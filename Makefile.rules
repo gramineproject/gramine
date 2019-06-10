@@ -1,0 +1,66 @@
+ifeq ("$(origin V)", "command line")
+  BUILD_VERBOSE = $(V)
+endif
+ifndef BUILD_VERBOSE
+  BUILD_VERBOSE = 0
+endif
+
+ifeq ($(BUILD_VERBOSE),1)
+  quiet =
+  Q =
+else
+  quiet = quiet_
+  Q = @
+endif
+
+export Q quiet BUILD_VERBOSE
+
+squote  := '
+escsq = $(subst $(squote),'\$(squote)',$1)
+
+echo-cmd = $(if $($(quiet)cmd_$(1)), echo '  $(call escsq,$($(quiet)cmd_$(1)))';)
+cmd = @$(echo-cmd) $(cmd_$(1))
+
+
+quiet_cmd_generated_offsets_s = [ $@ ]
+      cmd_generated_offsets_s = $(CC) $(CFLAGS) $(defs) -S $< -o $@
+
+generated-offsets.s: generated-offsets.c $(filter-out asm-offsets.h,$(headers))
+	$(call cmd,generated_offsets_s)
+CLEAN_FILES += generated-offsets.s
+
+
+quiet_cmd_asm_offsets_h = [ $@ ]
+      cmd_asm_offsets_h = \
+	(set -e; \
+	 echo "/* DO NOT MODIFY. THIS FILE WAS AUTO-GENERATED. */"; \
+	 echo "\#ifndef _ASM_OFFSETS_H_"; \
+	 echo "\#define _ASM_OFFSETS_H_"; \
+	 echo ""; \
+	 awk '/\.ascii "GENERATED_INTEGER/{print "\#ifndef " $$3 "\n\#define " $$3 " " $$4 "\n\#endif"}' $^; \
+	 echo ""; \
+	 echo "\#endif") > $@
+
+asm-offsets.h: generated-offsets.s
+	$(call cmd,asm_offsets_h)
+CLEAN_FILES += asm-offsets.h
+
+quiet_cmd_generated_offsets_py = [ $@ ]
+      cmd_generated_offsets_py = \
+	(set -e; \
+	 echo "\# DO NOT MODIFY. THIS FILE WAS AUTO-GENERATED."; \
+	 echo ""; \
+	 awk '/\.ascii "GENERATED_INTEGER/{print $$3 " = " $$4}' $^) > $@
+
+generated_offsets.py: generated-offsets.s
+	$(call cmd,generated_offsets_py)
+CLEAN_FILES += generated_offsets.py generated_offsets.pyc
+
+quiet_cmd_ln_sf = [ $@ ]
+      cmd_ln_sf = ln -sf $(abspath $<) $@
+
+
+cc-option = $(shell set -e; \
+	if ($(CC) -Werror $(1) -c -x c /dev/null -o /dev/null) >/dev/null 2>&1; \
+	then echo "$(1)"; \
+	fi)

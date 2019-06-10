@@ -1,0 +1,4 @@
+#!$(PAL)
+
+loader.exec = file:Bootstrap
+loader.execname = Bootstrap
