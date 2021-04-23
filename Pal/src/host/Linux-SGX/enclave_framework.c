@@ -188,6 +188,46 @@ int sgx_verify_report(sgx_report_t* report) {
     return 0;
 }
 
+int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key) {
+    assert(key_policy == KEYPOLICY_MRENCLAVE || key_policy == KEYPOLICY_MRSIGNER);
+
+    /* get our own SGX report to obtain this enclave's isv_svn, cpu_svn, config_svn */
+    __sgx_mem_aligned sgx_target_info_t empty_target_info = {0};
+    __sgx_mem_aligned sgx_report_data_t empty_report_data = {0};
+    __sgx_mem_aligned sgx_report_t our_sgx_report = {0};
+    int ret = sgx_get_report(&empty_target_info, &empty_report_data, &our_sgx_report);
+    if (ret) {
+        log_error("Failed to get our own enclave report\n");
+        return -PAL_ERROR_DENIED;
+    }
+
+    /* The keyrequest struct dictates the key derivation material used to generate the sealing key.
+     * It includes MRENCLAVE/MRSIGNER key policy (to allow secret migration/sealing between
+     * instances of the same enclave or between different enclaves of the same author/signer),
+     * CPU/ISV/CONFIG SVNs (to prevent secret migration to older vulnerable versions of the
+     * enclave), ATTRIBUTES and MISCSELECT masks (to prevent secret migration from e.g. production
+     * enclave to debug enclave). Note that KEYID is zero, to generate the same sealing key in
+     * different instances of the same enclave/same signer. */
+    __sgx_mem_aligned sgx_key_request_t key_request = {0};
+    key_request.key_name   = SEAL_KEY;
+    key_request.key_policy = key_policy;
+
+    memcpy(&key_request.cpu_svn, &our_sgx_report.body.cpu_svn, sizeof(sgx_cpu_svn_t));
+    memcpy(&key_request.isv_svn, &our_sgx_report.body.isv_svn, sizeof(sgx_isv_svn_t));
+    memcpy(&key_request.config_svn, &our_sgx_report.body.config_svn, sizeof(sgx_config_svn_t));
+
+    key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST_HI << 32 | SGX_FLAGS_MASK_CONST_LO;
+    key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST_HI << 32 | SGX_XFRM_MASK_CONST_LO;
+    key_request.misc_mask            = SGX_MISCSELECT_MASK_CONST;
+
+    ret = sgx_getkey(&key_request, seal_key);
+    if (ret) {
+        log_error("Failed to generate sealing key using SGX EGETKEY\n");
+        return -PAL_ERROR_DENIED;
+    }
+    return 0;
+}
+
 DEFINE_LISTP(trusted_file);
 static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
 static spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;

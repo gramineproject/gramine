@@ -70,6 +70,7 @@ c_executables = \
 	proc_common \
 	proc_cpuinfo \
 	proc_path \
+	sealed_file \
 	pselect \
 	pthread_set_get_affinity \
 	readdir \
@@ -194,6 +195,7 @@ clean-tmp:
 		*.sig \
 		*.tmp \
 		*.token \
+		*.dat \
 		*~ \
 		.cache \
 		.pytest_cache \
