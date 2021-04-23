@@ -125,6 +125,18 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
                    sgx_report_t* report);
 
 /*!
+ * \brief Obtain an enclave/signer-bound key via EGETKEY(SGX_SEAL_KEY) for secret migration/sealing
+ * of files.
+ *
+ * \param[in]  key_policy  Must be SGX_KEYPOLICY_MRENCLAVE or SGX_KEYPOLICY_MRSIGNER. Binds the
+ *                         sealing key to MRENCLAVE (only the same enclave can unseal secrets) or
+ *                         to MRSIGNER (all enclaves from the same signer can unseal secrets).
+ * \param[out] seal_key    Output buffer to store the sealing key.
+ * \return 0 on success, negative error code otherwise.
+ */
+int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key);
+
+/*!
  * \brief Verify the peer enclave during SGX local attestation.
  *
  * Verifies that the SGX information of the peer enclave is the same as ours (all Gramine enclaves

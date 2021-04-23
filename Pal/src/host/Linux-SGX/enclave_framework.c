@@ -150,7 +150,7 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
 int sgx_verify_report(sgx_report_t* report) {
     __sgx_mem_aligned sgx_key_request_t keyrequest;
     memset(&keyrequest, 0, sizeof(sgx_key_request_t));
-    keyrequest.key_name = REPORT_KEY;
+    keyrequest.key_name = SGX_REPORT_KEY;
     memcpy(&keyrequest.key_id, &report->key_id, sizeof(keyrequest.key_id));
 
     sgx_key_128bit_t report_key __attribute__((aligned(sizeof(sgx_key_128bit_t))));
@@ -186,6 +186,36 @@ int sgx_verify_report(sgx_report_t* report) {
         return -PAL_ERROR_DENIED;
     }
 
+    return 0;
+}
+
+int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
+    assert(key_policy == SGX_KEYPOLICY_MRENCLAVE || key_policy == SGX_KEYPOLICY_MRSIGNER);
+
+    /* The keyrequest struct dictates the key derivation material used to generate the sealing key.
+     * It includes MRENCLAVE/MRSIGNER key policy (to allow secret migration/sealing between
+     * instances of the same enclave or between different enclaves of the same author/signer),
+     * CPU/ISV/CONFIG SVNs (to prevent secret migration to older vulnerable versions of the
+     * enclave), ATTRIBUTES and MISCSELECT masks (to prevent secret migration from e.g. production
+     * enclave to debug enclave). Note that KEYID is zero, to generate the same sealing key in
+     * different instances of the same enclave/same signer. */
+    __sgx_mem_aligned sgx_key_request_t key_request = {0};
+    key_request.key_name   = SGX_SEAL_KEY;
+    key_request.key_policy = key_policy;
+
+    memcpy(&key_request.cpu_svn, &g_pal_sec.enclave_info.cpu_svn, sizeof(sgx_cpu_svn_t));
+    memcpy(&key_request.isv_svn, &g_pal_sec.enclave_info.isv_svn, sizeof(sgx_isv_svn_t));
+    memcpy(&key_request.config_svn, &g_pal_sec.enclave_info.config_svn, sizeof(sgx_config_svn_t));
+
+    key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST_HI << 32 | SGX_FLAGS_MASK_CONST_LO;
+    key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST_HI << 32 | SGX_XFRM_MASK_CONST_LO;
+    key_request.misc_mask            = SGX_MISCSELECT_MASK_CONST;
+
+    int ret = sgx_getkey(&key_request, out_seal_key);
+    if (ret) {
+        log_error("Failed to generate sealing key using SGX EGETKEY\n");
+        return -PAL_ERROR_DENIED;
+    }
     return 0;
 }
 
