@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "rw_file.h"
+
 #define STR_HELPER(x) #x
 #define STR(x)        STR_HELPER(x)
 
@@ -16,31 +18,6 @@
 
 #define TEST_DIR  "tmp"
 #define TEST_FILE "__testfile__"
-
-static ssize_t rw_file(int fd, char* buf, size_t bytes, bool write_flag) {
-    ssize_t rv = 0;
-    ssize_t ret;
-
-    while (bytes > rv) {
-        if (write_flag)
-            ret = write(fd, buf + rv, bytes - rv);
-        else
-            ret = read(fd, buf + rv, bytes - rv);
-
-        if (ret > 0) {
-            rv += ret;
-        } else {
-            if (ret < 0 && (errno == EAGAIN || errno == EINTR)) {
-                continue;
-            } else {
-                fprintf(stderr, "%s failed:%s\n", write_flag ? "write" : "read", strerror(errno));
-                return ret;
-            }
-        }
-    }
-
-    return rv;
-}
 
 int main(int argc, const char** argv) {
     char buf[BUF_LENGTH];
@@ -71,7 +48,7 @@ int main(int argc, const char** argv) {
     }
 
     /* test file size: write a file of type != FILEBUF_MAP */
-    bytes = rw_file(fd, buf, BUF_LENGTH, true);
+    bytes = posix_fd_write(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("writing " STR(BUF_LENGTH) " bytes to test file failed");
         return 1;
@@ -83,7 +60,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file(fd, buf, 1, true);
+    bytes = posix_fd_write(fd, buf, 1);
     if (bytes != 1) {
         perror("writing one byte to test file failed");
         return 1;
@@ -95,7 +72,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file(fd, buf, BUF_LENGTH, true);
+    bytes = posix_fd_write(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("writing " STR(BUF_LENGTH) " bytes to test file failed");
         return 1;
@@ -120,7 +97,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file(fd, buf, BUF_LENGTH, false);
+    bytes = posix_fd_read(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("reading " STR(BUF_LENGTH) " bytes from test file failed");
         return 1;

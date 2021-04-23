@@ -1,3 +1,4 @@
+/*.dat
 /*.manifest
 /*.xml
 
@@ -92,6 +93,8 @@
 /run_test
 /sched
 /sched_set_get_affinity
+/sealed_file
+/sealed_file_mod
 /select
 /send_handle
 /shared_object

@@ -900,6 +900,48 @@ class TC_40_FileSystem(RegressionTestCase):
             self.assertIn(f'{node}/hugepages/hugepages-2048kB/nr_hugepages: file', lines)
             self.assertIn(f'{node}/hugepages/hugepages-1048576kB/nr_hugepages: file', lines)
 
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
+    def test_050_sealed_file_mrenclave(self):
+        pf_path = 'sealed_file_mrenclave.dat'
+        if os.path.exists(pf_path):
+            os.remove(pf_path)
+
+        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        self.assertIn('CREATION OK', stdout)
+        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        self.assertIn('READING OK', stdout)
+
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
+    def test_051_sealed_file_mrsigner(self):
+        pf_path = 'sealed_file_mrsigner.dat'
+        if os.path.exists(pf_path):
+            os.remove(pf_path)
+
+        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        self.assertIn('CREATION OK', stdout)
+        stdout, _ = self.run_binary(['sealed_file_mod', pf_path])
+        self.assertIn('READING FROM MODIFIED ENCLAVE OK', stdout)
+
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
+    def test_052_sealed_file_mrenclave_bad(self):
+        # Negative test: Seal MRENCLAVE-bound file in one enclave -> opening this file in another
+        # enclave (with different MRENCLAVE) should fail
+        pf_path = 'sealed_file_mrenclave.dat'
+        if os.path.exists(pf_path):
+            os.remove(pf_path)
+
+        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        self.assertIn('CREATION OK', stdout)
+
+        try:
+            self.run_binary(['sealed_file_mod', pf_path])
+            self.fail('expected to return nonzero')
+        except subprocess.CalledProcessError as e:
+            self.assertEqual(e.returncode, 1)
+            stdout = e.stdout.decode()
+            self.assertNotIn('READING FROM MODIFIED ENCLAVE OK', stdout)
+            self.assertIn('Permission denied', stdout)
+
 
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):

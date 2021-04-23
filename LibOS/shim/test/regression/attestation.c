@@ -13,6 +13,7 @@
 #include "mbedtls/base64.h"
 #include "mbedtls/cmac.h"
 
+#include "rw_file.h"
 #include "sgx_api.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
@@ -23,105 +24,8 @@ char user_report_data_str[] = "This is user-provided report data";
 
 enum { SUCCESS = 0, FAILURE = -1 };
 
-ssize_t (*rw_file_f)(const char* path, char* buf, size_t bytes, bool do_write);
-
-static ssize_t rw_file_posix(const char* path, char* buf, size_t bytes, bool do_write) {
-    ssize_t rv = 0;
-    ssize_t ret = 0;
-
-    int fd = open(path, do_write ? O_WRONLY : O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "opening %s failed\n", path);
-        return fd;
-    }
-
-    while (bytes > rv) {
-        if (do_write)
-            ret = write(fd, buf + rv, bytes - rv);
-        else
-            ret = read(fd, buf + rv, bytes - rv);
-
-        if (ret > 0) {
-            rv += ret;
-        } else if (ret == 0) {
-            /* end of file */
-            if (rv == 0)
-                fprintf(stderr, "%s failed: unexpected end of file\n", do_write ? "write" : "read");
-            break;
-        } else {
-            if (ret < 0 && (errno == EAGAIN || errno == EINTR)) {
-                continue;
-            } else {
-                fprintf(stderr, "%s failed: %s\n", do_write ? "write" : "read", strerror(errno));
-                goto out;
-            }
-        }
-    }
-
-out:
-    if (ret < 0) {
-        /* error path */
-        close(fd);
-        return ret;
-    }
-
-    ret = close(fd);
-    if (ret < 0) {
-        fprintf(stderr, "closing %s failed\n", path);
-        return ret;
-    }
-    return rv;
-}
-
-static ssize_t rw_file_stdio(const char* path, char* buf, size_t bytes, bool do_write) {
-    size_t rv = 0;
-    size_t ret = 0;
-
-    FILE* f = fopen(path, do_write ? "wb" : "rb");
-    if (!f) {
-        fprintf(stderr, "opening %s failed\n", path);
-        return -1;
-    }
-
-    while (bytes > rv) {
-        if (do_write)
-            ret = fwrite(buf + rv, /*size=*/1, /*nmemb=*/bytes - rv, f);
-        else
-            ret = fread(buf + rv, /*size=*/1, /*nmemb=*/bytes - rv, f);
-
-        if (ret > 0) {
-            rv += ret;
-        } else {
-            if (feof(f)) {
-                if (rv) {
-                    /* read some bytes from file, success */
-                    break;
-                }
-                assert(rv == 0);
-                fprintf(stderr, "%s failed: unexpected end of file\n", do_write ? "write" : "read");
-                fclose(f);
-                return -1;
-            }
-
-            assert(ferror(f));
-
-            if (errno == EAGAIN || errno == EINTR) {
-                continue;
-            }
-
-            fprintf(stderr, "%s failed: %s\n", do_write ? "write" : "read", strerror(errno));
-            fclose(f);
-            return -1;
-        }
-    }
-
-    int close_ret = fclose(f);
-    if (close_ret) {
-        fprintf(stderr, "closing %s failed\n", path);
-        return -1;
-    }
-    return rv;
-}
+ssize_t (*file_read_f)(const char* path, char* buf, size_t bytes);
+ssize_t (*file_write_f)(const char* path, char* buf, size_t bytes);
 
 /*!
  * \brief Verify the signature on `report`.
@@ -137,7 +41,7 @@ static int verify_report_mac(sgx_report_t* report) {
     /* setup key request structure */
     __sgx_mem_aligned sgx_key_request_t key_request;
     memset(&key_request, 0, sizeof(key_request));
-    key_request.key_name = REPORT_KEY;
+    key_request.key_name = SGX_REPORT_KEY;
     memcpy(&key_request.key_id, &report->key_id, sizeof(key_request.key_id));
 
     /* retrieve key via EGETKEY instruction leaf */
@@ -186,18 +90,17 @@ static int test_local_attestation(void) {
 
     /* 1. read `my_target_info` file */
     sgx_target_info_t target_info;
-    bytes = rw_file_f("/dev/attestation/my_target_info", (char*)&target_info, sizeof(target_info),
-                      /*do_write=*/false);
+    bytes = file_read_f("/dev/attestation/my_target_info", (char*)&target_info,
+                        sizeof(target_info));
     if (bytes != sizeof(target_info)) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_read_f() */
         return FAILURE;
     }
 
     /* 2. write data from `my_target_info` to `target_info` file */
-    bytes = rw_file_f("/dev/attestation/target_info", (char*)&target_info, sizeof(target_info),
-                      /*do_write=*/true);
+    bytes = file_write_f("/dev/attestation/target_info", (char*)&target_info, sizeof(target_info));
     if (bytes != sizeof(target_info)) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_write_f() */
         return FAILURE;
     }
 
@@ -208,19 +111,18 @@ static int test_local_attestation(void) {
 
     memcpy((void*)&user_report_data, (void*)user_report_data_str, sizeof(user_report_data_str));
 
-    bytes = rw_file_f("/dev/attestation/user_report_data", (char*)&user_report_data,
-                      sizeof(user_report_data), /*do_write=*/true);
+    bytes = file_write_f("/dev/attestation/user_report_data", (char*)&user_report_data,
+                         sizeof(user_report_data));
     if (bytes != sizeof(user_report_data)) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_write_f() */
         return FAILURE;
     }
 
     /* 4. read `report` file */
     sgx_report_t report;
-    bytes = rw_file_f("/dev/attestation/report", (char*)&report, sizeof(report),
-                      /*do_write=*/false);
+    bytes = file_read_f("/dev/attestation/report", (char*)&report, sizeof(report));
     if (bytes != sizeof(report)) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_read_f() */
         return FAILURE;
     }
 
@@ -287,18 +189,17 @@ static int test_quote_interface(void) {
 
     memcpy((void*)&user_report_data, (void*)user_report_data_str, sizeof(user_report_data_str));
 
-    bytes = rw_file_f("/dev/attestation/user_report_data", (char*)&user_report_data,
-                      sizeof(user_report_data), /*do_write=*/true);
+    bytes = file_write_f("/dev/attestation/user_report_data", (char*)&user_report_data,
+                         sizeof(user_report_data));
     if (bytes != sizeof(user_report_data)) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_write_f() */
         return FAILURE;
     }
 
     /* 2. read `quote` file */
-    bytes = rw_file_f("/dev/attestation/quote", (char*)&g_quote, sizeof(g_quote),
-                      /*do_write=*/false);
+    bytes = file_read_f("/dev/attestation/quote", (char*)&g_quote, sizeof(g_quote));
     if (bytes < 0) {
-        /* error is already printed by rw_file_f() */
+        /* error is already printed by file_read_f() */
         return FAILURE;
     }
 
@@ -327,10 +228,13 @@ static int test_quote_interface(void) {
 }
 
 int main(int argc, char** argv) {
-    rw_file_f = rw_file_posix;
+    file_read_f  = posix_file_read;
+    file_write_f = posix_file_write;
+
     if (argc > 1) {
         /* simple trick to test stdio-style interface to pseudo-files in our tests */
-        rw_file_f = rw_file_stdio;
+        file_read_f  = stdio_file_read;
+        file_write_f = stdio_file_write;
     }
 
     printf("Test local attestation... %s\n",
