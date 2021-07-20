@@ -9,7 +9,6 @@
 enum {
     ECALL_ENCLAVE_START = 0,
     ECALL_THREAD_START,
-    ECALL_THREAD_RESET,
     ECALL_NR,
 };
 
@@ -25,6 +24,7 @@ typedef struct {
     size_t            ms_env_size;
     struct pal_sec*   ms_sec_info;
     struct rpc_queue* rpc_queue; /* pointer to RPC queue in untrusted mem */
+    void*             ocall_args_ptr;
 } ms_ecall_enclave_start_t;
 
 #endif /* ECALL_TYPES_H */
