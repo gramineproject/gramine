@@ -22,6 +22,10 @@ fs.mount.bin.type = "chroot"
 fs.mount.bin.path = "/bin"
 fs.mount.bin.uri = "file:/bin"
 
+fs.mount.tmpfs.type = "tmpfs"
+fs.mount.tmpfs.path = "/mnt/tmpfs"
+fs.mount.tmpfs.uri = "file:dummy-unused-by-tmpfs-uri"
+
 sgx.thread_num = 16
 sgx.nonpie_binary = true
 
