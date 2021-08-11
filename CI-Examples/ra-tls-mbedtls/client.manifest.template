@@ -4,7 +4,7 @@ loader.preload = "file:{{ graphene.libos }}"
 libos.entrypoint = "client"
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}:/libs"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 loader.env.RA_TLS_CLIENT_INSIDE_SGX = "1"
 loader.env.LC_ALL = "C"
 
@@ -21,7 +21,7 @@ fs.mount.lib2.uri = "file:{{ arch_libdir }}"
 
 fs.mount.lib3.type = "chroot"
 fs.mount.lib3.path = "/usr{{ arch_libdir }}"
-fs.mount.lib3.uri = "file:/usr/{{ arch_libdir }}"
+fs.mount.lib3.uri = "file:/usr{{ arch_libdir }}"
 
 fs.mount.etc.type = "chroot"
 fs.mount.etc.path = "/etc"
@@ -35,8 +35,7 @@ sgx.trusted_files = [
   "file:client",
   "file:{{ graphene.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
-  "file:./libs/",
+  "file:/usr{{ arch_libdir }}/",
 ]
 
 sgx.allowed_files = [
