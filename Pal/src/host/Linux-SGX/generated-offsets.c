@@ -151,9 +151,6 @@ __attribute__((__used__)) static void dummy(void) {
     OFFSET_T(SGX_ARCH_ENCLAVE_CSS_Q2, sgx_arch_enclave_css_t, buffer.q2);
     DEFINE(SGX_ARCH_ENCLAVE_CSS_SIZE, sizeof(sgx_arch_enclave_css_t));
 
-    /* struct pal_sec */
-    OFFSET(PAL_SEC_ENCLAVE_ATTRIBUTES, pal_sec, enclave_attributes);
-
     /* pal_linux_def.h */
     DEFINE(SSA_FRAME_NUM, SSA_FRAME_NUM);
     DEFINE(SSA_FRAME_SIZE, SSA_FRAME_SIZE);
