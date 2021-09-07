@@ -115,18 +115,52 @@
  *       enclave pair, no report can be reused even from an enclave with the same MR_ENCLAVE.
  */
 
-bool is_peer_enclave_ok(sgx_measurement_t* mr_enclave, sgx_report_data_t* expected_data,
-                        sgx_report_data_t* peer_data) {
-    /* must make sure the signer of the report is also the owner of the key, in order to prevent
-     * man-in-the-middle attack */
-    if (memcmp(peer_data, expected_data, sizeof(*expected_data)))
+bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_measurements,
+                        sgx_report_data_t* expected_data) {
+    /* current DH session is tied with SGX local attestation via `report_data` field */
+    if (memcmp(&peer_enclave_measurements->report_data, expected_data, sizeof(*expected_data)))
         return false;
 
-    /* all Gramine enclaves with same configuration (manifest) should have the same MR_ENCLAVE */
-    if (!memcmp(mr_enclave, &g_pal_sec.mr_enclave, sizeof(*mr_enclave)))
-        return true;
+    /* all Gramine enclaves with same config (manifest) should have same enclave measurements */
+    if (memcmp(&peer_enclave_measurements->mr_enclave, &g_pal_sec.enclave_measurements.mr_enclave,
+               sizeof(peer_enclave_measurements->mr_enclave)))
+        return false;
 
-    return false;
+    if (memcmp(&peer_enclave_measurements->mr_signer, &g_pal_sec.enclave_measurements.mr_signer,
+               sizeof(peer_enclave_measurements->mr_signer)))
+        return false;
+
+    if (memcmp(&peer_enclave_measurements->attributes, &g_pal_sec.enclave_measurements.attributes,
+               sizeof(peer_enclave_measurements->attributes)))
+        return false;
+
+    if (memcmp(&peer_enclave_measurements->misc_select, &g_pal_sec.enclave_measurements.misc_select,
+               sizeof(peer_enclave_measurements->misc_select)))
+        return false;
+
+    if (memcmp(&peer_enclave_measurements->cpu_svn, &g_pal_sec.enclave_measurements.cpu_svn,
+               sizeof(peer_enclave_measurements->cpu_svn)))
+        return false;
+
+    if (memcmp(&peer_enclave_measurements->isv_ext_prod_id,
+               &g_pal_sec.enclave_measurements.isv_ext_prod_id,
+               sizeof(peer_enclave_measurements->isv_ext_prod_id)))
+        return false;
+
+    if (memcmp(&peer_enclave_measurements->isv_family_id,
+               &g_pal_sec.enclave_measurements.isv_family_id,
+               sizeof(peer_enclave_measurements->isv_family_id)))
+        return false;
+
+    if (peer_enclave_measurements->isv_prod_id != g_pal_sec.enclave_measurements.isv_prod_id)
+        return false;
+
+    if (peer_enclave_measurements->isv_svn != g_pal_sec.enclave_measurements.isv_svn)
+        return false;
+
+    /* do not verify config_id and config_svn -- they are set by the app enclave after EINIT and are
+     * thus not security-critical */
+    return true;
 }
 
 int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
