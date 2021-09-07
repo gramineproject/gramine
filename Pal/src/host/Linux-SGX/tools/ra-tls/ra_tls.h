@@ -9,7 +9,8 @@
 
 #define RA_TLS_EPID_API_KEY "RA_TLS_EPID_API_KEY"
 
-#define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"
+#define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE  "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"
+#define RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE "RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE"
 
 #define RA_TLS_MRSIGNER    "RA_TLS_MRSIGNER"
 #define RA_TLS_MRENCLAVE   "RA_TLS_MRENCLAVE"
@@ -34,14 +35,16 @@
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
 static const uint8_t quote_oid[] = OID(0x06);
 static const size_t quote_oid_len = sizeof(quote_oid);
-#define QUOTE_MAX_SIZE 8192
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
 
 /* internally used functions, not exported */
 __attribute__ ((visibility("hidden")))
-int getenv_allow_outdated_tcb(bool* allow_outdated_tcb);
+bool getenv_allow_outdated_tcb(void);
+
+__attribute__ ((visibility("hidden")))
+bool getenv_allow_debug_enclave(void);
 
 __attribute__ ((visibility("hidden")))
 int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oid_len,

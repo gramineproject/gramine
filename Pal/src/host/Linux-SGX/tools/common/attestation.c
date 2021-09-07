@@ -84,7 +84,7 @@ void display_report_body(const sgx_report_body_t* body) {
 }
 
 void display_quote(const void* quote_data, size_t quote_size) {
-    if (quote_size < offsetof(sgx_quote_t, signature_len)) {
+    if (quote_size < SGX_QUOTE_BODY_SIZE) {
         ERROR("Quote size too small\n");
         return;
     }
@@ -315,31 +315,6 @@ out:
     return ret ? -1 : 0;
 }
 
-int verify_ias_report(const uint8_t* ias_report, size_t ias_report_size, uint8_t* ias_sig_b64,
-                      size_t ias_sig_b64_size, bool allow_outdated_tcb, const char* nonce,
-                      const char* mrsigner, const char* mrenclave, const char* isv_prod_id,
-                      const char* isv_svn, const char* report_data, const char* ias_pub_key_pem,
-                      bool expected_as_str) {
-    int ret;
-
-    uint8_t* report_quote = NULL;
-    size_t quote_size     = 0;
-
-    ret = verify_ias_report_extract_quote(ias_report, ias_report_size, ias_sig_b64,
-                                          ias_sig_b64_size, allow_outdated_tcb, nonce,
-                                          ias_pub_key_pem, &report_quote, &quote_size);
-    if (ret) {
-        goto out;
-    }
-
-    ret = verify_quote(report_quote, quote_size, mrsigner, mrenclave, isv_prod_id, isv_svn,
-                       report_data, expected_as_str);
-
-out:
-    free(report_quote);
-    return ret ? -1 : 0;
-}
-
 int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signer,
                  const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
                  const char* report_data, bool expected_as_str) {
@@ -350,9 +325,8 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
 
     // Quote contained in the IAS report doesn't contain signature_len and signature fields
     // Reject any smaller quotes as invalid
-    size_t ias_quote_size = offsetof(sgx_quote_t, signature_len);
-    if (quote_size < ias_quote_size) {
-        ERROR("Quote: Bad size %zu < %zu\n", quote_size, ias_quote_size);
+    if (quote_size < SGX_QUOTE_BODY_SIZE) {
+        ERROR("Quote: Bad size %zu < %zu\n", quote_size, SGX_QUOTE_BODY_SIZE);
         goto out;
     }
 
@@ -469,4 +443,33 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
     // TODO: KSS support (isv_ext_prod_id, config_id, config_svn, isv_family_id)
 out:
     return ret;
+}
+
+int verify_quote_enclave_attributes(sgx_quote_t* quote, bool allow_debug_enclave) {
+    if (!allow_debug_enclave && (quote->report_body.attributes.flags & SGX_FLAGS_DEBUG)) {
+        ERROR("Quote: DEBUG bit in enclave attributes is set\n");
+        return -1;
+    }
+
+    /* sanity check: enclave must be initialized */
+    if (!(quote->report_body.attributes.flags & SGX_FLAGS_INITIALIZED)) {
+        ERROR("Quote: INIT bit in enclave attributes is not set\n");
+        return -1;
+    }
+
+    /* sanity check: enclave must not have provision/EINIT token key */
+    if ((quote->report_body.attributes.flags & SGX_FLAGS_PROVISION_KEY) ||
+            (quote->report_body.attributes.flags & SGX_FLAGS_LICENSE_KEY)) {
+        ERROR("Quote: PROVISION_KEY or LICENSE_KEY bit in enclave attributes is set\n");
+        return -1;
+    }
+
+    /* currently only support 64-bit enclaves */
+    if (!(quote->report_body.attributes.flags & SGX_FLAGS_MODE64BIT)) {
+        ERROR("Quote: MODE64 bit in enclave attributes is not set\n");
+        return -1;
+    }
+
+    DBG("Quote: enclave attributes OK\n");
+    return 0;
 }

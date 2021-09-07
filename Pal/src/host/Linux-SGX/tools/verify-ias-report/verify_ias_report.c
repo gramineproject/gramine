@@ -19,6 +19,7 @@ struct option g_options[] = {
     { "report-path", required_argument, 0, 'r' },
     { "sig-path", required_argument, 0, 's' },
     { "allow-outdated-tcb", no_argument, 0, 'o' },
+    { "allow-debug-enclave", no_argument, 0, 'd' },
     { "nonce", required_argument, 0, 'n' },
     { "mr-signer", required_argument, 0, 'S' },
     { "mr-enclave", required_argument, 0, 'E' },
@@ -38,6 +39,7 @@ static void usage(const char* exec) {
     INFO("  --report-path, -r PATH    Path to the IAS report\n");
     INFO("  --sig-path, -s PATH       Path to the IAS report's signature\n");
     INFO("  --allow-outdated-tcb, -o  Treat IAS status GROUP_OUT_OF_DATE as OK\n");
+    INFO("  --allow-debug-enclave, -d Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1)\n");
     INFO("  --nonce, -n STRING        Nonce that's expected in the report (optional)\n");
     INFO("  --mr-signer, -S STRING    Expected mr_signer field (hex string, optional)\n");
     INFO("  --mr-enclave, -E STRING   Expected mr_enclave field (hex string, optional)\n");
@@ -48,24 +50,27 @@ static void usage(const char* exec) {
 }
 
 int main(int argc, char* argv[]) {
-    int option              = 0;
-    char* report_path       = NULL;
-    size_t report_size      = 0;
-    char* sig_path          = NULL;
-    size_t sig_size         = 0;
-    char* nonce             = NULL;
-    bool allow_outdated_tcb = false;
-    char* mrsigner          = NULL;
-    char* mrenclave         = NULL;
-    char* report_data       = NULL;
-    char* isv_prod_id       = NULL;
-    char* isv_svn           = NULL;
-    char* ias_pubkey_path   = NULL;
-    endianness_t endian     = ENDIAN_LSB;
+    int ret;
+
+    int option               = 0;
+    char* report_path        = NULL;
+    size_t report_size       = 0;
+    char* sig_path           = NULL;
+    size_t sig_size          = 0;
+    char* nonce              = NULL;
+    bool allow_outdated_tcb  = false;
+    bool allow_debug_enclave = false;
+    char* mrsigner           = NULL;
+    char* mrenclave          = NULL;
+    char* report_data        = NULL;
+    char* isv_prod_id        = NULL;
+    char* isv_svn            = NULL;
+    char* ias_pubkey_path    = NULL;
+    endianness_t endian      = ENDIAN_LSB;
 
     // parse command line
     while (true) {
-        option = getopt_long(argc, argv, "hvmr:s:on:S:E:R:P:V:i:", g_options, NULL);
+        option = getopt_long(argc, argv, "hvmr:s:odn:S:E:R:P:V:i:", g_options, NULL);
         if (option == -1)
             break;
 
@@ -87,6 +92,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'o':
                 allow_outdated_tcb = true;
+                break;
+            case 'd':
+                allow_debug_enclave = true;
                 break;
             case 'n':
                 nonce = optarg;
@@ -156,9 +164,33 @@ int main(int argc, char* argv[]) {
         DBG("Using IAS public key from file '%s'\n", ias_pubkey_path);
     }
 
-    int ret = verify_ias_report(report, report_size, sig, sig_size, allow_outdated_tcb, nonce,
-                                mrsigner, mrenclave, isv_prod_id, isv_svn, report_data, ias_pubkey,
-                                /*expected_as_str=*/true);
+    uint8_t* report_quote = NULL;
+    size_t quote_size = 0;
 
+    ret = verify_ias_report_extract_quote(report, report_size, sig, sig_size,
+                                          allow_outdated_tcb, nonce, ias_pubkey,
+                                          &report_quote, &quote_size);
+    if (ret < 0)
+        return ret;
+
+    /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
+    if (quote_size < SGX_QUOTE_BODY_SIZE || quote_size > SGX_QUOTE_MAX_SIZE) {
+        ERROR("SGX quote returned in IAS report has unexpected size %lu\n", quote_size);
+        free(report_quote);
+        return -1;
+    }
+
+    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
+     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
+
+    ret = verify_quote(report_quote, quote_size, mrsigner, mrenclave, isv_prod_id, isv_svn,
+                       report_data, /*expected_as_str=*/true);
+    if (ret < 0) {
+        free(report_quote);
+        return ret;
+    }
+
+    ret = verify_quote_enclave_attributes((sgx_quote_t*)report_quote, allow_debug_enclave);
+    free(report_quote);
     return ret;
 }

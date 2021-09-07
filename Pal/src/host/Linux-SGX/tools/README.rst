@@ -133,6 +133,7 @@ that the quote from the report contains expected values::
       --report-path, -r PATH    Path to the IAS report
       --sig-path, -s PATH       Path to the IAS report's signature
       --allow-outdated-tcb, -o  Treat IAS status GROUP_OUT_OF_DATE as OK
+      --allow-debug-enclave, -d Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1)
       --nonce, -n STRING        Nonce that's expected in the report (optional)
       --mr-signer, -S STRING    Expected mr_signer field (hex string, optional)
       --mr-enclave, -E STRING   Expected mr_enclave field (hex string, optional)
@@ -143,7 +144,7 @@ that the quote from the report contains expected values::
 
 Example report verification with all options enabled::
 
-    $ verify_ias_report -v -m -r rp -s sp -i ias.pem -o -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
+    $ verify_ias_report -v -m -r rp -s sp -i ias.pem -o -d -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
     Verbose output enabled
     Endianness set to MSB
     Using IAS public key from file 'ias.pem'
@@ -159,6 +160,7 @@ Example report verification with all options enabled::
     Quote: isv_prod_id OK
     Quote: isv_svn OK
     Quote: report_data OK
+    Quote: enclave attributes OK
 
 
 RA-TLS Libraries

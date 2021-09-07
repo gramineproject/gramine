@@ -27,6 +27,11 @@ There are two versions of the server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
 build time.
 
+Because this example builds and uses debug SGX enclaves
+(`SIGSTRUCT.ATTRIBUTES.DEBUG` bit is set to one), we use environment variable
+`RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`. Note that in production environments,
+you must *not* use this option!
+
 
 ## Secret Provisioning clients
 
@@ -59,8 +64,10 @@ build time.
 ```sh
 RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app epid files/input.txt
 
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
+RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=12345678901234567890123456789012 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./secret_prov_server_epid &
+./secret_prov_server_epid &
 
 # test minimal client
 gramine-sgx ./secret_prov_min_client
@@ -79,7 +86,9 @@ kill %%
 ```sh
 make app dcap files/input.txt
 
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./secret_prov_server_dcap &
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
+RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
+./secret_prov_server_dcap &
 
 # test minimal client
 gramine-sgx ./secret_prov_min_client

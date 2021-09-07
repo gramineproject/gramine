@@ -109,13 +109,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (ret < 0)
         goto out;
 
-    /* prepare user-supplied verification parameter "allow outdated TCB" */
-    bool allow_outdated_tcb;
-    ret = getenv_allow_outdated_tcb(&allow_outdated_tcb);
-    if (ret < 0) {
-        ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
-        goto out;
-    }
+    /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
+    bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
+    bool allow_debug_enclave = getenv_allow_debug_enclave();
 
     /* call into libsgx_dcap_quoteverify to verify ECDSA/based SGX quote */
     ret = sgx_qv_get_quote_supplemental_data_size(&supplemental_data_size);
@@ -167,7 +163,14 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
             break;
     }
 
-    /* verify all measurements from the SGX quote */
+    /* verify enclave attributes from the SGX quote */
+    ret = verify_quote_enclave_attributes(quote, allow_debug_enclave);
+    if (ret < 0) {
+        ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+        goto out;
+    }
+
+    /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
         ret = g_verify_measurements_cb((const char*)&quote->report_body.mr_enclave,

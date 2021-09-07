@@ -74,17 +74,14 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
     return 0;
 }
 
-int getenv_allow_outdated_tcb(bool* allow_outdated_tcb) {
-    *allow_outdated_tcb = false;
-
+bool getenv_allow_outdated_tcb(void) {
     char* str = getenv(RA_TLS_ALLOW_OUTDATED_TCB_INSECURE);
-    if (!str)
-        return 0;
+    return (str && !strcmp(str, "1"));
+}
 
-    if (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE"))
-        *allow_outdated_tcb = true;
-
-    return 0;
+bool getenv_allow_debug_enclave(void) {
+    char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
+    return (str && !strcmp(str, "1"));
 }
 
 /*! searches for specific \p oid among \p exts and returns pointer to its value in \p val */
@@ -139,7 +136,7 @@ int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oi
 
     *val = p;
 
-    if (*len > QUOTE_MAX_SIZE || *val + *len > exts_end)
+    if (*len > SGX_QUOTE_MAX_SIZE || *val + *len > exts_end)
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
     return 0;

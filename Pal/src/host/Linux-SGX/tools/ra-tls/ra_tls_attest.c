@@ -33,6 +33,7 @@
 
 #include "ra_tls.h"
 #include "sgx_arch.h"
+#include "sgx_attest.h"
 
 #define CERT_SUBJECT_NAME_VALUES  "CN=RATLS,O=GramineDevelopers,C=US"
 #define CERT_TIMESTAMP_NOT_BEFORE_DEFAULT "20010101000000"
@@ -175,11 +176,11 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
     if (written != sizeof(user_report_data))
         return MBEDTLS_ERR_X509_FILE_IO_ERROR;
 
-    uint8_t* quote = malloc(QUOTE_MAX_SIZE);
+    uint8_t* quote = malloc(SGX_QUOTE_MAX_SIZE);
     if (!quote)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
 
-    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, QUOTE_MAX_SIZE,
+    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
                                  /*do_write=*/false);
     if (quote_size < 0) {
         free(quote);

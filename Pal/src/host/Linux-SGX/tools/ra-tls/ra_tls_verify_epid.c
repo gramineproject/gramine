@@ -206,19 +206,15 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify_ias_report() expects report_data and sig_data without the ending '\0' */
+    /* verify_ias_report_extract_quote() expects report_data and sig_data without the ending '\0' */
     assert(report_data[report_data_size - 1] == '\0');
     report_data_size--;
     assert(sig_data[sig_data_size - 1] == '\0');
     sig_data_size--;
 
-    /* verify the received IAS attestation report */
-    bool allow_outdated_tcb;
-    ret = getenv_allow_outdated_tcb(&allow_outdated_tcb);
-    if (ret < 0) {
-        ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
-        goto out;
-    }
+    /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
+    bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
+    bool allow_debug_enclave = getenv_allow_debug_enclave();
 
     ret = getenv_ias_pub_key_pem(&ias_pub_key_pem);
     if (ret < 0)
@@ -236,15 +232,25 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify all measurements from the SGX quote (extracted from IAS report) */
+    /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
+    if (quote_from_ias_size < SGX_QUOTE_BODY_SIZE || quote_from_ias_size > SGX_QUOTE_MAX_SIZE) {
+        ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+        goto out;
+    }
+
+    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
+     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
+
+    /* verify enclave attributes from the SGX quote */
+    ret = verify_quote_enclave_attributes((sgx_quote_t*)quote_from_ias, allow_debug_enclave);
+    if (ret < 0) {
+        ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+        goto out;
+    }
+
+    /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
-        size_t min_quote_size = offsetof(sgx_quote_t, signature_len);
-        if (quote_from_ias_size < min_quote_size || quote_from_ias_size > QUOTE_MAX_SIZE) {
-            ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
-            goto out;
-        }
-
         sgx_quote_t* q = (sgx_quote_t*)quote_from_ias;
         ret = g_verify_measurements_cb((const char*)&q->report_body.mr_enclave,
                                        (const char*)&q->report_body.mr_signer,

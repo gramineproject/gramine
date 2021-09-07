@@ -126,6 +126,8 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
     /* all Gramine enclaves with same config (manifest) should have same enclave information
      * (in the future, we may exclude `config_svn` and `config_id` from this check -- they are set
      * by the app enclave after EINIT and are thus not security-critical) */
+    static_assert(offsetof(sgx_report_body_t, report_data) + sizeof(*expected_data) ==
+                      sizeof(sgx_report_body_t), "wrong sgx_report_body_t::report_data offset");
     if (memcmp(peer_enclave_info, &g_pal_sec.enclave_info,
                offsetof(sgx_report_body_t, report_data)))
         return false;
