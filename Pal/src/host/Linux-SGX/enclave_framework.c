@@ -947,25 +947,18 @@ int init_file_check_policy(void) {
 }
 
 int init_enclave(void) {
-    // Get report to initialize info (MR_ENCLAVE, etc.) about this enclave from
-    // a trusted source.
-
-    // Since this report is only read by ourselves we can
-    // leave targetinfo zeroed.
+    /* initialize enclave information (MRENCLAVE, etc.) of current enclave (via EREPORT) */
     __sgx_mem_aligned sgx_target_info_t targetinfo = {0};
     __sgx_mem_aligned sgx_report_data_t reportdata = {0};
     __sgx_mem_aligned sgx_report_t report;
 
     int ret = sgx_report(&targetinfo, &reportdata, &report);
     if (ret) {
-        log_error("failed to get self report: %d", ret);
+        log_error("Failed to get SGX report for current enclave");
         return -PAL_ERROR_INVAL;
     }
 
-    memcpy(&g_pal_sec.mr_enclave, &report.body.mr_enclave, sizeof(g_pal_sec.mr_enclave));
-    memcpy(&g_pal_sec.mr_signer, &report.body.mr_signer, sizeof(g_pal_sec.mr_signer));
-    g_pal_sec.enclave_attributes = report.body.attributes;
-
+    memcpy(&g_pal_sec.enclave_info, &report.body, sizeof(g_pal_sec.enclave_info));
     return 0;
 }
 
@@ -1101,8 +1094,8 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
 
     /* A -> B: targetinfo[A] */
     memset(&target_info, 0, sizeof(target_info));
-    memcpy(&target_info.mr_enclave, &g_pal_sec.mr_enclave, sizeof(sgx_measurement_t));
-    memcpy(&target_info.attributes, &g_pal_sec.enclave_attributes, sizeof(sgx_attributes_t));
+    memcpy(&target_info.mr_enclave, &g_pal_sec.enclave_info.mr_enclave, sizeof(sgx_measurement_t));
+    memcpy(&target_info.attributes, &g_pal_sec.enclave_info.attributes, sizeof(sgx_attributes_t));
 
     for (bytes = 0, ret = 0; bytes < SGX_TARGETINFO_FILLED_SIZE; bytes += ret) {
         ret = _DkStreamWrite(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,
@@ -1140,7 +1133,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
         goto out;
     }
 
-    if (!is_peer_enclave_ok(&report.body.mr_enclave, peer_report_data, &report.body.report_data)) {
+    if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
         log_error("Not an allowed enclave (mr_enclave = %s)",
                   ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
         ret = -PAL_ERROR_DENIED;
@@ -1251,7 +1244,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
         goto out;
     }
 
-    if (!is_peer_enclave_ok(&report.body.mr_enclave, peer_report_data, &report.body.report_data)) {
+    if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
         log_error("Not an allowed enclave (mr_enclave = %s)",
                   ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
         ret = -PAL_ERROR_DENIED;

@@ -246,11 +246,10 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         log_error("Reading enclave token failed: %d", ret);
         goto out;
     }
-    enclave->pal_sec.enclave_attributes = enclave_token.body.attributes;
 
 #ifdef DEBUG
     if (enclave->profile_enable) {
-        if (!(enclave->pal_sec.enclave_attributes.flags & SGX_FLAGS_DEBUG)) {
+        if (!(enclave_token.body.attributes.flags & SGX_FLAGS_DEBUG)) {
             log_error("Cannot use 'sgx.profile' with a production enclave");
             ret = -EINVAL;
             goto out;

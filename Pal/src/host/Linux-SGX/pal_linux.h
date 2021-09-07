@@ -127,20 +127,21 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
 /*!
  * \brief Verify the peer enclave during SGX local attestation.
  *
- * Verifies that the MR_ENCLAVE of the peer enclave is the same as ours (all Gramine enclaves with
- * the same configuration have the same MR_ENCLAVE), and that the signer of the SGX report is the
- * owner of the newly established session key.
+ * Verifies that the SGX information of the peer enclave is the same as ours (all Gramine enclaves
+ * with the same configuration have the same SGX enclave info), and that the signer of the SGX
+ * report is the owner of the newly established session key.
  *
- * \param  mr_enclave     MR_ENCLAVE of the peer enclave received in its SGX report.
- * \param  expected_data  Expected SGX report data, contains SHA256(K_e || tag1).
- * \param  peer_data      Peer enclave's SGX report data, contains SHA256(K_e || tag2).
+ * \param  peer_enclave_info  SGX information of the peer enclave.
+ * \param  expected_data      Expected SGX report data, contains SHA256(K_e || tag1); see
+ *                            also top-level comment in db_process.c.
  * \return 0 on success, negative error code otherwise.
  */
-bool is_peer_enclave_ok(sgx_measurement_t* mr_enclave, sgx_report_data_t* expected_data,
-                        sgx_report_data_t* peer_data);
+bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
+                        sgx_report_data_t* expected_data);
 
 /* perform Diffie-Hellman to establish a session key and also produce a hash over (K_e || tag1) for
- * parent enclave A and a hash over (K_e || tag2) for child enclave B */
+ * parent enclave A and a hash over (K_e || tag2) for child enclave B; see also top-level comment in
+ * db_process.c */
 int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
                          sgx_report_data_t* out_parent_report_data,
                          sgx_report_data_t* out_child_report_data);

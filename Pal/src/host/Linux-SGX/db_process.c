@@ -59,8 +59,10 @@
  *
  * One more difference is that instead of calculating SHA256(g_x || g_y) for enclave A and
  * SHA256(g_y || g_x) for enclave B, our protocol calculates SHA256(K_e || tag1) for enclave A and
- * SHA256(K_e || tag2) for enclave B. This still introduces assymetry in the protocol (desired to
- * prevent reflection and interleaving attacks), but is more robust to future modifications.
+ * SHA256(K_e || tag2) for enclave B. Note that K_e is the established session key, and tag1/tag2
+ * are additional tags to produce different hashes in enclaves A and B. This hashing scheme still
+ * introduces assymetry in the protocol (desired to prevent reflection and interleaving attacks),
+ * but is more robust to future modifications.
  *
  * Final difference is CMAC used in SGX local attestation for SGX report validation, instead of the
  * signatures in the original ISO KE protocol. This CMAC however provides the same security
@@ -115,18 +117,20 @@
  *       enclave pair, no report can be reused even from an enclave with the same MR_ENCLAVE.
  */
 
-bool is_peer_enclave_ok(sgx_measurement_t* mr_enclave, sgx_report_data_t* expected_data,
-                        sgx_report_data_t* peer_data) {
-    /* must make sure the signer of the report is also the owner of the key, in order to prevent
-     * man-in-the-middle attack */
-    if (memcmp(peer_data, expected_data, sizeof(*expected_data)))
+bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
+                        sgx_report_data_t* expected_data) {
+    /* current DH session is tied with SGX local attestation via `report_data` field */
+    if (memcmp(&peer_enclave_info->report_data, expected_data, sizeof(*expected_data)))
         return false;
 
-    /* all Gramine enclaves with same configuration (manifest) should have the same MR_ENCLAVE */
-    if (!memcmp(mr_enclave, &g_pal_sec.mr_enclave, sizeof(*mr_enclave)))
-        return true;
+    /* all Gramine enclaves with same config (manifest) should have same enclave information
+     * (in the future, we may exclude `config_svn` and `config_id` from this check -- they are set
+     * by the app enclave after EINIT and are thus not security-critical) */
+    if (memcmp(peer_enclave_info, &g_pal_sec.enclave_info,
+               offsetof(sgx_report_body_t, report_data)))
+        return false;
 
-    return false;
+    return true;
 }
 
 int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
