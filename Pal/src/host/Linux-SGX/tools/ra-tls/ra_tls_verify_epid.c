@@ -180,6 +180,11 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (ret < 0)
         goto out;
 
+    /* verify enclave attributes like DEBUG, INIT, etc. */
+    ret = verify_quote_enclave_attributes(quote);
+    if (ret < 0)
+        goto out;
+
     /* initialize the IAS context, send the quote to the IAS and receive IAS attestation report */
     ias = ias_init(g_api_key, g_report_url, g_sigrl_url);
     if (!ias) {

@@ -176,6 +176,29 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
     return 0;
 }
 
+/*! verifies enclave attributes (ATTRIBUTES.FLAGS) from \quote, in particular the debug bit */
+int verify_quote_enclave_attributes(const sgx_quote_t* quote) {
+    bool allow_debug_enclave = false;
+    char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
+    if (str && (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE")))
+        allow_debug_enclave = true;
+
+    if (!allow_debug_enclave && (quote->report_body.attributes.flags & SGX_FLAGS_DEBUG))
+        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+
+    /* sanity checks: enclave must be initialized and must not have provision/EINIT token key */
+    if (!(quote->report_body.attributes.flags & SGX_FLAGS_INITIALIZED) ||
+            (quote->report_body.attributes.flags & SGX_FLAGS_PROVISION_KEY) ||
+            (quote->report_body.attributes.flags & SGX_FLAGS_LICENSE_KEY))
+        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+
+    /* currently only support 64-bit enclaves */
+    if (!(quote->report_body.attributes.flags & SGX_FLAGS_MODE64BIT))
+        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+
+    return 0;
+}
+
 void ra_tls_set_measurement_callback(int (*f_cb)(const char* mrenclave, const char* mrsigner,
                                                  const char* isv_prod_id, const char* isv_svn)) {
     g_verify_measurements_cb = f_cb;
