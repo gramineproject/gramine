@@ -5,6 +5,7 @@ python_platlib = sh(returnStdout: true, script: 'python3 Scripts/get-python-plat
 env.PYTHONPATH = python_platlib + ':' + env.WORKSPACE + '/Scripts'
 
 env.RA_TLS_ALLOW_OUTDATED_TCB_INSECURE = '1'
+env.RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE = '1'
 
 env.LC_ALL = 'C.UTF-8'
 env.LANG = env.LC_ALL

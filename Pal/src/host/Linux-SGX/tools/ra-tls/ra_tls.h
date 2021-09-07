@@ -9,7 +9,8 @@
 
 #define RA_TLS_EPID_API_KEY "RA_TLS_EPID_API_KEY"
 
-#define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"
+#define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE  "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"
+#define RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE "RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE"
 
 #define RA_TLS_MRSIGNER    "RA_TLS_MRSIGNER"
 #define RA_TLS_MRENCLAVE   "RA_TLS_MRENCLAVE"
@@ -49,6 +50,9 @@ int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oi
 
 __attribute__ ((visibility("hidden")))
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
+
+__attribute__ ((visibility("hidden")))
+int verify_quote_enclave_attributes(const sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
 int verify_quote_against_envvar_measurements(const void* quote, size_t quote_size);
