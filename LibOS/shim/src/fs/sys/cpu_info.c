@@ -18,11 +18,9 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
     char str[PAL_SYSFS_BUF_FILESZ] = {'\0'};
 
     if (strcmp(name, "online") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_control->topo_info.online_logical_cores, str,
-                                        sizeof(str), ",");
+        ret = sys_convert_ranges_to_str(&g_topo_info->online_logical_cores, str, sizeof(str), ",");
     } else if (strcmp(name, "possible") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_control->topo_info.possible_logical_cores, str,
-                                        sizeof(str), ",");
+        ret = sys_convert_ranges_to_str(&g_topo_info->possible_logical_cores, str, sizeof(str), ",");
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;
@@ -41,7 +39,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_TOPO_INFO* core_topology = &g_pal_control->topo_info.core_topology[cpu_num];
+    PAL_CORE_TOPO_INFO* core_topology = &g_topo_info->core_topology[cpu_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "online") == 0) {
         /* `cpu/cpuX/online` is not present for cpu0 */

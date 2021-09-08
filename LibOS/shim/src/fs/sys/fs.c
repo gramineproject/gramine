@@ -14,6 +14,8 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
+PAL_TOPO_INFO* g_topo_info = NULL;
+
 int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size_t max_size) {
     int ret = 0;
 
@@ -36,7 +38,6 @@ int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size
 
 int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* res_range_info, char* str, size_t max_size,
                               const char* sep) {
-
     uint64_t range_cnt = res_range_info->range_count;
     size_t offset = 0;
     for (uint64_t i = 0; i < range_cnt; i++) {
@@ -66,7 +67,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_inf
     int ret;
 
     /* Extract cpumask from the ranges */
-    uint64_t possible_cores =  g_pal_control->topo_info.possible_logical_cores.resource_count;
+    uint64_t possible_cores =  g_topo_info->possible_logical_cores.resource_count;
     uint64_t num_cpumask = BITS_TO_INTS(possible_cores);
     uint32_t* bitmap = (uint32_t*)calloc(num_cpumask, sizeof(uint32_t));
     if (!bitmap)
@@ -116,13 +117,13 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        pal_total = g_pal_control->topo_info.nodes.resource_count;
+        pal_total = g_topo_info->nodes.resource_count;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        pal_total = g_pal_control->topo_info.online_logical_cores.resource_count;
+        pal_total = g_topo_info->online_logical_cores.resource_count;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
-        pal_total = g_pal_control->topo_info.num_cache_index;
+        pal_total = g_topo_info->num_cache_index;
         prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);

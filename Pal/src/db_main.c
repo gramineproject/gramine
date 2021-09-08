@@ -26,6 +26,12 @@ const PAL_CONTROL* DkGetPalControl(void) {
     return &g_pal_control;
 }
 
+PAL_TOPO_INFO g_topo_info;
+
+PAL_TOPO_INFO* DkGetPalTopologyInfo(void) {
+    return &g_topo_info;
+}
+
 struct pal_internal_state g_pal_state;
 
 static void load_libraries(void) {
@@ -581,7 +587,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_control.mem_info.mem_total = _DkMemoryQuota();
 
-    if (_DkGetTopologyInfo(&g_pal_control.topo_info) < 0) {
+    if (_DkGetTopologyInfo(&g_topo_info) < 0) {
         goto out_fail;
     }
 

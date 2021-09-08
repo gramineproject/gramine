@@ -427,6 +427,9 @@ noreturn void* shim_init(int argc, void* args) {
         RUN_INIT(receive_checkpoint_and_restore, &hdr);
     } else {
         g_process_ipc_ids.self_vmid = STARTING_VMID;
+        /* Updated via checkpoint-and-restore on child processes. */
+        g_topo_info = DkGetPalTopologyInfo();
+        assert(g_topo_info);
     }
 
     RUN_INIT(init_mount_root);

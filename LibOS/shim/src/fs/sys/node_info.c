@@ -22,7 +22,7 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
         return -ENOENT;
     }
 
-    ret = sys_convert_ranges_to_str(&g_pal_control->topo_info.nodes, str, sizeof(str), ",");
+    ret = sys_convert_ranges_to_str(&g_topo_info->nodes, str, sizeof(str), ",");
     if (ret < 0)
         return ret;
 
@@ -37,7 +37,7 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_NUMA_TOPO_INFO* numa_topology = &g_pal_control->topo_info.numa_topology[node_num];
+    PAL_NUMA_TOPO_INFO* numa_topology = &g_topo_info->numa_topology[node_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "cpumap" ) == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topology->cpumap, str, sizeof(str));
