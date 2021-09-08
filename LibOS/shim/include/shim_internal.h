@@ -26,6 +26,7 @@ void* shim_init(int argc, void* args);
 extern int g_log_level;
 
 extern const PAL_CONTROL* g_pal_control;
+extern PAL_TOPO_INFO* g_topo_info;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.

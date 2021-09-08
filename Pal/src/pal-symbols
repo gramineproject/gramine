@@ -45,3 +45,4 @@ DkAttestationQuote
 DkSetProtectedFilesKey
 DkDebugLog
 DkGetPalControl
+DkGetPalTopologyInfo
