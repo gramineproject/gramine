@@ -26,7 +26,7 @@ Quick start without SGX support
       make
       graphene-direct helloworld
 
-#. For more complex examples, see :file:`Examples` directory.
+#. For more complex examples, see :file:`CI-Examples` directory.
 
 Quick start with SGX support
 -------------------------------
@@ -98,10 +98,11 @@ Running sample applications
 ---------------------------
 
 We prepared and tested several applications to demonstrate Graphene and
-Graphene-SGX usability. These applications can be found in the :file:`Examples`
-folder in the repository, each containing a short README with instructions how
-to test it. We recommend starting with a simpler, thoroughly documented example
-of Redis, to understand manifest options and features of Graphene.
+Graphene-SGX usability. These applications can be found in the
+:file:`CI-Examples` folder in the repository, each containing a short README
+with instructions how to test it. We recommend starting with a simpler,
+thoroughly documented example of Redis, to understand manifest options and
+features of Graphene.
 
 Please note that these sample applications are tested on Ubuntu 18.04 and 20.04.
 Most of these applications are also known to run correctly on

@@ -1,21 +1,21 @@
 stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/python
+            cd CI-Examples/python
             make ${MAKEOPTS}
             make ${MAKEOPTS} check
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/bash
+            cd CI-Examples/bash
             make ${MAKEOPTS}
             make ${MAKEOPTS} regression
         '''
     }
     timeout(time: 15, unit: 'MINUTES') {
         sh '''
-            cd Examples/memcached
+            cd CI-Examples/memcached
             make ${MAKEOPTS}
             make SGX=1 start-graphene-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 11211
@@ -35,7 +35,7 @@ stage('test-sgx') {
                 export USE_SELECT
             fi
 
-            cd Examples/redis
+            cd CI-Examples/redis
             make ${MAKEOPTS}
             make ${MAKEOPTS} start-graphene-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 6379
@@ -44,7 +44,7 @@ stage('test-sgx') {
     }
     timeout(time: 15, unit: 'MINUTES') {
         sh '''
-            cd Examples/lighttpd
+            cd CI-Examples/lighttpd
             make ${MAKEOPTS}
             make ${MAKEOPTS} start-graphene-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 8003
@@ -53,7 +53,7 @@ stage('test-sgx') {
     }
     timeout(time: 15, unit: 'MINUTES') {
         sh '''
-            cd Examples/nginx
+            cd CI-Examples/nginx
             make ${MAKEOPTS}
             make ${MAKEOPTS} start-graphene-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 8002
@@ -62,21 +62,21 @@ stage('test-sgx') {
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/blender
+            cd CI-Examples/blender
             make ${MAKEOPTS}
             make ${MAKEOPTS} check
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/sqlite
+            cd CI-Examples/sqlite
             make ${MAKEOPTS} all
             make ${MAKEOPTS} regression
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/ra-tls-mbedtls
+            cd CI-Examples/ra-tls-mbedtls
             if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
             then \
                 make check_epid RA_CLIENT_SPID=${ra_client_spid} \
@@ -93,7 +93,7 @@ stage('test-sgx') {
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/ra-tls-secret-prov
+            cd CI-Examples/ra-tls-secret-prov
             if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
             then \
                 make SGX=1 check_epid RA_CLIENT_SPID=${ra_client_spid} \
