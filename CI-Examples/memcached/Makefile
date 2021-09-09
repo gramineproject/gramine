@@ -6,16 +6,16 @@ SRCDIR = src
 MEMCACHED_SRC ?= memcached-1.5.21.tar.gz
 MEMCACHED_MIRRORS ?= \
     https://memcached.org/files \
-    https://packages.grapheneproject.io/distfiles
+    https://packages.gramineproject.io/distfiles
 
 MEMCACHED_SHA256 ?= e3d10c06db755b220f43d26d3b68d15ebf737a69c7663529b504ab047efe92f4
 
 UBUNTU_VER = $(shell lsb_release --short --id)$(shell lsb_release --short --release)
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 .PHONY: all
@@ -35,15 +35,15 @@ $(SRCDIR)/memcached: $(SRCDIR)/configure
 	$(MAKE) -C $(SRCDIR)
 
 memcached.manifest: memcached.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
 memcached.manifest.sgx: memcached.manifest memcached
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -51,7 +51,7 @@ memcached.manifest.sgx: memcached.manifest memcached
 memcached.sig: memcached.manifest.sgx
 
 memcached.token: memcached.sig
-	graphene-sgx-get-token \
+	gramine-sgx-get-token \
 		--output memcached.token --sig memcached.sig
 
 # for simplicity, copy memcached executable into our root directory
@@ -63,14 +63,14 @@ start-native-server: all
 	./memcached
 
 ifeq ($(SGX),)
-GRAPHENE = graphene-direct
+GRAMINE = gramine-direct
 else
-GRAPHENE = graphene-sgx
+GRAMINE = gramine-sgx
 endif
 
-.PHONY: start-graphene-server
-start-graphene-server: all
-	$(GRAPHENE) memcached -u nobody
+.PHONY: start-gramine-server
+start-gramine-server: all
+	$(GRAMINE) memcached -u nobody
 
 .PHONY: clean
 clean:

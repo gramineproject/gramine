@@ -128,7 +128,7 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
 /*!
  * \brief Verify the peer enclave during SGX local attestation.
  *
- * Verifies that the MR_ENCLAVE of the peer enclave is the same as ours (all Graphene enclaves with
+ * Verifies that the MR_ENCLAVE of the peer enclave is the same as ours (all Gramine enclaves with
  * the same configuration have the same MR_ENCLAVE), and that the signer of the SGX report is the
  * owner of the newly established session key.
  *

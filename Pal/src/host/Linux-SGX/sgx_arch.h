@@ -74,7 +74,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  *     with DEBUG == 0 and another with DEBUG == 1) will have two different SIGSTRUCTs.
  *   - Important consequence of the above: a debug version of the enclave requires a different
  *     SIGSTRUCT file than a production version of the enclave.
- *   - CET and KSS bits are not yet reflected in Graphene, i.e., Graphene doesn't support Intel CET
+ *   - CET and KSS bits are not yet reflected in Gramine, i.e., Gramine doesn't support Intel CET
  *     technology and Key Separation and Sharing feature.
  */
 /* FIXME: This FLAGS mask should be represented as one 64-bit constant (instead of the current two
@@ -112,7 +112,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  *   - Important consequence of the above: the same enclave (with the same SIGSTRUCT) may run on
  *     machines with and without AVX/AVX-512, but e.g. a PKRU-requiring enclave may run only on
  *     machine with PKRU.
- *   - CET bits are not yet reflected in Graphene, i.e., Graphene doesn't support Intel CET.
+ *   - CET bits are not yet reflected in Gramine, i.e., Gramine doesn't support Intel CET.
   */
 #define SGX_XFRM_MASK_CONST_HI 0xffffffffUL
 #define SGX_XFRM_MASK_CONST_LO 0xffffff1bUL
@@ -124,7 +124,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  * Notes:
  *   - Two instances of the same enclave (one with EXINFO == 0 and another with EXINFO == 1) will
  *     have two different SIGSTRUCTs.
- *   - CPINFO bit is not yet reflected in Graphene, i.e., information about control protection
+ *   - CPINFO bit is not yet reflected in Gramine, i.e., information about control protection
  *     exception (#CP) will not be reported on AEX.
   */
 #define SGX_MISCSELECT_MASK_CONST 0xffffffffUL

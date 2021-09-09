@@ -73,7 +73,7 @@ long shim_do_nanosleep(struct __kernel_timespec* req, struct __kernel_timespec* 
 
 long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_timespec* req,
                              struct __kernel_timespec* rem) {
-    /* In Graphene all clocks are the same. */
+    /* In Gramine all clocks are the same. */
     if (clock_id < 0 || clock_id >= MAX_CLOCKS) {
         return -EINVAL;
     }

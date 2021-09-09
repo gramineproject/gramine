@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "attestation"
 loader.argv0_override = "attestation"
 
@@ -7,7 +7,7 @@ loader.insecure__use_cmdline_argv = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.bin.type = "chroot"
 fs.mount.bin.path = "/bin"
@@ -20,6 +20,6 @@ sgx.ra_client_spid = "{{ ra_client_spid }}"
 sgx.ra_client_linkable = {{ ra_client_linkable }}
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:attestation",
 ]

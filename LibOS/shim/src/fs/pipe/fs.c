@@ -166,13 +166,13 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
 
     /* FIXME: man 7 fifo says "[with non-blocking flag], opening for write-only fails with ENXIO
      *        unless the other end has already been opened". We cannot enforce this failure since
-     *        Graphene doesn't know whether the other process already opened this FIFO. */
+     *        Gramine doesn't know whether the other process already opened this FIFO. */
 
     if (flags & O_RDWR) {
         /* POSIX disallows FIFOs opened for read-write, but Linux allows it. We must choose only
          * one end (read or write) in our emulation, so we treat such FIFOs as read-only. This
          * covers most apps seen in the wild (in particular, LTP apps). */
-        log_warning("FIFO (named pipe) '%s' cannot be opened in read-write mode in Graphene. "
+        log_warning("FIFO (named pipe) '%s' cannot be opened in read-write mode in Gramine. "
                     "Treating it as read-only.", dent->mount->path);
         flags = O_RDONLY;
     }
@@ -190,7 +190,7 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
 
     if (fd == -1) {
         /* fd is invalid, happens if app tries to open the same FIFO end twice; this is ok in
-         * normal Linux but Graphene uses TLS-encrypted pipes which are inherently point-to-point;
+         * normal Linux but Gramine uses TLS-encrypted pipes which are inherently point-to-point;
          * if this changes, should remove this error case (see GitHub issue #1417) */
         return -EOPNOTSUPP;
     }

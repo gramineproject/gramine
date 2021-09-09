@@ -3,7 +3,7 @@
 # The following changes are made:
 # - Number of worker processes in increased from 1 to 4
 # - Number of worker connections is decrease from 1024 to 768 (because Linux by default
-#   limits FDs to 1024, and Graphene uses ~100 FDs for its own purposes, so we are left with
+#   limits FDs to 1024, and Gramine uses ~100 FDs for its own purposes, so we are left with
 #   about 900 FDs available for Nginx application itself)
 # - Listening port is changed from 80 to LISTEN_PORT
 # - Listening host is changed from localhost to LISTEN_HOST

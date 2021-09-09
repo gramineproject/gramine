@@ -12,8 +12,8 @@ def main():
             'common/language_gdb.py',
             'common/pagination_gdb.py',
             'common/debug_map_gdb.py',
-            'common/graphene.gdb',
-            'graphene_sgx.gdb',
+            'common/gramine.gdb',
+            'gramine_sgx.gdb',
     ]:
         print('[%s] Loading %s...' % (os.path.basename(__file__), filename))
         path = os.path.join(os.path.dirname(__file__), filename)

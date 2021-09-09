@@ -1,6 +1,6 @@
 # Client manifest file (both for EPID and DCAP)
 
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "client"
 loader.log_level = "{{ log_level }}"
 
@@ -13,7 +13,7 @@ loader.insecure__use_host_env = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.lib2.type = "chroot"
 fs.mount.lib2.path = "{{ arch_libdir }}"
@@ -33,7 +33,7 @@ sgx.thread_num = 4
 
 sgx.trusted_files = [
   "file:client",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
 ]

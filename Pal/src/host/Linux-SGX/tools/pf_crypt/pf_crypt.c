@@ -45,7 +45,7 @@ static void usage(void) {
     INFO("  --verify, -V            (optional) Verify that input path matches PF's allowed paths\n");
     INFO("\n");
     INFO("NOTE: Files encrypted using the 'encrypt' mode embed the output path string, exactly\n");
-    INFO("      as specified in '-o PATH'. Therefore, the Graphene manifest must specify this\n");
+    INFO("      as specified in '-o PATH'. Therefore, the Gramine manifest must specify this\n");
     INFO("      exact path in sgx.protected_files.xyz = \"PATH\".\n");
 }
 

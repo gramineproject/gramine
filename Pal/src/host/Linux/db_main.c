@@ -35,7 +35,7 @@ char* g_libpal_path = NULL;
 struct pal_linux_state g_linux_state;
 struct pal_sec g_pal_sec;
 
-/* for internal PAL objects, Graphene first uses pre-allocated g_mem_pool and then falls back to
+/* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
  * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is limited
  * by the variable below */
 size_t g_pal_internal_mem_size = 0;
@@ -138,11 +138,11 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
                "\tFirst process: %s <path to libpal.so> init <application> args...\n"
                "\tChildren:      %s <path to libpal.so> child <parent_pipe_fd> args...",
                self, self);
-    log_always("This is an internal interface. Use pal_loader to launch applications in Graphene.");
+    log_always("This is an internal interface. Use pal_loader to launch applications in Gramine.");
     _DkProcessExit(1);
 }
 
-/* Graphene uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
+/* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with no TCB in the GS register, so we disable stack protector here */
 __attribute_no_stack_protector
 noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
@@ -189,7 +189,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     /* Now that we have `argv`, set name for PAL map */
     g_pal_map.l_name = argv[0];
 
-    // Are we the first in this Graphene's namespace?
+    // Are we the first in this Gramine's namespace?
     bool first_process = !strcmp(argv[2], "init");
     if (!first_process && strcmp(argv[2], "child")) {
         print_usage_and_exit(argv[0]);

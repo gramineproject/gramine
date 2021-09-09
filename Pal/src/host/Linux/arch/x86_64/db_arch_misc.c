@@ -127,7 +127,7 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
 
     /* TODO: correctly support offline cores */
     if (possible_logical_cores > 0 && possible_logical_cores > online_logical_cores) {
-         log_warning("some CPUs seem to be offline; Graphene doesn't take this into account which "
+         log_warning("some CPUs seem to be offline; Gramine doesn't take this into account which "
                      "may lead to subpar performance");
     }
 

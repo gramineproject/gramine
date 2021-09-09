@@ -21,7 +21,7 @@ DRIVER_VERSIONS = {
 
 def find_intel_sgx_driver(isgx_driver_path):
     '''
-    Graphene only needs one header from the Intel SGX Driver:
+    Gramine only needs one header from the Intel SGX Driver:
       - sgx_user.h for non-DCAP, older version of the driver
         (https://github.com/intel/linux-sgx-driver)
       - include/uapi/asm/sgx_oot.h for DCAP 1.6+ version but below 1.10 of the driver

@@ -1,13 +1,13 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 libos.entrypoint = "multi_pthread"
 loader.argv0_override = "multi_pthread"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
-# app runs with 4 parallel threads + Graphene has couple internal threads
+# app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8
 sgx.rpc_thread_num = 8
 
@@ -15,6 +15,6 @@ sgx.nonpie_binary = true
 sgx.enable_stats = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:multi_pthread",
 ]

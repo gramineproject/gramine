@@ -13,8 +13,8 @@ int main(int argc, char* argv[]) {
         errx(1, "invalid arguments count");
     }
     uint32_t expected_events = EPOLLIN;
-    if (argc == 2 && !strcmp(argv[1], "EMULATE_GRAPHENE_BUG")) {
-        /* More details: https://github.com/oscarlab/graphene/issues/1717 */
+    if (argc == 2 && !strcmp(argv[1], "EMULATE_GRAMINE_BUG")) {
+        /* More details: https://github.com/gramineproject/graphene/issues/1717 */
         expected_events |= EPOLLOUT;
     }
 

@@ -1,7 +1,7 @@
 # Blender
 
 This directory contains a Makefile and template manifest to run Blender v2.82 on
-Graphene.
+Gramine.
 
 # Quick Start
 

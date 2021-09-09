@@ -3,7 +3,7 @@
 # Copyright (C) 2020 Intel Corporation
 #                    Paweł Marczewski <pawel@invisiblethingslab.com>
 
-# Debug map handling, so that GDB sees all ELF binaries loaded by Graphene. Connects with
+# Debug map handling, so that GDB sees all ELF binaries loaded by Gramine. Connects with
 # debug_map.c (in PAL) using a breakpoint on debug_map_update_debugger() function.
 
 import os

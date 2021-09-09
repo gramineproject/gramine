@@ -640,7 +640,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
             base = NULL;
         }
     } else {
-        /* this region is not available to LibOS in the current Graphene instance */
+        /* this region is not available to LibOS in the current Gramine instance */
         base = NULL;
     }
 

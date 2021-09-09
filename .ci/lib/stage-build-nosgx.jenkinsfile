@@ -38,10 +38,10 @@ stage('build') {
         | jq -r '(map(select(.name == "prefix")) + map(select(.name == "libdir"))) | map(.value) | join("/")'
     ''').trim()
 
-    env.GRAPHENE_PKGLIBDIR = libdir + '/graphene'
+    env.GRAMINE_PKGLIBDIR = libdir + '/gramine'
 
     // In CI we install to non-standard --prefix (see above). This makes sure the libraries are
-    // available anyway (e.g. graphene-sgx-pf-crypt needs libsgx_util.so).
+    // available anyway (e.g. gramine-sgx-pf-crypt needs libsgx_util.so).
     env.PKG_CONFIG_PATH = libdir + '/pkgconfig'
 
     // prevent cheating and testing from repo

@@ -5,7 +5,7 @@
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
 #                    Paweł Marczewski <pawel@invisiblethingslab.com>
 
-# Graphene GDB configuration (Linux-SGX specific).
+# Gramine GDB configuration (Linux-SGX specific).
 
 # Without this GDB would interpret all the expressions below depending on the app code where it just
 # happened to stop.
@@ -40,10 +40,10 @@ commands
     push-pagination off
 
     if *(uint16_t*)$rip == 0xa20f
-        echo [graphene_sgx.gdb] Passing SIGILL caused by CPUID to the enclave\n
+        echo [gramine_sgx.gdb] Passing SIGILL caused by CPUID to the enclave\n
     end
     if *(uint16_t*)$rip == 0x310f
-        echo [graphene_sgx.gdb] Passing SIGILL caused by RDTSC to the enclave\n
+        echo [gramine_sgx.gdb] Passing SIGILL caused by RDTSC to the enclave\n
     end
 
     pop-pagination

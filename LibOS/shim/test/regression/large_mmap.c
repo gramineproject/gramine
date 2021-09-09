@@ -48,7 +48,7 @@ int main(void) {
 #if 0
     /* The below fork tests sending of large checkpoints: at this point, the process allocated >4GB
      * of memory and must send it to the child. Thus, this fork stresses 32-bit/64-bit logic in
-     * Graphene (especially on SGX PAL). However, for SGX enclaves, this takes several minutes to
+     * Gramine (especially on SGX PAL). However, for SGX enclaves, this takes several minutes to
      * execute on wimpy machines (with 128MB of EPC), so it is commented out by default. */
 
     pid_t pid = fork();

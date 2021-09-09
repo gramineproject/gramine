@@ -2,7 +2,7 @@ Coding style guidelines
 =======================
 
 This document describes coding conventions and formatting styles we use in
-Graphene. All newly commited code must conform to them to pass a |~| review.
+Gramine. All newly commited code must conform to them to pass a |~| review.
 
 Automatic reformatting
 ----------------------
@@ -102,9 +102,9 @@ Code formatting
 
    #. Matching :file:`.h` header for :file:`.c` files.
    #. Standard library headers.
-   #. Non-standard headers not included in Graphene's repository (e.g. from
+   #. Non-standard headers not included in Gramine's repository (e.g. from
       external dependencies, like :file:`curl.h`).
-   #. Graphene's headers.
+   #. Gramine's headers.
 
 #. Assignments may be aligned when assigning some structurized data (e.g. struct
    members). Example::

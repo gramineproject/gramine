@@ -3,10 +3,10 @@ Cloud Deployment
 
 .. highlight:: sh
 
-Graphene without Intel SGX can be deployed on arbitrary cloud VMs. Please see
+Gramine without Intel SGX can be deployed on arbitrary cloud VMs. Please see
 our :doc:`quickstart` guide for the details.
 
-To deploy Graphene with Intel SGX, the cloud VM has to support Intel SGX. Please
+To deploy Gramine with Intel SGX, the cloud VM has to support Intel SGX. Please
 see the installation and usage guide for each cloud VM offering individually
 below (currently only for Microsoft Azure).
 
@@ -23,7 +23,7 @@ description below uses a VM running Ubuntu 18.04.
 Prerequisites
 ^^^^^^^^^^^^^
 
-Update and install the required packages for Graphene::
+Update and install the required packages for Gramine::
 
    sudo apt-get update
    sudo apt-get install -y autoconf bison build-essential gawk \
@@ -32,7 +32,7 @@ Update and install the required packages for Graphene::
        wget
    python3 -m pip install toml>=0.10
 
-Graphene requires the kernel to support FSGSBASE x86 instructions. Older Azure
+Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
 Confidential Compute VMs may not contain the required kernel patches and need to
 be updated.
 
@@ -43,16 +43,16 @@ To be able to run all tests also install::
 Building
 ^^^^^^^^
 
-#. Clone Graphene::
+#. Clone Gramine::
 
-       git clone https://github.com/oscarlab/graphene.git
-       cd graphene
+       git clone https://github.com/gramineproject/gramine.git
+       cd gramine
 
 #. Prepare the signing keys::
 
        openssl genrsa -3 -out Pal/src/host/Linux-SGX/signer/enclave-key.pem 3072
 
-#. Build Graphene::
+#. Build Gramine::
 
        make ISGX_DRIVER_PATH=/usr/src/linux-headers-`uname -r`/arch/x86/ SGX=1
        meson setup build/ --buildtype=release -Dsgx=enabled -Ddirect=disabled
@@ -64,4 +64,4 @@ Building
        cd LibOS/shim/test/regression
        make SGX=1
        make SGX=1 sgx-tokens
-       graphene-sgx helloworld
+       gramine-sgx helloworld

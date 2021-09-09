@@ -5,7 +5,7 @@
 /*
  * Operations to handle devices (with special case of "dev:tty" which is stdin/stdout).
  *
- * TODO: Some devices allow lseek() but typically with device-specific semantics. Graphene currently
+ * TODO: Some devices allow lseek() but typically with device-specific semantics. Gramine currently
  *       emulates lseek() completely in LibOS layer, thus seeking at PAL layer cannot be correctly
  *       implemented (without device-specific changes to LibOS layer).
  */

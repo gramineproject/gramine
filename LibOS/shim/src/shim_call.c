@@ -3,7 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-/* This file implements Graphene custom calls from userspace. See `shim_entry.h` for details. */
+/* This file implements Gramine custom calls from userspace. See `shim_entry.h` for details. */
 
 #include <linux/errno.h>
 #include <limits.h>
@@ -18,7 +18,7 @@ static int run_test_pass(void) {
     return 0;
 }
 
-/* Test: invoke undefined behavior; enabled only when Graphene is compiled with UBSan */
+/* Test: invoke undefined behavior; enabled only when Gramine is compiled with UBSan */
 static int run_test_undefined(void) {
 #ifdef UBSAN
     volatile int x = INT_MAX;

@@ -160,7 +160,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         /* A disabled {RD,WR}{FS,GS}BASE instruction generated a #UD */
         log_error(
             "{RD,WR}{FS,GS}BASE instructions are not permitted on this platform. Please check the "
-            "instructions under \"Building with SGX support\" from Graphene documentation.");
+            "instructions under \"Building with SGX support\" from Gramine documentation.");
         return false;
     } else if (instr[0] == 0x0f && instr[1] == 0x05) {
         /* syscall: LibOS may know how to handle this */
@@ -191,7 +191,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
     } else {
         switch (ei.info.vector) {
             case SGX_EXCEPTION_VECTOR_BR:
-                log_error("Handling #BR exceptions is currently unsupported by Graphene");
+                log_error("Handling #BR exceptions is currently unsupported by Gramine");
                 _DkProcessExit(1);
                 break;
             case SGX_EXCEPTION_VECTOR_UD:
@@ -266,7 +266,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
 /* TODO: remove this function (SGX signal handling needs to be revisited)
  * actually what is the point of this function?
- * Tracked: https://github.com/oscarlab/graphene/issues/2140 */
+ * Tracked: https://github.com/gramineproject/graphene/issues/2140 */
 noreturn void _DkHandleExternalEvent(PAL_NUM event, sgx_cpu_context_t* uc,
                                      PAL_XREGS_STATE* xregs_state) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));

@@ -14,7 +14,7 @@ GNU_MIRRORS ?= https://ftp.gnu.org/gnu/ \
 
 # ------------------------------------------------------------------------------------------------
 # Glibc build: patch libc.so and other C standard libraries to replace raw SYSCALL instructions
-# with function calls into Graphene (plus some smaller patches for Graphene). The resulting
+# with function calls into Gramine (plus some smaller patches for Gramine). The resulting
 # libraries are symlinked under $RUNTIME_DIR.
 #
 # Override CC, CXX, AS in case we're compiling the rest of the project with clang.
@@ -121,7 +121,7 @@ $(GLIBC_SRC)/dlfcn/Versions: $(GLIBC_SRC)/.configured
 
 # ------------------------------------------------------------------------------------------------
 # GCC build: patch libgomp.so.1 (OpenMP runtime library) to replace raw SYSCALL instruction with
-# function call into Graphene. GCC is not built by default with Graphene; use `make -C LibOS gcc`
+# function call into Gramine. GCC is not built by default with Gramine; use `make -C LibOS gcc`
 # to build it. The resulting libgomp.so.1 is symlinked under $RUNTIME_DIR. This patched version
 # makes sense only on x86_64 platforms. NOTE: We'd prefer to build libgomp.so.1 alone but it is
 # impossible (the only way to build it is as part of the complete GCC build).

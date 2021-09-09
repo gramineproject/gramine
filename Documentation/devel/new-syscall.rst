@@ -33,7 +33,7 @@ For example, in :file:`LibOS/shim/src/sys/shim_sched.c`::
 3. Add new PAL Calls (optional)
 -------------------------------
 
-The concept of Graphene library OS is to keep the PAL interface as simple as
+The concept of Gramine library OS is to keep the PAL interface as simple as
 possible. So, you should not add new PAL calls if the features can be fully
 implemented inside the library OS using the existing PAL calls. However,
 sometimes the OS features needed involve low-level operations inside the host OS

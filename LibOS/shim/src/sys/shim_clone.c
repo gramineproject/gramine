@@ -257,7 +257,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
     /* CLONE_DETACHED is deprecated and ignored. */
     flags &= ~CLONE_DETACHED;
 
-    /* These 2 flags modify ptrace behavior and can be ignored in Graphene. */
+    /* These 2 flags modify ptrace behavior and can be ignored in Gramine. */
     flags &= ~(CLONE_PTRACE | CLONE_UNTRACED);
 
     if ((flags & CLONE_THREAD) && !(flags & CLONE_SIGHAND))
@@ -265,7 +265,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
     if ((flags & CLONE_SIGHAND) && !(flags & CLONE_VM))
         return -EINVAL;
 
-    /* Explicitly disallow CLONE_VM without either of CLONE_THREAD or CLONE_VFORK in Graphene. While
+    /* Explicitly disallow CLONE_VM without either of CLONE_THREAD or CLONE_VFORK in Gramine. While
      * the Linux allows for such combinations, they do not happen in the wild, so they are
      * explicitly disallowed for now. */
     if (flags & CLONE_VM) {
@@ -278,10 +278,10 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
     if (flags & CLONE_VFORK) {
         /* Instead of trying to support Linux semantics for vfork() -- which requires adding
          * corner-cases in signal handling and syscalls -- we simply treat vfork() as fork(). We
-         * assume that performance hit is negligible (Graphene has to migrate internal state anyway
+         * assume that performance hit is negligible (Gramine has to migrate internal state anyway
          * which is slow) and apps do not rely on insane Linux-specific semantics of vfork().  */
         log_warning("vfork was called by the application, implemented as an alias to fork in "
-                    "Graphene");
+                    "Gramine");
         flags &= ~(CLONE_VFORK | CLONE_VM);
     }
 
@@ -306,7 +306,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
 
     bool clone_new_process = false;
     if (!(flags & CLONE_VM)) {
-        /* New process has its own address space - currently in Graphene that means it's just
+        /* New process has its own address space - currently in Gramine that means it's just
          * another process. */
         assert(!(flags & CLONE_THREAD));
         clone_new_process = true;

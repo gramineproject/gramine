@@ -9,7 +9,7 @@ LIGHTTPD_HASH ?= e266e389ddb79bf17b8e8d9022aec95ae839c6f3159822f402df8d8df8a13f6
 
 LIGHTTPD_MIRRORS ?= \
     https://download.lighttpd.net/lighttpd/releases-1.4.x \
-    https://packages.grapheneproject.io/distfiles
+    https://packages.gramineproject.io/distfiles
 
 HOST ?= 127.0.0.1
 PORT ?= 8003
@@ -17,9 +17,9 @@ PORT ?= 8003
 SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 CONF_FILES = lighttpd-server.conf lighttpd.conf
@@ -47,8 +47,8 @@ $(LIGHTTPD_SRC).tar.gz:
 		$(foreach mirror,$(LIGHTTPD_MIRRORS),--url $(mirror)/$(LIGHTTPD_SRC).tar.gz)
 
 lighttpd.manifest: lighttpd.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dinstall_dir=$(INSTALL_DIR) \
 		-Dinstall_dir_abspath=$(abspath $(INSTALL_DIR)) \
@@ -57,7 +57,7 @@ lighttpd.manifest: lighttpd.manifest.template
 lighttpd.manifest.sgx: lighttpd.manifest $(INSTALL_DIR)/sbin/lighttpd
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest lighttpd.manifest \
 		--output $@
@@ -65,7 +65,7 @@ lighttpd.manifest.sgx: lighttpd.manifest $(INSTALL_DIR)/sbin/lighttpd
 lighttpd.sig: lighttpd.manifest.sgx
 
 lighttpd.token: lighttpd.sig
-	graphene-sgx-get-token --output $@ --sig $^
+	gramine-sgx-get-token --output $@ --sig $^
 
 # lighttpd configuration and test data
 lighttpd-server.conf:
@@ -103,14 +103,14 @@ start-native-server: all
 	$(INSTALL_DIR)/sbin/lighttpd -D -m $(INSTALL_DIR)/lib -f lighttpd.conf
 
 ifeq ($(SGX),)
-GRAPHENE = graphene-direct
+GRAMINE = gramine-direct
 else
-GRAPHENE = graphene-sgx
+GRAMINE = gramine-sgx
 endif
 
-.PHONY: start-graphene-server
-start-graphene-server: all
-	$(GRAPHENE) ./lighttpd -D -m $(INSTALL_DIR)/lib -f lighttpd.conf
+.PHONY: start-gramine-server
+start-gramine-server: all
+	$(GRAMINE) ./lighttpd -D -m $(INSTALL_DIR)/lib -f lighttpd.conf
 
 .PHONY: clean
 clean:

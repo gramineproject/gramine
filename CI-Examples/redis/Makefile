@@ -11,7 +11,7 @@
 # select, use `make USE_SELECT=1`. For correct re-builds, always clean up
 # Redis source code beforehand via `make distclean`.
 #
-# Use `make clean` to remove Graphene-generated files and `make distclean` to
+# Use `make clean` to remove Gramine-generated files and `make distclean` to
 # additionally remove the cloned Redis git repository.
 
 ################################# CONSTANTS ###################################
@@ -29,9 +29,9 @@ COMMIT = 6.0.5
 TAR_SHA256 = f7ded6c27d48c20bc78e797046c79b6bc411121f0c2d7eead9fea50d6b0b6290
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 .PHONY: all
@@ -51,7 +51,7 @@ $(SRCDIR)/Makefile:
 	../common_tools/download --output redis.tar.gz \
 		--sha256 $(TAR_SHA256) \
 		--url https://github.com/antirez/redis/archive/$(COMMIT).tar.gz \
-		--url https://packages.grapheneproject.io/distfiles/redis-$(COMMIT).tar.gz
+		--url https://packages.gramineproject.io/distfiles/redis-$(COMMIT).tar.gz
 	mkdir $(SRCDIR)
 	tar -C $(SRCDIR) --strip-components=1 -xf redis.tar.gz
 
@@ -67,23 +67,23 @@ endif
 ################################ REDIS MANIFEST ###############################
 
 # The template file contains almost all necessary information to run Redis under
-# Graphene / Graphene-SGX. We create redis-server.manifest (to be run under
-# non-SGX Graphene) by replacing variables in the template file using the
-# "graphene-manifest" script.
+# Gramine / Gramine-SGX. We create redis-server.manifest (to be run under
+# non-SGX Gramine) by replacing variables in the template file using the
+# "gramine-manifest" script.
 
 redis-server.manifest: redis-server.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
-# Manifest for Graphene-SGX requires special "graphene-sgx-sign" procedure. This
+# Manifest for Gramine-SGX requires special "gramine-sgx-sign" procedure. This
 # procedure measures all Redis trusted files, adds the measurement to the
 # resulting manifest.sgx file (among other, less important SGX options) and
 # creates redis-server.sig (SIGSTRUCT object).
 #
-# Graphene-SGX requires EINITTOKEN and SIGSTRUCT objects (see SGX hardware ABI,
-# in particular EINIT instruction). The "graphene-sgx-get-token" script
+# Gramine-SGX requires EINITTOKEN and SIGSTRUCT objects (see SGX hardware ABI,
+# in particular EINIT instruction). The "gramine-sgx-get-token" script
 # generates EINITTOKEN based on a SIGSTRUCT and puts it in .token file. Note
 # that filenames must be the same as the manifest name (i.e., "redis-server").
 # EINITTOKEN must be generated on the machine where the application will run,
@@ -98,13 +98,13 @@ redis-server.sig redis-server.manifest.sgx: sgx_outputs
 sgx_outputs: redis-server.manifest $(SRCDIR)/src/redis-server
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest redis-server.manifest \
 		--output redis-server.manifest.sgx
 
 redis-server.token: redis-server.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ########################### COPIES OF EXECUTABLES #############################
 
@@ -120,14 +120,14 @@ start-native-server: all
 	./redis-server --save '' --protected-mode no
 
 ifeq ($(SGX),)
-GRAPHENE = graphene-direct
+GRAMINE = gramine-direct
 else
-GRAPHENE = graphene-sgx
+GRAMINE = gramine-sgx
 endif
 
-.PHONY: start-graphene-server
-start-graphene-server: all
-	$(GRAPHENE) redis-server --save '' --protected-mode no
+.PHONY: start-gramine-server
+start-gramine-server: all
+	$(GRAMINE) redis-server --save '' --protected-mode no
 
 ################################## CLEANUP ####################################
 

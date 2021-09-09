@@ -3,18 +3,15 @@ Performance tuning and analysis
 
 .. highlight:: sh
 
-This is the "best performance practices" document for Graphene performance
+This is the "best performance practices" document for Gramine performance
 tuning and explanation of possible software and hardware performance bottlenecks
 and limitations. In this document, we are highlighting only those manifest
-options relevant for performance benchmarking. Refer to `Graphene manifest
-syntax
-<https://github.com/oscarlab/graphene/blob/master/Documentation/manifest-syntax.rst>`__
-for a full list.
+options relevant for performance benchmarking. Refer to
+:doc:`../manifest-syntax` for a full list.
 
-*Note:* The below examples were run on a Mehlow machine with the legacy Intel
-SGX driver v2.6 and Graphene release v1.1. The performance numbers in these
-examples should not be considered representative and serve only illustration
-purposes.
+*Note:* The below examples were run on a Mehlow machine. The performance numbers
+in these examples should not be considered representative and serve only
+illustration purposes.
 
 Enabling per-thread and process-wide SGX stats
 ----------------------------------------------
@@ -24,12 +21,12 @@ See also :ref:`perf` below for installing ``perf``.
 Enable statistics using ``sgx.enable_stats = true`` manifest option. Now your
 graphenized application correctly reports performance counters. This is useful
 when using e.g. ``perf stat`` to collect performance statistics. This manifest
-option also forces Graphene to dump SGX-related information on each
+option also forces Gramine to dump SGX-related information on each
 thread/process exit. Here is an example:
 
 ::
 
-   LibOS/shim/test/regression$ perf stat graphene-sgx helloworld
+   LibOS/shim/test/regression$ perf stat gramine-sgx helloworld
    Hello world (helloworld)!
    ----- SGX stats for thread 87219 -----
    # of EENTERs:        224
@@ -44,7 +41,7 @@ thread/process exit. Here is an example:
    # of sync signals:   32
    # of async signals:  0
 
-   Performance counter stats for 'graphene-sgx helloworld':
+   Performance counter stats for 'gramine-sgx helloworld':
         3,568,568,948      cycles
         1,072,072,581      instructions
           172,308,653      branches
@@ -62,31 +59,31 @@ How to read this output:
    recall that every OCALL requires one EEXIT to exit the enclave and one EENTER
    to re-enter it again. We can conclude that there are about 200 OCALLs. Also,
    the number of EENTERs is slightly higher than of EEXITs: this is because of
-   ECALLs.  Recall that Graphene performs one ECALL for the whole process and
+   ECALLs.  Recall that Gramine performs one ECALL for the whole process and
    one ECALL per each new thread (and possibly some more ECALLs to reset threads
-   and other bookkeeping). You can consider ECALLs as "no-return" in Graphene:
+   and other bookkeeping). You can consider ECALLs as "no-return" in Gramine:
    they only contribute to EENTERs and do not increase EEXITs (in reality,
    ECALLs perform EEXITs but only after the stats are printed).
 
 #. Why there are about 200 OCALLs in our trivial HelloWorld example? This is
-   because even before HelloWorld's ``main()`` function starts, Graphene and
-   Glibc initialize themselves. For example, Graphene must open and read the
+   because even before HelloWorld's ``main()`` function starts, Gramine and
+   Glibc initialize themselves. For example, Gramine must open and read the
    manifest file – this requires several OCALLs. Glibc may need to open and load
    shared libraries – this requires more OCALLs. In general, you may consider
-   200 OCALLs as the cost of initialization in Graphene.
+   200 OCALLs as the cost of initialization in Gramine.
 
 #. Why are there about 200 Asynchronous Exits (AEXs)? Most of these AEXs come
    from in-enclave exceptions and normal Linux interrupts. In particular,
    Linux’s scheduler interrupts each CPU every 4ms, or 250 times per second.
    Since our enclave workload runs for a fraction of a second, maybe 100 AEXs
    happen due to scheduler interrupts. Another 32 AEXs happen due to "sync
-   signals" – in particular, SGX and Graphene trap-and-emulate the CPUID
+   signals" – in particular, SGX and Gramine trap-and-emulate the CPUID
    instruction. Each trap-and-emulate results in one AEX. Finally, the rest 100
    AEXs happen due to some other sources of interrupts: enclave page faults or
    network interrupts.
 
 #. What are the 32 sync signals? These are synchronous signals forwarded by the
-   host Linux to Graphene. Synchronous signals are SIGILL (invalid instruction),
+   host Linux to Gramine. Synchronous signals are SIGILL (invalid instruction),
    SIGFPE (invalid floating-point result), SIGSEGV (segmentation fault), etc.
    These are exceptions originating from Glibc/application execution. For
    example, these 32 sync signals are trap-and-emulate cases for the CPUID
@@ -95,7 +92,7 @@ How to read this output:
    different CPU information, and thus invokes CPUID 32 times.
 
 #. What are the 0 async signals? These are asynchronous signals forwarded by the
-   host Linux to Graphene. These signals are SIGINT (interrupt), SIGCONT
+   host Linux to Gramine. These signals are SIGINT (interrupt), SIGCONT
    (continue), SIGKILL (the process is going to be killed), SIGCHLD (child
    process terminated) etc. None of these signals happened during HelloWorld
    execution.
@@ -105,16 +102,6 @@ How to read this output:
    itself, this particular output is not interesting. In reality, performance
    counters should be compared against "golden runs" to deduce any interesting
    trends.
-
-You can find additional information and context here:
-
-* https://github.com/oscarlab/graphene/pull/1519
-* https://github.com/oscarlab/graphene/pull/1622
-* https://github.com/oscarlab/graphene/pull/1706
-
-If you need additional statistics, you can check this unofficial patch:
-
-* https://github.com/oscarlab/graphene/tree/dimakuv/DONTMERGE-more-perf-stats-tweaks
 
 Effects of system calls / ocalls
 --------------------------------
@@ -154,11 +141,11 @@ to OCALLs:
 
 #. OCALLs generally correspond 1:1 to the system calls that the application
    performs, but not always. Typical system calls like ``read()``, ``write()``,
-   ``recv()``, ``send()`` indeed correspond 1:1 to Graphene's OCALLs and thus
+   ``recv()``, ``send()`` indeed correspond 1:1 to Gramine's OCALLs and thus
    introduce almost no overhead in the code path. However, some system calls are
    emulated in a more sophisticated way: e.g., Linux-specific ``epoll()`` is
    emulated via more generic ``poll()`` and this requires some additional logic.
-   Fortunately, such calls are never a real bottleneck in Graphene because they
+   Fortunately, such calls are never a real bottleneck in Gramine because they
    are not on hot paths of applications. Probably the only exceptional system
    call is ``gettimeofday()`` – and only on older Intel CPUs (see below).
 
@@ -166,7 +153,7 @@ to OCALLs:
    implemented via vDSO and a fast RDTSC instruction. Platforms older than
    Icelake typically forbid RDTSC inside an SGX enclave (this is a hardware
    limitation), and so ``gettimeofday()`` falls back to the expensive OCALL.
-   Graphene is smart enough to identify whether the platform supports RDTSC
+   Gramine is smart enough to identify whether the platform supports RDTSC
    inside enclaves, and uses the fast RDTSC logic to emulate ``gettimeofday()``.
    *Rule of thumb:* if you think that the bottleneck of your deployment is
    ``gettimeofday()``, move to a newer (Icelake) processor. If you cannot move
@@ -176,11 +163,11 @@ to OCALLs:
 Exitless feature
 ----------------
 
-Graphene supports the Exitless (or Switchless) feature – it trades off CPU cores
+Gramine supports the Exitless (or Switchless) feature – it trades off CPU cores
 for faster OCALL execution. More specifically, with Exitless, enclave threads do
 not exit the enclave on OCALLs but instead busy wait for untrusted helper
 threads which perform OCALLs (system calls) on their behalf.  Untrusted helper
-threads are created at Graphene start-up and burn CPU cycles busy waiting for
+threads are created at Gramine start-up and burn CPU cycles busy waiting for
 requests for OCALLs from enclave threads (untrusted helper threads periodically
 sleep if there have been no OCALL requests for a long time to save some CPU
 cycles).
@@ -194,7 +181,7 @@ You must decide how many untrusted helper RPC threads your application needs. A
 rule of thumb: specify ``sgx.rpc_thread_num == sgx.thread_num``, i.e., the
 number of untrusted RPC threads should be the same as the number of enclave
 threads. For example, native Redis 6.0 uses 3-4 enclave threads during its
-execution, plus Graphene uses another 1-2 helper enclave threads. So Redis
+execution, plus Gramine uses another 1-2 helper enclave threads. So Redis
 manifest has an over-approximation of this number: ``sgx.thread_num = 8``. Thus,
 to correctly enable the Exitless feature, specify ``sgx.rpc_thread_num = 8``.
 Here is an example:
@@ -202,21 +189,20 @@ Here is an example:
 ::
 
    # exitless disabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 0`
-   CI-Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
+   CI-Examples/redis$ gramine-sgx redis-server --save '' --protected-mode no &
    CI-Examples/redis$ src/src/redis-benchmark -t set
    43010.75 requests per second
 
    # exitless enabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 8`
-   CI-Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
+   CI-Examples/redis$ gramine-sgx redis-server --save '' --protected-mode no &
    CI-Examples/redis$ src/src/redis-benchmark -t set
    68119.89 requests per second
 
 As you can see, enabling the Exitless feature improves performance of Redis by
 58%. This comes at a price: there are now 8 additional threads occupying
 additional CPU cores (you can see these additional threads by running ``ps -Haux
-| grep pal-Linux-SGX`` while Graphene is running). We recommend to use Exitless
-only for single-threaded applications or if you care more about latency than
-throughput.
+| grep loader`` while Gramine is running). We recommend to use Exitless only for
+single-threaded applications or if you care more about latency than throughput.
 
 We also recommend to use core pinning via taskset or even isolating cores via
 ``isolcpus`` or disabling interrupts on cores via ``nohz_full``. It is also
@@ -224,24 +210,19 @@ beneficial to put all enclave threads on one set of cores (e.g., on first
 hyper-threads if you have hyper-threading enabled on your platform) and all
 untrusted RPC threads on another set of cores (e.g., on second hyper-threads).
 In general, the classical performance-tuning strategies are applicable for
-Graphene and Exitless multi-threaded workloads.
-
-You can find additional information and context here:
-
-* https://github.com/oscarlab/graphene/pull/1142
-* https://github.com/oscarlab/graphene/pull/1578
+Gramine and Exitless multi-threaded workloads.
 
 Optional CPU features (AVX, AVX512, MPX, PKRU)
 ----------------------------------------------
 
 SGX technology allows to specify which CPU features are required to run the SGX
-enclave. Graphene "inherits" this and has the following manifest options:
+enclave. Gramine "inherits" this and has the following manifest options:
 ``sgx.require_avx``, ``sgx.require_avx512``, ``sgx.require_mpx``,
 ``sgx.require_pkru``. By default, all of them are set to ``false`` – this means
 that SGX hardware will allow running the SGX enclave on any system, whether the
 system has the AVX/AVX512/MPX/PKRU feature or not.
 
-Graphene typically correctly identifies the features of the underlying platform
+Gramine typically correctly identifies the features of the underlying platform
 and propagates the information on AVX/AVX512/MPX/PKRU inside the enclave and to
 the application. It is recommended to leave these manifest options as-is (set to
 ``false``). However, we observed on some platforms that the graphenized
@@ -259,37 +240,24 @@ the SGX section.
 Multi-threaded workloads
 ------------------------
 
-Graphene supports multi-threaded applications. However, currently Graphene
-doesn’t implement many optimizations and performance-relevant system calls
-related to multi-threading and scheduling policies. In reality, Graphene simply
-ignores many such requests. For example, Graphene currently ignores
-``set_schedaffinity()`` system calls. We are working on making Graphene
-performance-tuning aware.
-
-In the meantime, you can try pending or unofficial patches to Graphene that may
-improve multi-threaded performance (by better emulation of relevant system
-calls):
-
-* Improved ``sched_yield()`` emulation:
-  https://github.com/oscarlab/graphene/tree/dimakuv/NOMERGE-nop-sched-yield
-
-* Improved ``sched_setaffinity()`` and ``sched_getaffinity()`` emulation:
-  https://github.com/oscarlab/graphene/pull/1580
+Gramine supports multi-threaded applications. Gramine implements many
+optimizations and performance-relevant system calls related to multi-threading
+and scheduling policies (e.g., ``set_schedaffinity()``).
 
 Multi-process workloads
 -----------------------
 
-Graphene supports multi-process applications, i.e., applications that run as
+Gramine supports multi-process applications, i.e., applications that run as
 several inter-dependent processes. Typical examples are bash scripts: one main
 bash script spawns many additional processes to perform some operations.
 Another typical example is Python: it usually spawns helper processes to obtain
 system information. Finally, many applications are multi-process by design,
 e.g., Nginx and Apache web servers spawn multiple worker processes.
 
-For each new child, the parent Graphene process creates a new process with a new
-Graphene instance and thus a new enclave. For example, if Nginx main process
-creates 4 workers, then there will be 5 Graphene instances and 5 SGX enclaves:
-one main Graphene process with its enclave and 4 child Graphene processes with 4
+For each new child, the parent Gramine process creates a new process with a new
+Gramine instance and thus a new enclave. For example, if Nginx main process
+creates 4 workers, then there will be 5 Gramine instances and 5 SGX enclaves:
+one main Gramine process with its enclave and 4 child Gramine processes with 4
 enclaves.
 
 To create a new child process, Linux has the following system calls:
@@ -298,31 +266,31 @@ memory of the parent process into the child, as well as all the resources like
 opened files, network connections, etc. In a normal environment, this copying is
 very fast because it uses the copy-on-write semantics. However, the SGX hardware
 doesn't have the notions of copy-on-write  and sharing of memory. Therefore,
-Graphene emulates ``fork/vfork/clone`` via the checkpoint-and-restore mechanism:
+Gramine emulates ``fork/vfork/clone`` via the checkpoint-and-restore mechanism:
 all enclave memory and resources of the parent process are serialized into one
 blob of data, the blob is encrypted and sent to the child process. The child
 process awaits this blob of data, receives it, decrypts it, and restores into
 its own enclave memory. This is a much more expensive operation than
-copy-on-write, therefore forking in Graphene is much slower than in native
+copy-on-write, therefore forking in Gramine is much slower than in native
 Linux. Some studies report 1,000x overhead of forking over native.
 
 Moreover, multi-process applications periodically need to communicate with each
 other. For example, the Nginx parent process sends a signal to one of the worker
 processes to inform that a new request is available for processing. All this
-Inter-Process Communication (IPC) is transparently encrypted in Graphene.
+Inter-Process Communication (IPC) is transparently encrypted in Gramine.
 Encryption by itself incurs 1-10% overhead. This means that a
 communication-heavy multi-process application may experience significant
 overheads.
 
 To summarize, there are two sources of overhead for multi-process applications
-in Graphene:
+in Gramine:
 
 #. ``Fork()``, ``vfork()`` and ``clone()`` system calls are very expensive in
-   Graphene and in SGX in general. This is because Intel SGX lacks the
+   Gramine and in SGX in general. This is because Intel SGX lacks the
    mechanisms for memory sharing and copy-on-write semantics. They are emulated
-   via checkpoint-and-restore in Graphene.
+   via checkpoint-and-restore in Gramine.
 
-#. Inter-Process Communication (IPC) is moderately expensive in Graphene because
+#. Inter-Process Communication (IPC) is moderately expensive in Gramine because
    all IPC is transparently encrypted/decrypted using the TLS-PSK with AES-GCM
    crypto.
 
@@ -344,9 +312,9 @@ that they have severe SGX-hardware limitations. In particular:
 #. RDTSC/RDTSCP instructions. These instructions are forbidden to execute in an
    SGX enclave on older machines. Unfortunately, many applications and runtimes
    use these instructions frequently, assuming that they are always available.
-   This leads to significant overheads when running such applications: Graphene
+   This leads to significant overheads when running such applications: Gramine
    treats each RDTSC instruction as trap-and-emulate, which is very expensive
-   (enclave performs an AEX, Graphene enters the enclave, fixes RDTSC, exits the
+   (enclave performs an AEX, Gramine enters the enclave, fixes RDTSC, exits the
    enclave, and re-enters it from the interrupted point). Solution: move to
    newer Intel processors that like Icelake which allow RDTSC inside the
    enclave.
@@ -354,19 +322,19 @@ that they have severe SGX-hardware limitations. In particular:
 #. CPUID and SYSCALL instructions. These instructions are forbidden to execute
    in an SGX enclave on all currently available machines. Fortunately,
    applications use these instructions typically only during initialization and
-   never on hot paths. Graphene emulates CPUID and SYSCALL similarly to RDTSC,
+   never on hot paths. Gramine emulates CPUID and SYSCALL similarly to RDTSC,
    but since this happens very infrequently, it is not a realistic bottleneck.
    However, it is always advisable to verify that the application doesn’t rely
    on CPUID and SYSCALL too much. This is especially important for statically
    built applications that may rely on raw SYSCALL instructions instead of
-   calling Glibc (recall that Graphene replaces native Glibc with our patched
-   version that performs function calls inside Graphene instead of raw SYSCALL
+   calling Glibc (recall that Gramine replaces native Glibc with our patched
+   version that performs function calls inside Gramine instead of raw SYSCALL
    instructions and thus avoids this overhead).
 
-#. CPU topology. The CPU topology may negatively affect performance of Graphene.
+#. CPU topology. The CPU topology may negatively affect performance of Gramine.
    For example, if the machine has several NUMA domains, it is important to
-   restrict Graphene runs to only one NUMA domain, e.g., via the command
-   ``numactl --cpunodebind=0 --membind=0``. Otherwise Graphene may spread
+   restrict Gramine runs to only one NUMA domain, e.g., via the command
+   ``numactl --cpunodebind=0 --membind=0``. Otherwise Gramine may spread
    enclave threads and enclave memory across several NUMA domains, which will
    lead to higher memory access latencies and overall worse performance.
 
@@ -374,10 +342,10 @@ Other considerations
 --------------------
 
 For performance testing, always use the non-debug versions of all software. In
-particular, build Graphene in non-debug configuration (simple ``make SGX=1``
+particular, build Gramine in non-debug configuration (simple ``make SGX=1``
 defaults to non-debug configuration). Also build the application itself in
 non-debug configuration (again, typically simple ``make SGX=1`` is sufficient).
-Finally, disable the debug log of Graphene by specifying the manifest option
+Finally, disable the debug log of Gramine by specifying the manifest option
 ``loader.log_level = "none"``.
 
 There are several manifest options that may improve performance of some
@@ -397,11 +365,11 @@ enclave size by tweaking ``sgx.enclave_size = "512M"``,
 ``sgx.enclave_size = "1G"``, ``sgx.enclave_size = "2G"``, and so on. If this
 doesn't help, it could be due to insufficient stack size: in this case try to
 increase ``sys.stack.size = "256K"``, ``sys.stack.size = "2M"``,
-``sys.stack.size = "4M"`` and so on. Finally, if Graphene complains about
+``sys.stack.size = "4M"`` and so on. Finally, if Gramine complains about
 insufficient number of TCSs or threads, increase ``sgx.thread_num = 4``,
 ``sgx.thread_num = 8``, ``sgx.thread_num = 16``, and so on.
 
-Do not forget about the cost of software encryption! Graphene transparently
+Do not forget about the cost of software encryption! Gramine transparently
 encrypts many means of communication:
 
 #. Inter-Process Communication (IPC) is encrypted via TLS-PSK. Regular pipes,
@@ -422,9 +390,9 @@ Parsing the manifest can be another source of overhead. If you have a really
 long manifest (several MBs in size), parsing such a manifest may significantly
 deteriorate start-up performance. This is rarely a case, but keep manifests as
 small as possible. Note that this overhead is due to our sub-optimal parser.
-Once Graphene moves to a better manifest parser, this won't be an issue.
+Once Gramine moves to a better manifest parser, this won't be an issue.
 
-Finally, recall that by default Graphene doesn't propagate environment variables
+Finally, recall that by default Gramine doesn't propagate environment variables
 into the SGX enclave. Thus, environment variables like ``OMP_NUM_THREADS`` and
 ``MKL_NUM_THREADS`` are not visible to the graphenized application by default.
 To propagate them into the enclave, either use the insecure manifest option
@@ -492,7 +460,7 @@ Recording samples with ``perf record``
 
 To record (saves ``perf.data``)::
 
-    perf record graphene-direct application
+    perf record gramine-direct application
 
 To view the report for ``perf.data``::
 
@@ -533,10 +501,10 @@ SGX profiling
 There is support for profiling the code inside the SGX enclave. Here is how to
 use it:
 
-#. Compile Graphene with ``SGX=1 DEBUGOPT=1``.
+#. Compile Gramine with ``SGX=1 DEBUGOPT=1``.
 
    You can also use ``SGX=1 DEBUG=1``, but ``DEBUGOPT=1`` (optimizations
-   enabled) makes Graphene performance more similar to release build.
+   enabled) makes Gramine performance more similar to release build.
 
 #. Add ``sgx.profile.enable = "main"`` to manifest (to collect data for the main
    process), or ``sgx.profile.enable = "all"`` (to collect data for all
@@ -591,5 +559,5 @@ Other useful tools for profiling
 * ``strace -c`` will display Linux system call statistics
 * Valgrind (with `Callgrind
   <https://valgrind.org/docs/manual/cl-manual.html>`__) unfortunately doesn't
-  work, see `issue #1919 <https://github.com/oscarlab/graphene/issues/1919>`__
-  for discussion.
+  work, see `issue #1919
+  <https://github.com/gramineproject/graphene/issues/1919>`__ for discussion.

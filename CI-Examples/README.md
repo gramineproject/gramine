@@ -3,7 +3,7 @@
 This folder contains application integration examples. They were tested on
 Ubuntu 18.04 and 20.04.
 
-For instructions how to build and run each application under Graphene, please
+For instructions how to build and run each application under Gramine, please
 see the README.md in each subdirectory.
 
 Please note that most of the examples use oversimplified configurations which
@@ -13,20 +13,20 @@ production workloads, please inspect and harden the configurations.
 
 We recommend to look at the (extensively commented) Redis example to get an idea
 how to write the README, Makefile and manifest files. If you want to contribute
-a new example to Graphene and you take the Redis example as a template, we
+a new example to Gramine and you take the Redis example as a template, we
 recommend to remove the comments from your copies as they only add noise (see
 e.g. Memcached for a "stripped-down" example).
 
 ## Building Examples
 
 All our examples use simple Makefiles to build the examples and enable them
-under Graphene. Use one of these commands:
+under Gramine. Use one of these commands:
 - `make`: create non-SGX no-debug-log manifest
 - `make DEBUG=1`: create non-SGX debug-log manifest
 - `make SGX=1`: create SGX no-debug-log manifest
 - `make SGX=1 DEBUG=1`: create SGX debug-log manifest
 
-Use `make clean` to remove Graphene-generated artifacts and `make distclean` to
+Use `make clean` to remove Gramine-generated artifacts and `make distclean` to
 remove all build artifacts (if applicable).
 
 ## How to Contribute?
@@ -45,7 +45,7 @@ addition, your application sample should have the following elements:
   command. If your application needs extra building steps, please document them
   in the `README.md`. In addition, we ask you to provide sufficient comments in
   the `Makefile` to help users understand the build process. If your application
-  also runs on Graphene-SGX, please include the commands for signing and
+  also runs on Gramine-SGX, please include the commands for signing and
   retrieving the token in the `Makefile`.
 
 - Manifest:

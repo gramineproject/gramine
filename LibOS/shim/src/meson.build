@@ -1,4 +1,4 @@
-libgraphene_libos = cc.find_library('graphene-lib',
+libgramine_libos = cc.find_library('gramine-lib',
     dirs: join_paths(meson.current_source_dir(), '.lib'))
 
 if skeleton
@@ -154,7 +154,7 @@ shared_library('sysdb',
         shim_lds,
     ],
     dependencies: [
-        libgraphene_libos,
+        libgramine_libos,
         libpal,
     ],
 

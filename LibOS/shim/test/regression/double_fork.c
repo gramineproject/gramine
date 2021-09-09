@@ -3,12 +3,12 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 /*
- * The main idea here is to test Graphene's internal connections between two processes.
+ * The main idea here is to test Gramine's internal connections between two processes.
  * The main process forks a child, which in turns forks a grandchild (hence the name "double_fork").
  * Then the intermediate (child process) exits and when parent receives information about that (via
  * `wait` syscall), it notifies grandchild process (using a pipe) that the setup is done. Then
  * the grandchild sends a signal to the main process, which receival should indicate that we have
- * a working "main <-> grandchild" Graphene's internal connection.
+ * a working "main <-> grandchild" Gramine's internal connection.
  */
 #define _GNU_SOURCE
 #include <err.h>

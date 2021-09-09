@@ -3,7 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-/* Wrapper for invoking testing code from inside Graphene (`shim_run_test`). */
+/* Wrapper for invoking testing code from inside Gramine (`shim_run_test`). */
 
 #include <stdio.h>
 

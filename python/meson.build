@@ -1,12 +1,23 @@
-subdir('graphenelibos')
+subdir('graminelibos')
 
 install_data([
-    'graphene-manifest',
+    'gramine-manifest',
 ], install_dir: get_option('bindir'))
+
+meson.add_install_script('/bin/sh', '-c',
+    'ln -sf legacy-graphene-to-gramine "$MESON_INSTALL_DESTDIR_PREFIX"/@0@'.format(
+        join_paths(get_option('bindir'), 'graphene-manifest')))
 
 if sgx
     install_data([
-        'graphene-sgx-get-token',
-        'graphene-sgx-sign',
+        'gramine-sgx-get-token',
+        'gramine-sgx-sign',
     ], install_dir: get_option('bindir'))
+
+    meson.add_install_script('/bin/sh', '-c',
+        'ln -sf legacy-graphene-to-gramine "$MESON_INSTALL_DESTDIR_PREFIX"/@0@'.format(
+            join_paths(get_option('bindir'), 'graphene-sgx-get-token')))
+    meson.add_install_script('/bin/sh', '-c',
+        'ln -sf legacy-graphene-to-gramine "$MESON_INSTALL_DESTDIR_PREFIX"/@0@'.format(
+            join_paths(get_option('bindir'), 'graphene-sgx-sign')))
 endif

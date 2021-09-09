@@ -22,7 +22,7 @@
 static noreturn void libos_clean_and_exit(int exit_code) {
     /*
      * TODO: if we are the IPC leader, we need to either:
-     * 1) kill all other Graphene processes
+     * 1) kill all other Gramine processes
      * 2) wait for them to exit here, before we terminate the IPC helper
      */
 
@@ -31,7 +31,8 @@ static noreturn void libos_clean_and_exit(int exit_code) {
     struct shim_thread* async_thread = terminate_async_worker();
     if (async_thread) {
         /* TODO: wait for the thread to finish its tasks and exit in the host OS.
-         * This is tracked by the following issue: https://github.com/oscarlab/graphene/issues/440
+         * This is tracked by the following issue:
+         * https://github.com/gramineproject/graphene/issues/440
          */
         put_thread(async_thread);
     }
@@ -48,7 +49,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
      * leader could give this ID to somebody else. This could be a nasty conflict.
      * The problem is that solving this is hard: we would need to make the parent own (or at least
      * release) our pid, but that would require "reparenting" in case the parent dies before us.
-     * Such solution would also have some nasty consequences: Graphene pid 1 (which I guess would
+     * Such solution would also have some nasty consequences: Gramine pid 1 (which I guess would
      * be the new parent) might not be expecting to have more children than it spawned (normal apps
      * do not expect that, init process is pretty special).
      */

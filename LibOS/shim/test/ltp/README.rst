@@ -1,5 +1,5 @@
-LTP FOR GRAPHENE
-================
+LTP FOR GRAMINE
+===============
 
 Just run ``make regression``, or ``make SGX=1 regression``.
 
@@ -9,7 +9,7 @@ is for consumption in Jenkins. There is also rudimentary logging.
 To run a single testcase, execute the following commands::
 
     cd <LTP_REPO>/install/testcases/bin/
-    graphene-{direct|sgx} <TEST_BINARY>
+    gramine-{direct|sgx} <TEST_BINARY>
 
 In this way, one can debug one particular syscall testcase.
 
@@ -20,8 +20,8 @@ To get more information, you can:
   change for ``make regression`` to work correctly. This will also not work when
   running under SGX, because the manifest needs to be re-signed afterwards.
 
-- Use GDB: ``GDB=1 graphene-{direct|sgx} <TEST_BINARY>``. You should compile
-  Graphene with ``DEBUG=1`` so that you can see the symbols inside Graphene.
+- Use GDB: ``GDB=1 gramine-{direct|sgx} <TEST_BINARY>``. You should compile
+  Gramine with ``DEBUG=1`` so that you can see the symbols inside Gramine.
 
 Running all the cases
 ---------------------
@@ -66,7 +66,7 @@ Another config file path can be specified using ``--config`` argument to
 ``./runltp_xml.py``. Options can be overridden as parameters to ``-o`` argument.
 See ``--help``.
 
-A lot of LTP tests cause problems in Graphene. The ones we've already analyzed
+A lot of LTP tests cause problems in Gramine. The ones we've already analyzed
 should have an appropriate comment in the ``ltp.cfg`` file.
 
 SGX mode

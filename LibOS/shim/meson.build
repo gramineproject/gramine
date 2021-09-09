@@ -1,5 +1,5 @@
 cflags_libos = [
-    # TODO: check whether all standard functions implemented in Graphene match their APIs and remove
+    # TODO: check whether all standard functions implemented in Gramine match their APIs and remove
     # this
     '-fno-builtin',
 

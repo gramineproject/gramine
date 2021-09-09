@@ -336,7 +336,7 @@ uint16_t __ntohs(uint16_t x);
 
 extern const char* const* sys_errlist_internal;
 
-/* Graphene functions */
+/* Gramine functions */
 
 int get_norm_path(const char* path, char* buf, size_t* inout_size);
 int get_base_name(const char* path, char* buf, size_t* inout_size);

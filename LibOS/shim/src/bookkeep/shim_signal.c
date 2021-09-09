@@ -463,7 +463,7 @@ static void illegal_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     struct shim_vma_info vma_info = {.file = NULL};
     if (is_internal(get_cur_thread()) || context_is_libos(context)
             || lookup_vma((void*)addr, &vma_info) || (vma_info.flags & VMA_INTERNAL)) {
-        internal_fault("Illegal instruction during Graphene internal execution", addr, context);
+        internal_fault("Illegal instruction during Gramine internal execution", addr, context);
     }
 
     if (vma_info.file) {

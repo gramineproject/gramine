@@ -9,7 +9,7 @@ Building
    release. Instead, for all users, there should be documentation for installing
    without full compilation.
 
-Graphene consists of several components:
+Gramine consists of several components:
 
 - The Library OS itself (a shared library named ``libsysdb.so``, called the
   "shim" in our source code)
@@ -17,16 +17,16 @@ Graphene consists of several components:
 - A patched GNU C Library (a set of shared libraries ``libc.so``,
   ``libpthread.so``, ``libm.so``, etc.)
 
-The build of Graphene implies building at least the first two components. The
+The build of Gramine implies building at least the first two components. The
 build of the patched C library is optional but highly recommended for
 performance reasons. The patched C library is built by default.
 
-Graphene currently only works on the x86_64 architecture. Graphene is currently
+Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
-building and installing Graphene on Ubuntu with Linux kernel version 5.11 or
-higher. If you find problems with Graphene on other Linux distributions, please
+building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
+higher. If you find problems with Gramine on other Linux distributions, please
 contact us with a |~| detailed `bug report
-<https://github.com/oscarlab/graphene/issues/new>`__.
+<https://github.com/gramineproject/gramine/issues/new>`__.
 
 Installing dependencies
 -----------------------
@@ -55,7 +55,7 @@ For GDB support and to run all tests locally you also need to install::
 Dependencies for SGX
 ^^^^^^^^^^^^^^^^^^^^
 
-The build of Graphene with SGX support requires the corresponding SGX software
+The build of Gramine with SGX support requires the corresponding SGX software
 infrastructure to be installed on the system. In particular, the FSGSBASE
 functionality must be enabled in the Linux kernel, the Intel SGX driver must be
 running, and Intel SGX SDK/PSW/DCAP must be installed.
@@ -129,7 +129,7 @@ You can either place the generated enclave key in the default path,
 location through the environment variable ``SGX_SIGNER_KEY``.
 
 After signing the application's manifest, users may ship the application and
-Graphene binaries, along with an SGX-specific manifest (``.manifest.sgx``
+Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
 extension), the SIGSTRUCT signature file (``.sig`` extension), and the
 EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
 
@@ -142,13 +142,13 @@ Building
    need to run **both** buildchains, first :command:`make` then
    :command:`meson`.
 
-To build Graphene, in the root directory of Graphene repo, run the following
+To build Gramine, in the root directory of Gramine repo, run the following
 commands::
 
-   # if you build graphene-direct (note that "direct" means non-SGX version)
+   # if you build gramine-direct (note that "direct" means non-SGX version)
    make
 
-   # if you build graphene-sgx
+   # if you build gramine-sgx
    make SGX=1 ISGX_DRIVER_PATH=<path-to-sgx-driver-sources>
 
 The path to the SGX driver sources must point to the absolute path where the SGX
@@ -161,7 +161,7 @@ Running :command:`make SGX=1 sgx-tokens` in the test or regression directory
 will automatically generate the required SIGSTRUCT signatures (``.sig`` files)
 and EINITTOKENs (``.token`` files).
 
-Then install Graphene (recall that "direct" means non-SGX version)::
+Then install Gramine (recall that "direct" means non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
    ninja -C build/
@@ -173,9 +173,9 @@ built both).
 
 .. note::
 
-   When installing from sources, Graphene executables are placed under
+   When installing from sources, Gramine executables are placed under
    ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
-   for executables under this path. If your system reports that Graphene
+   for executables under this path. If your system reports that Gramine
    programs can not be found, you might need to edit your configuration files so
    that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
 
@@ -183,8 +183,8 @@ Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - To create a debug build, run :command:`make DEBUG=1` and :command:`meson
-  --buildtype=debug`. This adds debug symbols in all Graphene components, builds
-  them without optimizations, and enables detailed debug logs in Graphene.
+  --buildtype=debug`. This adds debug symbols in all Gramine components, builds
+  them without optimizations, and enables detailed debug logs in Gramine.
 
   .. warning::
      Debug builds are not suitable for production.
@@ -202,7 +202,7 @@ Additional build options
      (e.g. for profiling).
 
 - To compile with undefined behavior sanitization (UBSan), run :command:`make
-  UBSAN=1` and :command:`meson -Dubsan=enabled`. This causes Graphene to abort
+  UBSAN=1` and :command:`meson -Dubsan=enabled`. This causes Gramine to abort
   when undefined behavior is detected (and display information about source
   line). UBSan can be enabled for both debug and non-debug builds.
 
@@ -241,6 +241,8 @@ Advanced: installing Linux kernel with FSGSBASE patches
 FSGSBASE patchset was merged in Linux kernel version 5.9. For older kernels it
 is available as `separate patches
 <https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
+(Note that Gramine was prevously called *Graphene* and was hosted under a
+different organization, hence the name of the linked repository.)
 
 The following instructions to patch and compile a Linux kernel with FSGSBASE
 support below are written around Ubuntu 18.04 LTS (Bionic Beaver) with a Linux
@@ -282,4 +284,4 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
-SDK/PSW, and Graphene itself.
+SDK/PSW, and Gramine itself.

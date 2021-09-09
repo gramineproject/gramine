@@ -5,14 +5,14 @@ minimal server and clients written against the Secret Provisioning library.
 
 This example uses the Secret Provisioning libraries `secret_prov_attest.so` for
 clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-server. These libraries are installed together with Graphene (for DCAP version,
+server. These libraries are installed together with Gramine (for DCAP version,
 you need `meson setup ... -Ddcap=enabled`). Additionally, mbedTLS libraries are
 required. For ECDSA/DCAP attestation, the DCAP software infrastructure must be
 installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
-https://graphene.readthedocs.io/en/latest/attestation.html.
+https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## Secret Provisioning server
 
@@ -38,7 +38,7 @@ There are three clients in this example:
 2. Feature-rich client. It uses a programmatic C API to get two secrets from the
    server.
 3. Protected-files client. Similarly to the minimal client, it relies on
-   constructor-time secret provisioning and instructs Graphene to consider the
+   constructor-time secret provisioning and instructs Gramine to consider the
    provisioned secret as the wrap (master) key for the Protected Files feature.
    After the master key is applied, the client reads an encrypted file
    `files/input.txt`.
@@ -63,13 +63,13 @@ RA_TLS_EPID_API_KEY=12345678901234567890123456789012 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./secret_prov_server_epid &
 
 # test minimal client
-graphene-sgx ./secret_prov_min_client
+gramine-sgx ./secret_prov_min_client
 
 # test feature-rich client
-graphene-sgx ./secret_prov_client
+gramine-sgx ./secret_prov_client
 
 # test protected-files client
-graphene-sgx ./secret_prov_pf_client
+gramine-sgx ./secret_prov_pf_client
 
 kill %%
 ```
@@ -82,13 +82,13 @@ make app dcap files/input.txt
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./secret_prov_server_dcap &
 
 # test minimal client
-graphene-sgx ./secret_prov_min_client
+gramine-sgx ./secret_prov_min_client
 
 # test feature-rich client
-graphene-sgx ./secret_prov_client
+gramine-sgx ./secret_prov_client
 
 # test protected-files client
-graphene-sgx ./secret_prov_pf_client
+gramine-sgx ./secret_prov_pf_client
 
 kill %%
 ```

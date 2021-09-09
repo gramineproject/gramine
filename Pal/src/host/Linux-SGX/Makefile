@@ -33,7 +33,7 @@ defs	= -DIN_PAL
 CFLAGS += $(defs)
 ASFLAGS += $(defs)
 
-commons_objs_encl = bogomips.o graphene_unix_socket_addr.o
+commons_objs_encl = bogomips.o gramine_unix_socket_addr.o
 commons_objs_urts = debug_map.o file_utils.o main_exec_path.o timespec_utils.o topo_info.o
 
 enclave-objs = \
@@ -86,7 +86,7 @@ urts-objs = \
 
 urts-asm-objs = sgx_entry.o
 
-graphene_lib = .lib/graphene-lib.a
+gramine_lib = .lib/gramine-lib.a
 
 # use TLS-based stack protector of GCC (trusted PAL must have a canary in its PAL_TCB at offset
 # 0x8, untrusted PAL uses the default GCC scheme)
@@ -135,7 +135,7 @@ common_syscall.o: ../Linux-common/arch/$(ARCH)/syscall.S
 
 CFLAGS-pal-sgx = -Wl,-z,relro,-z,now -pie
 LDLIBS-pal-sgx += -lprotobuf-c
-pal-sgx: $(urts-objs) $(urts-asm-objs) $(graphene_lib)
+pal-sgx: $(urts-objs) $(urts-asm-objs) $(gramine_lib)
 	$(call cmd,cmulti)
 
 quote/aesm.pb-c.o: quote/aesm.pb-c.c quote/aesm.pb-c.h

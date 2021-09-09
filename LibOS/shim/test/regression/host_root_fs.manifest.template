@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ env.PWD }}/host_root_fs"
 loader.argv0_override = "host_root_fs"
 
@@ -8,13 +8,13 @@ fs.root.type = "chroot"
 fs.root.path = "/"
 fs.root.uri = "file:/"
 
-fs.mount.graphene_lib.type = "chroot"
-fs.mount.graphene_lib.path = "/lib"
-fs.mount.graphene_lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.gramine_lib.type = "chroot"
+fs.mount.gramine_lib.path = "/lib"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ env.PWD }}/host_root_fs",
 ]

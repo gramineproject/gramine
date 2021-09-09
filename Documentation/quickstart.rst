@@ -6,11 +6,11 @@ Quick start
 Quick start without SGX support
 -------------------------------
 
-#. Clone the Graphene repository::
+#. Clone the Gramine repository::
 
-      git clone https://github.com/oscarlab/graphene.git
+      git clone https://github.com/gramineproject/gramine.git
 
-#. Build Graphene:
+#. Build Gramine:
 
    .. NOTE if you're about to sort the apt-get invocation below, see note in
       building.rst
@@ -21,7 +21,7 @@ Quick start without SGX support
           autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
           wget
       python3 -m pip install 'meson>=0.55'
-      cd graphene
+      cd gramine
       make
       meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled
       ninja -C build/
@@ -31,14 +31,14 @@ Quick start without SGX support
 
       cd LibOS/shim/test/regression
       make
-      graphene-direct helloworld
+      gramine-direct helloworld
 
 #. For more complex examples, see :file:`CI-Examples` directory.
 
 Quick start with SGX support
--------------------------------
+----------------------------
 
-Graphene requires several features from your system:
+Gramine requires several features from your system:
 
 - the FSGSBASE feature of recent processors must be enabled in the Linux kernel,
 - the Intel SGX driver must be built in the Linux kernel,
@@ -50,16 +50,16 @@ descriptions in :doc:`building`.
 #. Ensure that Intel SGX is enabled on your platform using
    :program:`is_sgx_available`.
 
-#. Clone the Graphene repository::
+#. Clone the Gramine repository::
 
-      git clone https://github.com/oscarlab/graphene.git
-      cd graphene
+      git clone https://github.com/gramineproject/gramine.git
+      cd gramine
 
 #. Prepare a signing key::
 
       openssl genrsa -3 -out Pal/src/host/Linux-SGX/signer/enclave-key.pem 3072
 
-#. Build Graphene and Graphene-SGX:
+#. Build Gramine with SGX support:
 
    .. NOTE if you're about to sort the apt-get invocation below, see note in
       building.rst
@@ -89,14 +89,14 @@ descriptions in :doc:`building`.
       cd LibOS/shim/test/regression
       make SGX=1
       make SGX=1 sgx-tokens
-      graphene-sgx helloworld
+      gramine-sgx helloworld
 
 Troubleshooting
 ---------------
 
-- When installing from sources, Graphene executables are placed under
+- When installing from sources, Gramine executables are placed under
   ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
-  for executables under this path. If your system reports that Graphene programs
+  for executables under this path. If your system reports that Gramine programs
   can not be found, you might need to edit your configuration files so that
   ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
 
@@ -109,12 +109,14 @@ Troubleshooting
 Running sample applications
 ---------------------------
 
-We prepared and tested several applications to demonstrate Graphene and
-Graphene-SGX usability. These applications can be found in the
-:file:`CI-Examples` folder in the repository, each containing a short README
-with instructions how to test it. We recommend starting with a simpler,
-thoroughly documented example of Redis, to understand manifest options and
-features of Graphene.
+We prepared and tested several applications to demonstrate Gramine usability.
+These applications can be found in the :file:`CI-Examples` folder in the
+repository, each containing a short README with instructions how to test it. We
+recommend starting with a simpler, thoroughly documented example of Redis, to
+understand manifest options and features of Gramine.
+
+Additional sample configurations for applications enabled in Gramine can be
+found in a separate repository https://github.com/gramineproject/examples.
 
 Please note that these sample applications are tested on Ubuntu 18.04 and 20.04.
 Most of these applications are also known to run correctly on

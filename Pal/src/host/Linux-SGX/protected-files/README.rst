@@ -3,15 +3,15 @@ Protected Files
 ===============
 
 Protected files (PF) are a type of files that can be specified in the manifest (SGX only). They are
-encrypted on disk and transparently decrypted when accessed by Graphene or by application running
-inside Graphene.
+encrypted on disk and transparently decrypted when accessed by Gramine or by application running
+inside Gramine.
 
 Features
 ========
 
 - Data is encrypted (confidentiality) and integrity protected (tamper resistance).
 - File swap protection (a PF can only be accessed when in a specific path).
-- Transparency (Graphene application sees PFs as regular files, no need to modify the application).
+- Transparency (Gramine application sees PFs as regular files, no need to modify the application).
 
 Example
 -------
@@ -52,5 +52,5 @@ TODO
 ====
 
 - Truncating protected files is not yet implemented.
-- The recovery file feature is disabled, this needs to be discussed if it's needed in Graphene.
+- The recovery file feature is disabled, this needs to be discussed if it's needed in Gramine.
 - Tests for invalid/malformed/corrupted files need to be ported to the new format.

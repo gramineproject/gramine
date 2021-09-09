@@ -1,7 +1,7 @@
 Attestation and Secret Provisioning
 ===================================
 
-Graphene is typically used to create and run Trusted Execution Environments
+Gramine is typically used to create and run Trusted Execution Environments
 (:term:`TEE`). A very important aspect of a TEE is :term:`Attestation`. Broadly
 speaking, attestation is a mechanism for a remote user to verify that the
 application runs on a real hardware in an up-to-date TEE with the expected
@@ -11,7 +11,7 @@ There are two types of attestation: :term:`Local Attestation` and
 :term:`Remote Attestation`. Local attestation is used when two TEEs run on the
 same physical machine and remote attestation is used when a user attests a TEE
 running on a remote physical machine. In the following, we discuss only
-:term:`Remote Attestation`. Moreover, even though Graphene attestation flows are
+:term:`Remote Attestation`. Moreover, even though Gramine attestation flows are
 designed to be TEE-agnostic, we discuss only :term:`SGX` remote attestation
 flows (the SGX flows are currently the only ones implemented).
 
@@ -22,10 +22,10 @@ processed securely. In addition to this assurance, the user needs to create a
 cases, the user also wants :term:`Secret Provisioning` to transparently
 provision secret keys and other sensitive data to the remote TEE.
 
-Graphene provides support for all three levels of attestation flows:
+Gramine provides support for all three levels of attestation flows:
 
 #. :term:`Remote Attestation` is exposed to the application via
-   ``/dev/attestation`` pseudo-filesystem. Remote attestation in Graphene uses
+   ``/dev/attestation`` pseudo-filesystem. Remote attestation in Gramine uses
    the Intel SGX PSW's AESM service and the Intel DCAP libraries under the hood.
 
 #. :term:`Secure Channel` is constructed using the RA-TLS libraries.
@@ -34,12 +34,12 @@ Graphene provides support for all three levels of attestation flows:
 #. :term:`Secret Provisioning` is built using the Secret Provisioning libraries.
    These libraries use RA-TLS under the hood.
 
-Applications running under Graphene can use each of the above three levels to
+Applications running under Gramine can use each of the above three levels to
 build their attestation flows. Each next level builds on the previous one and
 exposes a simpler API to the application (but also is more restricted in its
 functionality).
 
-In addition to these three Graphene-native flows, there is also an option to use
+In addition to these three Gramine-native flows, there is also an option to use
 third-party attestation & secret provisioning solutions. This option may be
 better suited for complex deployments, for example, deploying chained
 micro-services in the public cloud. Please refer to :ref:`third_party_solutions`
@@ -65,10 +65,10 @@ the attestation evidence from this enclave on a trusted machine.
 
 EPID based remote attestation starts with the enclavized user application
 opening the special file ``/dev/attestation/user_report_data`` for write (step
-1). Under the hood, Graphene uses the ``EREPORT`` hardware instruction to
+1). Under the hood, Gramine uses the ``EREPORT`` hardware instruction to
 generate an :term:`SGX Report` (step 2). After the SGX report is generated, the
 application opens another special file ``/dev/attestation/quote`` for read (step
-3). Under the hood, Graphene communicates with the :term:`Quoting Enclave` to
+3). Under the hood, Gramine communicates with the :term:`Quoting Enclave` to
 receive the :term:`SGX Quote` (step 4). In turn, the Quoting Enclave uses the
 EPID key provided by the :term:`Provisioning Enclave` (step 5, only during
 initial deployment of this SGX machine). The Provisioning Enclave requests the
@@ -179,10 +179,10 @@ is EPID based or DCAP/ECDSA based:
   :term:`Intel Provisioning Certification Service`, caching these certificates
   in the Provisioning Certificate Caching Service, etc.).
 
-Graphene does *not* provide any pseudo-files under ``/dev/attestation`` for
+Gramine does *not* provide any pseudo-files under ``/dev/attestation`` for
 verification of the attestation quote. Instead, the remote user is encouraged to
 use the :program:`quote_dump`, :program:`ias_request` and
-:program:`verify_ias_report` tools shipped together with Graphene (for
+:program:`verify_ias_report` tools shipped together with Gramine (for
 EPID based quote verification) or to use the Intel DCAP libraries and tools (for
 DCAP based quote verification).
 
@@ -349,7 +349,7 @@ communication with the remote user but simply a way to securely obtain this
 single key from a well-known location.
 
 This is the scenario where the high-level :term:`Secret Provisioning` interface
-comes into play. Secret Provisioning is shipped together with Graphene in the
+comes into play. Secret Provisioning is shipped together with Gramine in the
 form of (helper) shared libraries. These libraries are reference implementations
 for the flows to provision secrets from a trusted machine (service, verifier) to
 an enclavized application (client, attester). These libraries rely heavily on
@@ -403,7 +403,7 @@ environment variables if available:
   similar to ``sgx.protected_files_key`` manifest option. This environment
   variable is checked only if ``SECRET_PROVISION_CONSTRUCTOR`` is set. The
   library puts the provisioned key into ``/dev/attestation/protected_files_key``
-  so that Graphene recognizes it.
+  so that Gramine recognizes it.
 
 - ``SECRET_PROVISION_SERVERS`` (optional) -- a comma, semicolon or space
   separated list of server names with ports to connect to for secret
@@ -458,7 +458,7 @@ working correctly on the host.
 Third-Party Solutions
 ---------------------
 
-The three Graphene-native interfaces described above are quite limited in their
+The three Gramine-native interfaces described above are quite limited in their
 functionality. For example, RA-TLS currently creates only self-signed X.509
 certificates that may not fit well in traditional Public Key Infrastructure
 (PKI) flows.  As another example, our Secret Provisioning service is only a
@@ -474,7 +474,7 @@ This service itself runs in the SGX enclave, and is bootstrapped with a policy
 file that contains all the secure measurements and policies for each of the
 participating SGX applications.
 
-Fortunately, there are several such solutions that integrate with Graphene. We
+Fortunately, there are several such solutions that integrate with Gramine. We
 describe one of them below, and we will add more solutions in the future.
 
 Edgeless Marblerun
@@ -482,25 +482,25 @@ Edgeless Marblerun
 
 .. image:: ./img/marblerun.svg
    :target: ./img/marblerun.svg
-   :alt: Figure: Edgeless Marblerun integration with Graphene
+   :alt: Figure: Edgeless Marblerun integration with Gramine
 
 Marblerun is the service mesh for confidential computing from Edgeless Systems.
 Marblerun consists of two parts: the Coordinator (the centralized attestation &
-secret provisioning service) and the Marbles (separate Graphene applications).
+secret provisioning service) and the Marbles (separate Gramine applications).
 The Coordinator needs to be deployed once in the cluster and the Marble
-component needs to be integrated with each Graphene application. Marblerun
+component needs to be integrated with each Gramine application. Marblerun
 Coordinator is configured with a simple JSON document (the manifest). It
 specifies the topology of the cluster, the infrastructure properties, and
-provides configuration parameters for each Graphene application.
+provides configuration parameters for each Gramine application.
 
-Marblerun integrates with Graphene using the "premain" trick. In essence,
-instead of starting the Graphene application directly, Marblerun requires
-modifications to the Graphene manifest file to start its "premain" executable
+Marblerun integrates with Gramine using the "premain" trick. In essence,
+instead of starting the Gramine application directly, Marblerun requires
+modifications to the Gramine manifest file to start its "premain" executable
 first. This "premain" executable attests itself to the Coordinator, receives
 secrets from the Coordinator, patches command-line arguments, environment
-variables and files with these secrets, and only then starts the main Graphene
-application. This "premain" executable together with the Graphene application is
-referred to as a Marble. For more details, see `Marblerun docs on Graphene
+variables and files with these secrets, and only then starts the main Gramine
+application. This "premain" executable together with the Gramine application is
+referred to as a Marble. For more details, see `Marblerun docs on Gramine
 integration <https://www.marblerun.sh/docs/building-services/graphene>`__.
 
 The Coordinator serves as a centralized service for remote attestation of
@@ -508,14 +508,14 @@ Marbles and provisioning of secrets to them. The Coordinator verifies the
 identity and integrity of each newly spawned Marble before admitting it to the
 trusted cluster. Each Marble tries to register itself with the Coordinator by
 sending an activation request to it. This request contains the SGX quote, which
-allows the Coordinator to verify that the Marble (and thus the Graphene
+allows the Coordinator to verify that the Marble (and thus the Gramine
 application) adheres to the Marblerun manifest in effect.
 
-End users do not perform remote attestation on each Graphene application but
+End users do not perform remote attestation on each Gramine application but
 instead they only attest the Coordinator. After attesting the Coordinator and
 verifying its manifest, the end user gains trust in the whole cluster.
 Afterwards, the end user can establish conventional TLS connections to
-individual Graphene applications in the cluster and use them as normal. The
+individual Gramine applications in the cluster and use them as normal. The
 Coordinator acts as a Certificate Authority (CA) for these connections.
 
 For more information, refer to official Marblerun resources:

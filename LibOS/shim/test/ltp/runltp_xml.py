@@ -445,7 +445,7 @@ class TestSuite:
         ]
         self.sgx = self.config.getboolean(config.default_section, 'sgx')
 
-        self.loader = 'graphene-sgx' if self.sgx else 'graphene-direct'
+        self.loader = 'gramine-sgx' if self.sgx else 'gramine-direct'
 
         self.bindir = (
             config.getpath(config.default_section, 'ltproot') / 'testcases/bin')

@@ -5,7 +5,7 @@
  * Copyright (C) 2017 Fortanix Inc, and University of North Carolina at Chapel Hill.
  *
  * This file defines atomic operations (And barriers) for use in
- * Graphene.
+ * Gramine.
  *
  * The atomic operation assembly code is taken from musl libc, which
  * is subject to the MIT license.

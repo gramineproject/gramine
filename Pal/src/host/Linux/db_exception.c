@@ -67,7 +67,7 @@ static int get_pal_event(int sig) {
 
 /*
  * This function must be reentrant and thread-safe - this includes `upcall` too! Technically,
- * only for cases when the exception arrived while in Graphene code; if signal arrived while in
+ * only for cases when the exception arrived while in Gramine code; if signal arrived while in
  * the user app, this function doesn't need to be reentrant and thread-safe.
  */
 static void perform_signal_handling(int event, bool is_in_pal, PAL_NUM addr, ucontext_t* uc) {
@@ -92,7 +92,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         return;
     }
 
-    /* exception happened in PAL code: this is fatal in Graphene */
+    /* exception happened in PAL code: this is fatal in Gramine */
     const char* name = "exception";
     switch (event) {
         case PAL_EVENT_ARITHMETIC_ERROR:

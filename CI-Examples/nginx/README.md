@@ -21,19 +21,19 @@ We recommend to use the wrk benchmarking tool.
 make SGX=1
 
 # run original Nginx against HTTP and HTTPS benchmarks (benchmark-http.sh, uses ab)
-./install/sbin/nginx -c conf/nginx-graphene.conf &
+./install/sbin/nginx -c conf/nginx-gramine.conf &
 ../common_tools/benchmark-http.sh 127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
-# run Nginx in non-SGX Graphene against HTTP and HTTPS benchmarks
-graphene-direct ./nginx -c conf/nginx-graphene.conf &
+# run Nginx in non-SGX Gramine against HTTP and HTTPS benchmarks
+gramine-direct ./nginx -c conf/nginx-gramine.conf &
 ../common_tools/benchmark-http.sh 127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
-# run Nginx in Graphene-SGX against HTTP and HTTPS benchmarks
-graphene-sgx ./nginx -c conf/nginx-graphene.conf &
+# run Nginx in Gramine-SGX against HTTP and HTTPS benchmarks
+gramine-sgx ./nginx -c conf/nginx-gramine.conf &
 ../common_tools/benchmark-http.sh 127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
@@ -47,6 +47,6 @@ Alternatively, to run the Nginx server, use one of the following commands:
 
 ```
 make start-native-server
-make start-graphene-server
-make SGX=1 start-graphene-server
+make start-gramine-server
+make SGX=1 start-gramine-server
 ```

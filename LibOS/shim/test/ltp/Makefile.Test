@@ -58,14 +58,14 @@ relative-to = $(shell python -c "import os.path; print os.path.relpath(\"$(abspa
 %.manifest: %.manifest.template
 	@echo [ $@ ]
 	RELDIR=$(filter-out ./,$(call relative-to,$(dir $@),$(shell pwd))/) && \
-	graphene-manifest \
+	gramine-manifest \
 		-Dentrypoint=$* \
 		$(manifest_rules) \
 		$< > $@
 
 %.manifest: manifest.template
 	@echo [ $@ ]
-	graphene-manifest \
+	gramine-manifest \
 		-Dentrypoint=$* \
 		$(manifest_rules) \
 		$< > $@
@@ -75,8 +75,8 @@ SGX_DIR = $(PALDIR)/host/Linux-SGX
 RUNTIME_DIR = $(RUNTIME)
 
 SGX_SIGNER_KEY ?= $(SGX_DIR)/signer/enclave-key.pem
-SGX_SIGN = graphene-sgx-sign --key $(SGX_SIGNER_KEY)
-SGX_GET_TOKEN = graphene-sgx-get-token
+SGX_SIGN = gramine-sgx-sign --key $(SGX_SIGNER_KEY)
+SGX_GET_TOKEN = gramine-sgx-get-token
 
 # sgx manifest.sgx/sig/token
 drop_manifest_suffix = $(filter-out manifest,$(sort $(patsubst %.manifest,%,$(1))))

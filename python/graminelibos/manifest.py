@@ -4,7 +4,7 @@
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
 
 '''
-Graphene manifest renderer
+Gramine manifest renderer
 '''
 
 import os
@@ -71,8 +71,8 @@ class Runtimedir:
     def __truediv__(self, other):
         return self() / other
 
-def add_globals_from_graphene(env):
-    env.globals['graphene'] = {
+def add_globals_from_gramine(env):
+    env.globals['gramine'] = {
         'libos': pathlib.Path(_CONFIG_PKGLIBDIR) / 'libsysdb.so',
         'pkglibdir': pathlib.Path(_CONFIG_PKGLIBDIR),
         'runtimedir': Runtimedir(),
@@ -80,10 +80,10 @@ def add_globals_from_graphene(env):
 
     try:
         from . import _offsets as offsets
-    except ImportError: # no SGX graphene installed, skipping
+    except ImportError: # no SGX gramine installed, skipping
         pass
     else:
-        env.globals['graphene'].update(
+        env.globals['gramine'].update(
             (k, v) for k, v in offsets.__dict__.items()
             if not k.startswith('_'))
 
@@ -93,7 +93,7 @@ def add_globals_misc(env):
 
 def make_env():
     env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
-    add_globals_from_graphene(env)
+    add_globals_from_gramine(env)
     add_globals_from_python(env)
     add_globals_misc(env)
     return env

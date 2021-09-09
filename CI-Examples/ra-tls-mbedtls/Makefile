@@ -1,6 +1,6 @@
-GRAPHENEDIR ?= ../..
-SGX_SIGNER_KEY ?= $(GRAPHENEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
-GRAPHENE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/graphene # this is debian/ubuntu specific
+GRAMINEDIR ?= ../..
+SGX_SIGNER_KEY ?= $(GRAMINEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
+GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
@@ -10,10 +10,10 @@ RA_CLIENT_SPID ?=
 RA_CLIENT_LINKABLE ?= 0
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 CFLAGS += -O0 -ggdb3
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 CFLAGS += -O2
 endif
 
@@ -41,7 +41,7 @@ MBEDTLS_VERSION ?= 2.26.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
-	https://packages.grapheneproject.io/distfiles
+	https://packages.gramineproject.io/distfiles
 MBEDTLS_CHECKSUM ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
 
 ifeq ($(DEBUG),1)
@@ -66,8 +66,8 @@ mbedtls/.mbedtls_configured: mbedtls/.mbedtls_downloaded
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += -I./mbedtls/include $(shell pkg-config --cflags mbedtls_graphene)
-LFLAGS += -ldl $(shell pkg-config --libs mbedtls_graphene)
+CFLAGS += -I./mbedtls/include $(shell pkg-config --cflags mbedtls_gramine)
+LFLAGS += -ldl $(shell pkg-config --libs mbedtls_gramine)
 
 server: src/server.c mbedtls/.mbedtls_configured
 	$(CC) $< $(CFLAGS) $(LFLAGS) -o $@
@@ -78,8 +78,8 @@ client: src/client.c mbedtls/.mbedtls_configured
 ############################### SERVER MANIFEST ###############################
 
 server.manifest: server.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -88,7 +88,7 @@ server.manifest: server.manifest.template
 server.manifest.sgx: server.manifest server
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -96,20 +96,20 @@ server.manifest.sgx: server.manifest server
 server.sig: server.manifest.sgx
 
 server.token: server.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ########################### CLIENT (DCAP) MANIFEST ############################
 
 client_dcap.manifest: client.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
 client_dcap.manifest.sgx: client_dcap.manifest client
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -117,20 +117,20 @@ client_dcap.manifest.sgx: client_dcap.manifest client
 client_dcap.sig: client_dcap.manifest.sgx
 
 client_dcap.token: client_dcap.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ########################### CLIENT (EPID) MANIFEST ############################
 
 client_epid.manifest: client.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
 client_epid.manifest.sgx: client_epid.manifest client
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -138,13 +138,13 @@ client_epid.manifest.sgx: client_epid.manifest client
 client_epid.sig: client_epid.manifest.sgx
 
 client_epid.token: client_epid.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ############################### SGX CHECKS FOR CI #############################
 
 .PHONY: check_epid
 check_epid: app epid
-	graphene-sgx server epid & SERVER_ID=$$!; \
+	gramine-sgx server epid & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid > OUTPUT; \
 	./client epid 0 0 0 0 >> OUTPUT; \
@@ -157,14 +157,14 @@ check_epid: app epid
 
 .PHONY: check_epid_fail
 check_epid_fail: app epid
-	graphene-sgx server epid dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server epid dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 
 .PHONY: check_dcap
 check_dcap: app dcap
-	graphene-sgx server dcap >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dcap >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap > OUTPUT; \
 	./client dcap 0 0 0 0 >> OUTPUT; \
@@ -177,7 +177,7 @@ check_dcap: app dcap
 
 .PHONY: check_dcap_fail
 check_dcap_fail: app dcap
-	graphene-sgx server dcap dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dcap dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID

@@ -33,7 +33,7 @@ class Exec:
         self.template_vars = kwds
 
     @property
-    def graphene_path(self):
+    def gramine_path(self):
         return pathlib.Path(os.environ['ASV_BUILD_DIR'])
 
     @property
@@ -42,7 +42,7 @@ class Exec:
 
     @property
     def benchmarks_path(self):
-        return self.graphene_path / 'tests/benchmarks'
+        return self.gramine_path / 'tests/benchmarks'
 
     @property
     def manifest_path(self):
@@ -70,17 +70,17 @@ class Exec:
 
         with open(self.manifest_path, 'w') as file:
             file.write(template.substitute(
-                GRAPHENEDIR=os.environ['ASV_BUILD_DIR'],
+                GRAMINEDIR=os.environ['ASV_BUILD_DIR'],
                 ARCH_LIBDIR='/lib/x86_64-linux-gnu',
                 **self.template_vars))
 
-        signer_path = self.graphene_path / 'Pal/src/host/Linux-SGX/signer'
+        signer_path = self.gramine_path / 'Pal/src/host/Linux-SGX/signer'
 
         subprocess.run([os.fspath(signer_path / 'pal-sgx-sign'),
             '--manifest', os.fspath(self.manifest_path),
             '--output', os.fspath(self.manifest_sgx_path),
             '--key', os.fspath(signer_path / 'enclave-key.pem'),
-            '--libpal', os.fspath(self.graphene_path / 'Runtime/libpal-Linux-SGX.so'),
+            '--libpal', os.fspath(self.gramine_path / 'Runtime/libpal-Linux-SGX.so'),
         ], check=True, stdout=subprocess.PIPE)
 
         subprocess.run([os.fspath(signer_path / 'pal-sgx-get-token'),
@@ -101,16 +101,16 @@ class Exec:
 
     @property
     def pal_loader(self):
-        return os.fspath(self.graphene_path / 'Runtime/pal_loader')
+        return os.fspath(self.gramine_path / 'Runtime/pal_loader')
 
 
-    def run_in_graphene(self, *args, sgx=True):
+    def run_in_gramine(self, *args, sgx=True):
         self._set_sgx(sgx)
         return subprocess.run([self.pal_loader, os.fspath(self.manifest_sgx_path), *args],
             check=True, cwd=self.benchmarks_path)
 
     @contextlib.contextmanager
-    def graphene_server(self, *args, sgx=True, sleep=30):
+    def gramine_server(self, *args, sgx=True, sleep=30):
         self._set_sgx(sgx)
 
         try:

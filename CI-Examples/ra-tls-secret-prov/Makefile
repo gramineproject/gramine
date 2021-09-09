@@ -1,6 +1,6 @@
-GRAPHENEDIR ?= ../..
-SGX_SIGNER_KEY ?= $(GRAPHENEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
-GRAPHENE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/graphene # this is debian/ubuntu specific
+GRAMINEDIR ?= ../..
+SGX_SIGNER_KEY ?= $(GRAMINEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
+GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
@@ -10,10 +10,10 @@ RA_CLIENT_SPID ?=
 RA_CLIENT_LINKABLE ?= 0
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 CFLAGS += -O0 -ggdb3
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 CFLAGS += -O2
 endif
 
@@ -37,9 +37,9 @@ dcap: secret_prov_server_dcap
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += -Wall -std=c11 -I$(GRAPHENEDIR)/Pal/src/host/Linux-SGX/tools/ra-tls \
-          $(shell pkg-config --cflags mbedtls_graphene)
-LFLAGS += $(shell pkg-config --libs mbedtls_graphene)
+CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/Pal/src/host/Linux-SGX/tools/ra-tls \
+          $(shell pkg-config --cflags mbedtls_gramine)
+LFLAGS += $(shell pkg-config --libs mbedtls_gramine)
 
 secret_prov_server_epid: src/secret_prov_server.c
 	$(CC) $< $(CFLAGS) $(LFLAGS) -lsecret_prov_verify_epid -pthread -o $@
@@ -62,8 +62,8 @@ secret_prov_pf_client: src/secret_prov_pf_client.c
 ############################### CLIENT MANIFEST ###############################
 
 secret_prov_client.manifest: secret_prov_client.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -72,7 +72,7 @@ secret_prov_client.manifest: secret_prov_client.manifest.template
 secret_prov_client.manifest.sgx: secret_prov_client.manifest secret_prov_client
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -80,13 +80,13 @@ secret_prov_client.manifest.sgx: secret_prov_client.manifest secret_prov_client
 secret_prov_client.sig: secret_prov_client.manifest.sgx
 
 secret_prov_client.token: secret_prov_client.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ############################# MIN CLIENT MANIFEST #############################
 
 secret_prov_min_client.manifest: secret_prov_min_client.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -95,7 +95,7 @@ secret_prov_min_client.manifest: secret_prov_min_client.manifest.template
 secret_prov_min_client.manifest.sgx: secret_prov_min_client.manifest secret_prov_min_client
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -103,18 +103,18 @@ secret_prov_min_client.manifest.sgx: secret_prov_min_client.manifest secret_prov
 secret_prov_min_client.sig: secret_prov_min_client.manifest.sgx
 
 secret_prov_min_client.token: secret_prov_min_client.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ########################## PREPARE PROTECTED FILES ############################
 
 files/input.txt: files/wrap-key files/plain.txt
-	graphene-sgx-pf-crypt encrypt -w files/wrap-key -i files/plain.txt -o $@
+	gramine-sgx-pf-crypt encrypt -w files/wrap-key -i files/plain.txt -o $@
 
 ############################## PF CLIENT MANIFEST #############################
 
 secret_prov_pf_client.manifest: secret_prov_pf_client.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -123,7 +123,7 @@ secret_prov_pf_client.manifest: secret_prov_pf_client.manifest.template
 secret_prov_pf_client.manifest.sgx: secret_prov_pf_client.manifest secret_prov_pf_client
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -131,7 +131,7 @@ secret_prov_pf_client.manifest.sgx: secret_prov_pf_client.manifest secret_prov_p
 secret_prov_pf_client.sig: secret_prov_pf_client.manifest.sgx
 
 secret_prov_pf_client.token: secret_prov_pf_client.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 ############################# SGX CHECKS FOR CI ###############################
 
@@ -139,9 +139,9 @@ secret_prov_pf_client.token: secret_prov_pf_client.sig
 check_epid: app epid files/input.txt
 	./secret_prov_server_epid >/dev/null & SERVER_ID=$$!; \
 	sleep 3; \
-	graphene-sgx ./secret_prov_min_client > OUTPUT; \
-	graphene-sgx ./secret_prov_client >> OUTPUT; \
-	graphene-sgx ./secret_prov_pf_client >> OUTPUT; \
+	gramine-sgx ./secret_prov_min_client > OUTPUT; \
+	gramine-sgx ./secret_prov_client >> OUTPUT; \
+	gramine-sgx ./secret_prov_pf_client >> OUTPUT; \
 	kill -9 $$SERVER_ID;
 	@grep "Received secret = 'ffeeddccbbaa99887766554433221100'" OUTPUT && echo "[ Success 1/4 ]"
 	@grep "Received secret1 = 'ffeeddccbbaa99887766554433221100', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"
@@ -153,9 +153,9 @@ check_epid: app epid files/input.txt
 check_dcap: app dcap files/input.txt
 	./secret_prov_server_dcap >/dev/null & SERVER_ID=$$!; \
 	sleep 3; \
-	graphene-sgx ./secret_prov_min_client > OUTPUT; \
-	graphene-sgx ./secret_prov_client >> OUTPUT; \
-	graphene-sgx ./secret_prov_pf_client >> OUTPUT; \
+	gramine-sgx ./secret_prov_min_client > OUTPUT; \
+	gramine-sgx ./secret_prov_client >> OUTPUT; \
+	gramine-sgx ./secret_prov_pf_client >> OUTPUT; \
 	kill -9 $$SERVER_ID;
 	@grep "Received secret = 'ffeeddccbbaa99887766554433221100'" OUTPUT && echo "[ Success 1/4 ]"
 	@grep "Received secret1 = 'ffeeddccbbaa99887766554433221100', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"

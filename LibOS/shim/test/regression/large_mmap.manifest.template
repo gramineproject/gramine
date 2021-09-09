@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "large_mmap"
 loader.argv0_override = "large_mmap"
 
@@ -10,7 +10,7 @@ loader.insecure__disable_aslr = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.enclave_size = "8G"
 sgx.nonpie_binary = true
@@ -20,6 +20,6 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:large_mmap",
 ]

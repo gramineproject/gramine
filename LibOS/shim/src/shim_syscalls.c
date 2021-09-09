@@ -14,7 +14,7 @@ typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscal
                                                  arch_syscall_arg_t, arch_syscall_arg_t);
 
 /*
- * `context` is expected to be placed at the bottom of Graphene-internal stack.
+ * `context` is expected to be placed at the bottom of Gramine-internal stack.
  * If you change this function please also look at `shim_do_rt_sigsuspend`!
  */
 noreturn void shim_emulate_syscall(PAL_CONTEXT* context) {

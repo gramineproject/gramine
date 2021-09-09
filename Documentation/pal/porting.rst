@@ -1,26 +1,26 @@
-Porting Graphene PAL
-====================
+Porting Gramine PAL
+===================
 
 .. highlight:: sh
 
-Graphene adopts a similar architecture to the Drawbridge Library OS, which runs
+Gramine adopts a similar architecture to the Drawbridge Library OS, which runs
 a generic library OS on top of a Platform Adaptation Layer (:term:`PAL`) to
 maximize platform compatibility. In this architecture, the library OS can be
 easily ported to a new host by implementing only the PAL for this new host.
 
-To port Graphene to a |~| new host platform, the only effort required is
+To port Gramine to a |~| new host platform, the only effort required is
 reimplementing the PAL on the desired host platform. Most of the implementation
 should be as simple as translating the PAL API to the native system interface of
 the host. The implemented PAL must support :doc:`host-abi`.
 
 In fact, even in the PAL source code, we expect part of the code to be
-host-generic. To make porting Graphene easier, we deliberately separate the
+host-generic. To make porting Gramine easier, we deliberately separate the
 source code of PAL into two parts:
 
 * :file:`Pal/src`: Host-generic implementation.
 * :file:`Pal/src/host/{host name}`: Host-specific implementation.
 
-To port Graphene to a new host, we suggest starting with a |~| clone of
+To port Gramine to a new host, we suggest starting with a |~| clone of
 :file:`Pal/src/host/Skeleton`. This directory contains the skeleton code of all
 functions that need to be implemented as part of a |~| fully compatible PAL.
 Although we have tried our best to isolate any host-specific code in each host
@@ -28,7 +28,7 @@ directory, we do not guarantee that the necessary changes are only limited to
 these directories. That is, you may have to modify other parts of the source
 code (especially the :file:`Makefile` scripts) to complete your implementation.
 
-Below are the steps to port Graphene PAL to a new host platform.
+Below are the steps to port Gramine PAL to a new host platform.
 
 1. Fix compilation issues
 -------------------------
@@ -43,7 +43,7 @@ will also have to define the name of the loader as target ``pal`` in
 2. Build a loader
 -----------------
 
-PAL needs to run on the target host like a regular executable. To run Graphene,
+PAL needs to run on the target host like a regular executable. To run Gramine,
 PAL must initialize the proper environments and load the applications as well as
 the library OS in the form of Linux ELF binaries. To start the implemention of
 PAL loader, we suggest you begin with the following APIs in your host-specific
@@ -89,7 +89,7 @@ point :func:`pal_main()`. The definition of :func:`pal_main()` is:
    function to return addresses of the host ABI by names.
 
 You may implement the optional `_DkDebugMapAdd` and `_DkDebugMapRemove` to use
-a host-specific debugger such as GDB to debug applications in Graphene.
+a host-specific debugger such as GDB to debug applications in Gramine.
 
 3. Test HelloWorld without loading library OS
 ---------------------------------------------
@@ -113,7 +113,7 @@ tests, run the following steps::
 --------------------------------------
 
 With a completely implemented PAL, you should be able to run any applications
-that are currently supported by Graphene on your new platform. Please be aware
+that are currently supported by Gramine on your new platform. Please be aware
 you should not try to build any application binaries on your target host. On the
 contrary, you should build them on a Linux host and ship them to your target
 host.

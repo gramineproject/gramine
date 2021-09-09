@@ -6,7 +6,7 @@
 #ifndef SHIM_SYSCALLS_H_
 #define SHIM_SYSCALLS_H_
 
-/* TODO: This is required when building Graphene on systems with older headers. We should actually
+/* TODO: This is required when building Gramine on systems with older headers. We should actually
  * have our own copy of headers of the kernel we emulate, not from the one which is used on the
  * build machine.
  */

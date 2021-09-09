@@ -1,6 +1,6 @@
-/* NOTE: Under Graphene, this test must be run only in fork mode.
- * This is due to Graphene restricting communication via Unix
- * domain sockets only for processes in same Graphene instance
+/* NOTE: Under Gramine, this test must be run only in fork mode.
+ * This is due to Gramine restricting communication via Unix
+ * domain sockets only for processes in same Gramine instance
  * (i.e. only between parent and its child in this test).
  */
 

@@ -12,18 +12,18 @@ to verify the server RA-TLS certificate via `ra_tls_verify_callback()`.
 
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
 `ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
-installed together with Graphene (for DCAP version, you need `meson setup ...
+installed together with Gramine (for DCAP version, you need `meson setup ...
 -Ddcap=enabled`). Additionally, mbedTLS libraries are required to correctly run
 RA-TLS, the client, and the server. For ECDSA/DCAP attestation, the DCAP
 software infrastructure must be installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
-https://graphene.readthedocs.io/en/latest/attestation.html.
+https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## RA-TLS server
 
-The server is supposed to run in the SGX enclave with Graphene and RA-TLS
+The server is supposed to run in the SGX enclave with Gramine and RA-TLS
 dlopen-loaded. If RA-TLS library `ra_tls_attest.so` is not requested by user via
 `epid`/`dcap` command-line argument, the server falls back to using normal X.509
 PKI flows (specified as `native` command-line argument).
@@ -42,7 +42,7 @@ client falls back to using normal X.509 PKI flows (specified as `native`
 command-line argument).
 
 It is also possible to run the client in an SGX enclave. This will create a
-secure channel between two Graphene SGX processes, possibly running on different
+secure channel between two Gramine SGX processes, possibly running on different
 machines. It can be used as an example of in-enclave remote attestation and
 verification.
 
@@ -55,7 +55,7 @@ four additional command-line arguments (see the source code for details).
 
 # Quick Start
 
-- Normal non-RA-TLS flows; without SGX and without Graphene:
+- Normal non-RA-TLS flows; without SGX and without Gramine:
 
 ```sh
 make app
@@ -65,14 +65,14 @@ make app
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, EPID-based (IAS) attestation:
+- RA-TLS flows with SGX and with Gramine, EPID-based (IAS) attestation:
 
 ```sh
 # replace dummy values with your SPID, linkable setting, API key, MRENCLAVE, etc!
 make clean
 RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app epid
 
-graphene-sgx ./server epid &
+gramine-sgx ./server epid &
 
 RA_TLS_EPID_API_KEY=12345678901234567890123456789012 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
@@ -85,14 +85,14 @@ RA_TLS_ISV_PROD_ID=0 RA_TLS_ISV_SVN=0 \
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, ECDSA-based (DCAP) attestation:
+- RA-TLS flows with SGX and with Gramine, ECDSA-based (DCAP) attestation:
 
 ```sh
 # replace dummy values with your MRENCLAVE, MRSIGNER, etc!
 make clean
 make app dcap
 
-graphene-sgx ./server dcap &
+gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_MRENCLAVE=1234567890123456789012345678901234567890123456789012345678901234 \
@@ -104,14 +104,14 @@ RA_TLS_ISV_PROD_ID=0 RA_TLS_ISV_SVN=0 \
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, client with its own verification callback:
+- RA-TLS flows with SGX and with Gramine, client with its own verification callback:
 
 ```sh
 # replace dummy values with your MRENCLAVE, MRSIGNER, etc!
 make clean
 make app dcap
 
-graphene-sgx ./server dcap &
+gramine-sgx ./server dcap &
 
 # arguments are: MRENCLAVE in hex, MRSIGNER in hex, ISV_PROD_ID as dec, ISV_SVN as dec
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
@@ -123,20 +123,20 @@ RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, server sends malicious SGX quote:
+- RA-TLS flows with SGX and with Gramine, server sends malicious SGX quote:
 
 ```sh
 make clean
 make app dcap
 
-graphene-sgx ./server dcap dummy-option &
+gramine-sgx ./server dcap dummy-option &
 ./client dcap
 
 # client will fail to verify the malicious SGX quote and will *not* connect to the server
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, running EPID client in SGX:
+- RA-TLS flows with SGX and with Gramine, running EPID client in SGX:
 
 Note: you may also add environment variables to `client.manifest.template`, such
 as `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`, `RA_TLS_MRENCLAVE`, `RA_TLS_MRSIGNER`,
@@ -146,23 +146,23 @@ as `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`, `RA_TLS_MRENCLAVE`, `RA_TLS_MRSIGNER`,
 make clean
 RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app client_epid.manifest.sgx
 
-graphene-sgx ./server epid &
+gramine-sgx ./server epid &
 
-RA_TLS_EPID_API_KEY=12345678901234567890123456789012 graphene-sgx ./client_epid epid
+RA_TLS_EPID_API_KEY=12345678901234567890123456789012 gramine-sgx ./client_epid epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
 kill %%
 ```
 
-- RA-TLS flows with SGX and with Graphene, running DCAP client in SGX:
+- RA-TLS flows with SGX and with Gramine, running DCAP client in SGX:
 
 ```sh
 make clean
 make app client_dcap.manifest.sgx
 
-graphene-sgx ./server dcap &
+gramine-sgx ./server dcap &
 
-graphene-sgx ./client_dcap dcap
+gramine-sgx ./client_dcap dcap
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%

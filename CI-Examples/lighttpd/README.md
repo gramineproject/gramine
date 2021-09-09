@@ -1,6 +1,6 @@
 # Lighttpd Example
 
-This directory contains an example for running lighttpd in Graphene, including
+This directory contains an example for running lighttpd in Gramine, including
 the Makefile and a template for generating the manifest.
 
 # Building lighttpd source
@@ -20,14 +20,14 @@ Run `make` (non-debug) or `make DEBUG=1` (debug) in the directory.
 Run `make SGX=1` (non-debug) or `make SGX=1 DEBUG=1` (debug) in the directory to
 prepare lighttpd to run on SGX.
 
-# Running lighttpd natively, under Graphene, and under Graphene-SGX
+# Running lighttpd natively, under Gramine, and under Gramine-SGX
 
 Execute one of the following commands to start lighttpd either natively
-(non-Graphene), on Graphene or Graphene-SGX, respectively.
+(non-Gramine), on Gramine or Gramine-SGX, respectively.
 
     make start-native-server
-    make start-graphene-server
-    SGX=1 make start-graphene-server
+    make start-gramine-server
+    SGX=1 make start-gramine-server
 
 Because these commands will start the lighttpd server in the foreground, you
 will need to open another console to run the client.

@@ -195,7 +195,7 @@ static pf_status_t mbedtls_random(uint8_t* buffer, size_t size) {
 }
 
 static int pf_set_linux_callbacks(pf_debug_f debug_f) {
-    const char* prng_tag = "Graphene protected files library";
+    const char* prng_tag = "Gramine protected files library";
 
     /* Initialize mbedTLS CPRNG */
     mbedtls_entropy_init(&g_entropy);
@@ -290,7 +290,7 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
     }
 
     INFO("Encrypting: %s -> %s\n", input_path, output_path);
-    INFO("            (Graphene's sgx.protected_files must contain this exact path: \"%s\")\n",
+    INFO("            (Gramine's sgx.protected_files must contain this exact path: \"%s\")\n",
                       output_path);
 
     pf_handle_t handle = (pf_handle_t)&output;

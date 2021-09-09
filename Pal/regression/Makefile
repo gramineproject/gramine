@@ -71,13 +71,13 @@ target = \
 	$(all_manifests)
 
 include ../../Scripts/manifest.mk
-graphene_lib = .lib/graphene-lib.a
+gramine_lib = .lib/gramine-lib.a
 ifneq ($(SGX),)
-graphene = sgx
+gramine = sgx
 else
-graphene = direct
+gramine = direct
 endif
-pal_lib ?= $(shell graphene-manifest -c '{{ graphene.pkglibdir }}')/$(graphene)/libpal.so
+pal_lib ?= $(shell gramine-manifest -c '{{ gramine.pkglibdir }}')/$(gramine)/libpal.so
 
 .PHONY: all
 all: $(target) $(call expand_target_to_sig,$(target)) \
@@ -103,11 +103,11 @@ utils.o: CFLAGS += -fPIC
 ../regression/File: | File
 	@true
 
-LDLIBS-preloads = crt_init/user_shared_start.o utils.o $(graphene_lib) $(pal_lib)
+LDLIBS-preloads = crt_init/user_shared_start.o utils.o $(gramine_lib) $(pal_lib)
 $(preloads): %.so: %.c $(LDLIBS-preloads)
 	$(call cmd,csingle) -shared -fPIC $(LDLIBS-preloads)
 
-LDLIBS-executables = crt_init/user_start.o utils.o $(graphene_lib) $(pal_lib) $(preloads)
+LDLIBS-executables = crt_init/user_start.o utils.o $(gramine_lib) $(pal_lib) $(preloads)
 $(executables): %: %.c $(LDLIBS-executables)
 	$(call cmd,csingle) -no-pie $(LDLIBS-executables)
 
@@ -115,7 +115,7 @@ ifeq ($(filter %clean,$(MAKECMDGOALS)),)
 include $(wildcard *.d)
 endif
 
-$(graphene_lib):
+$(gramine_lib):
 	$(MAKE) -C ../../common/src target=$(abspath .lib)/
 
 .PHONY: regression

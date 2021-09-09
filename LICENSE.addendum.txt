@@ -1,6 +1,6 @@
-Graphene itself is licensed under the LGPL-3.0-or-later.
+Gramine itself is licensed under the LGPL-3.0-or-later.
 
-Graphene also includes the following third party sources (and licenses):
+Gramine also includes the following third party sources (and licenses):
 
 mbedtls crypto libraries - Apache 2.0
 

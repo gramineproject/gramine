@@ -173,7 +173,7 @@ EPID-based ``ra_tls_verify_epid.so`` and ECDSA-based (DCAP)
 ``ra_tls_verify_dcap.so``.
 
 For more information on RA-TLS, please read the ``Attestation`` documentation of
-Graphene.
+Gramine.
 
 
 Secret Provisioning Libraries
@@ -198,4 +198,4 @@ EPID-based ``secret_prov_verify_epid.so`` and ECDSA-based (DCAP)
 ``secret_prov_verify_dcap.so``.
 
 For more information on Secret Provisioning, please read the ``Attestation``
-documentation of Graphene.
+documentation of Gramine.

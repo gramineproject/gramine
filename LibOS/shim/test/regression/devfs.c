@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
     }
 
 #if 0
-    /* `/dev/stdout` is a link to `/proc/self/fd/1`; Graphene currently fails, see #1387 */
+    /* `/dev/stdout` is a link to `/proc/self/fd/1`; Gramine currently fails, see #1387 */
 
     printf("===== Write to /dev/stdout\n");
     f = fopen("/dev/stdout", "w");

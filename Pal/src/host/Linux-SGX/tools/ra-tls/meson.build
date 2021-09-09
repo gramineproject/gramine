@@ -16,7 +16,7 @@ libra_tls_attest = shared_library('ra_tls_attest',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_attest.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
         get_option('libdir')))
 
 libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
@@ -35,7 +35,7 @@ libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_verify_epid.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
         get_option('libdir')))
 
 libsecret_prov_attest = shared_library('secret_prov_attest',
@@ -56,7 +56,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_attest.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
         get_option('libdir')))
 
 libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
@@ -79,7 +79,7 @@ libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_verify_epid.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
         get_option('libdir')))
 
 if dcap
@@ -100,10 +100,10 @@ if dcap
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libra_tls_verify_dcap.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
             get_option('libdir')))
 
-    libra_tls_verify_dcap_graphene = shared_library('ra_tls_verify_dcap_graphene',
+    libra_tls_verify_dcap_gramine = shared_library('ra_tls_verify_dcap_gramine',
         'ra_tls_verify_dcap.c',
         'ra_tls_verify_dcap_urts.c',
         'ra_tls_verify_common.c',
@@ -120,8 +120,8 @@ if dcap
         install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
     )
     meson.add_install_script('/bin/sh', '-c',
-        'ln -sf ../../../libra_tls_verify_dcap_graphene.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+        'ln -sf ../../../libra_tls_verify_dcap_gramine.so ' +
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
             get_option('libdir')))
 
     libsecret_prov_verify_dcap = shared_library('secret_prov_verify_dcap',
@@ -145,6 +145,6 @@ if dcap
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libsecret_prov_verify_dcap.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
             get_option('libdir')))
 endif

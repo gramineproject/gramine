@@ -761,7 +761,7 @@ int ocall_fsetnonblock(int fd, int nonblocking) {
     return retval;
 }
 
-/* TODO: Unneeded OCALL? Graphene doesn't have a notion of permissions currently. */
+/* TODO: Unneeded OCALL? Gramine doesn't have a notion of permissions currently. */
 int ocall_fchmod(int fd, unsigned short mode) {
     int retval = 0;
     ms_ocall_fchmod_t* ms;

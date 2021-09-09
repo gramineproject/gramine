@@ -6,7 +6,7 @@ import subprocess
 import sys
 import unittest
 
-import graphenelibos
+import graminelibos
 
 fspath = getattr(os, 'fspath', str) # pylint: disable=invalid-name
 
@@ -32,7 +32,7 @@ class RegressionTestCase(unittest.TestCase):
     @property
     def pal_path(self):
         # pylint: disable=protected-access
-        return pathlib.Path(graphenelibos._CONFIG_PKGLIBDIR) / ('sgx' if HAS_SGX else 'direct')
+        return pathlib.Path(graminelibos._CONFIG_PKGLIBDIR) / ('sgx' if HAS_SGX else 'direct')
 
     @property
     def libpal_path(self):
@@ -52,11 +52,11 @@ class RegressionTestCase(unittest.TestCase):
         prefix = ['gdb', '-q']
         env = os.environ.copy()
         if HAS_SGX:
-            prefix += ['-x', fspath(self.pal_path / 'gdb_integration/graphene_sgx_gdb.py')]
+            prefix += ['-x', fspath(self.pal_path / 'gdb_integration/gramine_sgx_gdb.py')]
             sgx_gdb = fspath(self.pal_path / 'gdb_integration/sgx_gdb.so')
             env['LD_PRELOAD'] = sgx_gdb + ':' + env.get('LD_PRELOAD', '')
         else:
-            prefix += ['-x', fspath(self.pal_path / 'gdb_integration/graphene_linux_gdb.py')]
+            prefix += ['-x', fspath(self.pal_path / 'gdb_integration/gramine_linux_gdb.py')]
 
         # Override TTY, as apparently os.setpgrp() confuses GDB and causes it to hang.
         prefix += ['-x', gdb_script, '-batch', '-tty=/dev/null']

@@ -10,7 +10,7 @@ PyTorch PPML Framework Tutorial
    repositories.
 
 This tutorial presents a framework for developing PPML (Privacy-Preserving
-Machine Learning) applications with Intel SGX and Graphene. We use `PyTorch
+Machine Learning) applications with Intel SGX and Gramine. We use `PyTorch
 <https://pytorch.org>`__ as an example ML framework. However, this tutorial can
 be applied to other ML frameworks like OpenVINO, TensorFlow, etc.
 
@@ -28,7 +28,7 @@ the confidentiality and integrity of the input data when the computation takes
 place on an untrusted platform such as a public cloud virtual machine. We also
 protect the model for cases where the model owner is concerned about protecting
 their IP. In particular, we highlight how to build the PPML framework based on
-PyTorch in an untrusted cloud using Intel SGX and Graphene.
+PyTorch in an untrusted cloud using Intel SGX and Gramine.
 
 .. image:: ./img/intro-01.svg
    :target: ./img/intro-01.svg
@@ -46,16 +46,16 @@ while still ensuring the confidentiality and integrity of sensitive input data
 and the model. To this end, we use Intel SGX enclaves to isolate PyTorch's
 execution to protect data confidentiality and integrity, and to provide a
 cryptographic proof that the program is correctly initialized and running on
-legitimate hardware with the latest patches. We also use Graphene to simplify
+legitimate hardware with the latest patches. We also use Gramine to simplify
 the task of porting PyTorch to SGX, without any changes to the ML application
 and scripts.
 
 .. image:: ./img/workflow.svg
    :target: ./img/workflow.svg
-   :alt: Figure: Complete workflow of PyTorch with Graphene
+   :alt: Figure: Complete workflow of PyTorch with Gramine
 
 In this tutorial, we will show the complete workflow for PyTorch running inside
-an SGX enclave using Graphene and its features of Secret Provisioning and
+an SGX enclave using Gramine and its features of Secret Provisioning and
 Protected Files. We rely on the new ECDSA/DCAP remote attestation scheme
 developed by Intel for untrusted cloud environments.
 
@@ -77,11 +77,11 @@ the user starts the secret provisioning application on her own machine. The two
 machines establish a TLS connection using RA-TLS (3), the user verifies that the
 remote platform has a genuine up-to-date SGX processor and that the application
 runs in a genuine SGX enclave (4), and finally provisions the cryptographic wrap
-key to this remote platform (5). Note that during build time, Graphene informs
+key to this remote platform (5). Note that during build time, Gramine informs
 the user of the expected measurements of the SGX application.
 
 After the cryptographic wrap key is provisioned, the remote platform may start
-executing the application. Graphene uses Protected FS to transparently decrypt
+executing the application. Gramine uses Protected FS to transparently decrypt
 the input and the model files using the provisioned key when the PyTorch
 application starts (6). The application then proceeds with execution on
 plaintext files (7). When the PyTorch script is finished, the output file is
@@ -110,24 +110,24 @@ Prerequisites
   to install the Intel SGX driver and SDK/PSW. Make sure to install the driver
   with ECDSA/DCAP attestation.
 
-- Graphene. Follow `Quick Start
-  <https://graphene.readthedocs.io/en/latest/quickstart.html>`__ to build
-  Graphene. In this tutorial, we will use both non-SGX and SGX-backed versions
-  of Graphene. Make sure you build both Graphene loaders.
+- Gramine. Follow `Quick Start
+  <https://gramine.readthedocs.io/en/latest/quickstart.html>`__ to build
+  Gramine. In this tutorial, we will use both non-SGX and SGX-backed versions
+  of Gramine. Make sure you build both Gramine loaders.
 
 Executing Native PyTorch
 ------------------------
 
 We start with a very simple example script written in Python3 for PyTorch-based
-ML inferencing. Graphene already provides a minimalistic and *insecure* `PyTorch
-example <https://github.com/oscarlab/graphene/tree/master/Examples/pytorch>`__
+ML inferencing. Gramine already provides a minimalistic and *insecure* `PyTorch
+example <https://github.com/gramineproject/examples/tree/master/pytorch>`__
 which does not have confidentiality guarantees for input/output files and does
 not use remote attestation. In this tutorial, we will use this existing PyTorch
 example as a basis and will improve it to protect all user files.
 
-Go to the directory with Graphene's PyTorch example::
+Go to the directory with Gramine's PyTorch example::
 
-   cd <graphene repository>/Examples/pytorch
+   cd <gramine examples repository>/pytorch
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
 files.  The script reads a `pretrained AlexNet model
@@ -153,37 +153,37 @@ This will execute native PyTorch which will write the classification results to
 ``result.txt``. The provided example image is a photo of a dog, therefore the
 output file contains "Labrador retriever" as a first result.
 
-In later sections, we will run exactly the same Python script but with Graphene
+In later sections, we will run exactly the same Python script but with Gramine
 and inside SGX enclaves.
 
-Executing PyTorch with Graphene
+Executing PyTorch with Gramine
 -------------------------------
 
 In the next two sections, we will run the exact same PyTorch example with
-Graphene. We will first run PyTorch with non-SGX Graphene (for illustrative
-purposes) and then with SGX-backed Graphene. Note that this part of the tutorial
-still only shows the non-PPML workflow where Graphene doesn't protect
+Gramine. We will first run PyTorch with non-SGX Gramine (for illustrative
+purposes) and then with SGX-backed Gramine. Note that this part of the tutorial
+still only shows the non-PPML workflow where Gramine doesn't protect
 input/output user files; the end-to-end PPML workflow will be described below.
 
-The porting effort to run PyTorch in Graphene is minimal and boils down to
-creation of the *Graphene PyTorch-specific manifest file*.  When Graphene runs
+The porting effort to run PyTorch in Gramine is minimal and boils down to
+creation of the *Gramine PyTorch-specific manifest file*.  When Gramine runs
 an executable, it reads a manifest file that describes the execution environment
 including the security posture, environment variables, dynamic libraries,
 arguments, and so on.  In the rest of this tutorial, we will create this
 manifest file and explain its options and rationale behind them. Note that the
-manifest file contains both general non-SGX options for Graphene and
+manifest file contains both general non-SGX options for Gramine and
 SGX-specific ones.  Please refer to `this
-<https://graphene.readthedocs.io/en/latest/manifest-syntax.html>`__ for further
-details about the syntax of Graphene manifests.
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html>`__ for further
+details about the syntax of Gramine manifests.
 
-Executing PyTorch with non-SGX Graphene
+Executing PyTorch with non-SGX Gramine
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's run the PyTorch example using Graphene, but without an SGX enclave.
+Let's run the PyTorch example using Gramine, but without an SGX enclave.
 
 Navigate to the PyTorch example directory we examined in the previous section::
 
-   cd <graphene repository>/Examples/pytorch
+   cd <gramine examples repository>/pytorch
 
 Let's take a look at the template manifest file ``pytorch.manifest.template``
 (recall that PyTorch is a collection of libraries and utilities but it uses
@@ -200,12 +200,12 @@ must not be used in production::
    loader.insecure__use_host_env = true
 
 We mount the entire glibc host-level directory to the ``/lib`` directory seen
-inside Graphene. This trick allows to transparently replace standard C libraries
-with Graphene-patched libraries::
+inside Gramine. This trick allows to transparently replace standard C libraries
+with Gramine-patched libraries::
 
    fs.mount.lib.type = "chroot"
    fs.mount.lib.path = "/lib"
-   fs.mount.lib.uri  = "file:{{ graphene.runtime() }}/"
+   fs.mount.lib.uri  = "file:{{ gramine.runtime() }}/"
 
 We also mount other directories such as ``/usr``,  ``/etc``, and ``/tmp``
 required by Python and PyTorch (they search for libraries and utility files in
@@ -217,41 +217,41 @@ Finally, we mount the path containing the Python packages installed via pip::
    fs.mount.pip.path = "{{ env.HOME }}/.local/lib"
    fs.mount.pip.uri  = "file:{{ env.HOME }}/.local/lib"
 
-Now we can run ``make`` to build/copy all required Graphene files::
+Now we can run ``make`` to build/copy all required Gramine files::
 
    make
 
 This command will autogenerate a couple new files:
 
-#. Generate the actual non-SGX Graphene manifest (``pytorch.manifest``) from the
-   template manifest file. This file will be used by Graphene to decide on
-   different manifest options how to execute PyTorch inside Graphene.
+#. Generate the actual non-SGX Gramine manifest (``pytorch.manifest``) from the
+   template manifest file. This file will be used by Gramine to decide on
+   different manifest options how to execute PyTorch inside Gramine.
 
-Now, launch Graphene via :command:`graphene-direct`. You can simply append the
+Now, launch Gramine via :command:`gramine-direct`. You can simply append the
 arguments after the application path.  Our example takes
 :file:`pytorchexample.py` as an argument::
 
-   graphene-direct ./pytorch pytorchexample.py
+   gramine-direct ./pytorch pytorchexample.py
 
-That's it. You have run the PyTorch example with Graphene. You can check
+That's it. You have run the PyTorch example with Gramine. You can check
 :file:`result.txt` to make sure it ran correctly.
 
-Executing PyTorch with Graphene in SGX Enclave
+Executing PyTorch with Gramine in SGX Enclave
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this section, we will learn how to use Graphene to run the same PyTorch
+In this section, we will learn how to use Gramine to run the same PyTorch
 example inside an Intel SGX enclave.  Let's go back to the manifest template
 (recall that the manifest keys starting with ``sgx.`` are SGX-specific syntax;
-these entries are ignored if Graphene runs in non-SGX mode).
+these entries are ignored if Gramine runs in non-SGX mode).
 
 Below, we will highlight some of the SGX-specific manifest options in
 :file:`pytorch.manifest.template`.  SGX syntax is fully described `here
-<https://graphene.readthedocs.io/en/latest/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
 
 First, here are the following SGX-specific lines in the manifest template::
 
    sgx.trusted_files.python3 = "file:{{ entrypoint }}"
-   sgx.trusted_files.runtime = "file:{{ graphene.runtime() }}/"
+   sgx.trusted_files.runtime = "file:{{ gramine.runtime() }}/"
    ...
 
 ``sgx.trusted_files.<name>`` specifies a file or a directory that will be
@@ -260,11 +260,11 @@ traversed and all files are added as trusted). Note that the key string
 ``<name>`` may be an arbitrary legal string and does not have to be the same as
 the actual file name.
 
-The way these Trusted Files work is before Graphene runs PyTorch inside the SGX
-enclave, Graphene generates the final SGX manifest file using
-:command:`graphene-sgx-sign` Graphene utility.  This utility calculates hashes
+The way these Trusted Files work is before Gramine runs PyTorch inside the SGX
+enclave, Gramine generates the final SGX manifest file using
+:command:`gramine-sgx-sign` Gramine utility.  This utility calculates hashes
 of each trusted file and appends them as ``sgx.trusted_checksum.<name>`` to the
-final SGX manifest. When running PyTorch with SGX, Graphene reads trusted files,
+final SGX manifest. When running PyTorch with SGX, Gramine reads trusted files,
 finds their corresponding trusted checksums, and compares the
 calculated-at-runtime checksum against the expected value in the manifest.
 
@@ -302,9 +302,9 @@ The above command performs the following tasks:
    Flexible Launch Control).
 
 After running this command and building all the required files, we can use
-:command:`graphene-sgx` to launch the PyTorch workload inside an SGX enclave::
+:command:`gramine-sgx` to launch the PyTorch workload inside an SGX enclave::
 
-   graphene-sgx ./pytorch pytorchexample.py
+   gramine-sgx ./pytorch pytorchexample.py
 
 It will run exactly the same Python script but inside the SGX enclave. Again,
 you can verify that PyTorch ran correctly by examining :file:`result.txt`.
@@ -321,7 +321,7 @@ environment, ships the application code and data, and is sure that the *correct*
 application was executed inside a *genuine* SGX enclave. This process of gaining
 trust in a remote SGX machine is called Remote Attestation (RA).
 
-Graphene has two features that transparently add SGX RA to the application: (1)
+Gramine has two features that transparently add SGX RA to the application: (1)
 RA-TLS augments normal SSL/TLS sessions with an SGX-specific handshake callback,
 and (2) Secret Provisioning establishes a secure SSL/TLS session between the SGX
 enclave and the remote user so that the user may gain trust in the remote
@@ -334,7 +334,7 @@ applications: it transparently initializes the environment variable
 ``SECRET_PROVISION_SECRET_STRING`` with a secret obtained from the remote user
 during remote attestation. In our PyTorch example, the provisioned secret is the
 confidential (master, or wrap) key to encrypt/decrypt user files. To inform
-Graphene that the obtained secret is indeed the key for file encryption, it is
+Gramine that the obtained secret is indeed the key for file encryption, it is
 enough to set the environment variable ``SECRET_PROVISION_SET_PF_KEY``.
 
 Note that RA-TLS and Secret Provisioning work both with the EPID-based and the
@@ -344,12 +344,12 @@ on an untrusted-cloud scenario, we use the ECDSA/DCAP attestation framework.
 Background on Protected Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Graphene provides a feature of `Protected Files
-<https://graphene.readthedocs.io/en/latest/manifest-syntax.html?highlight=protected#protected-files>`__,
+Gramine provides a feature of `Protected Files
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=protected#protected-files>`__,
 which encrypts files and transparently decrypts them when the application reads
 or writes them. Integrity- or confidentiality-sensitive files (or whole
 directories) accessed by the application must be marked as protected files in
-the Graphene manifest. New files created in a protected directory are
+the Gramine manifest. New files created in a protected directory are
 automatically treated as protected. The encryption format used for protected
 files is borrowed from the similar feature of Intel SGX SDK.
 
@@ -370,27 +370,27 @@ PyTorch inference.
 We will use the previous non-confidential PyTorch example as a starting point,
 so copy the entire PyTorch directory::
 
-   cd <graphene repository>/Examples
+   cd <gramine examples repository>
    cp -R pytorch pytorch-confidential
 
 We will also use the reference implementation of Secret Provisioning found under
-``Examples/ra-tls-secret-prov`` directory, so build and copy all the relevant
-files from there::
+``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine repository),
+so build and copy all the relevant files from there::
 
-   cd <graphene repository>/Examples/ra-tls-secret-prov
+   cd <gramine repository>/CI-Examples/ra-tls-secret-prov
    make -C ../../Pal/src/host/Linux-SGX/tools/ra-tls dcap
    make dcap pf_crypt
 
-The second line in the above snippet creates Graphene-specific DCAP libraries
+The second line in the above snippet creates Gramine-specific DCAP libraries
 for preparation and verification of SGX quotes (needed for SGX remote
 attestation). The last line builds the required DCAP binaries and copies
-relevant Graphene utilities such as ``pf_crypt`` to encrypt input files.
+relevant Gramine utilities such as ``pf_crypt`` to encrypt input files.
 
 The last line also builds the secret provisioning server
 ``secret_prov_server_dcap``.  We will use this server to provision the master
 wrap key (used to encrypt/decrypt protected input and output files) to the
 PyTorch enclave.  See `Secret Provisioning Minimal Examples
-<https://github.com/oscarlab/graphene/tree/master/Examples/ra-tls-secret-prov>`__
+<https://github.com/gramineproject/gramine/tree/master/CI-Examples/ra-tls-secret-prov>`__
 for more information.
 
 Preparing Input Files
@@ -398,12 +398,12 @@ Preparing Input Files
 
 The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
 ``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing stuff
-from the ``Examples/ra-tls-secret-prov`` directory.  In particular, we re-use
+from the ``CI-Examples/ra-tls-secret-prov`` directory.  In particular, we re-use
 the confidential wrap key::
 
-   cd <graphene repository>/Examples/pytorch-confidential
+   cd <gramine examples repository>/pytorch-confidential
    mkdir files
-   cp ../ra-tls-secret-prov/files/wrap-key files/
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/files/wrap-key files/
 
 In real deployments, the user must replace this ``wrap-key`` with her own
 128-bit encryption key.
@@ -411,9 +411,9 @@ In real deployments, the user must replace this ``wrap-key`` with her own
 We also re-use the ``pf_crypt`` utility (with its ``libsgx_util.so`` helper
 library and required mbedTLS libraries) that encrypts/decrypts the files::
 
-   cp ../ra-tls-secret-prov/libs/libsgx_util.so .
-   cp ../ra-tls-secret-prov/libs/libmbed*.so* .
-   cp ../ra-tls-secret-prov/pf_crypt .
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libsgx_util.so .
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libmbed*.so* .
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/pf_crypt .
 
 Let's also make sure that ``alexnet-pretrained.pt`` network-model file exists
 under our new directory::
@@ -438,16 +438,16 @@ Preparing Secret Provisioning
 
 The user must prepare the secret provisioning server and start it. For this,
 copy the secret provisioning executable and its helper library from
-``Examples/ra-tls-secret-prov`` to the current directory::
+``CI-Examples/ra-tls-secret-prov`` to the current directory::
 
-   cp ../ra-tls-secret-prov/libs/libsecret_prov_verify_dcap.so .
-   cp ../ra-tls-secret-prov/secret_prov_server_dcap .
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libsecret_prov_verify_dcap.so .
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
 
-Also, copy the server-identifying certificates so that in-Graphene secret
+Also, copy the server-identifying certificates so that in-Gramine secret
 provisioning library can verify the provisioning server (via classical X.509
 PKI)::
 
-   cp -R ../ra-tls-secret-prov/certs ./
+   cp -R <gramine repository>/CI-Examples/ra-tls-secret-prov/certs ./
 
 These certificates are dummy mbedTLS-provided certificates; in production, you
 would want to generate real certificates for your secret-provisioning server and
@@ -486,10 +486,10 @@ Also add ``result.txt`` as a protected file so that PyTorch writes the
    sgx.protected_files.result = "file:result.txt"
 
 Now, let's add the secret provisioning library to the manifest. Append the
-current directory ``./`` to ``LD_LIBRARY_PATH`` so that PyTorch and Graphene
+current directory ``./`` to ``LD_LIBRARY_PATH`` so that PyTorch and Gramine
 add-ons search for libraries in the current directory::
 
-   # this instructs in-Graphene dynamic loader to search for dependencies in the current directory
+   # this instructs in-Gramine dynamic loader to search for dependencies in the current directory
    loader.env.LD_LIBRARY_PATH = "/lib:/usr/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}:./"
 
 Add the following lines to enable remote secret provisioning and allow protected
@@ -497,7 +497,7 @@ files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
 re-use the same ``certs/`` directory and specify ``localhost``. For more info on
 the used environment variables and other manifest options, see `here
-<https://github.com/oscarlab/graphene/tree/master/Pal/src/host/Linux-SGX/tools#secret-provisioning-libraries>`__::
+<https://github.com/gramineproject/gramine/tree/master/Pal/src/host/Linux-SGX/tools#secret-provisioning-libraries>`__::
 
    sgx.remote_attestation = true
 
@@ -511,11 +511,11 @@ the used environment variables and other manifest options, see `here
    sgx.trusted_files.cachain = "file:certs/test-ca-sha256.crt"
 
 The ``libsecret_prov_attest.so`` library provides the in-enclave logic to attest
-the SGX enclave, Graphene instance, and the application running in it to the
-remote secret-provisioning server. Graphene needs to locate this library, so
+the SGX enclave, Gramine instance, and the application running in it to the
+remote secret-provisioning server. Gramine needs to locate this library, so
 let's copy it to our working directory::
 
-   cp ../ra-tls-secret-prov/libs/libsecret_prov_attest.so ./
+   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libsecret_prov_attest.so ./
 
 Building and Executing End-To-End PyTorch Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -536,7 +536,7 @@ We are ready to run the end-to-end PyTorch example. Notice that we didn't change
 a line of code in the Python script. Moreover, we can run it with exactly the
 same command used in the previous section::
 
-   graphene-sgx ./pytorch pytorchexample.py
+   gramine-sgx ./pytorch pytorchexample.py
 
 This should run PyTorch with encrypted input files and generate the encrypted
 :file:`result.txt` output file. Note that we already launched the secret

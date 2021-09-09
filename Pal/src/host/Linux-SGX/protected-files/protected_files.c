@@ -216,7 +216,7 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     COPY_ARRAY(pf->user_kdk_key, *kdk_key);
 
     // omeg: we require a canonical full path to file, so no stripping path to filename only
-    // omeg: Intel's implementation opens the file, we get the fd and size from the Graphene handler
+    // omeg: Intel's implementation opens the file, we get the fd and size from the Gramine handler
 
     if (!file) {
         DEBUG_PF("invalid handle\n");
@@ -386,7 +386,7 @@ static bool ipf_close(pf_context_t* pf) {
         }
     }
 
-    // omeg: fs close is done by Graphene handler
+    // omeg: fs close is done by Gramine handler
     pf->file_status = PF_STATUS_UNINITIALIZED;
 
     while ((data = lruc_get_last(pf->cache)) != NULL) {

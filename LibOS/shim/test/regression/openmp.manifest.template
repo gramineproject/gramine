@@ -1,10 +1,10 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "openmp"
 loader.argv0_override = "openmp"
 
-# Graphene optionally provides patched OpenMP runtime library that runs faster inside SGX enclaves
+# Gramine optionally provides patched OpenMP runtime library that runs faster inside SGX enclaves
 # (execute `make -C LibOS gcc` to generate it). This library will replace the native one because
-# Graphene's Runtime path has priority in LD_LIBRARY_PATH.
+# Gramine's Runtime path has priority in LD_LIBRARY_PATH.
 
 loader.env.LD_LIBRARY_PATH = "/lib:/usrlib"
 
@@ -15,7 +15,7 @@ sgx.preheat_enclave = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.bin.type = "chroot"
 fs.mount.bin.path = "/bin"
@@ -29,7 +29,7 @@ sgx.thread_num = 32
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:openmp",
   "file:/usr{{ arch_libdir }}/libgomp.so.1",
 ]

@@ -445,7 +445,7 @@ long shim_do_kill(pid_t pid, int sig) {
         return do_kill_proc(g_process.pid, pid, sig);
     } else if (pid == -1) {
         /* If `pid` equals -1, then signal is sent to every process for which the calling process
-         * has permission to send, which means all processes in Graphene. NOTE: On Linux, kill(-1)
+         * has permission to send, which means all processes in Gramine. NOTE: On Linux, kill(-1)
          * does not signal the calling process. */
         return ipc_kill_all(g_process.pid, sig);
     } else if (pid == 0) {

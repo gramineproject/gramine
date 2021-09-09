@@ -3,9 +3,9 @@ ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 .PHONY: all
@@ -15,8 +15,8 @@ all: python.manifest.sgx python.sig python.token
 endif
 
 python.manifest: python.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dentrypoint=$(realpath $(shell sh -c "command -v python3")) \
 		$< >$@
@@ -24,7 +24,7 @@ python.manifest: python.manifest.template
 python.manifest.sgx: python.manifest
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
@@ -32,7 +32,7 @@ python.manifest.sgx: python.manifest
 python.sig: python.manifest.sgx
 
 python.token: python.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 .PHONY: check
 check: all

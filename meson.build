@@ -3,7 +3,7 @@
 #
 
 project(
-    'graphene',
+    'gramine',
     'c', 'cpp',
     version: '1.2-rc1',
     license: 'LGPLv3+',
@@ -39,7 +39,7 @@ python3mod = import('python3')
 python3 = python3mod.find_python()
 python3_platlib = run_command(
     python3, get_python_platlib_prog, get_option('prefix')).stdout()
-python3_pkgdir = join_paths(python3_platlib, 'graphenelibos')
+python3_pkgdir = join_paths(python3_platlib, 'graminelibos')
 
 pkgconfig = import('pkgconfig')
 
@@ -69,7 +69,7 @@ endif
 #
 
 # Not all compilers support mstack-protector-guard, so use stack protector only if supported.
-# Graphene-custom stack protector uses the canary stored in the TCB (same for both in LibOS and PAL)
+# Gramine-custom stack protector uses the canary stored in the TCB (same for both in LibOS and PAL)
 # at offset 0x8.
 if host_machine.cpu_family() == 'x86_64'
     cflags_custom_stack_protector = [
@@ -88,7 +88,7 @@ if not cc.has_multi_arguments(cflags_custom_stack_protector)
     cflags_custom_stack_protector = '-fno-stack-protector'
 endif
 
-# Don't support b_sanitize: integration with sanitizers in Graphene is tricky and we want more
+# Don't support b_sanitize: integration with sanitizers in Gramine is tricky and we want more
 # control over the exact flags.
 if get_option('b_sanitize') != 'none'
     error('Please don\'t use the b_sanitize option; use -Dubsan=enabled instead.')

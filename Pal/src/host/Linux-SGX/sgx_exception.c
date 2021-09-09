@@ -135,7 +135,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         return;
     }
 
-    /* exception happened in untrusted PAL code (during syscall handling): fatal in Graphene */
+    /* exception happened in untrusted PAL code (during syscall handling): fatal in Gramine */
     unsigned long rip = ucontext_get_ip(uc);
     switch (signum) {
         case SIGSEGV:
@@ -234,7 +234,7 @@ int sgx_signal_setup(void) {
     if (ret < 0)
         goto err;
 
-    /* SIGUSR2 is reserved for Graphene usage: interrupting blocking syscalls in RPC threads.
+    /* SIGUSR2 is reserved for Gramine usage: interrupting blocking syscalls in RPC threads.
      * We block SIGUSR2 in enclave threads; it is unblocked by each RPC thread explicitly. */
     ret = set_signal_handler(SIGUSR2, handle_dummy_signal);
     if (ret < 0)

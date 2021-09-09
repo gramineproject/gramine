@@ -17,7 +17,7 @@ stage('test-sgx') {
         sh '''
             cd CI-Examples/memcached
             make ${MAKEOPTS}
-            make SGX=1 start-graphene-server &
+            make SGX=1 start-gramine-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 11211
             # memcslap populates server but doesn't report errors, use
             # memcached-tool for this (must return two lines of stats)
@@ -37,7 +37,7 @@ stage('test-sgx') {
 
             cd CI-Examples/redis
             make ${MAKEOPTS}
-            make ${MAKEOPTS} start-graphene-server &
+            make ${MAKEOPTS} start-gramine-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 6379
             ./src/src/redis-benchmark
         '''
@@ -46,7 +46,7 @@ stage('test-sgx') {
         sh '''
             cd CI-Examples/lighttpd
             make ${MAKEOPTS}
-            make ${MAKEOPTS} start-graphene-server &
+            make ${MAKEOPTS} start-gramine-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 8003
             LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8003
         '''
@@ -55,7 +55,7 @@ stage('test-sgx') {
         sh '''
             cd CI-Examples/nginx
             make ${MAKEOPTS}
-            make ${MAKEOPTS} start-graphene-server &
+            make ${MAKEOPTS} start-gramine-server &
             ../../Scripts/wait_for_server 60 127.0.0.1 8002
             LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8002
         '''

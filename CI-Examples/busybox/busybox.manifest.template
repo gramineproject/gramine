@@ -1,6 +1,6 @@
 # Busybox manifest file example
 
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "busybox"
 loader.log_level = "{{ log_level }}"
 
@@ -15,7 +15,7 @@ loader.insecure__use_cmdline_argv = true
 
 fs.mount.lib1.type = "chroot"
 fs.mount.lib1.path = "/lib"
-fs.mount.lib1.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib1.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.lib2.type = "chroot"
 fs.mount.lib2.path = "{{ arch_libdir }}"
@@ -27,7 +27,7 @@ fs.mount.etc.uri = "file:/etc"
 
 sgx.trusted_files = [
   "file:busybox",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
 ]

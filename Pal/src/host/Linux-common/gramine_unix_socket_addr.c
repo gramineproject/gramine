@@ -8,7 +8,7 @@
 #include "api.h"
 #include "linux_utils.h"
 
-int get_graphene_unix_socket_addr(uint64_t instance_id, const char* name,
+int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
                                   struct sockaddr_un* out_addr) {
     /* Apparently there is no way to get this define without including whole "sys/socket.h". */
     out_addr->sun_family = /*AF_UNIX*/1;
@@ -17,7 +17,7 @@ int get_graphene_unix_socket_addr(uint64_t instance_id, const char* name,
      * buffer (i.e. do *not* consider the rest of the buffer as null-terminated C string, but rather
      * a fixed length byte array). */
     memset(out_addr->sun_path, 0, sizeof(out_addr->sun_path));
-    int ret = snprintf(out_addr->sun_path + 1, sizeof(out_addr->sun_path) - 1, "/graphene/%lu/%s",
+    int ret = snprintf(out_addr->sun_path + 1, sizeof(out_addr->sun_path) - 1, "/gramine/%lu/%s",
                        instance_id, name);
     if (ret < 0) {
         return ret;

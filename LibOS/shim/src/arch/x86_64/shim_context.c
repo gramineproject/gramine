@@ -103,7 +103,7 @@ void shim_xstate_save(void* xstate_extended) {
     memset(&fpx_sw->padding, 0, sizeof(fpx_sw->padding));
 
     /* the last 32-bit word of the extended FXSAVE/XSAVE area (at the xstate + extended_size
-     * - FP_XSTATE_MAGIC2_SIZE address) is set to FP_XSTATE_MAGIC2 so that app/Graphene can sanity
+     * - FP_XSTATE_MAGIC2_SIZE address) is set to FP_XSTATE_MAGIC2 so that app/Gramine can sanity
      * check FXSAVE/XSAVE size calculations */
     *((__typeof__(SHIM_FP_XSTATE_MAGIC2)*)bytes_after_xstate) = SHIM_FP_XSTATE_MAGIC2;
 }
@@ -232,12 +232,12 @@ void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, v
 
     sigframe->siginfo = *siginfo;
 
-    /* Graphene does not change SS (stack segment register) and assumes that it is constant so
+    /* Gramine does not change SS (stack segment register) and assumes that it is constant so
      * these flags are not strictly needed, but we do store SS in ucontext so let's just set them. */
     sigframe->uc.uc_flags = UC_SIGCONTEXT_SS | UC_STRICT_RESTORE_SS;
     sigframe->uc.uc_link = NULL;
     /* TODO: add support for SA_AUTODISARM
-     * Tracked: https://github.com/oscarlab/graphene/issues/2140 */
+     * Tracked: https://github.com/gramineproject/graphene/issues/2140 */
     sigframe->uc.uc_stack = current->signal_altstack;
 
     pal_context_to_ucontext(&sigframe->uc, context);

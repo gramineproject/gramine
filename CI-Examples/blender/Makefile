@@ -9,7 +9,7 @@ BLENDER_DIR = $(PWD)/blender_dir
 BLENDER_SRC ?= blender-2.82-linux64.tar.xz
 BLENDER_MIRRORS ?= \
     https://ftp.nluug.nl/pub/graphics/blender/release/Blender2.82 \
-    https://packages.grapheneproject.io/distfiles
+    https://packages.gramineproject.io/distfiles
 BLENDER_SHA256 ?= b13600fa2ca23ea1bba511e3a6599b6792acde80b180707c3ea75db592a9b916
 BLENDER_VER = 2.82
 
@@ -19,9 +19,9 @@ RUN_DIR = $(PWD)/run_dir
 UBUNTU_VER = $(shell lsb_release --short --id)$(shell lsb_release --short --release)
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 
@@ -41,8 +41,8 @@ $(RUN_DIR):
 	mkdir -p $@
 
 blender.manifest: blender.manifest.template | $(RUN_DIR)
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Ddata_dir=$(DATA_DIR) \
 		-Dblender_dir=$(BLENDER_DIR) \
@@ -58,13 +58,13 @@ blender.sig blender.manifest.sgx: sgx_outputs
 sgx_outputs: $(BLENDER_DIR)/blender blender.manifest | $(RUN_DIR)
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--output blender.manifest.sgx \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest blender.manifest
 
 blender.token: blender.sig
-	graphene-sgx-get-token --output $@ --sig $<
+	gramine-sgx-get-token --output $@ --sig $<
 
 $(DATA_DIR)/images:
 	mkdir -p $@

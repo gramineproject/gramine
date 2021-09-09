@@ -20,13 +20,13 @@ make SGX=1
 memtier_benchmark --port=11211 --protocol=memcache_binary --hide-histogram
 killall memcached
 
-# run Memcached in non-SGX Graphene against a benchmark
-graphene-direct memcached -u nobody &
+# run Memcached in non-SGX Gramine against a benchmark
+gramine-direct memcached -u nobody &
 memtier_benchmark --port=11211 --protocol=memcache_binary --hide-histogram
 killall pal-Linux
 
-# run Memcached in Graphene-SGX against a benchmark
-graphene-sgx memcached -u nobody &
+# run Memcached in Gramine-SGX against a benchmark
+gramine-sgx memcached -u nobody &
 memtier_benchmark --port=11211 --protocol=memcache_binary --hide-histogram
 killall pal-Linux-SGX
 ```
@@ -34,7 +34,7 @@ killall pal-Linux-SGX
 # Why this Memcached configuration?
 
 Notice that we run Memcached with `-u nobody` (means "user is nobody"). User
-argument is required because Graphene currently emulates real/effective user ID
+argument is required because Gramine currently emulates real/effective user ID
 as 0 (root). This leads Memcached to believe it is run under root. For security
 reasons, Memcached drops privileges and assumes non-privileged user ID which
 must be specified as command-line argument. The assumed user ID is irrelevant
