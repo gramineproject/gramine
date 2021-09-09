@@ -281,7 +281,7 @@ static int tcp_listen(PAL_HANDLE* handle, char* uri, int create, int options) {
     struct sockopt sock_options;
 
     memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Graphene */
+    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
 
     int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
     ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_STREAM, options), 0, ipv6_v6only,
@@ -316,7 +316,7 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
     struct sockopt sock_options;
 
     memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Graphene */
+    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
 
     ret = ocall_accept(handle->sock.fd, (struct sockaddr*)&dest_addr, &dest_addrlen, &sock_options);
     if (ret < 0)
@@ -356,7 +356,7 @@ static int tcp_connect(PAL_HANDLE* handle, char* uri, int options) {
     struct sockopt sock_options;
 
     memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Graphene */
+    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
 
     ret = ocall_connect(dest_addr->sa_family, sock_type(SOCK_STREAM, options), 0, /*ipv6_v6only=*/0,
                         dest_addr, dest_addrlen, bind_addr, &bind_addrlen, &sock_options);
@@ -456,7 +456,7 @@ static int udp_bind(PAL_HANDLE* handle, char* uri, int create, int options) {
     struct sockopt sock_options;
 
     memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Graphene */
+    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
 
     int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
     ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_DGRAM, options), 0, ipv6_v6only,
@@ -490,7 +490,7 @@ static int udp_connect(PAL_HANDLE* handle, char* uri, int create, int options) {
     struct sockopt sock_options;
 
     memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Graphene */
+    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
 
     int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
     ret = ocall_connect(dest_addr ? dest_addr->sa_family : AF_INET, sock_type(SOCK_DGRAM, options),

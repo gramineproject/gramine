@@ -1,7 +1,7 @@
 PAL host ABI
 ============
 
-PAL Host ABI is the interface used by Graphene to interact with its host. It is translated into
+PAL Host ABI is the interface used by Gramine to interact with its host. It is translated into
 the host's native ABI (e.g. system calls for UNIX) by a layer called the Platform Adaptation Layer
 (PAL). A PAL not only exports a set of APIs (PAL APIs) that can be called by the library OS, but
 also acts as the loader that bootstraps the library OS. The design of PAL Host ABI strictly follows
@@ -28,8 +28,8 @@ is described in :doc:`../manifest-syntax`.
 Manifest and executable loading
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To run a program in Graphene the PAL loader needs a manifest, which will
-describe the whole environment inside Graphene namespace. It also describes
+To run a program in Gramine the PAL loader needs a manifest, which will
+describe the whole environment inside Gramine namespace. It also describes
 which executable to start first (via ``libos.entrypoint``).
 
 Data types and variables
@@ -90,15 +90,15 @@ Basic types
    :project: pal
    :members:
 
-Graphene control block
+Gramine control block
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The control block in Graphene is a structure that provides static immutable
+The control block in Gramine is a structure that provides static immutable
 information about the current process and its host. The address of the control
 block is resolved via :func:`DkGetPalControl()` and can be memorized in a global
 variable for ease of use.
 
-The fields of the Graphene control block are defined as follows:
+The fields of the Gramine control block are defined as follows:
 
 .. doxygentypedef:: PAL_CONTROL
    :project: pal

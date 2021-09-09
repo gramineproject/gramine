@@ -22,7 +22,7 @@ fi
 rm -rf "$PRIVATE_DIR"
 
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
-patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/graphene.patch
+patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/gramine.patch
 
 make -C "$PRIVATE_DIR" lib "$@"
 

@@ -85,7 +85,7 @@ int init_devfs(void) {
     random->dev.major = 1;
     random->dev.minor = 8;
     random->dev.dev_ops.read = &dev_random_read;
-    /* writes in /dev/random add entropy in normal Linux, but not implemented in Graphene */
+    /* writes in /dev/random add entropy in normal Linux, but not implemented in Gramine */
     random->dev.dev_ops.write = &dev_null_write;
     random->dev.dev_ops.seek = &dev_null_seek;
 

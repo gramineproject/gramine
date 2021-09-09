@@ -2,8 +2,8 @@
 
 #define MAX_DBG_THREADS 1024
 
-/* This address is shared between our GDB and Graphene-SGX and must
- * reside in non-enclave memory. Graphene-SGX puts an enclave_dbginfo
+/* This address is shared between our GDB and Gramine-SGX and must
+ * reside in non-enclave memory. Gramine-SGX puts an enclave_dbginfo
  * object at this address and periodically updates it. Our GDB
  * reads the object from this address to update its internal structs
  * and learn about enclave layout, active threads, etc. */

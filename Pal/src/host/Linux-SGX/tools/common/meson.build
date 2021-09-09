@@ -41,5 +41,5 @@ pkgconfig.generate(
 
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsgx_util.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/graphene/runtime/glibc/'.format(
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
         get_option('libdir')))

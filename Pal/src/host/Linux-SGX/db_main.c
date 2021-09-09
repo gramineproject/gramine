@@ -40,7 +40,7 @@ struct pal_sec g_pal_sec;
 
 PAL_SESSION_KEY g_master_key = {0};
 
-/* for internal PAL objects, Graphene first uses pre-allocated g_mem_pool and then falls back to
+/* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
  * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is
  * limited by the variable below */
 size_t g_pal_internal_mem_size = 0;
@@ -513,7 +513,7 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 
-/* Graphene uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
+/* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with a default canary and then updates it to a random one, so we disable stack protector here */
 __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,

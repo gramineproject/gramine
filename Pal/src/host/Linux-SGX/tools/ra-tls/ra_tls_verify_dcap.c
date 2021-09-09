@@ -33,7 +33,7 @@
 
 extern verify_measurements_cb_t g_verify_measurements_cb;
 
-/* we cannot include libsgx_dcap_verify headers because they conflict with Graphene SGX headers,
+/* we cannot include libsgx_dcap_verify headers because they conflict with Gramine SGX headers,
  * so we declare the used types and functions below */
 
 /* QL stands for Quoting Library; QV stands for Quote Verification */

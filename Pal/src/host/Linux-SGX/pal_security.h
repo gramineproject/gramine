@@ -44,7 +44,7 @@ struct pal_sec {
 extern struct pal_sec g_pal_sec;
 #endif
 
-#define GRAPHENE_TEMPDIR "/tmp/graphene"
-#define GRAPHENE_PIPEDIR (GRAPHENE_TEMPDIR "/pipes")
+#define GRAMINE_TEMPDIR "/tmp/gramine"
+#define GRAMINE_PIPEDIR (GRAMINE_TEMPDIR "/pipes")
 
 #endif /* PAL_SECURITY_H */

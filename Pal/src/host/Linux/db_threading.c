@@ -77,7 +77,7 @@ out:
 
 /* Initialization wrapper of a newly-created thread (including the first thread). This function
  * accepts a TCB pointer to be set to the GS register (on x86-64) of the thread. The rest of the TCB
- * is used as the alternate stack for signal handling. Since Graphene uses GCC's stack protector,
+ * is used as the alternate stack for signal handling. Since Gramine uses GCC's stack protector,
  * and this function modifies the stack protector's GS register, we disable stack protector here. */
 __attribute_no_stack_protector
 int pal_thread_init(void* tcbptr) {

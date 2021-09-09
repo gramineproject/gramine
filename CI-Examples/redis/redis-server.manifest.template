@@ -1,16 +1,16 @@
 # Redis manifest file example
 
-################################## GRAPHENE ###################################
+################################## GRAMINE ###################################
 
-# LibOS layer library of Graphene. There is currently only one implementation,
+# LibOS layer library of Gramine. There is currently only one implementation,
 # so it is always set to libsysdb.so.
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 
-# Entrypoint binary which Graphene invokes.
+# Entrypoint binary which Gramine invokes.
 libos.entrypoint = "redis-server"
 
-# Verbosity of Graphene debug log (none/error/warning/debug/trace/all). Note
-# that GRAPHENE_LOG_LEVEL macro is expanded in the Makefile as part of the
+# Verbosity of Gramine debug log (none/error/warning/debug/trace/all). Note
+# that GRAMINE_LOG_LEVEL macro is expanded in the Makefile as part of the
 # building process: the default is "error" for non-debug builds, and "debug"
 # for debug builds.
 loader.log_level = "{{ log_level }}"
@@ -23,7 +23,7 @@ loader.insecure__use_cmdline_argv = true
 ################################# ENV VARS ####################################
 
 # Specify paths to search for libraries. The usual LD_LIBRARY_PATH syntax
-# applies. Paths must be in-Graphene visible paths, not host-OS paths (i.e.,
+# applies. Paths must be in-Gramine visible paths, not host-OS paths (i.e.,
 # paths must be taken from fs.mount.xxx.path, not fs.mount.xxx.uri).
 #
 # In case of Redis:
@@ -42,17 +42,17 @@ sys.enable_sigterm_injection = true
 # - There is only one supported type of mount points: 'chroot'.
 # - Directory names are (somewhat confusingly) prepended by 'file:'.
 # - Names of mount entries (lib, lib2, lib3) are irrelevant but must be unique.
-# - In-Graphene visible path names may be arbitrary but we reuse host-OS URIs
+# - In-Gramine visible path names may be arbitrary but we reuse host-OS URIs
 #   for simplicity (except for the first 'lib' case).
 
-# Mount host-OS directory to Graphene glibc/runtime libraries (in 'uri') into
-# in-Graphene visible directory /lib (in 'path').
+# Mount host-OS directory to Gramine glibc/runtime libraries (in 'uri') into
+# in-Gramine visible directory /lib (in 'path').
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 # Mount host-OS directory to Name Service Switch (NSS) libraries (in 'uri')
-# into in-Graphene visible directory /lib/x86_64-linux-gnu (in 'path').
+# into in-Gramine visible directory /lib/x86_64-linux-gnu (in 'path').
 fs.mount.lib2.type = "chroot"
 fs.mount.lib2.path = "{{ arch_libdir }}"
 fs.mount.lib2.uri = "file:{{ arch_libdir }}"
@@ -62,7 +62,7 @@ fs.mount.lib3.path = "/usr/{{ arch_libdir }}"
 fs.mount.lib3.uri = "file:/usr/{{ arch_libdir }}"
 
 # Mount host-OS directory to NSS files required by Glibc + NSS libs (in 'uri')
-# into in-Graphene visible directory /etc (in 'path').
+# into in-Gramine visible directory /etc (in 'path').
 fs.mount.etc.type = "chroot"
 fs.mount.etc.path = "/etc"
 fs.mount.etc.uri = "file:/etc"
@@ -80,7 +80,7 @@ sgx.enclave_size = "1024M"
 # that SGX v1 requires to specify the maximum number of simulteneous threads at
 # enclave creation time.
 #
-# Note that internally Graphene may spawn two additional threads, one for IPC
+# Note that internally Gramine may spawn two additional threads, one for IPC
 # and one for asynchronous events/alarms. Redis is technically single-threaded
 # but spawns couple additional threads to do background bookkeeping. Therefore,
 # specifying '8' allows to run a maximum of 6 Redis threads which is enough.
@@ -102,20 +102,20 @@ sgx.nonpie_binary = true
 # files (like configuration files).
 #
 # The paths to files are host-OS paths. These files will be searched for in
-# in-Graphene visible paths according to mount points above.
+# in-Gramine visible paths according to mount points above.
 #
-# As part of the build process, Graphene-SGX script (`graphene-sgx-sign`) finds
+# As part of the build process, Gramine-SGX script (`gramine-sgx-sign`) finds
 # each specified file, measures its hash, and adds it to the manifest entry for
 # that file (converting each entry to a table with "uri" and "sha256" keys).
 # Note that this happens on the developer machine or a build server.
 #
-# At runtime, during loading of each "trusted file", Graphene-SGX measures its
+# At runtime, during loading of each "trusted file", Gramine-SGX measures its
 # hash and compares with the "sha256" value in the corresponding manifest entry.
 # If hashes match, this file is trusted and allowed to be loaded and used. Note
 # that this happens on the client machine.
 sgx.trusted_files = [
   "file:redis-server",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
 ]
@@ -124,7 +124,7 @@ sgx.trusted_files = [
 ############################# SGX: ALLOWED FILES ###############################
 
 # Specify all non-static files used by app. These files may be accessed by
-# Graphene-SGX but their integrity is not verified (Graphene-SGX does not
+# Gramine-SGX but their integrity is not verified (Gramine-SGX does not
 # measure their hashes). This may pose a security risk!
 
 sgx.allowed_files = [

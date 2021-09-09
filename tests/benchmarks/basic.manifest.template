@@ -1,15 +1,15 @@
 #sgx.enable_stats = true
 
-loader.preload = file:@GRAPHENEDIR@/Runtime/libsysdb.so
+loader.preload = file:@GRAMINEDIR@/Runtime/libsysdb.so
 loader.env.LD_LIBRARY_PATH = /lib
 loader.syscall_symbol = syscalldb
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.graphene_lib.type = chroot
-fs.mount.graphene_lib.path = /lib
-fs.mount.graphene_lib.uri = file:@GRAPHENEDIR@/Runtime
+fs.mount.gramine_lib.type = chroot
+fs.mount.gramine_lib.path = /lib
+fs.mount.gramine_lib.uri = file:@GRAMINEDIR@/Runtime
 
-sgx.trusted_files.runtime = "file:@GRAPHENEDIR@/Runtime/"
+sgx.trusted_files.runtime = "file:@GRAMINEDIR@/Runtime/"
 
 sgx.thread_num = 3
 

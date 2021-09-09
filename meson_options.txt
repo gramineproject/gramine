@@ -1,8 +1,8 @@
 # TODO: after deprecating 18.04/bionic, change these to type: 'feature'
 option('direct', type: 'combo', choices: ['disabled', 'enabled'],
-    description: 'Build and install graphene-direct (aka Linux aka nonsgx)')
+    description: 'Build and install gramine-direct (aka Linux aka nonsgx)')
 option('sgx', type: 'combo', choices: ['disabled', 'enabled'],
-    description: 'Build and install graphene-sgx (aka Linux-SGX)')
+    description: 'Build and install gramine-sgx (aka Linux-SGX)')
 option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build skeleton PAL')
 

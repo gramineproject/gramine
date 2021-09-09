@@ -27,7 +27,7 @@ void ipc_child_disconnect_callback(IDTYPE vmid) {
 
 int ipc_cld_exit_send(unsigned int exitcode, unsigned int term_signal) {
     if (!g_process.ppid) {
-        /* We have no parent inside Graphene, so no one to notify. */
+        /* We have no parent inside Gramine, so no one to notify. */
         return 0;
     }
 

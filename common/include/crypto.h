@@ -3,7 +3,7 @@
 
 /*
  * Cryptographic primitive abstractions. This layer provides a way to
- * change the crypto library without changing the rest of Graphene code
+ * change the crypto library without changing the rest of Gramine code
  * by providing a small crypto library adaptor implementing these methods.
  */
 

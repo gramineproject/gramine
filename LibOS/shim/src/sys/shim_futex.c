@@ -747,7 +747,7 @@ static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, ui
         if (cmd != FUTEX_WAIT && cmd != FUTEX_WAIT_BITSET && cmd != FUTEX_WAIT_REQUEUE_PI) {
             return -ENOSYS;
         }
-        /* Graphene has only one clock for now. */
+        /* Gramine has only one clock for now. */
         log_warning("Ignoring FUTEX_CLOCK_REALTIME flag");
     }
 

@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "file_check_policy"
 loader.argv0_override = "file_check_policy"
 
@@ -7,13 +7,13 @@ loader.insecure__use_cmdline_argv = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
 sgx.file_check_policy = "strict"
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
 ]
 
 # below entry in sgx.trusted_files is to test TOML-table syntax without `sha256`

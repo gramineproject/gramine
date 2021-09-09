@@ -34,7 +34,7 @@
 #include "ra_tls.h"
 #include "sgx_arch.h"
 
-#define CERT_SUBJECT_NAME_VALUES  "CN=RATLS,O=GrapheneDevelopers,C=US"
+#define CERT_SUBJECT_NAME_VALUES  "CN=RATLS,O=GramineDevelopers,C=US"
 #define CERT_TIMESTAMP_NOT_BEFORE_DEFAULT "20010101000000"
 #define CERT_TIMESTAMP_NOT_AFTER_DEFAULT  "20301231235959"
 

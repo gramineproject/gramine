@@ -3,7 +3,7 @@ Introduction to SGX
 
 .. highlight:: sh
 
-Graphene project uses :term:`SGX` to securely run software. SGX is
+Gramine project uses :term:`SGX` to securely run software. SGX is
 a |~| complicated topic, which may be hard to learn, because the documentation
 is scattered through official/reference documentation, blogposts and academic
 papers. This page is an attempt to curate a |~| dossier of available reading
@@ -102,7 +102,7 @@ For historical reasons, there are three SGX drivers currently (January 2021):
     gpasswd -a USERNAME sgx
     groupadd -r sgx_prv
     gpasswd -a USERNAME sgx_prv
-    cat > /etc/udev/rules.d/65-graphene-sgx.rules << EOF
+    cat > /etc/udev/rules.d/65-gramine-sgx.rules << EOF
       SUBSYSTEM=="misc",KERNEL=="sgx_enclave",MODE="0660",GROUP="sgx"
       SUBSYSTEM=="misc",KERNEL=="sgx_provision",MODE="0660",GROUP="sgx_prv"
       EOF
@@ -526,7 +526,7 @@ SGX terminology
       compromises security. Any problem outside TCB is not a |~| vulnerability,
       i.e. |~| should not compromise security.
 
-      In context of Graphene there is also a |~| different meaning
+      In context of Gramine there is also a |~| different meaning
       (:term:`Thread Control Block`). Those two should not be confused.
 
    Thread Control Structure

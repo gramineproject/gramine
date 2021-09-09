@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    /* creating file within Graphene */
-    int fd = openat(AT_FDCWD, "tmp/filecreatedbygraphene", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    /* creating file within Gramine */
+    int fd = openat(AT_FDCWD, "tmp/filecreatedbygramine", O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
-        perror("failed to create file from within Graphene");
+        perror("failed to create file from within Gramine");
         return 1;
     }
     reti = close(fd);

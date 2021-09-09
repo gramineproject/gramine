@@ -213,7 +213,7 @@ static int __mount_one_other(toml_table_t* mount) {
     if (!strcmp(mount_path, "/")) {
         log_error(
             "Root mount / already exists, verify that there are no duplicate mounts in manifest\n"
-            "(note that root / is automatically mounted in Graphene and can be changed via "
+            "(note that root / is automatically mounted in Gramine and can be changed via "
             "'fs.root' manifest entry).\n");
         ret = -EEXIST;
         goto out;
@@ -232,7 +232,7 @@ static int __mount_one_other(toml_table_t* mount) {
             !strncmp(mount_uri, "file:/sys/", strlen("file:/sys/")) ||
             !strncmp(mount_uri, "file:/dev/", strlen("file:/dev/"))) {
         log_error("Mounting %s may expose unsanitized, unsafe files to unsuspecting application. "
-                  "Graphene will continue application execution, but this configuration is not "
+                  "Gramine will continue application execution, but this configuration is not "
                   "recommended for use in production!", mount_uri);
     }
 
@@ -269,8 +269,8 @@ static int __mount_others(void) {
     /* *** Warning: A _very_ ugly hack below (hopefully only temporary) ***
      *
      * Currently we don't use proper TOML syntax for declaring mountpoints, instead, we use a syntax
-     * which resembles the pre-TOML one used in Graphene. As a result, the entries are not ordered,
-     * but Graphene actually relies on the specific mounting order (e.g. you can't mount /lib/asdf
+     * which resembles the pre-TOML one used in Gramine. As a result, the entries are not ordered,
+     * but Gramine actually relies on the specific mounting order (e.g. you can't mount /lib/asdf
      * first and then /lib, but the other way around works). The problem is, that TOML structure is
      * just a dictionary, so the order of keys is not preserved.
      *
@@ -282,7 +282,7 @@ static int __mount_others(void) {
      * usually there are around 5 mountpoints with ~30 chars in paths, so it should still be quite
      * fast.
      *
-     * Corresponding issue: https://github.com/oscarlab/graphene/issues/2214.
+     * Corresponding issue: https://github.com/gramineproject/graphene/issues/2214.
      */
     const char** keys = malloc(mounts_cnt * sizeof(*keys));
     size_t* lengths = malloc(mounts_cnt * sizeof(*lengths));
@@ -512,7 +512,7 @@ out:
 
 /*
  * XXX: These two functions are useless - `mount` is not freed even if refcount reaches 0.
- * Unfortunately Graphene is not keeping track of this refcount correctly, so we cannot free
+ * Unfortunately Gramine is not keeping track of this refcount correctly, so we cannot free
  * the object. Fixing this would require revising whole filesystem implementation - but this code
  * is, uhm, not the best achievement of humankind and probably requires a complete rewrite.
  */

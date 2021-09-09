@@ -55,10 +55,10 @@ class Redis:
         with self.redis_server.native_server(*REDIS_SERVER[1:]):
             return _run_benchmark(t)
 
-    def track_graphene_nosgx(self, t):
-        with self.redis_server.graphene_server(*REDIS_SERVER[1:], sgx=False):
+    def track_gramine_nosgx(self, t):
+        with self.redis_server.gramine_server(*REDIS_SERVER[1:], sgx=False):
             return _run_benchmark(t)
 
-    def track_graphene_sgx(self, t):
-        with self.redis_server.graphene_server(*REDIS_SERVER[1:], sgx=True):
+    def track_gramine_sgx(self, t):
+        with self.redis_server.gramine_server(*REDIS_SERVER[1:], sgx=True):
             return _run_benchmark(t)

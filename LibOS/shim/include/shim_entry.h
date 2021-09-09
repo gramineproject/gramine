@@ -4,7 +4,7 @@
  */
 
 /*
- * This file describes Graphene's entrypoints from userspace (mostly from patched glibc).
+ * This file describes Gramine's entrypoints from userspace (mostly from patched glibc).
  *
  * The userspace wrappers for these functions are defined in `shim_entry_api.h`.
  */

@@ -87,7 +87,7 @@ static void test_cpuid_leaf_0xd(void) {
 }
 
 static void test_cpuid_leaf_reserved(void) {
-    /* Graphene returns all zeros for reserved CPUID leaves */
+    /* Gramine returns all zeros for reserved CPUID leaves */
     struct regs r;
     set_dummy_regs(&r);
 
@@ -102,7 +102,7 @@ static void test_cpuid_leaf_reserved(void) {
 }
 
 static void test_cpuid_leaf_not_recognized(void) {
-    /* in case of unrecognized leaves, Graphene returns info for highest basic information leaf */
+    /* in case of unrecognized leaves, Gramine returns info for highest basic information leaf */
     struct regs r;
     set_dummy_regs(&r);
 

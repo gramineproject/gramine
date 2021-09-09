@@ -150,7 +150,7 @@ int main(void) {
      * something (if the buffer is too big, the call before fork might retrieve all the entries, and
      * subsequent calls will return 0).
      *
-     * Note that we currently do not synchronize handle state between parent and child in Graphene,
+     * Note that we currently do not synchronize handle state between parent and child in Gramine,
      * so both calls after fork will return the same entries.
      */
     fd = open("root/testdir", O_RDONLY | O_DIRECTORY);

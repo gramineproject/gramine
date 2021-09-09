@@ -4,7 +4,7 @@ Please provide as much information as possible.
 Paste any logs using three backticks (```).
 
 IMPORTANT: please do not post general questions here;
-if you have questions, please use mailing list: support@graphene-project.io
+if you have questions, please use mailing list: support@gramineproject.io
 -->
 
 ## Description of the problem

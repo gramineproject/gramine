@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/lib64"
 loader.env.PATH = "/bin:/usr/bin:."
@@ -12,7 +12,7 @@ fs.mount.shm.uri = "file:/tmp"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.lib64.type = "chroot"
 fs.mount.lib64.path = "{{ arch_libdir }}"
@@ -36,11 +36,11 @@ sgx.allowed_files = [
 
 sgx.trusted_files = [
   "file:{{ entrypoint }}",
-  "file:{{ graphene.runtimedir() }}/ld-linux-x86-64.so.2",
-  "file:{{ graphene.runtimedir() }}/libc.so.6",
-  "file:{{ graphene.runtimedir() }}/libdl.so.2",
-  "file:{{ graphene.runtimedir() }}/libm.so.6",
-  "file:{{ graphene.runtimedir() }}/libpthread.so.0",
-  "file:{{ graphene.runtimedir() }}/librt.so.1",
+  "file:{{ gramine.runtimedir() }}/ld-linux-x86-64.so.2",
+  "file:{{ gramine.runtimedir() }}/libc.so.6",
+  "file:{{ gramine.runtimedir() }}/libdl.so.2",
+  "file:{{ gramine.runtimedir() }}/libm.so.6",
+  "file:{{ gramine.runtimedir() }}/libpthread.so.0",
+  "file:{{ gramine.runtimedir() }}/librt.so.1",
   "file:{{ coreutils_libdir }}/libstdbuf.so",
 ]

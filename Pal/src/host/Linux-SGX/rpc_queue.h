@@ -8,7 +8,7 @@
  *
  * Brief description: user must specify "sgx.rpc_thread_num = 2" in manifest to create two RPC
  * threads. If user specifies "0" or omits this directive, then no RPC threads are created and all
- * syscalls perform an enclave exit (as in previous versions of Graphene).
+ * syscalls perform an enclave exit (as in previous versions of Gramine).
  *
  * All enclave and RPC threads work on a single shared RPC queue (global variable `g_rpc_queue`).
  * To issue a syscall, enclave thread enqueues syscall request in the queue and spins waiting for
@@ -31,11 +31,11 @@
  *
  * NOTE: The Exitless feature trades slow OCALLs/ECALLs for fast RPC-queue communication at the
  * cost of occupying more CPU cores and burning more CPU cycles. For example, a single-threaded
- * Redis instance on Linux becomes 5-threaded on Graphene-SGX. Therefore, Exitless may negatively
+ * Redis instance on Linux becomes 5-threaded on Gramine-SGX. Therefore, Exitless may negatively
  * impact throughput but may improve latency. Only a subset of applications may benefit from
  * Exitless, in particular, single-threaded latency-sensitive apps that cannot be parallelized.
  *
- * Prototype code was written by Meni Orenbach and adapted to Graphene by Dmitrii Kuvaiskii.
+ * Prototype code was written by Meni Orenbach and adapted to Gramine by Dmitrii Kuvaiskii.
  */
 #ifndef QUEUE_H_
 #define QUEUE_H_

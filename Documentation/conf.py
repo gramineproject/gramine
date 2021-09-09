@@ -24,9 +24,9 @@ import recommonmark.parser
 
 # -- Project information -----------------------------------------------------
 
-project = 'Graphene'
-copyright = '2019-2021, Graphene Contributors'
-author = 'Graphene Contributors'
+project = 'Gramine'
+copyright = '2019-2021, Gramine Contributors'
+author = 'Gramine Contributors'
 
 # The short X.Y version
 version = ''
@@ -95,7 +95,7 @@ def generate_doxygen(app):
         subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
 
 def setup(app):
-    app.add_stylesheet('css/graphene.css')
+    app.add_stylesheet('css/gramine.css')
     app.connect('builder-inited', generate_doxygen)
 
 breathe_domain_by_extension = {
@@ -124,7 +124,7 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
     'logo_only': True,
 }
-html_logo = 'graphene_logo.svg'
+html_logo = 'gramine_logo.svg'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -147,7 +147,7 @@ html_static_path = ['_static']
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('manpages/graphene-manifest', 'graphene-manifest', 'Graphene manifest preprocessor', [author], 1),
+    ('manpages/gramine-manifest', 'gramine-manifest', 'Gramine manifest preprocessor', [author], 1),
     ('manpages/pal_loader', 'pal_loader', 'FIXME Loader', [author], 1),
     ('manpages/is_sgx_available', 'is_sgx_available', 'Check SGX compatibility', [author], 1),
     ('manpages/quote_dump', 'quote_dump', 'Display SGX quote', [author], 1),

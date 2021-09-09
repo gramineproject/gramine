@@ -431,7 +431,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             data = (void*)DO_SYSCALL(mmap, NULL, areas[i].size, PROT_READ | PROT_WRITE,
                                      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
             if (IS_PTR_ERR(data) || data == NULL) {
-                /* Note that Graphene currently doesn't handle 0x0 addresses */
+                /* Note that Gramine currently doesn't handle 0x0 addresses */
                 log_error("Allocating memory failed");
                 ret = -ENOMEM;
                 goto out;
@@ -806,7 +806,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 #else
     if (profile_str && strcmp(profile_str, "none")) {
         log_error("Invalid 'sgx.profile.enable' "
-                  "(SGX profiling works only when Graphene is compiled with DEBUG=1)");
+                  "(SGX profiling works only when Gramine is compiled with DEBUG=1)");
         ret = -EINVAL;
         goto out;
     }
@@ -913,7 +913,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* TODO: correctly support offline cores */
     if (possible_logical_cores > 0 && possible_logical_cores > online_logical_cores) {
-         log_warning("some CPUs seem to be offline; Graphene doesn't take this into account "
+         log_warning("some CPUs seem to be offline; Gramine doesn't take this into account "
                      "which may lead to subpar performance");
     }
 
@@ -994,8 +994,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     enclave->token = DO_SYSCALL(open, token_path, O_RDONLY | O_CLOEXEC, 0);
     if (enclave->token < 0) {
         log_error(
-            "Cannot open token %s. Use graphene-sgx-get-token on the runtime host or run "
-            "`make SGX=1 sgx-tokens` in the Graphene source to create the token file.",
+            "Cannot open token %s. Use gramine-sgx-get-token on the runtime host or run "
+            "`make SGX=1 sgx-tokens` in the Gramine source to create the token file.",
             token_path);
         return -EINVAL;
     }
@@ -1037,7 +1037,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     end_time = tv.tv_sec * 1000000UL + tv.tv_usec;
 
     if (g_sgx_enable_stats) {
-        /* This shows the time for Graphene + the Intel SGX driver to initialize the untrusted
+        /* This shows the time for Gramine + the Intel SGX driver to initialize the untrusted
          * PAL, config and create the SGX enclave, add enclave pages, measure and init it.
          */
         log_always("----- SGX enclave loading time = %10lu microseconds -----",
@@ -1068,7 +1068,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
                "\tChildren:      %s <path to libpal.so> child <parent_pipe_fd> args...",
                self, self);
     log_always("This is an internal interface. Use pal_loader to launch applications in "
-               "Graphene.");
+               "Gramine.");
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
 }
@@ -1099,7 +1099,7 @@ int main(int argc, char* argv[], char* envp[]) {
         return -ENOMEM;
     }
 
-    // Are we the first in this Graphene's namespace?
+    // Are we the first in this Gramine's namespace?
     bool first_process = !strcmp(argv[2], "init");
     if (!first_process && strcmp(argv[2], "child")) {
         print_usage_and_exit(argv[0]);
@@ -1125,7 +1125,7 @@ int main(int argc, char* argv[], char* envp[]) {
         free(manifest_path);
         manifest_path = NULL;
     } else {
-        /* We're one of the children spawned to host new processes started inside Graphene. */
+        /* We're one of the children spawned to host new processes started inside Gramine. */
         g_pal_enclave.is_first_process = false;
 
         /* We'll receive our argv and config via IPC. */

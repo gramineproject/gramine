@@ -4,7 +4,7 @@
  */
 
 /*
- * This file contains code for calling Graphene from userspace. It can be used in patched
+ * This file contains code for calling Gramine from userspace. It can be used in patched
  * applications and libraries (e.g. glibc).
  *
  * To use, include this file in patched code and replace SYSCALL instructions with invocations of

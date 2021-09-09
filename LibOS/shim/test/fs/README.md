@@ -1,7 +1,7 @@
 Test purpose
 ------------
 
-These tests perform common FS operations in various ways to exercise the Graphene FS subsystem:
+These tests perform common FS operations in various ways to exercise the Gramine FS subsystem:
 
 - open/close
 - read/write
@@ -23,6 +23,6 @@ How to execute
 (SGX only) Protected file tests assume that the SGX tools were installed in this directory:
 
 ```
-cd $graphene/Pal/src/host/Linux-SGX/tools
-make install PREFIX=$graphene/LibOS/shim/test/fs
+cd $gramine/Pal/src/host/Linux-SGX/tools
+make install PREFIX=$gramine/LibOS/shim/test/fs
 ```

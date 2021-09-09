@@ -255,7 +255,7 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
     /* corner case of regular file: emulate via open() + close() */
     if (!(mode & S_IFMT) || S_ISREG(mode)) {
         mode &= ~S_IFREG;
-        /* FIXME: Graphene assumes that file is at least readable by owner, in particular, see
+        /* FIXME: Gramine assumes that file is at least readable by owner, in particular, see
          *        unlink() emulation that uses DkStreamOpen(). We change empty mode to readable
          *        by user here to allow a consequent unlink. Was detected on LTP mknod tests. */
         int fd = shim_do_openat(dirfd, pathname, O_CREAT | O_EXCL, mode ?: PERM_r________);

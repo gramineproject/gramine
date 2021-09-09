@@ -3,12 +3,12 @@ project('mbedtls', 'c')
 pkgconfig = import('pkgconfig')
 
 mbedtls_libs_output = [
-    'libmbedcrypto_graphene.so.6',
-    'libmbedcrypto_graphene.so',
-    'libmbedtls_graphene.so.13',
-    'libmbedtls_graphene.so',
-    'libmbedx509_graphene.so.1',
-    'libmbedx509_graphene.so',
+    'libmbedcrypto_gramine.so.6',
+    'libmbedcrypto_gramine.so',
+    'libmbedtls_gramine.so.13',
+    'libmbedtls_gramine.so',
+    'libmbedx509_gramine.so.1',
+    'libmbedx509_gramine.so',
 ]
 
 # TODO: This is custom_target, because we need to patch mbedtls before compiling.
@@ -21,11 +21,11 @@ mbedtls_libs = custom_target('mbedtls',
         '@PRIVATE_DIR@',
         '@OUTPUT@',
         '--',
-        'SUFFIX=_graphene',
+        'SUFFIX=_gramine',
         'SHARED=1',
     ],
 
-    input: ['Makefile', 'graphene.patch'],
+    input: ['Makefile', 'gramine.patch'],
 
     # NOTE we need real sonames here (.so.N, not .so), please keep synced with
     # mbedtls/library/Makefile, variables SOEXT_{TLS,X509,CRYPTO}
@@ -36,22 +36,22 @@ mbedtls_libs = custom_target('mbedtls',
 )
 
 pkgconfig.generate(
-    name: 'mbedtls_graphene',
-    filebase: 'mbedtls_graphene',
-    description: 'A version of mbedtls patched for Graphene',
+    name: 'mbedtls_gramine',
+    filebase: 'mbedtls_gramine',
+    description: 'A version of mbedtls patched for Gramine',
     libraries: [
         '-L${libdir}',
         '-Wl,-rpath,${libdir}',
-        '-lmbedcrypto_graphene',
-        '-lmbedtls_graphene',
-        '-lmbedx509_graphene',
+        '-lmbedcrypto_gramine',
+        '-lmbedtls_gramine',
+        '-lmbedx509_gramine',
     ],
 )
 
 foreach output : mbedtls_libs_output
     meson.add_install_script('/bin/sh', '-c',
         ('ln -sf ../../../@0@ ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/graphene/runtime/glibc/').format(
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
             output, get_option('libdir')))
 endforeach
 
@@ -66,7 +66,7 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
         'SUFFIX=_pal',
     ],
 
-    input: ['Makefile', 'graphene.patch'],
+    input: ['Makefile', 'gramine.patch'],
 
     output: [
         'libmbedcrypto_pal.a',

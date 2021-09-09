@@ -48,7 +48,7 @@ static PAL_IDX pal_assign_tid(void) {
 }
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
- * g_thread_list, initializes its TCB/TLS, and jumps into the callback-to-run. Graphene uses GCC's
+ * g_thread_list, initializes its TCB/TLS, and jumps into the callback-to-run. Gramine uses GCC's
  * stack protector that looks for a canary at gs:[0x8], but this function starts with a default
  * canary and then updates it to a random one, so we disable stack protector here. */
 __attribute_no_stack_protector

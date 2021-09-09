@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2021 Intel Corporation
+
+REPLACED=${0/graphene/gramine}
+
+echo "WARNING: Graphene was renamed to Gramine recently. Consider using new executable names." >&2
+echo "         (For now, we replaced call to '$(basename $0)' with '$(basename $REPLACED)')." >&2
+echo "" >&2
+
+exec "${REPLACED}" "$@"

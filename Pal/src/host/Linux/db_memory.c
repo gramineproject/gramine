@@ -27,7 +27,7 @@
  * memory region on allocations and do nothing on deallocations (and fail loudly if the limit
  * specified in the manifest is exceeded). This wastes memory, but we assume that internal-PAL
  * allocations are rare, and that PAL doesn't consume much memory anyway. In near future, we need to
- * rewrite Graphene allocation logic in PAL.
+ * rewrite Gramine allocation logic in PAL.
  */
 
 static size_t g_pal_internal_mem_used = 0;

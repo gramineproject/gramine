@@ -1,4 +1,4 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "init_fail"
 loader.argv0_override = "init_fail"
 
@@ -6,7 +6,7 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
 
@@ -15,6 +15,6 @@ sgx.enclave_size = "256M"
 sys.brk.max_size = "512M"
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:init_fail",
 ]

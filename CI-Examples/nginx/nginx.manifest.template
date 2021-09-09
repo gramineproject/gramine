@@ -1,6 +1,6 @@
 # Nginx manifest example
 
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ install_dir }}/sbin/nginx"
 loader.log_level = "{{ log_level }}"
 
@@ -12,7 +12,7 @@ sys.enable_sigterm_injection = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.lib2.type = "chroot"
 fs.mount.lib2.path = "{{ arch_libdir }}"
@@ -45,7 +45,7 @@ sgx.trusted_files = [
   "file:{{ install_dir }}/sbin/nginx",
   "file:{{ install_dir }}/conf/",
   "file:{{ install_dir }}/html/",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
 ]

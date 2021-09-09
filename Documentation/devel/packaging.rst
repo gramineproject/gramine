@@ -1,7 +1,7 @@
 Packaging and distributing
 ==========================
 
-Graphene project aims to support two most recent releases of the long-lived
+Gramine project aims to support two most recent releases of the long-lived
 distributions (e.g. Debian, Ubuntu LTS, [the CentOS replacement that will
 hopefully emerge soon], ...).
 

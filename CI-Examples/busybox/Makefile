@@ -7,9 +7,9 @@ BUSYBOX_URL ?= https://busybox.net/downloads/busybox-1.32.0.tar.bz2
 BUSYBOX_SHA256 ?= c35d87f1d04b2b153d33c275c2632e40d388a88f19a9e71727e0bbbff51fe689
 
 ifeq ($(DEBUG),1)
-GRAPHENE_LOG_LEVEL = debug
+GRAMINE_LOG_LEVEL = debug
 else
-GRAPHENE_LOG_LEVEL = error
+GRAMINE_LOG_LEVEL = error
 endif
 
 
@@ -31,7 +31,7 @@ $(SRCDIR)/.config: $(SRCDIR)/Makefile
 	# Enable usage of Busybox's built-in applets
 	sed -e 's/.*CONFIG_FEATURE_SH_STANDALONE.*/CONFIG_FEATURE_SH_STANDALONE=y/' \
 		-i $(SRCDIR)/.config
-	# Currently '/proc/self/exe' is bugged in graphene, so manually set path
+	# Currently '/proc/self/exe' is bugged in gramine, so manually set path
 	# to the Busybox binary
 	sed -e 's/.*CONFIG_BUSYBOX_EXEC_PATH.*/CONFIG_BUSYBOX_EXEC_PATH="\/busybox"/' \
 		-i $(SRCDIR)/.config
@@ -40,19 +40,19 @@ $(SRCDIR)/busybox: $(SRCDIR)/.config
 	$(MAKE) -C $(SRCDIR)
 
 busybox.manifest: busybox.manifest.template
-	graphene-manifest \
-		-Dlog_level=$(GRAPHENE_LOG_LEVEL) \
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
 busybox.manifest.sgx: busybox.manifest busybox
 	@test -s $(SGX_SIGNER_KEY) || \
 	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
-	graphene-sgx-sign \
+	gramine-sgx-sign \
 		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
-	graphene-sgx-get-token \
+	gramine-sgx-get-token \
 		--output busybox.token --sig busybox.sig
 
 # Copy Busybox binary to our root directory for simplicity.

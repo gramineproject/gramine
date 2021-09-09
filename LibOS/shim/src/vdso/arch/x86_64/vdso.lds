@@ -5,7 +5,7 @@
  */
 
 /*
- * Linker script for Graphene vDSO emulation
+ * Linker script for Gramine vDSO emulation
  */
 
 PHDRS

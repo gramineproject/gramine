@@ -18,7 +18,7 @@
 #include "api.h"
 #include "syscall.h"
 
-/* Graphene uses GCC's stack protector that looks for canary at gs:[0x8], but this function changes
+/* Gramine uses GCC's stack protector that looks for canary at gs:[0x8], but this function changes
  * the GS register value, so we disable stack protector here (even though it is mostly inlined) */
 __attribute_no_stack_protector
 static inline int pal_set_tcb(PAL_TCB* tcb) {

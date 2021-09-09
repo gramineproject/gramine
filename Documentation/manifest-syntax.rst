@@ -5,7 +5,7 @@ Manifest syntax
 
 A |~| manifest file is an application-specific configuration text file that
 specifies the environment and resources for running an application inside
-Graphene. A |~| manifest file contains key-value pairs (as well as more
+Gramine. A |~| manifest file contains key-value pairs (as well as more
 complicated table and array objects) in the TOML syntax. For the details of the
 TOML syntax, see `the official documentation <https://toml.io>`__.
 
@@ -20,8 +20,8 @@ A typical integer entry looks similar to the above but without double quotes::
 Comments can be inlined in a |~| manifest by starting them with a |~| hash sign
 (``# comment...``).
 
-There is also a |~| preprocessor available: :ref:`graphene-manifest
-<graphene-manifest>`, which renders manifests from Jinja templates.
+There is also a |~| preprocessor available: :ref:`gramine-manifest
+<gramine-manifest>`, which renders manifests from Jinja templates.
 
 Common syntax
 -------------
@@ -36,21 +36,21 @@ Log level
 
     loader.log_file = "[PATH]"
 
-This configures Graphene's debug log. The ``log_level`` option specifies what
+This configures Gramine's debug log. The ``log_level`` option specifies what
 messages to enable (e.g. ``loader.log_level = "debug"`` will enable all messages
 of type ``error``, ``warning`` and ``debug``). By default, the messages are printed
 to the standard error. If ``log_file`` is specified, the messages will be
 appended to that file.
 
-Graphene outputs log messages of the following types:
+Gramine outputs log messages of the following types:
 
-* ``error``: A serious error preventing Graphene from operating properly (for
+* ``error``: A serious error preventing Gramine from operating properly (for
   example, error initializing one of the components).
 
 * ``warning``: A non-fatal issue. Might mean that application is requesting
   something unsupported or poorly emulated.
 
-* ``debug``: Detailed information about Graphene's operation and internals.
+* ``debug``: Detailed information about Gramine's operation and internals.
 
 * ``trace``: More detailed information, such as all system calls requested by
   the application. Might contain a lot of noise.
@@ -78,7 +78,7 @@ Entrypoint
    libos.entrypoint = "[PATH]"
 
 This specifies the first executable which is to be started when spawning a
-Graphene instance from this manifest file. Needs to be a path inside Graphene
+Gramine instance from this manifest file. Needs to be a path inside Gramine
 pointing to a mounted file. Relative paths will be interpreted as starting from
 the current working directory (i.e. from ``/`` by default, or ``fs.start_dir``
 if specified).
@@ -110,7 +110,7 @@ This syntax specifies an arbitrary string (typically the executable name) that
 will be passed as the first argument (``argv[0]``) to the executable.
 
 If the string is not specified in the manifest, the application will get
-``argv[0]`` from :program:`graphene-direct` or :program:`graphene-sgx`
+``argv[0]`` from :program:`gramine-direct` or :program:`gramine-sgx`
 invocation.
 
 ::
@@ -126,7 +126,7 @@ or
 If you want your application to use commandline arguments you need to either set
 ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases) or point
 ``loader.argv_src_file`` to a file containing output of
-:program:`graphene-argv-serializer`.
+:program:`gramine-argv-serializer`.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or a
 protected file. The former allows to securely hardcode arguments (current
@@ -162,7 +162,7 @@ both of the following options:
 be used multiple times to specify more than one variable.
 
 ``loader.env_src_file`` allows to specify a URI to a file containing serialized
-environment, which can be generated using :program:`graphene-argv-serializer`.
+environment, which can be generated using :program:`gramine-argv-serializer`.
 This option is intended to point to either a trusted file or a protected file.
 The former allows to securely hardcode environments (in a more flexible way than
 ``loader.env.[ENVIRON]`` option), the latter allows the environments to be
@@ -198,27 +198,27 @@ Check invalid pointers
 
 This specifies whether to enable checks of invalid pointers on syscall
 invocations. In particular, when this manifest option is set to ``true``,
-Graphene's LibOS will return an EFAULT error code if a user-supplied buffer
+Gramine's LibOS will return an EFAULT error code if a user-supplied buffer
 points to an invalid memory region. Setting this manifest option to ``false``
 may improve performance for certain workloads but may also generate
 ``SIGSEGV/SIGBUS`` exceptions for some applications that specifically use
 invalid pointers (though this is not expected for most real-world applications).
 
-Graphene internal metadata size
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Gramine internal metadata size
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
     loader.pal_internal_mem_size = "[SIZE]"
     (default: "0")
 
-This syntax specifies how much additional memory Graphene reserves for its
+This syntax specifies how much additional memory Gramine reserves for its
 internal use (e.g., metadata for trusted/protected files, internal handles,
-etc.). By default, Graphene pre-allocates 64MB of internal memory for this
+etc.). By default, Gramine pre-allocates 64MB of internal memory for this
 metadata, but for huge workloads this limit may be not enough. In this case,
-Graphene loudly fails with "out of PAL memory" error. To run huge workloads,
+Gramine loudly fails with "out of PAL memory" error. To run huge workloads,
 increase this limit by setting this option to e.g. ``64M`` (this would result in
-a total of 128MB used by Graphene for internal metadata). Note that this limit
+a total of 128MB used by Gramine for internal metadata). Note that this limit
 is included in ``sgx.enclave_size``, so if your enclave size is e.g. 512MB and
 you specify ``loader.pal_internal_mem_size = "64M"``, then your application is
 left with 384MB of usable memory.
@@ -231,7 +231,7 @@ Stack size
     sys.stack.size = "[SIZE]"
     (default: "256K")
 
-This specifies the stack size of each thread in each Graphene process. The
+This specifies the stack size of each thread in each Gramine process. The
 default value is determined by the library OS. Units like ``K`` |~| (KiB),
 ``M`` |~| (MiB), and ``G`` |~| (GiB) can be appended to the values for
 convenience. For example, ``sys.stack.size = "1M"`` indicates a 1 |~| MiB stack
@@ -245,7 +245,7 @@ Program break (brk) size
     sys.brk.max_size = "[SIZE]"
     (default: "256K")
 
-This specifies the maximal program break (brk) size in each Graphene process.
+This specifies the maximal program break (brk) size in each Gramine process.
 The default value of the program break size is determined by the library OS.
 Units like ``K`` (KiB), ``M`` (MiB), and ``G`` (GiB) can be appended to the
 values for convenience. For example, ``sys.brk.max_size = "1M"`` indicates
@@ -272,7 +272,7 @@ External SIGTERM injection
     (Default: false)
 
 This specifies whether to allow for a one-time injection of `SIGTERM` signal
-into Graphene. Could be useful to handle graceful shutdown.
+into Gramine. Could be useful to handle graceful shutdown.
 Be careful! In SGX environment, the untrusted host could inject that signal in
 an arbitrary moment. Examine what your application's `SIGTERM` handler does and
 whether it poses any security threat.
@@ -287,7 +287,7 @@ Root FS mount point
     fs.root.[identifier].uri  = "[URI]"
 
 This syntax specifies the root file system to be mounted inside the library OS.
-If not specified, then Graphene mounts the current working directory as the
+If not specified, then Gramine mounts the current working directory as the
 root. There can be only one root FS mount point specified in the manifest.
 
 FS mount points
@@ -303,21 +303,21 @@ This syntax specifies how file systems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
 required in the manifest (the mount point of the Glibc library).
 
-Graphene currently supports two types of mount points:
+Gramine currently supports two types of mount points:
 
 * ``chroot``: Host-backed files. All host files and sub-directories found under
-  ``[URI]`` are forwarded to the Graphene instance and placed under ``[PATH]``.
+  ``[URI]`` are forwarded to the Gramine instance and placed under ``[PATH]``.
   For example, with a host-level path specified as
-  ``fs.mount.lib.uri = "file:graphene/Runtime/"`` and forwarded to Graphene via
+  ``fs.mount.lib.uri = "file:gramine/Runtime/"`` and forwarded to Gramine via
   ``fs.mount.lib.path = "/lib"``, a host-level file
-  ``graphene/Runtime/libc.so.6`` is visible to graphenized application as
+  ``gramine/Runtime/libc.so.6`` is visible to graphenized application as
   ``/lib/libc.so.6``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
 
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
-  empty on Graphene instance startup) and are destroyed when a Graphene
+  empty on Gramine instance startup) and are destroyed when a Gramine
   instance terminates. The ``[URI]`` parameter is always ignored. ``tmpfs``
   is especially useful in trusted environments (like Intel SGX) for securely
   storing temporary files. This concept is similar to Linux's tmpfs. Files
@@ -332,13 +332,13 @@ Start (current working) directory
     fs.start_dir = "[URI]"
 
 This syntax specifies the start (current working) directory. If not specified,
-then Graphene sets the root directory as the start directory (see ``fs.root``).
+then Gramine sets the root directory as the start directory (see ``fs.root``).
 
 
 SGX syntax
 ----------
 
-If Graphene is *not* running with SGX, the SGX-specific syntax is ignored. All
+If Gramine is *not* running with SGX, the SGX-specific syntax is ignored. All
 keys in the SGX-specific syntax are optional.
 
 Debug/production enclave
@@ -374,7 +374,7 @@ Non-PIE binaries
     sgx.nonpie_binary = [true|false]
     (Default: false)
 
-This setting tells Graphene whether to use a specially crafted memory layout,
+This setting tells Gramine whether to use a specially crafted memory layout,
 which is required to support non-relocatable binaries (non-PIE).
 
 Number of threads
@@ -417,7 +417,7 @@ especially if there are many blocking system calls by other enclave threads.
 The Exitless feature *may be detrimental for performance*. It trades slow
 OCALLs/ECALLs for fast shared-memory communication at the cost of occupying
 more CPU cores and burning more CPU cycles. For example, a single-threaded
-Redis instance on Linux becomes 5-threaded on Graphene with Exitless. Thus,
+Redis instance on Linux becomes 5-threaded on Gramine with Exitless. Thus,
 Exitless may negatively impact throughput but may improve latency.
 
 Optional CPU features (AVX, AVX512, MPX, PKRU)
@@ -511,7 +511,7 @@ Protected files
     ]
 
 This syntax specifies the files that are encrypted on disk and transparently
-decrypted when accessed by Graphene or by application running inside Graphene.
+decrypted when accessed by Gramine or by application running inside Gramine.
 Protected files guarantee data confidentiality and integrity (tamper
 resistance), as well as file swap protection (a protected file can only be
 accessed when in a specific path).
@@ -549,7 +549,7 @@ authentication when opening files. By default, only files explicitly listed as
 access.
 
 If the file check policy is ``allow_all_but_log``, all files other than trusted
-and allowed are allowed for access, and Graphene-SGX emits a warning message for
+and allowed are allowed for access, and Gramine emits a warning message for
 every such file. Effectively, this policy operates on all unknown files as if
 they were listed as ``allowed_files``. (However, this policy still does not
 allow writing/creating files specified as trusted.) This policy is a convenient
@@ -574,7 +574,7 @@ be filled with your registered Intel SGX EPID Attestation Service credentials
 (linkable/unlinkable mode and SPID of the client respectively).
 
 For DCAP/ECDSA based attestation, ``ra_client_spid`` must be an empty string
-(this is a hint to Graphene to use DCAP instead of EPID) and
+(this is a hint to Gramine to use DCAP instead of EPID) and
 ``ra_client_linkable`` is ignored.
 
 Pre-heating enclave
@@ -585,7 +585,7 @@ Pre-heating enclave
     sgx.preheat_enclave = [true|false]
     (Default: false)
 
-When enabled, this option instructs Graphene to pre-fault all heap pages during
+When enabled, this option instructs Gramine to pre-fault all heap pages during
 initialization. This has a negative impact on the total run time, but shifts the
 :term:`EPC` page faults cost to the initialization phase, which can be useful in
 a scenario where a server starts and receives connections / work packages only
@@ -622,7 +622,7 @@ This syntax specifies whether to enable SGX enclave-specific statistics:
 .. warning::
    This option is insecure and cannot be used with production enclaves
    (``sgx.debug = false``). If a production enclave is started with this option
-   set, Graphene will fail initialization of the enclave.
+   set, Gramine will fail initialization of the enclave.
 
 SGX profiling
 ^^^^^^^^^^^^^
@@ -632,7 +632,7 @@ SGX profiling
     sgx.profile.enable = ["none"|"main"|"all"]
     (Default: "none")
 
-This syntax specifies whether to enable SGX profiling. Graphene must be compiled
+This syntax specifies whether to enable SGX profiling. Gramine must be compiled
 with ``DEBUG=1`` or ``DEBUGOPT=1`` for this option to work (the latter is
 advised).
 
@@ -648,7 +648,7 @@ See :ref:`sgx-profile` for more information.
 .. warning::
    This option is insecure and cannot be used with production enclaves
    (``sgx.debug = false``). If a production enclave is started with this option
-   set, Graphene will fail initialization of the enclave.
+   set, Gramine will fail initialization of the enclave.
 
 ::
 

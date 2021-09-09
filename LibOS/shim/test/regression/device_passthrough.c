@@ -13,7 +13,7 @@ int main(int argc, char* arvg[]) {
 
     off_t offset;
 #if 0
-    /* FIXME: doesn't work in Graphene because lseek() is fully emulated in LibOS and therefore
+    /* FIXME: doesn't work in Gramine because lseek() is fully emulated in LibOS and therefore
      *        lseek() is not aware of device-specific semantics */
     offset = lseek(devfd, 0, SEEK_CUR);
     if (offset != -1 || errno != EINVAL) {

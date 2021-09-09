@@ -406,7 +406,7 @@ void sync_server_message_callback(IDTYPE src, int code, uint64_t id, int state,
  * Check on client disconnect if all handles of that client have been closed.
  *
  * In principle, we could try to clean up after a client exiting. However, a disconnect without
- * cleanup probably means unclean Graphene exit (host SIGKILL, or fatal error), and in the case of
+ * cleanup probably means unclean Gramine exit (host SIGKILL, or fatal error), and in the case of
  * EXCLUSIVE handles, continuing will result in data loss.
  */
 void sync_server_disconnect_callback(IDTYPE src) {
