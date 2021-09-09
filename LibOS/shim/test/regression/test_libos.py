@@ -531,16 +531,23 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     def test_033_rename_unlink_chroot(self):
-        self._test_rename_unlink('tmp/file1', 'tmp/file2')
+        file1 = 'tmp/file1'
+        file2 = 'tmp/file2'
+        try:
+            stdout, _ = self.run_binary(['rename_unlink', file1, file2])
+        finally:
+            for path in [file1, file2]:
+                if os.path.exists(path):
+                    os.unlink(path)
+        self.assertIn('TEST OK', stdout)
 
     @unittest.skip('Protected files do not support renaming yet')
     @unittest.skipUnless(HAS_SGX,
         'Protected files are only available with SGX')
     def test_034_rename_unlink_pf(self):
         os.makedirs('tmp/pf', exist_ok=True)
-        self._test_rename_unlink('tmp/pf/file1', 'tmp/pf/file2')
-
-    def _test_rename_unlink(self, file1, file2):
+        file1 = 'tmp/pf/file1'
+        file2 = 'tmp/pf/file2'
         try:
             stdout, _ = self.run_binary(['rename_unlink', file1, file2])
         finally:
