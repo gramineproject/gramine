@@ -618,8 +618,9 @@ static int64_t udp_sendbyaddr(PAL_HANDLE handle, uint64_t offset, uint64_t len, 
     addr += static_strlen(URI_PREFIX_UDP);
     addrlen -= static_strlen(URI_PREFIX_UDP);
 
-    char* addrbuf = __alloca(addrlen);
+    char* addrbuf = __alloca(addrlen + 1);
     memcpy(addrbuf, addr, addrlen);
+    addrbuf[addrlen] = '\0';
 
     struct sockaddr_storage conn_addr;
     size_t conn_addrlen = sizeof(conn_addr);
