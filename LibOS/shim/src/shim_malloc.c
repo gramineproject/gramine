@@ -11,6 +11,7 @@
 
 #include <asm/mman.h>
 
+#include "asan.h"
 #include "pal.h"
 #include "shim_checkpoint.h"
 #include "shim_internal.h"
@@ -53,6 +54,9 @@ void* __system_malloc(size_t size) {
         return NULL;
     }
 
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, alloc_size, ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
     return addr;
 }
 
@@ -64,6 +68,9 @@ void __system_free(void* addr, size_t size) {
     if (DkVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size)) < 0) {
         BUG();
     }
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size));
+#endif
     bkeep_remove_tmp_vma(tmp_vma);
 }
 

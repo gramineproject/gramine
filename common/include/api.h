@@ -208,7 +208,7 @@ int isalpha(int c);
 int isdigit(int c);
 int isalnum(int c);
 
-char* strchr(const char* s, int c_in);
+char* strchr(const char* s, int c);
 char* strstr(const char* haystack, const char* needle);
 size_t strspn(const char* s, const char* c);
 
@@ -221,6 +221,12 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
 void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, size_t dest_count);
 void* __memmove_chk(void* dest, const void* src, size_t count, size_t dest_count);
 void* __memset_chk(void* dest, int ch, size_t count, size_t dest_count);
+
+/* Original version of functions that ASan overrides */
+void* _real_memcpy(void* restrict dest, const void* restrict src, size_t count);
+void* _real_memmove(void* dest, const void* src, size_t count);
+void* _real_memset(void* dest, int ch, size_t count);
+int _real_memcmp(const void* lhs, const void* rhs, size_t count);
 
 bool strstartswith(const char* str, const char* prefix);
 bool strendswith(const char* str, const char* suffix);

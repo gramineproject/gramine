@@ -6,6 +6,7 @@
  */
 
 #include "api.h"
+#include "asan.h"
 #include "pal.h"
 #include "pal_defs.h"
 #include "pal_error.h"
@@ -44,7 +45,7 @@ static inline void __free(void* addr, size_t size);
 static inline void* __malloc(size_t size) {
     void* addr = NULL;
 
-    size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);;
+    size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);
 
 #if STATIC_SLAB == 1
     SYSTEM_LOCK();
@@ -76,6 +77,10 @@ static inline void* __malloc(size_t size) {
         log_error("*** Out-of-memory in PAL (try increasing `loader.pal_internal_mem_size`) ***");
         _DkProcessExit(ENOMEM);
     }
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size), ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
+
     return addr;
 }
 
@@ -84,6 +89,9 @@ static inline void* __malloc(size_t size) {
 static inline void __free(void* addr, size_t size) {
     if (!addr)
         return;
+
+    size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);
+
 #if STATIC_SLAB == 1
     if (addr >= (void*)g_mem_pool && addr < g_mem_pool_end) {
         SYSTEM_LOCK();
@@ -95,9 +103,15 @@ static inline void __free(void* addr, size_t size) {
             g_low = addr;
         }
         /* not a last object from low/high addresses, can't do anything about this case */
+        /* ASAN: keep the memory poisoned, because we're not returning it to the system */
         SYSTEM_UNLOCK();
         return;
     }
+#endif /* STATIC_SLAB */
+
+#ifdef ASAN
+    /* Unpoison the memory before unmapping it */
+    asan_unpoison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size));
 #endif
 
     _DkVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size));
@@ -112,6 +126,12 @@ void init_slab_mgr(size_t alignment) {
     g_slab_mgr       = create_slab_mgr();
     if (!g_slab_mgr)
         INIT_FAIL(PAL_ERROR_NOMEM, "cannot initialize slab manager");
+#if STATIC_SLAB == 1
+#ifdef ASAN
+    /* Poison all of `g_mem_pool` initially */
+    asan_poison_region((uintptr_t)&g_mem_pool, sizeof(g_mem_pool), ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
+#endif
 }
 
 void* malloc(size_t size) {

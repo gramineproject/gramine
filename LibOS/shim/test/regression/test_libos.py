@@ -25,15 +25,22 @@ class TC_00_Unittests(RegressionTestCase):
 
     @unittest.skipUnless(os.environ.get('UBSAN') == '1', 'test only enabled with UBSAN=1')
     def test_020_ubsan(self):
+        self._test_abort('ubsan_int_overflow', 'ubsan: overflow')
+
+    @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
+    def test_020_asan(self):
+        self._test_abort('asan_buffer_overflow', 'asan: heap-buffer-overflow')
+
+    def _test_abort(self, test_name, expected):
         try:
-            self.run_binary(['run_test', 'undefined'])
+            self.run_binary(['run_test', test_name])
             self.fail('run_test unexpectedly succeeded')
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode()
-            self.assertIn('run_test("undefined") ...', stderr,
+            self.assertIn('run_test("{}") ...'.format(test_name), stderr,
                           'Graphene should not abort before attempting to run test')
-            self.assertIn('ubsan: overflow', stderr)
-            self.assertNotIn('run_test("undefined") =', stderr,
+            self.assertIn(expected, stderr)
+            self.assertNotIn('run_test("{}") ='.format(test_name), stderr,
                              'Graphene should abort before returning to application')
 
 class TC_01_Bootstrap(RegressionTestCase):

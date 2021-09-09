@@ -19,6 +19,7 @@
 #include "toml.h"
 #include "topo_info.h"
 
+#include "asan.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "linux_utils.h"
@@ -1073,11 +1074,32 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     die_or_inf_loop();
 }
 
+#ifdef ASAN
+__attribute__((no_sanitize("address")))
+static void setup_asan(void) {
+    int prot = PROT_READ | PROT_WRITE;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE;
+    void* addr = (void*)DO_SYSCALL(mmap, (void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, prot, flags,
+                                   /*fd=*/-1, /*offset=*/0);
+    if (IS_PTR_ERR(addr)) {
+        int err = PTR_TO_ERR(addr);
+        log_error("asan: error setting up shadow memory: %d", err);
+        DO_SYSCALL(exit_group, unix_to_pal_error(err));
+        die_or_inf_loop();
+    }
+}
+#endif
+
+__attribute__((no_sanitize("address")))
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
     int ret = 0;
     bool need_gsgx = true;
     char* manifest = NULL;
+
+#ifdef ASAN
+    setup_asan();
+#endif
 
     force_linux_to_grow_stack();
 

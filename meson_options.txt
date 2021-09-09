@@ -8,3 +8,6 @@ option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
 
 option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable undefined behavior sanitizer')
+
+option('asan', type: 'combo', choices: ['disabled', 'enabled'],
+    description: 'Enable address sanitizer (Clang only)')

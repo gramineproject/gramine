@@ -34,6 +34,7 @@ sgx = get_option('sgx') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'
 
 ubsan = get_option('ubsan') == 'enabled'
+asan = get_option('asan') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
@@ -96,11 +97,28 @@ if get_option('b_sanitize') != 'none'
 endif
 
 cflags_sanitizers = []
+
 if ubsan
     cflags_sanitizers += [
         '-fsanitize=undefined',
         '-fno-sanitize-recover=undefined',
         '-DUBSAN',
+    ]
+endif
+
+if asan
+    # TODO: When we start compiling C++ code with Meson, check for C++ compiler as well
+    if meson.get_compiler('c').get_id() != 'clang'
+        error('ASan is currently supported only for Clang (CC=clang)')
+    endif
+
+    cflags_sanitizers += [
+        '-fsanitize=address',
+        '-fno-sanitize-link-runtime',
+        '-mllvm', '-asan-use-after-return=0',
+        '-mllvm', '-asan-stack=0',
+        '-mllvm', '-asan-globals=0',
+        '-DASAN',
     ]
 endif
 

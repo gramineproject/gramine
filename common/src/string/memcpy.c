@@ -9,7 +9,15 @@
 #undef memcpy
 #undef memmove
 
-void* memcpy(void* restrict dest, const void* restrict src, size_t count) {
+#ifndef ASAN
+__attribute__((alias("_real_memcpy")))
+void* memcpy(void* restrict, const void* restrict, size_t);
+__attribute__((alias("_real_memmove")))
+void* memmove(void*, const void*, size_t);
+#endif
+
+__attribute__((no_sanitize("address")))
+void* _real_memcpy(void* restrict dest, const void* restrict src, size_t count) {
     char* d = dest;
 #if defined(__x86_64__)
     /* "Beginning with processors based on Intel microarchitecture code name Ivy Bridge, REP string
@@ -37,7 +45,8 @@ void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, 
     return memcpy(dest, src, count);
 }
 
-void* memmove(void* dest, const void* src, size_t count) {
+__attribute__((no_sanitize("address")))
+void* _real_memmove(void* dest, const void* src, size_t count) {
     char* d = dest;
     const char* s = src;
 
