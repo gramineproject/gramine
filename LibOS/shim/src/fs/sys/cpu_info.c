@@ -38,6 +38,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     const char* name = dent->name;
     PAL_CORE_TOPO_INFO* core_topology = &g_pal_control->topo_info.core_topology[cpu_num];
     const char* str;
+    char buf[12];
     if (strcmp(name, "online") == 0) {
         /* `cpu/cpuX/online` is not present for cpu0 */
         if (cpu_num == 0)
@@ -46,7 +47,6 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     } else if (strcmp(name, "core_id") == 0) {
         str = core_topology->core_id;
     } else if (strcmp(name, "physical_package_id") == 0) {
-        char buf[12];
         snprintf(buf, sizeof(buf), "%d\n", g_pal_control->cpu_info.cpu_socket[cpu_num]);
         str = buf;
     } else if (strcmp(name, "core_siblings") == 0) {
