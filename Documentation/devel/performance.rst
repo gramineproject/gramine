@@ -202,13 +202,13 @@ Here is an example:
 ::
 
    # exitless disabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 0`
-   Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
-   Examples/redis$ src/src/redis-benchmark -t set
+   CI-Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
+   CI-Examples/redis$ src/src/redis-benchmark -t set
    43010.75 requests per second
 
    # exitless enabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 8`
-   Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
-   Examples/redis$ src/src/redis-benchmark -t set
+   CI-Examples/redis$ graphene-sgx redis-server --save '' --protected-mode no &
+   CI-Examples/redis$ src/src/redis-benchmark -t set
    68119.89 requests per second
 
 As you can see, enabling the Exitless feature improves performance of Redis by
