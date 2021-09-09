@@ -237,7 +237,7 @@ RA-TLS is shipped as three libraries: ``ra_tls_attest.so``, EPID based
 The interfaces exposed by these libraries can be found in the following header:
 :file:`Pal/src/host/Linux-SGX/tools/ra-tls/ra_tls.h`.
 
-The examples of using RA-TLS can be found under ``Examples/ra-tls-mbedtls``.
+The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-mbedtls``.
 
 ``ra_tls_attest.so``
 ^^^^^^^^^^^^^^^^^^^^
@@ -372,7 +372,7 @@ Secret Provisioning is shipped as three libraries: ``secret_prov_attest.so``,
 EPID based ``secret_prov_verify_epid.so`` and DCAP/ECDSA based
 ``secret_prov_verify_dcap.so``.
 
-The examples of using RA-TLS can be found under ``Examples/ra-tls-secret-prov``.
+The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-secret-prov``.
 The examples include minimalistic provisioning of constant-string secrets as
 well as provisioning of an encryption key and its later use for protected files.
 

@@ -14,18 +14,18 @@ stage('clean-check') {
 
         make -C LibOS/shim/test/regression clean
 
-        make -C Examples/python clean
-        make -C Examples/bash clean
-        make -C Examples/memcached distclean
-        make -C Examples/redis distclean
-        make -C Examples/lighttpd distclean
-        make -C Examples/nginx distclean
-        make -C Examples/blender distclean
-        make -C Examples/sqlite distclean
+        make -C CI-Examples/python clean
+        make -C CI-Examples/bash clean
+        make -C CI-Examples/memcached distclean
+        make -C CI-Examples/redis distclean
+        make -C CI-Examples/lighttpd distclean
+        make -C CI-Examples/nginx distclean
+        make -C CI-Examples/blender distclean
+        make -C CI-Examples/sqlite distclean
         make -C Pal/src PAL_HOST=Skeleton clean
 
-        make -C Examples/ra-tls-mbedtls distclean
-        make -C Examples/ra-tls-secret-prov distclean
+        make -C CI-Examples/ra-tls-mbedtls distclean
+        make -C CI-Examples/ra-tls-secret-prov distclean
 
         make -C LibOS/shim/test/ltp clean
         # LTP's make clean is broken, see https://github.com/linux-test-project/ltp/issues/559
