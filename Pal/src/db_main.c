@@ -587,7 +587,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_control.mem_info.mem_total = _DkMemoryQuota();
 
-    if (_DkGetTopologyInfo(&g_topo_info) < 0) {
+    if (!parent_process && _DkGetTopologyInfo(&g_topo_info) < 0) {
         goto out_fail;
     }
 

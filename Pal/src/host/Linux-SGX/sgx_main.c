@@ -898,9 +898,13 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     pal_sec->uid = DO_SYSCALL(getuid);
     pal_sec->gid = DO_SYSCALL(getgid);
 
-    ret = get_topology_info(&pal_sec->topo_info);
-    if (ret < 0)
-        return ret;
+    /* Only the first process reads topology info from the host. Subsequent forked child/children
+     * get this information from the first process */
+    if (enclave->is_first_process) {
+        ret = get_topology_info(&pal_sec->topo_info);
+        if (ret < 0)
+            return ret;
+    }
 
 #ifdef DEBUG
     size_t env_i = 0;

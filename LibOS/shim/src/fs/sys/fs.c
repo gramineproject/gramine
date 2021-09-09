@@ -10,11 +10,15 @@
 
 #include <limits.h>
 
+#include "shim_checkpoint.h"
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
 PAL_TOPO_INFO* g_topo_info = NULL;
+int64_t g_num_cores_online;
+int64_t g_num_nodes_online;
+int64_t g_num_cache_lvls;
 
 int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size_t max_size) {
     int ret = 0;
@@ -259,3 +263,219 @@ int init_sysfs(void) {
 
     return 0;
 }
+
+BEGIN_CP_FUNC(numa_topology) {
+    __UNUSED(size);
+    assert(size == sizeof(PAL_NUMA_TOPO_INFO));
+
+    PAL_NUMA_TOPO_INFO* numa_topo = (PAL_NUMA_TOPO_INFO*)obj;
+    PAL_NUMA_TOPO_INFO* new_numa_topo = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) {
+        size_t numa_topo_sz = g_num_nodes_online * sizeof(PAL_NUMA_TOPO_INFO);
+        off = ADD_CP_OFFSET(numa_topo_sz);
+        ADD_TO_CP_MAP(obj, off);
+        new_numa_topo = (PAL_NUMA_TOPO_INFO*)(base + off);
+        memcpy(new_numa_topo, numa_topo, numa_topo_sz);
+
+        for (int64_t idx = 0; idx < g_num_nodes_online; idx++) {
+            if (numa_topo[idx].cpumap.range_count > 0) {
+                size_t range_sz = numa_topo[idx].cpumap.range_count * sizeof(PAL_RANGE_INFO);
+                size_t toff = ADD_CP_OFFSET(range_sz);
+                new_numa_topo[idx].cpumap.ranges = (void*)(base + toff);
+                memcpy(new_numa_topo[idx].cpumap.ranges, numa_topo[idx].cpumap.ranges, range_sz);
+            }
+
+            if (numa_topo[idx].distance.range_count > 0) {
+                size_t range_sz = numa_topo[idx].distance.range_count * sizeof(PAL_RANGE_INFO);
+                size_t toff = ADD_CP_OFFSET(range_sz);
+                new_numa_topo[idx].distance.ranges = (void*)(base + toff);
+                memcpy(new_numa_topo[idx].distance.ranges, numa_topo[idx].distance.ranges, range_sz);
+            }
+        }
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_numa_topo = (PAL_NUMA_TOPO_INFO*)(base + off);
+    }
+
+    if (objp) {
+        *objp = (void*)new_numa_topo;
+    }
+}
+END_CP_FUNC_NO_RS(numa_topology)
+
+BEGIN_CP_FUNC(cache) {
+    __UNUSED(size);
+    assert(size == sizeof(PAL_CORE_CACHE_INFO));
+
+    PAL_CORE_CACHE_INFO* cache = (PAL_CORE_CACHE_INFO*)obj;
+    PAL_CORE_CACHE_INFO* new_cache = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) {
+        size_t cache_topo_sz = g_num_cache_lvls * sizeof(PAL_CORE_CACHE_INFO);
+        off = ADD_CP_OFFSET(cache_topo_sz);
+        ADD_TO_CP_MAP(obj, off);
+        new_cache = (PAL_CORE_CACHE_INFO*)(base + off);
+        memcpy(new_cache, cache, cache_topo_sz);
+
+        for (int64_t idx = 0; idx < g_num_cache_lvls; idx++) {
+            if (cache[idx].shared_cpu_map.range_count > 0) {
+                size_t range_sz = cache[idx].shared_cpu_map.range_count * sizeof(PAL_RANGE_INFO);
+                size_t toff = ADD_CP_OFFSET(range_sz);
+                new_cache[idx].shared_cpu_map.ranges = (void*)(base + toff);
+                memcpy(new_cache[idx].shared_cpu_map.ranges, cache[idx].shared_cpu_map.ranges,
+                       range_sz);
+            }
+        }
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_cache = (PAL_CORE_CACHE_INFO*)(base + off);
+    }
+
+    if (objp) {
+        *objp = (void*)new_cache;
+    }
+}
+END_CP_FUNC_NO_RS(cache)
+
+BEGIN_CP_FUNC(core_topology) {
+    __UNUSED(size);
+    assert(size == sizeof(PAL_CORE_TOPO_INFO));
+
+    PAL_CORE_TOPO_INFO* core_topo = (PAL_CORE_TOPO_INFO*)obj;
+    PAL_CORE_TOPO_INFO* new_core_topo = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) {
+        size_t core_topo_sz = g_num_cores_online * sizeof(PAL_CORE_TOPO_INFO);
+        off = ADD_CP_OFFSET(core_topo_sz);
+        ADD_TO_CP_MAP(obj, off);
+        new_core_topo = (PAL_CORE_TOPO_INFO*)(base + off);
+        memcpy(new_core_topo, core_topo, core_topo_sz);
+
+        for (int64_t idx = 0; idx < g_num_cores_online; idx++) {
+            if (core_topo[idx].core_siblings.range_count > 0) {
+                size_t range_sz = core_topo[idx].core_siblings.range_count * sizeof(PAL_RANGE_INFO);
+                size_t toff = ADD_CP_OFFSET(range_sz);
+                new_core_topo[idx].core_siblings.ranges = (void*)(base + toff);
+                memcpy(new_core_topo[idx].core_siblings.ranges, core_topo[idx].core_siblings.ranges,
+                       range_sz);
+            }
+
+            if (core_topo[idx].thread_siblings.range_count > 0) {
+                size_t range_sz = core_topo[idx].thread_siblings.range_count * sizeof(PAL_RANGE_INFO);
+                size_t toff = ADD_CP_OFFSET(range_sz);
+                new_core_topo[idx].thread_siblings.ranges = (void*)(base + toff);
+                memcpy(new_core_topo[idx].thread_siblings.ranges,
+                       core_topo[idx].thread_siblings.ranges, range_sz);
+            }
+
+            DO_CP(cache, core_topo[idx].cache, &new_core_topo[idx].cache);
+        }
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_core_topo = (PAL_CORE_TOPO_INFO*)(base + off);
+    }
+
+    if (objp) {
+        *objp = (void*)new_core_topo;
+    }
+}
+END_CP_FUNC_NO_RS(core_topology)
+
+BEGIN_CP_FUNC(topo_info) {
+    __UNUSED(size);
+    __UNUSED(objp);
+    assert(size == sizeof(PAL_TOPO_INFO));
+
+    PAL_TOPO_INFO* topo_info = (PAL_TOPO_INFO*)obj;
+    PAL_TOPO_INFO* new_topo_info = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) {
+        off = ADD_CP_OFFSET(sizeof(*topo_info));
+        ADD_TO_CP_MAP(obj, off);
+        new_topo_info = (PAL_TOPO_INFO*)(base + off);
+        *new_topo_info = *topo_info;
+
+        if (topo_info->online_logical_cores.range_count > 0) {
+            size_t range_sz = topo_info->online_logical_cores.range_count * sizeof(PAL_RANGE_INFO);
+            size_t toff = ADD_CP_OFFSET(range_sz);
+            new_topo_info->online_logical_cores.ranges = (void*)(base + toff);
+            memcpy(new_topo_info->online_logical_cores.ranges,
+                   topo_info->online_logical_cores.ranges, range_sz);
+        }
+        g_num_cores_online = topo_info->online_logical_cores.resource_count;
+        g_num_cache_lvls = topo_info->num_cache_index;
+
+        if (topo_info->possible_logical_cores.range_count > 0) {
+            size_t range_sz = topo_info->possible_logical_cores.range_count * sizeof(PAL_RANGE_INFO);
+            size_t toff = ADD_CP_OFFSET(range_sz);
+            new_topo_info->possible_logical_cores.ranges = (void*)(base + toff);
+            memcpy(new_topo_info->possible_logical_cores.ranges,
+                   topo_info->possible_logical_cores.ranges, range_sz);
+        }
+
+        if (topo_info->nodes.range_count > 0) {
+            size_t range_sz = topo_info->nodes.range_count * sizeof(PAL_RANGE_INFO);
+            size_t toff = ADD_CP_OFFSET(range_sz);
+            new_topo_info->nodes.ranges = (void*)(base + toff);
+            memcpy(new_topo_info->nodes.ranges, topo_info->nodes.ranges, range_sz);
+        }
+        g_num_nodes_online = topo_info->nodes.resource_count;
+
+        DO_CP(core_topology, topo_info->core_topology, &new_topo_info->core_topology);
+        DO_CP(numa_topology, topo_info->numa_topology, &new_topo_info->numa_topology);
+
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_topo_info = (PAL_TOPO_INFO*)(base + off);
+    }
+
+    if (objp)
+        *objp = (void*)new_topo_info;
+}
+END_CP_FUNC(topo_info)
+
+BEGIN_RS_FUNC(topo_info) {
+    __UNUSED(offset);
+    PAL_TOPO_INFO* topo_info = (void*)(base + GET_CP_FUNC_ENTRY());
+
+    if (topo_info->online_logical_cores.range_count > 0) {
+        CP_REBASE(topo_info->online_logical_cores.ranges);
+    } else {
+        assert(!topo_info->online_logical_cores.ranges);
+    }
+
+    if (topo_info->possible_logical_cores.range_count > 0) {
+        CP_REBASE(topo_info->possible_logical_cores.ranges);
+    } else {
+        assert(!topo_info->possible_logical_cores.ranges);
+    }
+
+    if (topo_info->nodes.range_count > 0) {
+        CP_REBASE(topo_info->nodes.ranges);
+    } else {
+        assert(!topo_info->nodes.ranges);
+    }
+
+    CP_REBASE(topo_info->core_topology);
+    for (uint64_t idx = 0; idx < topo_info->online_logical_cores.resource_count; idx++) {
+        CP_REBASE(topo_info->core_topology[idx].core_siblings.ranges);
+        CP_REBASE(topo_info->core_topology[idx].thread_siblings.ranges);
+        CP_REBASE(topo_info->core_topology[idx].cache);
+        for (uint64_t lvl = 0; lvl < topo_info->num_cache_index; lvl++) {
+            CP_REBASE(topo_info->core_topology[idx].cache[lvl].shared_cpu_map.ranges);
+        }
+    }
+    CP_REBASE(topo_info->numa_topology);
+    for (uint64_t idx = 0; idx < topo_info->nodes.resource_count; idx++) {
+        CP_REBASE(topo_info->numa_topology[idx].cpumap.ranges);
+        CP_REBASE(topo_info->numa_topology[idx].distance.ranges);
+    }
+
+    g_topo_info = topo_info;
+}
+END_RS_FUNC(topo_info)

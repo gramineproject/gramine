@@ -777,11 +777,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_tsc();
     (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
-    /* Now that enclave memory is set up, parse and store host topology info into g_pal_sec struct */
-    ret = parse_host_topo_info(&sec_info.topo_info);
-    if (ret < 0)
-        ocall_exit(1, /*is_exitgroup=*/true);
-
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */
@@ -799,6 +794,15 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
             log_error("Failed to initialize child process: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }
+    }
+
+    /* Now that enclave memory is set up, sanitize host topology info into g_pal_sec struct.
+     * Note: This is done only on the first process and the subsequent forked child/children use
+     * the sanitized info from the first process. */
+    if (!parent) {
+        ret = parse_host_topo_info(&sec_info.topo_info);
+        if (ret < 0)
+            ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     uint64_t manifest_size = GET_ENCLAVE_TLS(manifest_size);
