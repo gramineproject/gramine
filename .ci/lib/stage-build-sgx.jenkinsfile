@@ -29,6 +29,9 @@ stage('build') {
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'
     }
+    if (env.ASAN == '1') {
+        env.MESON_OPTIONS += ' -Dasan=enabled'
+    }
 
     try {
         sh '''

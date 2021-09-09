@@ -133,7 +133,11 @@ common_syscall.o: ../Linux-common/arch/$(ARCH)/syscall.S
 %.s: %.S
 	$(call cmd,cpp_s_S)
 
-CFLAGS-pal-sgx = -Wl,-z,relro,-z,now -pie
+# Add `-Wunused-command-line-argument`, because with ASan, Clang complains that LLVM flags
+# (`-mllvm ...`) are unused.
+# TODO: `cmulti` probably should use LDFLAGS, not CFLAGS here, because we're not compiling any C
+# code.
+CFLAGS-pal-sgx = -Wl,-z,relro,-z,now -pie -Wno-unused-command-line-argument
 LDLIBS-pal-sgx += -lprotobuf-c
 pal-sgx: $(urts-objs) $(urts-asm-objs) $(gramine_lib)
 	$(call cmd,cmulti)

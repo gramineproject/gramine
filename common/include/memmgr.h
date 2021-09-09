@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 
 #include "api.h"
+#include "asan.h"
 #include "assert.h"
 #include "list.h"
 
@@ -36,6 +37,10 @@
 
 DEFINE_LIST(mem_obj);
 typedef struct mem_obj {
+#ifdef ASAN
+    /* Make sure there is padding between objects, so that we can detect buffer overflows */
+    char padding[8];
+#endif
     union {
         LIST_TYPE(mem_obj) __list;
         OBJ_TYPE obj;
@@ -98,6 +103,7 @@ static inline size_t init_align_up(size_t size) {
 }
 #endif
 
+__attribute_no_sanitize_address
 static inline void __set_free_mem_area(MEM_AREA area, MEM_MGR mgr) {
     assert(SYSTEM_LOCKED());
 
@@ -107,6 +113,7 @@ static inline void __set_free_mem_area(MEM_AREA area, MEM_MGR mgr) {
     mgr->active_area = area;
 }
 
+__attribute_no_sanitize_address
 static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
     MEM_AREA area;
     MEM_MGR mgr;
@@ -128,6 +135,7 @@ static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
     return mgr;
 }
 
+__attribute_no_sanitize_address
 static inline MEM_MGR create_mem_mgr(size_t size) {
     void* mem = system_malloc(__MAX_MEM_SIZE(size));
     if (!mem) {
@@ -136,6 +144,7 @@ static inline MEM_MGR create_mem_mgr(size_t size) {
     return create_mem_mgr_in_place(mem, size);
 }
 
+__attribute_no_sanitize_address
 static inline MEM_MGR enlarge_mem_mgr(MEM_MGR mgr, size_t size) {
     MEM_AREA area;
 
@@ -151,6 +160,7 @@ static inline MEM_MGR enlarge_mem_mgr(MEM_MGR mgr, size_t size) {
     return mgr;
 }
 
+__attribute_no_sanitize_address
 static inline void destroy_mem_mgr(MEM_MGR mgr) {
     MEM_AREA last = LISTP_LAST_ENTRY(&mgr->area_list, MEM_AREA_TYPE, __list);
 
@@ -166,6 +176,7 @@ static inline void destroy_mem_mgr(MEM_MGR mgr) {
     system_free(mgr, __MAX_MEM_SIZE(last->size));
 }
 
+__attribute_no_sanitize_address
 static inline OBJ_TYPE* get_mem_obj_from_mgr_enlarge(MEM_MGR mgr, size_t size) {
     MEM_OBJ mobj;
 
@@ -204,8 +215,19 @@ static inline OBJ_TYPE* get_mem_obj_from_mgr_enlarge(MEM_MGR mgr, size_t size) {
             __set_free_mem_area(area, mgr);
     }
 
-alloc:
-    if (!LISTP_EMPTY(&mgr->free_list)) {
+alloc:;
+    bool use_free_list;
+#ifdef ASAN
+    /* With ASan enabled, prefer using new memory instead of recycling already freed objects, so
+     * that we have a higher chance of detecting use-after-free bugs */
+    use_free_list = mgr->obj == mgr->obj_top;
+    if (use_free_list)
+        assert(!LISTP_EMPTY(&mgr->free_list));
+#else
+    use_free_list = !LISTP_EMPTY(&mgr->free_list);
+#endif
+
+    if (use_free_list) {
         mobj = LISTP_FIRST_ENTRY(&mgr->free_list, MEM_OBJ_TYPE, __list);
         LISTP_DEL_INIT(mobj, &mgr->free_list, __list);
         CHECK_LIST_HEAD(MEM_OBJ, &mgr->free_list, __list);
@@ -214,13 +236,18 @@ alloc:
     }
     assert(mgr->obj <= mgr->obj_top);
     SYSTEM_UNLOCK();
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)&mobj->obj, sizeof(mobj->obj));
+#endif
     return &mobj->obj;
 }
 
+__attribute_no_sanitize_address
 static inline OBJ_TYPE* get_mem_obj_from_mgr(MEM_MGR mgr) {
     return get_mem_obj_from_mgr_enlarge(mgr, 0);
 }
 
+__attribute_no_sanitize_address
 static inline void free_mem_obj_to_mgr(MEM_MGR mgr, OBJ_TYPE* obj) {
     if (memory_migrated(obj)) {
         return;
@@ -228,7 +255,10 @@ static inline void free_mem_obj_to_mgr(MEM_MGR mgr, OBJ_TYPE* obj) {
 
     MEM_OBJ mobj = container_of(obj, MEM_OBJ_TYPE, obj);
 #ifdef DEBUG
-    memset(obj, 0xCC, sizeof(*obj));
+    _real_memset(obj, 0xCC, sizeof(*obj));
+#endif
+#ifdef ASAN
+    asan_poison_region((uintptr_t)obj, sizeof(*obj), ASAN_POISON_HEAP_AFTER_FREE);
 #endif
 
     SYSTEM_LOCK();
