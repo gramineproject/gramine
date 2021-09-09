@@ -5,6 +5,9 @@ set -ex
 # Include Meson build output directory in $PYTHONPATH, needed by graphene-sgx-get-token
 export PYTHONPATH="${PYTHONPATH}:$(find /graphene/meson_build_output/lib -type d  -path '*/site-packages')"
 
+# Uncomment below for kernel version lower than 5.11
+# ln -s /dev/sgx/enclave /dev/sgx_enclave
+
 # Set default PAL to Linux-SGX
 if [ -z "$GSC_PAL" ] || [ "$GSC_PAL" == "Linux-SGX" ]
 then
