@@ -1,8 +1,0 @@
-/bazel-*-installer-linux-*.sh
-/image.bmp
-/inception_v3.pb
-/inception_v3.tflite
-/inception_v3_2018_04_27.tgz
-/labels.txt
-/tensorflow
-/tensorflow.tar.gz

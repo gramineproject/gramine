@@ -55,7 +55,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pyelftools \
     python3-pytest \
     python3-scipy \
-    r-base-core \
     shellcheck \
     sqlite3 \
     texinfo \

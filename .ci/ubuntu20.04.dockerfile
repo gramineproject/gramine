@@ -58,7 +58,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-scipy \
     python3-sphinx-rtd-theme \
     python3-toml \
-    r-base-core \
     shellcheck \
     sphinx-doc \
     sqlite3 \
