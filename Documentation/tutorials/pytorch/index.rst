@@ -3,6 +3,12 @@ PyTorch PPML Framework Tutorial
 
 .. highlight:: sh
 
+.. todo::
+
+   This page describes the steps required for the old Graphene repository. It
+   will be soon updated with the steps for the new Gramine and Examples
+   repositories.
+
 This tutorial presents a framework for developing PPML (Privacy-Preserving
 Machine Learning) applications with Intel SGX and Graphene. We use `PyTorch
 <https://pytorch.org>`__ as an example ML framework. However, this tutorial can
