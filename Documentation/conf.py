@@ -147,7 +147,6 @@ html_static_path = ['_static']
 man_pages = [
     ('manpages/graphene-manifest', 'graphene-manifest', 'Graphene manifest preprocessor', [author], 1),
     ('manpages/pal_loader', 'pal_loader', 'FIXME Loader', [author], 1),
-    ('manpages/gsc', 'gsc', 'Graphene Shielded Containers', [author], 1),
     ('manpages/is_sgx_available', 'is_sgx_available', 'Check SGX compatibility', [author], 1),
     ('manpages/quote_dump', 'quote_dump', 'Display SGX quote', [author], 1),
     ('manpages/ias_request', 'ias_request', 'Submit Intel Attestation Service request', [author], 1),

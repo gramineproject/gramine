@@ -96,8 +96,6 @@ important pages:
   <https://graphene.readthedocs.io/en/latest/building.html>`__
 - `Graphene manifest file syntax
   <https://graphene.readthedocs.io/en/latest/manifest-syntax.html>`__
-- `The Graphene Shielded Containers (GSC) tool
-  <https://graphene.readthedocs.io/en/latest/manpages/gsc.html>`__
 - `Performance tuning & analysis of SGX applications in Graphene
   <https://graphene.readthedocs.io/en/latest/devel/performance.html>`__
 - `Remote attestation in Graphene
