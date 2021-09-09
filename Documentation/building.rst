@@ -209,6 +209,18 @@ Additional build options
   .. warning::
      UBSan builds (even non-debug) are not suitable for production.
 
+- To compile with address sanitization (ASan), run :command:`make ASAN=1` and
+  :command:`meson -Dasan=enabled`. In this mode, Graphene will attempt to detect
+  invalid memory accesses. ASan can be enabled for both debug and non-debug
+  builds.
+
+  ASan is supported only when compiling with Clang (before building, set the
+  appropriate environment variables with :command:`export CC=clang CXX=clang++
+  AS=clang`).
+
+  .. warning::
+     ASan builds (even non-debug) are not suitable for production.
+
 - To build with ``-Werror``, run :command:`make WERROR=1` and
   :command:`meson --werror`.
 

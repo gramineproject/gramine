@@ -12,6 +12,7 @@
 #include <linux/personality.h>
 
 #include "api.h"
+#include "asan.h"
 #include "elf/elf.h"
 #include "linux_utils.h"
 #include "pal.h"
@@ -142,12 +143,30 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     _DkProcessExit(1);
 }
 
+#ifdef ASAN
+__attribute_no_stack_protector
+__attribute_no_sanitize_address
+static void setup_asan(void) {
+    int prot = PROT_READ | PROT_WRITE;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
+    void* addr = (void*)DO_SYSCALL(mmap, (void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, prot, flags,
+                                   /*fd=*/-1, /*offset=*/0);
+    if (IS_PTR_ERR(addr))
+        die_or_inf_loop();
+}
+#endif
+
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with no TCB in the GS register, so we disable stack protector here */
 __attribute_no_stack_protector
+__attribute_no_sanitize_address
 noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     __UNUSED(fini_callback);  // TODO: We should call `fini_callback` at the end.
     int ret;
+
+#ifdef ASAN
+    setup_asan();
+#endif
 
     /* we don't yet have a TCB in the GS register, but GCC's stack protector will look for a canary
      * at gs:[0x8] in functions called below, so let's install a dummy TCB with a default canary */

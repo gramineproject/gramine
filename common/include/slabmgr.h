@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 
 #include "api.h"
+#include "asan.h"
 #include "assert.h"
 #include "list.h"
 #include "log.h"
@@ -183,6 +184,7 @@ static inline size_t init_size_align_up(size_t size) {
 #define STARTUP_SIZE 16
 #endif
 
+__attribute_no_sanitize_address
 static inline void __set_free_slab_area(SLAB_AREA area, SLAB_MGR mgr, int level) {
     size_t slab_size = slab_levels[level] + SLAB_HDR_SIZE;
     mgr->addr[level]        = (void*)area->raw;
@@ -191,6 +193,7 @@ static inline void __set_free_slab_area(SLAB_AREA area, SLAB_MGR mgr, int level)
     mgr->active_area[level] = area;
 }
 
+__attribute_no_sanitize_address
 static inline SLAB_MGR create_slab_mgr(void) {
 #ifdef ALLOC_ALIGNMENT
     size_t size = init_size_align_up(STARTUP_SIZE);
@@ -232,6 +235,7 @@ static inline SLAB_MGR create_slab_mgr(void) {
     return mgr;
 }
 
+__attribute_no_sanitize_address
 static inline void destroy_slab_mgr(SLAB_MGR mgr) {
     void* addr = (void*)mgr + sizeof(SLAB_MGR_TYPE);
     SLAB_AREA area, tmp, n;
@@ -252,6 +256,7 @@ static inline void destroy_slab_mgr(SLAB_MGR mgr) {
 }
 
 // SYSTEM_LOCK needs to be held by the caller on entry.
+__attribute_no_sanitize_address
 static inline int maybe_enlarge_slab_mgr(SLAB_MGR mgr, int level) {
     assert(SYSTEM_LOCKED());
     assert(level < SLAB_LEVEL);
@@ -291,6 +296,7 @@ static inline int maybe_enlarge_slab_mgr(SLAB_MGR mgr, int level) {
     return 0;
 }
 
+__attribute_no_sanitize_address
 static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
     SLAB_OBJ mobj;
     size_t level = -1;
@@ -311,6 +317,9 @@ static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
         mem->size = size;
         OBJ_LEVEL(mem) = (unsigned char)-1;
 
+#ifdef ASAN
+        asan_unpoison_region((uintptr_t)OBJ_RAW(mem), size);
+#endif
         return OBJ_RAW(mem);
     }
 
@@ -323,7 +332,18 @@ static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
         return NULL;
     }
 
-    if (!LISTP_EMPTY(&mgr->free_list[level])) {
+    bool use_free_list;
+#ifdef ASAN
+    /* With ASan enabled, prefer using new memory instead of recycling already freed objects, so
+     * that we have a higher chance of detecting use-after-free bugs */
+    use_free_list = mgr->addr[level] == mgr->addr_top[level];
+    if (use_free_list)
+        assert(!LISTP_EMPTY(&mgr->free_list[level]));
+#else
+    use_free_list = !LISTP_EMPTY(&mgr->free_list[level]);
+#endif
+
+    if (use_free_list) {
         mobj = LISTP_FIRST_ENTRY(&mgr->free_list[level], SLAB_OBJ_TYPE, __list);
         LISTP_DEL(mobj, &mgr->free_list[level], __list);
     } else {
@@ -338,11 +358,15 @@ static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
     unsigned long* m = (unsigned long*)((void*)OBJ_RAW(mobj) + slab_levels[level]);
     *m = SLAB_CANARY_STRING;
 #endif
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)OBJ_RAW(mobj), size);
+#endif
 
     return OBJ_RAW(mobj);
 }
 
 // Returns user buffer size (i.e. excluding size of control structures).
+__attribute_no_sanitize_address
 static inline size_t slab_get_buf_size(const void* ptr) {
     assert(ptr);
 
@@ -367,6 +391,7 @@ static inline size_t slab_get_buf_size(const void* ptr) {
     return slab_levels[level];
 }
 
+__attribute_no_sanitize_address
 static inline void slab_free(SLAB_MGR mgr, void* obj) {
     /* In a general purpose allocator, free of NULL is allowed (and is a
      * nop). We might want to enforce stricter rules for our allocator if
@@ -379,7 +404,10 @@ static inline void slab_free(SLAB_MGR mgr, void* obj) {
     if (level == (unsigned char)-1) {
         LARGE_MEM_OBJ mem = RAW_TO_OBJ(obj, LARGE_MEM_OBJ_TYPE);
 #ifdef DEBUG
-        memset(obj, 0xCC, mem->size);
+        _real_memset(obj, 0xCC, mem->size);
+#endif
+#ifdef ASAN
+        asan_unpoison_region((uintptr_t)mem, mem->size + sizeof(LARGE_MEM_OBJ_TYPE));
 #endif
         system_free(mem, mem->size + sizeof(LARGE_MEM_OBJ_TYPE));
         return;
@@ -405,7 +433,10 @@ static inline void slab_free(SLAB_MGR mgr, void* obj) {
 
     SLAB_OBJ mobj = RAW_TO_OBJ(obj, SLAB_OBJ_TYPE);
 #ifdef DEBUG
-    memset(obj, 0xCC, slab_levels[level]);
+    _real_memset(obj, 0xCC, slab_levels[level]);
+#endif
+#ifdef ASAN
+    asan_poison_region((uintptr_t)obj, slab_levels[level], ASAN_POISON_HEAP_AFTER_FREE);
 #endif
 
     SYSTEM_LOCK();

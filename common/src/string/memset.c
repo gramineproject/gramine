@@ -11,7 +11,13 @@
 
 #undef memset
 
-void* memset(void* dest, int ch, size_t count) {
+#ifndef ASAN
+__attribute__((alias("_real_memset")))
+void* memset(void*, int, size_t);
+#endif
+
+__attribute_no_sanitize_address
+void* _real_memset(void* dest, int ch, size_t count) {
     char* d = dest;
 #if defined(__x86_64__)
     /* "Beginning with processors based on Intel microarchitecture code name Ivy Bridge, REP string

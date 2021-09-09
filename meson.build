@@ -30,6 +30,7 @@ skeleton = get_option('skeleton') == 'enabled'
 
 dcap = get_option('dcap') == 'enabled'
 ubsan = get_option('ubsan') == 'enabled'
+asan = get_option('asan') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
@@ -95,11 +96,29 @@ if get_option('b_sanitize') != 'none'
 endif
 
 cflags_sanitizers = []
+
 if ubsan
     cflags_sanitizers += [
         '-fsanitize=undefined',
         '-fno-sanitize-recover=undefined',
         '-DUBSAN',
+    ]
+endif
+
+if asan
+    if meson.get_compiler('c').get_id() != 'clang' or meson.get_compiler('cpp').get_id() != 'clang'
+        error('ASan is currently supported only for Clang (CC=clang CXX=clang++)')
+    endif
+
+    asan_shadow_start = '0x18000000000'
+    cflags_sanitizers += [
+        '-fsanitize=address',
+        '-fno-sanitize-link-runtime',
+        '-mllvm', '-asan-mapping-offset=' + asan_shadow_start,
+        '-mllvm', '-asan-use-after-return=0',
+        '-mllvm', '-asan-stack=0',
+        '-mllvm', '-asan-globals=0',
+        '-DASAN',
     ]
 endif
 
