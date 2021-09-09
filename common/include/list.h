@@ -272,8 +272,8 @@
          (HEAD)->first &&                                                                          \
          (first_iter || (CURSOR) != (HEAD)->first);                                                \
          /* Handle the case where the first element was removed. */                                \
-         first_iter = first_iter && (TMP) != (CURSOR) && (HEAD)->first == (TMP), (CURSOR) = (TMP), \
-              (TMP) = (TMP)->FIELD.next)
+         first_iter = first_iter && (TMP) != (CURSOR) && (HEAD)->first == (TMP),                   \
+             ((TMP) != (CURSOR) && ((CURSOR) = (TMP), (TMP) = (TMP)->FIELD.next)))
 
 /* Continue safe iteration with CURSOR->next */
 #define LISTP_FOR_EACH_ENTRY_SAFE_CONTINUE(CURSOR, TMP, HEAD, FIELD)    \
