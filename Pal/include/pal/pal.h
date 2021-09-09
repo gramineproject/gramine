@@ -752,7 +752,7 @@ PAL_NUM DkMemoryAvailableQuota(void);
  * and other fields as NULL to get PAL-enforced sizes of these three structs.
  *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
- *                                       identifies this Graphene instance). Must be a 64B buffer
+ *                                       identifies this Gramine instance). Must be a 64B buffer
  *                                       in case of SGX PAL.
  * \param[in,out] user_report_data_size  Caller specifies size of `user_report_data`; on return,
  *                                       contains PAL-enforced size of `user_report_data` (64B in
@@ -780,7 +780,7 @@ int DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size
  * and `quote` is an SGX quote obtained from Quoting Enclave via AESM service.
  *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
- *                                       identifies this Graphene instance). Must be a 64B buffer
+ *                                       identifies this Gramine instance). Must be a 64B buffer
  *                                       in case of SGX PAL.
  * \param[in]     user_report_data_size  Size in bytes of `user_report_data`. Must be exactly 64B
  *                                       in case of SGX PAL.

@@ -17,8 +17,8 @@ IN_GIT=@IN_GIT@
 
 if test -n "$IN_GIT"
 then
-    echo "Running from repository is broken. Please install Graphene using Meson." >&2
-    echo "See https://graphene.readthedocs.io/en/latest/building.html for details." >&2
+    echo "Running from repository is broken. Please install Gramine using Meson." >&2
+    echo "See https://gramine.readthedocs.io/en/latest/building.html for details." >&2
     exit 1
 fi
 
@@ -37,10 +37,10 @@ if [ "$GDB" == "1" ]; then
 		PREFIX+=("-i=mi")
 	fi
 	if [ 0"$SGX" -gt 0 ]; then
-		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/graphene_sgx_gdb.py")
+		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_sgx_gdb.py")
 		ENVS+=("LD_PRELOAD=$HOST_PAL_PATH/gdb_integration/sgx_gdb.so:$LD_PRELOAD")
 	else
-		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/graphene_linux_gdb.py")
+		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_linux_gdb.py")
 	fi
 	if [ "$GDB_SCRIPT" != "" ]; then
         # Run a script in batch mode, and without TTY (so that it can be piped, redirected etc.)

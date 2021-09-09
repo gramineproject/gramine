@@ -146,7 +146,7 @@ index 8ec554e88ec772931aebcff615a6d9624ffacbe6..382fdeda573b6b9aa8402c66e960b4ed
 -	errno = 0;
 -	*ret = strtod(buf, &endp);
 -	return (errno || *endp) ? -1 : 0;
-+    /* FIXME: strtod() is not supported by Graphene */
++    /* FIXME: strtod() is not supported by Gramine */
 +    (void)src;
 +    (void)ret_;
 +    (void)buf;

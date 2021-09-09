@@ -19,7 +19,7 @@ typedef struct shim_tcb shim_tcb_t;
 struct shim_tcb {
     shim_tcb_t*         self;
 
-    /* Function pointers for patched code calling into Graphene. */
+    /* Function pointers for patched code calling into Gramine. */
     void*               syscalldb;
     void*               handle_call;
 

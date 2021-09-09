@@ -126,7 +126,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("core id\t\t: %lu\n", n);
         ADD_INFO("cpu cores\t: %lu\n", g_pal_control->cpu_info.physical_cores_per_socket);
         double bogomips = g_pal_control->cpu_info.cpu_bogomips;
-        // Apparently graphene snprintf cannot into floats.
+        // Apparently Gramine snprintf cannot into floats.
         ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,
                  (unsigned long)(bogomips * 100.0 + 0.5) % 100);
         ADD_INFO("\n");

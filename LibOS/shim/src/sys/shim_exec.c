@@ -162,7 +162,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
             return -EFAULT;
     }
 
-    /* TODO: This should be removed, but: https://github.com/oscarlab/graphene/issues/2081 */
+    /* TODO: This should be removed, but: https://github.com/gramineproject/graphene/issues/2081 */
     if (!envp)
         envp = migrated_envp;
 

@@ -17,7 +17,7 @@
 
 static void child(int fd, int sig) {
     /* We need to wait till parent sleeps on `read`, unfortunately there is no way to check that in
-     * Graphene. Hopefully 100ms is enough. Worst case scenario this test succeeds without actually
+     * Gramine. Hopefully 100ms is enough. Worst case scenario this test succeeds without actually
      * testing anything useful. */
     if (usleep(100 * 1000) < 0) {
         err(1, "usleep");

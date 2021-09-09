@@ -1,5 +1,5 @@
-Contributing to Graphene
-========================
+Contributing to Gramine
+=======================
 
 .. highlight:: sh
 
@@ -7,21 +7,21 @@ Contributing to Graphene
 .. |nbsp| unicode:: 0xa0
    :trim:
 
-First off, thank you for your interest in contributing to Graphene!
+First off, thank you for your interest in contributing to Gramine!
 
-In general, code contributions should be submitted to the Graphene project
-using a |nbsp| `pull request <https://github.com/oscarlab/graphene/pulls>`__.
+In general, code contributions should be submitted to the Gramine project
+using a |nbsp| `pull request <https://github.com/gramineproject/gramine/pulls>`__.
 
 Reporting Bugs
 --------------
 
 In order to report a |nbsp| problem, please open an issue in the `issue tracker
-<https://github.com/oscarlab/graphene/issues>`__.
+<https://github.com/gramineproject/gramine/issues>`__.
 
 Reporting Security Vulnerabilities
 ----------------------------------
 
-Currently, we aren't aware of any production usage of Graphene, so feel free to
+Currently, we aren't aware of any production usage of Gramine, so feel free to
 report them using GitHub issues. Please note that this guideline may change
 quite soon, so please always check it before publicly reporting any
 vulnerabilities.
@@ -33,10 +33,10 @@ Major reorganizations, architectural changes, or code reorganization are best
 discussed with the maintainers in advance of writing code. We welcome
 contributions, and would hate for anyone to waste time implementing a change
 that will not be accepted for a design flaw. It is much better to reach out for
-advice first by emailing support@graphene-project.io.
+advice first by emailing support@gramineproject.io.
 
 Or you can see the archives at this google group:
-https://groups.google.com/forum/#!forum/graphene-support
+https://groups.google.com/forum/#!forum/gramine-support
 
 Please verify that your change doesn't introduce any insecure-by-default
 functionality. If an option allows users to introduce a security risk, the
@@ -71,10 +71,10 @@ In general, a |nbsp| PR should:
    grammatically correct American English.
 #. Include unit tests for the new behavior or bugfix, except in special
    circumstances, namely: when designing a unit test is difficult (e.g., the
-   code is deep enough in Graphene that it would require extra hooks for
+   code is deep enough in Gramine that it would require extra hooks for
    testing) or cannot be easily tested (e.g., a performance fix).
 #. Follow project's `style guidelines
-   <https://graphene.rtfd.io/en/latest/devel/coding-style.html>`__.
+   <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
 #. Be signed-off by the author of the PR in git (i.e., using the ``git commit -s``, indicating
    that the authors are agreeing to the terms of the `project Developer
    Certificate of Origin <DCO>`__
@@ -117,7 +117,7 @@ Before a pull request is merged, it must:
 
 #. Pass all CI tests
 #. Follow project's `style guidelines
-   <https://graphene.rtfd.io/en/latest/devel/coding-style.html>`__.
+   <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
 #. Be signed-off by the contributor.
 #. Introduce no new compilation errors or warnings
 #. Have all discussions from reviewers resolved
@@ -160,7 +160,7 @@ Reviewing Guidelines
 Style Guidelines
 ^^^^^^^^^^^^^^^^
 See `style guidelines
-<https://graphene.rtfd.io/en/latest/devel/coding-style.html>`__.
+<https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
 
 Running Regression Tests by Hand
 --------------------------------
@@ -186,13 +186,13 @@ For SGX, one needs to do the following::
 One can run tests manually (prepend the command with ``SGX=1`` or
 ``PAL_HOST=Linux-SGX`` to run the SGX variant)::
 
-   /path/to/graphene/Scripts/run-pytest -v -rs test_pal.py
-   SGX=1 /path/to/graphene/Scripts/run-pytest -v -rs test_pal.py
+   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py
+   SGX=1 /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py
 
 It is also possible to run subset of tests::
 
-   /path/to/graphene/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap
-   /path/to/graphene/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap::test_100_basic_boostrapping
+   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap
+   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap::test_100_basic_boostrapping
 
 The ``run-pytest`` script is a wrapper for `pytest
 <https://docs.pytest.org/en/stable/usage.html>`__ and accepts the same
@@ -203,7 +203,7 @@ The shim unit tests work similarly, and are under
 
 LTP
 ^^^
-Graphene passes a |nbsp| subset of the LTP tests. New changes should not break
+Gramine passes a |nbsp| subset of the LTP tests. New changes should not break
 currently passing LTP tests (and, ideally, might add new passing tests). LTP is
 currently only supported on the Linux PAL.
 

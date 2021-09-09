@@ -3,7 +3,7 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
-/* Helper tool for protected argv ("loader.argv_src_file" manifest option). See Graphene
+/* Helper tool for protected argv ("loader.argv_src_file" manifest option). See Gramine
  * documentation for usage.
  */
 

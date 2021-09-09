@@ -3,14 +3,14 @@
  *                         Rafal Wojdyla <omeg@invisiblethingslab.com>
  * Copyright (C) 2021      Intel Corporation */
 
-/* Protected files (PF) are encrypted on disk and transparently decrypted when accessed by Graphene
- * or by app running inside Graphene. Internal protected file format was ported from Intel SGX SDK,
+/* Protected files (PF) are encrypted on disk and transparently decrypted when accessed by Gramine
+ * or by app running inside Gramine. Internal protected file format was ported from Intel SGX SDK,
  * https://github.com/intel/linux-sgx/tree/1eaa4551d4b02677eec505684412dc288e6d6361/sdk/protected_fs
  *
  * Features:
  * - Data is encrypted (confidentiality) and integrity protected (tamper resistance).
  * - File swap protection (a PF can only be accessed when in a specific path).
- * - Transparency (Graphene app sees PFs as regular files, no need to modify the app).
+ * - Transparency (Gramine app sees PFs as regular files, no need to modify the app).
  *
  * Limitations:
  * - Metadata currently limits PF path size to 512 bytes and filename size to 260 bytes.

@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     /*
      * Make sure writes to a protected file are flushed.
      *
-     * TODO: this should not be necessary, Graphene should ensure protected files are flushed during
+     * TODO: this should not be necessary, Gramine should ensure protected files are flushed during
      * fork.
      */
     if (fsync(fd) == -1)

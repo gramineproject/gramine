@@ -4,7 +4,7 @@ Benchmarking
 We have some `Airspeed Velocity <https://asv.readthedocs.io/>`__ benchmarks
 available.
 
-After :doc:`building graphene <../building>`:
+After :doc:`building Gramine <../building>`:
 
 .. code-block:: sh
 

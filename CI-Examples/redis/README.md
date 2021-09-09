@@ -4,9 +4,9 @@ This directory contains the Makefile and the template manifest for the most
 recent version of Redis (as of this writing, version 6.0.5).
 
 The Makefile and the template manifest contain extensive comments and are made
-self-explanatory. Please review them to gain understanding of Graphene-SGX and
-requirements for applications running under Graphene-SGX. If you want to
-contribute a new example to Graphene and you take this Redis example as a
+self-explanatory. Please review them to gain understanding of Gramine-SGX and
+requirements for applications running under Gramine-SGX. If you want to
+contribute a new example to Gramine and you take this Redis example as a
 template, we recommend to remove the comments from your copies as they only add
 noise (see e.g. Memcached for a "stripped-down" example).
 
@@ -22,13 +22,13 @@ make SGX=1
 src/src/redis-benchmark
 kill %%
 
-# run Redis in non-SGX Graphene against a benchmark
-graphene-direct redis-server --save '' --protected-mode no &
+# run Redis in non-SGX Gramine against a benchmark
+gramine-direct redis-server --save '' --protected-mode no &
 src/src/redis-benchmark
 kill %%
 
-# run Redis in Graphene-SGX against a benchmark
-graphene-sgx redis-server --save '' --protected-mode no &
+# run Redis in Gramine-SGX against a benchmark
+gramine-sgx redis-server --save '' --protected-mode no &
 src/src/redis-benchmark
 kill %%
 ```
@@ -38,12 +38,12 @@ kill %%
 Notice that we run Redis with two parameters: `save ''` and `protected-mode no`:
 
 - `save ''` disables saving DB to disk (both RDB snapshots and AOF logs). We use
-  this parameter to side-step some bugs in Graphene triggered during the
+  this parameter to side-step some bugs in Gramine triggered during the
   graceful shutdown of Redis.
 
 - `protected-mode no` allows clients to connect to Redis on any network
   interface. Even though we use the loopback interface (which is always allowed
-  in Redis), Graphene hides this information. Therefore, we ask Redis to allow
+  in Redis), Gramine hides this information. Therefore, we ask Redis to allow
   clients on all interfaces.
 
 # Redis with Select

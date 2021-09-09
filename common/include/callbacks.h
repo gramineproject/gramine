@@ -5,10 +5,10 @@
  * Defines a set of callbacks that the common library expects from environment it is linked into.
  * Currently, the common library expects `shim_`-prefixed callbacks from LibOS, `pal_`-prefixed
  * callbacks from PAL, and not-prefixed callbacks from all other environments (e.g., PAL regression
- * tests and non-Graphene programs). This header aliases the actual callback implementations, i.e.,
+ * tests and non-Gramine programs). This header aliases the actual callback implementations, i.e.,
  * `shim_abort()` is aliased as `abort()` for use by the common library.
  *
- * Strictly speaking, current Graphene doesn't need different callback names for LibOS, PAL and
+ * Strictly speaking, current Gramine doesn't need different callback names for LibOS, PAL and
  * other environments. We introduce this notation for the future change where LibOS and PAL will be
  * statically linked together in a single binary (thus, we want to avoid name collisions in
  * callbacks).

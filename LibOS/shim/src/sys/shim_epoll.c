@@ -384,7 +384,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
             /* only if epoll was not updated concurrently and something was actually polled */
             /* TODO: This loop is wrong. If there are 2 epoll_items with the same pal_handle (e.g.
              * due to dup-ed fd), only the first will be updated.
-             * GH issue: https://github.com/oscarlab/graphene/issues/1848 */
+             * GH issue: https://github.com/gramineproject/graphene/issues/1848 */
             for (size_t i = 0; i < pal_cnt; i++) {
                 LISTP_FOR_EACH_ENTRY(epoll_item, &epoll->fds, list) {
                     assert(epoll_item->handle != NULL);

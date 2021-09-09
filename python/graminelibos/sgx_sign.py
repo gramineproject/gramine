@@ -189,7 +189,7 @@ def append_trusted_dir_or_file(targets, val, check_exist):
         targets.append((uri_, path, hash_))
 
 def get_trusted_files(manifest, check_exist=True, do_hash=True):
-    targets = [] # tuple of graphene-uri, host-path, hash-of-host-file (can be None)
+    targets = [] # tuple of gramine-uri, host-path, hash-of-host-file (can be None)
 
     preload_str = manifest['loader']['preload']
     # `filter` below is needed for the case where preload_str == '' (`split` returns [''] then)

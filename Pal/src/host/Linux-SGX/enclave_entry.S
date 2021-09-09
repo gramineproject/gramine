@@ -39,17 +39,6 @@ enclave_entry:
 	# The following code is hardened to defend attacks from untrusted host.
 	# Any states given by the host instead of the ISA must be assumed
 	# potentially malicious.
-	#
-	# For instance, Jo Van Bulck contributed a detailed vulnerability report
-	# in https://github.com/oscarlab/graphene/issues/28. (Fixed)
-	# Brief description of the vulnerabilities:
-	# The previous implementation does not check the index of entry
-	# functions (RDI at enclave entry) given by the untrusted PAL.
-	# An attacker can cause overflow/underflow to jump to random
-	# locaion in enclaves. Moreover, we used a specific index
-	# (RETURN_FROM_OCALL) to tell if the control flow is returned
-	# from a OCALL in the untrusted PAL. Attackers can manipulate RDI
-	# to deceive the trusted PAL.
 
 	# This thread can be interrupted but then the above check branches to
 	# .Lprepare_resume. So the outside can't re-enter the checks below in

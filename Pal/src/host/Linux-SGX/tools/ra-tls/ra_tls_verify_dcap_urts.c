@@ -3,7 +3,7 @@
 
 /*
  * To load libsgx_dcap_quoteverify.so, it needs some symbols which are normally
- * provided by libsgx_urts.so (or libsgx_urts_sim.so). To use it in Graphene,
+ * provided by libsgx_urts.so (or libsgx_urts_sim.so). To use it in Gramine,
  * there are two workarounds to solve this: 1) load libsgx_urts.so or 2) create
  * dummy functions and always return failure. In this example we use 2).
  */

@@ -29,7 +29,7 @@ stage('test-direct') {
         sh '''
             cd CI-Examples/memcached
             make -j8 all
-            make start-graphene-server &
+            make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 11211
             # memcslap populates server but doesn't report errors, use
             # memcached-tool for this (must return two lines of stats)
@@ -46,7 +46,7 @@ stage('test-direct') {
                 export USE_SELECT
             fi
             make -j8 all
-            make start-graphene-server &
+            make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 6379
             ./src/src/redis-benchmark
         '''
@@ -55,7 +55,7 @@ stage('test-direct') {
         sh '''
             cd CI-Examples/lighttpd
             make -j8 all
-            make start-graphene-server &
+            make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8003
             LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8003
         '''
@@ -64,7 +64,7 @@ stage('test-direct') {
         sh '''
             cd CI-Examples/nginx
             make -j8 all
-            make start-graphene-server &
+            make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8002
             LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8002
         '''

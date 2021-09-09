@@ -61,7 +61,7 @@ struct shim_process {
 
     /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
      * once during initialization, using static buffer and restricted to STR_SIZE. This is enough
-     * for current workloads but see issue https://github.com/oscarlab/graphene/issues/2279. */
+     * for current workloads but see https://github.com/gramineproject/graphene/issues/2279. */
     char cmdline[STR_SIZE];
     size_t cmdline_size;
 };

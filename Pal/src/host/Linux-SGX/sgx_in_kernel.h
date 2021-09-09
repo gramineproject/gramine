@@ -3,7 +3,7 @@
  * Copyright(c) 2016-20 Intel Corporation.
  */
 
-/* TODO: Graphene must remove this file after Intel SGX driver is upstreamed and this header is
+/* TODO: Gramine must remove this file after Intel SGX driver is upstreamed and this header is
  * distributed with the system. This header was taken from Linux version 5.12, it *may* be out of
  * sync with newer versions (though highly unlikely). If possible, use the header found on the
  * system instead of this one. */

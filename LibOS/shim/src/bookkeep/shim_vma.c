@@ -36,7 +36,7 @@ static int filter_saved_flags(int flags) {
                     | VMA_UNMAPPED | VMA_INTERNAL | VMA_TAINTED);
 }
 
-/* TODO: split flags into internal (Graphene) and Linux; also to consider: completely remove Linux
+/* TODO: split flags into internal (Gramine) and Linux; also to consider: completely remove Linux
  * flags - we only need MAP_SHARED/MAP_PRIVATE and possibly MAP_STACK/MAP_GROWSDOWN */
 struct shim_vma {
     uintptr_t begin;
@@ -342,7 +342,7 @@ static MEM_MGR vma_mgr = NULL;
  * size needs to be increased or any supported architecture does not allow for it).
  */
 #ifndef __x86_64__
-/* If this optimization will work on the architecture you port Graphene to, add it to the check
+/* If this optimization will work on the architecture you port Gramine to, add it to the check
  * above. */
 #error "This optimization requires specific representation of pointers."
 #endif

@@ -1,4 +1,4 @@
-executable('graphene-sgx-ias-request',
+executable('gramine-sgx-ias-request',
     'ias_request.c',
 
     dependencies: [

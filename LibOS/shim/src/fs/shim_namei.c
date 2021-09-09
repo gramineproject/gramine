@@ -534,7 +534,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
          * Can happen if user specified O_NOFOLLOW, or O_TRUNC | O_EXCL. Posix requires us to fail
          * with -ELOOP when trying to open a symlink.
          *
-         * (Linux allows opening a symlink with O_PATH, but Graphene does not support it yet).
+         * (Linux allows opening a symlink with O_PATH, but Gramine does not support it yet).
          */
         ret = -ELOOP;
         goto err;
@@ -686,7 +686,7 @@ static int populate_directory(struct shim_dentry* dent) {
                 /* Fail on underlying lookup errors, except -EACCES (for which we will just ignore
                  * the file). The lookup might fail with -EACCES for host symlinks pointing to
                  * inaccessible target, since the "chroot" filesystem transparently follows symlinks
-                 * instead of reporting them to Graphene. */
+                 * instead of reporting them to Gramine. */
                 goto out;
             }
             continue;

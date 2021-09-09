@@ -17,6 +17,6 @@ $(targets):
 	$(MAKE) -C Runtime $@
 	@echo
 	@echo NOTE: We are in the middle of a transition to the Meson buildsystem.
-	@echo You have successfully built part of Graphene, now please compile the rest and install
-	@echo using Meson. See https://graphene.readthedocs.io/en/latest/building.html for more details.
+	@echo You have successfully built part of Gramine, now please compile the rest and install
+	@echo using Meson. See https://gramine.readthedocs.io/en/latest/building.html for more details.
 	@echo

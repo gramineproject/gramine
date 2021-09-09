@@ -1,11 +1,11 @@
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.graphene_lib.type = "chroot"
-fs.mount.graphene_lib.path = "/lib"
-fs.mount.graphene_lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.gramine_lib.type = "chroot"
+fs.mount.gramine_lib.path = "/lib"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.host_lib.type = "chroot"
 fs.mount.host_lib.path = "{{ arch_libdir }}"
@@ -36,7 +36,7 @@ sgx.allowed_files = [
 
 sgx.trusted_files = [
   "file:{{ entrypoint }}",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
 ]
 

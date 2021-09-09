@@ -5,8 +5,8 @@ How to write documentation
 
 .. highlight:: rst
 
-Graphene uses `Sphinx`_ to generate the documentation in HTML form. The
-documentation is hosted on Read The Docs at https://graphene.readthedocs.io/.
+Gramine uses `Sphinx`_ to generate the documentation in HTML form. The
+documentation is hosted on Read The Docs at https://gramine.readthedocs.io/.
 Documentation is generally written as `reStructuredText`_ files which are placed
 in ``Documentation/`` directory. See `Sphinx' reST primer`_ for short
 introduction into syntax.
@@ -64,7 +64,7 @@ The output is in the ``_build`` directory:
    firefox _build/html/index.html
 
    # example: view man output
-   man _build/man/graphene-manifest.1
+   man _build/man/gramine-manifest.1
 
 Preferred reST style
 --------------------

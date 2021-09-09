@@ -170,7 +170,7 @@ static void lock_fail(int type, long int start, long int len) {
 /*
  * Test: lock/unlock various ranges. The locks are all for the same process, so the test is unlikely
  * to fail, but it's useful for checking if the locks are replaced and merged correctly (by looking
- * at Graphene debug output).
+ * at Gramine debug output).
  */
 static void test_ranges() {
     printf("testing ranges...\n");

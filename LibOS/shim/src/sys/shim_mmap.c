@@ -69,7 +69,7 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
     if (!length || !access_ok(addr, length))
         return (void*)-EINVAL;
 
-    /* This check is Graphene specific. */
+    /* This check is Gramine specific. */
     if (flags & (VMA_UNMAPPED | VMA_TAINTED | VMA_INTERNAL)) {
         return (void*)-EINVAL;
     }
@@ -440,7 +440,7 @@ long shim_do_msync(unsigned long start, size_t len_orig, int flags) {
     }
 
     if (flags != MS_ASYNC) {
-        log_warning("Graphene does not support flags to msync other than MS_ASYNC");
+        log_warning("Gramine does not support flags to msync other than MS_ASYNC");
         return -ENOSYS;
     }
 

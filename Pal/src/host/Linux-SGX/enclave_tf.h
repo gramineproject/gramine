@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
-/* Trusted files (TF) are integrity protected and transparently verified when accessed by Graphene
- * or by app running inside Graphene. For each file that requires authentication (specified in the
+/* Trusted files (TF) are integrity protected and transparently verified when accessed by Gramine
+ * or by app running inside Gramine. For each file that requires authentication (specified in the
  * manifest as "sgx.trusted_files"), a SHA256 hash is generated and stored in the manifest, signed
- * and verified as part of the enclave's crypto measurement. When user opens such a file, Graphene
+ * and verified as part of the enclave's crypto measurement. When user opens such a file, Gramine
  * loads the whole file, calculates its SHA256 hash, and checks against the corresponding hash in
  * the manifest. If the hashes do not match, the file access will be rejected.
  *

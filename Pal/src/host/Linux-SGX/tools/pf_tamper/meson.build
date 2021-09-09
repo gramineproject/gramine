@@ -1,4 +1,4 @@
-executable('graphene-sgx-pf-tamper',
+executable('gramine-sgx-pf-tamper',
     'pf_tamper.c',
 
     dependencies: [

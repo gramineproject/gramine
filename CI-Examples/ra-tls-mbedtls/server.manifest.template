@@ -1,6 +1,6 @@
 # RA-TLS manifest file example
 
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "server"
 loader.log_level = "{{ log_level }}"
 
@@ -12,7 +12,7 @@ sys.enable_sigterm_injection = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.lib2.type = "chroot"
 fs.mount.lib2.path = "{{ arch_libdir }}"
@@ -32,7 +32,7 @@ sgx.ra_client_linkable = {{ ra_client_linkable }}
 
 sgx.trusted_files = [
   "file:server",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
 ]

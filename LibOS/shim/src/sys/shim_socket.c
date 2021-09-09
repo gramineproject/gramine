@@ -1594,7 +1594,6 @@ long shim_do_recvmmsg(int sockfd, struct mmsghdr* msg, unsigned int vlen, int fl
         }
     }
 
-    // Issue # 753 - https://github.com/oscarlab/graphene/issues/753
     /* TODO(donporter): timeout properly. For now, explicitly return an error. */
     if (timeout) {
         log_warning("recvmmsg(): timeout parameter unsupported.");

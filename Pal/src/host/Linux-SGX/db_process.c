@@ -68,9 +68,9 @@
  * guarantees because it is generated over the SGX report that contains the target identity of the
  * peer enclave, thus it corresponds to the "directed signature from B to A" in ISO KE.
  *
- * Note that Graphene does *not* use the SIGMA-like protocol (used in e.g. Intel SGX SDK). SIGMA
+ * Note that Gramine does *not* use the SIGMA-like protocol (used in e.g. Intel SGX SDK). SIGMA
  * family of protocols is an enhancement over ISO KE to add the "identity protection" feature, which
- * is irrelevant for SGX local attestation. Thus, Graphene chooses a simpler protocol.
+ * is irrelevant for SGX local attestation. Thus, Gramine chooses a simpler protocol.
  *
  * Prerequisites of a secure channel:
  *
@@ -101,10 +101,10 @@
  *
  * (3) Both the parent and child enclaves need to have matching measurements.
  *
- *       All Graphene enclaves with the same configuration (manifest) and same Graphene (LibOS, PAL)
+ *       All Gramine enclaves with the same configuration (manifest) and same Gramine (LibOS, PAL)
  *       binaries should have the same measurement. During initialization, it's decided based on
  *       input from untrusted PAL, whether a particular enclave will become a leader of a new
- *       Graphene namespace, or will wait on a pipe for some parent enclave connection.
+ *       Gramine namespace, or will wait on a pipe for some parent enclave connection.
  *
  * (4) The two parties who create the session key need to be the ones proven by the CPU
  *     (for preventing man-in-the-middle attacks).
@@ -123,7 +123,7 @@ bool is_peer_enclave_ok(sgx_measurement_t* mr_enclave, sgx_report_data_t* expect
     if (memcmp(peer_data, expected_data, sizeof(*expected_data)))
         return false;
 
-    /* all Graphene enclaves with same configuration (manifest) should have the same MR_ENCLAVE */
+    /* all Gramine enclaves with same configuration (manifest) should have the same MR_ENCLAVE */
     if (!memcmp(mr_enclave, &g_pal_sec.mr_enclave, sizeof(*mr_enclave)))
         return true;
 
@@ -193,7 +193,7 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
             goto failed;
     }
 
-    /* Send this Graphene instance ID. */
+    /* Send this Gramine instance ID. */
     uint64_t instance_id = g_pal_state.instance_id;
     ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
                                /*is_blocking=*/!child->process.nonblocking);

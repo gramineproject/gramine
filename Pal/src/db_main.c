@@ -305,11 +305,9 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     /* Load argv */
-    /* TODO: Add an option to specify argv inline in the manifest. This requires an upgrade to the
-     * manifest syntax. See https://github.com/oscarlab/graphene/issues/870 (Use YAML or TOML syntax
-     * for manifests). 'loader.argv0_override' won't be needed after implementing this feature and
-     * resolving https://github.com/oscarlab/graphene/issues/1053 (RFC: graphene invocation).
-     */
+    /* TODO: Add an option to specify argv inline in the manifest. 'loader.argv0_override' won't be
+     * needed after implementing this feature and resolving
+     * https://github.com/gramineproject/graphene/issues/1053 (RFC: graphene invocation). */
     bool argv0_overridden = false;
     char* argv0_override = NULL;
     ret = toml_string_in(g_pal_state.manifest_root, "loader.argv0_override", &argv0_override);
@@ -338,7 +336,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (use_cmdline_argv) {
         /* Warn only in the first process. */
         if (!parent_process) {
-            log_error("Using insecure argv source. Graphene will continue application execution, "
+            log_error("Using insecure argv source. Gramine will continue application execution, "
                       "but this configuration must not be used in production!");
         }
     } else {
@@ -377,7 +375,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (use_host_env) {
         /* Warn only in the first process. */
         if (!parent_process) {
-            log_error("Forwarding host environment variables to the app is enabled. Graphene will "
+            log_error("Forwarding host environment variables to the app is enabled. Gramine will "
                       "continue application execution, but this configuration must not be used in "
                       "production!");
         }

@@ -66,7 +66,7 @@ objs = \
 	printf.o \
 	slab.o
 
-graphene_lib = $(LIB_DIR)/graphene-lib.a
+gramine_lib = $(LIB_DIR)/gramine-lib.a
 host_lib = $(HOST_DIR)/libpal-$(PAL_HOST).a
 
 # Install Targets (all in RUNTIME_DIR):
@@ -91,17 +91,17 @@ endif
 ###########################
 
 .PHONY: all
-all: $(graphene_lib) $(files_to_build) $(files_to_install)
+all: $(gramine_lib) $(files_to_build) $(files_to_install)
 
-.PHONY: host_lib_recurse graphene_lib_recurse
+.PHONY: host_lib_recurse gramine_lib_recurse
 
-graphene_lib_recurse:
+gramine_lib_recurse:
 	CFLAGS="$(defs)" $(MAKE) -C ../../common/src target=$(abspath $(LIB_DIR))/
 
-$(graphene_lib): graphene_lib_recurse
+$(gramine_lib): gramine_lib_recurse
 	@true
 
-host_lib_recurse: $(graphene_lib)
+host_lib_recurse: $(gramine_lib)
 	@[ ! -d host/$(PAL_HOST) ] || $(MAKE) -C host/$(PAL_HOST)
 
 $(host_lib): host_lib_recurse
@@ -116,7 +116,7 @@ endif
 
 ifneq ($(pal_lib),)
 $(pal_lib): $(addprefix $(OBJ_DIR)/,$(objs)) \
-	    $(host_lib) $(graphene_lib) $(pal_lib_deps)
+	    $(host_lib) $(gramine_lib) $(pal_lib_deps)
 	$(call cmd,ld_so_o)
 ifeq ($(PAL_HOST),Linux)
 	@if readelf -a $@ | grep -q NEEDED; then              \
@@ -137,10 +137,10 @@ $(pal_lib_post): $(pal_lib)
 endif
 
 $(pal_static): $(addprefix $(OBJ_DIR)/,$(objs)) \
-	       $(host_lib) $(graphene_lib)
+	       $(host_lib) $(gramine_lib)
 	$(call cmd,ar_a_o)
 
-$(OBJ_DIR)/%.o: %.c $(graphene_lib)
+$(OBJ_DIR)/%.o: %.c $(gramine_lib)
 	@mkdir -p $(OBJ_DIR)
 	$(call cmd,cc_o_c)
 

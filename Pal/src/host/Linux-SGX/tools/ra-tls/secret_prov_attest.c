@@ -330,7 +330,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         /* successfully retrieved the secret: is it a protected files key? */
         e = getenv(SECRET_PROVISION_SET_PF_KEY);
         if (e && (!strcmp(e, "1") || !strcmp(e, "true") || !strcmp(e, "TRUE"))) {
-            /* the secret is a PF key, apply it to Graphene via pseudo-FS */
+            /* the secret is a PF key, apply it to Gramine via pseudo-FS */
             int fd = open("/dev/attestation/protected_files_key", O_WRONLY);
             if (fd < 0)
                 return;

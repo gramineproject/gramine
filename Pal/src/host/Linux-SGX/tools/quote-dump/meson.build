@@ -1,4 +1,4 @@
-executable('graphene-sgx-quote-dump',
+executable('gramine-sgx-quote-dump',
     'quote_dump.c',
 
     dependencies: [

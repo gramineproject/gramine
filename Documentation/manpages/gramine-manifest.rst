@@ -1,19 +1,19 @@
-.. program:: graphene-manifest
-.. _graphene-manifest:
+.. program:: gramine-manifest
+.. _gramine-manifest:
 
-==============================================================
-:program:`graphene-manifest` -- Graphene manifest preprocessor
-==============================================================
+============================================================
+:program:`gramine-manifest` -- Gramine manifest preprocessor
+============================================================
 
 Synopsis
 ========
 
-:command:`graphene-manifest` [*OPTION*]... [*SOURCE-FILE* [*OUTPUT-FILE*]]
+:command:`gramine-manifest` [*OPTION*]... [*SOURCE-FILE* [*OUTPUT-FILE*]]
 
 Description
 ===========
 
-:program:`graphene-manifest` is used to preprocess manifests for Graphene using
+:program:`gramine-manifest` is used to preprocess manifests for Gramine using
 `Jinja markup <https://jinja.palletsprojects.com/>`__.
 
 Command line arguments
@@ -28,11 +28,11 @@ Functions and constants available in templates
 
 .. default-domain:: py
 
-.. data:: graphene.libos
+.. data:: gramine.libos
 
    Path to :file:`libsysdb.so`.
 
-.. function:: graphene.runtimedir([libc])
+.. function:: gramine.runtimedir([libc])
 
    The path to runtime directory with patched libc. The default libc is
    ``'glibc'``.
@@ -87,25 +87,25 @@ Example
 
 .. code-block:: jinja
 
-   loader.preload = "file:{{ graphene.libos }}"
+   loader.preload = "file:{{ gramine.libos }}"
    libos.entrypoint = "{{ entrypoint }}"
    loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
    [fs.mount.runtime]
    type = "chroot"
    path = "/lib"
-   uri = "file:{{ graphene.runtimedir() }}"
+   uri = "file:{{ gramine.runtimedir() }}"
 
    [sgx.trusted_files]
    entrypoint = "file:{{ entrypoint }}"
-   runtime = "file:{{ graphene.runtimedir() }}/"
+   runtime = "file:{{ gramine.runtimedir() }}/"
 
 :file:`Makefile`:
 
 .. code-block:: make
 
    %.manifest: manifest.template
-      graphene-manifest \
+      gramine-manifest \
          -Dentrypoint=$(ENTRYPOINT) \
          -Darch_libdir=$(ARCH_LIBDIR) \
          $< $@

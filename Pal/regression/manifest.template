@@ -3,7 +3,7 @@ loader.log_level = "debug"
 loader.insecure__use_cmdline_argv = true
 
 # PAL tests use `DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL)` which must allocate in the PAL-internal
-# part of the Graphene memory
+# part of the Gramine memory
 loader.pal_internal_mem_size = "64M"
 
 fs.mount.root.uri = "file:"

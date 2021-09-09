@@ -17,7 +17,7 @@
 
 #define GSGX_FILE  "/dev/gsgx"
 
-/* Graphene needs the below subset of SGX instructions' return values */
+/* Gramine needs the below subset of SGX instructions' return values */
 #ifndef SGX_INVALID_SIG_STRUCT
 #define SGX_INVALID_SIG_STRUCT  1
 #endif

@@ -21,11 +21,11 @@ int open_sgx_driver(bool need_gsgx) {
         g_gsgx_device = DO_SYSCALL(open, GSGX_FILE, O_RDWR | O_CLOEXEC, 0);
         if (g_gsgx_device < 0) {
             log_error(
-                "\n\tSystem does not support FSGSBASE instructions, which Graphene requires on SGX.\n\n"
+                "\n\tSystem does not support FSGSBASE instructions, which Gramine requires on SGX.\n\n"
                 "\tThe best option is to move to a newer Linux kernel with FSGSBASE support (5.9+), or\n"
                 "\ta kernel with a back-ported patch to support FSGSBASE.\n"
-                "\tOne may also load the Graphene SGX module, although this is insecure.\n"
-                "\tIf the Graphene SGX module is loaded, check permissions on the device "
+                "\tOne may also load the Gramine SGX module, although this is insecure.\n"
+                "\tIf the Gramine SGX module is loaded, check permissions on the device "
                 GSGX_FILE ",\n\tas we cannot open this file.");
             return g_gsgx_device;
         }
@@ -107,7 +107,7 @@ bool is_wrfsbase_supported(void) {
     if (!(cpuinfo[1] & 0x1)) {
         log_error(
             "{RD,WR}{FS,GS}BASE instructions are not permitted on this platform. Please check the "
-            "instructions under \"Building with SGX support\" from Graphene documentation.");
+            "instructions under \"Building with SGX support\" from Gramine documentation.");
         return false;
     }
 

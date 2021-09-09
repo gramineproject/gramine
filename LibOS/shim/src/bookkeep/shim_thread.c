@@ -171,7 +171,7 @@ static int init_main_thread(void) {
     }
 
     /* TODO: I believe there is some Pal allocated initial stack which could be reused by the first
-     * thread. Tracked: https://github.com/oscarlab/graphene/issues/2140 */
+     * thread. Tracked: https://github.com/gramineproject/graphene/issues/2140 */
     ret = alloc_thread_libos_stack(cur_thread);
     if (ret < 0) {
         put_thread(cur_thread);

@@ -2,7 +2,7 @@
 # Copyright (C) 2021 Invisible Things Lab
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
 
-# Commands for temporarily changing source language. Used by other Graphene GDB scripts to ensure
+# Commands for temporarily changing source language. Used by other Gramine GDB scripts to ensure
 # that a specific source language is used for parsing expressions - GDB interprets scripts using
 # the language taken from currently executing code, which may change in time, resulting in scripts
 # working only part of the time.

@@ -117,7 +117,7 @@ static int init_exec_handle(void) {
 
     if (strstartswith(exec_path, URI_PREFIX_FILE)) {
         /* TODO: change to error after some deprecation period */
-        log_error("'libos.entrypoint' is now a Graphene path, not URI. "
+        log_error("'libos.entrypoint' is now a Gramine path, not URI. "
                   "Ignoring the 'file:' prefix.");
         exec_path += strlen(URI_PREFIX_FILE);
     }

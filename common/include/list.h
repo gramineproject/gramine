@@ -280,7 +280,7 @@
     for ((CURSOR) = (CURSOR)->FIELD.next, (TMP) = (CURSOR)->FIELD.next; \
          (CURSOR) != (HEAD)->first && (HEAD)->first; (CURSOR) = (TMP), (TMP) = (TMP)->FIELD.next)
 
-/* Assertion code written in Graphene project */
+/* Assertion code written in Gramine project */
 #define CHECK_LIST_HEAD(TYPE, HEAD, FIELD)                               \
     do {                                                                 \
         TYPE pos;                                                        \

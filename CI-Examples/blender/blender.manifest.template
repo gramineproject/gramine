@@ -1,18 +1,18 @@
 # Blender manifest example
 
-loader.preload = "file:{{ graphene.libos }}"
+loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "/blender/blender"
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/graphene_lib:/blender_lib:/usr/{{ arch_libdir }}:{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/gramine_lib:/blender_lib:/usr/{{ arch_libdir }}:{{ arch_libdir }}"
 loader.env.HOME = "/home/user"
 loader.env.PWD = ""
 
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.graphene_lib.type = "chroot"
-fs.mount.graphene_lib.path = "/graphene_lib"
-fs.mount.graphene_lib.uri = "file:{{ graphene.runtimedir() }}"
+fs.mount.gramine_lib.type = "chroot"
+fs.mount.gramine_lib.path = "/gramine_lib"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
 fs.mount.blender_lib.type = "chroot"
 fs.mount.blender_lib.path = "/blender_lib"
@@ -42,7 +42,7 @@ sgx.thread_num = 64
 sgx.trusted_files = [
   "file:{{ blender_dir }}/blender",
   "file:{{ blender_dir }}/lib/",
-  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
 ]

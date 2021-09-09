@@ -1,12 +1,12 @@
-subdir('graphenelibos')
+subdir('graminelibos')
 
 install_data([
-    'graphene-manifest',
+    'gramine-manifest',
 ], install_dir: get_option('bindir'))
 
 if sgx
     install_data([
-        'graphene-sgx-get-token',
-        'graphene-sgx-sign',
+        'gramine-sgx-get-token',
+        'gramine-sgx-sign',
     ], install_dir: get_option('bindir'))
 endif

@@ -1,4 +1,4 @@
-executable('graphene-sgx-pf-crypt',
+executable('gramine-sgx-pf-crypt',
     'pf_crypt.c',
 
     dependencies: [

@@ -577,7 +577,7 @@ static int load_elf_header(struct shim_handle* file, ElfW(Ehdr)* ehdr) {
 
     ret = check_elf_header(ehdr);
     if (ret < 0) {
-        errstring = "%s is not an ELF executable. Please note that Graphene doesn't support "
+        errstring = "%s is not an ELF executable. Please note that Gramine doesn't support "
                     "executing scripts as executables.";
         ret = -ENOEXEC;
         goto err;
@@ -614,7 +614,7 @@ int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     struct link_map* map = map_elf_object(file, &ehdr);
     if (!map) {
         log_error("Failed to map %s. This may be caused by the binary being non-PIE, in which "
-                  "case Graphene requires a specially-crafted memory layout. You can enable it "
+                  "case Gramine requires a specially-crafted memory layout. You can enable it "
                   "by adding 'sgx.nonpie_binary = true' to the manifest.",
                   fname);
         return -EINVAL;
