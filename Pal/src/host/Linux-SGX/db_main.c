@@ -678,6 +678,19 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
+    /* TOML parser (for whatever reason) allocates a lot of memory when parsing the manifest into an
+     * in-memory struct. We heuristically pre-allocate additional PAL internal memory if the
+     * manifest file looks large enough. Hopefully below sizes are sufficient for any manifest.
+     *
+     * FIXME: this is a quick hack, we need proper memory allocation in PAL. */
+    if (manifest_size > 10 * 1024 * 1024) {
+        log_always("Detected a huge manifest, preallocating 128MB of internal memory.");
+        g_pal_internal_mem_size += 128 * 1024 * 1024; /* 10MB manifest -> 64 + 128 MB PAL mem */
+    } else if (manifest_size > 5 * 1024 * 1024) {
+        log_always("Detected a huge manifest, preallocating 64MB of internal memory.");
+        g_pal_internal_mem_size += 64 * 1024 * 1024; /* 5MB manifest -> 64 + 64 MB PAL mem */
+    }
+
     /* parse manifest */
     char errbuf[256];
     toml_table_t* manifest_root = toml_parse(manifest_addr, errbuf, sizeof(errbuf));
@@ -700,12 +713,20 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
             READ_ONCE(*(size_t*)i);
     }
 
+    size_t pal_internal_mem_size;
     ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
-                             /*defaultval=*/0, &g_pal_internal_mem_size);
+                             /*defaultval=*/0, &pal_internal_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
         ocall_exit(1, true);
     }
+
+    if (pal_internal_mem_size < g_pal_internal_mem_size) {
+        log_error("Too small `loader.pal_internal_mem_size`, need at least %luMB because the "
+                  "manifest is large", g_pal_internal_mem_size / 1024 / 1024);
+        ocall_exit(1, true);
+    }
+    g_pal_internal_mem_size = pal_internal_mem_size;
 
     if ((ret = init_file_check_policy()) < 0) {
         log_error("Failed to load the file check policy: %d", ret);
