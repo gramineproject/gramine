@@ -248,7 +248,6 @@ static void test_unlink_and_write(const char* path) {
         err(1, "close unlinked %s", path);
 }
 
-
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
