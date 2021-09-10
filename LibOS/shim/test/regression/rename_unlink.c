@@ -29,6 +29,8 @@ static_assert(sizeof(message1) != sizeof(message2), "the messages should have di
 static int write_all(int fd, const char* str, size_t size) {
     while (size > 0) {
         ssize_t n = write(fd, str, size);
+        /* Treat EINTR as error: we don't expect it because the test doesn't use any signal
+         * handlers. */
         if (n == -1) {
             warn("write");
             return -1;
@@ -43,6 +45,8 @@ static int write_all(int fd, const char* str, size_t size) {
 static int read_all(int fd, char* str, size_t size) {
     while (size > 0) {
         ssize_t n = read(fd, str, size);
+        /* Treat EINTR as error: we don't expect it because the test doesn't use any signal
+         * handlers. */
         if (n == -1) {
             warn("read");
             return -1;
@@ -200,7 +204,7 @@ static void test_rename_open_file(const char* path1, const char* path2) {
         err(1, "unlink %s", path2);
 }
 
-static void test_unlink(const char* path) {
+static void test_unlink_and_recreate(const char* path) {
     printf("%s...\n", __func__);
 
     int fd1 = create_file(path, message1, message1_len);
@@ -224,6 +228,26 @@ static void test_unlink(const char* path) {
         err(1, "unlink %s", path);
 }
 
+static void test_unlink_and_write(const char* path) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path, /*message=*/NULL, /*len=*/0);
+
+    if (unlink(path) == -1)
+        err(1, "unlink");
+
+    should_not_exist(path);
+
+    if (write_all(fd, message1, message1_len) == -1)
+        errx(1, "write_all %s", path);
+
+    should_contain("unlinked file", fd, message1, message1_len);
+    should_not_exist(path);
+
+    if (close(fd) == -1)
+        err(1, "close unlinked %s", path);
+}
+
 
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
@@ -238,7 +262,8 @@ int main(int argc, char* argv[]) {
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
     test_rename_open_file(path1, path2);
-    test_unlink(path1);
+    test_unlink_and_recreate(path1);
+    test_unlink_and_write(path1);
     printf("TEST OK\n");
     return 0;
 }

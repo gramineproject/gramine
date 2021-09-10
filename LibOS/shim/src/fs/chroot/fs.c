@@ -395,7 +395,7 @@ static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count) {
 
     file_off_t pos = hdl->info.chroot.pos;
 
-    /* Make sure won't overflow `pos` */
+    /* Make sure we won't overflow `pos` */
     file_off_t max_end_pos;
     if (inode->type == S_IFREG && __builtin_add_overflow(pos, count, &max_end_pos)) {
         ret = -EFBIG;
@@ -432,7 +432,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
 
     file_off_t pos = hdl->info.chroot.pos;
 
-    /* Make sure won't overflow `pos` */
+    /* Make sure we won't overflow `pos` */
     file_off_t max_end_pos;
     if (inode->type == S_IFREG && __builtin_add_overflow(pos, count, &max_end_pos)) {
         ret = -EFBIG;
