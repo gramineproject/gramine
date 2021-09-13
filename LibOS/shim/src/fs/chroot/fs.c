@@ -200,14 +200,14 @@ out:
     return ret;
 }
 
-/* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
-static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl) {
+/* Open a temporary PAL handle for a file (used by `rename`, `unlink` etc.) */
+static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl, int pal_options) {
     char* uri;
     int ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, /*create=*/0, /*options=*/0,
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, /*create=*/0, pal_options,
                        out_palhdl);
     free(uri);
     return pal_to_unix_errno(ret);
@@ -522,7 +522,7 @@ static int chroot_readdir(struct shim_dentry* dent, readdir_callback_t callback,
     char* buf = NULL;
     size_t buf_size = READDIR_BUF_SIZE;
 
-    ret = chroot_temp_open(dent, S_IFDIR, &palhdl);
+    ret = chroot_temp_open(dent, S_IFDIR, &palhdl, /*pal_options=*/0);
     if (ret < 0)
         return ret;
 
@@ -584,7 +584,7 @@ static int chroot_unlink(struct shim_dentry* dir, struct shim_dentry* dent) {
     lock(&dent->lock);
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->type, &palhdl, /*pal_options=*/0);
     if (ret < 0)
         goto out;
 
@@ -638,7 +638,7 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(old, old->type, &palhdl);
+    ret = chroot_temp_open(old, old->type, &palhdl, PAL_OPTION_RENAME);
     if (ret < 0)
         goto out;
 
@@ -677,7 +677,7 @@ static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
     lock(&dent->inode->lock);
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->type, &palhdl, /*pal_options=*/0);
     if (ret < 0)
         goto out;
 
