@@ -313,10 +313,12 @@ class TestRunner:
                 returncode = await self._run_cmd()
 
             must_pass = self.cfgsection.getintset('must-pass')
-            if must_pass is not None:
-                self._parse_test_output(must_pass)
-            elif returncode != 0:
+            if not must_pass and returncode != 0:
                 raise Fail('returncode={}'.format(returncode))
+            # Parse output regardless of whether `must_pass` is specified: unfortunately some tests
+            # do not exit with non-zero code when failing, because they rely on `MAP_SHARED` (which
+            # we do not support correctly) for collecting test results.
+            self._parse_test_output(must_pass)
 
         except AbnormalTestResult as result:
             result.apply_to(self)
@@ -325,19 +327,17 @@ class TestRunner:
             self.success()
 
     def _parse_test_output(self, must_pass):
-        '''Parse the output
+        '''Parse and process test output'''
 
-        This is normally done only for a test that has non-empty ``must-pass``
-        config directive.
-        '''
+        if must_pass is None:
+            must_pass = set()
+
         notfound = must_pass.copy()
         passed = set()
         failed = set()
         skipped = set()
         dontcare = set()
-
-        # on empty must_pass, it is always needed
-        maybe_unneeded_must_pass = bool(must_pass)
+        unspecified = set()
 
         subtest = 0
         for line in self.stdout.split('\n'):
@@ -366,10 +366,11 @@ class TestRunner:
                 notfound.remove(subtest)
             except KeyError:
                 # subtest is not in must-pass
-                maybe_unneeded_must_pass = False
+                unspecified.add(subtest)
 
             if 'TPASS' in line or 'PASS:' in line:
-                if subtest in must_pass:
+                # On empty must_pass, assume all tests must pass
+                if subtest in must_pass or not must_pass:
                     passed.add(subtest)
                 else:
                     dontcare.add(subtest)
@@ -377,9 +378,9 @@ class TestRunner:
 
             if any(t in line for t in (
                     'TFAIL', 'FAIL:', 'TCONF', 'CONF:', 'TBROK', 'BROK:')):
-                if subtest in must_pass:
+                # On empty must_pass, assume all tests must pass
+                if subtest in must_pass or not must_pass:
                     failed.add(subtest)
-                    maybe_unneeded_must_pass = False
                 else:
                     skipped.add(subtest)
                 continue
@@ -395,6 +396,7 @@ class TestRunner:
             skipped=', '.join(str(i) for i in sorted(skipped)),
             notfound=', '.join(str(i) for i in sorted(notfound)),
             dontcare=', '.join(str(i) for i in sorted(dontcare)),
+            unspecified=', '.join(str(i) for i in sorted(unspecified)),
         )
 
         stat = (
@@ -403,6 +405,7 @@ class TestRunner:
             'passed=[{passed}] '
             'dontcare=[{dontcare}] '
             'skipped=[{skipped}] '
+            'unspecified=[{unspecified}] '
             'returncode={returncode}'
         ).format(**self.props)
 
@@ -414,7 +417,7 @@ class TestRunner:
             raise Skip('binary without subtests, see stdout '
                        '(returncode={returncode})'.format(**self.props))
 
-        if maybe_unneeded_must_pass and not notfound:
+        if must_pass and not notfound and not unspecified:
             # all subtests passed and must-pass specified exactly all subtests
             raise Error(
                 'must-pass is unneeded, remove it from config ({})'.format(stat)
