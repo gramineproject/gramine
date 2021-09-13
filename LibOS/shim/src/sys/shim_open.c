@@ -27,7 +27,7 @@
 
 ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count) {
     if (!(hdl->acc_mode & MAY_READ))
-        return -EACCES;
+        return -EBADF;
 
     struct shim_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
@@ -65,7 +65,7 @@ long shim_do_read(int fd, void* buf, size_t count) {
 
 ssize_t do_handle_write(struct shim_handle* hdl, const void* buf, size_t count) {
     if (!(hdl->acc_mode & MAY_WRITE))
-        return -EACCES;
+        return -EBADF;
 
     struct shim_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
@@ -231,6 +231,11 @@ long shim_do_pread64(int fd, char* buf, size_t count, loff_t pos) {
     struct shim_fs* fs = hdl->fs;
     ssize_t ret = -EACCES;
 
+    if (!(hdl->acc_mode & MAY_READ)) {
+        ret = -EBADF;
+        goto out;
+    }
+
     if (!fs || !fs->fs_ops)
         goto out;
 
@@ -282,6 +287,11 @@ long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t pos) {
 
     struct shim_fs* fs = hdl->fs;
     ssize_t ret = -EACCES;
+
+    if (!(hdl->acc_mode & MAY_WRITE)) {
+        ret = -EBADF;
+        goto out;
+    }
 
     if (!fs || !fs->fs_ops)
         goto out;
@@ -548,13 +558,24 @@ long shim_do_ftruncate(int fd, loff_t length) {
         return -EBADF;
 
     struct shim_fs* fs = hdl->fs;
-    int ret = -EINVAL;
+    int ret;
 
-    if (!fs || !fs->fs_ops)
+    if (!(hdl->acc_mode & MAY_WRITE)) {
+        /* Note that we return EINVAL here, not EBADF like in `read`/`write`. This is what Linux
+         * does. */
+        ret = -EINVAL;
         goto out;
+    }
 
-    if (hdl->is_dir || !fs->fs_ops->truncate)
+    if (!fs || !fs->fs_ops) {
+        ret = -EINVAL;
         goto out;
+    }
+
+    if (hdl->is_dir || !fs->fs_ops->truncate) {
+        ret = -EINVAL;
+        goto out;
+    }
 
     ret = fs->fs_ops->truncate(hdl, length);
 out:

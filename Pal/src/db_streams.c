@@ -237,7 +237,7 @@ int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* 
 
 int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_PTR source,
                  PAL_NUM size) {
-    if (!handle || !buffer) {
+    if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
@@ -279,7 +279,7 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
 }
 
 int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_STR dest) {
-    if (!handle || !buffer) {
+    if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
