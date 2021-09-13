@@ -82,9 +82,10 @@ int proc_thread_maps_load(struct shim_dentry* dent, char** out_data, size_t* out
         char pr = (vma->flags & MAP_PRIVATE) ? 'p' : 's';
 
 #define ADDR_FMT(addr) ((addr) > 0xffffffff ? "%lx" : "%08lx")
-#define EMIT(fmt...)                                                    \
-    do {                                                                \
-        offset += snprintf(buffer + offset, buffer_size - offset, fmt); \
+#define EMIT(fmt...)                                                        \
+    do {                                                                    \
+        if (offset < buffer_size)                                           \
+            offset += snprintf(buffer + offset, buffer_size - offset, fmt); \
     } while (0)
 
     retry_emit_vma:
