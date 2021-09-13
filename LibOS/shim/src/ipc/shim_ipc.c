@@ -195,7 +195,7 @@ void remove_outgoing_ipc_connection(IDTYPE dest) {
 }
 
 void init_ipc_msg(struct shim_ipc_msg* msg, unsigned char code, size_t size) {
-    SET_UNALIGNED(msg->header.size, get_ipc_msg_size(size));
+    SET_UNALIGNED(msg->header.size, size);
     SET_UNALIGNED(msg->header.seq, 0ul);
     SET_UNALIGNED(msg->header.code, code);
 }
