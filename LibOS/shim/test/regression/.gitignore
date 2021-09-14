@@ -110,5 +110,6 @@
 /tcp_msg_peek
 /tmp
 /udp
+/uid_gid
 /unix
 /vfork_and_exec

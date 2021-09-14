@@ -105,6 +105,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         finally:
             os.remove('env_test_input')
 
+    def test_105_uid_and_gid_from_file(self):
+        stdout, _ = self.run_binary(['uid_gid.c'])
+        self.assertIn('TEST OK', stdout)
+
     @unittest.skipUnless(HAS_SGX,
         'This test is only meaningful on SGX PAL because only SGX catches raw '
         'syscalls and redirects to Graphene\'s LibOS. If we will add seccomp to '

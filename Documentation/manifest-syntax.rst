@@ -176,6 +176,21 @@ provided at runtime from an external (trusted) source.
 If the same variable is set in both, then ``loader.env.[ENVIRON]`` takes
 precedence.
 
+Add User ID and Group ID
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   loader.uid = [NUM]
+   loader.gid = [NUM]
+   (Default: 0)
+
+This specifies the user/group ID which will be used to run the executable in Gramine.
+These specified values are also used for the effective user/group ID. By default the
+executable is running as root user (0). If the value is < 0 Gramine stops with an
+"Invalid Argument" error.
+
+
 Disabling ASLR
 ^^^^^^^^^^^^^^
 
