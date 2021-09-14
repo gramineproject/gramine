@@ -128,9 +128,9 @@ quiet_cmd_sgx_sign = [ $*.{sig, manifest.sgx} ]
 quiet_cmd_sgx_get_token = [ Token: $(basename $*) ]
       cmd_sgx_get_token = graphene-sgx-get-token --output $@ --sig $^ > .output.sgx_get_token.$(basename $*)
 
-# sgx manifest dependency
-quiet_cmd_sgx_sign_depend = [ $@ ]
-      cmd_sgx_sign_depend = graphene-sgx-sign --key $(SGX_SIGNER_KEY) --depend --output $@ --manifest $<
+# manifest dependency
+quiet_cmd_manifest_gen_depend = [ $@ ]
+      cmd_manifest_gen_depend = graphene-gen-depend --output $@ --manifest $<
 
 # manifest ($(2) - entrypoint, $(3) - replace rules)
 quiet_cmd_manifest = [ $@ ]

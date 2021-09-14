@@ -77,7 +77,7 @@ graphene = sgx
 else
 graphene = direct
 endif
-pal_lib ?= $(shell graphene-manifest -c '{{ graphene.pkglibdir }}')/$(graphene)/libpal.so
+pal_lib ?= $(shell graphene-manifest -c 'EXTRACT = "{{ graphene.pkglibdir }}"' | grep -F EXTRACT | sed -e "s/EXTRACT = \"\(.*\)\"/\1/")/$(graphene)/libpal.so
 
 .PHONY: all
 all: $(target) $(call expand_target_to_sig,$(target)) \

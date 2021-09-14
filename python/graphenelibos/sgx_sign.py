@@ -3,23 +3,17 @@
 # Copyright (C) 2014 Stony Brook University
 # Copyright (C) 2021 Intel Corporation
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
+# Copyright (c) 2021 Intel Corporation
+#                    Borys Popławski <borysp@invisiblethingslab.com>
 
-import argparse
-import datetime
 import hashlib
 import os
-from pathlib import Path
 import struct
 import subprocess
-from sys import stderr
-
-import toml
 
 from . import _CONFIG_PKGLIBDIR
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
-
-class ManifestError(Exception):
-    pass
+from .sigstruct import Sigstruct
 
 
 # pylint: enable=invalid-name
@@ -27,9 +21,6 @@ class ManifestError(Exception):
 # Default / Architectural Options
 
 ARCHITECTURE = 'amd64'
-
-DEFAULT_ENCLAVE_SIZE = '256M'
-DEFAULT_THREAD_NUM = 4
 
 # Utilities
 
@@ -51,170 +42,50 @@ def parse_size(value):
     scale = 1
     if value.endswith('K'):
         scale = 1024
-    if value.endswith('M'):
+    elif value.endswith('M'):
         scale = 1024 * 1024
-    if value.endswith('G'):
+    elif value.endswith('G'):
         scale = 1024 * 1024 * 1024
     if scale != 1:
         value = value[:-1]
     return int(value, 0) * scale
 
 
-def exec_sig_manifest(args):
-    sigfile = args['output']
-    for ext in ['.manifest.sgx.d', '.manifest.sgx', '.manifest']:
-        if sigfile.endswith(ext):
-            sigfile = sigfile[:-len(ext)]
-            break
-    args['sigfile'] = sigfile + '.sig'
-
-    if args.get('libpal', None) is None:
-        print('Option --libpal must be given', file=stderr)
-        return 1
-
-    return 0
-
-
-def output_manifest(filename, manifest):
-    with open(filename, 'w', encoding='UTF-8') as file:
-        file.write('# DO NOT MODIFY. THIS FILE WAS AUTO-GENERATED.\n\n')
-        toml.dump(manifest, file)
-
-
-def or_bytes(bytes_a, bytes_b):
-    return bytes([a | b for a, b in zip(bytes_a, bytes_b)])
-
-
 # Loading Enclave Attributes
 
 
-def get_enclave_attributes(manifest):
-    sgx_flags = {
-        'FLAG_DEBUG': struct.pack('<Q', offs.SGX_FLAGS_DEBUG),
-        'FLAG_MODE64BIT': struct.pack('<Q', offs.SGX_FLAGS_MODE64BIT),
+def collect_bits(manifest_sgx, options_dict):
+    val = 0
+    for opt, bit in options_dict.items():
+        if manifest_sgx[opt] == 1:
+            val |= bit
+    return val
+
+
+def get_enclave_attributes(manifest_sgx):
+    flags_dict = {
+        'debug': offs.SGX_FLAGS_DEBUG,
     }
 
-    sgx_xfrms = {
-        'XFRM_LEGACY': struct.pack('<Q', offs.SGX_XFRM_LEGACY),
-        'XFRM_AVX': struct.pack('<Q', offs.SGX_XFRM_AVX),
-        'XFRM_AVX512': struct.pack('<Q', offs.SGX_XFRM_AVX512),
-        'XFRM_MPX': struct.pack('<Q', offs.SGX_XFRM_MPX),
-        'XFRM_PKRU': struct.pack('<Q', offs.SGX_XFRM_PKRU),
+    xfrms_dict = {
+        'require_avx': offs.SGX_XFRM_AVX,
+        'require_avx512': offs.SGX_XFRM_AVX512,
+        'require_mpx': offs.SGX_XFRM_MPX,
+        'require_pkru': offs.SGX_XFRM_PKRU,
     }
 
-    sgx_miscs = {
-        'MISC_EXINFO': struct.pack('<L', offs.SGX_MISCSELECT_EXINFO),
+    miscs_dict = {
+        'support_exinfo': offs.SGX_MISCSELECT_EXINFO,
     }
 
-    manifest_options = [
-        ('debug', 'FLAG_DEBUG'),
-        ('require_avx', 'XFRM_AVX'),
-        ('require_avx512', 'XFRM_AVX512'),
-        ('require_mpx', 'XFRM_MPX'),
-        ('require_pkru', 'XFRM_PKRU'),
-        ('support_exinfo', 'MISC_EXINFO'),
-    ]
-
-    attributes = {'XFRM_LEGACY'} # this one always needs to be set in SGX (it means "SSE supported")
+    flags = collect_bits(manifest_sgx, flags_dict)
     if ARCHITECTURE == 'amd64':
-        attributes.add('FLAG_MODE64BIT')
+        flags |= offs.SGX_FLAGS_MODE64BIT
 
-    for opt, flag in manifest_options:
-        if manifest['sgx'][opt] == 1:
-            attributes.add(flag)
+    xfrms = offs.SGX_XFRM_LEGACY | collect_bits(manifest_sgx, xfrms_dict)
+    miscs = collect_bits(manifest_sgx, miscs_dict)
 
-    flags_raw = struct.pack('<Q', 0)
-    xfrms_raw = struct.pack('<Q', 0)
-    miscs_raw = struct.pack('<L', 0)
-
-    for attr in attributes:
-        if attr in sgx_flags:
-            flags_raw = or_bytes(flags_raw, sgx_flags[attr])
-        if attr in sgx_xfrms:
-            xfrms_raw = or_bytes(xfrms_raw, sgx_xfrms[attr])
-        if attr in sgx_miscs:
-            miscs_raw = or_bytes(miscs_raw, sgx_miscs[attr])
-
-    return flags_raw, xfrms_raw, miscs_raw
-
-
-# Generate Checksums / Measurement
-
-def resolve_uri(uri, check_exist=True):
-    if not uri.startswith('file:'):
-        raise ManifestError(f'Unsupported URI type: {uri}')
-    path = Path(uri[len('file:'):])
-    if check_exist and not path.exists():
-        raise ManifestError(f'Cannot resolve {uri} or the file does not exist.')
-    return str(path)
-
-
-def sha256(data):
-    sha = hashlib.sha256()
-    sha.update(data)
-    return sha.digest()
-
-
-def get_hash(filename):
-    with open(filename, 'rb') as file:
-        return sha256(file.read())
-
-
-def walk_dir(path):
-    return sorted(filter(Path.is_file, path.rglob('*')))
-
-def append_trusted_dir_or_file(targets, val, check_exist):
-    if isinstance(val, dict):
-        # trusted file is specified as TOML table `{uri = "file:foo", sha256 = "deadbeef"}`
-        uri_ = val['uri']
-        hash_ = val.get('sha256')
-    elif isinstance(val, str):
-        # trusted file is specified as TOML string `"file:foo"`
-        uri_ = val
-        hash_ = None
-    else:
-        raise ValueError(f'Unknown trusted file format: {val!r}')
-
-    if hash_ is not None:
-        # if hash is specified for the trusted file, skip checking the file's existence
-        targets.append((uri_, resolve_uri(uri_, check_exist=False), hash_))
-        return
-
-    path = Path(resolve_uri(uri_, check_exist))
-    if path.is_dir():
-        for sub_path in walk_dir(path):
-            uri = f'file:{sub_path}'
-            targets.append((uri, sub_path, hash_))
-    else:
-        targets.append((uri_, path, hash_))
-
-def get_trusted_files(manifest, check_exist=True, do_hash=True):
-    targets = [] # tuple of graphene-uri, host-path, hash-of-host-file (can be None)
-
-    preload_str = manifest['loader']['preload']
-    # `filter` below is needed for the case where preload_str == '' (`split` returns [''] then)
-    for _, uri in enumerate(filter(None, preload_str.split(','))):
-        targets.append((uri, resolve_uri(uri, check_exist), None))
-
-    try:
-        # try as dict (TOML table) first
-        for _, val in manifest['sgx']['trusted_files'].items():
-            append_trusted_dir_or_file(targets, val, check_exist)
-    except (AttributeError, TypeError):
-        # try as list (TOML array) on exception
-        for val in manifest['sgx']['trusted_files']:
-            append_trusted_dir_or_file(targets, val, check_exist)
-
-    if not do_hash:
-        return targets
-
-    hashed_targets = []
-    for (uri, target, hash_) in targets:
-        if hash_ is None:
-            hash_ = get_hash(target).hex()
-        hashed_targets.append((uri, target, hash_))
-
-    return hashed_targets
+    return flags, xfrms, miscs
 
 
 # Populate Enclave Memory
@@ -296,7 +167,7 @@ class MemoryArea:
             self.size = roundup(self.size)
 
 
-def get_memory_areas(attr, args):
+def get_memory_areas(attr, libpal):
     areas = []
     areas.append(
         MemoryArea('ssa',
@@ -314,7 +185,7 @@ def get_memory_areas(attr, args):
         areas.append(MemoryArea('sig_stack', size=offs.ENCLAVE_SIG_STACK_SIZE,
                                 flags=PAGEINFO_R | PAGEINFO_W | PAGEINFO_REG))
 
-    areas.append(MemoryArea('pal', elf_filename=args['libpal'], flags=PAGEINFO_REG))
+    areas.append(MemoryArea('pal', elf_filename=libpal, flags=PAGEINFO_REG))
     return areas
 
 
@@ -439,6 +310,7 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
     gen_area_content(attr, areas, enclave_base, enclave_heap_min)
 
     return areas + free_areas
+
 
 def generate_measurement(enclave_base, attr, areas):
     # pylint: disable=too-many-statements,too-many-branches,too-many-locals
@@ -571,179 +443,30 @@ def generate_measurement(enclave_base, attr, areas):
     return mrenclave.digest()
 
 
-def generate_sigstruct(attr, args, mrenclave):
-    '''Generate Sigstruct.
-
-    field format: (offset, type, value)
-    ''' # pylint: disable=too-many-locals
-
-    fields = {
-        'header': (offs.SGX_ARCH_ENCLAVE_CSS_HEADER,
-                   '<4L', 0x00000006, 0x000000e1, 0x00010000, 0x00000000),
-        'module_vendor': (offs.SGX_ARCH_ENCLAVE_CSS_MODULE_VENDOR, '<L', 0x00000000),
-        'date': (offs.SGX_ARCH_ENCLAVE_CSS_DATE, '<HBB', attr['year'], attr['month'], attr['day']),
-        'header2': (offs.SGX_ARCH_ENCLAVE_CSS_HEADER2,
-                    '<4L', 0x00000101, 0x00000060, 0x00000060, 0x00000001),
-        'hw_version': (offs.SGX_ARCH_ENCLAVE_CSS_HW_VERSION, '<L', 0x00000000),
-        'misc_select': (offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT, '4s', attr['misc_select']),
-        'misc_mask': (offs.SGX_ARCH_ENCLAVE_CSS_MISC_MASK, '<L', offs.SGX_MISCSELECT_MASK_CONST),
-        'attributes': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTES, '8s8s', attr['flags'], attr['xfrms']),
-        'attribute_mask': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTE_MASK, '<4L',
-                           offs.SGX_FLAGS_MASK_CONST_LO, offs.SGX_FLAGS_MASK_CONST_HI,
-                           offs.SGX_XFRM_MASK_CONST_LO, offs.SGX_XFRM_MASK_CONST_HI),
-        'enclave_hash': (offs.SGX_ARCH_ENCLAVE_CSS_ENCLAVE_HASH, '32s', mrenclave),
-        'isv_prod_id': (offs.SGX_ARCH_ENCLAVE_CSS_ISV_PROD_ID, '<H', attr['isv_prod_id']),
-        'isv_svn': (offs.SGX_ARCH_ENCLAVE_CSS_ISV_SVN, '<H', attr['isv_svn']),
-    }
-
-    sign_buffer = bytearray(128 + 128)
-
-    for field in fields.values():
-        if field[0] >= offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT:
-            struct.pack_into(field[1], sign_buffer,
-                             field[0] - offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT + 128,
-                             *field[2:])
-        else:
-            struct.pack_into(field[1], sign_buffer, field[0], *field[2:])
-
-    proc = subprocess.Popen(
-        ['openssl', 'rsa', '-modulus', '-in', args['key'], '-noout'],
-        stdout=subprocess.PIPE)
-    modulus_out, _ = proc.communicate()
-    modulus = bytes.fromhex(modulus_out[8:8+offs.SE_KEY_SIZE*2].decode())
-    modulus = bytes(reversed(modulus))
-
-    proc = subprocess.Popen(
-        ['openssl', 'sha256', '-binary', '-sign', args['key']],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    signature, _ = proc.communicate(sign_buffer)
-    signature = signature[::-1]
-
-    modulus_int = int.from_bytes(modulus, byteorder='little')
-    signature_int = int.from_bytes(signature, byteorder='little')
-
-    tmp1 = signature_int * signature_int
-    q1_int = tmp1 // modulus_int
-    tmp2 = tmp1 % modulus_int
-    q2_int = tmp2 * signature_int // modulus_int
-
-    q1 = q1_int.to_bytes(384, byteorder='little') # pylint: disable=invalid-name
-    q2 = q2_int.to_bytes(384, byteorder='little') # pylint: disable=invalid-name
-
-    fields.update({
-        'modulus': (offs.SGX_ARCH_ENCLAVE_CSS_MODULUS, '384s', modulus),
-        'exponent': (offs.SGX_ARCH_ENCLAVE_CSS_EXPONENT, '<L', 3),
-        'signature': (offs.SGX_ARCH_ENCLAVE_CSS_SIGNATURE, '384s', signature),
-
-        'q1': (offs.SGX_ARCH_ENCLAVE_CSS_Q1, '384s', q1),
-        'q2': (offs.SGX_ARCH_ENCLAVE_CSS_Q2, '384s', q2),
-    })
-
-    buffer = bytearray(offs.SGX_ARCH_ENCLAVE_CSS_SIZE)
-
-    for field in fields.values():
-        struct.pack_into(field[1], buffer, field[0], *field[2:])
-
-    return buffer
-
-
-# Main Program
-
-argparser = argparse.ArgumentParser()
-argparser.add_argument('--output', '-output', metavar='OUTPUT',
-                       type=str, required=True,
-                       help='Output .manifest.sgx file '
-                            '(manifest augmented with autogenerated fields)')
-argparser.add_argument('--libpal', '-libpal', metavar='LIBPAL',
-                       type=str,
-                       help='Input libpal file (by default it gets the installed one)')
-argparser.add_argument('--key', '-key', metavar='KEY',
-                       type=str, required=True,
-                       help='specify signing key(.pem) file')
-argparser.add_argument('--manifest', '-manifest', metavar='MANIFEST',
-                       type=str, required=True,
-                       help='Input .manifest file '
-                            '(user-prepared manifest template)')
-argparser.add_argument('--depend', '-depend',
-                       action='store_true', required=False,
-                       help='Generate dependency for Makefile')
-
-argparser.set_defaults(libpal=os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so'))
-
-def parse_args(args):
-    args = argparser.parse_args(args)
-    args_dict = {
-        'output': args.output,
-        'libpal': args.libpal,
-        'key': args.key,
-        'manifest': args.manifest,
-    }
-    if args.depend:
-        args_dict['depend'] = True
-    else:
-        # key is required and not found in manifest
-        if args.key is None:
-            argparser.error('a key is required to sign')
-            return None
-
-    return args_dict
-
-
-def read_manifest(path):
-    manifest = toml.load(path)
-
-    # set defaults to simplify lookup code (otherwise we'd need to check keys existence each time)
-
-    sgx = manifest.setdefault('sgx', {})
-    sgx.setdefault('trusted_files', [])
-    sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE)
-    sgx.setdefault('thread_num', DEFAULT_THREAD_NUM)
-    sgx.setdefault('isvprodid', 0)
-    sgx.setdefault('isvsvn', 0)
-    sgx.setdefault('remote_attestation', False)
-    sgx.setdefault('debug', True)
-    sgx.setdefault('require_avx', False)
-    sgx.setdefault('require_avx512', False)
-    sgx.setdefault('require_mpx', False)
-    sgx.setdefault('require_pkru', False)
-    sgx.setdefault('support_exinfo', False)
-    sgx.setdefault('nonpie_binary', False)
-    sgx.setdefault('enable_stats', False)
-
-    loader = manifest.setdefault('loader', {})
-    loader.setdefault('preload', '')
-
-    return manifest
-
-
-def main_sign(manifest, args):
-    # pylint: disable=too-many-statements,too-many-branches,too-many-locals
-    if exec_sig_manifest(args) != 0:
-        return 1
-
-    # Get attributes from manifest
-    attr = {}
+def get_mrenclave(manifest, date, libpal=None):
+    if not libpal:
+        libpal = os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so')
 
     manifest_sgx = manifest['sgx']
-
-    attr['enclave_size'] = parse_size(manifest_sgx['enclave_size'])
-    attr['thread_num'] = manifest_sgx['thread_num']
-    attr['isv_prod_id'] = manifest_sgx['isvprodid']
-    attr['isv_svn'] = manifest_sgx['isvsvn']
-    attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest)
-    today = datetime.date.today()
-    attr['year'] = today.year
-    attr['month'] = today.month
-    attr['day'] = today.day
+    attr = {
+        'enclave_size': parse_size(manifest_sgx['enclave_size']),
+        'thread_num': manifest_sgx['thread_num'],
+        'isv_prod_id': manifest_sgx['isvprodid'],
+        'isv_svn': manifest_sgx['isvsvn'],
+        'year': date.year,
+        'month': date.month,
+        'day': date.day,
+    }
+    attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
     print('Attributes:')
     print(f'    size:        {attr["enclave_size"]:#x}')
     print(f'    thread_num:  {attr["thread_num"]}')
     print(f'    isv_prod_id: {attr["isv_prod_id"]}')
     print(f'    isv_svn:     {attr["isv_svn"]}')
-    print(f'    attr.flags:  {attr["flags"].hex()}')
-    print(f'    attr.xfrm:   {attr["xfrms"].hex()}')
-    print(f'    misc_select: {attr["misc_select"].hex()}')
+    print(f'    attr.flags:  {attr["flags"]:#x}')
+    print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
+    print(f'    misc_select: {attr["misc_select"]:#x}')
     print(f'    date:        {attr["year"]:04d}-{attr["month"]:02d}-{attr["day"]:02d}')
 
     if manifest_sgx['remote_attestation']:
@@ -755,18 +478,8 @@ def main_sign(manifest, args):
         else:
             print(f'    EPID (spid = {spid}, linkable = {linkable})')
 
-    # Get trusted hashes and measurements
-
-    # Use `list()` to ensure non-laziness (`manifest_sgx` is a part of `manifest`, and we'll be
-    # changing it while iterating).
-    expanded_trusted_files = list(get_trusted_files(manifest))
-    manifest_sgx['trusted_files'] = [] # generate the list from scratch, dropping directory entries
-    for val in expanded_trusted_files:
-        uri, _, hash_ = val
-        manifest_sgx['trusted_files'].append({'uri': uri, 'sha256': hash_})
-
     # Populate memory areas
-    memory_areas = get_memory_areas(attr, args)
+    memory_areas = get_memory_areas(attr, libpal)
 
     if manifest_sgx['nonpie_binary']:
         enclave_base = offs.DEFAULT_ENCLAVE_BASE
@@ -775,10 +488,7 @@ def main_sign(manifest, args):
         enclave_base = attr['enclave_size']
         enclave_heap_min = enclave_base
 
-    output_manifest(args['output'], manifest)
-
-    with open(args['output'], 'rb') as file:
-        manifest_data = file.read()
+    manifest_data = manifest.dumps().encode('UTF-8')
     manifest_data += b'\0' # in-memory manifest needs NULL-termination
 
     memory_areas = [
@@ -794,51 +504,48 @@ def main_sign(manifest, args):
     print('Measurement:')
     print(f'    {mrenclave.hex()}')
 
-    # Generate sigstruct
-    with open(args['sigfile'], 'wb') as file:
-        file.write(generate_sigstruct(attr, args, mrenclave))
-    return 0
+    return mrenclave
 
 
-def make_depend(manifest, args):
-    output = args['output']
+def get_tbssigstruct(manifest, date, mrenclave=None):
+    '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).''' # pylint: disable=too-many-locals
 
-    if exec_sig_manifest(args) != 0:
-        return 1
+    if not mrenclave:
+        mrenclave = get_mrenclave(manifest, date)
 
-    dependencies = set()
-    for _, filename, hash_ in get_trusted_files(manifest, check_exist=False, do_hash=False):
-        # file may not exist on this system but its hash is provided
-        if hash_ is None:
-            dependencies.add(filename)
-    if args['libpal'] is not None:
-        dependencies.add(args['libpal'])
-    dependencies.add(args['key'])
+    manifest_sgx = manifest['sgx']
 
-    with open(output, 'w', encoding='UTF-8') as file:
-        manifest_sgx = output
-        if manifest_sgx.endswith('.d'):
-            manifest_sgx = manifest_sgx[:-len('.d')]
-        file.write(f'{manifest_sgx} {args["sigfile"]}:')
-        for filename in dependencies:
-            file.write(f' \\\n\t{filename}')
-        file.write('\n')
+    sig = Sigstruct()
 
-    return 0
+    sig['date_year'] = date.year
+    sig['date_month'] = date.month
+    sig['date_day'] = date.day
+    sig['enclave_hash'] = mrenclave
+    sig['isv_prod_id'] = manifest_sgx['isvprodid']
+    sig['isv_svn'] = manifest_sgx['isvsvn']
+
+    attribute_flags, attribute_xfrms, misc_select = get_enclave_attributes(manifest_sgx)
+    sig['attribute_flags'] = attribute_flags
+    sig['attribute_xfrms'] = attribute_xfrms
+    sig['misc_select'] = misc_select
+
+    return sig
 
 
-def main(args=None):
-    args = parse_args(args)
-    if args is None:
-        return 1
+def sign_with_local_key(data, key):
+    proc = subprocess.Popen(
+        ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],
+        stdout=subprocess.PIPE)
+    modulus_out, _ = proc.communicate()
+    modulus = bytes.fromhex(modulus_out[8:8+offs.SE_KEY_SIZE*2].decode())
 
-    manifest_path = args['manifest']
-    try:
-        manifest = read_manifest(manifest_path)
-    except toml.TomlDecodeError as exc:
-        print(f'Parsing {manifest_path} as TOML failed: {exc}', file=stderr)
-        return 1
+    proc = subprocess.Popen(
+        ['openssl', 'sha256', '-binary', '-sign', key],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    signature, _ = proc.communicate(data)
 
-    if args.get('depend'):
-        return make_depend(manifest, args)
-    return main_sign(manifest, args)
+    exponent_int = 3
+    modulus_int = int.from_bytes(modulus, byteorder='big')
+    signature_int = int.from_bytes(signature, byteorder='big')
+
+    return exponent_int, modulus_int, signature_int

@@ -93,10 +93,8 @@ expand_target_to_sgx = $(addsuffix .manifest.sgx,$(call drop_manifest_suffix,$(1
 	@$(SGX_SIGN) --output $*.manifest.sgx --manifest $< > .output.sgx_sign.$*
 
 .PRECIOUS: %.manifest.sgx.d
-
 %.manifest.sgx.d: %.manifest
-	@echo [ $@ ]
-	@$(SGX_SIGN) --depend --output $@ --manifest $<
+	$(call cmd,manifest_gen_depend)
 
 ifeq ($(filter clean,$(MAKECMDGOALS)),)
 include $(addsuffix .manifest.sgx.d,$(call drop_manifest_suffix,$(manifests)))

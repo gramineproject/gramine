@@ -21,7 +21,7 @@ $(SGX_SIGNER_KEY):
 
 .PRECIOUS: %.manifest.sgx.d
 %.manifest.sgx.d: %.manifest
-	$(call cmd,sgx_sign_depend)
+	$(call cmd,manifest_gen_depend)
 
 ifeq ($(filter %clean,$(MAKECMDGOALS)),)
 ifeq ($(target),)

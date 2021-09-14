@@ -8,4 +8,4 @@ fs.mount.root.uri = "file:"
 sgx.enclave_size = "8192M"
 sgx.nonpie_binary = true
 
-sgx.trusted_files.entrypoint = "file:Bootstrap"
+sgx.trusted_files = [ "file:Bootstrap" ]
