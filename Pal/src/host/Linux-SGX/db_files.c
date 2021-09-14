@@ -777,7 +777,7 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int fd  = handle->file.fd;
-    int ret = ocall_fchmod(fd, attr->share_flags | PERM_rw_______);
+    int ret = ocall_fchmod(fd, attr->share_flags);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

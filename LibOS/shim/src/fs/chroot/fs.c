@@ -21,6 +21,7 @@
 
 #include "pal.h"
 #include "pal_error.h"
+#include "perm.h"
 #include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
@@ -32,6 +33,17 @@
 #include "stat.h"
 
 #define KEEP_URI_PREFIX 0
+
+/*
+ * Always add a read permission to files created on host, because PAL requires opening the file even
+ * for operations such as `unlink` or `chmod`.
+ *
+ * The updated file permissions will not be visible to the process creating the file or updating its
+ * permissions, e.g. if a process creates a write-only file, Gramine's `stat` will still report it
+ * as write-only. However, other Gramine processes accessing that file afterwards will see the
+ * updated permissions.
+ */
+#define HOST_PERM(perm) ((perm) | PERM_r________)
 
 static int chroot_mount(const char* uri, void** mount_data) {
     __UNUSED(mount_data);
@@ -215,7 +227,7 @@ static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* o
 
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
 static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mode_t type,
-                          int flags, mode_t mode) {
+                          int flags, mode_t perm) {
     assert(locked(&dent->lock));
 
     int ret;
@@ -229,7 +241,8 @@ static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mod
     int access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags);
     int create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     int options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
-    ret = DkStreamOpen(uri, access, mode, create, options, &palhdl);
+    mode_t host_perm = HOST_PERM(perm);
+    ret = DkStreamOpen(uri, access, host_perm, create, options, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -266,7 +279,7 @@ static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
         goto out;
     }
 
-    ret = chroot_do_open(hdl, dent, dent->type, flags, /*mode=*/0);
+    ret = chroot_do_open(hdl, dent, dent->type, flags, /*perm=*/0);
     if (ret < 0)
         goto out;
 
@@ -681,7 +694,8 @@ static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
     if (ret < 0)
         goto out;
 
-    PAL_STREAM_ATTR attr = {.share_flags = perm};
+    mode_t host_perm = HOST_PERM(perm);
+    PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     ret = DkStreamAttributesSetByHandle(palhdl, &attr);
     DkObjectClose(palhdl);
     if (ret < 0) {
