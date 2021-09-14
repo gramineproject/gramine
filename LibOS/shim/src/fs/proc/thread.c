@@ -230,7 +230,7 @@ int proc_thread_tid_list_names(struct shim_dentry* parent, readdir_callback_t ca
 bool proc_thread_fd_name_exists(struct shim_dentry* parent, const char* name) {
     __UNUSED(parent);
     unsigned long fd;
-    if (pseudo_parse_ulong(name, FDTYPE_MAX, &fd) < 0)
+    if (pseudo_parse_ulong(name, UINT32_MAX, &fd) < 0)
         return false;
 
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
@@ -253,7 +253,7 @@ int proc_thread_fd_list_names(struct shim_dentry* parent, readdir_callback_t cal
     lock(&handle_map->lock);
 
     int ret = 0;
-    for (int i = 0; i <= handle_map->fd_top; i++)
+    for (uint32_t i = 0; i <= handle_map->fd_top; i++)
         if (handle_map->map[i] && handle_map->map[i]->handle) {
             char name[11];
             snprintf(name, sizeof(name), "%u", i);
@@ -288,7 +288,7 @@ static char* describe_handle(struct shim_handle* hdl) {
 
 int proc_thread_fd_follow_link(struct shim_dentry* dent, char** out_target) {
     unsigned long fd;
-    if (pseudo_parse_ulong(dent->name, FDTYPE_MAX, &fd) < 0)
+    if (pseudo_parse_ulong(dent->name, UINT32_MAX, &fd) < 0)
         return -ENOENT;
 
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);

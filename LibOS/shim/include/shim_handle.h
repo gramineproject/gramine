@@ -162,7 +162,7 @@ struct shim_tmpfs_handle {
 DEFINE_LIST(shim_epoll_item);
 DEFINE_LISTP(shim_epoll_item);
 struct shim_epoll_item {
-    FDTYPE fd;
+    int fd;
     uint64_t data;
     unsigned int events;
     unsigned int revents;
@@ -259,16 +259,16 @@ int set_handle_nonblocking(struct shim_handle* hdl, bool on);
 
 /* file descriptor table */
 struct shim_fd_handle {
-    FDTYPE vfd; /* virtual file descriptor */
-    int flags;  /* file descriptor flags, only FD_CLOEXEC */
+    uint32_t vfd; /* virtual file descriptor */
+    int flags;    /* file descriptor flags, only FD_CLOEXEC */
 
     struct shim_handle* handle;
 };
 
 struct shim_handle_map {
     /* the top of created file descriptors */
-    FDTYPE fd_size;
-    FDTYPE fd_top;
+    uint32_t fd_size;
+    uint32_t fd_top;
 
     /* refrence count and lock */
     REFTYPE ref_count;
@@ -279,11 +279,11 @@ struct shim_handle_map {
 };
 
 /* allocating file descriptors */
-#define FD_NULL                     ((FDTYPE)-1)
+#define FD_NULL                     UINT32_MAX
 #define HANDLE_ALLOCATED(fd_handle) ((fd_handle) && (fd_handle)->vfd != FD_NULL)
 
-struct shim_handle* __get_fd_handle(FDTYPE fd, int* flags, struct shim_handle_map* map);
-struct shim_handle* get_fd_handle(FDTYPE fd, int* flags, struct shim_handle_map* map);
+struct shim_handle* __get_fd_handle(uint32_t fd, int* flags, struct shim_handle_map* map);
+struct shim_handle* get_fd_handle(uint32_t fd, int* flags, struct shim_handle_map* map);
 
 /*!
  * \brief Assign new fd to a handle.
@@ -296,13 +296,13 @@ struct shim_handle* get_fd_handle(FDTYPE fd, int* flags, struct shim_handle_map*
  * Uses the lowest, non-negative available number for the new fd.
  */
 int set_new_fd_handle(struct shim_handle* hdl, int fd_flags, struct shim_handle_map* map);
-int set_new_fd_handle_by_fd(FDTYPE fd, struct shim_handle* hdl, int fd_flags,
+int set_new_fd_handle_by_fd(uint32_t fd, struct shim_handle* hdl, int fd_flags,
                             struct shim_handle_map* map);
-int set_new_fd_handle_above_fd(FDTYPE fd, struct shim_handle* hdl, int fd_flags,
+int set_new_fd_handle_above_fd(uint32_t fd, struct shim_handle* hdl, int fd_flags,
                                struct shim_handle_map* map);
 struct shim_handle* __detach_fd_handle(struct shim_fd_handle* fd, int* flags,
                                        struct shim_handle_map* map);
-struct shim_handle* detach_fd_handle(FDTYPE fd, int* flags, struct shim_handle_map* map);
+struct shim_handle* detach_fd_handle(uint32_t fd, int* flags, struct shim_handle_map* map);
 
 /* manage handle mapping */
 int dup_handle_map(struct shim_handle_map** new_map, struct shim_handle_map* old_map);

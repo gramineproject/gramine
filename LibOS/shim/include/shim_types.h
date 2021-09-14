@@ -338,8 +338,6 @@ typedef Elf64_auxv_t elf_auxv_t;
 /* typedef for shim internal types */
 typedef uint32_t IDTYPE;
 #define IDTYPE_MAX UINT32_MAX
-typedef uint16_t FDTYPE;
-#define FDTYPE_MAX UINT16_MAX
 typedef uint64_t HASHTYPE;
 
 #define FILE_OFF_MAX INT64_MAX
