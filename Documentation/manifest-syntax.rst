@@ -196,6 +196,20 @@ are "consumed" by ``insecure__use_host_env``).
    because it's inherently insecure (doesn't provide any real security).
    Gramine loudly fails if ``passthrough = false`` manifest options are set.
 
+User ID and Group ID
+^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   loader.uid = [NUM]
+   loader.gid = [NUM]
+   (Default: 0)
+
+This specifies the initial, Gramine emulated user/group ID and effective
+user/group ID. It must be non-negative. By default Gramine emulates the
+user/group ID and effective user/group ID as the root user (uid = gid = 0).
+
+
 Disabling ASLR
 ^^^^^^^^^^^^^^
 

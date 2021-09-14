@@ -96,6 +96,7 @@ c_executables = \
 	tcp_ipv6_v6only \
 	tcp_msg_peek \
 	udp \
+	uid_gid \
 	unix \
 	vfork_and_exec \
 	$(c_executables-$(ARCH))
