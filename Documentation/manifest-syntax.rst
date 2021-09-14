@@ -176,6 +176,19 @@ provided at runtime from an external (trusted) source.
 If the same variable is set in both, then ``loader.env.[ENVIRON]`` takes
 precedence.
 
+User ID and Group ID
+^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   loader.uid = [NUM]
+   loader.gid = [NUM]
+   (Default: 0)
+
+This specifies the initial, Gramine emulated user/group ID and effective user/group ID.
+It must be non-negative. By default it runs as root user (uid = gid = 0).
+
+
 Disabling ASLR
 ^^^^^^^^^^^^^^
 

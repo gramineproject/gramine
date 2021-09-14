@@ -1,0 +1,12 @@
+loader.preload = "file:{{ graphene.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
+loader.insecure__use_cmdline_argv = true
+
+loader.uid = 1338
+loader.gid = 1337
+
+fs.mount.lib.type = "chroot"
+fs.mount.lib.path = "/lib"
+fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
+
