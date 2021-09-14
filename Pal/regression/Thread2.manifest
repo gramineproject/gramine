@@ -5,4 +5,4 @@ sgx.thread_num = 2
 sgx.enable_stats = true
 sgx.nonpie_binary = true
 
-sgx.trusted_files.entrypoint = "file:Thread2"
+sgx.trusted_files = [ "file:Thread2" ]
