@@ -28,7 +28,7 @@
 #include "spinlock.h"
 #include "toml.h"
 
-#define TSC_REFINE_INIT_TIMEOUT_USECS 10000000
+#define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
