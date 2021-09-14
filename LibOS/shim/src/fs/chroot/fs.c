@@ -38,8 +38,8 @@
  * Always add a read permission to files created on host, because PAL requires opening the file even
  * for operations operations such as `unlink` or `chmod`.
  *
- * This override not be reported back to user (e.g. if a user creates a write-only file, Graphene's
- * `stat` will report it as write-only); but they will be visible to other processes.
+ * This override will not be reported back to user (e.g. if a user creates a write-only file,
+ * Graphene's `stat` will report it as write-only); but it will be visible to other processes.
  */
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
