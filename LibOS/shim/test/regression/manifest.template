@@ -3,6 +3,10 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
 
+# for uid_gid test
+loader.uid = 80085
+loader.gid = 1337
+
 # for eventfd test
 sys.insecure__allow_eventfd = true
 

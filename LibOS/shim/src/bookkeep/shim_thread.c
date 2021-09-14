@@ -152,6 +152,27 @@ static int init_main_thread(void) {
 
     /* Default user and group ids are `0` and already set. */
 
+    int64_t uid_int64;
+    ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/0, &uid_int64);
+    if (ret < 0) {
+        log_error("Cannot parse 'loader.uid'");
+        put_thread(cur_thread);
+        return -EINVAL;
+    }
+
+    int64_t gid_int64;
+    ret = toml_int_in(g_manifest_root, "loader.gid", /*defaultval=*/0, &gid_int64);
+    if (ret < 0) {
+        log_error("Cannot parse 'loader.gid'");
+        put_thread(cur_thread);
+        return -EINVAL;
+    }
+
+    cur_thread -> uid = uid_int64;
+    cur_thread -> euid = uid_int64;
+    cur_thread -> gid = gid_int64;
+    cur_thread -> egid = gid_int64;
+
     cur_thread->signal_dispositions = alloc_default_signal_dispositions();
     if (!cur_thread->signal_dispositions) {
         put_thread(cur_thread);
