@@ -294,7 +294,11 @@ struct shim_handle* __detach_fd_handle(struct shim_fd_handle* fd, int* flags,
 
         if (vfd == map->fd_top)
             do {
-                map->fd_top = vfd ? vfd - 1 : FD_NULL;
+                if (vfd == 0) {
+                    map->fd_top = FD_NULL;
+                    break;
+                }
+                map->fd_top = vfd - 1;
                 vfd--;
             } while (!HANDLE_ALLOCATED(map->map[vfd]));
     }
