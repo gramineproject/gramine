@@ -77,7 +77,7 @@ gramine = sgx
 else
 gramine = direct
 endif
-pal_lib ?= $(shell gramine-manifest -c '{{ gramine.pkglibdir }}')/$(gramine)/libpal.so
+pal_lib ?= $(shell gramine-manifest -c 'EXTRACT = "{{ gramine.pkglibdir }}"' | grep -F EXTRACT | sed -e "s/EXTRACT = \"\(.*\)\"/\1/")/$(gramine)/libpal.so
 
 .PHONY: all
 all: $(target) $(call expand_target_to_sig,$(target)) \

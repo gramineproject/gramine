@@ -148,6 +148,8 @@ html_static_path = ['_static']
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('manpages/gramine-manifest', 'gramine-manifest', 'Gramine manifest preprocessor', [author], 1),
+    ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),
+    ('manpages/gramine-sgx-get-token', 'gramine-sgx-get-token', 'Gramine SGX Token generator', [author], 1),
     ('manpages/pal_loader', 'pal_loader', 'FIXME Loader', [author], 1),
     ('manpages/is_sgx_available', 'is_sgx_available', 'Check SGX compatibility', [author], 1),
     ('manpages/quote_dump', 'quote_dump', 'Display SGX quote', [author], 1),

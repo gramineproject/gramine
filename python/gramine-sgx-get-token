@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (c) 2021 Intel Corporation
+#                    Borys Popławski <borysp@invisiblethingslab.com>
 
-import sys
-from graminelibos.sgx_get_token import main
-sys.exit(main())
+import click
+
+from graminelibos import Sigstruct, get_token
+
+@click.command()
+@click.option('--sig', '-s', type=click.File('rb'), required=True, help='sigstruct file')
+@click.option('--output', '-o', type=click.File('wb'), required=True, help='Output token file')
+def main(sig, output):
+    sig = Sigstruct.from_bytes(sig.read())
+    token = get_token(sig)
+    output.write(token)
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter
