@@ -67,7 +67,7 @@ RUN python3 -m pip install \
     asv \
     recommonmark \
     'Sphinx==1.8' \
-    sphinx_rtd_theme \
+    'sphinx_rtd_theme<1' \
     toml>=0.10
 
 # Add the user UID:1001, GID:1001, home at /leeroy
