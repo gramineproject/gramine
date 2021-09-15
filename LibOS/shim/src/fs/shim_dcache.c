@@ -354,28 +354,6 @@ int dentry_rel_path(struct shim_dentry* dent, char** path, size_t* size) {
     return dentry_path(dent, /*relative=*/true, path, size);
 }
 
-void lock_two_dentries(struct shim_dentry* dent1, struct shim_dentry* dent2) {
-    assert(dent1 != dent2);
-    if ((uintptr_t)dent1 < (uintptr_t)dent2) {
-        lock(&dent1->lock);
-        lock(&dent2->lock);
-    } else {
-        lock(&dent2->lock);
-        lock(&dent1->lock);
-    }
-}
-
-void unlock_two_dentries(struct shim_dentry* dent1, struct shim_dentry* dent2) {
-    assert(dent1 != dent2);
-    if ((uintptr_t)dent1 < (uintptr_t)dent2) {
-        unlock(&dent2->lock);
-        unlock(&dent1->lock);
-    } else {
-        unlock(&dent1->lock);
-        unlock(&dent2->lock);
-    }
-}
-
 struct shim_inode* get_new_inode(struct shim_mount* mount, mode_t type, mode_t perm) {
     assert(mount);
 
@@ -399,6 +377,8 @@ struct shim_inode* get_new_inode(struct shim_mount* mount, mode_t type, mode_t p
     get_mount(mount);
     inode->fs = mount->fs;
 
+    inode->data = NULL;
+
     REF_SET(inode->ref_count, 1);
     return inode;
 }
@@ -409,6 +389,12 @@ void get_inode(struct shim_inode* inode) {
 
 void put_inode(struct shim_inode* inode) {
     if (REF_DEC(inode->ref_count) == 0) {
+        if (inode->fs->d_ops && inode->fs->d_ops->idrop) {
+            lock(&inode->lock);
+            inode->fs->d_ops->idrop(inode);
+            unlock(&inode->lock);
+        }
+
         put_mount(inode->mount);
 
         destroy_lock(&inode->lock);
@@ -667,6 +653,22 @@ BEGIN_CP_FUNC(inode) {
 
         REF_SET(new_inode->ref_count, 0);
 
+        if (inode->fs->d_ops && inode->fs->d_ops->icheckpoint) {
+            void* cp_data;
+            size_t cp_size;
+            int ret = inode->fs->d_ops->icheckpoint(inode, &cp_data, &cp_size);
+            if (ret < 0)
+                return ret;
+
+            size_t cp_off = ADD_CP_OFFSET(cp_size);
+            new_inode->data = (char*)base + cp_off;
+            memcpy(new_inode->data, cp_data, cp_size);
+            free(cp_data);
+        } else {
+            assert(!inode->data);
+            new_inode->data = NULL;
+        }
+
         unlock(&inode->lock);
 
         ADD_CP_FUNC_ENTRY(off);
@@ -690,6 +692,19 @@ BEGIN_RS_FUNC(inode) {
 
     if (!create_lock(&inode->lock)) {
         return -ENOMEM;
+    }
+
+    if (inode->fs->d_ops && inode->fs->d_ops->irestore) {
+        assert(inode->data);
+        CP_REBASE(inode->data);
+        void* cp_data = inode->data;
+        inode->data = NULL;
+
+        int ret = inode->fs->d_ops->irestore(inode, cp_data);
+        if (ret < 0)
+            return ret;
+    } else {
+        assert(!inode->data);
     }
 }
 END_RS_FUNC(inode)

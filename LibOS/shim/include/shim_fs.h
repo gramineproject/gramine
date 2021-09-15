@@ -204,6 +204,9 @@ struct shim_inode {
      * different in case of special files (such as named pipes or sockets). */
     struct shim_fs* fs;
 
+    /* Filesystem-specific data */
+    void* data;
+
     struct shim_lock lock;
     REFTYPE ref_count;
 };
@@ -355,6 +358,42 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`.
      */
     int (*readdir)(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
+
+    /*!
+     * \brief Deallocate inode data
+     *
+     * \param inode the inode about to be freed
+     *
+     * Deallocates any custom data stored in the inode by filesystem. Called before deleting the
+     * inode.
+     *
+     * The caller should hold `inode->lock`.
+     */
+    void (*idrop)(struct shim_inode* inode);
+
+    /*!
+     * \brief Checkpoint inode data
+     *
+     * \param inode the inode to be checkpointed
+     * \param out_data on success, contains a newly allocated buffer with data
+     * \param out_size on success, contains data size
+     *
+     * Prepares any custom data necessary to migrate the inode. Called when checkpointing the inode.
+     *
+     * The caller should hold `inode->lock`. On success, the caller should free `*out_data`.
+     */
+    int (*icheckpoint)(struct shim_inode* inode, void** out_data, size_t* out_size);
+
+    /*!
+     * \brief Restore inode data from checkpoint
+     *
+     * \param inode newly restored inode
+     * \param data checkpoint data (prepared by the `icheckpoint` callback)
+     *
+     * Restores custom state of the inode. Called when restoring the inode from checkpoint, after
+     * all other fields are set.
+     */
+    int (*irestore)(struct shim_inode* inode, void* data);
 };
 
 /*
@@ -648,9 +687,6 @@ void get_dentry(struct shim_dentry* dent);
 /* Decrement the reference count on dent */
 void put_dentry(struct shim_dentry* dent);
 
-void lock_two_dentries(struct shim_dentry* dent1, struct shim_dentry* dent2);
-void unlock_two_dentries(struct shim_dentry* dent1, struct shim_dentry* dent2);
-
 /*!
  * \brief Get the dentry one level up
  *
@@ -841,5 +877,10 @@ struct shim_fs* find_fs(const char* name);
  */
 int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
                  file_off_t* out_pos);
+
+int generic_inode_stat(struct shim_dentry* dent, struct stat* buf);
+int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf);
+file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin);
+int generic_inode_poll(struct shim_handle* hdl, int poll_type);
 
 #endif /* _SHIM_FS_H_ */

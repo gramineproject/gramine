@@ -314,42 +314,6 @@ static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
     return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
-static int chroot_istat(struct shim_inode* inode, struct stat* buf) {
-    memset(buf, 0, sizeof(*buf));
-
-    lock(&inode->lock);
-    buf->st_mode = inode->type | inode->perm;
-    buf->st_size = inode->size;
-    buf->st_dev = hash_str(inode->mount->uri);
-    /*
-     * Pretend `nlink` is 2 for directories (to account for "." and ".."), 1 for other files.
-     *
-     * Applications are unlikely to depend on exact value of `nlink`, and for us, it's inconvenient
-     * to keep track of the exact value (we would have to list the directory, and also take into
-     * account synthetic files created by Gramine, such as named pipes and sockets).
-     *
-     * TODO: Make this a default for filesystems that don't provide `nlink`?
-     */
-    buf->st_nlink = (inode->type == FILE_DIR ? 2 : 1);
-    unlock(&inode->lock);
-    return 0;
-}
-
-static int chroot_stat(struct shim_dentry* dent, struct stat* buf) {
-    assert(locked(&g_dcache_lock));
-
-    if (!dent->inode)
-        return -ENOENT;
-
-    return chroot_istat(dent->inode, buf);
-}
-
-static int chroot_hstat(struct shim_handle* hdl, struct stat* buf) {
-    assert(hdl->type == TYPE_CHROOT);
-
-    return chroot_istat(hdl->inode, buf);
-}
-
 static int chroot_flush(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT);
 
@@ -403,6 +367,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
         return -EFBIG;
 
     struct shim_inode* inode = hdl->inode;
+    lock(&inode->lock);
     lock(&hdl->lock);
 
     file_off_t pos = hdl->pos;
@@ -426,15 +391,14 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
         hdl->pos = pos;
 
         /* Update file size if we just wrote past the end of file */
-        lock(&inode->lock);
         if (inode->size < pos)
             inode->size = pos;
-        unlock(&inode->lock);
     }
     ret = actual_count;
 
 out:
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 
@@ -449,30 +413,6 @@ static int chroot_mmap(struct shim_handle* hdl, void** addr, size_t size, int pr
 
     int ret = DkStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
     return pal_to_unix_errno(ret);
-}
-
-/* TODO: this function emulates lseek() completely inside the LibOS, but some device files may
- * report size == 0 during fstat() and may provide device-specific lseek() logic; this emulation
- * breaks for such device-specific cases */
-static file_off_t chroot_seek(struct shim_handle* hdl, file_off_t offset, int whence) {
-    assert(hdl->type == TYPE_CHROOT);
-
-    file_off_t ret;
-
-    lock(&hdl->lock);
-    file_off_t pos = hdl->pos;
-
-    lock(&hdl->inode->lock);
-    file_off_t size = hdl->inode->size;
-    unlock(&hdl->inode->lock);
-
-    ret = generic_seek(pos, size, offset, whence, &pos);
-    if (ret == 0) {
-        hdl->pos = pos;
-        ret = pos;
-    }
-    unlock(&hdl->lock);
-    return ret;
 }
 
 static int chroot_truncate(struct shim_handle* hdl, file_off_t size) {
@@ -570,29 +510,6 @@ static int chroot_unlink(struct shim_dentry* dent) {
     dent->inode = NULL;
     put_inode(inode);
     return 0;
-}
-
-static int chroot_poll(struct shim_handle* hdl, int poll_type) {
-    assert(hdl->type == TYPE_CHROOT);
-
-    int ret;
-
-    lock(&hdl->lock);
-    lock(&hdl->inode->lock);
-
-    if (hdl->inode->type == S_IFREG) {
-        ret = 0;
-        if (poll_type & FS_POLL_WR)
-            ret |= FS_POLL_WR;
-        if ((poll_type & FS_POLL_RD) && hdl->pos < hdl->inode->size)
-            ret |= FS_POLL_RD;
-    } else {
-        ret = -EAGAIN;
-    }
-
-    unlock(&hdl->inode->lock);
-    unlock(&hdl->lock);
-    return ret;
 }
 
 static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
@@ -741,10 +658,13 @@ struct shim_fs_ops chroot_fs_ops = {
     .read       = &chroot_read,
     .write      = &chroot_write,
     .mmap       = &chroot_mmap,
-    .seek       = &chroot_seek,
-    .hstat      = &chroot_hstat,
+    /* TODO: this function emulates lseek() completely inside the LibOS, but some device files may
+     * report size == 0 during fstat() and may provide device-specific lseek() logic; this emulation
+     * breaks for such device-specific cases */
+    .seek       = &generic_inode_seek,
+    .hstat      = &generic_inode_hstat,
     .truncate   = &chroot_truncate,
-    .poll       = &chroot_poll,
+    .poll       = &generic_inode_poll,
     .checkout   = &chroot_checkout,
     .checkin    = &chroot_checkin,
 };
@@ -754,7 +674,7 @@ struct shim_d_ops chroot_d_ops = {
     .lookup  = &chroot_lookup,
     .creat   = &chroot_creat,
     .mkdir   = &chroot_mkdir,
-    .stat    = &chroot_stat,
+    .stat    = &generic_inode_stat,
     .readdir = &chroot_readdir,
     .unlink  = &chroot_unlink,
     .rename  = &chroot_rename,

@@ -6,10 +6,12 @@
 
 /*
  * This file contains code for implementation of 'tmpfs' filesystem. The tmpfs files are *not*
- * cloned during fork/clone and cannot be synchronized between processes.
+ * cloned during fork/clone (except for files currently open) and cannot be synchronized between
+ * processes.
  *
- * The tmpfs files are directly represented by their dentries (i.e. a file exists whenever
- * corresponding dentry exists). The file data is stored in the dentries.
+ * The tmpfs files are directly represented by their dentries and inodes (i.e. a file exists
+ * whenever corresponding dentry exists, and is associated with inode). The file data is stored in
+ * the `data` field of the inode (as a pointer to `struct shim_mem_file`).
  */
 
 #include <asm/mman.h>
@@ -27,41 +29,88 @@
 
 #define USEC_IN_SEC 1000000
 
-struct shim_tmpfs_data {
-    struct shim_mem_file mem;
-    time_t ctime;
-    time_t mtime;
-    time_t atime;
-};
+static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
-/* Get data associated with dentry. This is created on demand, instead of during dentry validation,
- * because the dentry might have been restored from a checkpoint, and Gramine's checkpointing
- * system currently omits the dentry `data` field. */
-static int tmpfs_get_data(struct shim_dentry* dent, struct shim_tmpfs_data** out_data) {
-    assert(locked(&dent->lock));
-    if (dent->data) {
-        *out_data = dent->data;
-        return 0;
-    }
+    dent->type = type;
+    dent->perm = perm;
 
-    struct shim_tmpfs_data* data = malloc(sizeof(*data));
-    if (!data)
+    struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
+    if (!inode)
         return -ENOMEM;
 
-    mem_file_init(&data->mem, /*data=*/NULL, /*size=*/0);
+    struct shim_mem_file* mem = malloc(sizeof(*mem));
+    if (!mem) {
+        put_inode(inode);
+        return -ENOMEM;
+    }
+    mem_file_init(mem, /*data=*/NULL, /*size=*/0);
+    inode->data = mem;
 
     uint64_t time_us;
     if (DkSystemTimeQuery(&time_us) < 0) {
-        free(data);
+        put_inode(inode);
         return -EPERM;
     }
 
-    data->ctime = time_us / USEC_IN_SEC;
-    data->mtime = data->ctime;
-    data->atime = data->ctime;
+    inode->ctime = time_us / USEC_IN_SEC;
+    inode->mtime = inode->ctime;
+    inode->atime = inode->ctime;
 
-    dent->data = data;
-    *out_data = data;
+    dent->inode = inode;
+    return 0;
+}
+
+static void tmpfs_idrop(struct shim_inode* inode) {
+    assert(locked(&inode->lock));
+
+    if (inode->data) {
+        mem_file_destroy(inode->data);
+        free(inode->data);
+    }
+}
+
+struct tmpfs_checkpoint {
+    size_t size;
+    char data[];
+};
+
+static int tmpfs_icheckpoint(struct shim_inode* inode, void** out_data, size_t* out_size) {
+    assert(locked(&inode->lock));
+
+    struct shim_mem_file* mem = inode->data;
+    assert(mem->size >= 0);
+
+    struct tmpfs_checkpoint* cp;
+    size_t cp_size = sizeof(*cp) + mem->size;
+    cp = malloc(cp_size);
+    if (!cp)
+        return -ENOMEM;
+    cp->size = mem->size;
+    memcpy(cp->data, mem->buf, mem->size);
+
+    *out_data = cp;
+    *out_size = cp_size;
+    return 0;
+}
+
+static int tmpfs_irestore(struct shim_inode* inode, void* data) {
+    struct tmpfs_checkpoint* cp = data;
+
+    struct shim_mem_file* mem = malloc(sizeof(*mem));
+    if (!mem)
+        return -ENOMEM;
+    mem->buf = malloc(cp->size);
+    if (!mem->buf) {
+        free(mem);
+        return -ENOMEM;
+    }
+    memcpy(mem->buf, cp->data, cp->size);
+    mem->size = cp->size;
+    mem->buf_size = cp->size;
+
+    inode->data = mem;
     return 0;
 }
 
@@ -71,94 +120,61 @@ static int tmpfs_mount(const char* uri, void** mount_data) {
     return 0;
 }
 
-static int tmpfs_unmount(void* mount_data) {
-    __UNUSED(mount_data);
+static int tmpfs_flush(struct shim_handle* hdl) {
+    __UNUSED(hdl);
     return 0;
 }
 
 static int tmpfs_lookup(struct shim_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+
     if (!dent->parent) {
         /* This is the root dentry, initialize it. */
-        dent->type = S_IFDIR;
-        dent->perm = PERM_rwx______;
-        return 0;
+        return tmpfs_setup_dentry(dent, S_IFDIR, PERM_rwx______);
     }
-    /* Looking up for other detries should fail: if a dentry has not been already created by `creat`
-     * or `mkdir`, the corresponding file does not exist. */
+    /* Looking up for other dentries should fail: if a dentry has not been already created by
+     * `creat` or `mkdir`, the corresponding file does not exist. */
     return -ENOENT;
 }
 
-static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
-    __UNUSED(dent);
+static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
     __UNUSED(flags);
+
     hdl->type = TYPE_TMPFS;
     hdl->pos = 0;
+    hdl->inode = dent->inode;
+    get_inode(dent->inode);
+}
+
+static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+    assert(locked(&g_dcache_lock));
+
+    if (!dent->inode)
+        return -ENOENT;
+
+    tmpfs_do_open(hdl, dent, flags);
     return 0;
 }
 
 static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
-    int ret;
+    assert(locked(&g_dcache_lock));
 
-    /* Trigger creating dentry data to ensure right timestamp. */
-    lock(&dent->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(dent, &data);
+    mode_t type = S_IFREG;
+    int ret = tmpfs_setup_dentry(dent, type, perm);
     if (ret < 0)
-        goto out;
+        return ret;
 
-    dent->type = S_IFREG;
-    dent->perm = perm;
-    ret = 0;
-
-out:
-    unlock(&dent->lock);
-    if (ret == 0)
-        return tmpfs_open(hdl, dent, flags);
-    return ret;
+    tmpfs_do_open(hdl, dent, flags);
+    return 0;
 }
 
 static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
-    int ret;
+    assert(locked(&g_dcache_lock));
 
-    /* Trigger creating dentry data to ensure right timestamp. */
-    lock(&dent->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(dent, &data);
-    if (ret < 0)
-        goto out;
-
-    dent->type = S_IFDIR;
-    dent->perm = perm;
-    ret = 0;
-
-out:
-    unlock(&dent->lock);
-    return ret;
-}
-
-static int tmpfs_stat(struct shim_dentry* dent, struct stat* buf) {
-    int ret;
-
-    lock(&dent->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(dent, &data);
-    if (ret < 0)
-        goto out;
-
-    memset(buf, 0, sizeof(*buf));
-    buf->st_mode  = dent->perm | dent->type;
-    buf->st_size  = data->mem.size;
-    buf->st_nlink = dent->type == S_IFDIR ? 2 : 1;
-    buf->st_ctime = data->ctime;
-    buf->st_mtime = data->mtime;
-    buf->st_atime = data->atime;
-    /* TODO: change to `hash_str(dent->inode->mount->uri)` once tmpfs supports inodes. */
-    buf->st_dev = 2;
-    ret = 0;
-
-out:
-    unlock(&dent->lock);
-    return ret;
+    mode_t type = S_IFREG;
+    return tmpfs_setup_dentry(dent, type, perm);
 }
 
 static int tmpfs_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
@@ -191,49 +207,59 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
             return -ENOTEMPTY;
     }
 
-    /* TODO: our `unlink` wipes the file data, even though there might be still file handles
-     * associated with the dentry. A proper solution would keep the unlinked file until all handles
-     * are closed, but also allow creating a new file with the same name. */
-    lock(&dent->lock);
-    struct shim_tmpfs_data* data = dent->data;
-    if (data) {
-        dent->data = NULL;
-        mem_file_destroy(&data->mem);
-        free(data);
-    }
-    unlock(&dent->lock);
+
+    if (!dent->inode)
+        return -ENOENT;
+
+    struct shim_inode* inode = dent->inode;
+    dent->inode = NULL;
+    put_inode(inode);
     return 0;
 }
 
 static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
+    assert(locked(&g_dcache_lock));
+
     uint64_t time_us;
     if (DkSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
-    lock_two_dentries(old, new);
-
     /* TODO: this should be done in the syscall handler, not here */
+
+    struct shim_inode* new_inode = new->inode;
+    if (new_inode) {
+        new->inode = NULL;
+        put_inode(new_inode);
+    }
+
+    struct shim_inode* old_inode = old->inode;
+
+    lock(&old_inode->lock);
+
+    /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
+     * from `old`. */
+    new->inode = old_inode;
     new->type = old->type;
     new->perm = old->perm;
 
-    if (new->data) {
-        struct shim_tmpfs_data* data = new->data;
-        mem_file_destroy(&data->mem);
-        free(data);
-    }
-    new->data = old->data;
-    old->data = NULL;
+    old->inode = NULL;
 
-    struct shim_tmpfs_data* data = new->data;
-    data->mtime = time_us / USEC_IN_SEC;
+    old_inode->ctime = time_us / USEC_IN_SEC;
 
-    unlock_two_dentries(old, new);
+    unlock(&old_inode->lock);
+
     return 0;
 }
 
 static int tmpfs_chmod(struct shim_dentry* dent, mode_t perm) {
-    __UNUSED(dent);
-    __UNUSED(perm);
+    assert(locked(&g_dcache_lock));
+
+    lock(&dent->inode->lock);
+
+    /* `dent->perm` already updated by caller */
+    dent->inode->perm = perm;
+
+    unlock(&dent->inode->lock);
     return 0;
 }
 
@@ -242,14 +268,14 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
 
     assert(hdl->type == TYPE_TMPFS);
 
-    lock(&hdl->lock);
-    lock(&hdl->dentry->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(hdl->dentry, &data);
-    if (ret < 0)
-        goto out;
+    struct shim_inode* inode = hdl->inode;
 
-    ret = mem_file_read(&data->mem, hdl->pos, buf, size);
+    lock(&inode->lock);
+    lock(&hdl->lock);
+
+    struct shim_mem_file* mem = inode->data;
+
+    ret = mem_file_read(mem, hdl->pos, buf, size);
     if (ret < 0)
         goto out;
 
@@ -261,8 +287,8 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
     /* keep `ret` */
 
 out:
-    unlock(&hdl->dentry->lock);
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 
@@ -275,24 +301,25 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
     if (DkSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
+    struct shim_inode* inode = hdl->inode;
+
+    lock(&inode->lock);
     lock(&hdl->lock);
-    lock(&hdl->dentry->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(hdl->dentry, &data);
+    struct shim_mem_file* mem = inode->data;
+
+    ret = mem_file_write(mem, hdl->pos, buf, size);
     if (ret < 0)
         goto out;
 
-    ret = mem_file_write(&data->mem, hdl->pos, buf, size);
-    if (ret < 0)
-        goto out;
+    inode->size = mem->size;
 
     hdl->pos += ret;
-    data->mtime = time_us / USEC_IN_SEC;
+    inode->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
 out:
-    unlock(&hdl->dentry->lock);
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 
@@ -303,50 +330,19 @@ static int tmpfs_truncate(struct shim_handle* hdl, file_off_t size) {
     if (DkSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
-    assert(hdl->type == TYPE_TMPFS);
+    lock(&hdl->inode->lock);
+    struct shim_mem_file* mem = hdl->inode->data;
 
-    lock(&hdl->lock);
-    lock(&hdl->dentry->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(hdl->dentry, &data);
+    ret = mem_file_truncate(mem, size);
     if (ret < 0)
         goto out;
 
-    ret = mem_file_truncate(&data->mem, size);
-    if (ret < 0)
-        goto out;
-
-    data->mtime = time_us / USEC_IN_SEC;
+    hdl->inode->mtime = time_us / USEC_IN_SEC;
+    hdl->inode->size = size;
     ret = 0;
 
 out:
-    unlock(&hdl->dentry->lock);
-    unlock(&hdl->lock);
-    return ret;
-}
-
-static file_off_t tmpfs_seek(struct shim_handle* hdl, file_off_t offset, int whence) {
-    file_off_t ret;
-
-    assert(hdl->type == TYPE_TMPFS);
-
-    lock(&hdl->lock);
-    lock(&hdl->dentry->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(hdl->dentry, &data);
-    if (ret < 0)
-        goto out;
-
-    file_off_t pos = hdl->pos;
-    ret = generic_seek(pos, data->mem.size, offset, whence, &pos);
-    if (ret < 0)
-        goto out;
-    hdl->pos = pos;
-    ret = pos;
-
-out:
-    unlock(&hdl->dentry->lock);
-    unlock(&hdl->lock);
+    unlock(&hdl->inode->lock);
     return ret;
 }
 
@@ -367,53 +363,31 @@ static int tmpfs_mmap(struct shim_handle* hdl, void** addr, size_t size, int pro
     return -ENOSYS;
 }
 
-static int tmpfs_hstat(struct shim_handle* handle, struct stat* buf) {
-    assert(handle->dentry);
-    return tmpfs_stat(handle->dentry, buf);
-}
-
-static int tmpfs_poll(struct shim_handle* hdl, int poll_type) {
-    int ret;
-
-    assert(hdl->type == TYPE_TMPFS);
-
-    lock(&hdl->lock);
-    lock(&hdl->dentry->lock);
-    struct shim_tmpfs_data* data;
-    ret = tmpfs_get_data(hdl->dentry, &data);
-    if (ret < 0)
-        goto out;
-
-    ret = mem_file_poll(&data->mem, hdl->pos, poll_type);
-
-out:
-    unlock(&hdl->dentry->lock);
-    unlock(&hdl->lock);
-    return ret;
-}
-
 struct shim_fs_ops tmp_fs_ops = {
     .mount    = &tmpfs_mount,
-    .unmount  = &tmpfs_unmount,
+    .flush    = &tmpfs_flush,
     .read     = &tmpfs_read,
     .write    = &tmpfs_write,
     .mmap     = &tmpfs_mmap,
-    .seek     = &tmpfs_seek,
-    .hstat    = &tmpfs_hstat,
+    .seek     = &generic_inode_seek,
+    .hstat    = &generic_inode_hstat,
     .truncate = &tmpfs_truncate,
-    .poll     = &tmpfs_poll,
+    .poll     = &generic_inode_poll,
 };
 
 struct shim_d_ops tmp_d_ops = {
-    .open    = &tmpfs_open,
-    .lookup  = &tmpfs_lookup,
-    .creat   = &tmpfs_creat,
-    .mkdir   = &tmpfs_mkdir,
-    .stat    = &tmpfs_stat,
-    .readdir = &tmpfs_readdir,
-    .unlink  = &tmpfs_unlink,
-    .rename  = &tmpfs_rename,
-    .chmod   = &tmpfs_chmod,
+    .open        = &tmpfs_open,
+    .lookup      = &tmpfs_lookup,
+    .creat       = &tmpfs_creat,
+    .mkdir       = &tmpfs_mkdir,
+    .stat        = &generic_inode_stat,
+    .readdir     = &tmpfs_readdir,
+    .unlink      = &tmpfs_unlink,
+    .rename      = &tmpfs_rename,
+    .chmod       = &tmpfs_chmod,
+    .idrop       = &tmpfs_idrop,
+    .icheckpoint = &tmpfs_icheckpoint,
+    .irestore    = &tmpfs_irestore,
 };
 
 struct shim_fs tmp_builtin_fs = {

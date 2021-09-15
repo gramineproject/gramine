@@ -217,16 +217,35 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('execve(invalid-envp) correctly returned error', stdout)
 
     def test_220_send_handle(self):
-        self._test_send_handle('tmp/send_handle_test')
-        self._test_send_handle('tmp/send_handle_test', delete=True)
+        path = 'tmp/send_handle_test'
+        try:
+            self._test_send_handle(path)
+            self._test_send_handle(path, delete=True)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
 
     @unittest.skipUnless(HAS_SGX,
         'Protected files are only available with SGX')
     def test_221_send_handle_pf(self):
+        path = 'tmp/pf/send_handle_test'
         os.makedirs('tmp/pf', exist_ok=True)
-        self._test_send_handle('tmp/pf/send_handle_test')
-        # TODO: Migrating a protected files handle is not supported when the file is deleted
-        # self._test_send_handle('tmp/pf/send_handle_test', delete=True)
+        # Delete the file: the test truncates the file anyway, but it may fail to open a malformed
+        # protected file.
+        if os.path.exists(path):
+            os.unlink(path)
+        try:
+            self._test_send_handle(path)
+            # TODO: Migrating a protected files handle is not supported when the file is deleted
+            # self._test_send_handle(path, delete=True)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    def test_222_send_handle_tmpfs(self):
+        path = '/mnt/tmpfs/send_handle_test'
+        self._test_send_handle(path)
+        self._test_send_handle(path, delete=True)
 
     def _test_send_handle(self, path, delete=False):
         if delete:
@@ -234,15 +253,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         else:
             cmd = ['send_handle', path]
 
-        # Delete the file: the test truncates the file anyway, but it may fail to open a malformed
-        # protected file.
-        if os.path.exists(path):
-            os.unlink(path)
-        try:
-            stdout, _ = self.run_binary(cmd)
-        finally:
-            if os.path.exists(path):
-                os.unlink(path)
+        stdout, _ = self.run_binary(cmd)
         self.assertIn('TEST OK', stdout, 'test failed: {}'.format(cmd))
 
     def test_300_shared_object(self):
@@ -595,7 +606,6 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skip('tmpfs needs to be rewritten to use inodes')
     def test_035_rename_unlink_tmpfs(self):
         file1 = '/mnt/tmpfs/file1'
         file2 = '/mnt/tmpfs/file2'

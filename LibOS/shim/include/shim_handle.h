@@ -179,6 +179,9 @@ struct shim_handle {
      * filesystem (see `shim_inode` in `shim_fs.h`). Eventually, should replace `dentry` fields.
      *
      * This field does not change, so reading it does not require holding `lock`.
+     *
+     * When taking locks for both handle and inode (`hdl->lock` and `hdl->inode->lock`), you should
+     * lock the *inode* first.
      */
     struct shim_inode* inode;
 
