@@ -91,7 +91,7 @@ static int tmpfs_lookup(struct shim_dentry* dent) {
 static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     __UNUSED(dent);
     hdl->type = TYPE_TMPFS;
-    hdl->info.tmpfs.pos = 0;
+    hdl->pos = 0;
     hdl->flags = flags;
     hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
     return 0;
@@ -257,11 +257,11 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
     if (ret < 0)
         goto out;
 
-    ret = mem_file_read(&data->mem, hdl->info.tmpfs.pos, buf, size);
+    ret = mem_file_read(&data->mem, hdl->pos, buf, size);
     if (ret < 0)
         goto out;
 
-    hdl->info.tmpfs.pos += ret;
+    hdl->pos += ret;
 
     /* technically, we should update access time here, but we skip this because it could hurt
      * performance on Linux-SGX host */
@@ -290,11 +290,11 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
     if (ret < 0)
         goto out;
 
-    ret = mem_file_write(&data->mem, hdl->info.tmpfs.pos, buf, size);
+    ret = mem_file_write(&data->mem, hdl->pos, buf, size);
     if (ret < 0)
         goto out;
 
-    hdl->info.tmpfs.pos += ret;
+    hdl->pos += ret;
     data->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
@@ -345,11 +345,11 @@ static file_off_t tmpfs_seek(struct shim_handle* hdl, file_off_t offset, int whe
     if (ret < 0)
         goto out;
 
-    file_off_t pos = hdl->info.tmpfs.pos;
+    file_off_t pos = hdl->pos;
     ret = generic_seek(pos, data->mem.size, offset, whence, &pos);
     if (ret < 0)
         goto out;
-    hdl->info.tmpfs.pos = pos;
+    hdl->pos = pos;
     ret = pos;
 
 out:
@@ -392,7 +392,7 @@ static int tmpfs_poll(struct shim_handle* hdl, int poll_type) {
     if (ret < 0)
         goto out;
 
-    ret = mem_file_poll(&data->mem, hdl->info.tmpfs.pos, poll_type);
+    ret = mem_file_poll(&data->mem, hdl->pos, poll_type);
 
 out:
     unlock(&hdl->dentry->lock);

@@ -183,10 +183,10 @@ static file_off_t do_lseek_dir(struct shim_handle* hdl, off_t offset, int origin
     struct shim_dir_handle* dirhdl = &hdl->dir_info;
 
     file_off_t pos;
-    ret = generic_seek(dirhdl->pos, dirhdl->count, offset, origin, &pos);
+    ret = generic_seek(hdl->pos, dirhdl->count, offset, origin, &pos);
     if (ret < 0)
         goto out;
-    dirhdl->pos = pos;
+    hdl->pos = pos;
     ret = pos;
 
 out:
@@ -387,15 +387,16 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         goto out;
 
     size_t buf_pos = 0;
-    while (dirhdl->pos < dirhdl->count) {
-        struct shim_dentry* dent = dirhdl->dents[dirhdl->pos];
+    assert(hdl->pos >= 0);
+    while ((size_t)hdl->pos < dirhdl->count) {
+        struct shim_dentry* dent = dirhdl->dents[hdl->pos];
         const char* name;
         size_t name_len;
 
-        if (dirhdl->pos == 0) {
+        if (hdl->pos == 0) {
             name = ".";
             name_len = 1;
-        } else if (dirhdl->pos == 1) {
+        } else if (hdl->pos == 1) {
             name = "..";
             name_len = 2;
         } else {
@@ -418,7 +419,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
             memset(ent, 0, ent_size); // this ensures `name` will be null-terminated
 
             ent->d_ino = d_ino;
-            ent->d_off = dirhdl->pos;
+            ent->d_off = hdl->pos;
             ent->d_reclen = ent_size;
             ent->d_type = d_type;
             memcpy(&ent->d_name, name, name_len);
@@ -438,14 +439,14 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
             memset(ent, 0, ent_size); // this ensures `name` will be null-terminated
 
             ent->d_ino = d_ino;
-            ent->d_off = dirhdl->pos;
+            ent->d_off = hdl->pos;
             ent->d_reclen = ent_size;
             memcpy(&ent->d_name, name, name_len);
             tail->d_type = d_type;
         }
 
         buf_pos += ent_size;
-        dirhdl->pos++;
+        hdl->pos++;
     }
 
     /* Guard against overflow */
@@ -456,7 +457,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     }
 
     /* Return EINVAL if buffer is too small to hold anything */
-    if (buf_pos == 0 && dirhdl->pos < dirhdl->count) {
+    if (buf_pos == 0 && (size_t)hdl->pos < dirhdl->count) {
         ret = -EINVAL;
         goto out;
     }

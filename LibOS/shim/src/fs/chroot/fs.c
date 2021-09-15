@@ -254,7 +254,7 @@ static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mod
         }
 
         hdl->type = TYPE_CHROOT;
-        hdl->info.chroot.pos = 0;
+        hdl->pos = 0;
         hdl->flags = flags;
         hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
         hdl->pal_handle = palhdl;
@@ -404,7 +404,7 @@ static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count) {
     struct shim_inode* inode = hdl->inode;
     lock(&hdl->lock);
 
-    file_off_t pos = hdl->info.chroot.pos;
+    file_off_t pos = hdl->pos;
 
     /* Make sure we won't overflow `pos` */
     file_off_t max_end_pos;
@@ -421,7 +421,7 @@ static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count) {
     }
     assert(actual_count <= count);
     if (inode->type == S_IFREG) {
-        hdl->info.chroot.pos += actual_count;
+        hdl->pos += actual_count;
     }
     ret = actual_count;
 
@@ -441,7 +441,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
     struct shim_inode* inode = hdl->inode;
     lock(&hdl->lock);
 
-    file_off_t pos = hdl->info.chroot.pos;
+    file_off_t pos = hdl->pos;
 
     /* Make sure we won't overflow `pos` */
     file_off_t max_end_pos;
@@ -459,7 +459,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
     assert(count <= actual_count);
     if (inode->type == S_IFREG) {
         pos += actual_count;
-        hdl->info.chroot.pos = pos;
+        hdl->pos = pos;
 
         /* Update file size if we just wrote past the end of file */
         lock(&inode->lock);
@@ -496,7 +496,7 @@ static file_off_t chroot_seek(struct shim_handle* hdl, file_off_t offset, int wh
     file_off_t ret;
 
     lock(&hdl->lock);
-    file_off_t pos = hdl->info.chroot.pos;
+    file_off_t pos = hdl->pos;
 
     lock(&hdl->inode->lock);
     file_off_t size = hdl->inode->size;
@@ -504,7 +504,7 @@ static file_off_t chroot_seek(struct shim_handle* hdl, file_off_t offset, int wh
 
     ret = generic_seek(pos, size, offset, whence, &pos);
     if (ret == 0) {
-        hdl->info.chroot.pos = pos;
+        hdl->pos = pos;
         ret = pos;
     }
     unlock(&hdl->lock);
@@ -627,7 +627,7 @@ static int chroot_poll(struct shim_handle* hdl, int poll_type) {
         ret = 0;
         if (poll_type & FS_POLL_WR)
             ret |= FS_POLL_WR;
-        if ((poll_type & FS_POLL_RD) && hdl->info.chroot.pos < hdl->inode->size)
+        if ((poll_type & FS_POLL_RD) && hdl->pos < hdl->inode->size)
             ret |= FS_POLL_RD;
     } else {
         ret = -EAGAIN;

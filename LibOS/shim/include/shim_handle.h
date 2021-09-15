@@ -57,10 +57,6 @@ enum shim_file_type {
     FILE_TTY,
 };
 
-struct shim_chroot_handle {
-    file_off_t pos;
-};
-
 #define FILE_HANDLE_DATA(hdl)  ((hdl)->info.file.data)
 #define FILE_DENTRY_DATA(dent) ((struct shim_file_data*)(dent)->data)
 
@@ -146,17 +142,11 @@ struct shim_dir_handle {
     /* The first two dentries are always "." and ".." */
     struct shim_dentry** dents;
     size_t count;
-    size_t pos;
 };
 
 struct shim_str_handle {
     struct shim_mem_file mem;
     bool dirty;
-    file_off_t pos;
-};
-
-struct shim_tmpfs_handle {
-    file_off_t pos;
 };
 
 DEFINE_LIST(shim_epoll_item);
@@ -208,6 +198,9 @@ struct shim_handle {
      */
     struct shim_inode* inode;
 
+    /* Offset in file */
+    file_off_t pos;
+
     /* If this handle is registered for any epoll handle, this list contains
      * a shim_epoll_item object in correspondence with the epoll handle. */
     LISTP_TYPE(shim_epoll_item) epolls;
@@ -226,11 +219,11 @@ struct shim_handle {
     /* Type-specific fields: when accessing, ensure that `type` field is appropriate first (at least
      * by using assert()) */
     union {
-        struct shim_chroot_handle chroot; /* TYPE_CHROOT */
+        /* (no data) */                   /* TYPE_CHROOT */
         /* (no data) */                   /* TYPE_DEV */
         struct shim_str_handle str;       /* TYPE_STR */
         /* (no data) */                   /* TYPE_PSEUDO */
-        struct shim_tmpfs_handle tmpfs;   /* TYPE_TMPFS */
+        /* (no data) */                   /* TYPE_TMPFS */
 
         struct shim_pipe_handle pipe;     /* TYPE_PIPE */
         struct shim_sock_handle sock;     /* TYPE_SOCK */

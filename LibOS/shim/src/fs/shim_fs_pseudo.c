@@ -125,7 +125,7 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
             hdl->type = TYPE_STR;
             mem_file_init(&hdl->info.str.mem, str, len);
             hdl->info.str.dirty = false;
-            hdl->info.str.pos = 0;
+            hdl->pos = 0;
             break;
         }
 
@@ -281,9 +281,9 @@ static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
-            ssize_t ret = mem_file_read(&hdl->info.str.mem, hdl->info.str.pos, buf, size);
+            ssize_t ret = mem_file_read(&hdl->info.str.mem, hdl->pos, buf, size);
             if (ret > 0)
-                hdl->info.str.pos += ret;
+                hdl->pos += ret;
             unlock(&hdl->lock);
             return ret;
         }
@@ -307,9 +307,9 @@ static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t siz
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
-            ssize_t ret = mem_file_write(&hdl->info.str.mem, hdl->info.str.pos, buf, size);
+            ssize_t ret = mem_file_write(&hdl->info.str.mem, hdl->pos, buf, size);
             if (ret > 0) {
-                hdl->info.str.pos += ret;
+                hdl->pos += ret;
                 hdl->info.str.dirty = true;
             }
             unlock(&hdl->lock);
@@ -336,10 +336,10 @@ static file_off_t pseudo_seek(struct shim_handle* hdl, file_off_t offset, int wh
     switch (node->type) {
         case PSEUDO_STR: {
             lock(&hdl->lock);
-            file_off_t pos = hdl->info.str.pos;
+            file_off_t pos = hdl->pos;
             ret = generic_seek(pos, hdl->info.str.mem.size, offset, whence, &pos);
             if (ret == 0) {
-                hdl->info.str.pos = pos;
+                hdl->pos = pos;
                 ret = pos;
             }
             unlock(&hdl->lock);
@@ -450,7 +450,7 @@ static int pseudo_poll(struct shim_handle* hdl, int poll_type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
-            int ret = mem_file_poll(&hdl->info.str.mem, hdl->info.str.pos, poll_type);
+            int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, poll_type);
             unlock(&hdl->lock);
             return ret;
         }
