@@ -1,0 +1,7 @@
+version: 2
+python:
+    install:
+        - requirements: Documentation/requirements.txt
+build:
+    apt_packages:
+        - doxygen
