@@ -13,35 +13,21 @@ stage('test-direct') {
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/python
+            cd CI-Examples/python
             make ${MAKEOPTS} all
             make check
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/bash
+            cd CI-Examples/bash
             make ${MAKEOPTS} all
             make ${MAKEOPTS} regression
         '''
     }
-    timeout(time: 5, unit: 'MINUTES') {
-        sh '''
-            cd Examples/curl
-            make -j8 all
-            make check
-        '''
-    }
-    timeout(time: 5, unit: 'MINUTES') {
-        sh '''
-            cd Examples/gcc
-            make -j8 all
-            make check
-        '''
-    }
     timeout(time: 10, unit: 'MINUTES') {
         sh '''
-            cd Examples/memcached
+            cd CI-Examples/memcached
             make -j8 all
             make start-graphene-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 11211
@@ -53,7 +39,7 @@ stage('test-direct') {
     }
     timeout(time: 10, unit: 'MINUTES') {
         sh '''
-            cd Examples/redis
+            cd CI-Examples/redis
             if .ci/isdistro xenial
             then
                 USE_SELECT=1
@@ -67,7 +53,7 @@ stage('test-direct') {
     }
     timeout(time: 10, unit: 'MINUTES') {
         sh '''
-            cd Examples/lighttpd
+            cd CI-Examples/lighttpd
             make -j8 all
             make start-graphene-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8003
@@ -76,43 +62,23 @@ stage('test-direct') {
     }
     timeout(time: 10, unit: 'MINUTES') {
         sh '''
-            cd Examples/nginx
+            cd CI-Examples/nginx
             make -j8 all
             make start-graphene-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8002
             LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8002
         '''
     }
-    /*
-    timeout(time: 20, unit: 'MINUTES') {
-        sh '''
-            cd Examples/apache
-            make -j8 all
-            make start-graphene-server &
-            ../../Scripts/wait_for_server 5 127.0.0.1 8001
-            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8001
-            ../../Scripts/wait_for_server 5 127.0.0.1 8443
-            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh https://127.0.0.1:8443
-        '''
-    }
-    */
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/blender
+            cd CI-Examples/blender
             make ${MAKEOPTS} all
             make check
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
-            cd Examples/r
-            make ${MAKEOPTS} all
-            make check
-        '''
-    }
-    timeout(time: 5, unit: 'MINUTES') {
-        sh '''
-            cd Examples/sqlite
+            cd CI-Examples/sqlite
             make ${MAKEOPTS} all
             make ${MAKEOPTS} regression
         '''

@@ -55,7 +55,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pyelftools \
     python3-pytest \
     python3-scipy \
-    r-base-core \
     shellcheck \
     sqlite3 \
     texinfo \
@@ -67,7 +66,7 @@ RUN python3 -m pip install \
     asv \
     recommonmark \
     'Sphinx==1.8' \
-    sphinx_rtd_theme \
+    'sphinx_rtd_theme<1' \
     toml>=0.10
 
 # Add the user UID:1001, GID:1001, home at /leeroy
