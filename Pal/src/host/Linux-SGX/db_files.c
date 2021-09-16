@@ -796,59 +796,60 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
-    char* tmp = strdup(uri);
-    if (!tmp)
+    char* new_path = strdup(uri);
+    if (!new_path)
         return -PAL_ERROR_NOMEM;
 
 
     struct protected_file* pf = find_protected_file_handle(handle);
 
-    /* TODO: Handle the case of renaming a file that has a file handle already open, so that the
-     * file operations work on both the handles properly. */
+    /* TODO: Handle the case of renaming a file that has a file handle already open */
     struct protected_file* pf_new;
     if (pf) {
-        size_t uri_size = strlen(uri) + 1;
-        char* new_path = (char*)calloc(1, uri_size);
+        size_t normpath_size = strlen(uri) + 1;
+        char* new_normpath = (char*)calloc(1, normpath_size);
 
-        if (!new_path) {
-            free(tmp);
+        if (!new_normpath) {
+            free(new_path);
             return -PAL_ERROR_NOMEM;
         }
 
-        if (get_norm_path(uri, new_path, &uri_size) < 0) {
+        if (get_norm_path(uri, new_normpath, &normpath_size) < 0) {
             log_warning("Could not normalize path (%s)", uri);
-            free(tmp);
+            free(new_normpath);
             free(new_path);
             return -PAL_ERROR_DENIED;
         }
 
-        pf_new = get_protected_file(new_path);
+        pf_new = get_protected_file(new_normpath);
         if (!pf_new) {
-            log_warning("New path is disallowed for protected files (%s)", new_path);
-            free(tmp);
+            log_warning("New path during rename is not specified in 'sgx.protected_files' (%s)", new_normpath);
+            free(new_normpath);
             free(new_path);
             return -PAL_ERROR_DENIED;
         }
 
         /* update the metadata of the protected file */
-        pf_status_t pf_ret = pf_rename(pf->context, new_path);
+        pf_status_t pf_ret = pf_rename(pf->context, new_normpath);
 
-        free(new_path);
+        free(new_normpath);
 
         if (PF_FAILURE(pf_ret)) {
             log_warning("pf_rename failed: %s", pf_strerror(pf_ret));
-            free(tmp);
+            free(new_path);
             return -PAL_ERROR_DENIED;
         }
     }
 
     int ret = ocall_rename(handle->file.realpath, uri);
     if (ret < 0) {
-        free(tmp);
-        /* restore the original file name in pf metadata */
-        pf_status_t pf_ret = pf_rename(pf->context, handle->file.realpath);
-        if (PF_FAILURE(pf_ret)) {
-            log_warning("Rename failed: %s, the file might be unusable", pf_strerror(pf_ret));
+        free(new_path);
+        if (pf) {
+            /* restore the original file name in pf metadata */
+            pf_status_t pf_ret = pf_rename(pf->context, handle->file.realpath);
+            if (PF_FAILURE(pf_ret)) {
+                log_warning("Rename failed: %s, the file might be unusable", pf_strerror(pf_ret));
+            }
         }
         return unix_to_pal_error(ret);
     }
@@ -868,7 +869,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         free((void*)handle->file.realpath);
     }
 
-    handle->file.realpath = tmp;
+    handle->file.realpath = new_path;
     return 0;
 }
 
