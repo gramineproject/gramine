@@ -80,6 +80,12 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 #define SGX_FLAGS_MASK_CONST_HI 0xffffffffUL
 #define SGX_FLAGS_MASK_CONST_LO 0xffffffffUL
 
+/* Note that XFRM follows XCR0 register format. Also note that XFRM bits 0 (x87 support) and 1 (SSE
+ * support) must be always set in Intel SGX (otherwise EINIT instruction fails). This is why these
+ * two bits are called "legacy" here.
+ *
+ * From Intel SDM, Section 41.7.2.1: "Because bits 0 and 1 of XFRM must always be set, the use of
+ * Intel SGX requires that SSE be enabled (CR4.OSFXSR = 1)." */
 #define SGX_XFRM_LEGACY   0x03ULL
 #define SGX_XFRM_AVX      0x04ULL
 #define SGX_XFRM_MPX      0x18ULL
