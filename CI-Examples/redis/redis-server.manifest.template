@@ -97,32 +97,29 @@ sgx.nonpie_binary = true
 
 ############################# SGX: TRUSTED FILES ###############################
 
-# Specify all files used by Redis and its dependencies (including all
-# libraries which can be loaded at runtime via dlopen). The paths to files
-# are host-OS paths. These files will be searched for in in-Graphene visible
-# paths according to mount points above.
+# Specify all files used by Redis and its dependencies (including all libraries
+# which can be loaded at runtime via dlopen), as well as other static read-only
+# files (like configuration files).
 #
-# As part of the build process, Graphene-SGX script (`graphene-sgx-sign`) finds each
-# specified file, measures its hash, and outputs the hash in auto-generated
-# entry 'sgx.trusted_checksum.xxx' in auto-generated redis-server.manifest.sgx.
+# The paths to files are host-OS paths. These files will be searched for in
+# in-Graphene visible paths according to mount points above.
+#
+# As part of the build process, Graphene-SGX script (`graphene-sgx-sign`) finds
+# each specified file, measures its hash, and adds it to the manifest entry for
+# that file (converting each entry to a table with "uri" and "sha256" keys).
 # Note that this happens on the developer machine or a build server.
 #
-# At runtime, during loading of each "trusted file", Graphene-SGX measures its hash
-# and compares with the one specified in 'sgx.trusted_checksum.xxx'. If hashes
-# match, this file is trusted and allowed to be loaded and used. Note that
-# this happens on the client machine.
-sgx.trusted_files.redis-server = "file:redis-server"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
+# At runtime, during loading of each "trusted file", Graphene-SGX measures its
+# hash and compares with the "sha256" value in the corresponding manifest entry.
+# If hashes match, this file is trusted and allowed to be loaded and used. Note
+# that this happens on the client machine.
+sgx.trusted_files = [
+  "file:redis-server",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
 
-# Trusted no-library files include configuration files, read-only files, and
-# other static files. It is useful to specify such files here to make sure
-# they are not maliciously modified (modifications will be detected as hash
-# mismatch by Graphene-SGX).
-#
-# Redis by default does not use configuration files, so this section is empty.
-# sgx.trusted_files.config = "file:<important-configuration-file>"
 
 ############################# SGX: ALLOWED FILES ###############################
 
@@ -130,14 +127,16 @@ sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
 # Graphene-SGX but their integrity is not verified (Graphene-SGX does not
 # measure their hashes). This may pose a security risk!
 
-# Name Service Switch (NSS) files. Glibc reads these files as part of name-
-# service information gathering. For more info, see 'man nsswitch.conf'.
-sgx.allowed_files.nsswitch = "file:/etc/nsswitch.conf"
-sgx.allowed_files.ethers = "file:/etc/ethers"
-sgx.allowed_files.hosts = "file:/etc/hosts"
-sgx.allowed_files.group = "file:/etc/group"
-sgx.allowed_files.passwd = "file:/etc/passwd"
+sgx.allowed_files = [
+  # Name Service Switch (NSS) files. Glibc reads these files as part of name-
+  # service information gathering. For more info, see 'man nsswitch.conf'.
+  "file:/etc/nsswitch.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
 
-# getaddrinfo(3) configuration file. Glibc reads this file to correctly find
-# network addresses. For more info, see 'man gai.conf'.
-sgx.allowed_files.gaiconf = "file:/etc/gai.conf"
+  # getaddrinfo(3) configuration file. Glibc reads this file to correctly find
+  # network addresses. For more info, see 'man gai.conf'.
+  "file:/etc/gai.conf",
+]

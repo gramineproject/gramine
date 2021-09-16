@@ -43,22 +43,26 @@ sgx.enclave_size = "512M"
 sys.stack.size = "2M"
 sgx.thread_num = 32
 
-sgx.trusted_files.python = "file:{{ entrypoint }}"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
-sgx.trusted_files.python_dir = "file:{{ python.stdlib }}/"
-sgx.trusted_files.dist = "file:{{ python.distlib }}/"
-sgx.trusted_files.scripts = "file:scripts/"
-sgx.trusted_files.mimetypes = "file:/etc/mime.types"
-sgx.trusted_files.defapport = "file:/etc/default/apport"
+sgx.trusted_files = [
+  "file:{{ entrypoint }}",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+  "file:{{ python.stdlib }}/",
+  "file:{{ python.distlib }}/",
+  "file:scripts/",
+  "file:/etc/mime.types",
+  "file:/etc/default/apport",
+]
 
-sgx.allowed_files.nsswitch = "file:/etc/nsswitch.conf"
-sgx.allowed_files.ethers = "file:/etc/ethers"
-sgx.allowed_files.hosts = "file:/etc/hosts"
-sgx.allowed_files.group = "file:/etc/group"
-sgx.allowed_files.passwd = "file:/etc/passwd"
-sgx.allowed_files.gaiconf = "file:/etc/gai.conf"
-sgx.allowed_files.hostconf = "file:/etc/host.conf"
-sgx.allowed_files.resolv = "file:/etc/resolv.conf"
-sgx.allowed_files.tmp = "file:/tmp"
+sgx.allowed_files = [
+  "file:/etc/nsswitch.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
+  "file:/etc/gai.conf",
+  "file:/etc/host.conf",
+  "file:/etc/resolv.conf",
+  "file:/tmp",
+]

@@ -39,11 +39,13 @@ sys.stack.size = "8M"
 sgx.enclave_size = "2048M"
 sgx.thread_num = 64
 
-sgx.trusted_files.blender = "file:{{ blender_dir }}/blender"
-sgx.trusted_files.libGL = "file:{{ blender_dir }}/lib/"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
+sgx.trusted_files = [
+  "file:{{ blender_dir }}/blender",
+  "file:{{ blender_dir }}/lib/",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
 
 # INSECURE! These 3 lines are insecure by design and should never be used in production environments.
 # There is a lot of files that Blender uses (e.g. bundled Python) and listing them here would
@@ -52,6 +54,8 @@ sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
 # Additionally, Blender scenes could allow for code execution (e.g. via bundled scripts), so
 # running untrusted scenes should not be allowed. This can be achieved for example by adding scenes
 # to trusted files or uploading them to a running and attested enclave via secured connection.
-sgx.allowed_files.blender_dir = "file:{{ blender_dir }}/{{ blender_ver }}/"
-sgx.allowed_files.blender_input = "file:{{ data_dir }}/scenes/"
-sgx.allowed_files.blender_output = "file:{{ data_dir }}/images/"
+sgx.allowed_files = [
+  "file:{{ blender_dir }}/{{ blender_ver }}/",
+  "file:{{ data_dir }}/scenes/",
+  "file:{{ data_dir }}/images/",
+]

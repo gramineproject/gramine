@@ -35,14 +35,18 @@ sgx.thread_num = 16
 # issue in Memcached source code, not related to Graphene.
 sgx.enclave_size = "1024M"
 
-sgx.trusted_files.memcached = "file:memcached"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
+sgx.trusted_files = [
+  "file:memcached",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
 
-sgx.allowed_files.nsswitch  = "file:/etc/nsswitch.conf"
-sgx.allowed_files.ethers    = "file:/etc/ethers"
-sgx.allowed_files.hosts     = "file:/etc/hosts"
-sgx.allowed_files.group     = "file:/etc/group"
-sgx.allowed_files.passwd    = "file:/etc/passwd"
-sgx.allowed_files.gaiconf   = "file:/etc/gai.conf"
+sgx.allowed_files = [
+  "file:/etc/nsswitch.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
+  "file:/etc/gai.conf",
+]

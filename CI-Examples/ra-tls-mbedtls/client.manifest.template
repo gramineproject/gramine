@@ -31,19 +31,23 @@ sgx.remote_attestation = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
 
-sgx.trusted_files.client = "file:client"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
-sgx.trusted_files.libs = "file:./libs/"
+sgx.trusted_files = [
+  "file:client",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+  "file:./libs/",
+]
 
-sgx.allowed_files.nsswitch = "file:/etc/nsswitch.conf"
-sgx.allowed_files.hostconf = "file:/etc/host.conf"
-sgx.allowed_files.resolvconf = "file:/etc/resolv.conf"
-sgx.allowed_files.ethers = "file:/etc/ethers"
-sgx.allowed_files.hosts = "file:/etc/hosts"
-sgx.allowed_files.group = "file:/etc/group"
-sgx.allowed_files.passwd = "file:/etc/passwd"
-sgx.allowed_files.gaiconf = "file:/etc/gai.conf"
-sgx.allowed_files.cacerts = "file:/etc/ssl/certs/ca-certificates.crt"
-sgx.allowed_files.sgx_default_qcnl = "file:/etc/sgx_default_qcnl.conf"
+sgx.allowed_files = [
+  "file:/etc/nsswitch.conf",
+  "file:/etc/host.conf",
+  "file:/etc/resolv.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
+  "file:/etc/gai.conf",
+  "file:/etc/ssl/certs/ca-certificates.crt",
+  "file:/etc/sgx_default_qcnl.conf",
+]

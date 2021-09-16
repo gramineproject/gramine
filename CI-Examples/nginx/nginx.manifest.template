@@ -41,16 +41,20 @@ sgx.thread_num = 4
 # Nginx benefits from Exitless. Uncomment the below line to use it.
 #sgx.rpc_thread_num = 4
 
-sgx.trusted_files.nginx = "file:{{ install_dir }}/sbin/nginx"
-sgx.trusted_files.conf_dir = "file:{{ install_dir }}/conf/"
-sgx.trusted_files.html_dir = "file:{{ install_dir }}/html/"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
+sgx.trusted_files = [
+  "file:{{ install_dir }}/sbin/nginx",
+  "file:{{ install_dir }}/conf/",
+  "file:{{ install_dir }}/html/",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
 
-sgx.allowed_files.logs = "file:{{ install_dir }}/logs"
-sgx.allowed_files.nsswitch = "file:/etc/nsswitch.conf"
-sgx.allowed_files.ethers = "file:/etc/ethers"
-sgx.allowed_files.hosts = "file:/etc/hosts"
-sgx.allowed_files.group = "file:/etc/group"
-sgx.allowed_files.passwd = "file:/etc/passwd"
+sgx.allowed_files = [
+  "file:{{ install_dir }}/logs",
+  "file:/etc/nsswitch.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
+]

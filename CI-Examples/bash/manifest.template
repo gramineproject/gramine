@@ -30,9 +30,13 @@ sgx.nonpie_binary = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
 
-sgx.trusted_files.execs = "file:{{ execdir }}/"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
+sgx.trusted_files = [
+  "file:{{ execdir }}/",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
 
-sgx.allowed_files.scripts = "file:scripts/"
+sgx.allowed_files = [
+  "file:scripts/",
+]
