@@ -206,7 +206,8 @@ User ID and Group ID
    (Default: 0)
 
 This specifies the initial, Gramine emulated user/group ID and effective user/group ID.
-It must be non-negative. By default it runs as root user (uid = gid = 0).
+It must be non-negative. By default Gramine emulates the user/group ID and effective user/group ID
+to the root user (uid = gid = 0).
 
 
 Disabling ASLR
