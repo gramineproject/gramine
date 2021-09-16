@@ -26,8 +26,12 @@ fs.mount.sqlite3.uri = "file:{{ execdir }}/sqlite3"
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
 
-sgx.trusted_files.sqlite3 = "file:{{ execdir }}/sqlite3"
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
+sgx.trusted_files = [
+  "file:{{ execdir }}/sqlite3",
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ arch_libdir }}/",
+]
 
-sgx.allowed_files.scripts = "file:scripts/"
+sgx.allowed_files = [
+  "file:scripts/",
+]
