@@ -17,9 +17,13 @@
 DUMMY_FUNCTION(sgx_create_enclave)
 DUMMY_FUNCTION(sgx_destroy_enclave)
 DUMMY_FUNCTION(sgx_ecall)
-/* ocalls in sgx_tstdc.edl */
+/* see https://github.com/intel/linux-sgx/blob/sgx_2.14/common/inc/sgx_tstdc.edl */
 DUMMY_FUNCTION(sgx_oc_cpuidex)
 DUMMY_FUNCTION(sgx_thread_set_untrusted_event_ocall)
 DUMMY_FUNCTION(sgx_thread_setwait_untrusted_events_ocall)
 DUMMY_FUNCTION(sgx_thread_set_multiple_untrusted_events_ocall)
 DUMMY_FUNCTION(sgx_thread_wait_untrusted_event_ocall)
+/* see https://github.com/intel/linux-sgx/blob/sgx_2.14/common/inc/sgx_pthread.edl */
+DUMMY_FUNCTION(pthread_wait_timeout_ocall)
+DUMMY_FUNCTION(pthread_create_ocall)
+DUMMY_FUNCTION(pthread_wakeup_ocall)
