@@ -34,11 +34,12 @@ sgx.nonpie_binary = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 3
 
-sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
-sgx.trusted_files.install_dir = "file:{{ install_dir }}/"
-sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/{{ arch_libdir }}/"
-
-sgx.trusted_files.conf = "file:lighttpd.conf"
-sgx.trusted_files.conf2 = "file:lighttpd-generic.conf"
-sgx.trusted_files.conf3 = "file:lighttpd-server.conf"
+sgx.trusted_files = [
+  "file:{{ graphene.runtimedir() }}/",
+  "file:{{ install_dir }}/",
+  "file:{{ arch_libdir }}/",
+  "file:/usr/{{ arch_libdir }}/",
+  "file:lighttpd.conf",
+  "file:lighttpd-generic.conf",
+  "file:lighttpd-server.conf",
+]
