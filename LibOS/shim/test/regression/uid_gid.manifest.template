@@ -1,7 +1,7 @@
 loader.preload = "file:{{ graphene.libos }}"
-libos.entrypoint = "{{ entrypoint }}"
+libos.entrypoint = "uid_gid"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
-loader.argv0_override = "bootstrap"
+loader.argv0_override = "uid_gid"
 
 loader.uid = 1338
 loader.gid = 1337
@@ -10,3 +10,7 @@ fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
 
+sgx.trusted_files = [
+  "file:{{ graphene.runtimedir() }}/",
+  "file:uid_gid"
+]
