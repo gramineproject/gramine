@@ -167,13 +167,13 @@ static int init_main_thread(void) {
     }
 
     if (uid_int64 < 0 || uid_int64 > IDTYPE_MAX ) {
-        log_error("`loader.uid` is either < 0 or > %u", IDTYPE_MAX);
+        log_error("`loader.uid` = %li is either < 0 or > %u", uid_int64, IDTYPE_MAX);
         put_thread(cur_thread);
         return -EINVAL;
     }
 
     if (gid_int64 < 0 || gid_int64 > IDTYPE_MAX) {
-        log_error("`loader.gid` is either < 0 or > %u", IDTYPE_MAX);
+        log_error("`loader.gid` = %li is either < 0 or > %u", gid_int64, IDTYPE_MAX);
         put_thread(cur_thread);
         return -EINVAL;
     }
