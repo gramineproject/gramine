@@ -70,13 +70,17 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  * SIGSTRUCT.ATTRIBUTES[63..0].
  *
  * Notes:
- *   - Two versions of the same enclave with even one-bit difference in attributes-flags (e.g., one
- *   with DEBUG == 0 and another with DEBUG == 1) will have two different SIGSTRUCTs.
+ *   - Two instances of the same enclave with even one-bit difference in attributes-flags (e.g., one
+ *     with DEBUG == 0 and another with DEBUG == 1) will have two different SIGSTRUCTs.
  *   - Important consequence of the above: a debug version of the enclave requires a different
  *     SIGSTRUCT file than a production version of the enclave.
  *   - CET and KSS bits are not yet reflected in Graphene, i.e., Graphene doesn't support Intel CET
  *     technology and Key Separation and Sharing feature.
-  */
+ */
+/* FIXME: This FLAGS mask should be represented as one 64-bit constant (instead of the current two
+ *        32-bit constants), but our constant-generation build scripts use assembly macros (see
+ *        `generated-offsets-build.h`) that represent 64-bit constants as negative integers. Same
+ *        issue applies to the XFRM mask below. */
 #define SGX_FLAGS_MASK_CONST_HI 0xffffffffUL
 #define SGX_FLAGS_MASK_CONST_LO 0xffffffffUL
 
@@ -99,11 +103,10 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  *
  * Notes:
  *   - Verified bits include: bit 0 + bit 1 (X87 + SSE, always enabled in SGX), bit 3 + bit 4
- *     (BNDREG + BNDCSR, enable security-critical MPX), bit 9 (PKRU, enables security-critical MPK),
- *     and all reserved bits.
+ *     (BNDREG + BNDCSR, enables Intel MPX), bit 9 (PKRU, enables Intel MPK), and all reserved bits.
  *   - Not-verified bits include: bit 2 (AVX), bit 5 + bit 6 + bit 7 (AVX-512). These bits are
  *     considered not security-critical.
- *   - Two versions of the same enclave with difference in X87, SSE, MPX, MPK bits (e.g., one
+ *   - Two instances of the same enclave with difference in X87, SSE, MPX, MPK bits (e.g., one
  *     with PKRU == 0 and another with PKRU == 1) will have two different SIGSTRUCTs. However,
  *     difference in AVX/AVX-512 bits does not lead to different SIGSTRUCTs.
  *   - Important consequence of the above: the same enclave (with the same SIGSTRUCT) may run on
@@ -119,7 +122,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 /* EINIT must verify *all* SECS.MISCSELECT bits against SIGSTRUCT.MISCSELECT.
  *
  * Notes:
- *   - Two versions of the same enclave (one with EXINFO == 0 and another with EXINFO == 1) will
+ *   - Two instances of the same enclave (one with EXINFO == 0 and another with EXINFO == 1) will
  *     have two different SIGSTRUCTs.
  *   - CPINFO bit is not yet reflected in Graphene, i.e., information about control protection
  *     exception (#CP) will not be reported on AEX.
