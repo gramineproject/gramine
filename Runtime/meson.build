@@ -19,23 +19,6 @@ if direct
 endif
 
 if sgx
-    install_data(
-        '../Pal/src/host/Linux-SGX/pal-sgx',
-        install_dir: join_paths(pkglibdir, 'sgx'))
-    install_data(
-        '../Pal/src/host/Linux-SGX/libpal.so',
-        install_dir: join_paths(pkglibdir, 'sgx'))
-    install_subdir('../Pal/src/host/Linux-SGX/gdb_integration',
-        install_dir: join_paths(pkglibdir, 'sgx'),
-        exclude_directories: ['common'])
-    install_subdir('../Pal/gdb_integration',
-        install_dir: join_paths(pkglibdir, 'sgx/gdb_integration/common'),
-        strip_directory: true)
-
-    meson.add_install_script('/bin/sh', '-c',
-        'ln -sf pal-sgx "$MESON_INSTALL_DESTDIR_PREFIX"/@0@'.format(
-            join_paths(pkglibdir, 'sgx', 'loader')))
-
     hostpalpath_linux_sgx = join_paths(prefix, pkglibdir, 'sgx')
     conf_graphene_sgx = configuration_data()
     conf_graphene_sgx.merge_from(conf)
