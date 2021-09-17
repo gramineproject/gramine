@@ -138,7 +138,6 @@ endif
 subdir('common')
 subdir('Pal')
 subdir('LibOS')
-subdir('Runtime')
 subdir('python')
 subdir('tools')
 
