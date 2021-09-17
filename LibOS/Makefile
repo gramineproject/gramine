@@ -12,112 +12,13 @@ GNU_MIRRORS ?= https://ftp.gnu.org/gnu/ \
                https://mirrors.kernel.org/gnu/ \
                https://mirrors.ocf.berkeley.edu/gnu/
 
-# ------------------------------------------------------------------------------------------------
-# Glibc build: patch libc.so and other C standard libraries to replace raw SYSCALL instructions
-# with function calls into Graphene (plus some smaller patches for Graphene). The resulting
-# libraries are symlinked under $RUNTIME_DIR.
-#
-# Override CC, CXX, AS in case we're compiling the rest of the project with clang.
-# ------------------------------------------------------------------------------------------------
-GLIBC_VERSION ?= 2.34
-GLIBC_SRC = glibc-$(GLIBC_VERSION)
-GLIBC_HASH = $(firstword $(shell grep $(GLIBC_SRC).tar.gz glibc-checksums))
 SHIM_DIR = shim
-BUILD_DIR = glibc-build
-GLIBC_LIBS = \
-	csu/crt1.o \
-	csu/crti.o \
-	csu/crtn.o \
-	dlfcn/libdl.so.2 \
-	libc.so \
-	libc.so.6 \
-	login/libutil.so.1 \
-	math/libm.so.6 \
-	mathvec/libmvec.so.1 \
-	nis/libnsl.so.1 \
-	nptl/libpthread.so.0 \
-	nptl_db/libthread_db.so.1 \
-	nss/libnss_compat.so.2 \
-	nss/libnss_db.so.2 \
-	nss/libnss_files.so.2 \
-	resolv/libanl.so.1 \
-	resolv/libnss_dns.so.2 \
-	resolv/libresolv.so.2 \
-	rt/librt.so.1
-ifeq ($(ARCH),x86_64)
-GLIBC_LIBS += elf/ld-linux-x86-64.so.2
-endif
-
-GLIBC_TARGET = $(addprefix $(BUILD_DIR)/, $(GLIBC_LIBS))
-GLIBC_RUNTIME = $(addprefix $(RUNTIME_DIR)/, $(notdir $(GLIBC_TARGET)))
-
-GLIBC_CFLAGS = -O2 -Wno-unused-value
-ifeq ($(DEBUG),1)
-	GLIBC_CFLAGS += -g
-endif
-export GLIBC_CFLAGS
-
-# For LibOS entry API
-GLIBC_CPPFLAGS = -I$(abspath $(SHIM_DIR))/include -I$(abspath $(SHIM_DIR))/include/arch/$(ARCH)
-export GLIBC_CPPFLAGS
-GLIBC_DEPS = shim/include/arch/$(ARCH)/shim_entry_api.h
 
 .PHONY: all
-all: $(GLIBC_TARGET) $(GLIBC_RUNTIME)
+all:
 	$(MAKE) -C $(SHIM_DIR) all
 
 ifeq ($(findstring x86_64,$(SYS))$(findstring linux,$(SYS)),x86_64linux)
-
-.SECONDARY: $(BUILD_DIR)/Build.success
-
-$(BUILD_DIR)/Build.success: $(BUILD_DIR)/Makefile
-	@echo "Building glibc, may take a while to finish. Warning messages may show up. If this process terminates with failures, see \"$(BUILD_DIR)/build.log\" for more information."
-	(CC=gcc CXX=g++ AS=gcc $(MAKE) -C $(BUILD_DIR) 2>&1 > build.log) && touch $@
-
-$(GLIBC_TARGET): $(BUILD_DIR)/Build.success
-
-$(BUILD_DIR)/Makefile: $(GLIBC_SRC)/.configured
-	mkdir -p $(BUILD_DIR)
-	(cd $(BUILD_DIR) || exit 1; \
-	CC=gcc CXX=g++ AS=gcc \
-	CFLAGS=$$GLIBC_CFLAGS CPPFLAGS=$$GLIBC_CPPFLAGS \
-	../$(GLIBC_SRC)/configure --prefix=$(RUNTIME_DIR) \
-		--with-tls \
-		--without-gd \
-		--without-selinux \
-		--disable-test \
-		--disable-nscd \
-	)
-
-$(foreach lib,$(GLIBC_TARGET),$(eval $(call LN_SF_TO_RUNTIME_DIR_template,$(lib))))
-
-GLIBC_PATCHES = \
-	glibc-patches/$(GLIBC_SRC).patch
-
-GLIBC_PATCHES_2.34 = \
-	glibc-patches/hp-timing-2.34.patch
-
-GLIBC_PATCHES += $(GLIBC_PATCHES_$(GLIBC_VERSION))
-
-.SECONDARY: $(GLIBC_SRC)/.configured
-$(GLIBC_SRC)/.configured: $(GLIBC_PATCHES) $(GLIBC_SRC).tar.gz $(GLIBC_DEPS)
-	$(RM) -r $(GLIBC_SRC)
-	tar -mxzf $(GLIBC_SRC).tar.gz
-	cd $(GLIBC_SRC) && \
-	for p in $(GLIBC_PATCHES); do \
-		echo applying $$p; \
-		patch -p1 -l < ../$$p || exit 255; \
-	done
-	touch $@
-
-$(GLIBC_SRC).tar.gz:
-	../Scripts/download --output $@ --sha256 $(GLIBC_HASH) $(foreach mirror,$(GNU_MIRRORS),--url $(mirror)glibc/$(GLIBC_SRC).tar.gz)
-
-$(GLIBC_SRC)/elf/Versions: $(GLIBC_SRC)/.configured
-
-$(GLIBC_SRC)/nptl/Versions: $(GLIBC_SRC)/.configured
-
-$(GLIBC_SRC)/dlfcn/Versions: $(GLIBC_SRC)/.configured
 
 # ------------------------------------------------------------------------------------------------
 # GCC build: patch libgomp.so.1 (OpenMP runtime library) to replace raw SYSCALL instruction with
@@ -187,7 +88,7 @@ gcc: $(GCC_TARGET) $(GCC_RUNTIME)
 # ------------------------------------------------------------------------------------------------
 .PHONY: clean_
 clean_:
-	$(RM) -r $(BUILD_DIR) $(GLIBC_SRC) $(GCC_BUILD_DIR) $(GCC_SRC) build.log gcc-build.log
+	$(RM) -r $(GCC_BUILD_DIR) $(GCC_SRC) gcc-build.log
 
 .PHONY: clean
 clean: clean_
@@ -199,15 +100,12 @@ distclean: clean_
 	$(RM) $(GLIBC_SRC).tar.gz $(GCC_SRC).tar.gz
 
 else
-.IGNORE: $(GLIBC_TARGET)
-$(GLIBC_TARGET):
-
 .IGNORE: $(GCC_TARGET)
 $(GCC_TARGET):
 
 .PHONY: clean
 clean:
-	$(RM) -r $(BUILD_DIR) $(GCC_BUILD_DIR)
+	$(RM) -r $(GCC_BUILD_DIR)
 
 .PHONY: distclean
 distclean: clean
