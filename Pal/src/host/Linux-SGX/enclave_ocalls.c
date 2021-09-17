@@ -505,19 +505,19 @@ ssize_t ocall_write(int fd, const void* buf, size_t count) {
             /* buf is too big and may overflow untrusted stack, so use untrusted heap */
             retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(count), &obuf, &need_munmap);
             if (retval < 0) {
-                sgx_reset_ustack(old_ustack);
-                return retval;
+                goto out;
             }
             memcpy(obuf, buf, count);
             ms_buf = obuf;
         } else {
             ms_buf = sgx_copy_to_ustack(buf, count);
+            if (!ms_buf) {
+                retval = -EPERM;
+                goto out;
+            }
         }
     } else {
         /* buf is partially in/out of enclave memory */
-        ms_buf = NULL;
-    }
-    if (!ms_buf) {
         retval = -EPERM;
         goto out;
     }
@@ -629,19 +629,19 @@ ssize_t ocall_pwrite(int fd, const void* buf, size_t count, off_t offset) {
             /* buf is too big and may overflow untrusted stack, so use untrusted heap */
             retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(count), &obuf, &need_munmap);
             if (retval < 0) {
-                sgx_reset_ustack(old_ustack);
-                return retval;
+                goto out;
             }
             memcpy(obuf, buf, count);
             ms_buf = obuf;
         } else {
             ms_buf = sgx_copy_to_ustack(buf, count);
+            if (!ms_buf) {
+                retval = -EPERM;
+                goto out;
+            }
         }
     } else {
         /* buf is partially in/out of enclave memory */
-        ms_buf = NULL;
-    }
-    if (!ms_buf) {
         retval = -EPERM;
         goto out;
     }
