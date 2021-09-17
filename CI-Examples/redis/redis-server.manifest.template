@@ -97,19 +97,21 @@ sgx.nonpie_binary = true
 
 ############################# SGX: TRUSTED FILES ###############################
 
-# Specify all files used by Redis and its dependencies (including all
-# libraries which can be loaded at runtime via dlopen). The paths to files
-# are host-OS paths. These files will be searched for in in-Graphene visible
-# paths according to mount points above.
+# Specify all files used by Redis and its dependencies (including all libraries
+# which can be loaded at runtime via dlopen), as well as other static read-only
+# files (like configuration files).
+#
+# The paths to files are host-OS paths. These files will be searched for in
+# in-Graphene visible paths according to mount points above.
 #
 # As part of the build process, Graphene-SGX script (`graphene-sgx-sign`) finds
-# each specified file, measures its hash, and outputs the hash in auto-generated
-# entry 'sgx.trusted_files.sha256' in auto-generated redis-server.manifest.sgx.
+# each specified file, measures its hash, and adds it to the manifest entry for
+# that file (converting each entry to a table with "uri" and "sha256" keys).
 # Note that this happens on the developer machine or a build server.
 #
 # At runtime, during loading of each "trusted file", Graphene-SGX measures its
-# hash and compares with the one specified in 'sgx.trusted_files.sha256'. If
-# hashes match, this file is trusted and allowed to be loaded and used. Note
+# hash and compares with the "sha256" value in the corresponding manifest entry.
+# If hashes match, this file is trusted and allowed to be loaded and used. Note
 # that this happens on the client machine.
 sgx.trusted_files = [
   "file:redis-server",
@@ -118,12 +120,6 @@ sgx.trusted_files = [
   "file:/usr/{{ arch_libdir }}/",
 ]
 
-# Trusted no-library files include configuration files, read-only files, and
-# other static files. It is useful to specify such files in 'sgx.trusted_files'
-# to make sure they are not maliciously modified (modifications will be detected
-# as hash mismatch by Graphene-SGX).
-#
-# Redis by default does not use configuration files, so this section is empty.
 
 ############################# SGX: ALLOWED FILES ###############################
 
