@@ -69,29 +69,13 @@ objs = \
 graphene_lib = $(LIB_DIR)/graphene-lib.a
 host_lib = $(HOST_DIR)/libpal-$(PAL_HOST).a
 
-# Install Targets (all in RUNTIME_DIR):
-#       pal-{Host Name}:       loader for PAL (as an executable)
-#       libpal-{Host Name}.so: dynamic-linking library
-
-ifneq ($(pal_loader),)
-	runtime_loader += $(RUNTIME_DIR)/pal-$(PAL_HOST)
-endif
-
-ifneq ($(pal_lib),)
-	runtime_lib += $(RUNTIME_DIR)/libpal-$(PAL_HOST)$(suffix $(pal_lib))
-endif
-
-ifeq ($(PAL_HOST),Linux-SGX)
-files_to_install = $(runtime_loader) $(runtime_lib) $(runtime_sec)
-endif
-
 
 ###########################
 ##  Generic Build Rules  ##
 ###########################
 
 .PHONY: all
-all: $(graphene_lib) $(files_to_build) $(files_to_install)
+all: $(graphene_lib) $(files_to_build)
 
 .PHONY: host_lib_recurse graphene_lib_recurse
 
@@ -109,11 +93,6 @@ $(host_lib): host_lib_recurse
 
 $(pal_loader): $(host_lib)
 
-ifneq ($(pal_loader),)
-$(runtime_loader): $(pal_loader)
-	$(call cmd,ln_sfr)
-endif
-
 ifneq ($(pal_lib),)
 $(pal_lib): $(addprefix $(OBJ_DIR)/,$(objs)) \
 	    $(host_lib) $(graphene_lib) $(pal_lib_deps)
@@ -125,10 +104,6 @@ ifeq ($(PAL_HOST),Linux)
 		exit 1;                                           \
 	fi
 endif
-
-
-$(runtime_lib): $(pal_lib)
-	$(call cmd,ln_sfr)
 endif
 
 ifneq ($(pal_lib_post),)
