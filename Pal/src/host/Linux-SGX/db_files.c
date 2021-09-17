@@ -804,7 +804,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     struct protected_file* pf = find_protected_file_handle(handle);
 
     /* TODO: Handle the case of renaming a file that has a file handle already open */
-    struct protected_file* pf_new;
     if (pf) {
         size_t normpath_size = strlen(uri) + 1;
         char* new_normpath = (char*)calloc(1, normpath_size);
@@ -821,8 +820,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
             return -PAL_ERROR_DENIED;
         }
 
-        pf_new = get_protected_file(new_normpath);
-        if (!pf_new) {
+        if (!get_protected_file(new_normpath)) {
             log_warning("New path during rename is not specified in 'sgx.protected_files' (%s)", new_normpath);
             free(new_normpath);
             free(new_path);
@@ -854,11 +852,8 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    /* TODO: Handle file_close for the source file during protected file rename works properly */
     if (pf) {
-        struct protected_file* tmp = pf;
-        pf = pf_new;
-        ret = pf_file_close(tmp, handle);
+        ret = pf_file_close(pf, handle);
         if (ret < 0) {
             log_warning("pf_file_close failed during rename");
         }

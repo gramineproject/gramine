@@ -201,7 +201,8 @@ out:
 }
 
 /* Open a temporary PAL handle for a file (used by `rename`, `unlink` etc.) */
-static int chroot_temp_open(struct shim_dentry* dent, mode_t type, int pal_options ,PAL_HANDLE* out_palhdl) {
+static int chroot_temp_open(struct shim_dentry* dent, mode_t type, int pal_options,
+                            PAL_HANDLE* out_palhdl) {
     char* uri;
     int ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
