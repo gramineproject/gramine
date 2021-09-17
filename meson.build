@@ -142,4 +142,6 @@ subdir('Runtime')
 subdir('python')
 subdir('tools')
 
+subproject('glibc-2.34')
+
 run_target('clang-format', command: [meson_clang_format_prog])
