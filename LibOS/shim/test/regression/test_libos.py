@@ -63,7 +63,7 @@ class TC_01_Bootstrap(RegressionTestCase):
 
     def test_102_argv_from_file(self):
         args = ['bootstrap', 'THIS', 'SHOULD GO', 'TO', '\nTHE\n', 'APP']
-        result = subprocess.run(['../../../../Tools/argv_serializer'] + args,
+        result = subprocess.run(['graphene-argv-serializer'] + args,
                                 stdout=subprocess.PIPE, check=True)
         with open('argv_test_input', 'wb') as f:
             f.write(result.stdout)
@@ -92,7 +92,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         envs = ['A=123', 'PWD=/some_dir', 'some weir:d\nvar_name= even we\nirder\tvalue']
         manifest_envs = ['LD_LIBRARY_PATH=/lib']
         host_envs = {'THIS_SHOULDNT_BE_PASSED': '1234'}
-        result = subprocess.run(['../../../../Tools/argv_serializer'] + envs,
+        result = subprocess.run(['graphene-argv-serializer'] + envs,
                                 stdout=subprocess.PIPE, check=True)
         with open('env_test_input', 'wb') as f:
             f.write(result.stdout)

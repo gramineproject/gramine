@@ -12,7 +12,7 @@ else
     FINDACTION="-exec clang-format -i {} +"
 fi
 
-find Pal LibOS Tools \
+find Pal LibOS tools \
     -path common/src/crypto/mbedtls -prune -o \
     -path Pal/src/host/Linux-SGX/tools/common/cJSON.c -prune -o \
     -path Pal/src/host/Linux-SGX/tools/common/cJSON.h -prune -o \

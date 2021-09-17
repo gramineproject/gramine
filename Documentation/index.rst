@@ -75,6 +75,11 @@ Table of Contents
 
    manpages/*
 
+.. TODO manpages:
+   graphene-argv-serializer
+   graphene-direct
+   graphene-sgx
+
 .. toctree::
    :caption: Developing Graphene
    :maxdepth: 1
