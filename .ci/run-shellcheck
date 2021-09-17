@@ -8,7 +8,7 @@ LC_ALL=C.UTF-8 shellcheck "$@" \
     CI-Examples/bash/scripts/bash_test.sh \
     CI-Examples/common_tools/benchmark-http.sh \
     CI-Examples/python/run-tests.sh \
-    Runtime/pal_loader \
+    tools/graphene.in \
     Scripts/clean-check \
     Scripts/clean-check-prepare \
     Scripts/clean-check-test-copy \

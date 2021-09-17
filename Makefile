@@ -14,7 +14,6 @@ $(targets):
 	$(MAKE) -C common $@
 	$(MAKE) -C Pal $@
 	$(MAKE) -C LibOS $@
-	$(MAKE) -C Runtime $@
 	@echo
 	@echo NOTE: We are in the middle of a transition to the Meson buildsystem.
 	@echo You have successfully built part of Graphene, now please compile the rest and install
