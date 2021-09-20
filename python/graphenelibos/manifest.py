@@ -182,11 +182,13 @@ class Manifest:
         sgx['trusted_files'] = trusted_files
 
         self._manifest = manifest
+        self._manifest_orig_str = manifest_str
 
     def __getitem__(self, key):
         return self._manifest[key]
 
     def __setitem__(self, key, val):
+        self._manifest_orig_str = None
         self._manifest[key] = val
 
     @classmethod
@@ -204,7 +206,7 @@ class Manifest:
         return cls.loads(f.read())
 
     def dumps(self):
-        return toml.dumps(self._manifest)
+        return self._manifest_orig_str or toml.dumps(self._manifest)
 
     def dump(self, f):
         toml.dump(self._manifest, f)
