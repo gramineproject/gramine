@@ -14,7 +14,7 @@ from graphenelibos import Manifest, get_mrenclave, get_tbssigstruct, sign_with_l
               help='Input libpal file')
 @click.option('--key', '-key', type=click.Path(exists=True, dir_okay=False), required=True,
               help='specify signing key (.pem) file')
-@click.option('--manifest', '-manifest', 'manifest_file', type=click.File('r',  encoding='utf-8'),
+@click.option('--manifest', '-manifest', 'manifest_file', type=click.File('r', encoding='utf-8'),
               required=True, help='Input .manifest file')
 @click.option('--sigfile', '-sigfile', help='Output .sig file')
 def main(output, libpal, key, manifest_file, sigfile):
