@@ -126,6 +126,14 @@ endif
 # Dependencies
 #
 
+tomlc99_proj = subproject('tomlc99-208203af46bdbdb29ba199660ed78d09c220b6c5')
+tomlc99_dep = tomlc99_proj.get_variable('tomlc99_dep')
+tomlc99_inc = tomlc99_proj.get_variable('tomlc99_inc')
+tomlc99_incpath = tomlc99_proj.get_variable('tomlc99_incpath')
+tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
+
+uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
+
 if sgx
     threads_dep = dependency('threads')
 
