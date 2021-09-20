@@ -129,6 +129,10 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int 
             goto fail_pf_unlock;
         }
 
+        /* Protected files sometimes needs to be read and written (e.g. to read or save some
+         * metadata), regardless of the requested open mode. */
+        flags = (flags & ~O_ACCMODE) | O_RDWR;
+
         fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {
             ret = unix_to_pal_error(fd);
