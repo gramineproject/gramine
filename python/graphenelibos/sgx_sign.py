@@ -488,7 +488,7 @@ def get_mrenclave(manifest, date, libpal=None):
         enclave_base = attr['enclave_size']
         enclave_heap_min = enclave_base
 
-    manifest_data = manifest.dumps().encode('UTF-8')
+    manifest_data = manifest.dumps().encode('utf-8')
     manifest_data += b'\0' # in-memory manifest needs NULL-termination
 
     memory_areas = [

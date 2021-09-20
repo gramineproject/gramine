@@ -61,7 +61,7 @@ class Sigstruct:
         except KeyError:
             raise KeyError(f'unknown field name {key}')
         except struct.error:
-            raise ValueError(f'{val} does not match requred format {self.fields[key][1]}')
+            raise ValueError(f'{val} does not match required format {self.fields[key][1]}')
 
         self._data[key] = val
 

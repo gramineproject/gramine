@@ -107,8 +107,7 @@ def make_env():
 class ManifestError(Exception):
     pass
 
-def hash_path(path):
-    # FIXME: is this name ok? Doesn't it sound like the path itself is hashed?
+def hash_file_contents(path):
     with open(path, 'rb') as f:
         sha = hashlib.sha256()
         sha.update(f.read())
@@ -138,13 +137,12 @@ def append_trusted_dir_or_file(trusted_files, val):
         raise ManifestError(f'Cannot resolve {path}')
     if path.is_dir():
         if not uri.endswith('/'):
-            # XXX: do we want to check this?
             raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
         for sub_path in filter(pathlib.Path.is_file, path.rglob('*')):
-            append_tf(trusted_files, f'file:{sub_path}', hash_path(sub_path))
+            append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
     else:
         assert path.is_file()
-        append_tf(trusted_files, uri, hash_path(path))
+        append_tf(trusted_files, uri, hash_file_contents(path))
 
 class Manifest:
     _env = make_env()
@@ -171,7 +169,7 @@ class Manifest:
         loader = manifest.setdefault('loader', {})
         loader.setdefault('preload', '')
 
-        # Current toml versions (< 1.0) do not support non homogeneous arrays
+        # Current toml versions (< 1.0) do not support non-homogeneous arrays
         trusted_files = []
         for tf in sgx['trusted_files']:
             if isinstance(tf, dict):
@@ -240,8 +238,8 @@ class Manifest:
 
     def get_dependencies(self):
         if self.has_tfs_expanded() and self['sgx']['trusted_files']:
-            raise ManifestError('Trusted files are already expanded in this manifest cannot decide '
-                                'which files are local')
+            raise ManifestError('Trusted files are already expanded in this manifest - cannot '
+                                'decide which files are local')
 
         deps = set()
 
