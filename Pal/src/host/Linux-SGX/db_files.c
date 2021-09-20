@@ -800,7 +800,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     if (!new_path)
         return -PAL_ERROR_NOMEM;
 
-
     struct protected_file* pf = find_protected_file_handle(handle);
 
     /* TODO: Handle the case of renaming a file that has a file handle already open */
