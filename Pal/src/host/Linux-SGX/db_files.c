@@ -129,6 +129,13 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int 
             goto fail_pf_unlock;
         }
 
+        if ((flags & O_ACCMODE) == O_WRONLY) {
+            /* FIXME: This is just a duck tape. Needs a proper fix.
+             * Protected files sometimes needs to be read, even if the fd is open in write-only mode
+             * (e.g. some metadata got invalidated). */
+            flags = (flags & ~O_ACCMODE) | O_RDWR;
+        }
+
         fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {
             ret = unix_to_pal_error(fd);
