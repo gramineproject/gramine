@@ -138,7 +138,7 @@ def append_trusted_dir_or_file(trusted_files, val):
     if path.is_dir():
         if not uri.endswith('/'):
             raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
-        for sub_path in filter(pathlib.Path.is_file, path.rglob('*')):
+        for sub_path in sorted(filter(pathlib.Path.is_file, path.rglob('*'))):
             append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
     else:
         assert path.is_file()
@@ -209,38 +209,22 @@ class Manifest:
     def dump(self, f):
         toml.dump(self._manifest, f)
 
-    def has_tfs_expanded(self):
-        tfs = self['sgx']['trusted_files']
-        preloads = set(filter(None, self['loader']['preload'].split(',')))
-        preloads_seen = False
-        for tf in tfs:
-            if not isinstance(tf, dict):
-                return False
-            if not tf.get('sha256'):
-                return False
-            if tf['uri'] in preloads:
-                preloads_seen = True
-        return preloads_seen or not preloads
-
     def expand_all_trusted_files(self):
-        assert not self.has_tfs_expanded()
         trusted_files = []
-
-        preload_str = self['loader']['preload']
-        # `filter` below is needed for the case where preload_str == '' (`split` returns [''] then)
-        for uri in filter(None, preload_str.split(',')):
-            append_trusted_dir_or_file(trusted_files, uri)
-
         for tf in self['sgx']['trusted_files']:
             append_trusted_dir_or_file(trusted_files, tf)
+
+        preloads = set(filter(None, self['loader']['preload'].split(',')))
+        # remove all preloads that were already expanded
+        for tf in trusted_files:
+            preloads.discard(tf['uri'])
+
+        for uri in sorted(preloads):
+            append_trusted_dir_or_file(trusted_files, uri)
 
         self['sgx']['trusted_files'] = trusted_files
 
     def get_dependencies(self):
-        if self.has_tfs_expanded() and self['sgx']['trusted_files']:
-            raise ManifestError('Trusted files are already expanded in this manifest - cannot '
-                                'decide which files are local')
-
         deps = set()
 
         preload_str = self['loader']['preload']

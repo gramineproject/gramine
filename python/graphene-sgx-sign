@@ -20,8 +20,7 @@ from graphenelibos import Manifest, get_mrenclave, get_tbssigstruct, sign_with_l
 def main(output, libpal, key, manifest_file, sigfile):
     manifest = Manifest.load(manifest_file)
 
-    if not manifest.has_tfs_expanded():
-        manifest.expand_all_trusted_files()
+    manifest.expand_all_trusted_files()
 
     manifest.dump(output)
 
