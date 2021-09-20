@@ -1,0 +1,8 @@
+pal.entrypoint = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/Process3-{{ pal }}"
+loader.log_level = "debug"
+loader.preload = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/libPreload1-{{ pal }}.so,file:{{ graphene.pkglibdir }}/{{ pal }}/tests/libPreload2-{{ pal }}.so"
+loader.insecure__use_cmdline_argv = true
+
+sgx.nonpie_binary = true
+
+sgx.trusted_files.entrypoint = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/Process3-{{ pal }}"

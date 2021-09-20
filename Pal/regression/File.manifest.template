@@ -1,0 +1,14 @@
+pal.entrypoint = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/File"
+loader.argv0_override = "File"
+loader.log_level = "debug"
+
+fs.mount.root.uri = "file:"
+
+sgx.nonpie_binary = true
+
+sgx.trusted_files = [
+    "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/File",
+    "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/../pal/File",
+    "file:file_nonexist.tmp",
+    "file:file_delete.tmp",
+]

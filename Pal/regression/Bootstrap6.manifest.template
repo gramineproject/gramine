@@ -1,0 +1,13 @@
+pal.entrypoint = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/Bootstrap-{{ pal }}"
+loader.log_level = "debug"
+loader.preload = "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/libPreload1-{{ pal }}.so,file:{{ graphene.pkglibdir }}/{{ pal }}/tests/libPreload2-{{ pal }}.so"
+loader.argv0_override = "Bootstrap"
+
+fs.mount.root.uri = "file:"
+
+sgx.enclave_size = "8192M"
+sgx.nonpie_binary = true
+
+sgx.trusted_files = [
+    "file:{{ graphene.pkglibdir }}/{{ pal }}/tests/Bootstrap-{{ pal }}",
+]

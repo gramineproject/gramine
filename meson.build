@@ -29,6 +29,7 @@ sgx = get_option('sgx') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'
 
 dcap = get_option('dcap') == 'enabled'
+tests = get_option('tests') == 'enabled'
 ubsan = get_option('ubsan') == 'enabled'
 asan = get_option('asan') == 'enabled'
 
