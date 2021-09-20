@@ -32,22 +32,22 @@ sgx.enclave_size = "256M"
 sgx.thread_num = 4
 
 sgx.trusted_files = [
-  "file:client",
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
-  "file:./libs/",
+    "file:client",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:./libs/",
 ]
 
 sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/host.conf",
-  "file:/etc/resolv.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/gai.conf",
-  "file:/etc/ssl/certs/ca-certificates.crt",
-  "file:/etc/sgx_default_qcnl.conf",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/host.conf",
+    "file:/etc/resolv.conf",
+    "file:/etc/ethers",
+    "file:/etc/hosts",
+    "file:/etc/group",
+    "file:/etc/passwd",
+    "file:/etc/gai.conf",
+    "file:/etc/ssl/certs/ca-certificates.crt",
+    "file:/etc/sgx_default_qcnl.conf",
 ]

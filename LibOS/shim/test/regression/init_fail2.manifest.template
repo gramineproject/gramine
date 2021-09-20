@@ -15,6 +15,6 @@ sgx.enclave_size = "256M"
 sys.brk.max_size = "512M"
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:init_fail",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:init_fail",
 ]

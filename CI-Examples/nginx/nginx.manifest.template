@@ -42,19 +42,19 @@ sgx.thread_num = 4
 #sgx.rpc_thread_num = 4
 
 sgx.trusted_files = [
-  "file:{{ install_dir }}/sbin/nginx",
-  "file:{{ install_dir }}/conf/",
-  "file:{{ install_dir }}/html/",
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
+    "file:{{ install_dir }}/sbin/nginx",
+    "file:{{ install_dir }}/conf/",
+    "file:{{ install_dir }}/html/",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
 ]
 
 sgx.allowed_files = [
-  "file:{{ install_dir }}/logs",
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
+    "file:{{ install_dir }}/logs",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/ethers",
+    "file:/etc/hosts",
+    "file:/etc/group",
+    "file:/etc/passwd",
 ]

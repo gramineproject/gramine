@@ -36,17 +36,17 @@ sgx.thread_num = 16
 sgx.enclave_size = "1024M"
 
 sgx.trusted_files = [
-  "file:memcached",
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
+    "file:memcached",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
 ]
 
 sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/gai.conf",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/ethers",
+    "file:/etc/hosts",
+    "file:/etc/group",
+    "file:/etc/passwd",
+    "file:/etc/gai.conf",
 ]

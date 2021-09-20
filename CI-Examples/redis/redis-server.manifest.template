@@ -114,10 +114,10 @@ sgx.nonpie_binary = true
 # If hashes match, this file is trusted and allowed to be loaded and used. Note
 # that this happens on the client machine.
 sgx.trusted_files = [
-  "file:redis-server",
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
+    "file:redis-server",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
 ]
 
 
@@ -128,15 +128,15 @@ sgx.trusted_files = [
 # measure their hashes). This may pose a security risk!
 
 sgx.allowed_files = [
-  # Name Service Switch (NSS) files. Glibc reads these files as part of name-
-  # service information gathering. For more info, see 'man nsswitch.conf'.
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-
-  # getaddrinfo(3) configuration file. Glibc reads this file to correctly find
-  # network addresses. For more info, see 'man gai.conf'.
-  "file:/etc/gai.conf",
+    # Name Service Switch (NSS) files. Glibc reads these files as part of name-
+    # service information gathering. For more info, see 'man nsswitch.conf'.
+    "file:/etc/nsswitch.conf",
+    "file:/etc/ethers",
+    "file:/etc/hosts",
+    "file:/etc/group",
+    "file:/etc/passwd",
+    
+    # getaddrinfo(3) configuration file. Glibc reads this file to correctly find
+    # network addresses. For more info, see 'man gai.conf'.
+    "file:/etc/gai.conf",
 ]

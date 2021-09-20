@@ -20,6 +20,6 @@ sgx.ra_client_spid = "{{ ra_client_spid }}"
 sgx.ra_client_linkable = {{ ra_client_linkable }}
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:attestation",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:attestation",
 ]

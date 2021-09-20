@@ -14,6 +14,6 @@ fs.mount.dev.uri = "dev:/dev/zero"
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:device_passthrough",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:device_passthrough",
 ]

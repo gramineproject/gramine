@@ -16,6 +16,6 @@ fs.mount.test.uri = "file:I_DONT_EXIST"
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:init_fail",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:init_fail",
 ]

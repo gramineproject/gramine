@@ -15,6 +15,6 @@ fs.mount.graphene_lib.uri = "file:{{ graphene.runtimedir() }}"
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ env.PWD }}/host_root_fs",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ env.PWD }}/host_root_fs",
 ]

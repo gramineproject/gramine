@@ -181,3 +181,11 @@ Meson
    tied to the script name (see :file:`meson.build` there). The scripts should
    be written in Python except for things that clearly benefit from being
    written in ``sh``.
+
+TOML
+----
+
+#. 4-space indent, no tabs. Wrap lines at ~80-100 columns except for unbreakable
+   things like URLs.
+
+#. No space inside parenthesis.

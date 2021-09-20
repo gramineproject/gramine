@@ -44,25 +44,25 @@ sys.stack.size = "2M"
 sgx.thread_num = 32
 
 sgx.trusted_files = [
-  "file:{{ entrypoint }}",
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
-  "file:{{ python.stdlib }}/",
-  "file:{{ python.distlib }}/",
-  "file:scripts/",
-  "file:/etc/mime.types",
-  "file:/etc/default/apport",
+    "file:{{ entrypoint }}",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:{{ python.stdlib }}/",
+    "file:{{ python.distlib }}/",
+    "file:scripts/",
+    "file:/etc/mime.types",
+    "file:/etc/default/apport",
 ]
 
 sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/gai.conf",
-  "file:/etc/host.conf",
-  "file:/etc/resolv.conf",
-  "file:/tmp",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/ethers",
+    "file:/etc/hosts",
+    "file:/etc/group",
+    "file:/etc/passwd",
+    "file:/etc/gai.conf",
+    "file:/etc/host.conf",
+    "file:/etc/resolv.conf",
+    "file:/tmp",
 ]

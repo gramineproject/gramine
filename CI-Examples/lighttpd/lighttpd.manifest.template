@@ -35,11 +35,11 @@ sgx.enclave_size = "256M"
 sgx.thread_num = 3
 
 sgx.trusted_files = [
-  "file:{{ graphene.runtimedir() }}/",
-  "file:{{ install_dir }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
-  "file:lighttpd.conf",
-  "file:lighttpd-generic.conf",
-  "file:lighttpd-server.conf",
+    "file:{{ graphene.runtimedir() }}/",
+    "file:{{ install_dir }}/",
+    "file:{{ arch_libdir }}/",
+    "file:/usr/{{ arch_libdir }}/",
+    "file:lighttpd.conf",
+    "file:lighttpd-generic.conf",
+    "file:lighttpd-server.conf",
 ]
