@@ -125,9 +125,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int 
         /* The file is being opened for renaming. We will need to update the metadata in the file,
          * so open with RDWR mode with necessary share permissions. */
         if (pal_options & PAL_OPTION_RENAME) {
-            pal_share = PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W;
             pf_mode = PF_FILE_MODE_READ | PF_FILE_MODE_WRITE;
-            flags |= O_RDWR;
+            flags = O_RDWR;
         }
 
         if ((pf_mode & PF_FILE_MODE_WRITE) && pf->writable_fd >= 0) {

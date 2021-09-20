@@ -373,11 +373,6 @@ static bool ipf_init_new_file(pf_context_t* pf, const char* path) {
 }
 
 static bool ipf_rename_file(pf_context_t* pf, const char* new_path) {
-    if (!new_path) {
-        pf->last_error = PF_STATUS_INVALID_PATH;
-        return false;
-    }
-
     if (strlen(new_path) > PATH_MAX_SIZE - 1) {
         pf->last_error = PF_STATUS_PATH_TOO_LONG;
         return false;
