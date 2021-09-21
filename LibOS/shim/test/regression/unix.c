@@ -112,32 +112,30 @@ static int server(void) {
     printf("The client is connected...\n");
 
     addrlen = sizeof(peer_addr);
-    int ret = getpeername(new_socket, (struct sockaddr *) &peer_addr, (socklen_t *)&addrlen);
-    if (ret == -1){
-        perror("getpeername failed. Error");
+    int ret = getpeername(new_socket, (struct sockaddr*)&peer_addr, (socklen_t*)&addrlen);
+    if (ret < 0) {
+        perror("getpeername");
         close(new_socket);
         exit(1);
     }
-    if(strcmp(peer_addr.sun_path, "/u") !=0) {
-        printf("returned wrong peername:%s\n", peer_addr.sun_path);
+    if (strcmp(peer_addr.sun_path, "/u") != 0) {
+        printf("returned wrong socket name: %s\n", peer_addr.sun_path);
         close(new_socket);
         exit(1);
     }
-    printf("peer name: %s\n", peer_addr.sun_path);
 
     addrlen = sizeof(sockname_addr);
-    ret = getsockname(new_socket, (struct sockaddr *) &sockname_addr, (socklen_t *)&addrlen);
-    if (ret == -1){
-        perror("getsockname failed. Error");
+    ret = getsockname(new_socket, (struct sockaddr*)&sockname_addr, (socklen_t*)&addrlen);
+    if (ret < 0) {
+        perror("getsockname");
         close(new_socket);
         exit(1);
     }
-    if(strcmp(sockname_addr.sun_path, "/u") !=0) {
-        printf("returned wrong socket name:%s\n", sockname_addr.sun_path);
+    if (strcmp(sockname_addr.sun_path, "/u") != 0) {
+        printf("returned wrong socket name: %s\n", sockname_addr.sun_path);
         close(new_socket);
         exit(1);
     }
-    printf("getsockname.sun_path: %s\n", sockname_addr.sun_path);
 
     for (int i = 0; i < 10; i++) {
         sprintf(buffer, "Data: This is packet %d\n", i);
@@ -177,14 +175,6 @@ static int client(void) {
     else {
         printf("The connection was not accepted with the server\n");
         exit(0);
-    }
-
-    if (do_fork) {
-        if (fork() > 0) {
-            close(create_socket);
-            wait(NULL);
-            return 0;
-        }
     }
 
     puts("Receiving:");

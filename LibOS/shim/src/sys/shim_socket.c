@@ -1717,8 +1717,7 @@ long shim_do_getsockname(int sockfd, struct sockaddr* addr, int* addrlen) {
         ret = unix_copy_addr(addr, sock->addr.un.dentry);
         if (ret < 0)
             goto out_locked;
-        if (addrlen)
-            *addrlen = sizeof(struct sockaddr_un);
+        *addrlen = sizeof(struct sockaddr_un);
     }
     else
         *addrlen = inet_copy_addr(sock->domain, addr, *addrlen, &sock->addr.in.bind);
@@ -1776,8 +1775,7 @@ long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen) {
         ret = unix_copy_addr(addr, sock->addr.un.dentry);
         if (ret < 0)
             goto out_locked;
-        if (addrlen)
-            *addrlen = sizeof(struct sockaddr_un);
+        *addrlen = sizeof(struct sockaddr_un);
     }
     else
         *addrlen = inet_copy_addr(sock->domain, addr, *addrlen, &sock->addr.in.conn);
