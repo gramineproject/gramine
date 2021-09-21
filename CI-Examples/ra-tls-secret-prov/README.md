@@ -5,8 +5,8 @@ minimal server and clients written against the Secret Provisioning library.
 
 This example uses the Secret Provisioning libraries `secret_prov_attest.so` for
 clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-server. These libraries can be found under
-`Pal/src/host/Linux-SGX/tools/ra-tls`. Additionally, mbedTLS libraries are
+server. These libraries are installed together with Graphene (for DCAP version,
+you need `meson setup ... -Ddcap=enabled`). Additionally, mbedTLS libraries are
 required. For ECDSA/DCAP attestation, the DCAP software infrastructure must be
 installed and work correctly on the host.
 
@@ -54,18 +54,6 @@ build time.
 
 # Quick Start
 
-Please make sure that the corresponding RA-TLS libraries (EPID or DCAP versions)
-are built.
-
-First, start with adding the library directory to `LD_LIBRARY_PATH`:
-
-```sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./libs
-```
-
-Remember to undo this change after finishing the tutorial (or just do everything
-in a subshell).
-
 - Secret Provisioning flows, EPID-based (IAS) attestation:
 
 ```sh
@@ -89,9 +77,6 @@ kill %%
 - Secret Provisioning flows, ECDSA-based (DCAP) attestation:
 
 ```sh
-# make sure RA-TLS DCAP libraries are built in Graphene via:
-#   cd graphene/Pal/src/host/Linux-SGX/tools/ra-tls && make dcap
-
 make app dcap files/input.txt
 
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./secret_prov_server_dcap &
