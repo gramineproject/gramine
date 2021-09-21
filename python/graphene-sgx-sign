@@ -4,7 +4,9 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import datetime
+
 import click
+
 from graphenelibos import Manifest, get_mrenclave, get_tbssigstruct, sign_with_local_key
 
 @click.command()

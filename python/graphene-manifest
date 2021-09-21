@@ -4,6 +4,7 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import click
+
 from graphenelibos import Manifest
 
 def validate_define(_ctx, _param, values):

@@ -57,9 +57,9 @@ def parse_size(value):
 
 def collect_bits(manifest_sgx, options_dict):
     val = 0
-    for opt, bit in options_dict.items():
+    for opt, bits in options_dict.items():
         if manifest_sgx[opt] == 1:
-            val |= bit
+            val |= bits
     return val
 
 

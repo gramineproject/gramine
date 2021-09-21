@@ -4,6 +4,7 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import click
+
 from graphenelibos import Sigstruct, get_token
 
 @click.command()

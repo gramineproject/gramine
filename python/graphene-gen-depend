@@ -4,7 +4,9 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import os
+
 import click
+
 from graphenelibos import Manifest, _CONFIG_PKGLIBDIR
 
 @click.command()
