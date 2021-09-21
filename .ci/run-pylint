@@ -19,5 +19,7 @@ find . -name \*.py \
     -and -not -path ./LibOS/shim/test/ltp/install/\* \
 | sed 's/./\\&/g' \
 | xargs "${PYLINT}" "$@" \
+    python/graphene-gen-depend \
+    python/graphene-manifest \
     python/graphene-sgx-get-token \
     python/graphene-sgx-sign

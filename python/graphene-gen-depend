@@ -3,8 +3,8 @@
 # Copyright (c) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
-import click
 import os
+import click
 from graphenelibos import Manifest, _CONFIG_PKGLIBDIR
 
 @click.command()

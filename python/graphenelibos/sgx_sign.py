@@ -445,7 +445,7 @@ def generate_measurement(enclave_base, attr, areas):
 
 
 def get_mrenclave(manifest_path, date, libpal=None):
-    with open(manifest_path, 'rb') as f:
+    with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
     manifest = Manifest.loads(manifest_data.decode('utf-8'))
 
