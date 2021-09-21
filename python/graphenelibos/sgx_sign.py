@@ -13,6 +13,7 @@ import subprocess
 
 from . import _CONFIG_PKGLIBDIR
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
+from .manifest import Manifest
 from .sigstruct import Sigstruct
 
 
@@ -443,7 +444,11 @@ def generate_measurement(enclave_base, attr, areas):
     return mrenclave.digest()
 
 
-def get_mrenclave(manifest, date, libpal=None):
+def get_mrenclave(manifest_path, date, libpal=None):
+    with open(manifest_path, 'rb') as f:
+        manifest_data = f.read()
+    manifest = Manifest.loads(manifest_data.decode('utf-8'))
+
     if not libpal:
         libpal = os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so')
 
@@ -488,7 +493,6 @@ def get_mrenclave(manifest, date, libpal=None):
         enclave_base = attr['enclave_size']
         enclave_heap_min = enclave_base
 
-    manifest_data = manifest.dumps().encode('utf-8')
     manifest_data += b'\0' # in-memory manifest needs NULL-termination
 
     memory_areas = [
@@ -504,14 +508,13 @@ def get_mrenclave(manifest, date, libpal=None):
     print('Measurement:')
     print(f'    {mrenclave.hex()}')
 
-    return mrenclave
+    return mrenclave, manifest
 
 
-def get_tbssigstruct(manifest, date, mrenclave=None):
+def get_tbssigstruct(manifest_path, date, args=None):
     '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).''' # pylint: disable=too-many-locals
 
-    if not mrenclave:
-        mrenclave = get_mrenclave(manifest, date)
+    mrenclave, manifest = args if args else get_mrenclave(manifest_path, date)
 
     manifest_sgx = manifest['sgx']
 
