@@ -1,7 +1,4 @@
 SGX_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-RUNTIME_DIR = $(SGX_DIR)/../../../../Runtime
-
-LIBPAL = $(RUNTIME_DIR)/libpal-Linux-SGX.so
 SGX_SIGNER_KEY ?= $(SGX_DIR)/signer/enclave-key.pem
 
 # sgx manifest.sgx/sig/token

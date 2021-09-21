@@ -1,13 +1,6 @@
 include ../Scripts/Makefile.configs
 include ../Scripts/Makefile.rules
 
-RUNTIME_DIR = $(CURDIR)/../Runtime
-
-define LN_SF_TO_RUNTIME_DIR_template =
-$(RUNTIME_DIR)/$(notdir $(1)): $(1)
-	$$(call cmd,ln_sfr)
-endef
-
 GNU_MIRRORS ?= https://ftp.gnu.org/gnu/ \
                https://mirrors.kernel.org/gnu/ \
                https://mirrors.ocf.berkeley.edu/gnu/
@@ -23,9 +16,9 @@ ifeq ($(findstring x86_64,$(SYS))$(findstring linux,$(SYS)),x86_64linux)
 # ------------------------------------------------------------------------------------------------
 # GCC build: patch libgomp.so.1 (OpenMP runtime library) to replace raw SYSCALL instruction with
 # function call into Gramine. GCC is not built by default with Gramine; use `make -C LibOS gcc`
-# to build it. The resulting libgomp.so.1 is symlinked under $RUNTIME_DIR. This patched version
-# makes sense only on x86_64 platforms. NOTE: We'd prefer to build libgomp.so.1 alone but it is
-# impossible (the only way to build it is as part of the complete GCC build).
+# to build it. This patched version makes sense only on x86_64 platforms. NOTE: We'd prefer to build
+# libgomp.so.1 alone but it is impossible (the only way to build it is as part of the complete GCC
+# build).
 #
 # We explicitly unset CC, CXX, AS environment variables for the case we're compiling the rest of the
 # project with clang. This is because in GCC build, "defining certain environment variables such as
@@ -38,7 +31,6 @@ GCC_HASH = 27e879dccc639cd7b0cc08ed575c1669492579529b53c9ff27b0b96265fa867d
 GCC_BUILD_DIR = gcc-build
 GCC_LIBS = x86_64-pc-linux-gnu/libgomp/.libs/libgomp.so.1
 GCC_TARGET = $(addprefix $(GCC_BUILD_DIR)/, $(GCC_LIBS))
-GCC_RUNTIME = $(addprefix $(RUNTIME_DIR)/, $(notdir $(GCC_TARGET)))
 
 .SECONDARY: $(GCC_BUILD_DIR)/Build.success
 
@@ -52,12 +44,10 @@ $(GCC_BUILD_DIR)/Makefile: $(GCC_SRC)/.configured
 	mkdir -p $(GCC_BUILD_DIR)
 	(cd $(GCC_BUILD_DIR) || exit 1; \
 	unset CC CXX AS; \
-	../$(GCC_SRC)/configure --prefix=$(RUNTIME_DIR) \
+	../$(GCC_SRC)/configure \
 		--enable-languages=c \
 		--disable-multilib \
 	)
-
-$(foreach lib,$(GCC_TARGET),$(eval $(call LN_SF_TO_RUNTIME_DIR_template,$(lib))))
 
 GCC_PATCHES = \
 	gcc-patches/libgomp-replace-futex-instruction.patch
@@ -81,7 +71,7 @@ $(GCC_SRC).tar.gz:
 	../Scripts/download --output $@ --sha256 $(GCC_HASH) $(foreach mirror,$(GNU_MIRRORS),--url $(mirror)gcc/$(GCC_SRC)/$(GCC_SRC).tar.gz)
 
 .PHONY: gcc
-gcc: $(GCC_TARGET) $(GCC_RUNTIME)
+gcc: $(GCC_TARGET)
 
 # ------------------------------------------------------------------------------------------------
 # Common targets

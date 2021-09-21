@@ -308,10 +308,10 @@ Gramine currently supports two types of mount points:
 * ``chroot``: Host-backed files. All host files and sub-directories found under
   ``[URI]`` are forwarded to the Gramine instance and placed under ``[PATH]``.
   For example, with a host-level path specified as
-  ``fs.mount.lib.uri = "file:gramine/Runtime/"`` and forwarded to Gramine via
-  ``fs.mount.lib.path = "/lib"``, a host-level file
-  ``gramine/Runtime/libc.so.6`` is visible to graphenized application as
-  ``/lib/libc.so.6``. This concept is similar to FreeBSD's chroot and to
+  ``fs.mount.lib.uri = "file:/one/path/"`` and forwarded to Graphene via
+  ``fs.mount.lib.path = "/another/path"``, a host-level file
+  ``/one/path/file`` is visible to graphenized application as
+  ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
 

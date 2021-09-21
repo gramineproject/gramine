@@ -1,5 +1,3 @@
-export RUNTIME_DIR = $(CURDIR)/../../Runtime
-
 include ../../Scripts/Makefile.configs
 include ../../Scripts/Makefile.rules
 
