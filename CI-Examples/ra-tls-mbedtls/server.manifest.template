@@ -4,7 +4,7 @@ loader.preload = "file:{{ graphene.libos }}"
 libos.entrypoint = "server"
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:/lib/x86_64-linux-gnu"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
 loader.insecure__use_cmdline_argv = true
 

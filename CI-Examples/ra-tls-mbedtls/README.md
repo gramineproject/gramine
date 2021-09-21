@@ -12,10 +12,10 @@ to verify the server RA-TLS certificate via `ra_tls_verify_callback()`.
 
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
 `ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
-found under `Pal/src/host/Linux-SGX/tools/ra-tls`. Additionally, mbedTLS
-libraries are required to correctly run RA-TLS, the client, and the server. For
-ECDSA/DCAP attestation, the DCAP software infrastructure must be installed and
-work correctly on the host.
+installed together with Graphene (for DCAP version, you need `meson setup ...
+-Ddcap=enabled`). Additionally, mbedTLS libraries are required to correctly run
+RA-TLS, the client, and the server. For ECDSA/DCAP attestation, the DCAP
+software infrastructure must be installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
@@ -55,15 +55,6 @@ four additional command-line arguments (see the source code for details).
 
 # Quick Start
 
-First, start with adding the library directory to `LD_LIBRARY_PATH`:
-
-```sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./libs
-```
-
-Remember to undo this change after finishing the tutorial (or just do everything
-in a subshell).
-
 - Normal non-RA-TLS flows; without SGX and without Graphene:
 
 ```sh
@@ -97,9 +88,6 @@ kill %%
 - RA-TLS flows with SGX and with Graphene, ECDSA-based (DCAP) attestation:
 
 ```sh
-# make sure RA-TLS DCAP libraries are built in Graphene via:
-#   cd graphene/Pal/src/host/Linux-SGX/tools/ra-tls && make dcap
-
 # replace dummy values with your MRENCLAVE, MRSIGNER, etc!
 make clean
 make app dcap
