@@ -91,6 +91,7 @@ if dcap
         args: ra_tls_args,
         include_directories: sgx_inc,
         dependencies: [
+            sgx_dcap_quoteverify_dep,
             sgx_util_dep,
             mbedtls_dep,
         ],
@@ -111,6 +112,7 @@ if dcap
         args: ra_tls_args,
         include_directories: sgx_inc,
         dependencies: [
+            sgx_dcap_quoteverify_dep,
             sgx_util_dep,
             mbedtls_dep,
         ],
@@ -134,6 +136,7 @@ if dcap
         include_directories: sgx_inc,
         dependencies: [
             threads_dep,
+            sgx_dcap_quoteverify_dep,
             sgx_util_dep,
             mbedtls_dep,
         ],
