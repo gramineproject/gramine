@@ -72,7 +72,7 @@ static int server(void) {
     socklen_t addrlen;
     int bufsize  = 1024;
     char* buffer = malloc(bufsize);
-    struct sockaddr_un address;
+    struct sockaddr_un address, peer_addr, sockname_addr;
 
     if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) > 0)
         printf("The socket was created\n");
@@ -104,23 +104,40 @@ static int server(void) {
     addrlen    = sizeof(address);
     new_socket = accept(create_socket, (struct sockaddr*)&address, &addrlen);
 
+    close(create_socket);
     if (new_socket < 0) {
         perror("accept");
-        close(create_socket);
         exit(1);
     }
-
-    close(create_socket);
-
     printf("The client is connected...\n");
 
-    if (do_fork) {
-        if (fork() > 0) {
-            close(new_socket);
-            wait(NULL);
-            return 0;
-        }
+    addrlen = sizeof(peer_addr);
+    int ret = getpeername(new_socket, (struct sockaddr *) &peer_addr, (socklen_t *)&addrlen);
+    if (ret == -1){
+        perror("getpeername failed. Error");
+        close(new_socket);
+        exit(1);
     }
+    if(strcmp(peer_addr.sun_path, "/u") !=0) {
+        printf("returned wrong peername:%s\n", peer_addr.sun_path);
+        close(new_socket);
+        exit(1);
+    }
+    printf("peer name: %s\n", peer_addr.sun_path);
+
+    addrlen = sizeof(sockname_addr);
+    ret = getsockname(new_socket, (struct sockaddr *) &sockname_addr, (socklen_t *)&addrlen);
+    if (ret == -1){
+        perror("getsockname failed. Error");
+        close(new_socket);
+        exit(1);
+    }
+    if(strcmp(sockname_addr.sun_path, "/u") !=0) {
+        printf("returned wrong socket name:%s\n", sockname_addr.sun_path);
+        close(new_socket);
+        exit(1);
+    }
+    printf("getsockname.sun_path: %s\n", sockname_addr.sun_path);
 
     for (int i = 0; i < 10; i++) {
         sprintf(buffer, "Data: This is packet %d\n", i);
@@ -131,8 +148,6 @@ static int server(void) {
     }
 
     close(new_socket);
-    if (do_fork)
-        exit(0);
     return 0;
 }
 
@@ -218,6 +233,8 @@ int main(int argc, char** argv) {
         return client();
     } else {
         server_dummy_socket();
-        return server();
+        int ret = server();
+        wait(NULL);
+        return ret;
     }
 }
