@@ -609,6 +609,13 @@ static int udp_bind(PAL_HANDLE* handle, char* uri, int create, int options) {
         }
     }
 
+    /* call getsockname to get socket address */
+    ret = DO_SYSCALL(getsockname, fd, bind_addr, &bind_addrlen);
+    if (ret < 0) {
+        ret = unix_to_pal_error(ret);
+        goto failed;
+    }
+
     *handle = socket_create_handle(PAL_TYPE_UDPSRV, fd, options, bind_addr, bind_addrlen, NULL, 0);
 
     if (!(*handle)) {
