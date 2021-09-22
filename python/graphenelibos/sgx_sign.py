@@ -444,7 +444,7 @@ def generate_measurement(enclave_base, attr, areas):
     return mrenclave.digest()
 
 
-def get_mrenclave(manifest_path, date, libpal=None):
+def get_mrenclave(manifest_path, libpal=None):
     with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
     manifest = Manifest.loads(manifest_data.decode('utf-8'))
@@ -458,9 +458,6 @@ def get_mrenclave(manifest_path, date, libpal=None):
         'thread_num': manifest_sgx['thread_num'],
         'isv_prod_id': manifest_sgx['isvprodid'],
         'isv_svn': manifest_sgx['isvsvn'],
-        'year': date.year,
-        'month': date.month,
-        'day': date.day,
     }
     attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
@@ -472,7 +469,6 @@ def get_mrenclave(manifest_path, date, libpal=None):
     print(f'    attr.flags:  {attr["flags"]:#x}')
     print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
     print(f'    misc_select: {attr["misc_select"]:#x}')
-    print(f'    date:        {attr["year"]:04d}-{attr["month"]:02d}-{attr["day"]:02d}')
 
     if manifest_sgx['remote_attestation']:
         spid = manifest_sgx.get('ra_client_spid', '')
@@ -514,7 +510,7 @@ def get_mrenclave(manifest_path, date, libpal=None):
 def get_tbssigstruct(manifest_path, date, args=None):
     '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).''' # pylint: disable=too-many-locals
 
-    mrenclave, manifest = args if args else get_mrenclave(manifest_path, date)
+    mrenclave, manifest = args if args else get_mrenclave(manifest_path)
 
     manifest_sgx = manifest['sgx']
 

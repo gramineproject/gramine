@@ -9,12 +9,11 @@ from graphenelibos import Sigstruct, get_token
 
 @click.command()
 @click.option('--sig', '-sig', type=click.File('rb'), required=True, help='sigstruct file')
-@click.option('--output', '-output', type=click.File('wb'), help='Output token file')
+@click.option('--output', '-output', type=click.File('wb'), required=True, help='Output token file')
 def main(sig, output):
     sig = Sigstruct.from_bytes(sig.read())
     token = get_token(sig)
-    if output:
-        output.write(token)
+    output.write(token)
 
 if __name__ == '__main__':
     main() # pylint: disable=no-value-for-parameter
