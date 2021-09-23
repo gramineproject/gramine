@@ -759,6 +759,16 @@ out:
     return ret;
 }
 
+static void maybe_warn_about_allowed_files_usage(void) {
+    static bool g_allowed_files_warned = false;
+
+    if (!g_pal_state.parent_process && !g_allowed_files_warned) {
+        log_always("WARNING! \"allowed_files\" is an insecure feature designed for debugging and "
+                   "prototyping, it must never be used in production!");
+        g_allowed_files_warned = true;
+    }
+}
+
 static int init_allowed_files_from_toml_table(void) {
     int ret;
 
@@ -769,6 +779,8 @@ static int init_allowed_files_from_toml_table(void) {
     toml_table_t* toml_allowed_files = toml_table_in(manifest_sgx, "allowed_files");
     if (!toml_allowed_files)
         return 0;
+
+    maybe_warn_about_allowed_files_usage();
 
     ssize_t toml_allowed_files_cnt = toml_table_nkval(toml_allowed_files);
     if (toml_allowed_files_cnt < 0)
@@ -824,6 +836,8 @@ static int init_allowed_files_from_toml_array(void) {
     toml_array_t* toml_allowed_files = toml_array_in(manifest_sgx, "allowed_files");
     if (!toml_allowed_files)
         return 0;
+
+    maybe_warn_about_allowed_files_usage();
 
     ssize_t toml_allowed_files_cnt = toml_array_nelem(toml_allowed_files);
     if (toml_allowed_files_cnt < 0)
