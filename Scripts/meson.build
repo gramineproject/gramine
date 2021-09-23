@@ -8,7 +8,3 @@ foreach script : [
     set_variable('@0@_prog'.format(script.split('.')[0].underscorify()),
         find_program(script))
 endforeach
-
-install_data(
-    'legacy-graphene-to-gramine',
-    install_dir: get_option('bindir'))

@@ -115,8 +115,8 @@ repository, each containing a short README with instructions how to test it. We
 recommend starting with a simpler, thoroughly documented example of Redis, to
 understand manifest options and features of Gramine.
 
-Additional sample configurations for Gramine can be found in a separate
-repository https://github.com/gramineproject/examples.
+Additional sample configurations for applications enabled in Gramine can be
+found in a separate repository https://github.com/gramineproject/examples.
 
 Please note that these sample applications are tested on Ubuntu 18.04 and 20.04.
 Most of these applications are also known to run correctly on

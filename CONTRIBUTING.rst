@@ -36,7 +36,7 @@ that will not be accepted for a design flaw. It is much better to reach out for
 advice first by emailing gramine-users@googlegroups.com.
 
 Or you can see the archives at this google group:
-https://groups.google.com/forum/#!forum/gramine-users
+https://groups.google.com/g/gramine-users
 
 Please verify that your change doesn't introduce any insecure-by-default
 functionality. If an option allows users to introduce a security risk, the

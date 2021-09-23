@@ -110,7 +110,7 @@ Getting help
 ============
 
 For any questions, please send an email to gramine-users@googlegroups.com
-(`public archive <https://groups.google.com/forum/#!forum/gramine-users>`__).
+(`public archive <https://groups.google.com/g/gramine-users>`__).
 
 For bug reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
