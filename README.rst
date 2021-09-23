@@ -109,8 +109,8 @@ important pages:
 Getting help
 ============
 
-For any questions, please send an email to support@gramineproject.io
-(`public archive <https://groups.google.com/forum/#!forum/gramine-support>`__).
+For any questions, please send an email to gramine-users@googlegroups.com
+(`public archive <https://groups.google.com/forum/#!forum/gramine-users>`__).
 
 For bug reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
