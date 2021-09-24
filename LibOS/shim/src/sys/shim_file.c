@@ -89,6 +89,12 @@ long shim_do_mkdirat(int dfd, const char* pathname, int mode) {
     if (!is_user_string_readable(pathname))
         return -EFAULT;
 
+    lock(&g_process.fs_lock);
+    mode_t umask = g_process.umask;
+    unlock(&g_process.fs_lock);
+
+    mode &= ~umask & 0777;
+
     struct shim_dentry* dir = NULL;
     int ret = 0;
 
