@@ -230,7 +230,7 @@ void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, 
 void* __memmove_chk(void* dest, const void* src, size_t count, size_t dest_count);
 void* __memset_chk(void* dest, int ch, size_t count, size_t dest_count);
 
-/* Original version of functions that ASan overrides */
+/* Original versions of functions that ASan overrides */
 void* _real_memcpy(void* restrict dest, const void* restrict src, size_t count);
 void* _real_memmove(void* dest, const void* src, size_t count);
 void* _real_memset(void* dest, int ch, size_t count);

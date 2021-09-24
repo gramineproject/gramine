@@ -28,7 +28,7 @@ class TC_00_Unittests(RegressionTestCase):
         self._test_abort('ubsan_int_overflow', 'ubsan: overflow')
 
     @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
-    def test_020_asan(self):
+    def test_021_asan(self):
         self._test_abort('asan_buffer_overflow', 'asan: heap-buffer-overflow')
 
     def _test_abort(self, test_name, expected):

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2021 Intel Corporation
+ *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ */
 
 #include "api.h"
 #include "asan.h"
@@ -7,7 +11,7 @@
 #error This code should be compiled only with ASAN defined.
 #endif
 
-#define RETURN_ADDR __builtin_extract_return_addr(__builtin_return_address(0))
+#define RETURN_ADDR() (__builtin_extract_return_addr(__builtin_return_address(0)))
 
 /* See `callbacks.h` */
 #if defined(IN_SHIM)
@@ -61,6 +65,8 @@ static void asan_find_problem(uintptr_t addr, size_t size, uintptr_t* out_bad_ad
     for (bad_addr = addr; bad_addr < addr + size; bad_addr++)
         if (asan_check(bad_addr))
             break;
+
+    assert(asan_check(bad_addr));
 
     uint8_t* shadow_ptr = (uint8_t*)ASAN_MEM_TO_SHADOW(bad_addr);
     /* If this is a partial right redzone, check the next byte */
@@ -122,14 +128,14 @@ static void asan_dump(uintptr_t bad_addr) {
 /* Display full report for the user */
 __attribute_no_sanitize_address
 static void asan_report(void* ip_addr, uintptr_t addr, size_t size, bool is_load) {
-
     uintptr_t bad_addr;
     const char* bug_type;
     asan_find_problem(addr, size, &bad_addr, &bug_type);
 
-    log_error("asan: %s while trying to %s %lu bytes at 0x%lx", bug_type,
-              is_load ? "load" : "store", size, addr);
-    log_error("asan: the bad address is %p (%lu from beginning)", (void*)bad_addr, bad_addr - addr);
+    log_error("asan: %s while trying to %s %lu byte%s at 0x%lx", bug_type,
+              is_load ? "load" : "store", size, (size > 1 ? "s" : ""), addr);
+    log_error("asan: the bad address is %p (%lu from beginning of access)", (void*)bad_addr,
+              bad_addr - addr);
     log_error("asan: IP = %p (for a full traceback, use GDB with a breakpoint at \"%s\")", ip_addr,
               ABORT_NAME);
     log_error("asan:");
@@ -165,36 +171,36 @@ static bool asan_check_region(uintptr_t addr, size_t size) {
     return false;
 }
 
-#define ASAN_LOAD(addr, size)          \
-    do {                                                \
-        if (asan_check_region(addr, size)) {            \
-            asan_report(RETURN_ADDR, addr, size, true); \
-            abort();                                    \
-        }                                               \
+#define ASAN_LOAD(addr, size)                                          \
+    do {                                                               \
+        if (asan_check_region(addr, size)) {                           \
+            asan_report(RETURN_ADDR(), addr, size, /*is_load=*/true);  \
+            abort();                                                   \
+        }                                                              \
     } while(0)
 
-#define ASAN_STORE(addr, size)          \
-    do {                                                 \
-        if (asan_check_region(addr, size)) {             \
-            asan_report(RETURN_ADDR, addr, size, false); \
-            abort();                                     \
-        }                                                \
+#define ASAN_STORE(addr, size)                                         \
+    do {                                                               \
+        if (asan_check_region(addr, size)) {                           \
+            asan_report(RETURN_ADDR(), addr, size, /*is_load=*/false); \
+            abort();                                                   \
+        }                                                              \
     } while(0)
 
-#define DEFINE_ASAN_LOAD_STORE_CALLBACKS(size)                 \
-    void __asan_load##size(uintptr_t addr) {                   \
-        ASAN_LOAD(addr, size);                                 \
-    }                                                          \
-    void __asan_store##size(uintptr_t addr) {                  \
-        ASAN_STORE(addr, size);                                \
-    }                                                          \
-    void __asan_report_load##size(uintptr_t addr) {            \
-        asan_report(RETURN_ADDR, addr, size, true);            \
-        abort();                                               \
-    }                                                          \
-    void __asan_report_store##size(uintptr_t addr) {           \
-        asan_report(RETURN_ADDR, addr, size, false);           \
-        abort();                                               \
+#define DEFINE_ASAN_LOAD_STORE_CALLBACKS(size)                     \
+    void __asan_load##size(uintptr_t addr) {                       \
+        ASAN_LOAD(addr, size);                                     \
+    }                                                              \
+    void __asan_store##size(uintptr_t addr) {                      \
+        ASAN_STORE(addr, size);                                    \
+    }                                                              \
+    void __asan_report_load##size(uintptr_t addr) {                \
+        asan_report(RETURN_ADDR(), addr, size, /*is_load=*/true);  \
+        abort();                                                   \
+    }                                                              \
+    void __asan_report_store##size(uintptr_t addr) {               \
+        asan_report(RETURN_ADDR(), addr, size, /*is_load=*/false); \
+        abort();                                                   \
     }
 
 DEFINE_ASAN_LOAD_STORE_CALLBACKS(1)
@@ -212,12 +218,12 @@ void __asan_storeN(uintptr_t addr, size_t size) {
 }
 
 void __asan_report_load_n(uintptr_t addr, size_t size) {
-    asan_report(RETURN_ADDR, addr, size, true);
+    asan_report(RETURN_ADDR(), addr, size, /*is_load=*/true);
     abort();
 }
 
 void __asan_report_store_n(uintptr_t addr, size_t size) {
-    asan_report(RETURN_ADDR, addr, size, false);
+    asan_report(RETURN_ADDR(), addr, size, /*is_load=*/false);
     abort();
 }
 
@@ -238,27 +244,29 @@ DEFINE_ASAN_SET_SHADOW(f3, 0xf3)
 DEFINE_ASAN_SET_SHADOW(f5, 0xf5)
 DEFINE_ASAN_SET_SHADOW(f8, 0xf8)
 
-__attribute__((alias("__asan_memcpy")))
-void* memcpy(void*, const void*, size_t size);
+/* Callbacks required by the compiler */
 
-void* __asan_memcpy(void* dst, const void* src, size_t size) {
+__attribute__((alias("memcpy")))
+void* __asan_memcpy(void*, const void*, size_t size);
+__attribute__((alias("memset")))
+void* __asan_memset(void*, int, size_t);
+__attribute__((alias("memmove")))
+void* __asan_memmove(void*, const void*, size_t);
+
+/* ASan-aware overrides for standard functions */
+
+void* memcpy(void* dst, const void* src, size_t size) {
     ASAN_LOAD((uintptr_t)src, size);
     ASAN_STORE((uintptr_t)dst, size);
     return _real_memcpy(dst, src, size);
 }
 
-__attribute__((alias("__asan_memset")))
-void* memset(void*, int, size_t);
-
-void* __asan_memset(void* s, int c, size_t n) {
+void* memset(void* s, int c, size_t n) {
     ASAN_STORE((uintptr_t)s, n);
     return _real_memset(s, c, n);
 }
 
-__attribute__((alias("__asan_memmove")))
-void* memmove(void*, const void*, uintptr_t);
-
-void* __asan_memmove(void* dest, const void* src, uintptr_t n) {
+void* memmove(void* dest, const void* src, size_t n) {
     ASAN_LOAD((uintptr_t)src, n);
     ASAN_STORE((uintptr_t)dest, n);
     return _real_memmove(dest, src, n);
@@ -266,6 +274,6 @@ void* __asan_memmove(void* dest, const void* src, uintptr_t n) {
 
 int memcmp(const void* lhs, const void* rhs, size_t count) {
     ASAN_LOAD((uintptr_t)lhs, count);
-    ASAN_LOAD((uintptr_t)lhs, count);
+    ASAN_LOAD((uintptr_t)rhs, count);
     return _real_memcmp(lhs, rhs, count);
 }

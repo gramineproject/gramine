@@ -103,7 +103,11 @@ static inline void __free(void* addr, size_t size) {
             g_low = addr;
         }
         /* not a last object from low/high addresses, can't do anything about this case */
-        /* ASAN: keep the memory poisoned, because we're not returning it to the system */
+#ifdef ASAN
+        /* Keep the now-unused part of `g_mem_pool` poisoned, because we know it won't be used by
+         * anything other than our allocator */
+        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
         SYSTEM_UNLOCK();
         return;
     }
@@ -126,11 +130,9 @@ void init_slab_mgr(size_t alignment) {
     g_slab_mgr       = create_slab_mgr();
     if (!g_slab_mgr)
         INIT_FAIL(PAL_ERROR_NOMEM, "cannot initialize slab manager");
-#if STATIC_SLAB == 1
-#ifdef ASAN
+#if STATIC_SLAB == 1 && defined(ASAN)
     /* Poison all of `g_mem_pool` initially */
     asan_poison_region((uintptr_t)&g_mem_pool, sizeof(g_mem_pool), ASAN_POISON_HEAP_LEFT_REDZONE);
-#endif
 #endif
 }
 

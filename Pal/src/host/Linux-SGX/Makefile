@@ -133,7 +133,7 @@ common_syscall.o: ../Linux-common/arch/$(ARCH)/syscall.S
 %.s: %.S
 	$(call cmd,cpp_s_S)
 
-# Add `-Wunused-command-line-argument`, because with ASAN, clang complains that LLVM flags
+# Add `-Wunused-command-line-argument`, because with ASan, Clang complains that LLVM flags
 # (`-mllvm ...`) are unused.
 # TODO: `cmulti` probably should use LDFLAGS, not CFLAGS here, because we're not compiling any C
 # code.

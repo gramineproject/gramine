@@ -6,7 +6,7 @@
 /*
  * This file defines functions for address sanitization (ASan).
  *
- * Normally, code compiled with ASAN is linked against a special library (libasan), but that library
+ * Normally, code compiled with ASan is linked against a special library (libasan), but that library
  * is hard to adapt to a no-stdlib setting as well as all the custom memory handling that we
  * perform.
  *
@@ -120,8 +120,8 @@ void __asan_version_mismatch_check_v8(void);
 /*
  * Load/store callbacks:
  *
- * - `load` / `store`: check if an memory under given address is accessible; if not, report the
- *   error and abort
+ * - `load` / `store`: check if memory under given address is accessible; if not, report the error
+ *   and abort
  *
  * - `report_load` / `report_store`: directly report an illegal access and abort
  *
