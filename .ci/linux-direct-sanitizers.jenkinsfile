@@ -11,6 +11,7 @@ node('nonsgx_slave') {
         load '.ci/lib/config-clang.jenkinsfile'
         load '.ci/lib/config-debug.jenkinsfile'
         load '.ci/lib/config-ubsan.jenkinsfile'
+        load '.ci/lib/config-asan.jenkinsfile'
 
         load '.ci/lib/stage-lint.jenkinsfile'
         load '.ci/lib/stage-clean-check-prepare.jenkinsfile'
