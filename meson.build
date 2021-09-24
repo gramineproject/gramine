@@ -112,9 +112,11 @@ if asan
         error('ASan is currently supported only for Clang (CC=clang)')
     endif
 
+    asan_shadow_start = '0x18000000000'
     cflags_sanitizers += [
         '-fsanitize=address',
         '-fno-sanitize-link-runtime',
+        '-mllvm', '-asan-mapping-offset=' + asan_shadow_start,
         '-mllvm', '-asan-use-after-return=0',
         '-mllvm', '-asan-stack=0',
         '-mllvm', '-asan-globals=0',

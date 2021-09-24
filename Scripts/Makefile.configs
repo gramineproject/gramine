@@ -88,9 +88,11 @@ CFLAGS_SANITIZERS += -fsanitize=undefined -fno-sanitize-recover=undefined -DUBSA
 endif
 
 ifeq ($(ASAN),1)
+ASAN_SHADOW_START = 0x18000000000
 CFLAGS_SANITIZERS += \
     -fsanitize=address \
     -fno-sanitize-link-runtime \
+    -mllvm -asan-mapping-offset=$(ASAN_SHADOW_START) \
     -mllvm -asan-use-after-return=0 \
     -mllvm -asan-stack=0 \
     -mllvm -asan-globals=0 \

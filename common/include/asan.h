@@ -53,6 +53,7 @@
  *
  *       -fsanitize=address
  *       -fno-sanitize-link-runtime
+ *       -mllvm -asan-mapping-offset=0x18000000000
  *       -mllvm -asan-use-after-return=0
  *       -mllvm -asan-stack=0
  *       -mllvm -asan-globals=0
@@ -78,10 +79,18 @@
 #include <stdint.h>
 
 /*
- * Parameters of the shadow memory area. The beginning address is the default for x86_64 (but can be
- * changed with `-mllvm -asan-mapping-offset=0x...`).
+ * Parameters of the shadow memory area. Each byte of shadow memory corresponds to ASAN_SHADOW_ALIGN
+ * (by default 8) bytes of user memory.
  *
- * Each byte of shadow memory corresponds to ASAN_SHADOW_ALIGN (by default 8) bytes of user memory.
+ * Note that we override the address of shadow memory area (ASAN_SHADOW_START). We want the shadow
+ * memory to begin at a high address, because the default for x86_64 (0x7fff8000, just before 2 GB)
+ * doesn't work well with SGX: an enclave of size 2 GB or higher will be mapped over the shadow
+ * memory.
+ *
+ * The address has to be provided to the compiler using `-mllvm -asan-mapping-offset=0x...`.
+ * BEWARE: You cannot use a power of 2, because LLVM special-cases such starting addresses and emits
+ * bitwise OR instead of addition in the mem-to-shadow conversion code, which does not actually work
+ * correctly in our case.
  *
  * - A value of 0 means all bytes are accessible.
  *
@@ -90,7 +99,7 @@
  * - A value with highest bit set (80..FF) means the memory is forbidden to use, and the exact value
  *   is used to diagnose the problem.
  */
-#define ASAN_SHADOW_START 0x7fff8000
+#define ASAN_SHADOW_START 0x18000000000ULL /* 1.5 TB */
 #define ASAN_SHADOW_SHIFT 3
 #define ASAN_SHADOW_LENGTH (1ULL << 44)
 #define ASAN_SHADOW_ALIGN (1 << ASAN_SHADOW_SHIFT)
