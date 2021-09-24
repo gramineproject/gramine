@@ -610,6 +610,7 @@ static int udp_bind(PAL_HANDLE* handle, char* uri, int create, int options) {
         }
     }
 
+    /* call getsockname to update socket address when using bind with a port number of 0 */
     ret = DO_SYSCALL(getsockname, fd, bind_addr, &bind_addrlen);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
