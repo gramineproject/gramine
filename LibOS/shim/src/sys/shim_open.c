@@ -120,7 +120,10 @@ long shim_do_openat(int dfd, const char* filename, int flags, int mode) {
         mode_t umask = g_process.umask;
         unlock(&g_process.fs_lock);
 
-        mode &= ~umask & 07777;
+        /* Clear invalid bits */
+        mode &= 07777;
+
+        mode &= ~umask;
     }
 
     struct shim_dentry* dir = NULL;

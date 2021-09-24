@@ -12,6 +12,7 @@
 
 #include "pal.h"
 #include "pal_error.h"
+#include "perm.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
@@ -93,7 +94,10 @@ long shim_do_mkdirat(int dfd, const char* pathname, int mode) {
     mode_t umask = g_process.umask;
     unlock(&g_process.fs_lock);
 
-    mode &= ~umask & 0777;
+    /* In addition to permission bits, Linux `mkdirat` honors the sticky bit (see man page) */
+    mode &= (PERM_rwxrwxrwx | S_ISVTX);
+
+    mode &= ~umask;
 
     struct shim_dentry* dir = NULL;
     int ret = 0;
