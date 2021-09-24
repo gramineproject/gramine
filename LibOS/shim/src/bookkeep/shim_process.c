@@ -43,7 +43,8 @@ int init_process(int argc, const char** argv) {
 
     g_process.wait_queue = NULL;
 
-    g_process.umask = 0;
+    /* default Linux umask */
+    g_process.umask = 0022;
 
     struct shim_dentry* dent = NULL;
     int ret = path_lookupat(/*start=*/NULL, "/", LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);

@@ -20,6 +20,7 @@
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
+#include "shim_process.h"
 #include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
@@ -115,8 +116,14 @@ long shim_do_openat(int dfd, const char* filename, int flags, int mode) {
         /* `mode` should be ignored if O_CREAT is not specified, according to man */
         mode = 0;
     } else {
-        /* This isn't documented, but that's what Linux does. */
+        lock(&g_process.fs_lock);
+        mode_t umask = g_process.umask;
+        unlock(&g_process.fs_lock);
+
+        /* Clear invalid bits */
         mode &= 07777;
+
+        mode &= ~umask;
     }
 
     struct shim_dentry* dir = NULL;
