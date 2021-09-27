@@ -237,8 +237,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL(-ret, "getting vdso and vvar ranges failed");
     }
 
-    if (!g_vdso_start && !g_vdso_end) {
-        /* We did not get vdso address from the auxiliary vector. */
+    if (vdso_start || vdso_end) {
+        /* Override the range retrieved by parsing vdso: the actual mapped range might be bigger. */
         g_vdso_start = vdso_start;
         g_vdso_end = vdso_end;
     }
