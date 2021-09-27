@@ -199,7 +199,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (first_process) {
         ret = DO_SYSCALL(personality, 0xffffffffu);
         if (ret < 0) {
-            INIT_FAIL(unix_to_pal_error(-ret), "retriving personality failed");
+            INIT_FAIL(unix_to_pal_error(-ret), "retrieving personality failed");
         }
         if (!(ret & ADDR_NO_RANDOMIZE)) {
             /* Gramine fork() emulation does fork()+execve() on host and then sends all necessary
