@@ -2,6 +2,7 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 #include "api.h"
+#include "asan.h"
 #include "enclave_ocalls.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -21,12 +22,21 @@ static inline void* __malloc(size_t size) {
     void* addr = NULL;
     int ret = ocall_mmap_untrusted(&addr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
                                    /*fd=*/-1, /*offset=*/0);
-    return ret < 0 ? NULL : addr;
+    if (ret < 0)
+        return NULL;
+
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, size, ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
+    return addr;
 }
 
 #define system_malloc(size) __malloc(size)
 
 static inline void __free(void* addr, size_t size) {
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)addr, size);
+#endif
     ocall_munmap_untrusted(addr, size);
 }
 
