@@ -7,28 +7,22 @@
 
 #include "api.h"
 #include "pal.h"
-#include "pal_defs.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "spinlock.h"
 
-static size_t g_slab_alignment;
 static spinlock_t g_slab_mgr_lock = INIT_SPINLOCK_UNLOCKED;
 
 #define SYSTEM_LOCK()   spinlock_lock(&g_slab_mgr_lock)
 #define SYSTEM_UNLOCK() spinlock_unlock(&g_slab_mgr_lock)
 #define SYSTEM_LOCKED() spinlock_is_locked(&g_slab_mgr_lock)
 
-#if STATIC_SLAB == 1
 #define POOL_SIZE 64 * 1024 * 1024
 static char g_mem_pool[POOL_SIZE];
 static bool g_alloc_from_low = true; /* allocate from low addresses if true, from high if false */
 static void* g_mem_pool_end = &g_mem_pool[POOL_SIZE];
 static void* g_low  = g_mem_pool;
 static void* g_high = &g_mem_pool[POOL_SIZE];
-#else
-#define ALLOC_ALIGNMENT g_slab_alignment
-#endif
 
 #define STARTUP_SIZE 2
 
@@ -46,7 +40,6 @@ static inline void* __malloc(size_t size) {
 
     size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);;
 
-#if STATIC_SLAB == 1
     SYSTEM_LOCK();
     if (g_low + size <= g_high) {
         /* alternate allocating objects from low and high addresses of available memory pool; this
@@ -64,7 +57,6 @@ static inline void* __malloc(size_t size) {
     SYSTEM_UNLOCK();
     if (addr)
         return addr;
-#endif
 
     /* At this point, we depleted the pre-allocated memory pool of POOL_SIZE. Let's fall back to
      * PAL-internal allocations. PAL allocator must be careful though because LibOS doesn't know
@@ -84,7 +76,6 @@ static inline void* __malloc(size_t size) {
 static inline void __free(void* addr, size_t size) {
     if (!addr)
         return;
-#if STATIC_SLAB == 1
     if (addr >= (void*)g_mem_pool && addr < g_mem_pool_end) {
         SYSTEM_LOCK();
         if (addr == g_high) {
@@ -98,18 +89,16 @@ static inline void __free(void* addr, size_t size) {
         SYSTEM_UNLOCK();
         return;
     }
-#endif
 
     _DkVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size));
 }
 
 static SLAB_MGR g_slab_mgr = NULL;
 
-void init_slab_mgr(size_t alignment) {
+void init_slab_mgr(void) {
     assert(!g_slab_mgr);
 
-    g_slab_alignment = alignment;
-    g_slab_mgr       = create_slab_mgr();
+    g_slab_mgr = create_slab_mgr();
     if (!g_slab_mgr)
         INIT_FAIL(PAL_ERROR_NOMEM, "cannot initialize slab manager");
 }

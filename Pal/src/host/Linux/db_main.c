@@ -15,7 +15,6 @@
 #include "elf/elf.h"
 #include "linux_utils.h"
 #include "pal.h"
-#include "pal_defs.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
@@ -216,7 +215,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     g_linux_state.host_environ = envp;
 
-    init_slab_mgr(g_page_size);
+    init_slab_mgr();
 
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);

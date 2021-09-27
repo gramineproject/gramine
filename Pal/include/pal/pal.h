@@ -52,6 +52,9 @@ typedef bool PAL_BOL;
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_NAME_MAX 96
 
+/* maximum length of URIs */
+#define URI_MAX 4096
+
 #ifdef IN_PAL
 #include "atomic.h"
 typedef struct atomic_int PAL_REF;

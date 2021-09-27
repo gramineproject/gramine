@@ -23,7 +23,6 @@
 #include "linux_types.h"
 #include "log.h"
 #include "pal.h"
-#include "pal_defs.h"
 #include "pal_internal.h"
 #include "pal_linux_defs.h"
 #include "sgx_api.h"

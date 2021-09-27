@@ -22,7 +22,6 @@
 #include "enclave_pf.h"
 #include "enclave_tf.h"
 #include "pal.h"
-#include "pal_defs.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
@@ -601,7 +600,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_sec.gid = sec_info.gid;
 
     /* set up page allocator and slab manager */
-    init_slab_mgr(g_page_size);
+    init_slab_mgr();
     init_untrusted_slab_mgr();
     init_enclave_pages();
     init_cpuid();
