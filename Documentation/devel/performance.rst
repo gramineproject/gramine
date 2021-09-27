@@ -297,17 +297,22 @@ in Gramine:
 Choice of SGX machine
 ---------------------
 
-Modern Icelake machines remove many of the hardware bottlenecks of Intel SGX. If
-you must use an older machine (Skylake, Caby Lake, Mehlow), you should be aware
-that they have severe SGX-hardware limitations. In particular:
+Modern Icelake server machines remove many of the hardware bottlenecks of Intel
+SGX. If you must use an older machine (Skylake, Caby Lake, Mehlow), you should
+be aware that they have severe SGX-hardware limitations. In particular:
 
 #. :term:`EPC` size. You can think of EPC as a physical cache (just like L3
-   cache) for enclave pages. On all currently available machines, EPC is only
-   128-256MB in size. This means that if the application has a working set size
-   of more than 100-200MB, enclave pages will be evicted from EPC into RAM.
+   cache) for enclave pages. On older machines (before Icelake servers), EPC is
+   only 128-256MB in size. This means that if the application has a working set
+   size of more than 100-200MB, enclave pages will be evicted from EPC into RAM.
    Eviction of enclave pages (also called EPC swapping or paging) is a very
    expensive hardware operation. Some applications have a working set size of
    MBs/GBs of data, so performance will be significantly impaired.
+
+   Note that modern Icelake servers have EPC size of up to 1TB and therefore
+   they are not affected by EPC swapping. A simple way to verify the amount of
+   EPC available on your machine is to execute Gramine's utility
+   ``is-sgx-available``.
 
 #. RDTSC/RDTSCP instructions. These instructions are forbidden to execute in an
    SGX enclave on older machines. Unfortunately, many applications and runtimes
