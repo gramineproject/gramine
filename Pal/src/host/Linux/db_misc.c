@@ -11,7 +11,6 @@
 #include "api.h"
 #include "pal.h"
 #include "linux_utils.h"
-#include "pal_defs.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"

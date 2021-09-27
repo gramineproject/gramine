@@ -15,7 +15,6 @@
 #include "enclave_pf.h"
 #include "enclave_tf.h"
 #include "pal.h"
-#include "pal_defs.h"
 #include "pal_error.h"
 #include "pal_flags_conv.h"
 #include "pal_internal.h"
