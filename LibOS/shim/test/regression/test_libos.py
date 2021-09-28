@@ -25,13 +25,16 @@ class TC_00_Unittests(RegressionTestCase):
 
     @unittest.skipUnless(os.environ.get('UBSAN') == '1', 'test only enabled with UBSAN=1')
     def test_020_ubsan(self):
-        self._test_abort('ubsan_int_overflow', 'ubsan: overflow')
+        self._test_abort('ubsan_int_overflow', ['ubsan: overflow'])
 
     @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
     def test_021_asan(self):
-        self._test_abort('asan_buffer_overflow', 'asan: heap-buffer-overflow')
+        expected_list = ['asan: heap-buffer-overflow']
+        if self.has_debug:
+            expected_list.append('asan: location: run_test_asan_buffer_overflow at shim_call.c:')
+        self._test_abort('asan_buffer_overflow', expected_list)
 
-    def _test_abort(self, test_name, expected):
+    def _test_abort(self, test_name, expected_list):
         try:
             self.run_binary(['run_test', test_name])
             self.fail('run_test unexpectedly succeeded')
@@ -39,7 +42,8 @@ class TC_00_Unittests(RegressionTestCase):
             stderr = e.stderr.decode()
             self.assertIn('run_test("{}") ...'.format(test_name), stderr,
                           'Gramine should not abort before attempting to run test')
-            self.assertIn(expected, stderr)
+            for expected in expected_list:
+                self.assertIn(expected, stderr)
             self.assertNotIn('run_test("{}") ='.format(test_name), stderr,
                              'Gramine should abort before returning to application')
 

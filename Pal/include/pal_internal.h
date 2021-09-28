@@ -277,6 +277,8 @@ void pal_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3
 #define PAL_LOG_DEFAULT_LEVEL  LOG_LEVEL_ERROR
 #define PAL_LOG_DEFAULT_FD     2
 
+const char* pal_event_name(enum PAL_EVENT event);
+
 #define uthash_fatal(msg)                      \
     do {                                       \
         log_error("uthash error: %s", msg);    \

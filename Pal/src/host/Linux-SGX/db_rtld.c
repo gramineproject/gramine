@@ -41,3 +41,7 @@ void setup_pal_map(struct link_map* pal_map) {
     pal_map->l_prev = pal_map->l_next = NULL;
     g_loaded_maps = pal_map;
 }
+
+int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+    return ocall_debug_describe_location(addr, buf, buf_size);
+}

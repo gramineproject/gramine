@@ -44,6 +44,10 @@ void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns);
 int64_t time_ns_diff_from_now(struct timespec* ts);
 
 int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
-                                  struct sockaddr_un* out_addr);
+                                 struct sockaddr_un* out_addr);
+
+/* Runs a command in a subprocess (fork + execve), and reads its stdout. */
+int run_command(const char* pathname, const char** argv, char* buf, size_t buf_size,
+                size_t* out_len);
 
 #endif // _LINUX_UTILS_H

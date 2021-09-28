@@ -32,3 +32,25 @@ void DkSetExceptionHandler(PAL_EVENT_HANDLER handler, PAL_NUM event) {
 noreturn void pal_abort(void) {
     _DkProcessExit(ENOTRECOVERABLE);
 }
+
+const char* pal_event_name(enum PAL_EVENT event) {
+    switch (event) {
+        case PAL_EVENT_ARITHMETIC_ERROR:
+            return "arithmetic exception";
+
+        case PAL_EVENT_MEMFAULT:
+            return "memory fault";
+
+        case PAL_EVENT_ILLEGAL:
+            return "illegal instruction";
+
+        case PAL_EVENT_QUIT:
+            return "signal from external program";
+
+        case PAL_EVENT_INTERRUPTED:
+            return "interrupted operation";
+
+        default:
+            return "unknown exception";
+    }
+}

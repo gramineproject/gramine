@@ -13,33 +13,60 @@
  * statically linked together in a single binary (thus, we want to avoid name collisions in
  * callbacks).
  *
- * All environments should implement the following callbacks:
- *
- * - _log(), prints a debug message (at different log levels)
- * - abort(), terminates the process
- *
+ * All environments should implement `_log` and `_abort` callbacks, and can optionally implement
+ * `describe_location`.
  */
 
 #ifndef COMMON_CALLBACKS_H
 #define COMMON_CALLBACKS_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include <stdnoreturn.h>
 
 #ifdef IN_SHIM
-void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-noreturn void shim_abort(void);
-#define _log(level, format...) shim_log(level, format)
-#define abort() shim_abort()
+
+#define _log shim_log
+#define abort shim_abort
+#define describe_location shim_describe_location
 
 #elif IN_PAL
-void pal_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-noreturn void pal_abort(void);
-#define _log(level, format...) pal_log(level, format)
-#define abort() pal_abort()
 
-#else
-void _log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-noreturn void abort(void);
+#define _log pal_log
+#define abort pal_abort
+#define describe_location pal_describe_location
+
 #endif
+
+/* Recommended buffer size for `describe_location`. */
+#define LOCATION_BUF_SIZE 128
+
+/*
+ * Output a formatted log message at a specific level (or drop it, if configured to do so).
+ *
+ * Used by `log_*` macros in `log.h`.
+ */
+void _log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+
+/*
+ * Terminate the process. Should perform an equivalent of `_exit(ENOTRECOVERABLE)`.
+ *
+ * Used by assertions, sanitizers, etc.
+ */
+noreturn void abort(void);
+
+/*
+ * Describe the code under given address: function, source line, etc.
+ *
+ * Currently used in AddressSanitizer (`asan.c`) and PAL/LibOS crash handlers.
+ *
+ * This callback is optional to implement (the common library contains a default implementation,
+ * defined as a weak symbol).
+ */
+void describe_location(uintptr_t addr, char* buf, size_t buf_size);
+
+/* This is the default implementation of `describe_location`, and returns only the raw value
+ * ("0x1234"). Your implementation might call it when it fails to determine more information. */
+void default_describe_location(uintptr_t addr, char* buf, size_t buf_size);
 
 #endif /* COMMON_CALLBACKS_H */

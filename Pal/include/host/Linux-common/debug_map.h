@@ -13,6 +13,11 @@
 #ifndef DEBUG_MAP_H
 #define DEBUG_MAP_H
 
+#include <stddef.h>
+
+/* TODO: We don't really use the fact that `addr` is a pointer. It should be converted to
+ * `uintptr_t` (here, and in all APIs that handle debug maps). */
+
 struct debug_map {
     char* name;
     void* addr;
@@ -31,5 +36,9 @@ int debug_map_remove(void* addr);
 /* Initialize `g_debug_map` with executable files already loaded by the system (main program, and
  * dynamic libraries). Processes `/proc/self/maps`. */
 int debug_map_init_from_proc_maps(void);
+
+/* Try to describe code location. Looks up the right debug map, and runs `addr2line` in a
+ * subprocess. */
+int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size);
 
 #endif /* DEBUG_MAP_H */

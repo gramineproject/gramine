@@ -3,6 +3,7 @@ pal_linux_common_sources_enclave = files(
     'gramine_unix_socket_addr.c',
 )
 pal_linux_common_sources_urts = files(
+    'command.c',
     'debug_map.c',
     'file_utils.c',
     'main_exec_path.c',

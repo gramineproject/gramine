@@ -1741,6 +1741,42 @@ int ocall_debug_map_remove(void* addr) {
     return retval;
 }
 
+int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
+#ifdef DEBUG
+    int retval = 0;
+
+    ms_ocall_debug_describe_location_t* ms;
+    char* ms_buf;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    ms_buf = sgx_alloc_on_ustack(buf_size);
+
+    WRITE_ONCE(ms->ms_addr, addr);
+    WRITE_ONCE(ms->ms_buf, ms_buf);
+    WRITE_ONCE(ms->ms_buf_size, buf_size);
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_DEBUG_DESCRIBE_LOCATION, ms);
+    } while (retval == -EINTR);
+
+    if (retval == 0) {
+        if (!sgx_copy_to_enclave(buf, buf_size, ms_buf, buf_size)) {
+            retval = -EPERM;
+            goto out;
+        }
+    }
+out:
+    sgx_reset_ustack(old_ustack);
+    return retval;
+#else
+    __UNUSED(addr);
+    __UNUSED(buf);
+    __UNUSED(buf_size);
+    return -ENOSYS;
+#endif
+}
+
 int ocall_eventfd(unsigned int initval, int flags) {
     int retval = 0;
     ms_ocall_eventfd_t* ms;

@@ -1,5 +1,6 @@
 common_src = files(
     'avl_tree.c',
+    'location.c',
     'network/hton.c',
     'network/inet_pton.c',
     'path.c',

@@ -93,6 +93,8 @@ int ocall_debug_map_add(const char* name, void* addr);
 
 int ocall_debug_map_remove(void* addr);
 
+int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size);
+
 int ocall_eventfd(unsigned int initval, int flags);
 
 /*!

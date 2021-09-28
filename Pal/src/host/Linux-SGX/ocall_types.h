@@ -60,6 +60,7 @@ enum {
     OCALL_DELETE,
     OCALL_DEBUG_MAP_ADD,
     OCALL_DEBUG_MAP_REMOVE,
+    OCALL_DEBUG_DESCRIBE_LOCATION,
     OCALL_EVENTFD,
     OCALL_GET_QUOTE,
     OCALL_NR,
@@ -287,6 +288,12 @@ typedef struct {
 typedef struct {
     void* ms_addr;
 } ms_ocall_debug_map_remove_t;
+
+typedef struct {
+    uintptr_t ms_addr;
+    char* ms_buf;
+    size_t ms_buf_size;
+} ms_ocall_debug_describe_location_t;
 
 typedef struct {
     unsigned int ms_initval;

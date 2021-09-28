@@ -155,6 +155,8 @@ ElfW(Sym)* do_lookup_map(ElfW(Sym)* ref, const char* undef_name, const uint_fast
 void _DkDebugMapAdd(const char* name, void* addr);
 void _DkDebugMapRemove(void* addr);
 
+int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+
 noreturn void start_execution(const char** arguments, const char** environs);
 
 #endif /* PAL_RTLD_H */

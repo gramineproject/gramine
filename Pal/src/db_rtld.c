@@ -836,6 +836,18 @@ void DkDebugMapRemove(PAL_PTR start_addr) {
 #endif
 }
 
+void DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+    pal_describe_location(addr, buf, buf_size);
+}
+
+void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
+#ifdef DEBUG
+    if (_DkDebugDescribeLocation(addr, buf, buf_size) == 0)
+        return;
+#endif
+    default_describe_location(addr, buf, buf_size);
+}
+
 #ifndef CALL_ENTRY
 #ifdef __x86_64__
 void* stack_before_call __attribute_unused = NULL;
