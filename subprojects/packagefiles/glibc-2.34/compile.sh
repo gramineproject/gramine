@@ -36,12 +36,18 @@ mkdir -p "$BUILDDIR"
 (
     cd "$BUILDDIR"
 
+    # if Gramine is built with the default prefix `/usr/local`, Glibc requires the option
+    # `--disable-sanity-checks` otherwise it complains like this: "On GNU/Linux systems the GNU C
+    # Library should not be installed into /usr/local since this might make your system totally
+    # unusable. We strongly advise to use a different prefix." Note that `--disable-sanity-checks`
+    # simply silences this warning -- we actually install Glibc under `gramine/runtime/glibc`.
     ../configure \
         --prefix="$PREFIX" \
         --libdir="$PREFIX"/"$LIBDIR"/gramine/runtime/glibc \
         --with-tls \
         --without-gd \
         --without-selinux \
+        --disable-sanity-checks \
         --disable-test \
         --disable-nscd
 
