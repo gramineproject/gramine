@@ -34,6 +34,10 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
+#define EXTENDED_STATE_LEAF 0xD
+#define AMX_TILE_INFO_LEAF  0x1D
+#define AMX_TMUL_INFO_LEAF  0x1E
+
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
 static uint64_t g_start_usec = 0;
@@ -121,7 +125,7 @@ static struct pal_cpuid {
     unsigned int values[4];
 } g_pal_cpuid_cache[CPUID_CACHE_SIZE];
 
-static int g_pal_cpuid_cache_top   = 0;
+static int g_pal_cpuid_cache_top = 0;
 static spinlock_t g_cpuid_cache_lock = INIT_SPINLOCK_UNLOCKED;
 
 static int get_cpuid_from_cache(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
@@ -173,18 +177,6 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
     return xfrm & feature_bit;
 }
 
-static __sgx_mem_aligned sgx_report_t report;
-static __sgx_mem_aligned sgx_target_info_t target_info;
-static __sgx_mem_aligned sgx_report_data_t report_data;
-
-/* Initialize the data structures used for CPUID emulation. */
-void init_cpuid(void) {
-    memset(&report, 0, sizeof(report));
-    memset(&target_info, 0, sizeof(target_info));
-    memset(&report_data, 0, sizeof(report_data));
-    sgx_report(&target_info, &report_data, &report);
-}
-
 /**
  * Sanity check untrusted CPUID inputs.
  *
@@ -193,24 +185,11 @@ void init_cpuid(void) {
  * through xfrm what extensions are enabled inside the enclave.
  */
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
-    uint64_t xfrm = report.body.attributes.xfrm;
-
-    enum cpu_extension { x87 = 0, SSE, AVX, MPX_1, MPX_2, AVX512_1, AVX512_2, AVX512_3, PKRU = 9 };
-    const uint32_t extension_sizes_bytes[] = {
-        [AVX] = 256,      [MPX_1] = 64,      [MPX_2] = 64, [AVX512_1] = 64,
-        [AVX512_2] = 512, [AVX512_3] = 1024, [PKRU] = 8};
-    /* Note that AVX offset is 576 bytes and MPX_1 starts at 960. The AVX state size is 256, leaving
-     * 128 bytes unaccounted for. */
-    const uint32_t extension_offset_bytes[] = {
-        [AVX] = 576,       [MPX_1] = 960,     [MPX_2] = 1024, [AVX512_1] = 1088,
-        [AVX512_2] = 1152, [AVX512_3] = 1664, [PKRU] = 2688};
-    enum register_index { EAX = 0, EBX, ECX, EDX };
-
-    const uint32_t EXTENDED_STATE_LEAF = 0xd;
+    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
-            case 0x0:
+            case X87:
                 /* From the SDM: "EDX:EAX is a bitmap of all the user state components that can be
                  * managed using the XSAVE feature set. A bit can be set in XCR0 if and only if the
                  * corresponding bit is set in this bitmap. Every processor that supports the XSAVE
@@ -229,9 +208,9 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 /* Start from AVX since x87 and SSE are always captured using XSAVE. Also, x87 and
                  * SSE state size is implicitly included in the extension's offset, e.g., AVX's
                  * offset is 576 which includes x87 and SSE state as well as the XSAVE header. */
-                for (int i = AVX; i <= PKRU; i++) {
+                for (int i = AVX; i < LAST_CPU_EXTENSION; i++) {
                     if (extension_enabled(xfrm, i)) {
-                        xsave_size = extension_offset_bytes[i] + extension_sizes_bytes[i];
+                        xsave_size = g_cpu_extension_offsets[i] + g_cpu_extension_sizes[i];
                     }
                 }
                 values[EBX] = xsave_size;
@@ -249,16 +228,16 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 values[EDX] = 0;
 
                 break;
-            case 0x1: {
+            case SSE: {
                 const uint32_t xsave_legacy_size = 512;
                 const uint32_t xsave_header = 64;
                 uint32_t save_size_bytes = xsave_legacy_size + xsave_header;
 
                 /* Start with AVX, since x87 and SSE state is already included when initializing
                  * `save_size_bytes`. */
-                for (int i = AVX; i <= PKRU; i++) {
+                for (int i = AVX; i < LAST_CPU_EXTENSION; i++) {
                     if (extension_enabled(xfrm, i)) {
-                        save_size_bytes += extension_sizes_bytes[i];
+                        save_size_bytes += g_cpu_extension_sizes[i];
                     }
                 }
                 /* EBX reports the actual size occupied by those extensions irrespective of their
@@ -269,16 +248,34 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 break;
             }
             case AVX:
-            case MPX_1:
-            case MPX_2:
-            case AVX512_1:
-            case AVX512_2:
-            case AVX512_3:
+            case MPX_BNDREGS:
+            case MPX_BNDCSR:
+            case AVX512_OPMASK:
+            case AVX512_ZMM256:
+            case AVX512_ZMM512:
             case PKRU:
+            case AMX_TILECFG:
+            case AMX_TILEDATA:
+                /*
+                 * Sanitize ECX:
+                 *   - bit 0 is always clear because all features are user state (in XCR0)
+                 *   - bit 1 is always set because all features are located on 64B boundary
+                 *   - bit 2 is set only for AMX_TILEDATA (support for XFD faulting)
+                 *   - bits 3-31 are reserved and are zeros
+                 */
+                values[ECX] = 0x2;
+                if (subleaf == AMX_TILEDATA)
+                    values[ECX] |= 0x4;
+
+                if (values[EDX] != 0) {
+                    log_error("Non-null EDX value in Processor Extended State Enum CPUID leaf");
+                    _DkProcessExit(1);
+                }
+
                 if (extension_enabled(xfrm, subleaf)) {
-                    if (values[EAX] != extension_sizes_bytes[subleaf] ||
-                            values[EBX] != extension_offset_bytes[subleaf]) {
-                        log_error("Unexpected value in host CPUID. Exiting...");
+                    if (values[EAX] != g_cpu_extension_sizes[subleaf] ||
+                            values[EBX] != g_cpu_extension_offsets[subleaf]) {
+                        log_error("Unexpected values in Processor Extended State Enum CPUID leaf");
                         _DkProcessExit(1);
                     }
                 } else {
@@ -290,6 +287,35 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                     values[EBX] = 0;
                 }
                 break;
+        }
+    } else if (leaf == AMX_TILE_INFO_LEAF) {
+        if (subleaf == 0x0) {
+            /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
+            if (!IS_IN_RANGE_INCL(values[EAX], 1, 16) || values[EBX] != 0 || values[ECX] != 0 ||
+                    values[EDX] != 0) {
+                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
+                _DkProcessExit(1);
+            }
+        } else {
+            /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
+            if (!IS_IN_RANGE_INCL(values[EAX] & 0xFFFF, 1, 0xFFFF) || /* total_tile_bytes */
+                    !IS_IN_RANGE_INCL(values[EAX] >> 16, 1, 0xFFFF) || /* bytes_per_tile */
+                    !IS_IN_RANGE_INCL(values[EBX] & 0xFFFF, 1, 0xFFFF) || /* bytes_per_row */
+                    !IS_IN_RANGE_INCL(values[EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
+                    !IS_IN_RANGE_INCL(values[ECX] & 0xFFFF, 1, 256) || /* max_rows */
+                    (values[ECX] >> 16) != 0 || values[EDX] != 0) {
+                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%x)", subleaf);
+                _DkProcessExit(1);
+            }
+        }
+    } else if (leaf == AMX_TMUL_INFO_LEAF) {
+        /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
+        if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
+                !IS_IN_RANGE_INCL((values[EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
+                (values[EBX] >> 24) != 0 || values[EAX] != 0 || values[ECX] != 0 ||
+                values[EDX] != 0) {
+            log_error("Unexpected values in TMUL Information CPUID Leaf");
+            _DkProcessExit(1);
         }
     }
 }
@@ -335,10 +361,10 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
     {.leaf = 0x18, .zero_subleaf = false, .cache = true},  /* Deterministic Address Translation */
     {.leaf = 0x19, .zero_subleaf = true,  .cache = true},  /* Key Locker */
     {.leaf = 0x1A, .zero_subleaf = true,  .cache = false}, /* Hybrid Information Enumeration */
-    /* NOTE: 0x1B leaf is not recognized, see code below */
+    {.leaf = 0x1B, .zero_subleaf = false, .cache = false}, /* PCONFIG Information */
     /* NOTE: 0x1C leaf is not recognized, see code below */
-    /* NOTE: 0x1D leaf is not recognized, see code below */
-    /* NOTE: 0x1E leaf is not recognized, see code below */
+    {.leaf = 0x1D, .zero_subleaf = false, .cache = true},  /* Tile Information Main Leaf (AMX) */
+    {.leaf = 0x1E, .zero_subleaf = false, .cache = true},  /* TMUL Information Main Leaf (AMX) */
     {.leaf = 0x1F, .zero_subleaf = false, .cache = false}, /* Intel V2 Ext Topology Enumeration */
     /* basic CPUID leaf functions end here */
 
@@ -360,6 +386,8 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 };
 
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
+    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
+
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
      * cases in the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2.
      *
@@ -382,9 +410,17 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
+    if ((!extension_enabled(xfrm, AMX_TILECFG) || !extension_enabled(xfrm, AMX_TILEDATA)) &&
+            (leaf == AMX_TILE_INFO_LEAF || leaf == AMX_TMUL_INFO_LEAF)) {
+        /* the Intel AMX feature is disabled, so we pretend that the CPU doesn't support it at all
+         * (by marking the TILE_INFO and TMUL_INFO AMX-related leaves as unrecognized) */
+        known_leaf = NULL;
+    }
+
     if (!known_leaf) {
         /* leaf is not recognized (EAX value is outside of recongized range for CPUID), return info
-         * for highest basic information leaf (see cpuid_known_leaves table; currently 0x1F); see
+         * for highest basic information leaf (see cpuid_known_leaves table); also if the highest
+         * basic information leaf data depend on the ECX input value (subleaf), ECX is honored; see
          * the DEFAULT case in the "Operation" section of CPUID description in Intel SDM, Vol. 2A,
          * Chapter 3.2 */
         leaf = 0x1F;
@@ -396,9 +432,11 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
+    /* FIXME: these leaves may have more subleaves in the future, we need a better way of
+     *        restricting subleaves (e.g., decide based on CPUID leaf 0x01) */
     if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
-        (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2) ||
+        (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2 && subleaf != 3) ||
         (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
         goto fail;

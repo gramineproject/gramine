@@ -344,7 +344,7 @@ Gramine currently supports two types of mount points:
   For example, with a host-level path specified as
   ``fs.mount.lib.uri = "file:/one/path/"`` and forwarded to Gramine via
   ``fs.mount.lib.path = "/another/path"``, a host-level file
-  ``/one/path/file`` is visible to graphenized application as
+  ``/one/path/file`` is visible to graminized application as
   ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
@@ -469,8 +469,8 @@ more CPU cores and burning more CPU cycles. For example, a single-threaded
 Redis instance on Linux becomes 5-threaded on Gramine with Exitless. Thus,
 Exitless may negatively impact throughput but may improve latency.
 
-Optional CPU features (AVX, AVX512, MPX, PKRU)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
@@ -478,6 +478,7 @@ Optional CPU features (AVX, AVX512, MPX, PKRU)
     sgx.require_avx512 = [true|false]
     sgx.require_mpx    = [true|false]
     sgx.require_pkru   = [true|false]
+    sgx.require_amx    = [true|false]
     (Default: false)
 
 This syntax ensures that the CPU features are available and enabled for the

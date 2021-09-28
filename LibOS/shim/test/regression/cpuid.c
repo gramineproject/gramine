@@ -41,48 +41,66 @@ static void test_cpuid_leaf_0xd(void) {
     struct regs r = {0, };
 
     const uint32_t leaf = 0xd;
-    // Sub-leaf IDs for the various extensions.
-    enum cpu_extension { x87 = 0, SSE, AVX, MPX_1, MPX_2, AVX512_1, AVX512_2, AVX512_3, PKRU = 9 };
-    const uint32_t extension_sizes_bytes[] = {
-        [AVX] = 256,      [MPX_1] = 64,      [MPX_2] = 64, [AVX512_1] = 64,
-        [AVX512_2] = 512, [AVX512_3] = 1024, [PKRU] = 8};
-    enum register_index {
-        EAX = 0, EBX, ECX, EDX
-    };
     const uint32_t extension_unavailable = 0;
+
+    // Sub-leaf IDs for the various extensions.
+    enum cpu_extension {
+        X87, SSE, AVX, MPX_BNDREGS, MPX_BNDCSR, AVX512_OPMASK, AVX512_ZMM256, AVX512_ZMM512,
+        PKRU = 9,
+        AMX_TILECFG = 17, AMX_TILEDATA,
+    };
+    const uint32_t extension_sizes_bytes[] = {
+        [AVX] = 256,
+        [MPX_BNDREGS] = 64, [MPX_BNDCSR] = 64,
+        [AVX512_OPMASK] = 64, [AVX512_ZMM256] = 512, [AVX512_ZMM512] = 1024,
+        [PKRU] = 8,
+        [AMX_TILECFG] = 64, [AMX_TILEDATA] = 8192,
+    };
+    enum register_index { EAX, EBX, ECX, EDX };
+
 
     cpuid(leaf, AVX, &r);
     if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX]))
         abort();
     clear_regs(&r);
 
-    cpuid(leaf, MPX_1, &r);
-    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[MPX_1]))
+    cpuid(leaf, MPX_BNDREGS, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[MPX_BNDREGS]))
         abort();
     clear_regs(&r);
 
-    cpuid(leaf, MPX_2, &r);
-    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[MPX_2]))
+    cpuid(leaf, MPX_BNDCSR, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[MPX_BNDCSR]))
         abort();
     clear_regs(&r);
 
-    cpuid(leaf, AVX512_1, &r);
-    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_1]))
+    cpuid(leaf, AVX512_OPMASK, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_OPMASK]))
         abort();
     clear_regs(&r);
 
-    cpuid(leaf, AVX512_2, &r);
-    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_2]))
+    cpuid(leaf, AVX512_ZMM256, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_ZMM256]))
         abort();
     clear_regs(&r);
 
-    cpuid(leaf, AVX512_3, &r);
-    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_3]))
+    cpuid(leaf, AVX512_ZMM512, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX512_ZMM512]))
         abort();
     clear_regs(&r);
 
     cpuid(leaf, PKRU, &r);
     if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[PKRU]))
+        abort();
+    clear_regs(&r);
+
+    cpuid(leaf, AMX_TILECFG, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AMX_TILECFG]))
+        abort();
+    clear_regs(&r);
+
+    cpuid(leaf, AMX_TILEDATA, &r);
+    if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AMX_TILEDATA]))
         abort();
 }
 

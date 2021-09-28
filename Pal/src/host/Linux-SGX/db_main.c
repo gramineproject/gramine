@@ -730,7 +730,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_slab_mgr();
     init_untrusted_slab_mgr();
     init_enclave_pages();
-    init_cpuid();
 
     /* now we can add a link map for PAL itself */
     setup_pal_map(&g_pal_map);

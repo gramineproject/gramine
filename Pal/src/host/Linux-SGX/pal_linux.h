@@ -70,6 +70,18 @@ extern char __text_start, __text_end, __data_start, __data_end;
 #define DATA_START ((void*)(&__data_start))
 #define DATA_END   ((void*)(&__data_end))
 
+enum cpu_extension {
+    X87, SSE, AVX, MPX_BNDREGS, MPX_BNDCSR, AVX512_OPMASK, AVX512_ZMM256, AVX512_ZMM512,
+    PKRU = 9,
+    AMX_TILECFG = 17, AMX_TILEDATA,
+    LAST_CPU_EXTENSION,
+};
+
+extern const uint32_t g_cpu_extension_sizes[];
+extern const uint32_t g_cpu_extension_offsets[];
+
+enum register_index { EAX, EBX, ECX, EDX };
+
 extern int g_xsave_enabled;
 extern uint64_t g_xsave_features;
 extern uint32_t g_xsave_size;
@@ -84,8 +96,6 @@ noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave
 void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                          PAL_XREGS_STATE* xregs_state);
 void _DkHandleExternalEvent(PAL_NUM event, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
-
-void init_cpuid(void);
 
 bool is_tsc_usable(void);
 uint64_t get_tsc_hz(void);
