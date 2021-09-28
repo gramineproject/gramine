@@ -88,6 +88,7 @@ class Manifest:
         sgx.setdefault('require_avx512', False)
         sgx.setdefault('require_mpx', False)
         sgx.setdefault('require_pkru', False)
+        sgx.setdefault('require_amx', False)
         sgx.setdefault('support_exinfo', False)
         sgx.setdefault('nonpie_binary', False)
         sgx.setdefault('enable_stats', False)

@@ -212,26 +212,26 @@ untrusted RPC threads on another set of cores (e.g., on second hyper-threads).
 In general, the classical performance-tuning strategies are applicable for
 Gramine and Exitless multi-threaded workloads.
 
-Optional CPU features (AVX, AVX512, MPX, PKRU)
-----------------------------------------------
+Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
+---------------------------------------------------
 
 SGX technology allows to specify which CPU features are required to run the SGX
 enclave. Gramine "inherits" this and has the following manifest options:
 ``sgx.require_avx``, ``sgx.require_avx512``, ``sgx.require_mpx``,
-``sgx.require_pkru``. By default, all of them are set to ``false`` – this means
-that SGX hardware will allow running the SGX enclave on any system, whether the
-system has the AVX/AVX512/MPX/PKRU feature or not.
+``sgx.require_pkru``, ``sgx.require_amx``. By default, all of them are set to
+``false`` – this means that SGX hardware will allow running the SGX enclave on
+any system, whether the system has the AVX/AVX512/MPX/PKRU/AMX feature or not.
 
 Gramine typically correctly identifies the features of the underlying platform
-and propagates the information on AVX/AVX512/MPX/PKRU inside the enclave and to
-the application. It is recommended to leave these manifest options as-is (set to
-``false``). However, we observed on some platforms that the graphenized
+and propagates the information on AVX/AVX512/MPX/PKRU/AMX inside the enclave and
+to the application. It is recommended to leave these manifest options as-is (set
+to ``false``). However, we observed on some platforms that the graphenized
 application cannot detect these features and falls back to a slow
 implementation. For example, some crypto libraries do not recognize AVX on the
 platform and use very slow functions, leading to 10-100x overhead over native
 (we still don't know the reason for this behavior). If you suspect this can be
-your case, enable the features in the manifest, e.g., set
-``sgx.require_avx = true``.
+your case, enable the features in the manifest, e.g., set ``sgx.require_avx =
+true``.
 
 For more information on SGX logic regarding optional CPU features, see the Intel
 Software Developer Manual, Table 38-3 ("Layout of ATTRIBUTES Structure") under

@@ -71,6 +71,7 @@ def get_enclave_attributes(manifest_sgx):
         'require_avx512': offs.SGX_XFRM_AVX512,
         'require_mpx': offs.SGX_XFRM_MPX,
         'require_pkru': offs.SGX_XFRM_PKRU,
+        'require_amx': offs.SGX_XFRM_AMX,
     }
 
     miscs_dict = {

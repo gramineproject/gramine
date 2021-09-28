@@ -69,14 +69,15 @@ void init_xsave_size(uint64_t xfrm) {
         uint64_t bits;
         uint32_t size;
     } xsave_size_table[] = {
-        // Note that the g_xsave_size should be in ascending order
-        {SGX_XFRM_LEGACY, 512 + 64},                        // 512 for legacy features, 64 for xsave
-                                                            // header
-        {SGX_XFRM_AVX,    512 + 64 + 256},                  // 256 for YMM0_H - YMM15_H registers
-        {SGX_XFRM_MPX,    512 + 64 + 256 + 256},            // 256 for MPX
-        {SGX_XFRM_AVX512, 512 + 64 + 256 + 256 + 1600},     // 1600 for k0 - k7, ZMM0_H - ZMM15_H,
-                                                            // ZMM16 - ZMM31
-        {SGX_XFRM_PKRU,   512 + 64 + 256 + 256 + 1600 + 8}, // 8 for PKRU register
+        /* `size` is calculated as the offset of the feature in XSAVE area + size of each
+         * sub-feature (see sanity_check_cpuid() for details).
+         * Note that g_xsave_size should be in ascending order. */
+        {SGX_XFRM_LEGACY, 64 + 512},               // 64 for xsave header, 512 for legacy features
+        {SGX_XFRM_AVX,    576 + 256},              // 256 for YMM0_H - YMM15_H registers
+        {SGX_XFRM_MPX,    960 + 64 + 64},          // 64 for MPX
+        {SGX_XFRM_AVX512, 1088 + 64 + 512 + 1024}, // 1600 for k0-k7, ZMM0_H-ZMM15_H, ZMM16-ZMM31
+        {SGX_XFRM_PKRU,   2688 + 8},               // 8 for PKRU register (note the gap!)
+        {SGX_XFRM_AMX,    2752 + 64 + 8192},       // 64 for XTILECFG, 8192 for XTILEDATA
     };
 
     /* fxsave/fxrstore as fallback */
