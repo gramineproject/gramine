@@ -90,8 +90,9 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 #define SGX_XFRM_MPX      0x18ULL
 #define SGX_XFRM_AVX512   0xe4ULL
 #define SGX_XFRM_PKRU     0x200ULL
+#define SGX_XFRM_AMX      0x60000ULL
 #define SGX_XFRM_RESERVED (~(SGX_XFRM_LEGACY | SGX_XFRM_AVX | SGX_XFRM_MPX | SGX_XFRM_AVX512 | \
-                             SGX_XFRM_PKRU))
+                             SGX_XFRM_PKRU | SGX_XFRM_AMX))
 
 /* EINIT must verify most of the SECS.ATTRIBUTES[127..64] bits (XFRM/XCR0 bits) against
  * SIGSTRUCT.ATTRIBUTES[127..64].
@@ -99,17 +100,17 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  * Notes:
  *   - Verified bits include: bit 0 + bit 1 (X87 + SSE, always enabled in SGX), bit 3 + bit 4
  *     (BNDREG + BNDCSR, enables Intel MPX), bit 9 (PKRU, enables Intel MPK), and all reserved bits.
- *   - Not-verified bits include: bit 2 (AVX), bit 5 + bit 6 + bit 7 (AVX-512). These bits are
- *     considered not security-critical.
+ *   - Not-verified bits include: bit 2 (AVX), bit 5 + bit 6 + bit 7 (AVX-512), bit 17 + bit 18
+ *     (AMX). These bits are considered not security-critical.
  *   - Two instances of the same enclave with difference in X87, SSE, MPX, MPK bits (e.g., one
  *     with PKRU == 0 and another with PKRU == 1) will have two different SIGSTRUCTs. However,
- *     difference in AVX/AVX-512 bits does not lead to different SIGSTRUCTs.
+ *     difference in AVX/AVX-512/AMX bits does not lead to different SIGSTRUCTs.
  *   - Important consequence of the above: the same enclave (with the same SIGSTRUCT) may run on
- *     machines with and without AVX/AVX-512, but e.g. a PKRU-requiring enclave may run only on
+ *     machines with and without AVX/AVX-512/AMX, but e.g. a PKRU-requiring enclave may run only on
  *     machine with PKRU.
  *   - CET bits are not yet reflected in Gramine, i.e., Gramine doesn't support Intel CET.
   */
-#define SGX_XFRM_MASK_CONST 0xffffffffffffff1bUL
+#define SGX_XFRM_MASK_CONST 0xfffffffffff9ff1bUL
 
 #define SGX_MISCSELECT_EXINFO 0x01UL
 
@@ -423,8 +424,6 @@ typedef uint8_t sgx_key_128bit_t[16];
  * measurement) and 1 (use MRSIGNER measurement) */
 #define SGX_KEYPOLICY_MRENCLAVE 0x1
 #define SGX_KEYPOLICY_MRSIGNER  0x2
-
-#define XSAVE_SIZE 512
 
 #define STACK_ALIGN       0xfffffffffffffff0
 #define XSAVE_ALIGN       0xffffffffffffffc0
