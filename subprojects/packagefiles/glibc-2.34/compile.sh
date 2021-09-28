@@ -42,6 +42,7 @@ mkdir -p "$BUILDDIR"
         --with-tls \
         --without-gd \
         --without-selinux \
+        --disable-sanity-checks \
         --disable-test \
         --disable-nscd
 
