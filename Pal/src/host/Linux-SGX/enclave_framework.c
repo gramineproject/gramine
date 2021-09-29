@@ -20,6 +20,7 @@
 
 void* g_enclave_base;
 void* g_enclave_top;
+bool g_allowed_files_warn = false;
 
 static int register_file(const char* uri, const char* checksum_str, bool check_duplicates);
 
@@ -760,13 +761,8 @@ out:
 }
 
 static void maybe_warn_about_allowed_files_usage(void) {
-    static bool g_allowed_files_warned = false;
-
-    if (!g_pal_state.parent_process && !g_allowed_files_warned) {
-        log_always("WARNING! \"allowed_files\" is an insecure feature designed for debugging and "
-                   "prototyping, it must never be used in production!");
-        g_allowed_files_warned = true;
-    }
+    if (!g_pal_state.parent_process)
+        g_allowed_files_warn = true;
 }
 
 static int init_allowed_files_from_toml_table(void) {

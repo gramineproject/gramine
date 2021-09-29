@@ -467,13 +467,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                                              "(the value must be `true` or `false`)");
     }
 
-    if (use_cmdline_argv) {
-        /* Warn only in the first process. */
-        if (!parent_process) {
-            log_error("Using insecure argv source. Gramine will continue application execution, "
-                      "but this configuration must not be used in production!");
-        }
-    } else {
+    if (!use_cmdline_argv) {
         char* argv_src_file = NULL;
 
         ret = toml_string_in(g_pal_state.manifest_root, "loader.argv_src_file", &argv_src_file);
@@ -507,15 +501,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (ret < 0) {
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__use_host_env' "
                                              "(the value must be `true` or `false`)");
-    }
-
-    if (use_host_env) {
-        /* Warn only in the first process. */
-        if (!parent_process) {
-            log_error("Forwarding host environment variables to the app is enabled. Gramine will "
-                      "continue application execution, but this configuration must not be used in "
-                      "production!");
-        }
     }
 
     char* env_src_file = NULL;

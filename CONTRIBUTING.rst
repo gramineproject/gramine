@@ -41,7 +41,8 @@ https://groups.google.com/g/gramine-users
 Please verify that your change doesn't introduce any insecure-by-default
 functionality. If an option allows users to introduce a security risk, the
 option should have a name prefixed with ``insecure__`` and be disabled by
-default.
+default. All new insecure options must be added to the Linux-SGX PAL function
+``print_warnings_on_insecure_configs()``.
 
 Simple bugfixes need not have advance discussion, but we welcome queries from
 newcomers.
