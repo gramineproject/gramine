@@ -168,9 +168,8 @@ and can be used multiple times to specify more than one variable. To
 add/overwrite the environment variable, specify a TOML string (``"[VALUE]"``) or
 a TOML table with the key-value pair ``{ value = "[VALUE]" }``. To pass the
 environment variable from the host, specify a TOML table with the key-value pair
-``{ passthrough = true }``. If you do not specify a variable in the manifest, it
-has the same effect as ``{ passthrough = false }``. If you specify a variable,
-it needs to either have a value or be a passthrough.
+``{ passthrough = true }``. If you specify a variable, it needs to either have a
+value or be a passthrough.
 
 ``loader.env_src_file`` allows to specify a URI to a file containing serialized
 environment, which can be generated using :file:`Tools/argv_serializer`. This

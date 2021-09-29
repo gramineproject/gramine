@@ -71,13 +71,19 @@ static void load_libraries(void) {
  *   - `loader.env.{key} = { passthrough = true|false }`
  *
  * If `loader.env.{key}` doesn't exist, then returns 0 and `*out_exists = false`. If the key exists,
- * then `*out_exists = true` and the corresponding `*out_val` or `*out_passthrough` is set.
+ * then `*out_exists = true` and:
+ *   - if passthrough is specified, then `*out_val` is NULL and `*out_passthrough` is true/false;
+ *   - if the value is specified, then `*out_val` is set and `*out_passthrough` is false.
  *
  * For any other format, returns negative error code. The caller is responsible to free `out_val`.
  */
 static int get_env_value_from_manifest(toml_table_t* toml_envs, const char* key, bool* out_exists,
                                        char** out_val, bool* out_passthrough) {
     int ret;
+
+    assert(out_exists);
+    assert(out_val);
+    assert(out_passthrough);
 
     toml_table_t* toml_env_table = toml_table_in(toml_envs, key);
     if (!toml_env_table) {
@@ -89,9 +95,6 @@ static int get_env_value_from_manifest(toml_table_t* toml_envs, const char* key,
             *out_exists = false;
             return 0;
         }
-
-        if (!out_val)
-            return -PAL_ERROR_INVAL;
 
         ret = toml_rtos(toml_env_val_raw, out_val);
         if (ret < 0)
@@ -113,7 +116,7 @@ static int get_env_value_from_manifest(toml_table_t* toml_envs, const char* key,
     if (!toml_passthrough_raw) {
         /* not passthrough like `loader.env.key = { passthrough = true }`, must be value-table like
          * `loader.env.key = { value = "val" }` */
-        if (!toml_value_raw || !out_val)
+        if (!toml_value_raw)
             return -PAL_ERROR_INVAL;
 
         ret = toml_rtos(toml_value_raw, out_val);
@@ -126,9 +129,6 @@ static int get_env_value_from_manifest(toml_table_t* toml_envs, const char* key,
     }
 
     /* at this point, it must be `loader.env.key = { passthrough = true|false }`*/
-    if (!out_passthrough)
-        return -PAL_ERROR_INVAL;
-
     int passthrough_int;
     ret = toml_rtob(toml_passthrough_raw, &passthrough_int);
     if (ret < 0)
@@ -275,8 +275,7 @@ static int build_envs(const char** orig_envp, bool propagate, const char*** out_
             continue;
         }
 
-        char* final_env = alloc_concat3(toml_env_key, strlen(toml_env_key), "=", 1, env_val,
-                                        strlen(env_val));
+        char* final_env = alloc_concat3(toml_env_key, -1, "=", 1, env_val, -1);
         if (!final_env)
             return -PAL_ERROR_NOMEM;
 
@@ -502,8 +501,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         }
     }
 
-    /* we don't modify original `environments` but deep-copy them into `final_environments`,
-     * augmented based on `loader.env.key` manifest options */
     const char** orig_environments  = NULL;
     const char** final_environments = NULL;
 
@@ -518,10 +515,9 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (use_host_env) {
         /* Warn only in the first process. */
         if (!parent_process) {
-            log_error("Forwarding host environment variables to the app is enabled. All "
-                      "'passthrough' environment variables in the manifest are ignored. Graphene "
-                      "will continue application execution, but this configuration must not be "
-                      "used in production!");
+            log_error("Forwarding host environment variables to the app is enabled. Graphene will "
+                      "continue application execution, but this configuration must not be used in "
+                      "production!");
         }
     }
 
