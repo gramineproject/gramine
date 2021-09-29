@@ -10,6 +10,8 @@ fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ graphene.runtimedir() }}"
 
+sgx.nonpie_binary = true
+
 sgx.trusted_files = [
   "file:{{ graphene.runtimedir() }}/",
   "file:uid_gid"
