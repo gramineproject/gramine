@@ -511,6 +511,87 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
 
 extern void* g_enclave_base;
 extern void* g_enclave_top;
+extern bool g_allowed_files_warn;
+
+static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
+    int ret;
+
+    if (parent_process) {
+        /* Warn only in the first process. */
+        return 0;
+    }
+
+    log_always("-------------------------------------------------------------------------------"
+               "--------------------");
+    log_always("Gramine detected the following insecure configurations:\n");
+
+    bool sgx_debug;
+    ret = toml_bool_in(g_pal_state.manifest_root, "sgx.debug",
+                       /*defaultval=*/false, &sgx_debug);
+    if (ret < 0)
+        return ret;
+    if (sgx_debug)
+        log_always("    - %-44s (%s)", "sgx.debug = true", "this is a debug enclave");
+
+    char* log_level_str = NULL;
+    ret = toml_string_in(g_pal_state.manifest_root, "loader.log_level", &log_level_str);
+    if (ret < 0)
+        return ret;
+    if (log_level_str && strcmp(log_level_str, "none") && strcmp(log_level_str, "error"))
+        log_always("    - loader.log_level = %-24s  (%s)", log_level_str,
+                   "verbose log level, may leak information");
+    free(log_level_str);
+
+    bool use_cmdline_argv;
+    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_cmdline_argv",
+                       /*defaultval=*/false, &use_cmdline_argv);
+    if (ret < 0)
+        return ret;
+    if (use_cmdline_argv)
+        log_always("    - %-44s (%s)", "loader.insecure__use_cmdline_argv = true",
+                   "forwarding command-line args to the app");
+
+    bool use_host_env;
+    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_host_env",
+                       /*defaultval=*/false, &use_host_env);
+    if (ret < 0)
+        return ret;
+    if (use_host_env)
+        log_always("    - %-44s (%s)", "loader.insecure__use_host_env = true",
+                   "forwarding host environment vars to the app");
+
+    bool disable_aslr;
+    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__disable_aslr",
+                       /*defaultval=*/false, &disable_aslr);
+    if (ret < 0)
+        return ret;
+    if (disable_aslr)
+        log_always("    - %-44s (%s)", "loader.insecure__disable_aslr = true",
+                   "Address Space Layout Randomization is disabled");
+
+    bool allow_eventfd;
+    ret = toml_bool_in(g_pal_state.manifest_root, "sys.insecure__allow_eventfd",
+                       /*defaultval=*/false, &allow_eventfd);
+    if (ret < 0)
+        return ret;
+    if (allow_eventfd)
+        log_always("    - %-44s (%s)", "sys.insecure__allow_eventfd = true",
+                   "host-based eventfd is enabled");
+
+    if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
+        log_always("    - %-44s (%s)", "sgx.file_check_policy = allow_all_but_log",
+                   "all files allowed for unrestricted access");
+
+    if (g_allowed_files_warn)
+        log_always("    - %-44s (%s)", "sgx.allowed_files = [ ... ]",
+                   "some files allowed for unrestricted access");
+
+    log_always("\nGramine will continue application execution, but this configuration must not be "
+               "used in production!");
+    log_always("-------------------------------------------------------------------------------"
+               "--------------------\n");
+    return 0;
+}
 
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with a default canary and then updates it to a random one, so we disable stack protector here */
@@ -744,6 +825,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     if ((ret = init_protected_files()) < 0) {
         log_error("Failed to initialize protected files: %d", ret);
+        ocall_exit(1, true);
+    }
+
+    /* this should be placed *after all* initialize-from-manifest routines */
+    if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
+        log_error("Cannot parse the manifest (while checking for insecure configurations)");
         ocall_exit(1, true);
     }
 
