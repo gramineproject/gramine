@@ -23,6 +23,7 @@ fs.mount.sqlite3.type = "chroot"
 fs.mount.sqlite3.path = "{{ execdir }}/sqlite3"
 fs.mount.sqlite3.uri = "file:{{ execdir }}/sqlite3"
 
+sgx.debug = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
 

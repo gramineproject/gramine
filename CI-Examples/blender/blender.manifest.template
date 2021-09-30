@@ -34,6 +34,7 @@ fs.mount.blender.type = "chroot"
 fs.mount.blender.path = "/blender"
 fs.mount.blender.uri = "file:{{ blender_dir }}"
 
+sgx.debug = true
 sgx.nonpie_binary = true
 sys.stack.size = "8M"
 sgx.enclave_size = "2048M"

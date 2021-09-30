@@ -27,6 +27,7 @@ fs.mount.usrlib.uri = "file:/usr/{{ arch_libdir }}"
 
 sgx.thread_num = 32
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",

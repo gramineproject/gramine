@@ -9,6 +9,7 @@ fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
+sgx.debug = true
 
 # this is an impossible combination of options, LibOS must fail very early in init process
 sgx.enclave_size = "256M"

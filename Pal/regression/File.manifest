@@ -5,6 +5,7 @@ loader.log_level = "debug"
 fs.mount.root.uri = "file:"
 
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.allowed_files.tmp1 = "file:File"
 sgx.allowed_files.tmp2 = "file:../regression/File"

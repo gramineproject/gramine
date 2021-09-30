@@ -9,6 +9,7 @@ fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
+sgx.debug = true
 
 # this tests the old syntax for allowed_files (TOML table)
 sgx.allowed_files.env = "file:env_test_input"

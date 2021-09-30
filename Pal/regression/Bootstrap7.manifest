@@ -3,6 +3,7 @@ loader.argv0_override = "Bootstrap7"
 
 sgx.trusted_files.entrypoint = "file:Bootstrap7"
 sgx.nonpie_binary = true
+sgx.debug = true
 
 loader.env.key1 = "na"
 loader.env.key2 = "na"

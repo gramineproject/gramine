@@ -34,6 +34,7 @@ fs.mount.cwd.type = "chroot"
 fs.mount.cwd.path = "{{ install_dir_abspath }}"
 fs.mount.cwd.uri = "file:{{ install_dir }}"
 
+sgx.debug = true
 sgx.nonpie_binary = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
