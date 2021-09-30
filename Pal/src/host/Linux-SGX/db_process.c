@@ -59,8 +59,10 @@
  *
  * One more difference is that instead of calculating SHA256(g_x || g_y) for enclave A and
  * SHA256(g_y || g_x) for enclave B, our protocol calculates SHA256(K_e || tag1) for enclave A and
- * SHA256(K_e || tag2) for enclave B. This still introduces assymetry in the protocol (desired to
- * prevent reflection and interleaving attacks), but is more robust to future modifications.
+ * SHA256(K_e || tag2) for enclave B. Note that K_e is the established session key, and tag1/tag2
+ * are additional tags to produce different hashes in enclaves A and B. This hashing scheme still
+ * introduces assymetry in the protocol (desired to prevent reflection and interleaving attacks),
+ * but is more robust to future modifications.
  *
  * Final difference is CMAC used in SGX local attestation for SGX report validation, instead of the
  * signatures in the original ISO KE protocol. This CMAC however provides the same security
@@ -115,51 +117,19 @@
  *       enclave pair, no report can be reused even from an enclave with the same MR_ENCLAVE.
  */
 
-bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_measurements,
+bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
                         sgx_report_data_t* expected_data) {
     /* current DH session is tied with SGX local attestation via `report_data` field */
-    if (memcmp(&peer_enclave_measurements->report_data, expected_data, sizeof(*expected_data)))
+    if (memcmp(&peer_enclave_info->report_data, expected_data, sizeof(*expected_data)))
         return false;
 
-    /* all Gramine enclaves with same config (manifest) should have same enclave measurements */
-    if (memcmp(&peer_enclave_measurements->mr_enclave, &g_pal_sec.enclave_measurements.mr_enclave,
-               sizeof(peer_enclave_measurements->mr_enclave)))
+    /* all Gramine enclaves with same config (manifest) should have same enclave information
+     * (in the future, we may exclude `config_svn` and `config_id` from this check -- they are set
+     * by the app enclave after EINIT and are thus not security-critical) */
+    if (memcmp(peer_enclave_info, &g_pal_sec.enclave_info,
+               offsetof(sgx_report_body_t, report_data)))
         return false;
 
-    if (memcmp(&peer_enclave_measurements->mr_signer, &g_pal_sec.enclave_measurements.mr_signer,
-               sizeof(peer_enclave_measurements->mr_signer)))
-        return false;
-
-    if (memcmp(&peer_enclave_measurements->attributes, &g_pal_sec.enclave_measurements.attributes,
-               sizeof(peer_enclave_measurements->attributes)))
-        return false;
-
-    if (memcmp(&peer_enclave_measurements->misc_select, &g_pal_sec.enclave_measurements.misc_select,
-               sizeof(peer_enclave_measurements->misc_select)))
-        return false;
-
-    if (memcmp(&peer_enclave_measurements->cpu_svn, &g_pal_sec.enclave_measurements.cpu_svn,
-               sizeof(peer_enclave_measurements->cpu_svn)))
-        return false;
-
-    if (memcmp(&peer_enclave_measurements->isv_ext_prod_id,
-               &g_pal_sec.enclave_measurements.isv_ext_prod_id,
-               sizeof(peer_enclave_measurements->isv_ext_prod_id)))
-        return false;
-
-    if (memcmp(&peer_enclave_measurements->isv_family_id,
-               &g_pal_sec.enclave_measurements.isv_family_id,
-               sizeof(peer_enclave_measurements->isv_family_id)))
-        return false;
-
-    if (peer_enclave_measurements->isv_prod_id != g_pal_sec.enclave_measurements.isv_prod_id)
-        return false;
-
-    if (peer_enclave_measurements->isv_svn != g_pal_sec.enclave_measurements.isv_svn)
-        return false;
-
-    /* do not verify config_id and config_svn -- they are set by the app enclave after EINIT and are
-     * thus not security-critical */
     return true;
 }
 

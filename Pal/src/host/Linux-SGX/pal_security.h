@@ -17,7 +17,7 @@ struct pal_sec {
 
     /* enclave information */
     sgx_target_info_t qe_targetinfo;
-    sgx_report_body_t enclave_measurements;
+    sgx_report_body_t enclave_info;
     uint64_t enclave_flags; /* currently only PAL_ENCLAVE_INITIALIZED */
 
     /* remaining heap usable by application */
