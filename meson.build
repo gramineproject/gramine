@@ -139,6 +139,7 @@ if sgx
 
     mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0')
     mbedtls_dep = mbedtls_proj.get_variable('mbedtls_dep')
+    mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
     libcurl_dep = dependency('libcurl', version: '>=7.58.0')
 
@@ -152,6 +153,8 @@ if sgx
         # Ubuntu 18.04 does not have cjson at all
         cjson_dep = subproject('cJSON-1.7.12').get_variable('cjson_dep')
     endif
+
+    protobuf_dep = dependency('libprotobuf-c')
 
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
