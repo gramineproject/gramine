@@ -122,7 +122,7 @@ struct shim_sock_handle {
         struct addr_unix {
             struct shim_dentry* dentry;
             char name[PIPE_URI_SIZE];
-            char sun_path[108]; /* Path name.  */
+            char sun_path[SOCK_URI_SIZE]; /* Path name.  */
         } un;
     } addr;
 

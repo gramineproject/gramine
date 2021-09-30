@@ -50,6 +50,8 @@
 
 static size_t minimal_addrlen(int domain) {
     switch (domain) {
+        case AF_UNIX:
+            return sizeof(struct sockaddr_un);
         case AF_INET:
             return sizeof(struct sockaddr_in);
         case AF_INET6:
@@ -292,6 +294,8 @@ static int unix_copy_addr(struct sockaddr* saddr, const char* path) {
     } else
         memcpy(un->sun_path, path, size);
 
+    /* for simplicity, we return not the dynimically-calculated minimally needed size but a static
+     * max size */
     return sizeof(struct sockaddr_un);
 }
 
@@ -494,13 +498,7 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
          * (deterministic so that independent parent and child connect to the same socket) */
         hash_dentry_path(dent, sock->addr.un.name, sizeof(sock->addr.un.name));
         sock->addr.un.dentry = dent;
-        size_t size = strlen(saddr->sun_path) + 1;
-        if (size > ARRAY_SIZE(sock->addr.un.sun_path)) {
-            log_error("user-supplied UNIX domain name is longer than sun_path size");
-            goto out;
-        }
-        memcpy(sock->addr.un.sun_path, saddr->sun_path, size);
-
+        memcpy(sock->addr.un.sun_path, saddr->sun_path, sun_path_size);
     } else if (sock->domain == AF_INET || sock->domain == AF_INET6) {
         if ((ret = inet_check_addr(sock->domain, addr, addrlen)) < 0)
             goto out;
@@ -785,12 +783,7 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
         hash_dentry_path(dent, sock->addr.un.name, sizeof(sock->addr.un.name));
         sock->addr.un.dentry = dent;
 
-        size_t size = strlen(saddr->sun_path) + 1;
-        if (size > ARRAY_SIZE(sock->addr.un.sun_path)) {
-            log_error("user-supplied UNIX domain name is longer than sun_path size");
-            goto out;
-        }
-        memcpy(sock->addr.un.sun_path, saddr->sun_path, size);
+        memcpy(sock->addr.un.sun_path, saddr->sun_path, sun_path_size);
     }
 
     if (state == SOCK_BOUND) {
@@ -901,7 +894,7 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
         if (!is_user_memory_writable(addrlen, sizeof(*addrlen)))
             return -EINVAL;
 
-        if (*addrlen < 0 || (size_t)*addrlen < minimal_addrlen(sock->domain))
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain))
             return -EINVAL;
 
         if (!is_user_memory_writable(addr, *addrlen))
@@ -982,7 +975,7 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
         }
 
         memcpy(cli_sock->addr.un.sun_path, sock->addr.un.sun_path,
-               strlen(sock->addr.un.sun_path) + 1);
+               ARRAY_SIZE(sock->addr.un.sun_path));
         qstrsetstr(&cli->uri, qstrgetstr(&hdl->uri), hdl->uri.len);
 
         if (addr) {
@@ -1072,7 +1065,7 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
     struct shim_sock_handle* sock = &hdl->info.sock;
 
     if (addr) {
-        if (addrlen < 0 || (size_t)addrlen < minimal_addrlen(sock->domain)) {
+        if ((size_t)addrlen < minimal_addrlen(sock->domain)) {
             ret = -EINVAL;
             goto out;
         }
@@ -1317,7 +1310,7 @@ static ssize_t do_recvmsg(int fd, struct iovec* bufs, size_t nbufs, int flags,
     struct shim_sock_handle* sock = &hdl->info.sock;
 
     if (addr) {
-        if (*addrlen < 0 || (size_t)*addrlen < minimal_addrlen(sock->domain)) {
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
             ret = -EINVAL;
             goto out;
         }
@@ -1714,11 +1707,15 @@ long shim_do_getsockname(int sockfd, struct sockaddr* addr, int* addrlen) {
     struct shim_sock_handle* sock = &hdl->info.sock;
     lock(&hdl->lock);
 
-    if(sock->domain == AF_UNIX) {
+    if (sock->domain == AF_UNIX) {
+        if ((size_t)*addrlen < sizeof(struct sockaddr_un)) {
+            /* unix_copy_addr currently always requires the max possible size of AF_UNIX address */
+            return -EINVAL;
+        }
         *addrlen = unix_copy_addr(addr, sock->addr.un.sun_path);
-    }
-    else
+    } else {
         *addrlen = inet_copy_addr(sock->domain, addr, *addrlen, &sock->addr.in.bind);
+    }
 
     unlock(&hdl->lock);
 out:
@@ -1768,11 +1765,15 @@ long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen) {
         goto out_locked;
     }
 
-    if(sock->domain == AF_UNIX) {
+    if (sock->domain == AF_UNIX) {
+        if ((size_t)*addrlen < sizeof(struct sockaddr_un)) {
+            /* unix_copy_addr currently always requires the max possible size of AF_UNIX address */
+            return -EINVAL;
+        }
         *addrlen = unix_copy_addr(addr, sock->addr.un.sun_path);
-    }
-    else
+    } else {
         *addrlen = inet_copy_addr(sock->domain, addr, *addrlen, &sock->addr.in.conn);
+    }
 
 out_locked:
     unlock(&hdl->lock);

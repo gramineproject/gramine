@@ -118,7 +118,7 @@ static int server(void) {
         perror("getsockname");
         exit(1);
     }
-    if (strcmp(sockname_addr.sun_path, "u") != 0) {
+    if (strcmp(sockname_addr.sun_path, SUN_PATH) != 0) {
         printf("Returned wrong socket name: %s\n", sockname_addr.sun_path);
         exit(1);
     }
@@ -169,7 +169,7 @@ static int client(void) {
         perror("getpeername");
         exit(1);
     }
-    if (strcmp(peer_addr.sun_path, "u") != 0) {
+    if (strcmp(peer_addr.sun_path, SUN_PATH) != 0) {
         printf("returned wrong peer name: %s\n", peer_addr.sun_path);
         exit(1);
     }
@@ -217,14 +217,19 @@ int main(int argc, char** argv) {
         return client();
     } else {
         int ret = server();
+        if (ret)
+            return ret;
         int status;
         pid_t pid = wait(&status);
         if (pid != child_pid) {
             perror("wait failed");
             return 1;
         }
-        if (WIFEXITED(status))
+        if (!WIFEXITED(status)){
             printf("child exited with status: %d\n", WEXITSTATUS(status));
-        return ret;
+            return 1;
+        }
+
+        return 0;
     }
 }
