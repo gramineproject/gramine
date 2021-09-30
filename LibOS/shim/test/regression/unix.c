@@ -18,6 +18,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define SUN_PATH "u"
+#define BUFFER_SIZE 1024
 enum { SINGLE, PARALLEL } mode = PARALLEL;
 int do_fork                    = 0;
 
@@ -70,15 +72,14 @@ static int server_dummy_socket(void) {
 static int server(void) {
     int create_socket, new_socket;
     socklen_t addrlen;
-    int bufsize  = 1024;
-    char* buffer = malloc(bufsize);
-    struct sockaddr_un address, peer_addr, sockname_addr;
+    char* buffer = malloc(BUFFER_SIZE);
+    struct sockaddr_un address, sockname_addr;
 
     if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) > 0)
-        printf("The socket was created\n");
+        printf("The server socket was created\n");
 
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
+    strncpy(address.sun_path, SUN_PATH, sizeof(address.sun_path));
 
     if (bind(create_socket, (struct sockaddr*)&address, sizeof(address)) < 0) {
         perror("bind");
@@ -111,29 +112,15 @@ static int server(void) {
     }
     printf("The client is connected...\n");
 
-    addrlen = sizeof(peer_addr);
-    int ret = getpeername(new_socket, (struct sockaddr*)&peer_addr, (socklen_t*)&addrlen);
-    if (ret < 0) {
-        perror("getpeername");
-        close(new_socket);
-        exit(1);
-    }
-    if (strcmp(peer_addr.sun_path, "/u") != 0) {
-        printf("returned wrong socket name: %s\n", peer_addr.sun_path);
-        close(new_socket);
-        exit(1);
-    }
-
     addrlen = sizeof(sockname_addr);
-    ret = getsockname(new_socket, (struct sockaddr*)&sockname_addr, (socklen_t*)&addrlen);
+    int ret = getsockname(new_socket, (struct sockaddr*)&sockname_addr, &addrlen);
     if (ret < 0) {
         perror("getsockname");
-        close(new_socket);
         exit(1);
     }
-    if (strcmp(sockname_addr.sun_path, "/u") != 0) {
-        printf("returned wrong socket name: %s\n", sockname_addr.sun_path);
-        close(new_socket);
+    /* Gramine returns absolute path, whereas native Linux returns non-normalized path */
+    if (strcmp(sockname_addr.sun_path, "u") != 0) {
+        printf("Returned wrong socket name: %s\n", sockname_addr.sun_path);
         exit(1);
     }
 
@@ -151,9 +138,9 @@ static int server(void) {
 
 static int client(void) {
     int count, create_socket;
-    int bufsize  = 1024;
-    char* buffer = malloc(bufsize);
-    struct sockaddr_un address;
+    char* buffer = malloc(BUFFER_SIZE);
+    struct sockaddr_un address, peer_addr;
+    socklen_t addrlen = 0;
 
     if (mode == PARALLEL) {
         close(pipefds[1]);
@@ -165,10 +152,10 @@ static int client(void) {
     }
 
     if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) >= 0)
-        printf("The socket was created\n");
+        printf("The client socket was created\n");
 
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
+    strncpy(address.sun_path, SUN_PATH, sizeof(address.sun_path));
 
     if (connect(create_socket, (struct sockaddr*)&address, sizeof(address)) == 0)
         printf("The connection was accepted with the server\n");
@@ -177,15 +164,25 @@ static int client(void) {
         exit(0);
     }
 
+    addrlen = sizeof(peer_addr);
+    int ret = getpeername(create_socket, (struct sockaddr*)&peer_addr, &addrlen);
+    if (ret < 0) {
+        perror("getpeername");
+        exit(1);
+    }
+    /* Gramine returns absolute path, whereas native Linux returns non-normalized path */
+    if (strcmp(peer_addr.sun_path, "u") != 0) {
+        printf("returned wrong peer name: %s\n", peer_addr.sun_path);
+        exit(1);
+    }
+
     puts("Receiving:");
-    while ((count = recv(create_socket, buffer, bufsize, 0)) > 0) {
+    while ((count = recv(create_socket, buffer, BUFFER_SIZE, 0)) > 0) {
         fwrite(buffer, count, 1, stdout);
     }
     puts("Done");
 
     close(create_socket);
-    if (do_fork)
-        exit(0);
     return 0;
 }
 
@@ -214,17 +211,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int pid = fork();
-
-    if (pid < 0) {
+    int child_pid = fork();
+    if (child_pid < 0) {
         perror("fork error");
         return 1;
-    } else if (pid == 0) {
+    } else if (child_pid == 0) {
         return client();
     } else {
-        server_dummy_socket();
         int ret = server();
-        wait(NULL);
+        int status;
+        pid_t pid = wait(&status);
+        if (pid != child_pid) {
+            perror("wait failed");
+            return 1;
+        }
+        if (WIFEXITED(status))
+            printf("child exited with status: %d\n", WEXITSTATUS(status));
         return ret;
     }
 }
