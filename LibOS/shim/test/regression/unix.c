@@ -118,7 +118,6 @@ static int server(void) {
         perror("getsockname");
         exit(1);
     }
-    /* Gramine returns absolute path, whereas native Linux returns non-normalized path */
     if (strcmp(sockname_addr.sun_path, "u") != 0) {
         printf("Returned wrong socket name: %s\n", sockname_addr.sun_path);
         exit(1);
@@ -170,7 +169,6 @@ static int client(void) {
         perror("getpeername");
         exit(1);
     }
-    /* Gramine returns absolute path, whereas native Linux returns non-normalized path */
     if (strcmp(peer_addr.sun_path, "u") != 0) {
         printf("returned wrong peer name: %s\n", peer_addr.sun_path);
         exit(1);
