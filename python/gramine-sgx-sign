@@ -7,7 +7,7 @@ import datetime
 
 import click
 
-from graminelibos import Manifest, get_mrenclave, get_tbssigstruct, sign_with_local_key
+from graminelibos import Manifest, get_tbssigstruct, sign_with_local_key
 
 @click.command()
 @click.option('--output', '-output', type=click.Path(), required=True,
@@ -35,8 +35,7 @@ def main(output, libpal, key, manifest_file, sigfile):
         sigfile += '.sig'
 
     today = datetime.date.today()
-    mrenclave, manifest = get_mrenclave(output, libpal)
-    sigstruct = get_tbssigstruct(None, today, args=(mrenclave, manifest))
+    sigstruct = get_tbssigstruct(output, today, libpal)
     sigstruct.sign(sign_with_local_key, key)
 
     with open(sigfile, 'wb') as f:

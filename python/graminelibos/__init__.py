@@ -15,5 +15,5 @@ if __version__.startswith('@'):
 from .manifest import Manifest
 if '@SGX_ENABLED@' == '1':
     from .sgx_get_token import get_token
-    from .sgx_sign import get_mrenclave, get_tbssigstruct, sign_with_local_key
+    from .sgx_sign import get_tbssigstruct, sign_with_local_key
     from .sigstruct import Sigstruct

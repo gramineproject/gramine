@@ -17,8 +17,6 @@ from .manifest import Manifest
 from .sigstruct import Sigstruct
 
 
-# pylint: enable=invalid-name
-
 # Default / Architectural Options
 
 ARCHITECTURE = 'amd64'
@@ -444,7 +442,7 @@ def generate_measurement(enclave_base, attr, areas):
     return mrenclave.digest()
 
 
-def get_mrenclave(manifest_path, libpal=None):
+def get_mrenclave_and_manifest(manifest_path, libpal=None):
     with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
     manifest = Manifest.loads(manifest_data.decode('utf-8'))
@@ -507,10 +505,10 @@ def get_mrenclave(manifest_path, libpal=None):
     return mrenclave, manifest
 
 
-def get_tbssigstruct(manifest_path, date, args=None):
-    '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).''' # pylint: disable=too-many-locals
+def get_tbssigstruct(manifest_path, date, libpal=None):
+    '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).'''
 
-    mrenclave, manifest = args if args else get_mrenclave(manifest_path)
+    mrenclave, manifest = get_mrenclave_and_manifest(manifest_path, libpal)
 
     manifest_sgx = manifest['sgx']
 
