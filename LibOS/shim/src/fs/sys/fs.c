@@ -36,8 +36,6 @@ int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size
 
 int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* res_range_info, char* str, size_t max_size,
                               const char* sep) {
-    if (res_range_info->range_count > INT64_MAX)
-        return -EINVAL;
 
     uint64_t range_cnt = res_range_info->range_count;
     size_t offset = 0;
@@ -66,12 +64,6 @@ int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* res_range_info, char* st
 int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_info, char* str,
                                          size_t max_size) {
     int ret;
-
-    if (g_pal_control->topo_info.possible_logical_cores.resource_count > INT64_MAX)
-        return -EINVAL;
-
-    if (res_range_info->range_count > INT64_MAX)
-        return -EINVAL;
 
     /* Extract cpumask from the ranges */
     uint64_t possible_cores =  g_pal_control->topo_info.possible_logical_cores.resource_count;
