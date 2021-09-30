@@ -50,5 +50,10 @@ sgx.protected_files = [
 
 # for sealed_file test
 sgx.protected_mrenclave_files = [
-  "file:sealed_file.dat",
+  "file:sealed_file_mrenclave.dat",
+]
+
+# for sealed_file_mrsigner test
+sgx.protected_mrsigner_files = [
+  "file:sealed_file_mrsigner.dat",
 ]

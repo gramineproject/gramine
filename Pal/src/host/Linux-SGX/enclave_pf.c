@@ -230,7 +230,8 @@ out:
     return ret;
 }
 
-static int register_protected_path(const char* path, int key_type, struct protected_file** new_pf);
+static int register_protected_path(const char* path, enum pf_key_type key_type,
+                                   struct protected_file** new_pf);
 
 /* Return a registered PF that matches specified path
    (or the path that is contained in a registered PF directory) */
@@ -289,7 +290,7 @@ out:
 }
 
 /* Register all files from the given directory recursively */
-static int register_protected_dir(const char* path, int key_type) {
+static int register_protected_dir(const char* path, enum pf_key_type key_type) {
     int fd = -1;
     int ret = -PAL_ERROR_NOMEM;
     size_t bufsize = 1024;
@@ -353,7 +354,8 @@ out:
 }
 
 /* Register a single PF (if it's a directory, recursively) */
-static int register_protected_path(const char* path, int key_type, struct protected_file** new_pf) {
+static int register_protected_path(const char* path, enum pf_key_type key_type,
+                                   struct protected_file** new_pf) {
     int ret = -PAL_ERROR_NOMEM;
     struct protected_file* new = NULL;
 
@@ -435,29 +437,33 @@ out:
     return ret;
 }
 
-static int register_protected_files_from_toml_table(int key_type) {
+static int toml_table_name_from_key_type(enum pf_key_type key_type, char** out_table_name) {
+    switch (key_type) {
+        case PROTECTED_FILE_KEY_WRAP:
+            *out_table_name = "protected_files";
+            return 0;
+        case PROTECTED_FILE_KEY_MRENCLAVE:
+            *out_table_name = "protected_mrenclave_files";
+            return 0;
+        case PROTECTED_FILE_KEY_MRSIGNER:
+            *out_table_name = "protected_mrsigner_files";
+            return 0;
+    }
+    log_error("Invalid key type when registering protected files!");
+    return -PAL_ERROR_INVAL;
+}
+
+static int register_protected_files_from_toml_table(enum pf_key_type key_type) {
     int ret;
     toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
     char* table_name = NULL;
-    switch (key_type) {
-        case PROTECTED_FILE_KEY_WRAP:
-            table_name = "protected_files";
-            break;
-        case PROTECTED_FILE_KEY_MRENCLAVE:
-            table_name = "protected_mrenclave_files";
-            break;
-        case PROTECTED_FILE_KEY_MRSIGNER:
-            table_name = "protected_mrsigner_files";
-            break;
-        default:
-            log_error("Invalid key type when registering protected files!");
-            return -PAL_ERROR_INVAL;
-    }
+    ret = toml_table_name_from_key_type(key_type, &table_name);
+    if (ret < 0)
+        return ret;
 
-    assert(table_name);
     toml_table_t* toml_pfs = toml_table_in(manifest_sgx, table_name);
     if (!toml_pfs)
         return 0;
@@ -511,29 +517,17 @@ out:
     return ret;
 }
 
-static int register_protected_files_from_toml_array(int key_type) {
+static int register_protected_files_from_toml_array(enum pf_key_type key_type) {
     int ret;
     toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
     char* table_name = NULL;
-    switch (key_type) {
-        case PROTECTED_FILE_KEY_WRAP:
-            table_name = "protected_files";
-            break;
-        case PROTECTED_FILE_KEY_MRENCLAVE:
-            table_name = "protected_mrenclave_files";
-            break;
-        case PROTECTED_FILE_KEY_MRSIGNER:
-            table_name = "protected_mrsigner_files";
-            break;
-        default:
-            log_error("Invalid key type when registering protected files!");
-            return -PAL_ERROR_INVAL;
-    }
+    ret = toml_table_name_from_key_type(key_type, &table_name);
+    if (ret < 0)
+        return ret;
 
-    assert(table_name);
     toml_array_t* toml_pfs = toml_array_in(manifest_sgx, table_name);
     if (!toml_pfs)
         return 0;
@@ -581,7 +575,7 @@ out:
     return ret;
 }
 
-static int register_protected_files(int key_type) {
+static int register_protected_files(enum pf_key_type key_type) {
     int ret;
 
     /* first try legacy manifest syntax with TOML tables, i.e. `sgx.protected_files.key = "file"` */
@@ -616,15 +610,15 @@ int init_protected_files(void) {
     pf_set_callbacks(cb_read, cb_write, cb_truncate, cb_aes_cmac, cb_aes_gcm_encrypt,
                      cb_aes_gcm_decrypt, cb_random, debug_callback);
 
-    ret = sgx_get_seal_key(KEYPOLICY_MRENCLAVE, &g_pf_mrenclave_key);
+    ret = sgx_get_seal_key(SGX_KEYPOLICY_MRENCLAVE, &g_pf_mrenclave_key);
     if (ret < 0) {
-        log_error("Cannot obtain MRENCLAVE-specific protected files key");
+        log_error("Cannot obtain MRENCLAVE-bound protected files key");
         return ret;
     }
 
-    ret = sgx_get_seal_key(KEYPOLICY_MRSIGNER, &g_pf_mrsigner_key);
+    ret = sgx_get_seal_key(SGX_KEYPOLICY_MRSIGNER, &g_pf_mrsigner_key);
     if (ret < 0) {
-        log_error("Cannot obtain MRSIGNER-specific protected files key");
+        log_error("Cannot obtain MRSIGNER-bound protected files key");
         return ret;
     }
 
@@ -668,13 +662,13 @@ int init_protected_files(void) {
 
     ret = register_protected_files(PROTECTED_FILE_KEY_MRENCLAVE);
     if (ret < 0) {
-        log_error("Malformed MRENCLAVE-specific protected files found in manifest");
+        log_error("Malformed MRENCLAVE-bound protected files found in manifest");
         return ret;
     }
 
     ret = register_protected_files(PROTECTED_FILE_KEY_MRSIGNER);
     if (ret < 0) {
-        log_error("Malformed MRSIGNER-specific protected files found in manifest");
+        log_error("Malformed MRSIGNER-bound protected files found in manifest");
         return ret;
     }
 
@@ -700,10 +694,9 @@ static int open_protected_file(const char* path, struct protected_file* pf, pf_h
             pf_key = &g_pf_mrsigner_key;
             break;
         default:
-            log_error("Invalid key type when opening protected file!");
+            log_error("Invalid key type when opening a protected file!");
             return -PAL_ERROR_DENIED;
     }
-    assert(pf_key);
 
     pf_status_t pfs;
     pfs = pf_open(handle, path, size, mode, create, pf_key, &pf->context);

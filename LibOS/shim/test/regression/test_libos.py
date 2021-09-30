@@ -882,15 +882,25 @@ class TC_40_FileSystem(RegressionTestCase):
             self.assertIn(f'{node}/hugepages/hugepages-2048kB/nr_hugepages: file', lines)
             self.assertIn(f'{node}/hugepages/hugepages-1048576kB/nr_hugepages: file', lines)
 
-    def test_050_sealed_file(self):
-        pf_path = 'sealed_file.dat'
+    def test_050_sealed_file_mrenclave(self):
+        pf_path = 'sealed_file_mrenclave.dat'
         if os.path.exists(pf_path):
             os.remove(pf_path)
 
         stdout, _ = self.run_binary(['sealed_file', pf_path])
         self.assertIn('CREATION OK', stdout)
         stdout, _ = self.run_binary(['sealed_file', pf_path])
-        self.assertIn('TEST OK', stdout)
+        self.assertIn('READING OK', stdout)
+
+    def test_051_sealed_file_mrsigner(self):
+        pf_path = 'sealed_file_mrsigner.dat'
+        if os.path.exists(pf_path):
+            os.remove(pf_path)
+
+        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        self.assertIn('CREATION OK', stdout)
+        stdout, _ = self.run_binary(['sealed_file_mod', pf_path])
+        self.assertIn('READING FROM MODIFIED ENCLAVE OK', stdout)
 
 
 class TC_50_GDB(RegressionTestCase):

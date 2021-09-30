@@ -70,7 +70,6 @@ c_executables = \
 	proc_common \
 	proc_cpuinfo \
 	proc_path \
-	sealed_file \
 	pselect \
 	pthread_set_get_affinity \
 	readdir \
@@ -78,6 +77,8 @@ c_executables = \
 	run_test \
 	sched \
 	sched_set_get_affinity \
+	sealed_file \
+	sealed_file_mod \
 	select \
 	send_handle \
 	shared_object \
@@ -166,10 +167,23 @@ else
 CFLAGS-openmp = -fopenmp
 endif
 
-proc_common: proc_common.o dump.o
+attestation: attestation.c rw_file.c
 	$(call cmd,cmulti)
 
-sysfs_common: sysfs_common.o dump.o
+file_size: file_size.c rw_file.c
+	$(call cmd,cmulti)
+
+proc_common: proc_common.c dump.c
+	$(call cmd,cmulti)
+
+sealed_file: sealed_file.c rw_file.c
+	$(call cmd,cmulti)
+
+CFLAGS-sealed_file_mod += -DMODIFY_MRENCLAVE  # see comment in the test's source
+sealed_file_mod: sealed_file.c rw_file.c
+	$(call cmd,cmulti)
+
+sysfs_common: sysfs_common.c dump.c
 	$(call cmd,cmulti)
 
 %: %.c
@@ -190,12 +204,12 @@ libos-regression.xml: test_libos.py $(call expand_target_to_token,$(target))
 clean-tmp:
 	$(RM) -r \
 		*.cached \
+		*.dat \
 		*.manifest \
 		*.manifest.sgx \
 		*.sig \
 		*.tmp \
 		*.token \
-		*.dat \
 		*~ \
 		.cache \
 		.pytest_cache \
