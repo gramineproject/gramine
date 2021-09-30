@@ -12,6 +12,7 @@ fs.mount.dev.path = "/dev/host-zero"
 fs.mount.dev.uri = "dev:/dev/zero"
 
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",

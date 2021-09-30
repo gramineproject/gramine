@@ -25,6 +25,8 @@ fs.mount.etc.type = "chroot"
 fs.mount.etc.path = "/etc"
 fs.mount.etc.uri = "file:/etc"
 
+sgx.debug = true
+
 sgx.trusted_files = [
   "file:busybox",
   "file:{{ gramine.runtimedir() }}/",

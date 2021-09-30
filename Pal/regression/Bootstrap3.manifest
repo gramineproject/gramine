@@ -5,3 +5,4 @@ loader.argv0_override = "Bootstrap3"
 
 sgx.trusted_files.entrypoint = "file:Bootstrap3"
 sgx.nonpie_binary = true
+sgx.debug = true

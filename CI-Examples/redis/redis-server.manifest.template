@@ -69,6 +69,11 @@ fs.mount.etc.uri = "file:/etc"
 
 ############################### SGX: GENERAL ##################################
 
+# Create a debug SGX enclave (with SIGSTRUCT.ATTRIBUTES.DEBUG bit set to 1).
+# This allows to debug Gramine with the application using GDB, read perf
+# counters and enable SGX statistics. Note that this option is *insecure*!
+sgx.debug = true
+
 # Set enclave size (somewhat arbitrarily) to 1024MB. Recall that SGX v1 requires
 # to specify enclave size at enclave creation time. If Redis exhausts these
 # 1024MB then it will start failing with random errors. Greater enclave sizes

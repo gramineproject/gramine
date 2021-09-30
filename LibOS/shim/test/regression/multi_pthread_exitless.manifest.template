@@ -12,6 +12,7 @@ sgx.thread_num = 8
 sgx.rpc_thread_num = 8
 
 sgx.nonpie_binary = true
+sgx.debug = true
 sgx.enable_stats = true
 
 sgx.trusted_files = [

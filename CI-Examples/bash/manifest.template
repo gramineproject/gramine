@@ -26,6 +26,7 @@ fs.mount.bin.type = "chroot"
 fs.mount.bin.path = "{{ execdir }}"
 fs.mount.bin.uri = "file:{{ execdir }}"
 
+sgx.debug = true
 sgx.nonpie_binary = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4

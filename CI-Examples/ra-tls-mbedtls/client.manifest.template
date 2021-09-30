@@ -27,6 +27,7 @@ fs.mount.etc.type = "chroot"
 fs.mount.etc.path = "/etc"
 fs.mount.etc.uri = "file:/etc"
 
+sgx.debug = true
 sgx.remote_attestation = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4

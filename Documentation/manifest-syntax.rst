@@ -367,7 +367,7 @@ Debug/production enclave
 ::
 
     sgx.debug = [true|false]
-    (Default: true)
+    (Default: false)
 
 This syntax specifies whether the enclave can be debugged. Set it to ``true``
 for a |~| debug enclave and to ``false`` for a |~| production enclave.

@@ -28,6 +28,7 @@ fs.mount.tmpfs.uri = "file:dummy-unused-by-tmpfs-uri"
 
 sgx.thread_num = 16
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.allowed_files = [
   "file:tmp/",

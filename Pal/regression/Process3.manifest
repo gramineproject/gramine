@@ -4,5 +4,6 @@ loader.preload = "file:Preload1.so,file:Preload2.so"
 loader.insecure__use_cmdline_argv = true
 
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.trusted_files.entrypoint = "file:Process3"
