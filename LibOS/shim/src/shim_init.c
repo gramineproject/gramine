@@ -456,13 +456,15 @@ noreturn void* shim_init(int argc, void* args) {
             DkProcessExit(1);
         }
 
-        /* This has also a (very much desired) side effect of the IPC leader making a connection to
-         * this process, so that it's included in all broadcast messages. */
-        ret = ipc_change_id_owner(g_process.pid, g_process_ipc_ids.self_vmid);
+        /* Send a dummy request causing the IPC leader to connect to this process, so that it is
+         * included in all broadcast messages. */
+        IDTYPE dummy = 0;
+        ret = ipc_get_id_owner(/*id=*/0, /*out_owner=*/&dummy);
         if (ret < 0) {
-            log_debug("shim_init: failed to change child process PID ownership: %d", ret);
+            log_debug("shim_init: failed to get a connection from IPC leader to us: %d", ret);
             DkProcessExit(1);
         }
+        assert(dummy == 0); // Nobody should own ID `0`.
 
         /* Notify the parent process we are done. */
         char dummy_c = 0;

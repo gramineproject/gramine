@@ -128,8 +128,8 @@ static int migrate_fork(struct shim_cp_store* store, struct shim_process* proces
     return START_MIGRATE(store, fork, process_description, thread_description, process_ipc_ids);
 }
 
-static long do_clone_new_vm(unsigned long flags, struct shim_thread* thread, unsigned long tls,
-                            unsigned long user_stack_addr, int* set_parent_tid) {
+static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_thread* thread,
+                            unsigned long tls, unsigned long user_stack_addr, int* set_parent_tid) {
     assert(!(flags & CLONE_VM));
 
     struct shim_child_process* child_process = create_child_process();
@@ -193,11 +193,10 @@ static long do_clone_new_vm(unsigned long flags, struct shim_thread* thread, uns
     child_process->pid = process_description.pid;
     child_process->child_termination_signal = flags & CSIGNAL;
     child_process->uid = thread->uid;
-    long ret = ipc_get_new_vmid(&child_process->vmid);
-    if (!ret) {
-        ret = create_process_and_send_checkpoint(&migrate_fork, child_process, &process_description,
-                                                 thread);
-    }
+    child_process->vmid = child_vmid;
+
+    long ret = create_process_and_send_checkpoint(&migrate_fork, child_process,
+                                                  &process_description, thread);
 
     if (parent_stack) {
         pal_context_set_sp(self->shim_tcb->context.regs, parent_stack);
@@ -335,7 +334,17 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
         tls = get_tls();
     }
 
-    IDTYPE tid = get_new_id(/*remove_from_owned=*/clone_new_process);
+    IDTYPE new_vmid = 0;
+    if (clone_new_process) {
+        ret = ipc_get_new_vmid(&new_vmid);
+        if (ret < 0) {
+            log_error("Cound not allocate new vmid!");
+            ret = -EAGAIN;
+            goto failed;
+        }
+    }
+
+    IDTYPE tid = get_new_id(/*move_ownership_to=*/new_vmid);
     if (!tid) {
         log_error("Could not allocate a tid!");
         ret = -EAGAIN;
@@ -344,7 +353,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
     thread->tid = tid;
 
     if (clone_new_process) {
-        ret = do_clone_new_vm(flags, thread, tls, user_stack_addr, set_parent_tid);
+        ret = do_clone_new_vm(new_vmid, flags, thread, tls, user_stack_addr, set_parent_tid);
 
         /* We should not have saved any references to this thread anywhere and `put_thread` below
          * should free it. */
@@ -356,9 +365,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
         put_thread(thread);
 
         if (ret < 0) {
-            /* The child process might have already taken the ownership of `tid`, let's change it
-             * back (if we still own it, this call will split `tid` from any other range, if it is
-             * a part of one)... */
+            /* The child process have already taken the ownership of `tid`, let's change it back. */
             int tmp_ret = ipc_change_id_owner(tid, g_process_ipc_ids.self_vmid);
             if (tmp_ret < 0) {
                 log_debug("Failed to change back ID %u owner: %d", tid, tmp_ret);

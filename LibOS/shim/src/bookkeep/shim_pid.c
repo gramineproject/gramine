@@ -66,7 +66,7 @@ int init_id_ranges(IDTYPE preload_tid) {
     return 0;
 }
 
-IDTYPE get_new_id(bool remove_from_owned) {
+IDTYPE get_new_id(IDTYPE move_ownership_to) {
     IDTYPE ret_id = 0;
     lock(&g_ranges_lock);
     if (!g_last_range) {
@@ -99,7 +99,7 @@ IDTYPE get_new_id(bool remove_from_owned) {
     ret_id = ++g_last_used_id;
     g_last_range->taken_count++;
 
-    if (remove_from_owned) {
+    if (move_ownership_to) {
         g_last_range->taken_count--;
         if (g_last_range->start == g_last_range->end) {
             assert(g_last_range->taken_count == 0);
@@ -127,6 +127,11 @@ IDTYPE get_new_id(bool remove_from_owned) {
             g_last_range->end = g_last_used_id - 1;
             avl_tree_insert(&g_used_ranges_tree, &g_last_range->node);
             g_last_range = range;
+        }
+        if (ipc_change_id_owner(ret_id, move_ownership_to) < 0) {
+            /* Good luck unwinding all of above operations. Better just kill everything. */
+            log_error("Unrecoverable error in %s:%d", __FILE__, __LINE__);
+            DkProcessExit(1);
         }
     } else {
         if (g_last_used_id == g_last_range->end) {
