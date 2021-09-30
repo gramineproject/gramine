@@ -122,7 +122,8 @@ struct shim_sock_handle {
         struct addr_unix {
             struct shim_dentry* dentry;
             char name[PIPE_URI_SIZE];
-            char sun_path[SOCK_URI_SIZE]; /* Path name.  */
+            /* Linux stores user-supplied name as-is; we do the same */
+            char sun_path[SOCK_URI_SIZE];
         } un;
     } addr;
 
