@@ -14,6 +14,7 @@ fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.enclave_size = "8G"
 sgx.nonpie_binary = true
+sgx.debug = true
 
 sgx.allowed_files = [
   "file:testfile",

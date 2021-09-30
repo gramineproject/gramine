@@ -701,7 +701,7 @@ def read_manifest(path):
     sgx.setdefault('isvprodid', 0)
     sgx.setdefault('isvsvn', 0)
     sgx.setdefault('remote_attestation', False)
-    sgx.setdefault('debug', True)
+    sgx.setdefault('debug', False)
     sgx.setdefault('require_avx', False)
     sgx.setdefault('require_avx512', False)
     sgx.setdefault('require_mpx', False)

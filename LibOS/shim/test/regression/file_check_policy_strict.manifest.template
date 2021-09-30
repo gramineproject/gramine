@@ -10,6 +10,8 @@ fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.nonpie_binary = true
+sgx.debug = true
+
 sgx.file_check_policy = "strict"
 
 sgx.trusted_files = [
