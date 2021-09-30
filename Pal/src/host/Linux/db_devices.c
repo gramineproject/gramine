@@ -160,7 +160,7 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         attr->readable     = stataccess(&stat_buf, ACCESS_R);
         attr->writable     = stataccess(&stat_buf, ACCESS_W);
         attr->runnable     = stataccess(&stat_buf, ACCESS_X);
-        attr->share_flags  = stat_buf.st_mode;
+        attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
     }
 
@@ -190,7 +190,7 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         attr->readable     = stataccess(&stat_buf, ACCESS_R);
         attr->writable     = stataccess(&stat_buf, ACCESS_W);
         attr->runnable     = stataccess(&stat_buf, ACCESS_X);
-        attr->share_flags  = stat_buf.st_mode;
+        attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
     }
 
