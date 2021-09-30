@@ -2,7 +2,7 @@
 .. _gramine-sgx-get-token:
 
 ===============================================================
-:program:`gramine-sgx-get-token` -- Gramine SGX Token generator
+:program:`gramine-sgx-get-token` -- Gramine SGX token generator
 ===============================================================
 
 Synopsis
@@ -14,7 +14,7 @@ Synopsis
 Description
 ===========
 
-:program:`gramine-sgx-get-token` is used to generate the SGX Token file for
+:program:`gramine-sgx-get-token` is used to generate the SGX token file for
 given SIGSTRUCT (".sig" file).
 
 Command line arguments

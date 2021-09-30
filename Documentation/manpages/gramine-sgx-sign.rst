@@ -14,7 +14,7 @@ Synopsis
 Description
 ===========
 
-:program:`gramine-sgx-sign` is used to expand Truested Files and generate
+:program:`gramine-sgx-sign` is used to expand Trusted Files and generate
 signature file for given input manifest and libpal file (main Gramine binary).
 
 Command line arguments
