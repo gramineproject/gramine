@@ -40,7 +40,7 @@ static int verify_report_mac(sgx_report_t* report) {
     /* setup key request structure */
     __sgx_mem_aligned sgx_key_request_t key_request;
     memset(&key_request, 0, sizeof(key_request));
-    key_request.key_name = REPORT_KEY;
+    key_request.key_name = SGX_REPORT_KEY;
     memcpy(&key_request.key_id, &report->key_id, sizeof(key_request.key_id));
 
     /* retrieve key via EGETKEY instruction leaf */
