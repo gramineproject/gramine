@@ -8,8 +8,8 @@ import click
 from graminelibos import Sigstruct, get_token
 
 @click.command()
-@click.option('--sig', '-sig', type=click.File('rb'), required=True, help='sigstruct file')
-@click.option('--output', '-output', type=click.File('wb'), required=True, help='Output token file')
+@click.option('--sig', '-s', type=click.File('rb'), required=True, help='sigstruct file')
+@click.option('--output', '-o', type=click.File('wb'), required=True, help='Output token file')
 def main(sig, output):
     sig = Sigstruct.from_bytes(sig.read())
     token = get_token(sig)
