@@ -384,6 +384,16 @@ enclave_entry:
 	addq $STACK_FRAME_SUB, %rax
 	subq %rax, %rsi
 
+	# Disallow too many nested exceptions. In normal Gramine flow, this should never happen.
+	# Since addresses need to be canonical, this addition does not overflow.
+	movq %gs:SGX_SIG_STACK_HIGH, %rax
+	addq %gs:SGX_SIG_STACK_LOW, %rax
+	shrq $1, %rax
+	cmp %rax, %rsi
+	jae .Lno_signal_stack_overflow
+	FAIL_LOOP
+.Lno_signal_stack_overflow:
+
 	# Align xsave area to 64 bytes after sgx_cpu_context_t
 	andq $~(PAL_XSTATE_ALIGN - 1), %rsi
 	subq $SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, %rsi
