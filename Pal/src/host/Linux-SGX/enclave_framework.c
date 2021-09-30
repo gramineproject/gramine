@@ -761,7 +761,7 @@ out:
 }
 
 static void maybe_warn_about_allowed_files_usage(void) {
-    if (!g_pal_state.parent_process && !g_allowed_files_warn)
+    if (!g_pal_state.parent_process)
         g_allowed_files_warn = true;
 }
 

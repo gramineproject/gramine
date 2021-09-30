@@ -467,9 +467,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                                              "(the value must be `true` or `false`)");
     }
 
-    if (use_cmdline_argv) {
-        /* nothing to do, continue using `arguments` */
-    } else {
+    if (!use_cmdline_argv) {
         char* argv_src_file = NULL;
 
         ret = toml_string_in(g_pal_state.manifest_root, "loader.argv_src_file", &argv_src_file);
