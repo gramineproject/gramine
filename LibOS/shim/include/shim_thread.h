@@ -143,14 +143,15 @@ static inline bool is_internal(struct shim_thread* thread) {
 /*!
  * \brief Allocates new ID
  *
- * \param remove_from_owned if `true`, ID is removed from owned and locally tracked IDs
+ * \param move_ownership_to VMID of the process to pass ownership of ID to; if set, ID is removed
+ *                          from owned and locally tracked IDs
  *
  * \returns new ID on success, `0` on failure (`0` is an invalid ID)
  *
- * If \p remove_from_owned is `true`, the returned ID cannot be freed with #release_id since it's
- * no longer locally tracked. You probably want to call #ipc_change_id_owner afterwards.
+ * If \p move_ownership_to is set, the returned ID should not be freed with #release_id since it's
+ * no longer locally tracked and the current process no longer owns it.
  */
-IDTYPE get_new_id(bool remove_from_owned);
+IDTYPE get_new_id(IDTYPE move_ownership_to);
 /*!
  * \brief Releases (frees) previously allocated ID
  *

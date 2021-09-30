@@ -141,7 +141,7 @@ static int init_main_thread(void) {
         return -ENOMEM;
     }
 
-    cur_thread->tid = get_new_id(/*remove_from_owned=*/false);
+    cur_thread->tid = get_new_id(/*move_ownership_to=*/0);
     if (!cur_thread->tid) {
         log_error("Cannot allocate pid for the initial thread!");
         put_thread(cur_thread);
