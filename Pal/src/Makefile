@@ -1,145 +1,28 @@
 include ../../Scripts/Makefile.configs
 include ../../Scripts/Makefile.rules
 
-# Customizable PAL Targets
-# (specify in Makefile.am in host-specific directories)
-# For concurrent builds, all PAL targets must be in host-specific directories
-pal_loader =
-pal_lib =
-pal_lib_deps =
-pal_lib_post =
-pal_static =
-
 HOST_DIR = host/$(PAL_HOST)
-LIB_DIR = $(HOST_DIR)/.lib
-OBJ_DIR = $(HOST_DIR)/.obj
-
-include host/$(PAL_HOST)/Makefile.am
-
-CFLAGS += \
-	-I. \
-	-I../../common/include \
-	-I../../common/include/arch/$(ARCH) \
-	-I$(HOST_DIR) \
-	-I../include \
-	-I../include/pal \
-	-I../include/$(HOST_DIR) \
-	-I../include/arch/$(ARCH) \
-	-I../include/arch/$(ARCH)/$(PAL_HOST)
-
-# use TLS-based stack protector of GCC (all PALs must have a canary in its PAL_TCB at offset 0x8);
-# not all compilers support mstack-protector-guard, so use stack protector only if supported
-CFLAGS += -fno-stack-protector
-ifeq ($(ARCH),x86_64)
-CFLAGS += $(call cc-option, -fstack-protector-strong -mstack-protector-guard=tls \
-	                        -mstack-protector-guard-reg=%gs -mstack-protector-guard-offset=8)
-endif
-
-PAL_HOST_MACRO = $(shell echo $(PAL_HOST) | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-
-# Build Targets:
-#     (1) Host-specific targets are in "host/{Host Name}".
-#     (2) Generic targets are in "host/{Host Name}/.obj".
-#     (3) API library targets are in "host/{Host Name}/.lib".
-
-ifeq ($(PAL_HOST),Linux-SGX)
-files_to_build = $(pal_lib) $(pal_lib_post) $(pal_static) \
-		 $(pal_loader)
-endif
-
-defs	= -DIN_PAL -DHOST_TYPE="$(PAL_HOST)" -D$(PAL_HOST_MACRO)
-CFLAGS += $(defs)
-objs = \
-	db_events.o \
-	db_exception.o \
-	db_main.o \
-	db_memory.o \
-	db_misc.o \
-	db_object.o \
-	db_process.o \
-	db_rtld.o \
-	db_streams.o \
-	db_threading.o \
-	pal_error.o \
-	printf.o \
-	slab.o
-
-gramine_lib = $(LIB_DIR)/gramine-lib.a
-host_lib = $(HOST_DIR)/libpal-$(PAL_HOST).a
-
-
-###########################
-##  Generic Build Rules  ##
-###########################
 
 .PHONY: all
-all: $(gramine_lib) $(files_to_build)
+all: host_lib_recurse
 
-.PHONY: host_lib_recurse gramine_lib_recurse
-
-gramine_lib_recurse:
-	CFLAGS="$(defs)" $(MAKE) -C ../../common/src target=$(abspath $(LIB_DIR))/
-
-$(gramine_lib): gramine_lib_recurse
-	@true
-
-host_lib_recurse: $(gramine_lib)
-	@[ ! -d host/$(PAL_HOST) ] || $(MAKE) -C host/$(PAL_HOST)
-
-$(host_lib): host_lib_recurse
-	@true
-
-$(pal_loader): $(host_lib)
-
-ifneq ($(pal_lib),)
-$(pal_lib): $(addprefix $(OBJ_DIR)/,$(objs)) \
-	    $(host_lib) $(gramine_lib) $(pal_lib_deps)
-	$(call cmd,ld_so_o)
-ifeq ($(PAL_HOST),Linux)
-	@if readelf -a $@ | grep -q NEEDED; then              \
-		echo Error: $@ should not be dynamically linked ; \
-		mv $@ $@.dynamic;                                 \
-		exit 1;                                           \
-	fi
-endif
-endif
-
-ifneq ($(pal_lib_post),)
-$(pal_lib_post): $(pal_lib)
-	@$(MAKE) -C $(HOST_DIR) $@
-endif
-
-$(pal_static): $(addprefix $(OBJ_DIR)/,$(objs)) \
-	       $(host_lib) $(gramine_lib)
-	$(call cmd,ar_a_o)
-
-$(OBJ_DIR)/%.o: %.c $(gramine_lib)
-	@mkdir -p $(OBJ_DIR)
-	$(call cmd,cc_o_c)
-
-$(OBJ_DIR)/%.i: %.c
-	@mkdir -p $(OBJ_DIR)
-	$(call cmd,cpp_i_c)
-
-$(OBJ_DIR)/%.s: %.c
-	@mkdir -p $(OBJ_DIR)
-	$(call cmd,cc_s_c)
-
-ifeq ($(filter %clean,$(MAKECMDGOALS)),)
-include $(wildcard *.d)
--include $(patsubst %.o,$(OBJ_DIR)/%.d,$(objs))
+.PHONY: host_lib_recurse
+host_lib_recurse:
+ifeq ($(PAL_HOST),Linux-SGX)
+	$(MAKE) -C $(HOST_DIR)
+else
+	@:
 endif
 
 clean_targets = clean distclean
-.PHONY: $(clean_targets) clean_
+.PHONY: $(clean_targets)
 
-$(clean_targets): clean_
+$(clean_targets):
 ifeq ($(PAL_HOST),Linux-SGX)
-	@[ ! -d $(HOST_DIR) ] || $(MAKE) -C $(HOST_DIR) $@
+	$(MAKE) -C $(HOST_DIR) $@
+else
+	@:
 endif
-
-clean_:
-	$(RM) -r $(LIB_DIR) $(OBJ_DIR) $(files_to_build) *.d
 
 .PHONY: test
 test:

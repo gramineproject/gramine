@@ -84,7 +84,9 @@ mbedtls_dep = declare_dependency(
     include_directories: mbedtls_inc,
 )
 mbedtls_pal_dep = declare_dependency(
-    link_with: mbedtls_pal_libs,
+    # HACK: Apparently Meson considers the `mbedtls_pal_libs` to be "not linkable", because it has
+    # multiple outputs; however, it allows picking the outputs one by one.
+    link_with: [mbedtls_pal_libs[0], mbedtls_pal_libs[1], mbedtls_pal_libs[2]],
     include_directories: mbedtls_inc,
     compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-pal.h"',
 )
