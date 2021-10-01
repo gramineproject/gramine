@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
+#include "rw_file.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -9,8 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "rw_file.h"
 
 ssize_t rw_file_posix(const char* path, char* buf, size_t bytes, bool do_write) {
     ssize_t rv = 0;

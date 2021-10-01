@@ -425,8 +425,10 @@ typedef uint8_t sgx_key_128bit_t[16];
 #define SGX_REPORT_KEY         3
 #define SGX_SEAL_KEY           4
 
-#define SGX_KEYPOLICY_MRENCLAVE 1
-#define SGX_KEYPOLICY_MRSIGNER  2
+/* KEYREQUEST.KEYPOLICY field is a 16-bit bitmask, currently we use only bits 0 (use MRENCLAVE
+ * measurement) and 1 (use MRSIGNER measurement) */
+#define SGX_KEYPOLICY_MRENCLAVE 0x1
+#define SGX_KEYPOLICY_MRSIGNER  0x2
 
 #define XSAVE_SIZE 512
 

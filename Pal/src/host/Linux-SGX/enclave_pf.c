@@ -437,20 +437,18 @@ out:
     return ret;
 }
 
-static int toml_table_name_from_key_type(enum pf_key_type key_type, char** out_table_name) {
+static const char* toml_table_name_from_key_type(enum pf_key_type key_type) {
+    assert(key_type == PROTECTED_FILE_KEY_WRAP || key_type == PROTECTED_FILE_KEY_MRENCLAVE ||
+           key_type == PROTECTED_FILE_KEY_MRSIGNER);
     switch (key_type) {
         case PROTECTED_FILE_KEY_WRAP:
-            *out_table_name = "protected_files";
-            return 0;
+            return "protected_files";
         case PROTECTED_FILE_KEY_MRENCLAVE:
-            *out_table_name = "protected_mrenclave_files";
-            return 0;
+            return "protected_mrenclave_files";
         case PROTECTED_FILE_KEY_MRSIGNER:
-            *out_table_name = "protected_mrsigner_files";
-            return 0;
+            return "protected_mrsigner_files";
     }
-    log_error("Invalid key type when registering protected files!");
-    return -PAL_ERROR_INVAL;
+    return NULL; /* unreachable */
 }
 
 static int register_protected_files_from_toml_table(enum pf_key_type key_type) {
@@ -459,10 +457,7 @@ static int register_protected_files_from_toml_table(enum pf_key_type key_type) {
     if (!manifest_sgx)
         return 0;
 
-    char* table_name = NULL;
-    ret = toml_table_name_from_key_type(key_type, &table_name);
-    if (ret < 0)
-        return ret;
+    const char* table_name = toml_table_name_from_key_type(key_type);
 
     toml_table_t* toml_pfs = toml_table_in(manifest_sgx, table_name);
     if (!toml_pfs)
@@ -523,10 +518,7 @@ static int register_protected_files_from_toml_array(enum pf_key_type key_type) {
     if (!manifest_sgx)
         return 0;
 
-    char* table_name = NULL;
-    ret = toml_table_name_from_key_type(key_type, &table_name);
-    if (ret < 0)
-        return ret;
+    const char* table_name = toml_table_name_from_key_type(key_type);
 
     toml_array_t* toml_pfs = toml_array_in(manifest_sgx, table_name);
     if (!toml_pfs)
