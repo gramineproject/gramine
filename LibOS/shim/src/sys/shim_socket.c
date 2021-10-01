@@ -304,7 +304,7 @@ static int inet_check_addr(int domain, struct sockaddr* addr, size_t addrlen) {
         if (addr->sa_family != AF_INET)
             return -EAFNOSUPPORT;
         if (addrlen != minimal_addrlen(addr->sa_family))
-            return -EFAULT;
+            return -EINVAL;
         return 0;
     }
 
@@ -312,7 +312,7 @@ static int inet_check_addr(int domain, struct sockaddr* addr, size_t addrlen) {
         if (addr->sa_family != AF_INET && addr->sa_family != AF_INET6)
             return -EAFNOSUPPORT;
         if (addrlen != minimal_addrlen(addr->sa_family))
-            return -EFAULT;
+            return -EINVAL;
         return 0;
     }
 
@@ -450,8 +450,9 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
 
     struct shim_sock_handle* sock = &hdl->info.sock;
     if (addr) {
-        if ((size_t)_addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_readable(addr, _addrlen))
+        if ((size_t)_addrlen < minimal_addrlen(sock->domain))
+            return -EINVAL;
+        if (!is_user_memory_readable(addr, _addrlen))
             return -EFAULT;
     }
     size_t addrlen = _addrlen;
@@ -711,8 +712,10 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
 
     struct shim_sock_handle* sock = &hdl->info.sock;
     if (addr) {
-        if ((size_t)_addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_readable(addr, _addrlen))
+        if ((size_t)_addrlen < minimal_addrlen(sock->domain))
+            return -EINVAL;
+
+        if (!is_user_memory_readable(addr, _addrlen))
             return -EFAULT;
     }
     size_t addrlen = _addrlen;
@@ -889,11 +892,14 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
         log_warning("shim_accept: not a stream socket");
         return -EOPNOTSUPP;
     }
-
     if (addr) {
-        if (!is_user_memory_writable(addrlen, sizeof(*addrlen)) ||
-            (size_t)*addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_writable(addr, *addrlen))
+        if (!is_user_memory_writable(addrlen, sizeof(*addrlen)))
+            return -EFAULT;
+
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain))
+            return -EINVAL;
+
+        if (!is_user_memory_writable(addr, *addrlen))
             return -EFAULT;
     }
 
@@ -1307,7 +1313,7 @@ static ssize_t do_recvmsg(int fd, struct iovec* bufs, size_t nbufs, int flags,
 
     if (addr) {
         if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
-            ret = -EFAULT;
+            ret = -EINVAL;
             goto out;
         }
     }
@@ -1538,12 +1544,19 @@ long shim_do_recvfrom(int sockfd, void* buf, size_t len, int flags, struct socka
     if (hdl->type != TYPE_SOCK)
         return -ENOTSOCK;
 
-    struct shim_sock_handle* sock        = &hdl->info.sock;
+    struct shim_sock_handle* sock = &hdl->info.sock;
     if (addr) {
-        if (!is_user_memory_writable(addrlen, sizeof(*addrlen)) ||
-            (size_t)*addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_writable(addr, *addrlen))
+        if (!is_user_memory_writable(addrlen, sizeof(*addrlen))) {
             return -EFAULT;
+        }
+
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
+            return -EINVAL;
+        }
+
+        if (!is_user_memory_writable(addr, *addrlen)) {
+            return -EFAULT;
+        }
     }
 
     if (!is_user_memory_writable(buf, len)) {
@@ -1687,9 +1700,17 @@ long shim_do_getsockname(int sockfd, struct sockaddr* addr, int* addrlen) {
     }
     struct shim_sock_handle* sock = &hdl->info.sock;
     if (addr) {
-        if (!is_user_memory_writable(addrlen, sizeof(*addrlen)) ||
-            (size_t)*addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_writable(addr, *addrlen)) {
+        if (!is_user_memory_writable(addrlen, sizeof(*addrlen))) {
+            ret = -EFAULT;
+            goto out;
+        }
+
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
+            ret = -EINVAL;
+            goto out;
+        }
+
+        if (!is_user_memory_writable(addr, *addrlen)) {
             ret = -EFAULT;
             goto out;
         }
@@ -1721,13 +1742,22 @@ long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen) {
     }
     struct shim_sock_handle* sock = &hdl->info.sock;
     if (addr) {
-        if (!is_user_memory_writable(addrlen, sizeof(*addrlen)) ||
-            (size_t)*addrlen < minimal_addrlen(sock->domain) ||
-            !is_user_memory_writable(addr, *addrlen)) {
+        if (!is_user_memory_writable(addrlen, sizeof(*addrlen))) {
+            ret = -EFAULT;
+            goto out;
+        }
+
+        if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
+            ret = -EINVAL;
+            goto out;
+        }
+
+        if (!is_user_memory_writable(addr, *addrlen)) {
             ret = -EFAULT;
             goto out;
         }
     }
+
     lock(&hdl->lock);
 
     /* Data gram sock need not be conneted or bound at all */
