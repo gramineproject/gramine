@@ -34,7 +34,13 @@ CFLAGS += $(defs)
 ASFLAGS += $(defs)
 
 commons_objs_encl = bogomips.o gramine_unix_socket_addr.o
-commons_objs_urts = debug_map.o file_utils.o main_exec_path.o timespec_utils.o topo_info.o
+commons_objs_urts = \
+	debug_map.o \
+	file_utils.o \
+	main_exec_path.o \
+	proc_maps.o \
+	timespec_utils.o \
+	topo_info.o
 
 enclave-objs = \
 	db_devices.o \

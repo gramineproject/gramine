@@ -101,3 +101,76 @@ out:
     free(buf);
     return (int)ret;
 }
+
+int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg),
+                              void* arg) {
+    int ret;
+
+    int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
+    if (fd < 0)
+        return fd;
+
+    size_t buf_size = 256;
+    char* buf = malloc(buf_size);
+    if (!buf) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    size_t len = 0;
+    while (true) {
+        ssize_t n = DO_SYSCALL(read, fd, &buf[len], buf_size - 1 - len);
+        if (n == -EINTR) {
+            continue;
+        } else if (n < 0) {
+            ret = n;
+            goto out;
+        } else if (n == 0) {
+            /* EOF; we will process the remainder after the loop */
+            break;
+        }
+        len += n;
+        buf[len] = '\0';
+
+        /* Process all finished lines that are in the buffer */
+        char* line_end;
+        while ((line_end = strchr(buf, '\n')) != NULL) {
+            *line_end = '\0';
+            ret = callback(buf, arg);
+            if (ret < 0)
+                goto out;
+
+            /* Move remaining part of buffer to beginning (including the final null terminator) */
+            len -= line_end + 1 - buf;
+            memmove(buf, line_end + 1, len + 1);
+        }
+
+        if (len == buf_size - 1) {
+            /* The current line might be longer than buffer. Reallocate. */
+            size_t new_buf_size = buf_size * 2;
+            char* new_buf = malloc(new_buf_size);
+            if (!new_buf) {
+                ret = -ENOMEM;
+                goto out;
+            }
+            memcpy(new_buf, buf, buf_size);
+            free(buf);
+            buf_size = new_buf_size;
+            buf = new_buf;
+        }
+    }
+    /* Process the rest of buffer; it should not contain any newlines. */
+    if (len > 0) {
+        ret = callback(buf, arg);
+        if (ret < 0)
+            goto out;
+    }
+    ret = 0;
+out:
+    free(buf);
+    int close_ret = DO_SYSCALL(close, fd);
+    if (close_ret < 0)
+        return close_ret;
+
+    return ret;
+}
