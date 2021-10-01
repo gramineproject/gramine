@@ -65,6 +65,69 @@ if get_option('buildtype') == 'debug' or get_option('buildtype') == 'debugoptimi
     add_project_arguments('-DDEBUG', language: 'c')
 endif
 
+if sgx
+    conf_sgx = configuration_data()
+
+    # SGX driver options (in Make, this was ISGX_DRIVER_PATH and link-intel-driver.py)
+    sgx_driver = get_option('sgx_driver')
+    sgx_driver_include_path = get_option('sgx_driver_include_path')
+    sgx_driver_device = get_option('sgx_driver_device')
+
+    if sgx_driver == 'upstream'
+        # upstream in-kernel driver (Linux 5.11+)
+        conf_sgx.set('CONFIG_SGX_DRIVER_UPSTREAM', true)
+        sgx_driver_header = 'uapi/asm/sgx.h'
+        sgx_driver_include_path_default = '/usr/src/linux-headers-@0@/arch/x86/include'.format(
+            run_command('uname', '-r').stdout().strip())
+        sgx_driver_device_default = '/dev/sgx_enclave'
+    elif sgx_driver == 'oot'
+        # old non-DCAP driver (https://github.com/intel/linux-sgx-driver)
+        conf_sgx.set('CONFIG_SGX_DRIVER_OOT', true)
+        sgx_driver_header = 'sgx_user.h'
+        sgx_driver_include_path_default = '/opt/intel/linux-sgx-driver'
+        sgx_driver_device_default = '/dev/isgx'
+    elif sgx_driver == 'dcap1.6'
+        # DCAP 1.6+ but below 1.10 (https://github.com/intel/SGXDataCenterAttestationPrimitives)
+        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_6', true)
+        sgx_driver_header = 'uapi/asm/sgx_oot.h'
+        sgx_driver_device_default = '/dev/sgx/enclave'
+        sgx_driver_include_path_default = \
+            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include'
+    elif sgx_driver == 'dcap1.10'
+        # DCAP 1.10+ (https://github.com/intel/SGXDataCenterAttestationPrimitives)
+        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
+        sgx_driver_header = 'sgx_user.h'
+        sgx_driver_device_default = '/dev/sgx/enclave'
+        sgx_driver_include_path_default = \
+            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include'
+    else
+        error('Unknown sgx_driver value')
+    endif
+
+    if sgx_driver_include_path == ''
+        sgx_driver_include_path = sgx_driver_include_path_default
+    endif
+
+    if sgx_driver_device == ''
+        sgx_driver_device = sgx_driver_device_default
+    endif
+
+    # Check if the directory and header exist. We could run only `has_header`, but then
+    # `include_directories` would fail with a less helpful message if the directory does not exist.
+    fs = import('fs')
+    if (not fs.is_dir(sgx_driver_include_path) or
+        not cc.has_header(sgx_driver_header,
+                          include_directories: include_directories(sgx_driver_include_path)))
+
+        error('Invalid SGX driver configuration (-Dsgx_driver and/or -Dsgx_driver_include_path); ' +
+             'expected "@0@" header to exist under "@1@"'.format(
+                 sgx_driver_header, sgx_driver_include_path))
+    endif
+
+    conf_sgx.set('CONFIG_SGX_DRIVER_HEADER', sgx_driver_header)
+    conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
+endif
+
 #
 # Common checks and flags
 #

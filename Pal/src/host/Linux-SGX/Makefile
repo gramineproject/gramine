@@ -2,7 +2,7 @@ include ../../../../Scripts/Makefile.configs
 include ../../../../Scripts/Makefile.rules
 
 .PHONY: all
-all: gdb_integration/sgx_gdb.so quote/aesm.pb-c.c quote/aesm.pb-c.h gsgx.h
+all: gdb_integration/sgx_gdb.so quote/aesm.pb-c.c quote/aesm.pb-c.h
 
 gdb_integration/sgx_gdb.so: CFLAGS =
 CFLAGS-gdb_integration/sgx_gdb.so = -shared -Wall -fPIC -O2 -std=c11
@@ -14,12 +14,8 @@ quote/aesm.pb-c.c quote/aesm.pb-c.h: quote/aesm.proto
 	@echo [ host/Linux-SGX/quote/aesm.pb-c.h ]
 	@protoc-c --c_out=. $<
 
-gsgx.h: gsgx.h.in
-	./link-intel-driver.py --input $< --output $@
-
 CLEAN_FILES += gdb_integration/sgx_gdb.so
 CLEAN_FILES += quote/aesm.pb-c.c quote/aesm.pb-c.h
-CLEAN_FILES += gsgx.h
 
 .PHONY: clean
 clean:

@@ -149,13 +149,7 @@ commands::
    make
 
    # if you build gramine-sgx
-   make SGX=1 ISGX_DRIVER_PATH=<path-to-sgx-driver-sources>
-
-The path to the SGX driver sources must point to the absolute path where the SGX
-driver was downloaded or installed in the previous step. For example, for the
-DCAP version 33 of the SGX driver, you must specify
-``ISGX_DRIVER_PATH="/usr/src/sgx-1.33/"``. You can define
-``ISGX_DRIVER_PATH=""`` to use the default in-kernel driver's C header.
+   make SGX=1
 
 Running :command:`make SGX=1 sgx-tokens` in the test or regression directory
 will automatically generate the required SIGSTRUCT signatures (``.sig`` files)
@@ -163,13 +157,28 @@ and EINITTOKENs (``.token`` files).
 
 Then install Gramine (recall that "direct" means non-SGX version)::
 
-   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
+   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
+       -Dsgx_driver=<driver> -Dsgx_driver_path=<path-to-sgx-driver-sources>
    ninja -C build/
    sudo ninja -C build/ install
 
 Set ``-Ddirect=`` and ``-Dsgx=`` options to ``enabled`` or ``disabled``
 according to whether you built the corresponding PAL (the snippet assumes you
 built both).
+
+The ``-Dsgx_driver`` parameter controls which SGX driver to use:
+
+* ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
+  5.11+),
+* ``dcap1.6`` for Intel DCAP version 1.6 or higher,  but below 1.10,
+* ``dcap1.10`` for Intel DCAP version 1.10 or higher,
+* ``oot`` for non-DCAP, out-of-tree version of the driver.
+
+The ``-Dsgx_driver_path`` parameter must point to the absolute path where the
+SGX driver was downloaded or installed in the previous step. For example, for
+the DCAP version 33 of the SGX driver, you must specify
+``-Dsgx_driver-path="/usr/src/sgx-1.33/"``. If this parameter is omitted,
+Gramine's build system will try to determine the right path.
 
 .. note::
 
