@@ -258,6 +258,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         ret = sgx_profile_init();
         if (ret < 0)
             goto out;
+
+        /* Report all ELFs that are already loaded (URTS and dynamic libraries used by it) */
+        struct debug_map* map = g_debug_map;
+        while (map) {
+            sgx_profile_report_elf(map->name, map->addr);
+            map = map->next;
+        }
     }
 #endif
 
@@ -559,9 +566,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
-
-    /* Report outer PAL maps to profiler, so that we can record samples pointing to outer PAL. */
-    sgx_profile_report_urts_elfs();
 #endif
 
     ret = 0;
@@ -1098,6 +1102,14 @@ int main(int argc, char* argv[], char* envp[]) {
 
 #ifdef ASAN
     setup_asan();
+#endif
+
+#ifdef DEBUG
+    ret = debug_map_init_from_proc_maps();
+    if (ret < 0) {
+        log_error("Failed to init debug maps");
+        return unix_to_pal_error(ret);
+    }
 #endif
 
     force_linux_to_grow_stack();

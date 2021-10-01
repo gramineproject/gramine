@@ -13,6 +13,7 @@
 
 #include "api.h"
 #include "asan.h"
+#include "debug_map.h"
 #include "elf/elf.h"
 #include "linux_utils.h"
 #include "pal.h"
@@ -235,6 +236,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     g_linux_state.host_environ = envp;
 
     init_slab_mgr();
+
+#ifdef DEBUG
+    ret = debug_map_init_from_proc_maps();
+    if (ret < 0)
+        INIT_FAIL(-unix_to_pal_error(ret), "failed to init debug maps");
+#endif
 
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);

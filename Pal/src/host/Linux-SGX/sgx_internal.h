@@ -181,9 +181,6 @@ void sgx_profile_sample_ocall_outer(void* ocall_func);
 
 /* Record a new mapped ELF */
 void sgx_profile_report_elf(const char* filename, void* addr);
-
-/* Record all ELFs from outer PAL */
-void sgx_profile_report_urts_elfs(void);
 #endif
 
 /* perf.data output (sgx_perf_data.h) */
