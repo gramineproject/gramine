@@ -12,6 +12,7 @@ init_py = configure_file(
 
 install_data([
     init_py,
+    'gen_jinja_env.py',
     'manifest.py',
 ], install_dir: python3_pkgdir)
 
