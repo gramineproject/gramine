@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "sgx_arch.h"
+#include "sgx_attest.h"
 
 /*!
  *  \brief Display internal SGX quote structure.
@@ -78,11 +79,11 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
 /*!
  *  \brief Verify enclave attributes of the provided SGX quote.
  *
- *  \param[in] quote_data           Quote to verify.
+ *  \param[in] quote                Quote to verify.
  *  \param[in] allow_debug_enclave  If true, then SGXREPORT.ATTRIBUTES.DEBUG can be 1.
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote_enclave_attributes(const void* quote_data, bool allow_debug_enclave);
+int verify_quote_enclave_attributes(sgx_quote_t* quote, bool allow_debug_enclave);
 
 #endif /* ATTESTATION_H */

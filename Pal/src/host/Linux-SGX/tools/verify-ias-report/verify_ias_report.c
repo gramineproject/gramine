@@ -165,11 +165,11 @@ int main(int argc, char* argv[]) {
     }
 
     uint8_t* report_quote = NULL;
-    size_t quote_size     = 0;
+    size_t quote_size = 0;
 
     ret = verify_ias_report_extract_quote(report, report_size, sig, sig_size,
-                                              allow_outdated_tcb, nonce, ias_pubkey,
-                                              &report_quote, &quote_size);
+                                          allow_outdated_tcb, nonce, ias_pubkey,
+                                          &report_quote, &quote_size);
     if (ret < 0)
         return ret;
 
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
         return ret;
     }
 
-    ret = verify_quote_enclave_attributes(report_quote, allow_debug_enclave);
+    ret = verify_quote_enclave_attributes((sgx_quote_t*)report_quote, allow_debug_enclave);
     free(report_quote);
     return ret;
 }

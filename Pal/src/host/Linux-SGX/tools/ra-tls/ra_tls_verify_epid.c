@@ -233,7 +233,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     /* verify enclave attributes from the SGX quote (extracted from IAS report) */
-    ret = verify_quote_enclave_attributes(quote_from_ias, allow_debug_enclave);
+    ret = verify_quote_enclave_attributes((sgx_quote_t*)quote_from_ias, allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;

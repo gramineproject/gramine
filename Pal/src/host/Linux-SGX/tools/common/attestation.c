@@ -446,9 +446,7 @@ out:
     return ret;
 }
 
-int verify_quote_enclave_attributes(const void* quote_data, bool allow_debug_enclave) {
-    sgx_quote_t* quote = (sgx_quote_t*)quote_data;
-
+int verify_quote_enclave_attributes(sgx_quote_t* quote, bool allow_debug_enclave) {
     if (!allow_debug_enclave && (quote->report_body.attributes.flags & SGX_FLAGS_DEBUG)) {
         ERROR("Quote: DEBUG bit in enclave attributes is set\n");
         return -1;
