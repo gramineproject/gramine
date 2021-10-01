@@ -46,8 +46,8 @@ int debug_map_add(const char* name, void* addr) {
         if (map->addr == addr) {
             bool name_matches = !strcmp(name, map->name);
             spinlock_unlock(&g_debug_map_lock);
-            /* If the name matches, allow adding the same map twice: this can happen e.g. because we
-             * encountered two executable ranges for the same file. */
+            /* If the exact same map is already there, skip adding it and report success: this can
+             * happen when we encounter two executable ranges for the same file. */
             return name_matches ? 0 : -EEXIST;
         }
         map = map->next;
