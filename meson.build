@@ -154,6 +154,8 @@ if sgx
         cjson_dep = subproject('cJSON-1.7.12').get_variable('cjson_dep')
     endif
 
+    protobuf_dep = dependency('libprotobuf-c')
+
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
     endif

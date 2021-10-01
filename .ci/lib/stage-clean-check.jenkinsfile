@@ -22,7 +22,6 @@ stage('clean-check') {
         make -C CI-Examples/nginx distclean
         make -C CI-Examples/blender distclean
         make -C CI-Examples/sqlite distclean
-        make -C Pal/src PAL_HOST=Skeleton clean
 
         make -C CI-Examples/ra-tls-mbedtls distclean
         make -C CI-Examples/ra-tls-secret-prov distclean

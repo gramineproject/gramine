@@ -25,7 +25,6 @@ CLEAN_FILES += gsgx.h
 clean:
 	$(RM) -r *.o *.e *.i *.s $(host_files) $(CLEAN_FILES) *.d gdb_integration/*.d signer/*.pyc \
 	         __pycache__ signer/__pycache__
-	$(RM) -r protected-files/*.o protected-files/*.d
 
 .PHONY: distclean
 distclean: clean

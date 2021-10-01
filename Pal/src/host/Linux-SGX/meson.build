@@ -188,7 +188,7 @@ executable('loader',
 
     dependencies: [
         common_dep,
-        dependency('libprotobuf-c'),
+        protobuf_dep,
     ],
 
     install: true,
