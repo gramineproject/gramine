@@ -577,36 +577,36 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     log_always("Gramine detected the following insecure configurations:\n");
 
     if (sgx_debug)
-        log_always("    - %-44s (%s)", "sgx.debug = true", "this is a debug enclave");
+        log_always("    - sgx.debug = true                            "
+                   "(this is a debug enclave)");
 
     if (verbose_log_level)
-        log_always("    - loader.log_level = %-24s  (%s)", log_level_str,
-                   "verbose log level, may leak information");
+        log_always("    - loader.log_level = warning|debug|trace|all  "
+                   "(verbose log level, may leak information)");
 
     if (use_cmdline_argv)
-        log_always("    - %-44s (%s)", "loader.insecure__use_cmdline_argv = true",
-                   "forwarding command-line args to the app");
+        log_always("    - loader.insecure__use_cmdline_argv = true    "
+                   "(forwarding command-line args to the app)");
 
     if (use_host_env)
-        log_always("    - %-44s (%s)", "loader.insecure__use_host_env = true",
-                   "forwarding host environment vars to the app");
+        log_always("    - loader.insecure__use_host_env = true        "
+                   "(forwarding host environment vars to the app)");
 
     if (disable_aslr)
-        log_always("    - %-44s (%s)", "loader.insecure__disable_aslr = true",
-                   "Address Space Layout Randomization is disabled");
+        log_always("    - loader.insecure__disable_aslr = true        "
+                   "(Address Space Layout Randomization is disabled)");
 
     if (allow_eventfd)
-        log_always("    - %-44s (%s)", "sys.insecure__allow_eventfd = true",
-                   "host-based eventfd is enabled");
+        log_always("    - sys.insecure__allow_eventfd = true          "
+                   "(host-based eventfd is enabled)");
 
     if (allow_all_files)
-        log_always("    - %-44s (%s)", "sgx.file_check_policy = allow_all_but_log",
-                   "all files allowed for unrestricted access");
+        log_always("    - sgx.file_check_policy = allow_all_but_log   "
+                   "(all files allowed for unrestricted access)");
 
     if (use_allowed_files)
-        log_always("    - %-44s (%s)", "sgx.allowed_files = [ ... ]",
-                   "some files allowed for unrestricted access");
-
+        log_always("    - sgx.allowed_files = [ ... ]                 "
+                   "(some files allowed for unrestricted access)");
 
     log_always("\nGramine will continue application execution, but this configuration must not be "
                "used in production!");

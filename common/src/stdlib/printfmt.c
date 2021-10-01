@@ -87,7 +87,7 @@ int vfprintfmt(int (*_fputc)(char c, void* arg), void* arg, const char* fmt, va_
         switch (ch = *(unsigned char*)(fmt++)) {
             // flag to pad on the right
             case '-':
-                padc = '-';
+                padc = ' ';
                 goto reswitch;
 
             // flag to pad with 0's instead of spaces
