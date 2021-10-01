@@ -101,7 +101,15 @@ def make_env():
 _env = make_env()
 
 def render(template, variables=None):
-    '''Render template, given as string. Optional variables may be given as mapping.'''
+    '''Render template, given as string.
+
+    Args:
+        template (str): string containing jinja template
+        variables (dict or None): optional variables to add to template context
+
+    Returns:
+        str: rendered manifest
+    '''
     return _env.from_string(template).render(**(variables or {}))
 
 def validate_define(_ctx, _param, values):
