@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
             perror("wait failed");
             return 1;
         }
-        if (!WIFEXITED(status)){
+        if (!WIFEXITED(status)) {
             printf("child exited with status: %d\n", WEXITSTATUS(status));
             return 1;
         }
