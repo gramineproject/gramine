@@ -28,4 +28,8 @@ void debug_map_update_debugger(void);
 int debug_map_add(const char* name, void* addr);
 int debug_map_remove(void* addr);
 
+/* Initialize `g_debug_map` with executable files already loaded by the system (main program, and
+ * dynamic libraries). Processes `/proc/self/maps`. */
+int debug_map_init_from_proc_maps(void);
+
 #endif /* DEBUG_MAP_H */
