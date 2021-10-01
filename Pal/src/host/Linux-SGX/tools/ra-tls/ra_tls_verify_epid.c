@@ -232,22 +232,23 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify enclave attributes from the SGX quote (extracted from IAS report) */
+    /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
+    size_t min_quote_size = offsetof(sgx_quote_t, signature_len);
+    if (quote_from_ias_size < min_quote_size || quote_from_ias_size > QUOTE_MAX_SIZE) {
+        ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+        goto out;
+    }
+
+    /* verify enclave attributes from the SGX quote */
     ret = verify_quote_enclave_attributes((sgx_quote_t*)quote_from_ias, allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
     }
 
-    /* verify other relevant enclave information from the SGX quote (extracted from IAS report) */
+    /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
-        size_t min_quote_size = offsetof(sgx_quote_t, signature_len);
-        if (quote_from_ias_size < min_quote_size || quote_from_ias_size > QUOTE_MAX_SIZE) {
-            ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
-            goto out;
-        }
-
         sgx_quote_t* q = (sgx_quote_t*)quote_from_ias;
         ret = g_verify_measurements_cb((const char*)&q->report_body.mr_enclave,
                                        (const char*)&q->report_body.mr_signer,
