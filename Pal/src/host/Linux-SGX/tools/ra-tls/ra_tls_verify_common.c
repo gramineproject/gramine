@@ -74,30 +74,14 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
     return 0;
 }
 
-int getenv_allow_outdated_tcb(bool* allow_outdated_tcb) {
-    *allow_outdated_tcb = false;
-
+bool getenv_allow_outdated_tcb(void) {
     char* str = getenv(RA_TLS_ALLOW_OUTDATED_TCB_INSECURE);
-    if (!str)
-        return 0;
-
-    if (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE"))
-        *allow_outdated_tcb = true;
-
-    return 0;
+    return (str && !strcmp(str, "1"));
 }
 
-int getenv_allow_debug_enclave(bool* allow_debug_enclave) {
-    *allow_debug_enclave = false;
-
+bool getenv_allow_debug_enclave(void) {
     char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
-    if (!str)
-        return 0;
-
-    if (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE"))
-        *allow_debug_enclave = true;
-
-    return 0;
+    return (str && !strcmp(str, "1"));
 }
 
 /*! searches for specific \p oid among \p exts and returns pointer to its value in \p val */

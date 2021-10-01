@@ -302,15 +302,15 @@ The library also uses the following SGX-specific environment variables:
 
 - ``RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`` (optional) -- whether to allow outdated
   TCB as returned in the IAS attestation report or returned by the DCAP
-  verification library. Values ``1/true/TRUE`` mean "allow outdated TCB". Note
-  that allowing outdated TCB is **insecure** and should be used only for
-  debugging and testing. Outdated TCB is not allowed by default.
+  verification library. Value ``1`` means "allow outdated TCB". Note that
+  allowing outdated TCB is **insecure** and should be used only for debugging
+  and testing. Outdated TCB is not allowed by default.
 
 - ``RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`` (optional) -- whether to allow debug
-  enclaves (enclaves with ``SECS.ATTRIBUTES.DEBUG`` bit set to one). Values
-  ``1/true/TRUE`` mean "allow debug enclaves". Note that allowing debug enclaves
-  is **insecure** and should be used only for debugging and testing. Debug
-  enclaves are not allowed by default.
+  enclaves (enclaves with ``SECS.ATTRIBUTES.DEBUG`` bit set to one). Value ``1``
+  means "allow debug enclaves". Note that allowing debug enclaves is
+  **insecure** and should be used only for debugging and testing. Debug enclaves
+  are not allowed by default.
 
 The library uses the following EPID-specific environment variables if available:
 

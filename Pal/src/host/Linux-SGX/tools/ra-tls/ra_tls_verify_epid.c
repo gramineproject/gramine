@@ -213,19 +213,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     sig_data_size--;
 
     /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
-    bool allow_outdated_tcb;
-    ret = getenv_allow_outdated_tcb(&allow_outdated_tcb);
-    if (ret < 0) {
-        ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
-        goto out;
-    }
-
-    bool allow_debug_enclave;
-    ret = getenv_allow_debug_enclave(&allow_debug_enclave);
-    if (ret < 0) {
-        ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
-        goto out;
-    }
+    bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
+    bool allow_debug_enclave = getenv_allow_debug_enclave();
 
     ret = getenv_ias_pub_key_pem(&ias_pub_key_pem);
     if (ret < 0)

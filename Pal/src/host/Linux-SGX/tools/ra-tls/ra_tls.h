@@ -42,10 +42,10 @@ typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsig
 
 /* internally used functions, not exported */
 __attribute__ ((visibility("hidden")))
-int getenv_allow_outdated_tcb(bool* allow_outdated_tcb);
+bool getenv_allow_outdated_tcb(void);
 
 __attribute__ ((visibility("hidden")))
-int getenv_allow_debug_enclave(bool* allow_debug_enclave);
+bool getenv_allow_debug_enclave(void);
 
 __attribute__ ((visibility("hidden")))
 int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oid_len,
