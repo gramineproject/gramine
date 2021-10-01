@@ -3,16 +3,17 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#include "debug_map.h"
-
 #include <asm/errno.h>
+#include <asm/mman.h>
 
+#include "debug_map.h"
+#include "linux_utils.h"
 #include "spinlock.h"
 
 struct debug_map* _Atomic g_debug_map = NULL;
 
-/* Lock for modifying g_debug_map on our end. Even though the list can be read at any
- * time, we need to prevent concurrent modification. */
+/* Lock for modifying g_debug_map on our end. Even though the list can be read by GDB at any time,
+ * we need to prevent concurrent modification. */
 static spinlock_t g_debug_map_lock = INIT_SPINLOCK_UNLOCKED;
 
 static struct debug_map* debug_map_new(const char* name, void* addr) {
@@ -38,11 +39,22 @@ __attribute__((__noinline__)) void debug_map_update_debugger(void) {
 }
 
 int debug_map_add(const char* name, void* addr) {
-    struct debug_map* map = debug_map_new(name, addr);
-    if (!map)
-        return -ENOMEM;
-
     spinlock_lock(&g_debug_map_lock);
+
+    struct debug_map* map = g_debug_map;
+    while (map) {
+        if (map->addr == addr && strcmp(name, map->name)) {
+            spinlock_unlock(&g_debug_map_lock);
+            return -EEXIST;
+        }
+        map = map->next;
+    }
+
+    map = debug_map_new(name, addr);
+    if (!map) {
+        spinlock_unlock(&g_debug_map_lock);
+        return -ENOMEM;
+    }
 
     map->next = g_debug_map;
     g_debug_map = map;
@@ -83,4 +95,38 @@ int debug_map_remove(void* addr) {
     free(map);
 
     return 0;
+}
+
+/* Find a range that (likely) corresponds to a mapped executable file, and add it to debug maps. */
+static int debug_map_init_callback(struct proc_maps_range* r, void* arg) {
+    __UNUSED(arg);
+
+    /* not executable */
+    if (!(r->prot & PROT_EXEC))
+        return 0;
+
+    /* not a file */
+    if (!r->name)
+        return 0;
+
+    /* [vvar], [vdso] etc. */
+    if (r->name[0] == '[')
+        return 0;
+
+    /* /dev/sgx etc. */
+    if (strstartswith(r->name, "/dev/"))
+        return 0;
+
+    void* addr = (void*)(r->start - r->offset);
+    int ret = debug_map_add(r->name, addr);
+    if (ret == -EEXIST) {
+        /* This is expected: there might be multiple executable ranges for the same instance of a
+         * mapped file, so we'll end up calling `debug_map_add` with the same parameters again */
+        return 0;
+    }
+    return ret;
+}
+
+int debug_map_init_from_proc_maps(void) {
+    return parse_proc_maps("/proc/self/maps", debug_map_init_callback, /*arg=*/NULL);
 }

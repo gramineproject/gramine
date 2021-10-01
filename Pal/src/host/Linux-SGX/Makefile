@@ -83,7 +83,6 @@ urts-objs = \
 	sgx_platform.o \
 	sgx_process.o \
 	sgx_profile.o \
-	sgx_profile_glibc.o \
 	sgx_syscall.o \
 	sgx_thread.o \
 	quote/aesm.pb-c.o \
