@@ -12,3 +12,11 @@ option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable undefined behavior sanitizer')
 option('asan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable address sanitizer (Clang only)')
+
+option('sgx_driver', type: 'combo',
+    choices: ['upstream', 'dcap1.6', 'dcap1.10', 'oot'],
+    description: 'Flavour of the SGX driver')
+option('sgx_driver_include_path', type: 'string',
+    description: 'Path to SGX driver headers (default value depends on sgx_driver)')
+option('sgx_driver_device', type: 'string',
+    description: 'Path to "enclave" device in /dev (default value depends on sgx_driver)')

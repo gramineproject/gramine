@@ -1,9 +1,14 @@
 
 # TODO: We still depend on Makefile to generate some files used in this build:
 #
-# - gsgx.h
 # - quote/aesm.pb-c.[ch]
 # - sgx_integration/sgx_gdb.so
+
+gsgx_h = configure_file(
+    input: 'gsgx.h.in',
+    output: 'gsgx.h',
+    configuration: conf_sgx,
+)
 
 sgx_inc = [
     includes_pal_common,
@@ -12,6 +17,7 @@ sgx_inc = [
         '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
         '../../../include/host/Linux-common',
         'protected-files',
+        sgx_driver_include_path,
     ),
 ]
 
@@ -29,6 +35,8 @@ cflags_pal_sgx = [
 # possible to generate this list from `sgx_inc`.
 sgx_inc_i = [
     '-I@0@'.format(meson.current_source_dir()),
+    '-I@0@'.format(meson.current_build_dir()),
+    '-I@0@'.format(sgx_driver_include_path),
     '-I@0@'.format(join_paths(meson.current_source_dir(),
                               'protected-files')),
     '-I@0@'.format(join_paths(meson.current_source_dir(),
@@ -119,6 +127,7 @@ libpal_sgx = shared_library('pal',
     pal_sgx_asm_offsets,
     pal_common_sources,
     pal_linux_common_sources_enclave,
+    gsgx_h,
 
     include_directories: sgx_inc,
 
@@ -172,6 +181,7 @@ executable('loader',
     'sgx_thread.c',
     pal_linux_common_sources_urts,
     pal_sgx_asm_offsets,
+    gsgx_h,
 
     include_directories: sgx_inc,
     c_args: [

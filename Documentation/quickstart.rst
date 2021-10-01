@@ -72,7 +72,8 @@ descriptions in :doc:`building`.
           python3-pip python3-protobuf wget
       python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       make
-      make ISGX_DRIVER_PATH="" SGX=1                  # this assumes Linux 5.11+
+      make SGX=1
+      # this assumes Linux 5.11+
       meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
       ninja -C build/
       sudo ninja -C build/ install
