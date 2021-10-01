@@ -35,7 +35,6 @@
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
 static const uint8_t quote_oid[] = OID(0x06);
 static const size_t quote_oid_len = sizeof(quote_oid);
-#define QUOTE_MAX_SIZE 8192
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);

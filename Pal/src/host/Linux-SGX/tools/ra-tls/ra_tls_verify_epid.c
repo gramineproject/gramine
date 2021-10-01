@@ -206,7 +206,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify_ias_report() expects report_data and sig_data without the ending '\0' */
+    /* verify_ias_report_extract_quote() expects report_data and sig_data without the ending '\0' */
     assert(report_data[report_data_size - 1] == '\0');
     report_data_size--;
     assert(sig_data[sig_data_size - 1] == '\0');
@@ -233,11 +233,13 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
-    size_t min_quote_size = offsetof(sgx_quote_t, signature_len);
-    if (quote_from_ias_size < min_quote_size || quote_from_ias_size > QUOTE_MAX_SIZE) {
+    if (quote_from_ias_size < SGX_QUOTE_BODY_SIZE || quote_from_ias_size > SGX_QUOTE_MAX_SIZE) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
     }
+
+    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
+     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
 
     /* verify enclave attributes from the SGX quote */
     ret = verify_quote_enclave_attributes((sgx_quote_t*)quote_from_ias, allow_debug_enclave);

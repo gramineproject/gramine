@@ -12,8 +12,6 @@
 #include "attestation.h"
 #include "util.h"
 
-#define QUOTE_MAX_SIZE 8192
-
 struct option g_options[] = {
     { "help", no_argument, 0, 'h' },
     { "verbose", no_argument, 0, 'v' },
@@ -176,12 +174,14 @@ int main(int argc, char* argv[]) {
         return ret;
 
     /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
-    size_t min_quote_size = offsetof(sgx_quote_t, signature_len);
-    if (quote_size < min_quote_size || quote_size > QUOTE_MAX_SIZE) {
+    if (quote_size < SGX_QUOTE_BODY_SIZE || quote_size > SGX_QUOTE_MAX_SIZE) {
         ERROR("SGX quote returned in IAS report has unexpected size %lu\n", quote_size);
         free(report_quote);
         return -1;
     }
+
+    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
+     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
 
     ret = verify_quote(report_quote, quote_size, mrsigner, mrenclave, isv_prod_id, isv_svn,
                        report_data, /*expected_as_str=*/true);

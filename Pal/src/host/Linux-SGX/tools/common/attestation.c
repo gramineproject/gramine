@@ -84,7 +84,7 @@ void display_report_body(const sgx_report_body_t* body) {
 }
 
 void display_quote(const void* quote_data, size_t quote_size) {
-    if (quote_size < offsetof(sgx_quote_t, signature_len)) {
+    if (quote_size < SGX_QUOTE_BODY_SIZE) {
         ERROR("Quote size too small\n");
         return;
     }
@@ -325,9 +325,8 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
 
     // Quote contained in the IAS report doesn't contain signature_len and signature fields
     // Reject any smaller quotes as invalid
-    size_t ias_quote_size = offsetof(sgx_quote_t, signature_len);
-    if (quote_size < ias_quote_size) {
-        ERROR("Quote: Bad size %zu < %zu\n", quote_size, ias_quote_size);
+    if (quote_size < SGX_QUOTE_BODY_SIZE) {
+        ERROR("Quote: Bad size %zu < %zu\n", quote_size, SGX_QUOTE_BODY_SIZE);
         goto out;
     }
 
