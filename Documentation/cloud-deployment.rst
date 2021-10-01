@@ -54,7 +54,7 @@ Building
 
 #. Build Gramine::
 
-       make ISGX_DRIVER_PATH=/usr/src/linux-headers-`uname -r`/arch/x86/ SGX=1
+       make SGX=1
        meson setup build/ --buildtype=release -Dsgx=enabled -Ddirect=disabled
        ninja -C build/
        sudo ninja -C build/ install

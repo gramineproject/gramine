@@ -1,9 +1,14 @@
 
 # TODO: We still depend on Makefile to generate some files used in this build:
 #
-# - gsgx.h
 # - quote/aesm.pb-c.[ch]
 # - sgx_integration/sgx_gdb.so
+
+configure_file(
+    input: 'gsgx.h.in',
+    output: 'gsgx.h',
+    configuration: conf_sgx,
+)
 
 sgx_inc = [
     includes_pal_common,
@@ -12,6 +17,7 @@ sgx_inc = [
         '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
         '../../../include/host/Linux-common',
         'protected-files',
+        sgx_driver_include_path,
     ),
 ]
 
@@ -29,6 +35,8 @@ cflags_pal_sgx = [
 # possible to generate this list from `sgx_inc`.
 sgx_inc_i = [
     '-I@0@'.format(meson.current_source_dir()),
+    '-I@0@'.format(meson.current_build_dir()),
+    '-I@0@'.format(sgx_driver_include_path),
     '-I@0@'.format(join_paths(meson.current_source_dir(),
                               'protected-files')),
     '-I@0@'.format(join_paths(meson.current_source_dir(),
@@ -62,7 +70,9 @@ pal_sgx_generated_offsets_s = custom_target('generated-offsets-pal-sgx.s',
     input: 'generated-offsets.c',
     depfile: 'generated_offsets.c.d',
 
-    depends: tomlc99_src,
+    depends: [
+        tomlc99_src,
+    ]
 )
 
 # TODO: after meson 0.54 those two targets can be combined, and the second one might be passed to
