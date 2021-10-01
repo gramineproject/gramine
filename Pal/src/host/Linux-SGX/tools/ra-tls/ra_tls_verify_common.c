@@ -87,6 +87,19 @@ int getenv_allow_outdated_tcb(bool* allow_outdated_tcb) {
     return 0;
 }
 
+int getenv_allow_debug_enclave(bool* allow_debug_enclave) {
+    *allow_debug_enclave = false;
+
+    char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
+    if (!str)
+        return 0;
+
+    if (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE"))
+        *allow_debug_enclave = true;
+
+    return 0;
+}
+
 /*! searches for specific \p oid among \p exts and returns pointer to its value in \p val */
 int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oid_len,
              uint8_t** val, size_t* len) {
@@ -172,29 +185,6 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
     ret = memcmp(quote->report_body.report_data.d, sha, SHA256_DIGEST_SIZE);
     if (ret)
         return MBEDTLS_ERR_X509_SIG_MISMATCH;
-
-    return 0;
-}
-
-/*! verifies enclave attributes (ATTRIBUTES.FLAGS) from \quote, in particular the debug bit */
-int verify_quote_enclave_attributes(const sgx_quote_t* quote) {
-    bool allow_debug_enclave = false;
-    char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
-    if (str && (!strcmp(str, "1") || !strcmp(str, "true") || !strcmp(str, "TRUE")))
-        allow_debug_enclave = true;
-
-    if (!allow_debug_enclave && (quote->report_body.attributes.flags & SGX_FLAGS_DEBUG))
-        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
-
-    /* sanity checks: enclave must be initialized and must not have provision/EINIT token key */
-    if (!(quote->report_body.attributes.flags & SGX_FLAGS_INITIALIZED) ||
-            (quote->report_body.attributes.flags & SGX_FLAGS_PROVISION_KEY) ||
-            (quote->report_body.attributes.flags & SGX_FLAGS_LICENSE_KEY))
-        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
-
-    /* currently only support 64-bit enclaves */
-    if (!(quote->report_body.attributes.flags & SGX_FLAGS_MODE64BIT))
-        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
 
     return 0;
 }

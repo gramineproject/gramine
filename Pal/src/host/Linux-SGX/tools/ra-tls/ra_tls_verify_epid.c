@@ -180,11 +180,6 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (ret < 0)
         goto out;
 
-    /* verify enclave attributes like DEBUG, INIT, etc. */
-    ret = verify_quote_enclave_attributes(quote);
-    if (ret < 0)
-        goto out;
-
     /* initialize the IAS context, send the quote to the IAS and receive IAS attestation report */
     ias = ias_init(g_api_key, g_report_url, g_sigrl_url);
     if (!ias) {
@@ -217,9 +212,16 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     assert(sig_data[sig_data_size - 1] == '\0');
     sig_data_size--;
 
-    /* verify the received IAS attestation report */
+    /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
     bool allow_outdated_tcb;
     ret = getenv_allow_outdated_tcb(&allow_outdated_tcb);
+    if (ret < 0) {
+        ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        goto out;
+    }
+
+    bool allow_debug_enclave;
+    ret = getenv_allow_debug_enclave(&allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         goto out;
@@ -241,7 +243,14 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify all measurements from the SGX quote (extracted from IAS report) */
+    /* verify enclave attributes from the SGX quote (extracted from IAS report) */
+    ret = verify_quote_enclave_attributes(quote_from_ias, allow_debug_enclave);
+    if (ret < 0) {
+        ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+        goto out;
+    }
+
+    /* verify other relevant enclave information from the SGX quote (extracted from IAS report) */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
         size_t min_quote_size = offsetof(sgx_quote_t, signature_len);

@@ -45,14 +45,14 @@ __attribute__ ((visibility("hidden")))
 int getenv_allow_outdated_tcb(bool* allow_outdated_tcb);
 
 __attribute__ ((visibility("hidden")))
+int getenv_allow_debug_enclave(bool* allow_debug_enclave);
+
+__attribute__ ((visibility("hidden")))
 int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oid_len,
              uint8_t** val, size_t* len);
 
 __attribute__ ((visibility("hidden")))
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
-
-__attribute__ ((visibility("hidden")))
-int verify_quote_enclave_attributes(const sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
 int verify_quote_against_envvar_measurements(const void* quote, size_t quote_size);
