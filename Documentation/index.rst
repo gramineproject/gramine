@@ -106,6 +106,12 @@ Table of Contents
    pal/host-abi
    pal/porting
 
+.. toctree::
+   :caption: Python
+   :maxdepth: 1
+
+   python/api
+
 Indices and tables
 ==================
 
