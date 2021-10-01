@@ -1,11 +1,12 @@
 '''Python support for Gramine'''
+import os as _os
 
 __version__ = '@VERSION@'
 
 _CONFIG_PKGLIBDIR = '@PKGLIBDIR@'
 _CONFIG_LIBDIR = '@LIBDIR@'
 
-if __version__.startswith('@'):
+if __version__.startswith('@') and not _os.getenv('GRAMINE_IMPORT_FOR_SPHINX_ANYWAY') == '1':
     raise RuntimeError(
         'You are attempting to run the tools from repo, without installing. '
         'Please install Gramine before running Python tools. See '
