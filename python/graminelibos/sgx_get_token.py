@@ -104,6 +104,16 @@ def create_dummy_token(flags, xfrms, misc_select):
     return token
 
 def get_token(sig):
+    """Get SGX token.
+
+    Generates a SGX token from the given SIGSTRUCT.
+
+    Args:
+        sig (Sigstruct): SIGSTRUCT to generate the token for.
+
+    Returns:
+        bytes: SGX token.
+    """
     xfrms = get_optional_sgx_features(sig)
 
     # calculate MRSIGNER as sha256 hash over RSA public key's modulus
