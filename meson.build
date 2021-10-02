@@ -73,36 +73,28 @@ if sgx
     sgx_driver_include_path = get_option('sgx_driver_include_path')
     sgx_driver_device = get_option('sgx_driver_device')
 
-    # Gramine only needs one header from the Intel SGX Driver:
-    #   - sgx_user.h for non-DCAP, older version of the driver
-    #     (https://github.com/intel/linux-sgx-driver)
-    #   - include/uapi/asm/sgx_oot.h for DCAP 1.6+ version but below 1.10 of the driver
-    #     (https://github.com/intel/SGXDataCenterAttestationPrimitives)
-    #   - include/sgx_user.h for DCAP 1.10+ version of the driver
-    #     (https://github.com/intel/SGXDataCenterAttestationPrimitives)
-    #   - include/uapi/asm/sgx.h for in-kernel (but not upstreamed) version of the driver
-    #     (https://lore.kernel.org/linux-sgx/20200716135303.276442-1-jarkko.sakkinen@linux.intel.com)
-    #   - default sgx_in_kernel.h for upstreamed in-kernel driver from mainline Linux kernel 5.11+
-    #     (https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git)
-
     if sgx_driver == 'upstream'
+        # upstream in-kernel driver (Linux 5.11+)
         conf_sgx.set('CONFIG_SGX_DRIVER_UPSTREAM', true)
         sgx_driver_header = 'uapi/asm/sgx.h'
         sgx_driver_include_path_default = '/usr/src/linux-headers-@0@/arch/x86/include'.format(
             run_command('uname', '-r').stdout().strip())
         sgx_driver_device_default = '/dev/sgx_enclave'
     elif sgx_driver == 'oot'
+        # old non-DCAP driver (https://github.com/intel/linux-sgx-driver)
         conf_sgx.set('CONFIG_SGX_DRIVER_OOT', true)
         sgx_driver_header = 'sgx_user.h'
         sgx_driver_include_path_default = '/opt/intel/linux-sgx-driver'
         sgx_driver_device_default = '/dev/isgx'
     elif sgx_driver == 'dcap1.6'
+        # DCAP 1.6+ but below 1.10 (https://github.com/intel/SGXDataCenterAttestationPrimitives)
         conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_6', true)
         sgx_driver_header = 'uapi/asm/sgx_oot.h'
         sgx_driver_device_default = '/dev/sgx/enclave'
         sgx_driver_include_path_default = \
             '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include'
     elif sgx_driver == 'dcap1.10'
+        # DCAP 1.10+ (https://github.com/intel/SGXDataCenterAttestationPrimitives)
         conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
         sgx_driver_header = 'sgx_user.h'
         sgx_driver_device_default = '/dev/sgx/enclave'

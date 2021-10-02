@@ -22,6 +22,14 @@ stage('build') {
         make ${MAKEOPTS}
     '''
 
+    env.MESON_OPTIONS = ''
+    if (env.UBSAN == '1') {
+        env.MESON_OPTIONS += ' -Dubsan=enabled'
+    }
+    if (env.ASAN == '1') {
+        env.MESON_OPTIONS += ' -Dasan=enabled'
+    }
+
     try {
         sh '''
             meson setup build-dcap/ \
@@ -29,20 +37,13 @@ stage('build') {
                 --buildtype="$BUILDTYPE" \
                 -Ddirect=disabled \
                 -Dsgx=enabled \
-                -Dsgx_driver=dcap1.6
+                -Dsgx_driver=dcap1.6 \
+                $MESON_OPTIONS
             ninja -vC build-dcap
         '''
     } finally {
         archiveArtifacts 'build-dcap/meson-logs/**/*'
         sh 'rm -rf build-dcap'
-    }
-
-    env.MESON_OPTIONS = ''
-    if (env.UBSAN == '1') {
-        env.MESON_OPTIONS += ' -Dubsan=enabled'
-    }
-    if (env.ASAN == '1') {
-        env.MESON_OPTIONS += ' -Dasan=enabled'
     }
 
     try {

@@ -4,7 +4,7 @@
 # - quote/aesm.pb-c.[ch]
 # - sgx_integration/sgx_gdb.so
 
-configure_file(
+gsgx_h = configure_file(
     input: 'gsgx.h.in',
     output: 'gsgx.h',
     configuration: conf_sgx,
@@ -70,9 +70,7 @@ pal_sgx_generated_offsets_s = custom_target('generated-offsets-pal-sgx.s',
     input: 'generated-offsets.c',
     depfile: 'generated_offsets.c.d',
 
-    depends: [
-        tomlc99_src,
-    ]
+    depends: tomlc99_src,
 )
 
 # TODO: after meson 0.54 those two targets can be combined, and the second one might be passed to
@@ -129,6 +127,7 @@ libpal_sgx = shared_library('pal',
     pal_sgx_asm_offsets,
     pal_common_sources,
     pal_linux_common_sources_enclave,
+    gsgx_h,
 
     include_directories: sgx_inc,
 
@@ -182,6 +181,7 @@ executable('loader',
     'sgx_thread.c',
     pal_linux_common_sources_urts,
     pal_sgx_asm_offsets,
+    gsgx_h,
 
     include_directories: sgx_inc,
     c_args: [
