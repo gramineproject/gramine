@@ -5,9 +5,9 @@
 # Copyright (c) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
-'''
-Gramine manifest renderer
-'''
+"""
+Gramine manifest management and rendering
+"""
 
 import hashlib
 import pathlib
@@ -21,7 +21,10 @@ DEFAULT_ENCLAVE_SIZE = '256M'
 DEFAULT_THREAD_NUM = 4
 
 class ManifestError(Exception):
-    pass
+    """Thrown at errors in manifest parsing and handling.
+
+    Contains a string with error description.
+    """
 
 def hash_file_contents(path):
     with open(path, 'rb') as f:
@@ -46,7 +49,7 @@ def append_trusted_dir_or_file(trusted_files, val):
     elif isinstance(val, str):
         uri = val
     else:
-        raise ValueError(f'Unknown trusted file format: {val!r}')
+        raise ManifestError(f'Unknown trusted file format: {val!r}')
 
     path = uri2path(uri)
     if not path.exists():
@@ -61,6 +64,15 @@ def append_trusted_dir_or_file(trusted_files, val):
         append_tf(trusted_files, uri, hash_file_contents(path))
 
 class Manifest:
+    """Just a representation of a manifest.
+
+    You can access or change specific manifest entries via ``[]`` operator (just like a normal
+    python ``dict``).
+
+    Args:
+        manifest_str (str): the manifest in the TOML format.
+    """
+
     def __init__(self, manifest_str):
         manifest = toml.loads(manifest_str)
 
@@ -99,7 +111,7 @@ class Manifest:
                 if isinstance(tf, str):
                     append_tf(trusted_files, tf, None)
                 else:
-                    raise ValueError(f'Unknown trusted file format: {tf!r}')
+                    raise ManifestError(f'Unknown trusted file format: {tf!r}')
         else:
             for tf in sgx['trusted_files']:
                 if isinstance(tf, dict) and 'uri' in tf:
@@ -107,7 +119,7 @@ class Manifest:
                 elif isinstance(tf, str):
                     append_tf(trusted_files, tf, None)
                 else:
-                    raise ValueError(f'Unknown trusted file format: {tf!r}')
+                    raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
         sgx['trusted_files'] = trusted_files
 
@@ -121,8 +133,19 @@ class Manifest:
 
     @classmethod
     def from_template(cls, template, variables=None):
-        '''Render template into a Manifest from the given string. Optional variables may be given
-        as mapping.'''
+        """Render template into Manifest.
+
+        Creates a manifest from the jinja template given as string. Optional variables may be given
+        as mapping.
+
+        Args:
+            template (str): jinja2 template of the manifest
+            variables (:obj:`dict`, optional): Dictionary of variables that are used in
+                the template.
+
+        Returns:
+            Manifest: instance created from rendered template.
+        """
         return cls(_env.from_string(template).render(**(variables or {})))
 
     @classmethod
@@ -140,6 +163,16 @@ class Manifest:
         toml.dump(self._manifest, f)
 
     def expand_all_trusted_files(self):
+        """Expand all trusted files entries.
+
+        Collects all trusted files entries and all files from ``loader.preload`` entry, hashes each
+        of them (skipping these which already had a hash present) and updates ``sgx.trusted_files``
+        manifest entry with the result.
+
+        Raises:
+            ManifestError: There was an error with the format of some trusted files in the manifest
+                or some of them could not be loaded from the filesystem.
+        """
         trusted_files = []
         for tf in self['sgx']['trusted_files']:
             append_trusted_dir_or_file(trusted_files, tf)
@@ -155,6 +188,17 @@ class Manifest:
         self['sgx']['trusted_files'] = trusted_files
 
     def get_dependencies(self):
+        """Generate list of files which this manifest depends on.
+
+        Collects all trusted files that are not yet expanded (do not have a hash in the entry) and
+        all files from ``loader.preload`` entry and returns them.
+
+        Returns:
+            list(pathlib.Path): List of paths to the files this manifest depends on.
+
+        Raises:
+            ManifestError: One of the found URIs is in an unsupported format.
+        """
         deps = set()
 
         preload_str = self['loader']['preload']
