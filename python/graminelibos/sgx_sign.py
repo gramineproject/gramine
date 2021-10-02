@@ -506,7 +506,19 @@ def get_mrenclave_and_manifest(manifest_path, libpal=None):
 
 
 def get_tbssigstruct(manifest_path, date, libpal=None):
-    '''Generate To Be Signed Sigstruct (TBSSIGSTRUCT).'''
+    """Generate To Be Signed Sigstruct (TBSSIGSTRUCT).
+
+    Generates a Sigstruct object using the provided data with all required fields initialized (i.e.
+    all except those corresponding to the signature itself).
+
+    Args:
+        manifest_path (str): Path to the manifest file.
+        date (date): Date to put into SIGSTRUCT.
+        libpal (:obj:`str`, optional): Path to the libpal file.
+
+    Returns:
+        Sigstruct: SIGSTRUCT generated from provided data.
+    """
 
     mrenclave, manifest = get_mrenclave_and_manifest(manifest_path, libpal)
 
@@ -530,6 +542,19 @@ def get_tbssigstruct(manifest_path, date, libpal=None):
 
 
 def sign_with_local_key(data, key):
+    """Signs *data* using *key*.
+
+    Function used to generate an RSA signature over provided data using a 3072-bit private key with
+    the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
+    Suitable to be used as a callback to :py:func:`graminelibos.Sigstruct.sign()`.
+
+    Args:
+        data (bytes): Data to calculate the signature over.
+        key (str): Path to a file with RSA private key.
+
+    Returns:
+        (int, int, int): Tuple of exponent, modulus and signature respectively.
+    """
     proc = subprocess.Popen(
         ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],
         stdout=subprocess.PIPE)

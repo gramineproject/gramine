@@ -9,6 +9,13 @@ from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 
 
 class Sigstruct:
+    """Class for holding SGX SIGSTRUCT.
+
+    Each field can be accessed and modified using ``[]`` operator. Accessing or setting an unknown
+    key raises ``KeyError`` and setting a key to a value not matching required format raises
+    ``ValueError``.
+    """
+
     fields = {
         'header': (offs.SGX_ARCH_ENCLAVE_CSS_HEADER, '16s'),
         'module_vendor': (offs.SGX_ARCH_ENCLAVE_CSS_MODULE_VENDOR, '<L'),
@@ -70,11 +77,30 @@ class Sigstruct:
         return key in self._data
 
 
-    def to_bytes(self, verify=True):
+    def to_bytes(self, verify=True, verify_sig_fields=False):
+        """Turn SIGSTRUCT into bytes.
+
+        You probably want to set all required fields before calling this function. If you not wish
+        to do so, you can pass :obj:`False` as *verify* argument - in such case non-set fields
+        will be implicitly ``0``-initialized. Some fields have default values and therefore not need
+        to be set (e.g. *header*).
+
+        Args:
+            verify (bool): if ``True``, check if all fields were initialized.
+            verify_sig_fields (bool): if ``True``, don't skip signature fields in checks. Used only
+                when `verify` is ``True``.
+
+        Returns:
+            bytearray: buffer containing byte representation of this SIGSTRUCT.
+
+        Raises:
+            KeyError: some SIGSTRUCT fields were not set.
+        """
         buffer = bytearray(offs.SGX_ARCH_ENCLAVE_CSS_SIZE)
         for key, (offset, fmt) in self.fields.items():
             if key not in self:
-                if verify:
+                if verify and (key not in ['modulus', 'exponent', 'signature', 'q1', 'q2']
+                               or verify_sig_fields):
                     raise KeyError(f'{key} is not set')
                 continue
             struct.pack_into(fmt, buffer, offset, self[key])
@@ -83,6 +109,20 @@ class Sigstruct:
 
     @classmethod
     def from_bytes(cls, buffer):
+        """Load a SIGSTRUCT from bytes-like object.
+
+        Input bytes must match the required SIGSTRUCT format.
+
+        Args:
+            buffer (bytes-like): buffer containing SIGSTRUCT.
+
+        Returns:
+            Sigstruct: parsed SIGSTRUCT object.
+
+        Raises:
+            TypeError: *buffer* has a wrong type (is not bytes or bytearray).
+            ValueError: *buffer* does not have required length or one of the headers does not match.
+        """
         if not isinstance(buffer, bytes) and not isinstance(buffer, bytearray):
             raise TypeError(f'a bytes-like object is required, not {type(buffer).__name__}')
         if len(buffer) != offs.SGX_ARCH_ENCLAVE_CSS_SIZE:
@@ -102,12 +142,27 @@ class Sigstruct:
 
 
     def get_signing_data(self):
-        data = self.to_bytes(verify=False)
+        data = self.to_bytes()
         after_sig_offset = offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT
         return data[:128] + data[after_sig_offset:after_sig_offset+128]
 
 
     def sign(self, do_sign_callback, *args, **kwargs):
+        """Sign the SIGSTRUCT.
+
+        Signs this SIGSTRUCT in place (i.e. fills appropriate fields with the signing result) using
+        *do_sign_callback* function.
+
+        Args:
+            do_sign_callback: Function doing actual signing. Gets to-be-signed data as the first
+                argument (bytearray), then optional ``*args`` and ``**kwargs``. Must return a tuple
+                ``(int, int, int)`` containing exponent, modulus and signature respectively.
+            *args: Arbitrary arguments list passed to *do_sign_callback*.
+            **kwargs:  Arbitrary keyword arguments passed to *do_sign_callback*.
+
+        Raises:
+            KeyError: some SIGSTRUCT fields were not set.
+        """
         data = self.get_signing_data()
 
         exponent_int, modulus_int, signature_int = do_sign_callback(data, *args, **kwargs)

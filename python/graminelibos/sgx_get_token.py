@@ -104,6 +104,21 @@ def create_dummy_token(flags, xfrms, misc_select):
     return token
 
 def get_token(sig):
+    """Get SGX token (aka EINITTOKEN).
+
+    Generates an SGX token from the given SIGSTRUCT. The resulting token might have some additional
+    features enabled that were not required (but also not forbidden) by the input SIGSTRUCT. For
+    example, if SIGSTRUCT did not have bit(s) corresponding to AVX512 set in
+    `SIGSTRUCT.ATTRIBUTEMASK.XFRM` and the machine on which the token is generated (i.e. the one
+    that will be running the enclave) supports AVX512, then the output token will have AVX512
+    enabled.
+
+    Args:
+        sig (Sigstruct): SIGSTRUCT to generate the token for.
+
+    Returns:
+        bytes: SGX token.
+    """
     xfrms = get_optional_sgx_features(sig)
 
     # calculate MRSIGNER as sha256 hash over RSA public key's modulus
