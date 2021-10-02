@@ -278,15 +278,15 @@ enum {
     HUGEPAGES_MAX,
 };
 
-enum {
+enum multiplier {
     MULTIPLIER_NONE,
     MULTIPLIER_KB,
     MULTIPLIER_MB,
     MULTIPLIER_GB,
 };
 
-enum {
-    CACHE_TYPE_DATA = 0,
+enum cache_type {
+    CACHE_TYPE_DATA,
     CACHE_TYPE_INSTRUCTION,
     CACHE_TYPE_UNIFIED,
 };
@@ -320,7 +320,7 @@ typedef struct PAL_CORE_CACHE_INFO_ {
     PAL_NUM level;
     PAL_NUM type;
     PAL_NUM size;
-    PAL_NUM size_multiplier;
+    enum multiplier size_multiplier;
     PAL_NUM coherency_line_size;
     PAL_NUM number_of_sets;
     PAL_NUM physical_line_partition;
@@ -333,7 +333,7 @@ typedef struct PAL_CORE_TOPO_INFO_ {
     PAL_RES_RANGE_INFO core_siblings;
     PAL_RES_RANGE_INFO thread_siblings;
     PAL_CORE_CACHE_INFO* cache; /* Array of size num_cache_index, owned by this struct */
-    PAL_NUM cpu_socket; /* array of "logical core -> socket" mappings; */
+    PAL_NUM cpu_socket; /* Array of "logical core -> socket" mappings */
 } PAL_CORE_TOPO_INFO;
 
 typedef struct PAL_NUMA_TOPO_INFO_ {

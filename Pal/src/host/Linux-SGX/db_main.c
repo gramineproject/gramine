@@ -166,48 +166,48 @@ static int sanitize_hw_resource_range(PAL_RES_RANGE_INFO* res_info, uint64_t res
                                       uint64_t range_max_limit) {
     uint64_t resource_count = res_info->resource_count;
     if (!IS_IN_RANGE_INCL(resource_count, res_min_limit, res_max_limit)) {
-        log_error("Invalid resource count: %ld", resource_count);
+        log_error("Invalid resource count: %lu", resource_count);
         return -1;
     }
 
     uint64_t range_count = res_info->range_count;
     if (!IS_IN_RANGE_INCL(range_count, 1, 1 << 7)) {
-        log_error("Invalid range count: %ld", range_count);
+        log_error("Invalid range count: %lu", range_count);
         return -1;
     }
 
     if (!res_info->ranges)
         return -1;
 
-    bool skip_overlap_check = true;
+    bool check_for_overlaps = false;
     uint64_t previous_end = 0;
     for (uint64_t i = 0; i < range_count; i++) {
 
         uint64_t start = res_info->ranges[i].start;
         uint64_t end = res_info->ranges[i].end;
 
-        /* Ensure start and end fall within the max_limit value */
+        /* Ensure start and end fall within range limits */
         if (!IS_IN_RANGE_INCL(start, range_min_limit, range_max_limit)) {
-            log_error("Invalid start range: %ld", start);
+            log_error("Invalid start range: %lu", start);
             return -1;
         }
 
         if ((start != end) && !IS_IN_RANGE_INCL(end, start + 1, range_max_limit)) {
-            log_error("Invalid end range: %ld", end);
+            log_error("Invalid end range: %lu", end);
             return -1;
         }
 
         /* check for overlaps like "1-5, 3-4". Note: we skip this check for first time as
          *`previous_end` is not yet initializied. */
-        if (!skip_overlap_check && previous_end >= start) {
-            log_error("Malformed range: previous_end = %ld, current start = %ld", previous_end,
+        if (check_for_overlaps && previous_end >= start) {
+            log_error("Malformed range: previous_end = %lu, current start = %lu", previous_end,
                       start);
             return -1;
         }
         previous_end = end;
 
-        if (skip_overlap_check)
-            skip_overlap_check = false;
+        /* Start checking for overlaps after the first range */
+        check_for_overlaps = true;
     }
 
     return 0;
@@ -232,7 +232,7 @@ static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, uint64_t cac
         int ret = sanitize_hw_resource_range(&cache[lvl].shared_cpu_map, 1, max_limit, 0,
                                              num_cores);
         if (ret < 0) {
-            log_error("Invalid cache[%ld].shared_cpu_map", lvl);
+            log_error("Invalid cache[%lu].shared_cpu_map", lvl);
             return -1;
         }
 
@@ -297,14 +297,14 @@ static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, uint64
         ret = sanitize_hw_resource_range(&core_topology[idx].core_siblings, 1, num_cores, 0,
                                          num_cores);
         if (ret < 0) {
-            log_error("Invalid core_topology[%ld].core_siblings", idx);
+            log_error("Invalid core_topology[%lu].core_siblings", idx);
             return -1;
         }
 
         /* Max. SMT siblings currently supported on x86 processors is 4 */
         ret = sanitize_hw_resource_range(&core_topology[idx].thread_siblings, 1, 4, 0, num_cores);
         if (ret < 0) {
-            log_error("Invalid core_topology[%ld].thread_siblings", idx);
+            log_error("Invalid core_topology[%lu].thread_siblings", idx);
             return -1;
         }
 
@@ -382,7 +382,7 @@ static int sanitize_socket_info(PAL_TOPO_INFO* topo_info) {
                                     topo_info->core_topology[core_in_socket].core_siblings.ranges;
         for (uint64_t j = 0; j < core_sibling_cnt; j++) {
             if (socket_info[idx].ranges[j].start != core_sibling_ranges[j].start ||
-                socket_info[idx].ranges[j].end != core_sibling_ranges[j].end) {
+                    socket_info[idx].ranges[j].end != core_sibling_ranges[j].end) {
                 ret = -1;
                 goto out_socket;
             }
@@ -411,7 +411,7 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, uint64
     for (uint64_t idx = 0; idx < num_nodes; idx++) {
         ret = sanitize_hw_resource_range(&numa_topology[idx].cpumap, 1, num_cores, 0, num_cores);
         if (ret < 0) {
-            log_error("Invalid numa_topology[%ld].cpumap", idx);
+            log_error("Invalid numa_topology[%lu].cpumap", idx);
             goto out_numa;
         }
 
@@ -426,7 +426,7 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, uint64
                     goto out_numa;
                 }
                 if (bitmap[index] & (1U << (j % BITS_IN_TYPE(int)))) {
-                    log_error("Invalid numa_topology: Core %ld found in multiple numa nodes", j);
+                    log_error("Invalid numa_topology: Core %lu found in multiple numa nodes", j);
                     ret = -1;
                     goto out_numa;
                 }
@@ -437,7 +437,7 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, uint64
 
         uint64_t distances = numa_topology[idx].distance.resource_count;
         if (distances != num_nodes) {
-            log_error("Invalid numa_topology[%ld].distance", idx);
+            log_error("Invalid numa_topology[%lu].distance", idx);
             ret = -1;
             goto out_numa;
         }
@@ -468,15 +468,15 @@ static int sgx_copy_core_topo_to_enclave(PAL_CORE_TOPO_INFO* src, uint64_t onlin
         core_topo[idx].core_id = src[idx].core_id;
         core_topo[idx].cpu_socket = src[idx].cpu_socket;
 
-        int ret  = copy_hw_resource_range(&src[idx].core_siblings, &core_topo[idx].core_siblings);
+        int ret = copy_hw_resource_range(&src[idx].core_siblings, &core_topo[idx].core_siblings);
         if (ret < 0) {
-            log_error("Copying core_topo[%ld].core_siblings failed", idx);
+            log_error("Copying core_topo[%lu].core_siblings failed", idx);
             return -1;
         }
 
-        ret  = copy_hw_resource_range(&src[idx].thread_siblings, &core_topo[idx].thread_siblings);
+        ret = copy_hw_resource_range(&src[idx].thread_siblings, &core_topo[idx].thread_siblings);
         if (ret < 0) {
-            log_error("Copying core_topo[%ld].core_siblings failed", idx);
+            log_error("Copying core_topo[%lu].core_siblings failed", idx);
             return -1;
         }
 
@@ -497,10 +497,10 @@ static int sgx_copy_core_topo_to_enclave(PAL_CORE_TOPO_INFO* src, uint64_t onlin
             cache_info[lvl].number_of_sets = src[idx].cache[lvl].number_of_sets;
             cache_info[lvl].physical_line_partition = src[idx].cache[lvl].physical_line_partition;
 
-            ret  = copy_hw_resource_range(&src[idx].cache[lvl].shared_cpu_map,
+            ret = copy_hw_resource_range(&src[idx].cache[lvl].shared_cpu_map,
                                           &cache_info[lvl].shared_cpu_map);
             if (ret < 0) {
-                log_error("Copying core_topo[%ld].cache[%ld].shared_cpu_map failed", idx, lvl);
+                log_error("Copying core_topo[%lu].cache[%lu].shared_cpu_map failed", idx, lvl);
                 return -1;
             }
         }
@@ -523,15 +523,15 @@ static int sgx_copy_numa_topo_to_enclave(PAL_NUMA_TOPO_INFO* src, uint64_t num_o
         numa_topo[idx].nr_hugepages[HUGEPAGES_2M] = src[idx].nr_hugepages[HUGEPAGES_2M];
         numa_topo[idx].nr_hugepages[HUGEPAGES_1G] = src[idx].nr_hugepages[HUGEPAGES_1G];
 
-        int ret  = copy_hw_resource_range(&src[idx].cpumap, &numa_topo[idx].cpumap);
+        int ret = copy_hw_resource_range(&src[idx].cpumap, &numa_topo[idx].cpumap);
         if (ret < 0) {
-            log_error("Copying numa_topo[%ld].core_siblings failed", idx);
+            log_error("Copying numa_topo[%lu].core_siblings failed", idx);
             return -1;
         }
 
-        ret  = copy_hw_resource_range(&src[idx].distance, &numa_topo[idx].distance);
+        ret = copy_hw_resource_range(&src[idx].distance, &numa_topo[idx].distance);
         if (ret < 0) {
-            log_error("Copying numa_topo[%ld].core_siblings failed", idx);
+            log_error("Copying numa_topo[%lu].core_siblings failed", idx);
             return -1;
         }
     }
@@ -546,7 +546,7 @@ static int parse_host_topo_info(PAL_TOPO_INFO* topo_info) {
         log_error("Invalid sec_info.topo_info.online_logical_cores");
         return -1;
     }
-    ret  = copy_hw_resource_range(&topo_info->online_logical_cores,
+    ret = copy_hw_resource_range(&topo_info->online_logical_cores,
                                   &g_pal_sec.topo_info.online_logical_cores);
     if (ret < 0) {
         log_error("Copying sec_info.topo_info.online_logical_cores failed");
@@ -558,7 +558,7 @@ static int parse_host_topo_info(PAL_TOPO_INFO* topo_info) {
         log_error("Invalid sec_info.topo_info.possible_logical_cores");
         return -1;
     }
-    ret  = copy_hw_resource_range(&topo_info->possible_logical_cores,
+    ret = copy_hw_resource_range(&topo_info->possible_logical_cores,
                                   &g_pal_sec.topo_info.possible_logical_cores);
     if (ret < 0) {
         log_error("Copying sec_info.topo_info.possible_logical_cores failed");
@@ -578,7 +578,7 @@ static int parse_host_topo_info(PAL_TOPO_INFO* topo_info) {
 
     uint64_t num_cache_index = topo_info->num_cache_index;
     if (!IS_IN_RANGE_INCL(num_cache_index, 1, 1 << 4)) {
-        log_error("Invalid sec_info.topo_info.num_cache_index: %ld", num_cache_index);
+        log_error("Invalid sec_info.topo_info.num_cache_index: %lu", num_cache_index);
         return -1;
     }
     g_pal_sec.topo_info.num_cache_index = num_cache_index;
@@ -601,7 +601,7 @@ static int parse_host_topo_info(PAL_TOPO_INFO* topo_info) {
     }
 
     if (!IS_IN_RANGE_INCL(topo_info->physical_cores_per_socket, 1, 1 << 13)) {
-        log_error("Invalid sec_info.physical_cores_per_socket: %ld",
+        log_error("Invalid sec_info.physical_cores_per_socket: %lu",
                   topo_info->physical_cores_per_socket);
         return -1;
     }
@@ -611,7 +611,7 @@ static int parse_host_topo_info(PAL_TOPO_INFO* topo_info) {
     /* Virtual environments such as QEMU may assign each core to a separate socket/package with
      * one or more NUMA nodes. So we check against the number of online logical cores. */
     if (!IS_IN_RANGE_INCL(num_sockets, 1, online_logical_cores)) {
-        log_error("Invalid sec_info.topo_info.num_cache_index: %ld", num_cache_index);
+        log_error("Invalid sec_info.topo_info.num_cache_index: %lu", num_cache_index);
         return -1;
     }
     g_pal_sec.topo_info.num_sockets = num_sockets;

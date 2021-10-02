@@ -14,7 +14,8 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
-int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size_t max_size) {
+int sys_convert_int_to_sizestr(uint64_t val, enum multiplier size_mult, char* str,
+                               size_t max_size) {
     int ret = 0;
 
     switch (size_mult) {
@@ -75,10 +76,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_inf
     for (uint64_t i = 0; i < res_range_info->range_count; i++) {
         uint64_t start = res_range_info->ranges[i].start;
         uint64_t end = res_range_info->ranges[i].end;
-        if (start > INT64_MAX || end > INT64_MAX) {
-            ret = -EINVAL;
-            goto out;
-        }
+
         for (uint64_t j = start; j <= end; j++) {
             uint64_t index = j / BITS_IN_TYPE(int);
             if (index >= num_cpumask) {

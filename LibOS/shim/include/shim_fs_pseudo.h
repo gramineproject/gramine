@@ -209,10 +209,10 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 
-/* Converts integer to a string. When integer representation (enum value) of size multiplier like
- *'K', 'M' or 'G' is passed, it is converted back to string and appended. When the size multiplier
- * is `MULTIPLIER_NONE`, nothing is appended, and the integer is simply converted to a string. */
-int sys_convert_int_to_sizestr(uint64_t val, uint64_t size_mult, char* str, size_t max_size);
+/* Converts integer to a string. When size multiplier is passed, it is converted back to string and
+ * appended except in cases where the size multiplier is `MULTIPLIER_NONE`. In such cases nothing is
+ * appended and the integer is simply converted to a string. */
+int sys_convert_int_to_sizestr(uint64_t val, enum multiplier size_mult, char* str, size_t max_size);
 
 /* Converts array of integer range(s) to a string. For example if res_range_info->ranges[0].start
  * and res_range_info->ranges[0].end were 0 and 63 respectively, then `0-63` string is generated.
