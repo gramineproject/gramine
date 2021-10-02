@@ -2,9 +2,9 @@
 
 CFLAGS='-O2 -DMBEDTLS_CONFIG_FILE=\"mbedtls/config-pal.h\"'
 
-# Gramine's stack protector options (TODO: pass from Meson?)
-CFLAGS="$CFLAGS -fstack-protector-strong -mstack-protector-guard=tls \
-    -mstack-protector-guard-reg=%gs -mstack-protector-guard-offset=8"
+# TODO: We disable the stack protector because the default configuration doesn't work inside
+# Gramine. Instead, we should pass the right stack protector options from Meson.
+CFLAGS="$CFLAGS -fno-stack-protector"
 
 # Generate position-independent code even for a static library, so that it can be used in PAL and
 # LibOS
