@@ -22,7 +22,7 @@ PAL_CONTROL g_pal_control = {
     .log_level = PAL_LOG_DEFAULT_LEVEL,
 };
 
-const PAL_CONTROL* DkGetPalControl(void) {
+PAL_CONTROL* DkGetPalControl(void) {
     return &g_pal_control;
 }
 
