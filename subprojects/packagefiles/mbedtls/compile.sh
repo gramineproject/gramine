@@ -24,18 +24,6 @@ rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/gramine.patch
 
-# Disable the default stack protector, because it conflicts with the one used by Gramine
-CFLAGS="$CFLAGS -fno-stack-protector"
-
-# Generate position-independent code even for a static library, so that it can be used in PAL and
-# LibOS
-CFLAGS="$CFLAGS -fPIC"
-
-# Don't assume existence of builtins (currently Clang emits references to `bcmp`)
-CFLAGS="$CFLAGS -fno-builtin"
-
-export CFLAGS
-
 make -C "$PRIVATE_DIR" lib "$@"
 
 for output in $OUTPUTS
