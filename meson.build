@@ -68,7 +68,7 @@ endif
 if sgx
     conf_sgx = configuration_data()
 
-    # SGX driver options (in make, this was ISGX_DRIVER_PATH and link-intel-driver.py)
+    # SGX driver options (in Make, this was ISGX_DRIVER_PATH and link-intel-driver.py)
     sgx_driver = get_option('sgx_driver')
     sgx_driver_include_path = get_option('sgx_driver_include_path')
     sgx_driver_device = get_option('sgx_driver_device')
@@ -86,44 +86,38 @@ if sgx
     #     (https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git)
 
     if sgx_driver == 'upstream'
-        sgx_driver_header = 'uapi/asm/sgx.h'
         conf_sgx.set('CONFIG_SGX_DRIVER_UPSTREAM', true)
-        if sgx_driver_include_path == ''
-            sgx_driver_include_path = '/usr/src/linux-headers-@0@/arch/x86/include'.format(
-                run_command('uname', '-r').stdout().strip())
-        endif
-        if sgx_driver_device == ''
-            sgx_driver_device = '/dev/sgx_enclave'
-        endif
-
+        sgx_driver_header = 'uapi/asm/sgx.h'
+        sgx_driver_include_path_default = '/usr/src/linux-headers-@0@/arch/x86/include'.format(
+            run_command('uname', '-r').stdout().strip())
+        sgx_driver_device_default = '/dev/sgx_enclave'
     elif sgx_driver == 'oot'
-        sgx_driver_header = 'sgx_user.h'
         conf_sgx.set('CONFIG_SGX_DRIVER_OOT', true)
-        if sgx_driver_include_path == ''
-            sgx_driver_include_path = '/opt/intel/linux-sgx-driver'
-        endif
-        if sgx_driver_device == ''
-            sgx_driver_device = '/dev/isgx'
-        endif
+        sgx_driver_header = 'sgx_user.h'
+        sgx_driver_include_path_default = '/opt/intel/linux-sgx-driver'
+        sgx_driver_device_default = '/dev/isgx'
+    elif sgx_driver == 'dcap1.6'
+        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_6', true)
+        sgx_driver_header = 'uapi/asm/sgx_oot.h'
+        sgx_driver_device_default = '/dev/sgx/enclave'
+        sgx_driver_include_path_default = \
+            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include'
+    elif sgx_driver == 'dcap1.10'
+        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
+        sgx_driver_header = 'sgx_user.h'
+        sgx_driver_device_default = '/dev/sgx/enclave'
+        sgx_driver_include_path_default = \
+            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include'
+    else
+        error('Unknown sgx_driver value')
+    endif
 
-    else # dcap1.6 or dcap1.10
-        if sgx_driver == 'dcap1.6'
-            sgx_driver_header = 'uapi/asm/sgx_oot.h'
-            conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_6', true)
-        elif sgx_driver == 'dcap1.10'
-            sgx_driver_header = 'sgx_user.h'
-            conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
-        else
-            error('Unknown sgx_driver value')
-        endif
+    if sgx_driver_include_path == ''
+        sgx_driver_include_path = sgx_driver_include_path_default
+    endif
 
-        if sgx_driver_device == ''
-            sgx_driver_device = '/dev/sgx/enclave'
-        endif
-        if sgx_driver_include_path == ''
-            sgx_driver_include_path = (
-                '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include')
-        endif
+    if sgx_driver_device == ''
+        sgx_driver_device = sgx_driver_device_default
     endif
 
     # Check if the directory and header exist. We could run only `has_header`, but then
