@@ -56,7 +56,7 @@ argparser.add_argument('--output-file', '-O', metavar='FILENAME',
     help='write XML report to a file (use - for stdout)')
 
 argparser.add_argument('--timeout-factor', '-T', metavar='N',
-    type=float,
+    type=float, default=1,
     help='multiply all timeouts by N')
 
 argparser.set_defaults(
@@ -122,7 +122,7 @@ class TestRunner:
         tag (str): a name of the test
         cmd (iterable): the command (full *argv*)
     '''
-    def __init__(self, suite, tag, cmd, timeout_factor):
+    def __init__(self, suite, tag, cmd, timeout_factor=1):
         self.suite = suite
         self.tag = tag
         self.cmd = tuple(cmd)

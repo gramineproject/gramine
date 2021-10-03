@@ -15,8 +15,8 @@ ifeq ($(BUILD_VERBOSE),1)
 	RUNLTPOPTS += -v
 endif
 
-ifneq ($(TIMEOUT_FACTOR),)
-	RUNLTPOPTS += -T $(TIMEOUT_FACTOR)
+ifneq ($(LTP_TIMEOUT_FACTOR),)
+	RUNLTPOPTS += -T $(LTP_TIMEOUT_FACTOR)
 endif
 
 $(SRCDIR)/Makefile:
