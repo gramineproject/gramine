@@ -199,9 +199,7 @@ static int chroot_lookup(struct shim_dentry* dent) {
             BUG();
     }
 
-    mode_t perm = (pal_attr.readable ? S_IRUSR : 0) |
-                  (pal_attr.writable ? S_IWUSR : 0) |
-                  (pal_attr.runnable ? S_IXUSR : 0);
+    mode_t perm = pal_attr.share_flags;
 
     file_off_t size = (type == S_IFREG ? pal_attr.pending_size : 0);
 
