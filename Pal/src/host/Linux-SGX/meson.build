@@ -17,7 +17,6 @@ sgx_inc = [
         '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
         '../../../include/host/Linux-common',
         'protected-files',
-        sgx_driver_include_path,
     ),
 ]
 
@@ -36,7 +35,6 @@ cflags_pal_sgx = [
 sgx_inc_i = [
     '-I@0@'.format(meson.current_source_dir()),
     '-I@0@'.format(meson.current_build_dir()),
-    '-I@0@'.format(sgx_driver_include_path),
     '-I@0@'.format(join_paths(meson.current_source_dir(),
                               'protected-files')),
     '-I@0@'.format(join_paths(meson.current_source_dir(),

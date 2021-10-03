@@ -13,7 +13,7 @@
 #include <linux/stddef.h>
 #include <linux/types.h>
 
-#include <@CONFIG_SGX_DRIVER_HEADER@>
+#include <@CONFIG_SGX_DRIVER_HEADER_ABSPATH@>
 
 #mesondefine CONFIG_SGX_DRIVER_UPSTREAM
 #mesondefine CONFIG_SGX_DRIVER_DCAP_1_6

@@ -112,19 +112,14 @@ if sgx
         sgx_driver_device = sgx_driver_device_default
     endif
 
-    # Check if the directory and header exist. We could run only `has_header`, but then
-    # `include_directories` would fail with a less helpful message if the directory does not exist.
-    fs = import('fs')
-    if (not fs.is_dir(sgx_driver_include_path) or
-        not cc.has_header(sgx_driver_header,
-                          include_directories: include_directories(sgx_driver_include_path)))
+    sgx_driver_header_abspath = join_paths(sgx_driver_include_path, sgx_driver_header)
 
+    if not cc.has_header(sgx_driver_header_abspath)
         error('Invalid SGX driver configuration (-Dsgx_driver and/or -Dsgx_driver_include_path); ' +
-             'expected "@0@" header to exist under "@1@"'.format(
-                 sgx_driver_header, sgx_driver_include_path))
+             'expected "@0@" to exist'.format(sgx_driver_header_abspath))
     endif
 
-    conf_sgx.set('CONFIG_SGX_DRIVER_HEADER', sgx_driver_header)
+    conf_sgx.set('CONFIG_SGX_DRIVER_HEADER_ABSPATH', sgx_driver_header_abspath)
     conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
 endif
 
