@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         err(EXIT_FAILURE, "access failed");
     }
 
-    char buf[128];
+    char buf[SECRETSTRING_LEN];
     bytes = stdio_file_read(argv[1], buf, sizeof(buf));
     if (bytes < 0) {
         /* error is already printed by stdio_file_read() */

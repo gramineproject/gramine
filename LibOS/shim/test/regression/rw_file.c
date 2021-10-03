@@ -72,7 +72,9 @@ static ssize_t posix_file_rw(const char* path, char* buf, size_t count, bool do_
     ssize_t transferred = posix_fd_rw(fd, buf, count, do_write);
     if (transferred < 0) {
         int olderrno = errno;
-        close(fd);
+        int close_ret = close(fd);
+        if (close_ret < 0)
+            warn("close (during error handling)");
         errno = olderrno;
         return -1;
     }
@@ -93,11 +95,12 @@ static ssize_t stdio_file_rw(const char* path, char* buf, size_t count, bool do_
         return -1;
     }
 
-
     ssize_t transferred = stdio_fd_rw(f, buf, count, do_write);
     if (transferred < 0) {
         int olderrno = errno;
-        fclose(f);
+        int close_ret = fclose(f);
+        if (close_ret < 0)
+            warn("close (during error handling)");
         errno = olderrno;
         return -1;
     }
