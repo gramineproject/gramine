@@ -121,6 +121,7 @@ vdso_data_o = custom_target('vdso-data.o',
     command: [
         cc.cmd_array(),
         cflags_libos,
+        '-Wa,--noexecstack',
         '-DVDSO_SO_FULL_PATH="@0@"'.format(vdso_so.full_path()),
         '-c',
         '@INPUT@',
