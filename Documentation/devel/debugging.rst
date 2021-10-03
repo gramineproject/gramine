@@ -12,13 +12,11 @@ PAL loader also loads a |~| GDB script to enable GDB features to make the
 debugging process easier.
 
 To build Gramine with debug symbols, the source code needs to be compiled with
-``DEBUG=1``. Run the following commands in the source tree::
+``--buildtype=debug``::
 
-    make clean
-    make DEBUG=1
-    meson setup build/ --buildtype=debug -Ddirect=enabled
-    ninja -C build/
-    sudo ninja -C build/ install
+    meson setup build-debug/ --buildtype=debug -Ddirect=enabled
+    ninja -C build-debug/
+    sudo ninja -C build-debug/ install
 
 GDB integration also requires pyelftools Python package::
 
@@ -37,19 +35,17 @@ library OS running inside an enclave (using a normal GDB will only debug the
 execution *outside* the enclave).
 
 To build Gramine with debug symbols, the source code needs to be compiled with
-``DEBUG=1``. Run the following commands in the source tree::
+``--buildtype=debug``:
 
-    make SGX=1 clean
-    make SGX=1 DEBUG=1
-    meson setup build/ --buildtype=debug -Dsgx=enabled
-    ninja -C build/
-    sudo ninja -C build/ install
+    meson setup build-debug/ --buildtype=debug -Dsgx=enabled
+    ninja -C build-debug/
+    sudo ninja -C build-debug/ install
 
 GDB integration also requires pyelftools Python package::
 
     sudo apt-get install -y python3-pyelftools
 
-After rebuilding Gramine with ``DEBUG=1``, you need to re-sign the manifest of
+After rebuilding Gramine with debug symbols, you need to re-sign the manifest of
 the application. For instance, if you want to debug the ``helloworld`` program,
 run the following commands::
 
@@ -65,14 +61,14 @@ To run Gramine with GDB, use the Gramine loader (``gramine-sgx``) and specify
 Compiling with optimizations enabled
 ------------------------------------
 
-Building Gramine with ``DEBUG=1`` enables debug symbols and GDB integration,
-but disables optimizations. This is usually the right thing to do: optimized
-builds are harder to debug, as they may cause GDB to display confusing
+Building Gramine with ``--buildtype=debug`` enables debug symbols and GDB
+integration, but disables optimizations. This is usually the right thing to do:
+optimized builds are harder to debug, as they may cause GDB to display confusing
 tracebacks or garbage data.
 
 However, in some cases an optimized debug build might be desirable: for example,
 ``_FORTIFY_SOURCE`` runtime checks work only when optimizations are enabled, and
 profiling optimized code will give you more accurate results.
 
-To build Gramine with debug symbols, and with optimizations still enabled, run
-``make DEBUGOPT=1``.
+To build Gramine with debug symbols, and with optimizations still enabled, use
+``--buildtype=debugoptimized``.

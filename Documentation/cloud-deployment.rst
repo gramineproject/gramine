@@ -54,7 +54,6 @@ Building
 
 #. Build Gramine::
 
-       make SGX=1
        meson setup build/ --buildtype=release -Dsgx=enabled -Ddirect=disabled
        ninja -C build/
        sudo ninja -C build/ install

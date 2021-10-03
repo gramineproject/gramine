@@ -4,7 +4,7 @@ MAKEFLAGS += --check-symlink-times
 
 .PHONY: all
 all:
-	$(MAKE) -C src $@
+	@:
 
 .PHONY: test
 test:
@@ -17,5 +17,4 @@ sgx-tokens:
 clean_targets = clean distclean
 .PHONY: $(clean_targets)
 $(clean_targets):
-	$(MAKE) -C src $@
 	$(MAKE) -C test $@

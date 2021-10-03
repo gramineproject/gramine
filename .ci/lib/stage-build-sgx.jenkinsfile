@@ -18,10 +18,6 @@ stage('build') {
         # no need to build, we only need the SGX header file (sgx_oot.h)
     '''
 
-    sh '''
-        make ${MAKEOPTS}
-    '''
-
     env.MESON_OPTIONS = ''
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'
