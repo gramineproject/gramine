@@ -12,7 +12,7 @@ We expose a python API for manifest, SIGSTRUCT and SGX token management.
 Examples
 --------
 
-To render a |~| manifest from a |~| template::
+To render a |~| manifest from a |~| jinja2 template::
 
    from graminelibos import Manifest
 
@@ -23,6 +23,31 @@ To render a |~| manifest from a |~| template::
 
    with open('some_output_file', 'w') as f:
        manifest.dump(f)
+
+To create a |~| signed SIGSTRUCT file from a manifest::
+
+    import datetime
+    from graminelibos import get_tbssigstruct, sign_with_local_key
+
+    today = datetime.date.today()
+    # Manifest must be ready for signing, e.g. all trusted files must be already expanded.
+    sigstruct = get_tbssigstruct('path_to_manifest', today, 'optional_path_to_libpal')
+    sigstruct.sign(sign_with_local_key, 'path_to_private_key')
+
+    with open('path_to_signature_file', 'wb') as f:
+        f.write(sigstruct.to_bytes())
+
+To create a |~| SGX token file from a |~| signed SIGSTRUCT file::
+
+    from graminelibos import Sigstruct, get_token
+
+    with open('path_to_sigstruct', 'rb') as f:
+        sigstruct = Sigstruct.from_bytes(f.read())
+
+    token = get_token(sigstruct)
+
+    with open('path_to_token_file', 'wb') as f:
+        f.write(token)
 
 API Reference
 -------------
