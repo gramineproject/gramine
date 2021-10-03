@@ -34,7 +34,7 @@ To create a |~| signed SIGSTRUCT file from a manifest::
     sigstruct = get_tbssigstruct('path_to_manifest', today, 'optional_path_to_libpal')
     sigstruct.sign(sign_with_local_key, 'path_to_private_key')
 
-    with open('path_to_signature_file', 'wb') as f:
+    with open('path_to_sigstruct', 'wb') as f:
         f.write(sigstruct.to_bytes())
 
 To create a |~| SGX token file from a |~| signed SIGSTRUCT file::
