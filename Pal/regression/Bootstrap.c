@@ -34,7 +34,7 @@ int main(int argc, char** argv, char** envp) {
         pal_control.user_address.start < pal_control.user_address.end)
         pal_printf("User Address Range OK\n");
 
-    pal_printf("CPU num: %ld\n", pal_control.cpu_info.online_logical_cores);
+    pal_printf("CPU num: %ld\n", pal_control.topo_info.online_logical_cores.resource_count);
     pal_printf("CPU vendor: %s\n", pal_control.cpu_info.cpu_vendor);
     pal_printf("CPU brand: %s\n", pal_control.cpu_info.cpu_brand);
     pal_printf("CPU family: %ld\n", pal_control.cpu_info.cpu_family);
