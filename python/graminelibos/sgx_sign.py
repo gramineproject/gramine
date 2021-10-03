@@ -508,7 +508,8 @@ def get_mrenclave_and_manifest(manifest_path, libpal=None):
 def get_tbssigstruct(manifest_path, date, libpal=None):
     """Generate To Be Signed Sigstruct (TBSSIGSTRUCT).
 
-    Generates a Sigstruct object using the provided data with all required fields initialized.
+    Generates a Sigstruct object using the provided data with all required fields initialized (i.e.
+    all except those corresponding to the signature itself).
 
     Args:
         manifest_path (str): Path to the manifest file.
@@ -543,8 +544,9 @@ def get_tbssigstruct(manifest_path, date, libpal=None):
 def sign_with_local_key(data, key):
     """Signs `data` using `key`.
 
-    Function used to generate a RSA signature over provided data using a key from local filesystem.
-    Suitable to be used as a callback to ``graminelibos.Sigstruct.sign()``.
+    Function used to generate an RSA signature over provided data using a 3072-bit private key with
+    the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
+    Suitable to be used as a callback to :py:func:``graminelibos.Sigstruct.sign()``.
 
     Args:
         data (bytes): Data to calculate the signature over.

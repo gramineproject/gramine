@@ -9,9 +9,9 @@ from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 
 
 class Sigstruct:
-    """Class for holding SGX SIGSTRUCT
+    """Class for holding SGX SIGSTRUCT.
 
-    Each filed can be accessed and modified using ``[]`` operator. Accessing or setting an unknown
+    Each field can be accessed and modified using ``[]`` operator. Accessing or setting an unknown
     key raises ``KeyError`` and setting a key to a value not matching required format raises
     ``ValueError``.
     """
@@ -80,14 +80,15 @@ class Sigstruct:
     def to_bytes(self, verify=True, verify_sig_fields=False):
         """Turn SIGSTRUCT into bytes.
 
-        You probably want to  set all required fields before calling this function. If you not wish
-        to do so, you can pass ``False`` as `verify` argument - in such case non-set fields will be
-        implicitly ``0``-initialized. Some fields have default values and therefore not need to be
-        set (e.g. ``header``).
+        You probably want to set all required fields before calling this function. If you not wish
+        to do so, you can pass :obj:``False`` as `verify` argument - in such case non-set fields
+        will be implicitly ``0``-initialized. Some fields have default values and therefore not need
+        to be set (e.g. ``header``).
 
         Args:
             verify (bool): if ``True``, check if all fields were initialized.
-            verify_sig_fields (bool): if ``True``, don't skip signature fields in checks.
+            verify_sig_fields (bool): if ``True``, don't skip signature fields in checks. Used only
+                when `verify` is ``True``.
 
         Returns:
             bytearray: buffer containing byte representation of this SIGSTRUCT.
@@ -120,7 +121,7 @@ class Sigstruct:
 
         Raises:
             TypeError: `buffer` has a wrong type (is not bytes or bytearray).
-            ValueError: `buffer` not have required length or one of the headers does not match.
+            ValueError: `buffer` does not have required length or one of the headers does not match.
         """
         if not isinstance(buffer, bytes) and not isinstance(buffer, bytearray):
             raise TypeError(f'a bytes-like object is required, not {type(buffer).__name__}')
