@@ -13,6 +13,7 @@
 #include "rw_file.h"
 
 #define SECRETSTRING "Secret string\n"
+#define SECRETSTRING_LEN (sizeof(SECRETSTRING) - 1)
 
 int main(int argc, char** argv) {
     int ret;
@@ -25,11 +26,15 @@ int main(int argc, char** argv) {
     if (ret < 0) {
         if (errno == ENOENT) {
             /* file is not yet created, create with secret string */
-            bytes = rw_file_stdio(argv[1], SECRETSTRING, sizeof(SECRETSTRING), /*do_write=*/true);
-            if (bytes != sizeof(SECRETSTRING)) {
-                /* error is already printed by rw_file_f() */
+            bytes = stdio_file_write(argv[1], SECRETSTRING, SECRETSTRING_LEN);
+            if (bytes < 0) {
+                /* error is already printed by stdio_file_read() */
                 return EXIT_FAILURE;
             }
+
+            if (bytes != SECRETSTRING_LEN)
+                errx(EXIT_FAILURE, "Wrote %ld instead of expected %ld", bytes, SECRETSTRING_LEN);
+
             printf("CREATION OK\n");
             return 0;
         }
@@ -37,15 +42,17 @@ int main(int argc, char** argv) {
     }
 
     char buf[128];
-    bytes = rw_file_stdio(argv[1], buf, sizeof(buf), /*do_write=*/false);
-    if (bytes <= 0) {
-        /* error is already printed by rw_file_f() */
+    bytes = stdio_file_read(argv[1], buf, sizeof(buf));
+    if (bytes < 0) {
+        /* error is already printed by stdio_file_read() */
         return EXIT_FAILURE;
     }
-    buf[bytes - 1] = '\0';
 
-    if (strncmp(SECRETSTRING, buf, sizeof(SECRETSTRING)))
-        errx(EXIT_FAILURE, "Expected '%s' but read '%s'\n", SECRETSTRING, buf);
+    if (bytes != SECRETSTRING_LEN)
+        errx(EXIT_FAILURE, "Read %ld instead of expected %ld", bytes, SECRETSTRING_LEN);
+
+    if (memcmp(SECRETSTRING, buf, SECRETSTRING_LEN))
+        errx(EXIT_FAILURE, "Read wrong content (expected '%s')\n", SECRETSTRING);
 
 #ifdef MODIFY_MRENCLAVE
     /* The build system adds MODIFE_MRENCLAVE macro to produce a slightly different executable (due

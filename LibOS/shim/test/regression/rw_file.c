@@ -4,6 +4,7 @@
 #include "rw_file.h"
 
 #include <assert.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -12,125 +13,134 @@
 #include <string.h>
 #include <unistd.h>
 
-ssize_t rw_file_posix(const char* path, char* buf, size_t bytes, bool do_write) {
-    ssize_t rv = 0;
-    ssize_t ret = 0;
+static ssize_t posix_fd_rw(int fd, char* buf, size_t count, bool do_write) {
+    ssize_t transferred = 0;
+    while (transferred < count) {
+        ssize_t ret = do_write ? write(fd, buf + transferred, count - transferred) :
+                                 read(fd, buf + transferred, count - transferred);
 
-    int fd = open(path, do_write ? O_WRONLY : O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "opening %s failed\n", path);
-        return fd;
-    }
-
-    while (bytes > rv) {
-        if (do_write)
-            ret = write(fd, buf + rv, bytes - rv);
-        else
-            ret = read(fd, buf + rv, bytes - rv);
-
-        if (ret > 0) {
-            rv += ret;
-        } else if (ret == 0) {
-            /* end of file */
-            if (rv == 0)
-                fprintf(stderr, "%s failed: unexpected end of file\n", do_write ? "write" : "read");
-            break;
-        } else {
-            if (ret < 0 && (errno == EAGAIN || errno == EINTR)) {
+        if (ret < 0) {
+            if (errno == EINTR)
                 continue;
-            } else {
-                fprintf(stderr, "%s failed: %s\n", do_write ? "write" : "read", strerror(errno));
-                goto out;
-            }
+            warn("%s", do_write ? "write" : "read");
+            return -1;
         }
+
+        if (ret == 0) {
+            /* end of file */
+            break;
+        }
+
+        transferred += ret;
     }
 
-out:
-    if (ret < 0) {
-        /* error path */
-        close(fd);
-        return ret;
-    }
-
-    ret = close(fd);
-    if (ret < 0) {
-        fprintf(stderr, "closing %s failed\n", path);
-        return ret;
-    }
-    return rv;
+    return transferred;
 }
 
-ssize_t rw_file_stdio(const char* path, char* buf, size_t bytes, bool do_write) {
-    size_t rv = 0;
-    size_t ret = 0;
+static ssize_t stdio_fd_rw(FILE* f, char* buf, size_t count, bool do_write) {
+    ssize_t transferred = 0;
+    while (transferred < count) {
+        size_t ret = do_write ? fwrite(buf + transferred, 1, count - transferred, f) :
+                                fread(buf + transferred, 1, count - transferred, f);
 
-    FILE* f = fopen(path, do_write ? "w" : "r");
-    if (!f) {
-        fprintf(stderr, "opening %s failed\n", path);
-        return -1;
-    }
-
-    while (bytes > rv) {
-        if (do_write)
-            ret = fwrite(buf + rv, /*size=*/1, /*nmemb=*/bytes - rv, f);
-        else
-            ret = fread(buf + rv, /*size=*/1, /*nmemb=*/bytes - rv, f);
-
-        if (ret > 0) {
-            rv += ret;
-        } else {
-            if (feof(f)) {
-                if (rv) {
-                    /* read some bytes from file, success */
-                    break;
-                }
-                assert(rv == 0);
-                fprintf(stderr, "%s failed: unexpected end of file\n", do_write ? "write" : "read");
-                fclose(f);
+        if (ret == 0) {
+            /* end of file or error */
+            if (ferror(f)) {
+                if (errno == EINTR)
+                    continue;
+                warn("%s", do_write ? "write" : "read");
                 return -1;
             }
 
-            assert(ferror(f));
-
-            if (errno == EAGAIN || errno == EINTR) {
-                continue;
-            }
-
-            fprintf(stderr, "%s failed: %s\n", do_write ? "write" : "read", strerror(errno));
-            fclose(f);
-            return -1;
+            assert(feof(f));
+            break;
         }
+
+        transferred += ret;
+    }
+
+    return transferred;
+}
+
+static ssize_t posix_file_rw(const char* path, char* buf, size_t count, bool do_write) {
+    int fd = open(path, do_write ? O_WRONLY : O_RDONLY);
+    if (fd < 0) {
+        warn("open");
+        return -1;
+    }
+
+    ssize_t transferred = posix_fd_rw(fd, buf, count, do_write);
+    if (transferred < 0) {
+        int olderrno = errno;
+        close(fd);
+        errno = olderrno;
+        return -1;
+    }
+
+    int close_ret = close(fd);
+    if (close_ret < 0) {
+        warn("close");
+        return -1;
+    }
+
+    return transferred;
+}
+
+static ssize_t stdio_file_rw(const char* path, char* buf, size_t count, bool do_write) {
+    FILE* f = fopen(path, do_write ? "w" : "r");
+    if (!f) {
+        warn("open");
+        return -1;
+    }
+
+
+    ssize_t transferred = stdio_fd_rw(f, buf, count, do_write);
+    if (transferred < 0) {
+        int olderrno = errno;
+        fclose(f);
+        errno = olderrno;
+        return -1;
     }
 
     int close_ret = fclose(f);
-    if (close_ret) {
-        fprintf(stderr, "closing %s failed\n", path);
+    if (close_ret < 0) {
+        warn("close");
         return -1;
     }
-    return rv;
+
+    return transferred;
 }
 
-ssize_t rw_file_posix_fd(int fd, char* buf, size_t bytes, bool do_write) {
-    ssize_t rv = 0;
-    ssize_t ret;
 
-    while (bytes > rv) {
-        if (do_write)
-            ret = write(fd, buf + rv, bytes - rv);
-        else
-            ret = read(fd, buf + rv, bytes - rv);
+ssize_t posix_file_read(const char* path, char* buf, size_t count) {
+    return posix_file_rw(path, buf, count, /*do_write=*/false);
+}
 
-        if (ret > 0) {
-            rv += ret;
-        } else {
-            if (ret < 0 && (errno == EAGAIN || errno == EINTR)) {
-                continue;
-            } else {
-                fprintf(stderr, "%s failed:%s\n", do_write ? "write" : "read", strerror(errno));
-                return ret;
-            }
-        }
-    }
+ssize_t posix_file_write(const char* path, char* buf, size_t count) {
+    return posix_file_rw(path, buf, count, /*do_write=*/true);
+}
 
-    return rv;
+
+ssize_t stdio_file_read(const char* path, char* buf, size_t count) {
+    return stdio_file_rw(path, buf, count, /*do_write=*/false);
+}
+
+ssize_t stdio_file_write(const char* path, char* buf, size_t count) {
+    return stdio_file_rw(path, buf, count, /*do_write=*/true);
+}
+
+ssize_t posix_fd_read(int fd, char* buf, size_t count) {
+    return posix_fd_rw(fd, buf, count, /*do_write=*/false);
+}
+
+ssize_t posix_fd_write(int fd, char* buf, size_t count) {
+    return posix_fd_rw(fd, buf, count, /*do_write=*/true);
+}
+
+ssize_t stdio_fd_read(FILE* f, char* buf, size_t count) {
+    return stdio_fd_rw(f, buf, count, /*do_write=*/false);
+}
+
+ssize_t stdio_fd_write(FILE* f, char* buf, size_t count) {
+    return stdio_fd_rw(f, buf, count, /*do_write=*/true);
 }

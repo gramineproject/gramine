@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
     }
 
     /* test file size: write a file of type != FILEBUF_MAP */
-    bytes = rw_file_posix_fd(fd, buf, BUF_LENGTH, /*do_write=*/true);
+    bytes = posix_fd_write(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("writing " STR(BUF_LENGTH) " bytes to test file failed");
         return 1;
@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file_posix_fd(fd, buf, 1, /*do_write=*/true);
+    bytes = posix_fd_write(fd, buf, 1);
     if (bytes != 1) {
         perror("writing one byte to test file failed");
         return 1;
@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file_posix_fd(fd, buf, BUF_LENGTH, /*do_write=*/true);
+    bytes = posix_fd_write(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("writing " STR(BUF_LENGTH) " bytes to test file failed");
         return 1;
@@ -97,7 +97,7 @@ int main(int argc, const char** argv) {
         return 1;
     }
 
-    bytes = rw_file_posix_fd(fd, buf, BUF_LENGTH, /*do_write=*/false);
+    bytes = posix_fd_read(fd, buf, BUF_LENGTH);
     if (bytes != BUF_LENGTH) {
         perror("reading " STR(BUF_LENGTH) " bytes from test file failed");
         return 1;
