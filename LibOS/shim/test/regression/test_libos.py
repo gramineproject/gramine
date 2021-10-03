@@ -144,7 +144,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('Local Address in Executable: 0x', stdout)
         self.assertIn('argv[0] = bootstrap_pie', stdout)
 
-    def test_107_uid_and_gid(self):
+    def test_108_uid_and_gid(self):
         stdout, _ = self.run_binary(['uid_gid'])
         self.assertIn('TEST OK', stdout)
 
