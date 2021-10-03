@@ -55,6 +55,10 @@ argparser.add_argument('--output-file', '-O', metavar='FILENAME',
     type=argparse.FileType('w'),
     help='write XML report to a file (use - for stdout)')
 
+argparser.add_argument('--timeout-factor', '-T', metavar='N',
+    type=float, default=1,
+    help='multiply all timeouts by N')
+
 argparser.set_defaults(
     config=None,
     option=[],
@@ -118,10 +122,11 @@ class TestRunner:
         tag (str): a name of the test
         cmd (iterable): the command (full *argv*)
     '''
-    def __init__(self, suite, tag, cmd):
+    def __init__(self, suite, tag, cmd, timeout_factor=1):
         self.suite = suite
         self.tag = tag
         self.cmd = tuple(cmd)
+        self.timeout_factor = timeout_factor
 
         try:
             self.cfgsection = self.suite.config[self.tag]
@@ -246,7 +251,7 @@ class TestRunner:
             AbnormalTestResult: for assorted failures
         '''
         cmd = [self.suite.loader, *self.cmd]
-        timeout = self.cfgsection.getfloat('timeout')
+        timeout = int(self.cfgsection.getfloat('timeout') * self.timeout_factor)
         self.log.info('starting %r with timeout %d', cmd, timeout)
         start_time = time.time()
 
@@ -437,8 +442,9 @@ class TestSuite:
     Args:
         config (configparser.Configparser): configuration
     '''
-    def __init__(self, config):
+    def __init__(self, config, timeout_factor=1):
         self.config = config
+        self.timeout_factor = timeout_factor
         self.fnmatch_names = [
             name for name in config
             if is_fnmatch_pattern(name)
@@ -481,7 +487,7 @@ class TestSuite:
             tag (str): test case name
             cmd (iterable): command (full *argv*)
         '''
-        self.queue.append(TestRunner(self, tag, cmd))
+        self.queue.append(TestRunner(self, tag, cmd, self.timeout_factor))
 
     def add_result(self, element):
         '''Add a result.
@@ -615,7 +621,7 @@ def main(args=None):
         key, value = token.split('=', maxsplit=1)
         config[config.default_section][key] = value
 
-    suite = TestSuite(config)
+    suite = TestSuite(config, args.timeout_factor)
     with args.cmdfile as file:
         for line in file:
             if line[0] in '\n#':

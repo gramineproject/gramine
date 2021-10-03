@@ -15,6 +15,10 @@ ifeq ($(BUILD_VERBOSE),1)
 	RUNLTPOPTS += -v
 endif
 
+ifneq ($(LTP_TIMEOUT_FACTOR),)
+	RUNLTPOPTS += -T $(LTP_TIMEOUT_FACTOR)
+endif
+
 $(SRCDIR)/Makefile:
 	$(error "$(SRCDIR) is empty. Please run `git submodule update --init $(SRCDIR)` or download the LTP source code (https://github.com/linux-test-project/ltp) into $(SRCDIR).")
 
