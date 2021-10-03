@@ -20,9 +20,11 @@ static ssize_t posix_fd_rw(int fd, char* buf, size_t count, bool do_write) {
                                  read(fd, buf + transferred, count - transferred);
 
         if (ret < 0) {
-            if (errno == EINTR)
+            int ret_errno = errno;
+            if (ret_errno == EINTR)
                 continue;
             warn("%s", do_write ? "write" : "read");
+            errno = ret_errno;
             return -1;
         }
 
@@ -46,9 +48,11 @@ static ssize_t stdio_fd_rw(FILE* f, char* buf, size_t count, bool do_write) {
         if (ret == 0) {
             /* end of file or error */
             if (ferror(f)) {
-                if (errno == EINTR)
+                int ret_errno = errno;
+                if (ret_errno == EINTR)
                     continue;
                 warn("%s", do_write ? "write" : "read");
+                errno = ret_errno;
                 return -1;
             }
 
@@ -65,23 +69,27 @@ static ssize_t stdio_fd_rw(FILE* f, char* buf, size_t count, bool do_write) {
 static ssize_t posix_file_rw(const char* path, char* buf, size_t count, bool do_write) {
     int fd = open(path, do_write ? O_WRONLY : O_RDONLY);
     if (fd < 0) {
+        int ret_errno = errno;
         warn("open");
+        errno = ret_errno;
         return -1;
     }
 
     ssize_t transferred = posix_fd_rw(fd, buf, count, do_write);
     if (transferred < 0) {
-        int olderrno = errno;
+        int ret_errno = errno;
         int close_ret = close(fd);
         if (close_ret < 0)
             warn("close (during error handling)");
-        errno = olderrno;
+        errno = ret_errno;
         return -1;
     }
 
     int close_ret = close(fd);
     if (close_ret < 0) {
+        int ret_errno = errno;
         warn("close");
+        errno = ret_errno;
         return -1;
     }
 
@@ -91,23 +99,27 @@ static ssize_t posix_file_rw(const char* path, char* buf, size_t count, bool do_
 static ssize_t stdio_file_rw(const char* path, char* buf, size_t count, bool do_write) {
     FILE* f = fopen(path, do_write ? "w" : "r");
     if (!f) {
+        int ret_errno = errno;
         warn("open");
+        errno = ret_errno;
         return -1;
     }
 
     ssize_t transferred = stdio_fd_rw(f, buf, count, do_write);
     if (transferred < 0) {
-        int olderrno = errno;
+        int ret_errno = errno;
         int close_ret = fclose(f);
         if (close_ret < 0)
             warn("close (during error handling)");
-        errno = olderrno;
+        errno = ret_errno;
         return -1;
     }
 
     int close_ret = fclose(f);
     if (close_ret < 0) {
+        int ret_errno = errno;
         warn("close");
+        errno = ret_errno;
         return -1;
     }
 

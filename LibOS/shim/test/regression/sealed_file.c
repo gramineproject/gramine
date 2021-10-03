@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
             /* file is not yet created, create with secret string */
             bytes = stdio_file_write(argv[1], SECRETSTRING, SECRETSTRING_LEN);
             if (bytes < 0) {
-                /* error is already printed by stdio_file_read() */
+                /* error is already printed by stdio_file_write() */
                 return EXIT_FAILURE;
             }
 

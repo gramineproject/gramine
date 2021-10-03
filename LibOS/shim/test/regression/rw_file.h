@@ -12,21 +12,21 @@
 /* All functions below return the number of bytes read/written on success or -1 (with set errno) on
  * failure. All functions restart read/write syscall in case of EINTR. */
 
-/* Open file `path`, read/write at most `count` bytes into/from buffer `buf`, and close the file.
- * Use POSIX functions: open, read/write, close. */
+/* Opens file `path`, reads/writes at most `count` bytes into/from buffer `buf` and closes the
+ * file. Uses POSIX functions: open, read/write, close. */
 ssize_t posix_file_read(const char* path, char* buf, size_t count);
 ssize_t posix_file_write(const char* path, char* buf, size_t count);
 
-/* Open file `path`, read/write at most `count` bytes into/from buffer `buf`, and close the file.
- * Use stdio functions: fopen, fread/fwrite, fclose. */
+/* Opens file `path`, reads/writes at most `count` bytes into/from buffer `buf` and closes the
+ * file. Uses stdio functions: fopen, fread/fwrite, fclose. */
 ssize_t stdio_file_read(const char* path, char* buf, size_t count);
 ssize_t stdio_file_write(const char* path, char* buf, size_t count);
 
-/* Read/write at most `count` bytes into/from buffer `buf`. Use POSIX functions: read/write. */
+/* Reads/writes at most `count` bytes into/from buffer `buf`. Uses POSIX functions: read/write. */
 ssize_t posix_fd_read(int fd, char* buf, size_t count);
 ssize_t posix_fd_write(int fd, char* buf, size_t count);
 
-/* Read/write at most `count` bytes into/from buffer `buf`. Use stdio functions: fread/fwrite. */
+/* Reads/writes at most `count` bytes into/from buffer `buf`. Uses stdio functions: fread/fwrite. */
 ssize_t stdio_fd_read(FILE* f, char* buf, size_t count);
 ssize_t stdio_fd_write(FILE* f, char* buf, size_t count);
 
