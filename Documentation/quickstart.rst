@@ -3,6 +3,8 @@ Quick start
 
 .. highlight:: sh
 
+The following guide assumes you're using Ubuntu 18.04 or 20.04.
+
 Quick start without SGX support
 -------------------------------
 
@@ -41,7 +43,8 @@ Quick start with SGX support
 Gramine requires several features from your system:
 
 - the FSGSBASE feature of recent processors must be enabled in the Linux kernel,
-- the Intel SGX driver must be built in the Linux kernel,
+- the Intel SGX driver must be built in the Linux kernel, and Linux headers for
+  your kernel (``linux-headers-*`` package) must be installed,
 - Intel SGX SDK/PSW and (optionally) Intel DCAP must be installed.
 
 If your system doesn't meet these requirements, please refer to more detailed
@@ -73,10 +76,14 @@ descriptions in :doc:`building`.
       python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       make
       make SGX=1
-      # this assumes Linux 5.11+
       meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
       ninja -C build/
       sudo ninja -C build/ install
+
+   In case of a non-standard SGX driver configuration (different SGX driver, or
+   different kernel headers path) you might need to also pass ``-Dsgx_driver``
+   and ``-Dsgx_driver_include_path`` options to Meson. See :doc:`building` for
+   details.
 
 #. Set ``vm.mmap_min_addr=0`` in the system (*only required for the legacy SGX
    driver and not needed for newer DCAP/in-kernel drivers*)::
