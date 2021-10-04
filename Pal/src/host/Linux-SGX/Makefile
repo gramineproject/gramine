@@ -5,7 +5,7 @@ include ../../../../Scripts/Makefile.rules
 all: gdb_integration/sgx_gdb.so quote/aesm.pb-c.c quote/aesm.pb-c.h
 
 gdb_integration/sgx_gdb.so: CFLAGS =
-CFLAGS-gdb_integration/sgx_gdb.so = -shared -Wall -fPIC -O2 -std=c11
+CFLAGS-gdb_integration/sgx_gdb.so = -shared -Wall -fPIC -O2 -std=c11 -Wextra
 gdb_integration/sgx_gdb.so: gdb_integration/sgx_gdb.c
 	$(call cmd,csingle)
 
