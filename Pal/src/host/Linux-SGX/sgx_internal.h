@@ -14,7 +14,6 @@
 #include "pal_linux.h"
 #include "pal_security.h"
 #include "sgx_syscall.h"
-#include "toml.h"
 
 extern const size_t g_page_size;
 

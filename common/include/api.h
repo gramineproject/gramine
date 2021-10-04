@@ -17,7 +17,6 @@
 
 #include "cpu.h"
 #include "list.h"
-#include "toml.h"
 
 /* WARNING: this declaration may conflict with some header files */
 #ifndef ssize_t
@@ -366,6 +365,14 @@ int get_base_name(const char* path, char* buf, size_t* inout_size);
  * (e.g., suffix is wrong).
  */
 int parse_size_str(const char* str, uint64_t* out_val);
+
+/*
+ * TOML table type and our helper functions. (`toml.h` is intentionally NOT included here, because
+ * it comes from an external subproject).
+ */
+
+struct toml_table_t;
+typedef struct toml_table_t toml_table_t;
 
 /*!
  * \brief Check if a key was specified in TOML manifest.
