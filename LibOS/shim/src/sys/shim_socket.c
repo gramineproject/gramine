@@ -437,6 +437,12 @@ static void hash_dentry_path(struct shim_dentry* dent, char* buf, size_t size) {
 }
 
 long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
+    if (_addrlen < 0)
+        return -EINVAL;
+    size_t addrlen = _addrlen;
+    if (!is_user_memory_readable(addr, addrlen))
+        return -EFAULT;
+
     struct shim_handle* hdl = get_fd_handle(sockfd, NULL, NULL);
     int ret = -EINVAL;
     if (!hdl)
@@ -448,12 +454,11 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
     }
 
     struct shim_sock_handle* sock = &hdl->info.sock;
-    if (_addrlen < 0 || (size_t)_addrlen < minimal_addrlen(sock->domain))
+    if ((size_t)addrlen < minimal_addrlen(sock->domain)) {
+        put_handle(hdl);
         return -EINVAL;
-    if (!is_user_memory_readable(addr, _addrlen))
-        return -EFAULT;
+    }
 
-    size_t addrlen = _addrlen;
     lock(&hdl->lock);
     enum shim_sock_state state = sock->sock_state;
 
@@ -698,6 +703,12 @@ out:
  * specify a new IP address and port 2. To unconnect the socket.
  */
 long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
+    if (_addrlen < 0)
+        return -EINVAL;
+    size_t addrlen = _addrlen;
+    if (!is_user_memory_readable(addr, addrlen))
+        return -EFAULT;
+
     struct shim_handle* hdl = get_fd_handle(sockfd, NULL, NULL);
 
     if (!hdl)
@@ -709,13 +720,11 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
     }
 
     struct shim_sock_handle* sock = &hdl->info.sock;
-    if (_addrlen < 0 || (size_t)_addrlen < minimal_addrlen(sock->domain))
+    if ((size_t)addrlen < minimal_addrlen(sock->domain)) {
+        put_handle(hdl);
         return -EINVAL;
+    }
 
-    if (!is_user_memory_readable(addr, _addrlen))
-        return -EFAULT;
-
-    size_t addrlen = _addrlen;
     lock(&hdl->lock);
     enum shim_sock_state state = sock->sock_state;
     int ret = -EINVAL;
@@ -898,7 +907,7 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
             return -EINVAL;
 
         if (!is_user_memory_writable(addr, *addrlen))
-            return -EFAULT;
+            return -EINVAL;
     }
 
     lock(&hdl->lock);
@@ -1689,19 +1698,25 @@ long shim_do_getsockname(int sockfd, struct sockaddr* addr, int* addrlen) {
         ret = -ENOTSOCK;
         goto out;
     }
-    struct shim_sock_handle* sock = &hdl->info.sock;
+
     if (!is_user_memory_writable(addrlen, sizeof(*addrlen))) {
         ret = -EFAULT;
         goto out;
     }
 
-    if (*addrlen < 0 || (size_t)*addrlen < minimal_addrlen(sock->domain)) {
+    if (*addrlen <= 0) {
         ret = -EINVAL;
         goto out;
     }
 
     if (!is_user_memory_writable(addr, *addrlen)) {
         ret = -EFAULT;
+        goto out;
+    }
+
+    struct shim_sock_handle* sock = &hdl->info.sock;
+    if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
+        ret = -EINVAL;
         goto out;
     }
 
@@ -1729,13 +1744,13 @@ long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen) {
         ret = -ENOTSOCK;
         goto out;
     }
-    struct shim_sock_handle* sock = &hdl->info.sock;
+
     if (!is_user_memory_writable(addrlen, sizeof(*addrlen))) {
         ret = -EFAULT;
         goto out;
     }
 
-    if (*addrlen < 0 || (size_t)*addrlen < minimal_addrlen(sock->domain)) {
+    if (*addrlen <= 0) {
         ret = -EINVAL;
         goto out;
     }
@@ -1744,6 +1759,13 @@ long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen) {
         ret = -EFAULT;
         goto out;
     }
+
+    struct shim_sock_handle* sock = &hdl->info.sock;
+    if ((size_t)*addrlen < minimal_addrlen(sock->domain)) {
+        ret = -EINVAL;
+        goto out;
+    }
+
     lock(&hdl->lock);
 
     /* Data gram sock need not be conneted or bound at all */
