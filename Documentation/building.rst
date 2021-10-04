@@ -177,8 +177,8 @@ The ``-Dsgx_driver`` parameter controls which SGX driver to use:
 
 The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
 where the SGX driver was downloaded or installed in the previous step. For
-example, for the DCAP version 33 of the SGX driver, you must specify
-``-Dsgx_driver_include_path="/usr/src/sgx-1.33/"``. If this parameter is
+example, for the DCAP version 1.41 of the SGX driver, you must specify
+``-Dsgx_driver_include_path="/usr/src/sgx-1.41/include/"``. If this parameter is
 omitted, Gramine's build system will try to determine the right path.
 
 .. note::
