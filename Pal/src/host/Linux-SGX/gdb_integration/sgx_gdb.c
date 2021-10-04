@@ -24,13 +24,13 @@
 //#define DEBUG_GDB_PTRACE 1
 
 #if DEBUG_GDB_PTRACE == 1
-#define DEBUG(fmt, ...)                      \
+#define DEBUG_LOG(fmt, ...)                  \
     do {                                     \
         fprintf(stderr, fmt, ##__VA_ARGS__); \
     } while (0)
 #else
-#define DEBUG(fmt, ...) \
-    do {                \
+#define DEBUG_LOG(fmt, ...) \
+    do {                    \
     } while (0)
 #endif
 
@@ -167,7 +167,7 @@ static long int host_ptrace(enum __ptrace_request request, pid_t tid, void* addr
                        addr < (void*)(DBGINFO_ADDR + sizeof(struct enclave_dbginfo)));
 
     if (!is_dbginfo_addr)
-        DEBUG("[GDB %d] Executed host_ptrace(%s, %d, %p, %p) = %ld\n", getpid(),
+        DEBUG_LOG("[GDB %d] Executed host_ptrace(%s, %d, %p, %p) = %ld\n", getpid(),
               str_ptrace_request(request), tid, addr, data, ret);
 
     if (ret < 0 && ptrace_errno != 0) {
@@ -192,7 +192,7 @@ static int update_thread_tids(struct enclave_dbginfo* ei) {
     static_assert((sizeof(ei->thread_tids) % sizeof(long)) == 0,
                   "Unsupported ei->thread_tids size");
 
-    for (int off = 0; off < sizeof(ei->thread_tids); off += sizeof(long)) {
+    for (size_t off = 0; off < sizeof(ei->thread_tids); off += sizeof(long)) {
         errno = 0;
         res = host_ptrace(PTRACE_PEEKDATA, ei->pid, src + off, NULL);
         if (res < 0 && errno != 0) {
@@ -211,7 +211,7 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
         uint64_t ossa;
         uint32_t cssa, nssa;
     } tcs_part;
-    int ret;
+    ssize_t ret;
 
     for (int i = 0; i < MAX_DBG_THREADS; i++)
         if (ei->thread_tids[i] == tid) {
@@ -220,18 +220,18 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
         }
 
     if (!tcs_addr) {
-        DEBUG("Cannot find enclave thread %d to peek/poke its SSA\n", tid);
+        DEBUG_LOG("Cannot find enclave thread %d to peek/poke its SSA\n", tid);
         return NULL;
     }
 
     ret = pread(memdev, &tcs_part, sizeof(tcs_part),
                 (off_t)tcs_addr + offsetof(sgx_arch_tcs_t, ossa));
-    if (ret < sizeof(tcs_part)) {
-        DEBUG("Cannot read TCS data (%p) of enclave thread %d\n", tcs_addr, tid);
+    if (ret < (ssize_t)sizeof(tcs_part)) {
+        DEBUG_LOG("Cannot read TCS data (%p) of enclave thread %d\n", tcs_addr, tid);
         return NULL;
     }
 
-    DEBUG("[enclave thread %d] TCS at 0x%lx: TCS.ossa = 0x%lx TCS.cssa = %d\n", tid, (long)tcs_addr,
+    DEBUG_LOG("[enclave thread %d] TCS at 0x%lx: TCS.ossa = 0x%lx TCS.cssa = %d\n", tid, (long)tcs_addr,
           tcs_part.ossa, tcs_part.cssa);
     assert(tcs_part.cssa > 0);
     /* CSSA points to the next empty slot, so to read the current frame, we look at CSSA - 1. */
@@ -247,41 +247,41 @@ static void* get_gpr_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
 }
 
 static int peek_gpr(int memdev, pid_t tid, struct enclave_dbginfo* ei, sgx_pal_gpr_t* gpr) {
-    int ret;
+    ssize_t ret;
 
     void* gpr_addr = get_gpr_addr(memdev, tid, ei);
     if (!gpr_addr)
         return -1;
 
     ret = pread(memdev, gpr, sizeof(*gpr), (off_t)gpr_addr);
-    if (ret < sizeof(sgx_pal_gpr_t)) {
-        DEBUG("Cannot read GPR data (%p) of enclave thread %d\n", gpr_addr, tid);
+    if (ret < (ssize_t)sizeof(sgx_pal_gpr_t)) {
+        DEBUG_LOG("Cannot read GPR data (%p) of enclave thread %d\n", gpr_addr, tid);
         return -1;
     }
 
-    DEBUG("[enclave thread %d] Peek GPR: RIP 0x%08lx RBP 0x%08lx\n", tid, gpr->rip, gpr->rbp);
+    DEBUG_LOG("[enclave thread %d] Peek GPR: RIP 0x%08lx RBP 0x%08lx\n", tid, gpr->rip, gpr->rbp);
     return 0;
 }
 
 static int poke_gpr(int memdev, pid_t tid, struct enclave_dbginfo* ei, const sgx_pal_gpr_t* gpr) {
-    int ret;
+    ssize_t ret;
 
     void* gpr_addr = get_gpr_addr(memdev, tid, ei);
     if (!gpr_addr)
         return -1;
 
     ret = pwrite(memdev, gpr, sizeof(sgx_pal_gpr_t), (off_t)gpr_addr);
-    if (ret < sizeof(sgx_pal_gpr_t)) {
-        DEBUG("Cannot write GPR data (%p) of enclave thread %d\n", (void*)gpr_addr, tid);
+    if (ret < (ssize_t)sizeof(sgx_pal_gpr_t)) {
+        DEBUG_LOG("Cannot write GPR data (%p) of enclave thread %d\n", (void*)gpr_addr, tid);
         return -1;
     }
 
-    DEBUG("[enclave thread %d] Poke GPR: RIP 0x%08lx RBP 0x%08lx\n", tid, gpr->rip, gpr->rbp);
+    DEBUG_LOG("[enclave thread %d] Poke GPR: RIP 0x%08lx RBP 0x%08lx\n", tid, gpr->rip, gpr->rbp);
     return 0;
 }
 
 static int peek_xsave(int memdev, pid_t tid, struct enclave_dbginfo* ei, struct iovec* iov) {
-    int ret;
+    ssize_t ret;
 
     void* ssa_addr = get_ssa_addr(memdev, tid, ei);
     if (!ssa_addr)
@@ -289,17 +289,17 @@ static int peek_xsave(int memdev, pid_t tid, struct enclave_dbginfo* ei, struct 
 
     /* The SSA.XSAVE field has an offset of 0, so we use ssa_addr directly. */
     ret = pread(memdev, iov->iov_base, iov->iov_len, (off_t)ssa_addr);
-    if (ret < iov->iov_len) {
-        DEBUG("Cannot read XSAVE data (%p) of enclave thread %d\n", ssa_addr, tid);
+    if (ret < (ssize_t)iov->iov_len) {
+        DEBUG_LOG("Cannot read XSAVE data (%p) of enclave thread %d\n", ssa_addr, tid);
         return -1;
     }
 
-    DEBUG("[enclave thread %d] Peek XSAVE: read %zu bytes\n", tid, iov->iov_len);
+    DEBUG_LOG("[enclave thread %d] Peek XSAVE: read %zu bytes\n", tid, iov->iov_len);
     return 0;
 }
 
 static int poke_xsave(int memdev, pid_t tid, struct enclave_dbginfo* ei, struct iovec* iov) {
-    int ret;
+    ssize_t ret;
 
     void* ssa_addr = get_ssa_addr(memdev, tid, ei);
     if (!ssa_addr)
@@ -307,12 +307,12 @@ static int poke_xsave(int memdev, pid_t tid, struct enclave_dbginfo* ei, struct 
 
     /* The SSA.XSAVE field has an offset of 0, so we use ssa_addr directly. */
     ret = pwrite(memdev, iov->iov_base, iov->iov_len, (off_t)ssa_addr);
-    if (ret < iov->iov_len) {
-        DEBUG("Cannot write XSAVE data (%p) of enclave thread %d\n", (void*)ssa_addr, tid);
+    if (ret < (ssize_t)iov->iov_len) {
+        DEBUG_LOG("Cannot write XSAVE data (%p) of enclave thread %d\n", (void*)ssa_addr, tid);
         return -1;
     }
 
-    DEBUG("[enclave thread %d] Poke XSAVE: wrote %zu bytes\n", tid, iov->iov_len);
+    DEBUG_LOG("[enclave thread %d] Poke XSAVE: wrote %zu bytes\n", tid, iov->iov_len);
     return 0;
 }
 
@@ -390,7 +390,7 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
 
     static_assert(sizeof(eib) % sizeof(long) == 0, "Unsupported eib size");
 
-    for (int off = 0; off < sizeof(eib); off += sizeof(long)) {
+    for (size_t off = 0; off < sizeof(eib); off += sizeof(long)) {
         errno = 0;
         long val = host_ptrace(PTRACE_PEEKDATA, tid, (void*)DBGINFO_ADDR + off, NULL);
         if (val < 0 && errno != 0) {
@@ -411,17 +411,17 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
         }
     }
 
-    DEBUG("Retrieved debug information (enclave reports PID %d)\n", eib.pid);
+    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", eib.pid);
 
     if (g_memdevs_cnt == sizeof(g_memdevs) / sizeof(g_memdevs[0])) {
-        DEBUG("Too many debugged processes (max = %d)\n", g_memdevs_cnt);
+        DEBUG_LOG("Too many debugged processes (max = %d)\n", g_memdevs_cnt);
         return -2;
     }
 
     snprintf(memdev_path, sizeof(memdev_path), "/proc/%d/mem", tid);
     fd = open(memdev_path, O_RDWR);
     if (fd < 0) {
-        DEBUG("Cannot open %s\n", memdev_path);
+        DEBUG_LOG("Cannot open %s\n", memdev_path);
         return -2;
     }
 
@@ -434,7 +434,7 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
 
         ssize_t bytes_read = pread(fd, &flags, sizeof(flags), (off_t)flags_addr);
         if (bytes_read < 0 || (size_t)bytes_read < sizeof(flags)) {
-            DEBUG("Cannot read TCS flags (address = %p)\n", flags_addr);
+            DEBUG_LOG("Cannot read TCS flags (address = %p)\n", flags_addr);
             ret = -2;
             goto out_err;
         }
@@ -443,11 +443,11 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
             continue;
 
         flags |= TCS_FLAGS_DBGOPTIN;
-        DEBUG("Setting TCS debug flag at %p (%lx)\n", flags_addr, flags);
+        DEBUG_LOG("Setting TCS debug flag at %p (%lx)\n", flags_addr, flags);
 
         ssize_t bytes_written = pwrite(fd, &flags, sizeof(flags), (off_t)flags_addr);
         if (bytes_written < 0 || (size_t)bytes_written < sizeof(flags)) {
-            DEBUG("Cannot write TCS flags (address = %p)\n", flags_addr);
+            DEBUG_LOG("Cannot write TCS flags (address = %p)\n", flags_addr);
             ret = -2;
             goto out_err;
         }
@@ -474,11 +474,11 @@ static int is_in_enclave(pid_t tid, struct enclave_dbginfo* ei) {
 
     int ret = host_ptrace(PTRACE_GETREGS, tid, NULL, &regs);
     if (ret < 0) {
-        DEBUG("Failed getting registers: TID %d\n", tid);
+        DEBUG_LOG("Failed getting registers: TID %d\n", tid);
         return -1;
     }
 
-    DEBUG("%d: User RIP 0x%08llx%s\n", tid, regs.rip,
+    DEBUG_LOG("%d: User RIP 0x%08llx%s\n", tid, regs.rip,
           ((void*)regs.rip == ei->aep) ? " (in enclave)" : "");
 
     return ((void*)regs.rip == ei->aep) ? 1 : 0;
@@ -501,7 +501,7 @@ long int ptrace(enum __ptrace_request request, ...) {
     data = va_arg(ap, void*);
     va_end(ap);
 
-    DEBUG("[GDB %d] Intercepted ptrace(%s, %d, %p, %p)\n", getpid(), str_ptrace_request(request),
+    DEBUG_LOG("[GDB %d] Intercepted ptrace(%s, %d, %p, %p)\n", getpid(), str_ptrace_request(request),
           tid, addr, data);
 
     ret = open_memdevice(tid, &memdev, &ei);
@@ -564,7 +564,7 @@ long int ptrace(enum __ptrace_request request, ...) {
         }
 
         case PTRACE_PEEKUSER: {
-            if ((off_t)addr >= sizeof(struct user)) {
+            if ((size_t)addr >= sizeof(struct user)) {
                 errno = EINVAL;
                 return -1;
             }
@@ -572,7 +572,7 @@ long int ptrace(enum __ptrace_request request, ...) {
             if (!in_enclave)
                 return host_ptrace(PTRACE_PEEKUSER, tid, addr, data);
 
-            if ((off_t)addr >= sizeof(struct user_regs_struct))
+            if ((size_t)addr >= sizeof(struct user_regs_struct))
                 return host_ptrace(PTRACE_PEEKUSER, tid, addr, NULL);
 
             ret = peek_user(memdev, tid, ei, &userdata);
@@ -585,12 +585,12 @@ long int ptrace(enum __ptrace_request request, ...) {
         }
 
         case PTRACE_POKEUSER: {
-            if ((off_t)addr >= sizeof(struct user)) {
+            if ((size_t)addr >= sizeof(struct user)) {
                 errno = EINVAL;
                 return -1;
             }
 
-            if (!in_enclave || (off_t)addr >= sizeof(struct user_regs_struct))
+            if (!in_enclave || (size_t)addr >= sizeof(struct user_regs_struct))
                 return host_ptrace(PTRACE_POKEUSER, tid, addr, data);
 
             ret = peek_user(memdev, tid, ei, &userdata);
@@ -681,7 +681,7 @@ long int ptrace(enum __ptrace_request request, ...) {
             regs.rip = (unsigned long long)ei->eresume;
             ret = host_ptrace(PTRACE_SETREGS, tid, NULL, &regs);
             if (ret < 0) {
-                DEBUG("Cannot set RIP to ERESUME to continue single-step in enclave thread %d\n",
+                DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave thread %d\n",
                       tid);
                 errno = EFAULT;
                 return -1;
@@ -694,7 +694,7 @@ long int ptrace(enum __ptrace_request request, ...) {
                 }
             }
 
-            DEBUG("Cannot find enclave thread %d to single-step\n", tid);
+            DEBUG_LOG("Cannot find enclave thread %d to single-step\n", tid);
             errno = EFAULT;
             return -1;
         }
@@ -708,7 +708,7 @@ long int ptrace(enum __ptrace_request request, ...) {
 }
 
 pid_t waitpid(pid_t tid, int* status, int options) {
-    int ret;
+    ssize_t ret;
     int memdev;
     pid_t wait_res;
     struct enclave_dbginfo* ei;
@@ -716,14 +716,14 @@ pid_t waitpid(pid_t tid, int* status, int options) {
     uint8_t code;
     int wait_errno;
 
-    DEBUG("[GDB %d] Intercepted waitpid(%d)\n", getpid(), tid);
+    DEBUG_LOG("[GDB %d] Intercepted waitpid(%d)\n", getpid(), tid);
 
     errno = 0;
     wait_res = syscall((long int)SYS_wait4, (long int)tid, (long int)status, (long int)options,
                        (long int)NULL);
     wait_errno = errno;
 
-    DEBUG("[GDB %d] Executed host waitpid(%d, <status>, %d) = %d\n", getpid(), tid, options,
+    DEBUG_LOG("[GDB %d] Executed host waitpid(%d, <status>, %d) = %d\n", getpid(), tid, options,
           wait_res);
 
     if (wait_res < 0) {
@@ -776,8 +776,8 @@ pid_t waitpid(pid_t tid, int* status, int options) {
         }
 
         ret = pread(memdev, &code, sizeof(code), (off_t)gpr.rip);
-        if (ret < sizeof(code)) {
-            DEBUG("Cannot read RIP of enclave thread %d\n", tid);
+        if (ret < (ssize_t)sizeof(code)) {
+            DEBUG_LOG("Cannot read RIP of enclave thread %d\n", tid);
             errno = ECHILD;
             return -1;
         }
@@ -785,7 +785,7 @@ pid_t waitpid(pid_t tid, int* status, int options) {
         if (code != 0xcc)
             return wait_res;
 
-        DEBUG("RIP 0x%lx points to a breakpoint\n", gpr.rip);
+        DEBUG_LOG("RIP 0x%lx points to a breakpoint\n", gpr.rip);
 
         /* This is a quirk of SGX hardware implementation. GDB expects that
          * RIP points to one byte *after* INT3 (which GDB put in place of
