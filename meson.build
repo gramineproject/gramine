@@ -34,6 +34,7 @@ asan = get_option('asan') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
+protoc_c_prog = find_program('protoc-c')
 
 # TODO: after deprecating 18.04/bionic, update this to import('python')
 python3mod = import('python3')
@@ -61,7 +62,8 @@ add_project_arguments(
 
     language: 'c')
 
-if get_option('buildtype') == 'debug' or get_option('buildtype') == 'debugoptimized'
+debug = get_option('buildtype') == 'debug' or get_option('buildtype') == 'debugoptimized'
+if debug
     add_project_arguments('-DDEBUG', language: 'c')
 endif
 

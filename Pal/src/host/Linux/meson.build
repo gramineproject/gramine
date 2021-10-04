@@ -90,12 +90,13 @@ libpal_direct_dep = declare_dependency(
     link_with: libpal_direct,
 )
 
-install_subdir('gdb_integration',
-    install_dir: join_paths(pkglibdir, 'direct'),
-    exclude_directories: ['common'])
-install_subdir('../../../gdb_integration',
-    install_dir: join_paths(pkglibdir, 'direct/gdb_integration/common'),
-    strip_directory: true)
+if debug
+    install_data(
+        'gdb_integration/gramine_linux_gdb.py',
+        install_dir: join_paths(pkglibdir, 'direct/gdb_integration'),
+    )
+endif
+
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf libpal.so "$MESON_INSTALL_DESTDIR_PREFIX"/@0@'.format(
         join_paths(pkglibdir, 'direct/loader')))

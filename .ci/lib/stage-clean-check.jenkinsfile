@@ -14,6 +14,8 @@ stage('clean-check') {
 
         make -C LibOS/shim/test/regression clean
 
+        make -C Pal/regression clean
+
         make -C CI-Examples/python clean
         make -C CI-Examples/bash clean
         make -C CI-Examples/memcached distclean
