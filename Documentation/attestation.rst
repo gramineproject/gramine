@@ -406,10 +406,10 @@ environment variables if available:
 - ``SECRET_PROVISION_SET_PF_KEY`` (optional) -- set it to ``1/true/TRUE`` to
   indicate that the provisioned secret is a protected-files master key. The key
   must be a 32-char null-terminated AES-GCM encryption key in hex format,
-  similar to ``sgx.protected_files_key`` manifest option. This environment
-  variable is checked only if ``SECRET_PROVISION_CONSTRUCTOR`` is set. The
-  library puts the provisioned key into ``/dev/attestation/protected_files_key``
-  so that Gramine recognizes it.
+  similar to ``sgx.insecure__protected_files_key`` manifest option. This
+  environment variable is checked only if ``SECRET_PROVISION_CONSTRUCTOR`` is
+  set. The library puts the provisioned key into
+  ``/dev/attestation/protected_files_key`` so that Gramine recognizes it.
 
 - ``SECRET_PROVISION_SERVERS`` (optional) -- a comma, semicolon or space
   separated list of server names with ports to connect to for secret

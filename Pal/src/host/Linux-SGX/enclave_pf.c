@@ -617,16 +617,16 @@ int init_protected_files(void) {
     /* if wrap key is not hard-coded in the manifest, assume that it was received from parent or
      * it will be provisioned after local/remote attestation; otherwise read it from manifest */
     char* protected_files_key_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "sgx.protected_files_key",
+    ret = toml_string_in(g_pal_state.manifest_root, "sgx.insecure__protected_files_key",
                          &protected_files_key_str);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.protected_files_key'");
+        log_error("Cannot parse 'sgx.insecure__protected_files_key'");
         return -PAL_ERROR_INVAL;
     }
 
     if (protected_files_key_str) {
         if (strlen(protected_files_key_str) != PF_KEY_SIZE * 2) {
-            log_error("Malformed 'sgx.protected_files_key' value in the manifest");
+            log_error("Malformed 'sgx.insecure__protected_files_key' value in the manifest");
             free(protected_files_key_str);
             return -PAL_ERROR_INVAL;
         }
@@ -635,7 +635,7 @@ int init_protected_files(void) {
         for (size_t i = 0; i < strlen(protected_files_key_str); i++) {
             int8_t val = hex2dec(protected_files_key_str[i]);
             if (val < 0) {
-                log_error("Malformed 'sgx.protected_files_key' value in the manifest");
+                log_error("Malformed 'sgx.insecure__protected_files_key' value in the manifest");
                 free(protected_files_key_str);
                 return -PAL_ERROR_INVAL;
             }

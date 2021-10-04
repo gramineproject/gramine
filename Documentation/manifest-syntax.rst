@@ -524,7 +524,7 @@ Protected files
 
 ::
 
-    sgx.protected_files_key = "[16-byte hex value]"
+    sgx.insecure__protected_files_key = "[16-byte hex value]"
 
     sgx.protected_files = [
       "[URI]",
@@ -555,16 +555,16 @@ directory are automatically treated as protected.
 Note that path size of a protected file is limited to 512 bytes and filename
 size is limited to 260 bytes.
 
-``sgx.protected_files_key`` specifies the wrap (master) encryption key and must
-be used only for debugging purposes.
+``sgx.insecure__protected_files_key`` specifies the wrap (master) encryption key
+and must be used only for debugging purposes.
 
 .. warning::
-   ``sgx.protected_files_key`` hard-codes the key in the manifest. This option
-   is thus insecure and must not be used in production environments! Typically,
-   you want to provision the protected files wrap key using SGX local/remote
-   attestation, thus you should not specify the ``sgx.protected_files_key``
-   manifest option at all. Instead, use the Secret Provisioning interface (see
-   :doc:`attestation`).
+   ``sgx.insecure__protected_files_key`` hard-codes the key in the manifest.
+   This option is thus insecure and must not be used in production environments!
+   Typically, you want to provision the protected files wrap key using SGX
+   local/remote attestation, thus you should not specify the
+   ``sgx.insecure__protected_files_key`` manifest option at all. Instead, use
+   the Secret Provisioning interface (see :doc:`attestation`).
 
 There are three types of protected files:
 
