@@ -12,7 +12,6 @@ endif
 $(targets):
 	$(MAKE) -C Scripts $@
 	$(MAKE) -C common $@
-	$(MAKE) -C Pal $@
 	$(MAKE) -C LibOS $@
 	@echo
 	@echo NOTE: We are in the middle of a transition to the Meson buildsystem.
