@@ -17,7 +17,7 @@
  * N.B: Understands complex formats like "1,3-5,6" when called with count == true.
  */
 int get_hw_resource(const char* filename, bool count, PAL_RES_RANGE_INFO* res_info,
-                    enum sz_multiplier* size_mult);
+                    enum size_multiplier* size_mult);
 
 /* Reads up to count bytes from the file into the buf passed.
  * Returns 0 or number of bytes read on success and UNIX error code on failure.

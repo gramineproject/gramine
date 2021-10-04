@@ -14,22 +14,22 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
-int sys_convert_int_to_sizestr(uint64_t val, enum sz_multiplier size_mult, char* str,
+int sys_convert_int_to_sizestr(uint64_t val, enum size_multiplier size_mult, char* str,
                                size_t buf_size) {
     int ret = 0;
 
     switch (size_mult) {
         case MULTIPLIER_KB:
-            ret = snprintf(str, buf_size, "%luK", val);
+            ret = snprintf(str, buf_size, "%luK\n", val);
             break;
         case MULTIPLIER_MB:
-            ret = snprintf(str, buf_size, "%luM", val);
+            ret = snprintf(str, buf_size, "%luM\n", val);
             break;
         case MULTIPLIER_GB:
-            ret = snprintf(str, buf_size, "%luG", val);
+            ret = snprintf(str, buf_size, "%luG\n", val);
             break;
         default:
-            ret = snprintf(str, buf_size, "%lu", val);
+            ret = snprintf(str, buf_size, "%lu\n", val);
             break;
     }
 
@@ -49,11 +49,11 @@ int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, cha
         int ret;
         if (resource_range_info->ranges[i].end == resource_range_info->ranges[i].start) {
             ret = snprintf(str + offset, buf_size - offset, "%lu%s",
-                           resource_range_info->ranges[i].start, (i + 1 == range_cnt) ? "\0" : sep);
+                           resource_range_info->ranges[i].start, (i + 1 == range_cnt) ? "\n" : sep);
         } else {
             ret = snprintf(str + offset, buf_size - offset, "%lu-%lu%s",
                            resource_range_info->ranges[i].start, resource_range_info->ranges[i].end,
-                           (i + 1 == range_cnt) ? "" : sep);
+                           (i + 1 == range_cnt) ? "\n" : sep);
         }
 
         /* Truncation has occurred */
@@ -84,6 +84,8 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_rang
 
         for (uint64_t j = start; j <= end; j++) {
             uint64_t index = j / BITS_IN_TYPE(int);
+            assert(index < num_cpumask);
+
             bitmap[index] |= 1U << (j % BITS_IN_TYPE(int));
         }
     }
@@ -96,18 +98,21 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_rang
             goto out;
         }
 
-        /* Print full 4-byte values for systems having greater than 32 cores.*/
-        if (possible_cores > 31) {
+        /* Linux doesn't print leading zeroes for systems with less than 32 cores, e.g. "fff" for
+         * 12 cores; we mimic this behavior. */
+        if (possible_cores >= 32) {
             ret = snprintf(str + offset, buf_size - offset, "%08x%s", bitmap[j-1],
-                           (j-1 == 0) ? "" : ",");
+                           (j-1 == 0) ? "\n" : ",");
         } else {
             ret = snprintf(str + offset, buf_size - offset, "%x%s", bitmap[j-1],
-                           (j-1 == 0) ? "" : ",");
+                           (j-1 == 0) ? "\n" : ",");
         }
 
         /* Truncation has occurred */
-        if (ret >= (int)buf_size)
-            return -EOVERFLOW;
+        if (ret >= (int)buf_size) {
+            ret = -EOVERFLOW;
+            goto out;
+        }
 
         if (ret < 0)
             goto out;

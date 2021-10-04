@@ -17,7 +17,7 @@
 #include "topo_info.h"
 
 int get_hw_resource(const char* filename, bool count, PAL_RES_RANGE_INFO* res_info,
-                    enum sz_multiplier* size_mult) {
+                    enum size_multiplier* size_mult) {
     if (res_info) {
         res_info->resource_count = 0;
         res_info->range_count = 0;
@@ -223,7 +223,7 @@ static int get_cache_topo_info(int num_cache_lvl, int core_idx, PAL_CORE_CACHE_I
             goto out_cache;
         }
 
-        enum sz_multiplier size_mult;
+        enum size_multiplier size_mult;
         snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%d/cache/index%d/size",
                  core_idx, lvl);
         int size = get_hw_resource(filename, /*count=*/false, NULL, &size_mult);

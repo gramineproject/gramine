@@ -421,6 +421,7 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, uint64
             uint64_t end = numa_topology[idx].cpumap.ranges[i].end;
             for (uint64_t j = start; j <= end; j++) {
                 uint64_t index = j / BITS_IN_TYPE(int);
+                assert(index < num_cpumask);
 
                 if (bitmap[index] & (1U << (j % BITS_IN_TYPE(int)))) {
                     log_error("Invalid numa_topology: Core %lu found in multiple numa nodes", j);

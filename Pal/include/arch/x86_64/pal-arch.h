@@ -278,7 +278,7 @@ enum {
     HUGEPAGES_MAX,
 };
 
-enum sz_multiplier {
+enum size_multiplier {
     MULTIPLIER_NONE,
     MULTIPLIER_KB,
     MULTIPLIER_MB,
@@ -320,7 +320,7 @@ typedef struct PAL_CORE_CACHE_INFO_ {
     PAL_NUM level;
     PAL_NUM type;
     PAL_NUM size;
-    enum sz_multiplier size_multiplier;
+    enum size_multiplier size_multiplier;
     PAL_NUM coherency_line_size;
     PAL_NUM number_of_sets;
     PAL_NUM physical_line_partition;
