@@ -152,8 +152,12 @@ static void setup_asan(void) {
     int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
     void* addr = (void*)DO_SYSCALL(mmap, (void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, prot, flags,
                                    /*fd=*/-1, /*offset=*/0);
-    if (IS_PTR_ERR(addr))
+    if (IS_PTR_ERR(addr)) {
+        /* We are super early in the init sequence, TCB is not yet set, we probably should not call
+         * any logging functions. */
+        DO_SYSCALL(exit_group, PAL_ERROR_NOMEM);
         die_or_inf_loop();
+    }
 }
 #endif
 
