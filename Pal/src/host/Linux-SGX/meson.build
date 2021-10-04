@@ -1,9 +1,3 @@
-
-# TODO: We still depend on Makefile to generate some files used in this build:
-#
-# - quote/aesm.pb-c.[ch]
-# - sgx_integration/sgx_gdb.so
-
 gsgx_h = configure_file(
     input: 'gsgx.h.in',
     output: 'gsgx.h',
@@ -162,7 +156,6 @@ libpal_sgx = shared_library('pal',
 
 # URTS (untrusted runtime)
 executable('loader',
-    'quote/aesm.pb-c.c',
     'sgx_enclave.c',
     'sgx_entry.S',
     'sgx_exception.c',
@@ -179,6 +172,7 @@ executable('loader',
     'sgx_thread.c',
     pal_linux_common_sources_urts,
     pal_sgx_asm_offsets,
+    aesm_proto_ch,
     gsgx_h,
 
     include_directories: sgx_inc,
@@ -206,6 +200,19 @@ executable('loader',
 libpal_sgx_dep = declare_dependency(
     link_with: libpal_sgx,
     include_directories: includes_pal_common,
+)
+
+shared_library('sgx_gdb',
+    'sgx_gdb.c',
+    'sgx_gdb.h',
+
+    c_args: [
+        # optimize even in a debug build
+        '-O3',
+    ],
+
+    install: true,
+    install_dir: join_paths(pkglibdir, 'sgx'),
 )
 
 install_subdir('gdb_integration',

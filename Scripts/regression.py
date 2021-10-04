@@ -53,7 +53,7 @@ class RegressionTestCase(unittest.TestCase):
         env = os.environ.copy()
         if HAS_SGX:
             prefix += ['-x', fspath(self.pal_path / 'gdb_integration/gramine_sgx_gdb.py')]
-            sgx_gdb = fspath(self.pal_path / 'gdb_integration/sgx_gdb.so')
+            sgx_gdb = fspath(self.pal_path / 'libsgx_gdb.so')
             env['LD_PRELOAD'] = sgx_gdb + ':' + env.get('LD_PRELOAD', '')
         else:
             prefix += ['-x', fspath(self.pal_path / 'gdb_integration/gramine_linux_gdb.py')]

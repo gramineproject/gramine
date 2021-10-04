@@ -34,6 +34,7 @@ asan = get_option('asan') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
+protoc_c_prog = find_program('protoc-c')
 
 # TODO: after deprecating 18.04/bionic, update this to import('python')
 python3mod = import('python3')
