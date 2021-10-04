@@ -14,56 +14,61 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
-int sys_convert_int_to_sizestr(uint64_t val, enum multiplier size_mult, char* str,
-                               size_t max_size) {
+int sys_convert_int_to_sizestr(uint64_t val, enum sz_multiplier size_mult, char* str,
+                               size_t buf_size) {
     int ret = 0;
 
     switch (size_mult) {
         case MULTIPLIER_KB:
-            ret = snprintf(str, max_size, "%luK", val);
+            ret = snprintf(str, buf_size, "%luK", val);
             break;
         case MULTIPLIER_MB:
-            ret = snprintf(str, max_size, "%luM", val);
+            ret = snprintf(str, buf_size, "%luM", val);
             break;
         case MULTIPLIER_GB:
-            ret = snprintf(str, max_size, "%luG", val);
+            ret = snprintf(str, buf_size, "%luG", val);
             break;
         default:
-            ret = snprintf(str, max_size, "%lu", val);
+            ret = snprintf(str, buf_size, "%lu", val);
             break;
     }
+
+    if (ret >= buf_size)
+        ret = -EOVERFLOW;
     return ret;
 }
 
-int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* res_range_info, char* str, size_t max_size,
-                              const char* sep) {
-
-    uint64_t range_cnt = res_range_info->range_count;
+int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
+                              size_t buf_size, const char* sep) {
+    uint64_t range_cnt = resource_range_info->range_count;
     size_t offset = 0;
     for (uint64_t i = 0; i < range_cnt; i++) {
-        if (offset > max_size)
+        if (offset > buf_size)
             return -ENOMEM;
 
         int ret;
-        if (res_range_info->ranges[i].end == res_range_info->ranges[i].start) {
-            ret = snprintf(str + offset, max_size - offset, "%lu%s", res_range_info->ranges[i].start,
-                           (i + 1 == range_cnt) ? "\0" : sep);
+        if (resource_range_info->ranges[i].end == resource_range_info->ranges[i].start) {
+            ret = snprintf(str + offset, buf_size - offset, "%lu%s",
+                           resource_range_info->ranges[i].start, (i + 1 == range_cnt) ? "\0" : sep);
         } else {
-            ret = snprintf(str + offset, max_size - offset, "%lu-%lu%s",
-                           res_range_info->ranges[i].start, res_range_info->ranges[i].end,
-                           (i + 1 == range_cnt) ? "\0" : sep);
+            ret = snprintf(str + offset, buf_size - offset, "%lu-%lu%s",
+                           resource_range_info->ranges[i].start, resource_range_info->ranges[i].end,
+                           (i + 1 == range_cnt) ? "" : sep);
         }
+
+        /* Truncation has occurred */
+        if (ret >= buf_size)
+            return -EOVERFLOW;
 
         if (ret < 0)
             return ret;
-
         offset += ret;
     }
     return 0;
 }
 
-int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_info, char* str,
-                                         size_t max_size) {
+int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
+                                         size_t buf_size) {
     int ret;
 
     /* Extract cpumask from the ranges */
@@ -73,16 +78,12 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_inf
     if (!bitmap)
         return -ENOMEM;
 
-    for (uint64_t i = 0; i < res_range_info->range_count; i++) {
-        uint64_t start = res_range_info->ranges[i].start;
-        uint64_t end = res_range_info->ranges[i].end;
+    for (uint64_t i = 0; i < resource_range_info->range_count; i++) {
+        uint64_t start = resource_range_info->ranges[i].start;
+        uint64_t end = resource_range_info->ranges[i].end;
 
         for (uint64_t j = start; j <= end; j++) {
             uint64_t index = j / BITS_IN_TYPE(int);
-            if (index >= num_cpumask) {
-                ret = -EINVAL;
-                goto out;
-            }
             bitmap[index] |= 1U << (j % BITS_IN_TYPE(int));
         }
     }
@@ -90,11 +91,24 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_inf
     /* Convert cpumask to strings */
     size_t offset = 0;
     for (uint64_t j = num_cpumask; j > 0; j--) {
-        if (offset > max_size) {
+        if (offset > buf_size) {
             ret = -ENOMEM;
             goto out;
         }
-        ret = snprintf(str + offset, max_size - offset, "%08x%s", bitmap[j-1], (j-1 == 0) ? "\0" : ",");
+
+        /* Print full 4-byte values for systems having greater than 32 cores.*/
+        if (possible_cores > 31) {
+            ret = snprintf(str + offset, buf_size - offset, "%08x%s", bitmap[j-1],
+                           (j-1 == 0) ? "" : ",");
+        } else {
+            ret = snprintf(str + offset, buf_size - offset, "%x%s", bitmap[j-1],
+                           (j-1 == 0) ? "" : ",");
+        }
+
+        /* Truncation has occurred */
+        if (ret >= buf_size)
+            return -EOVERFLOW;
+
         if (ret < 0)
             goto out;
         offset += ret;

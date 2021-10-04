@@ -209,21 +209,20 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 
-/* Converts integer to a string. When size multiplier is passed, it is converted back to string and
- * appended except in cases where the size multiplier is `MULTIPLIER_NONE`. In such cases nothing is
- * appended and the integer is simply converted to a string. */
-int sys_convert_int_to_sizestr(uint64_t val, enum multiplier size_mult, char* str, size_t max_size);
+/* Converts an integer to a string, optionally appending a given single-letter unit suffix
+ * (see enum sz_multiplier for possible values). */
+int sys_convert_int_to_sizestr(uint64_t val, enum sz_multiplier size_mult, char* str,
+                               size_t buf_size);
 
-/* Converts array of integer range(s) to a string. For example if res_range_info->ranges[0].start
- * and res_range_info->ranges[0].end were 0 and 63 respectively, then `0-63` string is generated.
- `sep` is used to seperate each generated range string. */
-int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* res_range_info, char* str, size_t max_size,
-                              const char* sep);
+/* Converts `PAL_RANGE_INFO` that is part of `PAL_RES_RANGE_INFO` to a string representation.
+ * Example output when sep == ',': "10-63,68,70-127". */
+int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
+                              size_t buf_size, const char* sep);
 
-/* Converts array of integer range(s) to a cpu bitmap string. For example, if
- * res_range_info->ranges[0].start and res_range_info->ranges[0].end were 0 and 31 respectively,
- * then `00000000,ffffffff` string is generated. */
-int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* res_range_info, char* str,
-                                         size_t max_size);
+/* Converts `PAL_RANGE_INFO` that is part of `PAL_RES_RANGE_INFO` to a sysfs CPU bitmask
+ * representation with bitmask size based on the possible cores count in the system. Example
+ * output for 64 cores in total and ranges 0-15,48-55: "00ff0000, 0000ffff". */
+int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
+                                         size_t buf_size);
 
 #endif /* SHIM_FS_PSEUDO_H_ */
