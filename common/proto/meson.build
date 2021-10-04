@@ -1,17 +1,27 @@
+
+# TODO after we drop Ubuntu 18.04 (ninja 1.8):
+#
+# Unfortunately, ninja versions older than 1.10 don't allow more than one output in dependencies
+# (see https://github.com/ninja-build/ninja/issues/1184). That means we cannot track the `.h` file
+# here, and also we cannot make use of dependency files generated `proto-c`.
+
 aesm_proto_ch = custom_target('aesm.pb-c.[ch]',
     input: 'aesm.proto',
 
-    # TODO after ninja 1.10 (bionic EOL) add two outputs
-    # https://github.com/ninja-build/ninja/issues/1184
-#   output: ['aesm.pb-c.c', 'aesm.pb-c.h'],
+    # TODO ninja 1.10+ (see above)
+    # output: ['aesm.pb-c.c', 'aesm.pb-c.h'],
     output: 'aesm.pb-c.c',
 
-    depfile: 'aesm.pb-c.c.d',
+    # TODO ninja 1.10+ (see above)
+    # depfile: 'aesm.pb-c.c.d',
+
     command: [protoc_c_prog,
         '--c_out=@OUTDIR@',
-        '--dependency_out=@DEPFILE@',
 
-        # XXX @INPUT@ doesn't work, because protoc-c expects this file to be inside -I, and the
+        # TODO ninja 1.10+ (see above)
+        # '--dependency_out=@DEPFILE@',
+
+        # XXX: @INPUT@ doesn't work, because protoc-c expects this file to be inside -I, and the
         # check for that is dumb, notably fails when one path is absolute and one is relative, so we
         # have to generate -I and input the same way
         '-I@0@'.format(meson.current_source_dir()),
