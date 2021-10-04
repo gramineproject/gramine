@@ -17,7 +17,6 @@ sgx_util = shared_library('sgx_util',
         libcurl_dep,
         protected_files_dep,
         mbedtls_dep,
-        uthash_dep,
     ],
 
     install: true,
