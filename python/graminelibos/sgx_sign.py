@@ -542,7 +542,7 @@ def get_tbssigstruct(manifest_path, date, libpal=None):
 
 
 def sign_with_local_key(data, key):
-    """Signs `data` using `key`.
+    """Signs *data* using *key*.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
     the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).

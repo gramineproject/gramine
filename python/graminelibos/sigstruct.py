@@ -81,9 +81,9 @@ class Sigstruct:
         """Turn SIGSTRUCT into bytes.
 
         You probably want to set all required fields before calling this function. If you not wish
-        to do so, you can pass :obj:``False`` as `verify` argument - in such case non-set fields
+        to do so, you can pass :obj:``False`` as *verify* argument - in such case non-set fields
         will be implicitly ``0``-initialized. Some fields have default values and therefore not need
-        to be set (e.g. ``header``).
+        to be set (e.g. *header*).
 
         Args:
             verify (bool): if ``True``, check if all fields were initialized.
@@ -120,8 +120,8 @@ class Sigstruct:
             Sigstruct: parsed SIGSTRUCT object.
 
         Raises:
-            TypeError: `buffer` has a wrong type (is not bytes or bytearray).
-            ValueError: `buffer` does not have required length or one of the headers does not match.
+            TypeError: *buffer* has a wrong type (is not bytes or bytearray).
+            ValueError: *buffer* does not have required length or one of the headers does not match.
         """
         if not isinstance(buffer, bytes) and not isinstance(buffer, bytearray):
             raise TypeError(f'a bytes-like object is required, not {type(buffer).__name__}')
@@ -151,14 +151,14 @@ class Sigstruct:
         """Sign the SIGSTRUCT.
 
         Signs this SIGSTRUCT in place (i.e. fills appropriate fields with the signing result) using
-        `do_sign_callback` function.
+        *do_sign_callback* function.
 
         Args:
             do_sign_callback: Function doing actual signing. Gets to-be-signed data as the first
-                argument (bytearray), then optional `*args` and `**kwargs`. Must return a tuple
+                argument (bytearray), then optional ``*args`` and ``**kwargs``. Must return a tuple
                 ``(int, int, int)`` containing exponent, modulus and signature respectively.
-            *args: Arbitrary arguments list passed to `do_sign_callback`.
-            **kwargs:  Arbitrary keyword arguments passed to `do_sign_callback`.
+            *args: Arbitrary arguments list passed to *do_sign_callback*.
+            **kwargs:  Arbitrary keyword arguments passed to *do_sign_callback*.
 
         Raises:
             KeyError: some SIGSTRUCT fields were not set.
