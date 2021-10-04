@@ -33,7 +33,7 @@ int sys_convert_int_to_sizestr(uint64_t val, enum sz_multiplier size_mult, char*
             break;
     }
 
-    if (ret >= buf_size)
+    if (ret >= (int)buf_size)
         ret = -EOVERFLOW;
     return ret;
 }
@@ -57,7 +57,7 @@ int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, cha
         }
 
         /* Truncation has occurred */
-        if (ret >= buf_size)
+        if (ret >= (int)buf_size)
             return -EOVERFLOW;
 
         if (ret < 0)
@@ -106,7 +106,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_rang
         }
 
         /* Truncation has occurred */
-        if (ret >= buf_size)
+        if (ret >= (int)buf_size)
             return -EOVERFLOW;
 
         if (ret < 0)
