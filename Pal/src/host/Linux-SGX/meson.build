@@ -61,8 +61,6 @@ pal_sgx_generated_offsets_s = custom_target('generated-offsets-pal-sgx.s',
     output: 'generated-offsets-pal-sgx.s',
     input: 'generated-offsets.c',
     depfile: 'generated_offsets.c.d',
-
-    depends: tomlc99_src,
 )
 
 # TODO: after meson 0.54 those two targets can be combined, and the second one might be passed to

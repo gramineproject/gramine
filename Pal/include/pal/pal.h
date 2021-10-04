@@ -15,8 +15,6 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-#include "toml.h"
-
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
 #endif

@@ -23,6 +23,7 @@
 #include "pal_linux_defs.h"
 #include "pal_security.h"
 #include "sysdeps/generic/ldsodefs.h"
+#include "toml.h"
 
 #define RTLD_BOOTSTRAP
 
