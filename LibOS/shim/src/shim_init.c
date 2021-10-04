@@ -36,8 +36,10 @@ static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
               "shim_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
 
 const toml_table_t* g_manifest_root = NULL;
-/* We don't have const qualifier for this struct as topo_info struct part of this structure maybe
- * overriden during LibOS initialization for the child process. */
+
+/* We don't have const qualifier for `g_pal_control` as its `topo_info` field may be overriden
+ * during LibOS initialization (for child processes which inherit `topo_info` from the parent
+ * process). FIXME: We may need to rethink `g_pal_control` structure. */
 PAL_CONTROL* g_pal_control = NULL;
 
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()

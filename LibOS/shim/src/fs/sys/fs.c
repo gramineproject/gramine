@@ -275,6 +275,7 @@ BEGIN_CP_FUNC(numa_topology) {
         memcpy(new_numa_topo, numa_topo, numa_topo_sz);
 
         for (uint64_t idx = 0; idx < num_nodes_online; idx++) {
+            new_numa_topo[idx].cpumap.ranges = NULL;
             if (numa_topo[idx].cpumap.range_count > 0) {
                 size_t range_sz = numa_topo[idx].cpumap.range_count * sizeof(PAL_RANGE_INFO);
                 size_t toff = ADD_CP_OFFSET(range_sz);
@@ -282,6 +283,7 @@ BEGIN_CP_FUNC(numa_topology) {
                 memcpy(new_numa_topo[idx].cpumap.ranges, numa_topo[idx].cpumap.ranges, range_sz);
             }
 
+            new_numa_topo[idx].distance.ranges = NULL;
             if (numa_topo[idx].distance.range_count > 0) {
                 size_t range_sz = numa_topo[idx].distance.range_count * sizeof(PAL_RANGE_INFO);
                 size_t toff = ADD_CP_OFFSET(range_sz);
@@ -317,6 +319,7 @@ BEGIN_CP_FUNC(cache) {
         memcpy(new_cache, cache, cache_topo_sz);
 
         for (uint64_t idx = 0; idx < num_cache_lvls; idx++) {
+            new_cache[idx].shared_cpu_map.ranges = NULL;
             if (cache[idx].shared_cpu_map.range_count > 0) {
                 size_t range_sz = cache[idx].shared_cpu_map.range_count * sizeof(PAL_RANGE_INFO);
                 size_t toff = ADD_CP_OFFSET(range_sz);
@@ -353,6 +356,7 @@ BEGIN_CP_FUNC(core_topology) {
         memcpy(new_core_topo, core_topo, core_topo_sz);
 
         for (uint64_t idx = 0; idx < num_cores_online; idx++) {
+            new_core_topo[idx].core_siblings.ranges = NULL;
             if (core_topo[idx].core_siblings.range_count > 0) {
                 size_t range_sz = core_topo[idx].core_siblings.range_count * sizeof(PAL_RANGE_INFO);
                 size_t toff = ADD_CP_OFFSET(range_sz);
@@ -361,6 +365,7 @@ BEGIN_CP_FUNC(core_topology) {
                        range_sz);
             }
 
+            new_core_topo[idx].thread_siblings.ranges = NULL;
             if (core_topo[idx].thread_siblings.range_count > 0) {
                 size_t range_sz =
                     core_topo[idx].thread_siblings.range_count * sizeof(PAL_RANGE_INFO);
@@ -398,6 +403,7 @@ BEGIN_CP_FUNC(topo_info) {
         new_topo_info = (PAL_TOPO_INFO*)(base + off);
         *new_topo_info = *topo_info;
 
+        new_topo_info->online_logical_cores.ranges = NULL;
         if (topo_info->online_logical_cores.range_count > 0) {
             size_t range_sz = topo_info->online_logical_cores.range_count * sizeof(PAL_RANGE_INFO);
             size_t toff = ADD_CP_OFFSET(range_sz);
@@ -406,6 +412,7 @@ BEGIN_CP_FUNC(topo_info) {
                    topo_info->online_logical_cores.ranges, range_sz);
         }
 
+        new_topo_info->possible_logical_cores.ranges = NULL;
         if (topo_info->possible_logical_cores.range_count > 0) {
             size_t range_sz = topo_info->possible_logical_cores.range_count * sizeof(PAL_RANGE_INFO);
             size_t toff = ADD_CP_OFFSET(range_sz);
@@ -414,6 +421,7 @@ BEGIN_CP_FUNC(topo_info) {
                    topo_info->possible_logical_cores.ranges, range_sz);
         }
 
+        new_topo_info->nodes.ranges = NULL;
         if (topo_info->nodes.range_count > 0) {
             size_t range_sz = topo_info->nodes.range_count * sizeof(PAL_RANGE_INFO);
             size_t toff = ADD_CP_OFFSET(range_sz);
@@ -465,13 +473,13 @@ BEGIN_RS_FUNC(topo_info) {
             CP_REBASE(topo_info->core_topology[idx].cache[lvl].shared_cpu_map.ranges);
         }
     }
+
     CP_REBASE(topo_info->numa_topology);
     for (uint64_t idx = 0; idx < topo_info->nodes.resource_count; idx++) {
         CP_REBASE(topo_info->numa_topology[idx].cpumap.ranges);
         CP_REBASE(topo_info->numa_topology[idx].distance.ranges);
     }
 
-    /* Restore topo_info from parent to the child */
     g_pal_control->topo_info.online_logical_cores = topo_info->online_logical_cores;
     g_pal_control->topo_info.possible_logical_cores = topo_info->possible_logical_cores;
     g_pal_control->topo_info.nodes = topo_info->nodes;
