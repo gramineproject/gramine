@@ -16,7 +16,6 @@
 #include "log.h"
 #include "pal.h"
 #include "pal_error.h"
-#include "toml.h"
 
 #ifndef IN_PAL
 #error "pal_internal.h can only be included in PAL"
