@@ -81,7 +81,7 @@ class Sigstruct:
         """Turn SIGSTRUCT into bytes.
 
         You probably want to set all required fields before calling this function. If you not wish
-        to do so, you can pass :obj:``False`` as *verify* argument - in such case non-set fields
+        to do so, you can pass :obj:`False` as *verify* argument - in such case non-set fields
         will be implicitly ``0``-initialized. Some fields have default values and therefore not need
         to be set (e.g. *header*).
 

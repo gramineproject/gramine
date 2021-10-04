@@ -546,7 +546,7 @@ def sign_with_local_key(data, key):
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
     the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
-    Suitable to be used as a callback to :py:func:``graminelibos.Sigstruct.sign()``.
+    Suitable to be used as a callback to :py:func:`graminelibos.Sigstruct.sign()`.
 
     Args:
         data (bytes): Data to calculate the signature over.
