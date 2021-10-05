@@ -13,4 +13,8 @@ protected_files_dep = declare_dependency(
         include_directories('.'),
         common_inc,
     ],
+
+    dependencies: [
+        uthash_dep,
+    ]
 )
