@@ -5,13 +5,35 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "mbedtls/base64.h"
-#include "mbedtls/cmac.h"
+/*
+ * HACK: Since we don't have access to mbedtls headers here (mbedtls is built as a Meson suproject,
+ * and this file is compiled using Make), we inline the relevant definitions.
+ *
+ * As soon as this test is built using Meson, use #include instead of the below definitions.
+ */
+
+// #include "mbedtls/base64.h"
+// #include "mbedtls/cmac.h"
+
+typedef enum {
+    MBEDTLS_CIPHER_AES_128_ECB = 2,
+} mbedtls_cipher_type_t;
+
+typedef struct mbedtls_cipher_context_t mbedtls_cipher_context_t;
+typedef struct mbedtls_cipher_info_t mbedtls_cipher_info_t;
+
+const mbedtls_cipher_info_t* mbedtls_cipher_info_from_type(const mbedtls_cipher_type_t cipher_type);
+int mbedtls_cipher_cmac(const mbedtls_cipher_info_t* cipher_info,
+                        const unsigned char* key, size_t keylen,
+                        const unsigned char* input, size_t ilen,
+                        unsigned char* output);
+int mbedtls_cipher_cmac_finish(mbedtls_cipher_context_t* ctx, unsigned char* output);
 
 #include "rw_file.h"
 #include "sgx_api.h"
