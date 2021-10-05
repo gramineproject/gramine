@@ -247,6 +247,7 @@ done:
 }
 
 struct shim_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct shim_handle_map* map) {
+    assert(map);
     assert(locked(&map->lock));
 
     struct shim_fd_handle* fd_handle = NULL;
@@ -265,8 +266,8 @@ struct shim_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct shim_hand
 }
 
 struct shim_handle* get_fd_handle(uint32_t fd, int* fd_flags, struct shim_handle_map* map) {
-    if (!map)
-        map = get_thread_handle_map(NULL);
+    map = map ?: get_thread_handle_map(NULL);
+    assert(map);
 
     struct shim_handle* hdl = NULL;
     lock(&map->lock);

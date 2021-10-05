@@ -313,8 +313,8 @@ static noreturn void internal_fault(const char* errstr, PAL_NUM addr, PAL_CONTEX
         log_error("%s at 0x%08lx (IP = +0x%lx, VMID = %u, TID = %u)", errstr, addr,
                   (void*)ip - (void*)&__load_address, g_process_ipc_ids.self_vmid, tid);
     else
-        log_error("%s at 0x%08lx (IP = 0x%08lx, VMID = %u, TID = %u)", errstr, addr,
-                  context ? ip : 0, g_process_ipc_ids.self_vmid, tid);
+        log_error("%s at 0x%08lx (IP = 0x%08lx, VMID = %u, TID = %u)", errstr, addr, ip,
+                  g_process_ipc_ids.self_vmid, tid);
 
     DEBUG_BREAK_ON_FAILURE();
     DkProcessExit(1);

@@ -184,12 +184,16 @@ enum {
         tmp;                                         \
     })
 
-#define GET_CP_ENTRY(type)                           \
-    ({                                               \
-        struct shim_cp_entry* tmp = NEXT_CP_ENTRY(); \
-        while (tmp->cp_type != CP_##type)            \
-            tmp = NEXT_CP_ENTRY();                   \
-        tmp->cp_val;                                 \
+#define GET_CP_ENTRY(type)                             \
+    ({                                                 \
+        struct shim_cp_entry* tmp = NEXT_CP_ENTRY();   \
+        while (tmp && tmp->cp_type != CP_##type)       \
+            tmp = NEXT_CP_ENTRY();                     \
+        if (!tmp) {                                    \
+            log_error("cannot find checkpoint entry"); \
+            DkProcessExit(EINVAL);                     \
+        }                                              \
+        tmp->cp_val;                                   \
     })
 
 #define GET_CP_FUNC_ENTRY()  \
@@ -272,7 +276,11 @@ struct shim_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
 #define ADD_TO_CP_MAP(obj, off)                                                   \
     do {                                                                          \
         struct shim_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, true); \
-        e->off                      = (off);                                      \
+        if (!e) {                                                                 \
+            log_error("cannot extend checkpoint map buffer");                     \
+            DkProcessExit(ENOMEM);                                                \
+        }                                                                         \
+        e->off = (off);                                                           \
     } while (0)
 
 #define BEGIN_MIGRATION_DEF(name, ...)                                  \

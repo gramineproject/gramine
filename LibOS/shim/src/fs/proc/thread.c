@@ -234,6 +234,7 @@ bool proc_thread_fd_name_exists(struct shim_dentry* parent, const char* name) {
         return false;
 
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
     lock(&handle_map->lock);
 
     if (fd > handle_map->fd_top || handle_map->map[fd] == NULL ||
@@ -248,8 +249,9 @@ bool proc_thread_fd_name_exists(struct shim_dentry* parent, const char* name) {
 
 int proc_thread_fd_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
     __UNUSED(parent);
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
 
+    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
     lock(&handle_map->lock);
 
     int ret = 0;
@@ -260,6 +262,7 @@ int proc_thread_fd_list_names(struct shim_dentry* parent, readdir_callback_t cal
             if ((ret = callback(name, arg)) < 0)
                 break;
         }
+
     unlock(&handle_map->lock);
     return ret;
 }
@@ -292,6 +295,7 @@ int proc_thread_fd_follow_link(struct shim_dentry* dent, char** out_target) {
         return -ENOENT;
 
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
     lock(&handle_map->lock);
 
     if (fd > handle_map->fd_top || handle_map->map[fd] == NULL ||
