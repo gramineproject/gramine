@@ -62,7 +62,8 @@ add_project_arguments(
 
     language: 'c')
 
-if get_option('buildtype') == 'debug' or get_option('buildtype') == 'debugoptimized'
+debug = get_option('buildtype') == 'debug' or get_option('buildtype') == 'debugoptimized'
+if debug
     add_project_arguments('-DDEBUG', language: 'c')
 endif
 

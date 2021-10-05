@@ -202,25 +202,28 @@ libpal_sgx_dep = declare_dependency(
     include_directories: includes_pal_common,
 )
 
-shared_library('sgx_gdb',
-    'sgx_gdb.c',
-    'sgx_gdb.h',
+if debug
+    shared_library('sgx_gdb',
+        'gdb_integration/sgx_gdb.c',
 
-    c_args: [
-        # optimize even in a debug build
-        '-O3',
-    ],
+        # just `sgx_gdb.so`, without `lib`
+        name_prefix: '',
 
-    install: true,
-    install_dir: join_paths(pkglibdir, 'sgx'),
-)
+        c_args: [
+            # optimize even in a debug build
+            '-O3',
+        ],
 
-install_subdir('gdb_integration',
-    install_dir: join_paths(pkglibdir, 'sgx'),
-    exclude_directories: ['common'])
-install_subdir('../../../gdb_integration',
-    install_dir: join_paths(pkglibdir, 'sgx/gdb_integration/common'),
-    strip_directory: true)
+        install: true,
+        install_dir: join_paths(pkglibdir, 'sgx/gdb_integration'),
+    )
+
+    install_data(
+        'gdb_integration/gramine_sgx.gdb',
+        'gdb_integration/gramine_sgx_gdb.py',
+        install_dir: join_paths(pkglibdir, 'sgx/gdb_integration'),
+    )
+endif
 
 subdir('protected-files')
 subdir('tools')

@@ -21,11 +21,11 @@
 
 #include "asan.h"
 #include "debug_map.h"
+#include "gdb_integration/sgx_gdb.h"
 #include "linux_utils.h"
 #include "rpc_queue.h"
 #include "sgx_api.h"
 #include "sgx_enclave.h"
-#include "sgx_gdb.h"
 #include "sgx_internal.h"
 #include "sgx_log.h"
 #include "sgx_tls.h"

@@ -16,7 +16,7 @@
 #include <wait.h>
 
 #include "assert.h"
-#include "sgx_arch.h"
+#include "../sgx_arch.h"
 
 /* Used by GDB with PTRACE_GETREGSET. */
 #define NT_X86_XSTATE 0x202
