@@ -30,7 +30,7 @@ Update and install the required packages for Gramine::
        libcurl4-openssl-dev libprotobuf-c-dev meson protobuf-c-compiler \
        python3 python3-click python3-jinja2 python3-pip python3-protobuf \
        wget
-   python3 -m pip install toml>=0.10
+   python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
 Confidential Compute VMs may not contain the required kernel patches and need to

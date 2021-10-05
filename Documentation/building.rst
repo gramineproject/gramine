@@ -43,7 +43,7 @@ Run the following command on Ubuntu LTS to install dependencies::
     sudo apt-get install -y build-essential \
         autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
         wget
-    python3 -m pip install 'meson>=0.55'
+    python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 You can also install Meson from apt instead of pip, but only if your distro is
 new enough to have Meson >= 0.55 (Debian 11, Ubuntu 20.10).
@@ -72,7 +72,6 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
 
     sudo apt-get install -y libcurl4-openssl-dev libprotobuf-c-dev \
         protobuf-c-compiler python3-pip python3-protobuf
-    python3 -m pip install toml>=0.10
 
 2. Upgrade to the Linux kernel patched with FSGSBASE
 """"""""""""""""""""""""""""""""""""""""""""""""""""

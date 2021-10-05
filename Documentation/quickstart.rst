@@ -22,7 +22,7 @@ Quick start without SGX support
       sudo apt-get install -y build-essential \
           autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
           wget
-      python3 -m pip install 'meson>=0.55'
+      python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       cd gramine
       make
       meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled
