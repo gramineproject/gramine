@@ -1,8 +1,4 @@
 stage('build') {
-    sh '''
-        make ${MAKEOPTS}
-    '''
-
     env.MESON_OPTIONS = ''
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'

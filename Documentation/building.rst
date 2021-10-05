@@ -136,30 +136,15 @@ EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
 Building
 --------
 
-.. note::
-
-   We're in the middle of the migration from Make to Meson. In the meantime you
-   need to run **both** buildchains, first :command:`make` then
-   :command:`meson`.
-
-To build Gramine, in the root directory of Gramine repo, run the following
-commands::
-
-   # if you build gramine-direct (note that "direct" means non-SGX version)
-   make
-
-   # if you build gramine-sgx
-   make SGX=1
-
-Running :command:`make SGX=1 sgx-tokens` in the test or regression directory
-will automatically generate the required SIGSTRUCT signatures (``.sig`` files)
-and EINITTOKENs (``.token`` files).
-
-Then install Gramine (recall that "direct" means non-SGX version)::
+In order to build Gramine, you need to first set up the build directory. In the
+root directory of Gramine repo, run the following command (recall that "direct"
+means non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
-       -Dsgx_driver=<driver> \
-       -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+       -Dsgx_driver=<driver> -Dsgx_driver_path=<path-to-sgx-driver-sources>
+
+Then, build and install Gramine by running the following::
+
    ninja -C build/
    sudo ninja -C build/ install
 
@@ -192,15 +177,15 @@ omitted, Gramine's build system will try to determine the right path.
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- To create a debug build, run :command:`make DEBUG=1` and :command:`meson
-  --buildtype=debug`. This adds debug symbols in all Gramine components, builds
-  them without optimizations, and enables detailed debug logs in Gramine.
+- To create a debug build, run :command:`meson --buildtype=debug`. This adds
+  debug symbols in all Gramine components, builds them without optimizations,
+  and enables detailed debug logs in Gramine.
 
   .. warning::
      Debug builds are not suitable for production.
 
 - To create a debug build that does not disable optimizations, run
-  :command:`make DEBUGOPT=1` and :command:`meson --buildtype=debugoptimized`.
+  :command:`meson --buildtype=debugoptimized`.
 
   .. warning::
      Debug builds are not suitable for production.
@@ -211,16 +196,16 @@ Additional build options
      garbage data. You should use ``DEBUGOPT=1`` only if you have a good reason
      (e.g. for profiling).
 
-- To compile with undefined behavior sanitization (UBSan), run :command:`make
-  UBSAN=1` and :command:`meson -Dubsan=enabled`. This causes Gramine to abort
-  when undefined behavior is detected (and display information about source
-  line). UBSan can be enabled for both debug and non-debug builds.
+- To compile with undefined behavior sanitization (UBSan), run
+  :command:`meson -Dubsan=enabled`. This causes Gramine to abort when undefined
+  behavior is detected (and display information about source line). UBSan can be
+  enabled for both debug and non-debug builds.
 
   .. warning::
      UBSan builds (even non-debug) are not suitable for production.
 
-- To compile with address sanitization (ASan), run :command:`make ASAN=1` and
-  :command:`meson -Dasan=enabled`. In this mode, Graphene will attempt to detect
+- To compile with address sanitization (ASan), run
+  :command:`meson -Dasan=enabled`. In this mode, Gramine will attempt to detect
   invalid memory accesses. ASan can be enabled for both debug and non-debug
   builds.
 
@@ -231,11 +216,7 @@ Additional build options
   .. warning::
      ASan builds (even non-debug) are not suitable for production.
 
-- To build with ``-Werror``, run :command:`make WERROR=1` and
-  :command:`meson --werror`.
-
-- To specify custom mirrors for downloading the Glibc source, use :command:`make
-  GLIBC_MIRRORS=...`.
+- To build with ``-Werror``, run :command:`meson --werror`.
 
 - To install into some other place than :file:`/usr/local`, use
   :command:`meson --prefix=<prefix>`. Note that if you chose something else than

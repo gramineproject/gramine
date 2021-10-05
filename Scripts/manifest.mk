@@ -1,3 +1,5 @@
+# This file is deprecated, see README.
+
 ifeq ($(PAL_HOST),)
 $(error include Makefile.configs before including manifest.mk)
 endif
