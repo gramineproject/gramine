@@ -11,8 +11,6 @@ endif
 .PHONY: $(targets)
 $(targets):
 	$(MAKE) -C Scripts $@
-	$(MAKE) -C common $@
-	$(MAKE) -C LibOS $@
 	@echo
 	@echo NOTE: We are in the middle of a transition to the Meson buildsystem.
 	@echo You have successfully built part of Gramine, now please compile the rest and install

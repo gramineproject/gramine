@@ -1,6 +1,3 @@
-libgramine_libos = cc.find_library('gramine-lib',
-    dirs: join_paths(meson.current_source_dir(), '.lib'))
-
 if skeleton
     libpal = libpal_skeleton_dep
 elif direct
@@ -154,7 +151,7 @@ shared_library('sysdb',
         shim_lds,
     ],
     dependencies: [
-        libgramine_libos,
+        common_dep,
         libpal,
     ],
 
