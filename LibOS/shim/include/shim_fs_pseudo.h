@@ -210,18 +210,21 @@ bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 
 /* Converts an integer to a string, optionally appending a given single-letter unit suffix
- * (see enum size_multiplier for possible values). */
+ * (see enum size_multiplier for possible values).
+ * Note: This function adds a newline at end of the string. */
 int sys_convert_int_to_sizestr(uint64_t val, enum size_multiplier size_mult, char* str,
                                size_t buf_size);
 
 /* Converts PAL_RES_RANGE_INFO to a string representation.
- * Example output when sep == ',': "10-63,68,70-127". */
+ * Example output when sep == ',': "10-63,68,70-127".
+ * Note: This function adds a newline at end of the string. */
 int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
                               size_t buf_size, const char* sep);
 
 /* Converts PAL_RES_RANGE_INFO to a sysfs CPU bitmask representation with bitmask size based on the
  * possible cores count in the system.
- * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff". */
+ * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff".
+ * Note: This function adds a newline at end of the string. */
 int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_range_info, char* str,
                                          size_t buf_size);
 

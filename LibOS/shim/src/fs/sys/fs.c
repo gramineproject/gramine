@@ -56,12 +56,13 @@ int sys_convert_ranges_to_str(const PAL_RES_RANGE_INFO* resource_range_info, cha
                            (i + 1 == range_cnt) ? "\n" : sep);
         }
 
-        /* Truncation has occurred */
-        if (ret >= (int)buf_size)
-            return -EOVERFLOW;
-
         if (ret < 0)
             return ret;
+
+        /* Truncation has occurred */
+        if ((size_t)ret >= buf_size)
+            return -EOVERFLOW;
+
         offset += ret;
     }
     return 0;
@@ -108,14 +109,15 @@ int sys_convert_ranges_to_cpu_bitmap_str(const PAL_RES_RANGE_INFO* resource_rang
                            (j-1 == 0) ? "\n" : ",");
         }
 
+        if (ret < 0)
+            goto out;
+
         /* Truncation has occurred */
-        if (ret >= (int)buf_size) {
+        if ((size_t)ret >= buf_size) {
             ret = -EOVERFLOW;
             goto out;
         }
 
-        if (ret < 0)
-            goto out;
         offset += ret;
     }
     ret = 0;
