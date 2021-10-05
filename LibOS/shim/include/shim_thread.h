@@ -304,10 +304,7 @@ void get_handle_map(struct shim_handle_map* map);
 void put_handle_map(struct shim_handle_map* map);
 
 static inline struct shim_handle_map* get_thread_handle_map(struct shim_thread* thread) {
-    if (!thread)
-        thread = get_cur_thread();
-
-    return thread ? thread->handle_map : NULL;
+    return thread ? thread->handle_map : get_cur_thread()->handle_map;
 }
 
 static inline void set_handle_map(struct shim_thread* thread, struct shim_handle_map* map) {

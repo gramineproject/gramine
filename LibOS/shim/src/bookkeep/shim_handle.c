@@ -267,8 +267,7 @@ struct shim_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct shim_hand
 
 struct shim_handle* get_fd_handle(uint32_t fd, int* fd_flags, struct shim_handle_map* map) {
     map = map ?: get_thread_handle_map(NULL);
-    if (!map)
-        return NULL;
+    assert(map);
 
     struct shim_handle* hdl = NULL;
     lock(&map->lock);

@@ -130,9 +130,11 @@ static int flock_to_posix_lock(struct flock* fl, struct shim_handle* hdl, struct
 }
 
 long shim_do_fcntl(int fd, int cmd, unsigned long arg) {
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
-    int flags;
     int ret;
+    int flags;
+
+    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
 
     struct shim_handle* hdl = get_fd_handle(fd, &flags, handle_map);
     if (!hdl)

@@ -184,15 +184,16 @@ enum {
         tmp;                                         \
     })
 
-/* FIXME: this macro must be rewritten as a function with out_val and that returns error code. */
-#define GET_CP_ENTRY(type)                           \
-    ({                                               \
-        struct shim_cp_entry* tmp = NEXT_CP_ENTRY(); \
-        while (tmp && tmp->cp_type != CP_##type)     \
-            tmp = NEXT_CP_ENTRY();                   \
-        if (!tmp)                                    \
-            DkProcessExit(EINVAL);                   \
-        tmp->cp_val;                                 \
+#define GET_CP_ENTRY(type)                             \
+    ({                                                 \
+        struct shim_cp_entry* tmp = NEXT_CP_ENTRY();   \
+        while (tmp && tmp->cp_type != CP_##type)       \
+            tmp = NEXT_CP_ENTRY();                     \
+        if (!tmp) {                                    \
+            log_error("cannot find checkpoint entry"); \
+            DkProcessExit(EINVAL);                     \
+        }                                              \
+        tmp->cp_val;                                   \
     })
 
 #define GET_CP_FUNC_ENTRY()  \
@@ -272,12 +273,13 @@ struct shim_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
         e ? e->off : 0;                                                            \
     })
 
-/* FIXME: this macro must be rewritten as a function that returns error code if out-of-memory. */
 #define ADD_TO_CP_MAP(obj, off)                                                   \
     do {                                                                          \
         struct shim_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, true); \
-        if (!e)                                                                   \
+        if (!e) {                                                                 \
+            log_error("cannot extend checkpoint map buffer");                     \
             DkProcessExit(ENOMEM);                                                \
+        }                                                                         \
         e->off = (off);                                                           \
     } while (0)
 
