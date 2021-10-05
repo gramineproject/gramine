@@ -9,7 +9,7 @@ LIGHTTPD_HASH ?= e266e389ddb79bf17b8e8d9022aec95ae839c6f3159822f402df8d8df8a13f6
 
 LIGHTTPD_MIRRORS ?= \
     https://download.lighttpd.net/lighttpd/releases-1.4.x \
-    https://packages.gramineproject.io/distfiles
+    https://packages.grapheneproject.io/distfiles
 
 HOST ?= 127.0.0.1
 PORT ?= 8003

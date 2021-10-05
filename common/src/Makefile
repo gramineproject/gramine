@@ -69,7 +69,7 @@ MBEDTLS_VERSION ?= 2.26.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
-	https://packages.gramineproject.io/distfiles
+	https://packages.grapheneproject.io/distfiles
 MBEDTLS_CHECKSUM ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
 
 crypto/$(MBEDTLS_SRC):
@@ -153,7 +153,7 @@ endif
 
 UTHASH_URI ?= \
 	https://raw.githubusercontent.com/troydhanson/uthash/8b214aefcb81df86a7e5e0d4fa20e59a6c18bc02/src/uthash.h \
-	https://packages.gramineproject.io/distfiles/uthash-2.1.0/src/uthash.h
+	https://packages.grapheneproject.io/distfiles/uthash-2.1.0/src/uthash.h
 UTHASH_CHECKSUM ?= ba9af0e8c902108cc40be8e742ff4fcbb0e93062d91aefd6070b70d4e067c2ac
 
 uthash.h:
@@ -167,11 +167,11 @@ uthash.patched: uthash.h
 TOML_COMMIT ?= 208203af46bdbdb29ba199660ed78d09c220b6c5
 TOML_H_URI ?= \
 	https://raw.githubusercontent.com/cktan/tomlc99/$(TOML_COMMIT)/toml.h \
-	https://packages.gramineproject.io/distfiles/tomlc99-$(TOML_COMMIT)/toml.h
+	https://packages.grapheneproject.io/distfiles/tomlc99-$(TOML_COMMIT)/toml.h
 TOML_H_CHECKSUM ?= 2156347bb23ac717aaa1260eef34daeb87565fc2c647e2bc92fa691787fc210c
 TOML_C_URI ?= \
 	https://raw.githubusercontent.com/cktan/tomlc99/$(TOML_COMMIT)/toml.c \
-	https://packages.gramineproject.io/distfiles/tomlc99-$(TOML_COMMIT)/toml.c
+	https://packages.grapheneproject.io/distfiles/tomlc99-$(TOML_COMMIT)/toml.c
 TOML_C_CHECKSUM ?= 98115b4483f4c23f6f22b19f1fb86e2a0e3855c02aa1eed21d8a19f9afbc6c35
 
 toml.h:

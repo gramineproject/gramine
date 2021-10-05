@@ -6,7 +6,7 @@ SRCDIR = src
 MEMCACHED_SRC ?= memcached-1.5.21.tar.gz
 MEMCACHED_MIRRORS ?= \
     https://memcached.org/files \
-    https://packages.gramineproject.io/distfiles
+    https://packages.grapheneproject.io/distfiles
 
 MEMCACHED_SHA256 ?= e3d10c06db755b220f43d26d3b68d15ebf737a69c7663529b504ab047efe92f4
 

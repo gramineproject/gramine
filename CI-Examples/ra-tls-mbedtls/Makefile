@@ -41,7 +41,7 @@ MBEDTLS_VERSION ?= 2.26.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
-	https://packages.gramineproject.io/distfiles
+	https://packages.grapheneproject.io/distfiles
 MBEDTLS_CHECKSUM ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
 
 ifeq ($(DEBUG),1)

@@ -8,7 +8,7 @@ NGINX_SHA256 ?= f11c2a6dd1d3515736f0324857957db2de98be862461b5a542a3ac6188dbe32b
 
 NGINX_MIRRORS ?= \
     http://nginx.org/download \
-    https://packages.gramineproject.io/distfiles
+    https://packages.grapheneproject.io/distfiles
 
 LISTEN_HOST ?= 127.0.0.1
 LISTEN_PORT ?= 8002

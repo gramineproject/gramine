@@ -9,7 +9,7 @@ BLENDER_DIR = $(PWD)/blender_dir
 BLENDER_SRC ?= blender-2.82-linux64.tar.xz
 BLENDER_MIRRORS ?= \
     https://ftp.nluug.nl/pub/graphics/blender/release/Blender2.82 \
-    https://packages.gramineproject.io/distfiles
+    https://packages.grapheneproject.io/distfiles
 BLENDER_SHA256 ?= b13600fa2ca23ea1bba511e3a6599b6792acde80b180707c3ea75db592a9b916
 BLENDER_VER = 2.82
 

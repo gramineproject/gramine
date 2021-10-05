@@ -51,7 +51,7 @@ $(SRCDIR)/Makefile:
 	../common_tools/download --output redis.tar.gz \
 		--sha256 $(TAR_SHA256) \
 		--url https://github.com/antirez/redis/archive/$(COMMIT).tar.gz \
-		--url https://packages.gramineproject.io/distfiles/redis-$(COMMIT).tar.gz
+		--url https://packages.grapheneproject.io/distfiles/redis-$(COMMIT).tar.gz
 	mkdir $(SRCDIR)
 	tar -C $(SRCDIR) --strip-components=1 -xf redis.tar.gz
 
