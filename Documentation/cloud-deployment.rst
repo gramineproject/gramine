@@ -23,14 +23,18 @@ description below uses a VM running Ubuntu 18.04.
 Prerequisites
 ^^^^^^^^^^^^^
 
+.. NOTE to anyone who will be sorting this list: build-essential should not be
+   sorted together with others, because it is implicit when specifying package
+   dependecies, so when copying to debian/control, it should be omitted
+
 Update and install the required packages for Gramine::
 
    sudo apt-get update
-   sudo apt-get install -y autoconf bison build-essential gawk \
-       libcurl4-openssl-dev libprotobuf-c-dev meson protobuf-c-compiler \
-       python3 python3-click python3-jinja2 python3-pip python3-protobuf \
-       wget
-   python3 -m pip install toml>=0.10
+   sudo apt-get install -y build-essential \
+       autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev ninja-build \
+       protobuf-c-compiler python3 python3-click python3-jinja2 python3-pip \
+       python3-protobuf wget
+   python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
 Confidential Compute VMs may not contain the required kernel patches and need to
