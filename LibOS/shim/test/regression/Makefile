@@ -155,9 +155,9 @@ CFLAGS-sigaction_per_process += -pthread
 CFLAGS-signal_multithread += -pthread
 CFLAGS-spinlock += -iquote ../../../../common/include -iquote ../../../../common/include/arch/$(ARCH) -pthread
 
-CFLAGS-attestation += -iquote ../../../../common/src/crypto/mbedtls/include \
+CFLAGS-attestation += -iquote ../../../../subprojects/mbedtls-mbedtls-2.26.0/include \
                       -iquote $(PALDIR)/host/Linux-SGX
-LDLIBS-attestation += ../../../../common/src/crypto/mbedtls/install/lib/libmbedcrypto.a
+LDLIBS-attestation += -lmbedcrypto_gramine
 
 CFLAGS-fp_multithread += -pthread -fno-builtin  # see comment in the test's source
 LDLIBS-fp_multithread += -lm
