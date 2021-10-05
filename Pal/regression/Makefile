@@ -71,7 +71,24 @@ target = \
 	$(all_manifests)
 
 include ../../Scripts/manifest.mk
-gramine_lib = .lib/gramine-lib.a
+
+# HACK: Compile the parts of `common` used by the test programs. The other components using `common`
+# are already doing so through Meson.
+
+common_src = ../../common/src
+common_objs = avl_tree.o path.o printfmt.o atoi.o memcmp.o memcpy.o memset.o strcmp.o strlen.o
+
+$(common_objs): CFLAGS += -fPIC
+
+avl_tree.o path.o: %.o: $(common_src)/%.c
+	$(call cmd,cc_o_c)
+
+printfmt.o: %.o: $(common_src)/stdlib/%.c
+	$(call cmd,cc_o_c)
+
+atoi.o memcmp.o memcpy.o memset.o strcmp.o strlen.o : %.o: $(common_src)/string/%.c
+	$(call cmd,cc_o_c)
+
 ifneq ($(SGX),)
 gramine = sgx
 else
@@ -103,20 +120,17 @@ utils.o: CFLAGS += -fPIC
 ../regression/File: | File
 	@true
 
-LDLIBS-preloads = crt_init/user_shared_start.o utils.o $(gramine_lib) $(pal_lib)
+LDLIBS-preloads = crt_init/user_shared_start.o utils.o $(common_objs) $(pal_lib)
 $(preloads): %.so: %.c $(LDLIBS-preloads)
 	$(call cmd,csingle) -shared -fPIC $(LDLIBS-preloads)
 
-LDLIBS-executables = crt_init/user_start.o utils.o $(gramine_lib) $(pal_lib) $(preloads)
+LDLIBS-executables = crt_init/user_start.o utils.o $(common_objs) $(pal_lib) $(preloads)
 $(executables): %: %.c $(LDLIBS-executables)
 	$(call cmd,csingle) -no-pie $(LDLIBS-executables)
 
 ifeq ($(filter %clean,$(MAKECMDGOALS)),)
 include $(wildcard *.d)
 endif
-
-$(gramine_lib):
-	$(MAKE) -C ../../common/src target=$(abspath .lib)/
 
 .PHONY: regression
 regression:
