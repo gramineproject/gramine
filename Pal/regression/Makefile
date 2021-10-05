@@ -78,6 +78,8 @@ include ../../Scripts/manifest.mk
 common_objs = avl_tree.o path.o printfmt.o atoi.o memcmp.o memcpy.o memset.o strcmp.o strlen.o
 common_src = ../../common/src
 
+$(common_objs): CFLAGS += -fPIC
+
 avl_tree.o path.o: %.o: $(common_src)/%.c
 	$(call cmd,cc_o_c)
 
