@@ -26,19 +26,23 @@ functions that need to be implemented as part of a |~| fully compatible PAL.
 Although we have tried our best to isolate any host-specific code in each host
 directory, we do not guarantee that the necessary changes are only limited to
 these directories. That is, you may have to modify other parts of the source
-code (especially the :file:`Makefile` scripts) to complete your implementation.
+code (especially the :file:`meson.build` scripts) to complete your implementation.
 
 Below are the steps to port Gramine PAL to a new host platform.
 
 1. Fix compilation issues
 -------------------------
 
+..
+   TODO: Explain how to build PAL only, without LibOS.
+
 For the first step to port PAL, you want to be able to build PAL as an
-executable on the target host. After cloning a host-specific directory, first
-modify :file:`Makefile.am` to adjust compilation rules such as :makevar:`CC`,
-:makevar:`CFLAGS`, :makevar:`LDFLAGS`, :makevar:`AS` and :makevar:`ASFLAGS`. You
-will also have to define the name of the loader as target ``pal`` in
-:file:`Makefile.am.`
+executable on the target host. Clone a host specific directory, and add
+necessary references to other Meson files (you can do it by following the output
+of :command:`git grep skeleton`).
+
+Then, try following the build procedure for your new host, adjusting
+:file:`meson.build` files as necessary.
 
 2. Build a loader
 -----------------

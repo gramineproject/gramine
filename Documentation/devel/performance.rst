@@ -347,11 +347,11 @@ Other considerations
 --------------------
 
 For performance testing, always use the non-debug versions of all software. In
-particular, build Gramine in non-debug configuration (simple ``make SGX=1``
-defaults to non-debug configuration). Also build the application itself in
-non-debug configuration (again, typically simple ``make SGX=1`` is sufficient).
-Finally, disable the debug log of Gramine by specifying the manifest option
-``loader.log_level = "none"``.
+particular, build Gramine in non-debug configuration
+(``meson --buildtype=release``). Also build the application itself in non-debug
+configuration (in the example Makefiles, simple ``make SGX=1`` defaults to
+non-debug). Finally, disable the debug log of Gramine by specifying the manifest
+option ``loader.log_level = "none"``.
 
 There are several manifest options that may improve performance of some
 workloads. The manifest options include:
@@ -506,10 +506,11 @@ SGX profiling
 There is support for profiling the code inside the SGX enclave. Here is how to
 use it:
 
-#. Compile Gramine with ``SGX=1 DEBUGOPT=1``.
+#. Compile Gramine with ``-Dsgx=enabled --buildtype=debugoptimized``.
 
-   You can also use ``SGX=1 DEBUG=1``, but ``DEBUGOPT=1`` (optimizations
-   enabled) makes Gramine performance more similar to release build.
+   You can also use ``--buildtype=debug``, but ``--buildtype=debugoptimized``
+   (optimizations enabled) makes Gramine performance more similar to release
+   build.
 
 #. Add ``sgx.profile.enable = "main"`` to manifest (to collect data for the main
    process), or ``sgx.profile.enable = "all"`` (to collect data for all
