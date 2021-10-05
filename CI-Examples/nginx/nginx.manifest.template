@@ -36,7 +36,7 @@ fs.mount.cwd.uri = "file:{{ install_dir }}"
 
 sgx.debug = true
 sgx.nonpie_binary = true
-sgx.enclave_size = "256M"
+sgx.enclave_size = "512M"
 sgx.thread_num = 4
 
 # Nginx benefits from Exitless. Uncomment the below line to use it.
