@@ -1,3 +1,6 @@
+# TODO: This file is only here for the `clean` and `distclean` target, which clean up after Python
+# tests (`regression.py`). It can be removed when the tests are moved to Meson.
+
 .PHONY: all
 all: ;
 
@@ -7,9 +10,3 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-
-.PHONY: test
-test: ;
-
-.PHONY: sgx-tokens
-sgx-tokens: ;

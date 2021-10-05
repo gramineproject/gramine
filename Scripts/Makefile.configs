@@ -1,3 +1,5 @@
+# This file is deprecated, see README.
+
 MAKEFILE_CONFIGS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 ifeq ($(origin CC),default)

@@ -8,13 +8,10 @@ stage('clean-check') {
 
         rm -f Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
-        make distclean
-
-        rm -rf LibOS/glibc-2.*
-
         make -C LibOS/shim/test/regression clean
-
+        make -C LibOS/shim/test/fs clean
         make -C Pal/regression clean
+        make -C Scripts clean
 
         make -C CI-Examples/python clean
         make -C CI-Examples/bash clean

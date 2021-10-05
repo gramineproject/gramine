@@ -1,3 +1,5 @@
+# This file is deprecated, see README.
+
 all_hosts = Skeleton Linux Linux-SGX
 
 ifneq ($(MAKEFILE_CONFIGS_INCLUDED),y)

@@ -1,18 +1,5 @@
-include Scripts/Makefile.configs
 
-targets = all clean test sgx-tokens distclean
-
-ifneq ($(filter sgx-tokens,$(MAKECMDGOALS)),)
-ifneq ($(SGX),1)
-$(error "The 'sgx-tokens' target requires SGX=1")
-endif
-endif
-
-.PHONY: $(targets)
-$(targets):
-	$(MAKE) -C Scripts $@
-	@echo
-	@echo NOTE: We are in the middle of a transition to the Meson buildsystem.
-	@echo You have successfully built part of Gramine, now please compile the rest and install
-	@echo using Meson. See https://gramine.readthedocs.io/en/latest/building.html for more details.
-	@echo
+.PHONY: all
+all:
+	@echo Please build and install Gramine using Meson!
+	@echo See https://gramine.readthedocs.io/en/latest/building.html for more details.

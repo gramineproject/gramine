@@ -9,7 +9,7 @@ SHIM_DIR = shim
 
 .PHONY: all
 all:
-	$(MAKE) -C $(SHIM_DIR) all
+	@:
 
 ifeq ($(findstring x86_64,$(SYS))$(findstring linux,$(SYS)),x86_64linux)
 
@@ -76,17 +76,12 @@ gcc: $(GCC_TARGET)
 # ------------------------------------------------------------------------------------------------
 # Common targets
 # ------------------------------------------------------------------------------------------------
-.PHONY: clean_
-clean_:
+.PHONY: clean
+clean:
 	$(RM) -r $(GCC_BUILD_DIR) $(GCC_SRC) gcc-build.log
 
-.PHONY: clean
-clean: clean_
-	$(MAKE) -C $(SHIM_DIR) clean
-
 .PHONY: distclean
-distclean: clean_
-	$(MAKE) -C $(SHIM_DIR) distclean
+distclean: clean
 	$(RM) $(GLIBC_SRC).tar.gz $(GCC_SRC).tar.gz
 
 else
@@ -100,11 +95,3 @@ clean:
 .PHONY: distclean
 distclean: clean
 endif
-
-.PHONY: test
-test:
-	$(MAKE) -C $(SHIM_DIR) test
-
-.PHONY: sgx-tokens
-sgx-tokens:
-	$(MAKE) -C $(SHIM_DIR) sgx-tokens
