@@ -1,11 +1,14 @@
 include ../../../../Scripts/Makefile.configs
 
 c_executables-x86_64 = \
-	attestation \
 	cpuid \
 	debug_regs-x86_64 \
 	rdtsc \
 	sighandler_divbyzero
+
+ifeq ($(SGX),1)
+	c_executables-x86_64 += attestation
+endif
 
 c_executables = \
 	abort \
@@ -156,9 +159,8 @@ CFLAGS-sigaction_per_process += -pthread
 CFLAGS-signal_multithread += -pthread
 CFLAGS-spinlock += -iquote ../../../../common/include -iquote ../../../../common/include/arch/$(ARCH) -pthread
 
-CFLAGS-attestation += -iquote ../../../../common/src/crypto/mbedtls/include \
-                      -iquote $(PALDIR)/host/Linux-SGX
-LDLIBS-attestation += ../../../../common/src/crypto/mbedtls/install/lib/libmbedcrypto.a
+CFLAGS-attestation += -iquote $(PALDIR)/host/Linux-SGX
+LDLIBS-attestation += $(shell pkg-config --libs mbedtls_gramine)
 
 CFLAGS-fp_multithread += -pthread -fno-builtin  # see comment in the test's source
 LDLIBS-fp_multithread += -lm
