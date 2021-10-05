@@ -148,8 +148,8 @@ class Manifest:
     def expand_all_trusted_files(self):
         """Expand all trusted files entries.
 
-        Collects all trusted files entries and all files from `loader.preload` entry, hashes each
-        of them (skipping these which already had a hash present) and updates `sgx.trusted_files`
+        Collects all trusted files entries and all files from ``loader.preload`` entry, hashes each
+        of them (skipping these which already had a hash present) and updates ``sgx.trusted_files``
         manifest entry with the result.
 
         Raises:
@@ -174,7 +174,7 @@ class Manifest:
         """Generate list of files which this manifest depends on.
 
         Collects all trusted files that are not yet expanded (do not have a hash in the entry) and
-        all files from `loader.preload` entry and returns them.
+        all files from ``loader.preload`` entry and returns them.
 
         Returns:
             list(pathlib.Path): List of paths to the files this manifest depends on.
