@@ -602,9 +602,9 @@ int check_elf_object(struct shim_handle* file) {
 
 int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     int ret;
-    const char* fname = file ? qstrgetstr(&file->uri) : "(unknown)";
-
     assert(file);
+
+    const char* fname = qstrgetstr(&file->uri);
     log_debug("loading \"%s\"", fname);
 
     ElfW(Ehdr) ehdr;

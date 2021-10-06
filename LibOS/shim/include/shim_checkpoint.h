@@ -323,7 +323,8 @@ struct shim_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
                                                                            \
             log_debug("complete checkpointing data");                      \
         out:                                                               \
-            destroy_cp_map((store)->cp_map);                               \
+            if ((store)->cp_map)                                           \
+                destroy_cp_map((store)->cp_map);                           \
         } while (0);                                                       \
         ret;                                                               \
     })

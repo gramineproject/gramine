@@ -403,6 +403,8 @@ static int receive_handles_on_stream(struct checkpoint_hdr* hdr, void* base, ssi
     log_debug("receiving %lu PAL handles", entries_cnt);
 
     struct shim_palhdl_entry** entries = malloc(sizeof(*entries) * entries_cnt);
+    if (!entries)
+        return -ENOMEM;
 
     /* entries are extracted from checkpoint in reverse order, let's first populate them */
     struct shim_palhdl_entry* entry = palhdl_entries;
