@@ -160,11 +160,7 @@ CFLAGS-signal_multithread += -pthread
 CFLAGS-spinlock += -iquote ../../../../common/include -iquote ../../../../common/include/arch/$(ARCH) -pthread
 
 CFLAGS-attestation += -iquote $(PALDIR)/host/Linux-SGX
-ifeq ($(GRAMINE_PKGLIBDIR),)
-LDLIBS-attestation += -lmbedcrypto_gramine
-else
-LDLIBS-attestation += $(GRAMINE_PKGLIBDIR)/../libmbedcrypto_gramine.so.6
-endif
+LDLIBS-attestation += $(shell pkg-config --libs mbedtls_gramine)
 
 CFLAGS-fp_multithread += -pthread -fno-builtin  # see comment in the test's source
 LDLIBS-fp_multithread += -lm
