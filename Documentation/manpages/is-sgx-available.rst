@@ -1,18 +1,18 @@
-.. program:: is_sgx_available
+.. program:: is-sgx-available
 
 ======================================================================
-:program:`is_sgx_available` -- Check environment for SGX compatibility
+:program:`is-sgx-available` -- Check environment for SGX compatibility
 ======================================================================
 
 Synopsis
 ========
 
-:command:`is_sgx_available` [--quiet]
+:command:`is-sgx-available` [*OPTIONS*]
 
 Description
 ===========
 
-`is_sgx_available` checks the CPU and operating system for :term:`SGX`
+`is-sgx-available` checks the CPU and operating system for :term:`SGX`
 compatibility. A detailed report is printed unless suppressed by the
 :option:`--quiet` option.
 
