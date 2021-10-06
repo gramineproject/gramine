@@ -193,6 +193,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_EVENTFD:
             break;
         default:
+            free(hdl);
             return -PAL_ERROR_BADHANDLE;
     }
 

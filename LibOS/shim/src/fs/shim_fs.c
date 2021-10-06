@@ -318,10 +318,7 @@ static int __mount_others(void) {
             if (lengths[j] != i)
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
-            if (!mount) {
-                ret = -ENOENT;
-                goto out;
-            }
+            assert(mount);
             ret = __mount_one_other(mount);
             if (ret < 0)
                 goto out;
