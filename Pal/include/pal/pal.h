@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
+#include "toml.h"
+
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
 #endif
@@ -129,8 +131,7 @@ typedef struct PAL_CONTROL_ {
      * Handles and executables
      */
 
-    void* manifest_root;         /*!< program manifest; actually `toml_table_t* but we do not want
-                                  * this header to include `toml.h` */
+    toml_table_t* manifest_root; /*!< program manifest */
     PAL_HANDLE parent_process;   /*!< handle of parent process */
     PAL_HANDLE first_thread;     /*!< handle of first thread */
     int log_level;               /*!< what log messages to enable */
