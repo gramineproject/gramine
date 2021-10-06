@@ -24,6 +24,8 @@
 #include "shim_signal.h"
 #include "shim_thread.h"
 #include "shim_vma.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 /* TODO: consider changing this list to a tree. */
 static LISTP_TYPE(shim_thread) g_thread_list = LISTP_INIT;
