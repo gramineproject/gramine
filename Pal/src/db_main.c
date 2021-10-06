@@ -16,6 +16,7 @@
 #include "pal_rtld.h"
 #include "sysdeps/generic/ldsodefs.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 PAL_CONTROL g_pal_control = {
     /* Enable log to catch early initialization errors; it will be overwritten in pal_main(). */

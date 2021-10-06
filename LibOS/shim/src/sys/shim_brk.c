@@ -17,6 +17,7 @@
 #include "shim_utils.h"
 #include "shim_vma.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 static struct {
     size_t data_segment_size;

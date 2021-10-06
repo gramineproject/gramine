@@ -16,7 +16,6 @@
 #include "log.h"
 #include "pal.h"
 #include "pal_error.h"
-#include "toml.h"
 
 #ifndef IN_PAL
 #error "pal_internal.h can only be included in PAL"
@@ -121,7 +120,8 @@ struct pal_internal_state {
     PAL_HANDLE      parent_process;
 
     const char*     raw_manifest_data;
-    toml_table_t*   manifest_root;
+    /* Actually `toml_table_t*` but we do not want this header to include `toml.h` */
+    void*           manifest_root;
 
     /* May not be the same as page size, e.g. SYSTEM_INFO::dwAllocationGranularity on Windows */
     size_t          alloc_align;

@@ -30,6 +30,7 @@
 #include "protected_files.h"
 #include "sysdeps/generic/ldsodefs.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 #define RTLD_BOOTSTRAP
 #define _ENTRY enclave_entry

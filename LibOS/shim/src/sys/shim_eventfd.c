@@ -18,6 +18,7 @@
 #include "shim_table.h"
 #include "shim_utils.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 static int create_eventfd(PAL_HANDLE* efd, unsigned count, int flags) {
     int ret;
