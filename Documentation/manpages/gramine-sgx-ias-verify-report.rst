@@ -1,20 +1,21 @@
-.. program:: verify_ias_report
+.. program:: gramine-sgx-ias-verify-report
 
-========================================================================
-:program:`verify_ias_report` -- Submit Intel Attestation Service request
-========================================================================
+====================================================================================
+:program:`gramine-sgx-ias-verify-report` -- Submit Intel Attestation Service request
+====================================================================================
 
 Synopsis
 ========
 
-:command:`verify_ias_report` [*OPTION*]...
+:command:`gramine-sgx-ias-verify-report` [*OPTION*]...
 
 Description
 ===========
 
-`verify_ias_report` verifies attestation report retrieved from the Intel
-Attestation Service (using ``ias_request`` for example). It also verifies
-that the quote contained in the IAS report contains expected values.
+`gramine-sgx-ias-verify-report` verifies attestation report retrieved from the
+Intel Attestation Service (using ``gramine-sgx-ias-request`` for example). It
+also verifies that the quote contained in the IAS report contains expected
+values.
 
 Command line arguments
 ======================

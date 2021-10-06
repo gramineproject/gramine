@@ -17,7 +17,6 @@ import sys
 sys.path.insert(0, os.path.abspath('../python'))
 os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 
-import collections
 import pathlib
 import subprocess
 
@@ -152,19 +151,20 @@ html_static_path = ['_static']
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
+    ('manpages/gramine', 'gramine-direct', 'Gramine', [author], 1),
+    ('manpages/gramine', 'gramine-sgx', 'Gramine', [author], 1),
     ('manpages/gramine-manifest', 'gramine-manifest', 'Gramine manifest preprocessor', [author], 1),
-    ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),
     ('manpages/gramine-sgx-get-token', 'gramine-sgx-get-token', 'Gramine SGX Token generator', [author], 1),
-    ('manpages/pal_loader', 'pal_loader', 'FIXME Loader', [author], 1),
-    ('manpages/is_sgx_available', 'is_sgx_available', 'Check SGX compatibility', [author], 1),
-    ('manpages/quote_dump', 'quote_dump', 'Display SGX quote', [author], 1),
-    ('manpages/ias_request', 'ias_request', 'Submit Intel Attestation Service request', [author], 1),
-    ('manpages/verify_ias_report', 'verify_ias_report', 'Verify Intel Attestation Service report', [author], 1),
+    ('manpages/gramine-sgx-ias-request', 'gramine-sgx-ias-request', 'Submit Intel Attestation Service request', [author], 1),
+    ('manpages/gramine-sgx-ias-verify-report', 'gramine-sgx-ias-verify-report', 'Verify Intel Attestation Service report', [author], 1),
+    ('manpages/gramine-sgx-quote-dump', 'gramine-sgx-quote-dump', 'Display SGX quote', [author], 1),
+    ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),
+    ('manpages/is-sgx-available', 'is-sgx-available', 'Check SGX compatibility', [author], 1),
 ]
 
 # barf if a page is not included
-assert (collections.Counter(str(p.with_suffix(''))
+assert (set(str(p.with_suffix(''))
         for p in pathlib.Path().glob('manpages/*.rst')
         if not p.stem == 'index')
-    == collections.Counter(source
+    == set(source
         for source, *_ in man_pages))

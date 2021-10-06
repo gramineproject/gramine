@@ -1,18 +1,18 @@
-.. program:: ias_request
+.. program:: gramine-sgx-ias-request
 
-==================================================================
-:program:`ias_request` -- Submit Intel Attestation Service request
-==================================================================
+==============================================================================
+:program:`gramine-sgx-ias-request` -- Submit Intel Attestation Service request
+==============================================================================
 
 Synopsis
 ========
 
-:command:`ias_request` *COMMAND* [*OPTION*]...
+:command:`gramine-sgx-ias-request` *COMMAND* [*OPTION*]...
 
 Description
 ===========
 
-`ias_request` submits requests to Intel Attestation Service (IAS).
+`gramine-sgx-ias-request` submits requests to Intel Attestation Service (IAS).
 Possible commands are retrieving EPID signature revocation list and verifying
 attestation evidence for an SGX enclave quote.
 
