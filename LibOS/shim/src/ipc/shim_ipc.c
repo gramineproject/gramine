@@ -298,6 +298,7 @@ out:
     avl_tree_delete(&g_msg_waiters_tree, &waiter.node);
     unlock(&g_msg_waiters_tree_lock);
     free(waiter.response_data);
+    DkObjectClose(waiter.event);
     return ret;
 }
 

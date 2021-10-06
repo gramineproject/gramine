@@ -285,7 +285,15 @@ static int __mount_others(void) {
      * Corresponding issue: https://github.com/gramineproject/graphene/issues/2214.
      */
     const char** keys = malloc(mounts_cnt * sizeof(*keys));
+    if (!keys)
+        return -ENOMEM;
+
     size_t* lengths = malloc(mounts_cnt * sizeof(*lengths));
+    if (!lengths) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
     size_t longest = 0;
     for (ssize_t i = 0; i < mounts_cnt; i++) {
         keys[i] = toml_key_in(manifest_fs_mounts, i);
@@ -310,6 +318,7 @@ static int __mount_others(void) {
             if (lengths[j] != i)
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
+            assert(mount);
             ret = __mount_one_other(mount);
             if (ret < 0)
                 goto out;
