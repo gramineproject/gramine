@@ -15,6 +15,8 @@
 #include "shim_lock.h"
 #include "shim_thread.h"
 #include "stat.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 static struct shim_lock handle_mgr_lock;
 

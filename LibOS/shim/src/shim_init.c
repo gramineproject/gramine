@@ -31,6 +31,7 @@
 #include "shim_vdso.h"
 #include "shim_vma.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
               "shim_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");

@@ -15,11 +15,13 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-#include "toml.h"
-
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
 #endif
+
+/* TODO: we should `#include "toml.h"` here, but this file is being included by PAL regression
+ * tests, which still use Make. Switch to `#include` once they're converted to Meson. */
+typedef struct toml_table_t toml_table_t;
 
 typedef uint64_t    PAL_NUM; /*!< a number */
 typedef const char* PAL_STR; /*!< a pointer to a C-string */

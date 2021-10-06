@@ -28,6 +28,7 @@
 #include "shim_utils.h"
 #include "shim_vma.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 static bool g_check_invalid_ptrs = true;
 

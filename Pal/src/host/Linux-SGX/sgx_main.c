@@ -29,6 +29,8 @@
 #include "sgx_internal.h"
 #include "sgx_log.h"
 #include "sgx_tls.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>

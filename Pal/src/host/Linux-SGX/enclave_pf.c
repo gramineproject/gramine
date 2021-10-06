@@ -13,6 +13,7 @@
 #include "pal_linux_error.h"
 #include "spinlock.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 /* SGX-specific keys for protected files, used for SGX sealing. The former key is bound to the
  * MRENCLAVE measurement of the SGX enclave (only the same enclave can unseal secrets). The latter

@@ -17,7 +17,6 @@
 
 #include "cpu.h"
 #include "list.h"
-#include "toml.h"
 
 /* WARNING: this declaration may conflict with some header files */
 #ifndef ssize_t
@@ -366,66 +365,6 @@ int get_base_name(const char* path, char* buf, size_t* inout_size);
  * (e.g., suffix is wrong).
  */
 int parse_size_str(const char* str, uint64_t* out_val);
-
-/*!
- * \brief Check if a key was specified in TOML manifest.
- *
- * \param root       Root table of the TOML manifest.
- * \param key        Dotted key (e.g. "loader.insecure__use_cmdline_argv").
- */
-bool toml_key_exists(const toml_table_t* root, const char* key);
-
-/*!
- * \brief Find a bool key-value in TOML manifest.
- *
- * \param root       Root table of the TOML manifest.
- * \param key        Dotted key (e.g. "loader.insecure__use_cmdline_argv").
- * \param defaultval `retval` is set to this value if not found in the manifest.
- * \param retval     Pointer to output bool.
- *
- * Returns 0 if there were no errors (but value may have not been found in manifest and was set to
- * default one) or -1 if there were errors during conversion to bool.
- */
-int toml_bool_in(const toml_table_t* root, const char* key, bool defaultval, bool* retval);
-
-/*!
- * \brief Find an integer key-value in TOML manifest.
- *
- * \param root       Root table of the TOML manifest.
- * \param key        Dotted key (e.g. "sgx.thread_num").
- * \param defaultval `retval` is set to this value if not found in the manifest.
- * \param retval     Pointer to output integer.
- *
- * Returns 0 if there were no errors (but value may have not been found in manifest and was set to
- * default one) or -1 if there were errors during conversion to int.
- */
-int toml_int_in(const toml_table_t* root, const char* key, int64_t defaultval, int64_t* retval);
-
-/*!
- * \brief Find a string key-value in TOML manifest.
- *
- * \param root      Root table of the TOML manifest.
- * \param key       Dotted key (e.g. "fs.mount.lib1.type").
- * \param retval    Pointer to output string.
- *
- * Returns 0 if there were no errors (but value may have not been found in manifest and was set to
- * NULL) or -1 if there were errors during conversion to string.
- */
-int toml_string_in(const toml_table_t* root, const char* key, char** retval);
-
-/*!
- * \brief Find a "size" string key-value in TOML manifest (parsed via `parse_size_str()`).
- *
- * \param root       Root table of the TOML manifest.
- * \param key        Dotted key (e.g. "sys.stack.size").
- * \param defaultval `retval` is set to this value if not found in the manifest.
- * \param retval     Pointer to output integer.
- *
- * Returns 0 if there were no errors (but value may have not been found in manifest and was set to
- * default one) or -1 if there were errors during conversion to "size" string.
- */
-int toml_sizestring_in(const toml_table_t* root, const char* key, uint64_t defaultval,
-                       uint64_t* retval);
 
 #define URI_PREFIX_SEPARATOR ":"
 

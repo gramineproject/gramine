@@ -3,5 +3,6 @@ common_inc = [
         '.',
         join_paths('arch', host_machine.cpu_family()),
     ),
-    tomlc99_inc, # TODO this is because there's #include "toml.h" in api.h
+    # for `toml_utils.h`
+    tomlc99_inc,
 ]

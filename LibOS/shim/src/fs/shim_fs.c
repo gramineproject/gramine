@@ -19,6 +19,7 @@
 #include "shim_process.h"
 #include "shim_utils.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 struct shim_fs* builtin_fs[] = {
     &chroot_builtin_fs,
