@@ -104,7 +104,6 @@ Table of Contents
    :caption: PAL
 
    pal/host-abi
-   pal/porting
 
 .. toctree::
    :caption: Python
