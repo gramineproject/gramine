@@ -20,7 +20,7 @@
 #endif
 
 /* TODO: we should `#include "toml.h"` here, but this file is being included by PAL regression
- * tests, which still use Make. Switch to `#include` once they're converted. */
+ * tests, which still use Make. Switch to `#include` once they're converted to Meson. */
 typedef struct toml_table_t toml_table_t;
 
 typedef uint64_t    PAL_NUM; /*!< a number */
