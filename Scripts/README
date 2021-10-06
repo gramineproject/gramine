@@ -1,0 +1,6 @@
+
+The Make scripts in this directory (Makefile, Makefile.*, manifest.mk) are legacy code intended to
+support the remaining parts of Gramine that aren't yet moved to Meson (regression tests, GCC build).
+
+They should not be used for any new components, and once the Meson move is complete, they should be
+deleted.
