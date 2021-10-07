@@ -566,7 +566,16 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_control.mem_info.mem_total = _DkMemoryQuota();
 
-    if (_DkGetTopologyInfo(&g_pal_control.topo_info) < 0) {
+    //TODO: Remove this manifest option once sysfs is more stable.
+    bool enable_sysfs_topology;
+    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+                       /*defaultval=*/false, &enable_sysfs_topology);
+    if (ret < 0) {
+        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'fs.experimental__enable_sysfs_topology' "
+                                             "(the value must be `true` or `false`)");
+    }
+
+    if (enable_sysfs_topology && _DkGetTopologyInfo(&g_pal_control.topo_info) < 0) {
         goto out_fail;
     }
 

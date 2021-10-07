@@ -37,6 +37,7 @@ static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
 
 const toml_table_t* g_manifest_root = NULL;
 const PAL_CONTROL* g_pal_control = NULL;
+bool g_enable_sysfs_topology = false;
 
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
@@ -390,6 +391,7 @@ noreturn void* shim_init(int argc, void* args) {
     }
 
     g_manifest_root = g_pal_control->manifest_root;
+    assert(g_manifest_root);
 
     shim_xstate_init();
 
@@ -406,6 +408,16 @@ noreturn void* shim_init(int argc, void* args) {
     RUN_INIT(read_environs, envp);
     RUN_INIT(init_str_mgr);
     RUN_INIT(init_rlimit);
+
+    //TODO: Remove this manifest option once sysfs is more stable.
+    int ret = toml_bool_in(g_manifest_root, "fs.experimental__enable_sysfs_topology",
+                           /*defaultval=*/false, &g_enable_sysfs_topology);
+    if (ret < 0) {
+        log_error("Cannot parse 'fs.experimental__enable_sysfs_topology' "
+                  "(the value must be `true` or `false`)");
+        DkProcessExit(EINVAL);
+    }
+
     RUN_INIT(init_fs);
     RUN_INIT(init_fs_lock);
     RUN_INIT(init_dcache);
