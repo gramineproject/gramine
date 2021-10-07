@@ -35,7 +35,7 @@ library OS running inside an enclave (using a normal GDB will only debug the
 execution *outside* the enclave).
 
 To build Gramine with debug symbols, the source code needs to be compiled with
-``--buildtype=debug``:
+``--buildtype=debug``::
 
     meson setup build-debug/ --buildtype=debug -Dsgx=enabled
     ninja -C build-debug/
