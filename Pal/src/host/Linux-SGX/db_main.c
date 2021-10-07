@@ -587,17 +587,17 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
 
-    if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
-            !allow_eventfd && !allow_all_files && !use_allowed_files) {
-        /* there are no insecure configurations, skip printing */
-        ret = 0;
-        goto out;
-    }
-
     ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
                        /*defaultval=*/false, &enable_sysfs_topo);
     if (ret < 0)
         goto out;
+
+    if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
+            !allow_eventfd && !allow_all_files && !use_allowed_files && !enable_sysfs_topo) {
+        /* there are no insecure configurations, skip printing */
+        ret = 0;
+        goto out;
+    }
 
     log_always("-------------------------------------------------------------------------------"
                "----------------------------------------");
@@ -840,7 +840,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     if (ret < 0) {
         log_error("Cannot parse 'fs.experimental__enable_sysfs_topology' (the value must be `true` "
                   "or `false`)");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     ret = parse_host_topo_info(&sec_info);
     if (ret < 0) {
@@ -858,7 +858,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                        &preheat_enclave);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     if (preheat_enclave) {
         for (uint8_t* i = g_pal_sec.heap_min; i < (uint8_t*)g_pal_sec.heap_max; i += g_page_size)
@@ -870,47 +870,47 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                              /*defaultval=*/0, &pal_internal_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if (pal_internal_mem_size < g_pal_internal_mem_size) {
         log_error("Too small `loader.pal_internal_mem_size`, need at least %luMB because the "
                   "manifest is large", g_pal_internal_mem_size / 1024 / 1024);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     g_pal_internal_mem_size = pal_internal_mem_size;
 
     if ((ret = init_file_check_policy()) < 0) {
         log_error("Failed to load the file check policy: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_allowed_files()) < 0) {
         log_error("Failed to initialize allowed files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_protected_files()) < 0) {
         log_error("Failed to initialize protected files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     /* this should be placed *after all* initialize-from-manifest routines */
     if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     /* set up thread handle */
     PAL_HANDLE first_thread = malloc(HANDLE_SIZE(thread));
     if (!first_thread) {
         log_error("Out of memory");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     init_handle_hdr(HANDLE_HDR(first_thread), PAL_TYPE_THREAD);
     first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);
