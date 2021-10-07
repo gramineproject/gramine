@@ -792,6 +792,7 @@ out_vendor_id:
 int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
     if (!g_pal_control.enable_sysfs_topology) {
         /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
+        memset(topo_info, 0, sizeof(*topo_info));
         return 0;
     }
 

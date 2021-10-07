@@ -385,6 +385,12 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
         return -1;
     }
 
+    if (online_logical_cores > possible_logical_cores) {
+        log_error("Impossible configuration: more online cores (%ld) than possible cores (%ld)",
+                  online_logical_cores, possible_logical_cores);
+        return -1;
+    }
+
     /* Allocate enclave memory to store "logical core -> socket" mappings */
     int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
     if (!cpu_socket) {
@@ -415,18 +421,15 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
 static int parse_advanced_host_topo_info(bool enable_sysfs_topology, struct pal_sec* sec_info) {
     int ret;
     int64_t cnt;
+    PAL_TOPO_INFO* ti = &sec_info->topo_info;
 
     if (!enable_sysfs_topology) {
         /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
         return 0;
     }
 
-    /* TODO: sec_info is currently in untrusted memory; must be copied into enclave and then used */
-    PAL_TOPO_INFO* ti = &sec_info->topo_info;
-
     if (ti->num_online_nodes > INT64_MAX || ti->num_cache_index > INT64_MAX)
         return -1;
-
 
     PAL_CORE_TOPO_INFO* core_topology;
     PAL_CORE_CACHE_INFO* cache_info;
@@ -547,6 +550,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool allow_eventfd     = false;
     bool allow_all_files   = false;
     bool use_allowed_files = g_allowed_files_warn;
+    bool enable_sysfs_topo = false;
 
     char* log_level_str = NULL;
     ret = toml_string_in(g_pal_state.manifest_root, "loader.log_level", &log_level_str);
@@ -590,6 +594,11 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
         goto out;
     }
 
+    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+                       /*defaultval=*/false, &enable_sysfs_topo);
+    if (ret < 0)
+        goto out;
+
     log_always("-------------------------------------------------------------------------------"
                "----------------------------------------");
     log_always("Gramine detected the following insecure configurations:\n");
@@ -625,6 +634,10 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (use_allowed_files)
         log_always("  - sgx.allowed_files = [ ... ]                "
                    "(some files are passed through from untrusted host without verification)");
+
+    if (enable_sysfs_topo)
+        log_always("  - fs.experimental__enable_sysfs_topology = true "
+                   "(forwarding sysfs topology from untrusted host to the app)");
 
     log_always("\nGramine will continue application execution, but this configuration must not be "
                "used in production!");
