@@ -151,6 +151,9 @@ static void init_node_dir(struct pseudo_node* node) {
 }
 
 int init_sysfs(void) {
+    if (!g_pal_control->enable_sysfs_topology)
+        return 0;
+
     struct pseudo_node* root = pseudo_add_root_dir("sys");
     struct pseudo_node* devices = pseudo_add_dir(root, "devices");
     struct pseudo_node* system = pseudo_add_dir(devices, "system");

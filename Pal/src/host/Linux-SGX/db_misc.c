@@ -790,6 +790,12 @@ out_vendor_id:
 }
 
 int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
+    if (!g_pal_control.enable_sysfs_topology) {
+        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
+        memset(topo_info, 0, sizeof(*topo_info));
+        return 0;
+    }
+
     topo_info->num_online_nodes = g_pal_sec.topo_info.num_online_nodes;
     topo_info->num_cache_index  = g_pal_sec.topo_info.num_cache_index;
     topo_info->core_topology    = g_pal_sec.topo_info.core_topology;
@@ -797,7 +803,6 @@ int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
     COPY_ARRAY(topo_info->online_logical_cores, g_pal_sec.topo_info.online_logical_cores);
     COPY_ARRAY(topo_info->possible_logical_cores, g_pal_sec.topo_info.possible_logical_cores);
     COPY_ARRAY(topo_info->online_nodes, g_pal_sec.topo_info.online_nodes);
-
     return 0;
 }
 

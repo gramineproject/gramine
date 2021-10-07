@@ -151,10 +151,12 @@ static int __mount_sys(void) {
         return ret;
     }
 
-    log_debug("Mounting special sys filesystem: /sys");
-    if ((ret = mount_fs("pseudo", "sys", "/sys")) < 0) {
-        log_error("Mounting sys filesystem failed (%d)", ret);
-        return ret;
+    if (g_pal_control->enable_sysfs_topology) {
+        log_debug("Mounting special sys filesystem: /sys");
+        if ((ret = mount_fs("pseudo", "sys", "/sys")) < 0) {
+            log_error("Mounting sys filesystem failed (%d)", ret);
+            return ret;
+        }
     }
 
     return 0;

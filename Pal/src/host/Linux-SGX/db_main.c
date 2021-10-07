@@ -348,84 +348,46 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, int64_
         if (!IS_IN_RANGE_INCL(cpumap, 1, num_cores))
             return -EINVAL;
 
-        if (num_nodes != sanitize_hw_resource_count(numa_topology[idx].distance, /*ordered=*/false))
+        int64_t cnt = sanitize_hw_resource_count(numa_topology[idx].distance, /*ordered=*/false);
+        if (cnt < 0 || num_nodes != cnt)
             return -EINVAL;
     }
     return 0;
 }
 
-/* This function doesn't clean up resources on failure, assuming that we terminate right away in
- * such case. */
+/* The below two functions don't clean up resources on failure: we terminate the process anyway. */
 static int parse_host_topo_info(struct pal_sec* sec_info) {
-    if (sec_info->online_logical_cores > INT64_MAX)
+    int ret;
+
+    if (sec_info->online_logical_cores > INT64_MAX ||
+            sec_info->possible_logical_cores > INT64_MAX ||
+            sec_info->physical_cores_per_socket > INT64_MAX) {
         return -1;
+    }
+
     int64_t online_logical_cores = (int64_t)sec_info->online_logical_cores;
+    int64_t possible_logical_cores = (int64_t)sec_info->possible_logical_cores;
+    int64_t physical_cores_per_socket = (int64_t)sec_info->physical_cores_per_socket;
+
     if (!IS_IN_RANGE_INCL(online_logical_cores, 1, 1 << 16)) {
         log_error("Invalid sec_info.online_logical_cores: %ld", online_logical_cores);
         return -1;
     }
-    g_pal_sec.online_logical_cores = online_logical_cores;
 
-    if (online_logical_cores != sanitize_hw_resource_count(sec_info->topo_info.online_logical_cores,
-                                                           /*ordered=*/true)) {
-        log_error("Invalid sec_info.topo_info.online_logical_cores");
-        return -1;
-    }
-    COPY_ARRAY(g_pal_sec.topo_info.online_logical_cores, sec_info->topo_info.online_logical_cores);
-
-    if (sec_info->possible_logical_cores > INT64_MAX)
-        return -1;
-    int64_t possible_logical_cores = (int64_t)sec_info->possible_logical_cores;
     if (!IS_IN_RANGE_INCL(possible_logical_cores, 1, 1 << 16)) {
         log_error("Invalid sec_info.possible_logical_cores: %ld", possible_logical_cores);
         return -1;
     }
-    g_pal_sec.possible_logical_cores = possible_logical_cores;
 
-    if (possible_logical_cores !=
-        sanitize_hw_resource_count(sec_info->topo_info.possible_logical_cores, /*ordered=*/true)) {
-        log_error("Invalid sec_info.topo_info.possible_logical_cores");
-        return -1;
-    }
-    COPY_ARRAY(g_pal_sec.topo_info.possible_logical_cores,
-               sec_info->topo_info.possible_logical_cores);
-
-    if (!IS_IN_RANGE_INCL(sec_info->physical_cores_per_socket, 1, 1 << 13)) {
+    if (!IS_IN_RANGE_INCL(physical_cores_per_socket, 1, 1 << 13)) {
         log_error("Invalid sec_info.physical_cores_per_socket: %ld",
                   sec_info->physical_cores_per_socket);
         return -1;
     }
-    g_pal_sec.physical_cores_per_socket = sec_info->physical_cores_per_socket;
 
-    if (sec_info->topo_info.num_online_nodes > INT64_MAX)
-        return -1;
-    int64_t num_online_nodes = (int64_t)sec_info->topo_info.num_online_nodes;
-    if (!IS_IN_RANGE_INCL(num_online_nodes, 1, 1 << 8)) {
-        log_error("Invalid sec_info.topo_info.num_online_nodes: %ld", num_online_nodes);
-        return -1;
-    }
-    g_pal_sec.topo_info.num_online_nodes = num_online_nodes;
-
-    if (num_online_nodes != sanitize_hw_resource_count(sec_info->topo_info.online_nodes,
-                                                       /*ordered=*/true)) {
-        log_error("Invalid sec_info.topo_info.online_nodes");
-        return -1;
-    }
-    COPY_ARRAY(g_pal_sec.topo_info.online_nodes, sec_info->topo_info.online_nodes);
-
-    if (sec_info->topo_info.num_cache_index > INT64_MAX)
-        return -1;
-    int64_t num_cache_index = (int64_t)sec_info->topo_info.num_cache_index;
-    if (!IS_IN_RANGE_INCL(num_cache_index, 1, 1 << 4)) {
-        log_error("Invalid sec_info.topo_info.num_cache_index: %ld", num_cache_index);
-        return -1;
-    }
-    g_pal_sec.topo_info.num_cache_index = num_cache_index;
-
-    /* Sanitize logical core -> socket mappings */
-    int ret = sanitize_socket_info(sec_info->cpu_socket, online_logical_cores);
-    if (ret < 0) {
-        log_error("Sanitization of logical core -> socket mappings failed");
+    if (online_logical_cores > possible_logical_cores) {
+        log_error("Impossible configuration: more online cores (%ld) than possible cores (%ld)",
+                  online_logical_cores, possible_logical_cores);
         return -1;
     }
 
@@ -436,77 +398,135 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
         return -1;
     }
 
-    if (!sgx_copy_to_enclave(cpu_socket, online_logical_cores * sizeof(int), sec_info->cpu_socket,
-                             online_logical_cores * sizeof(int))) {
+    if (!sgx_copy_to_enclave(cpu_socket, online_logical_cores * sizeof(int),
+                             sec_info->cpu_socket, online_logical_cores * sizeof(int))) {
         log_error("Copying cpu_socket into the enclave failed");
         return -1;
     }
-    g_pal_sec.cpu_socket = cpu_socket;
 
-    /* Sanitize core topology information */
-    ret = sanitize_core_topology_info(sec_info->topo_info.core_topology, online_logical_cores,
-                                      num_cache_index);
+    /* Sanitize logical core -> socket mappings */
+    ret = sanitize_socket_info(cpu_socket, online_logical_cores);
     if (ret < 0) {
-        log_error("Sanitization of core_topology failed");
+        log_error("Sanitization of logical core -> socket mappings failed");
         return -1;
     }
 
-    /* Allocate enclave memory to store core topology info */
-    PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores *
-                                                                    sizeof(PAL_CORE_TOPO_INFO));
+    g_pal_sec.online_logical_cores = online_logical_cores;
+    g_pal_sec.possible_logical_cores = possible_logical_cores;
+    g_pal_sec.physical_cores_per_socket = physical_cores_per_socket;
+    g_pal_sec.cpu_socket = cpu_socket;
+    return 0;
+}
+
+static int parse_advanced_host_topo_info(bool enable_sysfs_topology, struct pal_sec* sec_info) {
+    int ret;
+    int64_t cnt;
+    PAL_TOPO_INFO* ti = &sec_info->topo_info;
+
+    if (!enable_sysfs_topology) {
+        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
+        return 0;
+    }
+
+    if (ti->num_online_nodes > INT64_MAX || ti->num_cache_index > INT64_MAX)
+        return -1;
+
+    PAL_CORE_TOPO_INFO* core_topology;
+    PAL_CORE_CACHE_INFO* cache_info;
+    PAL_NUMA_TOPO_INFO* numa_topology;
+
+    uint64_t cores  = g_pal_sec.online_logical_cores;
+    int64_t nodes   = (int64_t)ti->num_online_nodes;
+    int64_t caches  = (int64_t)ti->num_cache_index;
+
+    if (!IS_IN_RANGE_INCL(nodes, 1, 1 << 8)) {
+        log_error("Invalid sec_info.topo_info.num_online_nodes: %ld", nodes);
+        return -1;
+    }
+
+    if (!IS_IN_RANGE_INCL(caches, 1, 1 << 4)) {
+        log_error("Invalid sec_info.topo_info.num_cache_index: %ld", caches);
+        return -1;
+    }
+
+    cnt = sanitize_hw_resource_count(ti->online_logical_cores, /*ordered=*/true);
+    if (cnt < 0 || g_pal_sec.online_logical_cores != (size_t)cnt) {
+        log_error("Invalid sec_info.topo_info.online_logical_cores");
+        return -1;
+    }
+
+    cnt = sanitize_hw_resource_count(ti->possible_logical_cores, /*ordered=*/true);
+    if (cnt < 0 || g_pal_sec.possible_logical_cores != (size_t)cnt) {
+        log_error("Invalid sec_info.topo_info.possible_logical_cores");
+        return -1;
+    }
+
+    cnt = sanitize_hw_resource_count(ti->online_nodes, /*ordered=*/true);
+    if (cnt < 0 || nodes != cnt) {
+        log_error("Invalid sec_info.topo_info.online_nodes");
+        return -1;
+    }
+
+    core_topology = (PAL_CORE_TOPO_INFO*)malloc(cores * sizeof(PAL_CORE_TOPO_INFO));
     if (!core_topology) {
         log_error("Allocation for core topology failed");
         return -1;
     }
 
-    if (!sgx_copy_to_enclave(core_topology, online_logical_cores * sizeof(PAL_CORE_TOPO_INFO),
-                             sec_info->topo_info.core_topology,
-                             online_logical_cores * sizeof(PAL_CORE_TOPO_INFO))) {
+    if (!sgx_copy_to_enclave(core_topology, cores * sizeof(PAL_CORE_TOPO_INFO),
+                             ti->core_topology, cores * sizeof(PAL_CORE_TOPO_INFO))) {
         log_error("Copying core_topology into the enclave failed");
         return -1;
     }
 
-    /* Allocate enclave memory to store cache info */
-    PAL_CORE_CACHE_INFO* cache_info = (PAL_CORE_CACHE_INFO*)malloc(num_cache_index *
-                                                                   sizeof(PAL_CORE_CACHE_INFO));
+    cache_info = (PAL_CORE_CACHE_INFO*)malloc(caches * sizeof(PAL_CORE_CACHE_INFO));
     if (!cache_info) {
         log_error("Allocation for cache_info failed");
         return -1;
     }
 
-    if (!sgx_copy_to_enclave(cache_info, num_cache_index * sizeof(PAL_CORE_CACHE_INFO),
-                             sec_info->topo_info.core_topology->cache,
-                             num_cache_index * sizeof(PAL_CORE_CACHE_INFO))) {
+    if (!sgx_copy_to_enclave(cache_info, caches * sizeof(PAL_CORE_CACHE_INFO),
+                             ti->core_topology->cache, caches * sizeof(PAL_CORE_CACHE_INFO))) {
         log_error("Copying cache_info into the enclave failed");
         return -1;
     }
-    core_topology->cache = cache_info;
-    g_pal_sec.topo_info.core_topology = core_topology;
 
-    /* Sanitize numa topology information */
-    ret = sanitize_numa_topology_info(sec_info->topo_info.numa_topology, num_online_nodes,
-                                      online_logical_cores);
-    if (ret < 0) {
-        log_error("Sanitization of numa_topology failed");
-        return -1;
-    }
-
-    /* Allocate enclave memory to store numa topology info */
-    PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(num_online_nodes *
-                                                                    sizeof(PAL_NUMA_TOPO_INFO));
+    numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes * sizeof(PAL_NUMA_TOPO_INFO));
     if (!numa_topology) {
         log_error("Allocation for numa topology failed");
         return -1;
     }
 
-    if (!sgx_copy_to_enclave(numa_topology, num_online_nodes * sizeof(PAL_NUMA_TOPO_INFO),
-                             sec_info->topo_info.numa_topology,
-                             num_online_nodes * sizeof(PAL_NUMA_TOPO_INFO))) {
+    if (!sgx_copy_to_enclave(numa_topology, nodes * sizeof(PAL_NUMA_TOPO_INFO),
+                             ti->numa_topology, nodes * sizeof(PAL_NUMA_TOPO_INFO))) {
         log_error("Copying numa_topology into the enclave failed");
         return -1;
     }
-    g_pal_sec.topo_info.numa_topology = numa_topology;
 
+    /* important to bind core_topology with cache_info before sanitize_core_topology_info() */
+    core_topology->cache = cache_info;
+
+    ret = sanitize_core_topology_info(core_topology, cores, caches);
+    if (ret < 0) {
+        log_error("Sanitization of core_topology failed");
+        return -1;
+    }
+
+    ret = sanitize_numa_topology_info(numa_topology, nodes, cores);
+    if (ret < 0) {
+        log_error("Sanitization of numa_topology failed");
+        return -1;
+    }
+
+    g_pal_sec.topo_info.num_online_nodes = nodes;
+    g_pal_sec.topo_info.num_cache_index = caches;
+
+    COPY_ARRAY(g_pal_sec.topo_info.online_logical_cores, ti->online_logical_cores);
+    COPY_ARRAY(g_pal_sec.topo_info.possible_logical_cores, ti->possible_logical_cores);
+    COPY_ARRAY(g_pal_sec.topo_info.online_nodes, ti->online_nodes);
+
+    g_pal_sec.topo_info.core_topology = core_topology;
+    g_pal_sec.topo_info.numa_topology = numa_topology;
     return 0;
 }
 
@@ -530,6 +550,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool allow_eventfd     = false;
     bool allow_all_files   = false;
     bool use_allowed_files = g_allowed_files_warn;
+    bool enable_sysfs_topo = false;
 
     char* log_level_str = NULL;
     ret = toml_string_in(g_pal_state.manifest_root, "loader.log_level", &log_level_str);
@@ -566,8 +587,13 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
 
+    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+                       /*defaultval=*/false, &enable_sysfs_topo);
+    if (ret < 0)
+        goto out;
+
     if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
-            !allow_eventfd && !allow_all_files && !use_allowed_files) {
+            !allow_eventfd && !allow_all_files && !use_allowed_files && !enable_sysfs_topo) {
         /* there are no insecure configurations, skip printing */
         ret = 0;
         goto out;
@@ -608,6 +634,10 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (use_allowed_files)
         log_always("  - sgx.allowed_files = [ ... ]                "
                    "(some files are passed through from untrusted host without verification)");
+
+    if (enable_sysfs_topo)
+        log_always("  - fs.experimental__enable_sysfs_topology = true "
+                   "(forwarding sysfs topology from untrusted host to the app)");
 
     log_always("\nGramine will continue application execution, but this configuration must not be "
                "used in production!");
@@ -751,11 +781,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_tsc();
     (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
-    /* Now that enclave memory is set up, parse and store host topology info into g_pal_sec struct */
-    ret = parse_host_topo_info(&sec_info);
-    if (ret < 0)
-        ocall_exit(1, /*is_exitgroup=*/true);
-
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */
@@ -808,12 +833,32 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_state.raw_manifest_data = manifest_addr;
     g_pal_state.manifest_root = manifest_root;
 
+    /* parse and store host topology info into g_pal_sec struct */
+    bool enable_sysfs_topology;     /* TODO: remove this manifest option once sysfs topo is stable */
+    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+                       /*defaultval=*/false, &enable_sysfs_topology);
+    if (ret < 0) {
+        log_error("Cannot parse 'fs.experimental__enable_sysfs_topology' (the value must be `true` "
+                  "or `false`)");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    ret = parse_host_topo_info(&sec_info);
+    if (ret < 0) {
+        log_error("Cannot parse basic host topology info (cores)");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    ret = parse_advanced_host_topo_info(enable_sysfs_topology, &sec_info);
+    if (ret < 0) {
+        log_error("Cannot parse advanced host topology info (cores, caches, NUMA nodes)");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     bool preheat_enclave;
     ret = toml_bool_in(g_pal_state.manifest_root, "sgx.preheat_enclave", /*defaultval=*/false,
                        &preheat_enclave);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     if (preheat_enclave) {
         for (uint8_t* i = g_pal_sec.heap_min; i < (uint8_t*)g_pal_sec.heap_max; i += g_page_size)
@@ -825,47 +870,47 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                              /*defaultval=*/0, &pal_internal_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if (pal_internal_mem_size < g_pal_internal_mem_size) {
         log_error("Too small `loader.pal_internal_mem_size`, need at least %luMB because the "
                   "manifest is large", g_pal_internal_mem_size / 1024 / 1024);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     g_pal_internal_mem_size = pal_internal_mem_size;
 
     if ((ret = init_file_check_policy()) < 0) {
         log_error("Failed to load the file check policy: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_allowed_files()) < 0) {
         log_error("Failed to initialize allowed files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_protected_files()) < 0) {
         log_error("Failed to initialize protected files: %d", ret);
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     /* this should be placed *after all* initialize-from-manifest routines */
     if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     /* set up thread handle */
     PAL_HANDLE first_thread = malloc(HANDLE_SIZE(thread));
     if (!first_thread) {
         log_error("Out of memory");
-        ocall_exit(1, true);
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
     init_handle_hdr(HANDLE_HDR(first_thread), PAL_TYPE_THREAD);
     first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);

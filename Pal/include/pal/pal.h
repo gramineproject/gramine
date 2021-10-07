@@ -167,6 +167,7 @@ typedef struct PAL_CONTROL_ {
     PAL_CPU_INFO cpu_info; /*!< CPU information (only required ones) */
     PAL_MEM_INFO mem_info; /*!< memory information (only required ones) */
     PAL_TOPO_INFO topo_info; /*!< Topology information (only required ones) */
+    bool enable_sysfs_topology;
 } PAL_CONTROL;
 
 const PAL_CONTROL* DkGetPalControl(void);
