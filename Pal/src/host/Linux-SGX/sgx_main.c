@@ -42,7 +42,6 @@
 #include "sysdeps/generic/ldsodefs.h"
 
 const size_t g_page_size = PRESET_PAGESIZE;
-static bool g_enable_sysfs_topology;
 
 char* g_pal_loader_path = NULL;
 char* g_libpal_path = NULL;
@@ -733,16 +732,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    //TODO: Remove this manifest option once sysfs is more stable.
-    ret = toml_bool_in(manifest_root, "fs.experimental__enable_sysfs_topology",
-                       /*defaultval=*/false, &g_enable_sysfs_topology);
-    if (ret < 0) {
-        log_error("Cannot parse 'fs.experimental__enable_sysfs_topology' "
-                  "(the value must be `true` or `false`)");
-        ret = -EINVAL;
-        goto out;
-    }
-
 #ifdef DEBUG
     enclave_info->profile_enable = false;
     enclave_info->profile_filename[0] = '\0';
@@ -962,11 +951,11 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
     pal_sec->cpu_socket = cpu_socket;
 
-    if (g_enable_sysfs_topology) {
-        ret = get_topology_info(&pal_sec->topo_info);
-        if (ret < 0)
-            return ret;
-    }
+
+    ret = get_topology_info(&pal_sec->topo_info);
+    if (ret < 0)
+        return ret;
+
 
 #ifdef DEBUG
     size_t env_i = 0;

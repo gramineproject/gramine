@@ -575,6 +575,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                                              "(the value must be `true` or `false`)");
     }
 
+    g_pal_control.enable_sysfs_topology = enable_sysfs_topology;
+
     if (enable_sysfs_topology && _DkGetTopologyInfo(&g_pal_control.topo_info) < 0) {
         goto out_fail;
     }

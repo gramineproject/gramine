@@ -20,7 +20,6 @@
 #include "shim_utils.h"
 #include "toml.h"
 
-extern bool g_enable_sysfs_topology;
 
 struct shim_fs* builtin_fs[] = {
     &chroot_builtin_fs,
@@ -66,7 +65,7 @@ int init_fs(void) {
     if ((ret = init_devfs()) < 0)
         goto err;
 
-    if (g_enable_sysfs_topology && (ret = init_sysfs()) < 0)
+    if (g_pal_control->enable_sysfs_topology && (ret = init_sysfs()) < 0)
         goto err;
 
     return 0;
@@ -153,10 +152,12 @@ static int __mount_sys(void) {
         return ret;
     }
 
-    log_debug("Mounting special sys filesystem: /sys");
-    if (g_enable_sysfs_topology && (ret = mount_fs("pseudo", "sys", "/sys")) < 0) {
-        log_error("Mounting sys filesystem failed (%d)", ret);
-        return ret;
+    if (g_pal_control->enable_sysfs_topology) {
+        log_debug("Mounting special sys filesystem: /sys");
+        if ((ret = mount_fs("pseudo", "sys", "/sys")) < 0) {
+            log_error("Mounting sys filesystem failed (%d)", ret);
+            return ret;
+        }
     }
 
     return 0;

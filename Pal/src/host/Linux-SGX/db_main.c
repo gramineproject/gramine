@@ -356,7 +356,7 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, int64_
 /* This function doesn't clean up resources on failure, assuming that we terminate right away in
  * such case. */
 static int parse_host_topo_info(struct pal_sec* sec_info) {
-    //TODO: Remove this manifest option once sysfs is more stable.
+    //TODO: Remove this manifest option once sysfs topology is more stable.
     bool enable_sysfs_topology;
     int ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
                            /*defaultval=*/false, &enable_sysfs_topology);
@@ -374,7 +374,7 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
     }
     g_pal_sec.online_logical_cores = online_logical_cores;
 
-    /* If sysfs_topology is disabled, skip sanitizing topology information. */
+    /* If sysfs topology is disabled, skip sanitizing topology information. */
     if (enable_sysfs_topology) {
         if (online_logical_cores !=
             sanitize_hw_resource_count(sec_info->topo_info.online_logical_cores, /*ordered=*/true)) {
@@ -393,7 +393,7 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
     }
     g_pal_sec.possible_logical_cores = possible_logical_cores;
 
-    /* If sysfs_topology is disabled, skip sanitizing topology information. */
+    /* If sysfs topology is disabled, skip sanitizing topology information. */
     if (enable_sysfs_topology) {
         if (possible_logical_cores !=
             sanitize_hw_resource_count(sec_info->topo_info.possible_logical_cores,
@@ -405,19 +405,15 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
                    sec_info->topo_info.possible_logical_cores);
     }
 
-    if (!IS_IN_RANGE_INCL(sec_info->physical_cores_per_socket, 1, 1 << 13)) {
+    if (sec_info->physical_cores_per_socket > INT64_MAX)
+        return -1;
+    int64_t physical_cores_per_socket = (int64_t)sec_info->physical_cores_per_socket;
+    if (!IS_IN_RANGE_INCL(physical_cores_per_socket, 1, 1 << 13)) {
         log_error("Invalid sec_info.physical_cores_per_socket: %ld",
                   sec_info->physical_cores_per_socket);
         return -1;
     }
-    g_pal_sec.physical_cores_per_socket = sec_info->physical_cores_per_socket;
-
-    /* Sanitize logical core -> socket mappings */
-    ret = sanitize_socket_info(sec_info->cpu_socket, online_logical_cores);
-    if (ret < 0) {
-        log_error("Sanitization of logical core -> socket mappings failed");
-        return -1;
-    }
+    g_pal_sec.physical_cores_per_socket = physical_cores_per_socket;
 
     /* Allocate enclave memory to store "logical core -> socket" mappings */
     int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
@@ -431,9 +427,17 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
         log_error("Copying cpu_socket into the enclave failed");
         return -1;
     }
+
+    /* Sanitize logical core -> socket mappings */
+    ret = sanitize_socket_info(cpu_socket, online_logical_cores);
+    if (ret < 0) {
+        log_error("Sanitization of logical core -> socket mappings failed");
+        return -1;
+    }
+
     g_pal_sec.cpu_socket = cpu_socket;
 
-    /* Skip other topology information if sysfs_topology is disabled. */
+    /* Skip other topology information if sysfs topology is disabled. */
     if (!enable_sysfs_topology)
         return 0;
 

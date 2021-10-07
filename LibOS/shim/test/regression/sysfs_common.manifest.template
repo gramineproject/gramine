@@ -1,0 +1,62 @@
+loader.preload = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
+loader.insecure__use_cmdline_argv = true
+
+# for eventfd test
+sys.insecure__allow_eventfd = true
+
+fs.experimental__enable_sysfs_topology = true
+
+fs.mount.gramine_lib.type = "chroot"
+fs.mount.gramine_lib.path = "/lib"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
+
+fs.mount.host_lib.type = "chroot"
+fs.mount.host_lib.path = "{{ arch_libdir }}"
+fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
+
+fs.mount.host_usr_lib.type = "chroot"
+fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
+fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
+
+fs.mount.bin.type = "chroot"
+fs.mount.bin.path = "/bin"
+fs.mount.bin.uri = "file:/bin"
+
+fs.mount.tmpfs.type = "tmpfs"
+fs.mount.tmpfs.path = "/mnt/tmpfs"
+fs.mount.tmpfs.uri = "file:dummy-unused-by-tmpfs-uri"
+
+sgx.thread_num = 16
+sgx.nonpie_binary = true
+sgx.debug = true
+
+sgx.allowed_files = [
+  "file:tmp/",
+  "file:root", # for getdents test
+  "file:testfile", # for mmap_file test
+]
+
+sgx.trusted_files = [
+  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ arch_libdir }}/libgcc_s.so.1",
+  "file:/usr{{ arch_libdir }}/libstdc++.so.6",
+  "file:{{ entrypoint }}",
+  "file:exec_victim",
+]
+
+sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"
+sgx.protected_files = [
+  "file:tmp/pf/",
+]
+
+# for sealed_file_mrenclave* tests
+sgx.protected_mrenclave_files = [
+  "file:sealed_file_mrenclave.dat",
+]
+
+# for sealed_file_mrsigner test
+sgx.protected_mrsigner_files = [
+  "file:sealed_file_mrsigner.dat",
+]
