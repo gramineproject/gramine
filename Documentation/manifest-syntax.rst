@@ -354,6 +354,17 @@ Start (current working) directory
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
 
+Sysfs experimental flag
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    fs.experimental__enable_sysfs_topology = [true|false]
+    (Default: false)
+
+This syntax toggles sysfs feature in Gramine. Note: The feature is still under development
+and can expose security issues when used in production environment.
+
 
 SGX syntax
 ----------

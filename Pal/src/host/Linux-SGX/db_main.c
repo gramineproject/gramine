@@ -356,6 +356,15 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, int64_
 /* This function doesn't clean up resources on failure, assuming that we terminate right away in
  * such case. */
 static int parse_host_topo_info(struct pal_sec* sec_info) {
+    //TODO: Remove this manifest option once sysfs is more stable.
+    bool enable_sysfs_topology;
+    int ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+                           /*defaultval=*/false, &enable_sysfs_topology);
+    if (ret < 0) {
+        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'fs.experimental__enable_sysfs_topology' "
+                                             "(the value must be `true` or `false`)");
+    }
+
     if (sec_info->online_logical_cores > INT64_MAX)
         return -1;
     int64_t online_logical_cores = (int64_t)sec_info->online_logical_cores;
@@ -365,12 +374,15 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
     }
     g_pal_sec.online_logical_cores = online_logical_cores;
 
-    if (online_logical_cores != sanitize_hw_resource_count(sec_info->topo_info.online_logical_cores,
-                                                           /*ordered=*/true)) {
-        log_error("Invalid sec_info.topo_info.online_logical_cores");
-        return -1;
+    /* If sysfs_topology is disabled, skip sanitizing topology information. */
+    if (enable_sysfs_topology) {
+        if (online_logical_cores !=
+            sanitize_hw_resource_count(sec_info->topo_info.online_logical_cores, /*ordered=*/true)) {
+            log_error("Invalid sec_info.topo_info.online_logical_cores");
+            return -1;
+        }
+        COPY_ARRAY(g_pal_sec.topo_info.online_logical_cores, sec_info->topo_info.online_logical_cores);
     }
-    COPY_ARRAY(g_pal_sec.topo_info.online_logical_cores, sec_info->topo_info.online_logical_cores);
 
     if (sec_info->possible_logical_cores > INT64_MAX)
         return -1;
@@ -381,13 +393,17 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
     }
     g_pal_sec.possible_logical_cores = possible_logical_cores;
 
-    if (possible_logical_cores !=
-        sanitize_hw_resource_count(sec_info->topo_info.possible_logical_cores, /*ordered=*/true)) {
-        log_error("Invalid sec_info.topo_info.possible_logical_cores");
-        return -1;
+    /* If sysfs_topology is disabled, skip sanitizing topology information. */
+    if (enable_sysfs_topology) {
+        if (possible_logical_cores !=
+            sanitize_hw_resource_count(sec_info->topo_info.possible_logical_cores,
+            /*ordered=*/true)) {
+            log_error("Invalid sec_info.topo_info.possible_logical_cores");
+            return -1;
+        }
+        COPY_ARRAY(g_pal_sec.topo_info.possible_logical_cores,
+                   sec_info->topo_info.possible_logical_cores);
     }
-    COPY_ARRAY(g_pal_sec.topo_info.possible_logical_cores,
-               sec_info->topo_info.possible_logical_cores);
 
     if (!IS_IN_RANGE_INCL(sec_info->physical_cores_per_socket, 1, 1 << 13)) {
         log_error("Invalid sec_info.physical_cores_per_socket: %ld",
@@ -395,6 +411,31 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
         return -1;
     }
     g_pal_sec.physical_cores_per_socket = sec_info->physical_cores_per_socket;
+
+    /* Sanitize logical core -> socket mappings */
+    ret = sanitize_socket_info(sec_info->cpu_socket, online_logical_cores);
+    if (ret < 0) {
+        log_error("Sanitization of logical core -> socket mappings failed");
+        return -1;
+    }
+
+    /* Allocate enclave memory to store "logical core -> socket" mappings */
+    int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
+    if (!cpu_socket) {
+        log_error("Allocation for logical core -> socket mappings failed");
+        return -1;
+    }
+
+    if (!sgx_copy_to_enclave(cpu_socket, online_logical_cores * sizeof(int), sec_info->cpu_socket,
+                             online_logical_cores * sizeof(int))) {
+        log_error("Copying cpu_socket into the enclave failed");
+        return -1;
+    }
+    g_pal_sec.cpu_socket = cpu_socket;
+
+    /* Skip other topology information if sysfs_topology is disabled. */
+    if (!enable_sysfs_topology)
+        return 0;
 
     if (sec_info->topo_info.num_online_nodes > INT64_MAX)
         return -1;
@@ -420,27 +461,6 @@ static int parse_host_topo_info(struct pal_sec* sec_info) {
         return -1;
     }
     g_pal_sec.topo_info.num_cache_index = num_cache_index;
-
-    /* Sanitize logical core -> socket mappings */
-    int ret = sanitize_socket_info(sec_info->cpu_socket, online_logical_cores);
-    if (ret < 0) {
-        log_error("Sanitization of logical core -> socket mappings failed");
-        return -1;
-    }
-
-    /* Allocate enclave memory to store "logical core -> socket" mappings */
-    int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
-    if (!cpu_socket) {
-        log_error("Allocation for logical core -> socket mappings failed");
-        return -1;
-    }
-
-    if (!sgx_copy_to_enclave(cpu_socket, online_logical_cores * sizeof(int), sec_info->cpu_socket,
-                             online_logical_cores * sizeof(int))) {
-        log_error("Copying cpu_socket into the enclave failed");
-        return -1;
-    }
-    g_pal_sec.cpu_socket = cpu_socket;
 
     /* Sanitize core topology information */
     ret = sanitize_core_topology_info(sec_info->topo_info.core_topology, online_logical_cores,
@@ -750,11 +770,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_tsc();
     (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
-    /* Now that enclave memory is set up, parse and store host topology info into g_pal_sec struct */
-    ret = parse_host_topo_info(&sec_info);
-    if (ret < 0)
-        ocall_exit(1, /*is_exitgroup=*/true);
-
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */
@@ -806,6 +821,11 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
     g_pal_state.raw_manifest_data = manifest_addr;
     g_pal_state.manifest_root = manifest_root;
+
+    /* Now that enclave memory is set up, parse and store host topology info into g_pal_sec struct */
+    ret = parse_host_topo_info(&sec_info);
+    if (ret < 0)
+        ocall_exit(1, /*is_exitgroup=*/true);
 
     bool preheat_enclave;
     ret = toml_bool_in(g_pal_state.manifest_root, "sgx.preheat_enclave", /*defaultval=*/false,

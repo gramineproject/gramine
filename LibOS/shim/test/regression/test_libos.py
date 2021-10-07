@@ -857,6 +857,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertGreater(n, 0, "no information about CPU cache found")
         return n
 
+    @unittest.skip('skip sysfs tests until the feature is fully stable')
     def test_040_sysfs(self):
         num_cpus = os.cpu_count()
         num_cache_levels = self.get_num_cache_levels()
