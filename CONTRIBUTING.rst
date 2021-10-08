@@ -21,10 +21,7 @@ In order to report a |nbsp| problem, please open an issue in the `issue tracker
 Reporting Security Vulnerabilities
 ----------------------------------
 
-Currently, we aren't aware of any production usage of Gramine, so feel free to
-report them using GitHub issues. Please note that this guideline may change
-quite soon, so please always check it before publicly reporting any
-vulnerabilities.
+Please report security issues to gramine-security@googlegroups.com.
 
 Architectural Changes
 ---------------------
