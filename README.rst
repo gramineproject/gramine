@@ -15,8 +15,8 @@ Gramine Library OS with Intel SGX Support
 
 .. highlight:: sh
 
-**NOTE:** We are in the middle of transitioning our buildsystem to Meson, and
-the build procedures are changing. See `Building instructions
+**NOTE:** We recently transitioned our buildsystem to Meson, and
+the build procedures were changed. See `Building instructions
 <https://gramine.readthedocs.io/en/latest/building.html>`__ for an up-to-date
 build tutorial.
 
@@ -48,8 +48,8 @@ Note that the Gramine project was formerly known as Graphene. However, the name
 "Graphene" was deemed too common, could be impossible to trademark, and collided
 with several other software projects. Thus, a new name "Gramine" was chosen.
 
-Release candidate version of Gramine (formerly Graphene) 1.2 available
-======================================================================
+Gramine 1.0 release
+===================
 
 Gramine has evolved a |nbsp| lot since our last major release. Over the last
 few months, we have made significant updates to provide a |nbsp| stable version
@@ -59,33 +59,12 @@ scripts, extended test coverage, and improved the CI/CD process. We’ve reviewe
 and hardened specific security aspects of Gramine, and increased stability for
 long-running and heavy workloads.
 
-Gramine also includes full SGX Attestation support, protected files support,
-multi-process support with encrypted IPC, and support for the upstreamed SGX
-driver for Linux. We’ve introduced a |nbsp| number of performance optimizations
-for SGX, and provide mechanisms to more easily deploy in cloud environments
-with full support for automatic Docker container integration using Gramine
-Shielded Containers (GSC).
-
-We have a |nbsp| growing set of well-tested applications including machine
-learning frameworks, databases, webservers, and programming language
-runtimes.
-
-This version of Gramine is tagged 'v1.2-rc1'. We encourage you to try this out
-with your workloads and let us know if you’re facing any issues. Please see
-`the release page
-<https://github.com/gramineproject/graphene/releases/tag/v1.2-rc1>`__ for release
-notes and installation instructions.
-
-While we have made significant progress, we are continuing to work towards
-making Gramine better and adding support for more workloads. The items that we
-are most immediately working on are tracked in `#1544
-<https://github.com/gramineproject/graphene/issues/1544>`__.
-
-In the meantime, we are also in the process of transitioning the Gramine
-project to a |nbsp| new home within the Confidential Computing Consortium under
-the Linux Foundation. In Q3 2021 we will provide more details on this, and we
-expect the next version of Gramine to be released once this transition is
-complete.
+We recently published our first production-ready release - Gramine 1.0. This
+version was tested on various configurations and heavy workloads, we also
+ensured that all risky configurations are clearly warned about to prevent
+insecure deployments. More details (including a list of all breaking changes)
+are available on the `v1.0 release page
+<https://github.com/gramineproject/gramine/releases/tag/v1.0>`__.
 
 Gramine documentation
 =====================
@@ -114,6 +93,12 @@ For any questions, please send an email to gramine-users@googlegroups.com
 
 For bug reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
+
+
+Reporting security issues
+=========================
+
+Please report security issues to gramine-security@googlegroups.com.
 
 
 Acknowledgments
