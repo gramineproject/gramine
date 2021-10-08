@@ -81,7 +81,8 @@ functions on AKS.
 
 This section describes the workflow to create an AKS cluster with confidential
 compute VMs, graminize a simple application, and deploy the graminized Docker
-image in an AKS cluster.
+image in an AKS cluster. This section will shortly be enhanced to include
+DCAP attestation support.
 
 Prerequisites
 ^^^^^^^^^^^^^
