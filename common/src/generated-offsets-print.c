@@ -19,7 +19,7 @@ static void print_offsets_h(void) {
     printf("#define %s_ASM_OFFSETS_H_\n", generated_offsets_name);
     printf("\n");
 
-    printf("#ifndef __ASSEMBLER__\n", generated_offsets_name);
+    printf("#ifndef __ASSEMBLER__\n");
     printf("#error This file can be used in assembly sources only, to prevent redefinition "
            "of macros from other header files.\n");
     printf("#endif\n");
