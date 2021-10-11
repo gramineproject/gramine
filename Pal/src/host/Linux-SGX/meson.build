@@ -88,8 +88,8 @@ libpal_sgx = shared_library('pal',
 
     c_args: [
         cflags_pal_sgx,
-        cflags_custom_stack_protector,
         cflags_sanitizers,
+        cflags_custom_stack_protector,
         '-DIN_ENCLAVE',
     ],
 
@@ -141,9 +141,10 @@ executable('loader',
     include_directories: sgx_inc,
     c_args: [
         cflags_pal_sgx,
+        cflags_sanitizers,
+
         # URTS uses stack protector with standard parameters (not the ones defined for Pal/LibOS)
         '-fstack-protector-strong',
-        cflags_sanitizers,
     ],
     link_args: [
         '-Wl,-zrelro',

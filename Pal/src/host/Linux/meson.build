@@ -51,8 +51,8 @@ foreach target_type : ['shared_library', 'static_library']
 
         c_args: [
             cflags_pal_common,
-            cflags_custom_stack_protector,
             cflags_sanitizers,
+            cflags_custom_stack_protector,
             '-DHOST_TYPE=Linux',
         ],
 
