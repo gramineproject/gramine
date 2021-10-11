@@ -20,11 +20,6 @@ cflags_libos += cc.get_supported_arguments(
     '-Wno-address-of-packed-member',
 )
 
-# use TLS-based stack protector of GCC (we rely on the fact that LibOS reuses the same TCB as its
-# underlying PAL which must have a canary in its PAL_TCB at offset 0x8, so no additional enabling
-# is required in the LibOS code);
-cflags_libos += cflags_custom_stack_protector
-
 if host_machine.cpu_family() == 'x86_64'
     cflags_libos += ['-mfxsr', '-mxsave']
 endif

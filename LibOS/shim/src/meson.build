@@ -134,6 +134,10 @@ shared_library('sysdb',
 
     c_args: [
         cflags_libos,
+        # use TLS-based stack protector of GCC (we rely on the fact that LibOS reuses the same TCB
+        # as its underlying PAL which must have a canary in its PAL_TCB at offset 0x8, so no
+        # additional enabling is required in the LibOS code)
+        cflags_custom_stack_protector,
         cflags_sanitizers,
     ],
     link_args: [

@@ -36,7 +36,8 @@ foreach target_type : ['shared_library', 'static_library']
 
         c_args: [
             cflags_pal_common,
-            '-fno-builtin',
+            cflags_custom_stack_protector,
+            cflags_sanitizers,
             '-DHOST_TYPE=Skeleton',
 
             # in Skeleton, every single parameter is unused
