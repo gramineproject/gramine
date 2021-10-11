@@ -208,8 +208,8 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     memcpy(&key_request.isv_svn, &g_pal_sec.enclave_info.isv_svn, sizeof(sgx_isv_svn_t));
     memcpy(&key_request.config_svn, &g_pal_sec.enclave_info.config_svn, sizeof(sgx_config_svn_t));
 
-    key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST_HI << 32 | SGX_FLAGS_MASK_CONST_LO;
-    key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST_HI << 32 | SGX_XFRM_MASK_CONST_LO;
+    key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST;
+    key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST;
     key_request.misc_mask            = SGX_MISCSELECT_MASK_CONST;
 
     int ret = sgx_getkey(&key_request, out_seal_key);

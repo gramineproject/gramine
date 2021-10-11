@@ -77,12 +77,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  *   - CET and KSS bits are not yet reflected in Gramine, i.e., Gramine doesn't support Intel CET
  *     technology and Key Separation and Sharing feature.
  */
-/* FIXME: This FLAGS mask should be represented as one 64-bit constant (instead of the current two
- *        32-bit constants), but our constant-generation build scripts use assembly macros (see
- *        `generated-offsets-build.h`) that represent 64-bit constants as negative integers. Same
- *        issue applies to the XFRM mask below. */
-#define SGX_FLAGS_MASK_CONST_HI 0xffffffffUL
-#define SGX_FLAGS_MASK_CONST_LO 0xffffffffUL
+#define SGX_FLAGS_MASK_CONST 0xffffffffffffffffUL
 
 /* Note that XFRM follows XCR0 register format. Also note that XFRM bits 0 (x87 support) and 1 (SSE
  * support) must be always set in Intel SGX (otherwise EINIT instruction fails). This is why these
@@ -114,8 +109,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
  *     machine with PKRU.
  *   - CET bits are not yet reflected in Gramine, i.e., Gramine doesn't support Intel CET.
   */
-#define SGX_XFRM_MASK_CONST_HI 0xffffffffUL
-#define SGX_XFRM_MASK_CONST_LO 0xffffff1bUL
+#define SGX_XFRM_MASK_CONST 0xffffffffffffff1bUL
 
 #define SGX_MISCSELECT_EXINFO 0x01UL
 
