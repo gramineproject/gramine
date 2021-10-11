@@ -8,8 +8,8 @@
  * Python.
  *
  * To use, create a C file with `generated_offsets` array (ending with `OFFSET_END`) and
- * `generated_offsets_name` string. Then, compile an executable out of this file and
- * `generated-offsets-print.c`.
+ * `generated_offsets_name` string. Then, build an executable from `generated-offsets-print.c` and
+ * your C file.
  *
  * TODO: The name "offsets" is not accurate anymore, we also use this setup for other values (such
  * as sizes or masks). Consider changing it.
@@ -18,11 +18,11 @@
 #ifndef GENERATED_OFFSETS_BUILD_H
 #define GENERATED_OFFSETS_BUILD_H
 
-#include <stddef.h>
+#include <stdint.h>
 
 struct generated_offset {
     const char* name;
-    size_t value;
+    uint64_t value;
 };
 
 extern const struct generated_offset generated_offsets[];

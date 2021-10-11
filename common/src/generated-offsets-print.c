@@ -3,6 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -26,7 +27,7 @@ static void print_offsets_h(void) {
 
     const struct generated_offset* gen;
     for (gen = &generated_offsets[0]; gen->name; gen++) {
-        printf("#define %s 0x%zx\n", gen->name, gen->value);
+        printf("#define %s 0x%" PRIx64 "\n", gen->name, gen->value);
     }
 
     printf("\n");
@@ -39,7 +40,7 @@ static void print_offsets_py(void) {
 
     const struct generated_offset* gen;
     for (gen = &generated_offsets[0]; gen->name; gen++) {
-        printf("%s = 0x%zx\n", gen->name, gen->value);
+        printf("%s = 0x%" PRIx64 "\n", gen->name, gen->value);
     }
 }
 
