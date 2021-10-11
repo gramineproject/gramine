@@ -1,42 +1,21 @@
-# don't put this in include_directories for now, we need this for assembly-only custom_target
 includes_libos = [
-    '.',
-    'arch/@0@'.format(host_machine.cpu_family()),
-    '../../../common/include',
-    '../../../common/include/arch/@0@'.format(host_machine.cpu_family()),
-    '../../../Pal/include',
-    '../../../Pal/include/arch/@0@'.format(host_machine.cpu_family()),
-    '../../../Pal/include/arch/@0@/Linux'.format(host_machine.cpu_family()),
-    '../../../Pal/include/elf',
-    '../../../Pal/include/pal',
+    include_directories(
+        '.',
+        'arch/@0@'.format(host_machine.cpu_family()),
+    ),
+    includes_pal_for_libos,
+    common_inc,
 ]
 
-includes_libos_i = []
-foreach inc : includes_libos
-    includes_libos_i += '-I@0@'.format(join_paths(meson.current_source_dir(), inc))
-endforeach
-
-includes_libos_i += '-I@0@'.format(tomlc99_incpath)
-
-includes_libos = [include_directories(includes_libos), tomlc99_inc]
-
-libos_generated_offsets_s = custom_target('generated-offsets.s',
-    command: [
-        cc.cmd_array(),
-        cflags_libos, includes_libos_i, '-S',
-        '-MD', '-MP', '-MF', '@DEPFILE@',
-        '@INPUT@',
-        '-o', '@OUTPUT@'
-    ],
-    output: 'generated-offsets.s',
-    input: 'generated-offsets.c',
-    depfile: 'generated-offsets.s.d',
-
-    depends: tomlc99_src,
+libos_generated_offsets_print = executable('libos-generated-offsets-print',
+    'generated-offsets.c',
+    generated_offsets_print_src,
+    include_directories: includes_libos,
+    c_args: cflags_libos,
 )
 
-libos_asm_offsets_h = custom_target('asm-offsets.h',
-    command: [gen_offsets_prog, '--output-h', '@OUTPUT@', '@INPUT@'],
-    input: libos_generated_offsets_s,
+libos_asm_offsets_h = custom_target('asm-offsets.h[libos]',
+    command: [libos_generated_offsets_print, '--h'],
+    capture: true,
     output: 'asm-offsets.h',
 )

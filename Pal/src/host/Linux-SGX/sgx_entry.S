@@ -1,4 +1,3 @@
-#include "pal_linux_defs.h"
 #include "sgx_arch.h"
 
 #include "asm-offsets.h"

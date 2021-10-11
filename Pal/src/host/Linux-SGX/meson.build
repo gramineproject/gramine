@@ -22,58 +22,22 @@ cflags_pal_sgx = [
     '-Wno-gnu-alignof-expression',
 ]
 
-# HACK: We explicitly define include directories in `-I...` format, for use in the the custom target
-# below. Unfortunately, `sgx_inc` is a nested list of opaque IncludeDirs objects, so it's not
-# possible to generate this list from `sgx_inc`.
-sgx_inc_i = [
-    '-I@0@'.format(meson.current_source_dir()),
-    '-I@0@'.format(meson.current_build_dir()),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              'protected-files')),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../common/include')),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../common/include/arch', host_machine.cpu_family())),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../Pal/include')),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../Pal/include/pal')),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../Pal/include/arch', host_machine.cpu_family())),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../Pal/include/arch', host_machine.cpu_family(), 'Linux')),
-    '-I@0@'.format(join_paths(meson.current_source_dir(),
-                              '../../../../Pal/include/host/Linux-common')),
-    '-I@0@'.format(tomlc99_incpath),
-]
-
-pal_sgx_generated_offsets_s = custom_target('generated-offsets-pal-sgx.s',
-    command: [
-        cc.cmd_array(),
-        cflags_pal_sgx,
-        sgx_inc_i,
-        '-S',
-        '-MD', '-MP', '-MF', '@DEPFILE@',
-        '@INPUT@',
-        '-o', '@OUTPUT@'
-    ],
-    output: 'generated-offsets-pal-sgx.s',
-    input: 'generated-offsets.c',
-    depfile: 'generated_offsets.c.d',
-
-    depends: tomlc99_src,
+pal_sgx_generated_offsets_print = executable('pal-sgx-generated-offsets-print',
+    'generated-offsets.c',
+    generated_offsets_print_src,
+    include_directories: sgx_inc,
+    c_args: cflags_pal_sgx,
 )
 
-# TODO: after meson 0.54 those two targets can be combined, and the second one might be passed to
-# installs in python/ directory
-pal_sgx_asm_offsets = custom_target('asm-offsets.h[pal-sgx]',
-    command: [gen_offsets_prog, '--output-h', '@OUTPUT@', '@INPUT@'],
-    input: pal_sgx_generated_offsets_s,
+pal_sgx_asm_offsets_h = custom_target('asm-offsets.h[pal-sgx]',
+    command: [pal_sgx_generated_offsets_print, '--h'],
+    capture: true,
     output: 'asm-offsets.h',
 )
+
 pal_sgx_offsets_py = custom_target('_offsets.py',
-    command: [gen_offsets_prog, '--output-py', '@OUTPUT@', '@INPUT@'],
-    input: pal_sgx_generated_offsets_s,
+    command: [pal_sgx_generated_offsets_print, '--py'],
+    capture: true,
     output: '_offsets.py',
 
     install: true,
@@ -115,7 +79,7 @@ libpal_sgx = shared_library('pal',
     'enclave_xstate.c',
     'protected-files/lru_cache.c',
     'protected-files/protected_files.c',
-    pal_sgx_asm_offsets,
+    pal_sgx_asm_offsets_h,
     pal_common_sources,
     pal_linux_common_sources_enclave,
     gsgx_h,
@@ -170,7 +134,7 @@ executable('loader',
     'sgx_syscall.c',
     'sgx_thread.c',
     pal_linux_common_sources_urts,
-    pal_sgx_asm_offsets,
+    pal_sgx_asm_offsets_h,
     aesm_proto_ch,
     gsgx_h,
 
