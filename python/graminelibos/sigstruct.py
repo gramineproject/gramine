@@ -47,8 +47,8 @@ class Sigstruct:
         'header2': b'\x01\x01\x00\x00`\x00\x00\x00`\x00\x00\x00\x01\x00\x00\x00',
         'hw_version': 0,
         'misc_mask': offs.SGX_MISCSELECT_MASK_CONST,
-        'attribute_flags_mask': offs.SGX_FLAGS_MASK_CONST_LO + (offs.SGX_FLAGS_MASK_CONST_HI << 32),
-        'attribute_xfrm_mask': offs.SGX_XFRM_MASK_CONST_LO + (offs.SGX_XFRM_MASK_CONST_HI << 32),
+        'attribute_flags_mask': offs.SGX_FLAGS_MASK_CONST,
+        'attribute_xfrm_mask': offs.SGX_XFRM_MASK_CONST,
     }
 
 
