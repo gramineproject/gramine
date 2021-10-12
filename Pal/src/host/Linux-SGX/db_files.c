@@ -78,15 +78,15 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int 
     struct trusted_file* tf   = get_trusted_or_allowed_file(hdl->file.realpath);
 
     if (!pf && !tf && get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
-        log_error("Disallowing access to file '%s'; file is not protected, trusted or allowed.",
-                  hdl->file.realpath);
+        log_warning("Disallowing access to file '%s'; file is not protected, trusted or allowed.",
+                    hdl->file.realpath);
         ret = -PAL_ERROR_DENIED;
         goto fail;
     }
 
     if (!pf && !tf) {
-        log_always("Allowing access to unknown file '%s' due to file_check_policy settings.",
-                   hdl->file.realpath);
+        log_warning("Allowing access to unknown file '%s' due to file_check_policy settings.",
+                    hdl->file.realpath);
 
         fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {

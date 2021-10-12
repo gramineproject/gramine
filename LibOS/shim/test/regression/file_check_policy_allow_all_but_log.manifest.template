@@ -2,6 +2,8 @@ loader.preload = "file:{{ gramine.libos }}"
 libos.entrypoint = "file_check_policy"
 loader.argv0_override = "file_check_policy"
 
+loader.log_level = "warning"
+
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.insecure__use_cmdline_argv = true
 
