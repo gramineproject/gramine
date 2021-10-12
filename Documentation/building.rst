@@ -236,6 +236,17 @@ Additional build options
   This very much depends on particular distribution, so please consult relevant
   documentation provided by your distro.
 
+- To compile a patched version of GCC's OpenMP library (``libgomp``), use
+  :command:`meson -Dlibgomp=enabled`.
+
+  The patched version has significantly better performance under SGX
+  (``libgomp`` uses inline ``SYSCALL`` instructions for futex calls; our patch
+  replaces them with a jump to Gramine LibOS, same as for ``glibc``).
+
+  Building the patched ``libgomp`` library is disabled by default because it can
+  take a long time: unfortunately, the only supported way of building
+  ``libgomp`` is as part of a complete GCC build.
+
 .. _FSGSBASE:
 
 Advanced: installing Linux kernel with FSGSBASE patches
