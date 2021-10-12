@@ -32,6 +32,8 @@ dcap = get_option('dcap') == 'enabled'
 ubsan = get_option('ubsan') == 'enabled'
 asan = get_option('asan') == 'enabled'
 
+enable_libgomp = get_option('libgomp') == 'enabled'
+
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
 protoc_c_prog = find_program('protoc-c')
@@ -252,5 +254,9 @@ subdir('python')
 subdir('tools')
 
 subproject('glibc-2.34')
+
+if enable_libgomp
+    subproject('gcc-10.2.0')
+endif
 
 run_target('clang-format', command: [meson_clang_format_prog])

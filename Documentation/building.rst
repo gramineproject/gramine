@@ -31,6 +31,8 @@ contact us with a |~| detailed `bug report
 Installing dependencies
 -----------------------
 
+.. _common-dependencies:
+
 Common dependencies
 ^^^^^^^^^^^^^^^^^^^
 
@@ -52,6 +54,11 @@ your distro is new enough to have Meson >= 0.55 and python3-toml >= 0.10 (Debian
 For GDB support and to run all tests locally you also need to install::
 
     sudo apt-get install -y libunwind8 python3-pyelftools python3-pytest
+
+If you want to build the patched ``libgomp`` library, you also need to install
+GCC's build dependencies::
+
+    sudo apt-get install -y libgmp-dev libmpfr-dev libmpc-dev libisl-dev
 
 Dependencies for SGX
 ^^^^^^^^^^^^^^^^^^^^
@@ -235,6 +242,18 @@ Additional build options
 
   This very much depends on particular distribution, so please consult relevant
   documentation provided by your distro.
+
+- To compile a patched version of GCC's OpenMP library (``libgomp``), install
+  GCC's build prerequisites (see :ref:`common-dependencies`), and use
+  :command:`meson -Dlibgomp=enabled`.
+
+  The patched version has significantly better performance under SGX
+  (``libgomp`` uses inline ``SYSCALL`` instructions for futex calls; our patch
+  replaces them with a jump to Gramine LibOS, same as for ``glibc``).
+
+  Building the patched ``libgomp`` library is disabled by default because it can
+  take a long time: unfortunately, the only supported way of building
+  ``libgomp`` is as part of a complete GCC build.
 
 .. _FSGSBASE:
 
