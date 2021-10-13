@@ -3,13 +3,11 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
+#ifdef ASAN
+
 #include "api.h"
 #include "asan.h"
 #include "assert.h"
-
-#ifndef ASAN
-#error This code should be compiled only with ASAN defined.
-#endif
 
 /*
  * NOTE: we define all ASan callbacks (`__asan_*`) with the `noinline` attribute. This is what the
@@ -305,3 +303,5 @@ int memcmp(const void* lhs, const void* rhs, size_t count) {
     ASAN_LOAD((uintptr_t)rhs, count);
     return _real_memcmp(lhs, rhs, count);
 }
+
+#endif /* ASAN */

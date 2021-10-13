@@ -1,3 +1,5 @@
+GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+
 copy_mmap_execs = \
 	copy_mmap_rev \
 	copy_mmap_seq \
@@ -40,19 +42,8 @@ include ../../../../Scripts/Makefile.Test
 
 ifeq ($(findstring x86_64,$(SYS))$(findstring linux,$(SYS)),x86_64linux)
 
-$(execs): common.o
-
-$(copy_execs): common_copy.o
-$(copy_mmap_execs): common_copy_mmap.o
-
-multiple_writers: LDLIBS += -lpthread
-
-common_copy_mmap.o: CFLAGS += -DCOPY_MMAP
-common_copy_mmap.o: common_copy.c
-	$(call cmd,cc_o_c)
-
-%.o: %.c
-	$(call cmd,cc_o_c)
+$(exec_target): %: $(GRAMINE_PKGLIBDIR)/tests/libos/fs/%
+	$(call cmd,link)
 
 else
 .IGNORE: $(execs)
