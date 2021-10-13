@@ -5,7 +5,7 @@ elif direct
 elif sgx
     libpal = libpal_sgx_dep
 else
-    error('need to link libsysdb against any PAL')
+    error('need to link LibOS against a PAL library, but no PAL version is enabled')
 endif
 
 libos_sources = files(

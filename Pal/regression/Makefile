@@ -1,17 +1,10 @@
 include ../../Scripts/Makefile.configs
 include ../../Scripts/Makefile.rules
 
-CFLAGS	+= -fno-stack-protector -fno-builtin -nostdlib \
-	  -I. \
-	  -I../../common/include \
-	  -I../../common/include/arch/$(ARCH) \
-	  -I../include \
-	  -I../include/pal \
-	  -I../include/arch/$(ARCH) \
-	  -I../include/arch/$(ARCH)/$(PAL_HOST)
+# Disable implicit rules so that Make doesn't try to compile the binaries
+.SUFFIXES:
 
-# TODO: Many files define `main` with parameters, but do not use them.
-CFLAGS += -Wno-unused-parameter
+GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
 
 preloads = \
 	Preload1.so \
@@ -23,9 +16,12 @@ executables-x86_64 = \
     Segment \
     Thread
 
+ifeq ($(SGX),1)
+	executables-x86_64 += AttestationReport
+endif
+
 executables = \
 	..Bootstrap \
-	AttestationReport \
 	avl_tree_test \
 	Bootstrap \
 	Bootstrap3 \
@@ -72,34 +68,10 @@ all_manifests = $(repo_manifests) $(gen_manifests)
 
 target = \
 	$(executables) \
+	$(preloads) \
 	$(all_manifests)
 
 include ../../Scripts/manifest.mk
-
-# HACK: Compile the parts of `common` used by the test programs. The other components using `common`
-# are already doing so through Meson.
-
-common_src = ../../common/src
-common_objs = avl_tree.o path.o printf.o atoi.o memcmp.o memcpy.o memset.o strchr.o strcmp.o \
-    strlen.o
-
-$(common_objs): CFLAGS += -fPIC
-
-avl_tree.o path.o: %.o: $(common_src)/%.c
-	$(call cmd,cc_o_c)
-
-printf.o: %.o: $(common_src)/%.c
-	$(call cmd,cc_o_c)
-
-atoi.o memcmp.o memcpy.o memset.o strchr.o strcmp.o strlen.o : %.o: $(common_src)/string/%.c
-	$(call cmd,cc_o_c)
-
-ifneq ($(SGX),)
-gramine = sgx
-else
-gramine = direct
-endif
-pal_lib ?= $(shell gramine-manifest -c 'EXTRACT = "{{ gramine.pkglibdir }}"' | grep -F EXTRACT | sed -e "s/EXTRACT = \"\(.*\)\"/\1/")/$(gramine)/libpal.so
 
 .PHONY: all
 all: $(target) $(call expand_target_to_sig,$(target)) \
@@ -108,34 +80,8 @@ all: $(target) $(call expand_target_to_sig,$(target)) \
 .PHONY: sgx-tokens
 sgx-tokens: $(call expand_target_to_token,$(target))
 
-.PHONY: crt_init-recurse
-crt_init-recurse:
-	$(MAKE) -C crt_init all
-
-crt_init/user_shared_start.o crt_init/user_start.o: crt_init-recurse
-	@true
-
-CFLAGS-Pie = -fPIC -pie
-CFLAGS-AttestationReport = -I../src/host/Linux-SGX
-
-utils.o: CFLAGS += -fPIC
-
-# workaround: File.manifest.template has strange reference
-# to ../regression/File
-../regression/File: | File
-	@true
-
-LDLIBS-preloads = crt_init/user_shared_start.o utils.o $(common_objs) $(pal_lib)
-$(preloads): %.so: %.c $(LDLIBS-preloads)
-	$(call cmd,csingle) -shared -fPIC $(LDLIBS-preloads)
-
-LDLIBS-executables = crt_init/user_start.o utils.o $(common_objs) $(pal_lib) $(preloads)
-$(executables): %: %.c $(LDLIBS-executables)
-	$(call cmd,csingle) -no-pie $(LDLIBS-executables)
-
-ifeq ($(filter %clean,$(MAKECMDGOALS)),)
-include $(wildcard *.d)
-endif
+$(preloads) $(executables): %: $(GRAMINE_PKGLIBDIR)/tests/pal/%
+	$(call cmd,symlink)
 
 .PHONY: regression
 regression:
@@ -147,7 +93,6 @@ pal-regression.xml: test_pal.py $(target) $(call expand_target_to_sig,$(target))
 
 .PHONY: clean
 clean:
-	$(MAKE) -C crt_init $@
 	$(RM) -r \
 		$(executables) \
 		$(gen_manifests) \

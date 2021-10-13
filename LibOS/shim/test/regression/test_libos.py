@@ -975,24 +975,27 @@ class TC_50_GDB(RegressionTestCase):
         stdout, _ = self.run_gdb(['debug'], 'debug.gdb')
 
         backtrace_1 = self.find('backtrace 1', stdout)
-        self.assertIn(' main () at debug.c', backtrace_1)
+        self.assertIn(f' main ()', backtrace_1)
         self.assertIn(' _start ()', backtrace_1)
+        self.assertIn('debug.c', backtrace_1)
         self.assertNotIn('??', backtrace_1)
 
         backtrace_2 = self.find('backtrace 2', stdout)
         self.assertIn(' dev_write (', backtrace_2)
-        self.assertIn(' func () at debug.c', backtrace_2)
-        self.assertIn(' main () at debug.c', backtrace_2)
+        self.assertIn(' func ()', backtrace_2)
+        self.assertIn(' main ()', backtrace_2)
         self.assertIn(' _start ()', backtrace_2)
+        self.assertIn('debug.c', backtrace_2)
         self.assertNotIn('??', backtrace_2)
 
         if HAS_SGX:
             backtrace_3 = self.find('backtrace 3', stdout)
             self.assertIn(' sgx_ocall_write (', backtrace_3)
             self.assertIn(' dev_write (', backtrace_3)
-            self.assertIn(' func () at debug.c', backtrace_3)
-            self.assertIn(' main () at debug.c', backtrace_3)
+            self.assertIn(' func ()', backtrace_3)
+            self.assertIn(' main ()', backtrace_3)
             self.assertIn(' _start ()', backtrace_3)
+            self.assertIn('debug.c', backtrace_3)
             self.assertNotIn('??', backtrace_3)
 
     @unittest.skipUnless(ON_X86, 'x86-specific')

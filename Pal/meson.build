@@ -1,6 +1,10 @@
 subdir('include')
 subdir('src')
 
+if enable_tests
+    subdir('regression')
+endif
+
 if debug
     install_data(
         'gdb_integration/gramine.gdb',

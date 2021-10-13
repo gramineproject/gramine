@@ -1,5 +1,10 @@
 include ../../../../Scripts/Makefile.configs
 
+# Disable implicit rules so that Make doesn't try to compile the binaries
+.SUFFIXES:
+
+GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+
 c_executables-x86_64 = \
 	cpuid \
 	debug_regs-x86_64 \
@@ -125,6 +130,9 @@ exec_target = \
 	$(c_executables) \
 	$(cxx_executables-$(ARCH))
 
+$(exec_target): %: $(GRAMINE_PKGLIBDIR)/tests/libos/regression/%
+	$(call cmd,symlink)
+
 target = \
 	$(exec_target) \
 	$(all_manifests)
@@ -137,67 +145,6 @@ extra_rules = \
 
 include ../../../../Scripts/manifest.mk
 include ../../../../Scripts/Makefile.Test
-
-# TODO: Many files define `main` with parameters, but do not use them.
-CFLAGS += -Wno-unused-parameter
-
-CFLAGS-abort_multithread = -pthread
-CFLAGS-bootstrap_pie = -fPIC -pie
-CFLAGS-bootstrap_static = -static
-CFLAGS-debug = -g3
-CFLAGS-debug_regs-x86_64 = -g3
-CFLAGS-eventfd = -pthread
-CFLAGS-exec_same = -pthread
-CFLAGS-exit_group = -pthread
-CFLAGS-futex_bitset = -pthread
-CFLAGS-futex_requeue = -pthread
-CFLAGS-futex_wake_op = -pthread
-CFLAGS-gettimeofday += -pthread
-CFLAGS-multi_pthread = -pthread
-CFLAGS-proc_common = -pthread
-CFLAGS-pthread_set_get_affinity += -pthread
-CFLAGS-run_test += -iquote ../../include -iquote ../../include/arch/$(ARCH)
-CFLAGS-shared_object = -fPIC -pie
-CFLAGS-sigaction_per_process += -pthread
-CFLAGS-signal_multithread += -pthread
-CFLAGS-spinlock += -iquote ../../../../common/include -iquote ../../../../common/include/arch/$(ARCH) -pthread
-
-CFLAGS-attestation += -iquote $(PALDIR)/host/Linux-SGX
-LDLIBS-attestation += $(shell pkg-config --libs mbedtls_gramine)
-
-CFLAGS-fp_multithread += -pthread -fno-builtin  # see comment in the test's source
-LDLIBS-fp_multithread += -lm
-
-ifeq ($(findstring clang,$(CC)),clang)
-CFLAGS-openmp = -fopenmp=libgomp
-else
-CFLAGS-openmp = -fopenmp
-endif
-
-attestation: attestation.c rw_file.c
-	$(call cmd,cmulti)
-
-file_size: file_size.c rw_file.c
-	$(call cmd,cmulti)
-
-proc_common: proc_common.c dump.c
-	$(call cmd,cmulti)
-
-sealed_file: sealed_file.c rw_file.c
-	$(call cmd,cmulti)
-
-CFLAGS-sealed_file_mod += -DMODIFY_MRENCLAVE  # see comment in the test's source
-sealed_file_mod: sealed_file.c rw_file.c
-	$(call cmd,cmulti)
-
-sysfs_common: sysfs_common.c dump.c
-	$(call cmd,cmulti)
-
-%: %.c
-	$(call cmd,csingle)
-
-%: %.cpp
-	$(call cmd,cxxsingle)
 
 .PHONY: regression
 regression: $(target)
