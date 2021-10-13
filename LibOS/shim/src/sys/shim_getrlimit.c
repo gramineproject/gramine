@@ -2,10 +2,11 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 /*
- * Implementation of system calls "getrlimit" and "setrlimit".
+ * Implementation of system calls "getrlimit", "setrlimit" and "sysinfo".
  */
 
 #include <asm/resource.h>
+#include <linux/sysinfo.h>
 
 #include "shim_checkpoint.h"
 #include "shim_internal.h"
@@ -159,4 +160,19 @@ long shim_do_prlimit64(pid_t pid, int resource, const struct __kernel_rlimit64* 
 out:
     unlock(&rlimit_lock);
     return ret;
+}
+
+/* minimal implementation; tested apps only care about total/free RAM */
+long shim_do_sysinfo(struct sysinfo* info) {
+    if (!is_user_memory_writable(info, sizeof(*info)))
+        return -EFAULT;
+
+    memset(info, 0, sizeof(*info));
+    info->totalram  = g_pal_control->mem_info.mem_total;
+    info->totalhigh = g_pal_control->mem_info.mem_total;
+    info->freeram   = DkMemoryAvailableQuota();
+    info->freehigh  = DkMemoryAvailableQuota();
+    info->mem_unit  = 1;
+    info->procs     = 1; /* report only this Gramine process */
+    return 0;
 }

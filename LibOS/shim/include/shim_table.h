@@ -195,6 +195,7 @@ long shim_do_eventfd2(unsigned int count, int flags);
 long shim_do_eventfd(unsigned int count);
 long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused);
 long shim_do_getrandom(char* buf, size_t count, unsigned int flags);
+long shim_do_sysinfo(struct sysinfo* info);
 
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM   0x0002
