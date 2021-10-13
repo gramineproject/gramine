@@ -33,6 +33,7 @@ ubsan = get_option('ubsan') == 'enabled'
 asan = get_option('asan') == 'enabled'
 
 enable_libgomp = get_option('libgomp') == 'enabled'
+enable_tests = get_option('tests') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')

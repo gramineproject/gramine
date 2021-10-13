@@ -171,6 +171,16 @@ called by Jenkins.
 
 We also have (and are actively growing) PAL and shim unit tests.
 
+In order to run tests, Gramine must be installed. The test binaries, which are
+also built by Meson, must be installed as well. To do that, configure your build
+directory with ``-Dtests=enabled`` and install Gramine::
+
+   # add -Dsgx=enabled and SGX options if necessary
+   meson setup build/ -Dtests=enabled -Ddirect=enabled
+
+   ninja -C build/
+   sudo ninja -C build/ install
+
 To run the PAL tests::
 
    cd Pal/regression
