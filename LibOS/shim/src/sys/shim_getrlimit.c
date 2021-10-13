@@ -6,7 +6,7 @@
  */
 
 #include <asm/resource.h>
-#include <sys/sysinfo.h>
+#include <linux/sysinfo.h>
 
 #include "shim_checkpoint.h"
 #include "shim_internal.h"
