@@ -15,6 +15,7 @@ stage('build') {
                 -Dskeleton=enabled \
                 -Ddirect=enabled \
                 -Dsgx=disabled \
+                -Dtests=enabled \
                 $MESON_OPTIONS
             ninja -vC build/
             ninja -vC build/ install

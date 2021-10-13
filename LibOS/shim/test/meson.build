@@ -1,0 +1,2 @@
+subdir('regression')
+subdir('fs')

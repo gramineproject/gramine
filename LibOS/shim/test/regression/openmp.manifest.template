@@ -6,24 +6,20 @@ loader.argv0_override = "openmp"
 # (execute `make -C LibOS gcc` to generate it). This library will replace the native one because
 # Gramine's Runtime path has priority in LD_LIBRARY_PATH.
 
-loader.env.LD_LIBRARY_PATH = "/lib:/usrlib"
+loader.env.LD_LIBRARY_PATH = "/lib:/usr/{{ arch_libdir }}"
 
 # the manifest options below are added only for testing, they have no significance for OpenMP
 libos.check_invalid_pointers = false
 sys.enable_sigterm_injection = true
 sgx.preheat_enclave = true
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount.gramine_lib.type = "chroot"
+fs.mount.gramine_lib.path = "/lib"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
-fs.mount.bin.type = "chroot"
-fs.mount.bin.path = "/bin"
-fs.mount.bin.uri = "file:/bin"
-
-fs.mount.usrlib.type = "chroot"
-fs.mount.usrlib.path = "/usrlib"
-fs.mount.usrlib.uri = "file:/usr/{{ arch_libdir }}"
+fs.mount.host_usr_lib.type = "chroot"
+fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
+fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
 
 sgx.thread_num = 32
 sgx.nonpie_binary = true
@@ -32,5 +28,10 @@ sgx.debug = true
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:openmp",
-  "file:/usr{{ arch_libdir }}/libgomp.so.1",
+
+  # for clang
+  "file:/usr/{{ arch_libdir }}/libomp.so.5",
+
+  # for gcc
+  "file:/usr/{{ arch_libdir }}/libgomp.so.1",
 ]

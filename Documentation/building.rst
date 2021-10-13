@@ -184,6 +184,10 @@ omitted, Gramine's build system will try to determine the right path.
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- To build test binaries, run :command:`meson -Dtests=enabled`. This is
+  necessary if you will be running regression tests. See
+  :doc:`devel/contributing` for details.
+
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,
   and enables detailed debug logs in Gramine.
