@@ -7,6 +7,7 @@
 
 int main(int argc, char** argv) {
     int ret;
+    size_t n;
     FILE* f;
     DIR* dir;
     struct dirent* dirent;
@@ -67,8 +68,8 @@ int main(int argc, char** argv) {
     }
 
     memset(buf, 0, sizeof(buf));
-    ret = fread(buf, 1, sizeof(buf), f);
-    if (ferror(f)) {
+    n = fread(buf, 1, sizeof(buf), f);
+    if (n < sizeof(buf) || ferror(f)) {
         perror("fread /dev/urandom");
         return 1;
     }
@@ -97,8 +98,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    ret = fwrite(buf, 1, sizeof(buf), f);
-    if (ret < sizeof(buf)) {
+    n = fwrite(buf, 1, sizeof(buf), f);
+    if (n < sizeof(buf)) {
         perror("fwrite /dev/null");
         return 1;
     }
@@ -121,8 +122,8 @@ int main(int argc, char** argv) {
 
     sprintf(buf, "%s\n", "Hello World written to stdout!");
     size_t towrite = strlen(buf) + 1;
-    ret = fwrite(buf, 1, towrite, f);
-    if (ret < towrite) {
+    n = fwrite(buf, 1, towrite, f);
+    if (n < towrite) {
         perror("fwrite /dev/stdout");
         return 1;
     }

@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     }
 
     /* write something into write end of pipe so read end becomes pollable */
-    ssize_t written = 0;
+    size_t written = 0;
     while (written < sizeof(string)) {
         ssize_t n;
         if ((n = write(pipefd[1], string + written, sizeof(string) - written)) < 0) {

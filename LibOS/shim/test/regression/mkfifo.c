@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
         }
 
         buffer[sizeof(buffer) - 1] = '\0';
-        if (bytes < sizeof(buffer))
+        if ((size_t)bytes < sizeof(buffer))
             buffer[bytes] = '\0';
 
         if (close(fd) < 0) {

@@ -146,7 +146,7 @@ static int eventfd_using_various_flags(void) {
     ssize_t bytes       = 0;
     int eventfd_flags[] = {0, EFD_SEMAPHORE, EFD_NONBLOCK, EFD_CLOEXEC};
 
-    for (int i = 0; i < sizeof(eventfd_flags) / sizeof(int); i++) {
+    for (unsigned int i = 0; i < sizeof(eventfd_flags) / sizeof(int); i++) {
         printf("iteration #-%d, flags=%d\n", i, eventfd_flags[i]);
 
         efd = eventfd(0, eventfd_flags[i]);

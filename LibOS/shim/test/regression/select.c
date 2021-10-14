@@ -33,7 +33,8 @@ int main(void) {
     printf("select() on write event returned %d file descriptors\n", ret);
 
     size_t size = strlen(string) + 1;
-    if (write(fd[1], string, size) != size) {
+    ssize_t write_ret = write(fd[1], string, size);
+    if (write_ret < 0 || (size_t)write_ret != size) {
         perror("write error");
         return 1;
     }

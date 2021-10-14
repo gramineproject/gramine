@@ -34,7 +34,7 @@ static int do_getdents(const char* name, int fd, size_t buf_size) {
         perror(name);
         return -1;
     }
-    for (size_t offs = 0; offs < count;) {
+    for (size_t offs = 0; offs < (size_t)count;) {
         struct linux_dirent* d32 = (struct linux_dirent*)(buf + offs);
         char d_type = *(buf + offs + d32->d_reclen - 1);
         printf("%s: %s [0x%x]\n", name, d32->d_name, d_type);
@@ -52,7 +52,7 @@ static int do_getdents64(const char* name, int fd, size_t buf_size) {
         return -1;
     }
 
-    for (size_t offs = 0; offs < count;) {
+    for (size_t offs = 0; offs < (size_t)count;) {
         struct linux_dirent64* d64 = (struct linux_dirent64*)(buf + offs);
         printf("%s: %s [0x%x]\n", name, d64->d_name, d64->d_type);
         offs += d64->d_reclen;

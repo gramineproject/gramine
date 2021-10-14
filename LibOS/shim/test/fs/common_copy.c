@@ -7,13 +7,15 @@
 #endif
 
 static void copy_file(const char* input_path, const char* output_path, size_t size) {
+    assert(!OVERFLOWS(off_t, size));
+
     int fi = open_input_fd(input_path);
     printf("open(%zu) input OK\n", size);
 
     struct stat st;
     if (fstat(fi, &st) < 0)
         fatal_error("Failed to stat file %s: %s\n", input_path, strerror(errno));
-    if (st.st_size != size)
+    if (st.st_size != (off_t)size)
         fatal_error("Size mismatch: expected %zu, got %zu\n", size, st.st_size);
     printf("fstat(%zu) input OK\n", size);
 
@@ -30,7 +32,7 @@ static void copy_file(const char* input_path, const char* output_path, size_t si
 
     if (fstat(fo, &st) < 0)
         fatal_error("Failed to stat file %s: %s\n", output_path, strerror(errno));
-    if (st.st_size != size)
+    if (st.st_size != (off_t)size)
         fatal_error("Size mismatch: expected %zu, got %zu\n", size, st.st_size);
     printf("fstat(%zu) output 2 OK\n", size);
 

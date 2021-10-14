@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 static ssize_t posix_fd_rw(int fd, char* buf, size_t count, bool do_write) {
-    ssize_t transferred = 0;
+    size_t transferred = 0;
     while (transferred < count) {
         ssize_t ret = do_write ? write(fd, buf + transferred, count - transferred) :
                                  read(fd, buf + transferred, count - transferred);
@@ -40,7 +40,7 @@ static ssize_t posix_fd_rw(int fd, char* buf, size_t count, bool do_write) {
 }
 
 static ssize_t stdio_fd_rw(FILE* f, char* buf, size_t count, bool do_write) {
-    ssize_t transferred = 0;
+    size_t transferred = 0;
     while (transferred < count) {
         size_t ret = do_write ? fwrite(buf + transferred, 1, count - transferred, f) :
                                 fread(buf + transferred, 1, count - transferred, f);
