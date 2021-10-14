@@ -9,7 +9,7 @@
 
 static int rounding_modes[] = {FE_TONEAREST, FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO};
 
-static char* get_rounding_mode(int mode) {
+static const char* get_rounding_mode(int mode) {
     switch (mode) {
         case FE_TONEAREST:  return "FE_TONEAREST ";
         case FE_UPWARD:     return "FE_UPWARD    ";

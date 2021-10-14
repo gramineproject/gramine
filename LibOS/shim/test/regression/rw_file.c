@@ -131,8 +131,8 @@ ssize_t posix_file_read(const char* path, char* buf, size_t count) {
     return posix_file_rw(path, buf, count, /*do_write=*/false);
 }
 
-ssize_t posix_file_write(const char* path, char* buf, size_t count) {
-    return posix_file_rw(path, buf, count, /*do_write=*/true);
+ssize_t posix_file_write(const char* path, const char* buf, size_t count) {
+    return posix_file_rw(path, (char*)buf, count, /*do_write=*/true);
 }
 
 
@@ -140,22 +140,22 @@ ssize_t stdio_file_read(const char* path, char* buf, size_t count) {
     return stdio_file_rw(path, buf, count, /*do_write=*/false);
 }
 
-ssize_t stdio_file_write(const char* path, char* buf, size_t count) {
-    return stdio_file_rw(path, buf, count, /*do_write=*/true);
+ssize_t stdio_file_write(const char* path, const char* buf, size_t count) {
+    return stdio_file_rw(path, (char*)buf, count, /*do_write=*/true);
 }
 
 ssize_t posix_fd_read(int fd, char* buf, size_t count) {
     return posix_fd_rw(fd, buf, count, /*do_write=*/false);
 }
 
-ssize_t posix_fd_write(int fd, char* buf, size_t count) {
-    return posix_fd_rw(fd, buf, count, /*do_write=*/true);
+ssize_t posix_fd_write(int fd, const char* buf, size_t count) {
+    return posix_fd_rw(fd, (char*)buf, count, /*do_write=*/true);
 }
 
 ssize_t stdio_fd_read(FILE* f, char* buf, size_t count) {
     return stdio_fd_rw(f, buf, count, /*do_write=*/false);
 }
 
-ssize_t stdio_fd_write(FILE* f, char* buf, size_t count) {
-    return stdio_fd_rw(f, buf, count, /*do_write=*/true);
+ssize_t stdio_fd_write(FILE* f, const char* buf, size_t count) {
+    return stdio_fd_rw(f, (char*)buf, count, /*do_write=*/true);
 }

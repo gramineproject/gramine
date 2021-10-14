@@ -47,7 +47,7 @@ char user_report_data_str[] = "This is user-provided report data";
 enum { SUCCESS = 0, FAILURE = -1 };
 
 ssize_t (*file_read_f)(const char* path, char* buf, size_t bytes);
-ssize_t (*file_write_f)(const char* path, char* buf, size_t bytes);
+ssize_t (*file_write_f)(const char* path, const char* buf, size_t bytes);
 
 /*!
  * \brief Verify the signature on `report`.

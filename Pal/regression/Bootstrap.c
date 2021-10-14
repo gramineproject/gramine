@@ -16,8 +16,8 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Parent Process: %p\n", pal_control.parent_process);
 
     /* test debug stream */
-    char* msg = "Written to Debug Stream\n";
-    int ret = DkDebugLog(msg, strlen(msg));
+    const char* msg = "Written to Debug Stream\n";
+    int ret = DkDebugLog((char*)msg, strlen(msg));
     if (ret < 0) {
         pal_printf("Failed to write the debug message.\n");
         return 1;

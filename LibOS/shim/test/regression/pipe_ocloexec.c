@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     if (pid < 0) {
         err(1, "fork");
     } else if (pid == 0) {
-        char* arg[] = {argv[0], "xxx", NULL};
+        char* arg[] = {argv[0], (char*)"xxx", NULL};
         execv(argv[0], arg);
         err(1, "execve");
     }
