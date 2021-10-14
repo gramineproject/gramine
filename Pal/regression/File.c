@@ -9,7 +9,7 @@ char buffer1[BUF_SIZE];
 char buffer2[BUF_SIZE];
 char hex_buf[BUF_SIZE * 2 + 1];
 
-static void print_hex(char* fmt, const void* data, size_t size) {
+static void print_hex(const char* fmt, const void* data, size_t size) {
     hex_buf[size * 2] = '\0';
     for (size_t i = 0; i < size; i++) {
         unsigned char b = ((unsigned char*)data)[i];

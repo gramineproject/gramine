@@ -9,10 +9,10 @@ int main(int argc, const char** argv, const char** envp) {
     char* badptr       = (char*)-1;
 
     char* bad_argv[]  = {badptr, NULL};
-    char* good_argv[] = {"DUMMY", NULL};
+    char* good_argv[] = {(char*)"DUMMY", NULL};
 
     char* bad_envp[]  = {badptr, NULL};
-    char* good_envp[] = {"DUMMY", NULL};
+    char* good_envp[] = {(char*)"DUMMY", NULL};
 
     r = execve(badptr, good_argv, good_envp);
     if (r == -1 && errno == EFAULT)

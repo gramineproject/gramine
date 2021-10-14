@@ -19,7 +19,7 @@ int main(int argc, const char** argv, const char** envp) {
 
     char fd_argv[12];
     snprintf(fd_argv, 12, "%d", newfd);
-    char* const new_argv[] = {"./exec_victim", fd_argv, NULL};
+    char* const new_argv[] = {(char*)"./exec_victim", fd_argv, NULL};
 
     /* set environment variable to test that it is inherited by exec_victim */
     int ret = setenv("IN_EXECVE", "1", 1);

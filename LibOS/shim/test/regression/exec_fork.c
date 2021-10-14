@@ -54,7 +54,7 @@ int main(int argc, const char** argv, const char** envp) {
     fflush(stdout);
 
     /* SIGCHLD signal handler must *not* be inherited by execv'ed child */
-    char* const new_argv[] = {(char*)argv[0], "dummy", NULL};
+    char* const new_argv[] = {(char*)argv[0], (char*)"dummy", NULL};
     execv(new_argv[0], new_argv);
 
     perror("execv failed");

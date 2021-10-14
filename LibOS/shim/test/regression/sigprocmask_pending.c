@@ -141,7 +141,7 @@ static void test_execve_start(char* self) {
 
     CHECK(kill(getpid(), SIGALRM) < 0);
 
-    char* argv[] = {self, "cont", NULL};
+    char* argv[] = {self, (char*)"cont", NULL};
     CHECK(execve(self, argv, NULL));
 }
 

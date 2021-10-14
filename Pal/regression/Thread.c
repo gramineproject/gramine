@@ -44,7 +44,7 @@ int main() {
     pal_printf("Private Message (FS Segment) 1: %s\n", ptr1);
 
     PAL_HANDLE thread1 = NULL;
-    int ret = DkThreadCreate(callback, "Hello World", &thread1);
+    int ret = DkThreadCreate(callback, (char*)"Hello World", &thread1);
     if (ret < 0)
         return 1;
 

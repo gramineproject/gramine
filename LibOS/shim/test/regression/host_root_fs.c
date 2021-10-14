@@ -1,7 +1,7 @@
 #include <dirent.h>
 #include <stdio.h>
 
-static int showdir(char* path) {
+static int showdir(const char* path) {
     struct dirent* de;
 
     DIR* dir = opendir(path);
