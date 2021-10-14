@@ -3,7 +3,7 @@
 set -e
 
 log() {
-    echo "gcc (libgomp): $1"
+    echo "gcc (libgomp): $*"
 }
 
 CPU_FAMILY="$1"
@@ -42,12 +42,6 @@ cp "$CURRENT_SOURCE_DIR/../../LibOS/shim/include/arch/$CPU_FAMILY/shim_entry_api
 
 BUILDDIR="$PRIVATE_DIR"/build
 mkdir -p "$BUILDDIR"
-
-log "running download_prerequisites..."
-(
-    cd "$PRIVATE_DIR"
-    ./contrib/download_prerequisites >>"$BUILD_LOG" 2>&1
-)
 
 (
     cd "$BUILDDIR"
