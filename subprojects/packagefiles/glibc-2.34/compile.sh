@@ -1,6 +1,10 @@
 #!/bin/sh
 
-set -xe
+set -e
+
+log() {
+    echo "glibc: $*"
+}
 
 CPU_FAMILY="$1"
 CURRENT_SOURCE_DIR="$2"
@@ -21,12 +25,19 @@ CPPFLAGS="\
 "
 export CC CXX AS CFLAGS CPPFLAGS
 
+BUILD_LOG=$(realpath "$CURRENT_BUILD_DIR/glibc-build.log")
+rm -f "$BUILD_LOG"
+
+log "see $BUILD_LOG for full build log"
+
+log "preparing sources..."
+
 rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
 for patch in "$CURRENT_SOURCE_DIR"/*.patch
 do
-    patch -p1 --directory "$PRIVATE_DIR" <"$patch"
+    patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
 done
 
 BUILDDIR="$PRIVATE_DIR"/build
@@ -36,6 +47,7 @@ mkdir -p "$BUILDDIR"
 (
     cd "$BUILDDIR"
 
+    log "running configure..."
     ../configure \
         --prefix="$PREFIX" \
         --libdir="$PREFIX"/"$LIBDIR"/gramine/runtime/glibc \
@@ -44,12 +56,16 @@ mkdir -p "$BUILDDIR"
         --without-selinux \
         --disable-sanity-checks \
         --disable-test \
-        --disable-nscd
+        --disable-nscd \
+        >>"$BUILD_LOG" 2>&1
 
-    make -j"$(nproc)"
+    log "running make..."
+    make -j"$(nproc)" >>"$BUILD_LOG" 2>&1
 )
 
 for output in "$@"
 do
     cp -aP "$BUILDDIR/$output" "$CURRENT_BUILD_DIR"/
 done
+
+log "done"
