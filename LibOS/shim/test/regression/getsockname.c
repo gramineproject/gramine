@@ -9,7 +9,7 @@
 
 #define PORT 1088
 
-int main() {
+int main(void) {
     struct sockaddr_in bind_addr, connected_addr;
     int sockfd;
     socklen_t len = sizeof(struct sockaddr);

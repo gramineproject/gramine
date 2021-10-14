@@ -29,7 +29,7 @@ static void* thread_func(void* x) {
     return x;
 }
 
-int main() {
+int main(void) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 
