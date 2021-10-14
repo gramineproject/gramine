@@ -77,6 +77,8 @@ glibc = custom_target('glibc',
 
     output: glibc_output,
 
+    console: true,
+
     install: true,
     install_dir: join_paths(get_option('libdir'), 'gramine/runtime/glibc'),
 )
