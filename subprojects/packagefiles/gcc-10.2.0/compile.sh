@@ -32,7 +32,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
 for patch in "$CURRENT_SOURCE_DIR"/*.patch
 do
-    patch -p1 --directory "$PRIVATE_DIR" <"$patch"
+    patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
 done
 
 # Copy `shim_entry_api.h` into (patched) GCC sources. We cannot pass the path using CPPFLAGS,
