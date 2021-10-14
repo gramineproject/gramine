@@ -17,8 +17,8 @@ void copy_data(int fi, int fo, const char* input_path, const char* output_path, 
             fatal_error("ftruncate(%s, %zu) failed: %s\n", output_path, size, strerror(errno));
         printf("ftruncate(%zu) output OK\n", size);
 
-        ssize_t offset = size;
-        ssize_t step;
+        size_t offset = size;
+        size_t step;
         while (offset > 0) {
             if (offset > max_step)
                 step = rand() % max_step + 1;

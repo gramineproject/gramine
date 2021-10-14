@@ -29,7 +29,7 @@ static int list_dir(const char* test_name, int fd) {
             return -1;
         }
 
-        for (size_t offs = 0; offs < count;) {
+        for (size_t offs = 0; offs < (size_t)count;) {
             struct linux_dirent64* d64 = (struct linux_dirent64*)(buf + offs);
             printf("%s: %s\n", test_name, d64->d_name);
             offs += d64->d_reclen;

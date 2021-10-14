@@ -173,8 +173,8 @@ static const char* paths[] = {
  */
 static int test_resource_leak(void) {
     /* repeatedly open()/close() pseudo-files to hopefully uncover resource leaks */
-    for (int j = 0; j < sizeof(paths) / sizeof(&paths[0]); j++) {
-        for (int i = 0; i < 100000; i++) {
+    for (unsigned int j = 0; j < sizeof(paths) / sizeof(&paths[0]); j++) {
+        for (unsigned int i = 0; i < 100000; i++) {
             int fd = open(paths[j], O_RDONLY);
             if (fd < 0) {
                 fprintf(stderr, "opening %s failed: %s\n", paths[j], strerror(errno));
@@ -226,7 +226,7 @@ static int test_quote_interface(void) {
     }
 
     /* 3. verify report data read from `quote` */
-    if (bytes < sizeof(sgx_quote_t)) {
+    if ((size_t)bytes < sizeof(sgx_quote_t)) {
         fprintf(stderr, "obtained SGX quote is too small: %ldB (must be at least %ldB)\n", bytes,
                 sizeof(sgx_quote_t));
         return FAILURE;

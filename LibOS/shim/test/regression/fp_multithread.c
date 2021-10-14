@@ -29,7 +29,7 @@ static void* thread_fp(void* arg) {
 int main(int argc, char* argv[]) {
     int ret;
 
-    for (int i = 0; i < sizeof(rounding_modes)/sizeof(rounding_modes[0]); i++) {
+    for (unsigned int i = 0; i < sizeof(rounding_modes)/sizeof(rounding_modes[0]); i++) {
         int mode = rounding_modes[i];
         ret = fesetround(mode);
         if (ret)

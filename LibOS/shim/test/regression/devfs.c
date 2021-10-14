@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     }
 
     ret = fwrite(buf, 1, sizeof(buf), f);
-    if (ret < sizeof(buf)) {
+    if (ret < 0 || (size_t)ret < sizeof(buf)) {
         perror("fwrite /dev/null");
         return 1;
     }

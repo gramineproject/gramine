@@ -6,8 +6,8 @@ void copy_data(int fi, int fo, const char* input_path, const char* output_path, 
         max_step = 256;
 
     void* data = alloc_buffer(max_step);
-    ssize_t offset = size;
-    ssize_t step;
+    size_t offset = size;
+    size_t step;
     while (offset > 0) {
         if (offset > max_step)
             step = rand() % max_step + 1;

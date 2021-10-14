@@ -91,7 +91,7 @@ static void server(void) {
 
     char buffer[] = "Hello from server!\n";
 
-    ssize_t written = 0;
+    size_t written = 0;
     while (written < sizeof(buffer)) {
         ssize_t n;
         /* we specify dummy MSG_DONTWAIT just to test this flag */

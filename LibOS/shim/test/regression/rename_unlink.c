@@ -35,7 +35,7 @@ static int write_all(int fd, const char* str, size_t size) {
             warn("write");
             return -1;
         }
-        assert(n <= size);
+        assert(n >= 0 && (size_t)n <= size);
         size -= n;
         str += n;
     }
@@ -58,7 +58,7 @@ static int read_all(int fd, char* str, size_t size) {
             }
             break;
         }
-        assert(n <= size);
+        assert(n >= 0 && (size_t)n <= size);
         size -= n;
         str += n;
     }
@@ -77,7 +77,7 @@ static void should_not_exist(const char* path) {
 static void check_statbuf(const char* desc, struct stat* statbuf, size_t size) {
     if (!S_ISREG(statbuf->st_mode))
         errx(1, "%s: wrong mode (0o%o)", desc, statbuf->st_mode);
-    if (statbuf->st_size != size)
+    if (statbuf->st_size != (off_t)size)
         errx(1, "%s: wrong size (%lu)", desc, statbuf->st_size);
 }
 

@@ -13,8 +13,8 @@ void copy_data(int fi, int fo, const char* input_path, const char* output_path, 
         printf("mmap_fd(%zu) output OK\n", size);
 
         // copy data
-        ssize_t offset = 0;
-        ssize_t step;
+        size_t offset = 0;
+        size_t step;
         while (offset < size) {
             if (offset + max_step <= size)
                 step = rand() % max_step + 1;
