@@ -172,7 +172,7 @@ static void lock_fail(int type, long int start, long int len) {
  * to fail, but it's useful for checking if the locks are replaced and merged correctly (by looking
  * at Gramine debug output).
  */
-static void test_ranges() {
+static void test_ranges(void) {
     printf("testing ranges...\n");
     unlock(0, 0);
 
@@ -241,7 +241,7 @@ static void read_pipe(int pipe[2]) {
 }
 
 /* Test: child takes a lock and then exits. The lock should be released. */
-static void test_child_exit() {
+static void test_child_exit(void) {
     printf("testing child exit...\n");
     unlock(0, 0);
 
@@ -269,7 +269,7 @@ static void test_child_exit() {
 }
 
 /* Test: child takes a lock, and then closes a duplicated FD. The lock should be released. */
-static void test_file_close() {
+static void test_file_close(void) {
     printf("testing file close...\n");
     unlock(0, 0);
 
@@ -307,7 +307,7 @@ static void test_file_close() {
 }
 
 /* Test: child waits for parent to release a lock. */
-static void test_child_wait() {
+static void test_child_wait(void) {
     printf("testing child wait...\n");
     unlock(0, 0);
 
@@ -336,7 +336,7 @@ static void test_child_wait() {
 }
 
 /* Test: parent waits for child to release a lock. */
-static void test_parent_wait() {
+static void test_parent_wait(void) {
     printf("testing parent wait...\n");
     unlock(0, 0);
 
@@ -372,7 +372,7 @@ static void test_parent_wait() {
 }
 
 /* Test: check that a range until EOF (len == 0) is handled correctly. */
-static void test_range_with_eof() {
+static void test_range_with_eof(void) {
     printf("testing range with EOF...\n");
     unlock(0, 0);
 

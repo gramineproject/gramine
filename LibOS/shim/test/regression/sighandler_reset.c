@@ -16,7 +16,7 @@ static void handler(int signum) {
     printf("Got signal %d\n", signum);
 }
 
-int main() {
+int main(void) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 

@@ -15,7 +15,7 @@
 
 #define PAGES_CNT 128
 
-int main() {
+int main(void) {
     size_t page_size = getpagesize();
 
     char* m = (char*)mmap(NULL, PAGES_CNT * page_size,
