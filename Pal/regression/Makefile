@@ -10,6 +10,9 @@ CFLAGS	+= -fno-stack-protector -fno-builtin -nostdlib \
 	  -I../include/arch/$(ARCH) \
 	  -I../include/arch/$(ARCH)/$(PAL_HOST)
 
+# TODO: Many files define `main` with parameters, but do not use them.
+CFLAGS += -Wno-unused-parameter
+
 preloads = \
 	Preload1.so \
 	Preload2.so

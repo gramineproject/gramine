@@ -138,6 +138,9 @@ extra_rules = \
 include ../../../../Scripts/manifest.mk
 include ../../../../Scripts/Makefile.Test
 
+# TODO: Many files define `main` with parameters, but do not use them.
+CFLAGS += -Wno-unused-parameter
+
 CFLAGS-abort_multithread = -pthread
 CFLAGS-bootstrap_pie = -fPIC -pie
 CFLAGS-bootstrap_static = -static

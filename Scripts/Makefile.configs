@@ -61,8 +61,8 @@ export OPTIMIZE
 export UBSAN
 export ASAN
 
-CFLAGS += -Wall -std=c11 -Wmissing-prototypes
-CXXFLAGS += -Wall -std=c++14
+CFLAGS += -std=c11 -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wwrite-strings
+CXXFLAGS += -std=c++14 -Wall -Wextra
 
 ifeq ($(DEBUG),1)
 CFLAGS += -gdwarf-2 -g3
