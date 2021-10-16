@@ -341,11 +341,14 @@ out:
 }
 
 static int chroot_istat(struct shim_inode* inode, struct stat* buf) {
+    struct shim_thread* cur_thread = get_cur_thread();
     memset(buf, 0, sizeof(*buf));
 
     lock(&inode->lock);
     buf->st_mode = inode->type | inode->perm;
     buf->st_size = inode->size;
+    buf->st_uid = cur_thread->uid;
+    buf->st_gid = cur_thread->gid;
     /*
      * Pretend `nlink` is 2 for directories (to account for "." and ".."), 1 for other files.
      *
