@@ -45,7 +45,7 @@ char* g_pal_internal_mem_addr = NULL;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
-static int g_uid, g_gid;
+static int g_host_euid, g_host_egid;
 static ElfW(Addr) g_sysinfo_ehdr;
 
 static void read_args_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
@@ -73,6 +73,8 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
     const char** e = envp;
     for (; *e; e++) {}
 
+    bool host_euid_set = false;
+    bool host_egid_set = false;
     for (ElfW(auxv_t)* av = (ElfW(auxv_t)*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {
             case AT_PAGESZ:
@@ -80,19 +82,23 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                     INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PAGESZ auxiliary vector");
                 }
                 break;
-            case AT_UID:
             case AT_EUID:
-                g_uid ^= av->a_un.a_val;
+                g_host_euid = av->a_un.a_val;
+                host_euid_set = true;
                 break;
-            case AT_GID:
             case AT_EGID:
-                g_gid ^= av->a_un.a_val;
+                g_host_egid = av->a_un.a_val;
+                host_egid_set = true;
                 break;
             case AT_SYSINFO_EHDR:
                 g_sysinfo_ehdr = av->a_un.a_val;
                 break;
         }
     }
+    if (!host_euid_set || !host_egid_set) {
+        INIT_FAIL(PAL_ERROR_INVAL, "Missing AT_EUID or AT_EGID in auxiliary vector");
+    }
+
     *out_argc = argc;
     *out_argv = argv;
     *out_envp = envp;
@@ -308,8 +314,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     g_linux_state.pid = DO_SYSCALL(getpid);
-    g_linux_state.uid = g_uid;
-    g_linux_state.gid = g_gid;
+    g_linux_state.uid = g_host_euid;
+    g_linux_state.gid = g_host_egid;
 
     PAL_HANDLE parent = NULL;
     char* manifest = NULL;
