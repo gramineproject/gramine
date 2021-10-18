@@ -31,19 +31,6 @@ extern const PAL_CONTROL* g_pal_control;
 // pasting it here and making `inline`, but our current linker scripts prevent both.
 void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
-#if 0
-#define DEBUG_BREAK_ON_FAILURE() DEBUG_BREAK()
-#else
-#define DEBUG_BREAK_ON_FAILURE() do {} while (0)
-#endif
-
-#define BUG()                                           \
-    do {                                                \
-        log_error("BUG() " __FILE__ ":%d", __LINE__);   \
-        DEBUG_BREAK_ON_FAILURE();                       \
-        die_or_inf_loop();                              \
-    } while (0)
-
 #define DEBUG_HERE()                                             \
     do {                                                         \
         log_debug("%s (" __FILE__ ":%d)", __func__, __LINE__);   \

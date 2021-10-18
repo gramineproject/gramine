@@ -17,6 +17,7 @@
 
 #include "cpu.h"
 #include "list.h"
+#include "log.h"
 
 /* WARNING: this declaration may conflict with some header files */
 #ifndef ssize_t
@@ -128,6 +129,19 @@ typedef ptrdiff_t ssize_t;
 #define DEBUG_BREAK()               \
     do {                            \
         __asm__ volatile("int $3"); \
+    } while (0)
+
+#if 0
+#define DEBUG_BREAK_ON_FAILURE() DEBUG_BREAK()
+#else
+#define DEBUG_BREAK_ON_FAILURE() do {} while (0)
+#endif
+
+#define BUG()                                           \
+    do {                                                \
+        log_error("BUG() %s:%d", __FILE__, __LINE__);   \
+        DEBUG_BREAK_ON_FAILURE();                       \
+        die_or_inf_loop();                              \
     } while (0)
 
 #ifndef container_of
