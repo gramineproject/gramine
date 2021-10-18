@@ -18,6 +18,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "common.h"
+
 static const char message1[] = "first message\n";
 static const size_t message1_len = sizeof(message1) - 1;
 
@@ -75,6 +77,8 @@ static void should_not_exist(const char* path) {
 }
 
 static void check_statbuf(const char* desc, struct stat* statbuf, size_t size) {
+    assert(!OVERFLOWS(off_t, size));
+
     if (!S_ISREG(statbuf->st_mode))
         errx(1, "%s: wrong mode (0o%o)", desc, statbuf->st_mode);
     if (statbuf->st_size != (off_t)size)

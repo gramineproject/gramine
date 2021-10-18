@@ -2,6 +2,7 @@
 #define COMMON_H
 
 #define _GNU_SOURCE
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -20,6 +21,12 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+
+#define OVERFLOWS(type, val)                        \
+    ({                                              \
+        type __dummy;                               \
+        __builtin_add_overflow((val), 0, &__dummy); \
+    })
 
 noreturn void fatal_error(const char* fmt, ...);
 void setup(void);
