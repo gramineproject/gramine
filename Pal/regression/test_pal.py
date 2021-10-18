@@ -38,7 +38,6 @@ class TC_00_Basic(RegressionTestCase):
         self.assertIn("TEST OK", stderr)
 
 
-@unittest.skipIf(HAS_SGX, "Not yet tested on SGX")
 class TC_00_BasicSet2(RegressionTestCase):
     @unittest.skipUnless(ON_X86, "x86-specific")
     def test_Exception2(self):
@@ -62,6 +61,7 @@ class TC_00_BasicSet2(RegressionTestCase):
         self.assertIn('start program: Pie', stderr)
         self.assertIn('Hello World', stdout)
 
+    @unittest.skipIf(HAS_SGX, "Pipes must be created in two parallel threads under SGX")
     def test_Process4(self):
         _, stderr = self.run_binary(['Process4'], timeout=5)
         self.assertIn('In process: Process4', stderr)
