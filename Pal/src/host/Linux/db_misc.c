@@ -15,7 +15,16 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
+
+static int g_rand_fd = -1;
+
+int init_random(void) {
+    int fd = DO_SYSCALL(open, "/dev/urandom", O_RDONLY | O_CLOEXEC, 0);
+    if (fd < 0)
+        return unix_to_pal_error(fd);
+    g_rand_fd = fd;
+    return 0;
+}
 
 int _DkSystemTimeQuery(uint64_t* out_usec) {
     struct timespec time;
@@ -36,15 +45,8 @@ int _DkSystemTimeQuery(uint64_t* out_usec) {
 }
 
 int _DkRandomBitsRead(void* buffer, size_t size) {
-    if (!g_pal_sec.random_device) {
-        int fd = DO_SYSCALL(open, RANDGEN_DEVICE, O_RDONLY, 0);
-        if (fd < 0)
-            return -PAL_ERROR_DENIED;
-
-        g_pal_sec.random_device = fd;
-    }
-
-    int ret = read_all(g_pal_sec.random_device, buffer, size);
+    assert(g_rand_fd != -1);
+    int ret = read_all(g_rand_fd, buffer, size);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

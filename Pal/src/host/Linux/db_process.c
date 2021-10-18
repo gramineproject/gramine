@@ -26,7 +26,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_rtld.h"
-#include "pal_security.h"
 
 /*
  * This needs to be included here because it conflicts with sigset.h included in pal_linux.
@@ -94,7 +93,6 @@ struct proc_param {
 
 struct proc_args {
     uint64_t        instance_id;
-    struct pal_sec  pal_sec;
 
     unsigned long   memory_quota;
 
@@ -152,7 +150,6 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
     }
 
     proc_args->instance_id = g_pal_state.instance_id;
-    memcpy(&proc_args->pal_sec, &g_pal_sec, sizeof(struct pal_sec));
     proc_args->memory_quota            = g_linux_state.memory_quota;
 
     char* data = (char*)(proc_args + 1);
@@ -268,7 +265,6 @@ void init_child_process(int parent_pipe_fd, PAL_HANDLE* parent_handle, char** ma
     data_iter += proc_args.manifest_data_size;
 
     g_linux_state.memory_quota = proc_args.memory_quota;
-    memcpy(&g_pal_sec, &proc_args.pal_sec, sizeof(struct pal_sec));
 
     *manifest_out = manifest;
     *instance_id = proc_args.instance_id;

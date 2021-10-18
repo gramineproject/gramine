@@ -20,7 +20,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 
 static inline int eventfd_type(int options) {
     int type = 0;

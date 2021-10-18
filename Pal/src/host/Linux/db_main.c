@@ -21,7 +21,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
 #include "sysdeps/generic/ldsodefs.h"
 #include "toml.h"
 #include "toml_utils.h"
@@ -37,7 +36,6 @@ char* g_pal_loader_path = NULL;
 char* g_libpal_path = NULL;
 
 struct pal_linux_state g_linux_state;
-struct pal_sec g_pal_sec;
 
 /* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
  * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is limited
@@ -198,6 +196,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_state.alloc_align));
+
+    ret = init_random();
+    if (ret < 0)
+        INIT_FAIL(-ret, "init_random() failed");
 
     int argc;
     const char** argv;

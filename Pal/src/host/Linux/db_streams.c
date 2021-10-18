@@ -23,7 +23,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
 #include "perm.h"
 #include "stat.h"
 
