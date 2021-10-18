@@ -125,6 +125,11 @@ foreach name, params : preloads
 
         link_args: [
             '-nostdlib',
+
+            # PAL expects that PAL regression tests have old-style hash (DT_HASH) table instead of
+            # the default GNU hash (DT_GNU_HASH) table; PAL symbol resolution uses DT_HASH to figure
+            # out the number of dynamic symbols in the SYMTAB symbol table
+            '-Wl,--hash-style=sysv',
         ],
 
         dependencies: libpal,
@@ -163,6 +168,11 @@ foreach name, params : tests
         link_args: [
             pie ? '-pie' : '-no-pie',
             '-nostdlib',
+
+            # PAL expects that PAL regression tests have old-style hash (DT_HASH) table instead of
+            # the default GNU hash (DT_GNU_HASH) table; PAL symbol resolution uses DT_HASH to figure
+            # out the number of dynamic symbols in the SYMTAB symbol table
+            '-Wl,--hash-style=sysv',
 
             params.get('link_args', []),
         ],

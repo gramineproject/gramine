@@ -143,9 +143,17 @@ shared_library('sysdb',
     ],
     link_args: [
         '-nostdlib',
-        '-Wl,-zcombreloc',
+
+        # PAL expects that LibOS binary has old-style hash (DT_HASH) table instead of the default
+        # GNU hash (DT_GNU_HASH) table; PAL symbol resolution uses DT_HASH to figure out the number
+        # of dynamic symbols in the SYMTAB symbol table
+        '-Wl,--hash-style=sysv',
+
+        # PAL expects that LibOS binary is linked with RELRO (Relocation Read-Only)
         '-Wl,-zrelro',
         '-Wl,-znow',
+
+        '-Wl,-zcombreloc',
         '-Wl,--no-undefined',
         '-Wl,--version-script=@0@'.format(shim_map),
         '-Wl,-T@0@'.format(shim_lds),

@@ -244,14 +244,6 @@ int _DkSetProtectedFilesKey(PAL_PTR pf_key_hex);
         _DkProcessExit(exitcode);                                      \
     } while (0)
 
-/* Loading ELF binaries */
-enum object_type { OBJECT_RTLD, OBJECT_EXEC, OBJECT_PRELOAD, OBJECT_EXTERNAL };
-
-bool has_elf_magic(const void* header, size_t len);
-bool is_elf_object(PAL_HANDLE handle);
-int load_elf_object(const char* uri, enum object_type type);
-int load_elf_object_by_handle(PAL_HANDLE handle, enum object_type type, void** out_loading_base);
-
 void init_slab_mgr(void);
 void* malloc(size_t size);
 void* malloc_copy(const void* mem, size_t size);

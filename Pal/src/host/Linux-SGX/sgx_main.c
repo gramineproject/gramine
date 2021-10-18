@@ -41,8 +41,6 @@
 #include <linux/in6.h>
 #include <sys/auxv.h>
 
-#include "sysdeps/generic/ldsodefs.h"
-
 const size_t g_page_size = PRESET_PAGESIZE;
 
 char* g_pal_loader_path = NULL;
@@ -563,8 +561,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * Report libpal map. All subsequent files will be reported via DkDebugMapAdd(), but this
      * one has to be handled separately.
      *
-     * We report it here, before enclave start (as opposed to setup_pal_map()), because we want both
-     * GDB integration and profiling to be active from the very beginning of enclave execution.
+     * We report it here, before enclave start (as opposed to setup_pal_binary()), because we want
+     * both GDB integration and profiling to be active from the very beginning of enclave execution.
      */
 
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);

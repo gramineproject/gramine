@@ -22,7 +22,6 @@
 #include <errno.h>
 
 #include "elf.h"
-#include "elf/ldsodefs.h"
 #include "shim_checkpoint.h"
 #include "shim_entry.h"
 #include "shim_flags_conv.h"
@@ -93,8 +92,8 @@ struct loadcmd {
     /* End of memory area */
     ElfW(Addr) alloc_end;
 
-    /* File offset */
-    uint64_t map_off;
+    /* Offset from the beginning of file at which the first byte of the segment resides */
+    ElfW(Off) map_off;
 
     /* Permissions for memory area */
     int prot;

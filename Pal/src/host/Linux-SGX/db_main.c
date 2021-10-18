@@ -26,9 +26,9 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
+#include "pal_rtld.h"
 #include "pal_security.h"
 #include "protected_files.h"
-#include "sysdeps/generic/ldsodefs.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -37,6 +37,7 @@
 
 struct pal_linux_state g_linux_state;
 struct pal_sec g_pal_sec;
+static struct link_map g_pal_map;
 
 PAL_SESSION_KEY g_master_key = {0};
 
@@ -62,11 +63,6 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 }
-
-#include "dynamic_link.h"
-#include "elf-x86_64.h"
-
-static struct link_map g_pal_map;
 
 /*
  * Takes a pointer+size to an untrusted memory region containing a
@@ -659,13 +655,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
 
-    /* Relocate PAL itself (note that this is required to run `log_error`) */
-    g_pal_map.l_addr = elf_machine_load_address();
-    g_pal_map.l_name = "libpal.so"; // to be overriden later
-    elf_get_dynamic_info((void*)g_pal_map.l_addr + elf_machine_dynamic(), g_pal_map.l_info,
-                         g_pal_map.l_addr);
-
-    ELF_DYNAMIC_RELOCATE(&g_pal_map);
+    /* Relocate PAL and populate g_pal_map */
+    ret = setup_pal_binary(&g_pal_map);
+    if (ret < 0) {
+        log_error("Relocation of the PAL binary failed: %d", ret);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
 
     uint64_t start_time;
     ret = _DkSystemTimeQuery(&start_time);
@@ -708,11 +703,11 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Now that we have `libpal_path`, set name for PAL map */
     g_pal_map.l_name = libpal_path;
 
-    /*
-     * We can't verify the following arguments from the urts. So we copy
-     * them directly but need to be careful when we use them.
-     */
+    assert(!g_loaded_maps);
+    g_loaded_maps = &g_pal_map;
 
+    /* We can't verify the following arguments from the urts. So we copy them directly but need to
+     * be careful when we use them. */
     g_pal_sec.stream_fd = sec_info.stream_fd;
     g_pal_sec.qe_targetinfo = sec_info.qe_targetinfo;
 
@@ -730,9 +725,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_slab_mgr();
     init_untrusted_slab_mgr();
     init_enclave_pages();
-
-    /* now we can add a link map for PAL itself */
-    setup_pal_map(&g_pal_map);
 
     /* initialize enclave properties */
     ret = init_enclave();

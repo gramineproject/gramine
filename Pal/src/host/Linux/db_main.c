@@ -21,7 +21,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "sysdeps/generic/ldsodefs.h"
+#include "pal_rtld.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -29,6 +29,8 @@
 
 /* pal_start is the entry point of libpal.so, which calls pal_main */
 #define _ENTRY pal_start
+
+static struct link_map g_pal_map;
 
 char* g_pal_loader_path = NULL;
 /* Currently content of this variable is only passed as an argument while spawning new processes
@@ -129,12 +131,6 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     *start = (PAL_PTR)start_addr;
 }
 
-#include "dynamic_link.h"
-
-static struct link_map g_pal_map;
-
-#include "elf-arch.h"
-
 noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
@@ -187,12 +183,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         die_or_inf_loop();
     }
 
-    /* Relocate PAL itself (note that this is required to run `log_error`) */
-    g_pal_map.l_addr = elf_machine_load_address();
-    g_pal_map.l_name = "libpal.so"; // to be overriden later
-    elf_get_dynamic_info((void*)g_pal_map.l_addr + elf_machine_dynamic(), g_pal_map.l_info,
-                         g_pal_map.l_addr);
-    ELF_DYNAMIC_RELOCATE(&g_pal_map);
+    /* relocate PAL and populate g_pal_map */
+    ret = setup_pal_binary(&g_pal_map);
+    if (ret < 0)
+        INIT_FAIL(-ret, "Relocation of the PAL binary failed");
 
     uint64_t start_time;
     ret = _DkSystemTimeQuery(&start_time);
@@ -217,6 +211,9 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* Now that we have `argv`, set name for PAL map */
     g_pal_map.l_name = argv[0];
+
+    assert(!g_loaded_maps);
+    g_loaded_maps = &g_pal_map;
 
     // Are we the first in this Gramine's namespace?
     bool first_process = !strcmp(argv[2], "init");
@@ -276,10 +273,11 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL(unix_to_pal_error(-ret), "pal_thread_init() failed");
 
-    setup_pal_map(&g_pal_map);
-
-    if (g_sysinfo_ehdr)
-        setup_vdso_map(g_sysinfo_ehdr);
+    if (g_sysinfo_ehdr) {
+        ret = setup_vdso(g_sysinfo_ehdr);
+        if (ret < 0)
+            INIT_FAIL(-ret, "Setup of VDSO failed");
+    }
 
     uintptr_t vdso_start = 0;
     uintptr_t vdso_end = 0;

@@ -61,9 +61,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                              struct pal_sec* uptr_sec_info);
 void pal_start_thread(void);
 
-struct link_map;
-void setup_pal_map(struct link_map* map);
-
 extern char __text_start, __text_end, __data_start, __data_end;
 #define TEXT_START ((void*)(&__text_start))
 #define TEXT_END   ((void*)(&__text_end))

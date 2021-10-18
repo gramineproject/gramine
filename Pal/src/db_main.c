@@ -14,7 +14,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_rtld.h"
-#include "sysdeps/generic/ldsodefs.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -52,7 +51,7 @@ static void load_libraries(void) {
         if (*c == ',' || !*c) {
             if (c > library_name) {
                 *c = 0;
-                if ((ret = load_elf_object(library_name, OBJECT_PRELOAD)) < 0)
+                if ((ret = load_elf_object(library_name, ELF_OBJECT_PRELOAD)) < 0)
                     INIT_FAIL(-ret, "Unable to load preload library");
             }
 
@@ -584,7 +583,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (entrypoint) {
         // Temporary hack: Assume we're in PAL regression test suite and load the test binary
         // directly, without LibOS.
-        if ((ret = load_elf_object(entrypoint, OBJECT_EXEC)) < 0)
+        if ((ret = load_elf_object(entrypoint, ELF_OBJECT_EXEC)) < 0)
             INIT_FAIL(-ret, "Unable to load pal.entrypoint");
     }
 

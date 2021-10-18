@@ -1,9 +1,31 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2021 Intel Labs
+ */
 
 /*
  * This file contains utilities to load ELF binaries into the memory and link them against each
- * other. The source code in this file was imported from the GNU C Library and modified.
+ * other. Note that PAL loads only two kinds of ELF binaries: the LibOS shared library and the PAL
+ * regression tests. Both these kinds of ELF binaries are assumed to have specific ELF config:
+ *
+ *   - They must be linked with RELRO (Relocation Read-Only); this simplifies relocation because
+ *     only R_X86_64_RELATIVE, R_X86_64_GLOB_DAT and R_X86_64_JUMP_SLOT reloc schemes are used. If
+ *     we add support for archs other than x86_64 in future, we need to add more reloc schemes.
+ *     Corresponding linker flags are `-Wl,-zrelro -Wl,-znow`.
+ *
+ *   - They must have old-style hash (DT_HASH) table; our code doesn't use the hash table itself but
+ *     only reads the number of available dynamic symbols from this table and then simply iterates
+ *     over all loaded ELF binaries and all their dynamic symbols. This is not efficient, but our
+ *     PAL binaries currently have less than 50 symbols, so the overhead is negligible. Note that we
+ *     cannot read the number of dynamic symbols from SHT_SYMTAB section because sections are
+ *     non-loadable and may be missing from final binaries (i.e., in vDSO).
+ *     Corresponding linker flag is `-Wl,--hash-style=sysv`.
+ *
+ *  - They must have DYN or EXEC object file type. Notice that addresses in DYN binaries are
+ *    actually offsets from the base address (`l_base`) and thus need adjustment, whereas addresses
+ *    in EXEC binaries are hard-coded and do not need any adjustment (thus `l_base == 0x0`). The
+ *    LibOS shared library is built as DYN, but some PAL regression tests are built as EXEC, so we
+ *    support both.
  */
 
 #include <stdbool.h>
@@ -14,793 +36,564 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_rtld.h"
-#include "sysdeps/generic/ldsodefs.h"
+
+/* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
+ * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.
+ *
+ * Note that with `visibility("hidden")`, the compiler prefers to use RIP-relative addressing with
+ * known offset (not a reference to GOT) for the `&__ehdr_start` operation, so this operation
+ * doesn't require relocation. */
+extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
 
 struct link_map* g_loaded_maps = NULL;
-struct link_map* g_exec_map = NULL;
 
-struct link_map* lookup_symbol(const char* undef_name, ElfW(Sym)** ref);
+static const unsigned char g_expected_elf_header[EI_NIDENT] = {
+    [EI_MAG0] = ELFMAG0,
+    [EI_MAG1] = ELFMAG1,
+    [EI_MAG2] = ELFMAG2,
+    [EI_MAG3] = ELFMAG3,
+    [EI_CLASS] = ELFW(CLASS),
+#if __BYTE_ORDER == __BIG_ENDIAN
+    [EI_DATA] = ELFDATA2MSB,
+#else
+    [EI_DATA] = ELFDATA2LSB,
+#endif
+    [EI_VERSION] = EV_CURRENT,
+    [EI_OSABI] = 0,
+};
 
-/* err - positive or negative value of error code */
-static inline void print_error(const char* msg, int err) {
-    log_error("%s (%s)", msg, pal_strerror(err));
+struct loadcmd {
+    /*
+     * Load command for a single segment. The following properties are true:
+     *
+     *   - start <= data_end <= map_end <= alloc_end
+     *   - start, map_end, alloc_end are page-aligned
+     *   - map_off is page-aligned
+     *
+     *   The addresses are not relocated (i.e. you need to add l_addr to them).
+     *
+     *   The same struct is used also in LibOS/shim/src/shim_rtld.c code.
+     */
+
+    /* Start of memory area */
+    ElfW(Addr) start;
+
+    /* End of file data (data_end .. alloc_end should be zeroed out) */
+    ElfW(Addr) data_end;
+
+    /* End of mapped file data (data_end rounded up to page size, so that we can mmap
+     * start .. map_end) */
+    ElfW(Addr) map_end;
+
+    /* End of memory area */
+    ElfW(Addr) alloc_end;
+
+    /* Offset from the beginning of file at which the first byte of the segment resides */
+    ElfW(Off) map_off;
+
+    /* Permissions for memory area */
+    int prot;
+};
+
+static int elf_segment_prot_to_pal_prot(int elf_segment_prot) {
+    int pal_prot = 0;
+    pal_prot |= (elf_segment_prot & PF_R) ? PAL_PROT_READ : 0;
+    pal_prot |= (elf_segment_prot & PF_W) ? PAL_PROT_WRITE : 0;
+    pal_prot |= (elf_segment_prot & PF_X) ? PAL_PROT_EXEC : 0;
+    return pal_prot;
 }
 
-/* This macro is used as a callback from the ELF_DYNAMIC_RELOCATE code.  */
-static struct link_map* resolve_map(const char** strtab, ElfW(Sym)** ref) {
-    if (ELFW(ST_BIND)((*ref)->st_info) != STB_LOCAL) {
-        struct link_map* l = lookup_symbol((*strtab) + (*ref)->st_name, ref);
-        if (l) {
-            *strtab = (const void*)D_PTR(l->l_info[DT_STRTAB]);
-            return l;
+/* iterate through DSO's program headers to find dynamic section (for dynamic linking) */
+static ElfW(Dyn)* find_dynamic_section(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr) {
+    const ElfW(Ehdr)* header = (void*)ehdr_addr;
+    const ElfW(Phdr)* phdr   = (void*)(ehdr_addr + header->e_phoff);
+
+    ElfW(Dyn)* dynamic_section = NULL;
+    for (const ElfW(Phdr)* ph = phdr; ph < &phdr[header->e_phnum]; ph++) {
+        if (ph->p_type == PT_DYNAMIC) {
+            dynamic_section = (void*)base_addr + ph->p_vaddr;
+            break;
         }
     }
+
+    return dynamic_section;
+}
+
+int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
+                                  const char** out_string_table, ElfW(Sym)** out_symbol_table,
+                                  uint32_t* out_symbol_table_cnt) {
+    const char* string_table  = NULL;
+    ElfW(Sym)* symbol_table   = NULL;
+    uint32_t symbol_table_cnt = 0;
+
+    ElfW(Dyn)* dynamic_section = find_dynamic_section(ehdr_addr, base_addr);
+    if (!dynamic_section) {
+        log_error("Loaded binary doesn't have dynamic section (required for symbol resolution)");
+        return -PAL_ERROR_DENIED;
+    }
+
+    /* iterate through DSO's dynamic section to find the string table and the symbol table */
+    ElfW(Dyn)* dynamic_section_entry = dynamic_section;
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        switch (dynamic_section_entry->d_tag) {
+            case DT_STRTAB:
+                string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                break;
+            case DT_SYMTAB:
+                symbol_table = (ElfW(Sym)*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                break;
+            case DT_HASH: {
+                /* symbol table size can only be found via ELF hash table's nchain (which is the
+                 * second word in the ELF hash table struct) */
+                ElfW(Word)* ht = (ElfW(Word)*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                symbol_table_cnt = ht[1];
+                break;
+            }
+        }
+        dynamic_section_entry++;
+    }
+
+    if (!string_table || !symbol_table || !symbol_table_cnt) {
+        log_error("Loaded binary doesn't have string table, symbol table and/or hash table");
+        return -PAL_ERROR_DENIED;
+    }
+
+    *out_string_table     = string_table;
+    *out_symbol_table     = symbol_table;
+    *out_symbol_table_cnt = symbol_table_cnt;
     return 0;
 }
 
-/* Define RESOLVE_RTLD as 0 since we rely on resolve_map on
- * all current PAL platforms */
-#define RESOLVE_RTLD(sym_name)   0
-#define RESOLVE_MAP(strtab, ref) resolve_map(strtab, ref)
+static int find_symbol_in_loaded_maps(struct link_map* map, ElfW(Rela)* rela,
+                                      ElfW(Addr)* out_symbol_addr) {
+    ElfW(Xword) symbol_idx = ELFW(R_SYM)(rela->r_info);
+    if (symbol_idx >= (ElfW(Xword))map->symbol_table_cnt)
+        return -PAL_ERROR_DENIED;
 
-#include "dl-machine.h"
-#include "dynamic_link.h"
+    const char* symbol_name = map->string_table + map->symbol_table[symbol_idx].st_name;
 
-/* Allocate a `struct link_map' for a new object being loaded,
-   and enter it into the _dl_loaded list.  */
-struct link_map* new_elf_object(const char* realname, enum object_type type) {
-    struct link_map* new;
-
-    new = (struct link_map*)malloc(sizeof(struct link_map));
-    if (new == NULL)
-        return NULL;
-
-    /* We apparently expect this to be zeroed. */
-    memset(new, 0, sizeof(struct link_map));
-
-    new->l_name = realname ? malloc_copy(realname, strlen(realname) + 1) : NULL;
-    new->l_type = type;
-    return new;
-}
-
-/* Cache the location of MAP's hash table.  */
-void setup_elf_hash(struct link_map* map) {
-    Elf_Symndx* hash;
-
-    if (map->l_info[DT_ADDRTAGIDX(DT_GNU_HASH) + DT_NUM + DT_THISPROCNUM + DT_VERSIONTAGNUM
-                    + DT_EXTRANUM + DT_VALNUM] != NULL) {
-        Elf32_Word* hash32 =
-            (void*)D_PTR(map->l_info[DT_ADDRTAGIDX(DT_GNU_HASH) + DT_NUM + DT_THISPROCNUM
-                                     + DT_VERSIONTAGNUM + DT_EXTRANUM + DT_VALNUM]);
-
-        map->l_nbuckets = *hash32++;
-
-        Elf32_Word symbias = *hash32++;
-        Elf32_Word bitmask_nwords = *hash32++;
-
-        assert(IS_POWER_OF_2(bitmask_nwords));
-        map->l_gnu_bitmask_idxbits = bitmask_nwords - 1;
-        map->l_gnu_shift = *hash32++;
-
-        map->l_gnu_bitmask = (ElfW(Addr)*)hash32;
-        hash32 += __ELF_NATIVE_CLASS / 32 * bitmask_nwords;
-
-        map->l_gnu_buckets = hash32;
-        hash32 += map->l_nbuckets;
-        map->l_gnu_chain_zero = hash32 - symbias;
-
-        return;
+    /* first try to find in this ELF object itself */
+    if (map->symbol_table[symbol_idx].st_value &&
+            map->symbol_table[symbol_idx].st_shndx != SHN_UNDEF) {
+        *out_symbol_addr = map->l_base + map->symbol_table[symbol_idx].st_value;
+        return 0;
     }
 
-    if (!map->l_info[DT_HASH])
-        return;
+    /* next try to find in other ELF object files */
+    for (struct link_map* loaded_map = g_loaded_maps; loaded_map; loaded_map = loaded_map->l_next) {
+        for (uint32_t i = 0; i < loaded_map->symbol_table_cnt; i++) {
+            if (loaded_map->symbol_table[i].st_shndx == SHN_UNDEF)
+                continue;
 
-    hash = (void*)D_PTR(map->l_info[DT_HASH]);
-
-    /* Structure of DT_HASH:
-         The bucket array forms the hast table itself. The entries in the
-         chain array parallel the symbol table.
-         [        nbucket        ]
-         [        nchain         ]
-         [       bucket[0]       ]
-         [          ...          ]
-         [   bucket[nbucket-1]   ]
-         [       chain[0]        ]
-         [          ...          ]
-         [    chain[nchain-1]    ] */
-
-    map->l_nbuckets = *hash++;
-    hash++;
-    map->l_buckets = hash;
-    hash += map->l_nbuckets;
-    map->l_chain = hash;
-}
-
-/* Map in the shared object NAME, actually located in REALNAME, and already opened on FD */
-static struct link_map* map_elf_object_by_handle(PAL_HANDLE handle, enum object_type type,
-                                                 void* fbp, size_t fbp_len, bool do_copy_dyn) {
-    struct link_map* l = new_elf_object(_DkStreamRealpath(handle), type);
-    int ret;
-
-    /* This is the ELF header.  We read it in `open_verify'.  */
-    const ElfW(Ehdr)* header = (void*)fbp;
-
-    /* Extract the remaining details we need from the ELF header
-       and then read in the program header table.  */
-    int e_type = header->e_type;
-    l->l_entry = header->e_entry;
-    l->l_phnum = header->e_phnum;
-
-    size_t maplength = header->e_phnum * sizeof(ElfW(Phdr));
-    ElfW(Phdr)* phdr;
-
-    if (header->e_phoff + maplength <= fbp_len) {
-        phdr = (void*)((char*)fbp + header->e_phoff);
-    } else {
-        phdr = (ElfW(Phdr)*)malloc(maplength);
-
-        if ((ret = _DkStreamRead(handle, header->e_phoff, maplength, phdr, NULL, 0)) < 0) {
-            print_error("cannot read file data", -ret);
-            return NULL;
+            const char* other_symbol_name = loaded_map->string_table +
+                loaded_map->symbol_table[i].st_name;
+            if (!strcmp(symbol_name, other_symbol_name)) {
+                /* NOTE: we currently don't take into account weak symbols and return the first
+                 *       symbol found (we don't have weak symbols in PAL and preloaded libs) */
+                *out_symbol_addr = loaded_map->l_base + loaded_map->symbol_table[i].st_value;
+                return 0;
+            }
         }
     }
 
-    /* Presumed absent PT_GNU_STACK.  */
-    // uint_fast16_t stack_flags = PF_R | PF_W | PF_X;
+    /* this could happen if e.g. LibOS and PAL binaries are out of sync */
+    log_error("Could not resolve symbol %s needed by binary %s", symbol_name, map->l_name);
+    return -PAL_ERROR_DENIED;
+}
 
-    /* Scan the program header table, collecting its load commands.  */
-    struct loadcmd {
-        ElfW(Addr) mapstart, mapend, dataend, allocend;
-        unsigned int mapoff;
-        int prot;
-    } * loadcmds, *c;
-    loadcmds = __alloca(sizeof(struct loadcmd) * l->l_phnum);
+static int perform_relocations(struct link_map* map) {
+    int ret;
 
-    int nloadcmds = 0;
-    bool has_holes = false;
-    ElfW(Addr) mapend_prev = 0;
+    ElfW(Addr) base_addr = map->l_base;
+    ElfW(Dyn)* dynamic_section_entry = map->l_ld;
 
-    /* The struct is initialized to zero so this is not necessary:
-       l->l_ld = 0;
-       l->l_phdr = 0;
-       l->l_addr = 0; */
+    ElfW(Rela)* relas_addr = NULL;
+    ElfW(Xword) relas_size = 0;
 
-    const ElfW(Phdr)* ph;
-    for (ph = phdr; ph < &phdr[l->l_phnum]; ++ph)
-        switch (ph->p_type) {
-            /* These entries tell us where to find things once the file's
-               segments are mapped in.  We record the addresses it says
-               verbatim, and later correct for the run-time load address.  */
-            case PT_DYNAMIC:
-                l->l_ld    = (void*)ph->p_vaddr;
-                l->l_ldnum = ph->p_memsz / sizeof(ElfW(Dyn));
+    ElfW(Rela)* plt_relas_addr = NULL;
+    ElfW(Xword) plt_relas_size = 0;
+
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        switch (dynamic_section_entry->d_tag) {
+            case DT_RELA:
+                relas_addr = (ElfW(Rela)*)(base_addr + dynamic_section_entry->d_un.d_ptr);
                 break;
+            case DT_RELASZ:
+                relas_size = dynamic_section_entry->d_un.d_val;
+                break;
+            case DT_JMPREL:
+                plt_relas_addr = (ElfW(Rela)*)(base_addr + dynamic_section_entry->d_un.d_ptr);
+                break;
+            case DT_PLTRELSZ:
+                plt_relas_size = dynamic_section_entry->d_un.d_val;
+                break;
+            }
+        dynamic_section_entry++;
+    }
 
-            case PT_PHDR:
-                l->l_phdr = (void*)ph->p_vaddr;
+    /* perform relocs: supported binaries may have only R_X86_64_RELATIVE/R_X86_64_GLOB_DAT relas */
+    ElfW(Rela)* relas_addr_end = (void*)relas_addr + relas_size;
+    for (ElfW(Rela)* rela = relas_addr; rela < relas_addr_end; rela++) {
+        if (ELFW(R_TYPE)(rela->r_info) == R_X86_64_RELATIVE) {
+            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + rela->r_offset);
+            *addr_to_relocate = base_addr + *addr_to_relocate;
+        } else if (ELFW(R_TYPE)(rela->r_info) == R_X86_64_GLOB_DAT) {
+            ElfW(Addr) symbol_addr;
+            ret = find_symbol_in_loaded_maps(map, rela, &symbol_addr);
+            if (ret < 0)
+                return ret;
+
+            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + rela->r_offset);
+            *addr_to_relocate = symbol_addr + rela->r_addend;
+        } else {
+            log_error("Unrecognized relocation type; PAL loader currently supports only "
+                      "R_X86_64_RELATIVE and R_X86_64_GLOB_DAT relocations");
+            return -PAL_ERROR_DENIED;
+        }
+
+    }
+
+    if (!plt_relas_size)
+        return 0;
+
+    /* perform PLT relocs: supported binaries may have only R_X86_64_JUMP_SLOT relas */
+    ElfW(Rela)* plt_relas_addr_end = (void*)plt_relas_addr + plt_relas_size;
+    for (ElfW(Rela)* plt_rela = plt_relas_addr; plt_rela < plt_relas_addr_end; plt_rela++) {
+        if (ELFW(R_TYPE)(plt_rela->r_info) != R_X86_64_JUMP_SLOT) {
+            log_error("Unrecognized relocation type; PAL loader currently supports only "
+                      "R_X86_64_JUMP_SLOT relocations");
+            return -PAL_ERROR_DENIED;
+        }
+
+        ElfW(Addr) symbol_addr;
+        ret = find_symbol_in_loaded_maps(map, plt_rela, &symbol_addr);
+        if (ret < 0)
+            return ret;
+
+        ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + plt_rela->r_offset);
+        *addr_to_relocate = symbol_addr + plt_rela->r_addend;
+    }
+
+    return 0;
+}
+
+/* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
+ * we don't bother undoing _DkStreamMap() and _DkVirtualMemoryAlloc() in case of failure. */
+static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
+                                   const char* elf_file_buf, struct link_map** out_map) {
+    int ret;
+    struct link_map* map = NULL;
+    struct loadcmd* loadcmds = NULL;
+
+    ElfW(Addr) l_relro_addr = 0x0;
+    size_t l_relro_size = 0;
+
+    const char* name = _DkStreamRealpath(handle);
+    if (!name)
+        return -PAL_ERROR_INVAL;
+
+    map = malloc(sizeof(*map));
+    if (map == NULL)
+        return -PAL_ERROR_NOMEM;
+
+    map->l_type = type;
+    map->l_name = strdup(name);
+    if (!map->l_name) {
+        ret = -PAL_ERROR_NOMEM;
+        goto out;
+    }
+
+    ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)elf_file_buf;
+    ElfW(Phdr)* phdr = (ElfW(Phdr)*)(elf_file_buf + ehdr->e_phoff);
+
+    map->l_entry = ehdr->e_entry;
+
+    loadcmds = malloc(sizeof(*loadcmds) * ehdr->e_phnum);
+    if (!loadcmds) {
+        ret = -PAL_ERROR_NOMEM;
+        goto out;
+    }
+
+    /* scan the program headers table, collecting segments to load; record addresses verbatim (as
+     * offsets) as we'll add the ELF-object base address later */
+    size_t loadcmds_cnt = 0;
+    for (const ElfW(Phdr)* ph = phdr; ph < &phdr[ehdr->e_phnum]; ph++) {
+        switch (ph->p_type) {
+            case PT_DYNAMIC:
+                map->l_ld = (void*)ph->p_vaddr;
                 break;
 
             case PT_LOAD:
-                /* A load command tells us to map in part of the file.
-                   We record the load commands and process them all later.  */
-                if (!IS_ALLOC_ALIGNED(ph->p_align)) {
-                    print_error("ELF load command alignment not aligned", PAL_ERROR_NOMEM);
-                    return NULL;
-                }
-
                 if (!IS_ALIGNED_POW2(ph->p_vaddr - ph->p_offset, ph->p_align)) {
-                    print_error("ELF load command address/offset not properly aligned",
-                                PAL_ERROR_NOMEM);
-                    return NULL;
+                    log_error("ELF loadable program segment not aligned");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
                 }
 
-                c = &loadcmds[nloadcmds++];
-                c->mapstart = ALLOC_ALIGN_DOWN(ph->p_vaddr);
-                c->mapend   = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_filesz);
-                c->dataend  = ph->p_vaddr + ph->p_filesz;
-                c->allocend = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
-                c->mapoff   = ALLOC_ALIGN_DOWN(ph->p_offset);
+                struct loadcmd* c = &loadcmds[loadcmds_cnt++];
+                c->start     = ALLOC_ALIGN_DOWN(ph->p_vaddr);
+                c->map_end   = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_filesz);
+                c->map_off   = ALLOC_ALIGN_DOWN(ph->p_offset);
+                c->data_end  = ph->p_vaddr + ph->p_filesz;
+                c->alloc_end = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
+                c->prot      = elf_segment_prot_to_pal_prot(ph->p_flags);
 
-                /* Determine whether there is a gap between the last segment
-                   and this one.  */
-                if (nloadcmds > 1 && mapend_prev != c->mapstart)
-                    has_holes = true;
+                /* this is our parser's simplification, not a requirement of the ELF spec */
+                if (loadcmds_cnt == 1 && c->map_off) {
+                    log_error("ELF first loadable program segment has non-zero offset");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
 
-                mapend_prev = c->mapend;
+                if (loadcmds_cnt == 1 && ehdr->e_type == ET_DYN && c->start) {
+                    log_error("DYN ELF first loadable program segment has non-zero map address");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
 
-                /* Optimize a common case.  */
-                c->prot = 0;
-                if (ph->p_flags & PF_R)
-                    c->prot |= PAL_PROT_READ;
-                if (ph->p_flags & PF_W)
-                    c->prot |= PAL_PROT_WRITE;
-                if (ph->p_flags & PF_X)
-                    c->prot |= PAL_PROT_EXEC;
-                break;
-
-            case PT_TLS:
-                if (ph->p_memsz == 0)
-                    /* Nothing to do for an empty segment.  */
-                    break;
-
-            case PT_GNU_STACK:
-                // stack_flags = ph->p_flags;
+                if (c->start >= c->map_end) {
+                    log_error("ELF loadable program segment has impossible memory region to map");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
                 break;
 
             case PT_GNU_RELRO:
-                l->l_relro_addr = ph->p_vaddr;
-                l->l_relro_size = ph->p_memsz;
+                l_relro_addr = ph->p_vaddr;
+                l_relro_size = ph->p_memsz;
                 break;
         }
-
-    if (nloadcmds == 0) {
-        /* This only happens for a bogus object that will be caught with
-           another error below.  But we don't want to go through the
-           calculations below using NLOADCMDS - 1.  */
-        print_error("object file has no loadable segments", PAL_ERROR_INVAL);
-        return NULL;
     }
 
-    /* Now process the load commands and map segments into memory.  */
-    c = loadcmds;
+    if (!loadcmds_cnt) {
+        log_error("ELF file has no loadable segments");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
 
-    /* Length of the sections to be loaded.  */
-    maplength = loadcmds[nloadcmds - 1].allocend - c->mapstart;
+    for (size_t i = 0; i < loadcmds_cnt; i++) {
+        struct loadcmd* c = &loadcmds[i];
 
-#define APPEND_WRITECOPY(prot) ((prot) | PAL_PROT_WRITECOPY)
+        size_t map_size = 0;
+        void*  map_addr = NULL;
+        if (ehdr->e_type == ET_EXEC) {
+            /* for EXEC (executables), force PAL memory allocator to use hard-coded segment addr */
+            map_addr = (void*)c->start;
+            map_size = c->map_end - c->start;
+        } else {
+            /* for DYN (shared libraries), let PAL memory allocator choose base addr the first time
+             * -- but we must reserve another memory for all loadable segments this first time to
+             *  not overwrite memory on subsequent segments */
+            map_addr = (i == 0) ? NULL : (void*)(map->l_base + c->start);
+            map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end - c->start
+                                : c->map_end - c->start;
+        }
 
-    if (e_type == ET_DYN) {
-        void* mapaddr = NULL;
-        ret = _DkStreamMap(handle, (void**)&mapaddr, APPEND_WRITECOPY(c->prot), c->mapoff,
-                           maplength);
+        ret = _DkStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
         if (ret < 0) {
-            print_error("failed to map dynamic segment from shared object", -ret);
-            return NULL;
+            log_error("Failed to map segment from ELF file");
+            goto out;
         }
 
-        l->l_map_start = (ElfW(Addr))mapaddr;
-        l->l_map_end   = (ElfW(Addr))mapaddr + maplength;
-        l->l_addr      = l->l_map_start - c->mapstart;
+        if (i == 0) {
+            /* memorize where the ELF file (its first loadable segment) was loaded */
+            map->l_addr = (ElfW(Addr))map_addr;
+            map->l_base = (ehdr->e_type == ET_EXEC) ? 0x0 : map->l_addr;
+        }
 
-        if (has_holes)
-            /* Change protection on the excess portion to disallow all access;
-               the portions we do not remap later will be inaccessible as if
-               unallocated.  Then jump into the normal segment-mapping loop to
-               handle the portion of the segment past the end of the file
-               mapping.  */
-            _DkVirtualMemoryProtect((void*)(l->l_addr + c->mapend),
-                                    loadcmds[nloadcmds - 1].mapstart - c->mapend, PAL_PROT_NONE);
+        /* adjust segment's addresses to actual addresses (for DYNs, they were offsets initially) */
+        c->start     += map->l_base;
+        c->map_end   += map->l_base;
+        c->data_end  += map->l_base;
+        c->alloc_end += map->l_base;
 
-        goto postmap;
+        if (c->alloc_end == c->map_end)
+            continue;
+
+        void* map_rest = (void*)c->map_end;
+        ret = _DkVirtualMemoryAlloc(&map_rest, c->alloc_end - c->map_end, /*alloc_type=*/0, c->prot);
+        if (ret < 0) {
+            log_error("Failed to zero-fill the rest of segment from ELF file");
+            goto out;
+        }
     }
 
-    /* Remember which part of the address space this object uses.  */
-    l->l_map_start = c->mapstart + l->l_addr;
-    l->l_map_end   = l->l_map_start + maplength;
+    /* adjust all fields by ELF object base address (for DYNs, they were offsets initially) */
+    map->l_entry = map->l_entry + map->l_base;
+    map->l_ld = (ElfW(Dyn)*)((ElfW(Addr))map->l_ld + map->l_base);
 
-    while (c < &loadcmds[nloadcmds]) {
-        if (c->mapend > c->mapstart) {
-            /* Map the segment contents from the file.  */
-            void* mapaddr = (void*)(l->l_addr + c->mapstart);
-
-            if ((ret = _DkStreamMap(handle, &mapaddr, APPEND_WRITECOPY(c->prot), c->mapoff,
-                                    c->mapend - c->mapstart)) < 0) {
-                print_error("failed to map segment from shared object", -ret);
-                return NULL;
-            }
-        }
-
-    postmap:
-        if (l->l_phdr == 0
-            && (ElfW(Off))c->mapoff <= header->e_phoff
-            && ((c->mapend - c->mapstart + c->mapoff)
-                >= header->e_phoff + header->e_phnum * sizeof(ElfW(Phdr))))
-            /* Found the program header in this segment.  */
-            l->l_phdr = (void*)(c->mapstart + header->e_phoff - c->mapoff);
-
-        if (c->allocend > c->dataend) {
-            /* Extra zero pages should appear at the end of this segment,
-               after the data mapped from the file.   */
-            ElfW(Addr) zero, zeroend, zerosec;
-
-            zero = l->l_addr + c->dataend;
-            zeroend = ALLOC_ALIGN_UP(l->l_addr + c->allocend);
-            zerosec = ALLOC_ALIGN_UP(zero);
-
-            if (zeroend < zerosec)
-                /* All the extra data is in the last section of the segment.
-                   We can just zero it.  */
-                zerosec = zeroend;
-
-            if (zerosec > zero) {
-                /* Zero the final part of the last section of the segment.  */
-                if ((c->prot & PAL_PROT_WRITE) == 0) {
-                    /* Dag nab it.  */
-                    ret =
-                        _DkVirtualMemoryProtect((void*)ALLOC_ALIGN_DOWN(zero),
-                                                g_pal_state.alloc_align, c->prot | PAL_PROT_WRITE);
-                    if (ret < 0) {
-                        print_error("cannot change memory protections", -ret);
-                        return NULL;
-                    }
-                }
-                memset((void*)zero, '\0', zerosec - zero);
-                if ((c->prot & PAL_PROT_WRITE) == 0)
-                    _DkVirtualMemoryProtect((void*)ALLOC_ALIGN_DOWN(zero), g_pal_state.alloc_align,
-                                            c->prot);
-            }
-
-            if (zeroend > zerosec) {
-                /* Map the remaining zero pages in from the zero fill FD. */
-                void* mapat = (void*)zerosec;
-                ret = _DkVirtualMemoryAlloc(&mapat, zeroend - zerosec, 0, c->prot);
-                if (ret < 0) {
-                    print_error("cannot map zero-fill allocation", -ret);
-                    return NULL;
-                }
-            }
-        }
-
-        ++c;
-    }
-
-    if (l->l_ld == 0) {
-        if (e_type == ET_DYN) {
-            print_error("object file has no dynamic section", PAL_ERROR_INVAL);
-            return NULL;
-        }
-    } else {
-        l->l_real_ld = l->l_ld = (ElfW(Dyn)*)((ElfW(Addr))l->l_ld + l->l_addr);
-
-        if (do_copy_dyn)
-            l->l_ld = malloc_copy(l->l_ld, sizeof(ElfW(Dyn)) * l->l_ldnum);
-    }
-
-    elf_get_dynamic_info(l->l_ld, l->l_info, l->l_addr);
-
-    if (l->l_phdr == NULL) {
-        /* The program header is not contained in any of the segments.
-           We have to allocate memory ourself and copy it over from out
-           temporary place.  */
-        ElfW(Phdr)* newp = (ElfW(Phdr)*)malloc(header->e_phnum * sizeof(ElfW(Phdr)));
-        if (!newp) {
-            print_error("cannot allocate memory for program header", PAL_ERROR_NOMEM);
-            return NULL;
-        }
-
-        l->l_phdr = memcpy(newp, phdr, header->e_phnum * sizeof(ElfW(Phdr)));
-    } else {
-        /* Adjust the PT_PHDR value by the runtime load address.  */
-        l->l_phdr = (ElfW(Phdr)*)((ElfW(Addr))l->l_phdr + l->l_addr);
-    }
-
-    l->l_entry += l->l_addr;
-
-    /* Set up the symbol hash table.  */
-    setup_elf_hash(l);
-
-    return l;
-}
-
-bool has_elf_magic(const void* header, size_t len) {
-    return len >= SELFMAG && !memcmp(header, ELFMAG, SELFMAG);
-}
-
-bool is_elf_object(PAL_HANDLE handle) {
-    unsigned char buffer[SELFMAG];
-    int64_t len = _DkStreamRead(handle, 0, sizeof(buffer), buffer, NULL, 0);
-
-    if (len < 0)
-        return false;
-    return has_elf_magic(buffer, len);
-}
-
-void free_elf_object(struct link_map* map) {
-    _DkVirtualMemoryFree((void*)map->l_map_start, map->l_map_end - map->l_map_start);
-
-    if (map->l_prev)
-        map->l_prev->l_next = map->l_next;
-    if (map->l_next)
-        map->l_next->l_prev = map->l_prev;
-
-#ifdef DEBUG
-    _DkDebugMapRemove((void*)map->l_addr);
-#endif
-
-    if (g_loaded_maps == map)
-        g_loaded_maps = map->l_next;
-
-    free(map);
-}
-
-/* Map in the shared object file loaded from URI.  */
-int load_elf_object(const char* uri, enum object_type type) {
-    PAL_HANDLE handle;
-    /* First we open the file by uri, as the regular file handles */
-    int ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, 0, 0, 0);
+    ret = find_string_and_symbol_tables(map->l_addr, map->l_base, &map->string_table,
+                                        &map->symbol_table, &map->symbol_table_cnt);
     if (ret < 0)
         return ret;
 
-    ret = load_elf_object_by_handle(handle, type, /*out_loading_base=*/NULL);
+    /* zero out the unused parts of loaded segments and perform relocations on loaded segments
+     * (need to first change memory permissions to writable and then revert permissions back) */
+    for (size_t i = 0; i < loadcmds_cnt; i++) {
+        struct loadcmd* c = &loadcmds[i];
+        ret = _DkVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start,
+                                      c->prot | PAL_PROT_WRITE);
+        if (ret < 0) {
+            log_error("Failed to add write memory protection on the segment from ELF file");
+            goto out;
+        }
 
-    _DkObjectClose(handle);
-    return ret;
-}
-
-static int relocate_elf_object(struct link_map* l);
-
-int load_elf_object_by_handle(PAL_HANDLE handle, enum object_type type, void** out_loading_base) {
-    struct link_map* map = NULL;
-    char fb[FILEBUF_SIZE];
-    const char* errstring;
-    int ret = 0;
-
-    /* Now we will start verify the file as a ELF header. This part of code was borrowed from
-     * open_verify(). */
-    ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)&fb;
-    ElfW(Phdr)* phdr = NULL;
-    int phdr_malloced = 0;
-
-    int64_t read_ret = _DkStreamRead(handle, 0, FILEBUF_SIZE, &fb, NULL, 0);
-
-    if (read_ret < 0) {
-        ret = read_ret;
-        errstring = "reading ELF file failed";
-        goto verify_failed;
-    }
-    size_t size = read_ret;
-    if (size < sizeof(ElfW(Ehdr))) {
-        ret = -PAL_ERROR_INVAL;
-        errstring = "too small for an ELF";
-        goto verify_failed;
+        /* zero out uninitialized but allocated part of the loaded segment (note that part of
+         * segment allocated via _DkVirtualMemoryAlloc() is already zeroed out) */
+        if (ALLOC_ALIGN_UP(c->data_end) > c->data_end)
+            memset((void*)c->data_end, 0, ALLOC_ALIGN_UP(c->data_end) - c->data_end);
     }
 
-#define ELF32_CLASS ELFCLASS32
-#define ELF64_CLASS ELFCLASS64
-
-    static const unsigned char expected[EI_NIDENT] = {
-        [EI_MAG0] = ELFMAG0,
-        [EI_MAG1] = ELFMAG1,
-        [EI_MAG2] = ELFMAG2,
-        [EI_MAG3] = ELFMAG3,
-        [EI_CLASS] = ELFW(CLASS),
-        [EI_DATA] = byteorder,
-        [EI_VERSION] = EV_CURRENT,
-        [EI_OSABI] = 0,
-    };
-
-#define ELFOSABI_LINUX 3 /* Linux. */
-
-    /* See whether the ELF header is what we expect.  */
-    if (memcmp(ehdr->e_ident, expected, EI_OSABI) != 0 || (
-            ehdr->e_ident[EI_OSABI] != ELFOSABI_SYSV &&
-            ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX)) {
-        ret = -PAL_ERROR_INVAL;
-        errstring = "ELF file with invalid header";
-        goto verify_failed;
+    ret = perform_relocations(map);
+    if (ret < 0) {
+        log_error("Failed to perform relocations on ELF file");
+        goto out;
     }
 
-    /* Chia-Che 11/23/13: Removing other checks, comparing the header
-       should be enough */
-
-    size_t maplength = ehdr->e_phnum * sizeof(ElfW(Phdr));
-
-    /* if e_phoff + maplength is smaller than the data read */
-    if (ehdr->e_phoff + maplength <= size) {
-        phdr = (void*)(&fb + ehdr->e_phoff);
-    } else {
-        /* ...otherwise, we have to read again */
-        phdr = malloc(maplength);
-        phdr_malloced = 1;
-
-        ret = _DkStreamRead(handle, ehdr->e_phoff, maplength, phdr, NULL, 0);
-
-        if (ret < 0 || (size_t)ret != maplength) {
-            ret = -PAL_ERROR_INVAL;
-            errstring = "cannot read file data";
-            goto verify_failed;
+    for (size_t i = 0; i < loadcmds_cnt; i++) {
+        struct loadcmd* c = &loadcmds[i];
+        ret = _DkVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start, c->prot);
+        if (ret < 0) {
+            log_error("Failed to revert write memory protection on the segment from ELF file");
+            goto out;
         }
     }
 
-    if (!(map = map_elf_object_by_handle(handle, type, &fb, size, true))) {
-        ret = -PAL_ERROR_INVAL;
-        errstring = "unexpected failure";
-        goto verify_failed;
+    if (l_relro_size != 0) {
+        l_relro_addr += map->l_base;
+        ElfW(Addr) start = ALLOC_ALIGN_DOWN(l_relro_addr);
+        ElfW(Addr) end   = ALLOC_ALIGN_UP(l_relro_addr + l_relro_size);
+        ret = _DkVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
+        if (ret < 0) {
+            log_error("Failed to apply read-only memory protection on the RELRO memory area");
+            goto out;
+        }
     }
 
-    relocate_elf_object(map);
+    *out_map = map;
+    ret = 0;
+out:
+    if (ret < 0) {
+        if (map) {
+            free((void*)map->l_name);
+            free(map);
+        }
+    }
+    free(loadcmds);
+    return ret;
+}
 
-    /* append to list (to preserve order of libs specified in
-     * manifest, e.g., loader.preload)
-     */
-    map->l_next = NULL;
+int load_elf_object(const char* uri, enum elf_object_type type) {
+    int ret;
+    PAL_HANDLE handle;
+    struct link_map* map = NULL;
+
+    char buf[1024]; /* must be enough to hold ELF header and all its program headers */
+    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, 0, 0, 0);
+    if (ret < 0)
+        return ret;
+
+    ret = _DkStreamRead(handle, 0, sizeof(buf), buf, NULL, 0);
+    if (ret < 0) {
+        log_error("Reading ELF file failed");
+        goto out;
+    }
+
+    size_t bytes_read = (size_t)ret;
+
+    ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)&buf;
+    if (bytes_read < sizeof(ElfW(Ehdr))) {
+        log_error("ELF file is too small (cannot read the ELF header)");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (memcmp(ehdr->e_ident, g_expected_elf_header, EI_OSABI)) {
+        log_error("ELF file has unexpected header (unexpected first 7 bytes)");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (ehdr->e_ident[EI_OSABI] != ELFOSABI_SYSV && ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX) {
+        log_error("ELF file has unexpected OS/ABI: PAL loader currently supports only SYS-V and "
+                  "LINUX");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (ehdr->e_type != ET_DYN && ehdr->e_type != ET_EXEC) {
+        log_error("ELF file has unexpected type: PAL loader currently supports only DYN and EXEC");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (bytes_read < ehdr->e_phoff + ehdr->e_phnum * sizeof(ElfW(Phdr))) {
+        log_error("Read too few bytes from the ELF file (not all program headers)");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    ret = map_relocate_elf_object(handle, type, buf, &map);
+    if (ret < 0) {
+        log_error("Could not map the ELF file into memory and then relocate it");
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    /* append to list (to preserve order of libs specified in manifest, e.g., loader.preload) */
     if (!g_loaded_maps) {
         map->l_prev = NULL;
+        map->l_next = NULL;
         g_loaded_maps = map;
     } else {
         struct link_map* end = g_loaded_maps;
         while (end->l_next)
             end = end->l_next;
+
         end->l_next = map;
         map->l_prev = end;
+        map->l_next = NULL;
     }
 
-    if (map->l_type == OBJECT_EXEC)
-        g_exec_map = map;
-
 #ifdef DEBUG
-    _DkDebugMapAdd(map->l_name, (void*)map->l_addr);
+    _DkDebugMapAdd(map->l_name, (void*)map->l_base);
 #endif
 
-    if (out_loading_base)
-        *out_loading_base = (void*)map->l_map_start;
-    return 0;
-
-verify_failed:
-
-    if (phdr && phdr_malloced)
-        free(phdr);
-
-    log_error("%s", errstring);
+out:
+    if (ret < 0)
+        free(map);
+    _DkObjectClose(handle);
     return ret;
 }
 
-struct sym_val {
-    ElfW(Sym)* s;
-    struct link_map* m;
-};
-
-/* This is the hashing function specified by the ELF ABI.  In the
-   first five operations no overflow is possible so we optimized it a
-   bit.  */
-unsigned long int elf_hash(const char* name_arg) {
-    const unsigned char* name = (const unsigned char*)name_arg;
-    unsigned long int hash = 0;
-
-    if (*name == '\0')
-        return hash;
-
-    hash = *name++;
-    if (*name == '\0')
-        return hash;
-
-    hash = (hash << 4) + *name++;
-    if (*name == '\0')
-        return hash;
-
-    hash = (hash << 4) + *name++;
-    if (*name == '\0')
-        return hash;
-
-    hash = (hash << 4) + *name++;
-    if (*name == '\0')
-        return hash;
-
-    hash = (hash << 4) + *name++;
-    while (*name != '\0') {
-        unsigned long int hi;
-        hash = (hash << 4) + *name++;
-        hi = hash & 0xf0000000;
-
-        /*
-         * The algorithm specified in the ELF ABI is as follows:
-         * if (hi != 0)
-         * hash ^= hi >> 24;
-         * hash &= ~hi;
-         * But the following is equivalent and a lot faster, especially on
-         *  modern processors.
-         */
-
-        hash ^= hi;
-        hash ^= hi >> 24;
-    }
-    return hash;
-}
-
-/* Nested routine to check whether the symbol matches.  */
-static inline __attribute_always_inline
-ElfW(Sym)* check_match(ElfW(Sym)* sym, ElfW(Sym)* ref, const char* undef_name,
-                       const char* strtab) {
-    unsigned int stt = ELFW(ST_TYPE) (sym->st_info);
-    static_assert(ELF_RTYPE_CLASS_PLT == 1, "ELF_RTYPE_CLASS_PLT != 1 is not supported");
-
-    if ((sym->st_value == 0 /* No value */ && stt != STT_TLS) || sym->st_shndx == SHN_UNDEF)
-        return NULL;
-
-    /* Ignore all but STT_NOTYPE, STT_OBJECT, STT_FUNC,
-    STT_COMMON, STT_TLS, and STT_GNU_IFUNC since these are no
-    code/data definitions.  */
-    #define ALLOWED_STT                                                                \
-        ((1 << STT_NOTYPE) | (1 << STT_OBJECT) | (1 << STT_FUNC) | (1 << STT_COMMON) | \
-         (1 << STT_TLS) | (1 << STT_GNU_IFUNC))
-
-    if (((1 << stt) & ALLOWED_STT) == 0)
-        return NULL;
-
-    if (sym != ref && memcmp(strtab + sym->st_name, undef_name, strlen(undef_name)))
-        /* Not the symbol we are looking for.  */
-        return NULL;
-
-    /* There cannot be another entry for this symbol so stop here.  */
-    return sym;
-}
-
-ElfW(Sym)* do_lookup_map(ElfW(Sym)* ref, const char* undef_name, const uint_fast32_t hash,
-                         unsigned long int elf_hash, const struct link_map* map) {
-    /* These variables are used in the nested function.  */
-    Elf_Symndx symidx;
-    ElfW(Sym)* sym;
-    /* The tables for this map.  */
-    ElfW(Sym)* symtab = (void*)D_PTR(map->l_info[DT_SYMTAB]);
-    const char* strtab = (const void*)D_PTR(map->l_info[DT_STRTAB]);
-    const ElfW(Addr)* bitmask = map->l_gnu_bitmask;
-
-    if (bitmask != NULL) {
-        ElfW(Addr) bitmask_word = bitmask[(hash / __ELF_NATIVE_CLASS) & map->l_gnu_bitmask_idxbits];
-
-        unsigned int hashbit1 = hash & (__ELF_NATIVE_CLASS - 1);
-        unsigned int hashbit2 = (hash >> map->l_gnu_shift) & (__ELF_NATIVE_CLASS - 1);
-
-        if ((bitmask_word >> hashbit1) & (bitmask_word >> hashbit2) & 1) {
-            Elf32_Word bucket = map->l_gnu_buckets[hash % map->l_nbuckets];
-
-            if (bucket != 0) {
-                const Elf32_Word* hasharr = &map->l_gnu_chain_zero[bucket];
-
-                do
-                    if (((*hasharr ^ hash) >> 1) == 0) {
-                        symidx = hasharr - map->l_gnu_chain_zero;
-                        sym = check_match(&symtab[symidx], ref, undef_name, strtab);
-                        if (sym != NULL)
-                            return sym;
-                    }
-                while ((*hasharr++ & 1u) == 0);
-            }
-        }
-
-        /* No symbol found.  */
-        symidx = SHN_UNDEF;
-    } else {
-        /* Use the old SysV-style hash table.  Search the appropriate
-           hash bucket in this object's symbol table for a definition
-           for the same symbol name.  */
-        for (symidx = map->l_buckets[elf_hash % map->l_nbuckets]; symidx != STN_UNDEF;
-             symidx = map->l_chain[symidx]) {
-            sym = check_match(&symtab[symidx], ref, undef_name, strtab);
-            if (sym != NULL)
-                return sym;
-        }
-    }
-
-    return NULL;
-}
-
-/* Inner part of the lookup functions.  We return a value > 0 if we
-   found the symbol, the value 0 if nothing is found and < 0 if
-   something bad happened.  */
-static int do_lookup(const char* undef_name, ElfW(Sym)* ref, struct sym_val* result) {
-    const uint_fast32_t fast_hash = elf_fast_hash(undef_name);
-    const long int hash = elf_hash(undef_name);
-    ElfW(Sym)* sym;
-    struct link_map* map = g_loaded_maps;
-    struct sym_val weak_result = {.s = NULL, .m = NULL};
-
-    for (; map; map = map->l_next) {
-        sym = do_lookup_map(ref, undef_name, fast_hash, hash, map);
-        if (!sym)
-            continue;
-
-        switch (ELFW(ST_BIND)(sym->st_info)) {
-            case STB_WEAK:
-                /* Weak definition.  Use this value if we don't find another. */
-                if (!weak_result.s) {
-                    weak_result.s = sym;
-                    weak_result.m = (struct link_map*)map;
-                }
-                break;
-                /* FALLTHROUGH */
-            case STB_GLOBAL:
-            case STB_GNU_UNIQUE:
-                /* success: */
-                /* Global definition.  Just what we need.  */
-                result->s = sym;
-                result->m = (struct link_map*)map;
-                return 1;
-            default:
-                /* Local symbols are ignored.  */
-                break;
-        }
-    }
-
-    if (weak_result.s) {
-        *result = weak_result;
-        return 1;
-    }
-
-    /* We have not found anything until now.  */
-    return 0;
-}
-
-/* Search loaded objects' symbol tables for a definition of the symbol
-   UNDEF_NAME, perhaps with a requested version for the symbol.
-
-   We must never have calls to the audit functions inside this function
-   or in any function which gets called.  If this would happen the audit
-   code might create a thread which can throw off all the scope locking.  */
-struct link_map* lookup_symbol(const char* undef_name, ElfW(Sym)** ref) {
-    struct sym_val current_value = {NULL, NULL};
-
-    do_lookup(undef_name, *ref, &current_value);
-
-    if (current_value.s == NULL) {
-        *ref = NULL;
-        return NULL;
-    }
-
-    *ref = current_value.s;
-    return current_value.m;
-}
-
-static int protect_relro(struct link_map* l) {
-    ElfW(Addr) start = ALLOC_ALIGN_DOWN(l->l_addr + l->l_relro_addr);
-    ElfW(Addr) end   = ALLOC_ALIGN_UP(l->l_addr + l->l_relro_addr + l->l_relro_size);
-
-    if (start != end)
-        _DkVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
-    return 0;
-}
-
-static int relocate_elf_object(struct link_map* l) {
-    struct textrels {
-        ElfW(Addr) start;
-        ElfW(Addr) len;
-        int prot;
-        struct textrels* next;
-    }* textrels = NULL;
+/* PAL binary must be DYN (shared object file) */
+int setup_pal_binary(struct link_map* pal_map) {
     int ret;
-    const ElfW(Phdr)* ph;
 
-    for (ph = l->l_phdr; ph < &l->l_phdr[l->l_phnum]; ph++)
-        if (ph->p_type == PT_LOAD && (ph->p_flags & PF_W) == 0) {
-            struct textrels* r = malloc(sizeof(struct textrels));
-            r->start = ALLOC_ALIGN_DOWN(ph->p_vaddr) + l->l_addr;
-            r->len   = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz) - ALLOC_ALIGN_DOWN(ph->p_vaddr);
+    pal_map->l_prev = NULL;
+    pal_map->l_next = NULL;
 
-            ret = _DkVirtualMemoryProtect((void*)r->start, r->len, PAL_PROT_READ | PAL_PROT_WRITE);
-            if (ret < 0)
-                return ret;
+    ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
 
-            r->prot = 0;
-            if (ph->p_flags & PF_R)
-                r->prot |= PAL_PROT_READ;
-            if (ph->p_flags & PF_W)
-                r->prot |= PAL_PROT_WRITE;
-            if (ph->p_flags & PF_X)
-                r->prot |= PAL_PROT_EXEC;
-            r->next = textrels;
-            textrels = r;
-        }
-
-    /* Do the actual relocation of the object's GOT and other data.  */
-    ELF_DYNAMIC_RELOCATE(l);
-
-    while (textrels) {
-        ret = _DkVirtualMemoryProtect((void*)textrels->start, textrels->len, textrels->prot);
-        if (ret < 0)
-            return ret;
-
-        struct textrels* next = textrels->next;
-        free(textrels);
-        textrels = next;
+    ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_binary_addr);
+    if (!dynamic_section) {
+        log_error("PAL binary doesn't have dynamic section (required for symbol resolution)");
+        return -PAL_ERROR_DENIED;
     }
 
-    /* In case we can protect the data now that the relocations are
-       done, do it.  */
-    if (l->l_type != OBJECT_EXEC && l->l_relro_size != 0)
-        if ((ret = protect_relro(l)) < 0)
-            return ret;
+    pal_map->l_name = NULL; /* will be overwritten later with argv[0] */
+    pal_map->l_type = ELF_OBJECT_INTERNAL;
+    pal_map->l_addr = pal_binary_addr;
+    pal_map->l_base = pal_binary_addr;
+    pal_map->l_ld = dynamic_section;
 
-    return 0;
+    ret = perform_relocations(pal_map);
+    if (ret < 0)
+        return ret;
+
+    ret = find_string_and_symbol_tables(pal_map->l_addr, pal_map->l_base, &pal_map->string_table,
+                                        &pal_map->symbol_table, &pal_map->symbol_table_cnt);
+    return ret;
 }
 
 /*
@@ -850,7 +643,8 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 
 #ifndef CALL_ENTRY
 #ifdef __x86_64__
-void* stack_before_call __attribute_unused = NULL;
+void* rsp_before_call = NULL;
+void* rbp_before_call = NULL;
 
 /* TODO: Why on earth do we call loaded libraries entry points?!?
  * I won't bother fixing this asm, it needs to be purged. */
@@ -860,11 +654,14 @@ void* stack_before_call __attribute_unused = NULL;
         __asm__ volatile(                                                            \
             "pushq $0\r\n"                                                           \
             "popfq\r\n"                                                              \
-            "movq %%rsp, stack_before_call(%%rip)\r\n"                               \
+            "movq %%rsp, rsp_before_call(%%rip)\r\n"                                 \
+            "movq %%rbp, rbp_before_call(%%rip)\r\n"                                 \
             "leaq 1f(%%rip), %%rdx\r\n"                                              \
+            "movq $0, %%rbp\r\n"                                                     \
             "movq %2, %%rsp\r\n"                                                     \
             "jmp *%1\r\n"                                                            \
-            "1: movq stack_before_call(%%rip), %%rsp\r\n"                            \
+            "1: movq rsp_before_call(%%rip), %%rsp\r\n"                              \
+            "   movq rbp_before_call(%%rip), %%rbp\r\n"                              \
                                                                                      \
             : "=a"(ret)                                                              \
             : "a"((l)->l_entry), "b"(cookies)                                        \
@@ -877,9 +674,6 @@ void* stack_before_call __attribute_unused = NULL;
 #endif /* !CALL_ENTRY */
 
 noreturn void start_execution(const char** arguments, const char** environs) {
-    /* First we will try to run all the preloaded libraries which come with
-       entry points */
-
     int narguments = 0;
     for (const char** a = arguments; *a; a++, narguments++)
         ;
@@ -918,11 +712,12 @@ noreturn void start_execution(const char** arguments, const char** environs) {
     auxv[0].a_un.a_val = 0;
 
     for (struct link_map* l = g_loaded_maps; l; l = l->l_next)
-        if (l->l_type == OBJECT_PRELOAD && l->l_entry)
+        if (l->l_type == ELF_OBJECT_PRELOAD && l->l_entry)
             CALL_ENTRY(l, cookies);
 
-    if (g_exec_map)
-        CALL_ENTRY(g_exec_map, cookies);
+    for (struct link_map* l = g_loaded_maps; l; l = l->l_next)
+        if (l->l_type == ELF_OBJECT_EXEC && l->l_entry)
+            CALL_ENTRY(l, cookies);
 
     _DkThreadExit(/*clear_child_tid=*/NULL);
     /* UNREACHABLE */

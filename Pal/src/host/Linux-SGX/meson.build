@@ -95,13 +95,21 @@ libpal_sgx = shared_library('pal',
 
     link_args: [
         '-nostdlib',
+
+        # For PAL symbol resolution, we use old-style hash (DT_HASH) table instead of the default
+        # GNU hash (DT_GNU_HASH) table -- to figure out the number of dynamic symbols in the SYMTAB
+        # symbol table
+        '-Wl,--hash-style=sysv',
+
+        # PAL is expected to be linked with RELRO (Relocation Read-Only)
+        '-Wl,-zrelro',
+        '-Wl,-znow',
+
         '-Wl,-zcombreloc',
         '-Wl,-zdefs',
         '-Wl,--version-script=@0@'.format(pal_sgx_map.full_path()),
         '-Wl,-T@0@'.format(pal_sgx_lds),
         '-Wl,--eh-frame-hdr',
-        '-Wl,-zrelro',
-        '-Wl,-znow',
     ],
 
     link_depends: [

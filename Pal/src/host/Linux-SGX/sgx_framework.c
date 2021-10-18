@@ -344,7 +344,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     }
 
     /* need to change permissions for EADDed pages since the initial mmap was with PROT_NONE */
-    ret = mprotect(addr, size, prot);
+    ret = DO_SYSCALL(mprotect, addr, size, prot);
     if (ret < 0) {
         log_error("Changing protections of EADDed pages returned %d", ret);
         return ret;

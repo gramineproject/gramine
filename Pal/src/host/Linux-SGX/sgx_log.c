@@ -12,16 +12,6 @@
 #include "perm.h"
 #include "sgx_log.h"
 
-/* NOTE: We could add "untrusted-pal" prefix to the below strings for more fine-grained log info */
-static const char* log_level_to_prefix[] = {
-    [LOG_LEVEL_NONE]    = "",
-    [LOG_LEVEL_ERROR]   = "error: ",
-    [LOG_LEVEL_WARNING] = "warning: ",
-    [LOG_LEVEL_DEBUG]   = "debug: ",
-    [LOG_LEVEL_TRACE]   = "trace: ",
-    [LOG_LEVEL_ALL]     = "", // not a valid entry actually (no public wrapper uses this log level)
-};
-
 int g_urts_log_level = PAL_LOG_DEFAULT_LEVEL;
 int g_urts_log_fd = PAL_LOG_DEFAULT_FD;
 
@@ -62,8 +52,20 @@ void pal_log(int level, const char* fmt, ...) {
     if (level <= g_urts_log_level) {
         va_list ap;
         va_start(ap, fmt);
-        assert(0 <= level && (size_t)level < ARRAY_SIZE(log_level_to_prefix));
-        print_to_fd(g_urts_log_fd, log_level_to_prefix[level], fmt, ap);
+        assert(0 <= level && (size_t)level < LOG_LEVEL_ALL);
+
+        /* NOTE: We could add "untrusted-pal" prefix to the below strings for more fine-grained log
+         *       info */
+        const char* prefix = NULL;
+        switch (level) {
+            case LOG_LEVEL_NONE:    prefix = ""; break;
+            case LOG_LEVEL_ERROR:   prefix = "error: "; break;
+            case LOG_LEVEL_WARNING: prefix = "warning: "; break;
+            case LOG_LEVEL_DEBUG:   prefix = "debug: "; break;
+            case LOG_LEVEL_TRACE:   prefix = "trace: "; break;
+        }
+
+        print_to_fd(g_urts_log_fd, prefix, fmt, ap);
         va_end(ap);
     }
 }

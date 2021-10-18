@@ -2638,6 +2638,14 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_M32R_GOTOFF_LO     64  /* Low 16 bit offset to GOT */
 #define R_M32R_NUM           256 /* Keep this the last entry. */
 
+#define ELF32_CLASS ELFCLASS32
+#define ELF64_CLASS ELFCLASS64
+
+#define ElfW(type)       _ElfW(Elf, __ELF_NATIVE_CLASS, type)
+#define _ElfW(e, w, t)   _ElfW_1(e, w, _##t)
+#define _ElfW_1(e, w, t) e##w##t
+#define ELFW(type) _ElfW(ELF, __ELF_NATIVE_CLASS, type)
+
 __END_DECLS
 
 #endif /* elf.h */

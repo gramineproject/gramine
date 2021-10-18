@@ -12,12 +12,8 @@ uthash - BSD revised
 
 A number of files taken from other C libraries:
 * glibc - LGPL
- ** LibOS/shim/include/elf.h
- ** LibOS/shim/src/elf/ - basically the whole directory, and most code related to linking and loading (e.g., Pal/src/db_rtld.c)
  ** Pal/include/elf/elf.h
- ** Pal/include/sysdeps/generic/ldsodefs.h
  ** common/src/network/hton.c
- ** Pal/src/dynamic_link.h, do-rel.h, dl-machine-x86_64.h
  ** Pal/include/arch/x86_64/Linux/ - whole directory - for signal API definitions
  ** We also build a patched glibc
 
