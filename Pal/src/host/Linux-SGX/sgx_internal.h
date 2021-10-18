@@ -17,6 +17,7 @@
 #include "toml.h"
 
 extern const size_t g_page_size;
+extern pid_t g_host_pid;
 
 #undef IS_ALLOC_ALIGNED
 #undef IS_ALLOC_ALIGNED_PTR

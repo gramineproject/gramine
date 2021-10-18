@@ -58,7 +58,7 @@ void update_and_print_stats(bool process_wide) {
     g_async_signal_cnt += tcb->async_signal_cnt;
 
     if (process_wide) {
-        int pid = DO_SYSCALL(getpid);
+        int pid = g_host_pid;
         assert(pid > 0);
         log_always("----- Total SGX stats for process %d -----\n"
                    "  # of EENTERs:        %lu\n"

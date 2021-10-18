@@ -98,8 +98,8 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
 
     const char* event_name = pal_event_name(event);
     bool in_vdso = is_in_vdso(rip);
-    log_error("Unexpected %s occurred inside %s (%s, PID = %ld, TID = %ld)", event_name,
-              in_vdso ? "VDSO" : "PAL", buf, DO_SYSCALL(getpid), DO_SYSCALL(gettid));
+    log_error("Unexpected %s occurred inside %s (%s, PID = %u, TID = %ld)", event_name,
+              in_vdso ? "VDSO" : "PAL", buf, g_linux_state.pid, DO_SYSCALL(gettid));
 
     _DkProcessExit(1);
 }

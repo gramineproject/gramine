@@ -122,8 +122,7 @@ int sgx_profile_init(void) {
     }
     g_perf_data = pd;
 
-    pid_t pid = g_pal_enclave.pal_sec.pid;
-    ret = pd_event_command(pd, "pal-sgx", pid, /*tid=*/pid);
+    ret = pd_event_command(pd, "pal-sgx", g_host_pid, /*tid=*/g_host_pid);
     if (!pd) {
         log_error("sgx_profile_init: reporting command failed: %d", ret);
         goto out;
@@ -178,12 +177,10 @@ void sgx_profile_finish(void) {
 static void sample_simple(uint64_t rip) {
     int ret;
 
-    // Report all events as the same PID so that they are grouped in report.
-    pid_t pid = g_pal_enclave.pal_sec.pid;
-    pid_t tid = pid;
-
     spinlock_lock(&g_perf_data_lock);
-    ret = pd_event_sample_simple(g_perf_data, rip, pid, tid, g_profile_period);
+    // Report all events as the same PID so that they are grouped in report.
+    ret = pd_event_sample_simple(g_perf_data, rip, g_host_pid, /*tid=*/g_host_pid,
+                                 g_profile_period);
     spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0) {
@@ -193,10 +190,6 @@ static void sample_simple(uint64_t rip) {
 
 static void sample_stack(sgx_pal_gpr_t* gpr) {
     int ret;
-
-    // Report all events as the same PID so that they are grouped in report.
-    pid_t pid = g_pal_enclave.pal_sec.pid;
-    pid_t tid = pid;
 
     uint8_t stack[PD_STACK_SIZE];
     size_t stack_size;
@@ -208,8 +201,9 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     stack_size = ret;
 
     spinlock_lock(&g_perf_data_lock);
-    ret = pd_event_sample_stack(g_perf_data, gpr->rip, pid, tid, g_profile_period,
-                                gpr, stack, stack_size);
+    // Report all events as the same PID so that they are grouped in report.
+    ret = pd_event_sample_stack(g_perf_data, gpr->rip, g_host_pid, /*tid=*/g_host_pid,
+                                g_profile_period, gpr, stack, stack_size);
     spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0) {
@@ -359,7 +353,6 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     // Read the program headers and record mmap events for the segments that should be mapped as
     // executable.
 
-    pid_t pid = g_pal_enclave.pal_sec.pid;
     const ElfW(Phdr)* phdr = (const ElfW(Phdr)*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
@@ -369,7 +362,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
             uint64_t mapstart = ALLOC_ALIGN_DOWN(phdr[i].p_vaddr);
             uint64_t mapend = ALLOC_ALIGN_UP(phdr[i].p_vaddr + phdr[i].p_filesz);
             uint64_t offset = ALLOC_ALIGN_DOWN(phdr[i].p_offset);
-            ret = pd_event_mmap(g_perf_data, path, pid,
+            ret = pd_event_mmap(g_perf_data, path, g_host_pid,
                                 (uint64_t)addr + mapstart, mapend - mapstart, offset);
             if (ret < 0)
                 break;

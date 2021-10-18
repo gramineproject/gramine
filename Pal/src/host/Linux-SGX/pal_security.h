@@ -8,8 +8,7 @@
 #include "sgx_arch.h"
 
 struct pal_sec {
-    /* host credentials */
-    PAL_IDX pid, uid, gid;
+    PAL_IDX uid, gid;
 
     /* enclave information */
     sgx_target_info_t qe_targetinfo;

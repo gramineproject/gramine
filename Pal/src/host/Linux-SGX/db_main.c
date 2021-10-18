@@ -716,14 +716,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_sec.stream_fd = sec_info.stream_fd;
     g_pal_sec.qe_targetinfo = sec_info.qe_targetinfo;
 
-    /* For {p,u,g}ids we can at least do some minimal checking. */
-
-    /* pid should be positive when interpreted as signed. */
-    if (sec_info.pid > INT32_MAX || sec_info.pid == 0) {
-        log_error("Invalid sec_info.pid: %u", sec_info.pid);
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-    g_pal_sec.pid = sec_info.pid;
+    /* For {u,g}ids we can at least do some minimal checking. */
 
     /* -1 is treated as special value for example by chown. */
     if (sec_info.uid == (PAL_IDX)-1 || sec_info.gid == (PAL_IDX)-1) {

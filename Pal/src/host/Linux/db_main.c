@@ -306,7 +306,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     g_linux_state.pid = DO_SYSCALL(getpid);
-
     g_linux_state.uid = g_uid;
     g_linux_state.gid = g_gid;
 

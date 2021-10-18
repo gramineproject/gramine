@@ -47,6 +47,7 @@ const size_t g_page_size = PRESET_PAGESIZE;
 
 char* g_pal_loader_path = NULL;
 char* g_libpal_path = NULL;
+pid_t g_host_pid;
 
 struct pal_enclave g_pal_enclave;
 
@@ -515,7 +516,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     if (IS_PTR_ERR(dbg)) {
         log_warning("Cannot allocate debug information (GDB will not work)");
     } else {
-        dbg->pid            = DO_SYSCALL(getpid);
+        dbg->pid            = g_host_pid;
         dbg->base           = enclave->baseaddr;
         dbg->size           = enclave->size;
         dbg->ssa_frame_size = enclave->ssa_frame_size;
@@ -749,7 +750,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     } else if (!strcmp(profile_str, "all")) {
         enclave_info->profile_enable = true;
         snprintf(enclave_info->profile_filename, ARRAY_SIZE(enclave_info->profile_filename),
-                 SGX_PROFILE_FILENAME_WITH_PID, (int)DO_SYSCALL(getpid));
+                 SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid);
     } else {
         log_error("Invalid 'sgx.profile.enable' "
                   "(the value must be \"none\", \"main\" or \"all\")");
@@ -899,7 +900,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    pal_sec->pid = DO_SYSCALL(getpid);
     pal_sec->uid = DO_SYSCALL(getuid);
     pal_sec->gid = DO_SYSCALL(getgid);
 
@@ -1106,6 +1106,8 @@ int main(int argc, char* argv[], char* envp[]) {
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);
+
+    g_host_pid = DO_SYSCALL(getpid);
 
     g_pal_loader_path = get_main_exec_path();
     if (!g_pal_loader_path) {
