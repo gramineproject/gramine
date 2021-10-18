@@ -5,9 +5,6 @@
 
 # Gramine GDB configuration (common for all hosts).
 
-# Tell Gramine to behave more gdb-friendly.
-set env IN_GDB=1
-
 # Used internally by Gramine, generates a lot of noise if we don't silence it.
 handle SIGCONT pass noprint nostop
 

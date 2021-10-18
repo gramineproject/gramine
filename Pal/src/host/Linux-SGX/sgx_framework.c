@@ -419,16 +419,3 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
 
     return 0;
 }
-
-int destroy_enclave(void* base_addr, size_t length) {
-    log_debug("destroying enclave...");
-
-    int ret = DO_SYSCALL(munmap, base_addr, length);
-
-    if (ret < 0) {
-        log_error("enclave EDESTROY failed");
-        return ret;
-    }
-
-    return 0;
-}

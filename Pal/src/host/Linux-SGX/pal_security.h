@@ -9,8 +9,6 @@
 
 #define PAL_ENCLAVE_INITIALIZED 0x0001
 
-typedef char PAL_SEC_STR[255];
-
 struct pal_sec {
     /* host credentials */
     PAL_IDX pid, uid, gid;
@@ -32,17 +30,10 @@ struct pal_sec {
     PAL_NUM physical_cores_per_socket;
     int* cpu_socket;
     PAL_TOPO_INFO topo_info;
-
-#ifdef DEBUG
-    PAL_BOL in_gdb;
-#endif
 };
 
 #ifdef IN_ENCLAVE
 extern struct pal_sec g_pal_sec;
 #endif
-
-#define GRAMINE_TEMPDIR "/tmp/gramine"
-#define GRAMINE_PIPEDIR (GRAMINE_TEMPDIR "/pipes")
 
 #endif /* PAL_SECURITY_H */

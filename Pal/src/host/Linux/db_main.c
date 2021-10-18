@@ -73,12 +73,7 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
     assert(argv[argc] == NULL);
 
     const char** e = envp;
-    for (; *e; e++) {
-#ifdef DEBUG
-        if (!strcmp(*e, "IN_GDB=1"))
-            g_linux_state.in_gdb = true;
-#endif
-    }
+    for (; *e; e++) {}
 
     for (ElfW(auxv_t)* av = (ElfW(auxv_t)*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {

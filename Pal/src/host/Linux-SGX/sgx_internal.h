@@ -113,9 +113,6 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
 
 int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct, sgx_arch_token_t* token);
 
-int destroy_enclave(void* base_addr, size_t length);
-void exit_process(int status, uint64_t start_exiting);
-
 int sgx_ecall(long ecall_no, void* ms);
 int sgx_raise(int event);
 
@@ -133,16 +130,10 @@ void unmap_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
 
-uint64_t sgx_edbgrd(void* addr);
-void sgx_edbgwr(void* addr, uint64_t data);
-
 int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** application_path_out,
                            char** manifest);
 int sgx_signal_setup(void);
-int block_signals(bool block, const int* sigs, int nsig);
 int block_async_signals(bool block);
-
-void update_debugger(void);
 
 #ifdef DEBUG
 /* SGX profiling (sgx_profile.c) */

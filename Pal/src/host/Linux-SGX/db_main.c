@@ -714,11 +714,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
      */
 
     g_pal_sec.stream_fd = sec_info.stream_fd;
-
     g_pal_sec.qe_targetinfo = sec_info.qe_targetinfo;
-#ifdef DEBUG
-    g_pal_sec.in_gdb = sec_info.in_gdb;
-#endif
 
     /* For {p,u,g}ids we can at least do some minimal checking. */
 

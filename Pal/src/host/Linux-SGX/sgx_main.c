@@ -957,18 +957,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (ret < 0)
         return ret;
 
-#ifdef DEBUG
-    size_t env_i = 0;
-    while (env_i < env_size) {
-        if (!strcmp(&env[env_i], "IN_GDB=1")) {
-            log_warning("[ Running under GDB ]");
-            pal_sec->in_gdb = true;
-        }
-
-        env_i += strnlen(&env[env_i], env_size - env_i) + 1;
-    }
-#endif
-
     enclave->libpal_uri = alloc_concat(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN, g_libpal_path, -1);
     if (!enclave->libpal_uri) {
         log_error("Out of memory for enclave->libpal_uri");

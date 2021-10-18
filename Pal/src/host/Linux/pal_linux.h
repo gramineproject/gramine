@@ -27,19 +27,11 @@ struct timespec;
 struct timeval;
 
 extern struct pal_linux_state {
-#ifdef DEBUG
-    bool            in_gdb;
-#endif
-
     const char**    host_environ;
 
     /* credentails */
     unsigned int    pid;
     unsigned int    uid, gid;
-
-    /* currently enabled signals */
-    __sigset_t      set_signals;
-    __sigset_t      blocked_signals;
 
     unsigned long   memory_quota;
 

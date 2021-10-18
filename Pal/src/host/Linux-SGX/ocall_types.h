@@ -277,10 +277,6 @@ typedef struct {
 } ms_ocall_delete_t;
 
 typedef struct {
-    struct debug_map* _Atomic* ms_debug_map;
-} ms_ocall_update_debugger_t;
-
-typedef struct {
     const char* ms_name;
     void* ms_addr;
 } ms_ocall_debug_map_add_t;

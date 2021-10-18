@@ -36,13 +36,6 @@ extern struct pal_linux_state {
 
     /* credentials */
     unsigned int uid, gid;
-
-    /* currently enabled signals */
-    __sigset_t sigset;
-    __sigset_t blocked_signals;
-
-    /* enclave */
-    const char* runtime_dir;
 } g_linux_state;
 
 #define ACCESS_R 4
