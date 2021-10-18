@@ -1,5 +1,11 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2020 Intel Corporation */
+
+#ifndef OCALL_TYPES_H
+#define OCALL_TYPES_H
+
 /*
- * This is for enclave to make ocalls to untrusted runtime.
+ * These structures are used in trusted -> untrusted world calls (OCALLS).
  */
 
 #include <stdbool.h>
@@ -11,10 +17,8 @@
 #include "sgx_attest.h"
 
 /*
- * GCC's structure padding may cause leaking from uninialized
- * regions (https://arxiv.org/abs/1710.09061).
- * A simple contermeasure is to enable packing for all ocall
- * argument structures.
+ * These structures must be packed, otherwise will leak data in their padding when copied to
+ * untrusted world.
  */
 #pragma pack(push, 1)
 
@@ -307,3 +311,5 @@ typedef struct {
 } ms_ocall_get_quote_t;
 
 #pragma pack(pop)
+
+#endif /* OCALL_TYPES_H */

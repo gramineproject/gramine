@@ -11,8 +11,8 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _DkObjectClose(PAL_HANDLE objectHandle) {
-    const struct handle_ops* ops = HANDLE_OPS(objectHandle);
+int _DkObjectClose(PAL_HANDLE object_handle) {
+    const struct handle_ops* ops = HANDLE_OPS(object_handle);
     if (!ops)
         return -PAL_ERROR_BADHANDLE;
 
@@ -20,7 +20,7 @@ int _DkObjectClose(PAL_HANDLE objectHandle) {
 
     /* if the operation 'close' is defined, call the function. */
     if (ops->close)
-        ret = ops->close(objectHandle);
+        ret = ops->close(object_handle);
 
     /*
      * Chia-Che 12/7/2017:
@@ -28,7 +28,7 @@ int _DkObjectClose(PAL_HANDLE objectHandle) {
      *   operation returns a non-zero value (e.g., 1 for skipping free() or -ERRNO).
      */
     if (!ret)
-        free(objectHandle);
+        free(object_handle);
 
     return ret;
 }
@@ -40,10 +40,10 @@ int _DkObjectClose(PAL_HANDLE objectHandle) {
  * cannot handle them in a meaningful way).
  */
 /* PAL call DkObjectClose: Close the given object handle. */
-void DkObjectClose(PAL_HANDLE objectHandle) {
-    assert(objectHandle);
+void DkObjectClose(PAL_HANDLE object_handle) {
+    assert(object_handle);
 
-    _DkObjectClose(objectHandle);
+    _DkObjectClose(object_handle);
 }
 
 /* Wait for user-specified events of handles in the handle array. The wait can be timed out, unless

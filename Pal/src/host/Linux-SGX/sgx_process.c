@@ -42,7 +42,7 @@ static int vfork_exec(const char** argv) {
     die_or_inf_loop();
 }
 
-int sgx_create_process(size_t nargs, const char** args, int* stream_fd, const char* manifest) {
+int sgx_create_process(size_t nargs, const char** args, const char* manifest, int* out_stream_fd) {
     int ret, rete;
     int fds[2] = {-1, -1};
 
@@ -117,8 +117,7 @@ int sgx_create_process(size_t nargs, const char** args, int* stream_fd, const ch
         goto out;
     }
 
-    if (stream_fd)
-        *stream_fd = fds[1];
+    *out_stream_fd = fds[1];
 
     ret = 0;
 out:
@@ -132,8 +131,8 @@ out:
     return ret;
 }
 
-int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** application_path_out,
-                           char** manifest_out) {
+int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** out_application_path,
+                           char** out_manifest) {
     int ret;
     struct proc_args proc_args;
     char* manifest = NULL;
@@ -176,8 +175,8 @@ int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** a
 
     pal_sec->stream_fd   = proc_args.stream_fd;
 
-    *application_path_out = application_path;
-    *manifest_out = manifest;
+    *out_application_path = application_path;
+    *out_manifest = manifest;
     ret = 0;
 out:
     if (ret < 0) {

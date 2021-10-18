@@ -45,7 +45,7 @@ extern struct pal_linux_state {
 struct stat;
 bool stataccess(struct stat* stats, int acc);
 
-int init_child_process(PAL_HANDLE* parent, uint64_t* instance_id_ptr);
+int init_child_process(PAL_HANDLE* out_parent, uint64_t* out_instance_id);
 
 #ifdef IN_ENCLAVE
 

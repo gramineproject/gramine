@@ -130,8 +130,8 @@ void unmap_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
 
-int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** application_path_out,
-                           char** manifest);
+int sgx_init_child_process(int parent_pipe_fd, struct pal_sec* pal_sec, char** out_application_path,
+                           char** out_manifest);
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
 

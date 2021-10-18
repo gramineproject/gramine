@@ -14,7 +14,7 @@
 const char* generated_offsets_name = "PAL_SGX";
 
 const struct generated_offset generated_offsets[] = {
-    /* defines in sgx_arch.h */
+    /* defines from sgx_arch.h */
     DEFINE(SGX_FLAGS_DEBUG, SGX_FLAGS_DEBUG),
     DEFINE(SGX_FLAGS_MODE64BIT, SGX_FLAGS_MODE64BIT),
     DEFINE(SGX_XFRM_LEGACY, SGX_XFRM_LEGACY),
@@ -29,7 +29,7 @@ const struct generated_offset generated_offsets[] = {
     DEFINE(SGX_XFRM_MASK_CONST, SGX_XFRM_MASK_CONST),
     DEFINE(SGX_MISCSELECT_MASK_CONST, SGX_MISCSELECT_MASK_CONST),
 
-    /* defines in pal-arch.h */
+    /* defines from pal-arch.h */
     DEFINE(STACK_PROTECTOR_CANARY_DEFAULT, STACK_PROTECTOR_CANARY_DEFAULT),
 
     /* sgx_measurement_t */

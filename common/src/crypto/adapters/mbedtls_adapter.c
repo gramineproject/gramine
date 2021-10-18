@@ -426,7 +426,7 @@ int lib_SSLSave(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t buf_size, size_t*
 
 /* Wrapper to provide mbedtls the RNG interface it expects. It passes an extra context parameter,
  * and expects a return value of 0 for success and nonzero for failure. */
-static int RandomWrapper(void* private, unsigned char* data, size_t size) {
+static int random_wrapper(void* private, unsigned char* data, size_t size) {
     __UNUSED(private);
     return _DkRandomBitsRead(data, size);
 }
@@ -455,7 +455,7 @@ int lib_DhCreatePublic(LIB_DH_CONTEXT* context, uint8_t* public, size_t public_s
     if (public_size != DH_SIZE)
         return -PAL_ERROR_INVAL;
 
-    int ret = mbedtls_dhm_make_public(context, context->len, public, public_size, RandomWrapper,
+    int ret = mbedtls_dhm_make_public(context, context->len, public, public_size, random_wrapper,
                                       /*p_rng=*/NULL);
     return mbedtls_to_pal_error(ret);
 }
@@ -473,7 +473,7 @@ int lib_DhCalcSecret(LIB_DH_CONTEXT* context, uint8_t* peer, size_t peer_size, u
 
     /* The RNG here is used for blinding against timing attacks if X is reused and not used
      * otherwise. mbedtls recommends always passing in an RNG. */
-    ret = mbedtls_dhm_calc_secret(context, secret, *secret_size, secret_size, RandomWrapper, NULL);
+    ret = mbedtls_dhm_calc_secret(context, secret, *secret_size, secret_size, random_wrapper, NULL);
     return mbedtls_to_pal_error(ret);
 }
 

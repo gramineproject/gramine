@@ -8,6 +8,6 @@
 
 #include <stddef.h>
 
-int sgx_create_process(size_t nargs, const char** args, int* stream_fd, const char* manifest);
+int sgx_create_process(size_t nargs, const char** args, const char* manifest, int* out_stream_fd);
 
 #endif /* SGX_PROCESS_H */

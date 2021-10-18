@@ -52,7 +52,8 @@ static PAL_IDX pal_assign_tid(void) {
  * canary and then updates it to a random one, so we disable stack protector here. */
 __attribute_no_stack_protector
 void pal_start_thread(void) {
-    struct pal_handle_thread *new_thread = NULL, *tmp;
+    struct pal_handle_thread* new_thread = NULL;
+    struct pal_handle_thread* tmp;
 
     spinlock_lock(&g_thread_list_lock);
     LISTP_FOR_EACH_ENTRY(tmp, &g_thread_list, list)
@@ -166,8 +167,8 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
     ocall_exit(0, /*is_exitgroup=*/false);
 }
 
-int _DkThreadResume(PAL_HANDLE threadHandle) {
-    int ret = ocall_resume_thread(threadHandle->thread.tcs);
+int _DkThreadResume(PAL_HANDLE thread_handle) {
+    int ret = ocall_resume_thread(thread_handle->thread.tcs);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 

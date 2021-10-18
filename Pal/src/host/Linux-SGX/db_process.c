@@ -214,7 +214,7 @@ failed:
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
-int init_child_process(PAL_HANDLE* parent_handle, uint64_t* instance_id_ptr) {
+int init_child_process(PAL_HANDLE* out_parent_handle, uint64_t* out_instance_id) {
     if (g_pal_sec.enclave_initialized)
         return -PAL_ERROR_DENIED;
 
@@ -279,8 +279,8 @@ int init_child_process(PAL_HANDLE* parent_handle, uint64_t* instance_id_ptr) {
         goto out_error;
     }
 
-    *parent_handle = parent;
-    *instance_id_ptr = instance_id;
+    *out_parent_handle = parent;
+    *out_instance_id = instance_id;
     return 0;
 
 out_error:
