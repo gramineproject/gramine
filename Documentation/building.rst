@@ -148,7 +148,7 @@ root directory of Gramine repo, run the following command (recall that "direct"
 means non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
-       -Dsgx_driver=<driver> -Dsgx_driver_path=<path-to-sgx-driver-sources>
+       -Dsgx_driver=<driver> -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
 
 Then, build and install Gramine by running the following::
 
