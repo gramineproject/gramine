@@ -3,7 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#ifndef COMMON_H
+#ifndef COMMON_H_
 #define COMMON_H_
 
 #define OVERFLOWS(type, val)                        \
