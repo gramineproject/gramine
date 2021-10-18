@@ -7,8 +7,6 @@
 #include "pal.h"
 #include "sgx_arch.h"
 
-#define PAL_ENCLAVE_INITIALIZED 0x0001
-
 struct pal_sec {
     /* host credentials */
     PAL_IDX pid, uid, gid;
@@ -16,7 +14,8 @@ struct pal_sec {
     /* enclave information */
     sgx_target_info_t qe_targetinfo;
     sgx_report_body_t enclave_info;
-    uint64_t enclave_flags; /* currently only PAL_ENCLAVE_INITIALIZED */
+    /* Thread creation ECALL is allowed only after this is set. */
+    bool enclave_initialized;
 
     /* remaining heap usable by application */
     PAL_PTR heap_min, heap_max;

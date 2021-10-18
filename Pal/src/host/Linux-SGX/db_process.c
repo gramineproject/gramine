@@ -215,7 +215,7 @@ failed:
 }
 
 int init_child_process(PAL_HANDLE* parent_handle, uint64_t* instance_id_ptr) {
-    if (g_pal_sec.enclave_flags & PAL_ENCLAVE_INITIALIZED)
+    if (g_pal_sec.enclave_initialized)
         return -PAL_ERROR_DENIED;
 
     PAL_HANDLE parent = malloc(HANDLE_SIZE(process));
