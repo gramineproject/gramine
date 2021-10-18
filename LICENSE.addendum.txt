@@ -6,9 +6,6 @@ mbedtls crypto libraries - Apache 2.0
 
 Internet Software Consortium (permissive license): common/src/network/inet_pton.c
 
-MIT JOS (mix of MIT and BSD licenses):
-* common/src/stdlib/printfmt.c
-
 cJSON - MIT
 tomlc99 - MIT
 uthash - BSD revised
