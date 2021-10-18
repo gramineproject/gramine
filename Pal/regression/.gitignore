@@ -49,6 +49,7 @@
 /Thread2_exitless
 /Udp
 /normalize_path
+/printf_test
 
 /test_file_0
 /test_file_1

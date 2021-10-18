@@ -296,11 +296,6 @@ void* calloc(size_t nmemb, size_t size);
 
 /* Printf family of functions. */
 
-/* Generic function, taking an "output single character" callback. Returns 0 or negative error
- * code (from the `_fputc` callback). */
-int vfprintfmt(int (*_fputc)(char c, void* arg), void* arg, const char* fmt, va_list ap)
-    __attribute__((format(printf, 3, 0)));
-
 int vsnprintf(char* buf, size_t buf_size, const char* fmt, va_list ap)
     __attribute__((format(printf, 3, 0)));
 int snprintf(char* buf, size_t buf_size, const char* fmt, ...)

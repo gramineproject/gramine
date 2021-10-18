@@ -33,6 +33,10 @@ class TC_00_Basic(RegressionTestCase):
     def test_002_avl_tree(self):
         _, _ = self.run_binary(['avl_tree_test'])
 
+    def test_003_printf(self):
+        _, stderr = self.run_binary(['printf_test'])
+        self.assertIn("TEST OK", stderr)
+
 
 @unittest.skipIf(HAS_SGX, "Not yet tested on SGX")
 class TC_00_BasicSet2(RegressionTestCase):

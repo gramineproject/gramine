@@ -38,3 +38,15 @@ void _log(int level, const char* fmt, ...) {
 noreturn void abort(void) {
     DkProcessExit(131); /* ENOTRECOVERABLE = 131 */
 }
+
+/* We just need these symbols for `printf`, but they won't be used in runtime. */
+void* malloc(size_t size) {
+    abort();
+}
+
+void free(void* ptr) {
+    if (!ptr) {
+        return;
+    }
+    abort();
+}

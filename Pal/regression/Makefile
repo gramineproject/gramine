@@ -52,6 +52,7 @@ executables = \
 	Thread2 \
 	Udp \
 	normalize_path \
+	printf_test \
 	$(executables-$(ARCH))
 
 repo_manifests = \
@@ -79,17 +80,18 @@ include ../../Scripts/manifest.mk
 # are already doing so through Meson.
 
 common_src = ../../common/src
-common_objs = avl_tree.o path.o printfmt.o atoi.o memcmp.o memcpy.o memset.o strcmp.o strlen.o
+common_objs = avl_tree.o path.o printf.o atoi.o memcmp.o memcpy.o memset.o strchr.o strcmp.o \
+    strlen.o
 
 $(common_objs): CFLAGS += -fPIC
 
 avl_tree.o path.o: %.o: $(common_src)/%.c
 	$(call cmd,cc_o_c)
 
-printfmt.o: %.o: $(common_src)/stdlib/%.c
+printf.o: %.o: $(common_src)/%.c
 	$(call cmd,cc_o_c)
 
-atoi.o memcmp.o memcpy.o memset.o strcmp.o strlen.o : %.o: $(common_src)/string/%.c
+atoi.o memcmp.o memcpy.o memset.o strchr.o strcmp.o strlen.o : %.o: $(common_src)/string/%.c
 	$(call cmd,cc_o_c)
 
 ifneq ($(SGX),)
