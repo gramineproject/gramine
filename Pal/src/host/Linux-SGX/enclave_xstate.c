@@ -51,8 +51,20 @@
 int g_xsave_enabled = 0;
 uint64_t g_xsave_features = 0;
 uint32_t g_xsave_size = 0;
-// FXRSTOR only cares about the first 512 bytes, while XRSTOR in compacted mode will ignore
-// the first 512 bytes.
+
+const uint32_t g_cpu_extension_sizes[] = {
+    [AVX] = 256,      [MPX_1] = 64,      [MPX_2] = 64, [AVX512_1] = 64,
+    [AVX512_2] = 512, [AVX512_3] = 1024, [PKRU] = 8,   [AMX_1] = 64,    [AMX_2] = 8192 };
+
+/* Note that AVX offset is 576 bytes and MPX_1 starts at 960. The AVX state size is 256, leaving
+ * 128 bytes unaccounted for (a gap between AVX and MPX_1). Similarly, there is a gap between
+ * PKRU and AMX_1. */
+const uint32_t g_cpu_extension_offsets[] = {
+    [AVX] = 576,       [MPX_1] = 960,     [MPX_2] = 1024, [AVX512_1] = 1088,
+    [AVX512_2] = 1152, [AVX512_3] = 1664, [PKRU] = 2688,  [AMX_1] = 2752,    [AMX_2] = 2816 };
+
+/* FXRSTOR only cares about the first 512 bytes, while XRSTOR in compacted mode will ignore
+ * the first 512 bytes. */
 const uint32_t g_xsave_reset_state[XSAVE_RESET_STATE_SIZE / sizeof(uint32_t)] __attribute__((
     aligned(PAL_XSTATE_ALIGN))) = {
     0x037F, 0, 0, 0, 0, 0, 0x1F80,     0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -70,14 +82,16 @@ void init_xsave_size(uint64_t xfrm) {
         uint32_t size;
     } xsave_size_table[] = {
         /* `size` is calculated as the offset of the feature in XSAVE area + size of each
-         * sub-feature (see sanity_check_cpuid() for details).
-         * Note that g_xsave_size should be in ascending order. */
-        {SGX_XFRM_LEGACY, 64 + 512},               // 64 for xsave header, 512 for legacy features
-        {SGX_XFRM_AVX,    576 + 256},              // 256 for YMM0_H - YMM15_H registers
-        {SGX_XFRM_MPX,    960 + 64 + 64},          // 64 for MPX
-        {SGX_XFRM_AVX512, 1088 + 64 + 512 + 1024}, // 1600 for k0-k7, ZMM0_H-ZMM15_H, ZMM16-ZMM31
-        {SGX_XFRM_PKRU,   2688 + 8},               // 8 for PKRU register (note the gap!)
-        {SGX_XFRM_AMX,    2752 + 64 + 8192},       // 64 for XTILECFG, 8192 for XTILEDATA
+         * sub-feature. Note that g_xsave_size should be in ascending order. */
+        {SGX_XFRM_LEGACY, XSAVE_RESET_STATE_SIZE},
+        {SGX_XFRM_AVX,    g_cpu_extension_offsets[AVX] + g_cpu_extension_sizes[AVX]},
+        {SGX_XFRM_MPX,    g_cpu_extension_offsets[MPX_1] + g_cpu_extension_sizes[MPX_1] +
+                              g_cpu_extension_sizes[MPX_2]},
+        {SGX_XFRM_AVX512, g_cpu_extension_offsets[AVX512_1] + g_cpu_extension_sizes[AVX512_1] +
+                              g_cpu_extension_sizes[AVX512_2] + g_cpu_extension_sizes[AVX512_3]},
+        {SGX_XFRM_PKRU,   g_cpu_extension_offsets[PKRU] + g_cpu_extension_sizes[PKRU]},
+        {SGX_XFRM_AMX,    g_cpu_extension_offsets[AMX_1] + g_cpu_extension_sizes[AMX_1] +
+                              g_cpu_extension_sizes[AMX_2]},
     };
 
     /* fxsave/fxrstore as fallback */

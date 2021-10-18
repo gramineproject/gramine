@@ -77,6 +77,14 @@ extern char __text_start, __text_end, __data_start, __data_end;
 #define DATA_START ((void*)(&__data_start))
 #define DATA_END   ((void*)(&__data_end))
 
+enum cpu_extension { X87 = 0, SSE, AVX, MPX_1, MPX_2, AVX512_1, AVX512_2, AVX512_3, PKRU = 9,
+                     AMX_1 = 17, AMX_2, LAST_CPU_EXTENSION };
+
+extern const uint32_t g_cpu_extension_sizes[];
+extern const uint32_t g_cpu_extension_offsets[];
+
+enum register_index { EAX = 0, EBX, ECX, EDX };
+
 extern int g_xsave_enabled;
 extern uint64_t g_xsave_features;
 extern uint32_t g_xsave_size;

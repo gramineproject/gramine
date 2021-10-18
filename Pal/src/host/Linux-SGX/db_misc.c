@@ -195,19 +195,6 @@ void init_cpuid(void) {
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = report.body.attributes.xfrm;
 
-    enum cpu_extension { x87 = 0, SSE, AVX, MPX_1, MPX_2, AVX512_1, AVX512_2, AVX512_3, PKRU = 9,
-                         AMX_1 = 17, AMX_2 };
-    const uint32_t extension_sizes_bytes[] = {
-        [AVX] = 256,      [MPX_1] = 64,      [MPX_2] = 64, [AVX512_1] = 64,
-        [AVX512_2] = 512, [AVX512_3] = 1024, [PKRU] = 8,   [AMX_1] = 64,    [AMX_2] = 8192 };
-    /* Note that AVX offset is 576 bytes and MPX_1 starts at 960. The AVX state size is 256, leaving
-     * 128 bytes unaccounted for (a gap between AVX and MPX_1). Similarly, there is a gap between
-     * PKRU and AMX_1. */
-    const uint32_t extension_offset_bytes[] = {
-        [AVX] = 576,       [MPX_1] = 960,     [MPX_2] = 1024, [AVX512_1] = 1088,
-        [AVX512_2] = 1152, [AVX512_3] = 1664, [PKRU] = 2688,  [AMX_1] = 2752,    [AMX_2] = 2816 };
-    enum register_index { EAX = 0, EBX, ECX, EDX };
-
     const uint32_t EXTENDED_STATE_LEAF = 0xd;
 
     if (leaf == EXTENDED_STATE_LEAF) {
@@ -231,9 +218,9 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 /* Start from AVX since x87 and SSE are always captured using XSAVE. Also, x87 and
                  * SSE state size is implicitly included in the extension's offset, e.g., AVX's
                  * offset is 576 which includes x87 and SSE state as well as the XSAVE header. */
-                for (int i = AVX; i <= AMX_2; i++) {
+                for (int i = AVX; i < LAST_CPU_EXTENSION; i++) {
                     if (extension_enabled(xfrm, i)) {
-                        xsave_size = extension_offset_bytes[i] + extension_sizes_bytes[i];
+                        xsave_size = g_cpu_extension_offsets[i] + g_cpu_extension_sizes[i];
                     }
                 }
                 values[EBX] = xsave_size;
@@ -258,9 +245,9 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
 
                 /* Start with AVX, since x87 and SSE state is already included when initializing
                  * `save_size_bytes`. */
-                for (int i = AVX; i <= AMX_2; i++) {
+                for (int i = AVX; i < LAST_CPU_EXTENSION; i++) {
                     if (extension_enabled(xfrm, i)) {
-                        save_size_bytes += extension_sizes_bytes[i];
+                        save_size_bytes += g_cpu_extension_sizes[i];
                     }
                 }
                 /* EBX reports the actual size occupied by those extensions irrespective of their
@@ -280,8 +267,8 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
             case AMX_1:
             case AMX_2:
                 if (extension_enabled(xfrm, subleaf)) {
-                    if (values[EAX] != extension_sizes_bytes[subleaf] ||
-                            values[EBX] != extension_offset_bytes[subleaf]) {
+                    if (values[EAX] != g_cpu_extension_sizes[subleaf] ||
+                            values[EBX] != g_cpu_extension_offsets[subleaf]) {
                         log_error("Unexpected value in host CPUID. Exiting...");
                         _DkProcessExit(1);
                     }
