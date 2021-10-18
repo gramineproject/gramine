@@ -5,11 +5,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 int main(int argc, char** argv) {
-    int r;
-    struct stat buffer;
-    struct stat* buf = &buffer;
+    int ret;
+    struct stat buf;
 
     uid_t uid  = getuid();
     uid_t euid = geteuid();
@@ -25,18 +23,17 @@ int main(int argc, char** argv) {
         errx(EXIT_FAILURE, "GID/effective GID are not equal to the value in the manifest");
     }
 
-    // check stat uid and gid
-    r = stat(argv[0], buf);
-    if (r != 0) {
-        errx(EXIT_FAILURE, "Something unexpected went wrong in stat function. Error code: %d", r);
+    ret = stat(argv[0], &buf);
+    if (ret < 0) {
+        err(EXIT_FAILURE, "stat failed");
     }
 
-    if (buf->st_uid != 1338) {
-        errx(EXIT_FAILURE, "UID is not equal to the value in the manifest");
+    if (buf.st_uid != 1338) {
+        errx(EXIT_FAILURE, "UID from stat() is not equal to the value in the manifest");
     }
 
-    if (buf->st_gid != 1337) {
-        errx(EXIT_FAILURE, "GID is not equal to the value in the manifest");
+    if (buf.st_gid != 1337) {
+        errx(EXIT_FAILURE, "GID from stat() is not equal to the value in the manifest");
     }
 
     puts("TEST OK");

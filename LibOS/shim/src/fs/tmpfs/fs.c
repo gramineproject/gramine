@@ -22,6 +22,7 @@
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
+#include "shim_thread.h"
 #include "shim_utils.h"
 #include "stat.h"
 
@@ -151,6 +152,8 @@ static int tmpfs_stat(struct shim_dentry* dent, struct stat* buf) {
     if (ret < 0)
         goto out;
 
+    struct shim_thread* cur_thread = get_cur_thread();
+
     memset(buf, 0, sizeof(*buf));
     buf->st_mode  = dent->perm | dent->type;
     buf->st_size  = data->mem.size;
@@ -158,6 +161,8 @@ static int tmpfs_stat(struct shim_dentry* dent, struct stat* buf) {
     buf->st_ctime = data->ctime;
     buf->st_mtime = data->mtime;
     buf->st_atime = data->atime;
+    buf->st_uid   = cur_thread->uid;
+    buf->st_gid   = cur_thread->gid;
     ret = 0;
 
 out:
