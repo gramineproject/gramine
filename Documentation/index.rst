@@ -22,10 +22,16 @@ External documentation
 
 This website contains the official documentation of Gramine. For external
 contributions and additional resources, please visit
-https://gramine-contrib.readthedocs.io/en/latest/. Note that this link contains
-unofficial documents; these documents are not guaranteed to always be up-to-date
-and correct.
+https://gramine-contrib.readthedocs.io. Note that this link contains unofficial
+documents; these documents are not guaranteed to always be up-to-date and
+correct.
 
+
+GSC documentation
+=================
+
+For GSC (Gramine Shielded Containers) documentation please visit
+https://gramine.readthedocs.io/projects/gsc.
 
 Building and running Gramine
 ============================
@@ -59,6 +65,7 @@ Table of Contents
    manifest-syntax
    attestation
    cloud-deployment
+   gsc
    sgx-intro
    glossary
 
