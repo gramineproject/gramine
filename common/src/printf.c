@@ -16,7 +16,7 @@
 #undef vsnprintf
 #undef snprintf
 
-enum length_modifier_t {
+enum length_modifier {
     None,
     HH,
     H,
@@ -148,7 +148,7 @@ static int vprintf_core(int (*write_callback)(const char* buf, size_t size, void
             }
         }
 
-        enum length_modifier_t len_modifier = None;
+        enum length_modifier len_modifier = None;
         switch (*fmt++) {
             case 'l':
                 len_modifier = L;

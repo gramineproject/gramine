@@ -39,28 +39,14 @@ noreturn void abort(void) {
     DkProcessExit(131); /* ENOTRECOVERABLE = 131 */
 }
 
-/* Poor man's `malloc`. Just don't use it please. */
-static char g_buf[0x100];
-static int g_buf_used = 0;
-
+/* We just need these symbols for `printf`, but they won't be used in runtime. */
 void* malloc(size_t size) {
-    if (size > sizeof(g_buf)) {
-        return NULL;
-    }
-    int was_used = __atomic_exchange_n(&g_buf_used, 1, __ATOMIC_ACQUIRE);
-    if (was_used) {
-        return NULL;
-    }
-
-    return g_buf;
+    abort();
 }
 
 void free(void* ptr) {
     if (!ptr) {
         return;
     }
-    if (ptr != g_buf) {
-        abort();
-    }
-    __atomic_store_n(&g_buf_used, 0, __ATOMIC_RELEASE);
+    abort();
 }
