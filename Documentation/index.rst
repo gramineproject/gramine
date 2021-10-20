@@ -31,7 +31,7 @@ GSC documentation
 =================
 
 For GSC (Gramine Shielded Containers) documentation please visit
-https://gramine-gsc.readthedocs.io.
+https://gramine.readthedocs.io/projects/gsc.
 
 Building and running Gramine
 ============================
