@@ -12,10 +12,10 @@
 #include "assert.h"
 #include "log.h"
 
+/* "api_fortified.h" might be included and it defines these. */
 #undef vsnprintf
 #undef snprintf
 
-// TODO: probably need to prefix these with something, but didn't come up with some good name
 enum length_modifier_t {
     None,
     HH,
@@ -56,8 +56,17 @@ static int printf_padding(int (*write_callback)(const char* buf, size_t size, vo
 /*!
  * \brief Core printf implementation.
  *
- * TODO: comment
- * does not append nullbyte
+ * \param write_callback function called on each generated chunk of data
+ * \param arg passed to \p write_callback
+ * \param fmt format string
+ * \param ap list of optional variadic arguments
+ * \param[out] out_size total size of written data (sum of sizes passed to all \p write_callback
+ *                      invocations)
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Note that this function does not append a trailing null byte i.e. \p write_callback gets only
+ * actual data.
  */
 static int vprintf_core(int (*write_callback)(const char* buf, size_t size, void* arg), void* arg,
                         const char* fmt, va_list ap, size_t* out_size) {
@@ -243,7 +252,7 @@ static int vprintf_core(int (*write_callback)(const char* buf, size_t size, void
         char inline_buf[0x80];
 
         if (integer_conversion) {
-            /* 0x20 should be enough to store all possbile values.
+            /* 0x20 should be enough to store all possible values.
              * log2(8) = 3 (octal produces most digits). */
             static_assert(0x20 > sizeof(UINTMAX_MAX) * 8 / 3, "oops");
             /* +1 for sign, +2 for optional prefix (e.g. "0x"). */
@@ -370,15 +379,15 @@ static int vprintf_core(int (*write_callback)(const char* buf, size_t size, void
 struct snprintf_arg {
     char* buf;
     size_t size;
-    size_t idx;
+    size_t pos;
 };
 
 static int snprintf_callback(const char* buf, size_t size, void* _arg) {
     struct snprintf_arg* arg = _arg;
-    if (arg->idx < arg->size) {
-        size_t copy_size = MIN(size, arg->size - arg->idx);
-        memcpy(&arg->buf[arg->idx], buf, copy_size);
-        arg->idx += copy_size;
+    if (arg->pos < arg->size) {
+        size_t copy_size = MIN(size, arg->size - arg->pos);
+        memcpy(&arg->buf[arg->pos], buf, copy_size);
+        arg->pos += copy_size;
     }
     return 0;
 }
@@ -387,7 +396,7 @@ int vsnprintf(char* buf, size_t buf_size, const char* fmt, va_list ap) {
     struct snprintf_arg arg = {
         .buf = buf,
         .size = buf_size ? buf_size - 1 : 0,
-        .idx = 0,
+        .pos = 0,
     };
     size_t len = 0;
     int ret = vprintf_core(snprintf_callback, &arg, fmt, ap, &len);
@@ -395,7 +404,7 @@ int vsnprintf(char* buf, size_t buf_size, const char* fmt, va_list ap) {
         return ret;
     }
     if (buf_size) {
-        buf[arg.idx] = 0;
+        buf[arg.pos] = 0;
     }
     if (len > INT_MAX) {
         return -EOVERFLOW;

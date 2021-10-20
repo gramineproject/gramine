@@ -85,6 +85,10 @@ int main(void) {
      * standard. */
     TEST("000x1337", "%#08x", 0x1337);
 
+    /* Test whether string precision is correctly respected. Create a string that is not null
+     * terminated at two pages boundary, where the second page has no read permission. If
+     * the precision limit is not respected, `snprintf` will access data at the second page and
+     * crash the process. */
     char* ptr = NULL;
     int ret = DkVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
                                    PAL_PROT_READ | PAL_PROT_WRITE);
