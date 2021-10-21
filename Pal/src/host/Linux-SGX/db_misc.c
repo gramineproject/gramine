@@ -196,6 +196,8 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
     uint64_t xfrm = report.body.attributes.xfrm;
 
     const uint32_t EXTENDED_STATE_LEAF = 0xd;
+    const uint32_t AMX_TILE_INFO_LEAF  = 0x1d;
+    const uint32_t AMX_TMUL_INFO_LEAF  = 0x1e;
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
@@ -269,7 +271,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 if (extension_enabled(xfrm, subleaf)) {
                     if (values[EAX] != g_cpu_extension_sizes[subleaf] ||
                             values[EBX] != g_cpu_extension_offsets[subleaf]) {
-                        log_error("Unexpected value in host CPUID. Exiting...");
+                        log_error("Unexpected values in Processor Extended State Enum CPUID leaf");
                         _DkProcessExit(1);
                     }
                 } else {
@@ -281,6 +283,35 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                     values[EBX] = 0;
                 }
                 break;
+        }
+    } else if (leaf == AMX_TILE_INFO_LEAF && extension_enabled(xfrm, AMX_2)) {
+        if (subleaf == 0x0) {
+            /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
+            if (!IS_IN_RANGE_INCL(values[EAX], 1, 16) || values[EBX] != 0 || values[ECX] != 0 ||
+                    values[EDX] != 0) {
+                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
+                _DkProcessExit(1);
+            }
+        } else {
+            /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
+            if (!IS_IN_RANGE_INCL(values[EAX] & 0xFFFF, 1, 65536) || /* total_tile_bytes */
+                    !IS_IN_RANGE_INCL(values[EAX] >> 16, 1, 65536) || /* bytes_per_tile */
+                    !IS_IN_RANGE_INCL(values[EBX] & 0xFFFF, 1, 65536) || /* bytes_per_row */
+                    !IS_IN_RANGE_INCL(values[EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
+                    !IS_IN_RANGE_INCL(values[ECX] & 0xFFFF, 1, 256) || /* max_rows */
+                    (values[ECX] >> 16) != 0 || values[EDX] != 0) {
+                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%x)", subleaf);
+                _DkProcessExit(1);
+            }
+        }
+    } else if (leaf == AMX_TMUL_INFO_LEAF && extension_enabled(xfrm, AMX_2)) {
+        /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
+        if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 256) || /* tmul_maxk (rows or columns) */
+                !IS_IN_RANGE_INCL((values[EBX] & 0xFFFFFF) >> 8, 1, 65536) || /* tmul_maxn */
+                (values[EBX] >> 24) != 0 || values[EAX] != 0 || values[ECX] != 0 ||
+                values[EDX] != 0) {
+            log_error("Unexpected values in TMUL Information CPUID Leaf");
+            _DkProcessExit(1);
         }
     }
 }
