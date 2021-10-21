@@ -314,6 +314,8 @@ static int vprintf_core(int (*write_callback)(const char* buf, size_t size, void
             switch (conversion_specifier) {
                 case 's':
                     val_ptr = va_arg(ap, const char*);
+                    if (!val_ptr)
+                        val_ptr = "(null)";
                     val_len = strnlen(val_ptr, precision_seen ? precision : SIZE_MAX);
                     break;
                 case 'c':;

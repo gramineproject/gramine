@@ -22,6 +22,8 @@
 })
 
 int main(void) {
+    char* ptr = NULL;
+
     /* Basic tests. */
     TEST("1337", "%u", 1337);
     TEST("1337", "%d", 1337);
@@ -33,6 +35,7 @@ int main(void) {
     TEST("asdf", "%s", "asdf");
     TEST("0x1337", "%p", (void*)0x1337);
     TEST("ab%cd", "ab%%cd");
+    TEST("(null)", "%s", ptr);
 
     /* Length modifiers. */
     TEST("-13", "%hhd", (signed char)-13);
@@ -89,7 +92,6 @@ int main(void) {
      * terminated at two pages boundary, where the second page has no read permission. If
      * the precision limit is not respected, `snprintf` will access data at the second page and
      * crash the process. */
-    char* ptr = NULL;
     int ret = DkVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
                                    PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
