@@ -10,6 +10,7 @@ Gramine manifest management and rendering
 """
 
 import hashlib
+import os
 import pathlib
 import sys
 
@@ -58,7 +59,9 @@ def append_trusted_dir_or_file(trusted_files, val):
         if not uri.endswith('/'):
             raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
         for sub_path in sorted(filter(pathlib.Path.is_file, path.rglob('*'))):
-            append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
+            # Skip inaccessible files
+            if os.access(sub_path, os.R_OK):
+                append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
     else:
         assert path.is_file()
         append_tf(trusted_files, uri, hash_file_contents(path))
