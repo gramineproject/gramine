@@ -19,14 +19,13 @@
 #include "stat.h"
 
 /* 'open' operation for file streams */
-static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                     int create, int options) {
+static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                     pal_share_flags_t share, enum pal_create_mode create,
+                     pal_stream_options_t options) {
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
-    assert(0 <= access && access < PAL_ACCESS_BOUND);
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(create,  PAL_CREATE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     /* try to do the real open */
@@ -61,7 +60,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int 
         return ret;
     }
 
-    hdl->file.realpath = (PAL_STR)path;
+    hdl->file.realpath = path;
 
     struct stat st;
     ret = DO_SYSCALL(fstat, hdl->file.fd, &st);
@@ -111,8 +110,7 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return ret;
 }
 
-/* 'close' operation for file streams. In this case, it will only
-   close the file withou deleting it. */
+/* 'close' operation for file streams */
 static int file_close(PAL_HANDLE handle) {
     int fd = handle->file.fd;
 
@@ -126,10 +124,9 @@ static int file_close(PAL_HANDLE handle) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-/* 'delete' operation for file streams. It will actually delete
-   the file if we can successfully close it. */
-static int file_delete(PAL_HANDLE handle, int access) {
-    if (access)
+/* 'delete' operation for file streams */
+static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     DO_SYSCALL(unlink, handle->file.realpath);
@@ -137,7 +134,8 @@ static int file_delete(PAL_HANDLE handle, int access) {
 }
 
 /* 'map' operation for file stream. */
-static int file_map(PAL_HANDLE handle, void** addr, int prot, uint64_t offset, uint64_t size) {
+static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+                    uint64_t size) {
     int fd = handle->file.fd;
     void* mem = *addr;
     /*
@@ -151,11 +149,11 @@ static int file_map(PAL_HANDLE handle, void** addr, int prot, uint64_t offset, u
         handle->file.map_start = NULL;
     }
     int flags = PAL_MEM_FLAGS_TO_LINUX(0, prot) | (mem ? MAP_FIXED : 0);
-    prot = PAL_PROT_TO_LINUX(prot);
+    int linux_prot = PAL_PROT_TO_LINUX(prot);
 
     /* The memory will always be allocated with flag MAP_PRIVATE. */
     // TODO: except it will not since `assert(flags & MAP_PRIVATE)` fails on LTP
-    mem = (void*)DO_SYSCALL(mmap, mem, size, prot, flags, fd, offset);
+    mem = (void*)DO_SYSCALL(mmap, mem, size, linux_prot, flags, fd, offset);
 
     if (IS_PTR_ERR(mem))
         return unix_to_pal_error(PTR_TO_ERR(mem));
@@ -204,8 +202,8 @@ static inline int file_stat_type(struct stat* stat) {
 /* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
 static inline void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat) {
     attr->handle_type  = file_stat_type(stat);
-    attr->disconnected = PAL_FALSE;
-    attr->nonblocking  = PAL_FALSE;
+    attr->disconnected = false;
+    attr->nonblocking  = false;
     attr->readable     = stataccess(stat, ACCESS_R);
     attr->writable     = stataccess(stat, ACCESS_W);
     attr->runnable     = stataccess(stat, ACCESS_X);
@@ -315,22 +313,23 @@ struct handle_ops g_file_ops = {
 /* 'open' operation for directory stream. Directory stream does not have a
    specific type prefix, its URI looks the same file streams, plus it
    ended with slashes. dir_open will be called by file_open. */
-static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
+    __UNUSED(access);
+    assert(create != PAL_CREATE_IGNORED);
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
-    if (access < 0 || access >= PAL_ACCESS_BOUND)
-        return -PAL_ERROR_INVAL;
 
-    if (create & PAL_CREATE_TRY || create & PAL_CREATE_ALWAYS) {
+    if (create == PAL_CREATE_TRY || create == PAL_CREATE_ALWAYS) {
         int ret = DO_SYSCALL(mkdir, uri, share);
 
         if (ret < 0) {
-            if (ret == -EEXIST && create & PAL_CREATE_ALWAYS)
+            if (ret == -EEXIST && create == PAL_CREATE_ALWAYS)
                 return -PAL_ERROR_STREAMEXIST;
             if (ret != -EEXIST)
                 return unix_to_pal_error(ret);
-            assert(ret == -EEXIST && create & PAL_CREATE_TRY);
+            assert(ret == -EEXIST && create == PAL_CREATE_TRY);
         }
     }
 
@@ -349,11 +348,11 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, int a
     hdl->dir.fd = fd;
     char* path = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);
-    hdl->dir.realpath    = (PAL_STR)path;
+    hdl->dir.realpath    = path;
     hdl->dir.buf         = (PAL_PTR)NULL;
     hdl->dir.ptr         = (PAL_PTR)NULL;
     hdl->dir.end         = (PAL_PTR)NULL;
-    hdl->dir.endofstream = PAL_FALSE;
+    hdl->dir.endofstream = false;
     *handle = hdl;
     return 0;
 }
@@ -372,7 +371,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
         return -PAL_ERROR_INVAL;
     }
 
-    if (handle->dir.endofstream == PAL_TRUE) {
+    if (handle->dir.endofstream) {
         return 0;
     }
 
@@ -427,7 +426,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
         }
 
         if (!size) {
-            handle->dir.endofstream = PAL_TRUE;
+            handle->dir.endofstream = true;
             goto out;
         }
 
@@ -461,9 +460,9 @@ static int dir_close(PAL_HANDLE handle) {
     return 0;
 }
 
-/* 'delete' operation of directoy streams */
-static int dir_delete(PAL_HANDLE handle, int access) {
-    if (access)
+/* 'delete' operation of directory streams */
+static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     int ret = dir_close(handle);

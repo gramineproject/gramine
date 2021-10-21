@@ -170,7 +170,7 @@ sgx_raise:
 	.cfi_def_cfa %rsp, 8
 
 	movq %rax, %rdi
-	xor %esi, %esi
+	movq $PAL_EVENT_NO_EVENT, %rsi
 	lock xchgl %esi, %gs:PAL_TCB_URTS_LAST_ASYNC_EVENT
 
 	# return to enclave, arguments:

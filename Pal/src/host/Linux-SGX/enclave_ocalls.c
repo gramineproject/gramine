@@ -1777,7 +1777,7 @@ out:
 #endif
 }
 
-int ocall_eventfd(unsigned int initval, int flags) {
+int ocall_eventfd(int flags) {
     int retval = 0;
     ms_ocall_eventfd_t* ms;
 
@@ -1788,7 +1788,6 @@ int ocall_eventfd(unsigned int initval, int flags) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ms->ms_initval, initval);
     WRITE_ONCE(ms->ms_flags, flags);
 
     do {

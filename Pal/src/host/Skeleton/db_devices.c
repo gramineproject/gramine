@@ -10,8 +10,9 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

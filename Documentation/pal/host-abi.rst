@@ -67,20 +67,9 @@ Basic types
 
 .. doxygentypedef:: PAL_NUM
    :project: pal
-.. doxygentypedef:: PAL_FLG
-   :project: pal
 .. doxygentypedef:: PAL_PTR
    :project: pal
-.. doxygentypedef:: PAL_STR
-   :project: pal
 .. doxygentypedef:: PAL_IDX
-   :project: pal
-.. doxygentypedef:: PAL_BOL
-   :project: pal
-
-.. doxygendefine:: PAL_TRUE
-   :project: pal
-.. doxygendefine:: PAL_FALSE
    :project: pal
 
 
@@ -145,9 +134,9 @@ memory.
 .. doxygenfunction:: DkVirtualMemoryFree
    :project: pal
 
-.. doxygenenum:: PAL_ALLOC
+.. doxygentypedef:: pal_alloc_flags_t
    :project: pal
-.. doxygenenum:: PAL_PROT
+.. doxygentypedef:: pal_prot_flags_t
    :project: pal
 
 .. doxygenfunction:: DkVirtualMemoryProtect
@@ -247,21 +236,23 @@ applications.
 Flags used for stream manipulation
 """"""""""""""""""""""""""""""""""
 
-.. doxygenenum:: PAL_ACCESS
+.. doxygenenum:: pal_access
    :project: pal
 
-.. doxygenenum:: PAL_SHARE
+.. doxygentypedef:: pal_share_flags_t
    :project: pal
 
-.. doxygenenum:: PAL_CREATE
+.. doxygenenum:: pal_create_mode
    :project: pal
 
-.. doxygenenum:: PAL_OPTION
+.. doxygentypedef:: pal_stream_options_t
    :project: pal
 
-.. doxygenenum:: PAL_DELETE
+.. doxygenenum:: pal_delete_mode
    :project: pal
 
+.. doxygentypedef:: pal_wait_flags_t
+   :project: pal
 
 Thread creation
 ^^^^^^^^^^^^^^^
@@ -286,7 +277,7 @@ seven calls to create, signal, and block on synchronization objects.
 Exception handling
 ^^^^^^^^^^^^^^^^^^
 
-.. doxygenenum:: PAL_EVENT
+.. doxygenenum:: pal_event
    :project: pal
 
 .. doxygentypedef:: PAL_CONTEXT
@@ -295,7 +286,7 @@ Exception handling
    :project: pal
    :members:
 
-.. doxygentypedef:: PAL_EVENT_HANDLER
+.. doxygentypedef:: pal_event_handler_t
    :project: pal
 
 .. doxygenfunction:: DkSetExceptionHandler
@@ -349,13 +340,13 @@ and to obtain an attestation report and quote.
 .. doxygenfunction:: DkRandomBitsRead
    :project: pal
 
-.. doxygenfunction:: DkSegmentRegisterGet
+.. doxygenfunction:: DkSegmentBaseGet
    :project: pal
 
-.. doxygenfunction:: DkSegmentRegisterSet
+.. doxygenfunction:: DkSegmentBaseSet
    :project: pal
 
-.. doxygenenum:: PAL_SEGMENT
+.. doxygenenum:: pal_segment_reg
    :project: pal
 
 .. doxygenfunction:: DkMemoryAvailableQuota

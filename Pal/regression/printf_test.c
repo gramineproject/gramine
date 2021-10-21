@@ -97,7 +97,7 @@ int main(void) {
     if (ret < 0) {
         FAIL(1, "DkVirtualMemoryAlloc failed: %d", ret);
     }
-    ret = DkVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, PAL_PROT_NONE);
+    ret = DkVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
     if (ret < 0) {
         FAIL(1, "DkVirtualMemoryProtect failed: %d", ret);
     }

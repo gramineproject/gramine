@@ -25,7 +25,8 @@ int main(int argc, char** argv, char** envp) {
     /* test regular file opening */
 
     PAL_HANDLE file1 = NULL;
-    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file1);
+    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_NEVER, /*options=*/0, &file1);
     if (ret >= 0 && file1) {
         pal_printf("File Open Test 1 OK\n");
 
@@ -81,14 +82,16 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE file2 = NULL;
-    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file2);
+    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_NEVER, /*options=*/0, &file2);
     if (ret >= 0 && file2) {
         pal_printf("File Open Test 2 OK\n");
         DkObjectClose(file2);
     }
 
     PAL_HANDLE file3 = NULL;
-    ret = DkStreamOpen("file:../regression/File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file3);
+    ret = DkStreamOpen("file:../regression/File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_NEVER, /*options=*/0, &file3);
     if (ret >= 0 && file3) {
         pal_printf("File Open Test 3 OK\n");
         DkObjectClose(file3);
@@ -104,13 +107,15 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file4 = NULL;
     ret = DkStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
-                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, 0, &file4);
+                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, /*options=*/0,
+                       &file4);
     if (ret >= 0 && file4)
         pal_printf("File Creation Test 1 OK\n");
 
     PAL_HANDLE file5 = NULL;
     ret = DkStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
-                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, 0, &file5);
+                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, /*options=*/0,
+                       &file5);
     if (ret >= 0) {
         DkObjectClose(file5);
     } else {
@@ -119,7 +124,8 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file6 = NULL;
     ret = DkStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
-                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_TRY, 0, &file6);
+                       PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_TRY, /*options=*/0,
+                       &file6);
     if (ret >= 0 && file6) {
         pal_printf("File Creation Test 3 OK\n");
         DkObjectClose(file6);
@@ -157,9 +163,10 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE file7 = NULL;
-    ret = DkStreamOpen("file:file_delete.tmp", PAL_ACCESS_RDONLY, 0, 0, 0, &file7);
+    ret = DkStreamOpen("file:file_delete.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
+                       PAL_CREATE_NEVER, /*options=*/0, &file7);
     if (ret >= 0 && file7) {
-        ret = DkStreamDelete(file7, 0);
+        ret = DkStreamDelete(file7, PAL_DELETE_ALL);
         if (ret < 0) {
             pal_printf("DkStreamDelete failed\n");
             return 1;

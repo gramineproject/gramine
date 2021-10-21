@@ -57,7 +57,7 @@ struct shim_mem_entry {
     struct shim_mem_entry* next;
     void* addr;
     size_t size;
-    int prot; /* combination of PAL_PROT_* flags */
+    pal_prot_flags_t prot; /* combination of PAL_PROT_* flags */
 };
 
 struct shim_palhdl_entry {

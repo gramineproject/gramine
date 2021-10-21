@@ -58,7 +58,7 @@ static inline int create_process_handle(PAL_HANDLE* parent, PAL_HANDLE* child) {
     init_handle_hdr(HANDLE_HDR(phdl), PAL_TYPE_PROCESS);
     HANDLE_HDR(phdl)->flags  |= RFD(0) | WFD(0);
     phdl->process.stream      = fds[0];
-    phdl->process.nonblocking = PAL_FALSE;
+    phdl->process.nonblocking = false;
 
     chdl = malloc(HANDLE_SIZE(process));
     if (!chdl) {
@@ -69,7 +69,7 @@ static inline int create_process_handle(PAL_HANDLE* parent, PAL_HANDLE* child) {
     init_handle_hdr(HANDLE_HDR(chdl), PAL_TYPE_PROCESS);
     HANDLE_HDR(chdl)->flags  |= RFD(0) | WFD(0);
     chdl->process.stream      = fds[1];
-    chdl->process.nonblocking = PAL_FALSE;
+    chdl->process.nonblocking = false;
 
     *parent = phdl;
     *child  = chdl;
@@ -323,16 +323,16 @@ static int proc_close(PAL_HANDLE handle) {
     return 0;
 }
 
-static int proc_delete(PAL_HANDLE handle, int access) {
+static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     int shutdown;
-    switch (access) {
-        case 0:
+    switch (delete_mode) {
+        case PAL_DELETE_ALL:
             shutdown = SHUT_RDWR;
             break;
-        case PAL_DELETE_RD:
+        case PAL_DELETE_READ:
             shutdown = SHUT_RD;
             break;
-        case PAL_DELETE_WR:
+        case PAL_DELETE_WRITE:
             shutdown = SHUT_WR;
             break;
         default:

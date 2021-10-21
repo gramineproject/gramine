@@ -40,66 +40,66 @@ typedef struct pal_handle {
 
         struct {
             PAL_IDX fd;
-            PAL_STR realpath;
+            const char* realpath;
             /*
              * map_start is to request this file should be mapped to this
              * address. When fork is emulated, the address is already
              * determined by parent process.
              */
             PAL_PTR map_start;
-            PAL_BOL seekable; /* regular files are seekable, FIFO pipes are not */
+            bool seekable; /* regular files are seekable, FIFO pipes are not */
         } file;
 
         struct {
             PAL_IDX fd;
             PAL_PIPE_NAME name;
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } pipe;
 
         struct {
             PAL_IDX fds[MAX_FDS];
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } pipeprv;
 
         struct {
             PAL_IDX fd;
             /* TODO: add other flags in future, if needed (e.g., semaphore) */
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } eventfd;
 
         struct {
             PAL_IDX fd;
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } dev;
 
         struct {
             PAL_IDX fd;
-            PAL_STR realpath;
+            const char* realpath;
             PAL_PTR buf;
             PAL_PTR ptr;
             PAL_PTR end;
-            PAL_BOL endofstream;
+            bool endofstream;
         } dir;
 
         struct {
             PAL_IDX fd;
             PAL_PTR bind;
             PAL_PTR conn;
-            PAL_BOL nonblocking;
-            PAL_BOL reuseaddr;
+            bool nonblocking;
+            bool reuseaddr;
             PAL_NUM linger;
             PAL_NUM receivebuf;
             PAL_NUM sendbuf;
             PAL_NUM receivetimeout;
             PAL_NUM sendtimeout;
-            PAL_BOL tcp_cork;
-            PAL_BOL tcp_keepalive;
-            PAL_BOL tcp_nodelay;
+            bool tcp_cork;
+            bool tcp_keepalive;
+            bool tcp_nodelay;
         } sock;
 
         struct {
             PAL_IDX stream;
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } process;
 
         struct {

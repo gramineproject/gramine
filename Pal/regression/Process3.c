@@ -3,7 +3,7 @@
 #include "pal_regression.h"
 
 int main(int argc, char** argv, char** envp) {
-    PAL_STR args[1] = {0};
+    const char* args[1] = {NULL};
 
     // Hack to differentiate parent from child
     if (argc == 1) {

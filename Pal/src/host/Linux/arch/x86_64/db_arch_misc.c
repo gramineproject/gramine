@@ -227,7 +227,7 @@ out_vendor_id:
     return rv;
 }
 
-int _DkSegmentRegisterGet(int reg, void** addr) {
+int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_GET_FS, addr));
@@ -239,7 +239,7 @@ int _DkSegmentRegisterGet(int reg, void** addr) {
     }
 }
 
-int _DkSegmentRegisterSet(int reg, void* addr) {
+int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_SET_FS, addr));

@@ -15,7 +15,7 @@
 #define PAL_SOCKADDR_SIZE 96
 
 /* listen on a tcp socket */
-static int tcp_listen(PAL_HANDLE* handle, char* uri, int create) {
+static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -25,13 +25,14 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
 }
 
 /* connect on a tcp socket */
-static int tcp_connect(PAL_HANDLE* handle, char* uri, int create) {
+static int tcp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* 'open' operation of tcp stream */
-static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     size_t uri_size = strlen(uri) + 1;
 
     if (uri_size > PAL_SOCKADDR_SIZE)
@@ -60,7 +61,7 @@ static int64_t tcp_write(PAL_HANDLE handle, uint64_t offset, size_t len, const v
 }
 
 /* used by 'open' operation of tcp stream for bound socket */
-static int udp_bind(PAL_HANDLE* handle, char* uri, int create) {
+static int udp_bind(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -69,8 +70,9 @@ static int udp_connect(PAL_HANDLE* handle, char* uri) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     char buf[PAL_SOCKADDR_SIZE];
     size_t len = strlen(uri);
 
@@ -106,7 +108,7 @@ static int64_t udp_sendbyaddr(PAL_HANDLE handle, uint64_t offset, size_t len, co
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int socket_delete(PAL_HANDLE handle, int access) {
+static int socket_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

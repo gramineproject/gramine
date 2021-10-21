@@ -217,8 +217,8 @@ static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* o
     if (ret < 0)
         return ret;
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, /*create=*/0, /*options=*/0,
-                       out_palhdl);
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                       /*options=*/0, out_palhdl);
     free(uri);
     return pal_to_unix_errno(ret);
 }
@@ -236,9 +236,9 @@ static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mod
         return ret;
 
     PAL_HANDLE palhdl;
-    int access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags);
-    int create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
-    int options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
+    enum pal_access access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags);
+    enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
+    pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
     ret = DkStreamOpen(uri, access, host_perm, create, options, &palhdl);
     if (ret < 0) {
@@ -478,7 +478,7 @@ static int chroot_mmap(struct shim_handle* hdl, void** addr, size_t size, int pr
                        uint64_t offset) {
     assert(hdl->type == TYPE_CHROOT);
 
-    int pal_prot = LINUX_PROT_TO_PAL(prot, flags);
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
 
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
@@ -599,7 +599,7 @@ static int chroot_unlink(struct shim_dentry* dir, struct shim_dentry* dent) {
     if (ret < 0)
         goto out;
 
-    ret = DkStreamDelete(palhdl, /*access=*/0);
+    ret = DkStreamDelete(palhdl, PAL_DELETE_ALL);
     DkObjectClose(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
@@ -716,9 +716,9 @@ static int chroot_reopen(struct shim_handle* hdl, PAL_HANDLE* out_palhdl) {
     PAL_HANDLE palhdl;
 
     mode_t mode = 0;
-    int access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(hdl->flags);
-    int create = 0;
-    int options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(hdl->flags);
+    enum pal_access access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(hdl->flags);
+    enum pal_create_mode create = PAL_CREATE_NEVER;
+    pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(hdl->flags);
     int ret = DkStreamOpen(uri, access, mode, create, options, &palhdl);
     if (ret < 0)
         return pal_to_unix_errno(ret);

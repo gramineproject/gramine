@@ -26,7 +26,8 @@ int main(int argc, char** argv) {
         const char* newargs[4] = {"Tcp", time_arg, NULL};
 
         PAL_HANDLE srv = NULL;
-        ret = DkStreamOpen("tcp.srv:127.0.0.1:8000", 0, 0, 0, 0, &srv);
+        ret = DkStreamOpen("tcp.srv:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                           PAL_CREATE_IGNORED, /*options=*/0, &srv);
 
         if (ret < 0) {
             pal_printf("not able to create server\n");
@@ -86,7 +87,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        ret = DkStreamDelete(srv, 0);
+        ret = DkStreamDelete(srv, PAL_DELETE_ALL);
         if (ret < 0) {
             pal_printf("DkStreamDelete failed\n");
             return 1;
@@ -95,7 +96,8 @@ int main(int argc, char** argv) {
     } else {
         for (i = 0; i < NTRIES; i++) {
             PAL_HANDLE cli = NULL;
-            ret = DkStreamOpen("tcp:127.0.0.1:8000", 0, 0, 0, 0, &cli);
+            ret = DkStreamOpen("tcp:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                               PAL_CREATE_IGNORED, /*options=*/0, &cli);
 
             if (ret < 0) {
                 pal_printf("not able to create client\n");
@@ -119,7 +121,7 @@ int main(int argc, char** argv) {
 
             pal_printf("read from server: %s\n", buffer);
 
-            ret = DkStreamDelete(cli, 0);
+            ret = DkStreamDelete(cli, PAL_DELETE_ALL);
             if (ret < 0) {
                 pal_printf("DkStreamDelete failed\n");
                 return 1;

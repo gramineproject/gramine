@@ -10,7 +10,8 @@ int main(int argc, char** argv, char** envp) {
     int ret;
 
     PAL_HANDLE pipe1 = NULL;
-    ret = DkStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, 0, 0, 0, &pipe1);
+    ret = DkStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                       /*options=*/0, &pipe1);
 
     if (ret >= 0 && pipe1) {
         pal_printf("Pipe Creation 1 OK\n");
@@ -28,7 +29,8 @@ int main(int argc, char** argv, char** envp) {
         // Job for another day...
 
         PAL_HANDLE pipe2 = NULL;
-        ret = DkStreamOpen("pipe:1", PAL_ACCESS_RDWR, 0, 0, 0, &pipe2);
+        ret = DkStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                           /*options=*/0, &pipe2);
 
         if (ret >= 0 && pipe2) {
             PAL_HANDLE pipe3 = NULL;

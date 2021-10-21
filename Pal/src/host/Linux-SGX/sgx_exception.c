@@ -73,7 +73,7 @@ int block_async_signals(bool block) {
     return 0;
 }
 
-static int get_pal_event(int sig) {
+static enum pal_event signal_to_pal_event(int sig) {
     switch (sig) {
         case SIGFPE:
             return PAL_EVENT_ARITHMETIC_ERROR;
@@ -87,7 +87,7 @@ static int get_pal_event(int sig) {
         case SIGCONT:
             return PAL_EVENT_INTERRUPTED;
         default:
-            return -1;
+            BUG();
     }
 }
 
@@ -104,8 +104,7 @@ static bool interrupted_in_aex_profiling(void) {
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
-    int event = get_pal_event(signum);
-    assert(event > 0);
+    enum pal_event event = signal_to_pal_event(signum);
 
     __UNUSED(info);
 
@@ -156,8 +155,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
 }
 
 static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc) {
-    int event = get_pal_event(signum);
-    assert(event > 0);
+    enum pal_event event = signal_to_pal_event(signum);
 
     __UNUSED(info);
 

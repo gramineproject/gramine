@@ -316,7 +316,8 @@ static int load_cstring_array(const char* uri, const char*** res) {
     const char** array = NULL;
     int ret;
 
-    ret = _DkStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, 0, 0, 0);
+    ret = _DkStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0);
     if (ret < 0)
         return ret;
     ret = _DkStreamAttributesQueryByHandle(hdl, &attr);
@@ -370,8 +371,8 @@ out_fail:
 noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                        PAL_HANDLE parent_process,  /* parent process if it's a child */
                        PAL_HANDLE first_thread,    /* first thread handle */
-                       PAL_STR* arguments,         /* application arguments */
-                       PAL_STR* environments       /* environment variables */) {
+                       const char** arguments,     /* application arguments */
+                       const char** environments   /* environment variables */) {
     if (!instance_id) {
         assert(!parent_process);
         if (_DkRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {

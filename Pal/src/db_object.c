@@ -49,8 +49,8 @@ void DkObjectClose(PAL_HANDLE object_handle) {
 /* Wait for user-specified events of handles in the handle array. The wait can be timed out, unless
  * NO_TIMEOUT is given in the timeout_us argument. Returns `0` if waiting was successful, negative
  * error code otherwise. */
-int DkStreamsWaitEvents(PAL_NUM count, PAL_HANDLE* handle_array, PAL_FLG* events,
-                        PAL_FLG* ret_events, PAL_NUM timeout_us) {
+int DkStreamsWaitEvents(PAL_NUM count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                        pal_wait_flags_t* ret_events, PAL_NUM timeout_us) {
     for (PAL_NUM i = 0; i < count; i++) {
         if (UNKNOWN_HANDLE(handle_array[i])) {
             return -PAL_ERROR_INVAL;

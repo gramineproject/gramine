@@ -92,7 +92,9 @@ noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave
 
 void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                          PAL_XREGS_STATE* xregs_state);
-void _DkHandleExternalEvent(PAL_NUM event, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
+/* `event_` is actually of `enum pal_event` type, but we call it from assembly, so we need to know
+ * its underlying type. */
+void _DkHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
 
 bool is_tsc_usable(void);
 uint64_t get_tsc_hz(void);

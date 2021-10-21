@@ -36,7 +36,7 @@
  * \param[in]  options May contain PAL_OPTION_NONBLOCK.
  * \return             0 on success, negative PAL error code otherwise.
  */
-static int pipe_listen(PAL_HANDLE* handle, const char* name, int options) {
+static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
 
     struct sockaddr_un addr;
@@ -71,7 +71,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, int options) {
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPESRV);
     HANDLE_HDR(hdl)->flags |= RFD(0);  /* cannot write to a listening socket */
     hdl->pipe.fd            = fd;
-    hdl->pipe.nonblocking   = options & PAL_OPTION_NONBLOCK ? PAL_TRUE : PAL_FALSE;
+    hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
     /* padding with zeros is for uniformity with other PALs (in particular, Linux-SGX) */
     memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
@@ -115,7 +115,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
     HANDLE_HDR(clnt)->flags |= RFD(0) | WFD(0);
     clnt->pipe.fd            = newfd;
     clnt->pipe.name          = handle->pipe.name;
-    clnt->pipe.nonblocking   = PAL_FALSE; /* FIXME: must set nonblocking based on `handle` value */
+    clnt->pipe.nonblocking   = false; /* FIXME: must set nonblocking based on `handle` value */
 
     *client = clnt;
     return 0;
@@ -134,7 +134,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
  * \param[in]  options May contain PAL_OPTION_NONBLOCK.
  * \return             0 on success, negative PAL error code otherwise.
  */
-static int pipe_connect(PAL_HANDLE* handle, const char* name, int options) {
+static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
 
     struct sockaddr_un addr;
@@ -163,7 +163,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, int options) {
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPE);
     HANDLE_HDR(hdl)->flags |= RFD(0) | WFD(0);
     hdl->pipe.fd            = fd;
-    hdl->pipe.nonblocking   = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
+    hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
     /* padding with zeros is for uniformity with other PALs (in particular, Linux-SGX) */
     memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
@@ -184,7 +184,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, int options) {
  * \param[in]  options May contain PAL_OPTION_NONBLOCK.
  * \return             0 on success, negative PAL error code otherwise.
  */
-static int pipe_private(PAL_HANDLE* handle, int options) {
+static int pipe_private(PAL_HANDLE* handle, pal_stream_options_t options) {
     int fds[2];
 
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
@@ -204,7 +204,7 @@ static int pipe_private(PAL_HANDLE* handle, int options) {
     HANDLE_HDR(hdl)->flags  |= RFD(0) | WFD(1); /* first FD for reads, second FD for writes */
     hdl->pipeprv.fds[0]      = fds[0];
     hdl->pipeprv.fds[1]      = fds[1];
-    hdl->pipeprv.nonblocking = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
+    hdl->pipeprv.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
     *handle = hdl;
     return 0;
@@ -234,10 +234,14 @@ static int pipe_private(PAL_HANDLE* handle, int options) {
  * \param[in]  options May contain PAL_OPTION_NONBLOCK.
  * \return             0 on success, negative PAL error code otherwise.
  */
-static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                     int create, int options) {
-    if (access < 0 || access >= PAL_ACCESS_BOUND || !WITHIN_MASK(share, PAL_SHARE_MASK) ||
-        !WITHIN_MASK(create, PAL_CREATE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
+static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                     pal_share_flags_t share, enum pal_create_mode create,
+                     pal_stream_options_t options) {
+    __UNUSED(access);
+    __UNUSED(create);
+    assert(create == PAL_CREATE_IGNORED);
+
+    if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
         return -PAL_ERROR_INVAL;
 
     if (!strcmp(type, URI_TYPE_PIPE) && !*uri)
@@ -334,20 +338,20 @@ static int pipe_close(PAL_HANDLE handle) {
 /*!
  * \brief Shut down pipe (one or both ends in case of `pipeprv` depending on `access`).
  *
- * \param[in] handle  PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
- * \param[in] access  May be 0, PAL_DELETE_RD, PAL_DELETE_WR.
- * \return            0 on success, negative PAL error code otherwise.
+ * \param[in] handle       PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in] delete_mode  See #pal_delete_mode.
+ * \return                 0 on success, negative PAL error code otherwise.
  */
-static int pipe_delete(PAL_HANDLE handle, int access) {
+static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     int shutdown;
-    switch (access) {
-        case 0:
+    switch (delete_mode) {
+        case PAL_DELETE_ALL:
             shutdown = SHUT_RDWR;
             break;
-        case PAL_DELETE_RD:
+        case PAL_DELETE_READ:
             shutdown = SHUT_RD;
             break;
-        case PAL_DELETE_WR:
+        case PAL_DELETE_WRITE:
             shutdown = SHUT_WR;
             break;
         default:
@@ -450,9 +454,9 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->generic.fds[0] == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    PAL_BOL* nonblocking = (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV)
-                               ? &handle->pipeprv.nonblocking
-                               : &handle->pipe.nonblocking;
+    bool* nonblocking = (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV)
+                         ? &handle->pipeprv.nonblocking
+                         : &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
         int ret = DO_SYSCALL(fcntl, handle->generic.fds[0], F_SETFL,

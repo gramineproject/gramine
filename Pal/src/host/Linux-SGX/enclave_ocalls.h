@@ -7,6 +7,7 @@
 #include <linux/socket.h>
 
 #include "linux_types.h"
+#include "pal.h"
 #include "pal_linux.h"
 #include "sgx_attest.h"
 
@@ -95,7 +96,7 @@ int ocall_debug_map_remove(void* addr);
 
 int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size);
 
-int ocall_eventfd(unsigned int initval, int flags);
+int ocall_eventfd(int flags);
 
 /*!
  * \brief Execute untrusted code in PAL to obtain a quote from the Quoting Enclave.

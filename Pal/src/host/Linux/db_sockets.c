@@ -218,7 +218,7 @@ static int socket_parse_uri(char* uri, struct sockaddr** bind_addr, size_t* bind
 }
 
 /* fill in the PAL handle based on the file descriptors and address given. */
-static inline PAL_HANDLE socket_create_handle(int type, int fd, int options,
+static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_options_t options,
                                               struct sockaddr* bind_addr, size_t bind_addrlen,
                                               struct sockaddr* dest_addr, size_t dest_addrlen) {
     PAL_HANDLE hdl =
@@ -247,7 +247,7 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, int options,
         hdl->sock.conn = (PAL_PTR)NULL;
     }
 
-    hdl->sock.nonblocking = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
+    hdl->sock.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
     hdl->sock.linger      = 0;
 
     if (type == PAL_TYPE_TCPSRV) {
@@ -266,14 +266,14 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, int options,
 
     hdl->sock.receivetimeout = 0;
     hdl->sock.sendtimeout    = 0;
-    hdl->sock.tcp_cork       = PAL_FALSE;
-    hdl->sock.tcp_keepalive  = PAL_FALSE;
-    hdl->sock.tcp_nodelay    = PAL_FALSE;
+    hdl->sock.tcp_cork       = false;
+    hdl->sock.tcp_keepalive  = false;
+    hdl->sock.tcp_nodelay    = false;
     return hdl;
 }
 
 /* listen on a tcp socket */
-static int tcp_listen(PAL_HANDLE* handle, char* uri, int create, int options) {
+static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     struct sockaddr_storage buffer;
     struct sockaddr* bind_addr = (struct sockaddr*)&buffer;
     size_t bind_addrlen = sizeof(buffer);
@@ -301,7 +301,7 @@ static int tcp_listen(PAL_HANDLE* handle, char* uri, int create, int options) {
 
     if (bind_addr->sa_family == AF_INET6) {
         /* IPV6_V6ONLY socket option can only be set before first bind */
-        int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
+        int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
         ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_v6only,
                          sizeof(ipv6_v6only));
         if (ret < 0)
@@ -395,7 +395,7 @@ failed:
 }
 
 /* connect on a tcp socket */
-static int tcp_connect(PAL_HANDLE* handle, char* uri, int options) {
+static int tcp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     struct sockaddr_storage buffer[3];
     struct sockaddr* bind_addr = (struct sockaddr*)&buffer[0];
     size_t bind_addrlen = sizeof(buffer[0]);
@@ -474,14 +474,15 @@ failed:
 }
 
 /* 'open' operation of tcp stream */
-static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
+    __UNUSED(create);
+    assert(create == PAL_CREATE_IGNORED);
 
-    assert(0 <= access && access < PAL_ACCESS_BOUND);
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(create,  PAL_CREATE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     size_t uri_size = strlen(uri) + 1;
@@ -493,7 +494,7 @@ static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, int a
     memcpy(uri_buf, uri, uri_size);
 
     if (!strcmp(type, URI_TYPE_TCP_SRV))
-        return tcp_listen(handle, uri_buf, create, options);
+        return tcp_listen(handle, uri_buf, options);
 
     if (!strcmp(type, URI_TYPE_TCP))
         return tcp_connect(handle, uri_buf, options);
@@ -563,7 +564,7 @@ static int64_t tcp_write(PAL_HANDLE handle, uint64_t offset, size_t len, const v
 }
 
 /* used by 'open' operation of tcp stream for bound socket */
-static int udp_bind(PAL_HANDLE* handle, char* uri, int create, int options) {
+static int udp_bind(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     struct sockaddr_storage buffer;
     struct sockaddr* bind_addr = (struct sockaddr*)&buffer;
     size_t bind_addrlen = sizeof(buffer);
@@ -585,7 +586,7 @@ static int udp_bind(PAL_HANDLE* handle, char* uri, int create, int options) {
 
     /* IPV6_V6ONLY socket option can only be set before first bind */
     if (bind_addr->sa_family == AF_INET6) {
-        int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
+        int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
         ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_v6only,
                          sizeof(ipv6_v6only));
         if (ret < 0)
@@ -630,7 +631,7 @@ failed:
 }
 
 /* used by 'open' operation of tcp stream for connected socket */
-static int udp_connect(PAL_HANDLE* handle, char* uri, int create, int options) {
+static int udp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
     struct sockaddr_storage buffer[2];
     struct sockaddr* bind_addr = (struct sockaddr*)&buffer[0];
     size_t bind_addrlen = sizeof(buffer[0]);
@@ -651,7 +652,7 @@ static int udp_connect(PAL_HANDLE* handle, char* uri, int create, int options) {
     if (bind_addr) {
         if (bind_addr->sa_family == AF_INET6) {
             /* IPV6_V6ONLY socket option can only be set before first bind */
-            int ipv6_v6only = create & PAL_CREATE_DUALSTACK ? 0 : 1;
+            int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
             ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_v6only,
                              sizeof(ipv6_v6only));
             if (ret < 0)
@@ -690,14 +691,15 @@ failed:
     return ret;
 }
 
-static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
+    __UNUSED(create);
+    assert(create == PAL_CREATE_IGNORED);
 
-    assert(0 <= access && access < PAL_ACCESS_BOUND);
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(create,  PAL_CREATE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     char buf[PAL_SOCKADDR_SIZE];
@@ -709,10 +711,10 @@ static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, int acce
     memcpy(buf, uri, len + 1);
 
     if (!strcmp(type, URI_TYPE_UDP_SRV))
-        return udp_bind(hdl, buf, create, options);
+        return udp_bind(hdl, buf, options);
 
     if (!strcmp(type, URI_TYPE_UDP))
-        return udp_connect(hdl, buf, create, options);
+        return udp_connect(hdl, buf, options);
 
     return -PAL_ERROR_NOTSUPPORT;
 }
@@ -865,23 +867,23 @@ static int64_t udp_sendbyaddr(PAL_HANDLE handle, uint64_t offset, size_t len, co
     return bytes;
 }
 
-static int socket_delete(PAL_HANDLE handle, int access) {
+static int socket_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (handle->sock.fd == PAL_IDX_POISON)
         return 0;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCP && access)
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCP && delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     if (HANDLE_HDR(handle)->type == PAL_TYPE_TCP || HANDLE_HDR(handle)->type == PAL_TYPE_TCPSRV) {
         int shutdown;
-        switch (access) {
-            case 0:
+        switch (delete_mode) {
+            case PAL_DELETE_ALL:
                 shutdown = SHUT_RDWR;
                 break;
-            case PAL_DELETE_RD:
+            case PAL_DELETE_READ:
                 shutdown = SHUT_RD;
                 break;
-            case PAL_DELETE_WR:
+            case PAL_DELETE_WRITE:
                 shutdown = SHUT_WR;
                 break;
             default:

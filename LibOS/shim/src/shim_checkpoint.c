@@ -244,9 +244,9 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct shim_cp_store* store)
 
     struct shim_mem_entry* entry = store->first_mem_entry;
     while (entry) {
-        size_t mem_size = entry->size;
-        void* mem_addr  = entry->addr;
-        int mem_prot    = entry->prot;
+        size_t           mem_size = entry->size;
+        void*            mem_addr = entry->addr;
+        pal_prot_flags_t mem_prot = entry->prot;
 
         if (!(mem_prot & PAL_PROT_READ) && mem_size > 0) {
             /* make the area readable */
@@ -335,7 +335,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
 
             PAL_PTR addr = ALLOC_ALIGN_DOWN_PTR(entry->addr);
             PAL_NUM size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
-            PAL_FLG prot = entry->prot;
+            pal_prot_flags_t prot = entry->prot;
 
             int ret = DkVirtualMemoryAlloc(&addr, size, 0, prot | PAL_PROT_WRITE);
             if (ret < 0) {

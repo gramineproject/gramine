@@ -129,16 +129,13 @@ static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops**
     return 0;
 }
 
-/* _DkStreamOpen for internal use. Open stream based on uri. access/share/create/options are the
- * same flags defined for DkStreamOpen. */
-int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, int access, int share, int create,
-                  int options) {
+int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
+                  pal_share_flags_t share, enum pal_create_mode create,
+                  pal_stream_options_t options) {
     struct handle_ops* ops = NULL;
     char* type = NULL;
 
-    assert(0 <= access && access < PAL_ACCESS_BOUND);
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(create,  PAL_CREATE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     int ret = parse_stream_uri(&uri, &type, &ops);
@@ -152,14 +149,14 @@ int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, int access, int share, in
 }
 
 /* PAL call DkStreamOpen: Open stream based on uri, as given access/share/
-   create/options flags. DkStreamOpen return a PAL_HANDLE to access the
-   stream in `handle` argument.
-
-   FIXME: Currently `share` must match 1-1 to Linux open() `mode` argument. This isn't really
-   portable and will cause problems when implementing other PALs.
+ * create/options flags. DkStreamOpen return a PAL_HANDLE to access the
+ * stream in `handle` argument.
+ *
+ * FIXME: Currently `share` must match 1-1 to Linux open() `mode` argument. This isn't really
+ * portable and will cause problems when implementing other PALs.
  */
-int DkStreamOpen(PAL_STR uri, PAL_FLG access, PAL_FLG share, PAL_FLG create, PAL_FLG options,
-                 PAL_HANDLE* handle) {
+int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share,
+                 enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
     *handle = NULL;
     return _DkStreamOpen(handle, uri, access, share, create, options);
 }
@@ -183,12 +180,7 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client) {
     return _DkStreamWaitForClient(handle, client);
 }
 
-/* _DkStreamDelete for internal use. This function will explicit delete
-   the stream. For example, file will be deleted, socket witll be
-   disconnected, etc */
-int _DkStreamDelete(PAL_HANDLE handle, int access) {
-    assert(access == 0 || access == PAL_DELETE_RD || access == PAL_DELETE_WR);
-
+int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -197,15 +189,13 @@ int _DkStreamDelete(PAL_HANDLE handle, int access) {
     if (!ops->delete)
         return -PAL_ERROR_NOTSUPPORT;
 
-    return ops->delete(handle, access);
+    return ops->delete(handle, delete_mode);
 }
 
-int DkStreamDelete(PAL_HANDLE handle, PAL_FLG access) {
-    if (!handle) {
-        return -PAL_ERROR_INVAL;
-    }
+int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    assert(handle);
 
-    return _DkStreamDelete(handle, access);
+    return _DkStreamDelete(handle, delete_mode);
 }
 
 /* _DkStreamRead for internal use. Read from stream as absolute offset.
@@ -277,7 +267,8 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
     return ret;
 }
 
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_STR dest) {
+int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer,
+                  const char* dest) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
@@ -314,7 +305,7 @@ out:
     return ret;
 }
 
-int DkStreamAttributesQuery(PAL_STR uri, PAL_STREAM_ATTR* attr) {
+int DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
     if (!uri || !attr) {
         return -PAL_ERROR_INVAL;
     }
@@ -398,7 +389,8 @@ int DkStreamGetName(PAL_HANDLE handle, PAL_PTR buffer, PAL_NUM size) {
 
 /* _DkStreamMap for internal use. Map specific handle to certain memory,
    with given protection, offset and size */
-int _DkStreamMap(PAL_HANDLE handle, void** paddr, int prot, uint64_t offset, uint64_t size) {
+int _DkStreamMap(PAL_HANDLE handle, void** paddr, pal_prot_flags_t prot, uint64_t offset,
+                 uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset));
     void* addr = *paddr;
     int ret;
@@ -420,7 +412,8 @@ int _DkStreamMap(PAL_HANDLE handle, void** paddr, int prot, uint64_t offset, uin
     return 0;
 }
 
-int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, PAL_FLG prot, PAL_NUM offset, PAL_NUM size) {
+int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM offset,
+                PAL_NUM size) {
     assert(addr);
     void* map_addr = *addr;
 
@@ -530,7 +523,7 @@ int DkReceiveHandle(PAL_HANDLE handle, PAL_HANDLE* cargo) {
     return _DkReceiveHandle(handle, cargo);
 }
 
-int DkStreamChangeName(PAL_HANDLE hdl, PAL_STR uri) {
+int DkStreamChangeName(PAL_HANDLE hdl, const char* uri) {
     struct handle_ops* ops = NULL;
     char* type = NULL;
     int ret;

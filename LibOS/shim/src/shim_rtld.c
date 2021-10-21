@@ -235,7 +235,7 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
                            struct shim_handle* file) {
     int ret;
     int map_flags = MAP_FIXED | MAP_PRIVATE;
-    PAL_FLG pal_prot = LINUX_PROT_TO_PAL(c->prot, map_flags);
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(c->prot, map_flags);
 
     /* Map the part that should be loaded from file, rounded up to page size. */
     if (c->start < c->map_end) {
@@ -285,7 +285,7 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
         void* zero_page_start = (void*)(load_addr + c->map_end);
         size_t zero_page_size = c->alloc_end - c->map_end;
         int zero_map_flags = MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS;
-        PAL_FLG zero_pal_prot = LINUX_PROT_TO_PAL(c->prot, zero_map_flags);
+        pal_prot_flags_t zero_pal_prot = LINUX_PROT_TO_PAL(c->prot, zero_map_flags);
 
         if ((ret = bkeep_mmap_fixed(zero_page_start, zero_page_size, c->prot, zero_map_flags,
                                     /*file=*/NULL, /*offset=*/0, /*comment=*/NULL)) < 0) {

@@ -21,7 +21,7 @@
 #include "assert.h"
 #include "pal.h"
 
-static inline int PAL_MEM_FLAGS_TO_LINUX(int alloc_type, int prot) {
+static inline int PAL_MEM_FLAGS_TO_LINUX(pal_alloc_flags_t alloc_type, pal_prot_flags_t prot) {
     assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
     assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
 
@@ -29,14 +29,14 @@ static inline int PAL_MEM_FLAGS_TO_LINUX(int alloc_type, int prot) {
            (prot & PAL_PROT_WRITECOPY      ? MAP_PRIVATE : MAP_SHARED);
 }
 
-static inline int PAL_PROT_TO_LINUX(int prot) {
+static inline int PAL_PROT_TO_LINUX(pal_prot_flags_t prot) {
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
     return (prot & PAL_PROT_READ  ? PROT_READ  : 0) |
            (prot & PAL_PROT_WRITE ? PROT_WRITE : 0) |
            (prot & PAL_PROT_EXEC  ? PROT_EXEC  : 0);
 }
 
-static inline int PAL_ACCESS_TO_LINUX_OPEN(int access) {
+static inline int PAL_ACCESS_TO_LINUX_OPEN(enum pal_access access) {
     switch (access) {
         case PAL_ACCESS_RDONLY:
             return O_RDONLY;
@@ -45,18 +45,25 @@ static inline int PAL_ACCESS_TO_LINUX_OPEN(int access) {
         case PAL_ACCESS_RDWR:
             return O_RDWR;
         default:
-            log_error("Invalid access (%d) in PAL_ACCESS_TO_LINUX_OPEN", access);
-            die_or_inf_loop();
+            BUG();
     }
 }
 
-static inline int PAL_CREATE_TO_LINUX_OPEN(int create) {
-    assert(create == 0 || create == PAL_CREATE_TRY || create == PAL_CREATE_ALWAYS);
-    return (create & PAL_CREATE_TRY    ? O_CREAT          : 0) |
-           (create & PAL_CREATE_ALWAYS ? O_CREAT | O_EXCL : 0);
+static inline int PAL_CREATE_TO_LINUX_OPEN(enum pal_create_mode create) {
+    switch (create) {
+        case PAL_CREATE_NEVER:
+            return 0;
+        case PAL_CREATE_TRY:
+            return O_CREAT;
+        case PAL_CREATE_ALWAYS:
+            return O_CREAT | O_EXCL;
+        case PAL_CREATE_IGNORED:
+        default:
+            BUG();
+    }
 }
 
-static inline int PAL_OPTION_TO_LINUX_OPEN(int options) {
+static inline int PAL_OPTION_TO_LINUX_OPEN(pal_stream_options_t options) {
     assert(WITHIN_MASK(options, PAL_OPTION_CLOEXEC | PAL_OPTION_NONBLOCK));
     return (options & PAL_OPTION_CLOEXEC  ? O_CLOEXEC  : 0) |
            (options & PAL_OPTION_NONBLOCK ? O_NONBLOCK : 0);

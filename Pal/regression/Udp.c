@@ -21,7 +21,8 @@ int main(int argc, char** argv) {
         const char* newargs[3] = {"Udp", "child", NULL};
 
         PAL_HANDLE srv = NULL;
-        ret = DkStreamOpen("udp.srv:127.0.0.1:8000", 0, 0, 0, 0, &srv);
+        ret = DkStreamOpen("udp.srv:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                           PAL_CREATE_IGNORED, /*options=*/0, &srv);
 
         if (ret < 0) {
             pal_printf("not able to create server\n");
@@ -72,7 +73,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        ret = DkStreamDelete(srv, 0);
+        ret = DkStreamDelete(srv, PAL_DELETE_ALL);
         if (ret < 0) {
             pal_printf("DkStreamDelete failed\n");
             return 1;
@@ -80,7 +81,8 @@ int main(int argc, char** argv) {
         DkObjectClose(srv);
     } else {
         PAL_HANDLE cli = NULL;
-        ret = DkStreamOpen("udp:127.0.0.1:8000", 0, 0, 0, 0, &cli);
+        ret = DkStreamOpen("udp:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                           PAL_CREATE_IGNORED, /*options=*/0, &cli);
         if (ret < 0) {
             pal_printf("DkStreamOpen failed\n");
             return 1;

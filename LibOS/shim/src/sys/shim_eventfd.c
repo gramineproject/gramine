@@ -20,7 +20,7 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-static int create_eventfd(PAL_HANDLE* efd, unsigned count, int flags) {
+static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     int ret;
 
     assert(g_manifest_root);
@@ -39,18 +39,29 @@ static int create_eventfd(PAL_HANDLE* efd, unsigned count, int flags) {
     }
 
     PAL_HANDLE hdl = NULL;
-    int pal_flags  = 0;
+    int pal_flags = 0;
 
     pal_flags |= flags & EFD_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     pal_flags |= flags & EFD_CLOEXEC ? PAL_OPTION_CLOEXEC : 0;
     pal_flags |= flags & EFD_SEMAPHORE ? PAL_OPTION_EFD_SEMAPHORE : 0;
 
-    /* eventfd() requires count (aka initval) but PAL's DkStreamOpen() doesn't have such an
-     * argument. Using create arg as a work-around (note: initval is uint32 but create is int32). */
-    ret = DkStreamOpen(URI_PREFIX_EVENTFD, 0, 0, count, pal_flags, &hdl);
+    ret = DkStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_IGNORED, pal_flags, &hdl);
     if (ret < 0) {
-        log_error("eventfd open failure");
+        log_error("eventfd: creation failure");
         return pal_to_unix_errno(ret);
+    }
+
+    /* set the initial count */
+    PAL_NUM write_size = sizeof(initial_count);
+    ret = DkStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, /*dest=*/NULL);
+    if (ret < 0) {
+        log_error("eventfd: failed to set initial count");
+        return pal_to_unix_errno(ret);
+    }
+    if (write_size != sizeof(initial_count)) {
+        log_error("eventfd: interrupted while setting initial count");
+        return -EINTR;
     }
 
     *efd = hdl;

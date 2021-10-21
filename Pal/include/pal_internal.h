@@ -34,8 +34,8 @@ struct handle_ops {
     /* 'open' is used by DkStreamOpen. 'handle' is a preallocated handle, 'type' will be a
      * normalized prefix, 'uri' is the remaining string of uri. access, share, create, and options
      * follow the same flags defined for DkStreamOpen in pal.h. */
-    int (*open)(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                int create, int options);
+    int (*open)(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options);
 
     /* 'read' and 'write' is used by DkStreamRead and DkStreamWrite, so they have exactly same
      * prototype as them. */
@@ -53,7 +53,7 @@ struct handle_ops {
      * stream, while 'delete' actually destroy the stream, such as deleting a file or shutting
      * down a socket */
     int (*close)(PAL_HANDLE handle);
-    int (*delete)(PAL_HANDLE handle, int access);
+    int (*delete)(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 
     /*
      * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
@@ -62,7 +62,8 @@ struct handle_ops {
      * Common PAL code will ensure that *address, offset, and size are page-aligned. 'address'
      * should not be NULL.
      */
-    int (*map)(PAL_HANDLE handle, void** address, int prot, uint64_t offset, uint64_t size);
+    int (*map)(PAL_HANDLE handle, void** address, pal_prot_flags_t prot, uint64_t offset,
+               uint64_t size);
 
     /* 'setlength' is used by DkStreamFlush. It truncate the stream to certain size. */
     int64_t (*setlength)(PAL_HANDLE handle, uint64_t length);
@@ -152,7 +153,7 @@ int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
  * \param environments      environment variables
  */
 noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
-                       PAL_STR* arguments, PAL_STR* environments);
+                       const char** arguments, const char** environments);
 
 /* For initialization */
 
@@ -166,16 +167,18 @@ int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info);
 
 /* Internal DK calls, in case any of the internal routines needs to use them */
 /* DkStream calls */
-int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, int access, int share, int create,
-                  int options);
-int _DkStreamDelete(PAL_HANDLE handle, int access);
+int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
+                  pal_share_flags_t share, enum pal_create_mode create,
+                  pal_stream_options_t options);
+int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
                       int addrlen);
 int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
                        const char* addr, int addrlen);
 int _DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _DkStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _DkStreamMap(PAL_HANDLE handle, void** addr, int prot, uint64_t offset, uint64_t size);
+int _DkStreamMap(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+                 uint64_t size);
 int _DkStreamUnmap(void* addr, uint64_t size);
 int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _DkStreamFlush(PAL_HANDLE handle);
@@ -201,17 +204,18 @@ void _DkEventClear(PAL_HANDLE handle);
 int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 /* DkVirtualMemory calls */
-int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, int alloc_type, int prot);
+int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_type,
+                          pal_prot_flags_t prot);
 int _DkVirtualMemoryFree(void* addr, uint64_t size);
-int _DkVirtualMemoryProtect(void* addr, uint64_t size, int prot);
+int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
 /* DkObject calls */
 int _DkObjectClose(PAL_HANDLE object_handle);
-int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, PAL_FLG* events,
-                         PAL_FLG* ret_events, int64_t timeout_us);
+int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                         pal_wait_flags_t* ret_events, int64_t timeout_us);
 
 /* DkException calls & structures */
-PAL_EVENT_HANDLER _DkGetExceptionHandler(PAL_NUM event_num);
+pal_event_handler_t _DkGetExceptionHandler(enum pal_event event);
 
 /* other DK calls */
 int _DkSystemTimeQuery(uint64_t* out_usec);
@@ -221,8 +225,8 @@ int _DkSystemTimeQuery(uint64_t* out_usec);
  * 0 on success, negative on failure.
  */
 int _DkRandomBitsRead(void* buffer, size_t size);
-int _DkSegmentRegisterGet(int reg, void** addr);
-int _DkSegmentRegisterSet(int reg, void* addr);
+int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr);
+int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr);
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]);
 int _DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
                          PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
@@ -269,7 +273,7 @@ void pal_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3
 #define PAL_LOG_DEFAULT_LEVEL  LOG_LEVEL_ERROR
 #define PAL_LOG_DEFAULT_FD     2
 
-const char* pal_event_name(enum PAL_EVENT event);
+const char* pal_event_name(enum pal_event event);
 
 #define uthash_fatal(msg)                      \
     do {                                       \

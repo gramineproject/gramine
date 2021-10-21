@@ -113,6 +113,8 @@ nitpick_ignore = [
     ('c:type', 'uint32_t'),
     ('c:type', 'uint64_t'),
     ('c:type', 'union'),
+    ('c:type', 'enum'), # parsing of these seems to be broken:
+                        #     WARNING: c:type reference target not found: enum
 ]
 
 manpages_url = 'https://manpages.debian.org/{path}'

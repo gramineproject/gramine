@@ -296,7 +296,6 @@ typedef struct {
 } ms_ocall_debug_describe_location_t;
 
 typedef struct {
-    unsigned int ms_initval;
     int          ms_flags;
 } ms_ocall_eventfd_t;
 

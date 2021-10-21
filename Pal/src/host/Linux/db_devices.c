@@ -17,19 +17,15 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 
-static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     int ret;
-    __UNUSED(share);
-    __UNUSED(create);
-    __UNUSED(options);
 
     if (strcmp(type, URI_TYPE_DEV))
         return -PAL_ERROR_INVAL;
 
-    assert(0 <= access && access < PAL_ACCESS_BOUND);
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(create,  PAL_CREATE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     PAL_HANDLE hdl = malloc(HANDLE_SIZE(dev));
@@ -40,7 +36,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, int a
 
     if (!strcmp(uri, "tty")) {
         /* special case of "dev:tty" device which is the standard input + standard output */
-        hdl->dev.nonblocking = PAL_FALSE;
+        hdl->dev.nonblocking = false;
 
         if (access == PAL_ACCESS_RDONLY) {
             HANDLE_HDR(hdl)->flags |= RFD(0);
@@ -55,7 +51,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, int a
         }
     } else {
         /* other devices must be opened through the host */
-        hdl->dev.nonblocking = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
+        hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
         ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
                                     PAL_CREATE_TO_LINUX_OPEN(create)  |
@@ -145,9 +141,9 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 
     if (!strcmp(uri, "tty")) {
         /* special case of "dev:tty" device which is the standard input + standard output */
-        attr->readable     = PAL_TRUE; /* we don't know if it's stdin/stdout so simply return true */
-        attr->writable     = PAL_TRUE; /* we don't know if it's stdin/stdout so simply return true */
-        attr->runnable     = PAL_FALSE;
+        attr->readable     = true; /* we don't know if it's stdin/stdout so simply return true */
+        attr->writable     = true; /* we don't know if it's stdin/stdout so simply return true */
+        attr->runnable     = false;
         attr->share_flags  = 0;
         attr->pending_size = 0;
     } else {
@@ -164,8 +160,8 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         attr->pending_size = stat_buf.st_size;
     }
 
-    attr->handle_type  = PAL_TYPE_DEV;
-    attr->nonblocking  = PAL_FALSE;
+    attr->handle_type = PAL_TYPE_DEV;
+    attr->nonblocking = false;
     return 0;
 }
 
@@ -177,7 +173,7 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->readable     = HANDLE_HDR(handle)->flags & RFD(0);
         attr->writable     = HANDLE_HDR(handle)->flags & WFD(0);
-        attr->runnable     = PAL_FALSE;
+        attr->runnable     = false;
         attr->share_flags  = 0;
         attr->pending_size = 0;
     } else {

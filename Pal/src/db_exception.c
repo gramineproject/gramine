@@ -14,14 +14,14 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-PAL_EVENT_HANDLER g_handlers[PAL_EVENT_NUM_BOUND] = {0};
+static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};
 
-PAL_EVENT_HANDLER _DkGetExceptionHandler(PAL_NUM event) {
+pal_event_handler_t _DkGetExceptionHandler(enum pal_event event) {
     return __atomic_load_n(&g_handlers[event], __ATOMIC_ACQUIRE);
 }
 
-void DkSetExceptionHandler(PAL_EVENT_HANDLER handler, PAL_NUM event) {
-    assert(handler && event != 0 && event < ARRAY_SIZE(g_handlers));
+void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
+    assert(handler && event != PAL_EVENT_NO_EVENT && event < ARRAY_SIZE(g_handlers));
 
     __atomic_store_n(&g_handlers[event], handler, __ATOMIC_RELEASE);
 }
@@ -33,7 +33,7 @@ noreturn void pal_abort(void) {
     _DkProcessExit(ENOTRECOVERABLE);
 }
 
-const char* pal_event_name(enum PAL_EVENT event) {
+const char* pal_event_name(enum pal_event event) {
     switch (event) {
         case PAL_EVENT_ARITHMETIC_ERROR:
             return "arithmetic exception";

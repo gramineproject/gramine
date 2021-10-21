@@ -209,8 +209,8 @@ class TC_02_Symbols(RegressionTestCase):
         'DkMemoryAvailableQuota',
     ]
     if ON_X86:
-        ALL_SYMBOLS.append('DkSegmentRegisterGet')
-        ALL_SYMBOLS.append('DkSegmentRegisterSet')
+        ALL_SYMBOLS.append('DkSegmentBaseGet')
+        ALL_SYMBOLS.append('DkSegmentBaseSet')
 
     def test_000_symbols(self):
         _, stderr = self.run_binary(['Symbols'])

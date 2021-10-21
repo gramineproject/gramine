@@ -34,17 +34,20 @@ int main(int argc, char** argv) {
     pal_printf("Enter main thread\n");
 
     PAL_HANDLE handles[3];
-    int ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, 0, 0, 0, &handles[0]);
+    int ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                           PAL_CREATE_IGNORED, /*options=*/0, &handles[0]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");
         return 1;
     }
-    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, 0, 0, 0, &handles[1]);
+    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                       /*options=*/0, &handles[1]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");
         return 1;
     }
-    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, 0, 0, 0, &handles[2]);
+    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                       /*options=*/0, &handles[2]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");
         return 1;
@@ -60,8 +63,8 @@ int main(int argc, char** argv) {
 
     pal_printf("Waiting on event\n");
 
-    PAL_FLG events[3]  = {PAL_WAIT_READ, PAL_WAIT_READ, PAL_WAIT_READ};
-    PAL_FLG revents[3] = {0, 0, 0};
+    pal_wait_flags_t events[3]  = {PAL_WAIT_READ, PAL_WAIT_READ, PAL_WAIT_READ};
+    pal_wait_flags_t revents[3] = {0, 0, 0};
 
     ret = DkStreamsWaitEvents(3, handles, events, revents, NO_TIMEOUT);
     if (ret < 0) {

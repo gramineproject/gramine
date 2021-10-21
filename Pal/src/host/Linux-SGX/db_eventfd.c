@@ -36,18 +36,19 @@ static inline int eventfd_type(int options) {
 
 /* `type` must be eventfd, `uri` & `access` & `share` are unused, `create` holds eventfd's initval,
  * `options` holds eventfd's flags */
-static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri, int access,
-                            int share, int create, int options) {
+static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                            enum pal_access access, pal_share_flags_t share,
+                            enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
+    __UNUSED(create);
+    assert(create == PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_EVENTFD) != 0 || *uri != '\0') {
         return -PAL_ERROR_INVAL;
     }
 
-    /* Using create arg as a work-around (note: initval is uint32 but create is int32).*/
-    int fd = ocall_eventfd(create, eventfd_type(options));
-
+    int fd = ocall_eventfd(eventfd_type(options));
     if (fd < 0)
         return unix_to_pal_error(fd);
 
@@ -62,7 +63,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     HANDLE_HDR(hdl)->flags = RFD(0) | WFD(0);
 
     hdl->eventfd.fd          = fd;
-    hdl->eventfd.nonblocking = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
+    hdl->eventfd.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
     *handle = hdl;
 
     return 0;
@@ -137,7 +138,7 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
      * receives virtual FD from LibOS, but the Linux-host eventfd is memorized here, such that this
      * Linux-host eventfd can be retrieved (by LibOS) during app's ioctl(). */
     attr->no_of_fds = 1;
-    attr->fds[0]    = handle->eventfd.fd;
+    attr->fds[0] = handle->eventfd.fd;
 
     return 0;
 }

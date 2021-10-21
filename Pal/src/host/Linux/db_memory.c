@@ -41,7 +41,8 @@ bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     return false;
 }
 
-int _DkVirtualMemoryAlloc(void** paddr, size_t size, int alloc_type, int prot) {
+int _DkVirtualMemoryAlloc(void** paddr, size_t size, pal_alloc_flags_t alloc_type,
+                          pal_prot_flags_t prot) {
     assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
     assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
 
@@ -64,10 +65,10 @@ int _DkVirtualMemoryAlloc(void** paddr, size_t size, int alloc_type, int prot) {
     assert(addr);
 
     int flags = PAL_MEM_FLAGS_TO_LINUX(alloc_type, prot | PAL_PROT_WRITECOPY);
-    prot = PAL_PROT_TO_LINUX(prot);
+    int linux_prot = PAL_PROT_TO_LINUX(prot);
 
     flags |= MAP_ANONYMOUS | MAP_FIXED;
-    addr = (void*)DO_SYSCALL(mmap, addr, size, prot, flags, -1, 0);
+    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
 
     if (IS_PTR_ERR(addr)) {
         /* note that we don't undo operations on `g_pal_internal_mem_used` in case of internal-PAL
@@ -84,7 +85,7 @@ int _DkVirtualMemoryFree(void* addr, size_t size) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-int _DkVirtualMemoryProtect(void* addr, size_t size, int prot) {
+int _DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     int ret = DO_SYSCALL(mprotect, addr, size, PAL_PROT_TO_LINUX(prot));
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }

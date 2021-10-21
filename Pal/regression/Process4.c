@@ -13,7 +13,8 @@ int main(int argc, char** argv) {
 
     if (argc == 1) {
         PAL_HANDLE pipe_srv = NULL;
-        int ret = DkStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, 0, 0, 0, &pipe_srv);
+        int ret = DkStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                               PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
         if (ret < 0) {
             pal_printf("DkStreamOpen(\"pipe.srv\", ...) failed: %d\n", ret);
             return 1;
@@ -71,7 +72,8 @@ int main(int argc, char** argv) {
             pal_printf("wall time = %ld\n", end - start);
 
             PAL_HANDLE pipe = NULL;
-            int ret = DkStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, 0, 0, 0, &pipe);
+            int ret = DkStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                   PAL_CREATE_IGNORED, /*options=*/0, &pipe);
             if (ret < 0) {
                 pal_printf("Failed to open pipe: %d\n", ret);
                 return 1;

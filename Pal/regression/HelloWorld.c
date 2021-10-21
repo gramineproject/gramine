@@ -7,7 +7,8 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("start program: HelloWorld\n");
 
     PAL_HANDLE out = NULL;
-    int ret = DkStreamOpen("dev:tty", PAL_ACCESS_WRONLY, 0, 0, 0, &out);
+    int ret = DkStreamOpen("dev:tty", PAL_ACCESS_WRONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                           /*options=*/0, &out);
 
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");

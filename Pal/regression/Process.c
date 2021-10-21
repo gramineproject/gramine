@@ -31,7 +31,7 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("Process Read 2: %s\n", buffer4);
 
     } else {
-        PAL_STR args[3] = {"Process", "Child", 0};
+        const char* args[3] = {"Process", "Child", 0};
         PAL_HANDLE children[3] = { 0 };
 
         for (int i = 0; i < 3; i++) {

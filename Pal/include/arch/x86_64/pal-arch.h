@@ -288,13 +288,13 @@ typedef struct PAL_CPU_INFO_ {
     PAL_NUM physical_cores_per_socket;
     /* array of "logical core -> socket" mappings; has online_logical_cores elements */
     int* cpu_socket;
-    PAL_STR cpu_vendor;
-    PAL_STR cpu_brand;
+    const char* cpu_vendor;
+    const char* cpu_brand;
     PAL_NUM cpu_family;
     PAL_NUM cpu_model;
     PAL_NUM cpu_stepping;
     double  cpu_bogomips;
-    PAL_STR cpu_flags;
+    const char* cpu_flags;
 } PAL_CPU_INFO;
 
 typedef struct PAL_CORE_CACHE_INFO_ {

@@ -19,11 +19,11 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSegmentRegisterGet(int reg, void** addr) {
+int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSegmentRegisterSet(int reg, void* addr) {
+int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

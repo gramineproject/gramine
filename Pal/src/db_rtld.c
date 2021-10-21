@@ -93,11 +93,11 @@ struct loadcmd {
     ElfW(Off) map_off;
 
     /* Permissions for memory area */
-    int prot;
+    pal_prot_flags_t prot;
 };
 
-static int elf_segment_prot_to_pal_prot(int elf_segment_prot) {
-    int pal_prot = 0;
+static pal_prot_flags_t elf_segment_prot_to_pal_prot(int elf_segment_prot) {
+    pal_prot_flags_t pal_prot = 0;
     pal_prot |= (elf_segment_prot & PF_R) ? PAL_PROT_READ : 0;
     pal_prot |= (elf_segment_prot & PF_W) ? PAL_PROT_WRITE : 0;
     pal_prot |= (elf_segment_prot & PF_X) ? PAL_PROT_EXEC : 0;
@@ -485,7 +485,8 @@ int load_entrypoint(const char* uri) {
     PAL_HANDLE handle;
 
     char buf[1024]; /* must be enough to hold ELF header and all its program headers */
-    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, 0, 0, 0);
+    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0);
     if (ret < 0)
         return ret;
 
@@ -590,7 +591,7 @@ void set_pal_binary_name(const char* name) {
  * protected files system, and a workaround would be ugly. Instead, the protected files system needs
  * rethinking.
  */
-void DkDebugMapAdd(PAL_STR uri, PAL_PTR start_addr) {
+void DkDebugMapAdd(const char* uri, PAL_PTR start_addr) {
 #ifndef DEBUG
     __UNUSED(uri);
     __UNUSED(start_addr);

@@ -14,7 +14,7 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int DkProcessCreate(PAL_STR* args, PAL_HANDLE* handle) {
+int DkProcessCreate(const char** args, PAL_HANDLE* handle) {
     *handle = NULL;
     return _DkProcessCreate(handle, args);
 }

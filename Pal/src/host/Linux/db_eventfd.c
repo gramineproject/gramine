@@ -21,7 +21,7 @@
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 
-static inline int eventfd_type(int options) {
+static inline int eventfd_type(pal_stream_options_t options) {
     int type = 0;
     if (options & PAL_OPTION_NONBLOCK)
         type |= EFD_NONBLOCK;
@@ -37,17 +37,19 @@ static inline int eventfd_type(int options) {
 
 /* `type` must be eventfd, `uri` & `access` & `share` are unused, `create` holds eventfd's initval,
  * `options` holds eventfd's flags */
-static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri, int access,
-                            int share, int create, int options) {
+static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                            enum pal_access access, pal_share_flags_t share,
+                            enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
+    __UNUSED(create);
+    assert(create == PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_EVENTFD) != 0 || *uri != '\0') {
         return -PAL_ERROR_INVAL;
     }
 
-    /* Using create arg as a work-around (note: initval is uint32 but create is int32).*/
-    int fd = DO_SYSCALL(eventfd2, create, eventfd_type(options));
+    int fd = DO_SYSCALL(eventfd2, 0, eventfd_type(options));
 
     if (fd < 0)
         return unix_to_pal_error(fd);
@@ -63,8 +65,8 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     HANDLE_HDR(hdl)->flags = RFD(0) | WFD(0);
 
     hdl->eventfd.fd          = fd;
-    hdl->eventfd.nonblocking = (options & PAL_OPTION_NONBLOCK) ? PAL_TRUE : PAL_FALSE;
-    *handle                  = hdl;
+    hdl->eventfd.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
+    *handle = hdl;
 
     return 0;
 }

@@ -853,7 +853,7 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return 0;
 }
 
-int _DkSegmentRegisterGet(int reg, void** addr) {
+int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             *addr = (void*)GET_ENCLAVE_TLS(fsbase);
@@ -866,7 +866,7 @@ int _DkSegmentRegisterGet(int reg, void** addr) {
     }
 }
 
-int _DkSegmentRegisterSet(int reg, void* addr) {
+int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             SET_ENCLAVE_TLS(fsbase, addr);

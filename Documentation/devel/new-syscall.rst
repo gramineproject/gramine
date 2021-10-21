@@ -41,15 +41,13 @@ and cannot be emulated inside the library OS. Therefore, you may have to add
 a |~| few new PAL calls to the existing interface.
 
 To add a |~| new PAL call, first modify :file:`Pal/include/pal/pal.h`. Define
-the PAL call in a |~| platform-independent way::
+the PAL call::
 
-   PAL_BOL DkThreadSetCPUAffinity(PAL_NUM cpu_num, PAL_IDX* cpu_indexes);
+   bool DkThreadSetCPUAffinity(PAL_NUM cpu_num, PAL_IDX* cpu_indexes);
 
-Make sure you use the PAL-specific data types, including :type:`PAL_BOL`,
-:type:`PAL_NUM`, :type:`PAL_PTR`, :type:`PAL_FLG`, :type:`PAL_IDX`, and
-:type:`PAL_STR`. The naming convention of a |~| PAL call is to start functions
-with the ``Dk`` prefix, followed by a comprehensive name describing the purpose
-of the PAL call.
+The naming convention of a |~| PAL call is to start functions with the ``Dk``
+prefix, followed by a comprehensive name describing the purpose of the PAL
+call.
 
 4. Export new PAL calls from PAL binaries (optional)
 ----------------------------------------------------

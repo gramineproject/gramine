@@ -25,28 +25,9 @@
 typedef struct toml_table_t toml_table_t;
 
 typedef uint64_t    PAL_NUM; /*!< a number */
-typedef const char* PAL_STR; /*!< a pointer to a C-string */
 typedef void*       PAL_PTR; /*!< a pointer to memory or buffer (something other than string) */
-typedef uint32_t    PAL_FLG; /*!< a set of flags */
 typedef uint32_t    PAL_IDX; /*!< an index */
 
-/*!
- * \brief a boolean value (either #PAL_TRUE or #PAL_FALSE)
- *
- * This data type is commonly used as the return value of
- * a PAL API to determine whether the call succeeded
- */
-typedef bool PAL_BOL;
-
-/*!
- * True value for #PAL_BOL.
- */
-#define PAL_TRUE true
-
-/*!
- * False value for #PAL_BOL.
- */
-#define PAL_FALSE false
 
 /* Moved MAX_FDS from <host_kernel>/pal_host.h to here,
  * since it is 3, across all host kernels. */
@@ -64,7 +45,7 @@ typedef struct atomic_int PAL_REF;
 
 typedef struct {
     PAL_IDX type;
-    PAL_FLG flags;
+    uint32_t flags;
 } PAL_HDR;
 
 #include "pal_host.h"
@@ -128,7 +109,7 @@ typedef struct PAL_MEM_INFO_ {
 
 /********** PAL APIs **********/
 typedef struct PAL_CONTROL_ {
-    PAL_STR host_type;
+    const char* host_type;
 
     /*
      * Handles and executables
@@ -142,7 +123,7 @@ typedef struct PAL_CONTROL_ {
     /*
      * Memory layout
      */
-    PAL_BOL disable_aslr;       /*!< disable ASLR (may be necessary for restricted environments) */
+    bool disable_aslr;          /*!< disable ASLR (may be necessary for restricted environments) */
     PAL_PTR_RANGE user_address; /*!< The range of user addresses */
 
     struct {
@@ -177,24 +158,19 @@ const PAL_CONTROL* DkGetPalControl(void);
  * MEMORY ALLOCATION
  */
 
-/*! Memory Allocation Flags */
-enum PAL_ALLOC {
-    PAL_ALLOC_RESERVE  = 0x1, /*!< Only reserve the memory */
-    PAL_ALLOC_INTERNAL = 0x2, /*!< Allocate for PAL (valid only if #IN_PAL) */
+/*! memory allocation flags */
+typedef uint32_t pal_alloc_flags_t; /* bitfield */
+#define PAL_ALLOC_RESERVE  0x1 /*!< Only reserve the memory */
+#define PAL_ALLOC_INTERNAL 0x2 /*!< Allocate for PAL (valid only if #IN_PAL) */
+#define PAL_ALLOC_MASK     0x3
 
-    PAL_ALLOC_MASK     = 0x3,
-};
-
-/*! Memory Protection Flags */
-enum PAL_PROT {
-    PAL_PROT_NONE      = 0x0,
-    PAL_PROT_READ      = 0x1,
-    PAL_PROT_WRITE     = 0x2,
-    PAL_PROT_EXEC      = 0x4,
-    PAL_PROT_WRITECOPY = 0x8, /*!< Copy on write */
-
-    PAL_PROT_MASK      = 0xF,
-};
+/*! memory protection flags */
+typedef uint32_t pal_prot_flags_t; /* bitfield */
+#define PAL_PROT_READ      0x1
+#define PAL_PROT_WRITE     0x2
+#define PAL_PROT_EXEC      0x4
+#define PAL_PROT_WRITECOPY 0x8
+#define PAL_PROT_MASK      0xF
 
 /*!
  * \brief Allocate virtual memory for the library OS and zero it out.
@@ -206,10 +182,11 @@ enum PAL_PROT {
  *  forbidden. On successful return `*addr` will contain the allocated address (which can differ
  *  only in the `NULL` case).
  * \param size must be a positive number, aligned at the allocation alignment.
- * \param alloc_type can be a combination of any of the #PAL_ALLOC flags
- * \param prot can be a combination of the #PAL_PROT flags
+ * \param alloc_type a combination of any of the `PAL_ALLOC_*` flags
+ * \param prot a combination of the `PAL_PROT_*` flags
  */
-int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, PAL_FLG alloc_type, PAL_FLG prot);
+int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_type,
+                         pal_prot_flags_t prot);
 
 /*!
  * \brief This API deallocates a previously allocated memory mapping.
@@ -230,13 +207,11 @@ int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size);
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, PAL_FLG prot);
+int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, pal_prot_flags_t prot);
 
 /*
  * PROCESS CREATION
  */
-
-#define PAL_PROCESS_MASK 0x0
 
 /*!
  * \brief Create a new process.
@@ -249,7 +224,7 @@ int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, PAL_FLG prot);
  *
  * TODO: `args` is only used by PAL regression tests, and should be removed at some point.
  */
-int DkProcessCreate(PAL_STR* args, PAL_HANDLE* handle);
+int DkProcessCreate(const char** args, PAL_HANDLE* handle);
 
 /*!
  * \brief Terminate all threads in the process immediately.
@@ -263,69 +238,63 @@ noreturn void DkProcessExit(PAL_NUM exit_code);
  */
 
 /*! Stream Access Flags */
-enum PAL_ACCESS {
+enum pal_access {
     PAL_ACCESS_RDONLY,
     PAL_ACCESS_WRONLY,
     PAL_ACCESS_RDWR,
     PAL_ACCESS_BOUND,
 };
 
-/*! Stream Sharing Flags */
+/*! stream sharing flags */
 // FIXME: These flags currently must correspond 1-1 to Linux flags, which is totally unportable.
 //        They should be redesigned when we'll be rewriting the filesystem layer.
-enum PAL_SHARE {
-    PAL_SHARE_GLOBAL_X =    01,
-    PAL_SHARE_GLOBAL_W =    02,
-    PAL_SHARE_GLOBAL_R =    04,
-    PAL_SHARE_GROUP_X  =   010,
-    PAL_SHARE_GROUP_W  =   020,
-    PAL_SHARE_GROUP_R  =   040,
-    PAL_SHARE_OWNER_X  =  0100,
-    PAL_SHARE_OWNER_W  =  0200,
-    PAL_SHARE_OWNER_R  =  0400,
-    PAL_SHARE_STICKY   = 01000,
-    PAL_SHARE_SET_GID  = 02000,
-    PAL_SHARE_SET_UID  = 04000,
+typedef uint32_t pal_share_flags_t; /* bitfield */
+#define PAL_SHARE_GLOBAL_X    01
+#define PAL_SHARE_GLOBAL_W    02
+#define PAL_SHARE_GLOBAL_R    04
+#define PAL_SHARE_GROUP_X    010
+#define PAL_SHARE_GROUP_W    020
+#define PAL_SHARE_GROUP_R    040
+#define PAL_SHARE_OWNER_X   0100
+#define PAL_SHARE_OWNER_W   0200
+#define PAL_SHARE_OWNER_R   0400
+#define PAL_SHARE_STICKY   01000
+#define PAL_SHARE_SET_GID  02000
+#define PAL_SHARE_SET_UID  04000
+#define PAL_SHARE_MASK     07777
 
-    PAL_SHARE_MASK     = 07777,
+/*! stream create mode */
+enum pal_create_mode {
+    PAL_CREATE_NEVER,     /*!< Fail if file does not exist */
+    PAL_CREATE_TRY,       /*!< Create file if file does not exist */
+    PAL_CREATE_ALWAYS,    /*!< Create file and fail if file already exists */
+    PAL_CREATE_IGNORED,   /*!< Magic value for calls to handle types which ignore creation mode */
 };
 
-/*! Stream Create Flags */
-enum PAL_CREATE {
-    PAL_CREATE_TRY       = 1, /*!< Create file if file does not exist */
-    PAL_CREATE_ALWAYS    = 2, /*!< Create file and fail if file already exists */
-    PAL_CREATE_DUALSTACK = 4, /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
-
-    PAL_CREATE_MASK      = 7,
-};
-
-/*! Stream Option Flags */
-enum PAL_OPTION {
-    PAL_OPTION_CLOEXEC       = 1,
-    PAL_OPTION_EFD_SEMAPHORE = 2, /*!< specific to `eventfd` syscall */
-    PAL_OPTION_NONBLOCK      = 4,
-
-    PAL_OPTION_MASK          = 7,
-};
-
-#define WITHIN_MASK(val, mask) (((val) | (mask)) == (mask))
+/*! stream misc flags */
+typedef uint32_t pal_stream_options_t; /* bitfield */
+#define PAL_OPTION_CLOEXEC         1
+#define PAL_OPTION_EFD_SEMAPHORE   2 /*!< specific to `eventfd` syscall */
+#define PAL_OPTION_NONBLOCK        4
+#define PAL_OPTION_DUALSTACK       8 /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
+#define PAL_OPTION_MASK          0xF
 
 /*!
  * \brief Open/create a stream resource specified by `uri`
  *
- * \param uri is the URI of the stream to be opened/created
- * \param access can be a combination of the #PAL_ACCESS flags
- * \param share_flags can be a combination of the #PAL_SHARE flags
- * \param create can be a combination of the #PAL_CREATE flags
- * \param options can be a combination of the #PAL_OPTION flags
+ * \param uri         is the URI of the stream to be opened/created
+ * \param access      see #pal_access
+ * \param share_flags a combination of the `PAL_SHARE_*` flags
+ * \param create      see #pal_create_mode
+ * \param options     a combination of the `PAL_OPTION_*` flags
  * \param handle[out] if the resource is successfully opened or created, a PAL handle is returned
  *                    in `*handle` for further access such as reading or writing.
  *
  * \return 0 on success, negative error code on failure.
  *
  * Supported URI types:
- * * `%file:...`, `dir:...`: Files or directories on the host file system. If #PAL_CREATE_TRY is
- *   given in `create` flags, the file/directory will be created.
+ * * `%file:...`, `dir:...`: Files or directories on the host file system. If #PAL_CREATE_TRY or
+ *   #PAL_CREATE_ALWAYS is given in `create` flags, the file/directory will be created.
  * * `dev:...`: Open a device as a stream. For example, `dev:tty` represents the standard I/O.
  * * `pipe.srv:<name>`, `pipe:<name>`, `pipe:`: Open a byte stream that can be used for RPC between
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
@@ -335,8 +304,8 @@ enum PAL_OPTION {
  * * `udp.srv:<ADDR>:<PORT>`, `udp:<ADDR>:<PORT>`: Open a UDP socket to listen or connect to
  *   a remote UDP socket.
  */
-int DkStreamOpen(PAL_STR uri, PAL_FLG access, PAL_FLG share_flags, PAL_FLG create, PAL_FLG options,
-                 PAL_HANDLE* handle);
+int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share_flags,
+                 enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
 
 /*!
  * \brief Blocks until a new connection is accepted and returns the PAL handle for the connection.
@@ -383,19 +352,21 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buff
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_STR dest);
+int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer,
+                  const char* dest);
 
-enum PAL_DELETE {
-    PAL_DELETE_RD = 1, /*!< shut down the read side only */
-    PAL_DELETE_WR = 2, /*!< shut down the write side only */
+enum pal_delete_mode {
+    PAL_DELETE_ALL,  /*!< delete the whole resource / shut down both directions */
+    PAL_DELETE_READ,  /*!< shut down the read side only */
+    PAL_DELETE_WRITE, /*!< shut down the write side only */
 };
 
 /*!
  * \brief Delete files or directories on the host or shut down the connection of TCP/UDP sockets.
  *
- * \param access which side to shut down (#PAL_DELETE), or both if 0 is given.
+ * \param access which side to shut down (see #pal_delete_mode values)
  */
-int DkStreamDelete(PAL_HANDLE handle, PAL_FLG access);
+int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 
 /*!
  * \brief Map a file to a virtual memory address in the current process.
@@ -408,7 +379,8 @@ int DkStreamDelete(PAL_HANDLE handle, PAL_FLG access);
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, PAL_FLG prot, PAL_NUM offset, PAL_NUM size);
+int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM offset,
+                PAL_NUM size);
 
 /*!
  * \brief Unmap virtual memory that is backed by a file stream.
@@ -456,10 +428,10 @@ int DkReceiveHandle(PAL_HANDLE handle, PAL_HANDLE* cargo);
 /* stream attribute structure */
 typedef struct _PAL_STREAM_ATTR {
     PAL_IDX handle_type;
-    PAL_BOL disconnected;
-    PAL_BOL nonblocking;
-    PAL_BOL readable, writable, runnable;
-    PAL_FLG share_flags;
+    bool disconnected;
+    bool nonblocking;
+    bool readable, writable, runnable;
+    pal_share_flags_t share_flags;
     PAL_NUM pending_size;
     PAL_IDX no_of_fds;
     PAL_IDX fds[MAX_FDS];
@@ -468,9 +440,9 @@ typedef struct _PAL_STREAM_ATTR {
             PAL_NUM linger;
             PAL_NUM receivebuf, sendbuf;
             PAL_NUM receivetimeout, sendtimeout;
-            PAL_BOL tcp_cork;
-            PAL_BOL tcp_keepalive;
-            PAL_BOL tcp_nodelay;
+            bool tcp_cork;
+            bool tcp_keepalive;
+            bool tcp_nodelay;
         } socket;
     };
 } PAL_STREAM_ATTR;
@@ -480,7 +452,7 @@ typedef struct _PAL_STREAM_ATTR {
  *
  * This API only applies for URIs such as `%file:...`, `dir:...`, and `dev:...`.
  */
-int DkStreamAttributesQuery(PAL_STR uri, PAL_STREAM_ATTR* attr);
+int DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Query the attributes of an open stream.
@@ -502,13 +474,11 @@ int DkStreamGetName(PAL_HANDLE handle, PAL_PTR buffer, PAL_NUM size);
 /*!
  * \brief This API changes the name of an open stream.
  */
-int DkStreamChangeName(PAL_HANDLE handle, PAL_STR uri);
+int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
 
 /*
  * Thread creation
  */
-
-#define PAL_THREAD_MASK 0
 
 /*!
  * \brief Create a thread in the current process.
@@ -571,9 +541,13 @@ int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_
  * Exception Handling
  */
 
-enum PAL_EVENT {
+/* These values are used as indices in an array of PAL_EVENT_NUM_BOUND elements, be careful when
+ * changing them. */
+enum pal_event {
+    /*! pseudo event, used in some APIs to denote a lack of event */
+    PAL_EVENT_NO_EVENT,
     /*! arithmetic error (div-by-zero, floating point exception, etc.) */
-    PAL_EVENT_ARITHMETIC_ERROR = 1,
+    PAL_EVENT_ARITHMETIC_ERROR,
     /*! segmentation fault, protection fault, bus fault */
     PAL_EVENT_MEMFAULT,
     /*! illegal instructions */
@@ -593,14 +567,14 @@ enum PAL_EVENT {
  * \param addr address of the exception (meaningful only for sync exceptions)
  * \param context CPU context at the moment of exception.
  */
-typedef void (*PAL_EVENT_HANDLER)(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context);
+typedef void (*pal_event_handler_t)(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context);
 
 /*!
  * \brief Set the handler for the specific exception event.
  *
- * \param event can be one of #PAL_EVENT values
+ * \param event can be one of #pal_event values
  */
-void DkSetExceptionHandler(PAL_EVENT_HANDLER handler, PAL_NUM event);
+void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event);
 
 /*
  * Synchronization
@@ -658,12 +632,10 @@ void DkEventClear(PAL_HANDLE handle);
  */
 int DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
-enum PAL_WAIT {
-    PAL_WAIT_SIGNAL = 1, /*!< ignored in events */
-    PAL_WAIT_READ   = 2,
-    PAL_WAIT_WRITE  = 4,
-    PAL_WAIT_ERROR  = 8, /*!< ignored in events */
-};
+typedef uint32_t pal_wait_flags_t; /* bitfield */
+#define PAL_WAIT_READ   1
+#define PAL_WAIT_WRITE  2
+#define PAL_WAIT_ERROR  4 /*!< ignored in events */
 
 /*!
  * \brief Poll
@@ -677,8 +649,8 @@ enum PAL_WAIT {
  *  least one handle is ready.
  * \return 0 if there was an event on at least one handle, negative error code otherwise
  */
-int DkStreamsWaitEvents(PAL_NUM count, PAL_HANDLE* handle_array, PAL_FLG* events,
-                        PAL_FLG* ret_events, PAL_NUM timeout_us);
+int DkStreamsWaitEvents(PAL_NUM count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                        pal_wait_flags_t* ret_events, PAL_NUM timeout_us);
 
 /*!
  * \brief Close (deallocate) a PAL handle.
@@ -715,30 +687,30 @@ int DkSystemTimeQuery(PAL_NUM* time);
  */
 int DkRandomBitsRead(PAL_PTR buffer, PAL_NUM size);
 
-enum PAL_SEGMENT {
-    PAL_SEGMENT_FS = 1,
+enum pal_segment_reg {
+    PAL_SEGMENT_FS,
     PAL_SEGMENT_GS,
 };
 
 /*!
- * \brief Get segment register
+ * \brief Get segment register base
  *
- * \param reg the register to get (#PAL_SEGMENT)
+ * \param reg the register base to get (#pal_segment_reg)
  * \param addr the address where result will be stored
  *
  * \return 0 on success, negative error value on failure
  */
-int DkSegmentRegisterGet(PAL_FLG reg, PAL_PTR* addr);
+int DkSegmentBaseGet(enum pal_segment_reg reg, PAL_PTR* addr);
 
 /*!
  * \brief Set segment register
  *
- * \param reg the register to be set (#PAL_SEGMENT)
+ * \param reg the register base to be set (#pal_segment_reg)
  * \param addr the address to be set
  *
  * \return 0 on success, negative error value on failure
  */
-int DkSegmentRegisterSet(PAL_FLG reg, PAL_PTR addr);
+int DkSegmentBaseSet(enum pal_segment_reg reg, PAL_PTR addr);
 
 /*!
  * \brief Return the amount of currently available memory for LibOS/application
@@ -825,7 +797,7 @@ int DkSetProtectedFilesKey(PAL_PTR pf_key_hex);
 int DkCpuIdRetrieve(PAL_IDX leaf, PAL_IDX subleaf, PAL_IDX values[CPUID_WORD_NUM]);
 #endif
 
-void DkDebugMapAdd(PAL_STR uri, PAL_PTR start_addr);
+void DkDebugMapAdd(const char* uri, PAL_PTR start_addr);
 void DkDebugMapRemove(PAL_PTR start_addr);
 
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without

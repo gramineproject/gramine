@@ -256,7 +256,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             break;
     }
 
-    PAL_EVENT_HANDLER upcall = _DkGetExceptionHandler(event_num);
+    pal_event_handler_t upcall = _DkGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);
     }
@@ -267,19 +267,20 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 /* TODO: remove this function (SGX signal handling needs to be revisited)
  * actually what is the point of this function?
  * Tracked: https://github.com/gramineproject/graphene/issues/2140 */
-noreturn void _DkHandleExternalEvent(PAL_NUM event, sgx_cpu_context_t* uc,
+noreturn void _DkHandleExternalEvent(long event_, sgx_cpu_context_t* uc,
                                      PAL_XREGS_STATE* xregs_state) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
+    enum pal_event event = event_;
 
     if (event != PAL_EVENT_QUIT && event != PAL_EVENT_INTERRUPTED) {
-        log_error("Illegal exception reported by untrusted PAL: %lu", event);
+        log_error("Illegal exception reported by untrusted PAL: %d", event);
         _DkProcessExit(1);
     }
 
     PAL_CONTEXT ctx;
     save_pal_context(&ctx, uc, xregs_state);
 
-    PAL_EVENT_HANDLER upcall = _DkGetExceptionHandler(event);
+    pal_event_handler_t upcall = _DkGetExceptionHandler(event);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), /*addr=*/0, &ctx);
     }

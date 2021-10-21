@@ -49,7 +49,7 @@ int block_async_signals(bool block) {
     return 0;
 }
 
-static int get_pal_event(int sig) {
+static enum pal_event signal_to_pal_event(int sig) {
     switch (sig) {
         case SIGFPE:
             return PAL_EVENT_ARITHMETIC_ERROR;
@@ -64,7 +64,7 @@ static int get_pal_event(int sig) {
         case SIGCONT:
             return PAL_EVENT_INTERRUPTED;
         default:
-            return -1;
+            BUG();
     }
 }
 
@@ -73,8 +73,9 @@ static int get_pal_event(int sig) {
  * only for cases when the exception arrived while in Gramine code; if signal arrived while in
  * the user app, this function doesn't need to be reentrant and thread-safe.
  */
-static void perform_signal_handling(int event, bool is_in_pal, PAL_NUM addr, ucontext_t* uc) {
-    PAL_EVENT_HANDLER upcall = _DkGetExceptionHandler(event);
+static void perform_signal_handling(enum pal_event event, bool is_in_pal, PAL_NUM addr,
+                                    ucontext_t* uc) {
+    pal_event_handler_t upcall = _DkGetExceptionHandler(event);
     if (!upcall)
         return;
 
@@ -94,8 +95,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         }
     }
 
-    int event = get_pal_event(signum);
-    assert(event > 0);
+    enum pal_event event = signal_to_pal_event(signum);
 
     uintptr_t rip = ucontext_get_ip(uc);
     if (!ADDR_IN_PAL_OR_VDSO(rip)) {
@@ -120,8 +120,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
 static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(info);
 
-    int event = get_pal_event(signum);
-    assert(event > 0);
+    enum pal_event event = signal_to_pal_event(signum);
 
     uintptr_t rip = ucontext_get_ip(uc);
     perform_signal_handling(event, ADDR_IN_PAL_OR_VDSO(rip), /*addr=*/0, uc);

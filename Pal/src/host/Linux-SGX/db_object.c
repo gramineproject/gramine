@@ -21,8 +21,8 @@
  * "Pal/src/host/Linux-SGX/db_pipes.c". */
 /* Wait for specific events on all handles in the handle array and return multiple events
  * (including errors) reported by the host. Return 0 on success, PAL error on failure. */
-int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, PAL_FLG* events,
-                         PAL_FLG* ret_events, int64_t timeout_us) {
+int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                         pal_wait_flags_t* ret_events, int64_t timeout_us) {
     int ret;
 
     if (count == 0)
@@ -50,7 +50,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, PAL_FLG* events
 
         /* collect all internal-handle FDs (only those which are readable/writable) */
         for (size_t j = 0; j < MAX_FDS; j++) {
-            PAL_FLG flags = HANDLE_HDR(hdl)->flags;
+            uint32_t flags = HANDLE_HDR(hdl)->flags;
 
             /* hdl might be a event/non-pollable object, simply ignore it */
             if (hdl->generic.fds[j] == PAL_IDX_POISON)

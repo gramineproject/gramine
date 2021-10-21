@@ -84,6 +84,7 @@ typedef ptrdiff_t ssize_t;
 #define BITS_TO_LONGS(nr)               DIV_ROUND_UP(nr, BITS_IN_TYPE(long))
 /* Note: This macro is not intended for use when nbits == BITS_IN_TYPE(type) */
 #define SET_HIGHEST_N_BITS(type, nbits) (~(((uint64_t)1 << (BITS_IN_TYPE(type) - (nbits))) - 1))
+#define WITHIN_MASK(val, mask) (((val) | (mask)) == (mask))
 
 #define IS_ALIGNED(val, alignment)     ((val) % (alignment) == 0)
 #define ALIGN_DOWN(val, alignment)     ((val) - (val) % (alignment))

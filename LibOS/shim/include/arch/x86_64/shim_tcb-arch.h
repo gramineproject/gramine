@@ -144,7 +144,7 @@ struct shim_xstate {
     } while (0)
 
 static inline void set_tls(unsigned long tls) {
-    DkSegmentRegisterSet(PAL_SEGMENT_FS, (PAL_PTR)tls);
+    DkSegmentBaseSet(PAL_SEGMENT_FS, (PAL_PTR)tls);
 }
 
 static inline void set_default_tls(void) {
@@ -153,7 +153,7 @@ static inline void set_default_tls(void) {
 
 static inline unsigned long get_tls(void) {
     void* addr = NULL;
-    (void)DkSegmentRegisterGet(PAL_SEGMENT_FS, &addr);
+    (void)DkSegmentBaseGet(PAL_SEGMENT_FS, &addr);
     return (unsigned long)addr;
 }
 

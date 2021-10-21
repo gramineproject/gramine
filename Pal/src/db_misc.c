@@ -19,12 +19,12 @@ int DkRandomBitsRead(PAL_PTR buffer, PAL_NUM size) {
 }
 
 #if defined(__x86_64__)
-int DkSegmentRegisterGet(PAL_FLG reg, PAL_PTR* addr) {
-    return _DkSegmentRegisterGet(reg, addr);
+int DkSegmentBaseGet(enum pal_segment_reg reg, PAL_PTR* addr) {
+    return _DkSegmentBaseGet(reg, addr);
 }
 
-int DkSegmentRegisterSet(PAL_FLG reg, PAL_PTR addr) {
-    return _DkSegmentRegisterSet(reg, addr);
+int DkSegmentBaseSet(enum pal_segment_reg reg, PAL_PTR addr) {
+    return _DkSegmentBaseSet(reg, addr);
 }
 #endif
 

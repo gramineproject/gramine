@@ -12,7 +12,7 @@
 
 /* Wait for specific events on all handles in the handle array and return multiple events
  * (including errors) reported by the host. Return 0 on success, PAL error on failure. */
-int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, PAL_FLG* events,
-                         PAL_FLG* ret_events, int64_t timeout_us) {
+int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                         pal_wait_flags_t* ret_events, int64_t timeout_us) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

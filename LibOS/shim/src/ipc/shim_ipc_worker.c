@@ -220,8 +220,8 @@ static noreturn void ipc_worker_main(void) {
      * be rare). */
     struct shim_ipc_connection** connections = NULL;
     PAL_HANDLE* handles = NULL;
-    PAL_FLG* events = NULL;
-    PAL_FLG* ret_events = NULL;
+    pal_wait_flags_t* events = NULL;
+    pal_wait_flags_t* ret_events = NULL;
     size_t prev_items_cnt = 0;
 
     while (1) {

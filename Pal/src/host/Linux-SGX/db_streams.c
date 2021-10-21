@@ -187,7 +187,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     /* update handle fields to point to correct contents (located right after handle itself) */
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE:
-            hdl->file.realpath = hdl->file.realpath ? (PAL_STR)hdl + hdlsz : NULL;
+            hdl->file.realpath = hdl->file.realpath ? (const char*)hdl + hdlsz : NULL;
             hdl->file.chunk_hashes = (PAL_PTR)NULL;
             break;
         case PAL_TYPE_PIPE:
@@ -208,7 +208,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_DEV:
             break;
         case PAL_TYPE_DIR:
-            hdl->dir.realpath = hdl->dir.realpath ? (PAL_STR)hdl + hdlsz : NULL;
+            hdl->dir.realpath = hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL;
             break;
         case PAL_TYPE_TCP:
         case PAL_TYPE_TCPSRV:

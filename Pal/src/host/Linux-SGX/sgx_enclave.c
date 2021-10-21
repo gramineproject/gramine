@@ -645,7 +645,7 @@ static long sgx_ocall_eventfd(void* pms) {
     long ret;
     ODEBUG(OCALL_EVENTFD, ms);
 
-    ret = DO_SYSCALL(eventfd2, ms->ms_initval, ms->ms_flags);
+    ret = DO_SYSCALL(eventfd2, 0, ms->ms_flags);
 
     return ret;
 }

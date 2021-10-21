@@ -69,14 +69,14 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
         return -ENOMEM;
     }
 
-    /* allocate one memory region to hold two PAL_FLG arrays: events and revents */
-    PAL_FLG* pal_events = malloc(nfds * sizeof(PAL_FLG) * 2);
+    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
+    pal_wait_flags_t* pal_events = malloc(nfds * sizeof(*pal_events) * 2);
     if (!pal_events) {
         free(pals);
         free(fds_mapping);
         return -ENOMEM;
     }
-    PAL_FLG* ret_events = pal_events + nfds;
+    pal_wait_flags_t* ret_events = pal_events + nfds;
 
     nfds_t pal_cnt  = 0;
     nfds_t nrevents = 0;
@@ -134,7 +134,7 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
             continue;
         }
 
-        PAL_FLG allowed_events = 0;
+        pal_wait_flags_t allowed_events = 0;
         if ((fds[i].events & (POLLIN | POLLRDNORM)) && (hdl->acc_mode & MAY_READ))
             allowed_events |= PAL_WAIT_READ;
         if ((fds[i].events & (POLLOUT | POLLWRNORM)) && (hdl->acc_mode & MAY_WRITE))

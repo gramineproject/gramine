@@ -142,12 +142,12 @@ static int pipe_setflags(struct shim_handle* hdl, int flags) {
         if (flags & O_NONBLOCK)
             return 0;
 
-        attr.nonblocking = PAL_FALSE;
+        attr.nonblocking = false;
     } else {
         if (!(flags & O_NONBLOCK))
             return 0;
 
-        attr.nonblocking = PAL_TRUE;
+        attr.nonblocking = true;
     }
 
     ret = DkStreamAttributesSetByHandle(hdl->pal_handle, &attr);

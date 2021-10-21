@@ -177,13 +177,13 @@ static void shim_async_worker(void* arg) {
         goto out_err;
     }
 
-    /* allocate one memory region to hold two PAL_FLG arrays: events and revents */
-    PAL_FLG* pal_events = malloc(sizeof(*pal_events) * (1 + pals_max_cnt) * 2);
+    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
+    pal_wait_flags_t* pal_events = malloc(sizeof(*pal_events) * (1 + pals_max_cnt) * 2);
     if (!pal_events) {
         log_error("Allocation of pal_events failed");
         goto out_err;
     }
-    PAL_FLG* ret_events = pal_events + 1 + pals_max_cnt;
+    pal_wait_flags_t* ret_events = pal_events + 1 + pals_max_cnt;
 
     PAL_HANDLE install_new_event_pal = event_handle(&install_new_event);
     pals[0] = install_new_event_pal;
@@ -222,13 +222,13 @@ static void shim_async_worker(void* arg) {
                         log_error("tmp_pals allocation failed");
                         goto out_err_unlock;
                     }
-                    PAL_FLG* tmp_pal_events =
+                    pal_wait_flags_t* tmp_pal_events =
                         malloc(sizeof(*tmp_pal_events) * (2 + pals_max_cnt * 4));
                     if (!tmp_pal_events) {
                         log_error("tmp_pal_events allocation failed");
                         goto out_err_unlock;
                     }
-                    PAL_FLG* tmp_ret_events = tmp_pal_events + 1 + pals_max_cnt * 2;
+                    pal_wait_flags_t* tmp_ret_events = tmp_pal_events + 1 + pals_max_cnt * 2;
 
                     memcpy(tmp_pals, pals, sizeof(*tmp_pals) * (1 + pals_max_cnt));
                     memcpy(tmp_pal_events, pal_events,
@@ -290,7 +290,7 @@ static void shim_async_worker(void* arg) {
             log_error("DkStreamsWaitEvents failed with: %d", ret);
             goto out_err;
         }
-        PAL_BOL polled = ret == 0;
+        bool polled = ret == 0;
 
         ret = DkSystemTimeQuery(&now);
         if (ret < 0) {

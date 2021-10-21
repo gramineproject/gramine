@@ -513,15 +513,15 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
     if ((ret = create_socket_uri(hdl)) < 0)
         goto out;
 
-    int create_flags = PAL_CREATE_DUALSTACK;
-    if (__socket_is_ipv6_v6only(hdl)) {
-        /* application requests IPV6_V6ONLY, this socket is not dual-stack */
-        create_flags &= ~PAL_CREATE_DUALSTACK;
+    pal_stream_options_t options = hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
+    if (!__socket_is_ipv6_v6only(hdl)) {
+        /* application didn't request IPV6_V6ONLY, this socket is dual-stack */
+        options |= PAL_OPTION_DUALSTACK;
     }
 
     PAL_HANDLE pal_hdl = NULL;
-    ret = DkStreamOpen(qstrgetstr(&hdl->uri), 0, 0, create_flags,
-                       hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
+    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_IGNORED, options, &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
@@ -727,7 +727,7 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
         if (addr->sa_family == AF_UNSPEC) {
             sock->sock_state = SOCK_CREATED;
             if (sock->sock_type == SOCK_STREAM && hdl->pal_handle) {
-                DkStreamDelete(hdl->pal_handle, 0); // TODO: handle errors
+                DkStreamDelete(hdl->pal_handle, PAL_DELETE_ALL); // TODO: handle errors
                 DkObjectClose(hdl->pal_handle);
                 hdl->pal_handle = NULL;
                 pal_handle_updated = true;
@@ -790,7 +790,7 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
     if (state == SOCK_BOUND) {
         /* if the socket is bound, the stream needs to be shut and rebound. */
         assert(hdl->pal_handle);
-        DkStreamDelete(hdl->pal_handle, 0); // TODO: handle errors
+        DkStreamDelete(hdl->pal_handle, PAL_DELETE_ALL); // TODO: handle errors
         DkObjectClose(hdl->pal_handle);
         hdl->pal_handle = NULL;
         pal_handle_updated = true;
@@ -809,8 +809,9 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
         goto out;
 
     PAL_HANDLE pal_hdl = NULL;
-    ret = DkStreamOpen(qstrgetstr(&hdl->uri), 0, 0, 0,
-                       hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
+    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_IGNORED, hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0,
+                       &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_DENIED) ? -ECONNREFUSED : pal_to_unix_errno(ret);
@@ -939,7 +940,7 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
             goto out;
         }
 
-        attr.nonblocking = PAL_TRUE;
+        attr.nonblocking = true;
 
         ret = DkStreamAttributesSetByHandle(accepted, &attr);
         if (ret < 0) {
@@ -1113,7 +1114,8 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
         }
 
         if (sock->sock_state == SOCK_CREATED && !pal_hdl) {
-            ret = DkStreamOpen(URI_PREFIX_UDP, 0, 0, 0,
+            ret = DkStreamOpen(URI_PREFIX_UDP, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                               PAL_CREATE_IGNORED,
                                hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
@@ -1648,7 +1650,7 @@ long shim_do_shutdown(int sockfd, int how) {
 
     switch (how) {
         case SHUT_RD:
-            ret = DkStreamDelete(hdl->pal_handle, PAL_DELETE_RD);
+            ret = DkStreamDelete(hdl->pal_handle, PAL_DELETE_READ);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
                 goto out_locked;
@@ -1656,7 +1658,7 @@ long shim_do_shutdown(int sockfd, int how) {
             hdl->acc_mode &= ~MAY_READ;
             break;
         case SHUT_WR:
-            ret = DkStreamDelete(hdl->pal_handle, PAL_DELETE_WR);
+            ret = DkStreamDelete(hdl->pal_handle, PAL_DELETE_WRITE);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
                 goto out_locked;
@@ -1664,7 +1666,7 @@ long shim_do_shutdown(int sockfd, int how) {
             hdl->acc_mode &= ~MAY_WRITE;
             break;
         case SHUT_RDWR:
-            ret = DkStreamDelete(hdl->pal_handle, 0);
+            ret = DkStreamDelete(hdl->pal_handle, PAL_DELETE_ALL);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
                 goto out_locked;
@@ -1788,23 +1790,23 @@ static void __populate_addr_with_defaults(PAL_STREAM_ATTR* attr) {
     attr->socket.linger         = 0;
     attr->socket.receivetimeout = 0;
     attr->socket.sendtimeout    = 0;
-    attr->socket.tcp_cork       = PAL_FALSE;
-    attr->socket.tcp_keepalive  = PAL_FALSE;
-    attr->socket.tcp_nodelay    = PAL_FALSE;
+    attr->socket.tcp_cork       = false;
+    attr->socket.tcp_keepalive  = false;
+    attr->socket.tcp_nodelay    = false;
 }
 
 static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* optval) {
     assert(attr);
 
     bool need_set_attr = false;
-    int intval         = *((int*)optval);
-    PAL_BOL bolval     = intval ? PAL_TRUE : PAL_FALSE;
+    int intval = *((int*)optval);
+    bool boolval = !!intval;
 
     if (level == SOL_SOCKET) {
         switch (optname) {
             case SO_KEEPALIVE:
-                if (bolval != attr->socket.tcp_keepalive) {
-                    attr->socket.tcp_keepalive = bolval;
+                if (boolval != attr->socket.tcp_keepalive) {
+                    attr->socket.tcp_keepalive = boolval;
                     need_set_attr = true;
                 }
                 break;
@@ -1850,14 +1852,14 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
     if (level == SOL_TCP) {
         switch (optname) {
             case TCP_CORK:
-                if (bolval != attr->socket.tcp_cork) {
-                    attr->socket.tcp_cork = bolval;
+                if (boolval != attr->socket.tcp_cork) {
+                    attr->socket.tcp_cork = boolval;
                     need_set_attr = true;
                 }
                 break;
             case TCP_NODELAY:
-                if (bolval != attr->socket.tcp_nodelay) {
-                    attr->socket.tcp_nodelay = bolval;
+                if (boolval != attr->socket.tcp_nodelay) {
+                    attr->socket.tcp_nodelay = boolval;
                     need_set_attr = true;
                 }
                 break;

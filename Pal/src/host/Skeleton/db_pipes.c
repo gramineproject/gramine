@@ -10,7 +10,7 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-static int pipe_listen(PAL_HANDLE* handle, const char* name, int options) {
+static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -18,16 +18,17 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_connect(PAL_HANDLE* handle, const char* name, int options) {
+static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_private(PAL_HANDLE* handle, int options) {
+static int pipe_private(PAL_HANDLE* handle, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                     int create, int options) {
+static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                     pal_share_flags_t share, enum pal_create_mode create,
+                     pal_stream_options_t options) {
     if (!strcmp(type, URI_TYPE_PIPE) && !*uri)
         return pipe_private(handle, options);
 
@@ -59,7 +60,7 @@ static int pipe_close(PAL_HANDLE handle) {
 }
 
 /* 'delete' operation of pipe stream. */
-static int pipe_delete(PAL_HANDLE handle, int access) {
+static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

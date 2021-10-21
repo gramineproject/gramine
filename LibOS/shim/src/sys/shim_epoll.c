@@ -319,15 +319,15 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
             return -ENOMEM;
         }
 
-        /* allocate one memory region to hold two PAL_FLG arrays: events and revents */
-        PAL_FLG* pal_events = malloc((epoll->fds_count + 1) * sizeof(PAL_FLG) * 2);
+        /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
+        pal_wait_flags_t* pal_events = malloc((epoll->fds_count + 1) * sizeof(*pal_events) * 2);
         if (!pal_events) {
             free(pal_handles);
             unlock(&epoll_hdl->lock);
             put_handle(epoll_hdl);
             return -ENOMEM;
         }
-        PAL_FLG* ret_events = pal_events + (epoll->fds_count + 1);
+        pal_wait_flags_t* ret_events = pal_events + (epoll->fds_count + 1);
 
         /* populate pal_events with read/write events from user-supplied epoll items */
         size_t pal_cnt = 0;
@@ -405,7 +405,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
             }
         }
 
-        PAL_FLG event_handle_update = ret_events[pal_cnt];
+        pal_wait_flags_t event_handle_update = ret_events[pal_cnt];
         free(pal_handles);
         free(pal_events);
 

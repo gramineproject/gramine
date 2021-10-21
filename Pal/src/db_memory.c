@@ -10,7 +10,8 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, PAL_FLG alloc_type, PAL_FLG prot) {
+int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_type,
+                         pal_prot_flags_t prot) {
     assert(addr);
     void* map_addr = *addr;
 
@@ -49,7 +50,7 @@ int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size) {
     return _DkVirtualMemoryFree((void*)addr, size);
 }
 
-int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, PAL_FLG prot) {
+int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, pal_prot_flags_t prot) {
     if (!addr || !size) {
         return -PAL_ERROR_INVAL;
     }

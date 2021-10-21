@@ -25,7 +25,7 @@
     do {                                            \
         if ((bytes) != sizeof(uint64_t)) {          \
             perror(prefix);                         \
-            printf("error at line-%d\n", __LINE__); \
+            printf("error at line %d\n", __LINE__); \
             CLOSE_EFD_AND_EXIT(efd);                \
         }                                           \
     } while (0)
@@ -42,10 +42,8 @@ static void* write_eventfd_thread(void* arg) {
         return NULL;
     }
 
-    printf("%s:got here\n", __func__);
-
     for (int i = 0; i < MAX_EFDS; i++) {
-        printf("%s: efd = %d\n", __func__, efds[i]);
+        printf("%s: efd: %d\n", __func__, efds[i]);
     }
 
     for (int i = 0; i < MAX_EFDS; i++) {
@@ -109,14 +107,14 @@ static int eventfd_using_poll(void) {
         for (int i = 0; i < MAX_EFDS; i++) {
             if (pollfds[i].revents & POLLIN) {
                 pollfds[i].revents = 0;
-                errno              = 0;
+                errno = 0;
                 if (read(pollfds[i].fd, &count, sizeof(count)) != sizeof(count)) {
                     perror("read error");
                     ret = 1;
                     goto out;
                 }
-                printf("fd set=%d\n", pollfds[i].fd);
-                printf("efd = %d, count: %lu, errno=%d\n", pollfds[i].fd, count, errno);
+                printf("fd set: %d\n", pollfds[i].fd);
+                printf("efd: %d, count: %lu, errno: %d\n", pollfds[i].fd, count, errno);
                 nread_events++;
             }
         }
@@ -125,7 +123,7 @@ static int eventfd_using_poll(void) {
     if (nread_events == MAX_EFDS)
         printf("%s completed successfully\n", __func__);
     else
-        printf("%s: nread_events=%d, MAX_EFDS=%d\n", __func__, nread_events, MAX_EFDS);
+        printf("%s: nread_events: %d, MAX_EFDS: %d\n", __func__, nread_events, MAX_EFDS);
 
     pthread_join(tid, NULL);
 
@@ -141,19 +139,19 @@ out:
  * descriptors.
  * To support regression testing, positive value returned for error case. */
 static int eventfd_using_various_flags(void) {
-    uint64_t count      = 0;
-    int efd             = 0;
-    ssize_t bytes       = 0;
+    uint64_t count = 0;
+    int efd = 0;
+    ssize_t bytes = 0;
     int eventfd_flags[] = {0, EFD_SEMAPHORE, EFD_NONBLOCK, EFD_CLOEXEC};
 
-    for (unsigned int i = 0; i < sizeof(eventfd_flags) / sizeof(int); i++) {
-        printf("iteration #-%d, flags=%d\n", i, eventfd_flags[i]);
+    for (unsigned int i = 0; i < sizeof(eventfd_flags) / sizeof(*eventfd_flags); i++) {
+        printf("iteration %d, flags %d\n", i, eventfd_flags[i]);
 
         efd = eventfd(0, eventfd_flags[i]);
 
         if (efd < 0) {
             perror("eventfd failed");
-            printf("eventfd error for iteration #-%d, flags-%d\n", i, eventfd_flags[i]);
+            printf("eventfd error for iteration %d, flags %d\n", i, eventfd_flags[i]);
             return 1;
         }
 
@@ -168,14 +166,14 @@ static int eventfd_using_various_flags(void) {
         errno = 0;
         if (eventfd_flags[i] & EFD_SEMAPHORE) {
             uint64_t prev_count = 0;
-            bytes               = read(efd, &prev_count, sizeof(prev_count));
+            bytes = read(efd, &prev_count, sizeof(prev_count));
             EXIT_IF_ERROR(efd, bytes, "read");
 
             bytes = read(efd, &count, sizeof(count));
             EXIT_IF_ERROR(efd, bytes, "read");
 
             if (prev_count != 1 || count != 1) {
-                printf("flag->EFD_SEMAPHORE, error, prev_count=%lu, new count=%lu\n", prev_count,
+                printf("flag->EFD_SEMAPHORE, error, prev_count: %lu, new count: %lu\n", prev_count,
                        count);
                 close(efd);
                 return 1;
@@ -189,7 +187,7 @@ static int eventfd_using_various_flags(void) {
         bytes = read(efd, &count, sizeof(count));
         EXIT_IF_ERROR(efd, bytes, "read");
         if (count != 10) {
-            printf("%d: efd = %d, count: %lu, errno=%d\n", __LINE__, efd, count, errno);
+            printf("%d: efd: %d, count: %lu, errno: %d\n", __LINE__, efd, count, errno);
             CLOSE_EFD_AND_EXIT(efd);
         }
 
@@ -199,12 +197,12 @@ static int eventfd_using_various_flags(void) {
             errno = 0;
             ssize_t ret = read(efd, &count, sizeof(count));
             if (ret != -1 || errno != EAGAIN) {
-                printf("read that should return -1 with EAGAIN returned: %ld with errno=%d\n", ret,
+                printf("read that should return -1 with EAGAIN returned %ld with errno %d\n", ret,
                        errno);
                 close(efd);
                 return 1;
             }
-            printf("%d: efd = %d, count: %lu, errno=%d\n", __LINE__, efd, count, errno);
+            printf("%d: efd: %d, count: %lu, errno: %d\n", __LINE__, efd, count, errno);
         }
 
         close(efd);
@@ -253,7 +251,7 @@ static int eventfd_using_fork(void) {
             exit(1);
         }
         if (count != 5) {
-            printf("parent-pid=%d, efd = %d, count: %lu, errno=%d\n", getpid(), efd, count, errno);
+            printf("parent-pid: %d, efd: %d, count: %lu, errno: %d\n", getpid(), efd, count, errno);
             CLOSE_EFD_AND_EXIT(efd);
         }
 
@@ -270,11 +268,25 @@ static int eventfd_using_fork(void) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
+    int ret;
 
     ret = eventfd_using_poll();
-    ret += eventfd_using_various_flags();
-    ret += eventfd_using_fork();
+    if (ret) {
+        puts("eventfd_using_poll() failed");
+        return 1;
+    }
+    puts("----------------------------------------");
+    ret = eventfd_using_various_flags();
+    if (ret) {
+        puts("eventfd_using_various_flags() failed");
+        return 1;
+    }
+    puts("----------------------------------------");
+    ret = eventfd_using_fork();
+    if (ret) {
+        puts("eventfd_using_fork() failed");
+        return 1;
+    }
 
-    return ret;
+    return 0;
 }

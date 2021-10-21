@@ -11,8 +11,9 @@
 #include "pal_internal.h"
 
 /* 'open' operation for file streams */
-static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                     int create, int options) {
+static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                     pal_share_flags_t share, enum pal_create_mode create,
+                     pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -26,20 +27,19 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'close' operation for file streams. In this case, it will only close the file withou deleting it.
- */
+/* 'close' operation for file streams */
 static int file_close(PAL_HANDLE handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'delete' operation for file streams. It will actually delete the file if we can successfully
- * close it. */
-static int file_delete(PAL_HANDLE handle, int access) {
+/* 'delete' operation for file streams */
+static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* 'map' operation for file stream. */
-static int file_map(PAL_HANDLE handle, void** addr, int prot, uint64_t offset, uint64_t size) {
+static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+                    uint64_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -94,8 +94,9 @@ struct handle_ops g_file_ops = {
 /* 'open' operation for directory stream. Directory stream does not have a specific type prefix, its
  * URI looks the same file streams, plus it ended with slashes. dir_open will be called by
  * file_open. */
-static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, int access, int share,
-                    int create, int options) {
+static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                    pal_share_flags_t share, enum pal_create_mode create,
+                    pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -109,8 +110,8 @@ static int dir_close(PAL_HANDLE handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'delete' operation of directoy streams */
-static int dir_delete(PAL_HANDLE handle, int access) {
+/* 'delete' operation of directory streams */
+static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

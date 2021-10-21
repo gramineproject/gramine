@@ -20,7 +20,7 @@ static void callback(void* args) {
 
     pal_printf("Threads Run in Parallel OK\n");
 
-    if (DkSegmentRegisterSet(PAL_SEGMENT_FS, &private2) < 0) {
+    if (DkSegmentBaseSet(PAL_SEGMENT_FS, &private2) < 0) {
         pal_printf("Failed to set FS\n");
         DkThreadExit(/*clear_child_tid=*/NULL);
     }
@@ -35,7 +35,7 @@ static void callback(void* args) {
 }
 
 int main(void) {
-    if (DkSegmentRegisterSet(PAL_SEGMENT_FS, &private1) < 0) {
+    if (DkSegmentBaseSet(PAL_SEGMENT_FS, &private1) < 0) {
         pal_printf("Failed to set FS\n");
         return 1;
     }

@@ -117,7 +117,8 @@ static int ipc_connect(IDTYPE dest, struct shim_ipc_connection** conn_ptr) {
             log_error("buffer for IPC pipe URI too small");
             BUG();
         }
-        ret = DkStreamOpen(uri, 0, 0, 0, 0, &conn->handle);
+        ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                           /*options=*/0, &conn->handle);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;

@@ -1198,7 +1198,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     return 0;
 
 out:
-    _DkStreamDelete(stream, 0);
+    _DkStreamDelete(stream, PAL_DELETE_ALL);
     return ret;
 }
 
@@ -1286,7 +1286,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     return 0;
 
 out:
-    _DkStreamDelete(stream, 0);
+    _DkStreamDelete(stream, PAL_DELETE_ALL);
     return ret;
 }
 

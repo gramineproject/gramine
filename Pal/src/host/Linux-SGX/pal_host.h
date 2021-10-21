@@ -53,19 +53,19 @@ typedef struct pal_handle {
 
         struct {
             PAL_IDX fd;
-            PAL_STR realpath;
+            const char* realpath;
             PAL_NUM total;
             /* below fields are used only for trusted files */
             PAL_PTR chunk_hashes; /* array of hashes of file chunks */
             PAL_PTR umem;         /* valid only when chunk_hashes != NULL */
-            PAL_BOL seekable;     /* regular files are seekable, FIFO pipes are not */
+            bool seekable;        /* regular files are seekable, FIFO pipes are not */
         } file;
 
         struct {
             PAL_IDX fd;
             PAL_PIPE_NAME name;
-            PAL_BOL nonblocking;
-            PAL_BOL is_server;
+            bool nonblocking;
+            bool is_server;
             PAL_SESSION_KEY session_key;
             PAL_NUM handshake_done;
             void* ssl_ctx;
@@ -73,48 +73,48 @@ typedef struct pal_handle {
 
         struct {
             PAL_IDX fds[MAX_FDS];
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } pipeprv;
 
         struct {
             PAL_IDX fd;
             /* TODO: add other flags in future, if needed (e.g., semaphore) */
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } eventfd;
 
         struct {
             PAL_IDX fd;
-            PAL_BOL nonblocking;
+            bool nonblocking;
         } dev;
 
         struct {
             PAL_IDX fd;
-            PAL_STR realpath;
+            const char* realpath;
             PAL_PTR buf;
             PAL_PTR ptr;
             PAL_PTR end;
-            PAL_BOL endofstream;
+            bool endofstream;
         } dir;
 
         struct {
             PAL_IDX fd;
             PAL_PTR bind;
             PAL_PTR conn;
-            PAL_BOL nonblocking;
+            bool nonblocking;
             PAL_NUM linger;
             PAL_NUM receivebuf;
             PAL_NUM sendbuf;
             PAL_NUM receivetimeout;
             PAL_NUM sendtimeout;
-            PAL_BOL tcp_cork;
-            PAL_BOL tcp_keepalive;
-            PAL_BOL tcp_nodelay;
+            bool tcp_cork;
+            bool tcp_keepalive;
+            bool tcp_nodelay;
         } sock;
 
         struct {
             PAL_IDX stream;
-            PAL_BOL nonblocking;
-            PAL_BOL is_server;
+            bool nonblocking;
+            bool is_server;
             PAL_SESSION_KEY session_key;
             void* ssl_ctx;
         } process;

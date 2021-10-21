@@ -684,7 +684,7 @@ sgx_ocall:
 .Lno_fsbase:
 
 	# Check if there was a signal
-	cmpq $0, %rsi
+	cmpq $PAL_EVENT_NO_EVENT, %rsi
 	je .Lno_external_event
 	cmpq $PAL_EVENT_NUM_BOUND, %rsi
 	jb .Lexternal_event
@@ -706,7 +706,7 @@ sgx_ocall:
 	leaq g_xsave_reset_state(%rip), %rdi
 	callq restore_xregs
 
-	movq %rsi, %rdi # 1st argument = PAL_NUM event
+	movq %rsi, %rdi # 1st argument = enum pal_event event
 	movq %rsp, %rsi # 2nd argument = sgx_cpu_context_t* uc
 	leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rdx # 3rd argument = PAL_XREGS_STATE* xregs_state
 	callq _DkHandleExternalEvent
