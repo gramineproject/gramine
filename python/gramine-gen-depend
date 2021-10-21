@@ -23,7 +23,7 @@ def main(manifest_file, libpal, output):
     dependencies = manifest.get_dependencies()
     dependencies.add(libpal)
 
-    output.write(f'{manifest_file.name}:')
+    output.write(f'{manifest_file.name}.sgx:')
     for filename in dependencies:
         output.write(f' \\\n\t{filename}')
     output.write('\n')
