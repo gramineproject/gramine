@@ -121,7 +121,7 @@ static struct pal_cpuid {
     unsigned int values[4];
 } g_pal_cpuid_cache[CPUID_CACHE_SIZE];
 
-static int g_pal_cpuid_cache_top   = 0;
+static int g_pal_cpuid_cache_top = 0;
 static spinlock_t g_cpuid_cache_lock = INIT_SPINLOCK_UNLOCKED;
 
 static int get_cpuid_from_cache(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
@@ -326,10 +326,10 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
     {.leaf = 0x18, .zero_subleaf = false, .cache = true},  /* Deterministic Address Translation */
     {.leaf = 0x19, .zero_subleaf = true,  .cache = true},  /* Key Locker */
     {.leaf = 0x1A, .zero_subleaf = true,  .cache = false}, /* Hybrid Information Enumeration */
-    /* NOTE: 0x1B leaf is not recognized, see code below */
+    {.leaf = 0x1B, .zero_subleaf = false, .cache = false}, /* PCONFIG Information */
     /* NOTE: 0x1C leaf is not recognized, see code below */
-    /* NOTE: 0x1D leaf is not recognized, see code below */
-    /* NOTE: 0x1E leaf is not recognized, see code below */
+    {.leaf = 0x1D, .zero_subleaf = false, .cache = true},  /* Tile Information Main Leaf (AMX) */
+    {.leaf = 0x1E, .zero_subleaf = true,  .cache = true},  /* TMUL Information Main Leaf (AMX) */
     {.leaf = 0x1F, .zero_subleaf = false, .cache = false}, /* Intel V2 Ext Topology Enumeration */
     /* basic CPUID leaf functions end here */
 
@@ -390,7 +390,8 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
     if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2) ||
-        (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
+        (leaf == 0x14 && subleaf != 0 && subleaf != 1) ||
+        (leaf == 0x1D && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
         goto fail;
     }

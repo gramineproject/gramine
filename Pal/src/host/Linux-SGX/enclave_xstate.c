@@ -53,15 +53,23 @@ uint64_t g_xsave_features = 0;
 uint32_t g_xsave_size = 0;
 
 const uint32_t g_cpu_extension_sizes[] = {
-    [AVX] = 256,      [MPX_1] = 64,      [MPX_2] = 64, [AVX512_1] = 64,
-    [AVX512_2] = 512, [AVX512_3] = 1024, [PKRU] = 8,   [AMX_1] = 64,    [AMX_2] = 8192 };
+    [AVX] = 256,
+    [MPX_1] = 64, [MPX_2] = 64,
+    [AVX512_1] = 64, [AVX512_2] = 512, [AVX512_3] = 1024,
+    [PKRU] = 8,
+    [AMX_1] = 64, [AMX_2] = 8192,
+};
 
 /* Note that AVX offset is 576 bytes and MPX_1 starts at 960. The AVX state size is 256, leaving
  * 128 bytes unaccounted for (a gap between AVX and MPX_1). Similarly, there is a gap between
  * PKRU and AMX_1. */
 const uint32_t g_cpu_extension_offsets[] = {
-    [AVX] = 576,       [MPX_1] = 960,     [MPX_2] = 1024, [AVX512_1] = 1088,
-    [AVX512_2] = 1152, [AVX512_3] = 1664, [PKRU] = 2688,  [AMX_1] = 2752,    [AMX_2] = 2816 };
+    [AVX] = 576,
+    [MPX_1] = 960, [MPX_2] = 1024,
+    [AVX512_1] = 1088, [AVX512_2] = 1152, [AVX512_3] = 1664,
+    [PKRU] = 2688,
+    [AMX_1] = 2752, [AMX_2] = 2816,
+};
 
 /* FXRSTOR only cares about the first 512 bytes, while XRSTOR in compacted mode will ignore
  * the first 512 bytes. */
