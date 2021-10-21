@@ -294,9 +294,9 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
             }
         } else {
             /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
-            if (!IS_IN_RANGE_INCL(values[EAX] & 0xFFFF, 1, 65536) || /* total_tile_bytes */
-                    !IS_IN_RANGE_INCL(values[EAX] >> 16, 1, 65536) || /* bytes_per_tile */
-                    !IS_IN_RANGE_INCL(values[EBX] & 0xFFFF, 1, 65536) || /* bytes_per_row */
+            if (!IS_IN_RANGE_INCL(values[EAX] & 0xFFFF, 1, 0xFFFF) || /* total_tile_bytes */
+                    !IS_IN_RANGE_INCL(values[EAX] >> 16, 1, 0xFFFF) || /* bytes_per_tile */
+                    !IS_IN_RANGE_INCL(values[EBX] & 0xFFFF, 1, 0xFFFF) || /* bytes_per_row */
                     !IS_IN_RANGE_INCL(values[EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
                     !IS_IN_RANGE_INCL(values[ECX] & 0xFFFF, 1, 256) || /* max_rows */
                     (values[ECX] >> 16) != 0 || values[EDX] != 0) {
@@ -306,8 +306,8 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
         }
     } else if (leaf == AMX_TMUL_INFO_LEAF && extension_enabled(xfrm, AMX_2)) {
         /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
-        if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 256) || /* tmul_maxk (rows or columns) */
-                !IS_IN_RANGE_INCL((values[EBX] & 0xFFFFFF) >> 8, 1, 65536) || /* tmul_maxn */
+        if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
+                !IS_IN_RANGE_INCL((values[EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
                 (values[EBX] >> 24) != 0 || values[EAX] != 0 || values[ECX] != 0 ||
                 values[EDX] != 0) {
             log_error("Unexpected values in TMUL Information CPUID Leaf");
