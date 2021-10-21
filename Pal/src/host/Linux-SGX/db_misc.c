@@ -34,6 +34,10 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
+#define EXTENDED_STATE_LEAF 0xD
+#define AMX_TILE_INFO_LEAF  0x1D
+#define AMX_TMUL_INFO_LEAF  0x1E
+
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
 static uint64_t g_start_usec = 0;
@@ -195,10 +199,6 @@ void init_cpuid(void) {
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = report.body.attributes.xfrm;
 
-    const uint32_t EXTENDED_STATE_LEAF = 0xd;
-    const uint32_t AMX_TILE_INFO_LEAF  = 0x1d;
-    const uint32_t AMX_TMUL_INFO_LEAF  = 0x1e;
-
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
             case 0x0:
@@ -284,7 +284,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 }
                 break;
         }
-    } else if (leaf == AMX_TILE_INFO_LEAF && extension_enabled(xfrm, AMX_2)) {
+    } else if (leaf == AMX_TILE_INFO_LEAF) {
         if (subleaf == 0x0) {
             /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
             if (!IS_IN_RANGE_INCL(values[EAX], 1, 16) || values[EBX] != 0 || values[ECX] != 0 ||
@@ -304,7 +304,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 _DkProcessExit(1);
             }
         }
-    } else if (leaf == AMX_TMUL_INFO_LEAF && extension_enabled(xfrm, AMX_2)) {
+    } else if (leaf == AMX_TMUL_INFO_LEAF) {
         /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
         if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
                 !IS_IN_RANGE_INCL((values[EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
@@ -382,6 +382,8 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 };
 
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
+    uint64_t xfrm = report.body.attributes.xfrm;
+
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
      * cases in the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2.
      *
@@ -404,11 +406,13 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
-    if (!known_leaf) {
-        /* leaf is not recognized (EAX value is outside of recongized range for CPUID), return info
-         * for highest basic information leaf (see cpuid_known_leaves table; currently 0x1F); see
-         * the DEFAULT case in the "Operation" section of CPUID description in Intel SDM, Vol. 2A,
-         * Chapter 3.2 */
+    if (!known_leaf ||
+            (leaf == AMX_TILE_INFO_LEAF && !extension_enabled(xfrm, AMX_2)) ||
+            (leaf == AMX_TMUL_INFO_LEAF && !extension_enabled(xfrm, AMX_2))) {
+        /* leaf is not recognized (EAX value is outside of recongized range for CPUID) or leaf
+         * belongs to a disabled CPU extension (like Intel AMX): return info for highest basic
+         * information leaf (see cpuid_known_leaves table; currently 0x1F); see the DEFAULT case in
+         * the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2 */
         leaf = 0x1F;
         for (size_t i = 0; i < ARRAY_SIZE(cpuid_known_leaves); i++) {
             if (leaf == cpuid_known_leaves[i].leaf) {
@@ -422,7 +426,7 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2) ||
         (leaf == 0x14 && subleaf != 0 && subleaf != 1) ||
-        (leaf == 0x1D && subleaf != 0 && subleaf != 1)) {
+        (leaf == AMX_TILE_INFO_LEAF && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
         goto fail;
     }
