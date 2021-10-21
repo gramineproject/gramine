@@ -19,8 +19,9 @@
 #include "cpu.h"
 #endif
 
-/* TODO: we should `#include "toml.h"` here, but this file is being included by PAL regression
- * tests, which still use Make. Switch to `#include` once they're converted to Meson. */
+/* TODO: we should `#include "toml.h"` here. However, this is currently inconvenient to do in Meson,
+ * because `toml.h` is a generated (patched) file, and all targets built using `pal.h` would need to
+ * declare a dependency on it. */
 typedef struct toml_table_t toml_table_t;
 
 typedef uint64_t    PAL_NUM; /*!< a number */

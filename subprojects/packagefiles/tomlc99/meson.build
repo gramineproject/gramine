@@ -20,11 +20,8 @@ foreach src : ['toml.c', 'toml.h']
     )
 endforeach
 
-tomlc99_inc = include_directories('.')
-tomlc99_incpath = meson.current_build_dir()
-
 tomlc99_dep = declare_dependency(
     sources: tomlc99_src,
-    include_directories: tomlc99_inc,
+    include_directories: include_directories('.'),
 )
 
