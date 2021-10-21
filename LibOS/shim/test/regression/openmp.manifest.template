@@ -9,9 +9,12 @@ loader.argv0_override = "openmp"
 loader.env.LD_LIBRARY_PATH = "/lib:/usr/{{ arch_libdir }}"
 
 # the manifest options below are added only for testing, they have no significance for OpenMP
-libos.check_invalid_pointers = false
 sys.enable_sigterm_injection = true
 sgx.preheat_enclave = true
+
+# Note that `libos.check_invalid_pointers` cannot be disabled, because LLVM's OpenMP depends on it
+# (by calling `sched_setaffinity` with NULL and expecting it to return either -EFAULT or -ENOSYS)
+# libos.check_invalid_pointers = false
 
 fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
