@@ -177,18 +177,6 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
     return xfrm & feature_bit;
 }
 
-static __sgx_mem_aligned sgx_report_t report;
-static __sgx_mem_aligned sgx_target_info_t target_info;
-static __sgx_mem_aligned sgx_report_data_t report_data;
-
-/* Initialize the data structures used for CPUID emulation. */
-void init_cpuid(void) {
-    memset(&report, 0, sizeof(report));
-    memset(&target_info, 0, sizeof(target_info));
-    memset(&report_data, 0, sizeof(report_data));
-    sgx_report(&target_info, &report_data, &report);
-}
-
 /**
  * Sanity check untrusted CPUID inputs.
  *
@@ -197,7 +185,7 @@ void init_cpuid(void) {
  * through xfrm what extensions are enabled inside the enclave.
  */
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
-    uint64_t xfrm = report.body.attributes.xfrm;
+    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
@@ -382,7 +370,7 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 };
 
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
-    uint64_t xfrm = report.body.attributes.xfrm;
+    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
 
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
      * cases in the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2.
@@ -406,13 +394,19 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
-    if (!known_leaf ||
-            (leaf == AMX_TILE_INFO_LEAF && !extension_enabled(xfrm, AMX_2)) ||
-            (leaf == AMX_TMUL_INFO_LEAF && !extension_enabled(xfrm, AMX_2))) {
-        /* leaf is not recognized (EAX value is outside of recongized range for CPUID) or leaf
-         * belongs to a disabled CPU extension (like Intel AMX): return info for highest basic
-         * information leaf (see cpuid_known_leaves table; currently 0x1F); see the DEFAULT case in
-         * the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2 */
+    if (!extension_enabled(xfrm, AMX_2) &&
+            (leaf == AMX_TILE_INFO_LEAF || leaf == AMX_TMUL_INFO_LEAF)) {
+        /* the Intel AMX feature is disabled, so we pretend that the CPU doesn't support it at all
+         * (by marking the TILE_INFO and TMUL_INFO AMX-related leaves as unrecognized) */
+        known_leaf = NULL;
+    }
+
+    if (!known_leaf) {
+        /* leaf is not recognized (EAX value is outside of recongized range for CPUID), return info
+         * for highest basic information leaf (see cpuid_known_leaves table); also if the highest
+         * basic information leaf data depend on the ECX input value (subleaf), ECX is honored; see
+         * the DEFAULT case in the "Operation" section of CPUID description in Intel SDM, Vol. 2A,
+         * Chapter 3.2 */
         leaf = 0x1F;
         for (size_t i = 0; i < ARRAY_SIZE(cpuid_known_leaves); i++) {
             if (leaf == cpuid_known_leaves[i].leaf) {
