@@ -16,7 +16,7 @@ executables-x86_64 = \
     Segment \
     Thread
 
-ifeq ($(SGX,1))
+ifeq ($(SGX),1)
 	executables-x86_64 += AttestationReport
 endif
 
