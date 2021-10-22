@@ -985,7 +985,7 @@ class TC_50_GDB(RegressionTestCase):
         self.assertIn(' func ()', backtrace_2)
         self.assertIn(' main ()', backtrace_2)
         self.assertIn(' _start ()', backtrace_2)
-        self.assertIn('debug.c', backtrace_3)
+        self.assertIn('debug.c', backtrace_2)
         self.assertNotIn('??', backtrace_2)
 
         if HAS_SGX:
