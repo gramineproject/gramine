@@ -16,9 +16,12 @@ executables-x86_64 = \
     Segment \
     Thread
 
+ifeq ($(SGX,1))
+	executables-x86_64 += AttestationReport
+endif
+
 executables = \
 	..Bootstrap \
-	AttestationReport \
 	avl_tree_test \
 	Bootstrap \
 	Bootstrap3 \

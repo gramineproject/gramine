@@ -63,7 +63,7 @@ tests = {
         # NOTE: This will use `libgomp` in GCC and `libomp` in Clang.
         'c_args': '-fopenmp',
         'link_args': '-fopenmp',
-   },
+    },
     'pipe': {},
     'pipe_nonblocking': {},
     'pipe_ocloexec': {},
@@ -122,17 +122,6 @@ tests = {
     'vfork_and_exec': {},
 }
 
-if sgx
-    tests += {
-        'attestation': {
-            # for `sgx_arch.h`
-            'include_directories': include_directories('../../../../Pal/src/host/Linux-SGX'),
-
-            'dependencies': mbedtls_dep,
-        },
-    }
-endif
-
 if host_machine.cpu_family() == 'x86_64'
     tests += {
         'bootstrap_cpp': {
@@ -144,6 +133,17 @@ if host_machine.cpu_family() == 'x86_64'
         },
         'rdtsc': {},
         'sighandler_divbyzero': {},
+    }
+endif
+
+if sgx
+    tests += {
+        'attestation': {
+            # for `sgx_arch.h`
+            'include_directories': include_directories('../../../../Pal/src/host/Linux-SGX'),
+
+            'dependencies': mbedtls_dep,
+        },
     }
 endif
 
@@ -172,7 +172,7 @@ foreach name, params : tests
     endif
 
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
-    # compiler builds it by default.
+    # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
     if pie
         c_args += '-fPIE'
         link_args += '-pie'
@@ -203,7 +203,7 @@ foreach name, params : tests
 
         dependencies: params.get('dependencies', []),
 
-        install: enable_tests,
+        install: true,
         install_dir: install_dir,
     )
 endforeach

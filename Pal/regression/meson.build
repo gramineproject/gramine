@@ -1,14 +1,11 @@
 if skeleton
     libpal = libpal_skeleton_dep
-    pal_host = 'Skeleton'
 elif direct
     libpal = libpal_direct_dep
-    pal_host = 'Linux'
 elif sgx
     libpal = libpal_sgx_dep
-    pal_host = 'Linux-SGX'
 else
-    error('need to link tests against any PAL')
+    error('need to link tests against a PAL library, but no PAL version is enabled')
 endif
 
 preloads = {
@@ -51,17 +48,22 @@ tests = {
 
 if host_machine.cpu_family() == 'x86_64'
     tests += {
-        'AttestationReport': {
-            'include_directories': include_directories(
-                # for `sgx_arch.h`
-                join_paths('../src/host/Linux-SGX'),
-            ),
-        },
         'Exception': {},
         'Exception2': {},
         'Segment': {},
         'Thread': {},
     }
+endif
+
+if sgx
+   tests += {
+       'AttestationReport': {
+            'include_directories': include_directories(
+                # for `sgx_arch.h`
+                join_paths('../src/host/Linux-SGX'),
+            ),
+        },
+   }
 endif
 
 install_dir = join_paths(pkglibdir, 'tests', 'pal')
@@ -72,7 +74,7 @@ test_c_args = [
     '-fno-builtin',
     '-nostdlib',
 
-    # TODO
+    # TODO: Many files define `main` with parameters, but don't use them
     '-Wno-unused-parameter',
 ]
 
@@ -81,7 +83,7 @@ test_include_directories = [
         # for `pal.h`
         '../include/pal',
         join_paths('../include/arch', host_machine.cpu_family()),
-        join_paths('../include/arch', host_machine.cpu_family(), pal_host),
+        join_paths('../include/arch', host_machine.cpu_family(), 'Linux'),
     ),
     common_inc,
 ]
@@ -127,14 +129,14 @@ foreach name, params : preloads
 
         dependencies: libpal,
 
-        install: enable_tests,
+        install: true,
         install_dir: install_dir,
     )
 endforeach
 
 foreach name, params : tests
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
-    # compiler builds it by default.
+    # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
     pie = params.get('pie', false)
 
     executable(name,
@@ -167,7 +169,7 @@ foreach name, params : tests
 
         dependencies: libpal,
 
-        install: enable_tests,
+        install: true,
         install_dir: install_dir,
     )
 endforeach

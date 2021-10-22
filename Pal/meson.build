@@ -1,6 +1,9 @@
 subdir('include')
 subdir('src')
-subdir('regression')
+
+if enable_tests
+    subdir('regression')
+endif
 
 if debug
     install_data(

@@ -4,40 +4,36 @@ common_lib = static_library('test_fs',
 
 common_lib_copy = static_library('test_fs_copy',
     'common_copy.c',
-    c_args: [
-        '-Wno-sign-compare',
-    ],
 )
 
 common_lib_copy_mmap = static_library('test_fs_copy_mmap',
     'common_copy.c',
     c_args: [
-        '-Wno-sign-compare',
         '-DCOPY_MMAP',
     ],
 )
 
 tests = {
     'copy_mmap_rev': {
-        'libs': common_lib_copy_mmap,
+        'link_with': common_lib_copy_mmap,
     },
     'copy_mmap_seq': {
-        'libs': common_lib_copy_mmap,
+        'link_with': common_lib_copy_mmap,
     },
     'copy_mmap_whole': {
-        'libs': common_lib_copy_mmap,
+        'link_with': common_lib_copy_mmap,
     },
     'copy_rev': {
-        'libs': common_lib_copy,
+        'link_with': common_lib_copy,
     },
     'copy_seq': {
-        'libs': common_lib_copy,
+        'link_with': common_lib_copy,
     },
     'copy_whole': {
-        'libs': common_lib_copy,
+        'link_with': common_lib_copy,
     },
     'copy_sendfile': {
-        'libs': common_lib_copy,
+        'link_with': common_lib_copy,
     },
     'delete': {},
     'multiple_writers': {
@@ -59,19 +55,12 @@ foreach name, params : tests
 
         link_with: [
             common_lib,
-            params.get('libs', []),
-        ],
-
-        c_args: [
-            '-Wno-sign-compare',
-            params.get('c_args', []),
+            params.get('link_with', []),
         ],
 
         link_args: params.get('link_args', []),
 
-        dependencies: params.get('dependencies', []),
-
-        install: enable_tests,
+        install: true,
         install_dir: install_dir,
     )
 endforeach

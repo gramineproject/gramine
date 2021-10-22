@@ -26,4 +26,7 @@ endif
 
 subdir('include')
 subdir('src')
-subdir('test')
+
+if enable_tests
+    subdir('test')
+endif

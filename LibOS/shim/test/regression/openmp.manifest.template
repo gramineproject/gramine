@@ -31,10 +31,14 @@ sgx.debug = true
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:openmp",
+]
 
-  # for clang
-  "file:/usr/{{ arch_libdir }}/libomp.so.5",
-
-  # for gcc
+# HACK: Add OpenMP libraries as allowed (not trusted) so that you don't need both of them when
+# building the manifest. Only one of them is used, depending on the compiler.
+sgx.allowed_files = [
+  # for GCC
   "file:/usr/{{ arch_libdir }}/libgomp.so.1",
+
+  # for Clang
+  "file:/usr/{{ arch_libdir }}/libomp.so.5",
 ]
