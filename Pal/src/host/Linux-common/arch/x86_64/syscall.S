@@ -6,6 +6,12 @@
 #define __ASSEMBLY__
 #include <asm/unistd.h>
 
+.global syscalls_range_begin
+.global syscalls_range_end
+.type syscalls_range_begin, @function
+.type syscalls_range_end, @function
+syscalls_range_begin:
+
 .global do_syscall
 .type do_syscall, @function
 .align 0x10
@@ -107,3 +113,5 @@ _DkThreadExit_asm_stub:
     ud2
     jmp .Lskip_clear_child_tid
     .cfi_endproc
+
+syscalls_range_end:

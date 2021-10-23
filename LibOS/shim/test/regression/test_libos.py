@@ -767,10 +767,6 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
 class TC_31_Syscall(RegressionTestCase):
-    @unittest.skipUnless(HAS_SGX,
-        'This test is only meaningful on SGX PAL because only SGX catches raw '
-        'syscalls and redirects to Gramine\'s LibOS. If we will add seccomp to '
-        'Linux PAL, then we should allow this test on Linux PAL as well.')
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
 

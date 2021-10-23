@@ -337,7 +337,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
     assert(manifest);
 
-    signal_setup();
+    signal_setup(first_process);
 
     g_pal_state.raw_manifest_data = manifest;
 
