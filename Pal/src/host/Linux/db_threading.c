@@ -220,34 +220,21 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
     /* we might still be using the stack we just marked as unused until we enter the asm mode,
      * so we do not unlock now but rather in asm below */
 
-    /* To make sure the compiler doesn't touch the stack after it was freed, need inline asm:
+    /*
+     * To make sure the compiler doesn't touch the stack after it was freed, we need to use asm:
      *   1. Unlock g_thread_stack_lock (so that other threads can start re-using this stack)
      *   2. Set *clear_child_tid = 0 if clear_child_tid != NULL
      *      (we thus inform LibOS, where async worker thread is waiting on this to wake up parent)
-     *   3. Exit thread */
+     *   3. Exit thread
+     * All of these happen in `_DkThreadExit_asm_stub`.
+     */
     static_assert(sizeof(g_thread_stack_lock.lock) == 4,
                   "unexpected g_thread_stack_lock.lock size");
-    static_assert(offsetof(__typeof__(g_thread_stack_lock), lock) == 0,
-                  "unexpected offset of lock in g_thread_stack_lock");
+    static_assert(offsetof(__typeof__(g_thread_stack_lock), lock) % 4 == 0,
+                  "lock is not naturally aligned in g_thread_stack_lock");
     static_assert(sizeof(*clear_child_tid) == 4, "unexpected clear_child_tid size");
 
-    __asm__ volatile(
-        "movl $0, (%[lock]) \n"             /* spinlock_unlock(&g_thread_stack_lock) */
-        "cmpq $0, %[clear_child_tid] \n"    /* check if clear_child_tid != NULL */
-        "je 1f \n"
-        "movl $0, (%[clear_child_tid]) \n"  /* set *clear_child_tid = 0 */
-        "1: \n"
-        "mov %[nr_exit], %%rax\n"
-        "mov %[exit_code], %%edi\n"
-        "syscall \n"
-        "ud2 \n"
-        "jmp 1b \n"
-        :
-        : [nr_exit] "i" (__NR_exit), [exit_code] "i" (0),
-          [lock] "r" (&g_thread_stack_lock.lock), [clear_child_tid] "r" (clear_child_tid)
-        : "memory"
-    );
-    __builtin_unreachable();
+    _DkThreadExit_asm_stub(&g_thread_stack_lock.lock, clear_child_tid);
 }
 
 int _DkThreadResume(PAL_HANDLE thread_handle) {

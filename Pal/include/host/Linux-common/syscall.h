@@ -2,11 +2,15 @@
 #define SYSCALL_H_
 
 #include <asm/unistd.h>
+#include <stdint.h>
+#include <stdnoreturn.h>
 
 long do_syscall(long nr, ...);
 long clone(int (*f)(void*), void* stack, int flags, void* arg, void* parent_tid, void* tls,
            void* child_tid, void (*exit_func)(int));
 long vfork(void) __attribute__((returns_twice));
+
+noreturn void _DkThreadExit_asm_stub(uint32_t* thread_stack_spinlock, int* clear_child_tid);
 
 #define _extend(x) ((unsigned long)(x))
 

@@ -6,23 +6,10 @@
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 #include <linux/signal.h>
 
+#include "sigreturn.h"
 #include "sigset.h"
 #include "syscall.h"
 #include "ucontext.h"
-
-/* in x86_64 kernels, sigaction is required to have a user-defined restorer */
-__asm__(
-".align 16\n"
-".LSTART_restore_rt:\n"
-".type __restore_rt,@function\n"
-"__restore_rt:\n"
-"movq $" XSTRINGIFY(__NR_rt_sigreturn) ", %rax\n"
-"syscall\n"
-);
-
-/* workaround for an old GAS (2.27) bug that incorrectly omits relocations when referencing this
- * symbol */
-__attribute__((visibility("hidden"))) void __restore_rt(void);
 
 int arch_do_rt_sigprocmask(int sig, int how) {
     __sigset_t mask;
@@ -37,7 +24,7 @@ int arch_do_rt_sigaction(int sig, void* handler,
     struct sigaction action = {0};
     action.sa_handler  = handler;
     action.sa_flags    = SA_SIGINFO | SA_ONSTACK | SA_RESTORER;
-    action.sa_restorer = __restore_rt;
+    action.sa_restorer = syscall_rt_sigreturn;
 
     /* disallow nested asynchronous signals during exception handling */
     __sigemptyset((__sigset_t*)&action.sa_mask);

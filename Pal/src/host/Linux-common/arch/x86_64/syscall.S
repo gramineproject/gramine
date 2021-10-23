@@ -82,3 +82,28 @@ vfork:
     syscall
     jmp *%rdx
     .cfi_endproc
+
+.global syscall_rt_sigreturn
+.type syscall_rt_sigreturn, @function
+.align 0x10
+syscall_rt_sigreturn:
+    .cfi_startproc
+    mov $__NR_rt_sigreturn, %rax
+    syscall
+    .cfi_endproc
+
+.global _DkThreadExit_asm_stub
+.type _DkThreadExit_asm_stub, @function
+_DkThreadExit_asm_stub:
+    .cfi_startproc
+    movl $0, (%rdi)             /* spinlock_unlock(&g_thread_stack_lock) */
+    cmp $0, %rsi                /* check if clear_child_tid != NULL */
+    je .Lskip_clear_child_tid
+    movl $0, (%rsi)             /* set *clear_child_tid = 0 */
+.Lskip_clear_child_tid:
+    xor %edi, %edi
+    mov $__NR_exit, %rax
+    syscall
+    ud2
+    jmp .Lskip_clear_child_tid
+    .cfi_endproc
