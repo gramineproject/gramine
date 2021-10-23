@@ -170,6 +170,10 @@ out:
 
 /* Example output: "func_name at source_file.c:123" */
 static int run_addr2line(const char* name, uintptr_t offset, char* buf, size_t buf_size) {
+    /* FIXME: Temporarily disabled due to incompatibility with the new seccomp feature. Once fixed,
+     * we should also re-enable "test_021_asan" from LibOS regression tests. */
+    return -1;
+
     char addr_buf[20];
     snprintf(addr_buf, sizeof(addr_buf), "0x%lx", offset);
 

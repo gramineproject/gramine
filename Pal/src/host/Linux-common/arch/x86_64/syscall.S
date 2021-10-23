@@ -6,6 +6,12 @@
 #define __ASSEMBLY__
 #include <asm/unistd.h>
 
+.global gramine_raw_syscalls_code_begin
+.global gramine_raw_syscalls_code_end
+.type gramine_raw_syscalls_code_begin, @function
+.type gramine_raw_syscalls_code_end, @function
+gramine_raw_syscalls_code_begin:
+
 .global do_syscall
 .type do_syscall, @function
 .align 0x10
@@ -107,3 +113,5 @@ _DkThreadExit_asm_stub:
     ud2
     jmp .Lskip_clear_child_tid
     .cfi_endproc
+
+gramine_raw_syscalls_code_end:

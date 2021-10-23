@@ -75,7 +75,7 @@ void init_child_process(int parent_pipe_fd, PAL_HANDLE* parent, char** manifest_
 
 void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[]);
 int block_async_signals(bool block);
-void signal_setup(void);
+void signal_setup(bool is_first_process);
 
 extern char __text_start, __text_end, __data_start, __data_end;
 #define TEXT_START ((void*)(&__text_start))

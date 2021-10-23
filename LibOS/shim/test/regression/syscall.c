@@ -1,14 +1,22 @@
 #define _GNU_SOURCE
 #include <err.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
-#include <unistd.h>
 
-int main(int argc, char** argv) {
-    const char buf[] = "Hello world\n";
-    long ret = syscall(__NR_write, 1, buf, sizeof(buf) - 1);
-    if (ret < 0)
-        err(EXIT_FAILURE, "write syscall");
+int main(void) {
+    long ret = 0;
+#ifdef __x86_64__
+    __asm__ volatile (
+        "syscall"
+        : "=a"(ret)
+        : "0"(__NR_getpid)
+        : "memory", "cc", "rcx", "r11"
+    );
+#endif
+    if (ret != 1)
+        errx(EXIT_FAILURE, "getpid syscall: %ld (expected 1)", ret);
 
+    puts("TEST OK");
     return 0;
 }

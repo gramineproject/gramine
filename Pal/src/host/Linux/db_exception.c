@@ -1,13 +1,18 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
- *               2020 Intel Labs
+ * Copyright (C) 2020 Intel Labs
+ * Copyright (C) 2021 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
 /*
- * This file contains APIs to set up signal handlers.
+ * This file contains APIs to set up signal handlers and seccomp.
  */
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
+#include <linux/filter.h>
+#include <linux/prctl.h>
+#include <linux/seccomp.h>
 #include <linux/signal.h>
 
 #include "api.h"
@@ -80,6 +85,15 @@ static void perform_signal_handling(int event, bool is_in_pal, PAL_NUM addr, uco
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
+    if (info->si_signo == SIGSYS && info->si_code == SYS_SECCOMP) {
+        ucontext_revert_syscall(uc, info->si_arch, info->si_syscall, info->si_call_addr);
+        static int log_once = 1;
+        if (__atomic_exchange_n(&log_once, 0, __ATOMIC_RELAXED)) {
+            log_always("Emulating a raw system/supervisor call. This degrades performance, consider"
+                       " patching your application to use Gramine syscall API.");
+        }
+    }
+
     int event = get_pal_event(signum);
     assert(event > 0);
 
@@ -113,7 +127,56 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
     perform_signal_handling(event, ADDR_IN_PAL_OR_VDSO(rip), /*addr=*/0, uc);
 }
 
-void signal_setup(void) {
+static int setup_seccomp(void) {
+    int ret = DO_SYSCALL(prctl, PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+    if (ret < 0) {
+        log_error("prctl(PR_SET_NO_NEW_PRIVS, 1) failed: %d", ret);
+        return -1;
+    }
+
+    uint32_t syscalls_code_begin_low = (uintptr_t)gramine_raw_syscalls_code_begin & 0xffffffffu;
+    uint32_t syscalls_code_begin_high = (uintptr_t)gramine_raw_syscalls_code_begin >> 32;
+    uint32_t syscalls_code_end_low = (uintptr_t)gramine_raw_syscalls_code_end & 0xffffffffu;
+    uint32_t syscalls_code_end_high = (uintptr_t)gramine_raw_syscalls_code_end >> 32;
+    struct sock_filter filter[] = {
+        /* 0: A = ip >> 32 */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
+        /* 1: A >= syscalls_code_begin_high ? 0 : TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_high, 0, /*TRAP*/9),
+        /* 2: A == syscalls_code_begin_high ? 0 : CMP_END */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_begin_high, 0, /*CMP_END*/2),
+        /* 3: A = ip & (2**32 - 1) */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
+        /* 4: A >= syscalls_code_begin_low ? CMP_END : TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_low, /*CMP_END*/0, /*TRAP*/6),
+        /* 5: CMP_END: A = ip >> 32 */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
+        /* 6: A > syscalls_code_end_high ? TRAP : 0 */
+        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_high, /*TRAP*/4, 0),
+        /* 7: A == syscalls_code_end_high ? 0 : ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_end_high, 0, /*ALLOW*/2),
+        /* 8: A = ip & (2**32 - 1) */
+        BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
+        /* 9: A >= syscalls_code_end_low ? TRAP : ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_end_low, /*TRAP*/1, 0),
+
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
+    };
+
+    struct sock_fprog seccomp_filter = {
+        .len = ARRAY_SIZE(filter),
+        .filter = filter,
+    };
+    ret = DO_SYSCALL(prctl, PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &seccomp_filter);
+    if (ret < 0) {
+        log_error("Setting seccomp filter failed: %d", ret);
+        return -1;
+    }
+    return 0;
+}
+
+void signal_setup(bool is_first_process) {
     int ret;
 
     /* SIGPIPE and SIGCHLD are emulated completely inside LibOS */
@@ -151,6 +214,13 @@ void signal_setup(void) {
         ret = set_signal_handler(ASYNC_SIGNALS[i], handle_async_signal);
         if (ret < 0)
             goto err;
+    }
+
+    if (is_first_process) {
+        ret = setup_seccomp();
+        if (ret < 0) {
+            INIT_FAIL(PAL_ERROR_DENIED, "Setting up seccomp for inline syscall handling failed");
+        }
     }
 
     return;

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2020 Intel Corporation
+/* Copyright (C) 2020-2021 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 #ifndef LINUX_X86_64_UCONTEXT_H_
@@ -98,6 +98,20 @@ static inline uint64_t ucontext_get_ip(ucontext_t* uc) {
 
 static inline void ucontext_set_ip(ucontext_t* uc, uint64_t ip) {
     uc->uc_mcontext.rip = ip;
+}
+
+/* `si_call_addr` is a macro, we cannot use it as an argument name. */
+static inline void ucontext_revert_syscall(ucontext_t* uc, unsigned int arch, int syscall_nr,
+                                           void* _si_call_addr) {
+    __UNUSED(arch);
+    /* man seccomp(2) says that "si_call_addr will show the address of the system call instruction",
+     * which is not true - it points to the next instruction past "syscall". */
+    uc->uc_mcontext.rip = (uint64_t)_si_call_addr - 2;
+    uc->uc_mcontext.rax = syscall_nr;
+
+    uint8_t* rip = (uint8_t*)uc->uc_mcontext.rip;
+    assert(rip[0] == 0x0f && rip[1] == 0x05);
+    __UNUSED(rip);
 }
 
 #endif /* LINUX_X86_64_UCONTEXT_H_ */
