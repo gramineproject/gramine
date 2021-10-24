@@ -208,7 +208,8 @@ User ID and Group ID
 This specifies the initial, Gramine emulated user/group ID and effective
 user/group ID. It must be non-negative. By default Gramine emulates the
 user/group ID and effective user/group ID as the root user (uid = gid = 0).
-The user/group ID affects also the stat members for ``tmpfs`` and ``chroot``.
+The user and group IDs are also reflected in the information about ``tmpfs``
+and ``chroot`` files returned via ``stat()``.
 
 
 Disabling ASLR

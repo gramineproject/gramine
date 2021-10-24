@@ -1,4 +1,5 @@
 #include <err.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -25,15 +26,34 @@ int main(int argc, char** argv) {
 
     ret = stat(argv[0], &buf);
     if (ret < 0) {
-        err(EXIT_FAILURE, "stat failed");
+        err(EXIT_FAILURE, "chroot stat failed");
     }
 
     if (buf.st_uid != 1338) {
-        errx(EXIT_FAILURE, "UID from stat() is not equal to the value in the manifest");
+        errx(EXIT_FAILURE, "UID from chroot stat() is not equal to the value in the manifest");
     }
 
     if (buf.st_gid != 1337) {
-        errx(EXIT_FAILURE, "GID from stat() is not equal to the value in the manifest");
+        errx(EXIT_FAILURE, "GID from chroot stat() is not equal to the value in the manifest");
+    }
+
+    char file[] = "/tmp/file1";
+    ret = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (ret < 0) {
+        err(EXIT_FAILURE, "open failed");
+    }
+
+    ret = stat(file, &buf);
+    if (ret < 0) {
+        err(EXIT_FAILURE, "tmpfs stat failed");
+    }
+
+    if (buf.st_uid != 1338) {
+        errx(EXIT_FAILURE, "UID from tmpfs stat() is not equal to the value in the manifest");
+    }
+
+    if (buf.st_gid != 1337) {
+        errx(EXIT_FAILURE, "GID from tmpfs stat() is not equal to the value in the manifest");
     }
 
     puts("TEST OK");
