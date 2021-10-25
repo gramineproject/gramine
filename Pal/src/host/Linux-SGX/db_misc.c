@@ -256,10 +256,15 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
             case PKRU:
             case AMX_TILECFG:
             case AMX_TILEDATA:
-                if (subleaf == AMX_TILECFG)
-                    values[ECX] = 0x2; /* user state, located on 64B boundary, no XFD support */
+                /* Sanitize ECX:
+                 *   - bit 0 is always clear because all features are user state (in XCR0)
+                 *   - bit 1 is always set because all features are located on 64B boundary
+                 *   - bit 2 is set only for AMX_TILEDATA (support for XFD faulting)
+                 *   - bits 3-31 are reserved and are zeros
+                 */
+                values[ECX] = 0x2;
                 if (subleaf == AMX_TILEDATA)
-                    values[ECX] = 0x6; /* user state, located on 64B boundary, XFD support */
+                    values[ECX] |= 0x4;
 
                 if (values[EDX] != 0) {
                     log_error("Non-null EDX value in Processor Extended State Enum CPUID leaf");
