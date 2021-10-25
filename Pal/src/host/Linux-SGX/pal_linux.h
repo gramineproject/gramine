@@ -73,7 +73,7 @@ extern char __text_start, __text_end, __data_start, __data_end;
 enum cpu_extension {
     X87, SSE, AVX, MPX_1, MPX_2, AVX512_1, AVX512_2, AVX512_3,
     PKRU = 9,
-    AMX_1 = 17, AMX_2,
+    AMX_TILECFG = 17, AMX_TILEDATA,
     LAST_CPU_EXTENSION,
 };
 

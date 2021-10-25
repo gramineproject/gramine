@@ -189,7 +189,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
-            case 0x0:
+            case X87:
                 /* From the SDM: "EDX:EAX is a bitmap of all the user state components that can be
                  * managed using the XSAVE feature set. A bit can be set in XCR0 if and only if the
                  * corresponding bit is set in this bitmap. Every processor that supports the XSAVE
@@ -228,7 +228,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 values[EDX] = 0;
 
                 break;
-            case 0x1: {
+            case SSE: {
                 const uint32_t xsave_legacy_size = 512;
                 const uint32_t xsave_header = 64;
                 uint32_t save_size_bytes = xsave_legacy_size + xsave_header;
@@ -254,8 +254,18 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
             case AVX512_2:
             case AVX512_3:
             case PKRU:
-            case AMX_1:
-            case AMX_2:
+            case AMX_TILECFG:
+            case AMX_TILEDATA:
+                if (subleaf == AMX_TILECFG)
+                    values[ECX] = 0x2; /* user state, located on 64B boundary, no XFD support */
+                if (subleaf == AMX_TILEDATA)
+                    values[ECX] = 0x6; /* user state, located on 64B boundary, XFD support */
+
+                if (values[EDX] != 0) {
+                    log_error("Non-null EDX value in Processor Extended State Enum CPUID leaf");
+                    _DkProcessExit(1);
+                }
+
                 if (extension_enabled(xfrm, subleaf)) {
                     if (values[EAX] != g_cpu_extension_sizes[subleaf] ||
                             values[EBX] != g_cpu_extension_offsets[subleaf]) {
@@ -348,7 +358,7 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
     {.leaf = 0x1B, .zero_subleaf = false, .cache = false}, /* PCONFIG Information */
     /* NOTE: 0x1C leaf is not recognized, see code below */
     {.leaf = 0x1D, .zero_subleaf = false, .cache = true},  /* Tile Information Main Leaf (AMX) */
-    {.leaf = 0x1E, .zero_subleaf = true,  .cache = true},  /* TMUL Information Main Leaf (AMX) */
+    {.leaf = 0x1E, .zero_subleaf = false, .cache = true},  /* TMUL Information Main Leaf (AMX) */
     {.leaf = 0x1F, .zero_subleaf = false, .cache = false}, /* Intel V2 Ext Topology Enumeration */
     /* basic CPUID leaf functions end here */
 
@@ -394,7 +404,7 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
-    if (!extension_enabled(xfrm, AMX_2) &&
+    if ((!extension_enabled(xfrm, AMX_TILECFG) || !extension_enabled(xfrm, AMX_TILEDATA)) &&
             (leaf == AMX_TILE_INFO_LEAF || leaf == AMX_TMUL_INFO_LEAF)) {
         /* the Intel AMX feature is disabled, so we pretend that the CPU doesn't support it at all
          * (by marking the TILE_INFO and TMUL_INFO AMX-related leaves as unrecognized) */
@@ -419,8 +429,7 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
     if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2) ||
-        (leaf == 0x14 && subleaf != 0 && subleaf != 1) ||
-        (leaf == AMX_TILE_INFO_LEAF && subleaf != 0 && subleaf != 1)) {
+        (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
         goto fail;
     }
