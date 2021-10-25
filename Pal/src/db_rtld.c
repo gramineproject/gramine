@@ -83,7 +83,7 @@ struct loadcmd {
     /* End of memory area */
     ElfW(Addr) alloc_end;
 
-    /* File offset */
+    /* Offset from the beginning of file at which the first byte of the segment resides */
     uint64_t map_off;
 
     /* Permissions for memory area */
@@ -273,7 +273,7 @@ static int perform_relocations(struct link_map* map) {
 }
 
 /* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
- * we don't bother undoing _DkStreamMap() and _DkVirtualMemoryAlloc() in case of failure.  */
+ * we don't bother undoing _DkStreamMap() and _DkVirtualMemoryAlloc() in case of failure. */
 static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
                                    const char* elf_file_buf, struct link_map** out_map) {
     int ret;

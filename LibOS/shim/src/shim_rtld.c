@@ -92,7 +92,7 @@ struct loadcmd {
     /* End of memory area */
     ElfW(Addr) alloc_end;
 
-    /* File offset */
+    /* Offset from the beginning of file at which the first byte of the segment resides */
     uint64_t map_off;
 
     /* Permissions for memory area */
