@@ -90,8 +90,8 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         static bool log_once = true;
         if (log_once) {
             log_once = false;
-            log_always("Emulating an inline syscall. This degreades performance, consider patching "
-                       "your application to use Gramine syscall API.");
+            log_always("Emulating a raw system/supervisor call. This degrades performance, consider"
+                       " patching your application to use Gramine syscall API.");
         }
     }
 
@@ -164,7 +164,6 @@ static int setup_seccomp(void) {
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
     };
-    static_assert(ARRAY_SIZE(filter) == 12, "jumps in filter will fail");
 
     struct sock_fprog seccomp_filter = {
         .len = ARRAY_SIZE(filter),
