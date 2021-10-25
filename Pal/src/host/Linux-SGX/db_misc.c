@@ -256,7 +256,8 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
             case PKRU:
             case AMX_TILECFG:
             case AMX_TILEDATA:
-                /* Sanitize ECX:
+                /*
+                 * Sanitize ECX:
                  *   - bit 0 is always clear because all features are user state (in XCR0)
                  *   - bit 1 is always set because all features are located on 64B boundary
                  *   - bit 2 is set only for AMX_TILEDATA (support for XFD faulting)
