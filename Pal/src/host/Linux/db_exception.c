@@ -87,6 +87,12 @@ static void perform_signal_handling(int event, bool is_in_pal, PAL_NUM addr, uco
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
     if (info->si_signo == SIGSYS && info->si_code == SYS_SECCOMP) {
         ucontext_revert_syscall(uc, info->si_arch, info->si_syscall, info->si_call_addr);
+        static bool log_once = true;
+        if (log_once) {
+            log_once = false;
+            log_always("Emulating an inline syscall. This degreades performance, consider patching "
+                       "your application to use Gramine syscall API.");
+        }
     }
 
     int event = get_pal_event(signum);
@@ -129,32 +135,31 @@ static int setup_seccomp(void) {
         return -1;
     }
 
-    uint32_t syscalls_range_begin_low = (uintptr_t)syscalls_range_begin & 0xffffffffu;
-    uint32_t syscalls_range_begin_high = (uintptr_t)syscalls_range_begin >> 32;
-    uint32_t syscalls_range_end_low = (uintptr_t)syscalls_range_end & 0xffffffffu;
-    uint32_t syscalls_range_end_high = (uintptr_t)syscalls_range_end >> 32;
+    uint32_t syscalls_code_begin_low = (uintptr_t)gramine_raw_syscalls_code_begin & 0xffffffffu;
+    uint32_t syscalls_code_begin_high = (uintptr_t)gramine_raw_syscalls_code_begin >> 32;
+    uint32_t syscalls_code_end_low = (uintptr_t)gramine_raw_syscalls_code_end & 0xffffffffu;
+    uint32_t syscalls_code_end_high = (uintptr_t)gramine_raw_syscalls_code_end >> 32;
     struct sock_filter filter[] = {
-        /* A = ip >> 32 */
+        /* 0: A = ip >> 32 */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
-        /* A >= syscalls_range_begin_high ? 0 : GOTO_TRAP */
-        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_range_begin_high, 0, /*GOTO_TRAP*/9),
-        /* A == syscalls_range_begin_high ? 0 : GOTO_CMP_END */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_range_begin_high, 0, /*GOTO_CMP_END*/2),
-        /* A = ip & (2**32 - 1) */
+        /* 1: A >= syscalls_code_begin_high ? 0 : GOTO_TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_high, 0, /*GOTO_TRAP*/9),
+        /* 2: A == syscalls_code_begin_high ? 0 : GOTO_CMP_END */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_begin_high, 0, /*GOTO_CMP_END*/2),
+        /* 3: A = ip & (2**32 - 1) */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
-        /* A >= syscalls_range_begin_low ? GOTO_CMP_END : GOTO_TRAP */
-        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_range_begin_low, 0, /*GOTO_TRAP*/6),
-        /* CMP_END: */
-        /* A = ip >> 32 */
+        /* 4: A >= syscalls_code_begin_low ? GOTO_CMP_END : GOTO_TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_low, 0, /*GOTO_TRAP*/6),
+        /* 5: CMP_END: A = ip >> 32 */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
-        /* A > syscalls_range_end_high ? GOTO_TRAP : 0 */
-        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_range_end_high, /*GOTO_TRAP*/4, 0),
-        /* A == syscalls_range_end_high ? 0 : GOTO_ALLOW */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_range_end_high, 0, /*GOTO_ALLOW*/2),
-        /* A = ip & (2**32 - 1) */
+        /* 6: A > syscalls_code_end_high ? GOTO_TRAP : 0 */
+        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_high, /*GOTO_TRAP*/4, 0),
+        /* 7: A == syscalls_code_end_high ? 0 : GOTO_ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_end_high, 0, /*GOTO_ALLOW*/2),
+        /* 8: A = ip & (2**32 - 1) */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
-        /* A > syscalls_range_end_low ? GOTO_TRAP : GOTO_ALLOW */
-        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_range_end_low, /*GOTO_TRAP*/1, 0),
+        /* 9: A > syscalls_code_end_low ? GOTO_TRAP : GOTO_ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_low, /*GOTO_TRAP*/1, 0),
 
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
