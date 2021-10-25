@@ -432,9 +432,11 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
         }
     }
 
+    /* FIXME: these leaves may have more subleaves in the future, we need a better way of
+     *        restricting subleaves (e.g., decide based on CPUID leaf 0x01) */
     if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
-        (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2) ||
+        (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2 && subleaf != 3) ||
         (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
         goto fail;
