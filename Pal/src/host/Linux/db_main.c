@@ -51,6 +51,7 @@ const size_t g_page_size = PRESET_PAGESIZE;
 
 static int g_uid, g_gid;
 static ElfW(Addr) g_sysinfo_ehdr;
+static ElfW(Addr) g_pal_binary_addr;
 
 static void read_args_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
                                  const char*** out_envp) {
@@ -82,12 +83,21 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
 #endif
     }
 
+    ElfW(Addr) at_base_addr = 0x0;
+    ElfW(Addr) at_phdr_addr = 0x0;
+
     for (ElfW(auxv_t)* av = (ElfW(auxv_t)*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {
             case AT_PAGESZ:
                 if (av->a_un.a_val != g_page_size) {
                     INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PAGESZ auxiliary vector");
                 }
+                break;
+            case AT_BASE:
+                at_base_addr = av->a_un.a_val;
+                break;
+            case AT_PHDR:
+                at_phdr_addr = av->a_un.a_val;
                 break;
             case AT_UID:
             case AT_EUID:
@@ -102,9 +112,16 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                 break;
         }
     }
+
     *out_argc = argc;
     *out_argv = argv;
     *out_envp = envp;
+
+    /* logic taken from Musl code, see ldso/dlstart.c */
+    if (!at_base_addr && !ALLOC_ALIGN_DOWN(at_phdr_addr)) {
+        INIT_FAIL(PAL_ERROR_INVAL, "Did not get AT_BASE/AT_PHDR auxiliary vector (PAL base addr)");
+    }
+    g_pal_binary_addr = at_base_addr ?: ALLOC_ALIGN_DOWN(at_phdr_addr);
 }
 
 void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
@@ -184,8 +201,18 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         die_or_inf_loop();
     }
 
+    /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
+    g_pal_state.alloc_align = g_page_size;
+    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
+
+    /* must preceed setup_pal_binary() because it populates g_pal_binary_addr with AT_BASE */
+    int argc;
+    const char** argv;
+    const char** envp;
+    read_args_from_stack(initial_rsp, &argc, &argv, &envp);
+
     /* relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary(&g_pal_map);
+    ret = setup_pal_binary(g_pal_binary_addr, &g_pal_map);
     if (ret < 0)
         INIT_FAIL(-ret, "Relocation of the PAL binary failed");
 
@@ -193,15 +220,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     ret = _DkSystemTimeQuery(&start_time);
     if (ret < 0)
         INIT_FAIL(-ret, "_DkSystemTimeQuery() failed");
-
-    /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
-    g_pal_state.alloc_align = g_page_size;
-    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
-
-    int argc;
-    const char** argv;
-    const char** envp;
-    read_args_from_stack(initial_rsp, &argc, &argv, &envp);
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);  // may be NULL!

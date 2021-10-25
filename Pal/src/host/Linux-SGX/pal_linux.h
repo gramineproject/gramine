@@ -63,8 +63,8 @@ extern const size_t g_page_size;
 extern size_t g_pal_internal_mem_size;
 
 struct pal_sec;
-noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
-                             size_t args_size, char* uptr_env, size_t env_size,
+noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, uintptr_t libpal_addr,
+                             char* uptr_args, size_t args_size, char* uptr_env, size_t env_size,
                              struct pal_sec* uptr_sec_info);
 void pal_start_thread(void);
 

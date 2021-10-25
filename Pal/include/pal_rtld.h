@@ -42,7 +42,7 @@ void _DkDebugMapRemove(void* addr);
 
 /* loading ELF binaries */
 int load_elf_object(const char* uri, enum elf_object_type type);
-int setup_pal_binary(struct link_map* pal_map);
+int setup_pal_binary(ElfW(Addr) pal_binary_addr, struct link_map* pal_map);
 int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
                                   const char** out_string_table, ElfW(Sym)** out_symbol_table,
                                   uint32_t* out_symbol_table_cnt);

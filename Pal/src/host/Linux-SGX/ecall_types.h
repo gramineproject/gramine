@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 
 enum {
     ECALL_ENCLAVE_START = 0,
@@ -13,6 +14,7 @@ struct rpc_queue;
 typedef struct {
     char*             ms_libpal_uri;
     size_t            ms_libpal_uri_len;
+    uintptr_t         ms_libpal_addr;
     char*             ms_args;
     size_t            ms_args_size;
     char*             ms_env;

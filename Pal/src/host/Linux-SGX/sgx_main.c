@@ -568,6 +568,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
 #endif
 
+    enclave->libpal_addr = pal_area->addr;
+
     ret = 0;
 
 out:
@@ -1049,7 +1051,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
 
     /* start running trusted PAL */
-    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size);
+    ecall_enclave_start(enclave->libpal_uri, enclave->libpal_addr, args, args_size, env, env_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);

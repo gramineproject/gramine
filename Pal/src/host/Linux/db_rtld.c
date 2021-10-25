@@ -45,7 +45,7 @@ int setup_vdso(ElfW(Addr) base_addr) {
     int ret;
 
     const char* string_table  = NULL;
-    ElfW(Sym)* symbol_table   = NULL;
+    ElfW(Sym)* symbol_table = NULL;
     uint32_t symbol_table_cnt = 0;
 
     ret = find_string_and_symbol_tables(base_addr, base_addr, &string_table, &symbol_table,

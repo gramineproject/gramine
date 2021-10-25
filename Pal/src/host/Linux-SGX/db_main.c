@@ -649,14 +649,14 @@ out:
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with a default canary and then updates it to a random one, so we disable stack protector here */
 __attribute_no_stack_protector
-noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
-                             size_t args_size, char* uptr_env, size_t env_size,
+noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, uintptr_t libpal_addr,
+                             char* uptr_args, size_t args_size, char* uptr_env, size_t env_size,
                              struct pal_sec* uptr_sec_info) {
     /* Our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
 
     /* relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary(&g_pal_map);
+    ret = setup_pal_binary(libpal_addr, &g_pal_map);
     if (ret < 0) {
         log_error("Relocation of the PAL binary failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
