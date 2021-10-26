@@ -58,7 +58,6 @@ struct pal_enclave {
     int token;
 
     char* libpal_uri; /* Path to the PAL binary */
-    uintptr_t libpal_addr; /* Address at which PAL binary is loaded */
 
 #ifdef DEBUG
     /* profiling */

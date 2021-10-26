@@ -114,8 +114,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
 
         /* pal_linux_main is responsible to check the passed arguments */
         pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
-                       READ_ONCE(ms->ms_libpal_addr), READ_ONCE(ms->ms_args),
-                       READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
+                       READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
                        READ_ONCE(ms->ms_env_size), pal_sec);
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so

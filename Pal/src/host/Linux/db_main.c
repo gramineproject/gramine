@@ -83,9 +83,6 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
 #endif
     }
 
-    ElfW(Addr) at_base_addr = 0x0;
-    ElfW(Addr) at_phdr_addr = 0x0;
-
     for (ElfW(auxv_t)* av = (ElfW(auxv_t)*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {
             case AT_PAGESZ:
@@ -93,11 +90,11 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                     INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PAGESZ auxiliary vector");
                 }
                 break;
-            case AT_BASE:
-                at_base_addr = av->a_un.a_val;
-                break;
             case AT_PHDR:
-                at_phdr_addr = av->a_un.a_val;
+                if (ALLOC_ALIGN_DOWN(av->a_un.a_val) == 0x0) {
+                    INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PHDR auxiliary vector");
+                }
+                g_pal_binary_addr = ALLOC_ALIGN_DOWN(av->a_un.a_val);
                 break;
             case AT_UID:
             case AT_EUID:
@@ -116,12 +113,6 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
     *out_argc = argc;
     *out_argv = argv;
     *out_envp = envp;
-
-    /* logic taken from Musl code, see ldso/dlstart.c */
-    if (!at_base_addr && !ALLOC_ALIGN_DOWN(at_phdr_addr)) {
-        INIT_FAIL(PAL_ERROR_INVAL, "Did not get AT_BASE/AT_PHDR auxiliary vector (PAL base addr)");
-    }
-    g_pal_binary_addr = at_base_addr ?: ALLOC_ALIGN_DOWN(at_phdr_addr);
 }
 
 void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {

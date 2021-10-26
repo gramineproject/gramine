@@ -453,6 +453,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 gs->common.self = (PAL_TCB*)(tls_area->addr + g_page_size * t);
                 gs->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
                 gs->enclave_size = enclave->size;
+                gs->libpal_addr = (void*)pal_area->addr;
                 gs->tcs_offset = tcs_area->addr - enclave->baseaddr + g_page_size * t;
                 gs->initial_stack_addr = stack_areas[t].addr + ENCLAVE_STACK_SIZE;
                 gs->sig_stack_low = sig_stack_areas[t].addr;
@@ -567,8 +568,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
 #endif
-
-    enclave->libpal_addr = pal_area->addr;
 
     ret = 0;
 
@@ -1051,7 +1050,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
 
     /* start running trusted PAL */
-    ecall_enclave_start(enclave->libpal_uri, enclave->libpal_addr, args, args_size, env, env_size);
+    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
