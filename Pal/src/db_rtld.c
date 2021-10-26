@@ -37,8 +37,11 @@
 #include "pal_internal.h"
 #include "pal_rtld.h"
 
-/* special symbol added by the linker, points to the .dynamic (PT_DYNAMIC) section */
-extern ElfW(Dyn) _DYNAMIC[];
+/* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
+ * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.
+ * Note that `visibility("hidden")` forces `&__ehdr_start` operation to use RIP-relative addressing
+ * with known offset (not a reference to GOT), so that `&__ehdr_start` doesn't need relocation. */
+extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
 
 struct link_map* g_loaded_maps = NULL;
 
@@ -562,11 +565,13 @@ out:
 }
 
 /* PAL binary must be DYN (shared object file) */
-int setup_pal_binary(ElfW(Addr) pal_binary_addr, struct link_map* pal_map) {
+int setup_pal_binary(struct link_map* pal_map) {
     int ret;
 
     pal_map->l_prev = NULL;
     pal_map->l_next = NULL;
+
+    ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
 
     ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_binary_addr);
     if (!dynamic_section) {

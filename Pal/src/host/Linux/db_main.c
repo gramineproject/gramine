@@ -52,12 +52,6 @@ const size_t g_page_size = PRESET_PAGESIZE;
 static int g_uid, g_gid;
 static ElfW(Addr) g_sysinfo_ehdr;
 
-/* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
- * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.
- * Note that `visibility("hidden")` forces `&__ehdr_start` operation to use RIP-relative addressing
- * with known offset (not a reference to GOT), so that `&__ehdr_start` doesn't need relocation. */
-extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
-
 static void read_args_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
                                  const char*** out_envp) {
     /* The stack layout on program entry is:
@@ -191,7 +185,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     /* relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary((ElfW(Addr))&__ehdr_start, &g_pal_map);
+    ret = setup_pal_binary(&g_pal_map);
     if (ret < 0)
         INIT_FAIL(-ret, "Relocation of the PAL binary failed");
 

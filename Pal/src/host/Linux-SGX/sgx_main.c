@@ -453,7 +453,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 gs->common.self = (PAL_TCB*)(tls_area->addr + g_page_size * t);
                 gs->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
                 gs->enclave_size = enclave->size;
-                gs->libpal_addr = (void*)pal_area->addr;
                 gs->tcs_offset = tcs_area->addr - enclave->baseaddr + g_page_size * t;
                 gs->initial_stack_addr = stack_areas[t].addr + ENCLAVE_STACK_SIZE;
                 gs->sig_stack_low = sig_stack_areas[t].addr;

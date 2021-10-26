@@ -656,7 +656,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     int ret;
 
     /* Relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary((ElfW(Addr))GET_ENCLAVE_TLS(libpal_addr), &g_pal_map);
+    ret = setup_pal_binary(&g_pal_map);
     if (ret < 0) {
         log_error("Relocation of the PAL binary failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
