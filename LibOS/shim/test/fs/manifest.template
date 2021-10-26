@@ -7,6 +7,10 @@ fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
 fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
 fs.mount.host_lib.type = "chroot"
 fs.mount.host_lib.path = "{{ arch_libdir }}"
 fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
@@ -14,10 +18,6 @@ fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
 fs.mount.host_usr_lib.type = "chroot"
 fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
 fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
-
-fs.mount.bin.type = "chroot"
-fs.mount.bin.path = "/bin"
-fs.mount.bin.uri = "file:/bin"
 
 fs.mount.output.type = "chroot"
 fs.mount.output.path = "/mounted"
@@ -36,7 +36,7 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
-  "file:{{ entrypoint }}",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
 ]

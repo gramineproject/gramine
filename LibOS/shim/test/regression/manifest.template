@@ -10,6 +10,14 @@ fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
 fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
 
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
+fs.mount.exec_victim.type = "chroot"
+fs.mount.exec_victim.path = "exec_victim"
+fs.mount.exec_victim.uri = "file:{{ binary_dir }}/exec_victim"
+
 fs.mount.host_lib.type = "chroot"
 fs.mount.host_lib.path = "{{ arch_libdir }}"
 fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
@@ -40,8 +48,8 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
   "file:/usr{{ arch_libdir }}/libstdc++.so.6",
-  "file:{{ entrypoint }}",
-  "file:exec_victim",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+  "file:{{ binary_dir }}/exec_victim",
 ]
 
 sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"

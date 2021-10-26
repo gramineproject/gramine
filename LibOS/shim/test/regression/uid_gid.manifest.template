@@ -1,7 +1,7 @@
 loader.preload = "file:{{ gramine.libos }}"
-libos.entrypoint = "uid_gid"
+libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
-loader.argv0_override = "uid_gid"
+loader.argv0_override = "{{ entrypoint }}"
 
 loader.uid = 1338
 loader.gid = 1337
@@ -10,10 +10,14 @@ fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
 sgx.nonpie_binary = true
 sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:uid_gid",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

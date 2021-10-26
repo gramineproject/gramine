@@ -1,4 +1,4 @@
-pal.entrypoint = "file:{{ entrypoint }}"
+pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
 loader.insecure__use_cmdline_argv = true
 
@@ -18,5 +18,5 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
-  "file:{{ entrypoint }}",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

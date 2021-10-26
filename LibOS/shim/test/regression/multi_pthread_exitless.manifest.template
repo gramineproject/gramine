@@ -7,6 +7,10 @@ fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "multi_pthread"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/multi_pthread"
+
 # app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8
 sgx.rpc_thread_num = 8
@@ -17,5 +21,5 @@ sgx.enable_stats = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:multi_pthread",
+  "file:{{ binary_dir }}/multi_pthread",
 ]

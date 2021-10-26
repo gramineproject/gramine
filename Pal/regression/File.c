@@ -25,7 +25,7 @@ int main(int argc, char** argv, char** envp) {
     /* test regular file opening */
 
     PAL_HANDLE file1 = NULL;
-    ret = DkStreamOpen("file:File", PAL_ACCESS_RDWR, 0, 0, 0, &file1);
+    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file1);
     if (ret >= 0 && file1) {
         pal_printf("File Open Test 1 OK\n");
 
@@ -81,21 +81,21 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE file2 = NULL;
-    ret = DkStreamOpen("file:File", PAL_ACCESS_RDWR, 0, 0, 0, &file2);
+    ret = DkStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file2);
     if (ret >= 0 && file2) {
         pal_printf("File Open Test 2 OK\n");
         DkObjectClose(file2);
     }
 
     PAL_HANDLE file3 = NULL;
-    ret = DkStreamOpen("file:../regression/File", PAL_ACCESS_RDWR, 0, 0, 0, &file3);
+    ret = DkStreamOpen("file:../regression/File.manifest", PAL_ACCESS_RDWR, 0, 0, 0, &file3);
     if (ret >= 0 && file3) {
         pal_printf("File Open Test 3 OK\n");
         DkObjectClose(file3);
     }
 
     PAL_STREAM_ATTR attr2;
-    ret = DkStreamAttributesQuery("file:File", &attr2);
+    ret = DkStreamAttributesQuery("file:File.manifest", &attr2);
     if (ret >= 0) {
         pal_printf("Query: type = %d, size = %ld\n", attr2.handle_type, attr2.pending_size);
     }

@@ -1,7 +1,7 @@
-pal.entrypoint = "file:Bootstrap7"
-loader.argv0_override = "Bootstrap7"
+pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.argv0_override = "{{ entrypoint }}"
 
-sgx.trusted_files = [ "file:Bootstrap7" ]
+sgx.trusted_files = [ "file:{{ binary_dir }}/{{ entrypoint }}" ]
 sgx.nonpie_binary = true
 sgx.debug = true
 

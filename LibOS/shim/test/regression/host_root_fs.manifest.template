@@ -1,6 +1,6 @@
 loader.preload = "file:{{ gramine.libos }}"
-libos.entrypoint = "{{ env.PWD }}/host_root_fs"
-loader.argv0_override = "host_root_fs"
+libos.entrypoint = "{{ binary_dir }}/{{ entrypoint }}"
+loader.argv0_override = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
@@ -17,5 +17,5 @@ sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:{{ env.PWD }}/host_root_fs",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

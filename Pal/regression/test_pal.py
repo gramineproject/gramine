@@ -278,7 +278,7 @@ class TC_20_SingleProcess(RegressionTestCase):
             pass
         pathlib.Path('file_delete.tmp').touch()
 
-        with open('File', 'rb') as file_:
+        with open('File.manifest', 'rb') as file_:
             file_exist = file_.read()
 
         _, stderr = self.run_binary(['File'])

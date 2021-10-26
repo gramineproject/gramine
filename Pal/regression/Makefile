@@ -1,10 +1,10 @@
 include ../../Scripts/Makefile.configs
-include ../../Scripts/Makefile.rules
 
 # Disable implicit rules so that Make doesn't try to compile the binaries
 .SUFFIXES:
 
 GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+BINARY_DIR = $(GRAMINE_PKGLIBDIR)/tests/pal
 
 preloads = \
 	Preload1.so \
@@ -60,44 +60,34 @@ repo_manifests = \
 	Thread2.manifest \
 	Thread2_exitless.manifest
 
-# Empty rule to prevent overriding them using "%.manifest: manifest.template" rule.
-$(repo_manifests): ;
-
-gen_manifests = $(filter-out $(repo_manifests),$(addsuffix .manifest,$(executables)))
+gen_manifests = $(addsuffix .manifest,$(executables))
 all_manifests = $(repo_manifests) $(gen_manifests)
 
-target = \
-	$(executables) \
-	$(preloads) \
-	$(all_manifests)
+# Variables passed to `gramine-manifest`
+extra_rules = -Dbinary_dir=$(BINARY_DIR)
+
+target = $(all_manifests)
+
+clean-extra += clean-tmp
 
 include ../../Scripts/manifest.mk
-
-.PHONY: all
-all: $(target) $(call expand_target_to_sig,$(target)) \
-     $(call expand_target_to_sgx,$(target)) $(preloads)
+include ../../Scripts/Makefile.Test
 
 .PHONY: sgx-tokens
 sgx-tokens: $(call expand_target_to_token,$(target))
 
-$(preloads) $(executables): %: $(GRAMINE_PKGLIBDIR)/tests/pal/%
-	$(call cmd,symlink)
-
 .PHONY: regression
-regression:
+regression: $(target)
 	$(RM) pal-regression.xml
 	$(MAKE) pal-regression.xml
 
 pal-regression.xml: test_pal.py $(target) $(call expand_target_to_sig,$(target)) $(call expand_target_to_sgx,$(target)) $(call expand_target_to_token,$(target))
 	../../Scripts/run-pytest --junit-xml $@ -v $<
 
-.PHONY: clean
-clean:
+.PHONY: clean-tmp
+clean-tmp:
 	$(RM) -r \
-		$(executables) \
-		$(gen_manifests) \
-		$(preloads) \
-		*.cached \
+		$(all_manifests) \
 		*.d \
 		.*.d \
 		*.manifest.sgx \
@@ -108,8 +98,6 @@ clean:
 		*.tmp \
 		*.token \
 		.*.token \
-		.cache \
-		.lib \
 		.output.* \
 		.pytest_cache \
 		__pycache__ \

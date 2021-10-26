@@ -1,11 +1,15 @@
 loader.preload = "file:{{ gramine.libos }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
-loader.argv0_override = "multi_pthread"
-libos.entrypoint = "multi_pthread"
+loader.argv0_override = "{{ entrypoint }}"
+libos.entrypoint = "{{ entrypoint }}"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 
 # app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8
@@ -16,5 +20,5 @@ sgx.enable_stats = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:multi_pthread",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

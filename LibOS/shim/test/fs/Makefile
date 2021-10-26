@@ -2,6 +2,7 @@
 .SUFFIXES:
 
 GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+BINARY_DIR = $(GRAMINE_PKGLIBDIR)/tests/libos/fs
 
 copy_mmap_execs = \
 	copy_mmap_rev \
@@ -28,13 +29,12 @@ execs = \
 
 all_manifests = $(addsuffix .manifest,$(execs))
 
-exec_target = $(execs)
-
-target = \
-	$(exec_target) \
-	$(all_manifests)
+target = $(all_manifests)
 
 clean-extra += clean-tmp
+
+# Variables passed to `gramine-manifest`
+extra_rules = -Dbinary_dir=$(BINARY_DIR)
 
 .PHONY: default
 default: all
@@ -42,16 +42,6 @@ default: all
 include ../../../../Scripts/Makefile.configs
 include ../../../../Scripts/manifest.mk
 include ../../../../Scripts/Makefile.Test
-
-ifeq ($(findstring x86_64,$(SYS))$(findstring linux,$(SYS)),x86_64linux)
-
-$(exec_target): %: $(GRAMINE_PKGLIBDIR)/tests/libos/fs/%
-	$(call cmd,symlink)
-
-else
-.IGNORE: $(execs)
-$(execs)
-endif
 
 .PHONY: fs-test
 fs-test: $(target)
@@ -82,5 +72,12 @@ pf-test.xml: test_pf.py $(call expand_target_to_token,$(target))
 
 .PHONY: clean-tmp
 clean-tmp:
-	$(RM) -r *.tmp *.cached $(all_manifests) *.manifest.sgx *~ *.sig *.token *.o \
-	         __pycache__ .pytest_cache .cache *.xml bin lib
+	$(RM) -r \
+		*.manifest \
+		*.manifest.sgx \
+		*.sig \
+		*.token \
+		.pytest_cache \
+		__pycache__ \
+		*.xml \
+		tmp/*

@@ -1,6 +1,8 @@
+{% set entrypoint = "bootstrap" -%}
+
 loader.preload = "file:{{ gramine.libos }}"
-libos.entrypoint = "bootstrap"
-loader.argv0_override = "bootstrap"
+libos.entrypoint = "{{ entrypoint }}"
+loader.argv0_override = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.log_level = "debug"
@@ -9,10 +11,14 @@ fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
 sgx.nonpie_binary = true
 sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:bootstrap",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

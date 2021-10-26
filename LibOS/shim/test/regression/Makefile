@@ -4,6 +4,7 @@ include ../../../../Scripts/Makefile.configs
 .SUFFIXES:
 
 GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+BINARY_DIR = $(GRAMINE_PKGLIBDIR)/tests/libos/regression
 
 c_executables-x86_64 = \
 	cpuid \
@@ -126,22 +127,15 @@ repo_manifests = \
 gen_manifests = $(addsuffix .manifest,$(c_executables) $(cxx_executables-$(ARCH)))
 all_manifests = $(repo_manifests) $(gen_manifests)
 
-exec_target = \
-	$(c_executables) \
-	$(cxx_executables-$(ARCH))
-
-$(exec_target): %: $(GRAMINE_PKGLIBDIR)/tests/libos/regression/%
-	$(call cmd,symlink)
-
-target = \
-	$(exec_target) \
-	$(all_manifests)
+target = $(all_manifests)
 
 clean-extra += clean-tmp
 
+# Variables passed to `gramine-manifest`
 extra_rules = \
 	-Dra_client_spid=$(if $(RA_CLIENT_SPID),$(RA_CLIENT_SPID),) \
-	-Dra_client_linkable=$(if $(RA_CLIENT_LINKABLE),$(RA_CLIENT_LINKABLE),0)
+	-Dra_client_linkable=$(if $(RA_CLIENT_LINKABLE),$(RA_CLIENT_LINKABLE),0) \
+	-Dbinary_dir=$(BINARY_DIR)
 
 include ../../../../Scripts/manifest.mk
 include ../../../../Scripts/Makefile.Test
@@ -157,19 +151,14 @@ libos-regression.xml: test_libos.py $(call expand_target_to_token,$(target))
 .PHONY: clean-tmp
 clean-tmp:
 	$(RM) -r \
-		*.cached \
 		*.dat \
 		*.manifest \
 		*.manifest.sgx \
 		*.sig \
-		*.tmp \
 		*.token \
-		*~ \
-		.cache \
 		.pytest_cache \
 		__pycache__ \
-		libos-regression.xml \
+		*.xml \
 		testfile \
 		trusted_testfile \
-		tmp/* \
-		*.o
+		tmp/*

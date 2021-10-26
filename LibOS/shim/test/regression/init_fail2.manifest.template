@@ -1,12 +1,18 @@
+{% set entrypoint = "init_fail" -%}
+
 loader.preload = "file:{{ gramine.libos }}"
-libos.entrypoint = "init_fail"
-loader.argv0_override = "init_fail"
+libos.entrypoint = "{{ entrypoint }}"
+loader.argv0_override = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 
 sgx.nonpie_binary = true
 sgx.debug = true
@@ -17,5 +23,5 @@ sys.brk.max_size = "512M"
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
-  "file:init_fail",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
