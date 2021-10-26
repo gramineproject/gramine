@@ -84,7 +84,7 @@ struct loadcmd {
     ElfW(Addr) alloc_end;
 
     /* Offset from the beginning of file at which the first byte of the segment resides */
-    uint64_t map_off;
+    ElfW(Off) map_off;
 
     /* Permissions for memory area */
     int prot;
