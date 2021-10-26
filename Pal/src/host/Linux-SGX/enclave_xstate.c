@@ -54,19 +54,19 @@ uint32_t g_xsave_size = 0;
 
 const uint32_t g_cpu_extension_sizes[] = {
     [AVX] = 256,
-    [MPX_1] = 64, [MPX_2] = 64,
-    [AVX512_1] = 64, [AVX512_2] = 512, [AVX512_3] = 1024,
+    [MPX_BNDREGS] = 64, [MPX_BNDCSR] = 64,
+    [AVX512_OPMASK] = 64, [AVX512_ZMM256] = 512, [AVX512_ZMM512] = 1024,
     [PKRU] = 8,
     [AMX_TILECFG] = 64, [AMX_TILEDATA] = 8192,
 };
 
-/* Note that AVX offset is 576 bytes and MPX_1 starts at 960. The AVX state size is 256, leaving
- * 128 bytes unaccounted for (a gap between AVX and MPX_1). Similarly, there is a gap between
- * PKRU and AMX_TILECFG. */
+/* Note that AVX offset is 576 bytes and MPX_BNDREGS starts at 960. The AVX state size is 256,
+ * leaving 128 bytes unaccounted for (a gap between AVX and MPX_BNDREGS). Similarly, there is a gap
+ * between PKRU and AMX_TILECFG. */
 const uint32_t g_cpu_extension_offsets[] = {
     [AVX] = 576,
-    [MPX_1] = 960, [MPX_2] = 1024,
-    [AVX512_1] = 1088, [AVX512_2] = 1152, [AVX512_3] = 1664,
+    [MPX_BNDREGS] = 960, [MPX_BNDCSR] = 1024,
+    [AVX512_OPMASK] = 1088, [AVX512_ZMM256] = 1152, [AVX512_ZMM512] = 1664,
     [PKRU] = 2688,
     [AMX_TILECFG] = 2752, [AMX_TILEDATA] = 2816,
 };
@@ -92,13 +92,17 @@ void init_xsave_size(uint64_t xfrm) {
         /* `size` is calculated as the offset of the feature in XSAVE area + size of each
          * sub-feature. Note that g_xsave_size should be in ascending order. */
         {SGX_XFRM_LEGACY, XSAVE_RESET_STATE_SIZE},
-        {SGX_XFRM_AVX, g_cpu_extension_offsets[AVX] + g_cpu_extension_sizes[AVX]},
-        {SGX_XFRM_MPX, g_cpu_extension_offsets[MPX_1] + g_cpu_extension_sizes[MPX_1] +
-                              g_cpu_extension_sizes[MPX_2]},
-        {SGX_XFRM_AVX512, g_cpu_extension_offsets[AVX512_1] + g_cpu_extension_sizes[AVX512_1] +
-                              g_cpu_extension_sizes[AVX512_2] + g_cpu_extension_sizes[AVX512_3]},
-        {SGX_XFRM_PKRU, g_cpu_extension_offsets[PKRU] + g_cpu_extension_sizes[PKRU]},
-        {SGX_XFRM_AMX, g_cpu_extension_offsets[AMX_TILECFG] + g_cpu_extension_sizes[AMX_TILECFG] +
+        {SGX_XFRM_AVX,    g_cpu_extension_offsets[AVX] + g_cpu_extension_sizes[AVX]},
+        {SGX_XFRM_MPX,    g_cpu_extension_offsets[MPX_BNDREGS] +
+                              g_cpu_extension_sizes[MPX_BNDREGS] +
+                              g_cpu_extension_sizes[MPX_BNDCSR]},
+        {SGX_XFRM_AVX512, g_cpu_extension_offsets[AVX512_OPMASK] +
+                              g_cpu_extension_sizes[AVX512_OPMASK] +
+                              g_cpu_extension_sizes[AVX512_ZMM256] +
+                              g_cpu_extension_sizes[AVX512_ZMM512]},
+        {SGX_XFRM_PKRU,   g_cpu_extension_offsets[PKRU] + g_cpu_extension_sizes[PKRU]},
+        {SGX_XFRM_AMX,    g_cpu_extension_offsets[AMX_TILECFG] +
+                              g_cpu_extension_sizes[AMX_TILECFG] +
                               g_cpu_extension_sizes[AMX_TILEDATA]},
     };
 

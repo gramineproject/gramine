@@ -248,11 +248,11 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 break;
             }
             case AVX:
-            case MPX_1:
-            case MPX_2:
-            case AVX512_1:
-            case AVX512_2:
-            case AVX512_3:
+            case MPX_BNDREGS:
+            case MPX_BNDCSR:
+            case AVX512_OPMASK:
+            case AVX512_ZMM256:
+            case AVX512_ZMM512:
             case PKRU:
             case AMX_TILECFG:
             case AMX_TILEDATA:
