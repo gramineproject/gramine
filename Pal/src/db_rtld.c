@@ -39,8 +39,10 @@
 
 /* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
  * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.
- * Note that `visibility("hidden")` forces `&__ehdr_start` operation to use RIP-relative addressing
- * with known offset (not a reference to GOT), so that `&__ehdr_start` doesn't need relocation. */
+ *
+ * Note that with `visibility("hidden")`, the compiler prefers to use RIP-relative addressing with
+ * known offset (not a reference to GOT) for the `&__ehdr_start` operation, so this operation
+ * doesn't require relocation. */
 extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
 
 struct link_map* g_loaded_maps = NULL;
