@@ -101,11 +101,11 @@ static inline void ucontext_set_ip(ucontext_t* uc, uint64_t ip) {
 }
 
 static inline void ucontext_revert_syscall(ucontext_t* uc, unsigned int arch, int syscall_nr,
-                                           void* syscall_addr) {
+                                           void* si_call_addr) {
     __UNUSED(arch);
     /* man seccomp(2) says that "si_call_addr will show the address of the system call instruction",
      * which is not true - it points to the next instruction past "syscall". */
-    uc->uc_mcontext.rip = (uint64_t)syscall_addr - 2;
+    uc->uc_mcontext.rip = (uint64_t)si_call_addr - 2;
     uc->uc_mcontext.rax = syscall_nr;
 
     uint8_t* rip = (uint8_t*)uc->uc_mcontext.rip;
