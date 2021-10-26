@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2020 Intel Corporation
- *                    Borys Popławski <borysp@invisiblethingslab.com>
- * Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2020-2021 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 #ifndef LINUX_X86_64_UCONTEXT_H_

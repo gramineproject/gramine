@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
- *               2020 Intel Labs
+ * Copyright (C) 2020 Intel Labs
  * Copyright (C) 2021 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
@@ -87,9 +87,8 @@ static void perform_signal_handling(int event, bool is_in_pal, PAL_NUM addr, uco
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
     if (info->si_signo == SIGSYS && info->si_code == SYS_SECCOMP) {
         ucontext_revert_syscall(uc, info->si_arch, info->si_syscall, info->si_call_addr);
-        static bool log_once = true;
-        if (log_once) {
-            log_once = false;
+        static int log_once = 1;
+        if (__atomic_exchange_n(&log_once, 0, __ATOMIC_RELAXED)) {
             log_always("Emulating a raw system/supervisor call. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }
@@ -142,24 +141,24 @@ static int setup_seccomp(void) {
     struct sock_filter filter[] = {
         /* 0: A = ip >> 32 */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
-        /* 1: A >= syscalls_code_begin_high ? 0 : GOTO_TRAP */
-        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_high, 0, /*GOTO_TRAP*/9),
-        /* 2: A == syscalls_code_begin_high ? 0 : GOTO_CMP_END */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_begin_high, 0, /*GOTO_CMP_END*/2),
+        /* 1: A >= syscalls_code_begin_high ? 0 : TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_high, 0, /*TRAP*/9),
+        /* 2: A == syscalls_code_begin_high ? 0 : CMP_END */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_begin_high, 0, /*CMP_END*/2),
         /* 3: A = ip & (2**32 - 1) */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
-        /* 4: A >= syscalls_code_begin_low ? GOTO_CMP_END : GOTO_TRAP */
-        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_low, 0, /*GOTO_TRAP*/6),
+        /* 4: A >= syscalls_code_begin_low ? CMP_END : TRAP */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_begin_low, /*CMP_END*/0, /*TRAP*/6),
         /* 5: CMP_END: A = ip >> 32 */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer) + 4),
-        /* 6: A > syscalls_code_end_high ? GOTO_TRAP : 0 */
-        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_high, /*GOTO_TRAP*/4, 0),
-        /* 7: A == syscalls_code_end_high ? 0 : GOTO_ALLOW */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_end_high, 0, /*GOTO_ALLOW*/2),
+        /* 6: A > syscalls_code_end_high ? TRAP : 0 */
+        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_high, /*TRAP*/4, 0),
+        /* 7: A == syscalls_code_end_high ? 0 : ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, syscalls_code_end_high, 0, /*ALLOW*/2),
         /* 8: A = ip & (2**32 - 1) */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, instruction_pointer)),
-        /* 9: A > syscalls_code_end_low ? GOTO_TRAP : GOTO_ALLOW */
-        BPF_JUMP(BPF_JMP | BPF_JGT | BPF_K, syscalls_code_end_low, /*GOTO_TRAP*/1, 0),
+        /* 9: A >= syscalls_code_end_low ? TRAP : ALLOW */
+        BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, syscalls_code_end_low, /*TRAP*/1, 0),
 
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_TRAP),
