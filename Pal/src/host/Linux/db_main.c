@@ -51,7 +51,12 @@ const size_t g_page_size = PRESET_PAGESIZE;
 
 static int g_uid, g_gid;
 static ElfW(Addr) g_sysinfo_ehdr;
-static ElfW(Addr) g_pal_binary_addr;
+
+/* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
+ * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.
+ * Note that `visibility("hidden")` forces `&__ehdr_start` operation to use RIP-relative addressing
+ * with known offset (not a reference to GOT), so that `&__ehdr_start` doesn't need relocation. */
+extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
 
 static void read_args_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
                                  const char*** out_envp) {
@@ -90,12 +95,6 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                     INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PAGESZ auxiliary vector");
                 }
                 break;
-            case AT_PHDR:
-                if (ALLOC_ALIGN_DOWN(av->a_un.a_val) == 0x0) {
-                    INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PHDR auxiliary vector");
-                }
-                g_pal_binary_addr = ALLOC_ALIGN_DOWN(av->a_un.a_val);
-                break;
             case AT_UID:
             case AT_EUID:
                 g_uid ^= av->a_un.a_val;
@@ -109,7 +108,6 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                 break;
         }
     }
-
     *out_argc = argc;
     *out_argv = argv;
     *out_envp = envp;
@@ -192,18 +190,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         die_or_inf_loop();
     }
 
-    /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
-    g_pal_state.alloc_align = g_page_size;
-    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
-
-    /* must preceed setup_pal_binary() because it populates g_pal_binary_addr with AT_BASE */
-    int argc;
-    const char** argv;
-    const char** envp;
-    read_args_from_stack(initial_rsp, &argc, &argv, &envp);
-
     /* relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary(g_pal_binary_addr, &g_pal_map);
+    ret = setup_pal_binary((ElfW(Addr))&__ehdr_start, &g_pal_map);
     if (ret < 0)
         INIT_FAIL(-ret, "Relocation of the PAL binary failed");
 
@@ -211,6 +199,15 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     ret = _DkSystemTimeQuery(&start_time);
     if (ret < 0)
         INIT_FAIL(-ret, "_DkSystemTimeQuery() failed");
+
+    /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
+    g_pal_state.alloc_align = g_page_size;
+    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
+
+    int argc;
+    const char** argv;
+    const char** envp;
+    read_args_from_stack(initial_rsp, &argc, &argv, &envp);
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);  // may be NULL!
