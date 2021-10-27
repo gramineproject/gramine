@@ -102,7 +102,8 @@ out:
     return (int)ret;
 }
 
-int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg),
+int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg,
+                                                                bool* out_stop),
                               void* arg) {
     int ret;
 
@@ -117,6 +118,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         goto out;
     }
 
+    bool stop = false;
     size_t len = 0;
     while (true) {
         ssize_t n = DO_SYSCALL(read, fd, &buf[len], buf_size - 1 - len);
@@ -136,9 +138,13 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         char* line_end;
         while ((line_end = strchr(buf, '\n')) != NULL) {
             *line_end = '\0';
-            ret = callback(buf, arg);
+            ret = callback(buf, arg, &stop);
             if (ret < 0)
                 goto out;
+            if (stop) {
+                ret = 0;
+                goto out;
+            }
 
             /* Move remaining part of buffer to beginning (including the final null terminator) */
             len -= line_end + 1 - buf;
@@ -161,9 +167,10 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     }
     /* Process the rest of buffer; it should not contain any newlines. */
     if (len > 0) {
-        ret = callback(buf, arg);
+        ret = callback(buf, arg, &stop);
         if (ret < 0)
             goto out;
+        /* ignore `stop`, we've finished either way */
     }
     ret = 0;
 out:

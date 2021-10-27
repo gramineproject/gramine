@@ -148,6 +148,12 @@ if sgx
     conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
 endif
 
+gen_symbol_map_cmd = [
+    find_program('nm'),
+    '--numeric-sort', '--defined-only', '--print-size', '--line-numbers',
+    '@INPUT@',
+]
+
 #
 # Common checks and flags
 #

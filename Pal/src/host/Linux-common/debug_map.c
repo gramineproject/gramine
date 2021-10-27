@@ -168,40 +168,118 @@ out:
     return ret;
 }
 
-/* Example output: "func_name at source_file.c:123" */
-static int run_addr2line(const char* name, uintptr_t offset, char* buf, size_t buf_size) {
-    /* FIXME: Temporarily disabled due to incompatibility with the new seccomp feature. Once fixed,
-     * we should also re-enable "test_021_asan" from LibOS regression tests. */
-    return -1;
+struct symbol_map_data {
+    uintptr_t offset;
+    char* buf;
+    size_t buf_size;
+    bool found;
+};
 
-    char addr_buf[20];
-    snprintf(addr_buf, sizeof(addr_buf), "0x%lx", offset);
+/*
+ * Parse a single line of the symbol map. The symbol map is generated using the following command:
+ *
+ *     nm --numeric-sort --defined-only --print-size --line-numbers <file>
+ *
+ * We're interested in lines with the following format (and we skip other lines):
+ *
+ *     <start> <size> [tT] <symbol_name>\t<source_file>:<line_number>
+ *
+ * where the source information (`\t` and everything afterwards) is optional. Note that we don't
+ * actually use the line number: it describes only where the function starts, so it would be too
+ * confusing.
+ */
+static int symbol_map_callback(const char* line, void* arg, bool* out_stop) {
+    struct symbol_map_data* data = arg;
+    unsigned long val;
+    const char* next = line;
 
-    const char* argv[] = {
-        "/usr/bin/addr2line",
-        "--exe", name,
-        "--functions",
-        "--basename",
-        "--pretty-print",
-        addr_buf,
-        NULL,
-    };
+    /* Start address */
+    if (str_to_ulong(next, 16, &val, &next) < 0)
+        return 0;
+    uintptr_t start = val;
 
-    size_t len;
-    int ret = run_command(argv[0], argv, buf, buf_size - 1, &len);
-    if (ret < 0)
-        return ret;
+    if (*next != ' ')
+        return 0;
+    next++;
 
-    buf[len] = '\0';
+    /* Size */
+    if (str_to_ulong(next, 16, &val, &next) < 0)
+        return 0;
+    size_t size = val;
 
-    /* Strip trailing newline */
-    if (len > 0 && buf[len - 1] == '\n')
-        buf[len - 1] = '\0';
+    if (*next != ' ')
+        return 0;
+    next++;
 
+    /* Skip if we're too early; stop iteration if we're too late */
+    if (start + size <= data->offset)
+        return 0;
+    if (data->offset < start) {
+        *out_stop = true;
+        return 0;
+    }
+
+    /* `t` or `T` (symbol in a text section) */
+    if (*next != 't' && *next != 'T')
+        return 0;
+    next++;
+
+    if (*next != ' ')
+        return 0;
+    next++;
+
+    /* Symbol name */
+    const char* symbol_name = next;
+    next = strchr(next, '\t');
+    if (next) {
+        size_t symbol_name_len = next - symbol_name;
+        next++;
+
+        /* File name */
+        const char* file_name = next;
+        while (*next != ':' && *next != '\0') {
+            /* Begin `file_name` after the last '/' encountered */
+            if (*next == '/')
+                file_name = next + 1;
+            next++;
+        }
+        size_t file_name_len = next - file_name;
+
+        snprintf(data->buf, data->buf_size, "%.*s at %.*s", (int)symbol_name_len, symbol_name,
+                 (int)file_name_len, file_name);
+    } else {
+        /* There's no file name, the symbol name ends with null terminator */
+        snprintf(data->buf, data->buf_size, "%s", symbol_name);
+    }
+
+    data->found = true;
+    *out_stop = true;
     return 0;
 }
 
-/* Example output: "func_name at source_file.c:123, libpal.so+0x456" */
+/* Example output: "func_name at source_file.c" */
+static int find_in_symbol_map(const char* name, uintptr_t offset, char* buf, size_t buf_size) {
+    char* symbol_map_name = alloc_concat(name, /*a_len=*/-1, ".map", /*b_len=*/-1);
+    if (!symbol_map_name)
+        return -ENOMEM;
+
+    struct symbol_map_data data = {
+        .offset = offset,
+        .buf = buf,
+        .buf_size = buf_size,
+        .found = false,
+    };
+
+    int ret = read_text_file_iter_lines(symbol_map_name, &symbol_map_callback, &data);
+    free(symbol_map_name);
+
+    if (ret < 0)
+        return ret;
+
+    return data.found ? 0 : -ENOENT;
+}
+
+/* Example output: "func_name at source_file.c, libpal.so+0x456" */
 int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     int ret;
 
@@ -218,9 +296,9 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
             basename = s + 1;
     }
 
-    ret = run_addr2line(name, offset, buf, buf_size);
-    if (ret < 0 || buf[0] == '\0') {
-        /* addr2line failed, display just name and offset */
+    ret = find_in_symbol_map(name, offset, buf, buf_size);
+    if (ret < 0) {
+        /* parsing symbol map failed, display just name and offset */
         snprintf(buf, buf_size, "%s+0x%lx", basename, offset);
     } else {
         size_t len = strlen(buf);

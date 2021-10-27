@@ -127,7 +127,7 @@ vdso_data_o = custom_target('vdso-data.o',
     depends: vdso_so,
 )
 
-shared_library('sysdb',
+libos = shared_library('sysdb',
     libos_sources,
     vdso_data_o,
     libos_asm_offsets_h,
@@ -172,3 +172,15 @@ shared_library('sysdb',
     install: true,
     install_dir: pkglibdir,
 )
+
+if debug
+    custom_target('libsysdb.so.map',
+        input: libos,
+        command: gen_symbol_map_cmd,
+        capture: true,
+        output: 'libsysdb.so.map',
+
+        install: true,
+        install_dir: pkglibdir,
+    )
+endif

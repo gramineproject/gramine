@@ -127,7 +127,7 @@ libpal_sgx = shared_library('pal',
 )
 
 # URTS (untrusted runtime)
-executable('loader',
+libpal_sgx_urts = executable('loader',
     'sgx_enclave.c',
     'sgx_entry.S',
     'sgx_exception.c',
@@ -174,6 +174,26 @@ libpal_sgx_dep = declare_dependency(
 )
 
 if debug
+    custom_target('libpal.so.map',
+        input: libpal_sgx,
+        command: gen_symbol_map_cmd,
+        capture: true,
+        output: 'libpal.so.map',
+
+        install: true,
+        install_dir: join_paths(pkglibdir, 'sgx'),
+    )
+
+    custom_target('loader.map',
+        input: libpal_sgx_urts,
+        command: gen_symbol_map_cmd,
+        capture: true,
+        output: 'loader.map',
+
+        install: true,
+        install_dir: join_paths(pkglibdir, 'sgx'),
+    )
+
     shared_library('sgx_gdb',
         'gdb_integration/sgx_gdb.c',
 
