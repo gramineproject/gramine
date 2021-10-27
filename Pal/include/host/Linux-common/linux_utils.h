@@ -20,7 +20,7 @@ int write_all(int fd, const void* buf, size_t size);
 int read_text_file_to_cstr(const char* path, char** out);
 
 /* Iterate over a text file line by line; suitable for `/proc/` files. Stops iteration if the
- * callback result is not 0. */
+ * callback result is not 0, and returns the callback result. */
 int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg),
                               void* arg);
 

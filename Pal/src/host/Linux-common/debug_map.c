@@ -212,9 +212,9 @@ static int symbol_map_callback(const char* line, void* arg) {
     next++;
 
     /* Skip if we're too early; stop iteration if we're too late */
-    if (data->offset < start)
+    if (start + size <= data->offset)
         return 0;
-    if (data->offset >= start + size)
+    if (data->offset < start)
         return 1;
 
     /* `t` or `T` (symbol in a text section) */
@@ -228,30 +228,26 @@ static int symbol_map_callback(const char* line, void* arg) {
 
     /* Symbol name */
     const char* symbol_name = next;
-    while (*next != '\t' && *next != '\0')
+    next = strchr(next, '\t');
+    if (next) {
+        size_t symbol_name_len = next - symbol_name;
         next++;
-    size_t symbol_name_len = next - symbol_name;
 
-    /* File name (if available) */
-    const char* file_name = NULL;
-    size_t file_name_len = 0;
-    if (*next == '\t') {
-        next++;
-        file_name = next;
+        /* File name */
+        const char* file_name = next;
         while (*next != ':' && *next != '\0') {
             /* Begin `file_name` after the last '/' encountered */
             if (*next == '/')
                 file_name = next + 1;
             next++;
         }
-        file_name_len = next - file_name;
-    }
+        size_t file_name_len = next - file_name;
 
-    if (file_name) {
         snprintf(data->buf, data->buf_size, "%.*s at %.*s", (int)symbol_name_len, symbol_name,
                  (int)file_name_len, file_name);
     } else {
-        snprintf(data->buf, data->buf_size, "%.*s", (int)symbol_name_len, symbol_name);
+        /* There's no file name, the symbol name ends with null terminator */
+        snprintf(data->buf, data->buf_size, "%s", symbol_name);
     }
 
     data->found = true;

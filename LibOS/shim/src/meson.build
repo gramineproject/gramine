@@ -174,7 +174,7 @@ libos = shared_library('sysdb',
 )
 
 if debug
-    custom_target('libsysdb.map',
+    custom_target('libsysdb.so.map',
         input: libos,
         command: gen_symbol_map_cmd,
         capture: true,

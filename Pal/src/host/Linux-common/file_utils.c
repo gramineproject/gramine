@@ -137,7 +137,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         while ((line_end = strchr(buf, '\n')) != NULL) {
             *line_end = '\0';
             ret = callback(buf, arg);
-            if (ret < 0)
+            if (ret != 0)
                 goto out;
 
             /* Move remaining part of buffer to beginning (including the final null terminator) */
