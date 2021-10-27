@@ -95,6 +95,7 @@ clean-tmp:
 		*.o \
 		*.sig \
 		.*.sig \
+		*.tmp \
 		*.token \
 		.*.token \
 		.output.* \
