@@ -20,7 +20,7 @@ fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 sgx.nonpie_binary = true
 sgx.debug = true
 
-sgx.{{ entrypoint }} = "allow_all_but_log"
+sgx.file_check_policy = "allow_all_but_log"
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",

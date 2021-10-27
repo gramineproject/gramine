@@ -151,6 +151,7 @@ libos-regression.xml: test_libos.py $(call expand_target_to_token,$(target))
 .PHONY: clean-tmp
 clean-tmp:
 	$(RM) -r \
+		*.dat \
 		*.manifest \
 		*.manifest.sgx \
 		*.sig \
