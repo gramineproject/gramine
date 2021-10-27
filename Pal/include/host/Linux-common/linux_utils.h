@@ -19,7 +19,8 @@ int write_all(int fd, const void* buf, size_t size);
 /* Not suitable for `/proc/` files (uses `lseek` to determine file size) */
 int read_text_file_to_cstr(const char* path, char** out);
 
-/* Iterate over a text file line by line; suitable for `/proc/` files */
+/* Iterate over a text file line by line; suitable for `/proc/` files. Stops iteration if the
+ * callback result is not 0. */
 int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg),
                               void* arg);
 
@@ -45,9 +46,5 @@ int64_t time_ns_diff_from_now(struct timespec* ts);
 
 int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
                                  struct sockaddr_un* out_addr);
-
-/* Runs a command in a subprocess (fork + execve), and reads its stdout. */
-int run_command(const char* pathname, const char** argv, char* buf, size_t buf_size,
-                size_t* out_len);
 
 #endif // _LINUX_UTILS_H

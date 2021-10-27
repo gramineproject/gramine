@@ -162,7 +162,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     /* Process the rest of buffer; it should not contain any newlines. */
     if (len > 0) {
         ret = callback(buf, arg);
-        if (ret < 0)
+        if (ret != 0)
             goto out;
     }
     ret = 0;
