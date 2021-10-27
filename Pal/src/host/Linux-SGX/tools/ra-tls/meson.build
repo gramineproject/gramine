@@ -88,7 +88,7 @@ if dcap
         'ra_tls_verify_common.c',
         'ra_tls.h',
 
-        args: ra_tls_args,
+        c_args: ra_tls_args,
         include_directories: sgx_inc,
         dependencies: [
             sgx_dcap_quoteverify_dep,
@@ -109,7 +109,7 @@ if dcap
         'ra_tls_verify_common.c',
         'ra_tls.h',
 
-        args: ra_tls_args,
+        c_args: ra_tls_args,
         include_directories: sgx_inc,
         dependencies: [
             sgx_dcap_quoteverify_dep,
@@ -132,7 +132,7 @@ if dcap
         'ra_tls.h',
         'secret_prov.h',
 
-        args: ra_tls_args,
+        c_args: ra_tls_args,
         include_directories: sgx_inc,
         dependencies: [
             threads_dep,
