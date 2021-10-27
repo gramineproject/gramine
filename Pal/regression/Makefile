@@ -88,7 +88,6 @@ pal-regression.xml: test_pal.py $(target) $(call expand_target_to_sig,$(target))
 clean-tmp:
 	$(RM) -r \
 		$(all_manifests) \
-		*.cached \
 		*.d \
 		.*.d \
 		*.manifest.sgx \
@@ -96,11 +95,8 @@ clean-tmp:
 		*.o \
 		*.sig \
 		.*.sig \
-		*.tmp \
 		*.token \
 		.*.token \
-		.cache \
-		.lib \
 		.output.* \
 		.pytest_cache \
 		__pycache__ \
