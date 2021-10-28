@@ -58,13 +58,6 @@ struct __kernel_timespec {
 };
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
-struct __kernel_itimerspec {
-    struct __kernel_timespec it_interval; /* timer period */
-    struct __kernel_timespec it_value;    /* timer expiration */
-};
-#endif
-
 struct __kernel_timeval {
     __kernel_time_t tv_sec;       /* seconds */
     __kernel_suseconds_t tv_usec; /* microsecond */
