@@ -178,7 +178,7 @@ if debug
         input: libos,
         command: gen_symbol_map_cmd,
         capture: true,
-        output: '@PLAINNAME@.map',
+        output: 'libsysdb.so.map',
 
         install: true,
         install_dir: pkglibdir,

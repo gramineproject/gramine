@@ -188,7 +188,7 @@ struct symbol_map_data {
  * actually use the line number: it describes only where the function starts, so it would be too
  * confusing.
  */
-static int symbol_map_callback(const char* line, void* arg) {
+static int symbol_map_callback(const char* line, void* arg, bool* out_stop) {
     struct symbol_map_data* data = arg;
     unsigned long val;
     const char* next = line;
@@ -214,8 +214,10 @@ static int symbol_map_callback(const char* line, void* arg) {
     /* Skip if we're too early; stop iteration if we're too late */
     if (start + size <= data->offset)
         return 0;
-    if (data->offset < start)
-        return 1;
+    if (data->offset < start) {
+        *out_stop = true;
+        return 0;
+    }
 
     /* `t` or `T` (symbol in a text section) */
     if (*next != 't' && *next != 'T')
@@ -251,8 +253,8 @@ static int symbol_map_callback(const char* line, void* arg) {
     }
 
     data->found = true;
-    /* Stop iteration */
-    return 1;
+    *out_stop = true;
+    return 0;
 }
 
 /* Example output: "func_name at source_file.c" */

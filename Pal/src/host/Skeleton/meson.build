@@ -82,7 +82,7 @@ if debug
         input: libpal_skeleton,
         command: gen_symbol_map_cmd,
         capture: true,
-        output: '@PLAINNAME@.map',
+        output: 'libpal.so.map',
 
         install: true,
         install_dir: join_paths(pkglibdir, 'skeleton'),

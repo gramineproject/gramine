@@ -178,7 +178,7 @@ if debug
         input: libpal_sgx,
         command: gen_symbol_map_cmd,
         capture: true,
-        output: '@PLAINNAME@.map',
+        output: 'libpal.so.map',
 
         install: true,
         install_dir: join_paths(pkglibdir, 'sgx'),
@@ -188,7 +188,7 @@ if debug
         input: libpal_sgx_urts,
         command: gen_symbol_map_cmd,
         capture: true,
-        output: '@PLAINNAME@.map',
+        output: 'loader.map',
 
         install: true,
         install_dir: join_paths(pkglibdir, 'sgx'),

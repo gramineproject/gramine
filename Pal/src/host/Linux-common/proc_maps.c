@@ -88,7 +88,9 @@ struct parse_proc_maps_data {
     void* arg;
 };
 
-static int parse_proc_maps_callback(const char* line, void* arg) {
+static int parse_proc_maps_callback(const char* line, void* arg, bool* out_stop) {
+    __UNUSED(out_stop);
+
     struct parse_proc_maps_data* data = arg;
 
     struct proc_maps_range r;
