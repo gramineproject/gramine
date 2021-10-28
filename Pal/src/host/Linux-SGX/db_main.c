@@ -795,7 +795,10 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
      * manifest file looks large enough. Hopefully below sizes are sufficient for any manifest.
      *
      * FIXME: this is a quick hack, we need proper memory allocation in PAL. */
-    if (manifest_size > 10 * 1024 * 1024) {
+    if (manifest_size > 15 * 1024 * 1024) {
+        log_always("Detected a huge manifest, preallocating 256MB of internal memory.");
+        g_pal_internal_mem_size += 256 * 1024 * 1024; /* 15MB manifest -> 64 + 256 MB PAL mem */
+    } else if (manifest_size > 10 * 1024 * 1024) {
         log_always("Detected a huge manifest, preallocating 128MB of internal memory.");
         g_pal_internal_mem_size += 128 * 1024 * 1024; /* 10MB manifest -> 64 + 128 MB PAL mem */
     } else if (manifest_size > 5 * 1024 * 1024) {
