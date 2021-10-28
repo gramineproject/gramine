@@ -41,7 +41,7 @@ def uri2path(uri):
 def append_tf(trusted_files, uri, hash_):
     trusted_files.append({'uri': uri, 'sha256': hash_})
 
-def append_trusted_dir_or_file(trusted_files, val):
+def append_trusted_dir_or_file(trusted_files, val, expanded):
     if isinstance(val, dict):
         uri = val['uri']
         if val.get('sha256'):
@@ -58,13 +58,18 @@ def append_trusted_dir_or_file(trusted_files, val):
     if path.is_dir():
         if not uri.endswith('/'):
             raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
-        for sub_path in sorted(filter(pathlib.Path.is_file, path.rglob('*'))):
-            # Skip inaccessible files
-            if os.access(sub_path, os.R_OK):
-                append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
+
+        expanded.append(path)
+        for sub_path in sorted(path.rglob('*')):
+            expanded.append(sub_path)
+            if sub_path.is_file():
+                # Skip inaccessible files
+                if os.access(sub_path, os.R_OK):
+                    append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
     else:
         assert path.is_file()
         append_tf(trusted_files, uri, hash_file_contents(path))
+        expanded.append(path)
 
 class Manifest:
     """Just a representation of a manifest.
@@ -174,20 +179,26 @@ class Manifest:
         of them (skipping these which already had a hash present) and updates ``sgx.trusted_files``
         manifest entry with the result.
 
+        Returns a list of all expanded files, i.e. files that we need to hash, and directories that
+        we needed to list.
+
         Raises:
             ManifestError: There was an error with the format of some trusted files in the manifest
                 or some of them could not be loaded from the filesystem.
+
         """
         trusted_files = []
+        expanded = []
         for tf in self['sgx']['trusted_files']:
-            append_trusted_dir_or_file(trusted_files, tf)
+            append_trusted_dir_or_file(trusted_files, tf, expanded)
 
         # NOTE: `loader.preload` is deprecated; remove the below in the future
         preload_str = self['loader']['preload']
         if preload_str and not any(preload_str == tf['uri'] for tf in trusted_files):
-            append_trusted_dir_or_file(trusted_files, preload_str)
+            append_trusted_dir_or_file(trusted_files, preload_str, expanded)
 
         self['sgx']['trusted_files'] = trusted_files
+        return expanded
 
     def get_dependencies(self):
         """Generate list of files which this manifest depends on.

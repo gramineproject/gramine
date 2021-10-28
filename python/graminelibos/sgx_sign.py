@@ -21,6 +21,8 @@ from .sigstruct import Sigstruct
 
 ARCHITECTURE = 'amd64'
 
+SGX_LIBPAL = os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so')
+
 # Utilities
 
 ZERO_PAGE = bytes(offs.PAGESIZE)
@@ -449,13 +451,10 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
     return mrenclave.digest()
 
 
-def get_mrenclave_and_manifest(manifest_path, libpal=None, verbose=False):
+def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
     manifest = Manifest.loads(manifest_data.decode('utf-8'))
-
-    if not libpal:
-        libpal = os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so')
 
     manifest_sgx = manifest['sgx']
     attr = {
@@ -514,7 +513,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal=None, verbose=False):
     return mrenclave, manifest
 
 
-def get_tbssigstruct(manifest_path, date, libpal=None, verbose=False):
+def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     """Generate To Be Signed Sigstruct (TBSSIGSTRUCT).
 
     Generates a Sigstruct object using the provided data with all required fields initialized (i.e.

@@ -42,6 +42,13 @@ Command line arguments
     `manifest_file` will be used with ".manifest" (if present) removed from
     the end and with ".sig" appended.
 
+.. option:: --depfile depfile
+
+    Generate a file that describes the dependencies for the output manifest and
+    SIGSTRUCT, i.e. files that should trigger rebuilding if they're modified.
+    The dependency file is in Makefile format, and is suitable for using in
+    build systems (Make, Ninja).
+
 .. option:: --verbose, -v
 
     Print details to standard output. This is the default.
