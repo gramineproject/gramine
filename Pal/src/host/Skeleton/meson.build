@@ -7,7 +7,7 @@ pal_skeleton_map = custom_target('pal.map[skeleton]',
     output: 'pal.map',
 )
 
-libpal_skeleton = shared_library('pal-skeleton',
+libpal_skeleton = shared_library('pal',
     'db_devices.c',
     'db_eventfd.c',
     'db_events.c',
