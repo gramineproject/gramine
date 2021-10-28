@@ -300,7 +300,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
             INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
         }
     } else {
-        log_warning("vdso address range not preloaded, is your system missing vdso?!");
+        INIT_FAIL(PAL_ERROR_DENIED, "vdso address range not preloaded, is your system missing "
+                                    "vdso?!");
     }
     if (vvar_start || vvar_end) {
         ret = add_preloaded_range(vvar_start, vvar_end, "vvar");
@@ -335,7 +336,9 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
     assert(manifest);
 
-    signal_setup(first_process);
+    /* This depends on `g_vdso_start` and `g_vdso_end`, so it must be called only after they were
+     * initialized. */
+    signal_setup(first_process, g_vdso_start, g_vdso_end);
 
     g_pal_state.raw_manifest_data = manifest;
 
