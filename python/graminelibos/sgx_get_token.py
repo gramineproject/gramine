@@ -104,7 +104,7 @@ def create_dummy_token(flags, xfrms, misc_select):
 
     return token
 
-def get_token(sig):
+def get_token(sig, verbose=False):
     """Get SGX token (aka EINITTOKEN).
 
     Generates an SGX token from the given SIGSTRUCT. The resulting token might have some additional
@@ -116,6 +116,7 @@ def get_token(sig):
 
     Args:
         sig (Sigstruct): SIGSTRUCT to generate the token for.
+        verbose (bool): If true, print details to stdout.
 
     Returns:
         bytes: SGX token.
@@ -127,21 +128,23 @@ def get_token(sig):
     mrsigner.update(sig['modulus'])
     mrsigner = mrsigner.hexdigest()
 
-    print('Attributes:')
-    print(f'    mr_enclave:  {sig["enclave_hash"].hex()}')
-    print(f'    mr_signer:   {mrsigner}')
-    print(f'    isv_prod_id: {sig["isv_prod_id"]}')
-    print(f'    isv_svn:     {sig["isv_svn"]}')
-    print(f'    attr.flags:  {sig["attribute_flags"]:016x}')
-    print(f'    attr.xfrm:   {xfrms:016x}')
-    print(f'    mask.flags:  {sig["attribute_flags_mask"]:016x}')
-    print(f'    mask.xfrm:   {sig["attribute_xfrm_mask"]:016x}')
-    print(f'    misc_select: {sig["misc_select"]:08x}')
-    print(f'    misc_mask:   {sig["misc_mask"]:08x}')
-    print(f'    modulus:     {sig["modulus"].hex()[:32]}...')
-    print(f'    exponent:    {sig["exponent"]}')
-    print(f'    signature:   {sig["signature"].hex()[:32]}...')
-    print(f'    date:        {sig["date_year"]:04d}-{sig["date_month"]:02d}-{sig["date_day"]:02d}')
+    if verbose:
+        print('Attributes:')
+        print(f'    mr_enclave:  {sig["enclave_hash"].hex()}')
+        print(f'    mr_signer:   {mrsigner}')
+        print(f'    isv_prod_id: {sig["isv_prod_id"]}')
+        print(f'    isv_svn:     {sig["isv_svn"]}')
+        print(f'    attr.flags:  {sig["attribute_flags"]:016x}')
+        print(f'    attr.xfrm:   {xfrms:016x}')
+        print(f'    mask.flags:  {sig["attribute_flags_mask"]:016x}')
+        print(f'    mask.xfrm:   {sig["attribute_xfrm_mask"]:016x}')
+        print(f'    misc_select: {sig["misc_select"]:08x}')
+        print(f'    misc_mask:   {sig["misc_mask"]:08x}')
+        print(f'    modulus:     {sig["modulus"].hex()[:32]}...')
+        print(f'    exponent:    {sig["exponent"]}')
+        print(f'    signature:   {sig["signature"].hex()[:32]}...')
+        print(f'    date:        {sig["date_year"]:04d}-{sig["date_month"]:02d}-'
+              f'{sig["date_day"]:02d}')
 
     if is_dcap():
         token = create_dummy_token(sig['attribute_flags'], xfrms, sig['misc_select'])

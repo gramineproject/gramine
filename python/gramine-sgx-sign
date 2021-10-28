@@ -19,7 +19,10 @@ from graminelibos import Manifest, get_tbssigstruct, sign_with_local_key
 @click.option('--manifest', '-m', 'manifest_file', type=click.File('r', encoding='utf-8'),
               required=True, help='Input .manifest file')
 @click.option('--sigfile', '-s', help='Output .sig file')
-def main(output, libpal, key, manifest_file, sigfile):
+@click.option('--verbose/--quiet', '-v/-q', default=True, help='Display details (on by default)')
+def main(output, libpal, key, manifest_file, sigfile, depfile, verbose):
+    # pylint: disable=too-many-arguments
+
     manifest = Manifest.load(manifest_file)
 
     manifest.expand_all_trusted_files()
@@ -35,7 +38,7 @@ def main(output, libpal, key, manifest_file, sigfile):
         sigfile += '.sig'
 
     today = datetime.date.today()
-    sigstruct = get_tbssigstruct(output, today, libpal)
+    sigstruct = get_tbssigstruct(output, today, libpal, verbose=verbose)
     sigstruct.sign(sign_with_local_key, key)
 
     with open(sigfile, 'wb') as f:

@@ -312,7 +312,7 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
     return areas + free_areas
 
 
-def generate_measurement(enclave_base, attr, areas):
+def generate_measurement(enclave_base, attr, areas, verbose=False):
     # pylint: disable=too-many-statements,too-many-branches,too-many-locals
 
     def do_ecreate(digest, size):
@@ -347,6 +347,8 @@ def generate_measurement(enclave_base, attr, areas):
     do_ecreate(mrenclave, attr['enclave_size'])
 
     def print_area(addr, size, flags, desc, measured):
+        assert verbose
+
         if flags & PAGEINFO_REG:
             type_ = 'REG'
         if flags & PAGEINFO_TCS:
@@ -372,7 +374,8 @@ def generate_measurement(enclave_base, attr, areas):
         m_addr = rounddown(addr)
         m_size = roundup(addr + memsize) - m_addr
 
-        print_area(m_addr, m_size, flags, desc, True)
+        if verbose:
+            print_area(m_addr, m_size, flags, desc, True)
 
         for page in range(m_addr, m_addr + m_size, offs.PAGESIZE):
             start = page - m_addr + f_addr
@@ -400,6 +403,9 @@ def generate_measurement(enclave_base, attr, areas):
                 raise Exception('wrong calculation')
 
             include_page(digest, page, flags, start_zero + data + end_zero, True)
+
+    if verbose:
+        print('Memory:')
 
     for area in areas:
         if area.elf_filename is not None:
@@ -437,13 +443,13 @@ def generate_measurement(enclave_base, attr, areas):
                     data += b'\0' * (offs.PAGESIZE - len(data)) # pad last page
                 include_page(mrenclave, addr, area.flags, data, area.measure)
 
-            print_area(area.addr, area.size, area.flags, area.desc,
-                       area.measure)
+            if verbose:
+                print_area(area.addr, area.size, area.flags, area.desc, area.measure)
 
     return mrenclave.digest()
 
 
-def get_mrenclave_and_manifest(manifest_path, libpal=None):
+def get_mrenclave_and_manifest(manifest_path, libpal=None, verbose=False):
     with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
     manifest = Manifest.loads(manifest_data.decode('utf-8'))
@@ -460,23 +466,24 @@ def get_mrenclave_and_manifest(manifest_path, libpal=None):
     }
     attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
-    print('Attributes:')
-    print(f'    size:        {attr["enclave_size"]:#x}')
-    print(f'    thread_num:  {attr["thread_num"]}')
-    print(f'    isv_prod_id: {attr["isv_prod_id"]}')
-    print(f'    isv_svn:     {attr["isv_svn"]}')
-    print(f'    attr.flags:  {attr["flags"]:#x}')
-    print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
-    print(f'    misc_select: {attr["misc_select"]:#x}')
+    if verbose:
+        print('Attributes:')
+        print(f'    size:        {attr["enclave_size"]:#x}')
+        print(f'    thread_num:  {attr["thread_num"]}')
+        print(f'    isv_prod_id: {attr["isv_prod_id"]}')
+        print(f'    isv_svn:     {attr["isv_svn"]}')
+        print(f'    attr.flags:  {attr["flags"]:#x}')
+        print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
+        print(f'    misc_select: {attr["misc_select"]:#x}')
 
-    if manifest_sgx['remote_attestation']:
-        spid = manifest_sgx.get('ra_client_spid', '')
-        linkable = manifest_sgx.get('ra_client_linkable', False)
-        print('SGX remote attestation:')
-        if not spid:
-            print('    DCAP/ECDSA')
-        else:
-            print(f'    EPID (spid = {spid}, linkable = {linkable})')
+        if manifest_sgx['remote_attestation']:
+            spid = manifest_sgx.get('ra_client_spid', '')
+            linkable = manifest_sgx.get('ra_client_linkable', False)
+            print('SGX remote attestation:')
+            if not spid:
+                print('    DCAP/ECDSA')
+            else:
+                print(f'    EPID (spid = {spid}, linkable = {linkable})')
 
     # Populate memory areas
     memory_areas = get_memory_areas(attr, libpal)
@@ -497,16 +504,17 @@ def get_mrenclave_and_manifest(manifest_path, libpal=None):
 
     memory_areas = populate_memory_areas(attr, memory_areas, enclave_base, enclave_heap_min)
 
-    print('Memory:')
     # Generate measurement
-    mrenclave = generate_measurement(enclave_base, attr, memory_areas)
-    print('Measurement:')
-    print(f'    {mrenclave.hex()}')
+    mrenclave = generate_measurement(enclave_base, attr, memory_areas, verbose=verbose)
+
+    if verbose:
+        print('Measurement:')
+        print(f'    {mrenclave.hex()}')
 
     return mrenclave, manifest
 
 
-def get_tbssigstruct(manifest_path, date, libpal=None):
+def get_tbssigstruct(manifest_path, date, libpal=None, verbose=False):
     """Generate To Be Signed Sigstruct (TBSSIGSTRUCT).
 
     Generates a Sigstruct object using the provided data with all required fields initialized (i.e.
@@ -516,12 +524,13 @@ def get_tbssigstruct(manifest_path, date, libpal=None):
         manifest_path (str): Path to the manifest file.
         date (date): Date to put into SIGSTRUCT.
         libpal (:obj:`str`, optional): Path to the libpal file.
+        verbose (:obj:`bool`, optional): If true, print details to stdout.
 
     Returns:
         Sigstruct: SIGSTRUCT generated from provided data.
     """
 
-    mrenclave, manifest = get_mrenclave_and_manifest(manifest_path, libpal)
+    mrenclave, manifest = get_mrenclave_and_manifest(manifest_path, libpal, verbose=verbose)
 
     manifest_sgx = manifest['sgx']
 
