@@ -1,2 +1,5 @@
 /*.manifest
 /*.xml
+
+/build.ninja
+/.ninja_*

@@ -163,11 +163,10 @@ See `style guidelines
 Running Regression Tests by Hand
 --------------------------------
 
-All of our regression tests are automated in Jenkins jobs (see the
-Jenkinsfiles directory), and this is the ultimate documentation for
-application-level regression tests, although most tests can be run with
-:command:`make regression` or, in the worst case, should have a simple script
-called by Jenkins.
+All of our regression tests are automated in Jenkins jobs (see the Jenkinsfiles
+directory), and this is the ultimate documentation for application-level
+regression tests, although most tests can be run with :command:`gramine-test`,
+or, in the worst case, should have a simple script called by Jenkins.
 
 We also have (and are actively growing) PAL and shim unit tests.
 
@@ -184,27 +183,33 @@ directory with ``-Dtests=enabled`` and install Gramine::
 To run the PAL tests::
 
    cd Pal/regression
-   make regression
+   gramine-test pytest -v
 
 For SGX, one needs to do the following::
 
    cd Pal/regression
-   make SGX=1 regression
+   gramine-test --sgx pytest -v
 
-One can run tests manually (prepend the command with ``SGX=1`` or
-``PAL_HOST=Linux-SGX`` to run the SGX variant)::
+It is also possible to run a subset of tests::
 
-   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py
-   SGX=1 /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py
+   gramine-test pytest -v -rs test_pal.py::TC_01_Bootstrap
+   gramine-test -v -rs test_pal.py::TC_01_Bootstrap::test_100_basic_boostrapping
 
-It is also possible to run subset of tests::
-
-   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap
-   /path/to/gramine/Scripts/run-pytest -v -rs test_pal.py::TC_01_Bootstrap::test_100_basic_boostrapping
-
-The ``run-pytest`` script is a wrapper for `pytest
+The :command:`gramine-test pytest` command is a wrapper for `pytest
 <https://docs.pytest.org/en/stable/usage.html>`__ and accepts the same
 command-line options.
+
+It is also possible to run a single test binary without the Python harness::
+
+   gramine-test run Bootstrap
+
+or build a manifest and then run the binary directly::
+
+   gramine-test build Bootstrap
+   gramine-direct Bootstrap
+
+For more information, run :command:`gramine-test --help` and
+:command:`gramine-test <command> --help`.
 
 The shim unit tests work similarly, and are under
 :file:`LibOS/shim/test/regression`.

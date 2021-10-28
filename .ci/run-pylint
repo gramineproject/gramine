@@ -14,9 +14,11 @@ find . -name \*.py \
     -and -not -path ./LibOS/shim/test/ltp/src/\* \
     -and -not -path ./LibOS/shim/test/ltp/build/\* \
     -and -not -path ./LibOS/shim/test/ltp/install/\* \
+    -and -not -name ninja_syntax.py \
 | sed 's/./\\&/g' \
 | xargs "${PYLINT}" "$@" \
     python/gramine-gen-depend \
     python/gramine-manifest \
     python/gramine-sgx-get-token \
-    python/gramine-sgx-sign
+    python/gramine-sgx-sign \
+    python/gramine-test

@@ -9,6 +9,7 @@ Internet Software Consortium (permissive license): common/src/network/inet_pton.
 cJSON - MIT
 tomlc99 - MIT
 uthash - BSD revised
+Ninja (python/graminelibos/ninja_syntax.py) - Apache 2.0
 
 A number of files taken from other C libraries:
 * glibc - LGPL

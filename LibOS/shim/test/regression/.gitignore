@@ -7,3 +7,6 @@
 /trusted_testfile
 
 /tmp
+
+/build.ninja
+/.ninja_*

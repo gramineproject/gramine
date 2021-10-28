@@ -1,10 +1,18 @@
 stage('clean-check') {
-    sh 'rm -rf "$PREFIX"'
+    /*
+     * Test that `make clean` removes all files created during build. This happens inside a *copied*
+     * Gramine source tree.
+     *
+     * NOTE: This still uses installed Gramine (i.e. $PREFIX), because Make in regression tests
+     * invokes `gramine-test clean`.
+     */
     sh '''
-        ./Scripts/gitignore-test
-    '''
-    sh '''
+        REL_PREFIX=$(realpath "$PREFIX" --relative-to=.)
+
         cd "$(./Scripts/clean-check-test-copy)"
+
+        # Remove our copy of $PREFIX (inside the copied source tree)
+        rm -rf "$REL_PREFIX"
 
         rm -f Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
@@ -43,5 +51,14 @@ stage('clean-check') {
             subprojects/packagecache
 
         ./Scripts/clean-check
+    '''
+
+    /*
+     * Test that all files created during build are ignored by Git. This happens inside the original
+     * Gramine source tree.
+     */
+    sh 'rm -rf "$PREFIX"'
+    sh '''
+        ./Scripts/gitignore-test
     '''
 }

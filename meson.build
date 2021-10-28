@@ -24,6 +24,11 @@ prefix = get_option('prefix')
 pkglibdir = join_paths(get_option('libdir'), meson.project_name())
 pkgdatadir = join_paths(get_option('datadir'), meson.project_name())
 
+syslibdir = get_option('syslibdir')
+if syslibdir == ''
+    syslibdir = join_paths('/', get_option('libdir'))
+endif
+
 direct = get_option('direct') == 'enabled'
 sgx = get_option('sgx') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'

@@ -1,9 +1,0 @@
-#!/bin/sh
-
-set -e
-
-# A wrapper for running pytest, either manually or through a Makefile.
-# Usage:
-#    SGX=1 .../run-pytest
-
-exec python3 -m pytest "$@"

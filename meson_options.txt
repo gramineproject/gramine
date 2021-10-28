@@ -25,3 +25,6 @@ option('sgx_driver_include_path', type: 'string',
     description: 'Path to SGX driver headers (default value depends on sgx_driver)')
 option('sgx_driver_device', type: 'string',
     description: 'Path to "enclave" device in /dev (default value depends on sgx_driver)')
+
+option('syslibdir', type: 'string',
+    description: 'Path to the system library directory')
