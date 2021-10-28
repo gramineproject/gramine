@@ -114,8 +114,8 @@ static int debug_map_init_callback(struct proc_maps_range* r, void* arg) {
     if (!r->name)
         return 0;
 
-    /* [vvar], [vdso] etc. */
-    if (r->name[0] != '/')
+    /* [vvar] etc. */
+    if (r->name[0] != '/' && strcmp(r->name, "[vdso]"))
         return 0;
 
     /* /dev/sgx etc. */

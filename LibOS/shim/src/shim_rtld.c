@@ -756,6 +756,7 @@ static int vdso_map_init(void) {
         return pal_to_unix_errno(ret);
     }
 
+    append_r_debug("file:[vdso_libos]", addr);
     vdso_addr = addr;
     return 0;
 }
