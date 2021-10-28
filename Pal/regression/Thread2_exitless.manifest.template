@@ -1,4 +1,4 @@
-{% set entrypoint = "Thread2" %}
+{% set entrypoint = "Thread2" -%}
 
 pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"

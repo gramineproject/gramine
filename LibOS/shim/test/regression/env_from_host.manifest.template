@@ -1,4 +1,4 @@
-{% set entrypoint = "bootstrap" %}
+{% set entrypoint = "bootstrap" -%}
 
 loader.preload = "file:{{ gramine.libos }}"
 loader.argv0_override = "{{ entrypoint }}"

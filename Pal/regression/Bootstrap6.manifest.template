@@ -1,4 +1,4 @@
-{% set entrypoint = "Bootstrap" %}
+{% set entrypoint = "Bootstrap" -%}
 
 pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
