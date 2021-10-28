@@ -9,7 +9,7 @@ import unittest
 # Named import, so that Pytest does not pick up TC_00_FileSystem as belonging to this module.
 import test_fs
 
-from regression import (
+from graminelibos.regression import (
     HAS_SGX,
     expectedFailureIf,
 )

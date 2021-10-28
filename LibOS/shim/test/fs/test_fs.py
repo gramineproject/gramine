@@ -5,7 +5,7 @@ import os
 import shutil
 import unittest
 
-from regression import (
+from graminelibos.regression import (
     HAS_SGX,
     RegressionTestCase,
     expectedFailureIf,

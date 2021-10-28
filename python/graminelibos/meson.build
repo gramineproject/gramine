@@ -10,17 +10,23 @@ init_py = configure_file(
     configuration: conf,
 )
 
-install_data([
+python_src = [
     init_py,
     'gen_jinja_env.py',
     'manifest.py',
-], install_dir: python3_pkgdir)
+]
+
+if enable_tests
+    python_src += 'regression.py'
+endif
 
 if sgx
-    install_data([
+    python_src += [
         '_aesm_pb2.py',
         'sgx_get_token.py',
         'sgx_sign.py',
         'sigstruct.py',
-    ], install_dir: python3_pkgdir)
+    ]
 endif
+
+install_data(python_src, install_dir: python3_pkgdir)

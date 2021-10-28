@@ -6,7 +6,4 @@ set -e
 # Usage:
 #    SGX=1 .../run-pytest
 
-PYTHONPATH="$(realpath "$(dirname "$0")/..")/Scripts:$PYTHONPATH"
-export PYTHONPATH
-
 exec python3 -m pytest "$@"

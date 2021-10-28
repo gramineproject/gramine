@@ -10,7 +10,7 @@ import string
 import subprocess
 import unittest
 
-from regression import (
+from graminelibos.regression import (
     HAS_SGX,
     ON_X86,
     RegressionTestCase,
