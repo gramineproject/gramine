@@ -151,9 +151,6 @@ void remove_loaded_elf_objects(void);
 int init_brk_from_executable(struct link_map* exec_map);
 int register_library(const char* name, unsigned long load_address);
 
-extern uintptr_t g_vdso_addr;
-extern size_t g_vdso_size;
-
 /* gdb debugging support */
 int init_r_debug(void);
 void remove_r_debug(void* addr);

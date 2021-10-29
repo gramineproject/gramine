@@ -724,8 +724,7 @@ void remove_loaded_elf_objects(void) {
  * functions after migration.
  */
 
-uintptr_t g_vdso_addr __attribute_migratable = 0;
-size_t g_vdso_size __attribute_migratable = 0;
+static void* vdso_addr __attribute_migratable = NULL;
 
 static int vdso_map_init(void) {
     /*
@@ -758,10 +757,7 @@ static int vdso_map_init(void) {
     }
 
     append_r_debug("file:[vdso_libos]", addr);
-
-    g_vdso_addr = (uintptr_t)addr;
-    g_vdso_size = ALLOC_ALIGN_UP(vdso_so_size);
-
+    vdso_addr = addr;
     return 0;
 }
 
@@ -870,9 +866,9 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_addr : 0;
     auxp[5].a_type     = AT_RANDOM;
     auxp[5].a_un.a_val = 0; /* filled later */
-    if (g_vdso_addr) {
+    if (vdso_addr) {
         auxp[6].a_type     = AT_SYSINFO_EHDR;
-        auxp[6].a_un.a_val = (uint64_t)g_vdso_addr;
+        auxp[6].a_un.a_val = (uint64_t)vdso_addr;
     } else {
         auxp[6].a_type     = AT_NULL;
         auxp[6].a_un.a_val = 0;

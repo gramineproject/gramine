@@ -303,9 +303,6 @@ static void get_forced_signal(struct shim_signal* signal) {
 static bool context_is_libos(PAL_CONTEXT* context) {
     uintptr_t ip = pal_context_get_ip(context);
 
-    if (g_vdso_addr && g_vdso_addr <= ip && ip < g_vdso_addr + g_vdso_size)
-        return true;
-
     return (uintptr_t)&__load_address <= ip && ip < (uintptr_t)&__load_address_end;
 }
 
