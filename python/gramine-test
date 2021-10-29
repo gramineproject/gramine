@@ -15,20 +15,26 @@ from graminelibos import util_tests, _CONFIG_SGX_ENABLED
 @click.group(help='Helper program for running Gramine tests.')
 @click.option('--sgx/--no-sgx', default=(os.environ.get('SGX') == '1'),
               help='Enable SGX mode (you can also set SGX=1 before running)')
+@click.option('--conf-file-name', '-n', type=click.Path(exists=True, dir_okay=False),
+              default='tests.toml', help='Configuration file name to use')
 @click.option('--directory', '-C', metavar='dir', type=click.Path(file_okay=False),
               help='Change directory before running')
 @click.pass_context
-def main(ctx, sgx, directory):
+def main(ctx, sgx, conf_file_name, directory):
     if sgx and not _CONFIG_SGX_ENABLED:
         raise click.ClickException('This version of Gramine is built without SGX')
     if directory:
         os.chdir(directory)
-    ctx.obj = {'sgx': sgx}
+    ctx.obj = {
+        'sgx': sgx,
+        'conf_file_name': conf_file_name,
+    }
 
 
 @main.command(help='Rebuild the build.ninja file. Used internally by Ninja.')
-def regenerate():
-    util_tests.gen_build_file()
+@click.pass_context
+def regenerate(ctx):
+    util_tests.gen_build_file(ctx.obj['conf_file_name'])
 
 
 @main.command(help='Rebuild manifests. This rebuilds either all manifests, or the specified ones.')
@@ -40,12 +46,13 @@ def build(ctx, force, verbose, names):
     sgx = ctx.obj['sgx']
     names = [strip_suffix(name) for name in names]
 
-    rebuild(sgx, *names, force=force, verbose=verbose)
+    rebuild(sgx, ctx.obj['conf_file_name'], *names, force=force, verbose=verbose)
 
 
 @main.command(help='Remove all generated files.')
-def clean():
-    util_tests.gen_build_file()
+@click.pass_context
+def clean(ctx):
+    util_tests.gen_build_file(ctx.obj['conf_file_name'])
     try:
         util_tests.run_ninja(['-t', 'clean', '-g'])
     except subprocess.CalledProcessError as e:
@@ -71,7 +78,7 @@ def run(ctx, force, verbose, name, args):
     sgx = ctx.obj['sgx']
     name = strip_suffix(name)
 
-    rebuild(sgx, name, force=force, verbose=verbose)
+    rebuild(sgx, ctx.obj['conf_file_name'], name, force=force, verbose=verbose)
     util_tests.exec_gramine(sgx, name, args)
 
 
@@ -86,7 +93,7 @@ def run(ctx, force, verbose, name, args):
 def pytest(ctx, force, verbose, args):
     sgx = ctx.obj['sgx']
 
-    rebuild(sgx, force=force, verbose=verbose)
+    rebuild(sgx, ctx.obj['conf_file_name'], force=force, verbose=verbose)
     util_tests.exec_pytest(sgx, args)
 
 
@@ -102,8 +109,8 @@ def strip_suffix(name):
     return name
 
 
-def rebuild(sgx, *names, force=False, verbose=False):
-    util_tests.gen_build_file()
+def rebuild(sgx, conf_file_name, *names, force=False, verbose=False):
+    util_tests.gen_build_file(conf_file_name)
     verbosity = ['-v'] if verbose else []
     host = 'sgx' if sgx else 'direct'
     if names:

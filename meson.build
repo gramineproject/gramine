@@ -40,6 +40,9 @@ asan = get_option('asan') == 'enabled'
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
 
+enable_glibc = get_option('gnu-libc') == 'enabled'
+enable_musl = get_option('musl-libc') == 'enabled'
+
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
 
@@ -264,7 +267,12 @@ subdir('LibOS')
 subdir('python')
 subdir('tools')
 
-subproject('glibc-2.34-1')
+if enable_glibc
+    subproject('glibc-2.34-1')
+endif
+if enable_musl
+    subproject('musl-1.2.2')
+endif
 
 if enable_libgomp
     subproject('gcc-10.2.0')

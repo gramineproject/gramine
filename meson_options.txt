@@ -6,6 +6,11 @@ option('sgx', type: 'combo', choices: ['disabled', 'enabled'],
 option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build skeleton PAL')
 
+option('gnu-libc', type: 'combo', choices: ['disabled', 'enabled'],
+    value: 'enabled', description: 'Build patched glibc')
+option('musl-libc', type: 'combo', choices: ['disabled', 'enabled'],
+    value: 'enabled', description: 'Build patched musl-libc')
+
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
 
