@@ -19,7 +19,7 @@ sgx.preheat_enclave = true
 
 fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
 
 fs.mount.entrypoint.type = "chroot"
 fs.mount.entrypoint.path = "{{ entrypoint }}"
@@ -35,7 +35,7 @@ sgx.debug = true
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
-  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 

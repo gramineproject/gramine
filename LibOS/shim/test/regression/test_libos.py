@@ -10,6 +10,7 @@ import unittest
 from graminelibos.regression import (
     HAS_SGX,
     ON_X86,
+    USES_MUSL,
     RegressionTestCase,
 )
 
@@ -157,7 +158,8 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(['uid_gid'])
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skipUnless(ON_X86, "x86-specific")
+    @unittest.skipUnless(ON_X86, 'x86-specific')
+    @unittest.skipIf(USES_MUSL, 'C++ is not supported with musl')
     def test_110_basic_bootstrapping_cpp(self):
         stdout, _ = self.run_binary(['bootstrap_cpp'])
         self.assertIn('User Program Started', stdout)
@@ -337,6 +339,7 @@ class TC_01_Bootstrap(RegressionTestCase):
 
 
 class TC_02_OpenMP(RegressionTestCase):
+    @unittest.skipIf(USES_MUSL, 'OpenMP is not supported with musl')
     def test_000_simple_for_loop(self):
         stdout, _ = self.run_binary(['openmp'])
 
@@ -436,6 +439,8 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
 
 @unittest.skipUnless(HAS_SGX,
     'These tests are only meaningful on SGX PAL because only SGX supports attestation.')
+@unittest.skipIf(USES_MUSL,
+    'These tests require custom build of mbedtls, which is cumbersome to do twice (musl and glibc)')
 class TC_04_Attestation(RegressionTestCase):
     def test_000_attestation(self):
         stdout, _ = self.run_binary(['attestation'], timeout=60)
@@ -699,6 +704,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('eventfd_using_various_flags completed successfully', stdout)
         self.assertIn('eventfd_using_fork completed successfully', stdout)
 
+    @unittest.skipIf(USES_MUSL, 'sched_setscheduler is not supported in musl')
     def test_080_sched(self):
         stdout, _ = self.run_binary(['sched'])
 
@@ -973,7 +979,8 @@ class TC_50_GDB(RegressionTestCase):
         self.assertIn(f' main ()', backtrace_1)
         self.assertIn(' _start ()', backtrace_1)
         self.assertIn('debug.c', backtrace_1)
-        self.assertNotIn('??', backtrace_1)
+        if not USES_MUSL:
+            self.assertNotIn('??', backtrace_1)
 
         backtrace_2 = self.find('backtrace 2', stdout)
         self.assertIn(' dev_write (', backtrace_2)
@@ -981,7 +988,8 @@ class TC_50_GDB(RegressionTestCase):
         self.assertIn(' main ()', backtrace_2)
         self.assertIn(' _start ()', backtrace_2)
         self.assertIn('debug.c', backtrace_2)
-        self.assertNotIn('??', backtrace_2)
+        if not USES_MUSL:
+            self.assertNotIn('??', backtrace_2)
 
         if HAS_SGX:
             backtrace_3 = self.find('backtrace 3', stdout)
@@ -991,7 +999,8 @@ class TC_50_GDB(RegressionTestCase):
             self.assertIn(' main ()', backtrace_3)
             self.assertIn(' _start ()', backtrace_3)
             self.assertIn('debug.c', backtrace_3)
-            self.assertNotIn('??', backtrace_3)
+            if not USES_MUSL:
+                self.assertNotIn('??', backtrace_3)
 
     @unittest.skipUnless(ON_X86, 'x86-specific')
     def test_010_regs_x86_64(self):

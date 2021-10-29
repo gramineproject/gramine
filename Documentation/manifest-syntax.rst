@@ -340,7 +340,7 @@ FS mount points
 
 This syntax specifies how file systems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
-required in the manifest (the mount point of the Glibc library).
+required in the manifest (the mount point of linked libraries).
 
 Gramine currently supports two types of mount points:
 

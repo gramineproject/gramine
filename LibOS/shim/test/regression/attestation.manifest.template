@@ -7,7 +7,7 @@ loader.insecure__use_cmdline_argv = true
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
 
 fs.mount.entrypoint.type = "chroot"
 fs.mount.entrypoint.path = "{{ entrypoint }}"
@@ -26,6 +26,6 @@ sgx.ra_client_linkable = {{ 'true' if env.get('RA_CLIENT_LINKABLE', '0') == '1' 
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
-  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

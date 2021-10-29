@@ -32,10 +32,10 @@ Functions and constants available in templates
 
    Path to :file:`libsysdb.so`.
 
-.. function:: gramine.runtimedir([libc])
+.. function:: gramine.runtimedir(libc='glibc')
 
-   The path to runtime directory with patched libc. The default libc is
-   ``'glibc'``.
+   The path to runtime directory with patched libc. Currently supported options
+   are: ``'glibc'`` and ``'musl'``.
 
 .. data:: python.stdlib
 

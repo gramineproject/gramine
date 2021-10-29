@@ -84,3 +84,11 @@ Fedora/RHEL/CentOS, but with caveats. One caveat is that Makefiles should be
 invoked with ``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications
 that rely on specific versions/builds of Glibc may break (our GCC example is
 known to work only on Ubuntu).
+
+glibc vs musl
+-------------
+
+Most of the examples we provide use GNU C Library (glibc). If your application
+is built against musl libc, you can pass ``'musl'`` to
+:py:func:`gramine.runtimedir()` when generating the manifest from a template,
+which will mount musl libc (instead of the default glibc).

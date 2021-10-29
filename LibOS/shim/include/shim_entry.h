@@ -4,7 +4,7 @@
  */
 
 /*
- * This file describes Gramine's entrypoints from userspace (mostly from patched glibc).
+ * This file describes Gramine's entrypoints from userspace.
  *
  * The userspace wrappers for these functions are defined in `gramine_entry_api.h`.
  */
