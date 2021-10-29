@@ -152,7 +152,7 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
                                                                                                 \
     BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)
 
-static int setup_seccomp(void) {
+static int setup_seccomp(uintptr_t vdso_start, uintptr_t vdso_end) {
     int ret = DO_SYSCALL(prctl, PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
     if (ret < 0) {
         log_error("prctl(PR_SET_NO_NEW_PRIVS, 1) failed: %d", ret);
@@ -163,10 +163,10 @@ static int setup_seccomp(void) {
     uint32_t syscalls_code_begin_high = (uintptr_t)gramine_raw_syscalls_code_begin >> 32;
     uint32_t syscalls_code_end_low = (uintptr_t)gramine_raw_syscalls_code_end;
     uint32_t syscalls_code_end_high = (uintptr_t)gramine_raw_syscalls_code_end >> 32;
-    uint32_t vdso_begin_low = g_vdso_start;
-    uint32_t vdso_begin_high = g_vdso_start >> 32;
-    uint32_t vdso_end_low = g_vdso_end;
-    uint32_t vdso_end_high = g_vdso_end >> 32;
+    uint32_t vdso_begin_low = vdso_start;
+    uint32_t vdso_begin_high = vdso_start >> 32;
+    uint32_t vdso_end_low = vdso_end;
+    uint32_t vdso_end_high = vdso_end >> 32;
 
     struct sock_filter filter[] = {
         BPF_GENERATE_ALLOWED_RANGE(syscalls_code_begin_low, syscalls_code_begin_high,
@@ -187,7 +187,7 @@ static int setup_seccomp(void) {
     return 0;
 }
 
-void signal_setup(bool is_first_process) {
+void signal_setup(bool is_first_process, uintptr_t vdso_start, uintptr_t vdso_end) {
     int ret;
 
     /* SIGPIPE and SIGCHLD are emulated completely inside LibOS */
@@ -228,7 +228,7 @@ void signal_setup(bool is_first_process) {
     }
 
     if (is_first_process) {
-        ret = setup_seccomp();
+        ret = setup_seccomp(vdso_start, vdso_end);
         if (ret < 0) {
             INIT_FAIL(PAL_ERROR_DENIED, "Setting up seccomp for inline syscall handling failed");
         }
