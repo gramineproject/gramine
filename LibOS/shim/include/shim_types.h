@@ -31,15 +31,12 @@
 #include "pal.h"
 #include "shim_types-arch.h"
 
-typedef unsigned int __u32;
-
 typedef unsigned long int nfds_t;
 typedef unsigned long int nlink_t;
 
 typedef __kernel_uid_t     uid_t;
 typedef __kernel_gid_t     gid_t;
 typedef __kernel_pid_t     pid_t;
-typedef __kernel_caddr_t   caddr_t;
 typedef __kernel_mode_t    mode_t;
 typedef __kernel_off_t     off_t;
 typedef __kernel_loff_t    loff_t;
@@ -47,8 +44,6 @@ typedef __kernel_time_t    time_t;
 typedef __kernel_old_dev_t dev_t;
 typedef __kernel_ino_t     ino_t;
 typedef __kernel_clockid_t clockid_t;
-typedef __kernel_key_t     key_t;
-typedef __kernel_timer_t   timer_t;
 typedef __kernel_fd_set    fd_set;
 
 /* linux/time.h */
@@ -74,76 +69,8 @@ struct __kernel_timezone {
     int tz_dsttime;     /* type of dst correction */
 };
 
-/* linux/time.h
- * syscall interface - used (mainly by NTP daemon)
- * to discipline kernel clock oscillator
- */
-struct ____kernel_timex {
-    unsigned int modes;           /* mode selector */
-    long offset;                  /* time offset (usec) */
-    long freq;                    /* frequency offset (scaled ppm) */
-    long maxerror;                /* maximum error (usec) */
-    long esterror;                /* estimated error (usec) */
-    int status;                   /* clock command/status */
-    long constant;                /* pll time constant */
-    long precision;               /* clock precision (usec) (read only) */
-    long tolerance;               /* clock frequency tolerance (ppm) (read only) */
-    struct __kernel_timeval time; /* (read only) */
-    long tick;                    /* (modified) usecs between clock ticks */
-
-    long ppsfreq; /* pps frequency (scaled ppm) (ro) */
-    long jitter;  /* pps jitter (us) (ro) */
-    int shift;    /* interval duration (s) (shift) (ro) */
-    long stabil;  /* pps stability (scaled ppm) (ro) */
-    long jitcnt;  /* jitter limit exceeded (ro) */
-    long calcnt;  /* calibration intervals (ro) */
-    long errcnt;  /* calibration errors (ro) */
-    long stbcnt;  /* stability limit exceeded (ro) */
-
-    int tai; /* TAI offset (ro) */
-
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-    int : 32;
-};
-
 /* /arch/x86/include/asm/posix_types_64.h */
 typedef unsigned int __kernel_uid_t;
-typedef __kernel_uid_t __kernel_uid32_t;
-
-/* quota.h */
-typedef __kernel_uid32_t qid_t; /* Type in which we store ids in memory */
-
-/* capability.h */
-typedef struct __user_cap_header_struct {
-    __u32 version;
-    int pid;
-}* cap_user_header_t;
-
-typedef struct __user_cap_data_struct {
-    __u32 effective;
-    __u32 permitted;
-    __u32 inheritable;
-}* cap_user_data_t;
-
-/* defined in function in sysdeps/unix/sysv/linux/sysctl.c */
-struct __kernel_sysctl_args {
-    int* name;       /* integer vector describing variable */
-    int nlen;        /* length of this vector */
-    void* oldval;    /* 0 or address where to store old value */
-    size_t* oldlenp; /* available room for old value,
-                        overwritten by actual size of old value */
-    void* newval;    /* 0 or address of new value */
-    size_t newlen;   /* size of new value */
-};
 
 struct __kernel_sched_param {
     int __sched_priority;
@@ -155,9 +82,6 @@ struct __kernel_sigaction {
     void (*sa_restorer)(void);
     __sigset_t sa_mask;
 };
-
-/* linux/aio_abi.h (for io_setup which has no glibc wrapper) */
-typedef unsigned long aio_context_t;
 
 /* linux/rlimit.h */
 struct __kernel_rusage {
@@ -185,14 +109,6 @@ struct __kernel_rlimit {
 
 struct __kernel_rlimit64 {
     uint64_t rlim_cur, rlim_max;
-};
-
-/* bits/ustat.h */
-struct __kernel_ustat {
-    __daddr_t f_tfree; /* Number of free blocks. */
-    __ino_t f_tinode;  /* Number of free inodes. */
-    char f_fname[6];
-    char f_fpack[6];
 };
 
 /* bits/socket.h */
@@ -250,15 +166,6 @@ struct sockaddr {
 struct sockaddr_storage {
     __SOCKADDR_COMMON(ss_); /* Address family, etc. */
     char __ss_padding[128 - sizeof(sa_family_t)];
-};
-
-/* linux/mqueue.h */
-struct __kernel_mq_attr {
-    long mq_flags;      /* message queue flags */
-    long mq_maxmsg;     /* maximum number of messages */
-    long mq_msgsize;    /* maximum message size */
-    long mq_curmsgs;    /* number of messages currently queued */
-    long __reserved[4]; /* ignored for input, zeroed for output */
 };
 
 /* bits/uio.h */
