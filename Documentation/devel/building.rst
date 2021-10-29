@@ -8,12 +8,12 @@ Gramine consists of several components:
 - The Library OS itself (a shared library named ``libsysdb.so``, called the
   "shim" in our source code)
 - The Platform Adaptation Layer, or PAL (a shared library named ``libpal.so``)
-- A patched GNU C Library (a set of shared libraries ``libc.so``,
-  ``libpthread.so``, ``libm.so``, etc.)
+- A patched C Library (shared library ``libc.so`` and possibly others).
+  Currently there are two options: musl and GNU C Library (glibc).
 
 The build of Gramine implies building at least the first two components. The
 build of the patched C library is optional but highly recommended for
-performance reasons. The patched C library is built by default.
+performance reasons. Both patched glibc and patched musl are built by default.
 
 Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
@@ -47,7 +47,8 @@ your distro is new enough to have Meson >= 0.55 and python3-toml >= 0.10 (Debian
 
 For GDB support and to run all tests locally you also need to install::
 
-    sudo apt-get install -y libunwind8 python3-pyelftools python3-pytest
+    sudo apt-get install -y libunwind8 musl-tools python3-pyelftools \
+        python3-pytest
 
 If you want to build the patched ``libgomp`` library, you also need to install
 GCC's build dependencies::
@@ -193,6 +194,9 @@ omitted, Gramine's build system will try to determine the right path.
    for executables under this path. If your system reports that Gramine
    programs can not be found, you might need to edit your configuration files so
    that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
+
+Set ``-Dglibc=`` or ``-Dmusl=`` options to ``disabled`` if you wish not to build
+the support for any (they are both built by default).
 
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^

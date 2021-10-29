@@ -37,6 +37,8 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libxrender1 \
     libxxf86vm1 \
     linux-headers-generic \
+    musl \
+    musl-tools \
     net-tools \
     netcat-openbsd \
     ninja-build \

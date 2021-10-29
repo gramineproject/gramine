@@ -124,15 +124,24 @@ tests = {
 
 if host_machine.cpu_family() == 'x86_64'
     tests += {
-        'bootstrap_cpp': {
-            'source': 'bootstrap_cpp.cpp',
-        },
         'cpuid': {},
         'debug_regs-x86_64': {
             'c_args': '-g3',
         },
         'rdtsc': {},
         'sighandler_divbyzero': {},
+    }
+endif
+
+tests_musl = tests
+
+if host_machine.cpu_family() == 'x86_64'
+    # We use musl-gcc wrapper, which does not support building c++, so this test is not enabled
+    # with musl.
+    tests += {
+        'bootstrap_cpp': {
+            'source': 'bootstrap_cpp.cpp',
+        },
     }
 endif
 
@@ -147,63 +156,118 @@ if sgx
     }
 endif
 
-common_lib = static_library('test_libos',
-    'dump.c',
-    'rw_file.c',
-)
-
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'regression')
 
-foreach name, params : tests
-    pie = params.get('pie', false)
-    static = params.get('static', false)
-
-    c_args = [
-        # TODO: Many files define `main` with parameters, but don't use them
-        '-Wno-unused-parameter',
-    ]
-
-    link_args = [
-        '-pthread',
-    ]
-
-    if static
-        link_args += '-static'
-    endif
-
-    # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
-    # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
-    if pie
-        c_args += '-fPIE'
-        link_args += '-pie'
-    else
-        c_args += '-fno-PIE'
-        if not static
-            # When building static binaries, Clang complains that the `-no-pie` flag is unused.
-            link_args += '-no-pie'
-        endif
-    endif
-
-    exe = executable(name,
-        params.get('source', '@0@.c'.format(name)),
-
-        include_directories: params.get('include_directories', []),
-
-        link_with: common_lib,
-
-        c_args: [
-            c_args,
-            params.get('c_args', []),
-        ],
-
-        link_args: [
-            link_args,
-            params.get('link_args', []),
-        ],
-
-        dependencies: params.get('dependencies', []),
-
-        install: true,
-        install_dir: install_dir,
+configurations = []
+if enable_glibc
+    common_lib = static_library('test_libos',
+        'dump.c',
+        'rw_file.c',
     )
+    configurations += {
+        'use_musl': false,
+        'common_lib': common_lib,
+        'tests': tests,
+    }
+endif
+if enable_musl
+    musl_specs_path_cmd = run_command('sh', '-c',
+        'grep -Po -e \'-specs "\K([^"]*)\' `which musl-gcc`')
+    musl_specs_path = musl_specs_path_cmd.stdout().strip()
+    if musl_specs_path == ''
+        error('failed to find "musl-gcc", is it installed?')
+    endif
+
+    common_lib_musl = static_library('test_libos_musl',
+        'dump.c',
+        'rw_file.c',
+        # XXX: this is a hack, to be removed when we fix building tests
+        c_args: [ '-specs', musl_specs_path ],
+        link_args: [ '-specs', musl_specs_path ],
+    )
+    configurations += {
+        'use_musl': true,
+        'common_lib': common_lib_musl,
+        'tests': tests_musl,
+    }
+
+    musl_execs = []
+endif
+
+foreach conf: configurations
+    foreach name, params : conf['tests']
+        pie = params.get('pie', false)
+        static = params.get('static', false)
+
+        c_args = [
+            # TODO: Many files define `main` with parameters, but don't use them
+            '-Wno-unused-parameter',
+        ]
+
+        link_args = [
+            '-pthread',
+        ]
+
+        if static
+            link_args += '-static'
+        endif
+
+        # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
+        # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
+        if pie
+            c_args += '-fPIE'
+            link_args += '-pie'
+        else
+            c_args += '-fno-PIE'
+            if not static
+                # When building static binaries, Clang complains that the `-no-pie` flag is unused.
+                link_args += '-no-pie'
+            endif
+        endif
+
+        name_prefix = ''
+        if conf['use_musl']
+            # XXX: this is a hack, to be removed when we fix building tests
+            c_args += ['-specs', musl_specs_path]
+            link_args += ['-specs', musl_specs_path]
+            # This prefix will be stripped when installing executables to a designated directory
+            # below.
+            name_prefix = 'musl_'
+        endif
+
+        exe = executable(name_prefix + name,
+            params.get('source', '@0@.c'.format(name)),
+
+            include_directories: params.get('include_directories', []),
+
+            link_with: conf['common_lib'],
+
+            c_args: [
+                c_args,
+                params.get('c_args', []),
+            ],
+
+            link_args: [
+                link_args,
+                params.get('link_args', []),
+            ],
+
+            dependencies: params.get('dependencies', []),
+
+            install: true,
+            install_dir: install_dir,
+        )
+
+        if conf['use_musl']
+            musl_execs += exe
+        endif
+    endforeach
 endforeach
+
+if enable_musl
+    meson.add_install_script(
+        find_program('rename_musl_tests.sh'),
+        prefix / join_paths(install_dir, 'musl'),
+        musl_execs,
+    )
+endif
