@@ -1,5 +1,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
+loader.argv0_override = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
@@ -9,7 +10,7 @@ sys.insecure__allow_eventfd = true
 
 fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
 
 fs.mount.entrypoint.type = "chroot"
 fs.mount.entrypoint.path = "{{ entrypoint }}"
@@ -47,7 +48,7 @@ sgx.allowed_files = [
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
-  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
   "file:/usr{{ arch_libdir }}/libstdc++.so.6",
   "file:{{ binary_dir }}/{{ entrypoint }}",

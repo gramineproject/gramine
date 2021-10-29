@@ -6,6 +6,9 @@ stage('build') {
     if (env.ASAN == '1') {
         env.MESON_OPTIONS += ' -Dasan=enabled'
     }
+    if (env.CC == 'clang') {
+        env.MESON_OPTIONS += ' -Dmusl=disabled'
+    }
 
     try {
         sh '''

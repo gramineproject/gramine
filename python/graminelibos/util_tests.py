@@ -30,6 +30,8 @@ class TestConfig:
     - `binary_dir`: path to test binaries, passed as `binary_dir` to manifest templates; expands
       @GRAMINE_PKGLIBDIR@ to library directory of Gramine's installation
 
+    - `libc`: name of the libc to build against, currently supported: 'glibc' (default), 'musl'
+
     Ninja handles the following targets:
 
     - `NAME.manifest`, `NAME.manifest.sgx`, `NAME.sig`, `NAME.token`
@@ -51,6 +53,8 @@ class TestConfig:
 
         self.binary_dir = data.get('binary_dir', '.').replace(
             '@GRAMINE_PKGLIBDIR@', _CONFIG_PKGLIBDIR)
+
+        self.libc = data.get('libc', 'glibc')
 
         self.arch_libdir = _CONFIG_SYSLIBDIR
 
@@ -103,6 +107,7 @@ class TestConfig:
         ninja.variable('ARCH_LIBDIR', self.arch_libdir)
         ninja.variable('COREUTILS_LIBDIR', self.coreutils_libdir)
         ninja.variable('KEY', self.key)
+        ninja.variable('GRAMINE_LIBC', self.libc)
         ninja.newline()
 
         ninja.rule(
@@ -112,6 +117,7 @@ class TestConfig:
                      '-Dcoreutils_libdir=$COREUTILS_LIBDIR '
                      '-Dentrypoint=$ENTRYPOINT '
                      '-Dbinary_dir=$BINARY_DIR '
+                     '-Dlibc=$GRAMINE_LIBC '
                      '$in $out'),
             description='manifest: $out'
         )
@@ -209,8 +215,8 @@ class TestConfig:
             ninja.newline()
 
 
-def gen_build_file():
-    config = TestConfig('tests.toml')
+def gen_build_file(conf_file_name='tests.toml'):
+    config = TestConfig(conf_file_name)
     config.gen_build_file('build.ninja')
 
 

@@ -6,7 +6,7 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
 
 fs.mount.entrypoint.type = "chroot"
 fs.mount.entrypoint.path = "{{ entrypoint }}"
@@ -21,6 +21,6 @@ sgx.enable_stats = true
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
-  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

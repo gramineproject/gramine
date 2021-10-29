@@ -19,6 +19,8 @@ non-longterm release, together with the fact that EPID attestation is
 unsupported in upstream driver, **it is acceptable to require the user to use
 kernel other that provided by distro**.
 
+.. _glibc:
+
 glibc
 ^^^^^
 Glibc is a special case, because we need to provide the version supported by the
@@ -26,6 +28,10 @@ distribution **or a later version**, which is inverse from the usual dependency
 relation that we need to support the version from distro or earlier. Therefore
 we will provide some reasonably new version under the assumption that older
 software will be able to run against new glibc version.
+
+musl
+^^^^
+See :ref:`glibc`. Same thing applies to musl.
 
 varia
 ^^^^^
