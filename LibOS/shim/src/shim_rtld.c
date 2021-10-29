@@ -740,7 +740,7 @@ void remove_loaded_elf_objects(void) {
  * functions after migration.
  */
 
-static void* vdso_addr __attribute_migratable = NULL;
+static void* g_vdso_addr __attribute_migratable = NULL;
 
 static int vdso_map_init(void) {
     /*
@@ -773,7 +773,7 @@ static int vdso_map_init(void) {
     }
 
     append_r_debug("file:[vdso_libos]", addr);
-    vdso_addr = addr;
+    g_vdso_addr = addr;
     return 0;
 }
 
@@ -887,7 +887,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
      */
     assert(IS_ALIGNED_PTR(argp, 16)); /* stack must be 16B-aligned */
 
-    static_assert(REQUIRED_ELF_AUXV >= 8, "not enough space on stack for auxv");
+    static_assert(REQUIRED_ELF_AUXV >= 9, "not enough space on stack for auxv");
     auxp[0].a_type     = AT_PHDR;
     auxp[0].a_un.a_val = (__typeof(auxp[0].a_un.a_val))g_exec_map->l_phdr;
     auxp[1].a_type     = AT_PHNUM;
@@ -900,19 +900,16 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_map_start : 0;
     auxp[5].a_type     = AT_RANDOM;
     auxp[5].a_un.a_val = 0; /* filled later */
-    if (vdso_addr) {
-        auxp[6].a_type     = AT_SYSINFO_EHDR;
-        auxp[6].a_un.a_val = (uint64_t)vdso_addr;
-    } else {
-        auxp[6].a_type     = AT_NULL;
-        auxp[6].a_un.a_val = 0;
-    }
-    auxp[7].a_type     = AT_NULL;
-    auxp[7].a_un.a_val = 0;
+    auxp[6].a_type     = AT_PHENT;
+    auxp[6].a_un.a_val = sizeof(ElfW(Phdr));
+    auxp[7].a_type     = AT_SYSINFO_EHDR;
+    auxp[7].a_un.a_val = (uint64_t)g_vdso_addr;
+    auxp[8].a_type     = AT_NULL;
+    auxp[8].a_un.a_val = 0;
 
     /* populate extra memory space for aux vector data */
     static_assert(REQUIRED_ELF_AUXV_SPACE >= 16, "not enough space on stack for auxv");
-    ElfW(Addr) auxp_extra = (ElfW(Addr))&auxp[8];
+    ElfW(Addr) auxp_extra = (ElfW(Addr))&auxp[9];
 
     ElfW(Addr) random = auxp_extra; /* random 16B for AT_RANDOM */
     ret = DkRandomBitsRead((void*)random, 16);
