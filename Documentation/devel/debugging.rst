@@ -47,7 +47,8 @@ GDB integration also requires pyelftools Python package::
 
 After rebuilding Gramine with debug symbols, you need to re-sign the manifest of
 the application. For instance, if you want to debug the ``helloworld`` program,
-run the following commands::
+run the following commands (note that you need to also pass ``-Dtests=enabled``
+to Meson in order to build test binaries)::
 
     cd LibOS/shim/test/regression
     make SGX=1

@@ -24,12 +24,11 @@ Quick start without SGX support
           wget
       sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       cd gramine
-      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled \
-          -Dtests=enabled
+      meson setup build/ --buildtype=release -Ddirect=enabled -Dtests=enabled
       ninja -C build/
       sudo ninja -C build/ install
 
-#. Build and run :program:`helloworld`::
+#. Build test manifests and run :program:`helloworld`::
 
       cd LibOS/shim/test/regression
       make
@@ -92,7 +91,7 @@ descriptions in :doc:`building`.
 
    Note that this is an inadvisable configuration for production systems.
 
-#. Build and run :program:`helloworld`::
+#. Build test manifests and run :program:`helloworld`::
 
       cd LibOS/shim/test/regression
       make SGX=1

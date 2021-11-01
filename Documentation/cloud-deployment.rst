@@ -58,11 +58,11 @@ Building
 
 #. Build Gramine::
 
-       meson setup build/ --buildtype=release -Dsgx=enabled -Ddirect=disabled
+       meson setup build/ --buildtype=release -Dsgx=enabled -Dtests=enabled
        ninja -C build/
        sudo ninja -C build/ install
 
-#. Build and run :program:`helloworld`::
+#. Build test manifests and run :program:`helloworld`::
 
        cd LibOS/shim/test/regression
        make SGX=1
