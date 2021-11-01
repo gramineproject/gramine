@@ -24,7 +24,8 @@ Quick start without SGX support
           wget
       sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       cd gramine
-      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled
+      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled \
+          -Dtests=enabled
       ninja -C build/
       sudo ninja -C build/ install
 
@@ -74,7 +75,8 @@ descriptions in :doc:`building`.
           python3-pip python3-protobuf wget
       sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
       # this assumes Linux 5.11+
-      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
+      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
+          -Dtests=enabled
       ninja -C build/
       sudo ninja -C build/ install
 
