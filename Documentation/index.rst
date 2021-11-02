@@ -49,8 +49,8 @@ https://github.com/gramineproject/gramine/issues.
 For any questions, please send an email to users@gramineproject.io
 (`public archive <https://groups.google.com/g/gramine-users>`__).
 
-If you want to contribute to the project, please see :doc:`devel/contributing`.
-Thank you for your interest!
+If you want to contribute to the project, please see :doc:`devel/contributing`
+and :doc:`devel/onboarding`. Thank you for your interest!
 
 *****************
 Table of Contents
@@ -92,6 +92,7 @@ Table of Contents
    :maxdepth: 1
 
    devel/building
+   devel/onboarding
    devel/contributing
    devel/DCO/index
    devel/howto-doc
