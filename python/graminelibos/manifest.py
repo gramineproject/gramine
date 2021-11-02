@@ -96,6 +96,7 @@ class Manifest:
         sgx.setdefault('nonpie_binary', False)
         sgx.setdefault('enable_stats', False)
 
+        # NOTE: `loader.preload` is deprecated; remove the below in the future
         loader = manifest.setdefault('loader', {})
         loader.setdefault('preload', '')
 
@@ -169,7 +170,7 @@ class Manifest:
     def expand_all_trusted_files(self):
         """Expand all trusted files entries.
 
-        Collects all trusted files entries and all files from ``loader.preload`` entry, hashes each
+        Collects all trusted files entries and the file from ``loader.preload`` entry, hashes each
         of them (skipping these which already had a hash present) and updates ``sgx.trusted_files``
         manifest entry with the result.
 
@@ -181,13 +182,10 @@ class Manifest:
         for tf in self['sgx']['trusted_files']:
             append_trusted_dir_or_file(trusted_files, tf)
 
-        preloads = set(filter(None, self['loader']['preload'].split(',')))
-        # remove all preloads that were already expanded
-        for tf in trusted_files:
-            preloads.discard(tf['uri'])
-
-        for uri in sorted(preloads):
-            append_trusted_dir_or_file(trusted_files, uri)
+        # NOTE: `loader.preload` is deprecated; remove the below in the future
+        preload_str = self['loader']['preload']
+        if preload_str and not any(preload_str == tf['uri'] for tf in trusted_files):
+            append_trusted_dir_or_file(trusted_files, preload_str)
 
         self['sgx']['trusted_files'] = trusted_files
 
@@ -205,10 +203,10 @@ class Manifest:
         """
         deps = set()
 
+        # NOTE: `loader.preload` is deprecated; remove the below in the future
         preload_str = self['loader']['preload']
-        # `filter` below is needed for the case where preload_str == '' (`split` returns [''] then)
-        for uri in filter(None, preload_str.split(',')):
-            deps.add(uri2path(uri))
+        if preload_str:
+            deps.add(uri2path(preload_str))
 
         for tf in self['sgx']['trusted_files']:
             if not tf.get('sha256'):

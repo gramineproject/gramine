@@ -25,13 +25,6 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-#define RTLD_BOOTSTRAP
-
-/* pal_start is the entry point of libpal.so, which calls pal_main */
-#define _ENTRY pal_start
-
-static struct link_map g_pal_map;
-
 char* g_pal_loader_path = NULL;
 /* Currently content of this variable is only passed as an argument while spawning new processes
  * - this is to keep uniformity with other PALs. */
@@ -183,8 +176,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         die_or_inf_loop();
     }
 
-    /* relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary(&g_pal_map);
+    /* relocate PAL */
+    ret = setup_pal_binary();
     if (ret < 0)
         INIT_FAIL(-ret, "Relocation of the PAL binary failed");
 
@@ -210,10 +203,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         print_usage_and_exit(argv[0]);  // may be NULL!
 
     /* Now that we have `argv`, set name for PAL map */
-    g_pal_map.l_name = argv[0];
-
-    assert(!g_loaded_maps);
-    g_loaded_maps = &g_pal_map;
+    set_pal_binary_name(argv[0]);
 
     // Are we the first in this Gramine's namespace?
     bool first_process = !strcmp(argv[2], "init");

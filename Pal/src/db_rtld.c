@@ -45,7 +45,8 @@
  * doesn't require relocation. */
 extern const ElfW(Ehdr) __ehdr_start __attribute__((visibility("hidden")));
 
-struct link_map* g_loaded_maps = NULL;
+static struct link_map g_pal_map;
+static struct link_map g_entrypoint_map;
 
 static const unsigned char g_expected_elf_header[EI_NIDENT] = {
     [EI_MAG0] = ELFMAG0,
@@ -179,20 +180,23 @@ static int find_symbol_in_loaded_maps(struct link_map* map, ElfW(Rela)* rela,
         return 0;
     }
 
-    /* next try to find in other ELF object files */
-    for (struct link_map* loaded_map = g_loaded_maps; loaded_map; loaded_map = loaded_map->l_next) {
-        for (uint32_t i = 0; i < loaded_map->symbol_table_cnt; i++) {
-            if (loaded_map->symbol_table[i].st_shndx == SHN_UNDEF)
-                continue;
+    if (map == &g_pal_map) {
+        /* PAL ELF object tried to find symbol in itself but couldn't */
+        log_error("Could not resolve symbol %s in PAL ELF object", symbol_name);
+        return -PAL_ERROR_DENIED;
+    }
 
-            const char* other_symbol_name = loaded_map->string_table +
-                loaded_map->symbol_table[i].st_name;
-            if (!strcmp(symbol_name, other_symbol_name)) {
-                /* NOTE: we currently don't take into account weak symbols and return the first
-                 *       symbol found (we don't have weak symbols in PAL and preloaded libs) */
-                *out_symbol_addr = loaded_map->l_base + loaded_map->symbol_table[i].st_value;
-                return 0;
-            }
+    /* next try to find in PAL ELF object */
+    for (uint32_t i = 0; i < g_pal_map.symbol_table_cnt; i++) {
+        if (g_pal_map.symbol_table[i].st_shndx == SHN_UNDEF)
+            continue;
+
+        const char* pal_symbol_name = g_pal_map.string_table + g_pal_map.symbol_table[i].st_name;
+        if (!strcmp(symbol_name, pal_symbol_name)) {
+            /* NOTE: we currently don't take into account weak symbols and return the first symbol
+             *       found (we don't have weak symbols in PAL) */
+            *out_symbol_addr = g_pal_map.l_base + g_pal_map.symbol_table[i].st_value;
+            return 0;
         }
     }
 
@@ -279,10 +283,8 @@ static int perform_relocations(struct link_map* map) {
 
 /* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
  * we don't bother undoing _DkStreamMap() and _DkVirtualMemoryAlloc() in case of failure. */
-static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
-                                   const char* elf_file_buf, struct link_map** out_map) {
+static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_file_buf) {
     int ret;
-    struct link_map* map = NULL;
     struct loadcmd* loadcmds = NULL;
 
     ElfW(Addr) l_relro_addr = 0x0;
@@ -292,13 +294,8 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
     if (!name)
         return -PAL_ERROR_INVAL;
 
-    map = malloc(sizeof(*map));
-    if (map == NULL)
-        return -PAL_ERROR_NOMEM;
-
-    map->l_type = type;
-    map->l_name = strdup(name);
-    if (!map->l_name) {
+    g_entrypoint_map.l_name = strdup(name);
+    if (!g_entrypoint_map.l_name) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
@@ -306,7 +303,7 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
     ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)elf_file_buf;
     ElfW(Phdr)* phdr = (ElfW(Phdr)*)(elf_file_buf + ehdr->e_phoff);
 
-    map->l_entry = ehdr->e_entry;
+    g_entrypoint_map.l_entry = ehdr->e_entry;
 
     loadcmds = malloc(sizeof(*loadcmds) * ehdr->e_phnum);
     if (!loadcmds) {
@@ -320,7 +317,7 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
     for (const ElfW(Phdr)* ph = phdr; ph < &phdr[ehdr->e_phnum]; ph++) {
         switch (ph->p_type) {
             case PT_DYNAMIC:
-                map->l_ld = (void*)ph->p_vaddr;
+                g_entrypoint_map.l_ld = (void*)ph->p_vaddr;
                 break;
 
             case PT_LOAD:
@@ -384,7 +381,7 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
             /* for DYN (shared libraries), let PAL memory allocator choose base addr the first time
              * -- but we must reserve another memory for all loadable segments this first time to
              *  not overwrite memory on subsequent segments */
-            map_addr = (i == 0) ? NULL : (void*)(map->l_base + c->start);
+            map_addr = (i == 0) ? NULL : (void*)(g_entrypoint_map.l_base + c->start);
             map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end - c->start
                                 : c->map_end - c->start;
         }
@@ -397,15 +394,15 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
 
         if (i == 0) {
             /* memorize where the ELF file (its first loadable segment) was loaded */
-            map->l_addr = (ElfW(Addr))map_addr;
-            map->l_base = (ehdr->e_type == ET_EXEC) ? 0x0 : map->l_addr;
+            g_entrypoint_map.l_addr = (ElfW(Addr))map_addr;
+            g_entrypoint_map.l_base = (ehdr->e_type == ET_EXEC) ? 0x0 : g_entrypoint_map.l_addr;
         }
 
         /* adjust segment's addresses to actual addresses (for DYNs, they were offsets initially) */
-        c->start     += map->l_base;
-        c->map_end   += map->l_base;
-        c->data_end  += map->l_base;
-        c->alloc_end += map->l_base;
+        c->start     += g_entrypoint_map.l_base;
+        c->map_end   += g_entrypoint_map.l_base;
+        c->data_end  += g_entrypoint_map.l_base;
+        c->alloc_end += g_entrypoint_map.l_base;
 
         if (c->alloc_end == c->map_end)
             continue;
@@ -419,11 +416,14 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
     }
 
     /* adjust all fields by ELF object base address (for DYNs, they were offsets initially) */
-    map->l_entry = map->l_entry + map->l_base;
-    map->l_ld = (ElfW(Dyn)*)((ElfW(Addr))map->l_ld + map->l_base);
+    g_entrypoint_map.l_entry = g_entrypoint_map.l_entry + g_entrypoint_map.l_base;
+    g_entrypoint_map.l_ld = (ElfW(Dyn)*)((ElfW(Addr))g_entrypoint_map.l_ld +
+                                         g_entrypoint_map.l_base);
 
-    ret = find_string_and_symbol_tables(map->l_addr, map->l_base, &map->string_table,
-                                        &map->symbol_table, &map->symbol_table_cnt);
+    ret = find_string_and_symbol_tables(g_entrypoint_map.l_addr, g_entrypoint_map.l_base,
+                                        &g_entrypoint_map.string_table,
+                                        &g_entrypoint_map.symbol_table,
+                                        &g_entrypoint_map.symbol_table_cnt);
     if (ret < 0)
         return ret;
 
@@ -444,7 +444,7 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
             memset((void*)c->data_end, 0, ALLOC_ALIGN_UP(c->data_end) - c->data_end);
     }
 
-    ret = perform_relocations(map);
+    ret = perform_relocations(&g_entrypoint_map);
     if (ret < 0) {
         log_error("Failed to perform relocations on ELF file");
         goto out;
@@ -460,7 +460,7 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
     }
 
     if (l_relro_size != 0) {
-        l_relro_addr += map->l_base;
+        l_relro_addr += g_entrypoint_map.l_base;
         ElfW(Addr) start = ALLOC_ALIGN_DOWN(l_relro_addr);
         ElfW(Addr) end   = ALLOC_ALIGN_UP(l_relro_addr + l_relro_size);
         ret = _DkVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
@@ -470,23 +470,19 @@ static int map_relocate_elf_object(PAL_HANDLE handle, enum elf_object_type type,
         }
     }
 
-    *out_map = map;
     ret = 0;
 out:
     if (ret < 0) {
-        if (map) {
-            free((void*)map->l_name);
-            free(map);
-        }
+        free((void*)g_entrypoint_map.l_name);
+        g_entrypoint_map.l_name = NULL;
     }
     free(loadcmds);
     return ret;
 }
 
-int load_elf_object(const char* uri, enum elf_object_type type) {
+int load_entrypoint(const char* uri) {
     int ret;
     PAL_HANDLE handle;
-    struct link_map* map = NULL;
 
     char buf[1024]; /* must be enough to hold ELF header and all its program headers */
     ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, 0, 0, 0);
@@ -533,45 +529,29 @@ int load_elf_object(const char* uri, enum elf_object_type type) {
         goto out;
     }
 
-    ret = map_relocate_elf_object(handle, type, buf, &map);
+    ret = create_and_relocate_entrypoint(handle, buf);
     if (ret < 0) {
         log_error("Could not map the ELF file into memory and then relocate it");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
-    /* append to list (to preserve order of libs specified in manifest, e.g., loader.preload) */
-    if (!g_loaded_maps) {
-        map->l_prev = NULL;
-        map->l_next = NULL;
-        g_loaded_maps = map;
-    } else {
-        struct link_map* end = g_loaded_maps;
-        while (end->l_next)
-            end = end->l_next;
-
-        end->l_next = map;
-        map->l_prev = end;
-        map->l_next = NULL;
-    }
-
 #ifdef DEBUG
-    _DkDebugMapAdd(map->l_name, (void*)map->l_base);
+    assert(g_entrypoint_map.l_name);
+    _DkDebugMapAdd(g_entrypoint_map.l_name, (void*)g_entrypoint_map.l_base);
 #endif
 
 out:
-    if (ret < 0)
-        free(map);
     _DkObjectClose(handle);
     return ret;
 }
 
 /* PAL binary must be DYN (shared object file) */
-int setup_pal_binary(struct link_map* pal_map) {
+int setup_pal_binary(void) {
     int ret;
 
-    pal_map->l_prev = NULL;
-    pal_map->l_next = NULL;
+    g_pal_map.l_prev = NULL;
+    g_pal_map.l_next = NULL;
 
     ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
 
@@ -581,19 +561,22 @@ int setup_pal_binary(struct link_map* pal_map) {
         return -PAL_ERROR_DENIED;
     }
 
-    pal_map->l_name = NULL; /* will be overwritten later with argv[0] */
-    pal_map->l_type = ELF_OBJECT_INTERNAL;
-    pal_map->l_addr = pal_binary_addr;
-    pal_map->l_base = pal_binary_addr;
-    pal_map->l_ld = dynamic_section;
+    g_pal_map.l_name = NULL; /* will be overwritten later with argv[0] */
+    g_pal_map.l_addr = pal_binary_addr;
+    g_pal_map.l_base = pal_binary_addr;
+    g_pal_map.l_ld = dynamic_section;
 
-    ret = perform_relocations(pal_map);
+    ret = perform_relocations(&g_pal_map);
     if (ret < 0)
         return ret;
 
-    ret = find_string_and_symbol_tables(pal_map->l_addr, pal_map->l_base, &pal_map->string_table,
-                                        &pal_map->symbol_table, &pal_map->symbol_table_cnt);
+    ret = find_string_and_symbol_tables(g_pal_map.l_addr, g_pal_map.l_base, &g_pal_map.string_table,
+                                        &g_pal_map.symbol_table, &g_pal_map.symbol_table_cnt);
     return ret;
+}
+
+void set_pal_binary_name(const char* name) {
+    g_pal_map.l_name = name;
 }
 
 /*
@@ -641,84 +624,61 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     default_describe_location(addr, buf, buf_size);
 }
 
-#ifndef CALL_ENTRY
-#ifdef __x86_64__
-void* rsp_before_call = NULL;
-void* rbp_before_call = NULL;
-
-/* TODO: Why on earth do we call loaded libraries entry points?!?
- * I won't bother fixing this asm, it needs to be purged. */
-#define CALL_ENTRY(l, cookies)                                                       \
-    ({                                                                               \
-        long ret;                                                                    \
-        __asm__ volatile(                                                            \
-            "pushq $0\r\n"                                                           \
-            "popfq\r\n"                                                              \
-            "movq %%rsp, rsp_before_call(%%rip)\r\n"                                 \
-            "movq %%rbp, rbp_before_call(%%rip)\r\n"                                 \
-            "leaq 1f(%%rip), %%rdx\r\n"                                              \
-            "movq $0, %%rbp\r\n"                                                     \
-            "movq %2, %%rsp\r\n"                                                     \
-            "jmp *%1\r\n"                                                            \
-            "1: movq rsp_before_call(%%rip), %%rsp\r\n"                              \
-            "   movq rbp_before_call(%%rip), %%rbp\r\n"                              \
-                                                                                     \
-            : "=a"(ret)                                                              \
-            : "a"((l)->l_entry), "b"(cookies)                                        \
-            : "rcx", "rdx", "rdi", "rsi", "r8", "r9", "r10", "r11", "memory", "cc"); \
-        ret;                                                                         \
-    })
-#else
-#error "unsupported architecture"
-#endif
-#endif /* !CALL_ENTRY */
-
 noreturn void start_execution(const char** arguments, const char** environs) {
-    int narguments = 0;
-    for (const char** a = arguments; *a; a++, narguments++)
-        ;
+    /* Our PAL loader invokes LibOS entrypoint with the following stack:
+     *
+     *   0(%rsp)               argc
+     *   8(%rsp)               argv[0]
+     *   16(%rsp)              argv[1]
+     *   ...
+     *   (8*(argc+1))(%rsp)    argv[argc] = NULL
+     *   (8*(argc+2))(%rsp)    envp[0]
+     *   (8*(argc+3))(%rsp)    envp[1]
+     *   ...
+     *   (8*(argc+n+2))(%rsp)  envp[n] = NULL
+     *   (8*(argc+n+3))(%rsp)  auxv[0] = AT_NULL
+     *
+     * See also the corresponding LibOS entrypoint: LibOS/shim/src/arch/x86_64/start.S
+     */
+    size_t arguments_num = 0;
+    for (size_t i = 0; arguments[i]; i++)
+        arguments_num++;
 
-    /* Let's count the number of cookies, first we will have argc & argv */
-    int ncookies = narguments + 3; /* 1 for argc, argc + 2 for argv */
+    size_t environs_num = 0;
+    for (size_t i = 0; environs[i]; i++)
+        environs_num++;
 
-    /* Then we count envp */
-    for (const char** e = environs; *e; e++)
-        ncookies++;
+    /* 1 for argc stack entry, 1 for argv[argc] == NULL, 1 for envp[n] == NULL */
+    size_t stack_entries_size = 3 * sizeof(void*);
+    stack_entries_size += (arguments_num + environs_num) * sizeof(void*);
+    stack_entries_size += 1 * sizeof(ElfW(auxv_t));
 
-    ncookies++; /* for NULL-end */
+    const void** stack_entries = __alloca(stack_entries_size);
 
-    int cookiesz = sizeof(unsigned long int) * ncookies
-                      + sizeof(ElfW(auxv_t)) * 1  /* only AT_NULL */
-                      + sizeof(void*) * 4 + 16;
+    size_t idx = 0;
+    stack_entries[idx++] = (void*)arguments_num;
+    for (size_t i = 0; i < arguments_num; i++)
+        stack_entries[idx++] = arguments[i];
+    stack_entries[idx++] = NULL;
+    for (size_t i = 0; i < environs_num; i++)
+        stack_entries[idx++] = environs[i];
+    stack_entries[idx++] = NULL;
 
-    unsigned long int* cookies = __alloca(cookiesz);
-    int cnt = 0;
-
-    /* Let's copy the cookies */
-    cookies[cnt++] = (unsigned long int)narguments;
-
-    for (int i = 0; arguments[i]; i++)
-        cookies[cnt++] = (unsigned long int)arguments[i];
-    cookies[cnt++] = 0;
-    for (int i = 0; environs[i]; i++)
-        cookies[cnt++] = (unsigned long int)environs[i];
-    cookies[cnt++] = 0;
-
-    /* NOTE: LibOS implements its own ELF aux vectors. Any info from host's
-     * aux vectors must be passed in PAL_CONTROL. Here we pass an empty list
-     * of aux vectors for sanity. */
-    ElfW(auxv_t)* auxv = (ElfW(auxv_t)*)&cookies[cnt];
+    /* NOTE: LibOS implements its own ELF aux vectors. Any info from host's aux vectors must be
+     * passed in PAL_CONTROL. Here we pass an empty list of aux vectors for sanity. */
+    ElfW(auxv_t)* auxv = (ElfW(auxv_t)*)&stack_entries[idx];
     auxv[0].a_type     = AT_NULL;
     auxv[0].a_un.a_val = 0;
 
-    for (struct link_map* l = g_loaded_maps; l; l = l->l_next)
-        if (l->l_type == ELF_OBJECT_PRELOAD && l->l_entry)
-            CALL_ENTRY(l, cookies);
-
-    for (struct link_map* l = g_loaded_maps; l; l = l->l_next)
-        if (l->l_type == ELF_OBJECT_EXEC && l->l_entry)
-            CALL_ENTRY(l, cookies);
-
-    _DkThreadExit(/*clear_child_tid=*/NULL);
-    /* UNREACHABLE */
+    assert(g_entrypoint_map.l_entry);
+#ifdef __x86_64__
+    __asm__ volatile("movq %1, %%rsp\n"
+                     "jmp *%0\n"
+                     :
+                     : "r"(g_entrypoint_map.l_entry), "r"(stack_entries)
+                     : "memory");
+#else
+#error "unsupported architecture"
+#endif
+    __builtin_unreachable();
 }

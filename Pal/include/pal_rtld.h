@@ -29,12 +29,7 @@ struct link_map {
     const char* string_table;
     ElfW(Sym)* symbol_table;
     uint32_t symbol_table_cnt;
-
-    /* Typical case: INTERNAL type is for PAL binary, PRELOAD for LibOS lib, EXEC for PAL test. */
-    enum elf_object_type l_type;
 };
-
-extern struct link_map* g_loaded_maps;
 
 /* for GDB debugging */
 void _DkDebugMapAdd(const char* name, void* addr);
@@ -42,8 +37,9 @@ void _DkDebugMapRemove(void* addr);
 int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 /* loading ELF binaries */
-int load_elf_object(const char* uri, enum elf_object_type type);
-int setup_pal_binary(struct link_map* pal_map);
+int setup_pal_binary(void);
+void set_pal_binary_name(const char* name);
+int load_entrypoint(const char* uri);
 int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
                                   const char** out_string_table, ElfW(Sym)** out_symbol_table,
                                   uint32_t* out_symbol_table_cnt);

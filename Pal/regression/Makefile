@@ -6,10 +6,6 @@ include ../../Scripts/Makefile.configs
 GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
 BINARY_DIR = $(GRAMINE_PKGLIBDIR)/tests/pal
 
-preloads = \
-	Preload1.so \
-	Preload2.so
-
 executables-x86_64 = \
     Exception \
     Exception2 \
@@ -24,7 +20,6 @@ executables = \
 	..Bootstrap \
 	avl_tree_test \
 	Bootstrap \
-	Bootstrap3 \
 	Bootstrap7 \
 	Directory \
 	Event \
@@ -38,7 +33,6 @@ executables = \
 	Pie \
 	Pipe \
 	Process \
-	Process3 \
 	Process4 \
 	Select \
 	SendHandle \
@@ -52,11 +46,9 @@ executables = \
 	$(executables-$(ARCH))
 
 repo_manifests = \
-	Bootstrap3.manifest \
 	Bootstrap6.manifest \
 	Bootstrap7.manifest \
 	File.manifest \
-	Process3.manifest \
 	Thread2.manifest \
 	Thread2_exitless.manifest
 

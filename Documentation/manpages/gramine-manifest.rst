@@ -87,7 +87,7 @@ Example
 
 .. code-block:: jinja
 
-   loader.preload = "file:{{ gramine.libos }}"
+   loader.entrypoint = "file:{{ gramine.libos }}"
    libos.entrypoint = "{{ entrypoint }}"
    loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 

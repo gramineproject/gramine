@@ -28,41 +28,6 @@ const PAL_CONTROL* DkGetPalControl(void) {
 
 struct pal_internal_state g_pal_state;
 
-static void load_libraries(void) {
-    int ret = 0;
-    char* preload_str = NULL;
-
-    /* FIXME: rewrite to use array-of-strings TOML syntax */
-    /* string with preload libs: can be multiple URIs separated by commas */
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.preload", &preload_str);
-    if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.preload'");
-
-    if (!preload_str)
-        return;
-
-    size_t len = strlen(preload_str);
-    if (len == 0)
-        return;
-
-    char* c = preload_str;
-    char* library_name = c;
-    for (;; c++) {
-        if (*c == ',' || !*c) {
-            if (c > library_name) {
-                *c = 0;
-                if ((ret = load_elf_object(library_name, ELF_OBJECT_PRELOAD)) < 0)
-                    INIT_FAIL(-ret, "Unable to load preload library");
-            }
-
-            if (c == preload_str + len)
-                break;
-
-            library_name = c + 1;
-        }
-    }
-}
-
 /* Finds `loader.env.{key}` in the manifest and returns its value in `out_val`/`out_passthrough`.
  * Recognizes several formats:
  *   - `loader.env.{key} = "val"`
@@ -537,18 +502,25 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     free(env_src_file);
 
-    load_libraries();
-
-    // TODO: This is just an ugly, temporary hack for PAL regression tests and should only be used
-    // there until we clean up the way LibOS is loaded.
-    char* entrypoint;
-    ret = toml_string_in(g_pal_state.manifest_root, "pal.entrypoint", &entrypoint);
+    char* entrypoint_name = NULL;
+    ret = toml_string_in(g_pal_state.manifest_root, "loader.entrypoint", &entrypoint_name);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'pal.entrypoint'");
-    if (entrypoint) {
-        if (!strstartswith(entrypoint, URI_PREFIX_FILE))
-            INIT_FAIL(PAL_ERROR_INVAL, "'pal.entrypoint' is missing 'file:' prefix");
+        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.entrypoint'");
+
+    if (!entrypoint_name) {
+        ret = toml_string_in(g_pal_state.manifest_root, "loader.preload", &entrypoint_name);
+        if (ret < 0)
+            INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.preload'");
+
+        if (entrypoint_name)
+            log_warning("'loader.preload' is deprecated; please switch to 'loader.entrypoint'");
     }
+
+    if (!entrypoint_name)
+        INIT_FAIL(PAL_ERROR_INVAL, "No 'loader.entrypoint' is specified in the manifest");
+
+    if (!strstartswith(entrypoint_name, URI_PREFIX_FILE))
+        INIT_FAIL(PAL_ERROR_INVAL, "'loader.entrypoint' is missing the 'file:' prefix");
 
     g_pal_control.host_type       = XSTRINGIFY(HOST_TYPE);
     g_pal_control.manifest_root   = g_pal_state.manifest_root;
@@ -580,12 +552,9 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         goto out_fail;
     }
 
-    if (entrypoint) {
-        // Temporary hack: Assume we're in PAL regression test suite and load the test binary
-        // directly, without LibOS.
-        if ((ret = load_elf_object(entrypoint, ELF_OBJECT_EXEC)) < 0)
-            INIT_FAIL(-ret, "Unable to load pal.entrypoint");
-    }
+    ret = load_entrypoint(entrypoint_name);
+    if (ret < 0)
+        INIT_FAIL(-ret, "Unable to load loader.entrypoint");
 
     /* Now we will start the execution */
     start_execution(arguments, final_environments);

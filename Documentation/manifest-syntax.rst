@@ -59,29 +59,35 @@ Gramine outputs log messages of the following types:
    Only ``error`` log level is suitable for production. Other levels may leak
    sensitive data.
 
-Preloaded libraries
-^^^^^^^^^^^^^^^^^^^
+Loader entrypoint
+^^^^^^^^^^^^^^^^^
 
 ::
 
-   loader.preload = "[URI][,URI]..."
+   loader.entrypoint = "[URI]"
 
-This syntax specifies the libraries to be preloaded before loading the
-executable. The URIs of the libraries must be separated by commas. The libraries
-must be ELF binaries. This usually contains the LibOS library ``libsysdb.so``.
+This specifies the LibOS component that Gramine will load and run before loading
+the first executable of the user application. Currently, there is only one LibOS
+implementation: ``libsysdb.so``.
 
-Entrypoint
-^^^^^^^^^^
+Note that the loader (the PAL binary) loads the LibOS binary specified in
+``loader.entrypoint`` and passes control to this binary. Next, the LibOS binary
+loads the actual executable (the user application) specified in
+``libos.entrypoint``. Also note that, in contrast to ``libos.entrypoint``, the
+``loader.entrypoint`` option specifies a PAL URI (with the ``file:`` prefix).
+
+LibOS Entrypoint
+^^^^^^^^^^^^^^^^
 
 ::
 
    libos.entrypoint = "[PATH]"
 
-This specifies the first executable which is to be started when spawning a
-Gramine instance from this manifest file. Needs to be a path inside Gramine
-pointing to a mounted file. Relative paths will be interpreted as starting from
-the current working directory (i.e. from ``/`` by default, or ``fs.start_dir``
-if specified).
+This specifies the first executable of the user application which is to be
+started when spawning a Gramine instance from this manifest file. Needs to be a
+path inside Gramine pointing to a mounted file. Relative paths will be
+interpreted as starting from the current working directory (i.e. from ``/`` by
+default, or ``fs.start_dir`` if specified).
 
 The recommended usage is to provide an absolute path, and mount the executable
 at that path. For example::
@@ -786,3 +792,16 @@ Allowed/Trusted/Protected Files (deprecated schema)
 These manifest options used the TOML-table schema that had a bogus
 ``[identifier]`` key. This excessive TOML-table schema was replaced with a more
 appropriate TOML-array one.
+
+Preloaded library (deprecated option)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   loader.preload = "[URI]"
+
+This syntax specifies the library to be preloaded before loading the executable.
+This usually points to the LibOS library ``libsysdb.so``.
+
+Note that previously this syntax allowed to specify the list of URIs (separated
+by commas). This ability was never used and therefore was removed completely.

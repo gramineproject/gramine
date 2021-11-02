@@ -8,15 +8,9 @@ else
     error('need to link tests against a PAL library, but no PAL version is enabled')
 endif
 
-preloads = {
-    'Preload1': {},
-    'Preload2': {},
-}
-
 tests = {
     '..Bootstrap': {},
     'Bootstrap': {},
-    'Bootstrap3': {},
     'Bootstrap7': {},
     'Directory': {},
     'Event': {},
@@ -32,7 +26,6 @@ tests = {
     },
     'Pipe': {},
     'Process': {},
-    'Process3': {},
     'Process4': {},
     'Select': {},
     'SendHandle': {},
@@ -104,41 +97,6 @@ common_lib = static_library('test_pal',
 # `_start` that prepares the stack layout (argc, argv, env) and jumps into `main`.
 user_start_src = files(join_paths('crt_init', 'arch', host_machine.cpu_family(), 'user_start.S'))
 
-preload_targets = []
-
-foreach name, params : preloads
-    preload_targets += shared_library(name,
-        '@0@.c'.format(name),
-        user_start_src,
-
-        include_directories: test_include_directories,
-
-        link_with: common_lib,
-
-        name_prefix: '',
-
-        c_args: [
-            '-DSHARED',
-            test_c_args,
-            params.get('c_args', []),
-        ],
-
-        link_args: [
-            '-nostdlib',
-
-            # PAL expects that PAL regression tests have old-style hash (DT_HASH) table instead of
-            # the default GNU hash (DT_GNU_HASH) table; PAL symbol resolution uses DT_HASH to figure
-            # out the number of dynamic symbols in the SYMTAB symbol table
-            '-Wl,--hash-style=sysv',
-        ],
-
-        dependencies: libpal,
-
-        install: true,
-        install_dir: install_dir,
-    )
-endforeach
-
 foreach name, params : tests
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
     # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
@@ -155,7 +113,6 @@ foreach name, params : tests
 
         link_with: [
             common_lib,
-            preload_targets,
         ],
 
         c_args: [

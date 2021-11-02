@@ -19,7 +19,7 @@
 #include "shim_tcb.h"
 #include "shim_types.h"
 
-void* shim_init(int argc, void* args);
+noreturn void* shim_init(int argc, const char** argv, const char** envp);
 
 /* important macros and static inline functions */
 

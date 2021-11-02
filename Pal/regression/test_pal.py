@@ -152,13 +152,6 @@ class TC_01_Bootstrap(RegressionTestCase):
         _, stderr = self.run_binary(['..Bootstrap'])
         self.assertIn('User Program Started', stderr)
 
-    def test_110_preload_libraries(self):
-        _, stderr = self.run_binary(['Bootstrap3'])
-        self.assertIn('Binary 1 Preloaded', stderr)
-        self.assertIn('Binary 2 Preloaded', stderr)
-        self.assertIn('Preloaded Function 1 Called', stderr)
-        self.assertIn('Preloaded Function 2 Called', stderr)
-
     @unittest.skipUnless(HAS_SGX, 'this test requires SGX')
     def test_120_8gb_enclave(self):
         _, stderr = self.run_binary(['Bootstrap6'], timeout=360)
@@ -542,14 +535,6 @@ class TC_21_ProcessCreation(RegressionTestCase):
         self.assertEqual(counter['Process Read 1: Hello World 1'], 3)
         self.assertEqual(counter['Process Write 2 OK'], 3)
         self.assertEqual(counter['Process Read 2: Hello World 2'], 3)
-
-    def test_300_process3(self):
-        # Process Creation without Executable
-        _, stderr = self.run_binary(['Process3'])
-        counter = collections.Counter(stderr.split('\n'))
-        self.assertEqual(counter['Binary 1 Preloaded'], 2)
-        self.assertEqual(counter['Binary 2 Preloaded'], 2)
-        self.assertEqual(counter['Creating child OK'], 1)
 
 class TC_23_SendHandle(RegressionTestCase):
     def test_000_send_handle(self):

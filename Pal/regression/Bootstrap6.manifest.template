@@ -2,7 +2,6 @@
 
 pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
-loader.preload = "file:{{ binary_dir }}/Preload1.so,file:{{ binary_dir }}/Preload2.so"
 loader.argv0_override = "{{ entrypoint }}"
 
 fs.mount.root.uri = "file:"

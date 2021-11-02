@@ -32,12 +32,8 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-#define RTLD_BOOTSTRAP
-#define _ENTRY enclave_entry
-
 struct pal_linux_state g_linux_state;
 struct pal_sec g_pal_sec;
-static struct link_map g_pal_map;
 
 PAL_SESSION_KEY g_master_key = {0};
 
@@ -659,8 +655,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
 
-    /* Relocate PAL and populate g_pal_map */
-    ret = setup_pal_binary(&g_pal_map);
+    /* Relocate PAL */
+    ret = setup_pal_binary();
     if (ret < 0) {
         log_error("Relocation of the PAL binary failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
@@ -705,10 +701,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     libpal_path[libpal_uri_len] = '\0';
 
     /* Now that we have `libpal_path`, set name for PAL map */
-    g_pal_map.l_name = libpal_path;
-
-    assert(!g_loaded_maps);
-    g_loaded_maps = &g_pal_map;
+    set_pal_binary_name(libpal_path);
 
     /* We can't verify the following arguments from the urts. So we copy them directly but need to
      * be careful when we use them. */

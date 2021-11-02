@@ -372,7 +372,7 @@ static int read_environs(const char** envp) {
         }                                                                    \
     } while (0)
 
-noreturn void* shim_init(int argc, void* args) {
+noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     g_pal_control = DkGetPalControl();
     assert(g_pal_control);
 
@@ -398,9 +398,6 @@ noreturn void* shim_init(int argc, void* args) {
         log_error("Error during shim_init(): failed to allocate __master_lock");
         DkProcessExit(ENOMEM);
     }
-
-    const char** argv = args;
-    const char** envp = args + sizeof(char*) * ((argc) + 1);
 
     RUN_INIT(init_vma);
     RUN_INIT(init_slab);
