@@ -13,6 +13,13 @@ stage('test-direct') {
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
+            cd CI-Examples/helloworld
+            make ${MAKEOPTS} all
+            make check
+        '''
+    }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
             cd CI-Examples/python
             make ${MAKEOPTS} all
             make check
