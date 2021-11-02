@@ -72,7 +72,8 @@ RUN python3 -m pip install -U \
     'Sphinx==1.8' \
     'sphinx_rtd_theme<1' \
     'toml>=0.10' \
-    'meson>=0.55,<0.56'
+    'meson>=0.55,<0.56' \
+    'docutils>=0.17,<0.18'
 
 # Add the user UID:1001, GID:1001, home at /leeroy
 RUN groupadd -r leeroy -g 1001 && useradd -u 1001 -r -g leeroy -m -d /leeroy -c "Leeroy Jenkins" leeroy && \
