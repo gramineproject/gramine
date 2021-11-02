@@ -49,9 +49,9 @@ After rebuilding Gramine with debug symbols, you need to re-sign the manifest of
 the application. For instance, if you want to debug the ``helloworld`` program,
 run the following commands::
 
-    cd LibOS/shim/test/regression
-    make SGX=1
-    make SGX=1 sgx-tokens
+    cd CI-Examples/helloworld
+    make SGX=1 clean
+    make SGX=1 DEBUG=1
 
 To run Gramine with GDB, use the Gramine loader (``gramine-sgx``) and specify
 ``GDB=1``::

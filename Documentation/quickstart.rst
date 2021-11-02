@@ -30,7 +30,7 @@ Quick start without SGX support
 
 #. Build and run :program:`helloworld`::
 
-      cd LibOS/shim/test/regression
+      cd CI-Examples/helloworld
       make
       gramine-direct helloworld
 
@@ -92,9 +92,8 @@ descriptions in :doc:`building`.
 
 #. Build and run :program:`helloworld`::
 
-      cd LibOS/shim/test/regression
+      cd CI-Examples/helloworld
       make SGX=1
-      make SGX=1 sgx-tokens
       gramine-sgx helloworld
 
 Troubleshooting

@@ -1,6 +1,13 @@
 stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
+            cd CI-Examples/helloworld
+            make ${MAKEOPTS}
+            make ${MAKEOPTS} check
+        '''
+    }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
             cd CI-Examples/python
             make ${MAKEOPTS}
             make ${MAKEOPTS} check
