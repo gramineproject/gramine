@@ -797,10 +797,10 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
      * FIXME: this is a quick hack, we need proper memory allocation in PAL. */
     if (manifest_size > 10 * 1024 * 1024) {
         log_always("Detected a huge manifest, preallocating 128MB of internal memory.");
-        g_pal_internal_mem_size += 128 * 1024 * 1024; /* 10MB manifest -> 64 + 128 MB PAL mem */
+        g_pal_internal_mem_size += 192 * 1024 * 1024; /* 10MB manifest -> 1 + 192 MB PAL mem */
     } else if (manifest_size > 5 * 1024 * 1024) {
         log_always("Detected a huge manifest, preallocating 64MB of internal memory.");
-        g_pal_internal_mem_size += 64 * 1024 * 1024; /* 5MB manifest -> 64 + 64 MB PAL mem */
+        g_pal_internal_mem_size += 128 * 1024 * 1024; /* 5MB manifest -> 1 + 128 MB PAL mem */
     }
 
     /* parse manifest */
@@ -847,7 +847,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     size_t pal_internal_mem_size;
     ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
-                             /*defaultval=*/0, &pal_internal_mem_size);
+                             PAL_DEFAULT_INTERNAL_MEM_SIZE, &pal_internal_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
         ocall_exit(1, /*is_exitgroup=*/true);

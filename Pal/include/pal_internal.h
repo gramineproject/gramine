@@ -278,4 +278,10 @@ const char* pal_event_name(enum PAL_EVENT event);
     } while (0)
 #include "uthash.h"
 
+/* Size of initial memory pool (declared as a static array, see `slab.c`) */
+#define PAL_INITIAL_POOL_SIZE (512 * 1024)
+
+/* Default size of PAL-internal memory pool (customized using `loader.pal_internal_mem_size`) */
+#define PAL_DEFAULT_INTERNAL_MEM_SIZE (64 * 1024 * 1024)
+
 #endif

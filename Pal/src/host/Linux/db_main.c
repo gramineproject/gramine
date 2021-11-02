@@ -348,7 +348,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, errbuf);
 
     ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
-                             /*defaultval=*/g_page_size, &g_pal_internal_mem_size);
+                             PAL_DEFAULT_INTERNAL_MEM_SIZE, &g_pal_internal_mem_size);
     if (ret < 0) {
         INIT_FAIL(PAL_ERROR_INVAL, "Cannot parse 'loader.pal_internal_mem_size'");
     }

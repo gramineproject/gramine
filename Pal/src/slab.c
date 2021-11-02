@@ -18,14 +18,11 @@ static spinlock_t g_slab_mgr_lock = INIT_SPINLOCK_UNLOCKED;
 #define SYSTEM_UNLOCK() spinlock_unlock(&g_slab_mgr_lock)
 #define SYSTEM_LOCKED() spinlock_is_locked(&g_slab_mgr_lock)
 
-#define POOL_SIZE 64 * 1024 * 1024
-static char g_mem_pool[POOL_SIZE];
+static char g_mem_pool[PAL_INITIAL_POOL_SIZE];
 static bool g_alloc_from_low = true; /* allocate from low addresses if true, from high if false */
-static void* g_mem_pool_end = &g_mem_pool[POOL_SIZE];
+static void* g_mem_pool_end = &g_mem_pool[PAL_INITIAL_POOL_SIZE];
 static void* g_low  = g_mem_pool;
-static void* g_high = &g_mem_pool[POOL_SIZE];
-
-#define STARTUP_SIZE 2
+static void* g_high = &g_mem_pool[PAL_INITIAL_POOL_SIZE];
 
 static inline void* __malloc(size_t size);
 static inline void __free(void* addr, size_t size);
@@ -59,10 +56,10 @@ static inline void* __malloc(size_t size) {
     if (addr)
         return addr;
 
-    /* At this point, we depleted the pre-allocated memory pool of POOL_SIZE. Let's fall back to
-     * PAL-internal allocations. PAL allocator must be careful though because LibOS doesn't know
-     * about PAL-internal memory, limited via manifest option `loader.pal_internal_mem_size` and
-     * thus this malloc may return -ENOMEM. */
+    /* At this point, we depleted the pre-allocated memory pool of PAL_INITIAL_POOL_SIZE. Let's fall
+     * back to PAL-internal allocations. PAL allocator must be careful though because LibOS doesn't
+     * know about PAL-internal memory, limited via manifest option `loader.pal_internal_mem_size`
+     * and thus this malloc may return -ENOMEM. */
     int ret = _DkVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(size), PAL_ALLOC_INTERNAL,
               PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {

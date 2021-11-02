@@ -244,18 +244,26 @@ Gramine internal metadata size
 ::
 
     loader.pal_internal_mem_size = "[SIZE]"
-    (default: "0")
+    (default: "64M")
 
 This syntax specifies how much additional memory Gramine reserves for its
 internal use (e.g., metadata for trusted/protected files, internal handles,
-etc.). By default, Gramine pre-allocates 64MB of internal memory for this
-metadata, but for huge workloads this limit may be not enough. In this case,
-Gramine loudly fails with "out of PAL memory" error. To run huge workloads,
-increase this limit by setting this option to e.g. ``64M`` (this would result in
-a total of 128MB used by Gramine for internal metadata). Note that this limit
-is included in ``sgx.enclave_size``, so if your enclave size is e.g. 512MB and
-you specify ``loader.pal_internal_mem_size = "64M"``, then your application is
-left with 384MB of usable memory.
+etc.). By default, Gramine reserves 64MB of internal memory for this metadata,
+but for huge workloads this limit may be not enough. In this case, Gramine
+loudly fails with "out of PAL memory" error. To run huge workloads, increase
+this limit by setting this option to e.g. ``128M``. Note that this limit is
+included in ``sgx.enclave_size``, so if your enclave size is e.g. 512MB and you
+specify ``loader.pal_internal_mem_size = "128M"``, then your application is left
+with 384MB of usable memory.
+
+.. note::
+   Gramine 1.0 also used an initial 64MB pool on top of the one specified here
+   (and used ``loader.pal_internal_mem_size = "0"`` by default). This initial
+   pool is now much smaller (less than 1MB).
+
+   If your manifest previously specified ``loader.pal_internal_mem_size``, you
+   probably need to increase it by 64MB to account for this change (for example,
+   change ``64M`` to ``128M``).
 
 Stack size
 ^^^^^^^^^^
