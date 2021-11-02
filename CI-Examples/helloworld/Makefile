@@ -1,7 +1,5 @@
 SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
-ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
-
 CFLAGS = -Wall -Wextra
 
 ifeq ($(DEBUG),1)
@@ -25,7 +23,6 @@ helloworld.o: helloworld.c
 helloworld.manifest: helloworld.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
-		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< $@
 
 helloworld.manifest.sgx: helloworld.manifest helloworld

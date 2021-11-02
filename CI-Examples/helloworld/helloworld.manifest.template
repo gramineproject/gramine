@@ -5,21 +5,15 @@ libos.entrypoint = "helloworld"
 loader.log_level = "{{ log_level }}"
 loader.argv0_override = "helloworld"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib"
 
-fs.mount.lib1.type = "chroot"
-fs.mount.lib1.path = "/lib"
-fs.mount.lib1.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib2.type = "chroot"
-fs.mount.lib2.path = "{{ arch_libdir }}"
-fs.mount.lib2.uri = "file:{{ arch_libdir }}"
+fs.mount.lib.type = "chroot"
+fs.mount.lib.path = "/lib"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
 
 sgx.debug = true
 
 sgx.trusted_files = [
   "file:helloworld",
   "file:{{ gramine.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
 ]
