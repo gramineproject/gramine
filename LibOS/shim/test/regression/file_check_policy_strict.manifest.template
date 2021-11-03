@@ -1,13 +1,13 @@
 {% set entrypoint = "file_check_policy" -%}
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
+
 loader.argv0_override = "{{ entrypoint }}"
-
-loader.log_level = "warning"
-
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.insecure__use_cmdline_argv = true
+
+loader.log_level = "warning"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
@@ -23,6 +23,7 @@ sgx.debug = true
 sgx.file_check_policy = "strict"
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
 ]
 

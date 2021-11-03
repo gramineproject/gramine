@@ -1,7 +1,8 @@
 # Python3 manifest example
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
+
 loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "{{ python.stdlib }}/lib:/lib:{{ arch_libdir }}:/usr/lib:/usr/{{ arch_libdir }}"
@@ -45,6 +46,7 @@ sys.stack.size = "2M"
 sgx.thread_num = 32
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",

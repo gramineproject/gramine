@@ -1,7 +1,8 @@
 # lighttpd manifest example
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ install_dir }}/sbin/lighttpd"
+
 loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:{{ install_dir }}/lib"
@@ -36,6 +37,7 @@ sgx.enclave_size = "256M"
 sgx.thread_num = 3
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ install_dir }}/",
   "file:{{ arch_libdir }}/",

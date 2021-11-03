@@ -1,7 +1,8 @@
 # Busybox manifest file example
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "busybox"
+
 loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
@@ -28,6 +29,7 @@ fs.mount.etc.uri = "file:/etc"
 sgx.debug = true
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:busybox",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",

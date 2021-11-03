@@ -1,4 +1,4 @@
-pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 loader.log_level = "debug"
 

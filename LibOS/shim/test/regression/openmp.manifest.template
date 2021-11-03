@@ -1,5 +1,6 @@
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
+
 loader.argv0_override = "{{ entrypoint }}"
 
 # Gramine optionally provides patched OpenMP runtime library that runs faster inside SGX enclaves
@@ -33,6 +34,7 @@ sgx.nonpie_binary = true
 sgx.debug = true
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

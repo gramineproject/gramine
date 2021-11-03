@@ -1,9 +1,9 @@
 {% set entrypoint = "bootstrap" -%}
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
-loader.argv0_override = "{{ entrypoint }}"
 
+loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.argv_src_file = "file:argv_test_input"
 
@@ -23,6 +23,7 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

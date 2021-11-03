@@ -1,7 +1,7 @@
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
-loader.argv0_override = "{{ entrypoint }}"
 
+loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 # application allocates 2GB and 4GB memory regions which may occasionally fail
@@ -25,6 +25,7 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

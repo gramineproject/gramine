@@ -1,7 +1,8 @@
-loader.preload = "file:{{ gramine.libos }}"
-loader.env.LD_LIBRARY_PATH = "/lib"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "multi_pthread"
+
 loader.argv0_override = "multi_pthread"
+loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
@@ -20,6 +21,7 @@ sgx.debug = true
 sgx.enable_stats = true
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ binary_dir }}/multi_pthread",
 ]

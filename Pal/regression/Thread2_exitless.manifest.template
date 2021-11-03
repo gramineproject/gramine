@@ -1,6 +1,6 @@
 {% set entrypoint = "Thread2" -%}
 
-pal.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 
 sgx.thread_num = 2

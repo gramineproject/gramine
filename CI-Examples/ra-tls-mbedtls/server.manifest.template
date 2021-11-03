@@ -1,7 +1,8 @@
 # RA-TLS manifest file example
 
-loader.preload = "file:{{ gramine.libos }}"
+loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "server"
+
 loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
@@ -32,6 +33,7 @@ sgx.ra_client_spid = "{{ ra_client_spid }}"
 sgx.ra_client_linkable = {{ ra_client_linkable }}
 
 sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
   "file:server",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
