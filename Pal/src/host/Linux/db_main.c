@@ -241,7 +241,24 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     g_linux_state.host_environ = envp;
 
-    init_slab_mgr();
+    /* Prepare an initial memory pool for the slab allocator. This is necessary because we cannot
+     * allocate the PAL-internal range yet: we need to parse the manifest to know its size. */
+    size_t init_pool_size = PAL_INITIAL_MEM_SIZE;
+    void* init_pool_addr = (void*)DO_SYSCALL(mmap, /*addr=*/NULL, init_pool_size,
+                                             PROT_READ | PROT_WRITE,
+                                             MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1, /*offset=*/0);
+    if (IS_PTR_ERR(init_pool_addr)) {
+        INIT_FAIL(PAL_ERROR_NOMEM, "Cannot allocate initial memory pool");
+    }
+
+    init_slab_mgr(init_pool_addr, init_pool_size);
+
+    ret = add_preloaded_range((uintptr_t)init_pool_addr,
+                              (uintptr_t)init_pool_addr + init_pool_size,
+                              "pal_init_pool");
+    if (ret < 0) {
+        INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
+    }
 
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();

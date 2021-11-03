@@ -41,10 +41,8 @@ static struct link_map g_pal_map;
 
 PAL_SESSION_KEY g_master_key = {0};
 
-/* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
- * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is
- * limited by the variable below */
-size_t g_pal_internal_mem_size = 0;
+/* Limit of PAL memory available for _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL) */
+size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
@@ -646,6 +644,12 @@ out:
     return ret;
 }
 
+__attribute_no_sanitize_address
+static void do_preheat_enclave(void) {
+    for (uint8_t* i = g_pal_sec.heap_min; i < (uint8_t*)g_pal_sec.heap_max; i += g_page_size)
+        READ_ONCE(*(size_t*)i);
+}
+
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with a default canary and then updates it to a random one, so we disable stack protector here */
 __attribute_no_stack_protector
@@ -721,10 +725,11 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_sec.uid = sec_info.uid;
     g_pal_sec.gid = sec_info.gid;
 
-    /* set up page allocator and slab manager */
-    init_slab_mgr();
-    init_untrusted_slab_mgr();
+    /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
+     * because the slab manager can use normal allocations (`_DkVirtualMemoryAlloc`) right away. */
     init_enclave_pages();
+    init_slab_mgr(/*mem_pool=*/NULL, /*mem_pool_size=*/0);
+    init_untrusted_slab_mgr();
 
     /* initialize enclave properties */
     ret = init_enclave();
@@ -840,25 +845,26 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    if (preheat_enclave) {
-        for (uint8_t* i = g_pal_sec.heap_min; i < (uint8_t*)g_pal_sec.heap_max; i += g_page_size)
-            READ_ONCE(*(size_t*)i);
-    }
+    if (preheat_enclave)
+        do_preheat_enclave();
 
-    size_t pal_internal_mem_size;
+    /* For backward compatibility, `loader.pal_internal_mem_size` does not include
+     * PAL_INITIAL_MEM_SIZE */
+    size_t extra_mem_size;
     ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
-                             /*defaultval=*/0, &pal_internal_mem_size);
+                             /*defaultval=*/0, &extra_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    if (pal_internal_mem_size < g_pal_internal_mem_size) {
+    if (extra_mem_size + PAL_INITIAL_MEM_SIZE < g_pal_internal_mem_size) {
         log_error("Too small `loader.pal_internal_mem_size`, need at least %luMB because the "
-                  "manifest is large", g_pal_internal_mem_size / 1024 / 1024);
+                  "manifest is large",
+                  (g_pal_internal_mem_size - PAL_INITIAL_MEM_SIZE) / 1024 / 1024);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    g_pal_internal_mem_size = pal_internal_mem_size;
+    g_pal_internal_mem_size = extra_mem_size + PAL_INITIAL_MEM_SIZE;
 
     if ((ret = init_file_check_policy()) < 0) {
         log_error("Failed to load the file check policy: %d", ret);

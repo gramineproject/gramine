@@ -244,7 +244,7 @@ int _DkSetProtectedFilesKey(PAL_PTR pf_key_hex);
         _DkProcessExit(exitcode);                                      \
     } while (0)
 
-void init_slab_mgr(void);
+void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
 void* malloc(size_t size);
 void* malloc_copy(const void* mem, size_t size);
 void* calloc(size_t nmem, size_t size);
@@ -277,5 +277,9 @@ const char* pal_event_name(enum PAL_EVENT event);
         _DkProcessExit(PAL_ERROR_NOMEM);       \
     } while (0)
 #include "uthash.h"
+
+/* Size of PAL memory available before parsing the manifest; `loader.pal_internal_mem_size` does not
+ * include this memory */
+#define PAL_INITIAL_MEM_SIZE (64 * 1024 * 1024)
 
 #endif
