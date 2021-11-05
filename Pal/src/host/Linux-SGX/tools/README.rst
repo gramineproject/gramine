@@ -3,12 +3,15 @@ SGX tools
 
 .. TODO move this to Documentation/manpages
 
+All the below tools can be simply run from any directory as they are installed
+globally on the system.
+
 SGX availability checker
 ------------------------
 
 Example output::
 
-    > ./is_sgx_available/is_sgx_available
+    > is-sgx-available
     SGX supported by CPU: true
     SGX1 (ECREATE, EENTER, ...): true
     SGX2 (EAUG, EACCEPT, EMODPR, ...): false
@@ -22,9 +25,10 @@ Example output::
     AESMD installed: true
     SGX PSW/libsgx installed: true
 
-The program terminates successfully if all SGX1 components are detected and running, otherwise
-the program exits with an error code (see the source code for possible values).
-To suppress printing output use the --quiet argument.
+The program terminates successfully if all SGX1 components are detected and
+running, otherwise the program exits with an error code
+(see the source code for possible values). To suppress printing output use the
+--quiet argument.
 
 
 SGX quote dump
@@ -32,12 +36,12 @@ SGX quote dump
 
 Displays internal structure of an SGX quote::
 
-    Usage: quote_dump [options] <quote path>
+    Usage: gramine-sgx-quote-dump [options] <quote path>
     Available options:
       --help, -h  Display this help
       --msb, -m   Display hex strings in big-endian order
 
-    $ quote_dump -m gr.quote
+    $ gramine-sgx-quote-dump -m gr.quote
     version           : 0002
     sign_type         : 0001
     epid_group_id     : 00000aef
@@ -70,10 +74,10 @@ Displays internal structure of an SGX quote::
 Intel Attestation Service submitter
 -----------------------------------
 
-Submits requests to Intel Attestation Service (IAS) for retrieving EPID signature revocation lists
-and for verifying attestation evidence (enclave quote)::
+Submits requests to Intel Attestation Service (IAS) for retrieving EPID
+signature revocation lists and for verifying attestation evidence (enclave quote)::
 
-    Usage: ias_request <request> [options]
+    Usage: gramine-sgx-ias-request <request> [options]
     Available requests:
       sigrl                     Retrieve signature revocation list for a given EPID group
       report                    Verify attestation evidence (quote)
@@ -99,12 +103,12 @@ and for verifying attestation evidence (enclave quote)::
 
 Example SigRL retrieval::
 
-    $ ias_request sigrl -k $IAS_API_KEY -g ef0a0000 -i sigrl
+    $ gramine-sgx-ias-request sigrl -k $IAS_API_KEY -g ef0a0000 -i sigrl
     No SigRL for given EPID group ID ef0a0000
 
 Example quote verification::
 
-    $ ias_request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -a ias.adv -v
+    $ gramine-sgx-ias-request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -a ias.adv -v
     Verbose output enabled
     IAS request:
     {"isvEnclaveQuote":"AgABAO8..."}
@@ -122,10 +126,11 @@ Example quote verification::
 Intel Attestation Report verifier
 ---------------------------------
 
-Verifies attestation report retrieved from IAS (using ``ias_request`` for example). Also verifies
-that the quote from the report contains expected values::
+Verifies attestation report retrieved from IAS
+(using ``gramine-sgx-ias-request`` for example). Also verifies that the quote
+from the report contains expected values::
 
-    Usage: verify_ias_report [options]
+    Usage: gramine-sgx-ias-verify-report [options]
     Available options:
       --help, -h                Display this help
       --verbose, -v             Enable verbose output
@@ -144,7 +149,7 @@ that the quote from the report contains expected values::
 
 Example report verification with all options enabled::
 
-    $ verify_ias_report -v -m -r rp -s sp -i ias.pem -o -d -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
+    $ gramine-sgx-ias-verify-report -v -m -r rp -s sp -i ias.pem -o -d -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
     Verbose output enabled
     Endianness set to MSB
     Using IAS public key from file 'ias.pem'
