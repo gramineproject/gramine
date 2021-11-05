@@ -81,14 +81,17 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
     sudo apt-get install -y libcurl4-openssl-dev libprotobuf-c-dev \
         protobuf-c-compiler python3-pip python3-protobuf
 
-2. Upgrade to the Linux kernel patched with FSGSBASE
-""""""""""""""""""""""""""""""""""""""""""""""""""""
+2. Install Linux kernel with patched FSGSBASE
+"""""""""""""""""""""""""""""""""""""""""""""
 
 FSGSBASE is a feature in recent processors which allows direct access to the FS
 and GS segment base addresses. For more information about FSGSBASE and its
 benefits, see `this discussion <https://lwn.net/Articles/821719>`__. Note that
 if your kernel version is 5.9 or higher, then the FSGSBASE feature is already
-supported and you can skip this step.
+supported and you can skip this step. Kernel version can be checked using the
+following command::
+
+       uname -r
 
 If your current kernel version is lower than 5.9, then you have two options:
 
@@ -107,7 +110,7 @@ version is 5.11 or higher, then the Intel SGX driver is already installed and
 you can skip this step.
 
 If you have an older CPU without :term:`FLC` support, you need to download and
-install the the following Intel SGX driver:
+install the the following out-of-tree (OOT) Intel SGX driver:
 
 - https://github.com/intel/linux-sgx-driver
 
@@ -187,6 +190,14 @@ Additional build options
 - To build test binaries, run :command:`meson -Dtests=enabled`. This is
   necessary if you will be running regression tests. See
   :doc:`devel/contributing` for details.
+
+- In order to run SGX tools with DCAP version of RA-TLS library
+  (``ra_tls_verify_dcap.so``), build with :command:`meson -Ddcap=enabled` option.
+  See `RA-TLS example's README <https://github.com/gramineproject/gramine/blob/master/CI-Examples/ra-tls-mbedtls/README.md>`__.
+
+  .. note::
+     EPID version of RA-TLS library (``ra_tls_verify_epid.so``) is built by
+     default.
 
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,
@@ -304,9 +315,15 @@ instructions ensure that the resulting kernel has FSGSBASE support.
        uname -r
 
 #. Also verify that the patched kernel supports FSGSBASE (the below command
-   must return that bit 2 is set)::
+   must return that bit 1 is set)::
 
-       LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       # Linux kernel doesn't support FSGSBASE: patch or use higher version!
+       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       AT_HWCAP2:       0x0
+
+       # Linux kernel supports FSGSBASE (example where only bit 1 is set)
+       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       AT_HWCAP2:       0x2
 
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
