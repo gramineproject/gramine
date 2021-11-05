@@ -8,12 +8,13 @@ log() {
 
 CPU_FAMILY="$1"
 CURRENT_SOURCE_DIR="$2"
-CURRENT_BUILD_DIR="$3"
-PRIVATE_DIR="$4"
-PREFIX="$5"
-LIBDIR="$6"
-EXTRA_CFLAGS="$7"
-shift 7
+VENDOR_SOURCE_DIR="$3"
+CURRENT_BUILD_DIR="$4"
+PRIVATE_DIR="$5"
+PREFIX="$6"
+LIBDIR="$7"
+EXTRA_CFLAGS="$8"
+shift 8
 
 CC=gcc
 CXX=g++
@@ -33,7 +34,7 @@ log "see $BUILD_LOG for full build log"
 log "preparing sources..."
 
 rm -rf "$PRIVATE_DIR"
-cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
+cp -ar "$VENDOR_SOURCE_DIR" "$PRIVATE_DIR"
 
 for patch in "$CURRENT_SOURCE_DIR"/*.patch
 do

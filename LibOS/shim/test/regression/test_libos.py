@@ -19,9 +19,9 @@ class TC_00_Unittests(RegressionTestCase):
 
         self.assertIn('Test successful!', stdout)
 
-    def test_010_shim_run_test(self):
+    def test_010_gramine_run_test(self):
         stdout, _ = self.run_binary(['run_test', 'pass'])
-        self.assertIn('shim_run_test("pass") = 0', stdout)
+        self.assertIn('gramine_run_test("pass") = 0', stdout)
 
     @unittest.skipUnless(os.environ.get('UBSAN') == '1', 'test only enabled with UBSAN=1')
     def test_020_ubsan(self):

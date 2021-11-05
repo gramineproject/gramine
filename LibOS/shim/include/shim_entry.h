@@ -6,7 +6,7 @@
 /*
  * This file describes Gramine's entrypoints from userspace (mostly from patched glibc).
  *
- * The userspace wrappers for these functions are defined in `shim_entry_api.h`.
+ * The userspace wrappers for these functions are defined in `gramine_entry_api.h`.
  */
 
 #ifndef SHIM_ENTRY_H_
@@ -23,7 +23,8 @@ void syscalldb(void);
 /*!
  * \brief LibOS custom call entrypoint
  *
- * Invoked like a normal function. The call numbers are defined in `shim_entry_api.h`.
+ * Invoked through the syscall interface with GRAMINE_CALL_SYSCALL_NR. The call numbers are defined
+ * in `gramine_entry_api.h`.
  */
 long handle_call(int number, unsigned long arg1, unsigned long arg2);
 

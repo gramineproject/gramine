@@ -4,9 +4,9 @@
 #include "api.h"
 #include "assert.h"
 #include "atomic.h"
+#include "gramine_entry_api.h"
 #include "pal.h"
 #include "shim_entry.h"
-#include "shim_entry_api.h"
 #include "shim_tcb-arch.h"
 
 struct shim_context {
@@ -19,9 +19,8 @@ typedef struct shim_tcb shim_tcb_t;
 struct shim_tcb {
     shim_tcb_t*         self;
 
-    /* Function pointers for patched code calling into Gramine. */
+    /* Function pointer for patched code calling into Gramine. */
     void*               syscalldb;
-    void*               handle_call;
 
     struct shim_thread* tp;
     void*               libos_stack_bottom;
@@ -34,18 +33,12 @@ struct shim_tcb {
 };
 
 static_assert(
-    offsetof(PAL_TCB, libos_tcb) + offsetof(shim_tcb_t, syscalldb) == SHIM_SYSCALLDB_OFFSET,
-    "SHIM_SYSCALLDB_OFFSET must match");
-
-static_assert(
-    offsetof(PAL_TCB, libos_tcb) + offsetof(shim_tcb_t, handle_call) ==
-        SHIM_CALL_OFFSET,
-    "SHIM_CALL_OFFSET must match");
+    offsetof(PAL_TCB, libos_tcb) + offsetof(shim_tcb_t, syscalldb) == GRAMINE_SYSCALL_OFFSET,
+    "GRAMINE_SYSCALL_OFFSET must match");
 
 static inline void __shim_tcb_init(shim_tcb_t* shim_tcb) {
     shim_tcb->self = shim_tcb;
     shim_tcb->syscalldb = &syscalldb;
-    shim_tcb->handle_call = &handle_call;
     shim_tcb->context.syscall_nr = -1;
     shim_tcb->vma_cache = NULL;
 }

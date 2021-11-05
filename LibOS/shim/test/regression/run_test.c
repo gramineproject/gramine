@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#include "shim_entry_api.h"
+#include "gramine_entry_api.h"
 
 int main(int argc, char** argv) {
     if (argc != 2) {
@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     }
 
     const char* test_name = argv[1];
-    int ret = shim_run_test(test_name);
-    printf("shim_run_test(\"%s\") = %d\n", test_name, ret);
+    int ret = gramine_run_test(test_name);
+    printf("gramine_run_test(\"%s\") = %d\n", test_name, ret);
     return ret == 0 ? 0 : 1;
 }

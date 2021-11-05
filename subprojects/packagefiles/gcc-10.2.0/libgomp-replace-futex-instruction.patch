@@ -1,12 +1,12 @@
 diff --git a/libgomp/config/linux/x86/futex.h b/libgomp/config/linux/x86/futex.h
-index ead74d1496736a49694ef6b9b2b4da50f9852664..6f7406684f700867ac78a1588a7ede190666ca86 100644
+index ead74d1496736a49694ef6b9b2b4da50f9852664..1d0c406a62461f12e16d0a4004f4814373d9d9a3 100644
 --- a/libgomp/config/linux/x86/futex.h
 +++ b/libgomp/config/linux/x86/futex.h
 @@ -30,13 +30,15 @@
  #  define SYS_futex	202
  # endif
  
-+#include "shim_entry_api.h"
++#include "gramine_entry_api.h"
 +
  static inline void
  futex_wait (int *addr, int val)
@@ -15,7 +15,7 @@ index ead74d1496736a49694ef6b9b2b4da50f9852664..6f7406684f700867ac78a1588a7ede19
  
    register long r10 __asm__("%r10") = 0;
 -  __asm volatile ("syscall"
-+  __asm volatile ("SYSCALLDB"
++  __asm volatile ("GRAMINE_SYSCALL"
  		  : "=a" (res)
  		  : "0" (SYS_futex), "D" (addr), "S" (gomp_futex_wait),
  		    "d" (val), "r" (r10)
@@ -24,7 +24,7 @@ index ead74d1496736a49694ef6b9b2b4da50f9852664..6f7406684f700867ac78a1588a7ede19
        gomp_futex_wait &= ~FUTEX_PRIVATE_FLAG;
        gomp_futex_wake &= ~FUTEX_PRIVATE_FLAG;
 -      __asm volatile ("syscall"
-+      __asm volatile ("SYSCALLDB"
++      __asm volatile ("GRAMINE_SYSCALL"
  		      : "=a" (res)
  		      : "0" (SYS_futex), "D" (addr), "S" (gomp_futex_wait),
  			"d" (val), "r" (r10)
@@ -33,7 +33,7 @@ index ead74d1496736a49694ef6b9b2b4da50f9852664..6f7406684f700867ac78a1588a7ede19
    long res;
  
 -  __asm volatile ("syscall"
-+  __asm volatile ("SYSCALLDB"
++  __asm volatile ("GRAMINE_SYSCALL"
  		  : "=a" (res)
  		  : "0" (SYS_futex), "D" (addr), "S" (gomp_futex_wake),
  		    "d" (count)
@@ -42,7 +42,7 @@ index ead74d1496736a49694ef6b9b2b4da50f9852664..6f7406684f700867ac78a1588a7ede19
        gomp_futex_wait &= ~FUTEX_PRIVATE_FLAG;
        gomp_futex_wake &= ~FUTEX_PRIVATE_FLAG;
 -      __asm volatile ("syscall"
-+      __asm volatile ("SYSCALLDB"
++      __asm volatile ("GRAMINE_SYSCALL"
  		      : "=a" (res)
  		      : "0" (SYS_futex), "D" (addr), "S" (gomp_futex_wake),
  			"d" (count)

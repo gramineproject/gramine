@@ -10,8 +10,8 @@
 
 #include "api.h"
 #include "asan.h"
+#include "gramine_entry_api.h"
 #include "shim_entry.h"
-#include "shim_entry_api.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
 
@@ -75,10 +75,10 @@ static int run_test(const char* test_name) {
 
 long handle_call(int number, unsigned long arg1, unsigned long arg2) {
     switch (number) {
-        case SHIM_CALL_REGISTER_LIBRARY:
+        case GRAMINE_CALL_REGISTER_LIBRARY:
             return register_library((const char*)arg1, arg2);
 
-        case SHIM_CALL_RUN_TEST:
+        case GRAMINE_CALL_RUN_TEST:
             return run_test((const char*)arg1);
 
         default:

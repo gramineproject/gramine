@@ -35,9 +35,9 @@ do
     patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
 done
 
-# Copy `shim_entry_api.h` into (patched) GCC sources. We cannot pass the path using CPPFLAGS,
+# Copy `gramine_entry_api.h` into (patched) GCC sources. We cannot pass the path using CPPFLAGS,
 # because it will not get passed to the libgomp build.
-cp "$CURRENT_SOURCE_DIR/../../LibOS/shim/include/arch/$CPU_FAMILY/shim_entry_api.h" \
+cp "$CURRENT_SOURCE_DIR/../../LibOS/shim/include/arch/$CPU_FAMILY/gramine_entry_api.h" \
     "$PRIVATE_DIR/libgomp/config/linux/x86/"
 
 BUILDDIR="$PRIVATE_DIR"/build

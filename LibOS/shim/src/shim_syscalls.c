@@ -22,20 +22,24 @@ noreturn void shim_emulate_syscall(PAL_CONTEXT* context) {
 
     unsigned long sysnr = pal_context_get_syscall(context);
     arch_syscall_arg_t ret = 0;
-    if (sysnr >= LIBOS_SYSCALL_BOUND || !shim_table[sysnr]) {
-        warn_unsupported_syscall(sysnr);
-        ret = -ENOSYS;
-        goto out;
+
+    if (sysnr == GRAMINE_CUSTOM_SYSCALL_NR) {
+        unsigned long args[] = { ALL_SYSCALL_ARGS(context) };
+        ret = handle_call(args[0], args[1], args[2]);
+    } else {
+        if (sysnr >= LIBOS_SYSCALL_BOUND || !shim_table[sysnr]) {
+            warn_unsupported_syscall(sysnr);
+            ret = -ENOSYS;
+            goto out;
+        }
+
+        SHIM_TCB_SET(context.syscall_nr, sysnr);
+        six_args_syscall_t syscall_func = (six_args_syscall_t)shim_table[sysnr];
+
+        debug_print_syscall_before(sysnr, ALL_SYSCALL_ARGS(context));
+        ret = syscall_func(ALL_SYSCALL_ARGS(context));
+        debug_print_syscall_after(sysnr, ret, ALL_SYSCALL_ARGS(context));
     }
-
-    SHIM_TCB_SET(context.syscall_nr, sysnr);
-
-    six_args_syscall_t syscall_func = (six_args_syscall_t)shim_table[sysnr];
-
-    debug_print_syscall_before(sysnr, ALL_SYSCALL_ARGS(context));
-    ret = syscall_func(ALL_SYSCALL_ARGS(context));
-    debug_print_syscall_after(sysnr, ret, ALL_SYSCALL_ARGS(context));
-
 out:
     pal_context_set_retval(context, ret);
 

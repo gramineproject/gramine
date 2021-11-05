@@ -264,7 +264,7 @@ subdir('LibOS')
 subdir('python')
 subdir('tools')
 
-subproject('glibc-2.34')
+subproject('glibc-2.34-1')
 
 if enable_libgomp
     subproject('gcc-10.2.0')
