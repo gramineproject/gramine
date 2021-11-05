@@ -567,12 +567,12 @@ int setup_pal_binary(void) {
     g_pal_map.l_base = pal_binary_addr;
     g_pal_map.l_ld = dynamic_section;
 
-    ret = perform_relocations(&g_pal_map);
+    ret = find_string_and_symbol_tables(g_pal_map.l_addr, g_pal_map.l_base, &g_pal_map.string_table,
+                                        &g_pal_map.symbol_table, &g_pal_map.symbol_table_cnt);
     if (ret < 0)
         return ret;
 
-    ret = find_string_and_symbol_tables(g_pal_map.l_addr, g_pal_map.l_base, &g_pal_map.string_table,
-                                        &g_pal_map.symbol_table, &g_pal_map.symbol_table_cnt);
+    ret = perform_relocations(&g_pal_map);
     return ret;
 }
 
