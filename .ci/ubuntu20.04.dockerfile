@@ -56,6 +56,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pyelftools \
     python3-pytest \
     python3-scipy \
+    python3-sphinx \
     python3-sphinx-rtd-theme \
     python3-toml \
     shellcheck \
@@ -72,8 +73,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # specification)
 RUN python3 -m pip install -U \
     asv \
-    'meson>=0.55,<0.56' \
-    'docutils>=0.17,<0.18'
+    'meson>=0.55,<0.56'
 
 # Add the user UID:1001, GID:1001, home at /leeroy
 RUN \

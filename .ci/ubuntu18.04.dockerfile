@@ -45,7 +45,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python \
     python3-apport \
     python3-apt \
-    python3-breathe \
     python3-click \
     python3-jinja2 \
     python3-lxml \
@@ -66,13 +65,11 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # NOTE about meson version: we support "0.55 or newer", so in CI we pin to latest patch version of
 # the earliest supported minor version (pip implicitly installs latest version satisfying the
 # specification)
+# Sphinx==1.8 is needed, so recomonmark won't update the system-wide sphinx
 RUN python3 -m pip install -U \
     asv \
-    'Sphinx==1.8' \
-    'sphinx_rtd_theme<1' \
     'toml>=0.10' \
-    'meson>=0.55,<0.56' \
-    'docutils>=0.17,<0.18'
+    'meson>=0.55,<0.56'
 
 # Add the user UID:1001, GID:1001, home at /leeroy
 RUN groupadd -r leeroy -g 1001 && useradd -u 1001 -r -g leeroy -m -d /leeroy -c "Leeroy Jenkins" leeroy && \
