@@ -19,6 +19,7 @@ Quick start without SGX support
 
    .. code-block:: sh
 
+      cd gramine
       sudo apt-get install -y build-essential \
           autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
           wget
