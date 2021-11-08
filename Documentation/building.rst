@@ -184,15 +184,17 @@ omitted, Gramine's build system will try to determine the right path.
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-- To build test binaries, run :command:`meson -Dtests=enabled`. This is necessary if you will be
-  running regression tests. See :doc:`devel/contributing` for details.
+- To build test binaries, run :command:`meson -Dtests=enabled`. This is
+  necessary if you will be running regression tests. See
+  :doc:`devel/contributing` for details.
 
-- In order to run SGX tools with DCAP version of RA-TLS library `ra_tls_verify_dcap.so`, build with
-  :command:`meson -Ddcap=enabled` option. See :doc:`CI-Examples/ra-tls-mbedtls/README.md` for
-  details.
+- In order to run SGX tools with DCAP version of RA-TLS library
+  (``ra_tls_verify_dcap.so``), build with :command:`meson -Ddcap=enabled` option.
+  See `RA-TLS example's README <https://github.com/gramineproject/gramine/blob/master/CI-Examples/ra-tls-mbedtls/README.md>`__.
 
   .. note::
-     EPID version of RA-TLS library `ra_tls_verify_epid.so` is built by default.
+     EPID version of RA-TLS library (``ra_tls_verify_epid.so``) is built by
+     default.
 
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,

@@ -3,15 +3,15 @@ SGX tools
 
 .. TODO move this to Documentation/manpages
 
-All the below tools can be simply run from any directory as they are installed globally on the
-system.
+All the below tools can be simply run from any directory as they are installed
+globally on the system.
 
 SGX availability checker
 ------------------------
 
 Example output::
 
-    > is_sgx_available
+    > is-sgx-available
     SGX supported by CPU: true
     SGX1 (ECREATE, EENTER, ...): true
     SGX2 (EAUG, EACCEPT, EMODPR, ...): false
@@ -25,9 +25,10 @@ Example output::
     AESMD installed: true
     SGX PSW/libsgx installed: true
 
-The program terminates successfully if all SGX1 components are detected and running, otherwise
-the program exits with an error code (see the source code for possible values).
-To suppress printing output use the --quiet argument.
+The program terminates successfully if all SGX1 components are detected and
+running, otherwise the program exits with an error code
+(see the source code for possible values). To suppress printing output use the
+--quiet argument.
 
 
 SGX quote dump
@@ -73,8 +74,8 @@ Displays internal structure of an SGX quote::
 Intel Attestation Service submitter
 -----------------------------------
 
-Submits requests to Intel Attestation Service (IAS) for retrieving EPID signature revocation lists
-and for verifying attestation evidence (enclave quote)::
+Submits requests to Intel Attestation Service (IAS) for retrieving EPID
+signature revocation lists and for verifying attestation evidence (enclave quote)::
 
     Usage: gramine-sgx-ias-request <request> [options]
     Available requests:
@@ -125,8 +126,9 @@ Example quote verification::
 Intel Attestation Report verifier
 ---------------------------------
 
-Verifies attestation report retrieved from IAS (using ``gramine-sgx-ias-request`` for example). Also
-verifies that the quote from the report contains expected values::
+Verifies attestation report retrieved from IAS
+(using ``gramine-sgx-ias-request`` for example). Also verifies that the quote
+from the report contains expected values::
 
     Usage: gramine-sgx-ias-verify-report [options]
     Available options:
