@@ -249,8 +249,8 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
         }
 
         if ((ret = file->fs->fs_ops->mmap(file, &map_start, map_size, c->prot, map_flags,
-                                          c->map_off) < 0)) {
-            log_debug("%s: failed to map segment", __func__);
+                                          c->map_off)) < 0) {
+            log_debug("%s: failed to map segment: %d", __func__, ret);
             return ret;
         }
     }
