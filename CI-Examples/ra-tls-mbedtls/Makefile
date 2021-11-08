@@ -17,6 +17,9 @@ GRAMINE_LOG_LEVEL = error
 CFLAGS += -O2
 endif
 
+CFLAGS += -fPIE
+LDFLAGS += -pie
+
 .PHONY: all
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
 
@@ -67,13 +70,13 @@ mbedtls/.mbedtls_configured: mbedtls/.mbedtls_downloaded
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
 CFLAGS += -I./mbedtls/include $(shell pkg-config --cflags mbedtls_gramine)
-LFLAGS += -ldl $(shell pkg-config --libs mbedtls_gramine)
+LDFLAGS += -ldl $(shell pkg-config --libs mbedtls_gramine)
 
 server: src/server.c mbedtls/.mbedtls_configured
-	$(CC) $< $(CFLAGS) $(LFLAGS) -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 client: src/client.c mbedtls/.mbedtls_configured
-	$(CC) $< $(CFLAGS) $(LFLAGS) -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 ############################### SERVER MANIFEST ###############################
 

@@ -17,6 +17,9 @@ GRAMINE_LOG_LEVEL = error
 CFLAGS += -O2
 endif
 
+CFLAGS += -fPIE
+LDFLAGS += -pie
+
 .PHONY: clients
 clients: secret_prov_min_client secret_prov_client secret_prov_pf_client
 
@@ -39,25 +42,25 @@ dcap: secret_prov_server_dcap
 
 CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/Pal/src/host/Linux-SGX/tools/ra-tls \
           $(shell pkg-config --cflags mbedtls_gramine)
-LFLAGS += $(shell pkg-config --libs mbedtls_gramine)
+LDFLAGS += $(shell pkg-config --libs mbedtls_gramine)
 
 secret_prov_server_epid: src/secret_prov_server.c
-	$(CC) $< $(CFLAGS) $(LFLAGS) -lsecret_prov_verify_epid -pthread -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@
 
 # linker option --no-as-needed is required because SGX DCAP library (libsgx_dcap_quoteverify.so)
 # does dlopen() instead of directly linking against libsgx_urts.so, and without this option
 # compilers remove the "seemingly unused" libsgx_urts.so
 secret_prov_server_dcap: src/secret_prov_server.c
-	$(CC) $< $(CFLAGS) $(LFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
 
 secret_prov_client: src/secret_prov_client.c
-	$(CC) $< $(CFLAGS) $(LFLAGS) -lsecret_prov_attest -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_attest -o $@
 
 secret_prov_min_client: src/secret_prov_min_client.c
-	$(CC) $< $(CFLAGS) $(LFLAGS) -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 secret_prov_pf_client: src/secret_prov_pf_client.c
-	$(CC) $< $(CFLAGS) $(LFLAGS) -o $@
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 ############################### CLIENT MANIFEST ###############################
 
