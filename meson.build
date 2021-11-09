@@ -37,7 +37,6 @@ enable_tests = get_option('tests') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
-protoc_c_prog = find_program('protoc-c')
 
 # TODO: after deprecating 18.04/bionic, update this to import('python')
 python3mod = import('python3')
@@ -222,6 +221,8 @@ tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
 uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 
 if sgx
+    protoc_c_prog = find_program('protoc-c')
+
     threads_dep = dependency('threads')
 
     mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0')
