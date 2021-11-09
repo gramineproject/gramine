@@ -55,7 +55,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-protobuf \
     python3-pyelftools \
     python3-pytest \
-    python3-recommonmark \
     python3-scipy \
     python3-sphinx-rtd-theme \
     python3-toml \

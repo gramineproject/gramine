@@ -20,8 +20,6 @@ os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 import pathlib
 import subprocess
 
-import recommonmark.parser
-
 # -- Project information -----------------------------------------------------
 
 project = 'Gramine'
@@ -49,7 +47,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'breathe',
-    'recommonmark',
     'sphinx_rtd_theme',
 ]
 
@@ -59,8 +56,6 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': 'restructuredtext',
-    '.md': 'markdown',
-    '.markdown': 'markdown',
 }
 
 # The master toctree document.
