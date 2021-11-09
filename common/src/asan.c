@@ -103,18 +103,23 @@ static void asan_dump(uintptr_t bad_addr) {
     const unsigned int width = 16;
     const unsigned int lines = 4;
 
+    log_error("asan: shadow bytes around the bad address:");
+
     struct print_buf buf = INIT_PRINT_BUF(asan_buf_write_all);
 
     uintptr_t bad_shadow = ASAN_MEM_TO_SHADOW(bad_addr);
-    uintptr_t report_start = bad_shadow - bad_shadow % width - width * lines;
+    uintptr_t bad_line = bad_shadow - bad_shadow % width;
+    uintptr_t report_start = bad_line - width * lines;
     uintptr_t report_end = report_start + width * (lines * 2 + 1);
     for (uintptr_t line = report_start; line < report_end; line += width) {
-        buf_printf(&buf, "%p ", (void*)ASAN_SHADOW_TO_MEM(line));
+        const char* marker = (line == bad_line ? "=>" : "  ");
+        buf_printf(&buf, "%s0x%zx:", marker, line);
+
         for (uintptr_t shadow = line; shadow < line + width; shadow++) {
             uint8_t val = *(uint8_t*)shadow;
             if (shadow == bad_shadow) {
                 buf_printf(&buf, "[%02x]", val);
-            } else if (shadow == bad_shadow + 1) {
+            } else if (shadow == bad_shadow + 1 && shadow != line) {
                 buf_printf(&buf, "%02x", val);
             } else {
                 buf_printf(&buf, " %02x", val);
