@@ -401,6 +401,9 @@ static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count) {
     if (count > SSIZE_MAX)
         return -EFBIG;
 
+    if (count == 0)
+        return 0;
+
     struct shim_inode* inode = hdl->inode;
     lock(&hdl->lock);
 
@@ -437,6 +440,9 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
 
     if (count > SSIZE_MAX)
         return -EFBIG;
+
+    if (count == 0)
+        return 0;
 
     struct shim_inode* inode = hdl->inode;
     lock(&hdl->lock);
