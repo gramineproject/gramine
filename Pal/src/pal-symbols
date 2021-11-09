@@ -41,6 +41,7 @@ DkMemoryAvailableQuota
 DkDebugMapAdd
 DkDebugMapRemove
 DkDebugDescribeLocation
+DkDeviceIoControl
 DkAttestationReport
 DkAttestationQuote
 DkSetProtectedFilesKey

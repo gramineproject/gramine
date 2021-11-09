@@ -112,6 +112,26 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
+static int dev_map(PAL_HANDLE handle, void** addr, int prot, uint64_t offset, uint64_t size) {
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (handle->dev.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
+
+    assert(WITHIN_MASK(prot, PAL_PROT_MASK));
+
+    void* mem = *addr;
+    int flags = MAP_FILE | PAL_MEM_FLAGS_TO_LINUX(0, prot) | (mem ? MAP_FIXED : 0);
+
+    mem = (void*)DO_SYSCALL(mmap, mem, size, PAL_PROT_TO_LINUX(prot), flags, handle->dev.fd, offset);
+    if (IS_PTR_ERR(mem))
+        return unix_to_pal_error(PTR_TO_ERR(mem));
+
+    *addr = mem;
+    return 0;
+}
+
 static int dev_close(PAL_HANDLE handle) {
     if (HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
@@ -203,8 +223,20 @@ struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
+    .map            = &dev_map,
     .close          = &dev_close,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
 };
+
+int _DkDeviceIoControl(PAL_HANDLE handle, unsigned int cmd, uint64_t arg) {
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (handle->dev.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
+
+    int ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
+}

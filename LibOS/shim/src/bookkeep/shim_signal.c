@@ -367,8 +367,14 @@ static void memfault_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) 
 
             uintptr_t eof_in_vma = (uintptr_t)vma_info.addr + (size - vma_info.file_offset);
             if (addr > eof_in_vma) {
+#if 0
+                /* Dmitrii Kuvaiskii: dev special files may have zero size, and we want SIGSEGV in this case */
                 info.si_signo = SIGBUS;
                 info.si_code = BUS_ADRERR;
+#else
+                info.si_signo = SIGSEGV;
+                info.si_code = SEGV_ACCERR;
+#endif
             } else {
                 info.si_signo = SIGSEGV;
                 info.si_code = SEGV_ACCERR;
