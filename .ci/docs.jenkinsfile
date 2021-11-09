@@ -9,4 +9,9 @@ pipeline {
             }
         }
     }
+    post {
+        always {
+            archiveArtifacts 'Documentation/_build/**/*'
+        }
+    }
 }
