@@ -1,4 +1,6 @@
 subdir('include')
 subdir('src')
 
-subdir('proto')
+if sgx
+    subdir('proto')
+endif
