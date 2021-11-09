@@ -50,7 +50,7 @@ If your system doesn't meet these requirements, please refer to more detailed
 descriptions in :doc:`building`.
 
 #. Ensure that Intel SGX is enabled on your platform using
-   :program:`is_sgx_available`.
+   :program:`is-sgx-available`.
 
 #. Clone the Gramine repository::
 

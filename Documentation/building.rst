@@ -81,14 +81,17 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
     sudo apt-get install -y libcurl4-openssl-dev libprotobuf-c-dev \
         protobuf-c-compiler python3-pip python3-protobuf
 
-2. Upgrade to the Linux kernel patched with FSGSBASE
-""""""""""""""""""""""""""""""""""""""""""""""""""""
+2a. Install Linux kernel with patched FSGSBASE
+""""""""""""""""""""""""""""""""""""""""""""""
 
 FSGSBASE is a feature in recent processors which allows direct access to the FS
 and GS segment base addresses. For more information about FSGSBASE and its
 benefits, see `this discussion <https://lwn.net/Articles/821719>`__. Note that
 if your kernel version is 5.9 or higher, then the FSGSBASE feature is already
-supported and you can skip this step.
+supported and you can skip this step. Kernel version can be checked using the
+following command::
+
+       uname -r
 
 If your current kernel version is lower than 5.9, then you have two options:
 
@@ -99,6 +102,27 @@ If your current kernel version is lower than 5.9, then you have two options:
 - Use our provided patches to the Linux kernel version 5.4. See section
   :ref:`FSGSBASE` for the exact steps.
 
+2b. Install the Gramine FSGSBASE driver (not for production)
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+If you followed step 2a and installed the patched Linux kernel, skip this step.
+This step is required for older kernels (5.3 and lower) where the patchset does
+not apply cleanly. Otherwise, you will need a Gramine specific Linux driver that
+enables the FSGSBASE feature available in recent processors.
+
+.. warning::
+
+   This module is a |~| quick-and-dirty hack with dangerous security hole
+   (allows unauthorized local privilege escalation). "Do not use for production"
+   is not a |~| joke. We use it only for testing on old kernels.
+
+To install the Gramine specific FSGSBASE driver, run the following commands::
+
+   git clone https://github.com/oscarlab/graphene-sgx-driver
+   cd graphene-sgx-driver
+   make
+   sudo insmod gsgx.ko
+
 3. Install the Intel SGX driver
 """""""""""""""""""""""""""""""
 
@@ -107,7 +131,7 @@ version is 5.11 or higher, then the Intel SGX driver is already installed and
 you can skip this step.
 
 If you have an older CPU without :term:`FLC` support, you need to download and
-install the the following Intel SGX driver:
+install the the following out-of-tree(OOT) Intel SGX driver:
 
 - https://github.com/intel/linux-sgx-driver
 
@@ -314,7 +338,13 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 #. Also verify that the patched kernel supports FSGSBASE (the below command
    must return that bit 2 is set)::
 
-       LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       # Linux kernel doesn't support FSGSBASE: patch or use higher version!
+       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       AT_HWCAP2:       0x0
+
+       # Linux kernel supports FSGSBASE
+       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
+       AT_HWCAP2:       0x2
 
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
