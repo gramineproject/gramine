@@ -419,6 +419,7 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint6
         return -PAL_ERROR_INVAL;
     }
 
+#if 0
     if (!map_addr) {
         return -PAL_ERROR_INVAL;
     }
@@ -426,6 +427,7 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint6
     if (!IS_ALLOC_ALIGNED_PTR(map_addr)) {
         return -PAL_ERROR_INVAL;
     }
+#endif
 
     if (!size || !IS_ALLOC_ALIGNED(size) || !IS_ALLOC_ALIGNED(offset)) {
         return -PAL_ERROR_INVAL;

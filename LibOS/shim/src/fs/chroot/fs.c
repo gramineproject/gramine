@@ -325,7 +325,9 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
 static int chroot_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                        uint64_t offset) {
     assert(hdl->type == TYPE_CHROOT);
+#if 0
     assert(addr);
+#endif
 
     pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
 
@@ -336,6 +338,11 @@ static int chroot_mmap(struct shim_handle* hdl, void* addr, size_t size, int pro
     int ret = DkStreamMap(hdl->pal_handle, &actual_addr, pal_prot, offset, size);
     if (ret < 0)
         return pal_to_unix_errno(ret);
+
+    if (hdl->dentry && hdl->dentry->inode && hdl->dentry->inode->type == S_IFCHR) {
+        hdl->dentry->inode->data = actual_addr;  /* abuse inode data field to return actual addr */
+        return 0;
+    }
 
     assert(actual_addr == addr);
     return 0;

@@ -24,6 +24,11 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
+static int dev_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+                   uint64_t size) {
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
 static int dev_close(PAL_HANDLE handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
@@ -49,9 +54,17 @@ struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
+    .map            = &dev_map,
     .close          = &dev_close,
     .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
 };
+
+int _DkDeviceIoControl(PAL_HANDLE handle, unsigned int cmd, uint64_t arg) {
+    __UNUSED(handle);
+    __UNUSED(cmd);
+    __UNUSED(arg);
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}

@@ -227,6 +227,7 @@ double _DkGetBogomips(void);
 int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]);
+int _DkDeviceIoControl(PAL_HANDLE handle, unsigned int cmd, uint64_t arg);
 int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
                          void* target_info, size_t* target_info_size, void* report,
                          size_t* report_size);

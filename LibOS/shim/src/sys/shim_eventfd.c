@@ -55,6 +55,13 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
         return pal_to_unix_errno(ret);
     }
 
+    if (pal_flags & PAL_OPTION_EFD_SEMAPHORE) {
+        /* FIXME: semaphore option is abused for "fence" FDs used in DRM IOCTLs; such fence FDs
+         *        do not have any "initial count", so simply return success */
+        *efd = hdl;
+        return 0;
+    }
+
     /* set the initial count */
     size_t write_size = sizeof(initial_count);
     ret = DkStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, /*dest=*/NULL);

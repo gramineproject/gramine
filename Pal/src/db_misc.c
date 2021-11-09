@@ -36,6 +36,10 @@ int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
 }
 #endif
 
+int DkDeviceIoControl(PAL_HANDLE handle, unsigned int cmd, uint64_t arg) {
+    return _DkDeviceIoControl(handle, cmd, arg);
+}
+
 int DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
                         void* target_info, size_t* target_info_size, void* report,
                         size_t* report_size) {
