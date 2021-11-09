@@ -68,7 +68,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # specification)
 RUN python3 -m pip install -U \
     asv \
-    recommonmark \
     'Sphinx==1.8' \
     'sphinx_rtd_theme<1' \
     'toml>=0.10' \
