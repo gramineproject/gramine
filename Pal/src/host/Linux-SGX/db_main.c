@@ -44,7 +44,7 @@ const size_t g_page_size = PRESET_PAGESIZE;
 
 void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     *start = (PAL_PTR)g_pal_sec.heap_min;
-    *end   = (PAL_PTR)get_enclave_heap_top();
+    *end   = (PAL_PTR)g_pal_sec.heap_max;
 
     /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
      * track of PAL memory, so without this limit it could overwrite internal PAL memory). This

@@ -319,21 +319,3 @@ out:
     spinlock_unlock(&g_heap_vma_lock);
     return ret;
 }
-
-/* returns current highest available address on the enclave heap */
-void* get_enclave_heap_top(void) {
-    spinlock_lock(&g_heap_vma_lock);
-
-    void* addr = g_heap_top;
-    struct heap_vma* vma;
-    LISTP_FOR_EACH_ENTRY(vma, &g_heap_vma_list, list) {
-        if (vma->top < addr) {
-            goto out;
-        }
-        addr = vma->bottom;
-    }
-
-out:
-    spinlock_unlock(&g_heap_vma_lock);
-    return addr;
-}
