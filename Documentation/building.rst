@@ -81,8 +81,8 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
     sudo apt-get install -y libcurl4-openssl-dev libprotobuf-c-dev \
         protobuf-c-compiler python3-pip python3-protobuf
 
-2a. Install Linux kernel with patched FSGSBASE
-""""""""""""""""""""""""""""""""""""""""""""""
+2. Install Linux kernel with patched FSGSBASE
+"""""""""""""""""""""""""""""""""""""""""""""
 
 FSGSBASE is a feature in recent processors which allows direct access to the FS
 and GS segment base addresses. For more information about FSGSBASE and its
@@ -102,27 +102,6 @@ If your current kernel version is lower than 5.9, then you have two options:
 - Use our provided patches to the Linux kernel version 5.4. See section
   :ref:`FSGSBASE` for the exact steps.
 
-2b. Install the Gramine FSGSBASE driver (not for production)
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-If you followed step 2a and installed the patched Linux kernel, skip this step.
-This step is required for older kernels (5.3 and lower) where the patchset does
-not apply cleanly. Otherwise, you will need a Gramine specific Linux driver that
-enables the FSGSBASE feature available in recent processors.
-
-.. warning::
-
-   This module is a |~| quick-and-dirty hack with dangerous security hole
-   (allows unauthorized local privilege escalation). "Do not use for production"
-   is not a |~| joke. We use it only for testing on old kernels.
-
-To install the Gramine specific FSGSBASE driver, run the following commands::
-
-   git clone https://github.com/oscarlab/graphene-sgx-driver
-   cd graphene-sgx-driver
-   make
-   sudo insmod gsgx.ko
-
 3. Install the Intel SGX driver
 """""""""""""""""""""""""""""""
 
@@ -131,7 +110,7 @@ version is 5.11 or higher, then the Intel SGX driver is already installed and
 you can skip this step.
 
 If you have an older CPU without :term:`FLC` support, you need to download and
-install the the following out-of-tree(OOT) Intel SGX driver:
+install the the following out-of-tree (OOT) Intel SGX driver:
 
 - https://github.com/intel/linux-sgx-driver
 
