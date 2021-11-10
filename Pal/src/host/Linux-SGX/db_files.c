@@ -416,7 +416,7 @@ static int pf_file_map(struct protected_file* pf, PAL_HANDLE handle, void** addr
               *addr, prot, offset, size);
 
     if (*addr == NULL) {
-        /* LibOS didn't provide address at which to map, can happen on sendfile() */
+        /* No address at which to map, can happen when called from `db_rtld.c` */
         allocated_enclave_pages = get_enclave_pages(/*addr=*/NULL, size, /*is_pal_internal=*/false);
         if (!allocated_enclave_pages)
             return -PAL_ERROR_NOMEM;

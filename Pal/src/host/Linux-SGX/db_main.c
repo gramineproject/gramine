@@ -47,9 +47,8 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     *end   = (PAL_PTR)g_pal_sec.heap_max;
 
     /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
-     * track of PAL memory, so without this limit it could overwrite internal PAL memory). This
-     * relies on the fact that our memory management allocates memory from higher addresses to lower
-     * addresses (see also enclave_pages.c). */
+     * track of PAL memory, so without this limit it could overwrite internal PAL memory). See also
+     * `enclave_pages.c`. */
     *end = SATURATED_P_SUB(*end, g_pal_internal_mem_size, *start);
 
     if (*end <= *start) {

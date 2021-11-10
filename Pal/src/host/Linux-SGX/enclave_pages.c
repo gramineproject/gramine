@@ -13,8 +13,6 @@ struct atomic_int g_allocated_pages;
 static void* g_heap_bottom;
 static void* g_heap_top;
 
-static size_t g_pal_internal_mem_used = 0;
-
 /* list of VMAs of used memory areas kept in DESCENDING order; note that preallocated PAL internal
  * memory relies on this descending order of allocations (from high addresses to low), see
  * _DkGetAvailableUserAddressRange() for more details */
@@ -86,6 +84,10 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
     assert(addr && size);
 
     if (addr < g_heap_bottom)
+        return NULL;
+
+    /* PAL-internal memory cannot be allocated below the PAL-internal part of heap */
+    if (is_pal_internal && addr < g_heap_top - g_pal_internal_mem_size)
         return NULL;
 
     /* find enclosing VMAs and check that pal-internal VMAs do not overlap with normal VMAs */
@@ -171,11 +173,6 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
     size_t allocated = vma->top - vma->bottom - freed;
     __atomic_add_fetch(&g_allocated_pages.counter, allocated / g_page_size, __ATOMIC_SEQ_CST);
 
-    if (is_pal_internal) {
-        assert(allocated <= g_pal_internal_mem_size - g_pal_internal_mem_used);
-        g_pal_internal_mem_used += allocated;
-    }
-
     return addr;
 }
 
@@ -194,11 +191,6 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
     struct heap_vma* vma;
 
     spinlock_lock(&g_heap_vma_lock);
-
-    if (is_pal_internal && size > g_pal_internal_mem_size - g_pal_internal_mem_used) {
-        /* requested PAL-internal allocation would exceed the limit, fail */
-        goto out;
-    }
 
     if (addr) {
         /* caller specified concrete address; find VMA right-above this address */
@@ -234,6 +226,17 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
 
 out:
     spinlock_unlock(&g_heap_vma_lock);
+
+    if (ret) {
+        if (is_pal_internal) {
+            /* This should be guaranteed by the check in `__create_vma_and_merge()` */
+            assert(ret >= g_heap_top - g_pal_internal_mem_size);
+        } else {
+            assert(ret >= g_heap_bottom);
+        }
+        assert(ret + size <= g_heap_top);
+    }
+
     return ret;
 }
 
@@ -309,11 +312,6 @@ int free_enclave_pages(void* addr, size_t size) {
     }
 
     __atomic_sub_fetch(&g_allocated_pages.counter, freed / g_page_size, __ATOMIC_SEQ_CST);
-
-    if (is_pal_internal_set && is_pal_internal) {
-        assert(g_pal_internal_mem_used >= freed);
-        g_pal_internal_mem_used -= freed;
-    }
 
 out:
     spinlock_unlock(&g_heap_vma_lock);
