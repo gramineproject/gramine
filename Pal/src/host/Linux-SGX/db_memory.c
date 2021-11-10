@@ -6,6 +6,7 @@
  */
 
 #include "api.h"
+#include "asan.h"
 #include "enclave_pages.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -71,6 +72,16 @@ int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     __UNUSED(prot);
 
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
+
+#ifdef ASAN
+    if (sgx_is_completely_within_enclave(addr, size)) {
+        if (prot) {
+            asan_unpoison_region((uintptr_t)addr, size);
+        } else {
+            asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
+        }
+    }
+#endif
 
     static struct atomic_int at_cnt = {.counter = 0};
     int64_t t = 0;

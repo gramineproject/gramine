@@ -88,6 +88,9 @@ static void asan_find_problem(uintptr_t addr, size_t size, uintptr_t* out_bad_ad
         case ASAN_POISON_HEAP_AFTER_FREE:
             bug_type = "heap-use-after-free";
             break;
+        case ASAN_POISON_USER:
+            bug_type = "use-after-poison (unallocated SGX memory?)";
+            break;
         default:
             bug_type = "unknown-crash";
             break;
@@ -134,6 +137,7 @@ static void asan_dump(uintptr_t bad_addr) {
     log_error("asan: %22s %02x..%02x", "partially addressable:", 1, ASAN_SHADOW_ALIGN - 1);
     log_error("asan: %22s %02x", "heap left redzone:", ASAN_POISON_HEAP_LEFT_REDZONE);
     log_error("asan: %22s %02x", "freed heap region:", ASAN_POISON_HEAP_AFTER_FREE);
+    log_error("asan: %22s %02x", "user-poisoned:", ASAN_POISON_USER);
 }
 
 /* Display full report for the user */

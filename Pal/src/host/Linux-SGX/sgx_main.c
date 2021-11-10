@@ -413,6 +413,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     enclave_entry_addr += pal_area->addr;
 
+    struct mem_area* free_area = NULL;
     if (last_populated_addr > enclave_heap_min) {
         areas[area_num] = (struct mem_area){.desc         = "free",
                                             .skip_eextend = true,
@@ -421,7 +422,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                             .size         = last_populated_addr - enclave_heap_min,
                                             .prot         = PROT_READ | PROT_WRITE | PROT_EXEC,
                                             .type         = SGX_PAGE_REG};
-        area_num++;
+        free_area = &areas[area_num++];
     }
 
     for (int i = 0; i < area_num; i++) {
@@ -567,6 +568,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
+#endif
+
+#ifdef ASAN
+    if (free_area)
+        asan_poison_region(free_area->addr, free_area->size, ASAN_POISON_USER);
+#else
+    __UNUSED(free_area);
 #endif
 
     ret = 0;

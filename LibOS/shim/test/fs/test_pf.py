@@ -172,15 +172,21 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
                                          timeout=timeout)
         self.verify_copy(stdout, stderr, self.ENCRYPTED_DIR, executable)
 
+    # TODO: `mmap` on protected files is broken, because we fail to properly register that memory is
+    # unmapped. The `copy_mmap*` tests technically work, but trigger AddressSanitizer.
+
     # overrides TC_00_FileSystem to not skip this on SGX
+    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
 
     # overrides TC_00_FileSystem to not skip this on SGX
+    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_205_copy_dir_mmap_seq(self):
         self.do_copy_test('copy_mmap_seq', 60)
 
     # overrides TC_00_FileSystem to not skip this on SGX
+    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_206_copy_dir_mmap_rev(self):
         self.do_copy_test('copy_mmap_rev', 60)
 

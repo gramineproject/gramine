@@ -114,9 +114,12 @@
 #define ASAN_MEM_TO_SHADOW(addr) (((addr) >> ASAN_SHADOW_SHIFT) + ASAN_SHADOW_START)
 #define ASAN_SHADOW_TO_MEM(addr) (((addr) - ASAN_SHADOW_START) << ASAN_SHADOW_SHIFT)
 
-/* Magic values to mark different kinds of inaccessible memory. */
+/* Magic values to mark different kinds of inaccessible memory. These are the same as in LLVM's
+ * AddressSanitizer (`asan_internal.h`), because LLVM's instrumentation often writes them
+ * directly instead of calling our callbacks. */
 #define ASAN_POISON_HEAP_LEFT_REDZONE     0xfa
 #define ASAN_POISON_HEAP_AFTER_FREE       0xfd
+#define ASAN_POISON_USER                  0xf7  /* currently used for unallocated SGX memory */
 
 /* Poison a memory region. `addr` must be aligned to ASAN_SHADOW_ALIGN, and `size` is rounded up to
  * ASAN_SHADOW_ALIGN. */

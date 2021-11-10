@@ -1,6 +1,7 @@
 #include "enclave_pages.h"
 
 #include "api.h"
+#include "asan.h"
 #include "list.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -235,6 +236,10 @@ out:
             assert(ret >= g_heap_bottom);
         }
         assert(ret + size <= g_heap_top);
+
+#ifdef ASAN
+        asan_unpoison_region((uintptr_t)ret, size);
+#endif
     }
 
     return ret;
@@ -312,6 +317,10 @@ int free_enclave_pages(void* addr, size_t size) {
     }
 
     __atomic_sub_fetch(&g_allocated_pages.counter, freed / g_page_size, __ATOMIC_SEQ_CST);
+
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
+#endif
 
 out:
     spinlock_unlock(&g_heap_vma_lock);

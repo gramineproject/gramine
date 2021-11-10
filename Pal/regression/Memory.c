@@ -26,6 +26,9 @@ static void handler(bool is_in_pal, PAL_NUM arg, PAL_CONTEXT* context) {
 #endif
 }
 
+/* Disable AddressSanitizer: this code tries to trigger a memory fault by accessing memory that's
+ * supposed to be inaccessible, but SGX PAL poisons such memory. */
+__attribute_no_sanitize_address
 int main(int argc, char** argv, char** envp) {
     volatile int c;
     DkSetExceptionHandler(handler, PAL_EVENT_MEMFAULT);

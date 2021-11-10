@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 #include "api.h"
+#include "asan.h"
 #include "enclave_pf.h"
 #include "enclave_tf.h"
 #include "pal.h"
@@ -422,6 +423,21 @@ static int pf_file_map(struct protected_file* pf, PAL_HANDLE handle, void** addr
             return -PAL_ERROR_NOMEM;
 
         *addr = allocated_enclave_pages;
+    } else {
+        /*
+         * TODO: We should call `get_enclave_pages` here, but it's unclear how we should clean up in
+         * case of errors, because we don't know if anything was mapped over this range before.
+         *
+         * An unconditional `free_enclave_pages` during cleanup would poison this memory range, even
+         * if was being used before. The current code errs on the side of caution, and always leaves
+         * this memory unpoisoned (since we keep `allocated_enclave_pages` set to NULL).
+         *
+         * A proper implementation should first load the protected file, and allocate pages only
+         * after that succeeds.
+         */
+#ifdef ASAN
+        asan_unpoison_region((uintptr_t)*addr, size);
+#endif
     }
 
     if (prot & PAL_PROT_WRITE) {
