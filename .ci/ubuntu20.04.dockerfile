@@ -72,7 +72,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # the earliest supported minor version (pip implicitly installs latest version satisfying the
 # specification)
 RUN python3 -m pip install -U \
-    asv \
     'meson>=0.55,<0.56' \
     'docutils>=0.17,<0.18'
 

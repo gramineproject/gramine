@@ -97,7 +97,6 @@ Table of Contents
    devel/coding-style
    devel/setup
    devel/debugging
-   devel/benchmarks
    devel/performance
    devel/new-syscall
    devel/packaging
