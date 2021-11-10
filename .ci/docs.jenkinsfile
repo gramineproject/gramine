@@ -1,12 +1,17 @@
 pipeline {
     agent {
-        dockerfile { filename '.ci/ubuntu18.04.dockerfile' }
+        dockerfile { filename '.ci/ubuntu20.04.dockerfile' }
     }
     stages {
         stage('build') {
             steps {
                 sh 'make -C Documentation html SPHINXOPTS="-W"'
             }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts 'Documentation/_build/**/*'
         }
     }
 }
