@@ -30,7 +30,7 @@ class TC_00_Unittests(RegressionTestCase):
     @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
     def test_021_asan(self):
         expected_list = ['asan: heap-buffer-overflow']
-        if self.has_debug:
+        if self.has_debug():
             expected_list.append('asan: location: run_test_asan_buffer_overflow at shim_call.c')
         self._test_abort('asan_buffer_overflow', expected_list)
 
