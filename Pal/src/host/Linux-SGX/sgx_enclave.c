@@ -598,13 +598,6 @@ static long sgx_ocall_gettime(void* pms) {
     return 0;
 }
 
-static long sgx_ocall_sched_yield(void* pms) {
-    __UNUSED(pms);
-    ODEBUG(OCALL_SCHED_YIELD, pms);
-    DO_SYSCALL_INTERRUPTIBLE(sched_yield);
-    return 0;
-}
-
 static long sgx_ocall_poll(void* pms) {
     ms_ocall_poll_t* ms = (ms_ocall_poll_t*)pms;
     long ret;
@@ -730,7 +723,6 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_SETSOCKOPT]               = sgx_ocall_setsockopt,
     [OCALL_SHUTDOWN]                 = sgx_ocall_shutdown,
     [OCALL_GETTIME]                  = sgx_ocall_gettime,
-    [OCALL_SCHED_YIELD]              = sgx_ocall_sched_yield,
     [OCALL_POLL]                     = sgx_ocall_poll,
     [OCALL_RENAME]                   = sgx_ocall_rename,
     [OCALL_DELETE]                   = sgx_ocall_delete,

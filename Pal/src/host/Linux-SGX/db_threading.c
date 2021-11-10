@@ -141,10 +141,10 @@ out_err:
     return ret;
 }
 
-/* PAL call DkThreadYieldExecution. Yield the execution
-   of the current thread. */
 void _DkThreadYieldExecution(void) {
-    ocall_sched_yield();
+    /* TODO: make sure this is true.
+     * Issuing an ocall (enclave exit) just to yield cpu actually degrades performance in most
+     * cases, so this does nothing. */
 }
 
 /* _DkThreadExit for internal use: Thread exiting */

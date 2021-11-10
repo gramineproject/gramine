@@ -1554,15 +1554,6 @@ int ocall_gettime(uint64_t* microsec_ptr) {
     return retval;
 }
 
-void ocall_sched_yield(void) {
-    void* old_ustack = sgx_prepare_ustack();
-
-    /* NOTE: no reason to use exitless for `sched_yield` and it always succeeds. */
-    (void)sgx_ocall(OCALL_SCHED_YIELD, NULL);
-
-    sgx_reset_ustack(old_ustack);
-}
-
 int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us) {
     int retval = 0;
     size_t nfds_bytes = nfds * sizeof(struct pollfd);
