@@ -71,7 +71,8 @@ int main(int argc, char** argv) {
 
         if (ret >= 0 && child) {
             // Sending pipe handle
-            ret = DkStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, 0, PAL_CREATE_TRY, 0, &handles[0]);
+            ret = DkStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, 0, PAL_CREATE_IGNORED, 0,
+                               &handles[0]);
 
             if (ret >= 0 && handles[0]) {
                 pal_printf("Send Handle OK\n");
@@ -80,7 +81,7 @@ int main(int argc, char** argv) {
                     DkObjectClose(handles[0]);
                     PAL_HANDLE pipe = NULL;
                     ret = DkStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                       /*create=*/PAL_CREATE_TRY, /*options=*/0, &pipe);
+                                       PAL_CREATE_IGNORED, /*options=*/0, &pipe);
                     if (ret >= 0 && pipe) {
                         char buf[20] = "Hello World";
                         size_t buf_size = sizeof(buf);
@@ -93,7 +94,7 @@ int main(int argc, char** argv) {
             }
 
             // Sending udp handle
-            ret = DkStreamOpen("udp.srv:127.0.0.1:8000", PAL_ACCESS_RDWR, 0, PAL_CREATE_TRY, 0,
+            ret = DkStreamOpen("udp.srv:127.0.0.1:8000", PAL_ACCESS_RDWR, 0, PAL_CREATE_IGNORED, 0,
                                &handles[1]);
 
             if (ret >= 0 && handles[1]) {
@@ -103,7 +104,7 @@ int main(int argc, char** argv) {
                     DkObjectClose(handles[1]);
                     PAL_HANDLE socket = NULL;
                     ret = DkStreamOpen("udp:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                       /*create=*/PAL_CREATE_TRY, /*options=*/0, &socket);
+                                       PAL_CREATE_IGNORED, /*options=*/0, &socket);
                     if (ret >= 0 && socket) {
                         char buf[20] = "Hello World";
                         size_t buf_size = sizeof(buf);

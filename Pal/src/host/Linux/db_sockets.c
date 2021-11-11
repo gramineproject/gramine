@@ -478,8 +478,8 @@ static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     __UNUSED(access);
-    __UNUSED(create);
     __UNUSED(share);
+    assert(create == PAL_CREATE_IGNORED);
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
@@ -694,8 +694,8 @@ static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, enum pal
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     __UNUSED(access);
-    __UNUSED(create);
     __UNUSED(share);
+    assert(create == PAL_CREATE_IGNORED);
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));

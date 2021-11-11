@@ -35,18 +35,18 @@ int main(int argc, char** argv) {
 
     PAL_HANDLE handles[3];
     int ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_NEVER, /*options=*/0, &handles[0]);
+                           PAL_CREATE_IGNORED, /*options=*/0, &handles[0]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");
         return 1;
     }
-    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, /*create=*/PAL_CREATE_NEVER,
+    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                        /*options=*/0, &handles[1]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");
         return 1;
     }
-    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, /*create=*/PAL_CREATE_NEVER,
+    ret = DkStreamOpen("pipe:", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                        /*options=*/0, &handles[2]);
     if (ret < 0) {
         pal_printf("DkStreamOpen failed\n");

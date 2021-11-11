@@ -27,7 +27,7 @@ int main(int argc, char** argv, char** envp) {
     DkObjectClose(out);
 
     PAL_HANDLE in = NULL;
-    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, /*create=*/PAL_CREATE_NEVER,
+    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                        /*options=*/0, &in);
     if (ret < 0) {
         pal_printf("third DkStreamOpen failed\n");
@@ -56,7 +56,7 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE del = NULL;
-    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, /*create=*/PAL_CREATE_NEVER,
+    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_NEVER,
                        /*options=*/0, &del);
 
     if (ret >= 0) {

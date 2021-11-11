@@ -9,7 +9,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE dir1 = NULL;
     int ret = DkStreamOpen("dir:dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_NEVER, /*options=*/0, &dir1);
+                           PAL_CREATE_NEVER, /*options=*/0, &dir1);
     if (ret >= 0 && dir1) {
         pal_printf("Directory Open Test 1 OK\n");
 
@@ -32,7 +32,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE dir2 = NULL;
     ret = DkStreamOpen("dir:./dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_NEVER, /*options=*/0, &dir2);
+                       PAL_CREATE_NEVER, /*options=*/0, &dir2);
     if (ret >= 0 && dir2) {
         pal_printf("Directory Open Test 2 OK\n");
         DkObjectClose(dir2);
@@ -40,7 +40,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE dir3 = NULL;
     ret = DkStreamOpen("dir:../regression/dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_NEVER, /*options=*/0, &dir3);
+                       PAL_CREATE_NEVER, /*options=*/0, &dir3);
     if (ret >= 0 && dir3) {
         pal_printf("Directory Open Test 3 OK\n");
         DkObjectClose(dir3);
@@ -83,7 +83,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE dir7 = NULL;
     ret = DkStreamOpen("dir:dir_delete.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_NEVER, /*options=*/0, &dir7);
+                       PAL_CREATE_NEVER, /*options=*/0, &dir7);
     if (ret >= 0 && dir7) {
         ret = DkStreamDelete(dir7, PAL_DELETE_ALL);
         if (ret < 0) {

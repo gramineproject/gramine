@@ -266,8 +266,9 @@ typedef uint32_t pal_share_flags_t; /* bitfield */
 /*! stream create mode */
 enum pal_create_mode {
     PAL_CREATE_NEVER,     /*!< Fail if file does not exist */
-    PAL_CREATE_TRY,        /*!< Create file if file does not exist */
-    PAL_CREATE_ALWAYS,     /*!< Create file and fail if file already exists */
+    PAL_CREATE_TRY,       /*!< Create file if file does not exist */
+    PAL_CREATE_ALWAYS,    /*!< Create file and fail if file already exists */
+    PAL_CREATE_IGNORED,   /*!< Magic value for calls to handle types which ignore creation mode */
 };
 
 /*! stream misc flags */

@@ -217,7 +217,7 @@ static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* o
     if (ret < 0)
         return ret;
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, /*create=*/PAL_CREATE_NEVER,
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                        /*options=*/0, out_palhdl);
     free(uri);
     return pal_to_unix_errno(ret);

@@ -555,7 +555,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, struct shim
         if (len >= size)
             return -ERANGE;
 
-        ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_ALWAYS,
+        ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                            /*options=*/0, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {

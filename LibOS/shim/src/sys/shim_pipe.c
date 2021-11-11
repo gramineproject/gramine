@@ -35,7 +35,7 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
         return ret;
     }
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, /*create=*/PAL_CREATE_ALWAYS,
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                        LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);

@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
         PAL_HANDLE srv = NULL;
         ret = DkStreamOpen("tcp.srv:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_TRY, /*options=*/0, &srv);
+                           PAL_CREATE_IGNORED, /*options=*/0, &srv);
 
         if (ret < 0) {
             pal_printf("not able to create server\n");
@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
         for (i = 0; i < NTRIES; i++) {
             PAL_HANDLE cli = NULL;
             ret = DkStreamOpen("tcp:127.0.0.1:8000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                               /*create=*/PAL_CREATE_TRY, /*options=*/0, &cli);
+                               PAL_CREATE_IGNORED, /*options=*/0, &cli);
 
             if (ret < 0) {
                 pal_printf("not able to create client\n");

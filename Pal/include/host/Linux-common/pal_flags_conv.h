@@ -57,6 +57,7 @@ static inline int PAL_CREATE_TO_LINUX_OPEN(enum pal_create_mode create) {
             return O_CREAT;
         case PAL_CREATE_ALWAYS:
             return O_CREAT | O_EXCL;
+        case PAL_CREATE_IGNORED:
         default:
             BUG();
     }

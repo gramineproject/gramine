@@ -13,14 +13,14 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE tcp1 = NULL;
     ret = DkStreamOpen("tcp.srv:127.0.0.1:3000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_TRY, /*options=*/0, &tcp1);
+                       PAL_CREATE_IGNORED, /*options=*/0, &tcp1);
 
     if (ret >= 0 && tcp1) {
         pal_printf("TCP Creation 1 OK\n");
 
         PAL_HANDLE tcp2 = NULL;
         ret = DkStreamOpen("tcp:127.0.0.1:3000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_TRY, /*options=*/0, &tcp2);
+                           PAL_CREATE_IGNORED, /*options=*/0, &tcp2);
 
         if (ret >= 0 && tcp2) {
             PAL_HANDLE tcp3 = NULL;
@@ -65,14 +65,14 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE udp1 = NULL;
     ret = DkStreamOpen("udp.srv:127.0.0.1:3000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_TRY, /*options=*/0, &udp1);
+                       PAL_CREATE_IGNORED, /*options=*/0, &udp1);
 
     if (ret >= 0 && udp1) {
         pal_printf("UDP Creation 1 OK\n");
 
         PAL_HANDLE udp2 = NULL;
         ret = DkStreamOpen("udp:127.0.0.1:3000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_TRY, /*options=*/0, &udp2);
+                           PAL_CREATE_IGNORED, /*options=*/0, &udp2);
 
         if (ret >= 0 && udp2) {
             pal_printf("UDP Connection 1 OK\n");
@@ -107,7 +107,7 @@ int main(int argc, char** argv, char** envp) {
 
         PAL_HANDLE udp3 = NULL;
         ret = DkStreamOpen("udp:127.0.0.1:3001:127.0.0.1:3000", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                           /*create=*/PAL_CREATE_TRY, /*options=*/0, &udp3);
+                           PAL_CREATE_IGNORED, /*options=*/0, &udp3);
 
         if (ret >= 0 && udp3) {
             pal_printf("UDP Connection 2 OK\n");

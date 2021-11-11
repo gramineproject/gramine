@@ -46,7 +46,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     pal_flags |= flags & EFD_SEMAPHORE ? PAL_OPTION_EFD_SEMAPHORE : 0;
 
     ret = DkStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_ALWAYS, pal_flags, &hdl);
+                       PAL_CREATE_IGNORED, pal_flags, &hdl);
     if (ret < 0) {
         log_error("eventfd: creation failure");
         return pal_to_unix_errno(ret);

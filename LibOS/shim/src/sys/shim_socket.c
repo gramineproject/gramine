@@ -520,8 +520,8 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
     }
 
     PAL_HANDLE pal_hdl = NULL;
-    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_ALWAYS,
-                       options, &pal_hdl);
+    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
+                       PAL_CREATE_IGNORED, options, &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
@@ -810,8 +810,8 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
 
     PAL_HANDLE pal_hdl = NULL;
     ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       /*create=*/PAL_CREATE_ALWAYS,
-                       hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
+                       PAL_CREATE_IGNORED, hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0,
+                       &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_DENIED) ? -ECONNREFUSED : pal_to_unix_errno(ret);
@@ -1115,7 +1115,7 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
 
         if (sock->sock_state == SOCK_CREATED && !pal_hdl) {
             ret = DkStreamOpen(URI_PREFIX_UDP, PAL_ACCESS_RDWR, /*share_flags=*/0,
-                               /*create=*/PAL_CREATE_ALWAYS,
+                               PAL_CREATE_IGNORED,
                                hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);

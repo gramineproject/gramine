@@ -22,6 +22,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     int ret;
+    assert(create != PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_DEV))
         return -PAL_ERROR_INVAL;

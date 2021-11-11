@@ -33,10 +33,11 @@
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
                      enum pal_access pal_access, pal_share_flags_t pal_share,
                      enum pal_create_mode pal_create, pal_stream_options_t pal_options) {
+    assert(pal_create != PAL_CREATE_IGNORED);
     int ret;
     int fd = -1;
     PAL_HANDLE hdl = NULL;
-    bool do_create = (pal_create & PAL_CREATE_ALWAYS) || (pal_create & PAL_CREATE_TRY);
+    bool do_create = (pal_create == PAL_CREATE_ALWAYS) || (pal_create == PAL_CREATE_TRY);
 
     struct stat st;
     int flags = PAL_ACCESS_TO_LINUX_OPEN(pal_access) |
@@ -856,15 +857,15 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
 
-    if (create & PAL_CREATE_TRY || create & PAL_CREATE_ALWAYS) {
+    if (create == PAL_CREATE_TRY || create == PAL_CREATE_ALWAYS) {
         int ret = ocall_mkdir(uri, share);
 
         if (ret < 0) {
-            if (ret == -EEXIST && create & PAL_CREATE_ALWAYS)
+            if (ret == -EEXIST && create == PAL_CREATE_ALWAYS)
                 return -PAL_ERROR_STREAMEXIST;
             if (ret != -EEXIST)
                 return unix_to_pal_error(ret);
-            assert(ret == -EEXIST && create & PAL_CREATE_TRY);
+            assert(ret == -EEXIST && create == PAL_CREATE_TRY);
         }
     }
 

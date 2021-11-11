@@ -317,6 +317,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     __UNUSED(access);
+    assert(create != PAL_CREATE_IGNORED);
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
 
