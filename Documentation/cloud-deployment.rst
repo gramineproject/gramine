@@ -15,10 +15,10 @@ Azure confidential computing VMs
 
 `Azure confidential computing services
 <https://azure.microsoft.com/en-us/solutions/confidential-compute/>`__ are
-generally available and provide access to VMs with Intel SGX enabled in `DCsv2
-VM instances
-<https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series>`__. The
-description below uses a VM running Ubuntu 18.04.
+available and provide access to VMs with Intel SGX enabled in `DCsv2
+<https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series>`__ and
+`DCsv3 <https://docs.microsoft.com/en-us/azure/virtual-machines/dcv3-series>`__
+VM instances. The description below uses a *DCsv3 VM* running Ubuntu 20.04.
 
 Prerequisites
 ^^^^^^^^^^^^^
@@ -32,8 +32,8 @@ Update and install the required packages for Gramine::
    sudo apt-get update
    sudo apt-get install -y build-essential \
        autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev ninja-build \
-       protobuf-c-compiler python3 python3-click python3-jinja2 python3-pip \
-       python3-protobuf wget
+       pkg-config protobuf-c-compiler python3 python3-click python3-jinja2 \
+       python3-pip python3-protobuf wget
    sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
