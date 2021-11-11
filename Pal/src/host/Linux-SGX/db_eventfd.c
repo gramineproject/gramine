@@ -41,6 +41,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
                             enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
+    __UNUSED(create);
     assert(create == PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_EVENTFD) != 0 || *uri != '\0') {
