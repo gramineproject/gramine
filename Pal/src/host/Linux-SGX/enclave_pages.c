@@ -86,6 +86,10 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
     if (addr < g_heap_bottom)
         return NULL;
 
+    /* PAL-internal memory cannot be allocated below the PAL-internal part of heap */
+    if (is_pal_internal && addr < g_heap_top - g_pal_internal_mem_size)
+        return NULL;
+
     /* find enclosing VMAs and check that pal-internal VMAs do not overlap with normal VMAs */
     struct heap_vma* vma_below;
     if (vma_above) {
@@ -186,21 +190,9 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
     struct heap_vma* vma_above = NULL;
     struct heap_vma* vma;
 
-    void* pal_internal_mem_bottom = SATURATED_P_SUB(g_heap_top, g_pal_internal_mem_size,
-                                                    g_heap_bottom);
-
-    if (is_pal_internal && (size > g_pal_internal_mem_size
-                            || size > (size_t)(g_heap_top - g_heap_bottom))) {
-        /* requested PAL-internal allocation would not fit in PAL-internal area, fail */
-        return NULL;
-    }
-
     spinlock_lock(&g_heap_vma_lock);
 
     if (addr) {
-        /* we never request PAL-internal memory with specified address */
-        assert(!is_pal_internal);
-
         /* caller specified concrete address; find VMA right-above this address */
         if (addr < g_heap_bottom || addr + size > g_heap_top)
             goto out;
@@ -214,7 +206,7 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
         }
         ret = __create_vma_and_merge(addr, size, is_pal_internal, vma_above);
     } else {
-        /* caller did not specify address; find first (highest-address) empty slot that fits */
+        /* Caller did not specify address; find first (highest-address) empty slot that fits. */
         void* vma_above_bottom = g_heap_top;
 
         LISTP_FOR_EACH_ENTRY(vma, &g_heap_vma_list, list) {
@@ -225,11 +217,6 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
             }
             vma_above = vma;
             vma_above_bottom = vma_above->bottom;
-
-            if (is_pal_internal && vma_above_bottom - size < pal_internal_mem_bottom) {
-                /* we would have to go below PAL-internal area, fail */
-                goto out;
-            }
         }
 
         /* corner case: there may be enough space between heap bottom and the lowest-address VMA */
@@ -242,7 +229,8 @@ out:
 
     if (ret) {
         if (is_pal_internal) {
-            assert(ret >= pal_internal_mem_bottom);
+            /* This should be guaranteed by the check in `__create_vma_and_merge()` */
+            assert(ret >= g_heap_top - g_pal_internal_mem_size);
         } else {
             assert(ret >= g_heap_bottom);
         }
