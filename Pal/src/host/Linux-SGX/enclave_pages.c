@@ -206,7 +206,7 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
         }
         ret = __create_vma_and_merge(addr, size, is_pal_internal, vma_above);
     } else {
-        /* Caller did not specify address; find first (highest-address) empty slot that fits. */
+        /* caller did not specify address; find first (highest-address) empty slot that fits */
         void* vma_above_bottom = g_heap_top;
 
         LISTP_FOR_EACH_ENTRY(vma, &g_heap_vma_list, list) {
