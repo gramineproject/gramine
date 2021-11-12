@@ -20,6 +20,9 @@ def main():
         path = os.path.join(os.path.dirname(__file__), filename)
         gdb.execute('source ' + path)
 
+    print('[%s] For SGX enclave debugging, don\'t forget to specify `sgx.debug=true`.' %
+              os.path.basename(__file__))
+
 
 if __name__ == '__main__':
     main()
