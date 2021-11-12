@@ -54,7 +54,7 @@ __attribute__ ((visibility("hidden")))
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
-int verify_quote_against_envvar_measurements(const void* quote, size_t quote_size);
+int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
 
 /*!
  * \brief Callback for user-specific verification of measurements in SGX quote.

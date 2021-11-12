@@ -233,16 +233,16 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
-    if (quote_from_ias_size < SGX_QUOTE_BODY_SIZE || quote_from_ias_size > SGX_QUOTE_MAX_SIZE) {
+    if (quote_from_ias_size < sizeof(sgx_quote_body_t) ||
+            quote_from_ias_size > SGX_QUOTE_MAX_SIZE) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
     }
 
-    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
-     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
+    sgx_quote_body_t* quote_body = (sgx_quote_body_t*)quote_from_ias;
 
-    /* verify enclave attributes from the SGX quote */
-    ret = verify_quote_enclave_attributes((sgx_quote_t*)quote_from_ias, allow_debug_enclave);
+    /* verify enclave attributes from the SGX quote body */
+    ret = verify_quote_body_enclave_attributes(quote_body, allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
@@ -251,14 +251,13 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
-        sgx_quote_t* q = (sgx_quote_t*)quote_from_ias;
-        ret = g_verify_measurements_cb((const char*)&q->report_body.mr_enclave,
-                                       (const char*)&q->report_body.mr_signer,
-                                       (const char*)&q->report_body.isv_prod_id,
-                                       (const char*)&q->report_body.isv_svn);
+        ret = g_verify_measurements_cb((const char*)&quote_body->report_body.mr_enclave,
+                                       (const char*)&quote_body->report_body.mr_signer,
+                                       (const char*)&quote_body->report_body.isv_prod_id,
+                                       (const char*)&quote_body->report_body.isv_svn);
     } else {
         /* use default logic to verify measurements */
-        ret = verify_quote_against_envvar_measurements(quote_from_ias, quote_from_ias_size);
+        ret = verify_quote_body_against_envvar_measurements(quote_body);
     }
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;

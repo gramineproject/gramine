@@ -44,11 +44,7 @@ typedef struct _sgx_basename_t {
     uint8_t name[32];
 } sgx_basename_t;
 
-/* TODO: IAS returns an IAS report object that contains a truncated SGX quote inside, without
- * `signature_len` and `signature` fields. This is called "SGX quote body". We must split the
- * current `sgx_quote_t` struct into two structs, and use the "SGX quote body" in all relevant
- * functions instead of the full `sgx_quote_t` (otherwise it will blow up someday). */
-typedef struct _sgx_quote_t {
+typedef struct _sgx_quote_body_t {
     uint16_t version;
     uint16_t sign_type;
     sgx_epid_group_id_t epid_group_id;
@@ -57,11 +53,13 @@ typedef struct _sgx_quote_t {
     uint32_t xeid;
     sgx_basename_t basename;
     sgx_report_body_t report_body;
-    uint32_t signature_len;
+} sgx_quote_body_t;
+
+typedef struct _sgx_quote_t {
+    sgx_quote_body_t body;
+    uint32_t signature_size;
     uint8_t signature[];
 } sgx_quote_t;
-
-#define SGX_QUOTE_BODY_SIZE (offsetof(sgx_quote_t, signature_len))
 
 typedef uint8_t sgx_spid_t[16];
 typedef uint8_t sgx_quote_nonce_t[16];

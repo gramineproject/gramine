@@ -226,20 +226,20 @@ static int test_quote_interface(void) {
     }
 
     /* 3. verify report data read from `quote` */
-    if ((size_t)bytes < sizeof(sgx_quote_t)) {
+    if ((size_t)bytes < sizeof(sgx_quote_body_t)) {
         fprintf(stderr, "obtained SGX quote is too small: %ldB (must be at least %ldB)\n", bytes,
-                sizeof(sgx_quote_t));
+                sizeof(sgx_quote_body_t));
         return FAILURE;
     }
 
-    sgx_quote_t* typed_quote = (sgx_quote_t*)g_quote;
+    sgx_quote_body_t* quote_body = (sgx_quote_body_t*)g_quote;
 
-    if (typed_quote->version != /*EPID*/2 && typed_quote->version != /*DCAP*/3) {
+    if (quote_body->version != /*EPID*/2 && quote_body->version != /*DCAP*/3) {
         fprintf(stderr, "version of SGX quote is not EPID (2) and not ECDSA/DCAP (3)\n");
         return FAILURE;
     }
 
-    int ret = memcmp(typed_quote->report_body.report_data.d, user_report_data.d,
+    int ret = memcmp(quote_body->report_body.report_data.d, user_report_data.d,
                      sizeof(user_report_data));
     if (ret) {
         fprintf(stderr, "comparison of report data in SGX quote failed\n");

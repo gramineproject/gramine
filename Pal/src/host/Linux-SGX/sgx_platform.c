@@ -305,7 +305,7 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
     /* Intel SGX SDK implementation of the Quoting Enclave always sets `quote.len` to user-provided
      * `getreq.buf_size` (see above) instead of the actual size. We calculate the actual size here
      * by peeking into the quote and determining the size of the signature. */
-    size_t actual_quote_size = sizeof(sgx_quote_t) + actual_quote->signature_len;
+    size_t actual_quote_size = sizeof(sgx_quote_t) + actual_quote->signature_size;
     if (actual_quote_size > SGX_QUOTE_MAX_SIZE) {
         log_error("Size of the obtained SGX quote exceeds %d", SGX_QUOTE_MAX_SIZE);
         goto out;

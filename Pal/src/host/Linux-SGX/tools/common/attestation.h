@@ -23,13 +23,6 @@
 void display_quote(const void* quote_data, size_t quote_size);
 
 /*!
- *  \brief Display internal SGX report body structure (sgx_report_body_t).
- *
- *  \param[in] body Buffer with report body data.
- */
-void display_report_body(const sgx_report_body_t* body);
-
-/*!
  *  \brief Verify IAS attestation report. Also extract the SGX quote contained in IAS report:
  *         allocate enough memory to hold the quote and pass it to the user.
  *
@@ -54,10 +47,9 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
                                     size_t* out_quote_size);
 
 /*!
- *  \brief Verify that the provided SGX quote contains expected values.
+ *  \brief Verify that the provided SGX quote body contains expected values.
  *
- *  \param[in] quote_data      Quote to verify.
- *  \param[in] quote_size      Size of \a quote_data in bytes.
+ *  \param[in] quote_body      Quote body to verify.
  *  \param[in] mr_signer       (Optional) Expected mr_signer quote field.
  *  \param[in] mr_enclave      (Optional) Expected mr_enclave quote field.
  *  \param[in] isv_prod_id     (Optional) Expected isv_prod_id quote field.
@@ -72,18 +64,18 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signer,
-                 const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
-                 const char* report_data, bool expected_as_str);
+int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
+                      const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* report_data, bool expected_as_str);
 
 /*!
- *  \brief Verify enclave attributes of the provided SGX quote.
+ *  \brief Verify enclave attributes of the provided SGX quote body.
  *
- *  \param[in] quote                Quote to verify.
+ *  \param[in] quote_body           Quote body to verify.
  *  \param[in] allow_debug_enclave  If true, then SGXREPORT.ATTRIBUTES.DEBUG can be 1.
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote_enclave_attributes(sgx_quote_t* quote, bool allow_debug_enclave);
+int verify_quote_body_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave);
 
 #endif /* ATTESTATION_H */

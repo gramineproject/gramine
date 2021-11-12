@@ -92,11 +92,11 @@ static int report(struct ias_context_t* ias, const char* quote_path, const char*
     }
 
     sgx_quote_t* quote = (sgx_quote_t*)quote_data;
-    if ((size_t)quote_size < sizeof(sgx_quote_t) + quote->signature_len) {
+    if ((size_t)quote_size < sizeof(sgx_quote_t) + quote->signature_size) {
         ERROR("Quote is too small\n");
         goto out;
     }
-    quote_size = sizeof(sgx_quote_t) + quote->signature_len;
+    quote_size = sizeof(sgx_quote_t) + quote->signature_size;
 
     ret = ias_verify_quote(ias, quote_data, quote_size, nonce, report_path, sig_path, cert_path,
                            advisory_path);

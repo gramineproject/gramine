@@ -46,7 +46,7 @@ const char* g_ias_public_key_pem =
 #define IS_ALIGNED_PTR_POW2(val, alignment) IS_ALIGNED_POW2((uintptr_t)(val), alignment)
 
 // TODO: decode some known values (flags etc)
-void display_report_body(const sgx_report_body_t* body) {
+static void display_report_body(const sgx_report_body_t* body) {
     INFO(" cpu_svn          : ");
     HEXDUMP(body->cpu_svn);
     INFO(" misc_select      : ");
@@ -83,39 +83,45 @@ void display_report_body(const sgx_report_body_t* body) {
     HEXDUMP(body->report_data);
 }
 
+static void display_quote_body(const sgx_quote_body_t* quote_body) {
+    INFO(" version          : ");
+    HEXDUMP(quote_body->version);
+    INFO(" sign_type        : ");
+    HEXDUMP(quote_body->sign_type);
+    INFO(" epid_group_id    : ");
+    HEXDUMP(quote_body->epid_group_id);
+    INFO(" qe_svn           : ");
+    HEXDUMP(quote_body->qe_svn);
+    INFO(" pce_svn          : ");
+    HEXDUMP(quote_body->pce_svn);
+    INFO(" xeid             : ");
+    HEXDUMP(quote_body->xeid);
+    INFO(" basename         : ");
+    HEXDUMP(quote_body->basename);
+}
+
 void display_quote(const void* quote_data, size_t quote_size) {
-    if (quote_size < SGX_QUOTE_BODY_SIZE) {
+    if (quote_size < sizeof(sgx_quote_body_t)) {
         ERROR("Quote size too small\n");
         return;
     }
 
     assert(IS_ALIGNED_PTR_POW2(quote_data, alignof(sgx_quote_t)));
     sgx_quote_t* quote = (sgx_quote_t*)quote_data;
-    INFO("version           : ");
-    HEXDUMP(quote->version);
-    INFO("sign_type         : ");
-    HEXDUMP(quote->sign_type);
-    INFO("epid_group_id     : ");
-    HEXDUMP(quote->epid_group_id);
-    INFO("qe_svn            : ");
-    HEXDUMP(quote->qe_svn);
-    INFO("pce_svn           : ");
-    HEXDUMP(quote->pce_svn);
-    INFO("xeid              : ");
-    HEXDUMP(quote->xeid);
-    INFO("basename          : ");
-    HEXDUMP(quote->basename);
+    INFO("quote_body        :\n");
+    display_quote_body(&quote->body);
     INFO("report_body       :\n");
-    display_report_body(&quote->report_body);
+    display_report_body(&quote->body.report_body);
 
-    // quotes from IAS reports are missing signature fields
-    if (quote_size >= sizeof(sgx_quote_t)) {
-        INFO("signature_len     : %d (0x%x)\n", quote->signature_len, quote->signature_len);
+    /* Quotes from IAS reports are missing signature fields. So display signature and signature_size
+       fields only for DCAP-based quotes */
+    if (quote_size >= sizeof(sgx_quote_body_t) + sizeof(quote->signature_size)) {
+        INFO("signature_size    : %d (0x%x)\n", quote->signature_size, quote->signature_size);
     }
 
-    if (quote_size >= sizeof(sgx_quote_t) + quote->signature_len) {
+    if (quote_size >= sizeof(sgx_quote_t) + quote->signature_size) {
         INFO("signature         : ");
-        hexdump_mem(&quote->signature, quote->signature_len);
+        hexdump_mem(&quote->signature, quote->signature_size);
         INFO("\n");
     }
 }
@@ -315,25 +321,17 @@ out:
     return ret ? -1 : 0;
 }
 
-int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signer,
-                 const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
-                 const char* report_data, bool expected_as_str) {
+int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
+                      const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* report_data, bool expected_as_str) {
     int ret = -1;
 
-    assert(IS_ALIGNED_PTR_POW2(quote_data, alignof(sgx_quote_t)));
-    sgx_quote_t* quote = (sgx_quote_t*)quote_data;
-
-    // Quote contained in the IAS report doesn't contain signature_len and signature fields
-    // Reject any smaller quotes as invalid
-    if (quote_size < SGX_QUOTE_BODY_SIZE) {
-        ERROR("Quote: Bad size %zu < %zu\n", quote_size, SGX_QUOTE_BODY_SIZE);
-        goto out;
-    }
+    sgx_quote_body_t* body = (sgx_quote_body_t*)quote_body;
 
     if (get_verbose())
-        display_quote(quote_data, quote_size);
+        display_quote_body(body);
 
-    sgx_report_body_t* body = &quote->report_body;
+    sgx_report_body_t* report_body = &body->report_body;
 
     sgx_measurement_t expected_mr;
     if (mr_signer) {
@@ -344,11 +342,11 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
             memcpy(&expected_mr, mr_signer, sizeof(expected_mr));
         }
 
-        if (memcmp(&body->mr_signer, &expected_mr, sizeof(expected_mr)) != 0) {
+        if (memcmp(&report_body->mr_signer, &expected_mr, sizeof(expected_mr)) != 0) {
             ERROR("Quote: mr_signer doesn't match the expected value\n");
             if (get_verbose()) {
                 ERROR("Quote mr_signer:\n");
-                HEXDUMP(body->mr_signer);
+                HEXDUMP(report_body->mr_signer);
                 ERROR("Expected mr_signer:\n");
                 HEXDUMP(expected_mr);
             }
@@ -366,11 +364,11 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
             memcpy(&expected_mr, mr_enclave, sizeof(expected_mr));
         }
 
-        if (memcmp(&body->mr_enclave, &expected_mr, sizeof(expected_mr)) != 0) {
+        if (memcmp(&report_body->mr_enclave, &expected_mr, sizeof(expected_mr)) != 0) {
             ERROR("Quote: mr_enclave doesn't match the expected value\n");
             if (get_verbose()) {
                 ERROR("Quote mr_enclave:\n");
-                HEXDUMP(body->mr_enclave);
+                HEXDUMP(report_body->mr_enclave);
                 ERROR("Expected mr_enclave:\n");
                 HEXDUMP(expected_mr);
             }
@@ -390,8 +388,9 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
             memcpy(&prod_id, isv_prod_id, sizeof(prod_id));
         }
 
-        if (body->isv_prod_id != prod_id) {
-            ERROR("Quote: invalid isv_prod_id (%u, expected %u)\n", body->isv_prod_id, prod_id);
+        if (report_body->isv_prod_id != prod_id) {
+            ERROR("Quote: invalid isv_prod_id (%u, expected %u)\n", report_body->isv_prod_id,
+                  prod_id);
             goto out;
         }
 
@@ -407,8 +406,8 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
             memcpy(&svn, isv_svn, sizeof(svn));
         }
 
-        if (body->isv_svn < svn) {
-            ERROR("Quote: invalid isv_svn (%u < expected %u)\n", body->isv_svn, svn);
+        if (report_body->isv_svn < svn) {
+            ERROR("Quote: invalid isv_svn (%u < expected %u)\n", report_body->isv_svn, svn);
             goto out;
         }
 
@@ -425,11 +424,11 @@ int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signe
             memcpy(&rd, report_data, sizeof(rd));
         }
 
-        if (memcmp(&body->report_data, &rd, sizeof(rd)) != 0) {
+        if (memcmp(&report_body->report_data, &rd, sizeof(rd)) != 0) {
             ERROR("Quote: report_data doesn't match the expected value\n");
             if (get_verbose()) {
                 ERROR("Quote report_data:\n");
-                HEXDUMP(body->report_data);
+                HEXDUMP(report_body->report_data);
                 ERROR("Expected report_data:\n");
                 HEXDUMP(rd);
             }
@@ -445,27 +444,27 @@ out:
     return ret;
 }
 
-int verify_quote_enclave_attributes(sgx_quote_t* quote, bool allow_debug_enclave) {
-    if (!allow_debug_enclave && (quote->report_body.attributes.flags & SGX_FLAGS_DEBUG)) {
+int verify_quote_body_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave) {
+    if (!allow_debug_enclave && (quote_body->report_body.attributes.flags & SGX_FLAGS_DEBUG)) {
         ERROR("Quote: DEBUG bit in enclave attributes is set\n");
         return -1;
     }
 
     /* sanity check: enclave must be initialized */
-    if (!(quote->report_body.attributes.flags & SGX_FLAGS_INITIALIZED)) {
+    if (!(quote_body->report_body.attributes.flags & SGX_FLAGS_INITIALIZED)) {
         ERROR("Quote: INIT bit in enclave attributes is not set\n");
         return -1;
     }
 
     /* sanity check: enclave must not have provision/EINIT token key */
-    if ((quote->report_body.attributes.flags & SGX_FLAGS_PROVISION_KEY) ||
-            (quote->report_body.attributes.flags & SGX_FLAGS_LICENSE_KEY)) {
+    if ((quote_body->report_body.attributes.flags & SGX_FLAGS_PROVISION_KEY) ||
+            (quote_body->report_body.attributes.flags & SGX_FLAGS_LICENSE_KEY)) {
         ERROR("Quote: PROVISION_KEY or LICENSE_KEY bit in enclave attributes is set\n");
         return -1;
     }
 
     /* currently only support 64-bit enclaves */
-    if (!(quote->report_body.attributes.flags & SGX_FLAGS_MODE64BIT)) {
+    if (!(quote_body->report_body.attributes.flags & SGX_FLAGS_MODE64BIT)) {
         ERROR("Quote: MODE64 bit in enclave attributes is not set\n");
         return -1;
     }

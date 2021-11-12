@@ -164,33 +164,32 @@ int main(int argc, char* argv[]) {
         DBG("Using IAS public key from file '%s'\n", ias_pubkey_path);
     }
 
-    uint8_t* report_quote = NULL;
-    size_t quote_size = 0;
+    uint8_t* report_quote_body = NULL;
+    size_t quote_body_size = 0;
 
+    /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
     ret = verify_ias_report_extract_quote(report, report_size, sig, sig_size,
                                           allow_outdated_tcb, nonce, ias_pubkey,
-                                          &report_quote, &quote_size);
+                                          &report_quote_body, &quote_body_size);
     if (ret < 0)
         return ret;
 
     /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
-    if (quote_size < SGX_QUOTE_BODY_SIZE || quote_size > SGX_QUOTE_MAX_SIZE) {
-        ERROR("SGX quote returned in IAS report has unexpected size %lu\n", quote_size);
-        free(report_quote);
+    if (quote_body_size < sizeof(sgx_quote_body_t) || quote_body_size > SGX_QUOTE_MAX_SIZE) {
+        ERROR("SGX quote returned in IAS report has unexpected size %lu\n", quote_body_size);
+        free(report_quote_body);
         return -1;
     }
 
-    /* TODO: we must pass only the "SGX quote body" struct in the below verify_* functions, because
-     * the IAS report returns a truncated SGX quote (without signature_len and signature fields) */
-
-    ret = verify_quote(report_quote, quote_size, mrsigner, mrenclave, isv_prod_id, isv_svn,
-                       report_data, /*expected_as_str=*/true);
+    ret = verify_quote_body((sgx_quote_body_t*)report_quote_body, mrsigner, mrenclave, isv_prod_id,
+                            isv_svn, report_data, /*expected_as_str=*/true);
     if (ret < 0) {
-        free(report_quote);
+        free(report_quote_body);
         return ret;
     }
 
-    ret = verify_quote_enclave_attributes((sgx_quote_t*)report_quote, allow_debug_enclave);
-    free(report_quote);
+    ret = verify_quote_body_enclave_attributes((sgx_quote_body_t*)report_quote_body,
+                                               allow_debug_enclave);
+    free(report_quote_body);
     return ret;
 }

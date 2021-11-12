@@ -163,8 +163,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
             break;
     }
 
-    /* verify enclave attributes from the SGX quote */
-    ret = verify_quote_enclave_attributes(quote, allow_debug_enclave);
+    sgx_quote_body_t* quote_body = &quote->body;
+
+    /* verify enclave attributes from the SGX quote body */
+    ret = verify_quote_body_enclave_attributes(quote_body, allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
@@ -173,13 +175,13 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
-        ret = g_verify_measurements_cb((const char*)&quote->report_body.mr_enclave,
-                                       (const char*)&quote->report_body.mr_signer,
-                                       (const char*)&quote->report_body.isv_prod_id,
-                                       (const char*)&quote->report_body.isv_svn);
+        ret = g_verify_measurements_cb((const char*)&quote_body->report_body.mr_enclave,
+                                       (const char*)&quote_body->report_body.mr_signer,
+                                       (const char*)&quote_body->report_body.isv_prod_id,
+                                       (const char*)&quote_body->report_body.isv_svn);
     } else {
         /* use default logic to verify measurements */
-        ret = verify_quote_against_envvar_measurements(quote, quote_size);
+        ret = verify_quote_body_against_envvar_measurements(quote_body);
     }
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
