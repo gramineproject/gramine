@@ -564,7 +564,7 @@ long int ptrace(enum __ptrace_request request, ...) {
         }
 
         case PTRACE_PEEKUSER: {
-            if ((size_t)addr >= sizeof(struct user)) {
+            if ((size_t)addr + sizeof(long) > sizeof(struct user)) {
                 errno = EINVAL;
                 return -1;
             }
@@ -572,7 +572,7 @@ long int ptrace(enum __ptrace_request request, ...) {
             if (!in_enclave)
                 return host_ptrace(PTRACE_PEEKUSER, tid, addr, data);
 
-            if ((size_t)addr >= sizeof(struct user_regs_struct))
+            if ((size_t)addr + sizeof(long) > sizeof(struct user_regs_struct))
                 return host_ptrace(PTRACE_PEEKUSER, tid, addr, NULL);
 
             ret = peek_user(memdev, tid, ei, &userdata);
@@ -581,16 +581,16 @@ long int ptrace(enum __ptrace_request request, ...) {
                 return -1;
             }
 
-            return *(long int*)((void*)&userdata + (off_t)addr);
+            return *(long*)((void*)&userdata + (off_t)addr);
         }
 
         case PTRACE_POKEUSER: {
-            if ((size_t)addr >= sizeof(struct user)) {
+            if ((size_t)addr + sizeof(long) > sizeof(struct user)) {
                 errno = EINVAL;
                 return -1;
             }
 
-            if (!in_enclave || (size_t)addr >= sizeof(struct user_regs_struct))
+            if (!in_enclave || (size_t)addr + sizeof(long) > sizeof(struct user_regs_struct))
                 return host_ptrace(PTRACE_POKEUSER, tid, addr, data);
 
             ret = peek_user(memdev, tid, ei, &userdata);
@@ -599,7 +599,7 @@ long int ptrace(enum __ptrace_request request, ...) {
                 return -1;
             }
 
-            *(long int*)((void*)&userdata + (off_t)addr) = (long int)data;
+            *(long*)((void*)&userdata + (off_t)addr) = (long)data;
 
             ret = poke_user(memdev, tid, ei, &userdata);
             if (ret < 0) {
