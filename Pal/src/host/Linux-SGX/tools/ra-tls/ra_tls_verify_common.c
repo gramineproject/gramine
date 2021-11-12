@@ -166,7 +166,7 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
     if (ret < 0)
         return ret;
 
-    ret = memcmp(quote->report_body.report_data.d, sha, SHA256_DIGEST_SIZE);
+    ret = memcmp(quote->body.report_body.report_data.d, sha, SHA256_DIGEST_SIZE);
     if (ret)
         return MBEDTLS_ERR_X509_SIG_MISMATCH;
 
@@ -197,7 +197,7 @@ out:
     return ret;
 }
 
-int verify_quote_against_envvar_measurements(const void* quote, size_t quote_size) {
+int verify_quote_against_envvar_measurements(const void* quote_body, size_t quote_body_size) {
     int ret;
 
     sgx_measurement_t expected_mrsigner;
@@ -217,7 +217,7 @@ int verify_quote_against_envvar_measurements(const void* quote, size_t quote_siz
     if (ret < 0)
         return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
 
-    ret = verify_quote(quote, quote_size,
+    ret = verify_quote(quote_body, quote_body_size,
                        validate_mrsigner ? (char*)&expected_mrsigner : NULL,
                        validate_mrenclave ? (char*)&expected_mrenclave : NULL,
                        validate_isv_prod_id ? (char*)&expected_isv_prod_id : NULL,
