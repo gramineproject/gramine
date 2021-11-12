@@ -632,12 +632,12 @@ noreturn void start_execution(const char** arguments, const char** environs) {
      *   8(%rsp)               argv[0]
      *   16(%rsp)              argv[1]
      *   ...
-     *   (8*(argc+1))(%rsp)    argv[argc] = NULL
-     *   (8*(argc+2))(%rsp)    envp[0]
-     *   (8*(argc+3))(%rsp)    envp[1]
+     *   (8*(argc+0))(%rsp)    argv[argc] = NULL
+     *   (8*(argc+1))(%rsp)    envp[0]
+     *   (8*(argc+2))(%rsp)    envp[1]
      *   ...
-     *   (8*(argc+n+2))(%rsp)  envp[n] = NULL
-     *   (8*(argc+n+3))(%rsp)  auxv[0] = AT_NULL
+     *   (8*(argc+n+1))(%rsp)  envp[n] = NULL
+     *   (8*(argc+n+2))(%rsp)  auxv[0] = AT_NULL
      *
      * See also the corresponding LibOS entrypoint: LibOS/shim/src/arch/x86_64/start.S
      */
