@@ -489,8 +489,8 @@ int load_elf_object(const char* uri, enum elf_object_type type) {
     struct link_map* map = NULL;
 
     char buf[1024]; /* must be enough to hold ELF header and all its program headers */
-    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                        /*create=*/PAL_CREATE_NEVER, /*options=*/0);
+    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0);
     if (ret < 0)
         return ret;
 
