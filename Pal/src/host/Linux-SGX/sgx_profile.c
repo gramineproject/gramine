@@ -142,7 +142,7 @@ out:
         ssize_t close_ret = pd_close(g_perf_data);
         if (close_ret < 0)
             log_error("sgx_profile_init: pd_close failed: %ld", close_ret);
-            g_perf_data = NULL;
+        g_perf_data = NULL;
     }
     return ret;
 }
