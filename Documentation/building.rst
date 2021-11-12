@@ -314,8 +314,8 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 
        uname -r
 
-#. Also verify that the patched kernel supports FSGSBASE (the below command
-   shows one approach of verifying the support by checking if bit 2 is set)::
+#. Also verify that the patched kernel supports FSGSBASE (example where only
+   bit 2 is set)::
 
        # Linux kernel doesn't support FSGSBASE: patch or use higher version!
        $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2

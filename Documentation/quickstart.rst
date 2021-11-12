@@ -49,7 +49,7 @@ Gramine requires several features from your system:
 If your system doesn't meet these requirements, please refer to more detailed
 descriptions in :doc:`building`.
 
-#. Ensure that Intel SGX is enabled on your platform using::
+#. Ensure that Intel SGX is enabled on your platform by doing::
 
        sudo apt-get install -y cpuid
        cpuid | grep -i sgx
