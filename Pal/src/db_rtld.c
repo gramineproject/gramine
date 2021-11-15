@@ -628,16 +628,16 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 noreturn void start_execution(const char** arguments, const char** environs) {
     /* Our PAL loader invokes LibOS entrypoint with the following stack:
      *
-     *   RSP+0               argc
-     *   RSP+8+8*0           argv[0]
-     *   RSP+8+8*1           argv[1]
+     *   RSP + 0                     argc
+     *   RSP + 8+8*0                 argv[0]
+     *   RSP + 8+8*1                 argv[1]
      *   ...
-     *   RSP+8+8*(argc+0)    argv[argc] = NULL
-     *   RSP+8+8*(argc+1)    envp[0]
-     *   RSP+8+8*(argc+2)    envp[1]
+     *   RSP + 8+8*argc              argv[argc] = NULL
+     *   RSP + 8+8*argc + 8+8*0      envp[0]
+     *   RSP + 8+8*argc + 8+8*1      envp[1]
      *   ...
-     *   RSP+8+8*(argc+n+1)  envp[n] = NULL
-     *   RSP+8+8*(argc+n+2)  auxv[0] = AT_NULL
+     *   RSP + 8+8*argc + 8+8*n      envp[n] = NULL
+     *   RSP + 8+8*argc + 8+8*n + 8  auxv[0] = AT_NULL
      *
      * See also the corresponding LibOS entrypoint: LibOS/shim/src/arch/x86_64/start.S
      */
