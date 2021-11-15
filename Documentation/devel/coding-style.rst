@@ -128,6 +128,8 @@ Conventions and high-level style
    implementation details in comments within a |~| function. Only tricky or
    unintuitive code should be commented.
 
+#. Inline comments should be separated from code (or macros) with one space.
+
 #. Magic numbers (e.g. buffer sizes) shouldn’t be hardcoded in the
    implementation. Use ``#define``.
 

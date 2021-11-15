@@ -15,7 +15,7 @@
 #define GRAMINE_ENTRY_API_H_
 
 /* Offsets for GS register at which entry vectors can be found */
-#define GRAMINE_SYSCALL_OFFSET         24
+#define GRAMINE_SYSCALL_OFFSET 24
 
 #ifdef __ASSEMBLER__
 
@@ -27,7 +27,7 @@ jmpq *%gs:GRAMINE_SYSCALL_OFFSET
 
 #else /* !__ASSEMBLER__ */
 
-#define GRAMINE_STR(x) #x
+#define GRAMINE_STR(x)  #x
 #define GRAMINE_XSTR(x) GRAMINE_STR(x)
 
 __asm__(
@@ -67,7 +67,6 @@ static inline int gramine_register_library(const char* name, unsigned long load_
 static inline int gramine_run_test(const char* test_name) {
     return gramine_call(GRAMINE_CALL_RUN_TEST, (unsigned long)test_name, 0);
 }
-
 
 #endif /* __ASSEMBLER__ */
 
