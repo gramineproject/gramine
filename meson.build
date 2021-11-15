@@ -270,4 +270,8 @@ if enable_libgomp
     subproject('gcc-10.2.0')
 endif
 
+if enable_tests
+    subproject('ltp-20200930')
+endif
+
 run_target('clang-format', command: [meson_clang_format_prog])

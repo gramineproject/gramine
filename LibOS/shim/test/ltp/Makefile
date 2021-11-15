@@ -1,5 +1,7 @@
 include makevars.mk
 
+GRAMINE_PKGLIBDIR ?= $(shell python3 -c 'import graminelibos; print(graminelibos._CONFIG_PKGLIBDIR)')
+
 target = $(INSTALLDIR)/INSTALL_SUCCESS build-manifest
 exec_target =
 
@@ -19,26 +21,11 @@ ifneq ($(LTP_TIMEOUT_FACTOR),)
 	RUNLTPOPTS += -T $(LTP_TIMEOUT_FACTOR)
 endif
 
-$(SRCDIR)/Makefile:
-	$(error "$(SRCDIR) is empty. Please run `git submodule update --init $(SRCDIR)` or download the LTP source code (https://github.com/linux-test-project/ltp) into $(SRCDIR).")
-
-$(SRCDIR)/configure: $(SRCDIR)/Makefile
-	$(MAKE) -C $(SRCDIR) autotools
-
-.SECONDARY: $(BUILDDIR)/BUILD_SUCCESS
-$(BUILDDIR)/BUILD_SUCCESS: $(SRCDIR)/configure
-	# Out-of-tree build steps were taken from ltp/INSTALL.
-	# The instructions below assume that SRCDIR and BUILDDIR are absolute.
-	mkdir -p $(BUILDDIR)
-	# Kernel module tests are not meaningful for our LibOS and building them causes troubles on
-	# incompatible host kernels.
-	cd $(BUILDDIR) && $(SRCDIR)/configure --without-modules --prefix $(INSTALLDIR)
-	$(MAKE) -C $(BUILDDIR) -f $(SRCDIR)/Makefile top_srcdir=$(SRCDIR) top_builddir=$(BUILDDIR) all
-	touch $@
-
+# TODO: Use the already installed LTP binaries instead of copying them to our directory.
 .SECONDARY: $(INSTALLDIR)/INSTALL_SUCCESS
-$(INSTALLDIR)/INSTALL_SUCCESS: $(BUILDDIR)/BUILD_SUCCESS
-	$(MAKE) -C $(BUILDDIR) -f $(SRCDIR)/Makefile top_srcdir=$(SRCDIR) top_builddir=$(BUILDDIR) SKIP_IDCHECK=1 install
+$(INSTALLDIR)/INSTALL_SUCCESS: $(GRAMINE_PKGLIBDIR)/tests/ltp
+	rm -rf $(INSTALLDIR)
+	cp -r $< install/
 	ln -sf $(abspath Makefile.testcases) $(TESTCASEDIR)/Makefile
 	touch $@
 
@@ -73,5 +60,4 @@ ltp-sgx.xml: CFG = ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg
 
 .PHONY: clean-build
 clean-build:
-	$(MAKE) -C $(SRCDIR) clean
-	$(RM) -r $(BUILDDIR) $(INSTALLDIR) ltp*.xml
+	$(RM) -r $(INSTALLDIR) ltp*.xml

@@ -1,0 +1,7 @@
+[wrap-file]
+directory = ltp-full-20200930
+source_url = https://github.com/linux-test-project/ltp/releases/download/20200930/ltp-full-20200930.tar.bz2
+# source_fallback_url = https://packages.grapheneproject.io/distfiles/ltp-full-20200930.tar.bz2
+source_filename = ltp-full-20200930.tar.bz2
+source_hash = 22b2a75c3cf0cc27ec9e8e505aa22d5d601d52b699d38a6415e378dec3348fda
+patch_directory = ltp-20200930
