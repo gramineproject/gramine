@@ -2,12 +2,14 @@
 
 #define MAX_DBG_THREADS 1024
 
-/* This address is shared between our GDB and Gramine-SGX and must
- * reside in non-enclave memory. Gramine-SGX puts an enclave_dbginfo
- * object at this address and periodically updates it. Our GDB
- * reads the object from this address to update its internal structs
- * and learn about enclave layout, active threads, etc. */
-#define DBGINFO_ADDR 0x100000000000
+/*
+ * Pre-defined address at which Gramine-SGX writes the `enclave_dbginfo` object, and periodically
+ * updates it. The object is being read by the GDB integration (`sgx_gdb.c`) using `ptrace`.
+ *
+ * The address should be in untrusted memory (outside of enclave), and should not overlap with the
+ * ASan shadow memory area (see `asan.h`).
+ */
+#define DBGINFO_ADDR 0x10000000000ULL /* 1 TB */
 
 /* This struct is read using PTRACE_PEEKDATA in 8B increments
  * therefore it is aligned as uint64_t. */
