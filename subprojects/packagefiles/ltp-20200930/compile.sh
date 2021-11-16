@@ -31,8 +31,8 @@ INSTALLDIR=$(realpath "$PRIVATE_DIR"/install)
     log "running make autotools..."
     make autotools >>"$BUILD_LOG" 2>&1
 
-	# `--without-modules`: kernel module tests are not meaningful for our LibOS, and building them
-	# causes troubles on incompatible host kernels
+    # `--without-modules`: kernel module tests are not meaningful for our LibOS, and building them
+    # causes troubles on incompatible host kernels
     log "running configure..."
     ./configure --without-modules --prefix "$INSTALLDIR" >>"$BUILD_LOG" 2>&1
 

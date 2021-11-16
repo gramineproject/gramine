@@ -25,7 +25,7 @@ endif
 .SECONDARY: $(INSTALLDIR)/INSTALL_SUCCESS
 $(INSTALLDIR)/INSTALL_SUCCESS: $(GRAMINE_PKGLIBDIR)/tests/ltp
 	rm -rf $(INSTALLDIR)
-	cp -r $< install/
+	cp -r $< $(INSTALLDIR)
 	ln -sf $(abspath Makefile.testcases) $(TESTCASEDIR)/Makefile
 	touch $@
 
