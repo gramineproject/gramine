@@ -192,8 +192,8 @@ For SGX, one needs to do the following::
 
 It is also possible to run a subset of tests::
 
-   gramine-test pytest -v -rs test_pal.py::TC_01_Bootstrap
-   gramine-test -v -rs test_pal.py::TC_01_Bootstrap::test_100_basic_boostrapping
+   gramine-test pytest -v -k TC_01_Bootstrap
+   gramine-test pytest -v -k test_100_basic_boostrapping
 
 The :command:`gramine-test pytest` command is a wrapper for `pytest
 <https://docs.pytest.org/en/stable/usage.html>`__ and accepts the same
