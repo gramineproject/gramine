@@ -80,7 +80,8 @@
 
 /*
  * Parameters of the shadow memory area. Each byte of shadow memory corresponds to ASAN_SHADOW_ALIGN
- * (by default 8) bytes of user memory.
+ * (by default 8) bytes of user memory. The shadow map length is 1 << 45 to cover the whole 48-bit
+ * user address space: Linux sometimes maps `vvar` and `vdso` just above 0x800000000000 (= 1 << 47).
  *
  * Note that we override the address of shadow memory area (ASAN_SHADOW_START). We want the shadow
  * memory to begin at a high address, because the default for x86_64 (0x7fff8000, just before 2 GB)
@@ -91,7 +92,7 @@
  * (BEWARE when changing ASAN_SHADOW_START: the value should not be a power of two. For powers of
  * two, LLVM tries to optimize the generated code by emitting bitwise OR instead of addition in the
  * mem-to-shadow conversion. As a result, low values (such as 1 TB) will not work correctly. A value
- * at least as high as the shadow map length (1 << 44) should work, but it's probably better to stay
+ * at least as high as the shadow map length (1 << 45) should work, but it's probably better to stay
  * closer to the default configuration and not use a power of two.)
  *
  * The shadow memory bytes have the following meaning:
@@ -105,7 +106,7 @@
  */
 #define ASAN_SHADOW_START 0x18000000000ULL /* 1.5 TB */
 #define ASAN_SHADOW_SHIFT 3
-#define ASAN_SHADOW_LENGTH (1ULL << 44)
+#define ASAN_SHADOW_LENGTH (1ULL << 45)
 #define ASAN_SHADOW_ALIGN (1 << ASAN_SHADOW_SHIFT)
 #define ASAN_SHADOW_MASK ((1 << ASAN_SHADOW_SHIFT) - 1)
 
