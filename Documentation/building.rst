@@ -314,14 +314,14 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 
        uname -r
 
-#. Also verify that the patched kernel supports FSGSBASE (example where only
-   bit 2 is set)::
+#. Also verify that the patched kernel supports FSGSBASE (the below command
+   must return that bit 1 is set)::
 
        # Linux kernel doesn't support FSGSBASE: patch or use higher version!
        $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
        AT_HWCAP2:       0x0
 
-       # Linux kernel supports FSGSBASE
+       # Linux kernel supports FSGSBASE (example where only bit 1 is set)
        $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
        AT_HWCAP2:       0x2
 
