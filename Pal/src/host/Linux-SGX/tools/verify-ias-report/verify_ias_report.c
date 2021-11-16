@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    ret = verify_quote(report_quote_body, quote_body_size, mrsigner, mrenclave, isv_prod_id,
+    ret = verify_quote((sgx_quote_body_t*)report_quote_body, mrsigner, mrenclave, isv_prod_id,
                        isv_svn, report_data, /*expected_as_str=*/true);
     if (ret < 0) {
         free(report_quote_body);

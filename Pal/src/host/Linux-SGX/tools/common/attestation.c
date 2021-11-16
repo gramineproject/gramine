@@ -83,21 +83,21 @@ void display_report_body(const sgx_report_body_t* body) {
     HEXDUMP(body->report_data);
 }
 
-void display_quote_body(const sgx_quote_body_t* body) {
+void display_quote_body(const sgx_quote_body_t* quote_body) {
     INFO("version           : ");
-    HEXDUMP(body->version);
+    HEXDUMP(quote_body->version);
     INFO("sign_type         : ");
-    HEXDUMP(body->sign_type);
+    HEXDUMP(quote_body->sign_type);
     INFO("epid_group_id     : ");
-    HEXDUMP(body->epid_group_id);
+    HEXDUMP(quote_body->epid_group_id);
     INFO("qe_svn            : ");
-    HEXDUMP(body->qe_svn);
+    HEXDUMP(quote_body->qe_svn);
     INFO("pce_svn           : ");
-    HEXDUMP(body->pce_svn);
+    HEXDUMP(quote_body->pce_svn);
     INFO("xeid              : ");
-    HEXDUMP(body->xeid);
+    HEXDUMP(quote_body->xeid);
     INFO("basename          : ");
-    HEXDUMP(body->basename);
+    HEXDUMP(quote_body->basename);
 }
 
 void display_quote(const void* quote_data, size_t quote_size) {
@@ -114,7 +114,7 @@ void display_quote(const void* quote_data, size_t quote_size) {
     display_report_body(&quote->body.report_body);
 
     // quotes from IAS reports are missing signature fields
-    if (quote_size >= sizeof(sgx_quote_body_t)) {
+    if (quote_size >= sizeof(sgx_quote_body_t) + sizeof(quote->signature_len)) {
         INFO("signature_len     : %d (0x%x)\n", quote->signature_len, quote->signature_len);
     }
 
@@ -320,17 +320,12 @@ out:
     return ret ? -1 : 0;
 }
 
-int verify_quote(const void* quote_body, size_t quote_body_size, const char* mr_signer,
+int verify_quote(const sgx_quote_body_t* quote_body, const char* mr_signer,
                  const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
                  const char* report_data, bool expected_as_str) {
     int ret = -1;
 
     sgx_quote_body_t* body = (sgx_quote_body_t*)quote_body;
-
-    if (quote_body_size < sizeof(sgx_quote_body_t)) {
-        ERROR("Quote: Bad size %zu < %zu\n", quote_body_size, sizeof(sgx_quote_body_t));
-        goto out;
-    }
 
     if (get_verbose())
         display_quote_body(body);

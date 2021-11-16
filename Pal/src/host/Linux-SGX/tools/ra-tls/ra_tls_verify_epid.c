@@ -257,7 +257,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
                                        (const char*)&quote_body->report_body.isv_svn);
     } else {
         /* use default logic to verify measurements */
-        ret = verify_quote_against_envvar_measurements(quote_body, quote_from_ias_size);
+        ret = verify_quote_against_envvar_measurements(quote_body);
     }
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;

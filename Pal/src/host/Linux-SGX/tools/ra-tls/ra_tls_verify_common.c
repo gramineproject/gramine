@@ -197,7 +197,7 @@ out:
     return ret;
 }
 
-int verify_quote_against_envvar_measurements(const void* quote_body, size_t quote_body_size) {
+int verify_quote_against_envvar_measurements(const sgx_quote_body_t* quote_body) {
     int ret;
 
     sgx_measurement_t expected_mrsigner;
@@ -217,8 +217,7 @@ int verify_quote_against_envvar_measurements(const void* quote_body, size_t quot
     if (ret < 0)
         return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
 
-    ret = verify_quote(quote_body, quote_body_size,
-                       validate_mrsigner ? (char*)&expected_mrsigner : NULL,
+    ret = verify_quote(quote_body, validate_mrsigner ? (char*)&expected_mrsigner : NULL,
                        validate_mrenclave ? (char*)&expected_mrenclave : NULL,
                        validate_isv_prod_id ? (char*)&expected_isv_prod_id : NULL,
                        validate_isv_svn ? (char*)&expected_isv_svn : NULL,

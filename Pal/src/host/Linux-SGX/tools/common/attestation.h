@@ -25,9 +25,9 @@ void display_quote(const void* quote_data, size_t quote_size);
 /*!
  *  \brief Display SGX quote body structure (sgx_quote_body_t).
  *
- *  \param[in] body Buffer with quote body data.
+ *  \param[in] quote_body Buffer with quote body data.
  */
-void display_quote_body(const sgx_quote_body_t* body);
+void display_quote_body(const sgx_quote_body_t* quote_body);
 
 /*!
  *  \brief Display internal SGX report body structure (sgx_report_body_t).
@@ -63,8 +63,8 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
 /*!
  *  \brief Verify that the provided SGX quote contains expected values.
  *
- *  \param[in] quote_data      Quote body to verify.
- *  \param[in] quote_size      Size of \a quote body in bytes.
+ *  \param[in] quote_body      Quote body to verify.
+ *  \param[in] quote_body_size Size of \a quote_body in bytes.
  *  \param[in] mr_signer       (Optional) Expected mr_signer quote field.
  *  \param[in] mr_enclave      (Optional) Expected mr_enclave quote field.
  *  \param[in] isv_prod_id     (Optional) Expected isv_prod_id quote field.
@@ -79,7 +79,7 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote(const void* quote_data, size_t quote_size, const char* mr_signer,
+int verify_quote(const sgx_quote_body_t* quote_body, const char* mr_signer,
                  const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
                  const char* report_data, bool expected_as_str);
 
