@@ -75,12 +75,15 @@ def run(ctx, force, verbose, name, args):
     util_tests.exec_gramine(sgx, name, args)
 
 
+# NOTE: We do not accept the `-v/-q` short options in the below command, because Pytest accepts the
+# same options. We could instruct the user to run `gramine-test pytest -- -v` as a workaround, but
+# that would make `gramine-test` harder to use.
 @main.command(
     help='Run Pytest, rebuilding all manifests first. Arguments will be passed to Pytest.',
     context_settings={'ignore_unknown_options': True},
 )
 @click.option('--force/--no-force', '-f', help='Force rebuild')
-@click.option('--verbose/--quiet', '-v/-q', help='Show all command lines while building')
+@click.option('--verbose/--quiet', help='Show all command lines while building')
 @click.argument('args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_context
 def pytest(ctx, force, verbose, args):
