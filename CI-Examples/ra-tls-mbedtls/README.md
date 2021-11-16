@@ -166,11 +166,15 @@ kill %%
 
 ```sh
 make clean
-make app client_dcap.manifest.sgx
+make app dcap
 
 gramine-sgx ./server dcap &
 
-gramine-sgx ./client_dcap dcap
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 gramine-sgx \
+    ./client_dcap dcap \
+    1234567890123456789012345678901234567890123456789012345678901234 \
+    1234567890123456789012345678901234567890123456789012345678901234 \
+    0 0
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%
