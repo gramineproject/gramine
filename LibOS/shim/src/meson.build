@@ -130,9 +130,9 @@ vdso_data_o = custom_target('vdso-data.o',
 gramine_hash_src = vcs_tag(
     command: ['git', 'rev-parse', '--verify', 'HEAD' ],
     fallback: 'OOT',
-    input: 'gramine_hash_template.c',
+    input: 'gramine_hash.c.in',
     output: 'gramine_hash.c',
-    replace_string: 'GRAMINE_COMMIT_HASH',
+    replace_string: '@GRAMINE_COMMIT_HASH@',
 )
 
 libos = shared_library('sysdb',

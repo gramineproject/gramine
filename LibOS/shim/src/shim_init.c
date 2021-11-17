@@ -384,7 +384,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     log_setprefix(shim_get_tcb());
 
     extern const char g_gramine_commit_hash[];
-    log_debug("Gramine was build from commit: %s", g_gramine_commit_hash);
+    log_debug("Gramine was built from commit: %s", g_gramine_commit_hash);
 
     log_debug("Host: %s", g_pal_control->host_type);
 
