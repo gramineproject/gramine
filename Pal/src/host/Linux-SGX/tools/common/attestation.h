@@ -64,7 +64,6 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
  *  \brief Verify that the provided SGX quote contains expected values.
  *
  *  \param[in] quote_body      Quote body to verify.
- *  \param[in] quote_body_size Size of \a quote_body in bytes.
  *  \param[in] mr_signer       (Optional) Expected mr_signer quote field.
  *  \param[in] mr_enclave      (Optional) Expected mr_enclave quote field.
  *  \param[in] isv_prod_id     (Optional) Expected isv_prod_id quote field.
