@@ -85,6 +85,14 @@ important pages:
   <https://gramine.readthedocs.io/en/latest/attestation.html>`__
 
 
+Users of Gramine
+================
+
+We maintain `a list of companies
+<https://gramine.readthedocs.io/en/latest/gramine-users.html>`__ experimenting
+with Gramine for their confidential computing solutions.
+
+
 Getting help
 ============
 
