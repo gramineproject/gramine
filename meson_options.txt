@@ -8,6 +8,8 @@ option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
 
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
+option('ltp', type: 'combo', choices: ['disabled', 'enabled'],
+    description: 'Build LTP')
 
 option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build additional utilities linked against DCAP library')

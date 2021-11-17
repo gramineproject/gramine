@@ -39,6 +39,7 @@ asan = get_option('asan') == 'enabled'
 
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
+enable_ltp = get_option('ltp') == 'enabled'
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
@@ -270,7 +271,7 @@ if enable_libgomp
     subproject('gcc-10.2.0')
 endif
 
-if enable_tests
+if enable_ltp
     subproject('ltp-20200930')
 endif
 

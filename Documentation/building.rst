@@ -188,6 +188,10 @@ Additional build options
   necessary if you will be running regression tests. See
   :doc:`devel/contributing` for details.
 
+- To build `LTP <https://github.com/linux-test-project/ltp>`__, run
+  :command:`meson -Dtests=enabled -Dltp=enabled`. This is necessary if you will
+  be running LTP tests with Gramine (``LibOS/shim/test/ltp``).
+
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,
   and enables detailed debug logs in Gramine.

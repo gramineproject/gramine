@@ -1,7 +1,10 @@
 LTP FOR GRAMINE
 ===============
 
-Just run ``make regression``, or ``make SGX=1 regression``.
+You need to build and install Gramine with
+``meson -Dtests=enabled -Dltp=enabled``.
+
+Then, run ``make regression``, or ``make SGX=1 regression``.
 
 Test results are reported as an XML file, ``ltp.xml`` or ``ltp-sgx.xml``, which
 is for consumption in Jenkins. There is also rudimentary logging.
