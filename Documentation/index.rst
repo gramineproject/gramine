@@ -65,6 +65,7 @@ Table of Contents
    manifest-syntax
    attestation
    cloud-deployment
+   gramine-users
    gsc
    sgx-intro
    glossary
