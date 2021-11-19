@@ -45,7 +45,7 @@ void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 
  */
 noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
 /*!
- * \brief Restore the CPU context.
+ * \brief Restore the CPU context after handling a syscall.
  *
  * \param context CPU context to restore.
  *
@@ -53,6 +53,9 @@ noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
  * it does not need to be reentrant (there is no such thing as nested syscalls), but it cannot
  * assume that the CPU context is the same as at the entry to the syscall (e.g. sigreturn, or signal
  * handling may change it).
+ *
+ * This function should be called from the LibOS stack. When AddressSanitizer is enabled, it also
+ * performs stack cleanup.
  */
 noreturn void return_from_syscall(PAL_CONTEXT* context);
 /*!
@@ -63,6 +66,15 @@ noreturn void return_from_syscall(PAL_CONTEXT* context);
  * Restores LibOS \p context after a successful clone or fork.
  */
 noreturn void restore_child_context_after_clone(struct shim_context* context);
+/*!
+ * \brief Restore the CPU context.
+ *
+ * \param context CPU context to restore.
+ *
+ * This is the low-level function used by \p return_from_syscall and
+ * \p restore_child_context_after_clone.
+ */
+noreturn void restore_pal_context(PAL_CONTEXT* context);
 /*!
  * \brief Creates a signal frame
  *

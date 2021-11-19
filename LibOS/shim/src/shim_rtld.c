@@ -21,6 +21,7 @@
 #include <endian.h>
 #include <errno.h>
 
+#include "asan.h"
 #include "elf.h"
 #include "shim_checkpoint.h"
 #include "shim_entry.h"
@@ -819,7 +820,19 @@ int register_library(const char* name, unsigned long load_address) {
     return 0;
 }
 
-noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(auxv_t)* auxp) {
+#ifdef ASAN
+__attribute_no_sanitize_address
+noreturn static void cleanup_and_call_elf_entry(ElfW(Addr) entry, void* argp) {
+    uintptr_t libos_stack_bottom = (uintptr_t)SHIM_TCB_GET(libos_stack_bottom);
+    asan_unpoison_current_stack(libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE,
+                                SHIM_THREAD_LIBOS_STACK_SIZE);
+
+    CALL_ELF_ENTRY(entry, argp);
+}
+#endif
+
+noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(auxv_t)* auxp,
+                                 bool from_libos_stack) {
     if (exec_map) {
         /* If a new map is provided, it means we have cleared the existing one by calling
          * `remove_loaded_elf_objects`. This happens during `execve`. */
@@ -891,9 +904,22 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
 
     ElfW(Addr) entry = g_interp_map ? g_interp_map->l_entry : g_exec_map->l_entry;
 
-    CALL_ELF_ENTRY(entry, argp);
+#ifdef ASAN
+    /*
+     * If we're on a PAL stack (i.e. during LibOS startup), don't bother cleaning up, we will not be
+     * returning to it. But if we're on LibOS stack (i.e. during `execve`), we need to unpoison it:
+     * LibOS will use it again for syscall handling.
+     */
+    if (from_libos_stack) {
+        cleanup_and_call_elf_entry(entry, argp);
+        /* UNREACHABLE */
+    }
+#else
+    __UNUSED(from_libos_stack);
+#endif
 
-    die_or_inf_loop();
+    CALL_ELF_ENTRY(entry, argp);
+    /* UNREACHABLE */
 }
 
 BEGIN_CP_FUNC(elf_object) {

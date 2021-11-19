@@ -725,10 +725,22 @@ sgx_ocall:
 	.type _restore_sgx_context, @function
 _restore_sgx_context:
 	.cfi_startproc
-	xchgq %rdi, %rsi
-	callq restore_xregs
 
-	movq %rsi, %r15
+	movq %rdi, %r15
+
+#ifdef ASAN
+	# Unpoison the signal stack before leaving it
+
+	movq %rsi, %r14
+	movq %gs:SGX_SIG_STACK_LOW, %rdi
+	movq %gs:SGX_SIG_STACK_HIGH, %rsi
+	subq %rdi, %rsi
+	call asan_unpoison_current_stack
+	movq %r14, %rdi
+#else
+	movq %rsi, %rdi
+#endif
+	callq restore_xregs
 
 	movq SGX_CPU_CONTEXT_RAX(%r15), %rax
 	movq SGX_CPU_CONTEXT_RCX(%r15), %rcx

@@ -50,6 +50,26 @@ void asan_unpoison_region(uintptr_t addr, size_t size) {
         *(shadow_ptr + shadow_size) = right_part_size;
 }
 
+__attribute__((noinline))
+void asan_unpoison_current_stack(uintptr_t addr, size_t size) {
+    uintptr_t top = addr;
+    uintptr_t bottom = addr + size;
+
+    uintptr_t frame = (uintptr_t)__builtin_frame_address(0);
+    if (!(top <= frame && frame < bottom)) {
+        char buf[LOCATION_BUF_SIZE];
+        describe_location(RETURN_ADDR() - 1, buf, LOCATION_BUF_SIZE);
+
+        log_error("asan: incorrect stack information, frame: 0x%zx, top: 0x%zx, bottom: 0x%zx",
+                  frame, top, bottom);
+        log_error("asan: location: %s", buf);
+        log_error("asan: this can cause false positives in later execution");
+        return;
+    }
+
+    asan_unpoison_region(top, bottom - top);
+}
+
 /* Check if a single byte is poisoned */
 __attribute_no_sanitize_address
 static bool asan_check(uintptr_t addr) {
@@ -90,6 +110,20 @@ static void asan_find_problem(uintptr_t addr, size_t size, uintptr_t* out_bad_ad
             break;
         case ASAN_POISON_USER:
             bug_type = "use-after-poison (unallocated SGX memory?)";
+            break;
+        case ASAN_POISON_STACK_LEFT:
+            bug_type = "stack-buffer-underflow";
+            break;
+        case ASAN_POISON_STACK_MID:
+        case ASAN_POISON_STACK_RIGHT:
+            bug_type = "stack-buffer-overflow";
+            break;
+        case ASAN_POISON_STACK_USE_AFTER_SCOPE:
+            bug_type = "stack-use-after-scope";
+            break;
+        case ASAN_POISON_ALLOCA_LEFT:
+        case ASAN_POISON_ALLOCA_RIGHT:
+            bug_type = "dynamic-stack-buffer-overflow";
             break;
         default:
             bug_type = "unknown-crash";
@@ -137,6 +171,12 @@ static void asan_dump(uintptr_t bad_addr) {
     log_error("asan: %22s %02x..%02x", "partially addressable:", 1, ASAN_SHADOW_ALIGN - 1);
     log_error("asan: %22s %02x", "heap left redzone:", ASAN_POISON_HEAP_LEFT_REDZONE);
     log_error("asan: %22s %02x", "freed heap region:", ASAN_POISON_HEAP_AFTER_FREE);
+    log_error("asan: %22s %02x", "stack left redzone:", ASAN_POISON_STACK_LEFT);
+    log_error("asan: %22s %02x", "stack mid redzone:", ASAN_POISON_STACK_MID);
+    log_error("asan: %22s %02x", "stack right redzone:", ASAN_POISON_STACK_RIGHT);
+    log_error("asan: %22s %02x", "stack after scope:", ASAN_POISON_STACK_USE_AFTER_SCOPE);
+    log_error("asan: %22s %02x", "alloca left redzone:", ASAN_POISON_ALLOCA_LEFT);
+    log_error("asan: %22s %02x", "alloca right redzone:", ASAN_POISON_ALLOCA_RIGHT);
     log_error("asan: %22s %02x", "user-poisoned:", ASAN_POISON_USER);
 }
 
@@ -263,6 +303,27 @@ void __asan_init(void) {}
 
 __attribute__((noinline))
 void __asan_version_mismatch_check_v8(void) {}
+
+__attribute__((noinline))
+void __asan_alloca_poison(uintptr_t addr, size_t size) {
+    assert(IS_ALIGNED(addr, ASAN_ALLOCA_REDZONE_SIZE));
+
+    uintptr_t left_redzone_addr = addr - ASAN_ALLOCA_REDZONE_SIZE;
+    uintptr_t end_addr = addr + size;
+    uintptr_t right_redzone_addr = ALIGN_UP(end_addr, ASAN_ALLOCA_REDZONE_SIZE) +
+        ASAN_ALLOCA_REDZONE_SIZE;
+    asan_poison_region(left_redzone_addr, ASAN_ALLOCA_REDZONE_SIZE, ASAN_POISON_ALLOCA_LEFT);
+    asan_poison_region(addr, right_redzone_addr - addr, ASAN_POISON_ALLOCA_RIGHT);
+    asan_unpoison_region(addr, size);
+}
+
+__attribute__((noinline))
+void __asan_allocas_unpoison(uintptr_t top, uintptr_t bottom) {
+    if (top) {
+        assert(top <= bottom);
+        asan_unpoison_region(top, bottom - top);
+    }
+}
 
 #define DEFINE_ASAN_SET_SHADOW(name, value)                         \
     __attribute__((noinline))                                       \

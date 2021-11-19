@@ -35,14 +35,9 @@ static int close_cloexec_handle(struct shim_handle_map* map) {
     return walk_handle_map(&close_on_exec, map);
 }
 
-struct execve_rtld_arg {
-    void* new_argp;       /* pointer to beginning of first stack frame (argc, argv[0], ...) */
-    elf_auxv_t* new_auxv; /* pointer inside first stack frame (auxv[0], auxv[1], ...) */
-};
-
-noreturn static void __shim_do_execve_rtld(struct execve_rtld_arg* __arg) {
-    struct execve_rtld_arg arg = *__arg;
-
+/* new_argp: pointer to beginning of first stack frame (argc, argv[0], ...)
+ * new_auxv: pointer inside first stack frame (auxv[0], auxv[1], ...) */
+noreturn static void __shim_do_execve_rtld(void* new_argp, elf_auxv_t* new_auxv) {
     int ret = 0;
 
     set_default_tls();
@@ -100,7 +95,7 @@ noreturn static void __shim_do_execve_rtld(struct execve_rtld_arg* __arg) {
     put_handle(exec);
 
     log_debug("execve: start execution");
-    execute_elf_object(exec_map, arg.new_argp, arg.new_auxv);
+    execute_elf_object(exec_map, new_argp, new_auxv, /*from_libos_stack=*/true);
     /* NOTREACHED */
 
 error:
@@ -139,11 +134,7 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
     /* We are done using this handle and we got the ownership from the caller. */
     put_handle(hdl);
 
-    struct execve_rtld_arg arg = {
-        .new_argp = new_argp,
-        .new_auxv = new_auxv
-    };
-    __SWITCH_STACK(new_argp, &__shim_do_execve_rtld, &arg);
+    __shim_do_execve_rtld(new_argp, new_auxv);
     /* UNREACHABLE */
 }
 

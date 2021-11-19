@@ -15,6 +15,7 @@
 #include <stdnoreturn.h>
 
 #include "api.h"
+#include "asan.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -192,6 +193,7 @@ void _DkThreadYieldExecution(void) {
 }
 
 /* _DkThreadExit for internal use: Thread exiting */
+__attribute_no_sanitize_address
 noreturn void _DkThreadExit(int* clear_child_tid) {
     PAL_TCB_LINUX* tcb = get_tcb_linux();
     PAL_HANDLE handle = tcb->handle;
@@ -234,6 +236,9 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
                   "lock is not naturally aligned in g_thread_stack_lock");
     static_assert(sizeof(*clear_child_tid) == 4, "unexpected clear_child_tid size");
 
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)handle->thread.stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
+#endif
     _DkThreadExit_asm_stub(&g_thread_stack_lock.lock, clear_child_tid);
 }
 

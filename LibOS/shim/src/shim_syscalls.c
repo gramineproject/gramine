@@ -3,6 +3,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include "asan.h"
 #include "shim_defs.h"
 #include "shim_internal.h"
 #include "shim_table.h"
@@ -61,4 +62,14 @@ out:
     SHIM_TCB_SET(context.regs, NULL);
 
     return_from_syscall(context);
+}
+
+__attribute_no_sanitize_address
+noreturn void return_from_syscall(PAL_CONTEXT* context) {
+#ifdef ASAN
+    uintptr_t libos_stack_bottom = (uintptr_t)SHIM_TCB_GET(libos_stack_bottom);
+    asan_unpoison_current_stack(libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE,
+                                SHIM_THREAD_LIBOS_STACK_SIZE);
+#endif
+    restore_pal_context(context);
 }

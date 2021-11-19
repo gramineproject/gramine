@@ -625,6 +625,9 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     default_describe_location(addr, buf, buf_size);
 }
 
+/* Disable AddressSanitizer for this function: it uses the `cookies` array as the beginning of new
+ * stack, so we don't want any redzone around it, or ASan-specific stack frame handling. */
+__attribute_no_sanitize_address
 noreturn void start_execution(const char** arguments, const char** environs) {
     /* Our PAL loader invokes LibOS entrypoint with the following stack:
      *

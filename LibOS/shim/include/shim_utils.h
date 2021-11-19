@@ -146,7 +146,8 @@ int init_elf_objects(void);
 int check_elf_object(struct shim_handle* file);
 int load_elf_object(struct shim_handle* file, struct link_map** out_map);
 int load_elf_interp(struct link_map* exec_map);
-noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp);
+noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp,
+                                 bool from_libos_stack);
 void remove_loaded_elf_objects(void);
 int init_brk_from_executable(struct link_map* exec_map);
 int register_library(const char* name, unsigned long load_address);

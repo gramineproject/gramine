@@ -3,6 +3,7 @@
 #include <stdalign.h>
 
 #include "api.h"
+#include "asan.h"
 #include "ecall_types.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
@@ -58,6 +59,7 @@ static int verify_and_init_rpc_queue(rpc_queue_t* untrusted_rpc_queue) {
  *      Base address of enclave. Calculated dynamically in enclave_entry.S.
  *      Trusted.
  */
+__attribute_no_sanitize_address
 void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* enclave_base_addr) {
     if (ecall_index < 0 || ecall_index >= ECALL_NR)
         return;

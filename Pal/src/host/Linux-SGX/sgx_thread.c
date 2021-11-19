@@ -7,6 +7,7 @@
 #include <linux/futex.h>
 #include <linux/signal.h>
 
+#include "asan.h"
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "pal_internal.h"
@@ -197,10 +198,14 @@ int pal_thread_init(void* tcbptr) {
     unmap_tcs();
     ret = 0;
 out:
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)tcb->stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
+#endif
     DO_SYSCALL(munmap, tcb->stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
     return ret;
 }
 
+__attribute_no_sanitize_address
 noreturn void thread_exit(int status) {
     PAL_TCB_URTS* tcb = get_tcb_urts();
 
@@ -221,6 +226,9 @@ noreturn void thread_exit(int status) {
         DO_SYSCALL(sigaltstack, &ss, NULL);
     }
 
+#ifdef ASAN
+    asan_unpoison_current_stack((uintptr_t)tcb->stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
+#endif
     /* free the thread stack (via munmap) and exit; note that exit() needs a "status" arg
      * but it could be allocated on a stack, so we must put it in register and do asm */
     __asm__ volatile("cmpq $0, %%rdi \n"        /* check if tcb->stack != NULL */

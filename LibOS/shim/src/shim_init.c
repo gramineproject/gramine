@@ -502,7 +502,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     /* At this point, the exec map has been either copied from checkpoint, or initialized in
      * `init_loader`. */
-    execute_elf_object(/*exec_map=*/NULL, new_argp, new_auxv);
+    execute_elf_object(/*exec_map=*/NULL, new_argp, new_auxv, /*from_libos_stack=*/false);
     /* UNREACHABLE */
 }
 
