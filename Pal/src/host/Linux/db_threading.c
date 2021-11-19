@@ -15,6 +15,7 @@
 #include <stdnoreturn.h>
 
 #include "api.h"
+#include "asan.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -192,6 +193,7 @@ void _DkThreadYieldExecution(void) {
 }
 
 /* _DkThreadExit for internal use: Thread exiting */
+__attribute_no_sanitize_address
 noreturn void _DkThreadExit(int* clear_child_tid) {
     PAL_TCB_LINUX* tcb = get_tcb_linux();
     PAL_HANDLE handle = tcb->handle;
@@ -217,8 +219,13 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
             break;
         }
     }
+
     /* we might still be using the stack we just marked as unused until we enter the asm mode,
      * so we do not unlock now but rather in asm below */
+
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)handle->thread.stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
+#endif
 
     /*
      * To make sure the compiler doesn't touch the stack after it was freed, we need to use asm:

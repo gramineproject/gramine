@@ -53,8 +53,14 @@ noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
  * it does not need to be reentrant (there is no such thing as nested syscalls), but it cannot
  * assume that the CPU context is the same as at the entry to the syscall (e.g. sigreturn, or signal
  * handling may change it).
+ *
+ * When AddressSanitizer is enabled, it also unpoisons the LibOS stack. Note at this point, we could
+ * also be running from the initial PAL stack, but we unconditionally unpoison the LibOS stack for
+ * simplicity.
  */
 noreturn void return_from_syscall(PAL_CONTEXT* context);
+/* Platform-specific part of return_from_syscall (called after ASan unpoisoning). */
+noreturn void _return_from_syscall(PAL_CONTEXT* context);
 /*!
  * \brief Restore the context after clone/fork.
  *

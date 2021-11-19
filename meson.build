@@ -209,7 +209,6 @@ if asan
         '-fno-sanitize-link-runtime',
         '-mllvm', '-asan-mapping-offset=' + asan_shadow_start,
         '-mllvm', '-asan-use-after-return=0',
-        '-mllvm', '-asan-stack=0',
         '-mllvm', '-asan-globals=0',
         '-DASAN',
     ]

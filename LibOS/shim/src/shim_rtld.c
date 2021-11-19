@@ -21,6 +21,7 @@
 #include <endian.h>
 #include <errno.h>
 
+#include "asan.h"
 #include "elf.h"
 #include "shim_checkpoint.h"
 #include "shim_entry.h"
@@ -819,6 +820,24 @@ int register_library(const char* name, unsigned long load_address) {
     return 0;
 }
 
+/*
+ * Helper function for unpoisoning the stack before jump: we need to do it from a function that is
+ * not instrumented by ASan, so that the stack is guaranteed to stay unpoisoned.
+ *
+ * Note that at this point, we could also be running from the initial PAL stack. However, we
+ * unconditionally unpoison the LibOS stack for simplicity.
+ */
+__attribute_no_sanitize_address
+noreturn static void cleanup_and_call_elf_entry(ElfW(Addr) entry, void* argp) {
+#ifdef ASAN
+    uintptr_t libos_stack_bottom = (uintptr_t)SHIM_TCB_GET(libos_stack_bottom);
+    asan_unpoison_region(libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE,
+                         SHIM_THREAD_LIBOS_STACK_SIZE);
+
+#endif
+    CALL_ELF_ENTRY(entry, argp);
+}
+
 noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(auxv_t)* auxp) {
     if (exec_map) {
         /* If a new map is provided, it means we have cleared the existing one by calling
@@ -891,9 +910,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
 
     ElfW(Addr) entry = g_interp_map ? g_interp_map->l_entry : g_exec_map->l_entry;
 
-    CALL_ELF_ENTRY(entry, argp);
-
-    die_or_inf_loop();
+    cleanup_and_call_elf_entry(entry, argp);
 }
 
 BEGIN_CP_FUNC(elf_object) {

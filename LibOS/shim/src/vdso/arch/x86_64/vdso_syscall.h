@@ -7,6 +7,10 @@
 
 #include "gramine_entry_api.h"
 
+#ifdef ASAN
+#error This code should be compiled without AddressSanitizer.
+#endif
+
 static inline long vdso_arch_syscall(long nr, long arg1, long arg2) {
     long ret;
     __asm__ volatile(

@@ -29,15 +29,27 @@ static int run_test_ubsan_int_overflow(void) {
 }
 #endif
 
-/* Test: allocate a buffer on heap, write past the end of buffer (ASan only) */
 #ifdef ASAN
-static int run_test_asan_buffer_overflow(void) {
+/* Test: allocate a buffer on heap, write past the end of buffer (ASan only) */
+__attribute__((no_sanitize("undefined")))
+static int run_test_asan_heap(void) {
     uint8_t* buf = malloc(30);
     buf[30] = 1;
     free(buf);
     return 0;
 }
-#endif
+
+/* Test: write past the end of a stack buffer (ASan only) */
+__attribute__((no_sanitize("undefined")))
+static int run_test_asan_stack(void) {
+    char buf[30];
+    /* Take a pointer: direct assignment such as `buf[30] = 1;` triggers a compiler warning */
+    char* c = buf + 30;
+    *c = 1;
+
+    return 0;
+}
+#endif /* ASAN */
 
 static const struct shim_test {
     const char* name;
@@ -48,7 +60,8 @@ static const struct shim_test {
     { "ubsan_int_overflow", &run_test_ubsan_int_overflow },
 #endif
 #ifdef ASAN
-    { "asan_buffer_overflow", &run_test_asan_buffer_overflow },
+    { "asan_heap", &run_test_asan_heap },
+    { "asan_stack", &run_test_asan_stack },
 #endif
     { NULL, NULL },
 };

@@ -11,6 +11,10 @@
 #include "vdso.h"
 #include "vdso_syscall.h"
 
+#ifdef ASAN
+#error This code should be compiled without AddressSanitizer.
+#endif
+
 /*
  * The symbol below needs to be exported for libsysdb to inject those values,
  * but relocation (.rela.dyn section) isn't wanted in the code generation.
