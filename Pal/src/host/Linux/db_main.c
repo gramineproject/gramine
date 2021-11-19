@@ -250,6 +250,14 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
     }
 
+#ifdef ASAN
+    ret = add_preloaded_range(ASAN_SHADOW_START, ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
+                              "asan_shadow");
+    if (ret < 0) {
+        INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
+    }
+#endif
+
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();
     if (ret < 0)
