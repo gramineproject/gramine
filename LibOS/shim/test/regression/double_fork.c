@@ -13,7 +13,6 @@
 #define _GNU_SOURCE
 #include <err.h>
 #include <errno.h>
-#include <linux/futex.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -22,6 +21,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "futex.h"
 
 static pid_t main_pid;
 
