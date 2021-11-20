@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
-#include <linux/futex.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
@@ -11,6 +10,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "futex.h"
 
 #define THREADS 8
 static int myfutex = 0;

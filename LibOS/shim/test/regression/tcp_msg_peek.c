@@ -214,6 +214,9 @@ static void client(void) {
 }
 
 int main(int argc, char** argv) {
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+
     if (argc > 1) {
         if (strcmp(argv[1], "client") == 0) {
             mode = SINGLE;
@@ -238,6 +241,14 @@ int main(int argc, char** argv) {
             client();
         } else {
             server();
+
+            int status = 0;
+            if (wait(&status) < 0) {
+                err(1, "wait");
+            }
+            if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+                errx(1, "child wait status: %d", status);
+            }
         }
     }
 

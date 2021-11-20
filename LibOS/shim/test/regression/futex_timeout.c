@@ -1,11 +1,12 @@
 #define _GNU_SOURCE
 #include <errno.h>
-#include <linux/futex.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+#include "futex.h"
 
 #define SLEEP_SEC 1
 
