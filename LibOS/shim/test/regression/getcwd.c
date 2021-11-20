@@ -1,10 +1,11 @@
 /* XXX: this test needs a rewrite. */
 #define _GNU_SOURCE
 #include <errno.h>
-#include <linux/limits.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#define PATH_MAX 4096
 
 static char bss_cwd_buf[PATH_MAX];
 
