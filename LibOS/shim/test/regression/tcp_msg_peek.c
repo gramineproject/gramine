@@ -214,6 +214,14 @@ static void client(void) {
 }
 
 int main(int argc, char** argv) {
+    /* FIXME: This test depends on output being buffered. */
+    const size_t output_buf_size = 0x1000;
+    char* output_buf = malloc(output_buf_size);
+    if (!output_buf) {
+        err(1, "OOM");
+    }
+    setbuffer(stdout, output_buf, output_buf_size);
+
     if (argc > 1) {
         if (strcmp(argv[1], "client") == 0) {
             mode = SINGLE;
@@ -238,6 +246,14 @@ int main(int argc, char** argv) {
             client();
         } else {
             server();
+
+            int status = 0;
+            if (wait(&status) < 0) {
+                err(1, "wait");
+            }
+            if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+                errx(1, "child wait status: %d", status);
+            }
         }
     }
 

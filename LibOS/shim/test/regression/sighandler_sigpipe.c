@@ -1,10 +1,10 @@
 #define _XOPEN_SOURCE 700
 #include <errno.h>
+#include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/signal.h>
 #include <unistd.h>
 
 static atomic_int sigpipe_ctr = 0;

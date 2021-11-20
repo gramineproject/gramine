@@ -15,6 +15,8 @@
 
 #include "dump.h"
 
+#define PATH_MAX 4096
+
 static int dump_dir(const char* path) {
     printf("%s: directory\n", path);
     fflush(stdout);

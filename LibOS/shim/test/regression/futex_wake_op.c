@@ -1,13 +1,14 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <limits.h>
-#include <linux/futex.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+
+#include "futex.h"
 
 static int futex(int* uaddr, int futex_op, int val, const struct timespec* timeout, int* uaddr2,
                  int val3) {
