@@ -421,6 +421,33 @@ The PAL and library OS code/data count towards this size value, as well as the
 application memory itself: application's code, stack, heap, loaded application
 libraries, etc. The application cannot allocate memory that exceeds this limit.
 
+Be careful when setting the enclave size to large values: SGX |~| v1 hardware
+(i.e., without the :term:`EDMM` hardware feature) not only reserves
+``sgx.enclave_size`` bytes of virtual address space but also *commits* them to
+the backing store (RAM + swap file). For example, if ``sgx.enclave_size =
+"4G"``, then 4GB of RAM will be immediately allocated to back the enclave
+memory. Thus, if your system has 4GB of backing store or less, then the host
+Linux kernel will fail to start the SGX enclave and will typically print the
+``Killed`` message. If you encounter this situation, you can try the following:
+
+- If possible, decrease ``sgx.enclave_size`` to a value less than the amount of
+  RAM. For example, if you have 4GB of RAM, set ``sgx.enclave_size = "2G"``.
+- Switch to a system that has more RAM. For example, if you must use
+  ``sgx.enclave_size = "4G"``, move to a system with at least 5GB of RAM.
+- If the above options are ruled out, then increase the swap file size (recall
+  that the swap file is a space on hard disk used as a virtual "extension" to
+  real RAM). For example, if you have 4GB of RAM and you must use
+  ``sgx.enclave_size = "4G"``, then create the swap file of size 1GB. Note that
+  as soon as the SGX application starts using the swap file, its performance
+  degrades significantly!
+
+Also, be careful with multi-process SGX applications: each new child process
+runs in its own SGX enclave and thus requires an additional ``sgx.enclave_size``
+amount of RAM. For example, if you run ``bash -c ls`` and your manifest contains
+``sgx.enclave_size = "4G"``, then two SGX enclaves (bash and ls processes) will
+consume 8GB of RAM in total. If there is less than 8GB of RAM (+ swap file) on
+your system, such ``bash -c ls`` SGX workload will fail.
+
 Non-PIE binaries
 ^^^^^^^^^^^^^^^^
 
