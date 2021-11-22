@@ -424,11 +424,11 @@ libraries, etc. The application cannot allocate memory that exceeds this limit.
 Be careful when setting the enclave size to large values: SGX |~| v1 hardware
 (i.e., without the :term:`EDMM` hardware feature) not only reserves
 ``sgx.enclave_size`` bytes of virtual address space but also *commits* them to
-the physical memory (RAM). For example, if ``sgx.enclave_size = "4G"``, then 4GB
-of RAM will be immediately allocated to back the enclave memory. Thus, if your
-system has 4GB of RAM or less, then the host Linux kernel will fail to start the
-SGX enclave and will typically print the ``Killed`` message. If you encounter
-this situation, you can try the following:
+the backing store (RAM + swap file). For example, if ``sgx.enclave_size =
+"4G"``, then 4GB of RAM will be immediately allocated to back the enclave
+memory. Thus, if your system has 4GB of backing store or less, then the host
+Linux kernel will fail to start the SGX enclave and will typically print the
+``Killed`` message. If you encounter this situation, you can try the following:
 
 - If possible, decrease ``sgx.enclave_size`` to a value less than the amount of
   RAM. For example, if you have 4GB of RAM, set ``sgx.enclave_size = "2G"``.
@@ -438,7 +438,8 @@ this situation, you can try the following:
   that the swap file is a space on hard disk used as a virtual "extension" to
   real RAM). For example, if you have 4GB of RAM and you must use
   ``sgx.enclave_size = "4G"``, then create the swap file of size 1GB. Note that
-  the swap file significantly decreases performance of the system when used!
+  as soon as the SGX application starts using the swap file, its performance
+  degrades significantly!
 
 Also, be careful with multi-process SGX applications: each new child process
 runs in its own SGX enclave and thus requires an additional ``sgx.enclave_size``
