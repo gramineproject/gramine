@@ -46,7 +46,7 @@ Contacts and Contributing
 For bug reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
 
-For any questions, please send an email to gramine-users@googlegroups.com
+For any questions, please send an email to users@gramineproject.io
 (`public archive <https://groups.google.com/g/gramine-users>`__).
 
 If you want to contribute to the project, please see :doc:`devel/contributing`.

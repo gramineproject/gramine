@@ -21,7 +21,7 @@ In order to report a |nbsp| problem, please open an issue in the `issue tracker
 Reporting Security Vulnerabilities
 ----------------------------------
 
-Please report security issues to gramine-security@googlegroups.com.
+Please report security issues to security@gramineproject.io.
 
 Architectural Changes
 ---------------------
@@ -30,10 +30,10 @@ Major reorganizations, architectural changes, or code reorganization are best
 discussed with the maintainers in advance of writing code. We welcome
 contributions, and would hate for anyone to waste time implementing a change
 that will not be accepted for a design flaw. It is much better to reach out for
-advice first by emailing gramine-users@googlegroups.com.
+advice first by emailing devel@gramineproject.io.
 
 Or you can see the archives at this google group:
-https://groups.google.com/g/gramine-users
+https://groups.google.com/g/gramine-devel
 
 Please verify that your change doesn't introduce any insecure-by-default
 functionality. If an option allows users to introduce a security risk, the

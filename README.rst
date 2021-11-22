@@ -88,7 +88,7 @@ important pages:
 Getting help
 ============
 
-For any questions, please send an email to gramine-users@googlegroups.com
+For any questions, please send an email to users@gramineproject.io
 (`public archive <https://groups.google.com/g/gramine-users>`__).
 
 For bug reports, post an issue on our GitHub repository:
@@ -98,7 +98,7 @@ https://github.com/gramineproject/gramine/issues.
 Reporting security issues
 =========================
 
-Please report security issues to gramine-security@googlegroups.com.
+Please report security issues to security@gramineproject.io.
 
 
 Acknowledgments
