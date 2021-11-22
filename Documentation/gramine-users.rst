@@ -3,8 +3,8 @@ Users of Gramine
 
 We are excited to share that several companies are experimenting with Gramine
 for their confidential computing solutions. Please reach out to us at
-gramine-maintainers@googlegroups.com if you are using Gramine and would like to
-be highlighted on our page. We are looking forward to collaborating with you and
+maintainers@gramineproject.io if you are using Gramine and would like to be
+highlighted on our page. We are looking forward to collaborating with you and
 continue to enhance Gramine to meet the needs of your confidential computing use
 cases. We will be updating this list regularly (the list is sorted
 alphabetically).
