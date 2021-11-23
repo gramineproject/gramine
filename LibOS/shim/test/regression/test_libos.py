@@ -61,20 +61,20 @@ class TC_01_Bootstrap(RegressionTestCase):
 
         # One Argument Given
         self.assertIn('# of arguments: 1', stdout)
-        self.assertIn(f'argv[0] = {"musl_" if USES_MUSL else ""}bootstrap', stdout)
+        self.assertIn('argv[0] = bootstrap', stdout)
 
     def test_101_basic_bootstrapping_five_arguments(self):
         # Five Arguments Given
         stdout, _ = self.run_binary(['bootstrap', 'a', 'b', 'c', 'd'])
         self.assertIn('# of arguments: 5', stdout)
-        self.assertIn(f'argv[0] = {"musl_" if USES_MUSL else ""}bootstrap', stdout)
+        self.assertIn('argv[0] = bootstrap', stdout)
         self.assertIn('argv[1] = a', stdout)
         self.assertIn('argv[2] = b', stdout)
         self.assertIn('argv[3] = c', stdout)
         self.assertIn('argv[4] = d', stdout)
 
     def test_102_argv_from_file(self):
-        args = [('musl_' if USES_MUSL else '') + 'bootstrap', 'THIS', 'SHOULD GO', 'TO', '\nTHE\n', 'APP']
+        args = ['bootstrap', 'THIS', 'SHOULD GO', 'TO', '\nTHE\n', 'APP']
         result = subprocess.run(['gramine-argv-serializer'] + args,
                                 stdout=subprocess.PIPE, check=True)
         with open('argv_test_input', 'wb') as f:
@@ -137,13 +137,13 @@ class TC_01_Bootstrap(RegressionTestCase):
 
     def test_106_basic_bootstrapping_static(self):
         stdout, _ = self.run_binary(['bootstrap_static'])
-        self.assertIn(f'Hello world ({"musl_" if USES_MUSL else ""}bootstrap_static)!', stdout)
+        self.assertIn('Hello world (bootstrap_static)!', stdout)
 
     def test_107_basic_bootstrapping_pie(self):
         stdout, _ = self.run_binary(['bootstrap_pie'])
         self.assertIn('User program started', stdout)
         self.assertIn('Local Address in Executable: 0x', stdout)
-        self.assertIn(f'argv[0] = {"musl_" if USES_MUSL else ""}bootstrap_pie', stdout)
+        self.assertIn('argv[0] = bootstrap_pie', stdout)
 
     def test_108_uid_and_gid(self):
         stdout, _ = self.run_binary(['uid_gid'])
@@ -788,7 +788,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/self: link: 2', lines)
         self.assertIn('/proc/2: directory', lines)
         self.assertIn('/proc/2/cwd: link: /', lines)
-        self.assertIn(f'/proc/2/exe: link: /{"musl_" if USES_MUSL else ""}proc_common', lines)
+        self.assertIn('/proc/2/exe: link: /proc_common', lines)
         self.assertIn('/proc/2/root: link: /', lines)
         self.assertIn('/proc/2/maps: file', lines)
 
@@ -803,7 +803,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/2/task/2: directory', lines)
         self.assertIn('/proc/2/task/33: directory', lines)
         self.assertIn('/proc/2/task/33/cwd: link: /', lines)
-        self.assertIn(f'/proc/2/task/33/exe: link: /{"musl_" if USES_MUSL else ""}proc_common', lines)
+        self.assertIn('/proc/2/task/33/exe: link: /proc_common', lines)
         self.assertIn('/proc/2/task/33/root: link: /', lines)
         self.assertIn('/proc/2/task/33/fd/0: link: /dev/tty', lines)
         self.assertIn('/proc/2/task/33/fd/1: link: /dev/tty', lines)
@@ -811,7 +811,7 @@ class TC_40_FileSystem(RegressionTestCase):
 
         # /proc/[ipc-pid]/*
         self.assertIn('/proc/1/cwd: link: /', lines)
-        self.assertIn(f'/proc/1/exe: link: /{"musl_" if USES_MUSL else ""}proc_common', lines)
+        self.assertIn('/proc/1/exe: link: /proc_common', lines)
         self.assertIn('/proc/1/root: link: /', lines)
 
     def test_001_devfs(self):

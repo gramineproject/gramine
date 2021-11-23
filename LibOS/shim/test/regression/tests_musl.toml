@@ -1,4 +1,4 @@
-binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/regression"
+binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/regression/musl"
 
 libc = "musl"
 

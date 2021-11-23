@@ -1,4 +1,4 @@
-{% set entrypoint = ("musl_" if libc == "musl" else "") + "init_fail" -%}
+{% set entrypoint = "init_fail" -%}
 
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
