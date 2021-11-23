@@ -52,7 +52,6 @@ class TestConfig:
             '@GRAMINE_PKGLIBDIR@', _CONFIG_PKGLIBDIR)
 
         self.libc = data.get('libc', 'glibc')
-        self.binary_prefix = 'musl_' if self.libc == 'musl' else ''
 
         self.arch_libdir = _CONFIG_SYSLIBDIR
 
@@ -159,7 +158,7 @@ class TestConfig:
                 outputs=[f'{name}.manifest'],
                 rule='manifest',
                 inputs=[template],
-                variables={'ENTRYPOINT': self.binary_prefix + name},
+                variables={'ENTRYPOINT': name},
             )
 
             ninja.build(

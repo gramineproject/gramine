@@ -45,5 +45,5 @@ musl = custom_target('musl',
 meson.add_install_script(
     'sh', '-c',
     'ln -sf libc.so "${MESON_INSTALL_DESTDIR_PREFIX}/@0@"'.format(
-        join_paths(pkglibdir, 'runtime/musl', 'ld-musl-x86_64.so.1')),
+        join_paths(get_option('libdir'), 'gramine/runtime/musl', 'ld-musl-x86_64.so.1')),
 )
