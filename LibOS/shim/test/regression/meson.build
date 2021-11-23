@@ -178,6 +178,8 @@ if enable_musl
         'common_lib': common_lib_musl,
         'tests': tests,
     }
+
+    musl_execs = []
 endif
 
 foreach conf: configurations
@@ -240,5 +242,17 @@ foreach conf: configurations
             install: true,
             install_dir: install_dir,
         )
+
+        if conf['use_musl']
+            musl_execs += exe
+        endif
     endforeach
 endforeach
+
+if enable_musl
+    meson.add_install_script(
+        find_program('rename_musl_tests.sh'),
+        prefix / join_paths(install_dir, 'musl'),
+        musl_execs,
+    )
+endif
