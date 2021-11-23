@@ -90,9 +90,7 @@ Users of Gramine
 
 We maintain `a list of companies
 <https://gramine.readthedocs.io/en/latest/gramine-users.html>`__ experimenting
-with Gramine for their confidential computing solutions. Please reach out to us
-at maintainers@gramineproject.io if you are using Gramine and would like to be
-highlighted on our page.
+with Gramine for their confidential computing solutions.
 
 
 Getting help
