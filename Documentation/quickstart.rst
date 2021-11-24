@@ -3,122 +3,74 @@ Quick start
 
 .. highlight:: sh
 
-The following guide assumes you're using Ubuntu 18.04 or 20.04.
+Prerequisites
+-------------
 
-Quick start without SGX support
--------------------------------
+Gramine without SGX has no special requirements.
 
-#. Clone the Gramine repository::
+Gramine with SGX support requires several features from your system:
 
-      git clone https://github.com/gramineproject/gramine.git
-
-#. Build Gramine:
-
-   .. NOTE if you're about to sort the apt-get invocation below, see note in
-      building.rst
-
-   .. code-block:: sh
-
-      sudo apt-get install -y build-essential \
-          autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
-          wget
-      sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
-      cd gramine
-      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=disabled
-      ninja -C build/
-      sudo ninja -C build/ install
-
-#. Build and run :program:`helloworld`::
-
-      cd CI-Examples/helloworld
-      make
-      gramine-direct helloworld
-
-#. For more complex examples, see :file:`CI-Examples` directory.
-
-Quick start with SGX support
-----------------------------
-
-Gramine requires several features from your system:
-
-- the FSGSBASE feature of recent processors must be enabled in the Linux kernel,
-- the Intel SGX driver must be built in the Linux kernel, and Linux headers for
-  your kernel (``linux-headers-*`` package) must be installed,
+- the FSGSBASE feature of recent processors must be enabled in the Linux kernel;
+- the Intel SGX driver must be built in the Linux kernel;
 - Intel SGX SDK/PSW and (optionally) Intel DCAP must be installed.
 
 If your system doesn't meet these requirements, please refer to more detailed
-descriptions in :doc:`building`.
+descriptions in :doc:`devel/building`.
 
-#. Ensure that Intel SGX is enabled on your platform by doing::
+We supply a tool :doc:`manpages/is-sgx-available`, which you can use to check
+your hardware and system. It's installed together with the respective gramine
+package (see below).
 
-       sudo apt-get install -y cpuid
-       cpuid | grep -i sgx
-       # output must contain lines like "SGX: Software Guard Extensions supported = true"
+Installation
+------------
 
-#. Clone the Gramine repository::
+On Ubuntu 18.04 or 20.04::
 
-      git clone https://github.com/gramineproject/gramine.git
-      cd gramine
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
+   sudo apt-get update
 
-#. Prepare a signing key::
+   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
+   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
+   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
 
-      openssl genrsa -3 -out Pal/src/host/Linux-SGX/signer/enclave-key.pem 3072
+On RHEL-8-like distribution (like AlmaLinux 8, CentOS 8, Rocky Linux 8, ...)::
 
-#. Build Gramine with SGX support:
+   sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
+   sudo dnf install gramine          # only the default, distro-provided kernel is supported
 
-   .. NOTE if you're about to sort the apt-get invocation below, see note in
-      building.rst
+Prepare a signing key
+---------------------
 
-   .. code-block:: sh
+Only for SGX, and if you haven't already::
 
-      sudo apt-get install -y build-essential \
-          autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev \
-          ninja-build protobuf-c-compiler python3 python3-click python3-jinja2 \
-          python3-pip python3-protobuf wget
-      sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
-      # this assumes Linux 5.11+
-      meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
-      ninja -C build/
-      sudo ninja -C build/ install
+   openssl genrsa -3 -out "$HOME"/.config/gramine/enclave-key.pem 3072
 
-   In case of a non-standard SGX driver configuration (different SGX driver, or
-   different kernel headers path) you might need to also pass ``-Dsgx_driver``
-   and ``-Dsgx_driver_include_path`` options to Meson. See :doc:`building` for
-   details.
+Clone the repository and run sample application
+-----------------------------------------------
 
-#. Set ``vm.mmap_min_addr=0`` in the system (*only required for the legacy SGX
-   driver and not needed for newer DCAP/in-kernel drivers*)::
+::
 
-      sudo sysctl vm.mmap_min_addr=0
+   git clone --depth 1 https://github.com/gramineproject/gramine.git
+   cd gramine/CI-Examples/helloworld
 
-   Note that this is an inadvisable configuration for production systems.
+Without SGX::
 
-#. Build and run :program:`helloworld`::
+   make
+   gramine-direct helloworld
 
-      cd CI-Examples/helloworld
-      make SGX=1
-      gramine-sgx helloworld
+With SGX::
 
-Troubleshooting
----------------
+   make SGX=1 SGX_SIGNER_KEY="$HOME"/.config/gramine/enclave-key.pem
+   gramine-sgx helloworld
 
-- When installing from sources, Gramine executables are placed under
-  ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
-  for executables under this path. If your system reports that Gramine programs
-  can not be found, you might need to edit your configuration files so that
-  ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
+For more complex examples, see :file:`CI-Examples` directory.
 
-- If you invoked ``meson setup`` once, the next invocation of this command will
-  *not* have any effect. Instead, to change the build configuration, use ``meson
-  configure``. For example, if you built with ``meson setup build/
-  -Dsgx=disabled`` first and now want to enable SGX, type ``meson configure
-  build/ -Dsgx=enabled``.
-
-Running sample applications
----------------------------
+Other example applications
+--------------------------
 
 We prepared and tested several applications to demonstrate Gramine usability.
-These applications can be found in the :file:`CI-Examples` folder in the
+These applications can be found in the :file:`CI-Examples` directory in the
 repository, each containing a short README with instructions how to test it. We
 recommend starting with a simpler, thoroughly documented example of Redis, to
 understand manifest options and features of Gramine.

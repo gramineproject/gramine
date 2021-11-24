@@ -36,8 +36,8 @@ https://gramine.readthedocs.io/projects/gsc.
 Building and running Gramine
 ============================
 
-See :doc:`quickstart` for instructions how to quickly build and run Gramine.
-For full build instructions, see :doc:`building`. To deploy Gramine in the
+See :doc:`quickstart` for instructions how to quickly install and run Gramine.
+For full build instructions, see :doc:`devel/building`. To deploy Gramine in the
 cloud, see :doc:`cloud-deployment`.
 
 Contacts and Contributing
@@ -61,7 +61,6 @@ Table of Contents
    :maxdepth: 2
 
    quickstart
-   building
    manifest-syntax
    attestation
    cloud-deployment
@@ -92,6 +91,7 @@ Table of Contents
    :caption: Developing Gramine
    :maxdepth: 1
 
+   devel/building
    devel/contributing
    devel/DCO/index
    devel/howto-doc

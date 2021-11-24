@@ -18,7 +18,7 @@ IN_GIT=@IN_GIT@
 if test -n "$IN_GIT"
 then
     echo "Running from repository is broken. Please install Gramine using Meson." >&2
-    echo "See https://gramine.readthedocs.io/en/latest/building.html for details." >&2
+    echo "See https://gramine.readthedocs.io/en/latest/devel/building.html for details." >&2
     exit 1
 fi
 

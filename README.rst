@@ -15,11 +15,6 @@ Gramine Library OS with Intel SGX Support
 
 .. highlight:: sh
 
-**NOTE:** We recently transitioned our buildsystem to Meson, and
-the build procedures were changed. See `Building instructions
-<https://gramine.readthedocs.io/en/latest/building.html>`__ for an up-to-date
-build tutorial.
-
 What is Gramine?
 ================
 
@@ -76,7 +71,7 @@ important pages:
 - `Quick start and how to run applications
   <https://gramine.readthedocs.io/en/latest/quickstart.html>`__
 - `Complete building instructions
-  <https://gramine.readthedocs.io/en/latest/building.html>`__
+  <https://gramine.readthedocs.io/en/latest/devel/building.html>`__
 - `Gramine manifest file syntax
   <https://gramine.readthedocs.io/en/latest/manifest-syntax.html>`__
 - `Performance tuning & analysis of SGX applications in Gramine
