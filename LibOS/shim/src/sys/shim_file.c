@@ -22,7 +22,7 @@
 #include "shim_utils.h"
 #include "stat.h"
 
-#define BUF_SIZE 4096 /* read/write in 4KB chunks for sendfile() */
+#define BUF_SIZE (64 * 1024) /* read/write in 64KB chunks for sendfile() */
 
 /* The kernel would look up the parent directory, and remove the child from the inode. But we are
  * working with the PAL, so we open the file, truncate and close it. */
