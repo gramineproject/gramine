@@ -111,6 +111,14 @@ install the the following Intel SGX driver:
 
 - https://github.com/intel/linux-sgx-driver
 
+For this driver, you need to set ``vm.mmap_min_addr=0`` in the system (*only
+required for the legacy SGX driver and not needed for newer DCAP/in-kernel
+drivers*)::
+
+   sudo sysctl vm.mmap_min_addr=0
+
+Note that this is an inadvisable configuration for production systems.
+
 Alternatively, if your CPU supports :term:`FLC`, you can choose to install the
 DCAP version of the Intel SGX driver from:
 
@@ -149,6 +157,14 @@ means non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
        -Dsgx_driver=<driver> -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+
+.. note::
+
+   If you invoked ``meson setup`` once, the next invocation of this command will
+   *not* have any effect. Instead, to change the build configuration, use
+   ``meson configure``. For example, if you built with ``meson setup build/
+   -Dsgx=disabled`` first and now want to enable SGX, type ``meson configure
+   build/ -Dsgx=enabled``.
 
 Then, build and install Gramine by running the following::
 
