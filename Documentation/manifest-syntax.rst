@@ -322,9 +322,8 @@ Root FS mount point
 
 ::
 
-    fs.root.[identifier].type = "[chroot|...]"
-    fs.root.[identifier].path = "[PATH]"
-    fs.root.[identifier].uri  = "[URI]"
+    fs.root.type = "[chroot|...]"
+    fs.root.uri  = "[URI]"
 
 This syntax specifies the root file system to be mounted inside the library OS.
 If not specified, then Gramine mounts the current working directory as the
