@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "atomic.h"
+#include "spinlock.h"
 
 typedef struct {
     PAL_HDR hdr;
@@ -108,6 +108,8 @@ typedef struct pal_handle {
         } thread;
 
         struct {
+            spinlock_t lock;
+            uint32_t waiters_cnt;
             uint32_t signaled;
             bool auto_clear;
         } event;
