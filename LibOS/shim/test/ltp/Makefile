@@ -5,19 +5,8 @@ SRCDIR = $(ROOTDIR)/src
 BUILDDIR = $(ROOTDIR)/build
 INSTALLDIR = $(ROOTDIR)/install
 TESTCASEDIR = $(INSTALLDIR)/testcases/bin
-LTPSCENARIO = $(INSTALLDIR)/runtest/syscalls
 
 clean-extra += clean-build
-
-RUNLTPOPTS =
-
-ifeq ($(V),1)
-	RUNLTPOPTS += -v
-endif
-
-ifneq ($(LTP_TIMEOUT_FACTOR),)
-	RUNLTPOPTS += -T $(LTP_TIMEOUT_FACTOR)
-endif
 
 .PHONY: all
 all: $(INSTALLDIR)/INSTALL_SUCCESS manifests etc/nsswitch.conf etc/passwd
@@ -57,25 +46,24 @@ etc/passwd:
 	mkdir -p etc
 	printf "root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n" > $@
 
-.PHONY: regression
-regression:
 ifeq ($(SGX),"1")
-	$(RM) ltp-sgx.xml
-	$(MAKE) ltp-sgx.xml
+CFG = ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg
 else
-	$(RM) ltp.xml
-	$(MAKE) ltp.xml
+CFG = ltp.cfg
 endif
 
-ltp.xml: CFG = ltp.cfg
-ltp-sgx.xml: CFG = ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg
-
-%.xml: $(CFG) $(INSTALLDIR)/INSTALL_SUCCESS manifests
-	./contrib/conf_lint.py $(CFG) --scenario $(LTPSCENARIO)
-	./runltp_xml.py $(RUNLTPOPTS) $(foreach cfg,$(CFG),-c $(cfg)) $(LTPSCENARIO) -O $@
+.PHONY: regression
+regression: manifests
+	LTP_CONFIG="$(CFG)" python3 -m pytest -v
 
 .PHONY: clean
 clean:
 	if test -f $(INSTALLDIR)/INSTALL_SUCCESS; then gramine-test clean; fi
 	$(MAKE) -C $(SRCDIR) clean
-	$(RM) -r $(BUILDDIR) $(INSTALLDIR) ltp*.xml etc/
+	$(RM) -r \
+		$(BUILDDIR) \
+		$(INSTALLDIR) \
+		ltp*.xml \
+		etc/ \
+		.pytest_cache \
+		__pycache__

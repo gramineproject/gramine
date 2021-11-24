@@ -24,6 +24,7 @@ pal.map
 # python
 *.py[co]
 __pycache__
+.pytest_cache
 
 # sgx
 *.manifest.sgx

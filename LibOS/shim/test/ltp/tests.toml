@@ -1,3 +1,3 @@
 binary_dir = "install/testcases/bin"
 
-manifests_cmd = "./runltp_xml.py install/runtest/syscalls --list-executables -c ltp.cfg"
+manifests_cmd = "LTP_CONFIG='ltp.cfg' ./test_ltp.py --list"

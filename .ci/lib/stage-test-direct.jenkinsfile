@@ -4,7 +4,12 @@ stage('test-direct') {
             sh '''
                 cd LibOS/shim/test/ltp
                 make ${MAKEOPTS} all
-                make ltp.xml
+            '''
+            // Run tests in a separate block, so that Jenkins measures build time and run time
+            // separately
+            sh '''
+                cd LibOS/shim/test/ltp
+                python3 -m pytest -v -n4 --junit-xml=ltp.xml
             '''
         }
     } finally {
