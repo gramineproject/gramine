@@ -25,6 +25,8 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
 
     init_handle_hdr(HANDLE_HDR(handle), PAL_TYPE_EVENT);
     handle->event.auto_clear = auto_clear;
+    handle->event.waiters_cnt = 0;
+    __atomic_store_n(&handle->event.waiters_cnt, 0, __ATOMIC_RELEASE);
     __atomic_store_n(&handle->event.signaled, init_signaled ? 1 : 0, __ATOMIC_RELEASE);
 
     *handle_ptr = handle;
@@ -33,14 +35,16 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
 
 void _DkEventSet(PAL_HANDLE handle) {
     __atomic_store_n(&handle->event.signaled, 1, __ATOMIC_RELEASE);
-    /* We could just use `FUTEX_WAKE`, but using `FUTEX_WAKE_BITSET` is more consistent with
-     * `FUTEX_WAIT_BITSET` in `_DkEventWait`. */
-    int ret = DO_SYSCALL(futex, &handle->event.signaled, FUTEX_WAKE_BITSET,
-                         handle->event.auto_clear ? 1 : INT_MAX, NULL, NULL,
-                         FUTEX_BITSET_MATCH_ANY);
-    __UNUSED(ret);
-    /* This `FUTEX_WAKE_BITSET` cannot really fail. */
-    assert(ret >= 0);
+    if (__atomic_load_n(&handle->event.waiters_cnt, __ATOMIC_ACQUIRE) > 0) {
+        /* We could just use `FUTEX_WAKE`, but using `FUTEX_WAKE_BITSET` is more consistent with
+         * `FUTEX_WAIT_BITSET` in `_DkEventWait`. */
+        int ret = DO_SYSCALL(futex, &handle->event.signaled, FUTEX_WAKE_BITSET,
+                             handle->event.auto_clear ? 1 : INT_MAX, NULL, NULL,
+                             FUTEX_BITSET_MATCH_ANY);
+        __UNUSED(ret);
+        /* This `FUTEX_WAKE_BITSET` cannot really fail. */
+        assert(ret >= 0);
+    }
 }
 
 void _DkEventClear(PAL_HANDLE handle) {
@@ -53,6 +57,8 @@ int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     if (timeout_us) {
         time_get_now_plus_ns(&timeout, *timeout_us * TIME_NS_IN_US);
     }
+
+    __atomic_add_fetch(&handle->event.waiters_cnt, 1, __ATOMIC_ACQ_REL);
 
     while (1) {
         bool needs_sleep = false;
@@ -75,6 +81,8 @@ int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
             break;
         }
     }
+
+    __atomic_sub_fetch(&handle->event.waiters_cnt, 1, __ATOMIC_ACQ_REL);
 
     if (timeout_us) {
         int64_t diff = time_ns_diff_from_now(&timeout);

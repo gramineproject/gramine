@@ -108,6 +108,7 @@ typedef struct pal_handle {
         } thread;
 
         struct {
+            uint32_t waiters_cnt;
             uint32_t signaled;
             bool auto_clear;
         } event;
