@@ -24,6 +24,9 @@ class TestConfig:
     - `manifests`, `sgx.manifests`, `arch.[ARCH].manifests`: list of manifests to build
       (for all hosts, SGX-only, [ARCH]-only)
 
+    - `manifests_cmd` (and same with `sgx.` and `arch.[ARCH].`): a shell command that prints out
+      manifests to build, in separate lines (used by LTP, where the list depends on enabled tests)
+
     - `binary_dir`: path to test binaries, passed as `binary_dir` to manifest templates; expands
       @GRAMINE_PKGLIBDIR@ to library directory of Gramine's installation
 
@@ -39,17 +42,28 @@ class TestConfig:
 
         data = toml.load(path)
 
-        self.manifests = data.get('manifests', [])
+        self.manifests = self.get_manifests(data)
         arch = platform.processor()
-        arch_manifests = data.get('arch', {}).get(arch, {}).get('manifests', [])
-        self.manifests += arch_manifests
+        arch_data = data.get('arch', {}).get(arch, {})
+        self.manifests += self.get_manifests(arch_data)
 
-        self.sgx_manifests = data.get('sgx', {}).get('manifests', [])
+        self.sgx_manifests = self.get_manifests(data.get('sgx', {}))
 
         self.binary_dir = data.get('binary_dir', '.').replace(
             '@GRAMINE_PKGLIBDIR@', _CONFIG_PKGLIBDIR)
 
         self.arch_libdir = _CONFIG_SYSLIBDIR
+
+        # Used by LTP, for `libstdbuf.so`
+        for coreutils_libdir in [
+                os.path.join('/usr', self.arch_libdir[1:], 'coreutils'),
+                '/usr/libexec/coreutils',
+        ]:
+            if os.path.isdir(coreutils_libdir):
+                self.coreutils_libdir = coreutils_libdir
+                break
+        else:
+            raise Exception('Cannot determine coreutils libdir')
 
         self.key = os.environ.get('SGX_SIGNER_KEY', None)
         if not self.key:
@@ -59,6 +73,15 @@ class TestConfig:
             self.key = os.path.join(toplevel, 'Pal/src/host/Linux-SGX/signer/enclave-key.pem')
 
         self.all_manifests = self.manifests + self.sgx_manifests
+
+    @staticmethod
+    def get_manifests(data):
+        manifests = data.get('manifests', [])
+        cmd = data.get('manifests_cmd')
+        if cmd:
+            output = subprocess.check_output(cmd, shell=True).decode()
+            manifests += output.splitlines()
+        return manifests
 
     def gen_build_file(self, ninja_path):
         output = io.StringIO()
@@ -78,6 +101,7 @@ class TestConfig:
     def _gen_rules(self, ninja):
         ninja.variable('BINARY_DIR', self.binary_dir)
         ninja.variable('ARCH_LIBDIR', self.arch_libdir)
+        ninja.variable('COREUTILS_LIBDIR', self.coreutils_libdir)
         ninja.variable('KEY', self.key)
         ninja.newline()
 
@@ -85,6 +109,7 @@ class TestConfig:
             name='manifest',
             command=('gramine-manifest '
                      '-Darch_libdir=$ARCH_LIBDIR '
+                     '-Dcoreutils_libdir=$COREUTILS_LIBDIR '
                      '-Dentrypoint=$ENTRYPOINT '
                      '-Dbinary_dir=$BINARY_DIR '
                      '$in $out'),

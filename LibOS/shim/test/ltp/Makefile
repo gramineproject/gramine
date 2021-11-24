@@ -1,23 +1,26 @@
-include makevars.mk
 
-target = $(INSTALLDIR)/INSTALL_SUCCESS build-manifest
-exec_target =
+ROOTDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+SRCDIR = $(ROOTDIR)/src
+BUILDDIR = $(ROOTDIR)/build
+INSTALLDIR = $(ROOTDIR)/install
+TESTCASEDIR = $(INSTALLDIR)/testcases/bin
+LTPSCENARIO = $(INSTALLDIR)/runtest/syscalls
 
 clean-extra += clean-build
 
-include ../../../../Scripts/Makefile.rules
-include ../../../../Scripts/Makefile.configs
-# Make ARCH_LIBDIR visible in Makefile.Test
-export ARCH_LIBDIR
-include Makefile.Test
+RUNLTPOPTS =
 
-ifeq ($(BUILD_VERBOSE),1)
+ifeq ($(V),1)
 	RUNLTPOPTS += -v
 endif
 
 ifneq ($(LTP_TIMEOUT_FACTOR),)
 	RUNLTPOPTS += -T $(LTP_TIMEOUT_FACTOR)
 endif
+
+.PHONY: all
+all: $(INSTALLDIR)/INSTALL_SUCCESS manifests etc/nsswitch.conf etc/passwd
 
 $(SRCDIR)/Makefile:
 	$(error "$(SRCDIR) is empty. Please run `git submodule update --init $(SRCDIR)` or download the LTP source code (https://github.com/linux-test-project/ltp) into $(SRCDIR).")
@@ -42,17 +45,17 @@ $(INSTALLDIR)/INSTALL_SUCCESS: $(BUILDDIR)/BUILD_SUCCESS
 	ln -sf $(abspath Makefile.testcases) $(TESTCASEDIR)/Makefile
 	touch $@
 
-.PHONY: build-manifest
-build-manifest: $(TESTCASEDIR)/manifest.template $(INSTALLDIR)/INSTALL_SUCCESS
-	$(MAKE) -C $(TESTCASEDIR)
+.PHONY: manifests
+manifests: $(INSTALLDIR)/INSTALL_SUCCESS
+	gramine-test build
 
-$(TESTCASEDIR)/manifest.template: manifest.template $(INSTALLDIR)/INSTALL_SUCCESS
-	sed -e 's|$$(ARCH_LIBDIR)|'"$(ARCH_LIBDIR)"'|g' \
-		$< > $@
+etc/nsswitch.conf:
+	mkdir -p etc
+	printf "passwd: compat\ngroup: compat\nshadow: compat\nhosts: files\n" > $@
 
-.PHONY: sgx-tokens
-sgx-tokens: build-manifest
-	$(MAKE) -C $(TESTCASEDIR) $@
+etc/passwd:
+	mkdir -p etc
+	printf "root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n" > $@
 
 .PHONY: regression
 regression:
@@ -67,11 +70,12 @@ endif
 ltp.xml: CFG = ltp.cfg
 ltp-sgx.xml: CFG = ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg
 
-%.xml: $(CFG) $(target) $(INSTALLDIR)/INSTALL_SUCCESS
+%.xml: $(CFG) $(INSTALLDIR)/INSTALL_SUCCESS manifests
 	./contrib/conf_lint.py $(CFG) --scenario $(LTPSCENARIO)
 	./runltp_xml.py $(RUNLTPOPTS) $(foreach cfg,$(CFG),-c $(cfg)) $(LTPSCENARIO) -O $@
 
-.PHONY: clean-build
-clean-build:
+.PHONY: clean
+clean:
+	if test -f $(INSTALLDIR)/INSTALL_SUCCESS; then gramine-test clean; fi
 	$(MAKE) -C $(SRCDIR) clean
-	$(RM) -r $(BUILDDIR) $(INSTALLDIR) ltp*.xml
+	$(RM) -r $(BUILDDIR) $(INSTALLDIR) ltp*.xml etc/
