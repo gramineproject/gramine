@@ -7,6 +7,13 @@ loader.env.LD_PRELOAD = "{{ coreutils_libdir }}/libstdbuf.so"
 loader.env._STDBUF_O = "L"
 loader.insecure__use_cmdline_argv = true
 
+fs.root.type = "chroot"
+fs.root.uri = "file:{{ binary_dir }}"
+
+fs.mount.etc.type = "chroot"
+fs.mount.etc.path = "etc"
+fs.mount.etc.uri = "file:/etc"
+
 fs.mount.shm.type = "chroot"
 fs.mount.shm.path = "/dev/shm"
 fs.mount.shm.uri = "file:/tmp"
@@ -39,7 +46,7 @@ sgx.allowed_files = [
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
-  "file:{{ entrypoint }}",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/ld-linux-x86-64.so.2",
   "file:{{ gramine.runtimedir() }}/libc.so.6",
   "file:{{ gramine.runtimedir() }}/libdl.so.2",
