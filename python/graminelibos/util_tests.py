@@ -24,6 +24,9 @@ class TestConfig:
     - `manifests`, `sgx.manifests`, `arch.[ARCH].manifests`: list of manifests to build
       (for all hosts, SGX-only, [ARCH]-only)
 
+    - `manifests_cmd` (and same with `sgx.` and `arch.[ARCH].`): a shell command that prints out
+      manifests to build, in separate lines (used by LTP, where the list depends on enabled tests)
+
     - `binary_dir`: path to test binaries, passed as `binary_dir` to manifest templates; expands
       @GRAMINE_PKGLIBDIR@ to library directory of Gramine's installation
 
