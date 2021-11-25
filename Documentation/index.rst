@@ -61,7 +61,6 @@ Table of Contents
    :maxdepth: 2
 
    quickstart
-   building
    manifest-syntax
    attestation
    cloud-deployment

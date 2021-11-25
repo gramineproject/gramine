@@ -40,7 +40,7 @@ On RHEL-8-like distribution (like AlmaLinux 8, CentOS 8, Rocky Linux 8, ...)::
    sudo dnf install gramine          # only the default, distro-provided kernel is supported
 
 Prepare a signing key
---------------------------------------------
+---------------------
 
 Only for SGX, and if you haven't already::
 
@@ -51,8 +51,8 @@ Clone the repository and run sample application
 
 ::
 
-   git clone https://github.com/gramineproject/gramine.git
-   pushd gramine/CI-Examples/helloworld >/dev/null
+   git clone --depth 1 https://github.com/gramineproject/gramine.git
+   cd gramine/CI-Examples/helloworld >/dev/null
 
 Without SGX::
 
@@ -65,6 +65,9 @@ With SGX::
    gramine-sgx helloworld
 
 For more complex examples, see :file:`CI-Examples` directory.
+
+Other example applications
+--------------------------
 
 We prepared and tested several applications to demonstrate Gramine usability.
 These applications can be found in the :file:`CI-Examples` directory in the
