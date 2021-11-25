@@ -25,7 +25,6 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
 
     init_handle_hdr(HANDLE_HDR(handle), PAL_TYPE_EVENT);
     handle->event.auto_clear = auto_clear;
-    handle->event.waiters_cnt = 0;
     __atomic_store_n(&handle->event.waiters_cnt, 0, __ATOMIC_RELEASE);
     __atomic_store_n(&handle->event.signaled, init_signaled ? 1 : 0, __ATOMIC_RELEASE);
 
