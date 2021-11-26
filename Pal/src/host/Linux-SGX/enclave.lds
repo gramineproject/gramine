@@ -57,6 +57,11 @@ SECTIONS
   .jcr           : { KEEP(*(.jcr)) }
   .got           : { *(.got) *(.igot) }
   .got.plt       : { *(.got.plt) *(.igot.plt) }
+  .init_array    : {
+    __init_array_start = .;
+    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) .init_array))
+    __init_array_end = .;
+  }
   . = DATA_SEGMENT_RELRO_END (0, .);
   .data          :
   {

@@ -21,6 +21,7 @@
 #include "enclave_pages.h"
 #include "enclave_pf.h"
 #include "enclave_tf.h"
+#include "init.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -667,6 +668,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("_DkSystemTimeQuery() failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    call_init_array();
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_state.alloc_align = g_page_size;

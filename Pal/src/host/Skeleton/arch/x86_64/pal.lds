@@ -66,6 +66,11 @@ SECTIONS
   .dynamic       : { *(.dynamic) }
   .got           : { *(.got) *(.igot) }
   .got.plt       : { *(.got.plt) *(.igot.plt) }
+  .init_array    : {
+    __init_array_start = .;
+    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) .init_array))
+    __init_array_end = .;
+  }
   .data :
   {
     /* the rest of data segment */
