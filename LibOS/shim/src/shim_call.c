@@ -49,6 +49,17 @@ static int run_test_asan_stack(void) {
 
     return 0;
 }
+
+/* Test: write past the end of a global (static local) buffer (ASan only) */
+__attribute__((no_sanitize("undefined")))
+static int run_test_asan_global(void) {
+    static char buf[30];
+    char* c = buf + 30;
+    *c = 1;
+
+    return 0;
+}
+
 #endif /* ASAN */
 
 static const struct shim_test {
@@ -62,6 +73,7 @@ static const struct shim_test {
 #ifdef ASAN
     { "asan_heap", &run_test_asan_heap },
     { "asan_stack", &run_test_asan_stack },
+    { "asan_global", &run_test_asan_global },
 #endif
     { NULL, NULL },
 };

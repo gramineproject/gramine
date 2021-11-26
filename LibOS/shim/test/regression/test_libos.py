@@ -27,19 +27,21 @@ class TC_00_Unittests(RegressionTestCase):
     def test_020_ubsan(self):
         self._test_abort('ubsan_int_overflow', ['ubsan: overflow'])
 
-    @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
     def test_021_asan_heap(self):
-        expected_list = ['asan: heap-buffer-overflow']
-        if self.has_debug():
-            expected_list.append('asan: location: run_test_asan_heap at shim_call.c')
-        self._test_abort('asan_heap', expected_list)
+        self._test_asan('heap', 'heap-buffer-overflow')
+
+    def test_022_asan_stack(self):
+        self._test_asan('stack', 'stack-buffer-overflow')
+
+    def test_023_asan_stack(self):
+        self._test_asan('global', 'global-buffer-overflow')
 
     @unittest.skipUnless(os.environ.get('ASAN') == '1', 'test only enabled with ASAN=1')
-    def test_022_asan_stack(self):
-        expected_list = ['asan: stack-buffer-overflow']
+    def _test_asan(self, case, desc):
+        expected_list = [f'asan: {desc}']
         if self.has_debug():
-            expected_list.append('asan: location: run_test_asan_stack at shim_call.c')
-        self._test_abort('asan_stack', expected_list)
+            expected_list.append(f'asan: location: run_test_asan_{case} at shim_call.c')
+        self._test_abort(f'asan_{case}', expected_list)
 
     def _test_abort(self, test_name, expected_list):
         try:
