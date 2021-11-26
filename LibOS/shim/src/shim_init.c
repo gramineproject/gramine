@@ -11,6 +11,7 @@
 
 #include "api.h"
 #include "hex.h"
+#include "init.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "shim_checkpoint.h"
@@ -382,6 +383,8 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     shim_tcb_init();
 
     log_setprefix(shim_get_tcb());
+
+    call_init_array();
 
     extern const char g_gramine_commit_hash[];
     log_debug("Gramine was built from commit: %s", g_gramine_commit_hash);

@@ -15,6 +15,7 @@
 #include "asan.h"
 #include "debug_map.h"
 #include "elf/elf.h"
+#include "init.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -185,6 +186,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     ret = _DkSystemTimeQuery(&start_time);
     if (ret < 0)
         INIT_FAIL(-ret, "_DkSystemTimeQuery() failed");
+
+    call_init_array();
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_state.alloc_align = g_page_size;
