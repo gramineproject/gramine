@@ -31,9 +31,6 @@ long shim_do_dup(unsigned int fd) {
 }
 
 long shim_do_dup2(unsigned int oldfd, unsigned int newfd) {
-    if (oldfd == newfd)
-        return -EINVAL;
-
     if (newfd >= get_rlimit_cur(RLIMIT_NOFILE))
         return -EBADF;
 
@@ -43,6 +40,11 @@ long shim_do_dup2(unsigned int oldfd, unsigned int newfd) {
     struct shim_handle* hdl = get_fd_handle(oldfd, NULL, handle_map);
     if (!hdl)
         return -EBADF;
+
+    if (oldfd == newfd) {
+        put_handle(hdl);
+        return newfd;
+    }
 
     struct shim_handle* new_hdl = detach_fd_handle(newfd, NULL, handle_map);
 
