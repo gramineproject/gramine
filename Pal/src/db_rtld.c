@@ -547,16 +547,19 @@ out:
     return ret;
 }
 
-/* PAL binary must be DYN (shared object file) */
+/* PAL binary must be DYN (shared object file) or EXEC (non-PIE executable) */
 int setup_pal_binary(void) {
     int ret;
 
     g_pal_map.l_prev = NULL;
     g_pal_map.l_next = NULL;
 
-    ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
+    ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)&__ehdr_start;
 
-    ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_binary_addr);
+    ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
+    ElfW(Addr) pal_base_addr   = (ehdr->e_type == ET_EXEC) ? 0x0 : pal_binary_addr;
+
+    ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_base_addr);
     if (!dynamic_section) {
         log_error("PAL binary doesn't have dynamic section (required for symbol resolution)");
         return -PAL_ERROR_DENIED;
@@ -564,14 +567,14 @@ int setup_pal_binary(void) {
 
     g_pal_map.l_name = NULL; /* will be overwritten later with argv[0] */
     g_pal_map.l_addr = pal_binary_addr;
-    g_pal_map.l_base = pal_binary_addr;
+    g_pal_map.l_base = pal_base_addr;
     g_pal_map.l_ld = dynamic_section;
 
     ret = perform_relocations(&g_pal_map);
     if (ret < 0)
         return ret;
 
-    ret = find_string_and_symbol_tables(g_pal_map.l_addr, g_pal_map.l_base, &g_pal_map.string_table,
+    ret = find_string_and_symbol_tables(g_pal_map.l_addr, pal_base_addr, &g_pal_map.string_table,
                                         &g_pal_map.symbol_table, &g_pal_map.symbol_table_cnt);
     return ret;
 }
