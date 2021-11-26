@@ -58,7 +58,8 @@ Building
 
 #. Build Gramine::
 
-       meson setup build/ --buildtype=release -Dsgx=enabled -Ddirect=disabled
+       meson setup build/ --buildtype=release \
+           -Dsgx=enabled -Ddirect=disabled -Ddcap=enabled
        ninja -C build/
        sudo ninja -C build/ install
 
