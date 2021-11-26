@@ -3,12 +3,6 @@ Building
 
 .. highlight:: sh
 
-.. todo::
-
-   This page really belongs to :file:`devel/`, move it there after a |~| proper
-   release. Instead, for all users, there should be documentation for installing
-   without full compilation.
-
 Gramine consists of several components:
 
 - The Library OS itself (a shared library named ``libsysdb.so``, called the
@@ -202,7 +196,7 @@ Additional build options
 
 - To build test binaries, run :command:`meson -Dtests=enabled`. This is
   necessary if you will be running regression tests. See
-  :doc:`devel/contributing` for details.
+  :doc:`contributing` for details.
 
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,
