@@ -168,7 +168,10 @@ BEGIN_CP_FUNC(migratable) {
 
     size_t len = &__migratable_end - &__migratable[0];
     size_t off = ADD_CP_OFFSET(len);
-    memcpy((char*)base + off, &__migratable[0], len);
+    /* Use `_real_memcpy` to bypass ASan: we are accessing the whole `.migratable` section,
+     * including the redzones after global variables, and using normal `memcpy` would cause ASan to
+     * complain. */
+    _real_memcpy((char*)base + off, &__migratable[0], len);
     ADD_CP_FUNC_ENTRY(off);
 }
 END_CP_FUNC(migratable)
@@ -178,7 +181,8 @@ BEGIN_RS_FUNC(migratable) {
     __UNUSED(rebase);
 
     const char* data = (char*)base + GET_CP_FUNC_ENTRY();
-    memcpy(&__migratable[0], data, &__migratable_end - &__migratable[0]);
+    /* Use `_real_memcpy` to bypass ASan (same as above). */
+    _real_memcpy(&__migratable[0], data, &__migratable_end - &__migratable[0]);
 }
 END_RS_FUNC(migratable)
 

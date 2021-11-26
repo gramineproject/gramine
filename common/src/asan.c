@@ -144,6 +144,9 @@ static void asan_find_problem(uintptr_t addr, size_t size, uintptr_t* out_bad_ad
         case ASAN_POISON_ALLOCA_RIGHT:
             bug_type = "dynamic-stack-buffer-overflow";
             break;
+        case ASAN_POISON_GLOBAL:
+            bug_type = "global-buffer-overflow";
+            break;
         default:
             bug_type = "unknown-crash";
             break;
@@ -196,6 +199,7 @@ static void asan_dump(uintptr_t bad_addr) {
     log_error("asan: %22s %02x", "stack after scope:", ASAN_POISON_STACK_AFTER_SCOPE);
     log_error("asan: %22s %02x", "alloca left redzone:", ASAN_POISON_ALLOCA_LEFT);
     log_error("asan: %22s %02x", "alloca right redzone:", ASAN_POISON_ALLOCA_RIGHT);
+    log_error("asan: %22s %02x", "global redzone:", ASAN_POISON_GLOBAL);
     log_error("asan: %22s %02x", "user-poisoned:", ASAN_POISON_USER);
 }
 
@@ -341,6 +345,18 @@ void __asan_allocas_unpoison(uintptr_t start, uintptr_t end) {
         assert(start <= end);
         asan_unpoison_region(start, end - start);
     }
+}
+
+void __asan_register_globals(struct __asan_global* globals, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        asan_poison_right_redzone(globals[i].addr, globals[i].size, globals[i].size_with_redzone,
+                                  ASAN_POISON_GLOBAL);
+    }
+}
+
+void __asan_unregister_globals(struct __asan_global* globals, size_t n) {
+    __UNUSED(globals);
+    __UNUSED(n);
 }
 
 #define DEFINE_ASAN_SET_SHADOW(name, value)                         \
