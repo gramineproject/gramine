@@ -24,7 +24,7 @@
  *  - They must have DYN or EXEC object file type. Notice that addresses in DYN binaries are
  *    actually offsets from the actual base address in memory (`l_diff`) and thus need adjustment,
  *    whereas addresses in EXEC binaries are hard-coded and do not need any adjustment (thus
- *    `l_diff == 0x00`). The LibOS shared library is built as DYN, but some PAL regression tests are
+ *    `l_diff == 0x0`). The LibOS shared library is built as DYN, but some PAL regression tests are
  *    built as EXEC, so we support both.
  */
 
@@ -106,13 +106,13 @@ static pal_prot_flags_t elf_segment_prot_to_pal_prot(int elf_segment_prot) {
 
 /* iterate through DSO's program headers to find dynamic section (for dynamic linking) */
 static ElfW(Dyn)* find_dynamic_section(ElfW(Addr) ehdr_addr, ElfW(Addr) addr_diff) {
-    const ElfW(Ehdr)* header = (void*)ehdr_addr;
-    const ElfW(Phdr)* phdr   = (void*)(ehdr_addr + header->e_phoff);
+    const ElfW(Ehdr)* header = (const ElfW(Ehdr)*)ehdr_addr;
+    const ElfW(Phdr)* phdr   = (const ElfW(Phdr)*)(ehdr_addr + header->e_phoff);
 
     ElfW(Dyn)* dynamic_section = NULL;
     for (const ElfW(Phdr)* ph = phdr; ph < &phdr[header->e_phnum]; ph++) {
         if (ph->p_type == PT_DYNAMIC) {
-            dynamic_section = (void*)ph->p_vaddr + addr_diff;
+            dynamic_section = (ElfW(Dyn)*)(ph->p_vaddr + addr_diff);
             break;
         }
     }
@@ -236,7 +236,7 @@ static int perform_relocations(struct link_map* map) {
     }
 
     /* perform relocs: supported binaries may have only R_X86_64_RELATIVE/R_X86_64_GLOB_DAT relas */
-    ElfW(Rela)* relas_addr_end = (void*)relas_addr + relas_size;
+    ElfW(Rela)* relas_addr_end = (ElfW(Rela)*)((uintptr_t)relas_addr + relas_size);
     for (ElfW(Rela)* rela = relas_addr; rela < relas_addr_end; rela++) {
         if (ELFW(R_TYPE)(rela->r_info) == R_X86_64_RELATIVE) {
             ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(rela->r_offset + addr_diff);
@@ -261,7 +261,7 @@ static int perform_relocations(struct link_map* map) {
         return 0;
 
     /* perform PLT relocs: supported binaries may have only R_X86_64_JUMP_SLOT relas */
-    ElfW(Rela)* plt_relas_addr_end = (void*)plt_relas_addr + plt_relas_size;
+    ElfW(Rela)* plt_relas_addr_end = (ElfW(Rela)*)((uintptr_t)plt_relas_addr + plt_relas_size);
     for (ElfW(Rela)* plt_rela = plt_relas_addr; plt_rela < plt_relas_addr_end; plt_rela++) {
         if (ELFW(R_TYPE)(plt_rela->r_info) != R_X86_64_JUMP_SLOT) {
             log_error("Unrecognized relocation type; PAL loader currently supports only "
@@ -287,7 +287,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
     int ret;
     struct loadcmd* loadcmds = NULL;
 
-    ElfW(Addr) l_relro_addr = 0x00;
+    ElfW(Addr) l_relro_addr = 0x0;
     size_t l_relro_size = 0;
 
     const char* name = _DkStreamRealpath(handle);
@@ -317,7 +317,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
     for (const ElfW(Phdr)* ph = phdr; ph < &phdr[ehdr->e_phnum]; ph++) {
         switch (ph->p_type) {
             case PT_DYNAMIC:
-                g_entrypoint_map.l_ld = (void*)ph->p_vaddr;
+                g_entrypoint_map.l_ld = (ElfW(Dyn)*)ph->p_vaddr;
                 break;
 
             case PT_LOAD:
@@ -395,7 +395,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         if (i == 0) {
             /* memorize where the ELF file (its first loadable segment) was loaded */
             g_entrypoint_map.l_addr = (ElfW(Addr))map_addr;
-            g_entrypoint_map.l_diff = (ehdr->e_type == ET_EXEC) ? 0x00 : g_entrypoint_map.l_addr;
+            g_entrypoint_map.l_diff = (ehdr->e_type == ET_EXEC) ? 0x0 : g_entrypoint_map.l_addr;
         }
 
         /* adjust segment's addresses to actual addresses (for DYNs, they were offsets initially) */
@@ -557,7 +557,7 @@ int setup_pal_binary(void) {
     ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)&__ehdr_start;
 
     ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
-    ElfW(Addr) pal_addr_diff   = (ehdr->e_type == ET_EXEC) ? 0x00 : pal_binary_addr;
+    ElfW(Addr) pal_addr_diff   = (ehdr->e_type == ET_EXEC) ? 0x0 : pal_binary_addr;
 
     ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_addr_diff);
     if (!dynamic_section) {
