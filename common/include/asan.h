@@ -81,8 +81,7 @@
  *   The cleanup can also be skipped if we will not be using that stack again (e.g. LibOS code
  *   abandoning the initial PAL stack).
  *
- * Note that we rely on the fact that no Gramine code runs on the user stack (except for vDSO, which
- * we make sure to compile without ASan).
+ * Note that we rely on the fact that no Gramine code runs on the user stack.
  */
 
 #ifndef ASAN_H_
