@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import os
 import pathlib
 import signal
@@ -21,21 +22,6 @@ def expectedFailureIf(predicate):
     return lambda func: func
 
 
-def kill_process_group(proc):
-    try:
-        # after `setsid`, pgid should be the same as pid
-        if proc.pid != os.getpgid(proc.pid):
-            print('WARNING: main process changed pgid, this might indicate an error and prevent '
-                  'all processes from being cleaned up', file=sys.stderr)
-    except ProcessLookupError:
-        pass
-
-    try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-
-
 def run_command(cmd, *, timeout, can_fail=False, **kwds):
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           preexec_fn=os.setsid, **kwds) as proc:
@@ -44,14 +30,30 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
             raw_stdout, raw_stderr = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             timed_out = True
-            kill_process_group(proc)
-            raw_stdout, raw_stderr = proc.communicate()
-        else:
-            # Make sure no child processes remain
-            kill_process_group(proc)
 
-        stdout = raw_stdout.decode(errors='backslashreplace')
-        stderr = raw_stderr.decode(errors='backslashreplace')
+        # Kill the whole process group: even if we did not time out, there might be some processes
+        # remaining
+
+        try:
+            # after `setsid`, pgid should be the same as pid
+            if proc.pid != os.getpgid(proc.pid):
+                logging.warning(
+                    'run_command: main process changed pgid, this might indicate an error and '
+                    'prevent all processes from being cleaned up'
+                )
+        except ProcessLookupError:
+            pass
+
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+        if timed_out:
+            raw_stdout, raw_stderr = proc.communicate()
+
+        stdout = raw_stdout.decode(errors='surrogateescape')
+        stderr = raw_stderr.decode(errors='surrogateescape')
 
         # Print stdout/stderr so that pytest can capture it
         sys.stdout.write(stdout)
