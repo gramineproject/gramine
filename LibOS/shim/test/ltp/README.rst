@@ -41,32 +41,24 @@ tests might fail due to limited EPC size.
 Tips for debugging
 ------------------
 
-To enable debugging output, edit a manifest for a test case to set
-``loader.log_level = "trace"``. When running under SGX, you will need to re-sign
-the manifest using ``gramine-test build``.
+To enable debugging output, edit a manifest for a test case (``*.manifest``) to
+set ``loader.log_level = "trace"``. When running under SGX, you will need to
+re-sign the manifest using ``gramine-test build``.
+
+(NOTE: the manifests are all built from a single template,
+``manifest.template``, but you can edit the generated manifests anyway. If
+necessary, ``gramine-test build -f`` will rebuild the manifests from scratch).
 
 You can also use GDB: ``GDB=1 gramine-{direct|sgx} <TEST_BINARY>``. You should
 compile Gramine in debug mode so that you can see the symbols inside Gramine.
 
-Running all the cases
----------------------
-
-In case you want to analyze all the test results, including the tests that are
-currently skipped, you can use the ``ltp-all.cfg`` configuration.
-
-* Build all the manifests: temporarily edit ``tests.toml`` to change ``ltp.cfg``
-  to ``ltp-all.cfg``, and invoke ``gramine-test build``.
-
-  (To save time, we build only manifests for tests that are not skipped).
-
-* Run Pytest with ``ltp-all.cfg`` as configuration::
-
-    LTP_CONFIG=ltp-all.cfg python3 -m pytest -v --junit-xml=ltp-all.xml
-
-The ``ltp-all.xml`` file should contain output for all tests.
-
 ``ltp.cfg``
 ------------
+
+Currently, we run only a subset of tests with Gramine. Many tests are skipped
+because Gramine doesn't yet provide required functionality, or because they're
+very Linux-specific. The exact configuration (i.e. which LTP tests are skipped)
+is written in ``ltp.cfg``.
 
 This is a file in ``.ini`` format
 (https://docs.python.org/library/configparser). Lines starting with ``#`` and
@@ -99,6 +91,24 @@ environment variable. Run ``python3 test_ltp.py`` for more options.
 
 A lot of LTP tests cause problems in Gramine. The ones we've already analyzed
 should have an appropriate comment in the ``ltp.cfg`` file.
+
+Running all the cases
+---------------------
+
+As explained above, we skip many LTP tests. In case you want to analyze all the
+test results, including the tests that are currently skipped, you can use the
+``ltp-all.cfg`` configuration.
+
+* Build all the manifests: temporarily edit ``tests.toml`` to change ``ltp.cfg``
+  to ``ltp-all.cfg``, and invoke ``gramine-test build``.
+
+  (To save time, we build manifests only for those tests that are not skipped).
+
+* Run Pytest with ``ltp-all.cfg`` as configuration::
+
+    LTP_CONFIG=ltp-all.cfg python3 -m pytest -v --junit-xml=ltp-all.xml
+
+The ``ltp-all.xml`` file should contain output for all tests.
 
 SGX mode
 --------
