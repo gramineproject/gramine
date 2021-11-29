@@ -41,8 +41,8 @@
  */
 struct link_map {
     /* Difference between the address in ELF file and the address in memory (for DYNs, base address
-     * where shared object is loaded at; for EXECs, 0x00). */
-    ElfW(Addr) l_addr;
+     * where shared object is loaded at; for EXECs, 0x0). */
+    ElfW(Addr) l_diff;
 
     /* Object identifier: file path, or PAL URI if path is unavailable. */
     const char* l_name;
@@ -56,8 +56,7 @@ struct link_map {
     /* Number of program header entries.  */
     ElfW(Half) l_phnum;
 
-    /* Start and finish of memory map for this object.  l_map_start need not be the same as
-     * l_addr. */
+    /* Start and finish of memory map for this object. */
     ElfW(Addr) l_map_start, l_map_end;
 
     const char* l_interp_libname;
@@ -77,7 +76,7 @@ struct loadcmd {
      *   - start, map_end, alloc_end are page-aligned
      *   - map_off is page-aligned
      *
-     * The addresses are not relocated (i.e. you need to add l_addr to them).
+     * The addresses are not relocated (i.e. you need to add l_diff to them).
      */
 
     /* Start of memory area */
@@ -232,7 +231,7 @@ static int reserve_dyn(size_t total_size, void** addr) {
  * This function doesn't undo allocations in case of error: if it fails, it may leave some segments
  * already allocated.
  */
-static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
+static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) addr_diff,
                            struct shim_handle* file) {
     int ret;
     int map_flags = MAP_FIXED | MAP_PRIVATE;
@@ -240,7 +239,7 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
 
     /* Map the part that should be loaded from file, rounded up to page size. */
     if (c->start < c->map_end) {
-        void* map_start = (void*)(load_addr + c->start);
+        void* map_start = (void*)(c->start + addr_diff);
         size_t map_size = c->map_end - c->start;
 
         if ((ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
@@ -259,7 +258,7 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
     /* Zero out the extra data at the end of mapped area. If necessary, temporarily remap the last
      * page as writable. */
     if (c->data_end < c->map_end) {
-        void* zero_start = (void*)(load_addr + c->data_end);
+        void* zero_start = (void*)(c->data_end + addr_diff);
         size_t zero_size = c->map_end - c->data_end;
         void* last_page_start = ALLOC_ALIGN_DOWN_PTR(zero_start);
 
@@ -283,7 +282,7 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) load_addr,
 
     /* Allocate extra pages after the mapped area. */
     if (c->map_end < c->alloc_end) {
-        void* zero_page_start = (void*)(load_addr + c->map_end);
+        void* zero_page_start = (void*)(c->map_end + addr_diff);
         size_t zero_page_size = c->alloc_end - c->map_end;
         int zero_map_flags = MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS;
         pal_prot_flags_t zero_pal_prot = LINUX_PROT_TO_PAL(c->prot, zero_map_flags);
@@ -375,7 +374,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
          * address.
          *
          * Note that we reserve memory starting from offset 0, not from load_start. This is to
-         * ensure that the load base (l_addr) will not be lower than 0.
+         * ensure that the load base address will not be lower than 0.
          */
         void* addr;
 
@@ -384,19 +383,19 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
             goto err;
         }
 
-        l->l_addr = (ElfW(Addr))addr;
+        l->l_diff = (ElfW(Addr))addr;
     } else {
         /* This is a non-pie shared object (EXEC, executable), so the difference between address in
          * the ELF file and the actual address in memory is zero. */
-        l->l_addr = 0x00;
+        l->l_diff = 0x0;
     }
-    l->l_map_start = load_start + l->l_addr;
-    l->l_map_end   = load_end + l->l_addr;
+    l->l_map_start = load_start + l->l_diff;
+    l->l_map_end   = load_end + l->l_diff;
 
     /* Execute load commands. */
     l->l_data_segment_size = 0;
     for (struct loadcmd* c = &loadcmds[0]; c < &loadcmds[n_loadcmds]; c++) {
-        if ((ret = execute_loadcmd(c, l->l_addr, file)) < 0) {
+        if ((ret = execute_loadcmd(c, l->l_diff, file)) < 0) {
             errstring = "failed to execute load command";
             goto err;
         }
@@ -405,14 +404,14 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
                 && ehdr->e_phoff + phdr_size <= c->map_off + (c->data_end - c->start)) {
             /* Found the program header in this segment. */
             ElfW(Addr) phdr_vaddr = ehdr->e_phoff - c->map_off + c->start;
-            l->l_phdr = (ElfW(Phdr)*)(phdr_vaddr + l->l_addr);
+            l->l_phdr = (ElfW(Phdr)*)(phdr_vaddr + l->l_diff);
         }
 
 
         if (interp_libname_vaddr != 0 && !l->l_interp_libname && c->start <= interp_libname_vaddr
                 && interp_libname_vaddr < c->data_end) {
             /* Found the interpreter name in this segment (but we need to validate length). */
-            const char* interp_libname = (const char*)(interp_libname_vaddr + l->l_addr);
+            const char* interp_libname = (const char*)(interp_libname_vaddr + l->l_diff);
             size_t maxlen = c->data_end - interp_libname_vaddr;
             size_t len = strnlen(interp_libname, maxlen);
             if (len == maxlen) {
@@ -426,7 +425,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
         if (ehdr->e_entry != 0 && !l->l_entry && c->start <= ehdr->e_entry
                 && ehdr->e_entry < c->data_end) {
             /* Found the entry point in this segment. */
-            l->l_entry = (ElfW(Addr))(ehdr->e_entry + l->l_addr);
+            l->l_entry = (ElfW(Addr))(ehdr->e_entry + l->l_diff);
         }
 
         if (!(c->prot & PROT_EXEC))
@@ -470,7 +469,7 @@ err:
 }
 
 static void remove_elf_object(struct link_map* l) {
-    remove_r_debug((void*)l->l_addr);
+    remove_r_debug((void*)l->l_diff);
     free(l);
 }
 
@@ -626,7 +625,7 @@ int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     map->l_file = file;
 
     if (map->l_file && !qstrempty(&map->l_file->uri)) {
-        append_r_debug(qstrgetstr(&map->l_file->uri), (void*)map->l_addr);
+        append_r_debug(qstrgetstr(&map->l_file->uri), (void*)map->l_diff);
     }
 
     *out_map = map;
@@ -866,7 +865,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     auxp[3].a_type     = AT_ENTRY;
     auxp[3].a_un.a_val = g_exec_map->l_entry;
     auxp[4].a_type     = AT_BASE;
-    auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_addr : 0;
+    auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_diff : 0;
     auxp[5].a_type     = AT_RANDOM;
     auxp[5].a_un.a_val = 0; /* filled later */
     if (vdso_addr) {
@@ -941,7 +940,6 @@ BEGIN_RS_FUNC(elf_object) {
 
     CP_REBASE(map->l_name);
     CP_REBASE(map->l_file);
-    DEBUG_RS("base=0x%08lx,name=%s", map->l_addr, map->l_name);
 }
 END_RS_FUNC(elf_object)
 
