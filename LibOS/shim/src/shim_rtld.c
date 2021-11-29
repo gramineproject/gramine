@@ -40,7 +40,8 @@
  * Structure describing a loaded ELF object. Originally based on glibc link_map structure.
  */
 struct link_map {
-    /* Base address shared object is loaded at. */
+    /* Difference between the address in ELF file and the address in memory (for DYNs, base address
+     * where shared object is loaded at; for EXECs, 0x00). */
     ElfW(Addr) l_addr;
 
     /* Object identifier: file path, or PAL URI if path is unavailable. */
@@ -385,7 +386,9 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
 
         l->l_addr = (ElfW(Addr))addr;
     } else {
-        l->l_addr = 0;
+        /* This is a non-pie shared object (EXEC, executable), so the difference between address in
+         * the ELF file and the actual address in memory is zero. */
+        l->l_addr = 0x00;
     }
     l->l_map_start = load_start + l->l_addr;
     l->l_map_end   = load_end + l->l_addr;
