@@ -15,11 +15,12 @@ enum elf_object_type { ELF_OBJECT_INTERNAL, ELF_OBJECT_EXEC, ELF_OBJECT_PRELOAD 
 
 /* Loaded shared object. */
 struct link_map {
-    ElfW(Addr)  l_addr;       /* Address shared object (its first LOAD segment) is loaded at. */
-    ElfW(Addr)  l_base;       /* Base address (0x0 for EXECs, same as l_addr for DYNs). */
-    const char* l_name;       /* Absolute file name object was found in. */
-    ElfW(Dyn)*  l_ld;         /* Dynamic section of the shared object. */
-    ElfW(Addr)  l_entry;      /* Entry point location (may be empty, e.g., for libs). */
+    ElfW(Addr)  l_addr;  /* Address shared object (its first LOAD segment) is loaded at. */
+    ElfW(Addr)  l_diff;  /* Diff between address in ELF file and address in memory
+                            (0x0 for EXECs, same as l_addr for DYNs). */
+    const char* l_name;  /* Absolute file name object was found in. */
+    ElfW(Dyn)*  l_ld;    /* Dynamic section of the shared object. */
+    ElfW(Addr)  l_entry; /* Entry point location (may be empty, e.g., for libs). */
 
     /* Chain of all shared objects loaded at startup. */
     struct link_map* l_next;
