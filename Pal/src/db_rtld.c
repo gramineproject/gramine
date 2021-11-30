@@ -21,11 +21,10 @@
  *     non-loadable and may be missing from final binaries (i.e., in vDSO).
  *     Corresponding linker flag is `-Wl,--hash-style=sysv`.
  *
- *  - They must have DYN or EXEC object file type. Notice that addresses in DYN binaries are
- *    actually offsets from the base address (`l_base`) and thus need adjustment, whereas addresses
- *    in EXEC binaries are hard-coded and do not need any adjustment (thus `l_base == 0x0`). The
- *    LibOS shared library is built as DYN, but some PAL regression tests are built as EXEC, so we
- *    support both.
+ *  - They must have DYN or EXEC object file type. Notice that virtual addresses (p_vaddr) in DYN
+ *    binaries are actually offsets from the address where DYN is loaded at and thus need adjustment
+ *    (via `l_base_diff`), whereas virtual addresses in EXEC binaries are hard-coded and do not need
+ *    any adjustment (thus `l_base_diff == 0x0`).
  */
 
 #include <stdbool.h>
@@ -71,7 +70,7 @@ struct loadcmd {
      *   - start, map_end, alloc_end are page-aligned
      *   - map_off is page-aligned
      *
-     *   The addresses are not relocated (i.e. you need to add l_addr to them).
+     *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
      *   The same struct is used also in LibOS/shim/src/shim_rtld.c code.
      */
@@ -105,14 +104,14 @@ static pal_prot_flags_t elf_segment_prot_to_pal_prot(int elf_segment_prot) {
 }
 
 /* iterate through DSO's program headers to find dynamic section (for dynamic linking) */
-static ElfW(Dyn)* find_dynamic_section(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr) {
-    const ElfW(Ehdr)* header = (void*)ehdr_addr;
-    const ElfW(Phdr)* phdr   = (void*)(ehdr_addr + header->e_phoff);
+static ElfW(Dyn)* find_dynamic_section(ElfW(Addr) ehdr_addr, ElfW(Addr) base_diff) {
+    const ElfW(Ehdr)* header = (const ElfW(Ehdr)*)ehdr_addr;
+    const ElfW(Phdr)* phdr   = (const ElfW(Phdr)*)(ehdr_addr + header->e_phoff);
 
     ElfW(Dyn)* dynamic_section = NULL;
     for (const ElfW(Phdr)* ph = phdr; ph < &phdr[header->e_phnum]; ph++) {
         if (ph->p_type == PT_DYNAMIC) {
-            dynamic_section = (void*)base_addr + ph->p_vaddr;
+            dynamic_section = (ElfW(Dyn)*)(ph->p_vaddr + base_diff);
             break;
         }
     }
@@ -120,14 +119,14 @@ static ElfW(Dyn)* find_dynamic_section(ElfW(Addr) ehdr_addr, ElfW(Addr) base_add
     return dynamic_section;
 }
 
-int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
+int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_diff,
                                   const char** out_string_table, ElfW(Sym)** out_symbol_table,
                                   uint32_t* out_symbol_table_cnt) {
     const char* string_table  = NULL;
     ElfW(Sym)* symbol_table   = NULL;
     uint32_t symbol_table_cnt = 0;
 
-    ElfW(Dyn)* dynamic_section = find_dynamic_section(ehdr_addr, base_addr);
+    ElfW(Dyn)* dynamic_section = find_dynamic_section(ehdr_addr, base_diff);
     if (!dynamic_section) {
         log_error("Loaded binary doesn't have dynamic section (required for symbol resolution)");
         return -PAL_ERROR_DENIED;
@@ -138,15 +137,15 @@ int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
     while (dynamic_section_entry->d_tag != DT_NULL) {
         switch (dynamic_section_entry->d_tag) {
             case DT_STRTAB:
-                string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
             case DT_SYMTAB:
-                symbol_table = (ElfW(Sym)*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                symbol_table = (ElfW(Sym)*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
             case DT_HASH: {
                 /* symbol table size can only be found via ELF hash table's nchain (which is the
                  * second word in the ELF hash table struct) */
-                ElfW(Word)* ht = (ElfW(Word)*)(dynamic_section_entry->d_un.d_ptr + base_addr);
+                ElfW(Word)* ht = (ElfW(Word)*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 symbol_table_cnt = ht[1];
                 break;
             }
@@ -176,7 +175,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, ElfW(Rela)* rela,
     /* first try to find in this ELF object itself */
     if (map->symbol_table[symbol_idx].st_value &&
             map->symbol_table[symbol_idx].st_shndx != SHN_UNDEF) {
-        *out_symbol_addr = map->l_base + map->symbol_table[symbol_idx].st_value;
+        *out_symbol_addr = map->symbol_table[symbol_idx].st_value + map->l_base_diff;
         return 0;
     }
 
@@ -195,7 +194,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, ElfW(Rela)* rela,
         if (!strcmp(symbol_name, pal_symbol_name)) {
             /* NOTE: we currently don't take into account weak symbols and return the first symbol
              *       found (we don't have weak symbols in PAL) */
-            *out_symbol_addr = g_pal_map.l_base + g_pal_map.symbol_table[i].st_value;
+            *out_symbol_addr = g_pal_map.symbol_table[i].st_value + g_pal_map.l_base_diff;
             return 0;
         }
     }
@@ -208,7 +207,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, ElfW(Rela)* rela,
 static int perform_relocations(struct link_map* map) {
     int ret;
 
-    ElfW(Addr) base_addr = map->l_base;
+    ElfW(Addr) base_diff = map->l_base_diff;
     ElfW(Dyn)* dynamic_section_entry = map->l_ld;
 
     ElfW(Rela)* relas_addr = NULL;
@@ -220,13 +219,13 @@ static int perform_relocations(struct link_map* map) {
     while (dynamic_section_entry->d_tag != DT_NULL) {
         switch (dynamic_section_entry->d_tag) {
             case DT_RELA:
-                relas_addr = (ElfW(Rela)*)(base_addr + dynamic_section_entry->d_un.d_ptr);
+                relas_addr = (ElfW(Rela)*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
             case DT_RELASZ:
                 relas_size = dynamic_section_entry->d_un.d_val;
                 break;
             case DT_JMPREL:
-                plt_relas_addr = (ElfW(Rela)*)(base_addr + dynamic_section_entry->d_un.d_ptr);
+                plt_relas_addr = (ElfW(Rela)*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
             case DT_PLTRELSZ:
                 plt_relas_size = dynamic_section_entry->d_un.d_val;
@@ -236,18 +235,18 @@ static int perform_relocations(struct link_map* map) {
     }
 
     /* perform relocs: supported binaries may have only R_X86_64_RELATIVE/R_X86_64_GLOB_DAT relas */
-    ElfW(Rela)* relas_addr_end = (void*)relas_addr + relas_size;
+    ElfW(Rela)* relas_addr_end = (ElfW(Rela)*)((uintptr_t)relas_addr + relas_size);
     for (ElfW(Rela)* rela = relas_addr; rela < relas_addr_end; rela++) {
         if (ELFW(R_TYPE)(rela->r_info) == R_X86_64_RELATIVE) {
-            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + rela->r_offset);
-            *addr_to_relocate = base_addr + *addr_to_relocate;
+            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(rela->r_offset + base_diff);
+            *addr_to_relocate = *addr_to_relocate + base_diff;
         } else if (ELFW(R_TYPE)(rela->r_info) == R_X86_64_GLOB_DAT) {
             ElfW(Addr) symbol_addr;
             ret = find_symbol_in_loaded_maps(map, rela, &symbol_addr);
             if (ret < 0)
                 return ret;
 
-            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + rela->r_offset);
+            ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(rela->r_offset + base_diff);
             *addr_to_relocate = symbol_addr + rela->r_addend;
         } else {
             log_error("Unrecognized relocation type; PAL loader currently supports only "
@@ -274,7 +273,7 @@ static int perform_relocations(struct link_map* map) {
         if (ret < 0)
             return ret;
 
-        ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(base_addr + plt_rela->r_offset);
+        ElfW(Addr)* addr_to_relocate = (ElfW(Addr)*)(plt_rela->r_offset + base_diff);
         *addr_to_relocate = symbol_addr + plt_rela->r_addend;
     }
 
@@ -317,7 +316,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
     for (const ElfW(Phdr)* ph = phdr; ph < &phdr[ehdr->e_phnum]; ph++) {
         switch (ph->p_type) {
             case PT_DYNAMIC:
-                g_entrypoint_map.l_ld = (void*)ph->p_vaddr;
+                g_entrypoint_map.l_ld = (ElfW(Dyn)*)ph->p_vaddr;
                 break;
 
             case PT_LOAD:
@@ -368,23 +367,39 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         goto out;
     }
 
+    if (ehdr->e_type == ET_DYN) {
+        /*
+         * This is a position-independent shared object, allocate a dummy memory area to determine
+         * load address. This area will be populated (overwritten) with LOAD segments in the below
+         * loop.
+         *
+         * Note that we allocate memory to cover LOAD segments starting from offset 0, not from the
+         * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
+         *
+         * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
+         *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed).
+         */
+        void* map_addr = NULL;
+        ret = _DkStreamMap(handle, &map_addr, /*prot=*/0, /*offset=*/0,
+                           loadcmds[loadcmds_cnt - 1].alloc_end);
+        if (ret < 0) {
+            log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
+            goto out;
+        }
+
+        g_entrypoint_map.l_base_diff = (ElfW(Addr))map_addr;
+    } else {
+        /* for EXEC (executables), force PAL memory allocator to use hard-coded segment addresses */
+        g_entrypoint_map.l_base_diff = 0x0;
+    }
+
+    g_entrypoint_map.l_map_start = loadcmds[0].start + g_entrypoint_map.l_base_diff;
+
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
 
-        size_t map_size = 0;
-        void*  map_addr = NULL;
-        if (ehdr->e_type == ET_EXEC) {
-            /* for EXEC (executables), force PAL memory allocator to use hard-coded segment addr */
-            map_addr = (void*)c->start;
-            map_size = c->map_end - c->start;
-        } else {
-            /* for DYN (shared libraries), let PAL memory allocator choose base addr the first time
-             * -- but we must reserve another memory for all loadable segments this first time to
-             *  not overwrite memory on subsequent segments */
-            map_addr = (i == 0) ? NULL : (void*)(g_entrypoint_map.l_base + c->start);
-            map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end - c->start
-                                : c->map_end - c->start;
-        }
+        void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
+        size_t map_size = c->map_end - c->start;
 
         ret = _DkStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
         if (ret < 0) {
@@ -392,17 +407,11 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
             goto out;
         }
 
-        if (i == 0) {
-            /* memorize where the ELF file (its first loadable segment) was loaded */
-            g_entrypoint_map.l_addr = (ElfW(Addr))map_addr;
-            g_entrypoint_map.l_base = (ehdr->e_type == ET_EXEC) ? 0x0 : g_entrypoint_map.l_addr;
-        }
-
-        /* adjust segment's addresses to actual addresses (for DYNs, they were offsets initially) */
-        c->start     += g_entrypoint_map.l_base;
-        c->map_end   += g_entrypoint_map.l_base;
-        c->data_end  += g_entrypoint_map.l_base;
-        c->alloc_end += g_entrypoint_map.l_base;
+        /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */
+        c->start     += g_entrypoint_map.l_base_diff;
+        c->map_end   += g_entrypoint_map.l_base_diff;
+        c->data_end  += g_entrypoint_map.l_base_diff;
+        c->alloc_end += g_entrypoint_map.l_base_diff;
 
         if (c->alloc_end == c->map_end)
             continue;
@@ -415,12 +424,12 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         }
     }
 
-    /* adjust all fields by ELF object base address (for DYNs, they were offsets initially) */
-    g_entrypoint_map.l_entry = g_entrypoint_map.l_entry + g_entrypoint_map.l_base;
+    /* adjust shared object's virtual addresses (p_vaddr) to actual virtual addresses in memory */
+    g_entrypoint_map.l_entry = g_entrypoint_map.l_entry + g_entrypoint_map.l_base_diff;
     g_entrypoint_map.l_ld = (ElfW(Dyn)*)((ElfW(Addr))g_entrypoint_map.l_ld +
-                                         g_entrypoint_map.l_base);
+                                         g_entrypoint_map.l_base_diff);
 
-    ret = find_string_and_symbol_tables(g_entrypoint_map.l_addr, g_entrypoint_map.l_base,
+    ret = find_string_and_symbol_tables(g_entrypoint_map.l_map_start, g_entrypoint_map.l_base_diff,
                                         &g_entrypoint_map.string_table,
                                         &g_entrypoint_map.symbol_table,
                                         &g_entrypoint_map.symbol_table_cnt);
@@ -460,7 +469,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
     }
 
     if (l_relro_size != 0) {
-        l_relro_addr += g_entrypoint_map.l_base;
+        l_relro_addr += g_entrypoint_map.l_base_diff;
         ElfW(Addr) start = ALLOC_ALIGN_DOWN(l_relro_addr);
         ElfW(Addr) end   = ALLOC_ALIGN_UP(l_relro_addr + l_relro_size);
         ret = _DkVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
@@ -539,7 +548,7 @@ int load_entrypoint(const char* uri) {
 
 #ifdef DEBUG
     assert(g_entrypoint_map.l_name);
-    _DkDebugMapAdd(g_entrypoint_map.l_name, (void*)g_entrypoint_map.l_base);
+    _DkDebugMapAdd(g_entrypoint_map.l_name, (void*)g_entrypoint_map.l_base_diff);
 #endif
 
 out:
@@ -554,21 +563,25 @@ int setup_pal_binary(void) {
     g_pal_map.l_prev = NULL;
     g_pal_map.l_next = NULL;
 
+    /* PAL binary must have the first loadable segment with `p_vaddr == 0`, thus pal_base_diff is
+     * the same as the address where the PAL binary is loaded (== beginning of ELF header) */
     ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
+    ElfW(Addr) pal_base_diff   = pal_binary_addr;
 
-    ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_binary_addr);
+    ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_base_diff);
     if (!dynamic_section) {
         log_error("PAL binary doesn't have dynamic section (required for symbol resolution)");
         return -PAL_ERROR_DENIED;
     }
 
     g_pal_map.l_name = NULL; /* will be overwritten later with argv[0] */
-    g_pal_map.l_addr = pal_binary_addr;
-    g_pal_map.l_base = pal_binary_addr;
+    g_pal_map.l_map_start = pal_binary_addr;
+    g_pal_map.l_base_diff = pal_base_diff;
     g_pal_map.l_ld = dynamic_section;
 
-    ret = find_string_and_symbol_tables(g_pal_map.l_addr, g_pal_map.l_base, &g_pal_map.string_table,
-                                        &g_pal_map.symbol_table, &g_pal_map.symbol_table_cnt);
+    ret = find_string_and_symbol_tables(g_pal_map.l_map_start, g_pal_map.l_base_diff,
+                                        &g_pal_map.string_table, &g_pal_map.symbol_table,
+                                        &g_pal_map.symbol_table_cnt);
     if (ret < 0)
         return ret;
 

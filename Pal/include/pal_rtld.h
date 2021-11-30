@@ -11,12 +11,27 @@
 #include "api.h"
 #include "elf/elf.h"
 
-enum elf_object_type { ELF_OBJECT_INTERNAL, ELF_OBJECT_EXEC, ELF_OBJECT_PRELOAD };
-
 /* Loaded shared object. */
 struct link_map {
-    ElfW(Addr)  l_addr;       /* Address shared object (its first LOAD segment) is loaded at. */
-    ElfW(Addr)  l_base;       /* Base address (0x0 for EXECs, same as l_addr for DYNs). */
+    /*
+     * Difference between virtual addresses (p_vaddr) in ELF file and actual virtual addresses in
+     * memory. Equal to 0x0 for ET_EXECs.
+     *
+     * Note that `l_base_diff` name is a departure from the ELF standard and Glibc code: the ELF
+     * standard uses the term "Base Address" and Glibc uses `l_addr`. We find ELF/Glibc terms
+     * misleading and therefore replace them with `l_base_diff`. For the context, below is the
+     * exerpt from the ELF spec, Section "Program Header", Sub-section "Base Address":
+     *
+     *   The virtual addresses in the program headers might not represent the actual virtual
+     *   addresses of the program's memory image. [...] The difference between the virtual address
+     *   of any segment in memory and the corresponding virtual address in the file is thus a single
+     *   constant value for any one executable or shared object in a given process. This difference
+     *   is the *base address*. One use of the base address is to relocate the memory image of the
+     *   program during dynamic linking.
+     */
+    ElfW(Addr)  l_base_diff;
+
+    ElfW(Addr)  l_map_start;  /* Address shared object (its first LOAD segment) is loaded at. */
     const char* l_name;       /* Absolute file name object was found in. */
     ElfW(Dyn)*  l_ld;         /* Dynamic section of the shared object. */
     ElfW(Addr)  l_entry;      /* Entry point location (may be empty, e.g., for libs). */
