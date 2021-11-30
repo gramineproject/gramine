@@ -57,7 +57,7 @@ typedef struct _sgx_quote_body_t {
 
 typedef struct _sgx_quote_t {
     sgx_quote_body_t body;
-    uint32_t signature_len;
+    uint32_t signature_size;
     uint8_t signature[];
 } sgx_quote_t;
 

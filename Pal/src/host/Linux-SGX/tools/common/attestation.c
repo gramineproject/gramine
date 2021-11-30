@@ -46,7 +46,7 @@ const char* g_ias_public_key_pem =
 #define IS_ALIGNED_PTR_POW2(val, alignment) IS_ALIGNED_POW2((uintptr_t)(val), alignment)
 
 // TODO: decode some known values (flags etc)
-void display_report_body(const sgx_report_body_t* body) {
+static void display_report_body(const sgx_report_body_t* body) {
     INFO(" cpu_svn          : ");
     HEXDUMP(body->cpu_svn);
     INFO(" misc_select      : ");
@@ -83,20 +83,20 @@ void display_report_body(const sgx_report_body_t* body) {
     HEXDUMP(body->report_data);
 }
 
-void display_quote_body(const sgx_quote_body_t* quote_body) {
-    INFO("version           : ");
+static void display_quote_body(const sgx_quote_body_t* quote_body) {
+    INFO(" version          : ");
     HEXDUMP(quote_body->version);
-    INFO("sign_type         : ");
+    INFO(" sign_type        : ");
     HEXDUMP(quote_body->sign_type);
-    INFO("epid_group_id     : ");
+    INFO(" epid_group_id    : ");
     HEXDUMP(quote_body->epid_group_id);
-    INFO("qe_svn            : ");
+    INFO(" qe_svn           : ");
     HEXDUMP(quote_body->qe_svn);
-    INFO("pce_svn           : ");
+    INFO(" pce_svn          : ");
     HEXDUMP(quote_body->pce_svn);
-    INFO("xeid              : ");
+    INFO(" xeid             : ");
     HEXDUMP(quote_body->xeid);
-    INFO("basename          : ");
+    INFO(" basename         : ");
     HEXDUMP(quote_body->basename);
 }
 
@@ -113,14 +113,15 @@ void display_quote(const void* quote_data, size_t quote_size) {
     INFO("report_body       :\n");
     display_report_body(&quote->body.report_body);
 
-    // quotes from IAS reports are missing signature fields
-    if (quote_size >= sizeof(sgx_quote_body_t) + sizeof(quote->signature_len)) {
-        INFO("signature_len     : %d (0x%x)\n", quote->signature_len, quote->signature_len);
+    /* quotes from IAS reports are missing signature fields. So display signature and signature_size
+       fields only for dcap based quotes */
+    if (quote_size >= sizeof(sgx_quote_body_t) + sizeof(quote->signature_size)) {
+        INFO("signature_size     : %d (0x%x)\n", quote->signature_size, quote->signature_size);
     }
 
-    if (quote_size >= sizeof(sgx_quote_t) + quote->signature_len) {
+    if (quote_size >= sizeof(sgx_quote_t) + quote->signature_size) {
         INFO("signature         : ");
-        hexdump_mem(&quote->signature, quote->signature_len);
+        hexdump_mem(&quote->signature, quote->signature_size);
         INFO("\n");
     }
 }

@@ -23,20 +23,6 @@
 void display_quote(const void* quote_data, size_t quote_size);
 
 /*!
- *  \brief Display SGX quote body structure (sgx_quote_body_t).
- *
- *  \param[in] quote_body Buffer with quote body data.
- */
-void display_quote_body(const sgx_quote_body_t* quote_body);
-
-/*!
- *  \brief Display internal SGX report body structure (sgx_report_body_t).
- *
- *  \param[in] body Buffer with report body data.
- */
-void display_report_body(const sgx_report_body_t* body);
-
-/*!
  *  \brief Verify IAS attestation report. Also extract the SGX quote contained in IAS report:
  *         allocate enough memory to hold the quote and pass it to the user.
  *
