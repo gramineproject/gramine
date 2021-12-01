@@ -181,14 +181,15 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    ret = verify_quote((sgx_quote_body_t*)report_quote_body, mrsigner, mrenclave, isv_prod_id,
-                       isv_svn, report_data, /*expected_as_str=*/true);
+    ret = verify_quote_body((sgx_quote_body_t*)report_quote_body, mrsigner, mrenclave, isv_prod_id,
+                            isv_svn, report_data, /*expected_as_str=*/true);
     if (ret < 0) {
         free(report_quote_body);
         return ret;
     }
 
-    ret = verify_quote_enclave_attributes((sgx_quote_body_t*)report_quote_body, allow_debug_enclave);
+    ret = verify_quote_body_enclave_attributes((sgx_quote_body_t*)report_quote_body,
+                                               allow_debug_enclave);
     free(report_quote_body);
     return ret;
 }

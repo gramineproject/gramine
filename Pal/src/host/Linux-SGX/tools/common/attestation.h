@@ -64,9 +64,9 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote(const sgx_quote_body_t* quote_body, const char* mr_signer,
-                 const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
-                 const char* report_data, bool expected_as_str);
+int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
+                      const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* report_data, bool expected_as_str);
 
 /*!
  *  \brief Verify enclave attributes of the provided SGX quote.
@@ -76,6 +76,6 @@ int verify_quote(const sgx_quote_body_t* quote_body, const char* mr_signer,
  *
  *  \return 0 on successful verification, negative value on error.
  */
-int verify_quote_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave);
+int verify_quote_body_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave);
 
 #endif /* ATTESTATION_H */

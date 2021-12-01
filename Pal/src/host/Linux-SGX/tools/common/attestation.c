@@ -108,15 +108,15 @@ void display_quote(const void* quote_data, size_t quote_size) {
 
     assert(IS_ALIGNED_PTR_POW2(quote_data, alignof(sgx_quote_t)));
     sgx_quote_t* quote = (sgx_quote_t*)quote_data;
-    INFO("quote_body       :\n");
+    INFO("quote_body        :\n");
     display_quote_body(&quote->body);
     INFO("report_body       :\n");
     display_report_body(&quote->body.report_body);
 
-    /* quotes from IAS reports are missing signature fields. So display signature and signature_size
-       fields only for dcap based quotes */
+    /* Quotes from IAS reports are missing signature fields. So display signature and signature_size
+       fields only for DCAP-based quotes */
     if (quote_size >= sizeof(sgx_quote_body_t) + sizeof(quote->signature_size)) {
-        INFO("signature_size     : %d (0x%x)\n", quote->signature_size, quote->signature_size);
+        INFO("signature_size    : %d (0x%x)\n", quote->signature_size, quote->signature_size);
     }
 
     if (quote_size >= sizeof(sgx_quote_t) + quote->signature_size) {
@@ -321,9 +321,9 @@ out:
     return ret ? -1 : 0;
 }
 
-int verify_quote(const sgx_quote_body_t* quote_body, const char* mr_signer,
-                 const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
-                 const char* report_data, bool expected_as_str) {
+int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
+                      const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* report_data, bool expected_as_str) {
     int ret = -1;
 
     sgx_quote_body_t* body = (sgx_quote_body_t*)quote_body;
@@ -444,7 +444,7 @@ out:
     return ret;
 }
 
-int verify_quote_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave) {
+int verify_quote_body_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave) {
     if (!allow_debug_enclave && (quote_body->report_body.attributes.flags & SGX_FLAGS_DEBUG)) {
         ERROR("Quote: DEBUG bit in enclave attributes is set\n");
         return -1;
