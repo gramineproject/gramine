@@ -349,17 +349,7 @@ void __asan_allocas_unpoison(uintptr_t start, uintptr_t end) {
 
 void __asan_register_globals(struct __asan_global* globals, size_t n) {
     for (size_t i = 0; i < n; i++) {
-        /* Enable the below code for debugging */
-#if 0
-        if (!strcmp(globals[i].name, "<string literal>")) {
-            log_always("asan: global: \"%s\" at %#zx (size: %zu / %zu)", (char*)globals[i].beg,
-                       globals[i].beg, globals[i].size, globals[i].size_with_redzone);
-        } else {
-            log_always("asan: global: %s at %#zx (size: %zu / %zu)", globals[i].name,
-                       globals[i].beg, globals[i].size, globals[i].size_with_redzone);
-        }
-#endif
-        asan_poison_right_redzone(globals[i].beg, globals[i].size, globals[i].size_with_redzone,
+        asan_poison_right_redzone(globals[i].addr, globals[i].size, globals[i].size_with_redzone,
                                   ASAN_POISON_GLOBAL);
     }
 }

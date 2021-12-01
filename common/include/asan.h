@@ -228,25 +228,20 @@ void __asan_alloca_poison(uintptr_t addr, size_t size);
 /* Unpoison the stack area from `start` to `end`. Do nothing if `start` is zero. */
 void __asan_allocas_unpoison(uintptr_t start, uintptr_t end);
 
-/* Description of an instrumented global variable. See LLVM (`asan_interface_internal.h`) for
- * original definition. */
+/*
+ * Description of an instrumented global variable. See LLVM (`asan_interface_internal.h`) for
+ * original definition.
+ *
+ * Currently, we read only `addr`, `size`, and `size_with_redzone` fields.
+ */
 struct __asan_global {
-    /* The address of the global. */
-    uintptr_t beg;
-    /* The original size of the global. */
+    uintptr_t addr; /* in LLVM: `beg` */
     size_t size;
-    /* The size with the redzone. */
     size_t size_with_redzone;
-    /* Name as a C string. */
     const char* name;
-    /* Module name as a C string. This pointer is a unique identifier of a module. */
     const char* module_name;
-    /* Non-zero if the global has dynamic initializer. */
     size_t has_dynamic_init;
-    /* Source location of a global, or NULL if it is unknown. (__asan_global_source_location type
-     * omitted) */
-    void* location;
-    /* The address of the ODR (One Definition Rule) indicator symbol. */
+    void* location; /* in LLVM: `__asan_global_source_location* location` */
     uintptr_t odr_indicator;
 };
 
