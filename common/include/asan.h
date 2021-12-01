@@ -49,6 +49,10 @@
  *     unpoisoned before unmapping (in case ASan-unaware code uses this part of address space
  *     later).
  *
+ * - Make sure to call the constructors in the `.init_array` section (see `init.h` for a helper
+ *   function). This is necessary for global variables sanitization (see `__asan_register_globals`
+ *   below).
+ *
  * - You should compile the program with:
  *
  *       -fsanitize=address
@@ -56,7 +60,6 @@
  *       -mllvm -asan-mapping-offset=0x18000000000
  *       -mllvm -asan-use-after-return=0
  *       -mllvm -asan-stack=0
- *       -mllvm -asan-globals=0
  *       -DASAN
  *
  * If you want to enable stack sanitization (`-mllvm -asan-stack=1`), you need to also handle
@@ -168,8 +171,8 @@ void asan_unpoison_region(uintptr_t addr, size_t size);
  * prints a warning instead. */
 void asan_unpoison_current_stack(uintptr_t addr, size_t size);
 
-/* Initialization callbacks. Generated in object .init sections. Graphene doesn't call these anyway,
- * so this needs to be a no-op. */
+/* Initialization callbacks, called in `.init_array`. In Gramine, these do nothing, and we
+ * initialize ASan separately. */
 void __asan_init(void);
 void __asan_version_mismatch_check_v8(void);
 
