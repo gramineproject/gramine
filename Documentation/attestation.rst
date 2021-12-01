@@ -507,7 +507,8 @@ secrets from the Coordinator, patches command-line arguments, environment
 variables and files with these secrets, and only then starts the main Gramine
 application. This "premain" executable together with the Gramine application is
 referred to as a Marble. For more details, see `Marblerun docs on Gramine
-integration <https://www.marblerun.sh/docs/building-services/graphene>`__.
+integration
+<https://docs.edgeless.systems/marblerun/#/building-services/gramine>`__.
 
 The Coordinator serves as a centralized service for remote attestation of
 Marbles and provisioning of secrets to them. The Coordinator verifies the
@@ -527,5 +528,5 @@ Coordinator acts as a Certificate Authority (CA) for these connections.
 For more information, refer to official Marblerun resources:
 
 - `Official website <https://www.marblerun.sh>`__
-- `Marblerun documentation <https://www.marblerun.sh/docs/introduction>`__
+- `Marblerun documentation <https://docs.edgeless.systems/marblerun/#/>`__
 - `GitHub repository <https://github.com/edgelesssys/marblerun>`__
