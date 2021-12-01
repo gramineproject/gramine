@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /* Copy of "include/uapi/linux/futex.h" from the Linux kernel sources, with 2 includes commented
- * out and sparse annotations removed. */
+ * out and sparse annotations removed. Unfortunately we cannot use the host header, because we build
+ * tests both against glibc and musl - on glibc based systems (like Ubuntu) musl cannot use it, due
+ * to its location together with glibc headers. */
 #ifndef _UAPI_LINUX_FUTEX_H
 #define _UAPI_LINUX_FUTEX_H
 
