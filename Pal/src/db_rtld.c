@@ -24,8 +24,7 @@
  *  - They must have DYN or EXEC object file type. Notice that virtual addresses (p_vaddr) in DYN
  *    binaries are actually offsets from the address where DYN is loaded at and thus need adjustment
  *    (via `l_base_diff`), whereas virtual addresses in EXEC binaries are hard-coded and do not need
- *    any adjustment (thus `l_base_diff == 0x0`). The LibOS shared library is built as DYN, but some
- *    PAL regression tests are built as EXEC, so we support both.
+ *    any adjustment (thus `l_base_diff == 0x0`).
  */
 
 #include <stdbool.h>
@@ -393,10 +392,11 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         }
 
         if (i == 0) {
-            /* memorize where the ELF file (its first loadable segment) was loaded */
+            /* memorize where the ELF file (its first loadable segment) was loaded; note that we
+             * disallow ELF files where first loadable segment's p_vaddr is non-zero (see checks
+             * on LOAD segments above) */
             g_entrypoint_map.l_map_start = (ElfW(Addr))map_addr;
-            g_entrypoint_map.l_base_diff = (ehdr->e_type == ET_EXEC) ? 0x0
-                                                                     : g_entrypoint_map.l_map_start;
+            g_entrypoint_map.l_base_diff = (ehdr->e_type == ET_EXEC) ? 0x0 : (ElfW(Addr))map_addr;
         }
 
         /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */
@@ -555,6 +555,8 @@ int setup_pal_binary(void) {
     g_pal_map.l_prev = NULL;
     g_pal_map.l_next = NULL;
 
+    /* PAL binary must have the first loadable segment with `p_vaddr == 0`, thus pal_base_diff is
+     * the same as the address where the PAL binary is loaded (== beginning of ELF header) */
     ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
     ElfW(Addr) pal_base_diff   = pal_binary_addr;
 

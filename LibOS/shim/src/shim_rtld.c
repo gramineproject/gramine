@@ -43,8 +43,7 @@
 struct link_map {
     /*
      * Difference between virtual addresses (p_vaddr) in ELF file and actual virtual addresses in
-     * memory. Equal to the address shared object (its first LOAD segment) is loaded at for ET_DYNs,
-     * and 0x0 for ET_EXECs.
+     * memory. Equal to the address shared object is loaded at for ET_DYNs, and 0x0 for ET_EXECs.
      *
      * Note that `l_base_diff` name is a departure from the ELF standard and Glibc code: the ELF
      * standard uses the term "Base Address" and Glibc uses `l_addr`. We find ELF/Glibc terms
@@ -898,7 +897,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     auxp[3].a_type     = AT_ENTRY;
     auxp[3].a_un.a_val = g_exec_map->l_entry;
     auxp[4].a_type     = AT_BASE;
-    auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_base_diff : 0;
+    auxp[4].a_un.a_val = g_interp_map ? g_interp_map->l_map_start : 0;
     auxp[5].a_type     = AT_RANDOM;
     auxp[5].a_un.a_val = 0; /* filled later */
     if (vdso_addr) {
