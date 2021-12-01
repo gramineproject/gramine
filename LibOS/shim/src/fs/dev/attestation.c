@@ -275,7 +275,7 @@ static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     char buffer[sizeof(g_pf_key_hex) + 1];
     memcpy(buffer, data, sizeof(g_pf_key_hex));
     buffer[sizeof(g_pf_key_hex)] = '\0';
-    int ret = DkSetProtectedFilesKey(&buffer);
+    int ret = DkSetProtectedFilesKey(buffer);
     if (ret < 0)
         return -EACCES;
 

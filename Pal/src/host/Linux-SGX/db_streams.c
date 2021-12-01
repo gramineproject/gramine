@@ -188,7 +188,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE:
             hdl->file.realpath = hdl->file.realpath ? (const char*)hdl + hdlsz : NULL;
-            hdl->file.chunk_hashes = (PAL_PTR)NULL;
+            hdl->file.chunk_hashes = NULL;
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:

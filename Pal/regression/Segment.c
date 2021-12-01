@@ -1,7 +1,7 @@
 #include "pal.h"
 #include "pal_regression.h"
 
-void* dummy = &dummy;
+uintptr_t dummy = (uintptr_t)&dummy;
 
 int main(int argc, char** argv, char** envp) {
     if (DkSegmentBaseSet(PAL_SEGMENT_FS, dummy) < 0) {
@@ -9,7 +9,7 @@ int main(int argc, char** argv, char** envp) {
         return 1;
     }
 
-    void** ptr;
+    uintptr_t* ptr;
     __asm__ volatile("mov %%fs:0, %0" : "=r"(ptr)::"memory");
 
     if (ptr != &dummy) {

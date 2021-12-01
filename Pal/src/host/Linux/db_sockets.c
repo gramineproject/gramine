@@ -233,18 +233,18 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_optio
     hdl->sock.fd = fd;
     void* addr   = (void*)hdl + HANDLE_SIZE(sock);
     if (bind_addr) {
-        hdl->sock.bind = (PAL_PTR)addr;
+        hdl->sock.bind = addr;
         memcpy(addr, bind_addr, bind_addrlen);
         addr += bind_addrlen;
     } else {
-        hdl->sock.bind = (PAL_PTR)NULL;
+        hdl->sock.bind = NULL;
     }
     if (dest_addr) {
-        hdl->sock.conn = (PAL_PTR)addr;
+        hdl->sock.conn = addr;
         memcpy(addr, dest_addr, dest_addrlen);
         addr += dest_addrlen;
     } else {
-        hdl->sock.conn = (PAL_PTR)NULL;
+        hdl->sock.conn = NULL;
     }
 
     hdl->sock.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
@@ -908,10 +908,10 @@ static int socket_close(PAL_HANDLE handle) {
     }
 
     if (handle->sock.bind)
-        handle->sock.bind = (PAL_PTR)NULL;
+        handle->sock.bind = NULL;
 
     if (handle->sock.conn)
-        handle->sock.conn = (PAL_PTR)NULL;
+        handle->sock.conn = NULL;
 
     return 0;
 }

@@ -349,9 +349,9 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     char* path = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);
     hdl->dir.realpath    = path;
-    hdl->dir.buf         = (PAL_PTR)NULL;
-    hdl->dir.ptr         = (PAL_PTR)NULL;
-    hdl->dir.end         = (PAL_PTR)NULL;
+    hdl->dir.buf         = NULL;
+    hdl->dir.ptr         = NULL;
+    hdl->dir.end         = NULL;
     hdl->dir.endofstream = false;
     *handle = hdl;
     return 0;
@@ -409,7 +409,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
         }
 
         if (!handle->dir.buf) {
-            handle->dir.buf = (PAL_PTR)malloc(DIRBUF_SIZE);
+            handle->dir.buf = malloc(DIRBUF_SIZE);
             if (!handle->dir.buf) {
                 return -PAL_ERROR_NOMEM;
             }
@@ -445,8 +445,8 @@ static int dir_close(PAL_HANDLE handle) {
     int ret = DO_SYSCALL(close, fd);
 
     if (handle->dir.buf) {
-        free((void*)handle->dir.buf);
-        handle->dir.buf = handle->dir.ptr = handle->dir.end = (PAL_PTR)NULL;
+        free(handle->dir.buf);
+        handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
     /* initial realpath is part of handle object and will be freed with it */

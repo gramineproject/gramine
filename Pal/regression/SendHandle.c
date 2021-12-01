@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
                     char uri[20];
 
                     size = sizeof(buffer);
-                    ret = DkStreamRead(handles[i], 0, &size, buffer, &uri, sizeof(uri));
+                    ret = DkStreamRead(handles[i], 0, &size, buffer, uri, sizeof(uri));
                     if (ret == 0 && size > 0)
                         pal_printf("Receive Socket Handle: %s\n", buffer);
 

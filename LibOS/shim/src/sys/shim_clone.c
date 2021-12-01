@@ -48,12 +48,13 @@ struct shim_clone_args {
  * 7.In the wrapper function ,we just do the stack switch to user
  *   Provided stack and execute the user Provided function.
  */
-static int clone_implementation_wrapper(struct shim_clone_args* arg) {
+static int clone_implementation_wrapper(void* arg_) {
     /* The child thread created by PAL is now running on the PAL allocated stack. We need to switch
      * to the user provided stack. */
 
     /* We acquired ownership of arg->thread from the caller, hence there is
      * no need to call get_thread. */
+    struct shim_clone_args* arg = (struct shim_clone_args*)arg_;
     struct shim_thread* my_thread = arg->thread;
     assert(my_thread);
 

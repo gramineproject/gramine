@@ -138,7 +138,7 @@ long shim_do_sched_get_priority_max(int policy);
 long shim_do_sched_get_priority_min(int policy);
 long shim_do_sched_rr_get_interval(pid_t pid, struct timespec* interval);
 long shim_do_rt_sigsuspend(const __sigset_t* mask, size_t setsize);
-long shim_do_arch_prctl(int code, void* addr);
+long shim_do_arch_prctl(int code, unsigned long addr);
 long shim_do_setrlimit(int resource, struct __kernel_rlimit* rlim);
 long shim_do_chroot(const char* filename);
 long shim_do_sethostname(char* name, int len);

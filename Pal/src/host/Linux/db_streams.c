@@ -180,12 +180,12 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_TCPSRV:
         case PAL_TYPE_UDP:
         case PAL_TYPE_UDPSRV: {
-            size_t s1 = hdl->sock.bind ? addr_size((PAL_PTR)hdl + hdlsz) : 0;
-            size_t s2 = hdl->sock.conn ? addr_size((PAL_PTR)hdl + hdlsz + s1) : 0;
+            size_t s1 = hdl->sock.bind ? addr_size((struct sockaddr*)((char*)hdl + hdlsz)) : 0;
+            size_t s2 = hdl->sock.conn ? addr_size((struct sockaddr*)((char*)hdl + hdlsz + s1)) : 0;
             if (s1)
-                hdl->sock.bind = (PAL_PTR)hdl + hdlsz;
+                hdl->sock.bind = (char*)hdl + hdlsz;
             if (s2)
-                hdl->sock.conn = (PAL_PTR)hdl + hdlsz + s2;
+                hdl->sock.conn = (char*)hdl + hdlsz + s2;
             break;
         }
         case PAL_TYPE_PROCESS:

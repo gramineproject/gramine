@@ -8,7 +8,7 @@ const char* private2 = "Hello World 2";
 
 static atomic_int count = 0;
 
-static void callback(void* args) {
+static int callback(void* args) {
     pal_printf("Run in Child Thread: %s\n", (char*)args);
 
     while (count < 10) {
@@ -20,7 +20,7 @@ static void callback(void* args) {
 
     pal_printf("Threads Run in Parallel OK\n");
 
-    if (DkSegmentBaseSet(PAL_SEGMENT_FS, &private2) < 0) {
+    if (DkSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private2) < 0) {
         pal_printf("Failed to set FS\n");
         DkThreadExit(/*clear_child_tid=*/NULL);
     }
@@ -35,7 +35,7 @@ static void callback(void* args) {
 }
 
 int main(void) {
-    if (DkSegmentBaseSet(PAL_SEGMENT_FS, &private1) < 0) {
+    if (DkSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private1) < 0) {
         pal_printf("Failed to set FS\n");
         return 1;
     }
@@ -44,7 +44,7 @@ int main(void) {
     pal_printf("Private Message (FS Segment) 1: %s\n", ptr1);
 
     PAL_HANDLE thread1 = NULL;
-    int ret = DkThreadCreate(callback, (char*)"Hello World", &thread1);
+    int ret = DkThreadCreate(callback, "Hello World", &thread1);
     if (ret < 0)
         return 1;
 

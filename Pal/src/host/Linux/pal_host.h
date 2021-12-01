@@ -75,16 +75,16 @@ typedef struct pal_handle {
         struct {
             PAL_IDX fd;
             const char* realpath;
-            PAL_PTR buf;
-            PAL_PTR ptr;
-            PAL_PTR end;
+            void* buf;
+            void* ptr;
+            void* end;
             bool endofstream;
         } dir;
 
         struct {
             PAL_IDX fd;
-            PAL_PTR bind;
-            PAL_PTR conn;
+            void* bind;
+            void* conn;
             bool nonblocking;
             bool reuseaddr;
             PAL_NUM linger;

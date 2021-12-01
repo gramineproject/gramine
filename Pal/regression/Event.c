@@ -26,7 +26,7 @@ static void set(int* ptr, int val) {
 static int g_clear_thread_exit = 1;
 static int g_ready = 0;
 
-static void thread_func(void* arg) {
+static int thread_func(void* arg) {
     PAL_HANDLE sleep_handle = NULL;
     CHECK(DkEventCreate(&sleep_handle, /*init_signaled=*/false, /*auto_clear=*/false));
 

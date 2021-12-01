@@ -26,28 +26,28 @@ struct enclave_tls {
     PAL_TCB common;
 
     /* private to Linux-SGX PAL */
-    uint64_t enclave_size;
-    uint64_t tcs_offset;
-    uint64_t initial_stack_addr;
-    uint64_t tmp_rip;
-    uint64_t sig_stack_low;
-    uint64_t sig_stack_high;
-    void*    ecall_return_addr;
-    void*    ssa;
+    uint64_t  enclave_size;
+    uint64_t  tcs_offset;
+    uint64_t  initial_stack_addr;
+    uint64_t  tmp_rip;
+    uint64_t  sig_stack_low;
+    uint64_t  sig_stack_high;
+    void*     ecall_return_addr;
+    void*     ssa;
     sgx_pal_gpr_t* gpr;
-    void*    exit_target;
-    void*    fsbase;
-    void*    pre_ocall_stack;
-    void*    ustack_top;
-    void*    ustack;
+    void*     exit_target;
+    uintptr_t fsbase;
+    void*     pre_ocall_stack;
+    void*     ustack_top;
+    void*     ustack;
     struct pal_handle_thread* thread;
-    uint64_t ocall_exit_called;
-    uint64_t thread_started;
-    uint64_t ready_for_exceptions;
-    uint64_t manifest_size;
-    void*    heap_min;
-    void*    heap_max;
-    int*     clear_child_tid;
+    uint64_t  ocall_exit_called;
+    uint64_t  thread_started;
+    uint64_t  ready_for_exceptions;
+    uint64_t  manifest_size;
+    void*     heap_min;
+    void*     heap_max;
+    int*      clear_child_tid;
     struct untrusted_area untrusted_area_cache;
 };
 

@@ -12,10 +12,6 @@
  * each chunk (of size TRUSTED_CHUNK_SIZE) in the file. The per-chunk hashes are used for partial
  * verification in future reads, to avoid re-verifying the whole file again or the need of caching
  * file contents.
- *
- * Perhaps confusingly, `struct trusted_file` describes not only "sgx.trusted_files" but also
- * "sgx.allowed_files". For allowed files, `allowed = true`, `chunk_hashes = NULL`, and `uri` can be
- * not only a file but also a directory. TODO: Perhaps split "allowed_files" into a separate struct?
  */
 
 /* TODO: Move trusted/allowed files implementation into a separate file (`enclave_tf.c`?) */
@@ -29,35 +25,12 @@
 #include <sys/types.h>
 
 #include "api.h"
+#include "enclave_tf_structs.h"
 #include "pal.h"
-
-enum {
-    FILE_CHECK_POLICY_STRICT = 0,
-    FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG,
-};
 
 int init_file_check_policy(void);
 
 int get_file_check_policy(void);
-
-typedef struct {
-    uint8_t bytes[32];
-} sgx_file_hash_t;
-
-typedef struct {
-    uint8_t bytes[16];
-} sgx_chunk_hash_t;
-
-DEFINE_LIST(trusted_file);
-struct trusted_file {
-    LIST_TYPE(trusted_file) list;
-    uint64_t size;
-    bool allowed;
-    sgx_file_hash_t file_hash;      /* hash over the whole file, retrieved from the manifest */
-    sgx_chunk_hash_t* chunk_hashes; /* array of hashes over separate file chunks */
-    size_t uri_len;
-    char uri[]; /* must be NULL-terminated */
-};
 
 /*!
  * \brief Get trusted/allowed file struct, if corresponding path entry exists in the manifest
