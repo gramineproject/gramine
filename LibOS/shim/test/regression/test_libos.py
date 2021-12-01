@@ -150,7 +150,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     @unittest.skipUnless(ON_X86, 'x86-specific')
-    @unittest.skipIf(USES_MUSL, 'c++ not supported with musl')
+    @unittest.skipIf(USES_MUSL, 'C++ not supported with musl')
     def test_110_basic_bootstrapping_cpp(self):
         stdout, _ = self.run_binary(['bootstrap_cpp'])
         self.assertIn('User Program Started', stdout)
@@ -330,7 +330,7 @@ class TC_01_Bootstrap(RegressionTestCase):
 
 
 class TC_02_OpenMP(RegressionTestCase):
-    @unittest.skipIf(USES_MUSL, 'OpenMP not supported with musl')
+    @unittest.skipIf(USES_MUSL, 'OpenMP is not supported with musl')
     def test_000_simple_for_loop(self):
         stdout, _ = self.run_binary(['openmp'])
 
@@ -695,7 +695,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('eventfd_using_various_flags completed successfully', stdout)
         self.assertIn('eventfd_using_fork completed successfully', stdout)
 
-    @unittest.skipIf(USES_MUSL, 'sched_setscheduler not supported in musl')
+    @unittest.skipIf(USES_MUSL, 'sched_setscheduler is not supported in musl')
     def test_080_sched(self):
         stdout, _ = self.run_binary(['sched'])
 
