@@ -47,7 +47,7 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
                                     size_t* out_quote_size);
 
 /*!
- *  \brief Verify that the provided SGX quote contains expected values.
+ *  \brief Verify that the provided SGX quote body contains expected values.
  *
  *  \param[in] quote_body      Quote body to verify.
  *  \param[in] mr_signer       (Optional) Expected mr_signer quote field.
@@ -69,7 +69,7 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
                       const char* report_data, bool expected_as_str);
 
 /*!
- *  \brief Verify enclave attributes of the provided SGX quote.
+ *  \brief Verify enclave attributes of the provided SGX quote body.
  *
  *  \param[in] quote_body           Quote body to verify.
  *  \param[in] allow_debug_enclave  If true, then SGXREPORT.ATTRIBUTES.DEBUG can be 1.

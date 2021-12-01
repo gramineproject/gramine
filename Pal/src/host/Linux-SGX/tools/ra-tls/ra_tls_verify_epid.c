@@ -241,7 +241,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
 
     sgx_quote_body_t* quote_body = (sgx_quote_body_t*)quote_from_ias;
 
-    /* verify enclave attributes from the SGX quote */
+    /* verify enclave attributes from the SGX quote body */
     ret = verify_quote_body_enclave_attributes(quote_body, allow_debug_enclave);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
