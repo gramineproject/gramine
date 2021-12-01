@@ -420,13 +420,14 @@ The PAL and library OS code/data count towards this size value, as well as the
 application memory itself: application's code, stack, heap, loaded application
 libraries, etc. The application cannot allocate memory that exceeds this limit.
 
-Be careful when setting the enclave size to large values: SGX |~| v1 hardware
-(i.e., without the :term:`EDMM` hardware feature) not only reserves
+Be careful when setting the enclave size to large values: on systems where the
+:term:`EDMM` feature is not enabled, Gramine not only reserves
 ``sgx.enclave_size`` bytes of virtual address space but also *commits* them to
-the backing store (RAM + swap file). For example, if ``sgx.enclave_size =
-"4G"``, then 4GB of RAM will be immediately allocated to back the enclave
-memory. Thus, if your system has 4GB of backing store or less, then the host
-Linux kernel will fail to start the SGX enclave and will typically print the
+the backing store (EPC, RAM and/or swap file). For example, if
+``sgx.enclave_size = "4G"``, then 4GB of EPC/RAM will be immediately allocated
+to back the enclave memory (recall that :term:`EPC` is the SGX-protected part of
+RAM). Thus, if your system has 4GB of backing store or less, then the host Linux
+kernel will fail to start the SGX enclave and will typically print the
 ``Killed`` message. If you encounter this situation, you can try the following:
 
 - If possible, decrease ``sgx.enclave_size`` to a value less than the amount of
