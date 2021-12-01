@@ -19,7 +19,6 @@
 #define SHIM_CALL_OFFSET      32
 
 #ifdef __ASSEMBLER__
-/* clang-format off */
 
 .macro SYSCALLDB
 leaq .Lafter_syscalldb\@(%rip), %rcx
@@ -27,13 +26,11 @@ jmpq *%gs:SHIM_SYSCALLDB_OFFSET
 .Lafter_syscalldb\@:
 .endm
 
-/* clang-format on */
 #else /* !__ASSEMBLER__ */
 
 #define SHIM_STR(x)  #x
 #define SHIM_XSTR(x) SHIM_STR(x)
 
-/* clang-format off */
 __asm__(
     ".macro SYSCALLDB\n"
     "leaq .Lafter_syscalldb\\@(%rip), %rcx\n"
@@ -41,7 +38,6 @@ __asm__(
     ".Lafter_syscalldb\\@:\n"
     ".endm\n"
 );
-/* clang-format on */
 
 #undef SHIM_XSTR
 #undef SHIM_STR
@@ -54,12 +50,10 @@ enum {
 
 static inline int shim_call(int number, unsigned long arg1, unsigned long arg2) {
     long (*handle_call)(int number, unsigned long arg1, unsigned long arg2);
-    /* clang-format off */
     __asm__("movq %%gs:%c1, %0"
             : "=r"(handle_call)
             : "i"(SHIM_CALL_OFFSET)
             : "memory");
-    /* clang-format on */
     return handle_call(number, arg1, arg2);
 }
 
