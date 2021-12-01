@@ -14,16 +14,16 @@ int DkSystemTimeQuery(PAL_NUM* time) {
     return _DkSystemTimeQuery(time);
 }
 
-int DkRandomBitsRead(PAL_PTR buffer, PAL_NUM size) {
-    return _DkRandomBitsRead((void*)buffer, size);
+int DkRandomBitsRead(void* buffer, PAL_NUM size) {
+    return _DkRandomBitsRead(buffer, size);
 }
 
 #if defined(__x86_64__)
-int DkSegmentBaseGet(enum pal_segment_reg reg, PAL_PTR* addr) {
+int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     return _DkSegmentBaseGet(reg, addr);
 }
 
-int DkSegmentBaseSet(enum pal_segment_reg reg, PAL_PTR addr) {
+int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     return _DkSegmentBaseSet(reg, addr);
 }
 #endif
@@ -51,18 +51,18 @@ int DkCpuIdRetrieve(PAL_IDX leaf, PAL_IDX subleaf, PAL_IDX values[4]) {
     return 0;
 }
 
-int DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
-                        PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
+int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
+                        void* target_info, PAL_NUM* target_info_size, void* report,
                         PAL_NUM* report_size) {
     return _DkAttestationReport(user_report_data, user_report_data_size, target_info,
                                 target_info_size, report, report_size);
 }
 
-int DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size, PAL_PTR quote,
+int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                        PAL_NUM* quote_size) {
     return _DkAttestationQuote(user_report_data, user_report_data_size, quote, quote_size);
 }
 
-int DkSetProtectedFilesKey(PAL_PTR pf_key_hex) {
+int DkSetProtectedFilesKey(const char* pf_key_hex) {
     return _DkSetProtectedFilesKey(pf_key_hex);
 }

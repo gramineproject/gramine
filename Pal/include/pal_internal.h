@@ -188,14 +188,14 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo);
 int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo);
 
 /* DkProcess and DkThread calls */
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param);
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
 noreturn void _DkThreadExit(int* clear_child_tid);
 void _DkThreadYieldExecution(void);
 int _DkThreadResume(PAL_HANDLE thread_handle);
 int _DkProcessCreate(PAL_HANDLE* handle, const char** args);
 noreturn void _DkProcessExit(int exit_code);
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask);
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask);
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
 /* DkEvent calls */
 int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);
@@ -225,15 +225,15 @@ int _DkSystemTimeQuery(uint64_t* out_usec);
  * 0 on success, negative on failure.
  */
 int _DkRandomBitsRead(void* buffer, size_t size);
-int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr);
-int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr);
+int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
+int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]);
-int _DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
-                         PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
+int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
+                         void* target_info, PAL_NUM* target_info_size, void* report,
                          PAL_NUM* report_size);
-int _DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size, PAL_PTR quote,
+int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                         PAL_NUM* quote_size);
-int _DkSetProtectedFilesKey(PAL_PTR pf_key_hex);
+int _DkSetProtectedFilesKey(const char* pf_key_hex);
 
 #define INIT_FAIL(exitcode, reason)                                                              \
     do {                                                                                         \

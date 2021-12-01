@@ -915,7 +915,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     ElfW(Addr) auxp_extra = (ElfW(Addr))&auxp[8];
 
     ElfW(Addr) random = auxp_extra; /* random 16B for AT_RANDOM */
-    ret = DkRandomBitsRead((PAL_PTR)random, 16);
+    ret = DkRandomBitsRead((void*)random, 16);
     if (ret < 0) {
         log_error("execute_elf_object: DkRandomBitsRead failed: %d", ret);
         DkProcessExit(1);

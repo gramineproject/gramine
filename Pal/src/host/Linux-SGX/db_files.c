@@ -205,7 +205,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         goto fail;
     }
 
-    hdl->file.chunk_hashes = (PAL_PTR)chunk_hashes;
+    hdl->file.chunk_hashes = chunk_hashes;
     hdl->file.total = total;
     hdl->file.umem  = umem;
 
@@ -253,7 +253,7 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
         return pf_file_read(pf, handle, offset, count, buffer);
 
     int64_t ret;
-    sgx_chunk_hash_t* chunk_hashes = (sgx_chunk_hash_t*)handle->file.chunk_hashes;
+    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
 
     if (!chunk_hashes) {
         if (handle->file.seekable) {
@@ -313,7 +313,7 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
         return pf_file_write(pf, handle, offset, count, buffer);
 
     int64_t ret;
-    sgx_chunk_hash_t* chunk_hashes = (sgx_chunk_hash_t*)handle->file.chunk_hashes;
+    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
 
     if (!chunk_hashes) {
         if (handle->file.seekable) {
@@ -512,7 +512,7 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
     if (pf)
         return pf_file_map(pf, handle, addr, prot, offset, size);
 
-    sgx_chunk_hash_t* chunk_hashes = (sgx_chunk_hash_t*)handle->file.chunk_hashes;
+    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     void* mem = *addr;
 
     /* If the file is listed in the manifest as an "allowed" file, we allow mapping the file outside
@@ -901,9 +901,9 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     char* path  = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);
     hdl->dir.realpath    = path;
-    hdl->dir.buf         = (PAL_PTR)NULL;
-    hdl->dir.ptr         = (PAL_PTR)NULL;
-    hdl->dir.end         = (PAL_PTR)NULL;
+    hdl->dir.buf         = NULL;
+    hdl->dir.ptr         = NULL;
+    hdl->dir.end         = NULL;
     hdl->dir.endofstream = false;
     *handle              = hdl;
     return 0;
@@ -962,7 +962,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
         }
 
         if (!handle->dir.buf) {
-            handle->dir.buf = (PAL_PTR)malloc(DIRBUF_SIZE);
+            handle->dir.buf = malloc(DIRBUF_SIZE);
             if (!handle->dir.buf) {
                 return -PAL_ERROR_NOMEM;
             }
@@ -1000,8 +1000,8 @@ static int dir_close(PAL_HANDLE handle) {
     ocall_close(fd);
 
     if (handle->dir.buf) {
-        free((void*)handle->dir.buf);
-        handle->dir.buf = handle->dir.ptr = handle->dir.end = (PAL_PTR)NULL;
+        free(handle->dir.buf);
+        handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
     /* initial realpath is part of handle object and will be freed with it */

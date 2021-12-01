@@ -11,9 +11,9 @@
 #include "pal_internal.h"
 
 /* PAL call DkThreadCreate: create a thread inside the current process */
-int DkThreadCreate(PAL_PTR addr, PAL_PTR param, PAL_HANDLE* handle) {
+int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _DkThreadCreate(handle, (int (*)(void*))addr, (const void*)param);
+    return _DkThreadCreate(handle, callback, param);
 }
 
 /* PAL call DkThreadYieldExecution. Yield the execution of the current thread. */
@@ -22,8 +22,8 @@ void DkThreadYieldExecution(void) {
 }
 
 /* PAL call DkThreadExit: simply exit the current thread no matter what */
-noreturn void DkThreadExit(PAL_PTR clear_child_tid) {
-    _DkThreadExit((int*)clear_child_tid);
+noreturn void DkThreadExit(int* clear_child_tid) {
+    _DkThreadExit(clear_child_tid);
     /* UNREACHABLE */
 }
 
@@ -36,10 +36,10 @@ int DkThreadResume(PAL_HANDLE thread_handle) {
     return _DkThreadResume(thread_handle);
 }
 
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     return _DkThreadSetCpuAffinity(thread, cpumask_size, cpu_mask);
 }
 
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     return _DkThreadGetCpuAffinity(thread, cpumask_size, cpu_mask);
 }

@@ -139,10 +139,10 @@ int init_async_worker(void) {
     return 0;
 }
 
-static void shim_async_worker(void* arg) {
+static int shim_async_worker(void* arg) {
     struct shim_thread* self = (struct shim_thread*)arg;
     if (!arg)
-        return;
+        return -1;
 
     shim_tcb_init();
     set_cur_thread(self);

@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include "atomic.h"
+#include "enclave_tf_structs.h"
 #include "list.h"
 #include "spinlock.h"
 
@@ -27,7 +28,7 @@ DEFINE_LIST(pal_handle_thread);
 struct pal_handle_thread {
     PAL_HDR reserved;
     PAL_IDX tid;
-    PAL_PTR tcs;
+    void* tcs;
     LIST_TYPE(pal_handle_thread) list;
     void* param;
 };
@@ -56,9 +57,9 @@ typedef struct pal_handle {
             const char* realpath;
             PAL_NUM total;
             /* below fields are used only for trusted files */
-            PAL_PTR chunk_hashes; /* array of hashes of file chunks */
-            PAL_PTR umem;         /* valid only when chunk_hashes != NULL */
-            bool seekable;        /* regular files are seekable, FIFO pipes are not */
+            sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
+            void* umem;                     /* valid only when chunk_hashes != NULL */
+            bool seekable;                  /* regular files are seekable, FIFO pipes are not */
         } file;
 
         struct {
@@ -90,16 +91,16 @@ typedef struct pal_handle {
         struct {
             PAL_IDX fd;
             const char* realpath;
-            PAL_PTR buf;
-            PAL_PTR ptr;
-            PAL_PTR end;
+            void* buf;
+            void* ptr;
+            void* end;
             bool endofstream;
         } dir;
 
         struct {
             PAL_IDX fd;
-            PAL_PTR bind;
-            PAL_PTR conn;
+            struct sockaddr* bind;
+            struct sockaddr* conn;
             bool nonblocking;
             PAL_NUM linger;
             PAL_NUM receivebuf;

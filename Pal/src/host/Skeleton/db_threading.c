@@ -13,7 +13,7 @@
 /* _DkThreadCreate for internal use. Create an internal thread
    inside the current process. The arguments callback and param
    specify the starting function and parameters */
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param) {
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -33,11 +33,11 @@ int _DkThreadResume(PAL_HANDLE thread_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

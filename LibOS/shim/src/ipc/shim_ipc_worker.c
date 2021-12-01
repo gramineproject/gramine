@@ -357,7 +357,7 @@ out_die:
     DkProcessExit(1);
 }
 
-static void ipc_worker_wrapper(void* arg) {
+static int ipc_worker_wrapper(void* arg) {
     __UNUSED(arg);
     assert(g_worker_thread);
 

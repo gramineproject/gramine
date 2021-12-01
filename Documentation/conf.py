@@ -105,8 +105,15 @@ nitpicky = True
 nitpick_ignore = [
     ('c:type', 'bool'),
     ('c:type', 'toml_table_t'),
+    ('c:type', 'uint8_t'),
+    ('c:type', 'uint16_t'),
     ('c:type', 'uint32_t'),
     ('c:type', 'uint64_t'),
+    ('c:type', 'int8_t'),
+    ('c:type', 'int16_t'),
+    ('c:type', 'int32_t'),
+    ('c:type', 'int64_t'),
+    ('c:type', 'uintptr_t'),
     ('c:type', 'union'),
     ('c:type', 'enum'), # parsing of these seems to be broken:
                         #     WARNING: c:type reference target not found: enum

@@ -53,8 +53,8 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return 0;
 }
 
-int _DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
-                         PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
+int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
+                         void* target_info, PAL_NUM* target_info_size, void* report,
                          PAL_NUM* report_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
@@ -65,7 +65,7 @@ int _DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_siz
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size, PAL_PTR quote,
+int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                         PAL_NUM* quote_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
@@ -74,7 +74,7 @@ int _DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size,
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSetProtectedFilesKey(PAL_PTR pf_key_hex) {
+int _DkSetProtectedFilesKey(const char* pf_key_hex) {
     __UNUSED(pf_key_hex);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

@@ -164,7 +164,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     /* update handle fields to point to correct contents (located right after handle itself) */
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE:
-            hdl->file.realpath = hdl->file.realpath ? (const char*)hdl + hdlsz : NULL;
+            hdl->file.realpath = (hdl->file.realpath ? (const char*)hdl + hdlsz : NULL);
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
@@ -174,18 +174,18 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_DEV:
             break;
         case PAL_TYPE_DIR:
-            hdl->dir.realpath = hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL;
+            hdl->dir.realpath = (hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL);
             break;
         case PAL_TYPE_TCP:
         case PAL_TYPE_TCPSRV:
         case PAL_TYPE_UDP:
         case PAL_TYPE_UDPSRV: {
-            size_t s1 = hdl->sock.bind ? addr_size((PAL_PTR)hdl + hdlsz) : 0;
-            size_t s2 = hdl->sock.conn ? addr_size((PAL_PTR)hdl + hdlsz + s1) : 0;
+            size_t s1 = hdl->sock.bind ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz)) : 0;
+            size_t s2 = hdl->sock.conn ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz + s1)) : 0;
             if (s1)
-                hdl->sock.bind = (PAL_PTR)hdl + hdlsz;
+                hdl->sock.bind = (struct sockaddr*)((uint8_t*)hdl + hdlsz);
             if (s2)
-                hdl->sock.conn = (PAL_PTR)hdl + hdlsz + s2;
+                hdl->sock.conn = (struct sockaddr*)((uint8_t*)hdl + hdlsz + s2);
             break;
         }
         case PAL_TYPE_PROCESS:

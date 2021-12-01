@@ -12,14 +12,14 @@
 #include "shim_table.h"
 #include "shim_tcb.h"
 
-long shim_do_arch_prctl(int code, void* addr) {
+long shim_do_arch_prctl(int code, unsigned long addr) {
     switch (code) {
         case ARCH_SET_FS:
-            set_tls((unsigned long)addr);
+            set_tls(addr);
             return 0;
 
         case ARCH_GET_FS:
-            return pal_to_unix_errno(DkSegmentBaseGet(PAL_SEGMENT_FS, addr));
+            return pal_to_unix_errno(DkSegmentBaseGet(PAL_SEGMENT_FS, (unsigned long*)addr));
 
         default:
             log_warning("Not supported flag (0x%x) passed to arch_prctl", code);

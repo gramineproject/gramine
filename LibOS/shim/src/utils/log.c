@@ -78,7 +78,7 @@ void log_setprefix(shim_tcb_t* tcb) {
 
 static int buf_write_all(const char* str, size_t size, void* arg) {
     __UNUSED(arg);
-    DkDebugLog((PAL_PTR)str, size);
+    DkDebugLog(str, size);
     return 0;
 }
 

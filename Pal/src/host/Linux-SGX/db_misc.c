@@ -462,8 +462,8 @@ fail:
     _DkProcessExit(1);
 }
 
-int _DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
-                         PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
+int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
+                         void* target_info, PAL_NUM* target_info_size, void* report,
                          PAL_NUM* report_size) {
     __sgx_mem_aligned sgx_report_data_t stack_report_data = {0};
     __sgx_mem_aligned sgx_target_info_t stack_target_info = {0};
@@ -519,8 +519,8 @@ out:
     return 0;
 }
 
-int _DkAttestationQuote(const PAL_PTR user_report_data, PAL_NUM user_report_data_size,
-                        PAL_PTR quote, PAL_NUM* quote_size) {
+int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size,
+                        void* quote, PAL_NUM* quote_size) {
     if (user_report_data_size != sizeof(sgx_report_data_t))
         return -PAL_ERROR_INVAL;
 
@@ -607,7 +607,7 @@ int _DkAttestationQuote(const PAL_PTR user_report_data, PAL_NUM user_report_data
     return 0;
 }
 
-int _DkSetProtectedFilesKey(const PAL_PTR pf_key_hex) {
+int _DkSetProtectedFilesKey(const char* pf_key_hex) {
     return set_protected_files_key(pf_key_hex);
 }
 
@@ -853,10 +853,10 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return 0;
 }
 
-int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr) {
+int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
-            *addr = (void*)GET_ENCLAVE_TLS(fsbase);
+            *addr = GET_ENCLAVE_TLS(fsbase);
             return 0;
         case PAL_SEGMENT_GS:
             /* GS is internally used, deny any access to it */
@@ -866,7 +866,7 @@ int _DkSegmentBaseGet(enum pal_segment_reg reg, void** addr) {
     }
 }
 
-int _DkSegmentBaseSet(enum pal_segment_reg reg, void* addr) {
+int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             SET_ENCLAVE_TLS(fsbase, addr);

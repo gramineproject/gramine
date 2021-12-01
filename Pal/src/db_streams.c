@@ -224,13 +224,13 @@ int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* 
     return ret;
 }
 
-int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_PTR source,
+int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer, char* source,
                  PAL_NUM size) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _DkStreamRead(handle, offset, *count, (void*)buffer, size ? (char*)source : NULL,
+    int64_t ret = _DkStreamRead(handle, offset, *count, buffer, size ? source : NULL,
                                 source ? size : 0);
 
     if (ret < 0) {
@@ -242,7 +242,7 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buff
 }
 
 /* _DkStreamWrite for internal use, write to stream at absolute offset.
-   The actual behavior of stream write is defined by handler */
+ * The actual behavior of stream write is defined by handler. */
 int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
                        const char* addr, int addrlen) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
@@ -267,14 +267,13 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
     return ret;
 }
 
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer,
+int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer,
                   const char* dest) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _DkStreamWrite(handle, offset, *count, (void*)buffer, dest,
-                                 dest ? strlen(dest) : 0);
+    int64_t ret = _DkStreamWrite(handle, offset, *count, buffer, dest, dest ? strlen(dest) : 0);
 
     if (ret < 0) {
         return ret;
@@ -379,12 +378,12 @@ int _DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     return ret;
 }
 
-int DkStreamGetName(PAL_HANDLE handle, PAL_PTR buffer, PAL_NUM size) {
+int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size) {
     if (!handle || !buffer || !size) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkStreamGetName(handle, (void*)buffer, size);
+    return _DkStreamGetName(handle, buffer, size);
 }
 
 /* _DkStreamMap for internal use. Map specific handle to certain memory,
@@ -561,6 +560,6 @@ const char* _DkStreamRealpath(PAL_HANDLE hdl) {
     return ops->getrealpath(hdl);
 }
 
-int DkDebugLog(PAL_PTR buffer, PAL_NUM size) {
+int DkDebugLog(const void* buffer, PAL_NUM size) {
     return _DkDebugLog(buffer, size);
 }

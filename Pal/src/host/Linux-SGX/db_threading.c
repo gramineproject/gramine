@@ -29,7 +29,7 @@ static LISTP_TYPE(pal_handle_thread) g_thread_list = LISTP_INIT;
 
 struct thread_param {
     int (*callback)(void*);
-    const void* param;
+    void* param;
 };
 
 extern void* g_enclave_base;
@@ -93,7 +93,7 @@ void pal_start_thread(void) {
     /* UNREACHABLE */
 }
 
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param) {
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret;
     PAL_HANDLE new_thread = malloc(HANDLE_SIZE(thread));
     if (!new_thread)
@@ -172,12 +172,12 @@ int _DkThreadResume(PAL_HANDLE thread_handle) {
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     int ret = ocall_sched_setaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     int ret = ocall_sched_getaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }

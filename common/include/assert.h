@@ -8,8 +8,6 @@
 #ifndef ASSERT_H
 #define ASSERT_H
 
-#include <stdnoreturn.h>
-
 #include "callbacks.h"
 #include "log.h"
 

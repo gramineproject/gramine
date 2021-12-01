@@ -123,7 +123,7 @@ static noreturn void pal_thread_exit_wrapper(int ret_val) {
     _DkThreadExit(/*clear_child_tid=*/NULL);
 }
 
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param) {
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret = 0;
     PAL_HANDLE hdl = NULL;
     void* stack = get_thread_stack();
@@ -160,7 +160,7 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* para
 
     // Initialize TCB at the top of the alternative stack.
     PAL_TCB_LINUX* tcb = child_stack + ALT_STACK_SIZE - sizeof(PAL_TCB_LINUX);
-    pal_tcb_linux_init(tcb, hdl, child_stack, callback, (void*)param);
+    pal_tcb_linux_init(tcb, hdl, child_stack, callback, param);
 
     /* align child_stack to 16 */
     child_stack = ALIGN_DOWN_PTR(child_stack, 16);
@@ -253,13 +253,13 @@ int _DkThreadResume(PAL_HANDLE thread_handle) {
     return 0;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_setaffinity, thread->thread.tid, cpumask_size, cpu_mask);
 
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask) {
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpumask_size, cpu_mask);
 
     return ret < 0 ? unix_to_pal_error(ret) : ret;

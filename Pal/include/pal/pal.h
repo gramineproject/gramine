@@ -336,7 +336,7 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client);
  * If \p handle is a directory, DkStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer, PAL_PTR source,
+int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer, char* source,
                  PAL_NUM size);
 
 /*!
@@ -352,7 +352,7 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buff
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, PAL_PTR buffer,
+int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer,
                   const char* dest);
 
 enum pal_delete_mode {
@@ -469,7 +469,7 @@ int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 /*!
  * \brief Query the name of an open stream. On success `buffer` contains a null-terminated string.
  */
-int DkStreamGetName(PAL_HANDLE handle, PAL_PTR buffer, PAL_NUM size);
+int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size);
 
 /*!
  * \brief This API changes the name of an open stream.
@@ -487,7 +487,7 @@ int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
  * \param param is the pointer argument that is passed to the new thread
  * \param[out] handle on success contains the thread handle
  */
-int DkThreadCreate(PAL_PTR addr, PAL_PTR param, PAL_HANDLE* handle);
+int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle);
 
 /*!
  * \brief Yield the current thread such that the host scheduler can reschedule it.
@@ -501,7 +501,7 @@ void DkThreadYieldExecution(void);
  *  to notify LibOS (which in turn notifies the parent thread if any); if
  *  `clear_child_tid` is NULL, then PAL doesn't do the clearing.
  */
-noreturn void DkThreadExit(PAL_PTR clear_child_tid);
+noreturn void DkThreadExit(int* clear_child_tid);
 
 /*!
  * \brief Resume a thread.
@@ -520,7 +520,7 @@ int DkThreadResume(PAL_HANDLE thread);
  *
  * \return Returns 0 on success, negative error code on failure.
  */
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask);
+int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
 /*!
  * \brief Gets the CPU affinity of a thread.
@@ -535,7 +535,7 @@ int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_
  *
  * \return Returns 0 on success, negative error code on failure.
  */
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, PAL_PTR cpu_mask);
+int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
 /*
  * Exception Handling
@@ -669,7 +669,7 @@ void DkObjectClose(PAL_HANDLE object_handle);
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkDebugLog(PAL_PTR buffer, PAL_NUM size);
+int DkDebugLog(const void* buffer, PAL_NUM size);
 
 /*!
  * \brief Get the current time
@@ -685,7 +685,7 @@ int DkSystemTimeQuery(PAL_NUM* time);
  * \param[in] size buffer size
  * \return 0 on success, negative on failure
  */
-int DkRandomBitsRead(PAL_PTR buffer, PAL_NUM size);
+int DkRandomBitsRead(void* buffer, PAL_NUM size);
 
 enum pal_segment_reg {
     PAL_SEGMENT_FS,
@@ -700,7 +700,7 @@ enum pal_segment_reg {
  *
  * \return 0 on success, negative error value on failure
  */
-int DkSegmentBaseGet(enum pal_segment_reg reg, PAL_PTR* addr);
+int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 
 /*!
  * \brief Set segment register
@@ -710,7 +710,7 @@ int DkSegmentBaseGet(enum pal_segment_reg reg, PAL_PTR* addr);
  *
  * \return 0 on success, negative error value on failure
  */
-int DkSegmentBaseSet(enum pal_segment_reg reg, PAL_PTR addr);
+int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
  * \brief Return the amount of currently available memory for LibOS/application
@@ -748,8 +748,8 @@ PAL_NUM DkMemoryAvailableQuota(void);
  * \param[in,out] report_size            Caller specifies size of `report`; on return, contains
  *                                       PAL-enforced size of `report` (432B in case of SGX PAL).
  */
-int DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size,
-                        PAL_PTR target_info, PAL_NUM* target_info_size, PAL_PTR report,
+int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
+                        void* target_info, PAL_NUM* target_info_size, void* report,
                         PAL_NUM* report_size);
 
 /*!
@@ -767,7 +767,7 @@ int DkAttestationReport(PAL_PTR user_report_data, PAL_NUM* user_report_data_size
  * \param[in,out] quote_size             Caller specifies maximum size allocated for `quote`; on
  *                                       return, contains actual size of obtained quote.
  */
-int DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size, PAL_PTR quote,
+int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                        PAL_NUM* quote_size);
 
 /*!
@@ -779,7 +779,7 @@ int DkAttestationQuote(PAL_PTR user_report_data, PAL_NUM user_report_data_size, 
  * \param[in]     pf_key_hex       Wrap key for protected files. Must be a 32-char null-terminated
  *                                 hex string in case of SGX PAL (AES-GCM encryption key).
  */
-int DkSetProtectedFilesKey(PAL_PTR pf_key_hex);
+int DkSetProtectedFilesKey(const char* pf_key_hex);
 
 #ifdef __GNUC__
 #define symbol_version_default(real, name, version) \
