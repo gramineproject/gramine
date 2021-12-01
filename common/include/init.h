@@ -7,8 +7,7 @@
 #define INIT_H_
 
 /*
- * Call the constructors specified in `.init_array` for the current ELF object. Should be called
- * during initialization.
+ * Call the constructors specified in `.init_array`. Should be called during initialization.
  *
  * NOTE: Glibc handles `.init_array` by itself, so normal executables compiled against Glibc (e.g.
  * Linux-SGX untrusted runtime) should not call this.
