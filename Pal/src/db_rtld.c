@@ -367,38 +367,43 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         goto out;
     }
 
+    if (ehdr->e_type == ET_DYN) {
+        /*
+         * This is a position-independent shared object, reserve a memory area to determine load
+         * address. This area will be populated with LOAD segments below.
+         *
+         * Note that we reserve memory starting from offset 0, not from the first segment's p_vaddr.
+         * This is to ensure that l_base_diff will not be less than 0.
+         *
+         * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
+         *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed).
+         */
+        void* map_addr = NULL;
+        ret = _DkStreamMap(handle, &map_addr, /*prot=*/0, /*offset=*/0,
+                           loadcmds[loadcmds_cnt - 1].alloc_end);
+        if (ret < 0) {
+            log_error("Failed to reserve memory for all LOAD segments of DYN ELF file");
+            goto out;
+        }
+
+        g_entrypoint_map.l_base_diff = (ElfW(Addr))map_addr;
+    } else {
+        /* for EXEC (executables), force PAL memory allocator to use hard-coded segment addresses */
+        g_entrypoint_map.l_base_diff = 0x0;
+    }
+
+    g_entrypoint_map.l_map_start = loadcmds[0].start + g_entrypoint_map.l_base_diff;
+
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
 
-        size_t map_size = 0;
-        void*  map_addr = NULL;
-        if (ehdr->e_type == ET_EXEC) {
-            /* for EXEC (executables), force PAL memory allocator to use hard-coded segment addr */
-            map_addr = (void*)c->start;
-            map_size = c->map_end - c->start;
-        } else {
-            /*
-             * For DYN (shared libraries), let PAL memory allocator choose base addr the first time
-             * -- but we must reserve enough memory for all loadable segments this first time to not
-             * overwrite memory on subsequent segments.
-             *
-             * Note that we reserve memory starting from offset 0, not from c->start. This is to
-             * ensure that l_base_diff will not be less than 0 (similar to shim_rtld.c).
-             */
-            map_addr = (i == 0) ? NULL : (void*)(c->start + g_entrypoint_map.l_base_diff);
-            map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end : c->map_end - c->start;
-        }
+        void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
+        size_t map_size = c->map_end - c->start;
 
         ret = _DkStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
         if (ret < 0) {
             log_error("Failed to map segment from ELF file");
             goto out;
-        }
-
-        if (i == 0) {
-            /* memorize where the ELF file was loaded */
-            g_entrypoint_map.l_base_diff = (ehdr->e_type == ET_EXEC) ? 0x0 : (ElfW(Addr))map_addr;
-            g_entrypoint_map.l_map_start = c->start + g_entrypoint_map.l_base_diff;
         }
 
         /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */
