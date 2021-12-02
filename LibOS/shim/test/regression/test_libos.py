@@ -150,7 +150,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     @unittest.skipUnless(ON_X86, 'x86-specific')
-    @unittest.skipIf(USES_MUSL, 'C++ not supported with musl')
+    @unittest.skipIf(USES_MUSL, 'C++ is not supported with musl')
     def test_110_basic_bootstrapping_cpp(self):
         stdout, _ = self.run_binary(['bootstrap_cpp'])
         self.assertIn('User Program Started', stdout)

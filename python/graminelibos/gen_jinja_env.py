@@ -78,7 +78,6 @@ def add_globals_from_gramine(env):
 def add_globals_misc(env):
     env.globals['env'] = os.environ
     env.globals['ldd'] = ldd
-    env.globals['libc'] = 'glibc'
 
 def make_env():
     env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True)

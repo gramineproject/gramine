@@ -53,7 +53,8 @@ your distro is new enough to have Meson >= 0.55 and python3-toml >= 0.10 (Debian
 
 For GDB support and to run all tests locally you also need to install::
 
-    sudo apt-get install -y libunwind8 python3-pyelftools python3-pytest
+    sudo apt-get install -y libunwind8 musl-tools python3-pyelftools \
+        python3-pytest
 
 If you want to build the patched ``libgomp`` library, you also need to install
 GCC's build dependencies::

@@ -174,6 +174,9 @@ if enable_musl
     musl_specs_path_cmd = run_command('sh', '-c',
         'grep -Po -e \'-specs "\K([^"]*)\' `which musl-gcc`')
     musl_specs_path = musl_specs_path_cmd.stdout().strip()
+    if musl_specs_path == ''
+        error('failed to find "musl-gcc", is it installed?')
+    endif
 
     common_lib_musl = static_library('test_libos_musl',
         'dump.c',
