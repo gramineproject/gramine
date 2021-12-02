@@ -61,7 +61,7 @@ def main(output, libpal, key, manifest_file, sigfile, depfile, verbose):
         deps = [*expanded, libpal, key]
 
         depfile.write(f'{output}:')
-        for filename in expanded:
+        for filename in deps:
             depfile.write(f' \\\n\t{filename}')
         depfile.write('\n')
 
