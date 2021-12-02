@@ -230,7 +230,7 @@ out_vendor_id:
 int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
-            return unix_to_pal_error(DO_SYSCALL(arch_prctl, (unsigned long)ARCH_GET_FS, addr));
+            return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_GET_FS, (unsigned long*)addr));
         case PAL_SEGMENT_GS:
             // The GS segment is used for the internal TCB of PAL
             return -PAL_ERROR_DENIED;
