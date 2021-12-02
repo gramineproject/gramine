@@ -306,7 +306,7 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
     if (handle->sock.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    struct sockaddr* bind_addr = (struct sockaddr*)handle->sock.bind;
+    struct sockaddr* bind_addr = handle->sock.bind;
     size_t bind_addrlen = addr_size(bind_addr);
     struct sockaddr_storage dest_addr;
     size_t dest_addrlen = sizeof(dest_addr);
@@ -836,24 +836,24 @@ static int socket_getname(PAL_HANDLE handle, char* buffer, size_t count) {
         case PAL_TYPE_TCPSRV:
             prefix_len = static_strlen(URI_PREFIX_TCP_SRV);
             prefix = URI_PREFIX_TCP_SRV;
-            bind_addr = (struct sockaddr*)handle->sock.bind;
+            bind_addr = handle->sock.bind;
             break;
         case PAL_TYPE_TCP:
             prefix_len = static_strlen(URI_PREFIX_TCP);
             prefix = URI_PREFIX_TCP;
-            bind_addr = (struct sockaddr*)handle->sock.bind;
-            dest_addr = (struct sockaddr*)handle->sock.conn;
+            bind_addr = handle->sock.bind;
+            dest_addr = handle->sock.conn;
             break;
         case PAL_TYPE_UDPSRV:
             prefix_len = static_strlen(URI_PREFIX_UDP_SRV);
             prefix = URI_PREFIX_UDP_SRV;
-            bind_addr = (struct sockaddr*)handle->sock.bind;
+            bind_addr = handle->sock.bind;
             break;
         case PAL_TYPE_UDP:
             prefix_len = static_strlen(URI_PREFIX_UDP);
             prefix = URI_PREFIX_UDP;
-            bind_addr = (struct sockaddr*)handle->sock.bind;
-            dest_addr = (struct sockaddr*)handle->sock.conn;
+            bind_addr = handle->sock.bind;
+            dest_addr = handle->sock.conn;
             break;
         default:
             return -PAL_ERROR_INVAL;

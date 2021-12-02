@@ -99,8 +99,8 @@ typedef struct pal_handle {
 
         struct {
             PAL_IDX fd;
-            void* bind;
-            void* conn;
+            struct sockaddr* bind;
+            struct sockaddr* conn;
             bool nonblocking;
             PAL_NUM linger;
             PAL_NUM receivebuf;
