@@ -1,4 +1,5 @@
 #include <stdatomic.h>
+#include <stdnoreturn.h>
 
 #include "pal.h"
 #include "pal_regression.h"
@@ -8,7 +9,7 @@ const char* private2 = "Hello World 2";
 
 static atomic_int count = 0;
 
-static int callback(void* args) {
+static noreturn int callback(void* args) {
     pal_printf("Run in Child Thread: %s\n", (char*)args);
 
     while (count < 10) {
