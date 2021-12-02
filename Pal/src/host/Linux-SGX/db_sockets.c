@@ -230,16 +230,16 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_optio
     init_handle_hdr(HANDLE_HDR(hdl), type);
     HANDLE_HDR(hdl)->flags |= RFD(0) | (type != PAL_TYPE_TCPSRV ? WFD(0) : 0);
     hdl->sock.fd = fd;
-    void* addr = (void*)hdl + HANDLE_SIZE(sock);
+    uint8_t* addr = (uint8_t*)hdl + HANDLE_SIZE(sock);
     if (bind_addr) {
-        hdl->sock.bind = addr;
+        hdl->sock.bind = (struct sockaddr*)addr;
         memcpy(addr, bind_addr, bind_addrlen);
         addr += bind_addrlen;
     } else {
         hdl->sock.bind = NULL;
     }
     if (dest_addr) {
-        hdl->sock.conn = addr;
+        hdl->sock.conn = (struct sockaddr*)addr;
         memcpy(addr, dest_addr, dest_addrlen);
         addr += dest_addrlen;
     } else {
