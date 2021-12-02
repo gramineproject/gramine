@@ -369,11 +369,12 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
 
     if (ehdr->e_type == ET_DYN) {
         /*
-         * This is a position-independent shared object, reserve a memory area to determine load
-         * address. This area will be populated with LOAD segments below.
+         * This is a position-independent shared object, allocate a dummy memory area to determine
+         * load address. This area will be populated (overwritten) with LOAD segments in the below
+         * loop.
          *
-         * Note that we reserve memory starting from offset 0, not from the first segment's p_vaddr.
-         * This is to ensure that l_base_diff will not be less than 0.
+         * Note that we allocate memory to cover LOAD segments starting from offset 0, not from the
+         * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
          *
          * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
          *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed).
@@ -382,7 +383,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         ret = _DkStreamMap(handle, &map_addr, /*prot=*/0, /*offset=*/0,
                            loadcmds[loadcmds_cnt - 1].alloc_end);
         if (ret < 0) {
-            log_error("Failed to reserve memory for all LOAD segments of DYN ELF file");
+            log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
             goto out;
         }
 
