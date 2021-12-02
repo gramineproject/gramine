@@ -377,12 +377,16 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
             map_addr = (void*)c->start;
             map_size = c->map_end - c->start;
         } else {
-            /* for DYN (shared libraries), let PAL memory allocator choose base addr the first time
-             * -- but we must reserve another memory for all loadable segments this first time to
-             *  not overwrite memory on subsequent segments */
+            /*
+             * For DYN (shared libraries), let PAL memory allocator choose base addr the first time
+             * -- but we must reserve enough memory for all loadable segments this first time to not
+             * overwrite memory on subsequent segments.
+             *
+             * Note that we reserve memory starting from offset 0, not from c->start. This is to
+             * ensure that l_base_diff will not be less than 0 (similar to shim_rtld.c).
+             */
             map_addr = (i == 0) ? NULL : (void*)(c->start + g_entrypoint_map.l_base_diff);
-            map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end - c->start
-                                : c->map_end - c->start;
+            map_size = (i == 0) ? loadcmds[loadcmds_cnt - 1].alloc_end : c->map_end - c->start;
         }
 
         ret = _DkStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
@@ -392,11 +396,9 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         }
 
         if (i == 0) {
-            /* memorize where the ELF file (its first loadable segment) was loaded; note that we
-             * disallow ELF files where first loadable segment's p_vaddr is non-zero (see checks
-             * on LOAD segments above) */
-            g_entrypoint_map.l_map_start = (ElfW(Addr))map_addr;
+            /* memorize where the ELF file was loaded */
             g_entrypoint_map.l_base_diff = (ehdr->e_type == ET_EXEC) ? 0x0 : (ElfW(Addr))map_addr;
+            g_entrypoint_map.l_map_start = c->start + g_entrypoint_map.l_base_diff;
         }
 
         /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */

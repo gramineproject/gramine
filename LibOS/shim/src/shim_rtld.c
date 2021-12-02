@@ -43,7 +43,7 @@
 struct link_map {
     /*
      * Difference between virtual addresses (p_vaddr) in ELF file and actual virtual addresses in
-     * memory. Equal to the address shared object is loaded at for ET_DYNs, and 0x0 for ET_EXECs.
+     * memory. Equal to 0x0 for ET_EXECs.
      *
      * Note that `l_base_diff` name is a departure from the ELF standard and Glibc code: the ELF
      * standard uses the term "Base Address" and Glibc uses `l_addr`. We find ELF/Glibc terms
