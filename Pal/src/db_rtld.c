@@ -556,17 +556,21 @@ out:
     return ret;
 }
 
-/* PAL binary must be DYN (shared object file) */
+/* PAL binary must be DYN (shared object file) or EXEC (non-PIE executable) */
 int setup_pal_binary(void) {
     int ret;
 
     g_pal_map.l_prev = NULL;
     g_pal_map.l_next = NULL;
 
-    /* PAL binary must have the first loadable segment with `p_vaddr == 0`, thus pal_base_diff is
-     * the same as the address where the PAL binary is loaded (== beginning of ELF header) */
+    ElfW(Ehdr)* ehdr = (ElfW(Ehdr)*)&__ehdr_start;
+
+    /* In case of DYN PAL binary, it must have the first loadable segment with `p_vaddr == 0`, thus
+     * pal_base_diff is the same as the address where the PAL binary is loaded (== beginning of ELF
+     * header). In case of EXEC PAL binary, the first loadable segment has `p_vaddr` with a
+     * hard-coded address, thus pal_base_diff is zero. */
     ElfW(Addr) pal_binary_addr = (ElfW(Addr))&__ehdr_start;
-    ElfW(Addr) pal_base_diff   = pal_binary_addr;
+    ElfW(Addr) pal_base_diff   = (ehdr->e_type == ET_EXEC) ? 0x0 : pal_binary_addr;
 
     ElfW(Dyn)* dynamic_section = find_dynamic_section(pal_binary_addr, pal_base_diff);
     if (!dynamic_section) {
