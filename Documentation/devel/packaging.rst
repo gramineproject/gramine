@@ -27,6 +27,10 @@ relation that we need to support the version from distro or earlier. Therefore
 we will provide some reasonably new version under the assumption that older
 software will be able to run against new glibc version.
 
+musl
+^^^^
+See :ref:`glibc`. Same thing applies to musl.
+
 varia
 ^^^^^
 Maintainer tools, examples, etc. need not run on all distros.
