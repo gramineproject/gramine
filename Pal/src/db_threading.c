@@ -11,7 +11,7 @@
 #include "pal_internal.h"
 
 /* PAL call DkThreadCreate: create a thread inside the current process */
-int DkThreadCreate(int (*callback)(void*), const void* param, PAL_HANDLE* handle) {
+int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle) {
     *handle = NULL;
     return _DkThreadCreate(handle, callback, param);
 }

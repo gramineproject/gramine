@@ -188,7 +188,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo);
 int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo);
 
 /* DkProcess and DkThread calls */
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param);
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
 noreturn void _DkThreadExit(int* clear_child_tid);
 void _DkThreadYieldExecution(void);
 int _DkThreadResume(PAL_HANDLE thread_handle);

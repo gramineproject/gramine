@@ -13,7 +13,7 @@
 /* _DkThreadCreate for internal use. Create an internal thread
    inside the current process. The arguments callback and param
    specify the starting function and parameters */
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param) {
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

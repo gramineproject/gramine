@@ -487,7 +487,7 @@ int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
  * \param param is the pointer argument that is passed to the new thread
  * \param[out] handle on success contains the thread handle
  */
-int DkThreadCreate(int (*callback)(void*), const void* param, PAL_HANDLE* handle);
+int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle);
 
 /*!
  * \brief Yield the current thread such that the host scheduler can reschedule it.

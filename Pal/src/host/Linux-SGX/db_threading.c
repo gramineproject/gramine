@@ -29,7 +29,7 @@ static LISTP_TYPE(pal_handle_thread) g_thread_list = LISTP_INIT;
 
 struct thread_param {
     int (*callback)(void*);
-    const void* param;
+    void* param;
 };
 
 extern void* g_enclave_base;
@@ -93,7 +93,7 @@ void pal_start_thread(void) {
     /* UNREACHABLE */
 }
 
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* param) {
+int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret;
     PAL_HANDLE new_thread = malloc(HANDLE_SIZE(thread));
     if (!new_thread)
