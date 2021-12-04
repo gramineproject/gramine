@@ -531,7 +531,7 @@ static int futex_wake_op(uint32_t* uaddr1, uint32_t* uaddr2, int to_wake1, int t
             oldval = __atomic_fetch_or(uaddr2, oparg, __ATOMIC_RELAXED);
             break;
         case FUTEX_OP_ANDN:
-            oldval = __atomic_fetch_nand(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = __atomic_fetch_and(uaddr2, ~oparg, __ATOMIC_RELAXED);
             break;
         case FUTEX_OP_XOR:
             oldval = __atomic_fetch_xor(uaddr2, oparg, __ATOMIC_RELAXED);
