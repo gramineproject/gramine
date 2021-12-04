@@ -60,6 +60,8 @@ static int futex2 = 0;
 #define THREADS_WAKE1 2
 #define THREADS_WAKE2 3
 
+#define FUTEX_OP_MAX  5
+
 static int thread_state[THREADS1 + THREADS2] = {0};
 
 static void* thread_func(void* arg) {
@@ -83,16 +85,12 @@ static void* thread_func(void* arg) {
     return arg;
 }
 
-int main(void) {
-    pthread_t th[THREADS1 + THREADS2];
-    unsigned long i;
+static int run_futex_wake_op(int encoded_op) {
     int ret;
-    int arg1 = 0x123846;
-    int arg2 = 0xc73;
-    int cmparg = 0x746; // so that arg1 >= cmparg
-    int op = FUTEX_OP(FUTEX_OP_XOR, arg2, FUTEX_OP_CMP_GE, cmparg);
-
-    store(&futex2, arg1);
+    int oldval;
+    int newval;
+    unsigned long i;
+    pthread_t th[THREADS1 + THREADS2];
 
     for (i = 0; i < THREADS1 + THREADS2; i++) {
         check(pthread_create(&th[i], NULL, thread_func, (void*)i));
@@ -107,24 +105,63 @@ int main(void) {
     // and let them sleep on futex
     usleep(100000u);
 
-    ret = futex_wake_op(&futex1, THREADS_WAKE1, &futex2, THREADS_WAKE2, op);
+    oldval = load(&futex2);
+    ret = futex_wake_op(&futex1, THREADS_WAKE1, &futex2, THREADS_WAKE2, encoded_op);
+    newval = load(&futex2);
 
-    arg2 = wakeop_arg_extend(arg2);
+    /* Sign extend 12-bit argument to 32-bit */
+    int oparg = wakeop_arg_extend((encoded_op >> 12) & 0xfff);
+    if ((encoded_op >> 28) & FUTEX_OP_OPARG_SHIFT)
+        oparg = 1 << oparg;
 
-    op = load(&futex2);
-    if (op != (arg1 ^ arg2)) {
-        printf(
-            "futex_wake_op did not set futex2 value correctly: current value: 0x%x, expected: "
-            "0x%x\n",
-            op, arg1 ^ arg2);
-        return 1;
+    int op = (encoded_op >> 28) & 0x7;
+    switch (op) {
+        case FUTEX_OP_SET:
+            if (newval != oparg) {
+                printf("FUTEX_OP_SET operation failed: current value: 0x%x, expected: 0x%x\n",
+                        newval, oparg);
+                return 1;
+            }
+            break;
+        case FUTEX_OP_ADD:
+            if (newval != (oldval + oparg)) {
+                printf("FUTEX_OP_ADD operation failed: current value: 0x%x, expected: 0x%x\n",
+                        newval, oldval + oparg);
+                return 1;
+            }
+            break;
+        case FUTEX_OP_OR:
+            if (newval != (oldval | oparg)) {
+                printf("FUTEX_OP_OR operation failed: current value: 0x%x, expected: 0x%x\n",
+                        newval, oldval | oparg);
+                return 1;
+            }
+            break;
+        case FUTEX_OP_ANDN:
+            if (newval != (oldval & (~oparg))) {
+                printf("FUTEX_OP_ANDN operation failed: current value: 0x%x, expected: 0x%x\n",
+                        newval, oldval & (~oparg));
+                return 1;
+            }
+            break;
+        case FUTEX_OP_XOR:
+            if (newval != (oldval ^ oparg)) {
+                printf("FUTEX_OP_XOR operation failed: current value: 0x%x, expected: 0x%x\n",
+                        newval, oldval ^ oparg);
+                return 1;
+            }
+            break;
+        default:
+            /* Invalid operation */
+            return 1;
     }
 
     if (ret < 0) {
         fail("futex_wake_op", errno);
     }
     if (ret != THREADS_WAKE1 + THREADS_WAKE2) {
-        printf("futex_wake_op returned %d instead of %d!\n", ret, THREADS_WAKE1 + THREADS_WAKE2);
+        printf("futex_wake_op %d returned %d instead of %d!\n", op, ret,
+                THREADS_WAKE1 + THREADS_WAKE2);
         return 1;
     }
 
@@ -140,7 +177,8 @@ int main(void) {
         }
     }
     if (ret != THREADS_WAKE1) {
-        printf("futex_wake_op woke-up %d threads on futex1 instead of %d!\n", ret, THREADS_WAKE1);
+        printf("futex_wake_op %d woke-up %d threads on futex1 instead of %d!\n", op, ret,
+                THREADS_WAKE1);
         return 1;
     }
 
@@ -153,7 +191,8 @@ int main(void) {
         }
     }
     if (ret != THREADS_WAKE2) {
-        printf("futex_wake_op woke-up %d threads on futex2 instead of %d!\n", ret, THREADS_WAKE2);
+        printf("futex_wake_op %d woke-up %d threads on futex2 instead of %d!\n", op, ret,
+                THREADS_WAKE2);
         return 1;
     }
 
@@ -181,6 +220,46 @@ int main(void) {
         if (load(&thread_state[i]) != 3) {
             check(pthread_join(th[i], NULL));
         }
+    }
+
+    return 0;
+}
+
+int main(void) {
+    int arg1 = 0x123846;
+    int arg2 = 0xc73;
+    int encoded_op;
+
+    for (int i = 0; i < FUTEX_OP_MAX; i++) {
+        switch (i) {
+            case FUTEX_OP_SET:
+                encoded_op = FUTEX_OP(FUTEX_OP_SET, arg2, FUTEX_OP_CMP_GT, arg2);
+                break;
+            case FUTEX_OP_ADD:
+                encoded_op = FUTEX_OP(FUTEX_OP_ADD, arg2, FUTEX_OP_CMP_GE, arg2);
+                break;
+            case FUTEX_OP_OR:
+                encoded_op = FUTEX_OP(FUTEX_OP_OR, arg2, FUTEX_OP_CMP_NE, arg2);
+                break;
+            case FUTEX_OP_ANDN:
+                arg1 = 0x123; /* Override arg1 to something less than or equal to 0x800 */
+                encoded_op = FUTEX_OP(FUTEX_OP_ANDN, arg2, FUTEX_OP_CMP_EQ, arg1);
+                break;
+            case FUTEX_OP_XOR:
+                arg1 = 0x360; /* Override arg1 to something less than or equal to 0x800 */
+                arg2 = 0x4; /* Override arg2 to any value between 0 and 31 */
+                encoded_op = FUTEX_OP((FUTEX_OP_OPARG_SHIFT | FUTEX_OP_XOR), arg2, FUTEX_OP_CMP_LE,
+                                      arg1);
+                break;
+            default:
+                /* Incorrect case */
+                return 1;
+        }
+
+        store(&futex2, arg1);
+        int ret = run_futex_wake_op(encoded_op);
+        if (ret != 0)
+            return 1;
     }
 
     puts("Test successful!");
