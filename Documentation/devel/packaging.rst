@@ -19,6 +19,8 @@ non-longterm release, together with the fact that EPID attestation is
 unsupported in upstream driver, **it is acceptable to require the user to use
 kernel other that provided by distro**.
 
+.. _glibc:
+
 glibc
 ^^^^^
 Glibc is a special case, because we need to provide the version supported by the
