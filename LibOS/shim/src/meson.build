@@ -93,7 +93,6 @@ libos_sources = files(
     'sys/shim_wait.c',
     'sys/shim_wrappers.c',
     'utils/log.c',
-    'utils/strobjs.c',
 )
 
 libos_sources_arch = [
