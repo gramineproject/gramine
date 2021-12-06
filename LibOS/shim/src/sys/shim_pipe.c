@@ -52,6 +52,8 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
     PAL_HANDLE tmp = srv->pal_handle;
     srv->pal_handle = hdl1;
 
+    assert(!srv->uri);
+    assert(!cli->uri);
     srv->uri = strdup(uri);
     cli->uri = strdup(uri);
     if (!srv->uri || !cli->uri) {
@@ -81,6 +83,11 @@ out:
             DkObjectClose(hdl1);
         if (hdl2)
             DkObjectClose(hdl2);
+
+        free(srv->uri);
+        srv->uri = NULL;
+        free(cli->uri);
+        cli->uri = NULL;
     }
     DkStreamDelete(hdl0, PAL_DELETE_ALL); // TODO: handle errors
     DkObjectClose(hdl0);
