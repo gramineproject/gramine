@@ -392,7 +392,9 @@ static int create_socket_uri(struct shim_handle* hdl) {
         if (ret < 0)
             return ret;
 
-        qstrsetstr(&hdl->uri, uri_buf, uri_len);
+        hdl->uri = strdup(uri_buf);
+        if (!hdl->uri)
+            return -ENOMEM;
         return 0;
     }
 
@@ -405,7 +407,9 @@ static int create_socket_uri(struct shim_handle* hdl) {
         if (ret < 0)
             return ret;
 
-        qstrsetstr(&hdl->uri, uri_buf, uri_len);
+        hdl->uri = strdup(uri_buf);
+        if (!hdl->uri)
+            return -ENOMEM;
         return 0;
     }
 
@@ -520,8 +524,8 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
     }
 
     PAL_HANDLE pal_hdl = NULL;
-    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       PAL_CREATE_IGNORED, options, &pal_hdl);
+    ret = DkStreamOpen(hdl->uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
+                       &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
@@ -809,9 +813,8 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
         goto out;
 
     PAL_HANDLE pal_hdl = NULL;
-    ret = DkStreamOpen(qstrgetstr(&hdl->uri), PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       PAL_CREATE_IGNORED, hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0,
-                       &pal_hdl);
+    ret = DkStreamOpen(hdl->uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                       hdl->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0, &pal_hdl);
 
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_DENIED) ? -ECONNREFUSED : pal_to_unix_errno(ret);
@@ -976,7 +979,12 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
             cli_sock->addr.un.dentry = sock->addr.un.dentry;
         }
 
-        qstrsetstr(&cli->uri, qstrgetstr(&hdl->uri), hdl->uri.len);
+        assert(hdl->uri);
+        cli->uri = strdup(hdl->uri);
+        if (!cli->uri) {
+            ret = -ENOMEM;
+            goto out_cli;
+        }
 
         if (addr) {
             ret = unix_copy_addr(addr, sock->addr.un.dentry);
@@ -1001,7 +1009,11 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
                                    &cli_sock->addr.in.bind, &cli_sock->addr.in.conn)) < 0)
             goto out_cli;
 
-        qstrsetstr(&cli->uri, uri, strlen(uri));
+        cli->uri = strdup(uri);
+        if (!cli->uri) {
+            ret = -ENOMEM;
+            goto out_cli;
+        }
 
         inet_rebase_port(true, cli_sock->domain, &cli_sock->addr.in.bind, true);
         inet_rebase_port(true, cli_sock->domain, &cli_sock->addr.in.conn, false);

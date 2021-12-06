@@ -63,7 +63,6 @@ struct shim_mem_entry {
 struct shim_palhdl_entry {
     struct shim_palhdl_entry* prev;
     PAL_HANDLE handle;
-    struct shim_qstr* uri;
     PAL_HANDLE* phandle;
 };
 

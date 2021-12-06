@@ -247,11 +247,8 @@ static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mod
     }
 
     if (hdl) {
-        if (!qstrsetstr(&hdl->uri, uri, strlen(uri))) {
-            DkObjectClose(palhdl);
-            ret = -ENOMEM;
-            goto out;
-        }
+        hdl->uri = uri;
+        uri = NULL;
 
         hdl->type = TYPE_CHROOT;
         hdl->pos = 0;
@@ -712,14 +709,13 @@ out:
 }
 
 static int chroot_reopen(struct shim_handle* hdl, PAL_HANDLE* out_palhdl) {
-    const char* uri = qstrgetstr(&hdl->uri);
     PAL_HANDLE palhdl;
 
     mode_t mode = 0;
     enum pal_access access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(hdl->flags);
     enum pal_create_mode create = PAL_CREATE_NEVER;
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(hdl->flags);
-    int ret = DkStreamOpen(uri, access, mode, create, options, &palhdl);
+    int ret = DkStreamOpen(hdl->uri, access, mode, create, options, &palhdl);
     if (ret < 0)
         return pal_to_unix_errno(ret);
     *out_palhdl = palhdl;
@@ -752,7 +748,7 @@ static int chroot_checkout(struct shim_handle* hdl) {
      * process, so the PAL handle doesn't need sending. */
     if (is_in_dentry) {
         PAL_STREAM_ATTR attr;
-        if (DkStreamAttributesQuery(qstrgetstr(&hdl->uri), &attr) == 0) {
+        if (DkStreamAttributesQuery(hdl->uri, &attr) == 0) {
             hdl->pal_handle = NULL;
         }
     }
@@ -770,7 +766,7 @@ static int chroot_checkin(struct shim_handle* hdl) {
         PAL_HANDLE palhdl = NULL;
         int ret = chroot_reopen(hdl, &palhdl);
         if (ret < 0) {
-            log_warning("%s: failed to open %s: %d", __func__, qstrgetstr(&hdl->uri), ret);
+            log_warning("%s: failed to open %s: %d", __func__, hdl->uri, ret);
             return ret;
         }
         assert(palhdl);

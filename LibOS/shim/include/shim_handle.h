@@ -176,7 +176,6 @@ struct shim_epoll_handle {
 };
 
 struct shim_fs;
-struct shim_qstr;
 struct shim_dentry;
 
 /* The epolls list links to the back field of the shim_epoll_item structure
@@ -211,8 +210,7 @@ struct shim_handle {
     /* Same as above but for `EPOLLOUT` events. */
     bool needs_et_poll_out;
 
-    struct shim_qstr uri; /* URI representing this handle, it is not
-                           * necessary to be set. */
+    char* uri; /* PAL URI for this handle (if any). Does not change. */
 
     PAL_HANDLE pal_handle;
 

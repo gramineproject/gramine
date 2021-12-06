@@ -20,8 +20,7 @@
 #include "shim_utils.h"
 #include "stat.h"
 
-static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int flags, char* name,
-                        struct shim_qstr* qstr) {
+static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int flags, char* name) {
     int ret = 0;
     char uri[PIPE_URI_SIZE];
 
@@ -29,8 +28,8 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
     PAL_HANDLE hdl1 = NULL; /* one pipe end (accepted connect from hdl2) */
     PAL_HANDLE hdl2 = NULL; /* other pipe end (connects to hdl0 and talks to hdl1) */
 
-    if ((ret = create_pipe(name, uri, PIPE_URI_SIZE, &hdl0, qstr,
-                           /*use_vmid_for_name=*/false)) < 0) {
+    ret = create_pipe(name, uri, PIPE_URI_SIZE, &hdl0, /*use_vmid_for_name=*/false);
+    if (ret < 0) {
         log_error("pipe creation failure");
         return ret;
     }
@@ -52,6 +51,15 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
 
     PAL_HANDLE tmp = srv->pal_handle;
     srv->pal_handle = hdl1;
+
+    assert(!srv->uri);
+    assert(!cli->uri);
+    srv->uri = strdup(uri);
+    cli->uri = strdup(uri);
+    if (!srv->uri || !cli->uri) {
+        ret = -ENOENT;
+        goto out;
+    }
 
     if (flags & O_NONBLOCK) {
         ret = set_handle_nonblocking(cli, /*on=*/true);
@@ -75,6 +83,11 @@ out:
             DkObjectClose(hdl1);
         if (hdl2)
             DkObjectClose(hdl2);
+
+        free(srv->uri);
+        srv->uri = NULL;
+        free(cli->uri);
+        cli->uri = NULL;
     }
     DkStreamDelete(hdl0, PAL_DELETE_ALL); // TODO: handle errors
     DkObjectClose(hdl0);
@@ -128,12 +141,11 @@ long shim_do_pipe2(int* filedes, int flags) {
     hdl1->info.pipe.ready_for_ops = true;
     hdl2->info.pipe.ready_for_ops = true;
 
-    ret = create_pipes(hdl1, hdl2, flags, hdl1->info.pipe.name, &hdl1->uri);
+    ret = create_pipes(hdl1, hdl2, flags, hdl1->info.pipe.name);
     if (ret < 0)
         goto out;
 
     memcpy(hdl2->info.pipe.name, hdl1->info.pipe.name, sizeof(hdl2->info.pipe.name));
-    qstrcopy(&hdl2->uri, &hdl1->uri);
 
     vfd1 = set_new_fd_handle(hdl1, flags & O_CLOEXEC ? FD_CLOEXEC : 0, NULL);
     if (vfd1 < 0) {
@@ -213,13 +225,11 @@ long shim_do_socketpair(int domain, int type, int protocol, int* sv) {
     sock2->protocol   = protocol;
     sock2->sock_state = SOCK_CONNECTED;
 
-    ret = create_pipes(hdl1, hdl2, type & SOCK_NONBLOCK ? O_NONBLOCK : 0, sock1->addr.un.name,
-                       &hdl1->uri);
+    ret = create_pipes(hdl1, hdl2, type & SOCK_NONBLOCK ? O_NONBLOCK : 0, sock1->addr.un.name);
     if (ret < 0)
         goto out;
 
     memcpy(sock2->addr.un.name, sock1->addr.un.name, sizeof(sock2->addr.un.name));
-    qstrcopy(&hdl2->uri, &hdl1->uri);
 
     vfd1 = set_new_fd_handle(hdl1, type & SOCK_CLOEXEC ? FD_CLOEXEC : 0, NULL);
     if (vfd1 < 0) {
@@ -330,12 +340,11 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
 
     /* FIFO pipes are created in blocking mode; they will be changed to non-blocking if open()'ed
      * in non-blocking mode later (see fifo_open) */
-    ret = create_pipes(hdl1, hdl2, /*flags=*/0, hdl1->info.pipe.name, &hdl1->uri);
+    ret = create_pipes(hdl1, hdl2, /*flags=*/0, hdl1->info.pipe.name);
     if (ret < 0)
         goto out;
 
     memcpy(hdl2->info.pipe.name, hdl1->info.pipe.name, sizeof(hdl2->info.pipe.name));
-    qstrcopy(&hdl2->uri, &hdl1->uri);
 
     /* assign virtual FDs to both handles; ideally FDs must be assigned during open(<named-pipe>)
      * but then checkpointing after mknod() would not migrate the prepared hdl1 and hdl2; also FDs
