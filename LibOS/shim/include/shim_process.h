@@ -14,6 +14,8 @@
 #include "shim_lock.h"
 #include "shim_types.h"
 
+#define CMDLINE_SIZE 4096
+
 DEFINE_LIST(shim_child_process);
 DEFINE_LISTP(shim_child_process);
 struct shim_child_process {
@@ -60,9 +62,9 @@ struct shim_process {
     struct shim_lock fs_lock;
 
     /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
-     * once during initialization, using static buffer and restricted to STR_SIZE. This is enough
-     * for current workloads but see https://github.com/gramineproject/gramine/issues/79. */
-    char cmdline[STR_SIZE];
+     * once during initialization, using static buffer and restricted to CMDLINE_SIZE. This is
+     * enough for current workloads but see https://github.com/gramineproject/gramine/issues/79. */
+    char cmdline[CMDLINE_SIZE];
     size_t cmdline_size;
 };
 

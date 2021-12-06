@@ -347,22 +347,6 @@ typedef struct shim_aevent {
     PAL_HANDLE event;
 } AEVENTTYPE;
 
-#define STR_SIZE 4096
-
-struct shim_str {
-    char str[STR_SIZE];
-};
-
-#define QSTR_SIZE 32
-
-/* Use qstr for names. This has fixed size string + string object
- * if len > SHIM_QSTR_SIZE then use overflow string */
-struct shim_qstr {
-    size_t len;
-    char name[QSTR_SIZE];
-    struct shim_str* oflow;
-};
-
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_URI_SIZE 96
 

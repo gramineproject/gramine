@@ -408,7 +408,6 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_vma);
     RUN_INIT(init_slab);
     RUN_INIT(read_environs, envp);
-    RUN_INIT(init_str_mgr);
     RUN_INIT(init_rlimit);
     RUN_INIT(init_fs);
     RUN_INIT(init_fs_lock);
