@@ -148,7 +148,6 @@ BEGIN_CP_FUNC(palhdl) {
     struct shim_palhdl_entry* entry = (void*)(base + off);
 
     entry->handle  = (PAL_HANDLE)obj;
-    entry->uri     = NULL;
     entry->phandle = NULL;
     entry->prev    = store->last_palhdl_entry;
 

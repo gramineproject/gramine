@@ -161,8 +161,7 @@ void clean_link_map_list(void);
 int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_len);
 
 /* create unique files/pipes */
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, struct shim_qstr* qstr,
-                bool use_vmid_for_name);
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name);
 
 /* Asynchronous event support */
 int init_async_worker(void);

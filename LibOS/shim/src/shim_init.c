@@ -531,8 +531,7 @@ int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_len) {
     return 0;
 }
 
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, struct shim_qstr* qstr,
-                bool use_vmid_for_name) {
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name) {
     int ret;
     size_t len;
     char pipename[PIPE_URI_SIZE];
@@ -571,11 +570,9 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, struct shim
         break; /* succeeded in creating the pipe with random/vmid name */
     }
 
-    /* output generated pipe handle, URI, qstr-URI and name */
+    /* output generated pipe handle, URI, and name */
     *hdl = pipe;
     len = snprintf(uri, size, URI_PREFIX_PIPE "%s", pipename);
-    if (qstr)
-        qstrsetstr(qstr, uri, len);
     if (name)
         memcpy(name, pipename, sizeof(pipename));
     return 0;

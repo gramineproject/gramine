@@ -458,8 +458,8 @@ int set_new_fd_handle_above_fd(uint32_t fd, struct shim_handle* hdl, int fd_flag
 }
 
 static inline __attribute__((unused)) const char* __handle_name(struct shim_handle* hdl) {
-    if (!qstrempty(&hdl->uri))
-        return qstrgetstr(&hdl->uri);
+    if (hdl->uri)
+        return hdl->uri;
     if (hdl->dentry && hdl->dentry->name[0] != '\0')
         return hdl->dentry->name;
     if (hdl->fs)
@@ -508,7 +508,7 @@ void put_handle(struct shim_handle* hdl) {
         if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->hput)
             hdl->fs->fs_ops->hput(hdl);
 
-        qstrfree(&hdl->uri);
+        free(hdl->uri);
 
         if (hdl->pal_handle) {
 #ifdef DEBUG_REF
@@ -723,7 +723,8 @@ BEGIN_CP_FUNC(handle) {
 
         DO_CP(fs, hdl->fs, &new_hdl->fs);
 
-        DO_CP_IN_MEMBER(qstr, new_hdl, uri);
+        if (hdl->uri)
+            DO_CP_MEMBER(str, hdl, new_hdl, uri);
 
         if (hdl->dentry) {
             if (hdl->dentry->type == S_IFDIR) {
@@ -745,7 +746,6 @@ BEGIN_CP_FUNC(handle) {
         if (new_hdl->pal_handle) {
             struct shim_palhdl_entry* entry;
             DO_CP(palhdl, hdl->pal_handle, &entry);
-            entry->uri     = &new_hdl->uri;
             entry->phandle = &new_hdl->pal_handle;
         }
 
@@ -916,7 +916,7 @@ BEGIN_RS_FUNC(handle_map) {
                 struct shim_handle* hdl = handle_map->map[i]->handle;
                 assert(hdl);
                 get_handle(hdl);
-                DEBUG_RS("[%d]%s", i, qstrempty(&hdl->uri) ? hdl->fs_type : qstrgetstr(&hdl->uri));
+                DEBUG_RS("[%d]%s", i, hdl->uri ?: hdl->fs_type);
             }
         }
 

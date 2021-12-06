@@ -336,7 +336,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
 
     /* Allocate a new link_map. */
 
-    const char* name = qstrgetstr(&file->uri);
+    const char* name = file->uri;
     struct link_map* l = new_elf_object(name);
 
     if (!l)
@@ -619,7 +619,7 @@ int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     int ret;
     assert(file);
 
-    const char* fname = qstrgetstr(&file->uri);
+    const char* fname = file->uri;
     log_debug("loading \"%s\"", fname);
 
     ElfW(Ehdr) ehdr;
@@ -638,8 +638,8 @@ int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     get_handle(file);
     map->l_file = file;
 
-    if (map->l_file && !qstrempty(&map->l_file->uri)) {
-        append_r_debug(qstrgetstr(&map->l_file->uri), (void*)map->l_base_diff);
+    if (map->l_file && map->l_file->uri) {
+        append_r_debug(map->l_file->uri, (void*)map->l_base_diff);
     }
 
     *out_map = map;
@@ -830,7 +830,7 @@ int register_library(const char* name, unsigned long load_address) {
         return err;
     }
 
-    append_r_debug(qstrgetstr(&hdl->uri), (void*)load_address);
+    append_r_debug(hdl->uri, (void*)load_address);
     put_handle(hdl);
     return 0;
 }

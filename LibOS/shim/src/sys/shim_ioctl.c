@@ -37,7 +37,7 @@ long shim_do_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     int ret;
     switch (cmd) {
         case TIOCGPGRP:
-            if (strcmp(qstrgetstr(&hdl->uri), "dev:tty") != 0) {
+            if (!hdl->uri || strcmp(hdl->uri, "dev:tty") != 0) {
                 ret = -ENOTTY;
                 break;
             }

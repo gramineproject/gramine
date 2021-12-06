@@ -211,12 +211,16 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
 
     /* rewire new hdl to contents of intermediate FIFO hdl */
     assert(fifo_hdl->type == TYPE_PIPE);
+    assert(fifo_hdl->uri);
 
     hdl->type       = fifo_hdl->type;
     hdl->acc_mode   = fifo_hdl->acc_mode;
     hdl->info       = fifo_hdl->info;
     hdl->pal_handle = fifo_hdl->pal_handle;
-    qstrcopy(&hdl->uri, &fifo_hdl->uri);
+
+    hdl->uri = strdup(fifo_hdl->uri);
+    if (!hdl->uri)
+        return -ENOMEM;
 
     hdl->info.pipe.ready_for_ops = true;
 
