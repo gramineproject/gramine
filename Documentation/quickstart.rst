@@ -88,7 +88,7 @@ known to work only on Ubuntu).
 glibc vs musl
 -------------
 
-Most of the examples we provide use GNU C Library. If your application is build
-against musl libc, you can pass ``'musl'`` to :py:func:`gramine.runtimedir()`
-when generating the manifest from a template, which will mount musl libc
-(instead of the default glibc).
+Most of the examples we provide use GNU C Library (glibc). If your application
+is built against musl libc, you can pass ``'musl'`` to
+:py:func:`gramine.runtimedir()` when generating the manifest from a template,
+which will mount musl libc (instead of the default glibc).
