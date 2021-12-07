@@ -12,6 +12,11 @@ fs.mount.gramine_lib.type = "chroot"
 fs.mount.gramine_lib.path = "/lib"
 fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
 
+# overwrite host "/etc" - we don't want host-level configuration files, e.g. dynamic loader caches
+fs.mount.disable_etc.type = "tmpfs"
+fs.mount.disable_etc.path = "/etc"
+fs.mount.disable_etc.uri = "file:unused"
+
 sgx.nonpie_binary = true
 sgx.debug = true
 
