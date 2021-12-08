@@ -17,16 +17,16 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-PAL_CONTROL g_pal_control = {
+struct pal_common_state g_pal_common_state;
+
+struct pal_public_state g_pal_public_state = {
     /* Enable log to catch early initialization errors; it will be overwritten in pal_main(). */
     .log_level = PAL_LOG_DEFAULT_LEVEL,
 };
 
-const PAL_CONTROL* DkGetPalControl(void) {
-    return &g_pal_control;
+const struct pal_public_state* DkGetPalPublicState(void) {
+    return &g_pal_public_state;
 }
-
-struct pal_internal_state g_pal_state;
 
 /* Finds `loader.env.{key}` in the manifest and returns its value in `out_val`/`out_passthrough`.
  * Recognizes several formats:
@@ -148,7 +148,7 @@ static int deep_copy_envs(const char** envp, const char*** out_envp) {
 static int build_envs(const char** orig_envp, bool propagate, const char*** out_envp) {
     int ret;
 
-    toml_table_t* toml_loader = toml_table_in(g_pal_state.manifest_root, "loader");
+    toml_table_t* toml_loader = toml_table_in(g_pal_public_state.manifest_root, "loader");
     if (!toml_loader)
         return propagate ? deep_copy_envs(orig_envp, out_envp) : create_empty_envs(out_envp);
 
@@ -257,7 +257,7 @@ static void configure_logging(void) {
     int log_level = PAL_LOG_DEFAULT_LEVEL;
 
     char* debug_type = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.debug_type", &debug_type);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.debug_type", &debug_type);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.debug_type'");
     if (debug_type) {
@@ -267,7 +267,7 @@ static void configure_logging(void) {
     }
 
     char* log_level_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.log_level", &log_level_str);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.log_level'");
 
@@ -291,7 +291,7 @@ static void configure_logging(void) {
     free(log_level_str);
 
     char* log_file = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.log_file", &log_file);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_file", &log_file);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.log_file'");
 
@@ -303,7 +303,7 @@ static void configure_logging(void) {
     }
     free(log_file);
 
-    g_pal_control.log_level = log_level;
+    g_pal_public_state.log_level = log_level;
 }
 
 /* Loads a file containing a concatenation of C-strings. The resulting array of pointers is
@@ -379,25 +379,25 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
             INIT_FAIL(PAL_ERROR_DENIED, "Could not generate random instance_id");
         }
     }
-    g_pal_state.instance_id = instance_id;
-    g_pal_state.parent_process = parent_process;
+    g_pal_common_state.instance_id = instance_id;
+    g_pal_common_state.parent_process = parent_process;
 
     ssize_t ret;
 
-    assert(g_pal_state.manifest_root);
-    assert(g_pal_state.alloc_align && IS_POWER_OF_2(g_pal_state.alloc_align));
+    assert(g_pal_public_state.manifest_root);
+    assert(g_pal_public_state.alloc_align && IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
     configure_logging();
 
     char* dummy_exec_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.exec", &dummy_exec_str);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.exec", &dummy_exec_str);
     if (ret < 0 || dummy_exec_str)
         INIT_FAIL(PAL_ERROR_INVAL, "loader.exec is not supported anymore. Please update your "
                                    "manifest according to the current documentation.");
     free(dummy_exec_str);
 
     bool disable_aslr;
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__disable_aslr",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
                        /*defaultval=*/false, &disable_aslr);
     if (ret < 0) {
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__disable_aslr' "
@@ -410,7 +410,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
      * https://github.com/gramineproject/graphene/issues/1053 (RFC: graphene invocation). */
     bool argv0_overridden = false;
     char* argv0_override = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.argv0_override", &argv0_override);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv0_override",
+                         &argv0_override);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.argv0_override'");
 
@@ -426,7 +427,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     bool use_cmdline_argv;
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_cmdline_argv",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
                        /*defaultval=*/false, &use_cmdline_argv);
     if (ret < 0) {
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__use_cmdline_argv' "
@@ -436,7 +437,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (!use_cmdline_argv) {
         char* argv_src_file = NULL;
 
-        ret = toml_string_in(g_pal_state.manifest_root, "loader.argv_src_file", &argv_src_file);
+        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv_src_file",
+                             &argv_src_file);
         if (ret < 0)
             INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.argv_src_file'");
 
@@ -462,7 +464,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     const char** final_environments = NULL;
 
     bool use_host_env;
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_host_env",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_host_env",
                        /*defaultval=*/false, &use_host_env);
     if (ret < 0) {
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__use_host_env' "
@@ -470,7 +472,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     char* env_src_file = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.env_src_file", &env_src_file);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.env_src_file", &env_src_file);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.env_src_file'");
 
@@ -504,12 +506,12 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     free(env_src_file);
 
     char* entrypoint_name = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.entrypoint", &entrypoint_name);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint", &entrypoint_name);
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.entrypoint'");
 
     if (!entrypoint_name) {
-        ret = toml_string_in(g_pal_state.manifest_root, "loader.preload", &entrypoint_name);
+        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.preload", &entrypoint_name);
         if (ret < 0)
             INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.preload'");
 
@@ -523,33 +525,31 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (!strstartswith(entrypoint_name, URI_PREFIX_FILE))
         INIT_FAIL(PAL_ERROR_INVAL, "'loader.entrypoint' is missing the 'file:' prefix");
 
-    g_pal_control.host_type       = XSTRINGIFY(HOST_TYPE);
-    g_pal_control.manifest_root   = g_pal_state.manifest_root;
-    g_pal_control.parent_process  = parent_process;
-    g_pal_control.first_thread    = first_thread;
-    g_pal_control.disable_aslr    = disable_aslr;
+    g_pal_public_state.host_type       = XSTRINGIFY(HOST_TYPE);
+    g_pal_public_state.manifest_root   = g_pal_public_state.manifest_root;
+    g_pal_public_state.parent_process  = parent_process;
+    g_pal_public_state.first_thread    = first_thread;
+    g_pal_public_state.disable_aslr    = disable_aslr;
 
-    _DkGetAvailableUserAddressRange(&g_pal_control.user_address.start,
-                                    &g_pal_control.user_address.end);
+    _DkGetAvailableUserAddressRange(&g_pal_public_state.user_address.start,
+                                    &g_pal_public_state.user_address.end);
 
-    g_pal_control.alloc_align = g_pal_state.alloc_align;
-
-    if (_DkGetCPUInfo(&g_pal_control.cpu_info) < 0) {
+    if (_DkGetCPUInfo(&g_pal_public_state.cpu_info) < 0) {
         goto out_fail;
     }
-    g_pal_control.mem_info.mem_total = _DkMemoryQuota();
+    g_pal_public_state.mem_info.mem_total = _DkMemoryQuota();
 
     /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
     bool enable_sysfs_topology;
-    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "fs.experimental__enable_sysfs_topology",
                        /*defaultval=*/false, &enable_sysfs_topology);
     if (ret < 0) {
         INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'fs.experimental__enable_sysfs_topology' "
                                             "(the value must be `true` or `false`)");
     }
-    g_pal_control.enable_sysfs_topology = enable_sysfs_topology;
+    g_pal_public_state.enable_sysfs_topology = enable_sysfs_topology;
 
-    if (_DkGetTopologyInfo(&g_pal_control.topo_info) < 0) {
+    if (_DkGetTopologyInfo(&g_pal_public_state.topo_info) < 0) {
         goto out_fail;
     }
 

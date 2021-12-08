@@ -23,7 +23,7 @@ static void log_vprintf(const char* prefix, const char* fmt, va_list ap) {
 }
 
 void pal_log(int level, const char* fmt, ...) {
-    if (level <= g_pal_control.log_level) {
+    if (level <= g_pal_public_state.log_level) {
         va_list ap;
         va_start(ap, fmt);
         assert(0 <= level && (size_t)level < LOG_LEVEL_ALL);

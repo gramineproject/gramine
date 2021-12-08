@@ -3,7 +3,7 @@
 #include "pal_regression.h"
 #include "sgx_arch.h"
 
-#define ALLOC_ALIGN_UP(addr) ALIGN_UP_POW2(addr, pal_control.alloc_align)
+#define ALLOC_ALIGN_UP(addr) ALIGN_UP_POW2(addr, DkGetPalPublicState()->alloc_align)
 
 char zerobuf[sizeof(sgx_report_t)] = {0};
 

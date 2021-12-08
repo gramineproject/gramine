@@ -31,12 +31,21 @@
 #include "sgx_syscall.h"
 #include "sgx_tls.h"
 
-extern struct pal_linux_state {
-    const char** host_environ;
+/* Part of Linux-SGX PAL private state which is not shared with other PALs. */
+extern struct pal_linuxsgx_state {
+    /* enclave information */
+    bool enclave_initialized;        /* thread creation ECALL is allowed only after this is set */
+    sgx_target_info_t qe_targetinfo; /* received from untrusted host, use carefully */
+    sgx_report_body_t enclave_info;  /* cached self-report result, trusted */
 
-    /* credentials */
-    unsigned int uid, gid;
-} g_linux_state;
+    /* These are obviously untrusted, but we use them only for operations on the host. */
+    unsigned int host_euid;
+    unsigned int host_egid;
+
+    /* remaining heap usable by application */
+    PAL_PTR heap_min, heap_max;
+} g_pal_linuxsgx_state;
+
 
 #define ACCESS_R 4
 #define ACCESS_W 2
@@ -58,7 +67,8 @@ extern size_t g_pal_internal_mem_size;
 struct pal_sec;
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
-                             int parent_stream_fd, struct pal_sec* uptr_sec_info);
+                             int parent_stream_fd, unsigned int host_euid, unsigned int host_egid,
+                             sgx_target_info_t* uptr_qe_targetinfo, struct pal_sec* uptr_sec_info);
 void pal_start_thread(void);
 
 extern char __text_start, __text_end, __data_start, __data_end;

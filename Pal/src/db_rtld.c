@@ -688,7 +688,7 @@ noreturn void start_execution(const char** arguments, const char** environs) {
     stack_entries[idx++] = NULL;
 
     /* NOTE: LibOS implements its own ELF aux vectors. Any info from host's aux vectors must be
-     * passed in PAL_CONTROL. Here we pass an empty list of aux vectors for sanity. */
+     * passed in `struct pal_public_state`. Here we pass an empty list of aux vectors for sanity. */
     ElfW(auxv_t)* auxv = (ElfW(auxv_t)*)&stack_entries[idx];
     auxv[0].a_type     = AT_NULL;
     auxv[0].a_un.a_val = 0;

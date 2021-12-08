@@ -40,7 +40,7 @@ void _DkDebugMapRemove(void* addr) {
         log_error("debug_map_remove(%p) failed: %d", addr, ret);
 }
 
-/* populate g_linux_state.vdso_clock_gettime based on vDSO */
+/* populate g_pal_linux_state.vdso_clock_gettime based on vDSO */
 int setup_vdso(ElfW(Addr) base_addr) {
     int ret;
 
@@ -59,7 +59,7 @@ int setup_vdso(ElfW(Addr) base_addr) {
     for (uint32_t i = 0; i < symbol_table_cnt; i++) {
         const char* symbol_name = string_table + symbol_table[i].st_name;
         if (!strcmp("__vdso_clock_gettime", symbol_name)) {
-            g_linux_state.vdso_clock_gettime = (void*)(base_addr + symbol_table[i].st_value);
+            g_pal_linux_state.vdso_clock_gettime = (void*)(base_addr + symbol_table[i].st_value);
             break;
         }
     }

@@ -284,7 +284,7 @@ static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
 }
 
 int init_attestation(struct pseudo_node* dev) {
-    if (strcmp(g_pal_control->host_type, "Linux-SGX")) {
+    if (strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
         log_debug("host is not Linux-SGX, skipping /dev/attestation setup");
         return 0;
     }

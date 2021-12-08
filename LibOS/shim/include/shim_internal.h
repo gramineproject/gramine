@@ -25,7 +25,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp);
 
 extern int g_log_level;
 
-extern const PAL_CONTROL* g_pal_control;
+extern const struct pal_public_state* g_pal_public_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
@@ -310,7 +310,7 @@ static inline int64_t __ref_dec(REFTYPE* ref) {
 #define __alloca __builtin_alloca
 #endif
 
-#define ALLOC_ALIGNMENT         (g_pal_control->alloc_align)
+#define ALLOC_ALIGNMENT         (g_pal_public_state->alloc_align)
 #define IS_ALLOC_ALIGNED(x)     IS_ALIGNED_POW2(x, ALLOC_ALIGNMENT)
 #define IS_ALLOC_ALIGNED_PTR(x) IS_ALIGNED_PTR_POW2(x, ALLOC_ALIGNMENT)
 #define ALLOC_ALIGN_DOWN(x)     ALIGN_DOWN_POW2(x, ALLOC_ALIGNMENT)

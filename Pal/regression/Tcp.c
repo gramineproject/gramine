@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
 
         int retval = 0;
         size_t retval_size = sizeof(retval);
-        ret = DkStreamWrite(pal_control.parent_process, 0, &retval_size, &retval, NULL);
+        ret = DkStreamWrite(DkGetPalPublicState()->parent_process, 0, &retval_size, &retval, NULL);
         if (ret < 0 || retval_size != sizeof(retval)) {
             pal_printf("DkStreamWrite failed\n");
             return 1;

@@ -7,7 +7,7 @@
 #include "pal.h"
 #include "pal_regression.h"
 
-#define UNIT (pal_control.alloc_align)
+#define UNIT (DkGetPalPublicState()->alloc_align)
 
 static volatile int count = 0;
 
@@ -72,10 +72,10 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("Memory Deallocation OK\n");
     }
 
-    /* TODO: This does not take into account `pal_control.preloaded_ranges`; we are not allowed to
-     * ask for memory overlapping with these ranges */
-    void* mem3 = (void*)pal_control.user_address.start;
-    void* mem4 = (void*)pal_control.user_address.start + UNIT;
+    /* TODO: This does not take into account `DkGetPalPublicState()->preloaded_ranges`; we are not allowed
+     * to ask for memory overlapping with these ranges */
+    void* mem3 = (void*)DkGetPalPublicState()->user_address.start;
+    void* mem4 = (void*)DkGetPalPublicState()->user_address.start + UNIT;
 
     int ret2 = DkVirtualMemoryAlloc(&mem3, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
     ret = DkVirtualMemoryAlloc(&mem4, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
@@ -84,11 +84,11 @@ int main(int argc, char** argv, char** envp) {
         pal_printf("Memory Allocation with Address OK\n");
 
     /* Testing total memory */
-    pal_printf("Total Memory: %lu\n", pal_control.mem_info.mem_total);
+    pal_printf("Total Memory: %lu\n", DkGetPalPublicState()->mem_info.mem_total);
 
     /* Testing available memory (must be within valid range) */
     PAL_NUM avail = DkMemoryAvailableQuota();
-    if (avail > 0 && avail < pal_control.mem_info.mem_total)
+    if (avail > 0 && avail < DkGetPalPublicState()->mem_info.mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 
     return 0;

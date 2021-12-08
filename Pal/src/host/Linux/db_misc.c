@@ -30,8 +30,8 @@ int _DkSystemTimeQuery(uint64_t* out_usec) {
     struct timespec time;
     int ret;
 
-    if (g_linux_state.vdso_clock_gettime) {
-        ret = g_linux_state.vdso_clock_gettime(CLOCK_REALTIME, &time);
+    if (g_pal_linux_state.vdso_clock_gettime) {
+        ret = g_pal_linux_state.vdso_clock_gettime(CLOCK_REALTIME, &time);
     } else {
         ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &time);
     }

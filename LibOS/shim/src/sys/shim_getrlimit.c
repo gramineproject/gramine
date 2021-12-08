@@ -168,8 +168,8 @@ long shim_do_sysinfo(struct sysinfo* info) {
         return -EFAULT;
 
     memset(info, 0, sizeof(*info));
-    info->totalram  = g_pal_control->mem_info.mem_total;
-    info->totalhigh = g_pal_control->mem_info.mem_total;
+    info->totalram  = g_pal_public_state->mem_info.mem_total;
+    info->totalhigh = g_pal_public_state->mem_info.mem_total;
     info->freeram   = DkMemoryAvailableQuota();
     info->freehigh  = DkMemoryAvailableQuota();
     info->mem_unit  = 1;

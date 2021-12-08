@@ -18,15 +18,15 @@ int main(int argc, char** argv, char** envp) {
         }
 
         size = sizeof(buffer1);
-        DkStreamWrite(pal_control.parent_process, 0, &size, buffer1, NULL);
+        DkStreamWrite(DkGetPalPublicState()->parent_process, 0, &size, buffer1, NULL);
 
         size = sizeof(buffer1);
-        ret = DkStreamWrite(pal_control.parent_process, 0, &size, buffer1, NULL);
+        ret = DkStreamWrite(DkGetPalPublicState()->parent_process, 0, &size, buffer1, NULL);
         if (ret == 0 && size > 0)
             pal_printf("Process Write 1 OK\n");
 
         size = sizeof(buffer4);
-        ret = DkStreamRead(pal_control.parent_process, 0, &size, buffer4, NULL, 0);
+        ret = DkStreamRead(DkGetPalPublicState()->parent_process, 0, &size, buffer4, NULL, 0);
         if (ret == 0 && size > 0)
             pal_printf("Process Read 2: %s\n", buffer4);
 

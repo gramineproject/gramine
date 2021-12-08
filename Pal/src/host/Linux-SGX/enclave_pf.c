@@ -454,7 +454,7 @@ static const char* toml_table_name_from_key_type(enum pf_key_type key_type) {
 
 static int register_protected_files_from_toml_table(enum pf_key_type key_type) {
     int ret;
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -515,7 +515,7 @@ out:
 
 static int register_protected_files_from_toml_array(enum pf_key_type key_type) {
     int ret;
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -618,7 +618,7 @@ int init_protected_files(void) {
     /* if wrap key is not hard-coded in the manifest, assume that it was received from parent or
      * it will be provisioned after local/remote attestation; otherwise read it from manifest */
     char* protected_files_key_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "sgx.insecure__protected_files_key",
+    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.insecure__protected_files_key",
                          &protected_files_key_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.insecure__protected_files_key'");

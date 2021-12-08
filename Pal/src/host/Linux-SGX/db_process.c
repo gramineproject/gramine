@@ -128,7 +128,7 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
      * by the app enclave after EINIT and are thus not security-critical) */
     static_assert(offsetof(sgx_report_body_t, report_data) + sizeof(*expected_data) ==
                       sizeof(sgx_report_body_t), "wrong sgx_report_body_t::report_data offset");
-    if (memcmp(peer_enclave_info, &g_pal_sec.enclave_info,
+    if (memcmp(peer_enclave_info, &g_pal_linuxsgx_state.enclave_info,
                offsetof(sgx_report_body_t, report_data)))
         return false;
 
@@ -199,7 +199,7 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
     }
 
     /* Send this Gramine instance ID. */
-    uint64_t instance_id = g_pal_state.instance_id;
+    uint64_t instance_id = g_pal_common_state.instance_id;
     ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
                                /*is_blocking=*/!child->process.nonblocking);
     if (ret != sizeof(instance_id)) {
@@ -216,7 +216,7 @@ failed:
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
                        uint64_t* out_instance_id) {
-    if (g_pal_sec.enclave_initialized)
+    if (g_pal_linuxsgx_state.enclave_initialized)
         return -PAL_ERROR_DENIED;
 
     PAL_HANDLE parent = malloc(HANDLE_SIZE(process));

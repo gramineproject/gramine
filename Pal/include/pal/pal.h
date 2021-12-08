@@ -108,7 +108,10 @@ typedef struct PAL_MEM_INFO_ {
 } PAL_MEM_INFO;
 
 /********** PAL APIs **********/
-typedef struct PAL_CONTROL_ {
+
+/* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
+ * started by PAL (usually our LibOS). */
+struct pal_public_state {
     const char* host_type;
 
     /*
@@ -150,9 +153,9 @@ typedef struct PAL_CONTROL_ {
     PAL_MEM_INFO mem_info; /*!< memory information (only required ones) */
     PAL_TOPO_INFO topo_info; /*!< Topology information (only required ones) */
     bool enable_sysfs_topology;
-} PAL_CONTROL;
+};
 
-const PAL_CONTROL* DkGetPalControl(void);
+const struct pal_public_state* DkGetPalPublicState(void);
 
 /*
  * MEMORY ALLOCATION

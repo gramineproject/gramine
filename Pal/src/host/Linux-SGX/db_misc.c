@@ -185,7 +185,7 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
  * through xfrm what extensions are enabled inside the enclave.
  */
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
-    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
+    uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
@@ -386,7 +386,7 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 };
 
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
-    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
+    uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
      * cases in the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2.
@@ -531,7 +531,8 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
 
     /* read sgx.ra_client_spid from manifest (must be hex string) */
     char* ra_client_spid_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "sgx.ra_client_spid", &ra_client_spid_str);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.ra_client_spid",
+                         &ra_client_spid_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.ra_client_spid'");
         return -PAL_ERROR_INVAL;
@@ -565,7 +566,7 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
         }
 
         /* read sgx.ra_client_linkable from manifest */
-        ret = toml_bool_in(g_pal_state.manifest_root, "sgx.ra_client_linkable",
+        ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.ra_client_linkable",
                            /*defaultval=*/false, &linkable);
         if (ret < 0) {
             log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or "
@@ -828,7 +829,7 @@ out_vendor_id:
 }
 
 int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
-    if (!g_pal_control.enable_sysfs_topology) {
+    if (!g_pal_public_state.enable_sysfs_topology) {
         /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
         memset(topo_info, 0, sizeof(*topo_info));
         return 0;

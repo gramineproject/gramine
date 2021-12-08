@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 
         for (int i = 0; i < 3; i++) {
             handles[i] = NULL;
-            ret = DkReceiveHandle(pal_control.parent_process, &handles[i]);
+            ret = DkReceiveHandle(DkGetPalPublicState()->parent_process, &handles[i]);
             if (ret >= 0 && handles[i]) {
                 pal_printf("Receive Handle OK\n");
             } else {

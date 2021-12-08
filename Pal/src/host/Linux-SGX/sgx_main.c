@@ -906,9 +906,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    pal_sec->uid = DO_SYSCALL(getuid);
-    pal_sec->gid = DO_SYSCALL(getgid);
-
     /* we cannot use CPUID(0xb) because it counts even disabled-by-BIOS cores (e.g. HT cores);
      * instead extract info on total number of logical cores, number of physical cores,
      * SMT support etc. by parsing sysfs pseudo-files */
@@ -1010,11 +1007,12 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (ret < 0)
         return ret;
 
+    sgx_target_info_t qe_targetinfo = {0};
     if (enclave->remote_attestation_enabled) {
         /* initialize communication with Quoting Enclave only if app requests attestation */
         bool is_epid = enclave->use_epid_attestation;
         log_debug("Using SGX %s attestation", is_epid ? "EPID" : "DCAP/ECDSA");
-        ret = init_quoting_enclave_targetinfo(is_epid, &pal_sec->qe_targetinfo);
+        ret = init_quoting_enclave_targetinfo(is_epid, &qe_targetinfo);
         if (ret < 0)
             return ret;
     }
@@ -1045,7 +1043,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
 
     /* start running trusted PAL */
-    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd);
+    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
+                        DO_SYSCALL(getuid), DO_SYSCALL(getgid), &qe_targetinfo);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);

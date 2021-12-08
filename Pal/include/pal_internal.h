@@ -22,6 +22,19 @@
 #error "pal_internal.h can only be included in PAL"
 #endif
 
+/*
+ * Part of PAL state which is common to all PALs (trusted part, in case of TEE PALs).
+ * Most of it is actually very Linux-specific, we'll need to refactor it if we ever add a non-Linux
+ * PAL.
+ */
+struct pal_common_state {
+    uint64_t instance_id;
+    PAL_HANDLE parent_process;
+    const char* raw_manifest_data;
+};
+extern struct pal_common_state g_pal_common_state;
+extern struct pal_public_state g_pal_public_state;
+
 /* handle_ops is the operators provided for each handler type. They are mostly used by
  * stream-related PAL calls, but can also be used by some others in special ways. */
 struct handle_ops {
@@ -115,30 +128,14 @@ static inline size_t handle_size(PAL_HANDLE handle) {
  */
 void notify_failure(unsigned long error);
 
-/* all pal config value */
-struct pal_internal_state {
-    uint64_t        instance_id;
-
-    PAL_HANDLE      parent_process;
-
-    const char*     raw_manifest_data;
-    toml_table_t*   manifest_root;
-
-    /* May not be the same as page size, e.g. SYSTEM_INFO::dwAllocationGranularity on Windows */
-    size_t          alloc_align;
-};
-extern struct pal_internal_state g_pal_state;
-
-extern PAL_CONTROL g_pal_control;
-
 int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
 
-#define IS_ALLOC_ALIGNED(addr)     IS_ALIGNED_POW2(addr, g_pal_state.alloc_align)
-#define IS_ALLOC_ALIGNED_PTR(addr) IS_ALIGNED_PTR_POW2(addr, g_pal_state.alloc_align)
-#define ALLOC_ALIGN_UP(addr)       ALIGN_UP_POW2(addr, g_pal_state.alloc_align)
-#define ALLOC_ALIGN_UP_PTR(addr)   ALIGN_UP_PTR_POW2(addr, g_pal_state.alloc_align)
-#define ALLOC_ALIGN_DOWN(addr)     ALIGN_DOWN_POW2(addr, g_pal_state.alloc_align)
-#define ALLOC_ALIGN_DOWN_PTR(addr) ALIGN_DOWN_PTR_POW2(addr, g_pal_state.alloc_align)
+#define IS_ALLOC_ALIGNED(addr)     IS_ALIGNED_POW2(addr, g_pal_public_state.alloc_align)
+#define IS_ALLOC_ALIGNED_PTR(addr) IS_ALIGNED_PTR_POW2(addr, g_pal_public_state.alloc_align)
+#define ALLOC_ALIGN_UP(addr)       ALIGN_UP_POW2(addr, g_pal_public_state.alloc_align)
+#define ALLOC_ALIGN_UP_PTR(addr)   ALIGN_UP_PTR_POW2(addr, g_pal_public_state.alloc_align)
+#define ALLOC_ALIGN_DOWN(addr)     ALIGN_DOWN_POW2(addr, g_pal_public_state.alloc_align)
+#define ALLOC_ALIGN_DOWN_PTR(addr) ALIGN_DOWN_PTR_POW2(addr, g_pal_public_state.alloc_align)
 
 /*!
  * \brief Main initialization function

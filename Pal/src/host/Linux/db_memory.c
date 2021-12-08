@@ -139,19 +139,19 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
 }
 
 unsigned long _DkMemoryQuota(void) {
-    if (g_linux_state.memory_quota == (unsigned long)-1)
+    if (g_pal_linux_state.memory_quota == (unsigned long)-1)
         return 0;
 
-    if (g_linux_state.memory_quota)
-        return g_linux_state.memory_quota;
+    if (g_pal_linux_state.memory_quota)
+        return g_pal_linux_state.memory_quota;
 
     unsigned long quota = 0;
     if (read_proc_meminfo("MemTotal", &quota) < 0) {
-        g_linux_state.memory_quota = (unsigned long)-1;
+        g_pal_linux_state.memory_quota = (unsigned long)-1;
         return 0;
     }
 
-    return (g_linux_state.memory_quota = quota * 1024);
+    return (g_pal_linux_state.memory_quota = quota * 1024);
 }
 
 unsigned long _DkMemoryAvailableQuota(void) {

@@ -45,4 +45,4 @@ DkAttestationReport
 DkAttestationQuote
 DkSetProtectedFilesKey
 DkDebugLog
-DkGetPalControl
+DkGetPalPublicState

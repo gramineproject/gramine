@@ -856,7 +856,8 @@ static int start_rpc(size_t num_of_threads) {
 }
 
 int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd) {
+                        size_t env_size, int parent_stream_fd, unsigned int host_euid,
+                        unsigned int host_egid, sgx_target_info_t* qe_targetinfo) {
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
@@ -876,6 +877,9 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
     ms.ms_env              = env;
     ms.ms_env_size         = env_size;
     ms.ms_parent_stream_fd = parent_stream_fd;
+    ms.ms_host_euid        = host_euid;
+    ms.ms_host_egid        = host_egid;
+    ms.ms_qe_targetinfo    = qe_targetinfo;
     ms.ms_sec_info         = &g_pal_enclave.pal_sec;
     ms.rpc_queue           = g_rpc_queue;
     EDEBUG(ECALL_ENCLAVE_START, &ms);

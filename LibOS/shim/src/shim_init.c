@@ -38,7 +38,7 @@ static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
               "shim_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
 
 const toml_table_t* g_manifest_root = NULL;
-const PAL_CONTROL* g_pal_control = NULL;
+const struct pal_public_state* g_pal_public_state = NULL;
 
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
@@ -374,10 +374,10 @@ static int read_environs(const char** envp) {
     } while (0)
 
 noreturn void* shim_init(int argc, const char** argv, const char** envp) {
-    g_pal_control = DkGetPalControl();
-    assert(g_pal_control);
+    g_pal_public_state = DkGetPalPublicState();
+    assert(g_pal_public_state);
 
-    g_log_level = g_pal_control->log_level;
+    g_log_level = g_pal_public_state->log_level;
 
     /* create the initial TCB, shim can not be run without a tcb */
     shim_tcb_init();
@@ -389,14 +389,14 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     extern const char g_gramine_commit_hash[];
     log_debug("Gramine was built from commit: %s", g_gramine_commit_hash);
 
-    log_debug("Host: %s", g_pal_control->host_type);
+    log_debug("Host: %s", g_pal_public_state->host_type);
 
     if (!IS_POWER_OF_2(ALLOC_ALIGNMENT)) {
         log_error("Error during shim_init(): PAL allocation alignment not a power of 2");
         DkProcessExit(EINVAL);
     }
 
-    g_manifest_root = g_pal_control->manifest_root;
+    g_manifest_root = g_pal_public_state->manifest_root;
 
     shim_xstate_init();
 
@@ -417,10 +417,10 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     log_debug("Shim loaded at %p, ready to initialize", &__load_address);
 
-    if (g_pal_control->parent_process) {
+    if (g_pal_public_state->parent_process) {
         struct checkpoint_hdr hdr;
 
-        int ret = read_exact(g_pal_control->parent_process, &hdr, sizeof(hdr));
+        int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
             log_error("shim_init: failed to read the whole checkpoint header: %d", ret);
             DkProcessExit(1);
@@ -452,7 +452,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);
 
-    if (g_pal_control->parent_process) {
+    if (g_pal_public_state->parent_process) {
         int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
             log_error("shim_init: failed to establish IPC connection to parent: %d", ret);
@@ -471,19 +471,19 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
         /* Notify the parent process we are done. */
         char dummy_c = 0;
-        ret = write_exact(g_pal_control->parent_process, &dummy_c, sizeof(dummy_c));
+        ret = write_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
             log_error("shim_init: failed to write ready notification: %d", ret);
             DkProcessExit(1);
         }
 
         /* Wait for parent to settle its adult things. */
-        ret = read_exact(g_pal_control->parent_process, &dummy_c, sizeof(dummy_c));
+        ret = read_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
             log_error("shim_init: failed to read parent's confirmation: %d", ret);
             DkProcessExit(1);
         }
-    } else { /* !g_pal_control->parent_process */
+    } else { /* !g_pal_public_state->parent_process */
         RUN_INIT(init_sync_server);
     }
 

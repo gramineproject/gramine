@@ -791,7 +791,7 @@ int init_elf_objects(void) {
 
     if (!g_exec_map) {
         /* Child processes should have received `g_exec_map` from parent */
-        assert(!g_pal_control->parent_process);
+        assert(!g_pal_public_state->parent_process);
 
         ret = load_elf_object(exec, &g_exec_map);
         if (ret < 0)

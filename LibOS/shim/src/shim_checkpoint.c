@@ -396,7 +396,7 @@ static int receive_handles_on_stream(struct checkpoint_hdr* hdr, void* base, ssi
             continue;
 
         PAL_HANDLE hdl = NULL;
-        ret = DkReceiveHandle(g_pal_control->parent_process, &hdl);
+        ret = DkReceiveHandle(g_pal_public_state->parent_process, &hdl);
         /* need to abort migration if DkReceiveHandle() returned error, otherwise app may fail */
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
@@ -605,8 +605,8 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
     PAL_NUM mapsize = (PAL_PTR)ALLOC_ALIGN_UP_PTR(base + hdr->size) - mapaddr;
 
     /* first try allocating at address used by parent process */
-    if (g_pal_control->user_address.start <= mapaddr &&
-            mapaddr + mapsize <= g_pal_control->user_address.end) {
+    if (g_pal_public_state->user_address.start <= mapaddr &&
+            mapaddr + mapsize <= g_pal_public_state->user_address.end) {
         ret = bkeep_mmap_fixed((void*)mapaddr, mapsize, PROT_READ | PROT_WRITE,
                                CP_MMAP_FLAGS | MAP_FIXED_NOREPLACE, NULL, 0, "cpstore");
         if (ret < 0) {
@@ -641,13 +641,13 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
 
     log_debug("checkpoint mapped at %p-%p", base, base + hdr->size);
 
-    ret = read_exact(g_pal_control->parent_process, base, hdr->size);
+    ret = read_exact(g_pal_public_state->parent_process, base, hdr->size);
     if (ret < 0) {
         goto out_fail;
     }
     log_debug("read checkpoint of %lu bytes from parent", hdr->size);
 
-    ret = receive_memory_on_stream(g_pal_control->parent_process, hdr, (uintptr_t)base);
+    ret = receive_memory_on_stream(g_pal_public_state->parent_process, hdr, (uintptr_t)base);
     if (ret < 0) {
         goto out_fail;
     }

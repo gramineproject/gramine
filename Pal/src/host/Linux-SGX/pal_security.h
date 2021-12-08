@@ -8,17 +8,7 @@
 #include "sgx_arch.h"
 
 struct pal_sec {
-    PAL_IDX uid, gid;
-
-    /* enclave information */
-    sgx_target_info_t qe_targetinfo;
-    sgx_report_body_t enclave_info;
-    /* Thread creation ECALL is allowed only after this is set. */
-    bool enclave_initialized;
-
-    /* remaining heap usable by application */
-    PAL_PTR heap_min, heap_max;
-
+    /* topology information - received from untrusted host, but sanitized */
     PAL_NUM online_logical_cores;
     PAL_NUM possible_logical_cores;
     PAL_NUM physical_cores_per_socket;

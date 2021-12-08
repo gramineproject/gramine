@@ -15,7 +15,7 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
     const char* name = dent->name;
     const char* str;
     if (strcmp(name, "online") == 0) {
-        str = g_pal_control->topo_info.online_nodes;
+        str = g_pal_public_state->topo_info.online_nodes;
     } else {
         log_debug("unrecognized file: %s", name);
         return -ENOENT;
@@ -32,7 +32,7 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_NUMA_TOPO_INFO* numa_topology = &g_pal_control->topo_info.numa_topology[node_num];
+    PAL_NUMA_TOPO_INFO* numa_topology = &g_pal_public_state->topo_info.numa_topology[node_num];
     const char* str = NULL;
     if (strcmp(name, "cpumap" ) == 0) {
         str = numa_topology->cpumap;

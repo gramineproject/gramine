@@ -106,7 +106,7 @@ static int child_process(struct proc_param* proc_param) {
         return ret;
 
     /* child */
-    DO_SYSCALL(execve, g_pal_loader_path, proc_param->argv, g_linux_state.host_environ);
+    DO_SYSCALL(execve, g_pal_loader_path, proc_param->argv, g_pal_linux_state.host_environ);
     /* execve failed, but we're after vfork, so we can't do anything more than just exit */
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
@@ -140,7 +140,7 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
         goto out;
     parent_data_size = (size_t)ret;
 
-    manifest_data_size = strlen(g_pal_state.raw_manifest_data);
+    manifest_data_size = strlen(g_pal_common_state.raw_manifest_data);
 
     size_t data_size = parent_data_size + manifest_data_size;
     proc_args = malloc(sizeof(struct proc_args) + data_size);
@@ -149,8 +149,8 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
         goto out;
     }
 
-    proc_args->instance_id = g_pal_state.instance_id;
-    proc_args->memory_quota            = g_linux_state.memory_quota;
+    proc_args->instance_id = g_pal_common_state.instance_id;
+    proc_args->memory_quota = g_pal_linux_state.memory_quota;
 
     char* data = (char*)(proc_args + 1);
 
@@ -158,7 +158,7 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
     proc_args->parent_data_size = parent_data_size;
     data += parent_data_size;
 
-    memcpy(data, g_pal_state.raw_manifest_data, manifest_data_size);
+    memcpy(data, g_pal_common_state.raw_manifest_data, manifest_data_size);
     proc_args->manifest_data_size = manifest_data_size;
     data += manifest_data_size;
 
@@ -264,7 +264,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     manifest[proc_args.manifest_data_size] = '\0';
     data_iter += proc_args.manifest_data_size;
 
-    g_linux_state.memory_quota = proc_args.memory_quota;
+    g_pal_linux_state.memory_quota = proc_args.memory_quota;
 
     *manifest_out = manifest;
     *instance_id = proc_args.instance_id;

@@ -22,13 +22,13 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        pal_total = g_pal_control->topo_info.num_online_nodes;
+        pal_total = g_pal_public_state->topo_info.num_online_nodes;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        pal_total = g_pal_control->cpu_info.online_logical_cores;
+        pal_total = g_pal_public_state->cpu_info.online_logical_cores;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
-        pal_total = g_pal_control->topo_info.num_cache_index;
+        pal_total = g_pal_public_state->topo_info.num_cache_index;
         prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);
@@ -151,7 +151,7 @@ static void init_node_dir(struct pseudo_node* node) {
 }
 
 int init_sysfs(void) {
-    if (!g_pal_control->enable_sysfs_topology)
+    if (!g_pal_public_state->enable_sysfs_topology)
         return 0;
 
     struct pseudo_node* root = pseudo_add_root_dir("sys");

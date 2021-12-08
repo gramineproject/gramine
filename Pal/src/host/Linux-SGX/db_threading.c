@@ -158,7 +158,7 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
     static_assert(sizeof(*clear_child_tid) == 4, "unexpected clear_child_tid size");
 
     /* main thread is not part of the g_thread_list */
-    if (exiting_thread != &g_pal_control.first_thread->thread) {
+    if (exiting_thread != &g_pal_public_state.first_thread->thread) {
         spinlock_lock(&g_thread_list_lock);
         LISTP_DEL(exiting_thread, &g_thread_list, list);
         spinlock_unlock(&g_thread_list_lock);

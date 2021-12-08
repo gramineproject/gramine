@@ -204,9 +204,10 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     key_request.key_name   = SGX_SEAL_KEY;
     key_request.key_policy = key_policy;
 
-    memcpy(&key_request.cpu_svn, &g_pal_sec.enclave_info.cpu_svn, sizeof(sgx_cpu_svn_t));
-    memcpy(&key_request.isv_svn, &g_pal_sec.enclave_info.isv_svn, sizeof(sgx_isv_svn_t));
-    memcpy(&key_request.config_svn, &g_pal_sec.enclave_info.config_svn, sizeof(sgx_config_svn_t));
+    memcpy(&key_request.cpu_svn, &g_pal_linuxsgx_state.enclave_info.cpu_svn, sizeof(sgx_cpu_svn_t));
+    memcpy(&key_request.isv_svn, &g_pal_linuxsgx_state.enclave_info.isv_svn, sizeof(sgx_isv_svn_t));
+    memcpy(&key_request.config_svn, &g_pal_linuxsgx_state.enclave_info.config_svn,
+           sizeof(sgx_config_svn_t));
 
     key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST;
     key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST;
@@ -636,7 +637,7 @@ out:
 static int init_trusted_files_from_toml_table(void) {
     int ret;
 
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -684,7 +685,7 @@ static int init_trusted_files_from_toml_table(void) {
 
         /* sgx.trusted_checksum entries are actually SHA-256 hashes, so the better name would be
          * sgx.trusted_hash but we don't want to break old manifests so we keep the legacy name */
-        ret = toml_string_in(g_pal_state.manifest_root, toml_trusted_checksum_key,
+        ret = toml_string_in(g_pal_public_state.manifest_root, toml_trusted_checksum_key,
                              &toml_trusted_checksum_str);
         if (ret < 0 || !toml_trusted_checksum_str) {
             log_error("Invalid trusted checksum in manifest: '%s' (not found or not a string)",
@@ -719,7 +720,7 @@ out:
 static int init_trusted_files_from_toml_array(void) {
     int ret;
 
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -792,14 +793,14 @@ out:
 }
 
 static void maybe_warn_about_allowed_files_usage(void) {
-    if (!g_pal_state.parent_process)
+    if (!g_pal_common_state.parent_process)
         g_allowed_files_warn = true;
 }
 
 static int init_allowed_files_from_toml_table(void) {
     int ret;
 
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -856,7 +857,7 @@ out:
 static int init_allowed_files_from_toml_array(void) {
     int ret;
 
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_state.manifest_root, "sgx");
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
     if (!manifest_sgx)
         return 0;
 
@@ -951,7 +952,7 @@ int init_file_check_policy(void) {
     int ret;
 
     char* file_check_policy_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "sgx.file_check_policy",
+    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.file_check_policy",
                          &file_check_policy_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.file_check_policy'");
@@ -989,7 +990,8 @@ int init_enclave(void) {
         return -PAL_ERROR_INVAL;
     }
 
-    memcpy(&g_pal_sec.enclave_info, &report.body, sizeof(g_pal_sec.enclave_info));
+    memcpy(&g_pal_linuxsgx_state.enclave_info, &report.body,
+           sizeof(g_pal_linuxsgx_state.enclave_info));
     return 0;
 }
 
@@ -1125,8 +1127,10 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
 
     /* A -> B: targetinfo[A] */
     memset(&target_info, 0, sizeof(target_info));
-    memcpy(&target_info.mr_enclave, &g_pal_sec.enclave_info.mr_enclave, sizeof(sgx_measurement_t));
-    memcpy(&target_info.attributes, &g_pal_sec.enclave_info.attributes, sizeof(sgx_attributes_t));
+    memcpy(&target_info.mr_enclave, &g_pal_linuxsgx_state.enclave_info.mr_enclave,
+           sizeof(sgx_measurement_t));
+    memcpy(&target_info.attributes, &g_pal_linuxsgx_state.enclave_info.attributes,
+           sizeof(sgx_attributes_t));
 
     for (bytes = 0, ret = 0; bytes < SGX_TARGETINFO_FILLED_SIZE; bytes += ret) {
         ret = _DkStreamWrite(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,

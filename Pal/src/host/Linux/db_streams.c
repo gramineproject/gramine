@@ -48,17 +48,17 @@ static size_t addr_size(const struct sockaddr* addr) {
 bool stataccess(struct stat* stat, int acc) {
     mode_t mode = stat->st_mode;
 
-    if (g_linux_state.uid && g_linux_state.uid == stat->st_uid) {
+    if (g_pal_linux_state.host_euid && g_pal_linux_state.host_euid == stat->st_uid) {
         mode >>= 6;
         goto out;
     }
 
-    if (g_linux_state.gid && g_linux_state.gid == stat->st_gid) {
+    if (g_pal_linux_state.host_egid && g_pal_linux_state.host_egid == stat->st_gid) {
         mode >>= 3;
         goto out;
     }
 
-    if (!g_linux_state.uid)
+    if (!g_pal_linux_state.host_euid)
         mode >>= 6;
 
 out:

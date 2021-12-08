@@ -33,8 +33,8 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-struct pal_linux_state g_linux_state;
 struct pal_sec g_pal_sec;
+struct pal_linuxsgx_state g_pal_linuxsgx_state;
 
 PAL_SESSION_KEY g_master_key = {0};
 
@@ -44,8 +44,8 @@ size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
 const size_t g_page_size = PRESET_PAGESIZE;
 
 void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
-    *start = (PAL_PTR)g_pal_sec.heap_min;
-    *end   = (PAL_PTR)g_pal_sec.heap_max;
+    *start = (PAL_PTR)g_pal_linuxsgx_state.heap_min;
+    *end   = (PAL_PTR)g_pal_linuxsgx_state.heap_max;
 
     /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
      * track of PAL memory, so without this limit it could overwrite internal PAL memory). See also
@@ -543,33 +543,33 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool enable_sysfs_topo = false;
 
     char* log_level_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "loader.log_level", &log_level_str);
+    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
         goto out;
     if (log_level_str && strcmp(log_level_str, "none") && strcmp(log_level_str, "error"))
         verbose_log_level = true;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "sgx.debug",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.debug",
                        /*defaultval=*/false, &sgx_debug);
     if (ret < 0)
         goto out;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_cmdline_argv",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
                        /*defaultval=*/false, &use_cmdline_argv);
     if (ret < 0)
         goto out;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__use_host_env",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_host_env",
                        /*defaultval=*/false, &use_host_env);
     if (ret < 0)
         goto out;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "loader.insecure__disable_aslr",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
                        /*defaultval=*/false, &disable_aslr);
     if (ret < 0)
         goto out;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "sys.insecure__allow_eventfd",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.insecure__allow_eventfd",
                        /*defaultval=*/false, &allow_eventfd);
     if (ret < 0)
         goto out;
@@ -577,7 +577,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
 
-    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "fs.experimental__enable_sysfs_topology",
                        /*defaultval=*/false, &enable_sysfs_topo);
     if (ret < 0)
         goto out;
@@ -642,8 +642,10 @@ out:
 
 __attribute_no_sanitize_address
 static void do_preheat_enclave(void) {
-    for (uint8_t* i = g_pal_sec.heap_min; i < (uint8_t*)g_pal_sec.heap_max; i += g_page_size)
+    for (uint8_t* i = g_pal_linuxsgx_state.heap_min; i < (uint8_t*)g_pal_linuxsgx_state.heap_max;
+             i += g_page_size) {
         READ_ONCE(*(size_t*)i);
+    }
 }
 
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
@@ -651,7 +653,8 @@ static void do_preheat_enclave(void) {
 __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
-                             int parent_stream_fd, struct pal_sec* uptr_sec_info) {
+                             int parent_stream_fd, unsigned int host_euid, unsigned int host_egid,
+                             sgx_target_info_t* uptr_qe_targetinfo, struct pal_sec* uptr_sec_info) {
     /* All our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
 
@@ -672,8 +675,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     call_init_array();
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
-    g_pal_state.alloc_align = g_page_size;
-    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
+    g_pal_public_state.alloc_align = g_page_size;
+    assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
     struct pal_sec sec_info;
     if (!sgx_copy_to_enclave(&sec_info, sizeof(sec_info), uptr_sec_info, sizeof(*uptr_sec_info))) {
@@ -681,8 +684,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    g_pal_sec.heap_min = GET_ENCLAVE_TLS(heap_min);
-    g_pal_sec.heap_max = GET_ENCLAVE_TLS(heap_max);
+    g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TLS(heap_min);
+    g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TLS(heap_max);
 
     /* Skip URI_PREFIX_FILE. */
     if (libpal_uri_len < URI_PREFIX_FILE_LEN) {
@@ -707,21 +710,19 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* We can't verify the following arguments from the urts. So we copy them directly but need to
      * be careful when we use them. */
-    g_pal_sec.qe_targetinfo = sec_info.qe_targetinfo;
-
-    /* For {u,g}ids we can at least do some minimal checking. */
-
-    /* -1 is treated as special value for example by chown. */
-    if (sec_info.uid == (PAL_IDX)-1 || sec_info.gid == (PAL_IDX)-1) {
-        log_error("Invalid sec_info.gid: %u", sec_info.gid);
+    if (!sgx_copy_to_enclave(&g_pal_linuxsgx_state.qe_targetinfo,
+                             sizeof(g_pal_linuxsgx_state.qe_targetinfo),
+                             uptr_qe_targetinfo,
+                             sizeof(*uptr_qe_targetinfo))) {
+        log_error("Copying qe_targetinfo into the enclave failed");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    g_pal_sec.uid = sec_info.uid;
-    g_pal_sec.gid = sec_info.gid;
+
+    g_pal_linuxsgx_state.host_euid = host_euid;
+    g_pal_linuxsgx_state.host_egid = host_egid;
 
     /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
      * because the slab manager can use normal allocations (`_DkVirtualMemoryAlloc`) right away. */
-    init_enclave_pages();
     init_slab_mgr(/*mem_pool=*/NULL, /*mem_pool_size=*/0);
     init_untrusted_slab_mgr();
 
@@ -746,9 +747,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Creating environments failed");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-
-    g_linux_state.uid = g_pal_sec.uid;
-    g_linux_state.gid = g_pal_sec.gid;
 
     SET_ENCLAVE_TLS(ready_for_exceptions, 1UL);
 
@@ -809,12 +807,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("PAL failed at parsing the manifest: %s", errbuf);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    g_pal_state.raw_manifest_data = manifest_addr;
-    g_pal_state.manifest_root = manifest_root;
+    g_pal_common_state.raw_manifest_data = manifest_addr;
+    g_pal_public_state.manifest_root = manifest_root;
 
-    /* parse and store host topology info into g_pal_sec struct */
-    bool enable_sysfs_topology;     /* TODO: remove this manifest option once sysfs topo is stable */
-    ret = toml_bool_in(g_pal_state.manifest_root, "fs.experimental__enable_sysfs_topology",
+    /* parse and store host topology info into g_pal_linuxsgx_state struct */
+    bool enable_sysfs_topology; /* TODO: remove this manifest option once sysfs topo is stable */
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "fs.experimental__enable_sysfs_topology",
                        /*defaultval=*/false, &enable_sysfs_topology);
     if (ret < 0) {
         log_error("Cannot parse 'fs.experimental__enable_sysfs_topology' (the value must be `true` "
@@ -833,8 +831,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     bool preheat_enclave;
-    ret = toml_bool_in(g_pal_state.manifest_root, "sgx.preheat_enclave", /*defaultval=*/false,
-                       &preheat_enclave);
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.preheat_enclave",
+                       /*defaultval=*/false, &preheat_enclave);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
         ocall_exit(1, /*is_exitgroup=*/true);
@@ -845,7 +843,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* For backward compatibility, `loader.pal_internal_mem_size` does not include
      * PAL_INITIAL_MEM_SIZE */
     size_t extra_mem_size;
-    ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
+    ret = toml_sizestring_in(g_pal_public_state.manifest_root, "loader.pal_internal_mem_size",
                              /*defaultval=*/0, &extra_mem_size);
     if (ret < 0) {
         log_error("Cannot parse 'loader.pal_internal_mem_size'");
@@ -896,7 +894,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);
     /* child threads are assigned TIDs 2,3,...; see pal_start_thread() */
     first_thread->thread.tid = 1;
-    g_pal_control.first_thread = first_thread;
+    g_pal_public_state.first_thread = first_thread;
     SET_ENCLAVE_TLS(thread, &first_thread->thread);
 
     uint64_t stack_protector_canary;
@@ -907,8 +905,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
     pal_set_tcb_stack_canary(stack_protector_canary);
 
-    assert(!g_pal_sec.enclave_initialized);
-    g_pal_sec.enclave_initialized = true;
+    assert(!g_pal_linuxsgx_state.enclave_initialized);
+    g_pal_linuxsgx_state.enclave_initialized = true;
 
     /* call main function */
     pal_main(instance_id, parent, first_thread, arguments, environments);

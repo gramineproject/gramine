@@ -64,7 +64,7 @@ int init_dcache(void) {
 
     dentry_mgr = create_mem_mgr(init_align_up(DCACHE_MGR_ALLOC));
 
-    if (g_pal_control->parent_process) {
+    if (g_pal_public_state->parent_process) {
         /* In a child process, `g_dentry_root` will be restored from a checkpoint. */
         return 0;
     }

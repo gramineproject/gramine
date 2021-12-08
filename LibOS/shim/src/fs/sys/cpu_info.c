@@ -17,9 +17,9 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
     const char* str;
 
     if (strcmp(name, "online") == 0) {
-        str = g_pal_control->topo_info.online_logical_cores;
+        str = g_pal_public_state->topo_info.online_logical_cores;
     } else if (strcmp(name, "possible") == 0) {
-        str = g_pal_control->topo_info.possible_logical_cores;
+        str = g_pal_public_state->topo_info.possible_logical_cores;
     } else {
         log_debug("unrecognized file: %s", name);
         return -ENOENT;
@@ -36,7 +36,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_TOPO_INFO* core_topology = &g_pal_control->topo_info.core_topology[cpu_num];
+    PAL_CORE_TOPO_INFO* core_topology = &g_pal_public_state->topo_info.core_topology[cpu_num];
     const char* str;
     char buf[12];
     if (strcmp(name, "online") == 0) {
@@ -47,7 +47,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     } else if (strcmp(name, "core_id") == 0) {
         str = core_topology->core_id;
     } else if (strcmp(name, "physical_package_id") == 0) {
-        snprintf(buf, sizeof(buf), "%d\n", g_pal_control->cpu_info.cpu_socket[cpu_num]);
+        snprintf(buf, sizeof(buf), "%d\n", g_pal_public_state->cpu_info.cpu_socket[cpu_num]);
         str = buf;
     } else if (strcmp(name, "core_siblings") == 0) {
         str = core_topology->core_siblings;

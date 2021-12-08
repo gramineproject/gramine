@@ -26,14 +26,15 @@
 struct timespec;
 struct timeval;
 
+/* Part of Linux PAL private state which is not shared with other PALs. */
 extern struct pal_linux_state {
-    const char**    host_environ;
-    unsigned int    pid;
-    unsigned int    uid, gid;
-    unsigned long   memory_quota;
-
+    const char** host_environ;
+    unsigned int host_pid;
+    unsigned int host_euid;
+    unsigned int host_egid;
+    unsigned long memory_quota;
     long int (*vdso_clock_gettime)(long int clk, struct timespec* tp);
-} g_linux_state;
+} g_pal_linux_state;
 
 #define DEFAULT_BACKLOG 2048
 

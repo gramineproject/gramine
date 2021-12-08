@@ -11,9 +11,6 @@
 
 struct atomic_int g_allocated_pages;
 
-static void* g_heap_bottom;
-static void* g_heap_top;
-
 /* list of VMAs of used memory areas kept in DESCENDING order; note that preallocated PAL internal
  * memory relies on this descending order of allocations (from high addresses to low), see
  * _DkGetAvailableUserAddressRange() for more details */
@@ -74,21 +71,16 @@ static void __free_vma(struct heap_vma* vma) {
     g_heap_vma_num--;
 }
 
-void init_enclave_pages(void) {
-    g_heap_bottom = g_pal_sec.heap_min;
-    g_heap_top    = g_pal_sec.heap_max;
-}
-
 static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_internal,
                                     struct heap_vma* vma_above) {
     assert(spinlock_is_locked(&g_heap_vma_lock));
     assert(addr && size);
 
-    if (addr < g_heap_bottom)
+    if (addr < g_pal_linuxsgx_state.heap_min)
         return NULL;
 
     /* PAL-internal memory cannot be allocated below the PAL-internal part of heap */
-    if (is_pal_internal && addr < g_heap_top - g_pal_internal_mem_size)
+    if (is_pal_internal && addr < g_pal_linuxsgx_state.heap_max - g_pal_internal_mem_size)
         return NULL;
 
     /* find enclosing VMAs and check that pal-internal VMAs do not overlap with normal VMAs */
@@ -195,7 +187,7 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
 
     if (addr) {
         /* caller specified concrete address; find VMA right-above this address */
-        if (addr < g_heap_bottom || addr + size > g_heap_top)
+        if (addr < g_pal_linuxsgx_state.heap_min || addr + size > g_pal_linuxsgx_state.heap_max)
             goto out;
 
         LISTP_FOR_EACH_ENTRY(vma, &g_heap_vma_list, list) {
@@ -208,7 +200,7 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
         ret = __create_vma_and_merge(addr, size, is_pal_internal, vma_above);
     } else {
         /* caller did not specify address; find first (highest-address) empty slot that fits */
-        void* vma_above_bottom = g_heap_top;
+        void* vma_above_bottom = g_pal_linuxsgx_state.heap_max;
 
         LISTP_FOR_EACH_ENTRY(vma, &g_heap_vma_list, list) {
             if (vma->top < vma_above_bottom - size) {
@@ -221,7 +213,7 @@ void* get_enclave_pages(void* addr, size_t size, bool is_pal_internal) {
         }
 
         /* corner case: there may be enough space between heap bottom and the lowest-address VMA */
-        if (g_heap_bottom < vma_above_bottom - size)
+        if (g_pal_linuxsgx_state.heap_min < vma_above_bottom - size)
             ret = __create_vma_and_merge(vma_above_bottom - size, size, is_pal_internal, vma_above);
     }
 
@@ -231,11 +223,11 @@ out:
     if (ret) {
         if (is_pal_internal) {
             /* This should be guaranteed by the check in `__create_vma_and_merge()` */
-            assert(ret >= g_heap_top - g_pal_internal_mem_size);
+            assert(ret >= g_pal_linuxsgx_state.heap_max - g_pal_internal_mem_size);
         } else {
-            assert(ret >= g_heap_bottom);
+            assert(ret >= g_pal_linuxsgx_state.heap_min);
         }
-        assert(ret + size <= g_heap_top);
+        assert(ret + size <= g_pal_linuxsgx_state.heap_max);
 
 #ifdef ASAN
         asan_unpoison_region((uintptr_t)ret, size);
@@ -253,8 +245,10 @@ int free_enclave_pages(void* addr, size_t size) {
 
     size = ALIGN_UP(size, g_page_size);
 
-    if (!access_ok(addr, size) || !IS_ALIGNED_PTR(addr, g_page_size) || addr < g_heap_bottom ||
-            addr + size > g_heap_top) {
+    if (!access_ok(addr, size)
+        || !IS_ALIGNED_PTR(addr, g_page_size)
+        || addr < g_pal_linuxsgx_state.heap_min
+        || addr + size > g_pal_linuxsgx_state.heap_max) {
         return -PAL_ERROR_INVAL;
     }
 

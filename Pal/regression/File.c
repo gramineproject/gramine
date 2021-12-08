@@ -60,7 +60,7 @@ int main(int argc, char** argv, char** envp) {
 
         /* test file map */
 
-        void* mem1 = (void*)pal_control.user_address.start;
+        void* mem1 = (void*)DkGetPalPublicState()->user_address.start;
         ret = DkStreamMap(file1, &mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
         if (ret >= 0 && mem1) {
             memcpy(buffer1, mem1, 40);
@@ -150,7 +150,7 @@ int main(int argc, char** argv, char** envp) {
             goto fail_writing;
 
         /* test file truncate */
-        ret = DkStreamSetLength(file4, pal_control.alloc_align);
+        ret = DkStreamSetLength(file4, DkGetPalPublicState()->alloc_align);
         if (ret < 0) {
             goto fail_writing;
         }

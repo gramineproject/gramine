@@ -65,7 +65,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     int ret;
 
     struct sockaddr_un addr;
-    ret = get_gramine_unix_socket_addr(g_pal_state.instance_id, name, &addr);
+    ret = get_gramine_unix_socket_addr(g_pal_common_state.instance_id, name, &addr);
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
@@ -183,7 +183,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     int ret;
 
     struct sockaddr_un addr;
-    ret = get_gramine_unix_socket_addr(g_pal_state.instance_id, name, &addr);
+    ret = get_gramine_unix_socket_addr(g_pal_common_state.instance_id, name, &addr);
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
