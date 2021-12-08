@@ -221,13 +221,13 @@ out:
     return ret;
 }
 
-void init_child_process(int parent_pipe_fd, PAL_HANDLE* parent_handle, char** manifest_out,
+void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** manifest_out,
                         uint64_t* instance_id) {
     int ret = 0;
 
     struct proc_args proc_args;
 
-    ret = read_all(parent_pipe_fd, &proc_args, sizeof(proc_args));
+    ret = read_all(parent_stream_fd, &proc_args, sizeof(proc_args));
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         INIT_FAIL(-ret, "communication with parent failed");
@@ -242,7 +242,7 @@ void init_child_process(int parent_pipe_fd, PAL_HANDLE* parent_handle, char** ma
     if (!data)
         INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
 
-    ret = read_all(parent_pipe_fd, data, data_size);
+    ret = read_all(parent_stream_fd, data, data_size);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         INIT_FAIL(-ret, "communication with parent failed");

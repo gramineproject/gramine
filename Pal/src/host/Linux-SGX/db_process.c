@@ -214,7 +214,8 @@ failed:
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
-int init_child_process(PAL_HANDLE* out_parent_handle, uint64_t* out_instance_id) {
+int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
+                       uint64_t* out_instance_id) {
     if (g_pal_sec.enclave_initialized)
         return -PAL_ERROR_DENIED;
 
@@ -225,7 +226,7 @@ int init_child_process(PAL_HANDLE* out_parent_handle, uint64_t* out_instance_id)
     init_handle_hdr(HANDLE_HDR(parent), PAL_TYPE_PROCESS);
     HANDLE_HDR(parent)->flags |= RFD(0) | WFD(0);
 
-    parent->process.stream      = g_pal_sec.stream_fd;
+    parent->process.stream      = parent_stream_fd;
     parent->process.nonblocking = false;
     parent->process.is_server   = false;
     parent->process.ssl_ctx     = NULL;

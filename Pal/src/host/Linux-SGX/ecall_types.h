@@ -23,6 +23,7 @@ typedef struct {
     size_t            ms_args_size;
     char*             ms_env;
     size_t            ms_env_size;
+    int               ms_parent_stream_fd;
     struct pal_sec*   ms_sec_info;
     struct rpc_queue* rpc_queue; /* pointer to RPC queue in untrusted mem */
 } ms_ecall_enclave_start_t;

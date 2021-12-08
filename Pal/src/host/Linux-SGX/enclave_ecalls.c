@@ -112,10 +112,10 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         sgx_report(&target_info, &report_data, &report);
         init_xsave_size(report.body.attributes.xfrm);
 
-        /* pal_linux_main is responsible to check the passed arguments */
+        /* pal_linux_main is responsible for checking the passed arguments */
         pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
                        READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
-                       READ_ONCE(ms->ms_env_size), pal_sec);
+                       READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd), pal_sec);
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

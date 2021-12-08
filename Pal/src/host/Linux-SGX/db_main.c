@@ -651,8 +651,8 @@ static void do_preheat_enclave(void) {
 __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
-                             struct pal_sec* uptr_sec_info) {
-    /* Our arguments are coming directly from the urts. We are responsible to check them. */
+                             int parent_stream_fd, struct pal_sec* uptr_sec_info) {
+    /* All our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
 
     /* Relocate PAL */
@@ -707,7 +707,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* We can't verify the following arguments from the urts. So we copy them directly but need to
      * be careful when we use them. */
-    g_pal_sec.stream_fd = sec_info.stream_fd;
     g_pal_sec.qe_targetinfo = sec_info.qe_targetinfo;
 
     /* For {u,g}ids we can at least do some minimal checking. */
@@ -773,8 +772,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* if there is a parent, create parent handle */
     PAL_HANDLE parent = NULL;
     uint64_t instance_id = 0;
-    if (g_pal_sec.stream_fd != PAL_IDX_POISON) {
-        if ((ret = init_child_process(&parent, &instance_id)) < 0) {
+    if (parent_stream_fd != -1) {
+        if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
             log_error("Failed to initialize child process: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }

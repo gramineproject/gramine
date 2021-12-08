@@ -129,7 +129,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
                "\tFirst process: %s <path to libpal.so> init <application> args...\n"
-               "\tChildren:      %s <path to libpal.so> child <parent_pipe_fd> args...",
+               "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
     log_always("This is an internal interface. Use pal_loader to launch applications in Gramine.");
     _DkProcessExit(1);
@@ -349,8 +349,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         }
     } else {
         // Children receive their argv and config via IPC.
-        int parent_pipe_fd = atoi(argv[3]);
-        init_child_process(parent_pipe_fd, &parent, &manifest, &instance_id);
+        int parent_stream_fd = atoi(argv[3]);
+        init_child_process(parent_stream_fd, &parent, &manifest, &instance_id);
     }
     assert(manifest);
 
