@@ -158,6 +158,8 @@ static int tmpfs_stat(struct shim_dentry* dent, struct stat* buf) {
     buf->st_ctime = data->ctime;
     buf->st_mtime = data->mtime;
     buf->st_atime = data->atime;
+    /* TODO: change to `hash_str(dent->inode->mount->uri)` once tmpfs supports inodes. */
+    buf->st_dev = 2;
     ret = 0;
 
 out:
