@@ -343,6 +343,7 @@ static int chroot_istat(struct shim_inode* inode, struct stat* buf) {
     lock(&inode->lock);
     buf->st_mode = inode->type | inode->perm;
     buf->st_size = inode->size;
+    buf->st_dev = hash_str(inode->mount->uri);
     /*
      * Pretend `nlink` is 2 for directories (to account for "." and ".."), 1 for other files.
      *
@@ -367,11 +368,7 @@ static int chroot_stat(struct shim_dentry* dent, struct stat* buf) {
     }
 
     ret = chroot_istat(dent->inode, buf);
-    if (ret < 0)
-        goto out;
 
-    buf->st_dev = hash_str(dent->mount->uri);
-    ret = 0;
 out:
     unlock(&dent->lock);
     return ret;
