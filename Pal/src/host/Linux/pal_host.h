@@ -18,10 +18,6 @@
 #include "spinlock.h"
 
 typedef struct {
-    PAL_HDR hdr;
-} PAL_RESERVED_HDR;
-
-typedef struct {
     char str[PIPE_NAME_MAX];
 } PAL_PIPE_NAME;
 
