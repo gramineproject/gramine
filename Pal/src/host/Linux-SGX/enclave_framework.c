@@ -19,11 +19,31 @@
 #define LOCAL_ATTESTATION_TAG_PARENT_STR "GRAMINE_LOCAL_ATTESTATION_TAG_PARENT"
 #define LOCAL_ATTESTATION_TAG_CHILD_STR "GRAMINE_LOCAL_ATTESTATION_TAG_CHILD"
 
+static int register_file(const char* uri, const char* checksum_str, bool check_duplicates);
+
 void* g_enclave_base;
 void* g_enclave_top;
 bool g_allowed_files_warn = false;
 
-static int register_file(const char* uri, const char* checksum_str, bool check_duplicates);
+/*
+ * SGX's EGETKEY(SEAL_KEY) uses three masks as key-derivation material:
+ *   - KEYREQUEST.ATTRIBUTESMASK.FLAGS
+ *   - KEYREQUEST.ATTRIBUTESMASK.XFRM
+ *   - KEYREQUEST.MISCMASK
+ *
+ * These default masks may be replaced by user-defined ones (specified in the manifest file).
+ * Corresponding manifest keys are:
+ *   - `sgx.seal_key.flags_mask`
+ *   - `sgx.seal_key.xfrm_mask`
+ *   - `sgx.seal_key.misc_mask`
+ */
+static uint64_t g_seal_key_flags_mask = SGX_FLAGS_MASK_CONST;
+static uint64_t g_seal_key_xfrm_mask  = SGX_XFRM_MASK_CONST;
+static uint32_t g_seal_key_misc_mask  = SGX_MISCSELECT_MASK_CONST;
+
+static_assert(sizeof(g_seal_key_flags_mask) + sizeof(g_seal_key_xfrm_mask) ==
+                  sizeof(sgx_attributes_t), "wrong types");
+static_assert(sizeof(g_seal_key_misc_mask) == sizeof(sgx_misc_select_t), "wrong types");
 
 bool sgx_is_completely_within_enclave(const void* addr, size_t size) {
     if ((uintptr_t)addr > UINTPTR_MAX - size) {
@@ -209,9 +229,9 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     memcpy(&key_request.config_svn, &g_pal_linuxsgx_state.enclave_info.config_svn,
            sizeof(sgx_config_svn_t));
 
-    key_request.attribute_mask.flags = SGX_FLAGS_MASK_CONST;
-    key_request.attribute_mask.xfrm  = SGX_XFRM_MASK_CONST;
-    key_request.misc_mask            = SGX_MISCSELECT_MASK_CONST;
+    key_request.attribute_mask.flags = g_seal_key_flags_mask;
+    key_request.attribute_mask.xfrm  = g_seal_key_xfrm_mask;
+    key_request.misc_mask            = g_seal_key_misc_mask;
 
     int ret = sgx_getkey(&key_request, out_seal_key);
     if (ret) {
@@ -976,6 +996,70 @@ int init_file_check_policy(void) {
     log_debug("File check policy: %s", file_check_policy_str);
     free(file_check_policy_str);
     return 0;
+}
+
+static int update_seal_key_mask(const char* mask_name, uint8_t* mask_ptr, size_t mask_size) {
+    int ret;
+
+    char* mask_str = NULL;
+    ret = toml_string_in(g_pal_public_state.manifest_root, mask_name, &mask_str);
+    if (ret < 0) {
+        log_error("Cannot parse '%s'", mask_name);
+        return -PAL_ERROR_INVAL;
+    }
+
+    if (!mask_str) {
+        /* no mask specified in the manifest, use the default */
+        return 0;
+    }
+
+    if (strlen(mask_str) != 2 + mask_size * 2) {
+        log_error("Malformed '%s' value in the manifest (wrong size)", mask_name);
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (mask_str[0] != '0' || (mask_str[1] != 'x' && mask_str[1] != 'X')) {
+        log_error("Malformed '%s' value in the manifest (must start with '0x')", mask_name);
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    memset(mask_ptr, 0, mask_size);
+
+    for (size_t i = 0; i < mask_size * 2; i++) {
+        int8_t val = hex2dec(mask_str[i + 2]); /* skip first two chars (the '0x' prefix) */
+        if (val < 0) {
+            log_error("Malformed '%s' value in the manifest (not a hex number)", mask_name);
+            ret = -PAL_ERROR_INVAL;
+            goto out;
+        }
+        uint8_t* mask_byte = &mask_ptr[mask_size - i / 2 - 1];
+        *mask_byte = *mask_byte * 16 + (uint8_t)val;
+    }
+
+    ret = 0;
+out:
+    free(mask_str);
+    return ret;
+}
+
+int init_seal_key_material(void) {
+    int ret;
+
+    /* below parsing of TOML strings assumes little-endianness (which is true for this SGX PAL) */
+    ret = update_seal_key_mask("sgx.seal_key.flags_mask", (uint8_t*)&g_seal_key_flags_mask,
+                               sizeof(g_seal_key_flags_mask));
+    if (ret < 0)
+        return ret;
+
+    ret = update_seal_key_mask("sgx.seal_key.xfrm_mask", (uint8_t*)&g_seal_key_xfrm_mask,
+                               sizeof(g_seal_key_xfrm_mask));
+    if (ret < 0)
+        return ret;
+
+    return update_seal_key_mask("sgx.seal_key.misc_mask", (uint8_t*)&g_seal_key_misc_mask,
+                                sizeof(g_seal_key_misc_mask));
 }
 
 int init_enclave(void) {

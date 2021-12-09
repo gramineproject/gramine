@@ -532,6 +532,27 @@ ISV Product ID and SVN
 This syntax specifies the ISV Product ID and SVN to be added to the enclave
 signature.
 
+Attribute masks for SGX sealing key derivation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.seal_key.flags_mask = "[8-byte hex value]"  (default: "0xffffffffffffffff")
+    sgx.seal_key.xfrm_mask  = "[8-byte hex value]"  (default: "0xfffffffffff9ff1b")
+    sgx.seal_key.misc_mask  = "[4-byte hex value]"  (default: "0xffffffff")
+
+This syntax specifies masks used to generate the SGX sealing key. These masks
+correspond to the following SGX ``KEYREQUEST`` struct fields:
+
+- ``flags_mask``: ``KEYREQUEST.ATTRIBUTESMASK.FLAGS``
+- ``xfrm_mask``: ``KEYREQUEST.ATTRIBUTESMASK.XFRM``
+- ``misc_mask``: ``KEYREQUEST.MISCMASK``
+
+Most users do *not* need to set these masks. Only advanced users with knowledge
+of SGX sealing should use these masks. In particular, these masks allow to
+specify a subset of enclave/machine attributes to be used in sealing key
+derivation. Moreover, these masks themselves are used in sealing key derivation.
+
 Allowed files
 ^^^^^^^^^^^^^
 

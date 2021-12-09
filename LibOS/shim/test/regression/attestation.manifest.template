@@ -21,6 +21,11 @@ sgx.nonpie_binary = true
 sgx.debug = true
 sgx.remote_attestation = true
 
+# below three entries are irrelevant, only for test purposes
+sgx.seal_key.flags_mask = "0xffffffffffffffff"
+sgx.seal_key.xfrm_mask  = "0xfffffffffff9ff1b"
+sgx.seal_key.misc_mask  = "0xffffffff"
+
 sgx.ra_client_spid = "{{ env.get('RA_CLIENT_SPID', '') }}"
 sgx.ra_client_linkable = {{ 'true' if env.get('RA_CLIENT_LINKABLE', '0') == '1' else 'false' }}
 

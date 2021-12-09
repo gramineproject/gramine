@@ -28,8 +28,9 @@
 #include "enclave_tf_structs.h"
 #include "pal.h"
 
-int init_file_check_policy(void);
+int init_seal_key_material(void);
 
+int init_file_check_policy(void);
 int get_file_check_policy(void);
 
 /*!
