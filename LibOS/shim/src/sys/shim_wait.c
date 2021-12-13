@@ -84,7 +84,7 @@ static void remove_qnode_from_wait_queue(struct shim_thread_queue* qnode) {
             /* Check `mark_child_exited` for explanation why we might need this compiler barrier. */
             COMPILER_BARRIER();
             /* Check if `qnode` is no longer used. */
-            if (!__atomic_load_n(&qnode->in_use, __ATOMIC_ACQUIRE)) {
+            if (!atomic_load_explicit(&qnode->in_use, memory_order_acquire)) {
                 break;
             }
             int ret = thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/true);
@@ -179,7 +179,7 @@ static long do_waitid(int which, pid_t id, siginfo_t* infop, int options) {
             .next = g_process.wait_queue,
         };
         get_thread(qnode.thread);
-        __atomic_store_n(&qnode.in_use, true, __ATOMIC_RELEASE);
+        atomic_store_explicit(&qnode.in_use, true, memory_order_release);
         g_process.wait_queue = &qnode;
 
         unlock(&g_process.children_lock);
@@ -188,7 +188,7 @@ static long do_waitid(int which, pid_t id, siginfo_t* infop, int options) {
         /* Check `mark_child_exited` for explanation why we might need this compiler barrier. */
         COMPILER_BARRIER();
         /* Check that we are still supposed to sleep. */
-        if (!__atomic_load_n(&qnode.in_use, __ATOMIC_ACQUIRE)) {
+        if (!atomic_load_explicit(&qnode.in_use, memory_order_acquire)) {
             /* Something woke us up and took of the list in the meantime. */
             ret = -ERESTARTSYS;
             break;

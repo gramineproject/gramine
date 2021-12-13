@@ -118,7 +118,7 @@ static int mark_thread_to_die(struct shim_thread* thread, void* arg) {
         return 0;
     }
 
-    bool need_wakeup = !__atomic_exchange_n(&thread->time_to_die, true, __ATOMIC_ACQ_REL);
+    bool need_wakeup = !atomic_exchange_explicit(&thread->time_to_die, true, memory_order_acq_rel);
 
     /* Now let's kick `thread`, so that it notices (in `handle_signal`) the flag `time_to_die`
      * set above (but only if we really set that flag). */
@@ -156,8 +156,8 @@ noreturn void process_exit(int error_code, int term_signal) {
 
     /* If process_exit is invoked multiple times, only a single invocation proceeds past this
      * point. */
-    static int first = 0;
-    if (__atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) != 0) {
+    static atomic_int first = 0;
+    if (atomic_exchange_explicit(&first, 1, memory_order_relaxed) != 0) {
         /* Just exit current thread. */
         thread_exit(error_code, term_signal);
     }

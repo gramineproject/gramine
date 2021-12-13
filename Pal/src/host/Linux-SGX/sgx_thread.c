@@ -18,10 +18,10 @@
 
 struct thread_map {
     unsigned int    tid;
-    sgx_arch_tcs_t* tcs;
+    _Atomic sgx_arch_tcs_t* tcs;
 };
 
-static sgx_arch_tcs_t* g_enclave_tcs;
+static _Atomic sgx_arch_tcs_t* g_enclave_tcs;
 static int g_enclave_thread_num;
 static struct thread_map* g_enclave_thread_map;
 
@@ -284,7 +284,8 @@ int clone_thread(void) {
 }
 
 int get_tid_from_tcs(void* tcs) {
-    int index = (sgx_arch_tcs_t*)tcs - g_enclave_tcs;
+    _Atomic sgx_arch_tcs_t* atomic_tcs = tcs;
+    int index = atomic_tcs - g_enclave_tcs;
     struct thread_map* map = &g_enclave_thread_map[index];
     if (index >= g_enclave_thread_num)
         return -EINVAL;

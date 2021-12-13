@@ -42,8 +42,9 @@ extern void* g_enclave_base;
  */
 static PAL_IDX pal_assign_tid(void) {
     /* tid 1 is assigned to the first thread; see pal_linux_main() */
-    static struct atomic_int tid = ATOMIC_INIT(1);
-    return __atomic_add_fetch(&tid.counter, 1, __ATOMIC_SEQ_CST);
+    static volatile _Atomic uint32_t tid_counter = 1;
+    atomic_fetch_add_explicit(&tid_counter, 1, memory_order_seq_cst);
+    return tid_counter;
 }
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
@@ -60,8 +61,8 @@ void pal_start_thread(void) {
         if (!tmp->tcs) {
             new_thread = tmp;
             new_thread->tid = pal_assign_tid();
-            __atomic_store_n(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TLS(tcs_offset)),
-                             __ATOMIC_RELEASE);
+            atomic_store_explicit(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TLS(tcs_offset)),
+                                  memory_order_release);
             break;
         }
     spinlock_unlock(&g_thread_list_lock);
@@ -130,7 +131,7 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* para
 
     /* There can be subtle race between the parent and child so hold the parent until child updates
      * its tcs. */
-    while (!__atomic_load_n(&new_thread->thread.tcs, __ATOMIC_ACQUIRE))
+    while (!atomic_load_explicit(&new_thread->thread.tcs, memory_order_acquire))
         CPU_RELAX();
 
     *handle = new_thread;

@@ -189,7 +189,7 @@ typedef struct {
 } ms_ocall_sched_getaffinity_t;
 
 typedef struct {
-    uint32_t* ms_futex;
+    _Atomic uint32_t* ms_futex;
     int ms_op, ms_val;
     uint64_t ms_timeout_us;
 } ms_ocall_futex_t;

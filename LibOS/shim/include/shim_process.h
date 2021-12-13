@@ -37,7 +37,7 @@ struct shim_process {
     IDTYPE ppid;
 
     /* This field should be accessed atomically, so no lock needed. */
-    IDTYPE pgid;
+    _Atomic IDTYPE pgid;
 
     /* Currently all threads share filesystem information. For more info check `CLONE_FS` flag in
      * `clone.c`. Protected by `fs_lock`. */

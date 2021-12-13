@@ -110,7 +110,7 @@ typedef struct pal_handle {
         struct {
             spinlock_t lock;
             uint32_t waiters_cnt;
-            uint32_t signaled;
+            _Atomic uint32_t signaled;
             bool auto_clear;
         } event;
     };

@@ -150,7 +150,7 @@ static int init_main_thread(void) {
         return -ESRCH;
     }
     g_process.pid = cur_thread->tid;
-    __atomic_store_n(&g_process.pgid, g_process.pid, __ATOMIC_RELEASE);
+    atomic_store_explicit(&g_process.pgid, g_process.pid, memory_order_release);
 
     int64_t uid_int64;
     ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/0, &uid_int64);
@@ -450,7 +450,7 @@ void cleanup_thread(IDTYPE caller, void* arg) {
     assert(thread);
 
     /* wait on clear_child_tid_pal; this signals that PAL layer exited child thread */
-    while (__atomic_load_n(&thread->clear_child_tid_pal, __ATOMIC_RELAXED) != 0)
+    while (atomic_load_explicit(&thread->clear_child_tid_pal, memory_order_relaxed) != 0)
         CPU_RELAX();
 
     if (thread->robust_list) {

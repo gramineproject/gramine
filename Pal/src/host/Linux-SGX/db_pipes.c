@@ -43,7 +43,7 @@ static int thread_handshake_func(void* param) {
         _DkProcessExit(1);
     }
 
-    __atomic_store_n(&handle->pipe.handshake_done, 1, __ATOMIC_RELEASE);
+    atomic_store_explicit(&handle->pipe.handshake_done, 1, memory_order_release);
     return 0;
 }
 
@@ -160,7 +160,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
         free(clnt);
         return ret;
     }
-    __atomic_store_n(&clnt->pipe.handshake_done, 1, __ATOMIC_RELEASE);
+    atomic_store_explicit(&clnt->pipe.handshake_done, 1, memory_order_release);
 
     *client = clnt;
     return 0;
@@ -352,7 +352,7 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
             return unix_to_pal_error(bytes);
     } else {
         /* normal pipe, use a secure session (should be already initialized) */
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire))
             CPU_RELAX();
 
         if (!handle->pipe.ssl_ctx)
@@ -390,7 +390,7 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
             return unix_to_pal_error(bytes);
     } else {
         /* normal pipe, use a secure session (should be already initialized) */
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire))
             CPU_RELAX();
 
         if (!handle->pipe.ssl_ctx)
@@ -420,7 +420,7 @@ static int pipe_close(PAL_HANDLE handle) {
             handle->pipeprv.fds[1] = PAL_IDX_POISON;
         }
     } else if (handle->pipe.fd != PAL_IDX_POISON) {
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire))
             CPU_RELAX();
 
         if (handle->pipe.ssl_ctx) {
@@ -470,7 +470,7 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
         }
     } else {
         /* This pipe might use a secure session, make sure all initial work is done. */
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire)) {
             CPU_RELAX();
         }
 
@@ -524,7 +524,7 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         attr->writable = ret >= 1 && (pfd[1].revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
     } else {
         /* This pipe might use a secure session, make sure all initial work is done. */
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire)) {
             CPU_RELAX();
         }
 
@@ -562,7 +562,7 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPEPRV) {
         /* This pipe might use a secure session, make sure all initial work is done. */
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
+        while (!atomic_load_explicit(&handle->pipe.handshake_done, memory_order_acquire)) {
             CPU_RELAX();
         }
     }

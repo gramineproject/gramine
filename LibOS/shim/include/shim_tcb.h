@@ -3,7 +3,6 @@
 
 #include "api.h"
 #include "assert.h"
-#include "atomic.h"
 #include "gramine_entry_api.h"
 #include "pal.h"
 #include "shim_entry.h"

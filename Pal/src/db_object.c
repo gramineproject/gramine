@@ -6,7 +6,6 @@
  */
 
 #include "api.h"
-#include "atomic.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"

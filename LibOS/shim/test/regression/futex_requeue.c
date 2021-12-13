@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <linux/futex.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,10 +41,10 @@ static void check(int x) {
 }
 
 static void store(int* ptr, int val) {
-    __atomic_store_n(ptr, val, __ATOMIC_SEQ_CST);
+    atomic_store_explicit(ptr, val, memory_order_seq_cst);
 }
 static int load(int* ptr) {
-    return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
+    return atomic_load_explicit(ptr, memory_order_seq_cst);
 }
 
 static int futex1 = 0;

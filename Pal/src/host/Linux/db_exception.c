@@ -88,8 +88,8 @@ static void perform_signal_handling(enum pal_event event, bool is_in_pal, PAL_NU
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
     if (info->si_signo == SIGSYS && info->si_code == SYS_SECCOMP) {
         ucontext_revert_syscall(uc, info->si_arch, info->si_syscall, info->si_call_addr);
-        static int log_once = 1;
-        if (__atomic_exchange_n(&log_once, 0, __ATOMIC_RELAXED)) {
+        static _Atomic int log_once = 1;
+        if (atomic_exchange_explicit(&log_once, 0, memory_order_relaxed)) {
             log_always("Emulating a raw system/supervisor call. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }

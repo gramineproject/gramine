@@ -7,6 +7,8 @@
 #ifndef _SPINLOCK_H
 #define _SPINLOCK_H
 
+#include  <stdatomic.h>
+
 #include "api.h"
 #include "cpu.h"
 #include "log.h"
@@ -25,9 +27,9 @@
 #endif // IN_SHIM
 
 typedef struct {
-    uint32_t lock;
+    _Atomic uint32_t lock;
 #ifdef DEBUG_SPINLOCKS_SHIM
-    unsigned int owner;
+    _Atomic unsigned int owner;
 #endif // DEBUG_SPINLOCKS_SHIM
 } spinlock_t;
 
@@ -53,11 +55,11 @@ typedef struct {
 
 #ifdef DEBUG_SPINLOCKS_SHIM
 static inline void debug_spinlock_take_ownership(spinlock_t* lock) {
-    __atomic_store_n(&lock->owner, get_cur_tid(), __ATOMIC_RELAXED);
+    atomic_store_explicit(&lock->owner, get_cur_tid(), memory_order_relaxed);
 }
 
 static inline void debug_spinlock_giveup_ownership(spinlock_t* lock) {
-    __atomic_store_n(&lock->owner, SPINLOCK_UNLOCKED, __ATOMIC_RELAXED);
+    atomic_store_explicit(&lock->owner, SPINLOCK_UNLOCKED, memory_order_relaxed);
 }
 #else
 static inline void debug_spinlock_take_ownership(spinlock_t* lock) {
@@ -75,7 +77,7 @@ static inline void debug_spinlock_giveup_ownership(spinlock_t* lock) {
  */
 static inline void spinlock_init(spinlock_t* lock) {
     debug_spinlock_giveup_ownership(lock);
-    __atomic_store_n(&lock->lock, SPINLOCK_UNLOCKED, __ATOMIC_RELAXED);
+    atomic_store_explicit(&lock->lock, SPINLOCK_UNLOCKED, memory_order_relaxed);
 }
 
 /*!
@@ -84,7 +86,8 @@ static inline void spinlock_init(spinlock_t* lock) {
  * \return  0 if acquiring the lock succeeded, 1 if it was already taken.
  */
 static inline int spinlock_trylock(spinlock_t* lock) {
-    if (__atomic_exchange_n(&lock->lock, SPINLOCK_LOCKED, __ATOMIC_ACQUIRE) == SPINLOCK_UNLOCKED) {
+    if (atomic_exchange_explicit(&lock->lock, SPINLOCK_LOCKED, memory_order_acquire)
+            == SPINLOCK_UNLOCKED) {
         debug_spinlock_take_ownership(lock);
         return 0;
     }
@@ -98,19 +101,20 @@ static inline void spinlock_lock(spinlock_t* lock) {
     uint32_t val;
 
     /* First check if lock is already free. */
-    if (__atomic_exchange_n(&lock->lock, SPINLOCK_LOCKED, __ATOMIC_ACQUIRE) == SPINLOCK_UNLOCKED) {
+    if (atomic_exchange_explicit(&lock->lock, SPINLOCK_LOCKED, memory_order_acquire)
+            == SPINLOCK_UNLOCKED) {
         goto out;
     }
 
     do {
         /* This check imposes no inter-thread ordering, thus does not slow other threads. */
-        while (__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) != SPINLOCK_UNLOCKED)
+        while (atomic_load_explicit(&lock->lock, memory_order_relaxed) != SPINLOCK_UNLOCKED)
             CPU_RELAX();
         /* Seen lock as free, check if it still is, this time with acquire semantics (but only
          * if we really take it). */
         val = SPINLOCK_UNLOCKED;
-    } while (!__atomic_compare_exchange_n(&lock->lock, &val, SPINLOCK_LOCKED, /*weak=*/false,
-                                          __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+    } while (!atomic_compare_exchange_strong_explicit(&lock->lock, &val, SPINLOCK_LOCKED,
+                                                      memory_order_acquire, memory_order_relaxed));
 
 out:
     debug_spinlock_take_ownership(lock);
@@ -126,13 +130,14 @@ static inline int spinlock_lock_timeout(spinlock_t* lock, unsigned long iteratio
     uint32_t val;
 
     /* First check if lock is already free. */
-    if (__atomic_exchange_n(&lock->lock, SPINLOCK_LOCKED, __ATOMIC_ACQUIRE) == SPINLOCK_UNLOCKED) {
+    if (atomic_exchange_explicit(&lock->lock, SPINLOCK_LOCKED, memory_order_acquire)
+            == SPINLOCK_UNLOCKED) {
         goto out_success;
     }
 
     do {
         /* This check imposes no inter-thread ordering, thus does not slow other threads. */
-        while (__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) != SPINLOCK_UNLOCKED) {
+        while (atomic_load_explicit(&lock->lock, memory_order_relaxed) != SPINLOCK_UNLOCKED) {
             if (iterations == 0) {
                 return 1;
             }
@@ -142,8 +147,8 @@ static inline int spinlock_lock_timeout(spinlock_t* lock, unsigned long iteratio
         /* Seen lock as free, check if it still is, this time with acquire semantics (but only
          * if we really take it). */
         val = SPINLOCK_UNLOCKED;
-    } while (!__atomic_compare_exchange_n(&lock->lock, &val, SPINLOCK_LOCKED, /*weak=*/false,
-                                          __ATOMIC_ACQUIRE, __ATOMIC_RELAXED));
+    } while (!atomic_compare_exchange_strong_explicit(&lock->lock, &val, SPINLOCK_LOCKED,
+                                                      memory_order_acquire, memory_order_relaxed));
 
 out_success:
     debug_spinlock_take_ownership(lock);
@@ -159,9 +164,8 @@ out_success:
  * returned.
  */
 static inline int spinlock_cmpxchg(spinlock_t* lock, uint32_t* expected, uint32_t desired) {
-    static_assert(SAME_TYPE(&lock->lock, expected), "spinlock is not implemented as int*");
-    return __atomic_compare_exchange_n(&lock->lock, expected, desired, /*weak=*/false,
-                                       __ATOMIC_ACQUIRE, __ATOMIC_RELAXED);
+    return atomic_compare_exchange_strong_explicit(&lock->lock, expected, desired,
+                                                   memory_order_acquire, memory_order_relaxed);
 }
 
 /*!
@@ -169,12 +173,12 @@ static inline int spinlock_cmpxchg(spinlock_t* lock, uint32_t* expected, uint32_
  */
 static inline void spinlock_unlock(spinlock_t* lock) {
     debug_spinlock_giveup_ownership(lock);
-    __atomic_store_n(&lock->lock, SPINLOCK_UNLOCKED, __ATOMIC_RELEASE);
+    atomic_store_explicit(&lock->lock, SPINLOCK_UNLOCKED, memory_order_release);
 }
 
 #ifdef DEBUG_SPINLOCKS
 static inline bool _spinlock_is_locked(spinlock_t* lock) {
-    return __atomic_load_n(&lock->lock, __ATOMIC_SEQ_CST) != SPINLOCK_UNLOCKED;
+    return atomic_load_explicit(&lock->lock, memory_order_seq_cst) != SPINLOCK_UNLOCKED;
 }
 
 #ifdef DEBUG_SPINLOCKS_SHIM
@@ -182,7 +186,7 @@ static inline bool spinlock_is_locked(spinlock_t* lock) {
     if (!_spinlock_is_locked(lock)) {
         return false;
     }
-    unsigned int owner = __atomic_load_n(&lock->owner, __ATOMIC_RELAXED);
+    unsigned int owner = atomic_load_explicit(&lock->owner, memory_order_relaxed);
     if (owner != get_cur_tid()) {
         log_error("Unexpected lock ownership: owned by: %d, checked in: %d", owner, get_cur_tid());
         return false;

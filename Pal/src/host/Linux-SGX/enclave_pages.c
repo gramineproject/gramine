@@ -9,7 +9,7 @@
 #include "pal_security.h"
 #include "spinlock.h"
 
-struct atomic_int g_allocated_pages;
+_Atomic int64_t g_allocated_pages;
 
 static void* g_heap_bottom;
 static void* g_heap_top;
@@ -172,7 +172,8 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
 
     assert(vma->top - vma->bottom >= (ptrdiff_t)freed);
     size_t allocated = vma->top - vma->bottom - freed;
-    __atomic_add_fetch(&g_allocated_pages.counter, allocated / g_page_size, __ATOMIC_SEQ_CST);
+    atomic_fetch_add_explicit(&g_allocated_pages,
+                              allocated / g_page_size, memory_order_seq_cst);
 
     return addr;
 }
@@ -316,7 +317,8 @@ int free_enclave_pages(void* addr, size_t size) {
         }
     }
 
-    __atomic_sub_fetch(&g_allocated_pages.counter, freed / g_page_size, __ATOMIC_SEQ_CST);
+    atomic_fetch_sub_explicit(&g_allocated_pages,
+                              freed / g_page_size, memory_order_seq_cst);
 
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);

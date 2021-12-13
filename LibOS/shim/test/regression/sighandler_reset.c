@@ -2,6 +2,7 @@
 #include <err.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/signal.h>
@@ -9,10 +10,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-static unsigned count = 0;
+static atomic_uint count = 0;
 
 static void handler(int signum) {
-    __atomic_add_fetch(&count, 1, __ATOMIC_RELEASE);
+    atomic_fetch_add_explicit(&count, 1, memory_order_release);
     printf("Got signal %d\n", signum);
 }
 
@@ -60,7 +61,7 @@ int main(void) {
         errx(1, "unexpected exit status: %d", status);
     }
 
-    unsigned tmp_count = __atomic_load_n(&count, __ATOMIC_ACQUIRE);
+    unsigned tmp_count = atomic_load_explicit(&count, memory_order_acquire);
     printf("Handler was invoked %u time(s).\n", tmp_count);
 
     if (tmp_count != 1)

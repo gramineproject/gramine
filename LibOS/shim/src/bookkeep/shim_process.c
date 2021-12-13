@@ -168,7 +168,7 @@ static bool mark_child_exited(child_cmp_t child_cmp, unsigned long arg, IDTYPE c
     while (wait_queue) {
         struct shim_thread_queue* next = wait_queue->next;
         struct shim_thread* thread = wait_queue->thread;
-        __atomic_store_n(&wait_queue->in_use, false, __ATOMIC_RELEASE);
+        atomic_store_explicit(&wait_queue->in_use, false, memory_order_release);
         /* In theory the atomic release store above does not prevent hoisting of code to before it.
          * Here we rely on the order: first store to `in_use`, then wake the thread. Let's add
          * a compiler barrier to prevent compiler from messing with this (e.g. if `thread_wakeup`

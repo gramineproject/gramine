@@ -755,7 +755,7 @@ BEGIN_CP_FUNC(handle) {
             case TYPE_EPOLL:
                 /* `new_hdl->info.epoll.fds_count` stays the same - copied above. */
                 DO_CP(epoll_item, &hdl->info.epoll.fds, &new_hdl->info.epoll.fds);
-                __atomic_store_n(&new_hdl->info.epoll.waiter_cnt, 0, __ATOMIC_RELAXED);
+                atomic_store_explicit(&new_hdl->info.epoll.waiter_cnt, 0, memory_order_relaxed);
                 memset(&new_hdl->info.epoll.event, '\0', sizeof(new_hdl->info.epoll.event));
                 break;
             case TYPE_SOCK:

@@ -76,7 +76,7 @@ int ocall_clone_thread(void);
 
 int ocall_create_process(size_t nargs, const char** args, int* stream_fd);
 
-int ocall_futex(uint32_t* uaddr, int op, int val, uint64_t* timeout_us);
+int ocall_futex(_Atomic uint32_t* uaddr, int op, int val, uint64_t* timeout_us);
 
 int ocall_gettime(uint64_t* microsec);
 

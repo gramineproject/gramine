@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <linux/futex.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/syscall.h>
@@ -38,9 +39,9 @@ static void do_grandchild(int fd) {
     _exit(42);
 }
 
-static uint32_t last_sig = 0;
+static _Atomic uint32_t last_sig = 0;
 static void handler(int sig) {
-    __atomic_store_n(&last_sig, sig, __ATOMIC_RELAXED);
+    atomic_store_explicit(&last_sig, sig, memory_order_relaxed);
 }
 
 int main(void) {

@@ -32,7 +32,7 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
     handle->event.waiters_cnt = 0;
     handle->event.signaled = init_signaled;
     handle->event.auto_clear = auto_clear;
-    __atomic_store_n(handle->event.signaled_untrusted, init_signaled ? 1 : 0, __ATOMIC_RELEASE);
+    atomic_store_explicit(handle->event.signaled_untrusted, init_signaled ? 1 : 0, memory_order_release);
 
     *handle_ptr = handle;
     return 0;
@@ -41,7 +41,7 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
 void _DkEventSet(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     handle->event.signaled = true;
-    __atomic_store_n(handle->event.signaled_untrusted, 1, __ATOMIC_RELEASE);
+    atomic_store_explicit(handle->event.signaled_untrusted, 1, memory_order_release);
     bool need_wake = handle->event.waiters_cnt > 0;
     spinlock_unlock(&handle->event.lock);
 
@@ -61,7 +61,7 @@ void _DkEventSet(PAL_HANDLE handle) {
 void _DkEventClear(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     handle->event.signaled = false;
-    __atomic_store_n(handle->event.signaled_untrusted, 0, __ATOMIC_RELEASE);
+    atomic_store_explicit(handle->event.signaled_untrusted, 0, memory_order_release);
     spinlock_unlock(&handle->event.lock);
 }
 
@@ -74,7 +74,7 @@ int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
         if (handle->event.signaled) {
             if (handle->event.auto_clear) {
                 handle->event.signaled = false;
-                __atomic_store_n(handle->event.signaled_untrusted, 0, __ATOMIC_RELEASE);
+                atomic_store_explicit(handle->event.signaled_untrusted, 0, memory_order_release);
             }
             if (added_to_count) {
                 handle->event.waiters_cnt--;

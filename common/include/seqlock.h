@@ -25,7 +25,7 @@
 #include "spinlock.h"
 
 typedef struct {
-    uint32_t sequence;
+    _Atomic uint32_t sequence;
     spinlock_t lock;
 } seqlock_t;
 
@@ -39,7 +39,7 @@ typedef struct {
  * \brief Initialize seqlock with *dynamic* storage duration.
  */
 static inline void seqlock_init(seqlock_t* sl) {
-    __atomic_store_n(&sl->sequence, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(&sl->sequence, 0, memory_order_relaxed);
     spinlock_init(&sl->lock);
 }
 
@@ -49,7 +49,7 @@ static inline void seqlock_init(seqlock_t* sl) {
 static inline uint32_t read_seqbegin(seqlock_t* sl) {
     uint32_t start;
     while (true) {
-        start = __atomic_load_n(&sl->sequence, __ATOMIC_RELAXED);
+        start = atomic_load_explicit(&sl->sequence, memory_order_relaxed);
         if ((start & 1) == 0) {
             /* there is no writer in the middle of an update, data is currently consistent */
             break;
@@ -65,7 +65,7 @@ static inline uint32_t read_seqbegin(seqlock_t* sl) {
  */
 static inline bool read_seqretry(seqlock_t* sl, uint32_t start) {
     RMB();
-    return start != __atomic_load_n(&sl->sequence, __ATOMIC_RELAXED);
+    return start != atomic_load_explicit(&sl->sequence, memory_order_relaxed);
 }
 
 /*!
@@ -73,7 +73,7 @@ static inline bool read_seqretry(seqlock_t* sl, uint32_t start) {
  */
 static inline void write_seqbegin(seqlock_t* sl) {
     spinlock_lock(&sl->lock);
-    __atomic_add_fetch(&sl->sequence, 1, __ATOMIC_RELAXED);
+    atomic_fetch_add_explicit(&sl->sequence, 1, memory_order_relaxed);
     WMB();
 }
 
@@ -82,7 +82,7 @@ static inline void write_seqbegin(seqlock_t* sl) {
  */
 static inline void write_seqend(seqlock_t* sl) {
     WMB();
-    __atomic_add_fetch(&sl->sequence, 1, __ATOMIC_RELAXED);
+    atomic_fetch_add_explicit(&sl->sequence, 1, memory_order_relaxed);
     spinlock_unlock(&sl->lock);
 }
 

@@ -40,7 +40,7 @@ static struct shim_thread* g_worker_thread = NULL;
 static AEVENTTYPE exit_notification_event;
 /* Used by `DkThreadExit` to indicate that the thread really exited and is not using any resources
  * (e.g. stack) anymore. Awaited to be `0` (thread exited) in `terminate_ipc_worker()`. */
-static int g_clear_on_worker_exit = 1;
+static _Atomic int g_clear_on_worker_exit = 1;
 static PAL_HANDLE g_self_ipc_handle = NULL;
 
 typedef int (*ipc_callback)(IDTYPE src, void* data, uint64_t seq);
@@ -414,7 +414,7 @@ int init_ipc_worker(void) {
 void terminate_ipc_worker(void) {
     set_event(&exit_notification_event, 1);
 
-    while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_RELAXED)) {
+    while (atomic_load_explicit(&g_clear_on_worker_exit, memory_order_relaxed)) {
         CPU_RELAX();
     }
 

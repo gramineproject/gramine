@@ -15,10 +15,10 @@
 #include <linux/shm.h>
 #include <linux/un.h>
 #include <stdalign.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "atomic.h"  // TODO: migrate to stdatomic.h
 #include "list.h"
 #include "pal.h"
 #include "shim_defs.h"
@@ -176,7 +176,7 @@ struct shim_epoll_item {
 };
 
 struct shim_epoll_handle {
-    size_t waiter_cnt;
+    _Atomic size_t waiter_cnt;
 
     /* Number of items on fds list. */
     size_t fds_count;
@@ -214,9 +214,9 @@ struct shim_handle {
     /* Only meaningful if the handle is registered in some epoll instance with `EPOLLET` semantics.
      * `false` if it already triggered an `EPOLLIN` event for the current portion of data otherwise
      * `true` and the next `epoll_wait` will consider this handle and report events for it. */
-    bool needs_et_poll_in;
+    atomic_bool needs_et_poll_in;
     /* Same as above but for `EPOLLOUT` events. */
-    bool needs_et_poll_out;
+    atomic_bool needs_et_poll_out;
 
     struct shim_qstr uri; /* URI representing this handle, it is not
                            * necessary to be set. */

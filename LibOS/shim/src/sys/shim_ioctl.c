@@ -46,7 +46,7 @@ long shim_do_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
                 ret = -EFAULT;
                 break;
             }
-            *(int*)arg = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
+            *(int*)arg = atomic_load_explicit(&g_process.pgid, memory_order_acquire);
             ret = 0;
             break;
         case FIONBIO:

@@ -403,7 +403,7 @@ int do_kill_proc(IDTYPE sender, IDTYPE pid, int sig) {
 }
 
 int do_kill_pgroup(IDTYPE sender, IDTYPE pgid, int sig) {
-    IDTYPE current_pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
+    IDTYPE current_pgid = atomic_load_explicit(&g_process.pgid, memory_order_acquire);
     if (!pgid) {
         pgid = current_pgid;
     }

@@ -120,7 +120,7 @@ static struct shim_lock g_process_signal_queue_lock;
  * be read atomically without any locks, to get approximate value, but to get exact you need to take
  * appropriate lock. Every store should be both atomic and behind a lock.
  */
-static uint64_t g_process_pending_signals_cnt = 0;
+static _Atomic uint64_t g_process_pending_signals_cnt = 0;
 
 /*
  * If host signal injection is enabled, this stores the injected signal. Note that we currently
@@ -128,7 +128,7 @@ static uint64_t g_process_pending_signals_cnt = 0;
  * graceful termination of the user application. Note that the only host-injected signal currently
  * supported is SIGTERM; see also `pop_unblocked_signal()`.
  */
-static int g_host_injected_signal = 0;
+static _Atomic int g_host_injected_signal = 0;
 static bool g_inject_host_signal_enabled = false;
 
 static bool is_rt_sq_empty(struct shim_rt_signal_queue* queue) {
@@ -156,8 +156,8 @@ void get_all_pending_signals(__sigset_t* set) {
 
     __sigemptyset(set);
 
-    if (__atomic_load_n(&current->pending_signals, __ATOMIC_ACQUIRE) == 0
-            && __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE) == 0) {
+    if (atomic_load_explicit(&current->pending_signals, memory_order_acquire) == 0
+            && atomic_load_explicit(&g_process_pending_signals_cnt, memory_order_acquire) == 0) {
         return;
     }
 
@@ -179,7 +179,7 @@ bool have_pending_signals(void) {
     __signotset(&set, &set, &current->signal_mask);
     unlock(&current->lock);
 
-    return !__sigisemptyset(&set) || __atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE);
+    return !__sigisemptyset(&set) || atomic_load_explicit(&current->time_to_die, memory_order_acquire);
 }
 
 static bool append_standard_signal(struct shim_signal* queue_slot, struct shim_signal* signal) {
@@ -231,7 +231,7 @@ static bool append_thread_signal(struct shim_thread* thread, struct shim_signal*
     lock(&thread->lock);
     bool ret = queue_append_signal(&thread->signal_queue, signal);
     if (ret) {
-        (void)__atomic_add_fetch(&thread->pending_signals, 1, __ATOMIC_RELEASE);
+        (void)atomic_fetch_add_explicit(&thread->pending_signals, 1, memory_order_release);
     }
     unlock(&thread->lock);
     return ret;
@@ -241,7 +241,7 @@ static bool append_process_signal(struct shim_signal** signal) {
     lock(&g_process_signal_queue_lock);
     bool ret = queue_append_signal(&g_process_signal_queue, signal);
     if (ret) {
-        (void)__atomic_add_fetch(&g_process_pending_signals_cnt, 1, __ATOMIC_RELEASE);
+        (void)atomic_fetch_add_explicit(&g_process_pending_signals_cnt, 1, memory_order_release);
     }
     unlock(&g_process_signal_queue_lock);
     return ret;
@@ -494,8 +494,8 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
 
     int sig = 0;
     static_assert(SAME_TYPE(g_host_injected_signal, sig), "types must match");
-    if (!__atomic_compare_exchange_n(&g_host_injected_signal, &sig, SIGTERM,
-                                     /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+    if (!atomic_compare_exchange_strong_explicit(&g_host_injected_signal, &sig, SIGTERM,
+                                                 memory_order_relaxed, memory_order_relaxed)) {
         /* We already have 1 injected signal, bail out. */
         return;
     }
@@ -604,8 +604,8 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
     struct shim_thread* current = get_cur_thread();
     assert(current);
 
-    if (__atomic_load_n(&current->pending_signals, __ATOMIC_ACQUIRE)
-            || __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE)) {
+    if (atomic_load_explicit(&current->pending_signals, memory_order_acquire)
+            || atomic_load_explicit(&g_process_pending_signals_cnt, memory_order_acquire)) {
         lock(&current->lock);
         lock(&g_process_signal_queue_lock);
         for (int sig = 1; sig <= NUM_SIGS; sig++) {
@@ -641,11 +641,12 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
 
                 if (got) {
                     if (was_process) {
-                        (void)__atomic_sub_fetch(&g_process_pending_signals_cnt, 1,
-                                                 __ATOMIC_RELEASE);
+                        (void)atomic_fetch_sub_explicit(&g_process_pending_signals_cnt, 1,
+                                                        memory_order_release);
                         recalc_pending_mask(&g_process_signal_queue, sig);
                     } else {
-                        (void)__atomic_sub_fetch(&current->pending_signals, 1, __ATOMIC_RELEASE);
+                        (void)atomic_fetch_sub_explicit(&current->pending_signals, 1,
+                                                        memory_order_release);
                         recalc_pending_mask(&current->signal_queue, sig);
                     }
                     break;
@@ -654,11 +655,11 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
         }
         unlock(&g_process_signal_queue_lock);
         unlock(&current->lock);
-    } else if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED) != 0) {
+    } else if (atomic_load_explicit(&g_host_injected_signal, memory_order_relaxed) != 0) {
         static_assert(NUM_SIGS < 0xff, "This code requires 0xff to be an invalid signal number");
         lock(&current->lock);
         if (!__sigismember(mask ? : &current->signal_mask, SIGTERM)) {
-            int sig = __atomic_exchange_n(&g_host_injected_signal, 0xff, __ATOMIC_RELAXED);
+            int sig = atomic_exchange_explicit(&g_host_injected_signal, 0xff, memory_order_relaxed);
             if (sig != 0xff) {
                 signal->siginfo.si_signo = sig;
                 signal->siginfo.si_code = SI_USER;
@@ -684,7 +685,7 @@ bool handle_signal(PAL_CONTEXT* context, __sigset_t* old_mask_ptr) {
     assert(!is_internal(current));
     assert(!context_is_libos(context) || pal_context_get_ip(context) == (uint64_t)&syscalldb);
 
-    if (__atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE)) {
+    if (atomic_load_explicit(&current->time_to_die, memory_order_acquire)) {
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
 

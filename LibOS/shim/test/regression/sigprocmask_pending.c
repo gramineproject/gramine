@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 #include <errno.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -15,10 +16,10 @@
         }               \
     } while (0)
 
-static int seen_signal_cnt = 0;
+static atomic_int seen_signal_cnt = 0;
 
 static void signal_handler(int signal) {
-    __atomic_add_fetch(&seen_signal_cnt, 1, __ATOMIC_RELAXED);
+    atomic_fetch_add_explicit(&seen_signal_cnt, 1, memory_order_relaxed);
     printf("signal handled: %d\n", signal);
 }
 
@@ -62,7 +63,7 @@ static void clean_mask_and_pending_signals(void) {
     set_signal_handler(SIGALRM, signal_handler);
     /* This assumes that unblocking a signal will cause its immediate delivery. */
     ignore_signal(0);
-    __atomic_store_n(&seen_signal_cnt, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(&seen_signal_cnt, 0, memory_order_relaxed);
 }
 
 static void test_multiple_pending(void) {
@@ -73,19 +74,19 @@ static void test_multiple_pending(void) {
     CHECK(kill(getpid(), SIGALRM) < 0);
     CHECK(kill(getpid(), SIGALRM) < 0);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 0) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 0) {
         printf("Handled a blocked standard signal!\n");
         exit(1);
     }
 
     ignore_signal(0);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 1) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 1) {
         printf("Multiple or none instances of standard signal were queued!\n");
         exit(1);
     }
 
-    __atomic_store_n(&seen_signal_cnt, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(&seen_signal_cnt, 0, memory_order_relaxed);
 
     int sig = SIGRTMIN;
     ignore_signal(sig);
@@ -95,14 +96,14 @@ static void test_multiple_pending(void) {
 
     set_signal_handler(sig, signal_handler);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 0) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 0) {
         printf("Handled a blocked real-time signal!\n");
         exit(1);
     }
 
     ignore_signal(0);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 2) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 2) {
         printf("Multiple instances of real-time signal were NOT queued!\n");
         exit(1);
     }
@@ -120,7 +121,7 @@ static void test_fork(void) {
     if (p == 0) {
         ignore_signal(0);
 
-        if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 0) {
+        if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 0) {
             printf("Pending signal was inherited after fork!\n");
             exit(1);
         }
@@ -148,14 +149,14 @@ static void test_execve_start(char* self) {
 static void test_execve_continue(void) {
     set_signal_handler(SIGALRM, signal_handler);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 0) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 0) {
         printf("Seen an unexpected signal!\n");
         exit(1);
     }
 
     ignore_signal(0);
 
-    if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 1) {
+    if (atomic_load_explicit(&seen_signal_cnt, memory_order_relaxed) != 1) {
         printf("Pending signal was NOT preserved across execve!\n");
         exit(1);
     }

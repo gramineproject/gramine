@@ -11,8 +11,8 @@
 struct untrusted_area {
     void* addr;
     size_t size;
-    uint64_t in_use; /* must be uint64_t, because SET_ENCLAVE_TLS() currently supports only 8-byte
-                      * types. TODO: fix this. */
+    _Atomic uint64_t in_use; /* must be uint64_t, because SET_ENCLAVE_TLS() currently supports only 8-byte
+                              * types. TODO: fix this. */
     bool valid;
 };
 
@@ -95,7 +95,7 @@ static inline void pal_set_tcb_stack_canary(uint64_t canary) {
 /* private to untrusted Linux PAL, unique to each untrusted thread */
 typedef struct pal_tcb_urts {
     struct pal_tcb_urts* self;
-    sgx_arch_tcs_t* tcs;           /* TCS page of SGX corresponding to thread, for EENTER */
+    _Atomic sgx_arch_tcs_t* tcs;   /* TCS page of SGX corresponding to thread, for EENTER */
     void* stack;                   /* bottom of stack, for later freeing when thread exits */
     void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
     uint8_t is_in_aex_profiling;   /* non-zero if thread is currently doing AEX profiling */

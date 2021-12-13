@@ -40,8 +40,7 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 #define URI_MAX 4096
 
 #ifdef IN_PAL
-#include "atomic.h"
-typedef struct atomic_int PAL_REF;
+typedef _Atomic int64_t PAL_REF;
 
 typedef struct {
     PAL_IDX type;

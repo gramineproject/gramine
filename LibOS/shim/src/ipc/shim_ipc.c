@@ -254,8 +254,8 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
 }
 
 int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** resp) {
-    static uint64_t ipc_seq_counter = 1;
-    uint64_t seq = __atomic_fetch_add(&ipc_seq_counter, 1, __ATOMIC_RELAXED);
+    static _Atomic uint64_t ipc_seq_counter = 1;
+    uint64_t seq = atomic_fetch_add_explicit(&ipc_seq_counter, 1, memory_order_relaxed);
     SET_UNALIGNED(msg->header.seq, seq);
 
     struct ipc_msg_waiter waiter = {

@@ -16,7 +16,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "atomic.h"
 #include "list.h"
 #include "spinlock.h"
 
@@ -67,7 +66,7 @@ typedef struct pal_handle {
             bool nonblocking;
             bool is_server;
             PAL_SESSION_KEY session_key;
-            PAL_NUM handshake_done;
+            _Atomic PAL_NUM handshake_done;
             void* ssl_ctx;
         } pipe;
 
@@ -135,7 +134,7 @@ typedef struct pal_handle {
             bool auto_clear;
             /* Access to the *content* of this field should be atomic, because it's used as futex
              * word on the untrusted host. */
-            uint32_t* signaled_untrusted;
+            _Atomic uint32_t* signaled_untrusted;
         } event;
     };
 }* PAL_HANDLE;

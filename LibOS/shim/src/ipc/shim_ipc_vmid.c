@@ -9,10 +9,11 @@
 #include "shim_types.h"
 #include "shim_utils.h"
 
-static IDTYPE g_last_vmid = STARTING_VMID;
+static _Atomic IDTYPE g_last_vmid = STARTING_VMID;
 
 static IDTYPE get_next_vmid(void) {
-    return __atomic_add_fetch(&g_last_vmid, 1, __ATOMIC_RELAXED);
+    atomic_fetch_add_explicit(&g_last_vmid, 1, memory_order_relaxed);
+    return g_last_vmid;
 }
 
 int ipc_get_new_vmid(IDTYPE* vmid) {

@@ -47,7 +47,7 @@ long shim_do_epoll_create1(int flags) {
 
     struct shim_epoll_handle* epoll = &hdl->info.epoll;
     epoll->fds_count = 0;
-    __atomic_store_n(&epoll->waiter_cnt, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(&epoll->waiter_cnt, 0, memory_order_relaxed);
     INIT_LISTP(&epoll->fds);
 
     int ret = create_event(&epoll->event);
@@ -75,7 +75,7 @@ static void notify_epoll_waiters(struct shim_epoll_handle* epoll) {
      * XXX(borys): I don't think this is correct: set_event semantics seem to be producers-consumers
      * and here we need to wake all waiting threads. Waiting for this event is done in a loop
      * (`shim_do_epoll_wait`), what if one threads consumes multiple events? */
-    size_t waiters = __atomic_load_n(&epoll->waiter_cnt, __ATOMIC_RELAXED);
+    size_t waiters = atomic_load_explicit(&epoll->waiter_cnt, memory_order_relaxed);
     if (waiters) {
         /* TODO: this needs error checking. */
         set_event(&epoll->event, waiters);
@@ -128,9 +128,9 @@ void delete_from_epoll_handles(struct shim_handle* handle) {
 void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool was_partial) {
     if (ret == -EAGAIN || ret == -EWOULDBLOCK || was_partial) {
         if (in) {
-            __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
+            atomic_store_explicit(&handle->needs_et_poll_in, true, memory_order_release);
         } else {
-            __atomic_store_n(&handle->needs_et_poll_out, true, __ATOMIC_RELEASE);
+            atomic_store_explicit(&handle->needs_et_poll_out, true, memory_order_release);
         }
         lock(&handle->lock);
         _update_epolls(handle);
@@ -206,8 +206,8 @@ long shim_do_epoll_ctl(int epfd, int op, int fd, struct __kernel_epoll_event* ev
             epoll_item->epoll     = epoll_hdl;
 
             if (epoll_item->events & EPOLLET) {
-                __atomic_store_n(&hdl->needs_et_poll_in, true, __ATOMIC_RELEASE);
-                __atomic_store_n(&hdl->needs_et_poll_out, true, __ATOMIC_RELEASE);
+                atomic_store_explicit(&hdl->needs_et_poll_in, true, memory_order_release);
+                atomic_store_explicit(&hdl->needs_et_poll_out, true, memory_order_release);
             }
 
             /* register hdl (corresponding to FD) in epoll (corresponding to EPFD):
@@ -236,8 +236,8 @@ long shim_do_epoll_ctl(int epfd, int op, int fd, struct __kernel_epoll_event* ev
 
                     if (epoll_item->events & EPOLLET) {
                         struct shim_handle* handle = epoll_item->handle;
-                        __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
-                        __atomic_store_n(&handle->needs_et_poll_out, true, __ATOMIC_RELEASE);
+                        atomic_store_explicit(&handle->needs_et_poll_in, true, memory_order_release);
+                        atomic_store_explicit(&handle->needs_et_poll_out, true, memory_order_release);
                     }
 
                     log_debug("modified fd %d at epoll handle %p", fd, epoll);
@@ -347,10 +347,12 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
             ret_events[pal_cnt] = 0;
 
             if (epoll_item->events & EPOLLET) {
-                if (!__atomic_load_n(&epoll_item->handle->needs_et_poll_in, __ATOMIC_ACQUIRE)) {
+                if (!atomic_load_explicit(&epoll_item->handle->needs_et_poll_in,
+                                          memory_order_acquire)) {
                     pal_events[pal_cnt] &= ~PAL_WAIT_READ;
                 }
-                if (!__atomic_load_n(&epoll_item->handle->needs_et_poll_out, __ATOMIC_ACQUIRE)) {
+                if (!atomic_load_explicit(&epoll_item->handle->needs_et_poll_out,
+                                          memory_order_acquire)) {
                     pal_events[pal_cnt] &= ~PAL_WAIT_WRITE;
                 }
             }
@@ -367,7 +369,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
         ret_events[pal_cnt]  = 0;
 
         /* mark epoll as being waited on (so epoll-update signal is sent) */
-        __atomic_add_fetch(&epoll->waiter_cnt, 1, __ATOMIC_RELAXED);
+        atomic_fetch_add_explicit(&epoll->waiter_cnt, 1, memory_order_relaxed);
         unlock(&epoll_hdl->lock);
 
         /* TODO: Timeout must be updated in case of retries; otherwise, we may wait for too long */
@@ -377,7 +379,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
         error = pal_to_unix_errno(error);
 
         lock(&epoll_hdl->lock);
-        __atomic_sub_fetch(&epoll->waiter_cnt, 1, __ATOMIC_RELAXED);
+        atomic_fetch_sub_explicit(&epoll->waiter_cnt, 1, memory_order_relaxed);
 
         /* update user-supplied epoll items' revents with ret_events of polled PAL handles */
         if (!ret_events[pal_cnt] && polled) {
@@ -445,10 +447,10 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
             events[nevents].events = epoll_item->revents & monitored_events;
             events[nevents].data   = epoll_item->data;
             if (events[nevents].events & (EPOLLIN | EPOLLRDNORM)) {
-                __atomic_store_n(&epoll_item->handle->needs_et_poll_in, false, __ATOMIC_RELEASE);
+                atomic_store_explicit(&epoll_item->handle->needs_et_poll_in, false, memory_order_release);
             }
             if (events[nevents].events & (EPOLLOUT | EPOLLWRNORM)) {
-                __atomic_store_n(&epoll_item->handle->needs_et_poll_out, false, __ATOMIC_RELEASE);
+                atomic_store_explicit(&epoll_item->handle->needs_et_poll_out, false, memory_order_release);
             }
             epoll_item->revents &= ~epoll_item->events; /* informed user about revents, may clear */
             nevents++;

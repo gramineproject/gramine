@@ -2,23 +2,24 @@
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <unistd.h>
 
-static int counter = 0;
+static atomic_int counter = 0;
 
 static void sigterm_handler(int signum) {
-    __atomic_add_fetch(&counter, 1, __ATOMIC_SEQ_CST);
+    atomic_fetch_add_explicit(&counter, 1, memory_order_seq_cst);
 }
 
-static int sync_var = 0;
+static atomic_int sync_var = 0;
 
 static void set(int x) {
-    __atomic_store_n(&sync_var, x, __ATOMIC_SEQ_CST);
+    atomic_store_explicit(&sync_var, x, memory_order_seq_cst);
 }
 
 static void wait_for(int x) {
-    while (__atomic_load_n(&sync_var, __ATOMIC_SEQ_CST) != x) {
+    while (atomic_load_explicit(&sync_var, memory_order_seq_cst) != x) {
         sched_yield();
     }
 }
@@ -73,7 +74,7 @@ int main(void) {
         return 1;
     }
 
-    int t = __atomic_load_n(&counter, __ATOMIC_SEQ_CST);
+    int t = atomic_load_explicit(&counter, memory_order_seq_cst);
     if (t != 1) {
         fprintf(stderr, "test failed: sigerm_handler was run %d times\n", t);
         return 1;

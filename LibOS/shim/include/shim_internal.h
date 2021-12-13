@@ -5,12 +5,12 @@
 #define _SHIM_INTERNAL_H_
 
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdnoreturn.h>
 
 #include "api.h"
 #include "assert.h"
-#include "atomic.h"
 #include "log.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -269,32 +269,32 @@ static inline int clear_event(AEVENTTYPE* e) {
 }
 
 /* reference counter APIs */
-#define REF_GET(ref)        __atomic_load_n(&(ref).counter, __ATOMIC_SEQ_CST)
-#define REF_SET(ref, count) __atomic_store_n(&(ref).counter, count, __ATOMIC_SEQ_CST);
+#define REF_GET(ref)        atomic_load_explicit(&ref, memory_order_seq_cst)
+#define REF_SET(ref, count) atomic_store_explicit(&ref, count, memory_order_seq_cst);
 
-static inline int64_t __ref_inc(REFTYPE* ref) {
+static inline int64_t __ref_inc(REFTYPE* ref_count) {
     int64_t _c;
     do {
-        _c = __atomic_load_n(&ref->counter, __ATOMIC_SEQ_CST);
+        _c = atomic_load_explicit(ref_count, memory_order_seq_cst);
         assert(_c >= 0);
-    } while (!__atomic_compare_exchange_n(&ref->counter, &_c, _c + 1, /*weak=*/false,
-                                          __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+    } while (!atomic_compare_exchange_strong_explicit(ref_count, &_c, _c + 1,
+                                                      memory_order_seq_cst, memory_order_relaxed));
     return _c + 1;
 }
 
 #define REF_INC(ref) __ref_inc(&(ref))
 
-static inline int64_t __ref_dec(REFTYPE* ref) {
+static inline int64_t __ref_dec(REFTYPE* ref_count) {
     int64_t _c;
     do {
-        _c = __atomic_load_n(&ref->counter, __ATOMIC_SEQ_CST);
+        _c = atomic_load_explicit(ref_count, memory_order_seq_cst);
         if (!_c) {
             log_error("Fail: Trying to drop reference count below 0");
             BUG();
             return 0;
         }
-    } while (!__atomic_compare_exchange_n(&ref->counter, &_c, _c - 1, /*weak=*/false,
-                                          __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+    } while (!atomic_compare_exchange_strong_explicit(ref_count, &_c, _c - 1,
+                                                      memory_order_seq_cst, memory_order_relaxed));
     return _c - 1;
 }
 

@@ -334,7 +334,7 @@ static int futex_wait(uint32_t* uaddr, uint32_t val, uint64_t timeout, uint32_t 
     spinlock_lock(&futex->lock);
     spinlock_unlock(&g_futex_tree_lock);
 
-    if (__atomic_load_n(uaddr, __ATOMIC_RELAXED) != val) {
+    if (atomic_load_explicit(uaddr, memory_order_relaxed) != val) {
         ret = -EAGAIN;
         goto out_with_futex_lock;
     }
@@ -522,19 +522,19 @@ static int futex_wake_op(uint32_t* uaddr1, uint32_t* uaddr2, int to_wake1, int t
 
     switch (op) {
         case FUTEX_OP_SET:
-            oldval = __atomic_exchange_n(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = atomic_exchange_explicit(uaddr2, oparg, memory_order_relaxed);
             break;
         case FUTEX_OP_ADD:
-            oldval = __atomic_fetch_add(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = atomic_fetch_add_explicit(uaddr2, oparg, memory_order_relaxed);
             break;
         case FUTEX_OP_OR:
-            oldval = __atomic_fetch_or(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = atomic_fetch_or_explicit(uaddr2, oparg, memory_order_relaxed);
             break;
         case FUTEX_OP_ANDN:
-            oldval = __atomic_fetch_nand(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = atomic_fetch_and_explicit(uaddr2, ~oparg, memory_order_relaxed);
             break;
         case FUTEX_OP_XOR:
-            oldval = __atomic_fetch_xor(uaddr2, oparg, __ATOMIC_RELAXED);
+            oldval = atomic_fetch_xor_explicit(uaddr2, oparg, memory_order_relaxed);
             break;
         default:
             ret = -ENOSYS;
@@ -637,7 +637,7 @@ static int futex_requeue(uint32_t* uaddr1, uint32_t* uaddr2, int to_wake, int to
     spinlock_unlock(&g_futex_tree_lock);
 
     if (val != NULL) {
-        if (__atomic_load_n(uaddr1, __ATOMIC_RELAXED) != *val) {
+        if (atomic_load_explicit(uaddr1, memory_order_relaxed) != *val) {
             ret = -EAGAIN;
             goto out_unlock;
         }
@@ -865,7 +865,7 @@ static bool handle_futex_death(uint32_t* uaddr) {
 
     /* Loop until we successfully set the futex word or see someone else taking this futex. */
     while (1) {
-        val = __atomic_load_n(uaddr, __ATOMIC_RELAXED);
+        val = atomic_load_explicit(uaddr, memory_order_relaxed);
 
         if ((val & FUTEX_TID_MASK) != get_cur_thread()->tid) {
             /* Someone else is holding this futex. */
@@ -875,8 +875,8 @@ static bool handle_futex_death(uint32_t* uaddr) {
         /* Mark the FUTEX_OWNER_DIED bit, clear all tid bits. */
         uint32_t new_val = (val & FUTEX_WAITERS) | FUTEX_OWNER_DIED;
 
-        if (__atomic_compare_exchange_n(uaddr, &val, new_val,
-                                        /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+        if (atomic_compare_exchange_strong_explicit(uaddr, &val, new_val,
+                                                    memory_order_relaxed, memory_order_relaxed)) {
             /* Successfully set the new value, end the loop. */
             break;
         }
@@ -970,6 +970,6 @@ void release_clear_child_tid(int* clear_child_tid) {
         return;
 
     /* child thread exited, now parent can wake up */
-    __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(clear_child_tid, 0, memory_order_relaxed);
     futex_wake((uint32_t*)clear_child_tid, 1, FUTEX_BITSET_MATCH_ANY);
 }

@@ -194,8 +194,8 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
 
     /* If `execve` is invoked concurrently by multiple threads, let only one succeed. From this
      * point errors are fatal. */
-    static unsigned int first = 0;
-    if (__atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) != 0) {
+    static atomic_uint first = 0;
+    if (atomic_exchange_explicit(&first, 1, memory_order_relaxed) != 0) {
         /* Just exit current thread. */
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
@@ -203,7 +203,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
 
     /* All other threads are dead. Restoring initial value in case we stay inside same process
      * instance and call execve again. */
-    __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
+    atomic_store_explicit(&first, 0, memory_order_relaxed);
 
     /* Passing ownership of `exec`. */
     ret = shim_do_execve_rtld(exec, argv, envp);

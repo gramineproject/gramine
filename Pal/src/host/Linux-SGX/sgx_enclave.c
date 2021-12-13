@@ -795,7 +795,7 @@ static int rpc_thread_loop(void* arg) {
         req->result = f(req->buffer);
 
         /* this code is based on Mutex 2 from Futexes are Tricky */
-        int old_lock_state = __atomic_fetch_sub(&req->lock.lock, 1, __ATOMIC_ACQ_REL);
+        int old_lock_state = atomic_fetch_sub_explicit(&req->lock.lock, 1, memory_order_acq_rel);
         if (old_lock_state == SPINLOCK_LOCKED_WITH_WAITERS) {
             /* must unlock and wake waiters */
             spinlock_unlock(&req->lock);

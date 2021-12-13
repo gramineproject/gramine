@@ -37,7 +37,7 @@ long shim_do_setpgid(pid_t pid, pid_t pgid) {
     }
 
     if (!pid || g_process.pid == (IDTYPE)pid) {
-        __atomic_store_n(&g_process.pgid, (IDTYPE)pgid ?: g_process.pid, __ATOMIC_RELEASE);
+        atomic_store_explicit(&g_process.pgid, (IDTYPE)pgid ?: g_process.pid, memory_order_release);
         /* TODO: inform parent about pgid change. */
         return 0;
     }
@@ -48,7 +48,7 @@ long shim_do_setpgid(pid_t pid, pid_t pgid) {
 
 long shim_do_getpgid(pid_t pid) {
     if (!pid || g_process.pid == (IDTYPE)pid) {
-        return __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
+        return atomic_load_explicit(&g_process.pgid, memory_order_acquire);
     }
 
     /* TODO: Currently we do not support getting pgid of other processes.

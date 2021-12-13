@@ -1,3 +1,5 @@
+#include <stdatomic.h>
+
 #include "api.h"
 #include "cpu.h"
 #include "pal.h"
@@ -13,18 +15,18 @@
     _x;                                                                 \
 })
 
-static void wait_for(int* ptr, int val) {
+static void wait_for(atomic_int* ptr, int val) {
     while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != val) {
         CPU_RELAX();
     }
 }
 
-static void set(int* ptr, int val) {
+static void set(atomic_int* ptr, int val) {
     __atomic_store_n(ptr, val, __ATOMIC_RELEASE);
 }
 
-static int g_clear_thread_exit = 1;
-static int g_ready = 0;
+static atomic_int g_clear_thread_exit = 1;
+static atomic_int g_ready = 0;
 
 static void thread_func(void* arg) {
     PAL_HANDLE sleep_handle = NULL;

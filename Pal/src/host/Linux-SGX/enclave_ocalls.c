@@ -280,8 +280,8 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
     struct untrusted_area* cache = &get_tcb_trts()->untrusted_area_cache;
 
     uint64_t in_use = 0;
-    if (!__atomic_compare_exchange_n(&cache->in_use, &in_use, 1, /*weak=*/false, __ATOMIC_RELAXED,
-                                     __ATOMIC_RELAXED)) {
+    if (!atomic_compare_exchange_strong_explicit(&cache->in_use, &in_use, 1, memory_order_relaxed,
+                                                 memory_order_relaxed)) {
         /* AEX signal handling case: cache is in use, so make explicit mmap/munmap */
         ret = ocall_mmap_untrusted(addrptr, size, PROT_READ | PROT_WRITE,
                                    MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1, /*offset=*/0);
@@ -301,7 +301,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
         ret = ocall_munmap_untrusted(cache->addr, cache->size);
         if (ret < 0) {
             cache->valid = false;
-            __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
+            atomic_store_explicit(&cache->in_use, 0, memory_order_relaxed);
             return ret;
         }
     }
@@ -310,7 +310,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
                                /*fd=*/-1, /*offset=*/0);
     if (ret < 0) {
         cache->valid = false;
-        __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
+        atomic_store_explicit(&cache->in_use, 0, memory_order_relaxed);
     } else {
         cache->valid = true;
         cache->addr  = *addrptr;
@@ -325,7 +325,7 @@ static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munm
         /* there is not much we can do in case of error */
     } else {
         struct untrusted_area* cache = &get_tcb_trts()->untrusted_area_cache;
-        __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
+        atomic_store_explicit(&cache->in_use, 0, memory_order_relaxed);
     }
 }
 
@@ -1017,7 +1017,7 @@ int ocall_create_process(size_t nargs, const char** args, int* stream_fd) {
     return retval;
 }
 
-int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
+int ocall_futex(_Atomic uint32_t* futex, int op, int val, uint64_t* timeout_us) {
     int retval = 0;
     ms_ocall_futex_t* ms;
 
@@ -1522,8 +1522,8 @@ int ocall_gettime(uint64_t* microsec_ptr) {
     }
 
     /* Last seen time value. This guards against time rewinding. */
-    static uint64_t last_microsec = 0;
-    uint64_t last_microsec_before_ocall = __atomic_load_n(&last_microsec, __ATOMIC_ACQUIRE);
+    static _Atomic uint64_t last_microsec = 0;
+    uint64_t last_microsec_before_ocall = atomic_load_explicit(&last_microsec, memory_order_acquire);
     do {
         retval = sgx_exitless_ocall(OCALL_GETTIME, ms);
     } while (retval == -EINTR);
@@ -1542,8 +1542,8 @@ int ocall_gettime(uint64_t* microsec_ptr) {
         /* Update `last_microsec`. */
         uint64_t expected_microsec = last_microsec_before_ocall;
         while (expected_microsec < microsec) {
-            if (__atomic_compare_exchange_n(&last_microsec, &expected_microsec, microsec,
-                                            /*weak=*/true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+            if (atomic_compare_exchange_weak_explicit(&last_microsec, &expected_microsec, microsec,
+                                                      memory_order_release, memory_order_acquire)) {
                 break;
             }
         }

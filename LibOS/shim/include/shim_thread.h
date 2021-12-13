@@ -85,7 +85,7 @@ struct shim_thread {
     /* child tid */
     int* set_child_tid;
     int* clear_child_tid;    /* LibOS zeroes it to notify parent that thread exited */
-    int clear_child_tid_pal; /* PAL zeroes it to notify LibOS that thread exited */
+    _Atomic int clear_child_tid_pal; /* PAL zeroes it to notify LibOS that thread exited */
 
     /* signal handling */
     __sigset_t signal_mask;
@@ -94,7 +94,7 @@ struct shim_thread {
     struct shim_signal_queue signal_queue;
     /* For the field below, see the explanation in "LibOS/shim/src/bookkeep/shim_signal.c" near
      * `g_process_pending_signals_cnt`. */
-    uint64_t pending_signals;
+    _Atomic uint64_t pending_signals;
 
     /*
      * Space to store a forced, synchronous signal. Needed to handle e.g. `SIGSEGV` caused by
@@ -113,7 +113,7 @@ struct shim_thread {
 
     struct wake_queue_node wake_queue;
 
-    bool time_to_die;
+    atomic_bool time_to_die;
 
     void* stack;
     void* stack_top;
@@ -130,7 +130,7 @@ struct shim_thread_queue {
     struct shim_thread* thread;
     /* We use this field to mark that this object is still in use (is on some queue). This is needed
      * to distinguish spurious wake-ups from real ones. */
-    bool in_use;
+    atomic_bool in_use;
 };
 
 int init_threading(void);
@@ -235,8 +235,8 @@ static inline int add_thread_to_queue(struct wake_queue_head* queue, struct shim
     struct wake_queue_node* qnode = &thread->wake_queue;
 
     /* Atomic cmpxchg is enough, no need to take thread->lock */
-    if (!__atomic_compare_exchange_n(&qnode->next, &nptr, queue->first,
-                                     /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+    if (!atomic_compare_exchange_strong_explicit(&qnode->next, &nptr, queue->first,
+                                                 memory_order_relaxed, memory_order_relaxed)) {
         return 1;
     }
 
@@ -255,7 +255,7 @@ static inline void wake_queue(struct wake_queue_head* queue) {
         struct shim_thread* thread = container_of(qnode, struct shim_thread, wake_queue);
 
         qnode = qnode->next;
-        __atomic_store_n(&thread->wake_queue.next, NULL, __ATOMIC_RELAXED);
+        atomic_store_explicit(&thread->wake_queue.next, NULL, memory_order_relaxed);
 
         thread_wakeup(thread);
         put_thread(thread);

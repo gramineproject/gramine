@@ -16,7 +16,7 @@
 #include "pal_linux_defs.h"
 #include "pal_security.h"
 
-extern struct atomic_int g_allocated_pages;
+extern _Atomic int64_t g_allocated_pages;
 
 bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {
@@ -83,10 +83,10 @@ int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     }
 #endif
 
-    static struct atomic_int at_cnt = {.counter = 0};
+    static _Atomic int64_t at_cnt = 0;
     int64_t t = 0;
-    if (__atomic_compare_exchange_n(&at_cnt.counter, &t, 1, /*weak=*/false, __ATOMIC_SEQ_CST,
-                                    __ATOMIC_RELAXED))
+    if (atomic_compare_exchange_strong_explicit(&at_cnt, &t, 1, memory_order_seq_cst,
+                                                memory_order_relaxed))
         log_warning("DkVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
     return 0;
 }
@@ -97,5 +97,5 @@ uint64_t _DkMemoryQuota(void) {
 
 uint64_t _DkMemoryAvailableQuota(void) {
     return (g_pal_sec.heap_max - g_pal_sec.heap_min) -
-           __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
+           atomic_load_explicit(&g_allocated_pages, memory_order_seq_cst) * g_page_size;
 }

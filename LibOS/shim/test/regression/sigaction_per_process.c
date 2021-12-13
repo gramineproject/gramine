@@ -7,6 +7,7 @@
 #define _GNU_SOURCE
 #include <pthread.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/syscall.h>
@@ -21,27 +22,27 @@ static int tkill(pid_t tid, int sig) {
     return syscall(SYS_tkill, tid, sig);
 }
 
-static pid_t who1 = 0;
-static pid_t who2 = 0;
+static _Atomic pid_t who1 = 0;
+static _Atomic pid_t who2 = 0;
 
 static void sigterm_handler(int signum) {
     pid_t v = 0;
     pid_t my_tid = mygettid();
-    if (!__atomic_compare_exchange_n(&who1, &v, my_tid, /*weak=*/0, __ATOMIC_SEQ_CST,
-                                     __ATOMIC_SEQ_CST)) {
-        __atomic_store_n(&who2, my_tid, __ATOMIC_SEQ_CST);
+    if (!atomic_compare_exchange_strong_explicit(&who1, &v, my_tid, memory_order_seq_cst,
+                                                 memory_order_seq_cst)) {
+        atomic_store_explicit(&who2, my_tid, memory_order_seq_cst);
     }
     printf("sigterm_handler called in: %d\n", my_tid);
 }
 
-static int sync_var = 0;
+static atomic_int sync_var = 0;
 
 static void set(int x) {
-    __atomic_store_n(&sync_var, x, __ATOMIC_SEQ_CST);
+    atomic_store_explicit(&sync_var, x, memory_order_seq_cst);
 }
 
 static void wait_for(int x) {
-    while (__atomic_load_n(&sync_var, __ATOMIC_SEQ_CST) != x)
+    while (atomic_load_explicit(&sync_var, memory_order_seq_cst) != x)
         ;
 }
 
@@ -98,8 +99,8 @@ int main(void) {
         return 1;
     }
 
-    pid_t w1 = __atomic_load_n(&who1, __ATOMIC_SEQ_CST);
-    pid_t w2 = __atomic_load_n(&who2, __ATOMIC_SEQ_CST);
+    pid_t w1 = atomic_load_explicit(&who1, memory_order_seq_cst);
+    pid_t w2 = atomic_load_explicit(&who2, memory_order_seq_cst);
 
     if (w1 != tid || w2 != 0) {
         fprintf(stderr, "test failed: (%d, %d)\n", w1, w2);

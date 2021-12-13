@@ -65,7 +65,7 @@ typedef struct {
 
 typedef struct rpc_queue {
     spinlock_t lock;                  /* global lock for enclave and RPC threads */
-    uint64_t front, rear;             /* indexes into front and rear ends of q */
+    _Atomic uint64_t front, rear;     /* indexes into front and rear ends of q */
     rpc_request_t* q[RPC_QUEUE_SIZE]; /* queue of syscall requests */
     int rpc_threads[MAX_RPC_THREADS]; /* RPC threads (thread IDs) */
     size_t rpc_threads_cnt;           /* number of RPC threads */
@@ -119,8 +119,8 @@ out:
  * This function is called only from the untrusted code and thus has no security implications.
  */
 static inline rpc_request_t* rpc_dequeue(rpc_queue_t* q) {
-    if (__atomic_load_n(&q->front, __ATOMIC_RELAXED) ==
-            __atomic_load_n(&q->rear,  __ATOMIC_RELAXED)) {
+    if (atomic_load_explicit(&q->front, memory_order_relaxed) ==
+            atomic_load_explicit(&q->rear, memory_order_relaxed)) {
         /* quick check that queue is empty; this doesn't acquire a spinlock and thus lowers latency
          * on rpc_enqueue() performed by enclave threads (they don't have to wait for spinlock
          * release); note that untrusted RPC threads will simply retry again if this check fails */

@@ -171,7 +171,7 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
     struct shim_process process_description = {
         .pid = thread->tid,
         .ppid = g_process.pid,
-        .pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE),
+        .pgid = atomic_load_explicit(&g_process.pgid, memory_order_acquire),
         .root = g_process.root,
         .cwd = g_process.cwd,
         .umask = g_process.umask,
@@ -357,7 +357,7 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
 
         /* We should not have saved any references to this thread anywhere and `put_thread` below
          * should free it. */
-        assert(__atomic_load_n(&thread->ref_count.counter, __ATOMIC_RELAXED) == 1);
+        assert(atomic_load_explicit(&thread->ref_count, memory_order_relaxed) == 1);
 
         /* We do not own `thread->tid` aka `tid` anymore, clean it so that `put_thread` does not
          * try to release it. */

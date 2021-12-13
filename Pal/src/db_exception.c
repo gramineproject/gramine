@@ -17,13 +17,13 @@
 static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};
 
 pal_event_handler_t _DkGetExceptionHandler(enum pal_event event) {
-    return __atomic_load_n(&g_handlers[event], __ATOMIC_ACQUIRE);
+    return atomic_load_explicit(&g_handlers[event], memory_order_acquire);
 }
 
 void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
     assert(handler && event != PAL_EVENT_NO_EVENT && event < ARRAY_SIZE(g_handlers));
 
-    __atomic_store_n(&g_handlers[event], handler, __ATOMIC_RELEASE);
+    atomic_store_explicit(&g_handlers[event], handler, memory_order_release);
 }
 
 /* The below function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
