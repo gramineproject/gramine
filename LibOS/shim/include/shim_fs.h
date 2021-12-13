@@ -161,12 +161,11 @@ struct shim_dentry {
      * filesystem (see `shim_inode` below). Protected by `lock`. */
     struct shim_inode* inode;
 
-    /* File lock information, stored only in the main process. Protected by `lock`. See
-     * `shim_fs_lock.c`. */
+    /* File lock information, stored only in the main process. Managed by `shim_fs_lock.c`. */
     struct fs_lock* fs_lock;
 
     /* True if the file might have locks placed by current process. Used in processes other than
-     * main process, to prevent unnecessary IPC calls on handle close. Protected by `lock`. See
+     * main process, to prevent unnecessary IPC calls on handle close. Managed by
      * `shim_fs_lock.c`. */
     bool maybe_has_fs_locks;
 
