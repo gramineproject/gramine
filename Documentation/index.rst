@@ -74,6 +74,7 @@ Table of Contents
    :maxdepth: 2
 
    tutorials/pytorch/index.rst
+   tutorials/awesome-application/index.rst
 
 .. toctree::
    :caption: Manual pages
