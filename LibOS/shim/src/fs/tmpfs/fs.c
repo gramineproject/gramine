@@ -90,17 +90,13 @@ static int tmpfs_lookup(struct shim_dentry* dent) {
 
 static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     __UNUSED(dent);
+    __UNUSED(flags);
     hdl->type = TYPE_TMPFS;
     hdl->pos = 0;
-    hdl->flags = flags;
-    hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
     return 0;
 }
 
-static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dir, struct shim_dentry* dent,
-                       int flags, mode_t mode) {
-    __UNUSED(dir);
-
+static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
     int ret;
 
     /* Trigger creating dentry data to ensure right timestamp. */
@@ -111,7 +107,7 @@ static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dir, struct 
         goto out;
 
     dent->type = S_IFREG;
-    dent->perm = mode & ~S_IFMT;
+    dent->perm = perm;
     ret = 0;
 
 out:
@@ -121,9 +117,7 @@ out:
     return ret;
 }
 
-static int tmpfs_mkdir(struct shim_dentry* dir, struct shim_dentry* dent, mode_t mode) {
-    __UNUSED(dir);
-
+static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
     int ret;
 
     /* Trigger creating dentry data to ensure right timestamp. */
@@ -134,7 +128,7 @@ static int tmpfs_mkdir(struct shim_dentry* dir, struct shim_dentry* dent, mode_t
         goto out;
 
     dent->type = S_IFDIR;
-    dent->perm = mode & ~S_IFMT;
+    dent->perm = perm;
     ret = 0;
 
 out:
@@ -181,13 +175,10 @@ static int tmpfs_readdir(struct shim_dentry* dent, readdir_callback_t callback, 
     return 0;
 }
 
-static int tmpfs_unlink(struct shim_dentry* dir, struct shim_dentry* dent) {
-    __UNUSED(dir);
+static int tmpfs_unlink(struct shim_dentry* dent) {
+    assert(locked(&g_dcache_lock));
 
     if (dent->type == S_IFDIR) {
-        /* TODO: the whole unlink operation should be wrapped in a lock; otherwise there's a race:
-         * new files can be created before we delete the directory */
-        lock(&g_dcache_lock);
         struct shim_dentry* child;
         bool found = false;
         LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
@@ -196,7 +187,6 @@ static int tmpfs_unlink(struct shim_dentry* dir, struct shim_dentry* dent) {
                 break;
             }
         }
-        unlock(&g_dcache_lock);
         if (found)
             return -ENOTEMPTY;
     }

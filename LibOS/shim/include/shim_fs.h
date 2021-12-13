@@ -87,7 +87,6 @@ struct shim_fs_ops {
 
 #define DENTRY_VALID       0x0001 /* this dentry is verified to be valid */
 #define DENTRY_NEGATIVE    0x0002 /* recently deleted or inaccessible */
-#define DENTRY_PERSIST     0x0008 /* added as a persistent dentry */
 #define DENTRY_LOCKED      0x0200 /* locked by mountpoints at children */
 /* These flags are not used */
 //#define DENTRY_REACHABLE    0x0400  /* permission checked to be reachable */
@@ -114,6 +113,15 @@ struct fs_lock_info;
 DEFINE_LIST(shim_dentry);
 DEFINE_LISTP(shim_dentry);
 struct shim_dentry {
+    /*
+     * TODO: Concurrent access to dentry objects is currently inconsistent and broken. The dentry
+     * tree structure, i.e. children/siblings, is protected by `g_dcache_lock`, but many fields are
+     * accessed without any locks.
+     *
+     * The end goal is to move some fields to `shim_inode`, and use `g_dcache_lock` for all
+     * remaining mutable fields.
+     */
+
     int state; /* flags for managing state */
 
     /* File name, maximum of NAME_MAX characters. By convention, the root has an empty name. Does
@@ -204,50 +212,136 @@ struct shim_inode {
 typedef int (*readdir_callback_t)(const char* name, void* arg);
 
 struct shim_d_ops {
-    /* open: provide a filename relative to the mount point and flags,
-       modify the shim handle, file_data is "inode" equivalent */
-    int (*open)(struct shim_handle* hdl, struct shim_dentry* dent, int flags);
-
-    /* look up dentry and allocate internal data.
+    /*
+     * \brief Look up a file
      *
-     * On a successful lookup  (non-error, can be negative),
-     * this function should call get_new_dentry(), populating additional fields,
-     * and storing the new dentry in dent.
+     * \param dent dentry, not valid
+     *
+     * Queries the underlying filesystem for a path described by a dentry (`dent->name` and
+     * `dent->parent`). On success, prepares the dentry for use by the filesystem. Always sets the
+     * `type` and `perm` fields.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should mark the dentry as
+     * valid and non-negative.
      */
     int (*lookup)(struct shim_dentry* dent);
 
-    /* detach internal data from dentry */
-    int (*dput)(struct shim_dentry* dent);
+    /*
+     * \brief Open an existing file
+     *
+     * \param hdl a newly created handle
+     * \param dent dentry, valid and non-negative
+     * \param flags open flags, including access mode (O_RDONLY / O_WRONLY / O_RDWR)
+     *
+     * Opens a file, and if successful, prepares the handle for use by the filesystem. Always sets
+     * the `type` field.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should initialize the
+     * following handle fields: `fs`, `dentry`, `flags`, `acc_mode`.
+     */
+    int (*open)(struct shim_handle* hdl, struct shim_dentry* dent, int flags);
 
-    /* create a dentry inside a directory */
-    int (*creat)(struct shim_handle* hdl, struct shim_dentry* dir, struct shim_dentry* dent,
-                 int flags, mode_t mode);
+    /*
+     * \brief Create and open a new regular file
+     *
+     * \param hdl a newly created handle
+     * \param dent dentry, valid and negative (file to be created)
+     * \param flags open flags, including access mode (O_RDONLY / O_WRONLY / O_RDWR)
+     * \param perm permissions of the new file
+     *
+     * Creates and opens a new regular file at path described by `dent`. On success, prepares the
+     * handle and the dentry for use by the filesystem (as in `open` and `lookup`).
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should finish preparing the
+     * handle and the dentry (as in `open` and `lookup`).
+     */
+    int (*creat)(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm);
 
-    /* unlink a dentry inside a directory */
-    int (*unlink)(struct shim_dentry* dir, struct shim_dentry* dent);
+    /*
+     * \brief Create a directory
+     *
+     * \param dent dentry, valid and negative (directory to be created)
+     * \param perm permissions of the new directory
+     *
+     * Creates a new directory at path described by `dent`. On success, prepares the dentry for use
+     * by the filesystem (as in `lookup`).
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should finish preparing the
+     * dentry (as in `lookup`).
+     */
+    int (*mkdir)(struct shim_dentry* dent, mode_t perm);
 
-    /* create a directory inside a directory */
-    int (*mkdir)(struct shim_dentry* dir, struct shim_dentry* dent, mode_t mode);
+    /*
+     * \brief Unlink a file
+     *
+     * \param dent dentry, valid and non-negative, must have a parent
+     *
+     * Unlinks a file described by `dent`. Note that there might be handles for that file; if
+     * possible, they should still work.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should update the dentry to be
+     * negative.
+     */
+    int (*unlink)(struct shim_dentry* dent);
 
-    /* stat: get status of the file; `st_ino` will be taken from dentry */
+    /*
+     * \brief Get file status
+     *
+     * \param dent dentry, valid and non-negative
+     * \param buf status buffer to fill
+     *
+     * Fills `buf` with information about a file. Omits `st_ino` (which is later filled by the
+     * caller).
+     *
+     * The caller should hold `g_dcache_lock`.
+     */
     int (*stat)(struct shim_dentry* dent, struct stat* buf);
 
-    /* extracts the symlink name and saves in link */
+    /*
+     * \brief Extract the target of a symbolic link
+     *
+     * \param dent dentry, valid and non-negative, describing a symlink
+     * \param out_target on success, contains link target
+     *
+     * Determines the target of a symbolic link, and sets `*out_target` to an allocated string.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should free `*out_target`.
+     */
     int (*follow_link)(struct shim_dentry* dent, char** out_target);
-    /* set up symlink name to a dentry */
-    int (*set_link)(struct shim_dentry* dent, const char* link);
 
-    /* change the mode or owner of a file; the caller has to update dentry */
+    /*
+     * \brief Change file permissions
+     *
+     * \param dent dentry, valid and non-negative
+     * \param perm new permissions for the file
+     *
+     * Changes the permissions for a file.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should update `dent->perm`.
+     */
     int (*chmod)(struct shim_dentry* dent, mode_t perm);
-    int (*chown)(struct shim_dentry* dent, int uid, int gid);
 
-    /* change the name of a dentry */
+    /*
+     * \brief Rename a file
+     *
+     * \param old source dentry, valid and non-negative
+     * \param new target dentry, valid, can be negative or non-negative
+     *
+     * Moves a file described by `old` to the path described by `new`. Updates the fields of `new`
+     * (same as `lookup`).
+     *
+     * Note that the file described by `new` might exist, in which case the rename operation will
+     * unlink it.
+     *
+     * The caller should hold `g_dcache_lock`. On success, the caller should mark the old dentry as
+     * negative, and the new dentry as non-negative.
+     */
     int (*rename)(struct shim_dentry* old, struct shim_dentry* new);
 
     /*!
      * \brief List all files in the directory
      *
-     * \param dentry the dentry, must be valid, non-negative and describing a directory
+     * \param dent the dentry, must be valid, non-negative and describing a directory
      * \param callback the callback to invoke on each file name
      * \param arg argument to pass to the callback
      *
@@ -258,6 +352,8 @@ struct shim_d_ops {
      *
      * If the callback returns a negative error code, it's interpreted as a failure and `readdir`
      * stops, returning the same error code.
+     *
+     * The caller should hold `g_dcache_lock`.
      */
     int (*readdir)(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
 };
@@ -451,15 +547,6 @@ int check_permissions(struct shim_dentry* dent, mode_t mask);
  * TODO: This function doesn't check any permissions. It should return -EACCES on inaccessible
  * directories.
  */
-int _path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                   struct shim_dentry** found);
-
-/*!
- * \brief Look up a path, retrieving a dentry
- *
- * This is a version of `_path_lookupat` that does not require caller to hold `g_dcache_lock`, but
- * acquires and releases it by itself. See the documentation for `_path_lookupat` for details.
- */
 int path_lookupat(struct shim_dentry* start, const char* path, int flags,
                   struct shim_dentry** found);
 
@@ -522,7 +609,8 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
  * \param dent the dentry to open
  * \param flags Unix open flags
  *
- * The dentry has to already correspond to a file (i.e. has to be valid and non-negative).
+ * The dentry has to already correspond to a file (i.e. has to be valid and non-negative). The
+ * caller has to hold `g_dcache_lock`.
  *
  * The `flags` parameter will be passed to the underlying filesystem's `open` function. If O_TRUNC
  * flag is specified, the filesystem's `truncate` function will also be called.

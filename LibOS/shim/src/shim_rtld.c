@@ -653,6 +653,8 @@ static bool need_interp(struct link_map* exec_map) {
 extern const char** g_library_paths;
 
 static int find_interp(const char* interp_name, struct shim_dentry** out_dent) {
+    assert(locked(&g_dcache_lock));
+
     size_t interp_name_len = strlen(interp_name);
     const char* filename = interp_name;
     size_t filename_len = interp_name_len;
@@ -687,32 +689,35 @@ static int find_interp(const char* interp_name, struct shim_dentry** out_dent) {
     return -ENOENT;
 }
 
-static int load_interp_object(struct link_map* exec_map) {
-    assert(!g_interp_map);
+static int find_and_open_interp(const char* interp_name, struct shim_handle* hdl) {
+    assert(locked(&g_dcache_lock));
 
     struct shim_dentry* dent;
-    int ret;
-
-    ret = find_interp(exec_map->l_interp_libname, &dent);
+    int ret = find_interp(interp_name, &dent);
     if (ret < 0)
         return ret;
 
-    struct shim_handle* hdl = get_new_handle();
-    if (!hdl) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
     ret = dentry_open(hdl, dent, O_RDONLY);
+    put_dentry(dent);
+    return ret;
+}
+
+static int load_interp_object(struct link_map* exec_map) {
+    assert(!g_interp_map);
+
+    struct shim_handle* hdl = get_new_handle();
+    if (!hdl)
+        return -ENOMEM;
+
+    lock(&g_dcache_lock);
+    int ret = find_and_open_interp(exec_map->l_interp_libname, hdl);
+    unlock(&g_dcache_lock);
     if (ret < 0)
         goto out;
 
     ret = load_elf_object(hdl, &g_interp_map);
-
 out:
-    if (hdl)
-        put_handle(hdl);
-    put_dentry(dent);
+    put_handle(hdl);
     return ret;
 }
 

@@ -517,43 +517,29 @@ long shim_do_truncate(const char* path, loff_t length) {
     if (length < 0)
         return -EINVAL;
 
-    struct shim_dentry* dent = NULL;
-    int ret = 0;
+    int ret;
 
     if (!is_user_string_readable(path))
         return -EFAULT;
 
-    if ((ret = path_lookupat(/*start=*/NULL, path, LOOKUP_FOLLOW, &dent)) < 0)
-        return ret;
+    struct shim_handle* hdl = get_new_handle();
+    if (!hdl)
+        return -ENOMEM;
 
-    struct shim_fs* fs = dent->fs;
-
-    if (!fs || !fs->d_ops || !fs->d_ops->open) {
-        ret = -EBADF;
+    ret = open_namei(hdl, /*start=*/NULL, path, LOOKUP_FOLLOW, O_WRONLY, /*found=*/NULL);
+    if (ret < 0)
         goto out;
-    }
+
+    struct shim_fs* fs = hdl->fs;
 
     if (!fs->fs_ops->truncate) {
         ret = -EROFS;
         goto out;
     }
 
-    struct shim_handle* hdl = get_new_handle();
-
-    if (!hdl) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    hdl->fs = fs;
-
-    if ((ret = fs->d_ops->open(hdl, dent, O_WRONLY)) < 0)
-        goto out_handle;
-
     ret = fs->fs_ops->truncate(hdl, length);
-out_handle:
-    put_handle(hdl);
 out:
+    put_handle(hdl);
     return ret;
 }
 

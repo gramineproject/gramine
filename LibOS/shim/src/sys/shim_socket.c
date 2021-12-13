@@ -490,8 +490,10 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
         }
 
         struct shim_dentry* dent = NULL;
+        lock(&g_dcache_lock);
         ret = path_lookupat(/*start=*/NULL, saddr->sun_path, LOOKUP_NO_FOLLOW | LOOKUP_CREATE,
                             &dent);
+        unlock(&g_dcache_lock);
         if (ret < 0)
             goto out;
 
@@ -773,8 +775,10 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
         }
 
         struct shim_dentry* dent = NULL;
+        lock(&g_dcache_lock);
         ret = path_lookupat(/*start=*/NULL, saddr->sun_path, LOOKUP_FOLLOW | LOOKUP_CREATE,
                             &dent);
+        unlock(&g_dcache_lock);
         if (ret < 0)
             goto out;
 

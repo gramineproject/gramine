@@ -212,9 +212,9 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
     /* rewire new hdl to contents of intermediate FIFO hdl */
     assert(fifo_hdl->type == TYPE_PIPE);
     assert(fifo_hdl->uri);
+    assert(fifo_hdl->acc_mode == ACC_MODE(flags & O_ACCMODE));
 
     hdl->type       = fifo_hdl->type;
-    hdl->acc_mode   = fifo_hdl->acc_mode;
     hdl->info       = fifo_hdl->info;
     hdl->pal_handle = fifo_hdl->pal_handle;
 

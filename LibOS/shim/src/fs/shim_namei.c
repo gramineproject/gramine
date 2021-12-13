@@ -401,17 +401,9 @@ err:
     return ret;
 }
 
-int _path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                   struct shim_dentry** found) {
-    return do_path_lookupat(start, path, flags, found, /*link_depth=*/0);
-}
-
 int path_lookupat(struct shim_dentry* start, const char* path, int flags,
                    struct shim_dentry** found) {
-    lock(&g_dcache_lock);
-    int ret = do_path_lookupat(start, path, flags, found, /*link_depth=*/0);
-    unlock(&g_dcache_lock);
-    return ret;
+    return do_path_lookupat(start, path, flags, found, /*link_depth=*/0);
 }
 
 static inline int open_flags_to_lookup_flags(int flags) {
@@ -443,9 +435,11 @@ static void assoc_handle_with_dentry(struct shim_handle* hdl, struct shim_dentry
     get_dentry(dent);
     hdl->dentry = dent;
     hdl->flags = flags;
+    hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
 }
 
 int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+    assert(locked(&g_dcache_lock));
     assert(dent->state & DENTRY_VALID);
     assert(!(dent->state & DENTRY_NEGATIVE));
     assert(!hdl->dentry);
@@ -515,7 +509,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
 
     lock(&g_dcache_lock);
 
-    ret = _path_lookupat(start, path, lookup_flags, &dent);
+    ret = path_lookupat(start, path, lookup_flags, &dent);
     if (ret < 0)
         goto err;
 
@@ -567,7 +561,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
                 ret = -EINVAL;
                 goto err;
             }
-            ret = dir->fs->d_ops->mkdir(dir, dent, mode);
+            ret = dir->fs->d_ops->mkdir(dent, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
             dent->state &= ~DENTRY_NEGATIVE;
@@ -577,7 +571,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
                 ret = -EINVAL;
                 goto err;
             }
-            ret = dir->fs->d_ops->creat(hdl, dir, dent, flags, mode);
+            ret = dir->fs->d_ops->creat(hdl, dent, flags, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
             dent->state &= ~DENTRY_NEGATIVE;

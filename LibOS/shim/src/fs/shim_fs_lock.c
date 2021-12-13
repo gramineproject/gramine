@@ -507,7 +507,9 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
     struct shim_dentry* dent = NULL;
     struct posix_lock_request* req = NULL;
 
+    lock(&g_dcache_lock);
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
+    unlock(&g_dcache_lock);
     if (ret < 0) {
         log_warning("posix_lock_set_from_ipc: error on dentry lookup for %s: %d", path, ret);
         goto out;
@@ -586,7 +588,9 @@ int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posi
     assert(!g_process_ipc_ids.leader_vmid);
 
     struct shim_dentry* dent = NULL;
+    lock(&g_dcache_lock);
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
+    unlock(&g_dcache_lock);
     if (ret < 0) {
         log_warning("posix_lock_get_from_ipc: error on dentry lookup for %s: %d", path, ret);
         return ret;

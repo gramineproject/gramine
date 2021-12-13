@@ -67,7 +67,10 @@ long shim_do_chdir(const char* filename) {
     if (strnlen(filename, PATH_MAX + 1) == PATH_MAX + 1)
         return -ENAMETOOLONG;
 
-    if ((ret = path_lookupat(/*start=*/NULL, filename, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(/*start=*/NULL, filename, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
+    unlock(&g_dcache_lock);
+    if (ret < 0)
         return ret;
 
     if (!dent)

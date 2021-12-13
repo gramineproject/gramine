@@ -15,6 +15,7 @@
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
+#include "shim_lock.h"
 #include "shim_table.h"
 #include "shim_types.h"
 #include "shim_utils.h"
@@ -297,7 +298,9 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
     if (*pathname != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
         goto out;
 
+    lock(&g_dcache_lock);
     ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW | LOOKUP_CREATE, &dent);
+    unlock(&g_dcache_lock);
     if (ret < 0) {
         goto out;
     }

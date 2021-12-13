@@ -252,8 +252,6 @@ static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mod
 
         hdl->type = TYPE_CHROOT;
         hdl->pos = 0;
-        hdl->flags = flags;
-        hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
         hdl->pal_handle = palhdl;
     } else {
         DkObjectClose(palhdl);
@@ -287,16 +285,12 @@ out:
     return ret;
 }
 
-static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dir, struct shim_dentry* dent,
-                        int flags, mode_t mode) {
-    __UNUSED(dir);
-
+static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
     int ret;
 
     mode_t type = S_IFREG;
-    mode_t perm = mode & ~S_IFMT;
 
     lock(&dent->lock);
     ret = chroot_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
@@ -316,15 +310,12 @@ out:
     return ret;
 }
 
-static int chroot_mkdir(struct shim_dentry* dir, struct shim_dentry* dent, mode_t mode) {
-    __UNUSED(dir);
-
+static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
     int ret;
 
     mode_t type = S_IFDIR;
-    mode_t perm = mode & ~S_IFMT;
 
     lock(&dent->lock);
     ret = chroot_do_open(/*hdl=*/NULL, dent, type, O_CREAT | O_EXCL, perm);
@@ -581,9 +572,7 @@ out:
     return ret;
 }
 
-static int chroot_unlink(struct shim_dentry* dir, struct shim_dentry* dent) {
-    __UNUSED(dir);
-
+static int chroot_unlink(struct shim_dentry* dent) {
     int ret;
 
     lock(&dent->lock);

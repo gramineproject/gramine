@@ -368,7 +368,11 @@ int init_mount(void) {
 
     if (fs_start_dir) {
         struct shim_dentry* dent = NULL;
+
+        lock(&g_dcache_lock);
         ret = path_lookupat(/*start=*/NULL, fs_start_dir, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
+        unlock(&g_dcache_lock);
+
         free(fs_start_dir);
         if (ret < 0) {
             log_error("Invalid 'fs.start_dir' in manifest.");
@@ -458,7 +462,7 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
      * problem looking up the root, we want the mount operation to fail. */
 
     struct shim_dentry* root;
-    if ((ret = _path_lookupat(g_dentry_root, mount_path, LOOKUP_NO_FOLLOW, &root))) {
+    if ((ret = path_lookupat(g_dentry_root, mount_path, LOOKUP_NO_FOLLOW, &root))) {
         log_warning("error looking up mount root %s: %d", mount_path, ret);
         goto err;
     }
@@ -505,7 +509,7 @@ int mount_fs(const char* type, const char* uri, const char* mount_path) {
     lock(&g_dcache_lock);
 
     int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
-    if ((ret = _path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point)) < 0) {
+    if ((ret = path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point)) < 0) {
         log_warning("error looking up mountpoint %s: %d", mount_path, ret);
         goto out;
     }

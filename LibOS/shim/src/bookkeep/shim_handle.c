@@ -36,27 +36,14 @@ static MEM_MGR handle_mgr = NULL;
 //#define DEBUG_REF
 
 static int init_tty_handle(struct shim_handle* hdl, bool write) {
-    int ret;
-
-    hdl->type  = TYPE_DEV;
-    hdl->flags = write ? (O_WRONLY | O_APPEND) : O_RDONLY;
-
-    struct shim_dentry* dent = NULL;
-    if ((ret = path_lookupat(/*start=*/NULL, "/dev/tty", LOOKUP_FOLLOW, &dent)) < 0)
-        return ret;
-
-    ret = dent->fs->d_ops->open(hdl, dent, hdl->flags);
-    if (ret < 0)
-        return ret;
-
-    hdl->fs = dent->fs;
-    hdl->dentry = dent;
-    return 0;
+    int flags = write ? (O_WRONLY | O_APPEND) : O_RDONLY;
+    return open_namei(hdl, /*start=*/NULL, "/dev/tty", flags, LOOKUP_FOLLOW, /*found=*/NULL);
 }
 
 int open_executable(struct shim_handle* hdl, const char* path) {
     struct shim_dentry* dent = NULL;
 
+    lock(&g_dcache_lock);
     int ret = path_lookupat(/*start=*/NULL, path, LOOKUP_FOLLOW, &dent);
     if (ret < 0) {
         goto out;
@@ -79,6 +66,7 @@ int open_executable(struct shim_handle* hdl, const char* path) {
 
     ret = 0;
 out:
+    unlock(&g_dcache_lock);
     if (dent)
         put_dentry(dent);
 

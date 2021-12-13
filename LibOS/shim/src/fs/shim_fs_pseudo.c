@@ -139,8 +139,6 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
             break;
         }
     }
-    hdl->flags = flags;
-    hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
 
     return 0;
 }

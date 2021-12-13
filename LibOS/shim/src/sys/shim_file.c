@@ -44,7 +44,9 @@ long shim_do_unlinkat(int dfd, const char* pathname, int flag) {
     if (*pathname != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
 
-    if ((ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW, &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW, &dent);
+    if (ret < 0)
         goto out;
 
     if (!dent->parent) {
@@ -65,20 +67,19 @@ long shim_do_unlinkat(int dfd, const char* pathname, int flag) {
     }
 
     if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->unlink) {
-        if ((ret = dent->fs->d_ops->unlink(dent->parent, dent)) < 0) {
+        ret = dent->fs->d_ops->unlink(dent);
+        if (ret < 0) {
             goto out;
         }
-    } else {
-        dent->state |= DENTRY_PERSIST;
     }
 
     dent->state |= DENTRY_NEGATIVE;
 out:
+    unlock(&g_dcache_lock);
     if (dir)
         put_dentry(dir);
-    if (dent) {
+    if (dent)
         put_dentry(dent);
-    }
     return ret;
 }
 
@@ -119,8 +120,9 @@ long shim_do_rmdir(const char* pathname) {
     if (!is_user_string_readable(pathname))
         return -EFAULT;
 
-    if ((ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW | LOOKUP_DIRECTORY,
-                             &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW | LOOKUP_DIRECTORY, &dent);
+    if (ret < 0)
         return ret;
 
     if (!dent->parent) {
@@ -134,15 +136,15 @@ long shim_do_rmdir(const char* pathname) {
     }
 
     if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->unlink) {
-        if ((ret = dent->fs->d_ops->unlink(dent->parent, dent)) < 0)
+        if ((ret = dent->fs->d_ops->unlink(dent)) < 0)
             goto out;
-    } else {
-        dent->state |= DENTRY_PERSIST;
     }
 
     dent->state |= DENTRY_NEGATIVE;
 out:
-    put_dentry(dent);
+    unlock(&g_dcache_lock);
+    if (dent)
+        put_dentry(dent);
     return ret;
 }
 
@@ -172,20 +174,21 @@ long shim_do_fchmodat(int dfd, const char* filename, mode_t mode) {
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
 
-    if ((ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent);
+    if (ret < 0)
         goto out;
 
     if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->chmod) {
         if ((ret = dent->fs->d_ops->chmod(dent, mode)) < 0)
             goto out_dent;
-    } else {
-        dent->state |= DENTRY_PERSIST;
     }
 
     dent->perm = mode;
 out_dent:
     put_dentry(dent);
 out:
+    unlock(&g_dcache_lock);
     if (dir)
         put_dentry(dir);
     return ret;
@@ -202,20 +205,29 @@ long shim_do_fchmod(int fd, mode_t mode) {
     struct shim_dentry* dent = hdl->dentry;
     int ret = 0;
 
+    lock(&g_dcache_lock);
     if (!dent) {
         ret = -EINVAL;
         goto out;
     }
 
+    assert(dent->state & DENTRY_VALID);
+    if (dent->state & DENTRY_NEGATIVE) {
+        /* TODO: the `chmod` callback should take a handle, not dentry; otherwise we're not able to
+         * chmod an unlinked file */
+        ret = -ENOENT;
+        goto out;
+    }
+
     if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->chmod) {
-        if ((ret = dent->fs->d_ops->chmod(dent, mode)) < 0)
+        ret = dent->fs->d_ops->chmod(dent, mode);
+        if (ret < 0)
             goto out;
-    } else {
-        dent->state |= DENTRY_PERSIST;
     }
 
     dent->perm = mode;
 out:
+    unlock(&g_dcache_lock);
     put_handle(hdl);
     return ret;
 }
@@ -239,7 +251,10 @@ long shim_do_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid, int f
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
 
-    if ((ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent);
+    unlock(&g_dcache_lock);
+    if (ret < 0)
         goto out;
 
     /* XXX: do nothing now */
@@ -263,6 +278,8 @@ long shim_do_fchown(int fd, uid_t uid, gid_t gid) {
 }
 
 static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent) {
+    assert(locked(&g_dcache_lock));
+
     if ((old_dent->type != S_IFREG) ||
             (!(new_dent->state & DENTRY_NEGATIVE) && (new_dent->type != S_IFREG))) {
         /* Current implementation of fs does not allow for renaming anything but regular files */
@@ -325,11 +342,14 @@ long shim_do_renameat(int olddirfd, const char* oldpath, int newdirfd, const cha
         return -EFAULT;
     }
 
+    lock(&g_dcache_lock);
+
     if (*oldpath != '/' && (ret = get_dirfd_dentry(olddirfd, &old_dir_dent)) < 0) {
         goto out;
     }
 
-    if ((ret = path_lookupat(old_dir_dent, oldpath, LOOKUP_NO_FOLLOW, &old_dent)) < 0) {
+    ret = path_lookupat(old_dir_dent, oldpath, LOOKUP_NO_FOLLOW, &old_dent);
+    if (ret < 0) {
         goto out;
     }
 
@@ -353,6 +373,7 @@ long shim_do_renameat(int olddirfd, const char* oldpath, int newdirfd, const cha
     ret = do_rename(old_dent, new_dent);
 
 out:
+    unlock(&g_dcache_lock);
     if (old_dir_dent)
         put_dentry(old_dir_dent);
     if (old_dent)
@@ -493,7 +514,10 @@ long shim_do_chroot(const char* filename) {
 
     int ret = 0;
     struct shim_dentry* dent = NULL;
-    if ((ret = path_lookupat(/*start=*/NULL, filename, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent)) < 0)
+    lock(&g_dcache_lock);
+    ret = path_lookupat(/*start=*/NULL, filename, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
+    unlock(&g_dcache_lock);
+    if (ret < 0)
         goto out;
 
     if (!dent) {
