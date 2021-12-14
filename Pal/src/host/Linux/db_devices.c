@@ -16,6 +16,7 @@
 #include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "perm.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -144,7 +145,7 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         attr->readable     = true; /* we don't know if it's stdin/stdout so simply return true */
         attr->writable     = true; /* we don't know if it's stdin/stdout so simply return true */
         attr->runnable     = false;
-        attr->share_flags  = 0;
+        attr->share_flags  = PERM_rw_rw_rw_;
         attr->pending_size = 0;
     } else {
         /* other devices must query the host */
