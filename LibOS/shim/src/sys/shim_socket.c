@@ -564,7 +564,6 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
 
     hdl->pal_handle = pal_hdl;
     __process_pending_options(hdl);
-    _update_epolls(hdl);
     ret = 0;
 
 out:
@@ -579,6 +578,9 @@ out:
     }
 
     unlock(&hdl->lock);
+    if (!ret) {
+        interrupt_epolls(hdl);
+    }
     put_handle(hdl);
     return ret;
 }
@@ -872,11 +874,12 @@ out:
         }
     }
 
+    unlock(&hdl->lock);
+
     if (pal_handle_updated) {
-        _update_epolls(hdl);
+        interrupt_epolls(hdl);
     }
 
-    unlock(&hdl->lock);
     put_handle(hdl);
     if (ret == -EINTR) {
         /* TODO: in case of sockets with `SO_RCVTIMEO` or `SO_SNDTIMEO` set we should return
@@ -1107,6 +1110,7 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
         goto out_locked;
     }
 
+    bool needs_epolls_update = false;
     if (sock->sock_type == SOCK_DGRAM && sock->sock_state != SOCK_BOUNDCONNECTED &&
         sock->sock_state != SOCK_CONNECTED) {
         if (!addr) {
@@ -1124,7 +1128,7 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
             }
 
             hdl->pal_handle = pal_hdl;
-            _update_epolls(hdl);
+            needs_epolls_update = true;
         }
 
         if (addr && addr->sa_family != sock->domain) {
@@ -1136,6 +1140,10 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
     }
 
     unlock(&hdl->lock);
+
+    if (needs_epolls_update) {
+        interrupt_epolls(hdl);
+    }
 
     if (uri) {
         struct addr_inet addr_buf;
