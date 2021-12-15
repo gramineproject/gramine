@@ -324,6 +324,7 @@ static int peek_user(int memdev, pid_t tid, struct enclave_dbginfo* ei, struct u
     if (ret < 0)
         return ret;
 
+    memset(ud, 0, sizeof(*ud));
     fill_regs(&ud->regs, &gpr);
     return 0;
 }
