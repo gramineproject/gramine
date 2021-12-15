@@ -2,6 +2,7 @@
 #define _SHIM_TYPES_H_
 
 #include <limits.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

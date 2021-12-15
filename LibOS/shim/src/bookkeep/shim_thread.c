@@ -8,6 +8,8 @@
  * This file contains code for maintaining bookkeeping of threads in library OS.
  */
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "assert.h"
 #include "cpu.h"

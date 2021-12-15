@@ -8,8 +8,10 @@
  * This file contains code for handling signals and exceptions passed from PAL.
  */
 
-#include <stddef.h> /* needed by <linux/signal.h> for size_t */
+#include "shim_signal.h"
 
+#include <stddef.h> /* needed by <linux/signal.h> for size_t */
+#include <stdatomic.h>
 #include <asm/signal.h>
 #include <stdnoreturn.h>
 
@@ -21,7 +23,6 @@
 #include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_process.h"
-#include "shim_signal.h"
 #include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_types.h"

@@ -6,6 +6,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include <stdatomic.h>
+
 #include "pal.h"
 #include "pal_error.h"
 #include "shim_fs_lock.h"
@@ -156,7 +158,7 @@ noreturn void process_exit(int error_code, int term_signal) {
 
     /* If process_exit is invoked multiple times, only a single invocation proceeds past this
      * point. */
-    static atomic_int first = 0;
+    static _Atomic int first = 0;
     if (atomic_exchange_explicit(&first, 1, memory_order_relaxed) != 0) {
         /* Just exit current thread. */
         thread_exit(error_code, term_signal);

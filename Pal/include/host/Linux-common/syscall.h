@@ -2,6 +2,7 @@
 #define SYSCALL_H_
 
 #include <asm/unistd.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 

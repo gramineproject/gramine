@@ -5,6 +5,7 @@
 
 #include <asm/errno.h>
 #include <asm/mman.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "debug_map.h"

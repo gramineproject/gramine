@@ -8,6 +8,7 @@
  * These structures are used in trusted -> untrusted world calls (OCALLS).
  */
 
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 

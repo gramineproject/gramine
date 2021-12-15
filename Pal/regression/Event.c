@@ -15,18 +15,18 @@
     _x;                                                                 \
 })
 
-static void wait_for(atomic_int* ptr, int val) {
+static void wait_for(_Atomic int* ptr, int val) {
     while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != val) {
         CPU_RELAX();
     }
 }
 
-static void set(atomic_int* ptr, int val) {
+static void set(_Atomic int* ptr, int val) {
     __atomic_store_n(ptr, val, __ATOMIC_RELEASE);
 }
 
-static atomic_int g_clear_thread_exit = 1;
-static atomic_int g_ready = 0;
+static _Atomic int g_clear_thread_exit = 1;
+static _Atomic int g_ready = 0;
 
 static void thread_func(void* arg) {
     PAL_HANDLE sleep_handle = NULL;

@@ -14,6 +14,7 @@
 #include <linux/prctl.h>
 #include <linux/seccomp.h>
 #include <linux/signal.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "pal.h"

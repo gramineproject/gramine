@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <linux/futex.h>
 #include <linux/time.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 
 #include "api.h"

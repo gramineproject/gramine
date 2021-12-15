@@ -6,7 +6,7 @@
 const char* private1 = "Hello World 1";
 const char* private2 = "Hello World 2";
 
-static atomic_int count = 0;
+static _Atomic int count = 0;
 
 static void callback(void* args) {
     pal_printf("Run in Child Thread: %s\n", (char*)args);

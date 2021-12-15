@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-static atomic_uint count = 0;
+static _Atomic unsigned int count = 0;
 
 static void handler(int signum) {
     atomic_fetch_add_explicit(&count, 1, memory_order_release);

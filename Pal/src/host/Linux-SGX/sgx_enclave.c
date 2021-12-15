@@ -14,6 +14,7 @@
 #include <linux/in6.h>
 #include <linux/signal.h>
 #include <math.h>
+#include <stdatomic.h>
 #include <sys/wait.h>
 
 #include "cpu.h"

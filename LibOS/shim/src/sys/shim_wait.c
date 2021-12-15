@@ -7,6 +7,7 @@
 
 #include <linux/signal.h>
 #include <linux/wait.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 
 #include "assert.h"

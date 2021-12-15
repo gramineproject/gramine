@@ -7,7 +7,7 @@
 #define THREAD_NUM      64
 #define CONC_THREAD_NUM 4
 
-atomic_int counter = 0;
+_Atomic int counter = 0;
 
 static void* inc(void* arg) {
     counter++;

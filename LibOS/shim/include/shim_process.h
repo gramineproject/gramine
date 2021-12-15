@@ -5,6 +5,7 @@
 #ifndef _SHIM_PROCESS_H
 #define _SHIM_PROCESS_H
 
+#include <stdatomic.h>
 #include <stdbool.h>
 
 #include "list.h"

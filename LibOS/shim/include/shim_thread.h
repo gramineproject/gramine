@@ -8,6 +8,7 @@
 
 #include <linux/futex.h>
 #include <linux/signal.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -84,7 +85,7 @@ struct shim_thread {
 
     /* child tid */
     int* set_child_tid;
-    int* clear_child_tid;    /* LibOS zeroes it to notify parent that thread exited */
+    int* clear_child_tid;            /* LibOS zeroes it to notify parent that thread exited */
     _Atomic int clear_child_tid_pal; /* PAL zeroes it to notify LibOS that thread exited */
 
     /* signal handling */
@@ -113,7 +114,7 @@ struct shim_thread {
 
     struct wake_queue_node wake_queue;
 
-    atomic_bool time_to_die;
+    _Atomic bool time_to_die;
 
     void* stack;
     void* stack_top;
@@ -130,7 +131,7 @@ struct shim_thread_queue {
     struct shim_thread* thread;
     /* We use this field to mark that this object is still in use (is on some queue). This is needed
      * to distinguish spurious wake-ups from real ones. */
-    atomic_bool in_use;
+    _Atomic bool in_use;
 };
 
 int init_threading(void);

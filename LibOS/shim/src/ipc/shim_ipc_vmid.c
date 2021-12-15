@@ -3,6 +3,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "log.h"
 #include "shim_ipc.h"
@@ -12,8 +14,8 @@
 static _Atomic IDTYPE g_last_vmid = STARTING_VMID;
 
 static IDTYPE get_next_vmid(void) {
-    atomic_fetch_add_explicit(&g_last_vmid, 1, memory_order_relaxed);
-    return g_last_vmid;
+    IDTYPE prev_vmid = atomic_fetch_add_explicit(&g_last_vmid, 1, memory_order_relaxed);
+    return prev_vmid + 1;
 }
 
 int ipc_get_new_vmid(IDTYPE* vmid) {

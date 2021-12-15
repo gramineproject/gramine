@@ -9,6 +9,7 @@
 #include <asm/poll.h>
 #include <linux/types.h>
 #include <linux/un.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "cpu.h"

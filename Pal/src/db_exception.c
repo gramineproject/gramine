@@ -7,6 +7,7 @@
  */
 
 #include <errno.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "list.h"

@@ -315,7 +315,7 @@ long shim_do_mincore(void* addr, size_t len, unsigned char* vec) {
     if (!is_user_memory_writable(vec, pages))
         return -EFAULT;
 
-    static atomic_bool warned = false;
+    static _Atomic bool warned = false;
     if (!warned) {
         warned = true;
         log_warning(

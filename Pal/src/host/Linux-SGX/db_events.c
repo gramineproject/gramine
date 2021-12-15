@@ -6,6 +6,7 @@
 #include <asm/errno.h>
 #include <limits.h>
 #include <linux/futex.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 
 #include "api.h"

@@ -6,6 +6,7 @@
  */
 
 #include <asm/ioctls.h>
+#include <stdatomic.h>
 
 #include "pal.h"
 #include "shim_handle.h"

@@ -10,7 +10,7 @@
 #include <string.h>
 #include <ucontext.h>
 
-static atomic_int sigfpe_ctr = 0;
+static _Atomic int sigfpe_ctr = 0;
 
 static void sigfpe_handler(int signum, siginfo_t* si, void* uc) {
     printf("Got signal %d\n", signum);

@@ -5,6 +5,7 @@
  */
 
 #include <stdalign.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 

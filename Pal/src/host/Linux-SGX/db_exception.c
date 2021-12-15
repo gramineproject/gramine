@@ -9,6 +9,7 @@
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 #include <linux/signal.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "cpu.h"

@@ -1,6 +1,7 @@
 #include "enclave_ecalls.h"
 
 #include <stdalign.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "ecall_types.h"
@@ -15,7 +16,7 @@
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 
-static volatile _Atomic int64_t g_enclave_start_counter = 0;
+static volatile _Atomic bool g_enclave_start_counter = 0;
 
 /* returns 0 if rpc_queue is valid/not requested, otherwise -1 */
 static int verify_and_init_rpc_queue(rpc_queue_t* untrusted_rpc_queue) {
@@ -78,7 +79,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
     SET_ENCLAVE_TLS(clear_child_tid, NULL);
     SET_ENCLAVE_TLS(untrusted_area_cache.in_use, 0UL);
 
-    int64_t t = 0;
+    bool t = 0;
     if (atomic_compare_exchange_strong_explicit(&g_enclave_start_counter, &t, 1,
                                                 memory_order_seq_cst, memory_order_relaxed)) {
         // ENCLAVE_START not yet called, so only valid ecall is ENCLAVE_START.

@@ -7,7 +7,7 @@
 #include <sys/signal.h>
 #include <unistd.h>
 
-static atomic_int sigpipe_ctr = 0;
+static _Atomic int sigpipe_ctr = 0;
 
 static void sigpipe_handler(int signum, siginfo_t* si, void* uc) {
     printf("Got signal %d\n", signum);

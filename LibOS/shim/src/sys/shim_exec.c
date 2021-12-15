@@ -7,6 +7,7 @@
 
 #include <errno.h>
 #include <linux/futex.h>
+#include <stdatomic.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
@@ -194,7 +195,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
 
     /* If `execve` is invoked concurrently by multiple threads, let only one succeed. From this
      * point errors are fatal. */
-    static atomic_uint first = 0;
+    static _Atomic unsigned int first = 0;
     if (atomic_exchange_explicit(&first, 1, memory_order_relaxed) != 0) {
         /* Just exit current thread. */
         thread_exit(/*error_code=*/0, /*term_signal=*/0);

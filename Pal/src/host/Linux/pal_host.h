@@ -12,6 +12,7 @@
 #error "cannot be included outside PAL"
 #endif
 
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 

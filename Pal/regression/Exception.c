@@ -42,7 +42,7 @@ static void handler3(bool is_in_pal, PAL_NUM arg, PAL_CONTEXT* context) {
         context->rip++;
 }
 
-atomic_bool handler4_called = false;
+_Atomic bool handler4_called = false;
 
 static void handler4(bool is_in_pal, PAL_NUM arg, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);

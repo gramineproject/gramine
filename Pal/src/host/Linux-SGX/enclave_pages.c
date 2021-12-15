@@ -1,5 +1,7 @@
 #include "enclave_pages.h"
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "asan.h"
 #include "list.h"
@@ -9,7 +11,7 @@
 #include "pal_security.h"
 #include "spinlock.h"
 
-_Atomic int64_t g_allocated_pages;
+_Atomic uint64_t g_allocated_pages;
 
 static void* g_heap_bottom;
 static void* g_heap_top;

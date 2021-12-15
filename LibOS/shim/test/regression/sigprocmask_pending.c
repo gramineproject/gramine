@@ -16,7 +16,7 @@
         }               \
     } while (0)
 
-static atomic_int seen_signal_cnt = 0;
+static _Atomic int seen_signal_cnt = 0;
 
 static void signal_handler(int signal) {
     atomic_fetch_add_explicit(&seen_signal_cnt, 1, memory_order_relaxed);

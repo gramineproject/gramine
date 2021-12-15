@@ -16,6 +16,7 @@
                      // It definitely shouldn't behave like this...
 #include <limits.h>
 #include <linux/signal.h>
+#include <stdatomic.h>
 
 #include "pal.h"
 #include "pal_error.h"

@@ -5,6 +5,8 @@
  * This file contains APIs that allocate, free or protect virtual memory.
  */
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "asan.h"
 #include "enclave_pages.h"
@@ -16,7 +18,7 @@
 #include "pal_linux_defs.h"
 #include "pal_security.h"
 
-extern _Atomic int64_t g_allocated_pages;
+extern _Atomic uint64_t g_allocated_pages;
 
 bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {

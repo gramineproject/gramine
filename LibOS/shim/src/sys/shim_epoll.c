@@ -7,6 +7,7 @@
 
 #include <errno.h>
 #include <linux/eventpoll.h>
+#include <stdatomic.h>
 
 #include "pal.h"
 #include "pal_error.h"

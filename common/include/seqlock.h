@@ -20,6 +20,8 @@
 #ifndef _SEQLOCK_H
 #define _SEQLOCK_H
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "cpu.h"
 #include "spinlock.h"

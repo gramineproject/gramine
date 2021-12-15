@@ -11,6 +11,7 @@
 #include <linux/signal.h>
 #include <linux/types.h>
 #include <linux/wait.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "ecall_types.h"
@@ -43,8 +44,8 @@ extern void* g_enclave_base;
 static PAL_IDX pal_assign_tid(void) {
     /* tid 1 is assigned to the first thread; see pal_linux_main() */
     static volatile _Atomic uint32_t tid_counter = 1;
-    atomic_fetch_add_explicit(&tid_counter, 1, memory_order_seq_cst);
-    return tid_counter;
+    PAL_IDX prev_tid = atomic_fetch_add_explicit(&tid_counter, 1, memory_order_seq_cst);
+    return prev_tid + 1;
 }
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in

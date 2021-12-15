@@ -7,7 +7,7 @@
 #ifndef _SPINLOCK_H
 #define _SPINLOCK_H
 
-#include  <stdatomic.h>
+#include <stdatomic.h>
 
 #include "api.h"
 #include "cpu.h"

@@ -95,17 +95,17 @@ static inline void pal_set_tcb_stack_canary(uint64_t canary) {
 /* private to untrusted Linux PAL, unique to each untrusted thread */
 typedef struct pal_tcb_urts {
     struct pal_tcb_urts* self;
-    _Atomic sgx_arch_tcs_t* tcs;   /* TCS page of SGX corresponding to thread, for EENTER */
-    void* stack;                   /* bottom of stack, for later freeing when thread exits */
-    void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
-    uint8_t is_in_aex_profiling;   /* non-zero if thread is currently doing AEX profiling */
-    atomic_ulong eenter_cnt;       /* # of EENTERs, corresponds to # of ECALLs */
-    atomic_ulong eexit_cnt;        /* # of EEXITs, corresponds to # of OCALLs */
-    atomic_ulong aex_cnt;          /* # of AEXs, corresponds to # of interrupts/signals */
-    atomic_ulong sync_signal_cnt;  /* # of sync signals, corresponds to # of SIGSEGV/SIGILL/.. */
-    atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
-    uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
-    int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
+    sgx_arch_tcs_t* tcs;                    /* TCS page of SGX corresponding to thread, for EENTER */
+    void* stack;                            /* bottom of stack, for later freeing when thread exits */
+    void* alt_stack;                        /* bottom of alt stack, for child thread to init alt stack */
+    uint8_t is_in_aex_profiling;            /* non-zero if thread is currently doing AEX profiling */
+    _Atomic unsigned long eenter_cnt;       /* # of EENTERs, corresponds to # of ECALLs */
+    _Atomic unsigned long eexit_cnt;        /* # of EEXITs, corresponds to # of OCALLs */
+    _Atomic unsigned long aex_cnt;          /* # of AEXs, corresponds to # of interrupts/signals */
+    _Atomic unsigned long sync_signal_cnt;  /* # of sync signals, corresponds to # of SIGSEGV/SIGILL/.. */
+    _Atomic unsigned long async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
+    uint64_t profile_sample_time;           /* last time sgx_profile_sample() recorded a sample */
+    int32_t last_async_event;               /* last async signal, reported to the enclave on ocall return */
 } PAL_TCB_URTS;
 
 extern void pal_tcb_urts_init(PAL_TCB_URTS* tcb, void* stack, void* alt_stack);

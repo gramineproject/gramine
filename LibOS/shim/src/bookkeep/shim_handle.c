@@ -4,6 +4,7 @@
 /*
  * This file contains code to maintain bookkeeping for handles in library OS.
  */
+#include <stdatomic.h>
 
 #include "pal.h"
 #include "pal_error.h"

@@ -4,6 +4,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include <stdatomic.h>
+
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_table.h"

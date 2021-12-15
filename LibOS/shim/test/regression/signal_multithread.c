@@ -6,13 +6,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static atomic_int counter = 0;
+static _Atomic int counter = 0;
 
 static void sigterm_handler(int signum) {
     atomic_fetch_add_explicit(&counter, 1, memory_order_seq_cst);
 }
 
-static atomic_int sync_var = 0;
+static _Atomic int sync_var = 0;
 
 static void set(int x) {
     atomic_store_explicit(&sync_var, x, memory_order_seq_cst);

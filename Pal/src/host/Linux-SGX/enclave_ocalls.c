@@ -23,6 +23,7 @@
 #include <asm/errno.h>
 #include <linux/futex.h>
 #include <stdalign.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 

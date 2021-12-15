@@ -214,9 +214,9 @@ struct shim_handle {
     /* Only meaningful if the handle is registered in some epoll instance with `EPOLLET` semantics.
      * `false` if it already triggered an `EPOLLIN` event for the current portion of data otherwise
      * `true` and the next `epoll_wait` will consider this handle and report events for it. */
-    atomic_bool needs_et_poll_in;
+    _Atomic bool needs_et_poll_in;
     /* Same as above but for `EPOLLOUT` events. */
-    atomic_bool needs_et_poll_out;
+    _Atomic bool needs_et_poll_out;
 
     struct shim_qstr uri; /* URI representing this handle, it is not
                            * necessary to be set. */

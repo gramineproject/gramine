@@ -13,6 +13,7 @@
 #ifndef DEBUG_MAP_H
 #define DEBUG_MAP_H
 
+#include <stdatomic.h>
 #include <stddef.h>
 
 /* TODO: We don't really use the fact that `addr` is a pointer. It should be converted to

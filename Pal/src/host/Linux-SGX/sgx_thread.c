@@ -1,11 +1,13 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 
+#include <stdatomic.h>
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 #include <asm/errno.h>
 #include <asm/prctl.h>
 #include <asm/signal.h>
 #include <linux/futex.h>
 #include <linux/signal.h>
+#include <stdatomic.h>
 
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
@@ -18,10 +20,10 @@
 
 struct thread_map {
     unsigned int    tid;
-    _Atomic sgx_arch_tcs_t* tcs;
+    sgx_arch_tcs_t* tcs;
 };
 
-static _Atomic sgx_arch_tcs_t* g_enclave_tcs;
+static sgx_arch_tcs_t* g_enclave_tcs;
 static int g_enclave_thread_num;
 static struct thread_map* g_enclave_thread_map;
 
@@ -29,11 +31,11 @@ bool g_sgx_enable_stats = false;
 
 /* this function is called only on thread/process exit (never in the middle of thread exec) */
 void update_and_print_stats(bool process_wide) {
-    static atomic_ulong g_eenter_cnt       = 0;
-    static atomic_ulong g_eexit_cnt        = 0;
-    static atomic_ulong g_aex_cnt          = 0;
-    static atomic_ulong g_sync_signal_cnt  = 0;
-    static atomic_ulong g_async_signal_cnt = 0;
+    static _Atomic unsigned long g_eenter_cnt       = 0;
+    static _Atomic unsigned long g_eexit_cnt        = 0;
+    static _Atomic unsigned long g_aex_cnt          = 0;
+    static _Atomic unsigned long g_sync_signal_cnt  = 0;
+    static _Atomic unsigned long g_async_signal_cnt = 0;
 
     if (!g_sgx_enable_stats)
         return;
@@ -88,7 +90,7 @@ void pal_tcb_urts_init(PAL_TCB_URTS* tcb, void* stack, void* alt_stack) {
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
 }
 
-static spinlock_t tcs_lock = INIT_SPINLOCK_UNLOCKED;
+static spinlock_t g_tcs_lock = INIT_SPINLOCK_UNLOCKED;
 
 void create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
     size_t thread_map_size = ALIGN_UP_POW2(sizeof(struct thread_map) * thread_num, PRESET_PAGESIZE);
@@ -106,7 +108,7 @@ void create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
 }
 
 void map_tcs(unsigned int tid) {
-    spinlock_lock(&tcs_lock);
+    spinlock_lock(&g_tcs_lock);
     for (int i = 0; i < g_enclave_thread_num; i++)
         if (!g_enclave_thread_map[i].tid) {
             g_enclave_thread_map[i].tid = tid;
@@ -114,11 +116,11 @@ void map_tcs(unsigned int tid) {
             ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i] = tid;
             break;
         }
-    spinlock_unlock(&tcs_lock);
+    spinlock_unlock(&g_tcs_lock);
 }
 
 void unmap_tcs(void) {
-    spinlock_lock(&tcs_lock);
+    spinlock_lock(&g_tcs_lock);
 
     int index = get_tcb_urts()->tcs - g_enclave_tcs;
     struct thread_map* map = &g_enclave_thread_map[index];
@@ -128,16 +130,16 @@ void unmap_tcs(void) {
     get_tcb_urts()->tcs = NULL;
     ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[index] = 0;
     map->tid = 0;
-    spinlock_unlock(&tcs_lock);
+    spinlock_unlock(&g_tcs_lock);
 }
 
 int current_enclave_thread_cnt(void) {
     int ret = 0;
-    spinlock_lock(&tcs_lock);
+    spinlock_lock(&g_tcs_lock);
     for (int i = 0; i < g_enclave_thread_num; i++)
         if (g_enclave_thread_map[i].tid)
             ret++;
-    spinlock_unlock(&tcs_lock);
+    spinlock_unlock(&g_tcs_lock);
     return ret;
 }
 
@@ -284,8 +286,7 @@ int clone_thread(void) {
 }
 
 int get_tid_from_tcs(void* tcs) {
-    _Atomic sgx_arch_tcs_t* atomic_tcs = tcs;
-    int index = atomic_tcs - g_enclave_tcs;
+    int index = (sgx_arch_tcs_t*)tcs - g_enclave_tcs;
     struct thread_map* map = &g_enclave_thread_map[index];
     if (index >= g_enclave_thread_num)
         return -EINVAL;

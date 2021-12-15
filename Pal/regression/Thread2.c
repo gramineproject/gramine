@@ -6,10 +6,10 @@
 
 volatile bool dummy_true = true;
 
-static atomic_bool thread2_started = false;
-static atomic_bool thread3_started = false;
-static atomic_bool thread3_exit_ok = true;
-static atomic_bool thread4_started = false;
+static _Atomic bool thread2_started = false;
+static _Atomic bool thread3_started = false;
+static _Atomic bool thread3_exit_ok = true;
+static _Atomic bool thread4_started = false;
 
 static int thread2_run(void* args) {
     pal_printf("Thread 2 started.\n");

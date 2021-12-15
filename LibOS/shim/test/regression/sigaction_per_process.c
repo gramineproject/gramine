@@ -35,7 +35,7 @@ static void sigterm_handler(int signum) {
     printf("sigterm_handler called in: %d\n", my_tid);
 }
 
-static atomic_int sync_var = 0;
+static _Atomic int sync_var = 0;
 
 static void set(int x) {
     atomic_store_explicit(&sync_var, x, memory_order_seq_cst);
