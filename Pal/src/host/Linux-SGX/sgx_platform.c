@@ -209,9 +209,7 @@ failed:
 
 int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
-    int ret = connect_aesm_service();
-    if (ret < 0)
-        return ret;
+    int ret;
 
     Request req   = REQUEST__INIT;
     Response* res = NULL;
