@@ -377,10 +377,12 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
          * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
          *
          * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
-         *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed).
+         *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed). Note
+         *        that `PAL_PROT_WRITECOPY` is specified to prevent allocating memory in untrusted
+         *        memory in case of Linux-SGX PAL (see Linux-SGX/db_files.c:file_map).
          */
         void* map_addr = NULL;
-        ret = _DkStreamMap(handle, &map_addr, /*prot=*/0, /*offset=*/0,
+        ret = _DkStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,
                            loadcmds[loadcmds_cnt - 1].alloc_end);
         if (ret < 0) {
             log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
