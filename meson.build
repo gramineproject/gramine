@@ -211,9 +211,14 @@ if asan
         '-fsanitize=address',
         '-fno-sanitize-link-runtime',
         '-mllvm', '-asan-mapping-offset=' + asan_shadow_start,
-        '-mllvm', '-asan-use-after-return=0',
         '-DASAN',
     ]
+
+    if meson.get_compiler('c').version().version_compare('>=13')
+        cflags_sanitizers += ['-mllvm', '-asan-use-after-return=never']
+    else
+        cflags_sanitizers += ['-mllvm', '-asan-use-after-return=0']
+    endif
 endif
 
 #
