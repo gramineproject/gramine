@@ -30,6 +30,7 @@ struct pal_handle_thread {
     PAL_PTR tcs;
     LIST_TYPE(pal_handle_thread) list;
     void* param;
+    _Atomic bool created;
 };
 
 typedef struct {

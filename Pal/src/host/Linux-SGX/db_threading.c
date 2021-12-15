@@ -62,8 +62,8 @@ void pal_start_thread(void) {
         if (!tmp->tcs) {
             new_thread = tmp;
             new_thread->tid = pal_assign_tid();
-            atomic_store_explicit(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TLS(tcs_offset)),
-                                  memory_order_release);
+            new_thread->tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);
+            atomic_store_explicit(&new_thread->created, true, memory_order_release);
             break;
         }
     spinlock_unlock(&g_thread_list_lock);
@@ -107,6 +107,7 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* para
      */
     new_thread->thread.tid = 0;
     new_thread->thread.tcs = NULL;
+    new_thread->thread.created = false;
     INIT_LIST_HEAD(&new_thread->thread, list);
     struct thread_param* thread_param = malloc(sizeof(struct thread_param));
     if (!thread_param) {
@@ -132,7 +133,7 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), const void* para
 
     /* There can be subtle race between the parent and child so hold the parent until child updates
      * its tcs. */
-    while (!atomic_load_explicit(&new_thread->thread.tcs, memory_order_acquire))
+    while (!atomic_load_explicit(&new_thread->thread.created, memory_order_acquire))
         CPU_RELAX();
 
     *handle = new_thread;
