@@ -13,6 +13,7 @@
 #include <asm/stat.h>
 #include <asm/statfs.h>
 #include <linux/aio_abi.h>
+#include <linux/eventpoll.h>
 #include <linux/futex.h>
 #include <linux/kernel.h>
 #include <linux/msg.h>
@@ -186,22 +187,6 @@ struct __kernel_rlimit64 {
     uint64_t rlim_cur, rlim_max;
 };
 
-/* linux/eventpoll.h
- * On x86-64 make the 64bit structure have the same alignment as the
- * 32bit structure. This makes 32bit emulation easier.
- *
- * UML/x86_64 needs the same packing as x86_64
- */
-struct __kernel_epoll_event {
-    __u32 events;
-    __u64 data;
-}
-#ifdef __x86_64__
-__attribute__((packed));
-#else
-;
-#endif
-
 /* bits/ustat.h */
 struct __kernel_ustat {
     __daddr_t f_tfree; /* Number of free blocks. */
@@ -345,5 +330,10 @@ struct shim_lock {
 
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_URI_SIZE 96
+
+#ifndef EPOLLNVAL
+/* This is not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
+#define EPOLLNVAL ((uint32_t)0x00000020)
+#endif
 
 #endif /* _SHIM_TYPES_H_ */

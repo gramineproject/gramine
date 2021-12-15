@@ -228,8 +228,25 @@ int object_wait_with_retry(PAL_HANDLE handle);
 
 struct shim_handle;
 
-void _update_epolls(struct shim_handle* handle);
-void delete_from_epoll_handles(struct shim_handle* handle);
+/*!
+ * \brief Interrupt all threads waiting on epolls which \p handle is associated with
+ *
+ * \param handle handle to wakeup waiters of
+ *
+ * Currently the only usage of this function is on socket handles that were just connected (in
+ * which case their PAL handle changed from NULL to a newly created handle).
+ */
+void interrupt_epolls(struct shim_handle* handle);
+/*!
+ * \brief Delete all epoll items associated with the pair \p fd and \p handle
+ *
+ * \param fd fd which was just closed/detached
+ * \param handle handle which \p fd referred to
+ *
+ * This should be called once there is no possibility of adding new epoll items with this \p fd and
+ * \p handle, i.e. after \p fd was detached from fds map.
+ */
+void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
 /*!
  * \brief Check if next `epoll_wait` with `EPOLLET` should trigger for this handle
  *
