@@ -58,7 +58,7 @@
  *       -fsanitize=address
  *       -fno-sanitize-link-runtime
  *       -mllvm -asan-mapping-offset=0x18000000000
- *       -mllvm -asan-use-after-return=0
+ *       -mllvm -asan-use-after-return=0  (`never` in LLVM 13 or higher)
  *       -mllvm -asan-stack=0
  *       -DASAN
  *
