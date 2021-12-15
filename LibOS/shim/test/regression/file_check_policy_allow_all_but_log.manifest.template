@@ -22,10 +22,9 @@ sgx.debug = true
 
 sgx.file_check_policy = "allow_all_but_log"
 
-sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
-  "file:{{ gramine.runtimedir(libc) }}/",
-]
+# there are no "file:{{ gramine.libos }}" and "file:{{ gramine.runtimedir() }}/"
+# entries in `sgx.trusted_files` -- this is on purpose; we want to test that
+# `allow_all_but_log` also applies to Gramine-runtime files (e.g., LibOS binary)
 
 # below entry in sgx.trusted_files is to test TOML-table syntax without `sha256`
 [[sgx.trusted_files]]
