@@ -1060,15 +1060,12 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('getsockopt: Got socket type OK', stdout)
         self.assertIn('getsockopt: Got TCP_NODELAY flag OK', stdout)
 
-    def test_010_epoll_wait_timeout(self):
-        stdout, _ = self.run_binary(['epoll_wait_timeout', '8000'],
-            timeout=50)
-
-        # epoll_wait timeout
-        self.assertIn('epoll_wait test passed', stdout)
+    def test_010_epoll(self):
+        stdout, _ = self.run_binary(['epoll_test'])
+        self.assertIn('TEST OK', stdout)
 
     def test_011_epoll_epollet(self):
-        stdout, _ = self.run_binary(['epoll_epollet', 'EMULATE_GRAMINE_BUG'])
+        stdout, _ = self.run_binary(['epoll_epollet'])
         self.assertIn('TEST OK', stdout)
 
     def test_020_poll(self):

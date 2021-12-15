@@ -276,6 +276,7 @@ struct shim_handle* __detach_fd_handle(struct shim_fd_handle* fd, int* flags,
     if (HANDLE_ALLOCATED(fd)) {
         uint32_t vfd = fd->vfd;
         handle = fd->handle;
+        int handle_fd = vfd;
         if (flags)
             *flags = fd->flags;
 
@@ -292,6 +293,8 @@ struct shim_handle* __detach_fd_handle(struct shim_fd_handle* fd, int* flags,
                 map->fd_top = vfd - 1;
                 vfd--;
             } while (!HANDLE_ALLOCATED(map->map[vfd]));
+
+        delete_epoll_items_for_fd(handle_fd, handle);
     }
 
     return handle;
@@ -340,7 +343,8 @@ struct shim_handle* get_new_handle(void) {
         free_mem_obj_to_mgr(handle_mgr, new_handle);
         return NULL;
     }
-    INIT_LISTP(&new_handle->epolls);
+    INIT_LISTP(&new_handle->epoll_items);
+    new_handle->epoll_items_count = 0;
     return new_handle;
 }
 
@@ -479,7 +483,8 @@ void put_handle(struct shim_handle* hdl) {
 #endif
 
     if (!ref_count) {
-        delete_from_epoll_handles(hdl);
+        assert(hdl->epoll_items_count == 0);
+        assert(LISTP_EMPTY(&hdl->epoll_items));
 
         if (hdl->is_dir) {
             clear_directory_handle(hdl);
@@ -737,14 +742,20 @@ BEGIN_CP_FUNC(handle) {
             entry->phandle = &new_hdl->pal_handle;
         }
 
-        INIT_LISTP(&new_hdl->epolls);
+        /* This list is created empty and all necessary references are added when checkpointing
+         * items lists from specific epoll handles. See `epoll_items_list` checkpointing in
+         * `shim_epoll.c` for more details. */
+        INIT_LISTP(&new_hdl->epoll_items);
+        new_hdl->epoll_items_count = 0;
 
         switch (hdl->type) {
-            case TYPE_EPOLL:
-                /* `new_hdl->info.epoll.fds_count` stays the same - copied above. */
-                DO_CP(epoll_item, &hdl->info.epoll.fds, &new_hdl->info.epoll.fds);
-                __atomic_store_n(&new_hdl->info.epoll.waiter_cnt, 0, __ATOMIC_RELAXED);
-                memset(&new_hdl->info.epoll.event, '\0', sizeof(new_hdl->info.epoll.event));
+            case TYPE_EPOLL:;
+                struct shim_epoll_handle* epoll = &new_hdl->info.epoll;
+                clear_lock(&epoll->lock);
+                INIT_LISTP(&epoll->waiters);
+                INIT_LISTP(&epoll->items);
+                epoll->items_count = 0;
+                DO_CP(epoll_items_list, hdl, new_hdl);
                 break;
             case TYPE_SOCK:
                 /* no support for multiple processes sharing options/peek buffer of the socket */
@@ -773,7 +784,7 @@ BEGIN_RS_FUNC(handle) {
     CP_REBASE(hdl->fs);
     CP_REBASE(hdl->dentry);
     CP_REBASE(hdl->inode);
-    CP_REBASE(hdl->epolls);
+    CP_REBASE(hdl->epoll_items);
 
     if (!create_lock(&hdl->lock)) {
         return -ENOMEM;
@@ -788,21 +799,14 @@ BEGIN_RS_FUNC(handle) {
     }
 
     switch (hdl->type) {
-        case TYPE_EPOLL: {
-            int ret = create_pollable_event(&hdl->info.epoll.event);
-            if (ret < 0) {
-                return ret;
+        case TYPE_EPOLL:;
+            struct shim_epoll_handle* epoll = &hdl->info.epoll;
+            if (!create_lock(&epoll->lock)) {
+                return -ENOMEM;
             }
-
-            struct shim_epoll_item* epoll_item;
-            size_t count = 0;
-            LISTP_FOR_EACH_ENTRY(epoll_item, &hdl->info.epoll.fds, list) {
-                epoll_item->epoll = hdl;
-                count++;
-            }
-            assert(hdl->info.epoll.fds_count == count);
+            CP_REBASE(epoll->waiters);
+            /* `epoll->items` is rebased in epoll_items_list RS_FUNC. */
             break;
-        }
         default:
             break;
     }

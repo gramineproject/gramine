@@ -17,7 +17,7 @@ manifests = [
   "env_from_host",
   "env_passthrough",
   "epoll_epollet",
-  "epoll_wait_timeout",
+  "epoll_test",
   "eventfd",
   "exec",
   "exec_fork",

@@ -15,7 +15,7 @@ tests = {
     'device_passthrough': {},
     'double_fork': {},
     'epoll_epollet': {},
-    'epoll_wait_timeout': {},
+    'epoll_test': {},
     'eventfd': {},
     'exec': {},
     'exec_fork': {},

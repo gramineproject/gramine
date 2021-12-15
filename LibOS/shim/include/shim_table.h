@@ -156,9 +156,8 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 long shim_do_set_tid_address(int* tidptr);
 long shim_do_epoll_create(int size);
 long shim_do_getdents64(int fd, struct linux_dirent64* buf, size_t count);
-long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxevents,
-                        int timeout_ms);
-long shim_do_epoll_ctl(int epfd, int op, int fd, struct __kernel_epoll_event* event);
+long shim_do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms);
+long shim_do_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event);
 long shim_do_clock_gettime(clockid_t which_clock, struct timespec* tp);
 long shim_do_clock_getres(clockid_t which_clock, struct timespec* tp);
 long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_timespec* req,
@@ -182,8 +181,8 @@ long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
                    const __sigset_t* sigmask_ptr, size_t sigsetsize);
 long shim_do_set_robust_list(struct robust_list_head* head, size_t len);
 long shim_do_get_robust_list(pid_t pid, struct robust_list_head** head, size_t* len);
-long shim_do_epoll_pwait(int epfd, struct __kernel_epoll_event* events, int maxevents,
-                         int timeout_ms, const __sigset_t* sigmask, size_t sigsetsize);
+long shim_do_epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms,
+                         const __sigset_t* sigmask, size_t sigsetsize);
 long shim_do_accept4(int sockfd, struct sockaddr* addr, int* addrlen, int flags);
 long shim_do_dup3(unsigned int oldfd, unsigned int newfd, int flags);
 long shim_do_epoll_create1(int flags);
