@@ -231,8 +231,8 @@ int object_wait_with_retry(PAL_HANDLE handle);
 
 struct shim_handle;
 
-void _update_epolls(struct shim_handle* handle);
-void delete_from_epoll_handles(struct shim_handle* handle);
+void update_epolls(struct shim_handle* handle);
+void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
 /*!
  * \brief Check if next `epoll_wait` with `EPOLLET` should trigger for this handle
  *
