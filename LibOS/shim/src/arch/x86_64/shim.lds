@@ -44,6 +44,12 @@ SECTIONS
   {
     /* the rest of text segments */
     *(.text .stub .text.*);
+  }
+  .fini          : { *(.fini) }
+  .rodata :
+  {
+    /* the rest of rodata */
+    *(.rodata .rodata.*)
     . = ALIGN(8);
     __cp_name = .;
     *(SORT(.cp_name.*));
@@ -51,12 +57,6 @@ SECTIONS
     *(SORT(.cp_func.*));
     __rs_func = .;
     *(SORT(.rs_func.*));
-  }
-  .fini          : { *(.fini) }
-  .rodata :
-  {
-    /* the rest of rodata */
-    *(.rodata .rodata.*)
   }
   .eh_frame_hdr  : { *(.eh_frame_hdr) }
   .eh_frame      : ONLY_IF_RO { *(.eh_frame) }
