@@ -23,6 +23,7 @@
 #include "pal.h"
 #include "shim_defs.h"
 #include "shim_fs_mem.h"
+#include "shim_lock.h"
 #include "shim_pollable_event.h"
 #include "shim_sync.h"
 #include "shim_types.h"
@@ -150,37 +151,18 @@ struct shim_str_handle {
     bool dirty;
 };
 
-DEFINE_LIST(shim_epoll_item);
 DEFINE_LISTP(shim_epoll_item);
-struct shim_epoll_item {
-    int fd;
-    uint64_t data;
-    unsigned int events;
-    unsigned int revents;
-    /* The two references below are not ref-counted (to prevent cycles). When a handle is dropped
-     * (ref-count goes to 0) it is also removed from all epoll instances. When an epoll instance is
-     * destroyed, all handles that it traced are removed from it. */
-    struct shim_handle* handle;      /* reference to monitored object (socket, pipe, file, etc) */
-    struct shim_handle* epoll;       /* reference to epoll object that monitors handle object */
-    LIST_TYPE(shim_epoll_item) list; /* list of shim_epoll_items, used by epoll object (via `fds`) */
-    LIST_TYPE(shim_epoll_item) back; /* list of epolls, used by handle object (via `epolls`) */
-};
-
+DEFINE_LISTP(shim_epoll_waiter);
 struct shim_epoll_handle {
-    size_t waiter_cnt;
-
-    /* Number of items on fds list. */
-    size_t fds_count;
-
-    struct shim_pollable_event event;
-    LISTP_TYPE(shim_epoll_item) fds;
+    struct shim_lock lock;
+    LISTP_TYPE(shim_epoll_waiter) waiters;
+    LISTP_TYPE(shim_epoll_item) items;
+    size_t items_count;
 };
 
 struct shim_fs;
 struct shim_dentry;
 
-/* The epolls list links to the back field of the shim_epoll_item structure
- */
 struct shim_handle {
     enum shim_handle_type type;
     bool is_dir;
@@ -201,9 +183,10 @@ struct shim_handle {
     /* Offset in file */
     file_off_t pos;
 
-    /* If this handle is registered for any epoll handle, this list contains
-     * a shim_epoll_item object in correspondence with the epoll handle. */
-    LISTP_TYPE(shim_epoll_item) epolls;
+    /* This list contains `shim_epoll_item` objects this handle is part of. All accesses should be
+     * protected by `handle->lock`. */
+    LISTP_TYPE(shim_epoll_item) epoll_items;
+    size_t epoll_items_count;
     /* Only meaningful if the handle is registered in some epoll instance with `EPOLLET` semantics.
      * `false` if it already triggered an `EPOLLIN` event for the current portion of data otherwise
      * `true` and the next `epoll_wait` will consider this handle and report events for it. */
