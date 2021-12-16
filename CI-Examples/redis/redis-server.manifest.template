@@ -2,8 +2,12 @@
 
 ################################## GRAMINE ####################################
 
-# PAL entrypoint (points to the LibOS layer library of Gramine). There is currently only one
-# implementation, so it is always set to libsysdb.so.
+# Deprecated option, only for compatibility with Gramine v1.0. For newer
+# versions of Gramine, use `loader.entrypoint` instead.
+loader.preload = "file:{{ gramine.libos }}"
+
+# PAL entrypoint (points to the LibOS layer library of Gramine). There is
+# currently only one implementation, so it is always set to libsysdb.so.
 loader.entrypoint = "file:{{ gramine.libos }}"
 
 # Entrypoint binary which Gramine invokes.

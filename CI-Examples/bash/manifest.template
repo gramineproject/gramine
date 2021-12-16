@@ -1,6 +1,8 @@
 # This is a general manifest template for running Bash and core utility programs,
 # including ls, cat, cp, date, and rm.
 
+loader.preload = "file:{{ gramine.libos }}" # for compatibility with v1.0
+
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ execdir }}/bash"
 

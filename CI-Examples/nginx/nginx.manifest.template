@@ -1,5 +1,7 @@
 # Nginx manifest example
 
+loader.preload = "file:{{ gramine.libos }}" # for compatibility with v1.0
+
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ install_dir }}/sbin/nginx"
 
