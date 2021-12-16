@@ -206,14 +206,13 @@ typedef struct {
     int ms_ipv6_v6only;
     const struct sockaddr* ms_addr;
     size_t ms_addrlen;
-    struct sockopt ms_sockopt;
 } ms_ocall_listen_t;
 
 typedef struct {
     int ms_sockfd;
+    int options;
     struct sockaddr* ms_addr;
     size_t ms_addrlen;
-    struct sockopt ms_sockopt;
 } ms_ocall_accept_t;
 
 typedef struct {
@@ -225,7 +224,6 @@ typedef struct {
     size_t ms_addrlen;
     struct sockaddr* ms_bind_addr;
     size_t ms_bind_addrlen;
-    struct sockopt ms_sockopt;
 } ms_ocall_connect_t;
 
 typedef struct {

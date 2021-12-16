@@ -334,15 +334,6 @@ static long sgx_ocall_socketpair(void* pms) {
     return ret;
 }
 
-static long sock_getopt(int fd, struct sockopt* opt) {
-    log_debug("sock_getopt (fd = %d, sockopt addr = %p) is not implemented and always returns 0",
-              fd, opt);
-    /* initialize *opt with constant */
-    *opt = (struct sockopt){0};
-    opt->reuseaddr = 1;
-    return 0;
-}
-
 static long sgx_ocall_listen(void* pms) {
     ms_ocall_listen_t* ms = (ms_ocall_listen_t*)pms;
     long ret;
@@ -392,10 +383,6 @@ static long sgx_ocall_listen(void* pms) {
             goto err_fd;
     }
 
-    ret = sock_getopt(fd, &ms->ms_sockopt);
-    if (ret < 0)
-        goto err_fd;
-
     return fd;
 
 err_fd:
@@ -407,7 +394,6 @@ err:
 static long sgx_ocall_accept(void* pms) {
     ms_ocall_accept_t* ms = (ms_ocall_accept_t*)pms;
     long ret;
-    int fd;
     ODEBUG(OCALL_ACCEPT, ms);
 
     if (ms->ms_addrlen > INT_MAX) {
@@ -415,21 +401,17 @@ static long sgx_ocall_accept(void* pms) {
         goto err;
     }
     int addrlen = ms->ms_addrlen;
+    int options = ms->options | SOCK_CLOEXEC;
+    assert(WITHIN_MASK(options, SOCK_CLOEXEC | SOCK_NONBLOCK));
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ms->ms_sockfd, ms->ms_addr, &addrlen, O_CLOEXEC);
+    ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ms->ms_sockfd, ms->ms_addr, &addrlen, options);
     if (ret < 0)
         goto err;
 
-    fd = ret;
-    ret = sock_getopt(fd, &ms->ms_sockopt);
-    if (ret < 0)
-        goto err_fd;
-
+    int fd = ret;
     ms->ms_addrlen = addrlen;
     return fd;
 
-err_fd:
-    DO_SYSCALL(close, fd);
 err:
     return ret;
 }
@@ -490,10 +472,6 @@ static long sgx_ocall_connect(void* pms) {
             goto err_fd;
         ms->ms_bind_addrlen = addrlen;
     }
-
-    ret = sock_getopt(fd, &ms->ms_sockopt);
-    if (ret < 0)
-        goto err_fd;
 
     return fd;
 

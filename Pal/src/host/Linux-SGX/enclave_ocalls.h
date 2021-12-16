@@ -48,13 +48,12 @@ int ocall_mkdir(const char* pathname, unsigned short mode);
 int ocall_getdents(int fd, struct linux_dirent64* dirp, size_t size);
 
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
-                 size_t* addrlen, struct sockopt* sockopt);
+                 size_t* addrlen);
 
-int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockopt* opt);
+int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, int options);
 
 int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const struct sockaddr* addr,
-                  size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen,
-                  struct sockopt* sockopt);
+                  size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen);
 
 ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, size_t* addrlenptr,
                    void* control, size_t* controllenptr);

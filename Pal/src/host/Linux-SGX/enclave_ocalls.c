@@ -1119,7 +1119,7 @@ int ocall_socketpair(int domain, int type, int protocol, int sockfds[2]) {
 }
 
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
-                 size_t* addrlen, struct sockopt* sockopt) {
+                 size_t* addrlen) {
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     ms_ocall_listen_t* ms;
@@ -1164,17 +1164,13 @@ int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct soc
             }
             *addrlen = untrusted_addrlen;
         }
-
-        if (sockopt) {
-            *sockopt = READ_ONCE(ms->ms_sockopt);
-        }
     }
 
     sgx_reset_ustack(old_ustack);
     return retval;
 }
 
-int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockopt* sockopt) {
+int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, int options) {
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     ms_ocall_accept_t* ms;
@@ -1194,6 +1190,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
         return -EPERM;
     }
     WRITE_ONCE(ms->ms_addr, untrusted_addr);
+    WRITE_ONCE(ms->options, options);
 
     retval = sgx_exitless_ocall(OCALL_ACCEPT, ms);
 
@@ -1213,10 +1210,6 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
             }
             *addrlen = untrusted_addrlen;
         }
-
-        if (sockopt) {
-            *sockopt = READ_ONCE(ms->ms_sockopt);
-        }
     }
 
     sgx_reset_ustack(old_ustack);
@@ -1224,8 +1217,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
 }
 
 int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const struct sockaddr* addr,
-                  size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen,
-                  struct sockopt* sockopt) {
+                  size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen) {
     int retval = 0;
     size_t bind_len = bind_addrlen ? *bind_addrlen : 0;
     ms_ocall_connect_t* ms;
@@ -1276,10 +1268,6 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
                 return -EPERM;
             }
             *bind_addrlen = untrusted_addrlen;
-        }
-
-        if (sockopt) {
-            *sockopt = READ_ONCE(ms->ms_sockopt);
         }
     }
 

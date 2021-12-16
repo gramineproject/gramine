@@ -277,16 +277,15 @@ static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t option
     if (!bind_addr)
         return -PAL_ERROR_INVAL;
 
-    struct sockopt sock_options;
-
-    memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
-
     int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
     ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_STREAM, options), 0, ipv6_v6only,
-                       bind_addr, &bind_addrlen, &sock_options);
+                       bind_addr, &bind_addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    struct sockopt sock_options = {
+        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
+    };
 
     *handle = socket_create_handle(PAL_TYPE_TCPSRV, ret, options, bind_addr, bind_addrlen, NULL, 0,
                                    &sock_options);
@@ -312,14 +311,13 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
     size_t dest_addrlen = sizeof(dest_addr);
     int ret = 0;
 
-    struct sockopt sock_options;
-
-    memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
-
-    ret = ocall_accept(handle->sock.fd, (struct sockaddr*)&dest_addr, &dest_addrlen, &sock_options);
+    ret = ocall_accept(handle->sock.fd, (struct sockaddr*)&dest_addr, &dest_addrlen, /*options=*/0);
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    struct sockopt sock_options = {
+        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
+    };
 
     *client = socket_create_handle(PAL_TYPE_TCP, ret, 0, bind_addr, bind_addrlen,
                                    (struct sockaddr*)&dest_addr, dest_addrlen, &sock_options);
@@ -352,15 +350,14 @@ static int tcp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t optio
     if (bind_addr && bind_addr->sa_family != dest_addr->sa_family)
         return -PAL_ERROR_INVAL;
 
-    struct sockopt sock_options;
-
-    memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
-
     ret = ocall_connect(dest_addr->sa_family, sock_type(SOCK_STREAM, options), 0, /*ipv6_v6only=*/0,
-                        dest_addr, dest_addrlen, bind_addr, &bind_addrlen, &sock_options);
+                        dest_addr, dest_addrlen, bind_addr, &bind_addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    struct sockopt sock_options = {
+        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
+    };
 
     *handle = socket_create_handle(PAL_TYPE_TCP, ret, options, bind_addr, bind_addrlen, dest_addr,
                                    dest_addrlen, &sock_options);
@@ -453,16 +450,15 @@ static int udp_bind(PAL_HANDLE* handle, char* uri, pal_stream_options_t options)
         return -PAL_ERROR_INVAL;
     assert(bind_addrlen == addr_size(bind_addr));
 
-    struct sockopt sock_options;
-
-    memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
-
     int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
     ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_DGRAM, options), 0, ipv6_v6only,
-                       bind_addr, &bind_addrlen, &sock_options);
+                       bind_addr, &bind_addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    struct sockopt sock_options = {
+        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
+    };
 
     *handle = socket_create_handle(PAL_TYPE_UDPSRV, ret, options, bind_addr, bind_addrlen, NULL, 0,
                                    &sock_options);
@@ -487,18 +483,16 @@ static int udp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t optio
     if ((ret = socket_parse_uri(uri, &bind_addr, &bind_addrlen, &dest_addr, &dest_addrlen)) < 0)
         return ret;
 
-    struct sockopt sock_options;
-
-    memset(&sock_options, 0, sizeof(sock_options));
-    sock_options.reuseaddr = 1; /* sockets are always set as reusable in Gramine */
-
     int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
     ret = ocall_connect(dest_addr ? dest_addr->sa_family : AF_INET, sock_type(SOCK_DGRAM, options),
-                        0, ipv6_v6only, dest_addr, dest_addrlen, bind_addr, &bind_addrlen,
-                        &sock_options);
+                        0, ipv6_v6only, dest_addr, dest_addrlen, bind_addr, &bind_addrlen);
 
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    struct sockopt sock_options = {
+        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
+    };
 
     *handle = socket_create_handle(dest_addr ? PAL_TYPE_UDP : PAL_TYPE_UDPSRV, ret, options,
                                    bind_addr, bind_addrlen, dest_addr, dest_addrlen, &sock_options);

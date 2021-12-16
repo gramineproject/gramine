@@ -69,12 +69,11 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
-    struct sockopt sock_options;
     size_t addrlen = sizeof(struct sockaddr_un);
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
     ret = ocall_listen(AF_UNIX, SOCK_STREAM | nonblock, 0, /*ipv6_v6only=*/0,
-                       (struct sockaddr*)&addr, &addrlen, &sock_options);
+                       (struct sockaddr*)&addr, &addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -123,8 +122,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    struct sockopt sock_options;
-    int ret = ocall_accept(handle->pipe.fd, NULL, NULL, &sock_options);
+    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, /*options=*/0);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -187,12 +185,11 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
-    struct sockopt sock_options;
     unsigned int addrlen = sizeof(struct sockaddr_un);
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
     ret = ocall_connect(AF_UNIX, SOCK_STREAM | nonblock, 0, /*ipv6_v6only=*/0,
-                        (const struct sockaddr*)&addr, addrlen, NULL, NULL, &sock_options);
+                        (const struct sockaddr*)&addr, addrlen, NULL, NULL);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
