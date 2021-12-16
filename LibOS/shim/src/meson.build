@@ -55,6 +55,7 @@ libos_sources = files(
     'shim_malloc.c',
     'shim_object.c',
     'shim_parser.c',
+    'shim_pollable_event.c',
     'shim_rtld.c',
     'shim_syscalls.c',
     'shim_utils.c',

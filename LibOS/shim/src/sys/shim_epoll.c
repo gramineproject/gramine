@@ -50,7 +50,7 @@ long shim_do_epoll_create1(int flags) {
     __atomic_store_n(&epoll->waiter_cnt, 0, __ATOMIC_RELAXED);
     INIT_LISTP(&epoll->fds);
 
-    int ret = create_event(&epoll->event);
+    int ret = create_pollable_event(&epoll->event);
     if (ret < 0) {
         put_handle(hdl);
         return ret;
@@ -78,7 +78,7 @@ static void notify_epoll_waiters(struct shim_epoll_handle* epoll) {
     size_t waiters = __atomic_load_n(&epoll->waiter_cnt, __ATOMIC_RELAXED);
     if (waiters) {
         /* TODO: this needs error checking. */
-        set_event(&epoll->event, waiters);
+        set_pollable_event(&epoll->event, waiters);
     }
 }
 
@@ -362,7 +362,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
 
         /* populate "event" handle so it waits on read (meaning epoll-update signal arrived);
          * note that we don't increment pal_cnt because this is a special not-user-supplied item */
-        pal_handles[pal_cnt] = epoll->event.event;
+        pal_handles[pal_cnt] = epoll->event.read_handle;
         pal_events[pal_cnt]  = PAL_WAIT_READ;
         ret_events[pal_cnt]  = 0;
 
@@ -421,7 +421,7 @@ long shim_do_epoll_wait(int epfd, struct __kernel_epoll_event* events, int maxev
         } else if (event_handle_update) {
             /* retry if epoll was updated concurrently (similar to Linux semantics) */
             unlock(&epoll_hdl->lock);
-            int ret = wait_event(&epoll->event);
+            int ret = wait_pollable_event(&epoll->event);
             if (ret < 0) {
                 put_handle(epoll_hdl);
                 return ret;
@@ -490,7 +490,7 @@ static int epoll_close(struct shim_handle* epoll_hdl) {
 
     unlock(&epoll_hdl->lock);
 
-    destroy_event(&epoll->event);
+    destroy_pollable_event(&epoll->event);
 
     return 0;
 }

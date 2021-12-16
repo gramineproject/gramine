@@ -789,7 +789,7 @@ BEGIN_RS_FUNC(handle) {
 
     switch (hdl->type) {
         case TYPE_EPOLL: {
-            int ret = create_event(&hdl->info.epoll.event);
+            int ret = create_pollable_event(&hdl->info.epoll.event);
             if (ret < 0) {
                 return ret;
             }
