@@ -17,6 +17,7 @@
 #include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"
+#include "shim_pollable_event.h"
 #include "shim_thread.h"
 #include "shim_types.h"
 #include "shim_utils.h"
@@ -37,7 +38,7 @@ static LISTP_TYPE(shim_ipc_connection) g_ipc_connections;
 static size_t g_ipc_connections_cnt = 0;
 
 static struct shim_thread* g_worker_thread = NULL;
-static AEVENTTYPE exit_notification_event;
+static struct shim_pollable_event exit_notification_event;
 /* Used by `DkThreadExit` to indicate that the thread really exited and is not using any resources
  * (e.g. stack) anymore. Awaited to be `0` (thread exited) in `terminate_ipc_worker()`. */
 static int g_clear_on_worker_exit = 1;
@@ -249,7 +250,7 @@ static noreturn void ipc_worker_main(void) {
         memset(ret_events, 0, items_cnt * sizeof(*ret_events));
 
         connections[0] = NULL;
-        handles[0] = event_handle(&exit_notification_event);
+        handles[0] = exit_notification_event.read_handle;
         events[0] = PAL_WAIT_READ;
         connections[1] = NULL;
         handles[1] = g_self_ipc_handle;
@@ -402,7 +403,7 @@ static int create_ipc_worker(void) {
 }
 
 int init_ipc_worker(void) {
-    int ret = create_event(&exit_notification_event);
+    int ret = create_pollable_event(&exit_notification_event);
     if (ret < 0) {
         return ret;
     }
@@ -412,7 +413,7 @@ int init_ipc_worker(void) {
 }
 
 void terminate_ipc_worker(void) {
-    set_event(&exit_notification_event, 1);
+    set_pollable_event(&exit_notification_event, 1);
 
     while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_RELAXED)) {
         CPU_RELAX();

@@ -23,6 +23,7 @@
 #include "pal.h"
 #include "shim_defs.h"
 #include "shim_fs_mem.h"
+#include "shim_pollable_event.h"
 #include "shim_sync.h"
 #include "shim_types.h"
 
@@ -171,7 +172,7 @@ struct shim_epoll_handle {
     /* Number of items on fds list. */
     size_t fds_count;
 
-    AEVENTTYPE event;
+    struct shim_pollable_event event;
     LISTP_TYPE(shim_epoll_item) fds;
 };
 
