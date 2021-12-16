@@ -108,7 +108,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             }
             break;
         case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPEPRV:
             break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
@@ -203,7 +202,6 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             }
             break;
         case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPEPRV:
             break;
         case PAL_TYPE_DEV:
             break;
