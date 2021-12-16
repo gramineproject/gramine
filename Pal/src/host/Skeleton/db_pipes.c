@@ -22,16 +22,9 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_private(PAL_HANDLE* handle, pal_stream_options_t options) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
                      pal_stream_options_t options) {
-    if (!strcmp(type, URI_TYPE_PIPE) && !*uri)
-        return pipe_private(handle, options);
-
     if (strlen(uri) + 1 > PIPE_NAME_MAX)
         return -PAL_ERROR_INVAL;
 
@@ -76,11 +69,4 @@ struct handle_ops g_pipe_ops = {
     .write         = &pipe_write,
     .close         = &pipe_close,
     .delete        = &pipe_delete,
-};
-
-struct handle_ops g_pipeprv_ops = {
-    .open  = &pipe_open,
-    .read  = &pipe_read,
-    .write = &pipe_write,
-    .close = &pipe_close,
 };

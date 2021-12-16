@@ -49,7 +49,6 @@ enum {
     OCALL_CLONE_THREAD,
     OCALL_CREATE_PROCESS,
     OCALL_FUTEX,
-    OCALL_SOCKETPAIR,
     OCALL_LISTEN,
     OCALL_ACCEPT,
     OCALL_CONNECT,
@@ -193,11 +192,6 @@ typedef struct {
     int ms_op, ms_val;
     uint64_t ms_timeout_us;
 } ms_ocall_futex_t;
-
-typedef struct {
-    int ms_domain, ms_type, ms_protocol;
-    int ms_sockfds[2];
-} ms_ocall_socketpair_t;
 
 typedef struct {
     int ms_domain;
