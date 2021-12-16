@@ -32,6 +32,9 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         except subprocess.TimeoutExpired:
             timed_out = True
 
+        proc.poll()
+        main_returncode = proc.returncode
+
         # Kill the whole process group: even if we did not time out, there might be some processes
         # remaining
 
@@ -61,12 +64,27 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         sys.stderr.write(stderr)
 
         if timed_out:
-            raise AssertionError('Command {} timed out after {} s'.format(cmd, timeout))
+            if main_returncode is not None:
+                # XXX: Don't fail the test as long the main process exited (i.e. if it left dangling
+                # child processes). This can happen due to a known issue with Gramine failing to
+                # deliver a signal for an arbitrary amount of time. See the comment in
+                # `shim_internal.h:handle_signal` for details.
+                #
+                # This happens occasionally when running LTP tests (e.g. `sendfile04`,
+                # `fdatasync01`, `recvfrom01`, `sendto01`) that send SIGKILL to child processes.
+                logging.warning(
+                    'run_command: Command %s timed out, but the main process exited. This might be '
+                    'due to a known issue with Gramine failing to deliver a signal. Continuing.',
+                    cmd)
+            else:
+                raise AssertionError('Command {} timed out after {} s'.format(cmd, timeout))
 
-        if proc.returncode and not can_fail:
+        assert main_returncode is not None
+
+        if main_returncode != 0 and not can_fail:
             raise subprocess.CalledProcessError(proc.returncode, cmd, raw_stdout, raw_stderr)
 
-        return proc.returncode, stdout, stderr
+        return main_returncode, stdout, stderr
 
 
 class RegressionTestCase(unittest.TestCase):
