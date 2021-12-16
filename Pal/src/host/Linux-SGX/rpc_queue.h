@@ -66,8 +66,8 @@ typedef struct {
 
 typedef struct rpc_queue {
     spinlock_t lock;                  /* global lock for enclave and RPC threads */
-    _Atomic uint64_t front;           /* indexes into front end of q */
-    _Atomic uint64_t rear;            /* indexes into rear end of q */
+    _Atomic uint64_t front;           /* index into front end of q */
+    _Atomic uint64_t rear;            /* index into rear end of q */
     rpc_request_t* q[RPC_QUEUE_SIZE]; /* queue of syscall requests */
     int rpc_threads[MAX_RPC_THREADS]; /* RPC threads (thread IDs) */
     size_t rpc_threads_cnt;           /* number of RPC threads */

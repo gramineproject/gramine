@@ -6,8 +6,8 @@
 
 #include <errno.h>
 #include <linux/sched.h>
-#include <sys/mman.h>
 #include <stdatomic.h>
+#include <sys/mman.h>
 #include <sys/syscall.h>
 
 #include "pal.h"

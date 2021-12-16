@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 
-#include <stdatomic.h>
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 #include <asm/errno.h>
 #include <asm/prctl.h>

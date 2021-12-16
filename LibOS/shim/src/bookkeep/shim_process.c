@@ -3,8 +3,6 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include "shim_process.h"
-
 #include <stdatomic.h>
 
 #include "api.h"
@@ -15,6 +13,7 @@
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
+#include "shim_process.h"
 #include "shim_signal.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
