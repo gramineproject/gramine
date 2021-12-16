@@ -73,9 +73,9 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
                 # This happens occasionally when running LTP tests (e.g. `sendfile04`,
                 # `fdatasync01`, `recvfrom01`, `sendto01`) that send SIGKILL to child processes.
                 logging.warning(
-                    'run_command: Command {} timed out, but the main process exited. This might be '
-                    'due to a known issue with Gramine failing to deliver a signal. Continuing.'
-                    .format(cmd))
+                    'run_command: Command %s timed out, but the main process exited. This might be '
+                    'due to a known issue with Gramine failing to deliver a signal. Continuing.',
+                    cmd)
             else:
                 raise AssertionError('Command {} timed out after {} s'.format(cmd, timeout))
 
