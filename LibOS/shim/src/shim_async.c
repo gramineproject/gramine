@@ -9,6 +9,7 @@
 #include "pal.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
+#include "shim_pollable_event.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
 
@@ -34,7 +35,7 @@ static enum { WORKER_NOTALIVE, WORKER_ALIVE } async_worker_state;
 static struct shim_thread* async_worker_thread;
 static struct shim_lock async_worker_lock;
 
-static AEVENTTYPE install_new_event;
+static struct shim_pollable_event install_new_event;
 
 static int create_async_worker(void);
 
@@ -118,7 +119,7 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
     unlock(&async_worker_lock);
 
     log_debug("Installed async event at %lu", now);
-    set_event(&install_new_event, 1);
+    set_pollable_event(&install_new_event, 1);
     return max_prev_expire_time - now;
 }
 
@@ -128,7 +129,7 @@ int init_async_worker(void) {
     if (!create_lock(&async_worker_lock)) {
         return -ENOMEM;
     }
-    int ret = create_event(&install_new_event);
+    int ret = create_pollable_event(&install_new_event);
     if (ret < 0) {
         return ret;
     }
@@ -185,7 +186,7 @@ static int shim_async_worker(void* arg) {
     }
     pal_wait_flags_t* ret_events = pal_events + 1 + pals_max_cnt;
 
-    PAL_HANDLE install_new_event_pal = event_handle(&install_new_event);
+    PAL_HANDLE install_new_event_pal = install_new_event.read_handle;
     pals[0] = install_new_event_pal;
     pal_events[0] = PAL_WAIT_READ;
     ret_events[0] = 0;
@@ -310,7 +311,7 @@ static int shim_async_worker(void* arg) {
                 if (pals[i] == install_new_event_pal) {
                     /* some thread wants to install new event; this event is found in async_list,
                      * so just re-init install_new_event */
-                    clear_event(&install_new_event);
+                    clear_pollable_event(&install_new_event);
                     continue;
                 }
 
@@ -418,6 +419,6 @@ struct shim_thread* terminate_async_worker(void) {
     unlock(&async_worker_lock);
 
     /* force wake up of async worker thread so that it exits */
-    set_event(&install_new_event, 1);
+    set_pollable_event(&install_new_event, 1);
     return ret;
 }
