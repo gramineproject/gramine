@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
             switch (PAL_GET_TYPE(handles[i])) {
                 case PAL_TYPE_PIPESRV: {
                     PAL_HANDLE pipe = NULL;
-                    ret = DkStreamWaitForClient(handles[i], &pipe);
+                    ret = DkStreamWaitForClient(handles[i], &pipe, /*options=*/0);
 
                     if (ret >= 0 && pipe) {
                         size = sizeof(buffer);

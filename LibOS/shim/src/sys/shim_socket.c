@@ -883,6 +883,8 @@ out:
 }
 
 static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr, int* addrlen) {
+    assert(WITHIN_MASK(flags, O_CLOEXEC | O_NONBLOCK));
+
     if (hdl->type != TYPE_SOCK)
         return -ENOTSOCK;
 
@@ -919,7 +921,8 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
     /* NOTE: DkStreamWaitForClient() is blocking so we need to unlock before it and lock again
      * afterwards; we rely on DkStreamWaitForClient() being thread-safe and that `handle` is not
      * freed during the wait. */
-    ret = pal_to_unix_errno(DkStreamWaitForClient(handle, &accepted));
+    ret = pal_to_unix_errno(DkStreamWaitForClient(handle, &accepted,
+                            LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags)));
     maybe_epoll_et_trigger(hdl, ret, /*in=*/true, /*was_partial=*/false);
 
     lock(&hdl->lock);
@@ -932,24 +935,6 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
         log_debug("shim_accept: socket changed while waiting for a client connection");
         ret = -ECONNABORTED;
         goto out;
-    }
-
-    if (flags & O_NONBLOCK) {
-        PAL_STREAM_ATTR attr;
-
-        ret = DkStreamAttributesQueryByHandle(accepted, &attr);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
-
-        attr.nonblocking = true;
-
-        ret = DkStreamAttributesSetByHandle(accepted, &attr);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
     }
 
     struct shim_handle* cli = get_new_handle();

@@ -14,7 +14,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
+static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

@@ -34,7 +34,7 @@ int main(int argc, char** argv, char** envp) {
 
         if (ret >= 0 && pipe2) {
             PAL_HANDLE pipe3 = NULL;
-            ret = DkStreamWaitForClient(pipe1, &pipe3);
+            ret = DkStreamWaitForClient(pipe1, &pipe3, /*options=*/0);
 
             if (ret >= 0 && pipe3) {
                 pal_printf("Pipe Connection 1 OK\n");

@@ -20,7 +20,7 @@ static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t option
 }
 
 /* accept a tcp connection */
-static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
+static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

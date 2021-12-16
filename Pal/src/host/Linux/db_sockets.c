@@ -20,6 +20,7 @@
 #include "api.h"
 #include "pal.h"
 #include "pal_error.h"
+#include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
@@ -351,7 +352,7 @@ failed:
 }
 
 /* accept a tcp connection */
-static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
+static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     if (HANDLE_HDR(handle)->type != PAL_TYPE_TCPSRV || !handle->sock.bind || handle->sock.conn)
         return -PAL_ERROR_NOTSERVER;
 
@@ -363,8 +364,10 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
     struct sockaddr_storage buffer;
     int addrlen = sizeof(buffer);
     int ret = 0;
+    static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
+    int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
 
-    int newfd = DO_SYSCALL(accept4, handle->sock.fd, &buffer, &addrlen, SOCK_CLOEXEC);
+    int newfd = DO_SYSCALL(accept4, handle->sock.fd, &buffer, &addrlen, flags);
 
     if (newfd < 0)
         switch (newfd) {
@@ -379,7 +382,7 @@ static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client) {
     struct sockaddr* dest_addr = (struct sockaddr*)&buffer;
     size_t dest_addrlen = addrlen;
 
-    *client = socket_create_handle(PAL_TYPE_TCP, newfd, 0, bind_addr, bind_addrlen, dest_addr,
+    *client = socket_create_handle(PAL_TYPE_TCP, newfd, options, bind_addr, bind_addrlen, dest_addr,
                                    dest_addrlen);
 
     if (!(*client)) {

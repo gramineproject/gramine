@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
         for (i = 0; i < NTRIES; i++) {
             PAL_HANDLE cli = NULL;
-            ret = DkStreamWaitForClient(srv, &cli);
+            ret = DkStreamWaitForClient(srv, &cli, /*options=*/0);
 
             if (ret < 0) {
                 pal_printf("not able to accept client\n");

@@ -24,7 +24,7 @@ int main(int argc, char** argv, char** envp) {
 
         if (ret >= 0 && tcp2) {
             PAL_HANDLE tcp3 = NULL;
-            ret = DkStreamWaitForClient(tcp1, &tcp3);
+            ret = DkStreamWaitForClient(tcp1, &tcp3, /*options=*/0);
 
             if (ret >= 0 && tcp3) {
                 pal_printf("TCP Connection 1 OK\n");

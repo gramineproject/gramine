@@ -161,7 +161,8 @@ int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t shar
     return _DkStreamOpen(handle, uri, access, share, create, options);
 }
 
-static int _DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client) {
+static int _DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
+                                  pal_stream_options_t options) {
     if (UNKNOWN_HANDLE(handle))
         return -PAL_ERROR_BADHANDLE;
 
@@ -172,12 +173,12 @@ static int _DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client) {
     if (!ops->waitforclient)
         return -PAL_ERROR_NOTSERVER;
 
-    return ops->waitforclient(handle, client);
+    return ops->waitforclient(handle, client, options);
 }
 
-int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client) {
+int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     *client = NULL;
-    return _DkStreamWaitForClient(handle, client);
+    return _DkStreamWaitForClient(handle, client, options);
 }
 
 int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {

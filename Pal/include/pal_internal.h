@@ -85,7 +85,7 @@ struct handle_ops {
     int (*flush)(PAL_HANDLE handle);
 
     /* 'waitforclient' is used by DkStreamWaitforClient. It accepts an connection */
-    int (*waitforclient)(PAL_HANDLE server, PAL_HANDLE* client);
+    int (*waitforclient)(PAL_HANDLE server, PAL_HANDLE* client, pal_stream_options_t options);
 
     /* 'attrquery' is used by DkStreamAttributesQuery. It queries the attributes of a stream */
     int (*attrquery)(const char* type, const char* uri, PAL_STREAM_ATTR* attr);

@@ -315,11 +315,12 @@ int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t shar
  *
  * \param handle handle to accept a new connection on.
  * \param[out] client on success holds handle for the new connection.
+ * \param options flags to set on \p client handle.
  *
  * This API is only available for handles that are opened with `pipe.srv:...`, `tcp.srv:...`, and
  * `udp.srv:...`.
  */
-int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client);
+int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options);
 
 /*!
  * \brief Read data from an open stream.

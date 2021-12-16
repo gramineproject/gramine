@@ -307,7 +307,7 @@ static noreturn void ipc_worker_main(void) {
                 goto out_die;
             }
             PAL_HANDLE new_handle = NULL;
-            ret = DkStreamWaitForClient(g_self_ipc_handle, &new_handle);
+            ret = DkStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
                 log_error(LOG_PREFIX "DkStreamWaitForClient failed: %d", ret);

@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         DkObjectClose(proc);
 
         PAL_HANDLE pipe = NULL;
-        ret = DkStreamWaitForClient(pipe_srv, &pipe);
+        ret = DkStreamWaitForClient(pipe_srv, &pipe, /*options=*/0);
         if (ret < 0) {
             pal_printf("DkStreamWaitForClient failed: %d\n", ret);
         }

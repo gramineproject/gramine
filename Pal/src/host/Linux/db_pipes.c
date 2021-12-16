@@ -18,6 +18,7 @@
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
+#include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
@@ -92,16 +93,19 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  *
  * \param[in]  handle  PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
  * \param[out] client  PAL handle of type `pipecli` connected to the other end of the pipe (`pipe`).
+ * \param      options flags to set on \p client handle.
  * \return             0 on success, negative PAL error code otherwise.
  */
-static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
+static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int newfd = DO_SYSCALL(accept4, handle->pipe.fd, NULL, NULL, O_CLOEXEC);
+    static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
+    int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
+    int newfd = DO_SYSCALL(accept4, handle->pipe.fd, NULL, NULL, flags);
     if (newfd < 0)
         return unix_to_pal_error(newfd);
 
@@ -115,7 +119,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client) {
     HANDLE_HDR(clnt)->flags |= RFD(0) | WFD(0);
     clnt->pipe.fd            = newfd;
     clnt->pipe.name          = handle->pipe.name;
-    clnt->pipe.nonblocking   = false; /* FIXME: must set nonblocking based on `handle` value */
+    clnt->pipe.nonblocking   = !!(flags & SOCK_NONBLOCK);
 
     *client = clnt;
     return 0;
