@@ -325,15 +325,6 @@ static long sgx_ocall_futex(void* pms) {
     return ret;
 }
 
-static long sgx_ocall_socketpair(void* pms) {
-    ms_ocall_socketpair_t* ms = (ms_ocall_socketpair_t*)pms;
-    long ret;
-    ODEBUG(OCALL_SOCKETPAIR, ms);
-    ret = DO_SYSCALL(socketpair, ms->ms_domain, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol,
-                     &ms->ms_sockfds);
-    return ret;
-}
-
 static long sgx_ocall_listen(void* pms) {
     ms_ocall_listen_t* ms = (ms_ocall_listen_t*)pms;
     long ret;
@@ -699,7 +690,6 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_CLONE_THREAD]             = sgx_ocall_clone_thread,
     [OCALL_CREATE_PROCESS]           = sgx_ocall_create_process,
     [OCALL_FUTEX]                    = sgx_ocall_futex,
-    [OCALL_SOCKETPAIR]               = sgx_ocall_socketpair,
     [OCALL_LISTEN]                   = sgx_ocall_listen,
     [OCALL_ACCEPT]                   = sgx_ocall_accept,
     [OCALL_CONNECT]                  = sgx_ocall_connect,

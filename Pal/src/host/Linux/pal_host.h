@@ -53,11 +53,6 @@ typedef struct pal_handle {
         } pipe;
 
         struct {
-            PAL_IDX fds[MAX_FDS];
-            bool nonblocking;
-        } pipeprv;
-
-        struct {
             PAL_IDX fd;
             /* TODO: add other flags in future, if needed (e.g., semaphore) */
             bool nonblocking;

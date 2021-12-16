@@ -27,7 +27,6 @@ tests = {
     'Pipe': {},
     'Process': {},
     'Process4': {},
-    'Select': {},
     'SendHandle': {},
     'Socket': {},
     'Symbols': {},

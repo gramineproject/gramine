@@ -1085,39 +1085,6 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
     return retval;
 }
 
-int ocall_socketpair(int domain, int type, int protocol, int sockfds[2]) {
-    int retval = 0;
-    ms_ocall_socketpair_t* ms;
-
-    void* old_ustack = sgx_prepare_ustack();
-    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
-    if (!ms) {
-        sgx_reset_ustack(old_ustack);
-        return -EPERM;
-    }
-
-    WRITE_ONCE(ms->ms_domain, domain);
-    WRITE_ONCE(ms->ms_type, type);
-    WRITE_ONCE(ms->ms_protocol, protocol);
-
-    do {
-        retval = sgx_exitless_ocall(OCALL_SOCKETPAIR, ms);
-    } while (retval == -EINTR);
-
-    if (retval < 0 && retval != -EAFNOSUPPORT && retval != -EMFILE && retval != -ENFILE &&
-            retval != -EOPNOTSUPP && retval != -EPROTONOSUPPORT) {
-        retval = -EPERM;
-    }
-
-    if (!retval) {
-        sockfds[0] = READ_ONCE(ms->ms_sockfds[0]);
-        sockfds[1] = READ_ONCE(ms->ms_sockfds[1]);
-    }
-
-    sgx_reset_ustack(old_ustack);
-    return retval;
-}
-
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
                  size_t* addrlen) {
     int retval = 0;
