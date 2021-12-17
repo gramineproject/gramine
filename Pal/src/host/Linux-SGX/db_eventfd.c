@@ -60,7 +60,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_EVENTFD);
 
     /* Note: using index 0, given that there is only 1 eventfd FD per pal-handle. */
-    HANDLE_HDR(hdl)->flags = RFD(0) | WFD(0);
+    HANDLE_HDR(hdl)->flags = PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
     hdl->eventfd.fd          = fd;
     hdl->eventfd.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
@@ -116,7 +116,7 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->eventfd.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & ERROR(0);
+    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading */
     ret = ocall_fionread(handle->eventfd.fd);
@@ -133,12 +133,6 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
 
     attr->readable = ret == 1 && (pfd.revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
     attr->writable = ret == 1 && (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
-
-    /* For future use, so that Linux host kernel can send notifications to user-space apps. App
-     * receives virtual FD from LibOS, but the Linux-host eventfd is memorized here, such that this
-     * Linux-host eventfd can be retrieved (by LibOS) during app's ioctl(). */
-    attr->no_of_fds = 1;
-    attr->fds[0] = handle->eventfd.fd;
 
     return 0;
 }
