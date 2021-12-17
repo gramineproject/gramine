@@ -31,7 +31,7 @@ typedef struct pal_handle {
 
     union {
         struct {
-            PAL_IDX fds[MAX_FDS];
+            PAL_IDX fd;
         } generic;
 
         struct {
@@ -107,11 +107,11 @@ typedef struct pal_handle {
     };
 }* PAL_HANDLE;
 
-#define RFD(n)   (1 << (MAX_FDS * 0 + (n)))
-#define WFD(n)   (1 << (MAX_FDS * 1 + (n)))
-#define ERROR(n) (1 << (MAX_FDS * 2 + (n)))
-
 #define HANDLE_TYPE(handle) ((handle)->hdr.type)
+
+#define PAL_HANDLE_FD_READABLE  1
+#define PAL_HANDLE_FD_WRITABLE  2
+#define PAL_HANDLE_FD_ERROR     4
 
 int arch_do_rt_sigprocmask(int sig, int how);
 int arch_do_rt_sigaction(int sig, void* handler,

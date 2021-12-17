@@ -28,11 +28,6 @@ typedef uint64_t    PAL_NUM; /*!< a number */
 typedef void*       PAL_PTR; /*!< a pointer to memory or buffer (something other than string) */
 typedef uint32_t    PAL_IDX; /*!< an index */
 
-
-/* Moved MAX_FDS from <host_kernel>/pal_host.h to here,
- * since it is 3, across all host kernels. */
-#define MAX_FDS 3
-
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_NAME_MAX 96
 
@@ -436,8 +431,6 @@ typedef struct _PAL_STREAM_ATTR {
     bool readable, writable, runnable;
     pal_share_flags_t share_flags;
     PAL_NUM pending_size;
-    PAL_IDX no_of_fds;
-    PAL_IDX fds[MAX_FDS];
     union {
         struct {
             PAL_NUM linger;
