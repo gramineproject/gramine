@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/wait.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 
 #include "api.h"
@@ -29,10 +30,9 @@
 static int g_log_fd = PAL_LOG_DEFAULT_FD;
 
 struct hdl_header {
-    uint8_t fds;       /* bitmask of host file descriptors corresponding to PAL handle */
+    bool has_fd;       /* true if PAL handle has a corresponding host file descriptor */
     size_t  data_size; /* total size of serialized PAL handle */
 };
-static_assert((sizeof(((struct hdl_header*)0)->fds) * 8) >= MAX_FDS, "insufficient fds size");
 
 static size_t addr_size(const struct sockaddr* addr) {
     switch (addr->sa_family) {
@@ -66,13 +66,12 @@ out:
 }
 
 int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
-    for (int i = 0; i < MAX_FDS; i++)
-        if (HANDLE_HDR(handle)->flags & (RFD(i) | WFD(i))) {
-            long flags = enable ? FD_CLOEXEC : 0;
-            int ret = DO_SYSCALL(fcntl, handle->generic.fds[i], F_SETFD, flags);
-            if (ret < 0 && ret != -EBADF)
-                return -PAL_ERROR_DENIED;
-        }
+    if (HANDLE_HDR(handle)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE)) {
+        long flags = enable ? FD_CLOEXEC : 0;
+        int ret = DO_SYSCALL(fcntl, handle->generic.fd, F_SETFD, flags);
+        if (ret < 0 && ret != -EBADF)
+            return -PAL_ERROR_DENIED;
+    }
 
     return 0;
 }
@@ -216,19 +215,13 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         return hdl_data_size;
 
     ssize_t ret;
-    struct hdl_header hdl_hdr = {.fds = 0, .data_size = hdl_data_size};
+    struct hdl_header hdl_hdr = {
+        .has_fd = HANDLE_HDR(cargo)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
+        .data_size = hdl_data_size
+    };
     int fd = hdl->process.stream;
 
-    /* apply bitmask of FDs-to-transfer to hdl_hdr.fds and populate `fds` with these FDs */
-    int fds[MAX_FDS];
-    int nfds = 0;
-    for (int i = 0; i < MAX_FDS; i++)
-        if (HANDLE_HDR(cargo)->flags & (RFD(i) | WFD(i))) {
-            hdl_hdr.fds |= 1U << i;
-            fds[nfds++] = cargo->generic.fds[i];
-        }
-
-    /* first send hdl_hdr so the recipient knows how many FDs were transferred + how large is cargo */
+    /* first send hdl_hdr so the recipient knows if a FD is transferred + how large is cargo */
     struct msghdr message_hdr = {0};
     struct iovec iov[1];
 
@@ -243,16 +236,20 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         return unix_to_pal_error(ret);
     }
 
-    /* construct ancillary data of FDs-to-transfer in a control message */
-    char control_buf[sizeof(struct cmsghdr) + MAX_FDS * sizeof(int)];
+    /* construct ancillary data with FD-to-transfer in a control message */
+    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
     message_hdr.msg_control    = control_buf;
     message_hdr.msg_controllen = sizeof(control_buf);
 
     struct cmsghdr* control_hdr = CMSG_FIRSTHDR(&message_hdr);
     control_hdr->cmsg_level = SOL_SOCKET;
     control_hdr->cmsg_type  = SCM_RIGHTS;
-    control_hdr->cmsg_len   = CMSG_LEN(sizeof(int) * nfds);
-    memcpy(CMSG_DATA(control_hdr), fds, sizeof(int) * nfds);
+    if (hdl_hdr.has_fd) {
+        control_hdr->cmsg_len = CMSG_LEN(sizeof(int));
+        *(int*)CMSG_DATA(control_hdr) = cargo->generic.fd;
+    } else {
+        control_hdr->cmsg_len = CMSG_LEN(0);
+    }
 
     message_hdr.msg_controllen = control_hdr->cmsg_len;
 
@@ -309,13 +306,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return -PAL_ERROR_DENIED;
     }
 
-    /* prepare control-message buffer to receive ancillary data of FDs-to-transfer */
-    int nfds = 0;
-    for (int i = 0; i < MAX_FDS; i++)
-        if (hdl_hdr.fds & (1U << i))
-            nfds++;
-
-    char control_buf[sizeof(struct cmsghdr) + nfds * sizeof(int)];
+    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
     message_hdr.msg_control    = control_buf;
     message_hdr.msg_controllen = sizeof(control_buf);
 
@@ -342,17 +333,11 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
     if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
         return -PAL_ERROR_DENIED;
 
-    int fds_idx = 0;
-    int* fds = (int*)CMSG_DATA(control_hdr);
-
-    for (int i = 0; i < MAX_FDS; i++) {
-        if (hdl_hdr.fds & (1U << i)) {
-            if (fds_idx < nfds) {
-                handle->generic.fds[i] = fds[fds_idx++];
-            } else {
-                HANDLE_HDR(handle)->flags &= ~(RFD(i) | WFD(i));
-            }
-        }
+    if (hdl_hdr.has_fd) {
+        assert(control_hdr->cmsg_len == CMSG_LEN(sizeof(int)));
+        handle->generic.fd = *(int*)CMSG_DATA(control_hdr);
+    } else {
+        HANDLE_HDR(handle)->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
     *cargo = handle;
