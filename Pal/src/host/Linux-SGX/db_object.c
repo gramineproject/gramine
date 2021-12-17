@@ -28,12 +28,12 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
     if (count == 0)
         return 0;
 
-    struct pollfd* fds = malloc(count * MAX_FDS * sizeof(*fds));
+    struct pollfd* fds = malloc(count * sizeof(*fds));
     if (!fds) {
         return -PAL_ERROR_NOMEM;
     }
 
-    size_t* offsets = malloc(count * MAX_FDS * sizeof(*offsets));
+    size_t* offsets = malloc(count * sizeof(*offsets));
     if (!offsets) {
         free(fds);
         return -PAL_ERROR_NOMEM;
@@ -48,20 +48,22 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
         if (!hdl)
             continue;
 
-        /* collect all internal-handle FDs (only those which are readable/writable) */
-        for (size_t j = 0; j < MAX_FDS; j++) {
-            uint32_t flags = HANDLE_HDR(hdl)->flags;
-
-            /* hdl might be a event/non-pollable object, simply ignore it */
-            if (hdl->generic.fds[j] == PAL_IDX_POISON)
-                continue;
-
+        /* collect internal-handle FD (only if it is readable/writable)
+         * hdl might be a event/non-pollable object, simply ignore it */
+        uint32_t flags = HANDLE_HDR(hdl)->flags;
+        if ((flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
+                && hdl->generic.fd != PAL_IDX_POISON) {
+            // TODO: why does these check for flags?
             int fdevents = 0;
-            fdevents |= ((flags & RFD(j)) && (events[i] & PAL_WAIT_READ)) ? POLLIN : 0;
-            fdevents |= ((flags & WFD(j)) && (events[i] & PAL_WAIT_WRITE)) ? POLLOUT : 0;
+            if ((flags & PAL_HANDLE_FD_READABLE) && (events[i] & PAL_WAIT_READ)) {
+                fdevents |= POLLIN;
+            }
+            if ((flags & PAL_HANDLE_FD_WRITABLE) && (events[i] & PAL_WAIT_WRITE)) {
+                fdevents |= POLLOUT;
+            }
 
             if (fdevents) {
-                fds[nfds].fd      = hdl->generic.fds[j];
+                fds[nfds].fd      = hdl->generic.fd;
                 fds[nfds].events  = fdevents;
                 fds[nfds].revents = 0;
                 offsets[nfds] = i;
@@ -106,14 +108,10 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
         /* update handle's internal fields (flags) */
         PAL_HANDLE hdl = handle_array[j];
         assert(hdl);
-        for (size_t k = 0; k < MAX_FDS; k++) {
-            if (hdl->generic.fds[k] != (PAL_IDX)fds[i].fd)
-                continue;
-            if (HANDLE_HDR(hdl)->flags & ERROR(k))
-                ret_events[j] |= PAL_WAIT_ERROR;
-            if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
-                HANDLE_HDR(hdl)->flags |= ERROR(k);
-        }
+        if (HANDLE_HDR(hdl)->flags & PAL_HANDLE_FD_ERROR)
+            ret_events[j] |= PAL_WAIT_ERROR;
+        if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
+            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_ERROR;
     }
 
     ret = 0;

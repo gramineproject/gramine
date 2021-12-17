@@ -21,7 +21,7 @@ typedef struct pal_handle {
 
     union {
         struct {
-            PAL_IDX fds[MAX_FDS];
+            PAL_IDX fd;
         } generic;
 
         /* DP: Here we just define a placeholder fd; place your details here. Not every type

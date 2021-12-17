@@ -152,7 +152,7 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
         return -PAL_ERROR_NOMEM;
 
     init_handle_hdr(HANDLE_HDR(child), PAL_TYPE_PROCESS);
-    HANDLE_HDR(child)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(child)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     child->process.stream      = stream_fd;
     child->process.nonblocking = false;
     child->process.is_server   = true;
@@ -224,7 +224,7 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
         return -PAL_ERROR_NOMEM;
 
     init_handle_hdr(HANDLE_HDR(parent), PAL_TYPE_PROCESS);
-    HANDLE_HDR(parent)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(parent)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
     parent->process.stream      = parent_stream_fd;
     parent->process.nonblocking = false;
@@ -372,7 +372,7 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->process.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & ERROR(0);
+    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading */
     ret = ocall_fionread(handle->process.stream);

@@ -70,7 +70,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPESRV);
-    HANDLE_HDR(hdl)->flags |= RFD(0);  /* cannot write to a listening socket */
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;  /* cannot write to a listening socket */
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -116,7 +116,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     }
 
     init_handle_hdr(HANDLE_HDR(clnt), PAL_TYPE_PIPECLI);
-    HANDLE_HDR(clnt)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(clnt)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd            = newfd;
     clnt->pipe.name          = handle->pipe.name;
     clnt->pipe.nonblocking   = !!(flags & SOCK_NONBLOCK);
@@ -165,7 +165,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPE);
-    HANDLE_HDR(hdl)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -303,7 +303,6 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    /* other types of pipes have a single underlying FD, shut it down */
     if (handle->pipe.fd != PAL_IDX_POISON) {
         DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
     }
@@ -326,7 +325,7 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->pipe.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & ERROR(0);
+    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading (doesn't make sense for "listening" pipes) */
     attr->pending_size = 0;
@@ -368,14 +367,13 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  * \return            0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->generic.fds[0] == PAL_IDX_POISON)
+    if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
     bool* nonblocking = &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
-        int ret = DO_SYSCALL(fcntl, handle->generic.fds[0], F_SETFL,
-                             attr->nonblocking ? O_NONBLOCK : 0);
+        int ret = DO_SYSCALL(fcntl, handle->pipe.fd, F_SETFL, attr->nonblocking ? O_NONBLOCK : 0);
         if (ret < 0)
             return unix_to_pal_error(ret);
 
