@@ -171,6 +171,11 @@ if enable_glibc
     }
 endif
 if enable_musl
+    if meson.get_compiler('c').get_id() != 'gcc'
+        error('Compiling tests is currently unsupported with Musl and compilers other than GCC. ' +
+              'You need to either disable Musl (-Dmusl=disabled) or use GCC (CC=gcc).')
+    endif
+
     musl_specs_path_cmd = run_command('sh', '-c',
         'grep -Po -e \'-specs "\K([^"]*)\' `which musl-gcc`')
     musl_specs_path = musl_specs_path_cmd.stdout().strip()
