@@ -493,7 +493,6 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     }
 
     int sig = 0;
-    static_assert(SAME_TYPE(g_host_injected_signal, sig), "types must match");
     if (!atomic_compare_exchange_strong_explicit(&g_host_injected_signal, &sig, SIGTERM,
                                                  memory_order_relaxed, memory_order_relaxed)) {
         /* We already have 1 injected signal, bail out. */

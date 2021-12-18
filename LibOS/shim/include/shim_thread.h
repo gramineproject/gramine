@@ -25,7 +25,7 @@
 /* If next is NULL, then this node is not on any queue.
  * Otherwise it is a valid pointer to the next node or WAKE_QUEUE_TAIL. */
 struct wake_queue_node {
-    struct wake_queue_node* next;
+    _Atomic(struct wake_queue_node*) next;
 };
 struct wake_queue_head {
     struct wake_queue_node* first;

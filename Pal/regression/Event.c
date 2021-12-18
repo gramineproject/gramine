@@ -16,13 +16,13 @@
 })
 
 static void wait_for(_Atomic int* ptr, int val) {
-    while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != val) {
+    while (atomic_load_explicit(ptr, memory_order_acquire) != val) {
         CPU_RELAX();
     }
 }
 
 static void set(_Atomic int* ptr, int val) {
-    __atomic_store_n(ptr, val, __ATOMIC_RELEASE);
+    atomic_store_explicit(ptr, val, memory_order_release);
 }
 
 static _Atomic int g_clear_thread_exit = 1;
