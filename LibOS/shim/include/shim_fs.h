@@ -158,7 +158,7 @@ struct shim_dentry {
     void* data;
 
     /* Inode associated with this dentry. Currently optional, and only for the use of underlying
-     * filesystem (see `shim_inode` below). Protected by `lock`. */
+     * filesystem (see `shim_inode` below). Protected by `g_dcache_lock`. */
     struct shim_inode* inode;
 
     /* File lock information, stored only in the main process. Managed by `shim_fs_lock.c`. */
