@@ -135,7 +135,7 @@ out:
 
 static int chroot_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm,
                                file_off_t size) {
-    assert(locked(&dent->lock));
+    assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
     dent->type = type;
@@ -226,7 +226,7 @@ static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* o
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
 static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mode_t type,
                           int flags, mode_t perm) {
-    assert(locked(&dent->lock));
+    assert(locked(&g_dcache_lock));
 
     int ret;
 
@@ -264,25 +264,20 @@ out:
 }
 
 static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+    assert(locked(&g_dcache_lock));
+
     int ret;
 
-    lock(&dent->lock);
-    if (!dent->inode) {
-        ret = -ENOENT;
-        goto out;
-    }
+    if (!dent->inode)
+        return -ENOENT;
 
     ret = chroot_do_open(hdl, dent, dent->type, flags, /*perm=*/0);
     if (ret < 0)
-        goto out;
+        return ret;
 
     hdl->inode = dent->inode;
     get_inode(dent->inode);
-    ret = 0;
-
-out:
-    unlock(&dent->lock);
-    return ret;
+    return 0;
 }
 
 static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
@@ -292,22 +287,17 @@ static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int f
 
     mode_t type = S_IFREG;
 
-    lock(&dent->lock);
     ret = chroot_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
     if (ret < 0)
-        goto out;
+        return ret;
 
     ret = chroot_setup_dentry(dent, type, perm, /*size=*/0);
     if (ret < 0)
-        goto out;
+        return ret;
 
     hdl->inode = dent->inode;
     get_inode(dent->inode);
-    ret = 0;
-
-out:
-    unlock(&dent->lock);
-    return ret;
+    return 0;
 }
 
 static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
@@ -317,15 +307,11 @@ static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
 
     mode_t type = S_IFDIR;
 
-    lock(&dent->lock);
     ret = chroot_do_open(/*hdl=*/NULL, dent, type, O_CREAT | O_EXCL, perm);
     if (ret < 0)
-        goto out;
+        return ret;
 
-    ret = chroot_setup_dentry(dent, type, perm, /*size=*/0);
-out:
-    unlock(&dent->lock);
-    return ret;
+    return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
 static int chroot_istat(struct shim_inode* inode, struct stat* buf) {
@@ -350,19 +336,12 @@ static int chroot_istat(struct shim_inode* inode, struct stat* buf) {
 }
 
 static int chroot_stat(struct shim_dentry* dent, struct stat* buf) {
-    int ret;
+    assert(locked(&g_dcache_lock));
 
-    lock(&dent->lock);
-    if (!dent->inode) {
-        ret = -ENOENT;
-        goto out;
-    }
+    if (!dent->inode)
+        return -ENOENT;
 
-    ret = chroot_istat(dent->inode, buf);
-
-out:
-    unlock(&dent->lock);
-    return ret;
+    return chroot_istat(dent->inode, buf);
 }
 
 static int chroot_hstat(struct shim_handle* hdl, struct stat* buf) {
@@ -573,29 +552,24 @@ out:
 }
 
 static int chroot_unlink(struct shim_dentry* dent) {
-    int ret;
+    assert(locked(&g_dcache_lock));
 
-    lock(&dent->lock);
+    int ret;
 
     PAL_HANDLE palhdl;
     ret = chroot_temp_open(dent, dent->type, &palhdl);
     if (ret < 0)
-        goto out;
+        return ret;
 
     ret = DkStreamDelete(palhdl, PAL_DELETE_ALL);
     DkObjectClose(palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
+    if (ret < 0)
+        return pal_to_unix_errno(ret);
 
     struct shim_inode* inode = dent->inode;
     dent->inode = NULL;
     put_inode(inode);
-
-out:
-    unlock(&dent->lock);
-    return ret;
+    return 0;
 }
 
 static int chroot_poll(struct shim_handle* hdl, int poll_type) {
@@ -622,10 +596,10 @@ static int chroot_poll(struct shim_handle* hdl, int poll_type) {
 }
 
 static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
+    assert(locked(&g_dcache_lock));
+
     int ret;
     char* new_uri = NULL;
-
-    lock_two_dentries(old, new);
 
     ret = chroot_dentry_uri(new, old->type, &new_uri);
     if (ret < 0)
@@ -659,15 +633,15 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
     ret = 0;
 
 out:
-    unlock_two_dentries(old, new);
     free(new_uri);
     return ret;
 }
 
 static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
+    assert(locked(&g_dcache_lock));
+
     int ret;
 
-    lock(&dent->lock);
     lock(&dent->inode->lock);
 
     PAL_HANDLE palhdl;
@@ -690,7 +664,6 @@ static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
 
 out:
     unlock(&dent->inode->lock);
-    unlock(&dent->lock);
     return ret;
 }
 
@@ -721,18 +694,19 @@ static int chroot_checkout(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT);
     assert(hdl->pal_handle);
 
+    /* We should be holding `g_dcache_lock` for the whole checkpointing process. */
+    assert(locked(&g_dcache_lock));
+
     /* We don't take `hdl->lock` because this is actually the handle *copied* for checkpointing (and
      * the lock isn't even properly initialized). */
 
     /* First, check if we have not deleted or renamed the file (the dentry contains the same
      * inode). */
-    lock(&hdl->dentry->lock);
     bool is_in_dentry = (hdl->dentry->inode == hdl->inode);
-    unlock(&hdl->dentry->lock);
 
-    /* Then check if the file still exists on host. If so, we assume it can be opened by the child
-     * process, so the PAL handle doesn't need sending. */
     if (is_in_dentry) {
+        /* Then check if the file still exists on host. If so, we assume it can be opened by the
+         * child process, so the PAL handle doesn't need sending. */
         PAL_STREAM_ATTR attr;
         if (DkStreamAttributesQuery(hdl->uri, &attr) == 0) {
             hdl->pal_handle = NULL;
