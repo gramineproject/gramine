@@ -68,18 +68,22 @@ def retrieve_debug_maps():
     val_map = gdb.parse_and_eval('g_debug_map')
     while int(val_map) != 0:
         file_name = val_map['name'].string()
-        file_name = os.path.abspath(file_name)
         load_addr = int(val_map['addr'])
 
-        sections = load_elf_sections(file_name, load_addr)
-        text_addr = None
-        for name, addr in sections:
-            if name == '.text':
-                text_addr = addr
-                break
-        # We need the text_addr to use add-symbol-file (at least until GDB 8.2).
-        if text_addr is not None:
-            debug_maps[load_addr] = (file_name, text_addr, sections)
+        if file_name.startswith('['):
+            # This is vDSO, not a real file.
+            debug_maps[load_addr] = (file_name, load_addr, [])
+        else:
+            file_name = os.path.abspath(file_name)
+            sections = load_elf_sections(file_name, load_addr)
+            text_addr = None
+            for name, addr in sections:
+                if name == '.text':
+                    text_addr = addr
+                    break
+            # We need the text_addr to use add-symbol-file (at least until GDB 8.2).
+            if text_addr is not None:
+                debug_maps[load_addr] = (file_name, text_addr, sections)
 
         val_map = val_map['next']
 
@@ -126,11 +130,16 @@ class UpdateDebugMaps(gdb.Command):
 
             if load_addr in new:
                 file_name, text_addr, sections = new[load_addr]
-                cmd = 'add-symbol-file {} 0x{:x} '.format(
-                    shlex.quote(file_name), text_addr)
-                cmd += ' '.join('-s {} 0x{:x}'.format(shlex.quote(name), addr)
-                                for name, addr in sections
-                                if name != '.text')
+
+                if file_name.startswith('['):
+                    # This is vDSO, not a real file.
+                    cmd = 'add-symbol-file-from-memory 0x{:x}'.format(load_addr)
+                else:
+                    cmd = 'add-symbol-file {} 0x{:x} '.format(
+                        shlex.quote(file_name), text_addr)
+                    cmd += ' '.join('-s {} 0x{:x}'.format(shlex.quote(name), addr)
+                                    for name, addr in sections
+                                    if name != '.text')
                 try:
                     # Temporarily disable pagination, because 'add-symbol-file` produces a lot of
                     # noise.

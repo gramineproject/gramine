@@ -24,6 +24,10 @@ vdso_so_dbg = shared_library('vdso',
     link_depends: ['vdso.lds'],
 )
 
+# Strip symbols and debug info.
+#
+# TODO: It would be nice to keep debug info if we're in a debug build, but this seems to prevent GDB
+# from displaying a proper backtrace.
 vdso_not_checked_so = custom_target('vdso_not_checked.so',
     command: [objcopy, '-S', '@INPUT@', '@OUTPUT@'],
     input: vdso_so_dbg,
