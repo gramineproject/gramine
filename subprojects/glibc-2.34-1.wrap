@@ -6,7 +6,7 @@
 [wrap-file]
 directory = glibc-2.34-1
 source_url = https://ftp.gnu.org/gnu/glibc/glibc-2.34.tar.gz
-source_fallback_url = https://packages.grapheneproject.io/distfiles/glibc-2.34.tar.gz
+source_fallback_url = https://packages.gramineproject.io/distfiles/glibc-2.34.tar.gz
 source_filename = glibc-2.34.tar.gz
 source_hash = 255b7632746b5fdd478cb7b36bebd1ec1f92c2b552ee364c940f48eb38d07f62
 patch_directory = glibc-2.34
