@@ -42,8 +42,9 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 
-/* RA-TLS: on server, only need ra_tls_create_key_and_crt() to create keypair and X.509 cert */
-int (*ra_tls_create_key_and_crt_f)(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
+/* RA-TLS: on server, only need ra_tls_create_key_and_crt_der() to create keypair and X.509 cert */
+int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
+                                       size_t* der_crt_size);
 
 #define HTTP_RESPONSE                                    \
     "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n" \
@@ -69,8 +70,11 @@ int main(int argc, char** argv) {
     unsigned char buf[1024];
     const char* pers = "ssl_server";
 
-    void* ra_tls_attest_lib     = NULL;
-    ra_tls_create_key_and_crt_f = NULL;
+    void* ra_tls_attest_lib = NULL;
+    ra_tls_create_key_and_crt_der_f = NULL;
+
+    uint8_t* der_key = NULL;
+    uint8_t* der_crt = NULL;
 
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -105,8 +109,11 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        /* NOTE: use ra_tls_create_key_and_crt_der() API instead of ra_tls_create_key_and_crt()
+         * simply to test it in our CI and have an example of how to use this API; we already test
+         * ra_tls_create_key_and_crt() API in the Secret Provisioning example */
         char* error;
-        ra_tls_create_key_and_crt_f = dlsym(ra_tls_attest_lib, "ra_tls_create_key_and_crt");
+        ra_tls_create_key_and_crt_der_f = dlsym(ra_tls_attest_lib, "ra_tls_create_key_and_crt_der");
         if ((error = dlerror()) != NULL) {
             mbedtls_printf("%s\n", error);
             return 1;
@@ -117,9 +124,24 @@ int main(int argc, char** argv) {
         mbedtls_printf("\n  . Creating the RA-TLS server cert and key...");
         fflush(stdout);
 
-        ret = (*ra_tls_create_key_and_crt_f)(&pkey, &srvcert);
+        size_t der_key_size;
+        size_t der_crt_size;
+
+        ret = (*ra_tls_create_key_and_crt_der_f)(&der_key, &der_key_size, &der_crt, &der_crt_size);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  ra_tls_create_key_and_crt returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  ra_tls_create_key_and_crt_der returned %d\n\n", ret);
+            goto exit;
+        }
+
+        ret = mbedtls_x509_crt_parse(&srvcert, (unsigned char*)der_crt, der_crt_size);
+        if (ret != 0) {
+            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
+            goto exit;
+        }
+
+        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0);
+        if (ret != 0) {
+            mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
             goto exit;
         }
 
@@ -360,6 +382,9 @@ exit:
     mbedtls_ssl_config_free(&conf);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+
+    free(der_key);
+    free(der_crt);
 
     return ret;
 }

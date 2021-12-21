@@ -197,8 +197,11 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
                               size_t* crt_der_size) {
     int ret;
 
-    if (!key || !crt)
+    if (!key || (!crt && !(crt_der && crt_der_size))) {
+        /* mbedTLS API (ra_tls_create_key_and_crt) and generic API (ra_tls_create_key_and_crt_der)
+         * both use `key`, but the former uses `crt` and the latter uses `crt_der` */
         return MBEDTLS_ERR_X509_FATAL_ERROR;
+    }
 
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_ctr_drbg_init(&ctr_drbg);
@@ -293,7 +296,7 @@ int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8
 
     uint8_t* der_key_buf   = NULL;
     uint8_t* output_buf    = NULL;
-    size_t output_buf_size = 1024; /* enough for any public key */
+    size_t output_buf_size = 4096; /* enough for any public key in DER format */
 
     output_buf = malloc(output_buf_size);
     if (!output_buf) {
@@ -307,7 +310,7 @@ int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8
     }
 
     /* populate der_key; note that der_crt was already populated */
-    int size = mbedtls_pk_write_key_der(&key, output_buf, sizeof(output_buf));
+    int size = mbedtls_pk_write_key_der(&key, output_buf, output_buf_size);
     if (size < 0) {
         ret = size;
         goto out;
@@ -320,7 +323,7 @@ int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8
     }
 
     /* note that mbedtls_pk_write_key_der() wrote data at the end of the output_buf */
-    memcpy(der_key_buf, output_buf + sizeof(output_buf) - size, size);
+    memcpy(der_key_buf, output_buf + output_buf_size - size, size);
     *der_key      = der_key_buf;
     *der_key_size = size;
 
