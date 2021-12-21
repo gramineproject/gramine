@@ -536,6 +536,9 @@ BEGIN_CP_FUNC(dentry) {
     __UNUSED(size);
     assert(size == sizeof(struct shim_dentry));
 
+    /* We should be holding `g_dcache_lock` for the whole checkpointing process. */
+    assert(locked(&g_dcache_lock));
+
     struct shim_dentry* dent     = (struct shim_dentry*)obj;
     struct shim_dentry* new_dent = NULL;
 
