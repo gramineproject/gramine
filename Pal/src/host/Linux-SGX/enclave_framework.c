@@ -42,7 +42,7 @@ static uint64_t g_seal_key_xfrm_mask  = SGX_XFRM_MASK_CONST;
 static uint32_t g_seal_key_misc_mask  = SGX_MISCSELECT_MASK_CONST;
 
 static_assert(sizeof(g_seal_key_flags_mask) + sizeof(g_seal_key_xfrm_mask) ==
-        sizeof(sgx_attributes_t), "wrong types");
+                  sizeof(sgx_attributes_t), "wrong types");
 static_assert(sizeof(g_seal_key_misc_mask) == sizeof(sgx_misc_select_t), "wrong types");
 
 bool sgx_is_completely_within_enclave(const void* addr, size_t size) {
@@ -1047,6 +1047,7 @@ out:
 int init_seal_key_material(void) {
     int ret;
 
+    /* below parsing of TOML strings assumes little-endianness (which is true for this SGX PAL) */
     ret = update_seal_key_mask("sgx.seal_key.flags_mask", (uint8_t*)&g_seal_key_flags_mask,
                                sizeof(g_seal_key_flags_mask));
     if (ret < 0)
