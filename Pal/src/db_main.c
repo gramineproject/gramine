@@ -526,7 +526,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         INIT_FAIL(PAL_ERROR_INVAL, "'loader.entrypoint' is missing the 'file:' prefix");
 
     g_pal_public_state.host_type       = XSTRINGIFY(HOST_TYPE);
-    g_pal_public_state.manifest_root   = g_pal_public_state.manifest_root;
     g_pal_public_state.parent_process  = parent_process;
     g_pal_public_state.first_thread    = first_thread;
     g_pal_public_state.disable_aslr    = disable_aslr;
