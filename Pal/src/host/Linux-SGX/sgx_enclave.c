@@ -408,7 +408,9 @@ static long sgx_ocall_accept(void* pms) {
     if (ret < 0)
         goto err;
 
+    int fd = ret;
     ms->ms_addrlen = addrlen;
+    return fd;
 
 err:
     return ret;
