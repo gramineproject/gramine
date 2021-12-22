@@ -7,19 +7,19 @@
 #
 #     - OCALLs (label prefix `cssa0_ocall_`)
 #         - enclave requests OCALL via EEXIT (`sgx_ocall()` PAL function)
-#         - untrusted runtime returns from OCALL via EENTER (label prefix
-#           `cssa0_ocall_return`)
+#         - untrusted runtime returns from OCALL via EENTER (label prefix `cssa0_ocall_return`)
 #
 #     - Exception handling (label prefix `cssa1_exception_`)
 #
 # There are two entry points in this file:
 #
-#     - enclave_entry() -- where EENTER jumps to (address in TCS.OENTRY, taken
-#                          from the libpal.so enclave's ELF entry point)
+#     - enclave_entry() -- where EENTER jumps to (address in TCS.OENTRY, taken from the libpal.so
+#                                                 enclave's ELF entry point)
 #
 #     - sgx_ocall()     -- called by SGX PAL, to perform OCALLs
 #
 # There are several helper functions in this file:
+#
 #     - _restore_sgx_context()
 #     - save_xregs() and its no-stack version __save_xregs()
 #     - restore_xregs() and its no-stack version __restore_xregs()
@@ -29,18 +29,16 @@
 #
 #    [TCS.CSSA number] [ecall/ocall/exception] [action/flow]
 #
-# For example, `.Lcssa0_ecall_thread_reset` means that the code under this label
-# runs in frame SSA[0] ("regular context") and it processes ECALL_THREAD_RESET
-# ecall.
+# For example, `.Lcssa0_ecall_thread_reset` means that the code under this label runs in frame
+# SSA[0] ("regular context") and it processes ECALL_THREAD_RESET ecall.
 #
-# As another example, `.Lcssa1_exception_during_ocall_flows` means that the code
-# under this label runs in frame SSA[1] ("stage-1 exception handler") in
-# response to AEX that occured during in-enclave OCALL preparation/finalization
-# flows. The code under this label is supposed to set up the stage-2 exception
-# handler that will run in frame SSA[0] before returning to regular context.
+# As another example, `.Lcssa1_exception_during_ocall_flows` means that the code under this label
+# runs in frame SSA[1] ("stage-1 exception handler") in response to AEX that occured during
+# in-enclave OCALL preparation/finalization flows. The code under this label is supposed to set up
+# the stage-2 exception handler that will run in frame SSA[0] before returning to regular context.
 #
-# Note that stage-1 exception handler has only minimal asm code and doesn't call
-# any C functions. Its sole purpose is to prepare the stage-2 handler by:
+# Note that stage-1 exception handler has only minimal asm code and doesn't call any C functions.
+# Its sole purpose is to prepare the stage-2 handler by:
 #   - copying the interrupted SSA[0] context on the stack ("CPU context")
 #   - rewiring the SSA[0] context to point to _DkExceptionHandler()
 #   - invoking EEXIT (so that untrusted runtime can perform ERESUME)
@@ -48,10 +46,9 @@
 #include "sgx_arch.h"
 #include "asm-offsets.h"
 
-# In some cases, like bogus parameters passed to enclave_entry, it's tricky to
-# return cleanly (passing the correct return address to EEXIT, OCALL_EXIT can
-# be interrupted, etc.). Since those cases should only ever happen with a
-# malicious urts, just go into an endless loop.
+# In some cases, like bogus parameters passed to enclave_entry, it's tricky to return cleanly
+# (passing the correct return address to EEXIT, OCALL_EXIT can be interrupted, etc.). Since those
+# cases should only ever happen with a malicious urts, just go into an endless loop.
 .macro FAIL_LOOP
 .Lfail_loop\@:
 	jmp .Lfail_loop\@
@@ -65,34 +62,40 @@
 	jmp \label_on_stack
 .endm
 
+
 	.global enclave_entry
 	.type enclave_entry, @function
 enclave_entry:
 	.cfi_startproc
 
-	# On EENTER, RAX is the current SSA index (aka CSSA), RBX is the address of
-	# TCS, RCX is the address of IP following EENTER. Other regs are not trusted.
+	# PAL convention on EENTER:
+	#   RAX - current SSA index (aka CSSA), can be 0 (`cssa0_`) or 1 (`cssa1_`)
+	#   RBX - address of TCS
+	#   RCX - address of IP following EENTER
+	#   [ other regs are not trusted ]
+	#
+	# The following code is hardened to defend attacks from untrusted host. Any states given by the
+	# host instead of the ISA must be assumed potentially malicious.
+	#
+	# This thread can be interrupted but then the below check branches to .Lcssa1_exception (because
+	# on interrupt, CSSA = 1). So the outside can't re-enter the checks below in the middle.
 
-	# x86-64 sysv abi requires %rFLAGS.DF = 0 on entry to function call.
+	# x86-64 SysV ABI requires RFLAGS.DF = 0 on entry to function call.
 	cld
 
+	# CSSA = 1 -- this is a "stage-1 exception handler" flow
 	cmpq $0, %rax
 	jne .Lcssa1_exception
 
-	# ECALL return address in RCX (filled by EENTER hardware flow)
+	# RCX contains ECALL return address (filled by EENTER hardware flow)
 	movq %rcx, %gs:SGX_ECALL_RETURN_ADDR
-
-	# The following code is hardened to defend attacks from untrusted host.
-	# Any states given by the host instead of the ISA must be assumed
-	# potentially malicious.
-
-	# This thread can be interrupted but then the above check branches to
-	# .Lcssa1_exception. So the outside can't re-enter the checks below in
-	# the middle.
 
 	# OCALL stack was prepared previously -- this is a "return from OCALL" flow
 	cmpq $0, %gs:SGX_PRE_OCALL_STACK
 	jne .Lcssa0_ocall_return
+
+	# CSSA = 0 and it's not an OCALL -- this is an "ECALL" flow
+	jmp .Lcssa0_ecall
 
 .Lcssa0_ecall:
 	# PAL convention:
@@ -104,9 +107,9 @@ enclave_entry:
 	cmpq $ECALL_THREAD_RESET, %rdi
 	je .Lcssa0_ecall_thread_reset
 
-	# Except ecall_thread_reset, ecalls are only used to start a thread (main
-	# or additional threads). We already checked for case of ecall_thread_reset,
-	# so at this point we should only get exactly one ecall per thread
+	# Except ECALL_THREAD_RESET, ecalls are only used to start a thread (main or additional
+	# threads). We already checked for case of ECALL_THREAD_RESET, so at this point we should only
+	# get exactly one ecall per thread.
 	cmpq $0, %gs:SGX_THREAD_STARTED
 	je .Lcssa0_ecall_enclave_or_thread_start
 	FAIL_LOOP
@@ -133,30 +136,26 @@ enclave_entry:
 	xorq %r14, %r14
 	xorq %r15, %r15
 
-	# clear the Alignment Check flag (%rFLAGS.AC) to prevent #AC-fault side channel;
-	# this overrides 8B on enclave stack but stack is not used at this point anyway
+	# clear the Alignment Check flag (RFLAGS.AC) to prevent #AC-fault side channel; this overrides
+	# 8B on enclave stack but stack is not used at this point anyway
 	pushfq
 	andq $(~RFLAGS_AC), (%rsp)
 	popfq
 
 	# Clear "extended" state (FPU aka x87, SSE, AVX, ...).
-	# TODO: We currently clear only state covered by FXRSTOR but not by XRSTOR
-	#       (e.g., no clearing of YMM/ZMM regs). This is because we didn't read
-	#       the value of XFRM yet, so we don't know whether XRSTOR is safe at
-	#       this point.
+	# TODO: We currently clear only state covered by FXRSTOR but not by XRSTOR (e.g., no clearing of
+	#       YMM/ZMM regs). This is because we didn't read the value of XFRM yet, so we don't know
+	#       whether XRSTOR is safe at this point.
 	leaq g_xsave_reset_state(%rip), %rax
 	fxrstor (%rax)
 	xorq %rax, %rax
 
-	# register states need to be carefully checked, so we move the handling
-	# to handle_ecall() in enclave_ecalls.c
+	# register states need to be carefully checked, so we move handling to handle_ecall() in C code
 	callq handle_ecall
-
-	# handle_ecall will only return when invalid parameters has been passed.
 	FAIL_LOOP
 
-	# clear TLS variables for thread reuse
 .Lcssa0_ecall_thread_reset:
+	# clear TLS variables for thread reuse
 	movq $0, %gs:SGX_READY_FOR_EXCEPTIONS
 
 	# Assertion: thread is reset only after special-case OCALL_EXIT.
@@ -165,25 +164,24 @@ enclave_entry:
 	FAIL_LOOP
 1:
 
-	# At this point, the thread has completely exited from the point of view
-	# of LibOS. We can now set *clear_child_tid to 0, which will trigger
-	# async worker thread in LibOS, which will wake up parent thread if any.
+	# At this point, the thread has completely exited from the point of view of LibOS. We can now
+	# set *clear_child_tid to 0, which will trigger async worker thread in LibOS, which will wake up
+	# parent thread if any.
 	cmpq $0, %gs:SGX_CLEAR_CHILD_TID
 	je 1f
 	movq %gs:SGX_CLEAR_CHILD_TID, %rbx
 	movl $0, (%rbx)
 
 1:
-	# Signals are impossible at this point: benign untrusted runtime blocks
-	# all signals (see sgx_ocall_exit()), and even if malicious one doesn't
-	# block them, signals are ignored due to SGX_READY_FOR_EXCEPTIONS = 0.
+	# Signals are impossible at this point: benign untrusted runtime blocks all signals (see
+	# sgx_ocall_exit()), and even if malicious one doesn't block them, signals are ignored due to
+	# SGX_READY_FOR_EXCEPTIONS = 0.
 	movq $0, %gs:SGX_THREAD_STARTED
 	movq $0, %gs:SGX_OCALL_EXIT_CALLED
 	movq $0, %gs:SGX_PRE_OCALL_STACK
 
-	# Instead of jumping to .Lcssa0_ocall_or_cssa1_exception_eexit, simply
-	# perform EEXIT because there is no modified state to clear in this
-	# "thread-reset" code path.
+	# Instead of jumping to .Lcssa0_ocall_or_cssa1_exception_eexit, simply perform EEXIT because
+	# there is no modified state to clear in this "thread-reset" code path.
 	movq %gs:SGX_ECALL_RETURN_ADDR, %rbx
 	movq $EEXIT, %rax
 	ENCLU
@@ -193,35 +191,33 @@ enclave_entry:
 	#   RDI - external event
 
 	# Nested exceptions at the host-OS level are disallowed:
-	# - Synchronous exceptions are assumed to never happen during
-	#   .Lcssa1_exception;
-	# - Asynchronous signals are not nested by benign host OS because
-	#   we mask asynchronous signals on signal handler.
+	#   - Synchronous exceptions are assumed to never happen during .Lcssa1_exception;
+	#   - Asynchronous signals are not nested by benign host OS because we mask asynchronous signals
+	#     on signal handler.
 	#
-	# If malicious host OS injects a nested signal, CSSA != 1 and we go
-	# into FAIL_LOOP. Currently this check is assertion only because it
-	# is also enforced by EENTER since enclave is created with NSSA=2.
+	# If malicious host OS injects a nested signal, CSSA != 1 and we go into FAIL_LOOP. Currently
+	# this check is assertion only because it is also enforced by EENTER since enclave is created
+	# with NSSA=2.
 
 	cmpq $1, %rax
 	je 1f
 	FAIL_LOOP
 1:
 
-	# set RBX to point to SSA[0].GPRSGX region ("regular context" GPRs)
+	# SGX_GPR is a base pointer to the SSA[0].GPRSGX region (which contains "regular context")
 	movq %gs:SGX_GPR, %rbx
 
-	# first check SSA[0].GPRSGX.EXITINFO -- if VALID bit (0x80000000) is set,
-	# then use trusted SSA[0].GPRSGX.EXITINFO.VECTOR (first 8 bits of EXITINFO)
-	# instead of possibly-malicious "external event" value in RDI
+	# first check SSA[0].GPRSGX.EXITINFO -- if VALID bit (0x80000000) is set, then use trusted
+	# SSA[0].GPRSGX.EXITINFO.VECTOR (first 8 bits of EXITINFO) instead of possibly-malicious
+	# "external event" value in RDI
 	movq %rdi, %rsi
 	xorq %rdi, %rdi
 	movl SGX_GPR_EXITINFO(%rbx), %edi
 	testl $0x80000000, %edi
 	jnz .Lcssa1_exception_determine_when
 
-	# VALID bit in SSA[0].GPRSGX.EXITINFO is clear, some unknown-to-SGX
-	# exception occured, use the possibly-malicious "external event" value in
-	# RDI (only the first 8 bits count)
+	# VALID bit in SSA[0].GPRSGX.EXITINFO is clear, some unknown-to-SGX exception occured, use the
+	# possibly-malicious "external event" value in RDI (only the first 8 bits count)
 	movl %esi, %edi
 	andl $0xff, %edi
 	cmpl $0, %edi
@@ -231,64 +227,56 @@ enclave_entry:
 	jmp .Lcssa1_exception_eexit
 
 .Lcssa1_exception_determine_when:
-	# If this enclave thread has not been initialized yet, we should not
-	# try to call an event handler yet.
+	# If this enclave thread has not been initialized yet, we should not try to call an event
+	# handler yet.
 	cmpq $0, %gs:SGX_READY_FOR_EXCEPTIONS
 	jne 1f
 	FAIL_LOOP
 1:
 
-	# Beware of races between host signal delivery and handling %rsp in
-	# this entry code. Consider the following scenario:
+	# Beware of races between host signal delivery and handling %rsp in this entry code. Consider
+	# the following scenario:
 	#
-	# 1. We are inside the enclave but %rsp isn't restored yet to something
-	#    inside the enclave. That's for example the case when returning from
-	#    an ocall.
-	# 2. The enclave gets interrupted. The not restored %rsp is pushed into
-	#    SGX_GPR_RSP by the processor.
-	# 3. The host enters the enclave again and indicates that there's a new
-	#    signal.
-	# 4. SGX_GPR_RSP points to the untrusted stack
+	# 1. We are inside the enclave but %rsp isn't restored yet to something inside the enclave.
+	#    That's for example the case when returning from an ocall.
+	# 2. The enclave gets interrupted. The not restored %rsp is pushed into SGX_GPR_RSP by the CPU.
+	# 3. The host enters the enclave again and indicates that there's a new signal.
+	# 4. SGX_GPR_RSP points to the untrusted stack.
 	#
-	# The below code should be fine since it detects an interrupted ocall
-	# and restores %rsp from SGX_PRE_OCALL_STACK before exception handling
-	# (see below for full details)
+	# The below code should be fine since it detects an interrupted ocall and restores %rsp from
+	# SGX_PRE_OCALL_STACK before exception handling (see below for full details).
+	#
+	# The stack swap logic does not need to be atomic because nested exceptions are disallowed by
+	# SGX due to TCS.NSSA == 2 (thus, .Lcssa1_exception_determine_when logic cannot be nested).
 
-	# The stack swap logic does not need to be atomic because nested
-	# exceptions are disallowed by SGX due to TCS.NSSA == 2 (thus,
-	# .Lcssa1_exception_determine_when logic cannot be nested)
-
-	# Check if we got interrupted during an ocall case (except OCALL_EXIT),
-	# i.e. SGX_PRE_OCALL_STACK is set.
+	# Check if interrupted during an ocall case (except OCALL_EXIT), i.e. SGX_PRE_OCALL_STACK is set
 	movq %gs:SGX_PRE_OCALL_STACK, %rsi
 	cmpq $0, %rsi
 	jne .Lcssa1_exception_during_ocall_flows
 
-	# If this is not the case check if OCALL_EXIT has been called. If this
-	# is not the case setup the exception handler for the non-ocall case.
+	# If this is not the case, check if OCALL_EXIT has been called. If this is not the case, setup
+	# the exception handler for the non-ocall case.
 	cmpq $0, %gs:SGX_OCALL_EXIT_CALLED
 	je .Lcssa1_exception_during_enclave_run
 
-	# We are interrupted during the never-returning OCALL_EXIT. Because the
-	# thread is going to exit anyway, we can ignore this exception.
+	# We are interrupted during the never-returning OCALL_EXIT. Because the thread is going to exit
+	# anyway, we can ignore this exception.
 	jmp .Lcssa1_exception_eexit
 
 .Lcssa1_exception_during_ocall_flows:
 	# At this point, we are in the stage-1 exception handler (CSSA=1) and
-	# SGX_PRE_OCALL_STACK=<trusted pointer to enclave stack>. I.e. we are
-	# interrupted during handling of enclave's sgx_ocall/Lcssa0_ocall_return
-	# assembly code.
+	# SGX_PRE_OCALL_STACK=<trusted pointer to enclave stack>. I.e. we are interrupted during
+	# handling of enclave's sgx_ocall/Lcssa0_ocall_return assembly code.
 	#
-	# Calling the stage-2 exception handler (CSSA=0) while SGX_PRE_OCALL_STACK
-	# != 0 would be problematic because stage-2 handler could issue nested
-	# OCALLs. This would mean the SGX_PRE_OCALL_STACK logic would need to handle
-	# nesting. So we don't set up the stage-2 handler _DkExceptionHandler().
+	# Calling the stage-2 exception handler (CSSA=0) while SGX_PRE_OCALL_STACK != 0 would be
+	# problematic because stage-2 handler could issue nested OCALLs. This would mean the
+	# SGX_PRE_OCALL_STACK logic would need to handle nesting. So we don't set up the stage-2 handler
+	# _DkExceptionHandler().
 	#
-	# Instead if we're in such situation, we emulate it as if %rip reached to
-	# the safe point, .Lcssa0_ocall_return_after_stack_restore. In other words,
-	# the stage-1 handler jumps to the regular returning-from-OCALL flow
-	# (CSSA=0) with $rsi=<external event> which forces that flow to call
-	# _DkHandleExternalEvent() before proceeding with normal enclave code.
+	# Instead if we're in such situation, we emulate it as if %rip reached to the safe point,
+	# .Lcssa0_ocall_return_after_stack_restore. In other words, the stage-1 handler jumps to the
+	# regular returning-from-OCALL flow (CSSA=0) with $rsi=<external event> which forces that flow
+	# to call _DkHandleExternalEvent() before proceeding with normal enclave code.
 	#
 	# Ocall sequence:
 	#  1. call sgx_ocall()
@@ -302,31 +290,29 @@ enclave_entry:
 	#  9. call _DkHandleExternalEvent() if interrupted
 	# 10. return from sgx_ocall() to the caller
 	#
-	# It is also required that sgx_ocall() be atomic wrt async exception.
-	# When host async signal arrives, sgx_ocall() should result in EINTR.
+	# It is also required that sgx_ocall() be atomic wrt async exception. When host async signal
+	# arrives, sgx_ocall() should result in EINTR.
 	#
 	# There are three possibilities when exactly host async signal arrives:
+	#
 	# A. before exiting enclave to perform host syscall
-	# B. after exiting enclave and before re-entering enclave
-	#    (i.e., during untrusted execution of host syscall)
+	# B. after exiting enclave and before re-entering enclave (i.e., during untrusted execution of
+	#    host syscall)
 	# C. after re-entering enclave but before returning to sgx_ocall().
 	#
-	# Note that Case A didn't even issue host syscall, Case B may have
-	# interrupted host syscall (but maybe interrupt came after successful
-	# host syscall), and Case C was interrupted after successful host
-	# syscall. In Case C, the result of host system call must be preserved
-	# to be replayed in later invocation.
+	# Note that Case A didn't even issue host syscall, Case B may have interrupted host syscall (but
+	# maybe interrupt came after successful host syscall), and Case C was interrupted after
+	# successful host syscall. In Case C, the result of host system call must be preserved to be
+	# replayed in later invocation.
 	#
 	# On host async signal we treat these cases as follows:
 	#
 	# A. right-before EEXIT (2. in above sequence):
 	#        - set EINTR and forward %rip to exception handler
 	# B. during untrusted PAL (3. - 4. in above sequence):
-	#        - code in _DkTerminateSighandler() must handle this case
+	#        - code in untrusted PAL handles this case
 	# C. right-after EENTER (5. - 7. in above sequence):
 	#        - ocall succeeded, forward %rip to exception handler
-	#
-	# TODO: _DkTerminateSighandler() mustn't lose result of successful syscall.
 
 	# Find out which of cases A, B, or C happened:
 	#   - copy rip at which the enclave was interrupted into %rax,
@@ -341,35 +327,32 @@ enclave_entry:
 	cmpq %r11, %rax
 	jae .Lcssa1_exception_during_ocall_flows_case_c
 
-	# CASE A. We are right-before EEXIT for ocall in between
-	# [.Lcssa0_ocall_eexit_prepare, .Lcssa0_ocall_eexit_done) -- skip EEXIT
-	# as if ocall returned EINTR.
+	# CASE A. We are right-before EEXIT for ocall in between [.Lcssa0_ocall_eexit_prepare,
+	#         .Lcssa0_ocall_eexit_done) -- skip EEXIT as if ocall returned EINTR.
 	#
-	# If there is a registered signal handler for the current exception,
-	# _DkHandleExternalEvent() will be called (and thus we need to save %rdi =
-	# <external event>) before returning from ocall.
+	# If there is a registered signal handler for the current exception, _DkHandleExternalEvent()
+	# will be called (and thus we need to save %rdi = <external event>) before returning from ocall.
 
 	movq $-EINTR, SGX_GPR_RDI(%rbx)    # return value for .Lcssa0_ocall_return
 	# fallthrough to Case C
 
 	# CASE B. This code cannot land in Case B because:
-	# (1) this code path (.Lcssa1_exception_determine_when) is triggered only if
-	#     we haven't yet exited the enclave when signal arrived, and
-	# (2) in Case B, we exited the enclave and signal arrived while in untrusted
-	#     code.
-	# The two conditions cannot be true at the same time, so Case B never
-	# happens here (Case B results in Lcssa0_ocall_return code path below).
+	#
+	# (1) this code path is triggered only if we haven't yet exited enclave when signal arrived, and
+	# (2) in Case B, we exited the enclave and signal arrived while in untrusted code.
+	#
+	# The two conditions cannot be true at the same time, so Case B never happens here (Case B
+	# results in Lcssa0_ocall_return code path below).
 
 .Lcssa1_exception_during_ocall_flows_case_c:
 	# CASE C. We are right-after EENTER returning from successful ocall.
-	# Set %rsi = <external event> and move %rip to
-	# .Lcssa0_ocall_return_after_stack_restore, such that regular
-	# returning-from-OCALL flow (CSSA=0) will notice the external event and will
-	# call _DkHandleExternalEvent() to handle the async signal.
 	#
-	# Note that either we fell-through from Case A and %rdi was already set to
-	# the -EINTR return value, or we are indeed in Case C and %rdi already
-	# contains the successful OCALL result.
+	# Set %rsi = <external event> and move %rip to .Lcssa0_ocall_return_after_stack_restore, such
+	# that regular returning-from-OCALL flow (CSSA=0) will notice the external event and will call
+	# _DkHandleExternalEvent() to handle the exception.
+	#
+	# Note that either we fell-through from Case A and %rdi was already set to the -EINTR return
+	# value, or we are indeed in Case C and %rdi already contains the successful OCALL result.
 
 	movq %rdi, SGX_GPR_RSI(%rbx)      # external event for .Lcssa0_ocall_return
 
@@ -383,13 +366,12 @@ enclave_entry:
 	jmp .Lcssa1_exception_eexit       # cases A, B and C in stage-1 handler done
 
 .Lcssa1_exception_during_enclave_run:
-	# The thread got interrupted outside of ocall handling (see above for that
-	# special case). We inject a call to _DkExceptionHandler() into the
-	# interrupted thread to handle exception in stage-2 handler (on ERESUME).
+	# The thread got interrupted outside of ocall handling (see above for that special case). We
+	# inject a call to _DkExceptionHandler() into the interrupted thread to handle exception in
+	# stage-2 handler (on ERESUME).
 
-	# The last instructions of _restore_sgx_context() need to be atomic for the
-	# code below (see _restore_sgx_context for more details). So emulate this if
-	# we were interrupted there.
+	# The last instructions of _restore_sgx_context() need to be atomic for the code below (see
+	# _restore_sgx_context for more details). So emulate this if we were interrupted there.
 	leaq .Lrestore_sgx_context_inst0(%rip), %rax
 	cmpq %rax, SGX_GPR_RIP(%rbx)
 	je .Lcssa1_exception_emulate_restore_sgx_context_inst0
@@ -429,8 +411,8 @@ enclave_entry:
 .Lout_of_signal_stack:
 	movq %gs:SGX_SIG_STACK_HIGH, %rsi
 
-	# When switching to the not yet used signal stack we don't need to reserve
-	# a redzone. So move the stack pointer up here to undo the move down below.
+	# When switching to the not yet used signal stack we don't need to reserve a redzone. So move
+	# the stack pointer up here to undo the move down below.
 	addq $RED_ZONE_SIZE, %rsi
 
 	# Setup stack for stage-2 handler _DkExceptionHandler().
@@ -442,8 +424,8 @@ enclave_entry:
 	#     padding:            (if necessary)
 	#     RED_ZONE:           (unless newly switching to signal stack)
 	#
-	# NOTE: there is no saved %rip on the stack (to return) because
-	#       _DkExceptionHandler() calls _restore_sgx_context().
+	# NOTE: there is no saved %rip on the stack (to return) because _DkExceptionHandler() calls
+	#       _restore_sgx_context().
 
 #define STACK_PADDING_SIZE (PAL_FP_XSTATE_MAGIC2_SIZE + 8)
 #define STACK_FRAME_SUB \
@@ -454,9 +436,8 @@ enclave_entry:
 	addq $STACK_FRAME_SUB, %rax
 	subq %rax, %rsi
 
-	# Disallow too many nested exceptions. In normal Gramine flow, this should
-	# never happen. Since addresses need to be canonical, this addition does
-	# not overflow.
+	# Disallow too many nested exceptions. In normal Gramine flow, this should never happen. Since
+	# addresses need to be canonical, this addition does not overflow.
 	movq %gs:SGX_SIG_STACK_HIGH, %rax
 	addq %gs:SGX_SIG_STACK_LOW, %rax
 	shrq $1, %rax
@@ -465,13 +446,13 @@ enclave_entry:
 	FAIL_LOOP
 1:
 
-	# Align xsave area to 64 bytes after sgx_cpu_context_t
+	# Align XSAVE area to 64 bytes after sgx_cpu_context_t
 	andq $~(PAL_XSTATE_ALIGN - 1), %rsi
 	subq $SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, %rsi
 
 	# Rewire SSA0: pass 1st arg to _DkExceptionHandler():
-	#    - exit info (in %rdi, either trusted SSA[0].GPRSGX.EXITINFO or
-	#                 possibly-malicious "external event")
+	#    - exit info (in %rdi, either trusted SSA[0].GPRSGX.EXITINFO or possibly-malicious
+	#                 "external event")
 	#
 	# Also copy SSA[0].GPRSGX.RDI to the CPU context on the stack
 	xchgq %rdi, SGX_GPR_RDI(%rbx)
@@ -515,7 +496,7 @@ enclave_entry:
 	movq %rdi, SGX_CPU_CONTEXT_RIP(%rsi)
 
 	# Rewire SSA0: pass more args to _DkExceptionHandler():
-	#    - pointer to sgx_cpu_context_t (SSA[0].GPRSGX.RIP, 2nd arg)
+	#    - pointer to sgx_cpu_context_t (SSA[0].GPRSGX.RSI, 2nd arg)
 	#    - pointer to PAL_XREGS_STATE   (SSA[0].GPRSGX.RDX, 3rd arg)
 	movq %rsi, SGX_GPR_RSI(%rbx)
 	movq %rsi, SGX_GPR_RDX(%rbx)
@@ -525,20 +506,20 @@ enclave_entry:
 
 	# Rewire SSA0: SSA[0].GPRSGX.RSP points to SGX PAL signal stack
 	#
-	# x86-64 sysv abi requires 16B alignment of stack before call instruction
-	# which implies a (8 mod 16)B alignment on function entry (due to implicit
-	# push %rip). Since we already aligned xsave area above, this requirement
-	# is satisfied.
+	# x86-64 SysV ABI requires 16B alignment of stack before call instruction which implies a (8 mod
+	# 16)B alignment on function entry (due to implicit push %rip). Since we already aligned XSAVE
+	# area above, this requirement is satisfied.
 	subq $8, %rsi
 	movq %rsi, SGX_GPR_RSP(%rbx)
 
-	# clear SSA.GPRSGX.EXITINFO; we used it to identify HW exception (if any),
-	# and a scenario is possible where the same SSA is re-used to handle more
-	# signals that arrive right after this exception, so we must clear state
+	# clear SSA.GPRSGX.EXITINFO; we used it to identify HW exception (if any), and a scenario is
+	# possible where the same SSA is re-used to handle more signals that arrive right after this
+	# exception, so we must clear state
 	movq $0, SGX_GPR_EXITINFO(%rbx)
 
-	# Rewire SSA0: SSA[0].GPRSGX.RFLAGS: clear RFLAGS.DF to conform to the SysV
-	# ABI, clear RFLAGS.AC to prevent the #AC-fault side channel
+	# Rewire SSA0: modify SSA[0].GPRSGX.RFLAGS:
+	#   - clear RFLAGS.DF to conform to the SysV ABI,
+	#   - clear RFLAGS.AC to prevent the #AC-fault side channel
 	andq $(~(RFLAGS_DF | RFLAGS_AC)), SGX_GPR_RFLAGS(%rbx)
 
 	# Rewire SSA0: SSA[0].GPRSGX.RIP points to _DkExceptionHandler()
@@ -626,9 +607,8 @@ sgx_ocall:
 	pushq %rax             # previous RIP
 	pushfq
 
-	# Under GDB, single-stepping sets Trap Flag (TP) of EFLAGS, thus TP=1 is
-	# stored on pushfq above. Upon consequent popfq, TP is 1, resulting in
-	# spurious trap. Reset TP here.
+	# Under GDB, single-stepping sets Trap Flag (TP) of EFLAGS, thus TP=1 is stored on pushfq above.
+	# Upon consequent popfq, TP is 1, resulting in spurious trap. Reset TP here.
 	andq $~0x100, (%rsp)
 
 	pushq %r15
@@ -650,11 +630,10 @@ sgx_ocall:
 	pushq %rcx
 	pushq $0               # placeholder for RAX
 
-	# OCALL_EXIT should never return (see sgx_ocall_exit(): it always exits the
-	# thread). Skip setting SGX_PRE_OCALL_STACK to land in special-case of
-	# ECALL_THREAD_RESET (issued in sgx_ocall_exit()) later. Note that if there
-	# is an interrupt (which usually would result in a simulated return of
-	# -EINTR), it will be silently ignored via .Lcssa1_exception_eexit.
+	# OCALL_EXIT should never return (see sgx_ocall_exit(): it always exits the thread). Skip
+	# setting SGX_PRE_OCALL_STACK to land in special-case of ECALL_THREAD_RESET (issued in
+	# sgx_ocall_exit()) later. Note that if there is an interrupt (which usually would result in a
+	# simulated return of -EINTR), it will be silently ignored via .Lcssa1_exception_eexit.
 	cmpq $OCALL_EXIT, %rdi
 	jne 1f
 	movq $1, %gs:SGX_OCALL_EXIT_CALLED
@@ -664,12 +643,11 @@ sgx_ocall:
 	movq %rsp, %gs:SGX_PRE_OCALL_STACK
 
 .Lcssa0_ocall_eexit_prepare:
-	# From here .Lcssa1_exception_determine_when can mess with our state (%rip
-	# and %rsp). We need to be extremely careful when making changes here.
+	# From here .Lcssa1_exception_determine_when can mess with our state (%rip and %rsp).
+	# We need to be extremely careful when making changes here.
 	#
-	# It's ok to use the untrusted stack and exit target below without checks
-	# since the processor will ensure that after exiting enclave mode in-enclave
-	# memory can't be accessed.
+	# It's ok to use the untrusted stack and exit target below without checks since the processor
+	# will ensure that after exiting enclave mode in-enclave memory can't be accessed.
 
 	movq %gs:SGX_USTACK, %rsp
 
@@ -688,17 +666,17 @@ sgx_ocall:
 	#
 	# Arguments for EEXIT/untrusted code (not cleared):
 	#     %rax:       contains `EEXIT` code
-	#	  %rbx:       exit target
-	#	  %rsp:       untrusted stack
-	#	  %rdi, %rsi: (optional) arguments to untrusted code
+	#     %rbx:       exit target
+	#     %rsp:       untrusted stack
+	#     %rdi, %rsi: (optional) arguments to untrusted code
 .Lcssa0_ocall_or_cssa1_exception_eexit:
 	.cfi_startproc
 
 	# Clear "extended" state (FPU aka x87, SSE, AVX, ...).
 	#
-	# g_pal_sec.enclave_attributes.xfrm will always be zero before init_enclave
-	# has been called by pal_linux_main. So during early init nothing should use
-	# features not covered by fxrstor, like AVX.
+	# g_pal_sec.enclave_attributes.xfrm will always be zero before init_enclave has been called by
+	# pal_linux_main. So during early init nothing should use features not covered by fxrstor, like
+	# AVX.
 	cmpl $0, g_xsave_enabled(%rip)
 	jne 1f
 	fxrstor64 g_xsave_reset_state(%rip)
@@ -794,13 +772,12 @@ sgx_ocall:
 	# Restore SGX context as generated by .Lcssa1_exception_determine_when.
 	# Execution will continue as specified by %rip in the context.
 	#
-	# If %rdi (uc) points into the signal stack we need to ensure that until the
-	# last read from there %rsp points there, or code in
-	# .Lcssa1_exception_during_enclave_run might mess with it because it would
-	# think that the signal stack is not in use. In this case we assume that
-	# %rsp points into the signal stack when we get called.
+	# If %rdi (uc) points into the signal stack we need to ensure that until the last read from
+	# there %rsp points there, or code in .Lcssa1_exception_during_enclave_run might mess with it
+	# because it would think that the signal stack is not in use. In this case we assume that %rsp
+	# points into the signal stack when we get called.
 	#
-	# (Also keep the redzone in mind, see asserts for sgx_cpu_context_t in sgx_arch.h)
+	# Also keep the redzone in mind, see asserts for sgx_cpu_context_t in sgx_arch.h.
 
 	.global _restore_sgx_context
 	.type _restore_sgx_context, @function
@@ -835,27 +812,26 @@ _restore_sgx_context:
 	#
 	# The use of SGX_TMP_RIP (enclave_tls::tmp_rip per-enclave-thread field) must be atomic.
 	# Consider a data race:
+	#
 	# (1) thread handles a previous exception in SSA=0,
 	# (2) thread is done and returns from exception handler via restore_sgx_context(),
 	# (3) in the middle of _restore_sgx_context() a new exception arrives,
 	# (4) the exception handler for this new exception is prepared in SSA=1,
 	# (5) thread returns back to SSA=0 and handles this new exception,
-	# (6) thread is done and returns from exception handler via _restore_sgx_context()
-	#     and updates SGX_TMP_RIP (overwrites enclave_tls::tmp_rip). Now the
-	#     thread returned in the middle of _restore_sgx_context() and will try
-	#     to jmp *%gs:SGX_TMP_RIP but this value is lost, and SIGILL/SEGFAULT
-	#     follows.
+	# (6) thread is done and returns from exception handler via _restore_sgx_context() and updates
+	#     SGX_TMP_RIP (overwrites enclave_tls::tmp_rip). Now the thread returned in the middle of
+	#     _restore_sgx_context() and will try to jmp *%gs:SGX_TMP_RIP but this value is lost, and
+	#     SIGILL/SEGFAULT follows.
 	#
-	# The last 4 instructions that restore RIP, RSP and R15 (needed as tmp reg)
-	# need to be atomic wrt .Lcssa1_exception_during_enclave_run.
+	# The last 4 instructions that restore RIP, RSP and R15 (needed as tmp reg) need to be atomic
+	# wrt .Lcssa1_exception_during_enclave_run.
 	#
-	# The reason is that .Lcssa1_exception_during_enclave_run can interrupt us
-	# in the middle and the nested exception handler that it injects would mess
-	# with %gs:SGX_TMP_RIP when it calls us to return (%gs:SGX_TMP_RIP is a
-	# single memory location per thread, so not re-entry save).
+	# The reason is that .Lcssa1_exception_during_enclave_run can interrupt us in the middle and the
+	# nested exception handler that it injects would mess with %gs:SGX_TMP_RIP when it calls us to
+	# return (%gs:SGX_TMP_RIP is a single memory location per thread, so not re-entry save).
 	#
-	# Since they are not atomic, .Lcssa1_exception_during_enclave_run will
-	# emulate this behavior if it gets called while executing them (see there).
+	# Since they are not atomic, .Lcssa1_exception_during_enclave_run will emulate this behavior if
+	# it gets called while executing them (see there).
 
 	# RSP points to RIP so need relative addressing to restore RIP, R15, and RSP
 	movq SGX_CPU_CONTEXT_RIP - SGX_CPU_CONTEXT_RIP(%rsp), %r15
@@ -872,8 +848,7 @@ _restore_sgx_context:
 	# void __save_xregs(PAL_XREGS_STATE* xsave_area)
 	#
 	#   RDI: argument: pointer to xsave_area
-	#   R11: return address: in order to not touch stack (sometimes stack is not
-	#                                                     available)
+	#   R11: return address: in order to not touch stack (sometimes stack is not available)
 	#   RAX, RDX: clobbered
 
 	.global __save_xregs
@@ -884,7 +859,7 @@ __save_xregs:
 	cmpl $0, %eax
 	jz 1f
 
-	# clear xsave header
+	# clear XSAVE area header
 	movq $0, XSAVE_HEADER_OFFSET + 0 * 8(%rdi)
 	movq $0, XSAVE_HEADER_OFFSET + 1 * 8(%rdi)
 	movq $0, XSAVE_HEADER_OFFSET + 2 * 8(%rdi)
@@ -918,8 +893,7 @@ save_xregs:
 	# void __restore_xregs(const PAL_XREGS_STATE* xsave_area)
 	#
 	#   RDI: argument: pointer to xsave_area
-	#   R11: return address: in order to not touch stack (sometimes stack is not
-	#                                                     available)
+	#   R11: return address: in order to not touch stack (sometimes stack is not available)
 	#   RAX, RDX: clobbered
 
 	.global __restore_xregs
@@ -952,19 +926,17 @@ restore_xregs:
 
 
 #ifdef DEBUG
-	# CFI "trampoline" to make GDB happy. GDB normally does not handle switching
-	# stack in the middle of backtrace (which is what happens when we exit the
-	# enclave), unless the function doing it is called __morestack.
+	# CFI "trampoline" to make GDB happy. GDB normally does not handle switching stack in the middle
+	# of backtrace (which is what happens when we exit the enclave), unless the function doing it is
+	# called __morestack.
 	#
-	# To make GDB backtrace work, we make sure that the first function outside
-	# of enclave (sgx_entry) has a return address on stack, pointing inside
-	# __morestack. We will not actually return to this function (sgx_entry
-	# performs EENTER to go back to enclave), but GDB will make a stack frame
-	# for it.
+	# To make GDB backtrace work, we make sure that the first function outside of enclave
+	# (sgx_entry) has a return address on stack, pointing inside __morestack. We will not actually
+	# return to this function (sgx_entry performs EENTER to go back to enclave), but GDB will make a
+	# stack frame for it.
 	#
-	# The function contains CFI directives to make sure that all callee-saved
-	# registers can be recovered. They should reflect the situation during EEXIT
-	# in code above.
+	# The function contains CFI directives to make sure that all callee-saved registers can be
+	# recovered. They should reflect the situation during EEXIT in code above.
 
 	.global __morestack
 	.type __morestack, @function
