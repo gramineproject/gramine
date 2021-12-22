@@ -152,6 +152,8 @@ enclave_entry:
 
 	# register states need to be carefully checked, so we move handling to handle_ecall() in C code
 	callq handle_ecall
+
+	# handle_ecall() will only return when invalid parameters has been passed
 	FAIL_LOOP
 
 .Lcssa0_ecall_thread_reset:
@@ -204,7 +206,7 @@ enclave_entry:
 	FAIL_LOOP
 1:
 
-	# SGX_GPR is a base pointer to the SSA[0].GPRSGX region (which contains "regular context")
+	# SGX_GPR is a base pointer to the SSA[0].GPRSGX region
 	movq %gs:SGX_GPR, %rbx
 
 	# first check SSA[0].GPRSGX.EXITINFO -- if VALID bit (0x80000000) is set, then use trusted
