@@ -303,7 +303,6 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    /* other types of pipes have a single underlying FD, shut it down */
     if (handle->pipe.fd != PAL_IDX_POISON) {
         DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
     }
@@ -368,14 +367,13 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  * \return            0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->generic.fd == PAL_IDX_POISON)
+    if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
     bool* nonblocking = &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
-        int ret = DO_SYSCALL(fcntl, handle->generic.fd, F_SETFL,
-                             attr->nonblocking ? O_NONBLOCK : 0);
+        int ret = DO_SYSCALL(fcntl, handle->pipe.fd, F_SETFL, attr->nonblocking ? O_NONBLOCK : 0);
         if (ret < 0)
             return unix_to_pal_error(ret);
 

@@ -459,7 +459,7 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  * \return            0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->generic.fd == PAL_IDX_POISON)
+    if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
     /* This pipe might use a secure session, make sure all initial work is done. */
@@ -470,7 +470,7 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     bool* nonblocking = &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
-        int ret = ocall_fsetnonblock(handle->generic.fd, attr->nonblocking);
+        int ret = ocall_fsetnonblock(handle->pipe.fd, attr->nonblocking);
         if (ret < 0)
             return unix_to_pal_error(ret);
 
