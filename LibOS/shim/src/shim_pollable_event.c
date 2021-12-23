@@ -25,7 +25,6 @@ int create_pollable_event(struct shim_pollable_event* event) {
                        PAL_OPTION_CLOEXEC, &write_handle);
     if (ret < 0) {
         log_error("%s: DkStreamOpen failed: %d", __func__, ret);
-        DkObjectClose(srv_handle);
         goto out;
     }
 
@@ -47,6 +46,9 @@ out:;
     if (!ret && tmp_ret) {
         DkObjectClose(read_handle);
         DkObjectClose(write_handle);
+        /* Clearing just for sanity. */
+        event->read_handle = NULL;
+        event->write_handle = NULL;
     }
     return ret ?: tmp_ret;
 }
@@ -92,7 +94,7 @@ int wait_pollable_event(struct shim_pollable_event* event) {
 
 int clear_pollable_event(struct shim_pollable_event* event) {
     while (1) {
-        char buf[0x20];
+        char buf[0x100];
         size_t size = sizeof(buf);
         int ret = DkStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL, 0);
         if (ret < 0) {

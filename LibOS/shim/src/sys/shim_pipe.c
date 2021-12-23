@@ -77,8 +77,10 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
     cli->pal_handle = hdl2;
     ret = 0;
 
-out:
-    if (ret < 0) {
+out:;
+    int tmp_ret = DkStreamDelete(hdl0, PAL_DELETE_ALL);
+    DkObjectClose(hdl0);
+    if (ret || tmp_ret) {
         if (hdl1)
             DkObjectClose(hdl1);
         if (hdl2)
@@ -89,9 +91,7 @@ out:
         free(cli->uri);
         cli->uri = NULL;
     }
-    DkStreamDelete(hdl0, PAL_DELETE_ALL); // TODO: handle errors
-    DkObjectClose(hdl0);
-    return ret;
+    return ret ?: tmp_ret;
 }
 
 static void undo_set_fd_handle(int fd) {
