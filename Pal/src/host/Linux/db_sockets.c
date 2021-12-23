@@ -158,8 +158,9 @@ static int inet_create_uri(char* buf, size_t buf_size, struct sockaddr* addr, si
 
         /* for IPv6, the address will be in the form of
            "[xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx]:port". */
-        len = snprintf(buf, buf_size, "[%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x]:%u", addr[0],
-                       addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
+        len = snprintf(buf, buf_size, "[%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x]:%u",
+                       __ntohs(addr[0]), __ntohs(addr[1]), __ntohs(addr[2]), __ntohs(addr[3]),
+                       __ntohs(addr[4]), __ntohs(addr[5]), __ntohs(addr[6]), __ntohs(addr[7]),
                        __ntohs(addr_in6->sin6_port));
     } else {
         return -PAL_ERROR_INVAL;
