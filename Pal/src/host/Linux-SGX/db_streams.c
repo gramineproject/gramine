@@ -275,7 +275,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         return unix_to_pal_error(ret);
     }
 
-    /* construct ancillary data wtih FD-to-transfer in a control message */
+    /* construct ancillary data with FD-to-transfer in a control message */
     char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
