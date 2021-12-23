@@ -271,7 +271,7 @@ endforeach
 
 if enable_musl
     meson.add_install_script(
-        find_program('rename_musl_tests.sh'),
+        find_program('install_musl_tests.sh'),
         prefix / join_paths(install_dir, 'musl'),
         musl_execs,
     )
