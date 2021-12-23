@@ -436,6 +436,10 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertIn('TCP Write 2 OK', stderr)
         self.assertIn('TCP Read 2: Hello World 2', stderr)
 
+        # TCP (IPv6)
+        self.assertIn('TCP (IPv6) Creation 1 OK', stderr)
+        self.assertIn('TCP (IPv6) Connection 1 OK', stderr)
+
         # UDP Socket Creation
         self.assertIn('UDP Creation 1 OK', stderr)
 
