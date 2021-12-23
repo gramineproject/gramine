@@ -243,7 +243,8 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->file.fd, ret;
+    int ret;
+    int fd = handle->file.fd;
 
     ret = DO_SYSCALL(fchmod, fd, attr->share_flags);
     if (ret < 0)
