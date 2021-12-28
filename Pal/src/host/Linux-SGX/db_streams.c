@@ -263,7 +263,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
 
     ssize_t ret;
     struct hdl_header hdl_hdr = {
-        .has_fd = HANDLE_HDR(cargo)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
+        .has_fd = cargo->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
         .data_size = hdl_data_size
     };
     int fd = hdl->process.stream;
@@ -382,7 +382,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
     if (hdl_hdr.has_fd) {
         handle->generic.fd = host_fd;
     } else {
-        HANDLE_HDR(handle)->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
+        handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
     *cargo = handle;

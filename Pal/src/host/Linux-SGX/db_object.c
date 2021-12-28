@@ -50,7 +50,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
 
         /* collect internal-handle FD (only if it is readable/writable)
          * hdl might be a event/non-pollable object, simply ignore it */
-        uint32_t flags = HANDLE_HDR(hdl)->flags;
+        uint32_t flags = hdl->flags;
         if ((flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
                 && hdl->generic.fd != PAL_IDX_POISON) {
             // TODO: why does these check for flags?
@@ -106,12 +106,13 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
             ret_events[j] |= PAL_WAIT_ERROR;
 
         /* update handle's internal fields (flags) */
+        /* FIXME: something is wrong here, it reads and writes to flags without any locks... */
         PAL_HANDLE hdl = handle_array[j];
         assert(hdl);
-        if (HANDLE_HDR(hdl)->flags & PAL_HANDLE_FD_ERROR)
+        if (hdl->flags & PAL_HANDLE_FD_ERROR)
             ret_events[j] |= PAL_WAIT_ERROR;
         if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL))
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_ERROR;
+            hdl->flags |= PAL_HANDLE_FD_ERROR;
     }
 
     ret = 0;

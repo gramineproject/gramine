@@ -95,10 +95,12 @@ void pal_start_thread(void) {
 
 int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret;
-    PAL_HANDLE new_thread = malloc(HANDLE_SIZE(thread));
+    PAL_HANDLE new_thread = calloc(1, HANDLE_SIZE(thread));
     if (!new_thread)
         return -PAL_ERROR_NOMEM;
-    init_handle_hdr(HANDLE_HDR(new_thread), PAL_TYPE_THREAD);
+
+    init_handle_hdr(new_thread, PAL_TYPE_THREAD);
+
     /*
      * tid will be filled later by pal_start_thread()
      * tid is cleared to avoid random value here.

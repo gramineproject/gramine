@@ -29,21 +29,21 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(dev));
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dev));
     if (!hdl)
         return -PAL_ERROR_NOMEM;
 
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_DEV);
+    init_handle_hdr(hdl, PAL_TYPE_DEV);
 
     if (!strcmp(uri, "tty")) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         hdl->dev.nonblocking = false;
 
         if (access == PAL_ACCESS_RDONLY) {
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
+            hdl->flags |= PAL_HANDLE_FD_READABLE;
             hdl->dev.fd = 0; /* host stdin */
         } else if (access == PAL_ACCESS_WRONLY) {
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_WRITABLE;
+            hdl->flags |= PAL_HANDLE_FD_WRITABLE;
             hdl->dev.fd = 1; /* host stdout */
         } else {
             assert(access == PAL_ACCESS_RDWR);
@@ -65,12 +65,12 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.fd = ret;
 
         if (access == PAL_ACCESS_RDONLY) {
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
+            hdl->flags |= PAL_HANDLE_FD_READABLE;
         } else if (access == PAL_ACCESS_WRONLY) {
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_WRITABLE;
+            hdl->flags |= PAL_HANDLE_FD_WRITABLE;
         } else {
             assert(access == PAL_ACCESS_RDWR);
-            HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+            hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
         }
     }
 
@@ -85,7 +85,7 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (offset || HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    if (!(HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_READABLE))
+    if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
     if (handle->dev.fd == PAL_IDX_POISON)
@@ -99,7 +99,7 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (offset || HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    if (!(HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_WRITABLE))
+    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
     if (handle->dev.fd == PAL_IDX_POISON)
@@ -172,8 +172,8 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (handle->dev.fd == 0 || handle->dev.fd == 1) {
         /* special case of "dev:tty" device which is the standard input + standard output */
-        attr->readable     = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_READABLE;
-        attr->writable     = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_WRITABLE;
+        attr->readable     = handle->flags & PAL_HANDLE_FD_READABLE;
+        attr->writable     = handle->flags & PAL_HANDLE_FD_WRITABLE;
         attr->runnable     = false;
         attr->share_flags  = 0;
         attr->pending_size = 0;

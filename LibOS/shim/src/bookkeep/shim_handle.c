@@ -733,7 +733,7 @@ BEGIN_CP_FUNC(handle) {
 
         if (new_hdl->pal_handle) {
             struct shim_palhdl_entry* entry;
-            DO_CP(palhdl, hdl->pal_handle, &entry);
+            DO_CP(palhdl_ptr, &hdl->pal_handle, &entry);
             entry->phandle = &new_hdl->pal_handle;
         }
 

@@ -78,14 +78,14 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(pipe));
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(pipe));
     if (!hdl) {
         ocall_close(ret);
         return -PAL_ERROR_NOMEM;
     }
 
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPESRV);
-    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE; /* cannot write to a listening socket */
+    init_handle_hdr(hdl, PAL_TYPE_PIPESRV);
+    hdl->flags |= PAL_HANDLE_FD_READABLE; /* cannot write to a listening socket */
     hdl->pipe.fd          = ret;
     hdl->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -130,14 +130,14 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    PAL_HANDLE clnt = malloc(HANDLE_SIZE(pipe));
+    PAL_HANDLE clnt = calloc(1, HANDLE_SIZE(pipe));
     if (!clnt) {
         ocall_close(ret);
         return -PAL_ERROR_NOMEM;
     }
 
-    init_handle_hdr(HANDLE_HDR(clnt), PAL_TYPE_PIPECLI);
-    HANDLE_HDR(clnt)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    init_handle_hdr(clnt, PAL_TYPE_PIPECLI);
+    clnt->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd          = ret;
     clnt->pipe.name        = handle->pipe.name;
     clnt->pipe.nonblocking = !!(flags & SOCK_NONBLOCK);
@@ -197,14 +197,14 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(pipe));
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(pipe));
     if (!hdl) {
         ocall_close(ret);
         return -PAL_ERROR_NOMEM;
     }
 
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPE);
-    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    init_handle_hdr(hdl, PAL_TYPE_PIPE);
+    hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->pipe.fd            = ret;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -415,7 +415,7 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->pipe.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
+    attr->disconnected = handle->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading (doesn't make sense for "listening" pipes) */
     attr->pending_size = 0;

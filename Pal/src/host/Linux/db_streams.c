@@ -66,7 +66,7 @@ out:
 }
 
 int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
-    if (HANDLE_HDR(handle)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE)) {
+    if (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE)) {
         long flags = enable ? FD_CLOEXEC : 0;
         int ret = DO_SYSCALL(fcntl, handle->generic.fd, F_SETFD, flags);
         if (ret < 0 && ret != -EBADF)
@@ -216,7 +216,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
 
     ssize_t ret;
     struct hdl_header hdl_hdr = {
-        .has_fd = HANDLE_HDR(cargo)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
+        .has_fd = cargo->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
         .data_size = hdl_data_size
     };
     int fd = hdl->process.stream;
@@ -337,7 +337,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         assert(control_hdr->cmsg_len == CMSG_LEN(sizeof(int)));
         handle->generic.fd = *(int*)CMSG_DATA(control_hdr);
     } else {
-        HANDLE_HDR(handle)->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
+        handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
     *cargo = handle;

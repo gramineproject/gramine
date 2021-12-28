@@ -117,6 +117,8 @@ nitpick_ignore = [
     ('c:type', 'union'),
     ('c:type', 'enum'), # parsing of these seems to be broken:
                         #     WARNING: c:type reference target not found: enum
+    # `PAL_HANDLE` has a non complete definition outside of PAL
+    ('c:type', 'PAL_HANDLE'),
 ]
 
 manpages_url = 'https://manpages.debian.org/{path}'

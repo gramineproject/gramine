@@ -17,12 +17,12 @@
 #include "spinlock.h"
 
 int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
-    PAL_HANDLE handle = malloc(HANDLE_SIZE(event));
+    PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
     if (!handle) {
         return -PAL_ERROR_NOMEM;
     }
 
-    init_handle_hdr(HANDLE_HDR(handle), PAL_TYPE_EVENT);
+    init_handle_hdr(handle, PAL_TYPE_EVENT);
     handle->event.signaled_untrusted = malloc_untrusted(sizeof(*handle->event.signaled_untrusted));
     if (!handle->event.signaled_untrusted) {
         free(handle);

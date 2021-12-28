@@ -42,14 +42,14 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     /* if try_create_path succeeded, prepare for the file handle */
     size_t uri_size = strlen(uri) + 1;
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(file) + uri_size);
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(file) + uri_size);
     if (!hdl) {
         DO_SYSCALL(close, ret);
         return -PAL_ERROR_NOMEM;
     }
 
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_FILE);
-    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    init_handle_hdr(hdl, PAL_TYPE_FILE);
+    hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->file.fd = ret;
     hdl->file.map_start = NULL;
     char* path = (void*)hdl + HANDLE_SIZE(file);
@@ -339,21 +339,26 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         return unix_to_pal_error(fd);
 
     size_t len = strlen(uri);
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(dir) + len + 1);
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir) + len + 1);
     if (!hdl) {
         DO_SYSCALL(close, fd);
         return -PAL_ERROR_NOMEM;
     }
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_DIR);
-    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
+
+    init_handle_hdr(hdl, PAL_TYPE_DIR);
+
+    hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
+
     char* path = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);
+
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
     hdl->dir.ptr         = NULL;
     hdl->dir.end         = NULL;
     hdl->dir.endofstream = false;
+
     *handle = hdl;
     return 0;
 }

@@ -142,12 +142,14 @@ BEGIN_CP_FUNC(memory) {
 }
 END_CP_FUNC_NO_RS(memory)
 
-BEGIN_CP_FUNC(palhdl) {
+/* Checkpointing mess takes `sizeof(*obj)`, but `PAL_HANDLE` is just opaque pointer, which we do not
+ * know the size of, hence we pass a pointer to it and just dereference it here. */
+BEGIN_CP_FUNC(palhdl_ptr) {
     __UNUSED(size);
     size_t off = ADD_CP_OFFSET(sizeof(struct shim_palhdl_entry));
     struct shim_palhdl_entry* entry = (void*)(base + off);
 
-    entry->handle  = (PAL_HANDLE)obj;
+    entry->handle  = *(PAL_HANDLE*)obj;
     entry->phandle = NULL;
     entry->prev    = store->last_palhdl_entry;
 
@@ -158,7 +160,7 @@ BEGIN_CP_FUNC(palhdl) {
     if (objp)
         *objp = entry;
 }
-END_CP_FUNC_NO_RS(palhdl)
+END_CP_FUNC_NO_RS(palhdl_ptr)
 
 BEGIN_CP_FUNC(migratable) {
     __UNUSED(obj);

@@ -49,25 +49,25 @@ static inline int create_process_handle(PAL_HANDLE* parent, PAL_HANDLE* child) {
         goto out;
     }
 
-    phdl = malloc(HANDLE_SIZE(process));
+    phdl = calloc(1, HANDLE_SIZE(process));
     if (!phdl) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
 
-    init_handle_hdr(HANDLE_HDR(phdl), PAL_TYPE_PROCESS);
-    HANDLE_HDR(phdl)->flags  |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    init_handle_hdr(phdl, PAL_TYPE_PROCESS);
+    phdl->flags  |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     phdl->process.stream      = fds[0];
     phdl->process.nonblocking = false;
 
-    chdl = malloc(HANDLE_SIZE(process));
+    chdl = calloc(1, HANDLE_SIZE(process));
     if (!chdl) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
 
-    init_handle_hdr(HANDLE_HDR(chdl), PAL_TYPE_PROCESS);
-    HANDLE_HDR(chdl)->flags  |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    init_handle_hdr(chdl, PAL_TYPE_PROCESS);
+    chdl->flags  |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     chdl->process.stream      = fds[1];
     chdl->process.nonblocking = false;
 
@@ -354,7 +354,7 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->process.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
+    attr->disconnected = handle->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading */
     ret = DO_SYSCALL(ioctl, handle->process.stream, FIONREAD, &val);

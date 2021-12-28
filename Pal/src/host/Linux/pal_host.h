@@ -21,15 +21,18 @@ typedef struct {
     char str[PIPE_NAME_MAX];
 } PAL_PIPE_NAME;
 
-typedef struct pal_handle {
+typedef struct {
     /* TSAI: Here we define the internal types of PAL_HANDLE
      * in PAL design, user has not to access the content inside the
      * handle, also there is no need to allocate the internal
      * handles, so we hide the type name of these handles on purpose.
      */
     PAL_HDR hdr;
+    /* Bitmask of `PAL_HANDLE_FD_*` flags. */
+    uint32_t flags;
 
     union {
+        /* Common field for accessing underlying host fd. See also `PAL_HANDLE_FD_READABLE`. */
         struct {
             PAL_IDX fd;
         } generic;
@@ -109,8 +112,11 @@ typedef struct pal_handle {
 
 #define HANDLE_TYPE(handle) ((handle)->hdr.type)
 
+/* These two flags indicate whether the underlying host fd of `PAL_HANDLE` is readable and/or
+ * writable respectively. If none of these is set, then the handle has no host-level fd. */
 #define PAL_HANDLE_FD_READABLE  1
 #define PAL_HANDLE_FD_WRITABLE  2
+/* Set if an error was seen on this handle. Currently only set by `_DkStreamsWaitEvents`. */
 #define PAL_HANDLE_FD_ERROR     4
 
 int arch_do_rt_sigprocmask(int sig, int how);

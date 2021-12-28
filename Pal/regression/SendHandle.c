@@ -21,8 +21,8 @@ int main(int argc, char** argv) {
 
             memset(buffer, 0, 20);
 
-            switch (PAL_GET_TYPE(handles[i])) {
-                case PAL_TYPE_PIPESRV: {
+            switch (i) {
+                case 0:; /* pipe.srv */
                     PAL_HANDLE pipe = NULL;
                     ret = DkStreamWaitForClient(handles[i], &pipe, /*options=*/0);
 
@@ -36,9 +36,8 @@ int main(int argc, char** argv) {
                     }
 
                     break;
-                }
 
-                case PAL_TYPE_UDPSRV: {
+                case 1:; /* udp.srv */
                     char uri[20];
 
                     size = sizeof(buffer);
@@ -47,9 +46,8 @@ int main(int argc, char** argv) {
                         pal_printf("Receive Socket Handle: %s\n", buffer);
 
                     break;
-                }
 
-                case PAL_TYPE_FILE:
+                case 2: /* file */
                     size = sizeof(buffer);
                     ret = DkStreamRead(handles[i], 0, &size, buffer, NULL, 0);
                     if (ret == 0 && size > 0)

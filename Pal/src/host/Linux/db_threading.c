@@ -151,12 +151,12 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     void* child_stack = stack + THREAD_STACK_SIZE;
 
-    hdl = malloc(HANDLE_SIZE(thread));
+    hdl = calloc(1, HANDLE_SIZE(thread));
     if (!hdl) {
         ret = -PAL_ERROR_NOMEM;
         goto err;
     }
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_THREAD);
+    init_handle_hdr(hdl, PAL_TYPE_THREAD);
 
     // Initialize TCB at the top of the alternative stack.
     PAL_TCB_LINUX* tcb = child_stack + ALT_STACK_SIZE - sizeof(PAL_TCB_LINUX);
