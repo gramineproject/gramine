@@ -52,15 +52,15 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(eventfd));
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(eventfd));
     if (!hdl) {
         ocall_close(fd);
         return -PAL_ERROR_NOMEM;
     }
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_EVENTFD);
+    init_handle_hdr(hdl, PAL_TYPE_EVENTFD);
 
     /* Note: using index 0, given that there is only 1 eventfd FD per pal-handle. */
-    HANDLE_HDR(hdl)->flags = PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    hdl->flags = PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
     hdl->eventfd.fd          = fd;
     hdl->eventfd.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
@@ -116,7 +116,7 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->eventfd.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
+    attr->disconnected = handle->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading */
     ret = ocall_fionread(handle->eventfd.fd);

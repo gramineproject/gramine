@@ -40,14 +40,18 @@ typedef struct {
 /* RPC streams are encrypted with 256-bit AES keys */
 typedef uint8_t PAL_SESSION_KEY[32];
 
-typedef struct pal_handle {
+typedef struct {
     /*
      * Here we define the internal structure of PAL_HANDLE.
      * user has no access to the content inside these handles.
      */
 
     PAL_HDR hdr;
+    /* Bitmask of `PAL_HANDLE_FD_*` flags. */
+    uint32_t flags;
+
     union {
+        /* Common field for accessing underlying host fd. See also `PAL_HANDLE_FD_READABLE`. */
         struct {
             PAL_IDX fd;
         } generic;
@@ -138,8 +142,11 @@ typedef struct pal_handle {
 
 #define HANDLE_TYPE(handle) ((handle)->hdr.type)
 
+/* These two flags indicate whether the underlying host fd of `PAL_HANDLE` is readable and/or
+ * writable respectively. If none of these is set, then the handle has no host-level fd. */
 #define PAL_HANDLE_FD_READABLE  1
 #define PAL_HANDLE_FD_WRITABLE  2
+/* Set if an error was seen on this handle. Currently only set by `_DkStreamsWaitEvents`. */
 #define PAL_HANDLE_FD_ERROR     4
 
 #endif /* PAL_HOST_H */
