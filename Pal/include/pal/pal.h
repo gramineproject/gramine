@@ -35,38 +35,26 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 #define URI_MAX 4096
 
 #ifdef IN_PAL
-#include "atomic.h"
-typedef struct atomic_int PAL_REF;
 
 typedef struct {
     PAL_IDX type;
-    uint32_t flags;
 } PAL_HDR;
 
 #include "pal_host.h"
 
-#ifndef HANDLE_HDR
 #define HANDLE_HDR(handle) (&((handle)->hdr))
-#endif
+#define PAL_GET_TYPE(h) (HANDLE_HDR(h)->type)
+#define UNKNOWN_HANDLE(handle) (PAL_GET_TYPE(handle) >= PAL_HANDLE_TYPE_BOUND)
 
-static inline void init_handle_hdr(PAL_HDR* hdr, int pal_type) {
-    hdr->type  = pal_type;
-    hdr->flags = 0;
+static inline void init_handle_hdr(PAL_HANDLE handle, int pal_type) {
+    HANDLE_HDR(handle)->type = pal_type;
 }
 
-#else
-typedef union pal_handle {
-    struct {
-        PAL_IDX type;
-        /* the PAL-level reference counting is deprecated */
-    } hdr;
-}* PAL_HANDLE;
+#else /* IN_PAL */
 
-#ifndef HANDLE_HDR
-#define HANDLE_HDR(handle) (&((handle)->hdr))
-#endif
+typedef struct _pal_handle_undefined_type* PAL_HANDLE;
 
-#endif /* !IN_PAL */
+#endif /* IN_PAL */
 
 #include "pal-arch.h"
 
@@ -90,8 +78,6 @@ enum {
 };
 
 #define PAL_IDX_POISON         ((PAL_IDX)-1) /* PAL identifier poison value */
-#define PAL_GET_TYPE(h)        (HANDLE_HDR(h)->type)
-#define UNKNOWN_HANDLE(handle) (PAL_GET_TYPE(handle) >= PAL_HANDLE_TYPE_BOUND)
 
 typedef struct PAL_PTR_RANGE_ {
     PAL_PTR start, end;
