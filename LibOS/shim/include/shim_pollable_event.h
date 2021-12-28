@@ -6,6 +6,7 @@
 #define SHIM_POLLABLE_EVENT_H
 
 #include "pal.h"
+#include "spinlock.h"
 
 /* TODO: once epoll is rewritten, change these to normal events with two states (set and not set),
  * remove `wait_pollable_event` and make all handles nonblocking. */
@@ -21,6 +22,8 @@
 struct shim_pollable_event {
     PAL_HANDLE read_handle;
     PAL_HANDLE write_handle;
+    spinlock_t read_lock;
+    spinlock_t write_lock;
 };
 
 int create_pollable_event(struct shim_pollable_event* event);

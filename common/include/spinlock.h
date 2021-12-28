@@ -16,7 +16,7 @@
 #endif // DEBUG
 
 #ifdef IN_SHIM
-#include "shim_internal.h"
+#include "shim_thread.h"
 
 #ifdef DEBUG_SPINLOCKS
 #define DEBUG_SPINLOCKS_SHIM

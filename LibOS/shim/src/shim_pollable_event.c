@@ -38,6 +38,8 @@ int create_pollable_event(struct shim_pollable_event* event) {
 
     event->read_handle = read_handle;
     event->write_handle = write_handle;
+    spinlock_init(&event->read_lock);
+    spinlock_init(&event->write_lock);
     ret = 0;
 
 out:;
@@ -59,26 +61,39 @@ void destroy_pollable_event(struct shim_pollable_event* event) {
 }
 
 int set_pollable_event(struct shim_pollable_event* event, size_t n) {
-    char buf[0x20] = { 0 };
+    int ret = 0;
+
+    spinlock_lock(&event->write_lock);
+
     while (n > 0) {
+        char buf[0x20] = { 0 };
         size_t size = MIN(sizeof(buf), n);
         int ret = DkStreamWrite(event->write_handle, /*offset=*/0, &size, buf, /*dest=*/NULL);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED) {
                 continue;
             }
-            return pal_to_unix_errno(ret);
+            ret = pal_to_unix_errno(ret);
+            goto out;
         }
         if (size == 0) {
-            return -EINVAL;
+            ret = -EINVAL;
+            goto out;
         }
         n -= size;
     }
-    return 0;
+    ret = 0;
+
+out:
+    spinlock_unlock(&event->write_lock);
+    return ret;
 }
 
 int wait_pollable_event(struct shim_pollable_event* event) {
     int ret = 0;
+
+    spinlock_lock(&event->read_lock);
+
     do {
         char c;
         size_t size = sizeof(c);
@@ -89,10 +104,16 @@ int wait_pollable_event(struct shim_pollable_event* event) {
             ret = -EINVAL;
         }
     } while (ret == -EINTR || ret == -EAGAIN);
+
+    spinlock_unlock(&event->read_lock);
     return ret;
 }
 
 int clear_pollable_event(struct shim_pollable_event* event) {
+    int ret = 0;
+
+    spinlock_lock(&event->read_lock);
+
     while (1) {
         char buf[0x100];
         size_t size = sizeof(buf);
@@ -104,11 +125,17 @@ int clear_pollable_event(struct shim_pollable_event* event) {
                 /* Event not set. */
                 break;
             }
-            return pal_to_unix_errno(ret);
+            ret = pal_to_unix_errno(ret);
+            goto out;
         }
         if (size == 0) {
-            return -EINVAL;
+            ret = -EINVAL;
+            goto out;
         }
     }
-    return 0;
+    ret = 0;
+
+out:
+    spinlock_unlock(&event->read_lock);
+    return ret;
 }

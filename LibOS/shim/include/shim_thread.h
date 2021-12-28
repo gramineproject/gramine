@@ -14,7 +14,6 @@
 #include "api.h"
 #include "pal.h"
 #include "list.h"
-#include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_signal.h"
 #include "shim_tcb.h"
