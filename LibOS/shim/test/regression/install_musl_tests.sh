@@ -2,7 +2,7 @@
 
 # Usage:
 #
-#    rename_musl_tests destdir musl_a musl_b musl_c...
+#    install_musl_tests destdir musl_a musl_b musl_c...
 #
 # Installs `musl_*` binaries to a target directory, removing the `musl_` prefix.
 
