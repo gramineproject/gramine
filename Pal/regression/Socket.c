@@ -9,7 +9,7 @@ static void expect_name(PAL_HANDLE handle, const char* pattern) {
     int ret = DkStreamGetName(handle, name, sizeof(name));
     if (ret < 0) {
         pal_printf("DkStreamGetName failed: %d\n", ret);
-        abort();
+        DkProcessExit(1);
     }
 
     const char* pn = name;
@@ -33,7 +33,7 @@ static void expect_name(PAL_HANDLE handle, const char* pattern) {
     }
     if (*pn || *pp) {
         pal_printf("Wrong stream name: %s, expected: %s\n", name, pattern);
-        abort();
+        DkProcessExit(1);
     }
 }
 
@@ -192,6 +192,7 @@ int main(int argc, char** argv, char** envp) {
                            PAL_CREATE_IGNORED, /*options=*/0, &udp3);
 
         if (ret >= 0 && udp3) {
+            expect_name(udp3, "udp:127.0.0.1:3001:127.0.0.1:3000");
             pal_printf("UDP Connection 2 OK\n");
 
             memset(buffer3, 0, 20);
