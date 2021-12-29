@@ -41,24 +41,21 @@ Data types
 PAL handles
 """""""""""
 
-The PAL handles are identifiers that are returned by PAL when opening or
-creating resources. The basic data structure of a PAL handle is defined as
-follows::
+``PAL_HANDLE`` is the type of identifiers that are returned by PAL when opening
+or creating resources. It is an opaque type, that should not be accessed outside
+of PAL and its details depend on the actual PAL version (host).
+There is a common header (present on all PAL hosts) accessible from PAL code,
+which allows for checking the handle type::
 
-   typedef union pal_handle {
+   typedef struct {
        struct {
            PAL_IDX type;
        } hdr;
-       /* other resource-specific definitions */
+       /* other host-specific definitions */
    }* PAL_HANDLE;
 
-.. doxygenunion:: pal_handle
-   :project: pal
-.. doxygentypedef:: PAL_HANDLE
-   :project: pal
-
-As shown above, a PAL handle is usually defined as a `union` data type that
-contains different subtypes that represent each resource such as files,
+Rest of the fields are private to specific PAL hosts, but they usually define
+different handle subtypes that represent different resources such as files,
 directories, pipes or sockets. The actual memory allocated for the PAL handles
 may be variable-sized.
 
