@@ -21,7 +21,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 
 #ifndef SOL_TCP
 #define SOL_TCP 6

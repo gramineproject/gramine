@@ -18,11 +18,11 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     /* needs to be implemented */
 }
 
-int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
+int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     /* needs to be implemented */
     return 0;
 }
 
-int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
+int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
     return 0;
 }

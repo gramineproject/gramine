@@ -20,7 +20,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
 #include "seqlock.h"
 #include "sgx_api.h"
 #include "sgx_attest.h"
@@ -34,6 +33,7 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
+#define CPU_VENDOR_LEAF     0x0
 #define EXTENDED_STATE_LEAF 0xD
 #define AMX_TILE_INFO_LEAF  0x1D
 #define AMX_TMUL_INFO_LEAF  0x1E
@@ -177,17 +177,26 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
     return xfrm & feature_bit;
 }
 
-/**
- * Sanity check untrusted CPUID inputs.
+/*!
+ * \brief Sanitize untrusted CPUID inputs.
+ *
+ * \param[in] leaf       CPUID leaf
+ * \param[in] subleaf    CPUID subleaf
+ * \param[in,out] values untrusted result to sanitize
  *
  * The basic idea is that there are only a handful of extensions and we know the size needed to
  * store each extension's state. Use this to sanitize host's untrusted cpuid output. We also know
  * through xfrm what extensions are enabled inside the enclave.
  */
-static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
-    if (leaf == EXTENDED_STATE_LEAF) {
+    if (leaf == CPU_VENDOR_LEAF) {
+        /* hardcode the only possible values for SGX PAL */
+        values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */
+        values[CPUID_WORD_EDX] = 0x49656e69; /* 'ineI' */
+        values[CPUID_WORD_ECX] = 0x6c65746e; /* 'ntel' */
+    } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
             case X87:
                 /* From the SDM: "EDX:EAX is a bitmap of all the user state components that can be
@@ -461,7 +470,7 @@ int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int value
     if (ocall_cpuid(leaf, subleaf, values) < 0)
         return -PAL_ERROR_DENIED;
 
-    sanity_check_cpuid(leaf, subleaf, values);
+    sanitize_cpuid(leaf, subleaf, values);
 
     if (known_leaf->cache)
         add_cpuid_to_cache(leaf, subleaf, values);
@@ -742,7 +751,9 @@ uint64_t get_tsc_hz(void) {
     return base_frequency_mhz * 1000000;
 }
 
-int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
+// TODO: deduplicate with Linux PAL _DkGetCPUInfo() and move to a common, arch-specific source
+// directory, together with all other CPUID code.
+int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
 
@@ -757,11 +768,6 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     FOUR_CHARS_VALUE(&vendor_id[8], words[CPUID_WORD_ECX]);
     vendor_id[VENDOR_ID_SIZE - 1] = '\0';
     ci->cpu_vendor = vendor_id;
-    // Must be an Intel CPU
-    if (memcmp(vendor_id, "GenuineIntel", 12)) {
-        rv = -PAL_ERROR_INVAL;
-        goto out_vendor_id;
-    }
 
     const size_t BRAND_SIZE = 49;
     char* brand = malloc(BRAND_SIZE);
@@ -777,10 +783,6 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     memcpy(&brand[32], words, sizeof(unsigned int) * CPUID_WORD_NUM);
     brand[BRAND_SIZE - 1] = '\0';
     ci->cpu_brand = brand;
-
-    ci->online_logical_cores = g_pal_sec.online_logical_cores;
-    ci->physical_cores_per_socket = g_pal_sec.physical_cores_per_socket;
-    ci->cpu_socket = g_pal_sec.cpu_socket;
 
     _DkCpuIdRetrieve(1, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX],  8, 12) +
@@ -828,7 +830,8 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
         log_warning("bogomips could not be retrieved, passing 0.0 to the application");
     }
 
-    return rv;
+    return 0;
+
 out_flags:
     free(flags);
 out_brand:
@@ -838,20 +841,9 @@ out_vendor_id:
     return rv;
 }
 
-int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
-    if (!g_pal_public_state.enable_sysfs_topology) {
-        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
-        memset(topo_info, 0, sizeof(*topo_info));
-        return 0;
-    }
-
-    topo_info->online_nodes_cnt  = g_pal_sec.topo_info.online_nodes_cnt;
-    topo_info->cache_indices_cnt = g_pal_sec.topo_info.cache_indices_cnt;
-    topo_info->core_topology     = g_pal_sec.topo_info.core_topology;
-    topo_info->numa_topology     = g_pal_sec.topo_info.numa_topology;
-    COPY_ARRAY(topo_info->online_logical_cores, g_pal_sec.topo_info.online_logical_cores);
-    COPY_ARRAY(topo_info->possible_logical_cores, g_pal_sec.topo_info.possible_logical_cores);
-    COPY_ARRAY(topo_info->online_nodes, g_pal_sec.topo_info.online_nodes);
+// TODO: Move the parsing from db_main:pal_linux_main to here.
+int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
+    __UNUSED(topo_info);
     return 0;
 }
 

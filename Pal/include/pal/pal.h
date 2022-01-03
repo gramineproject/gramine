@@ -57,6 +57,7 @@ typedef struct _pal_handle_undefined_type* PAL_HANDLE;
 #endif /* IN_PAL */
 
 #include "pal-arch.h"
+#include "pal_topology.h"
 
 /********** PAL TYPE DEFINITIONS **********/
 enum {
@@ -127,9 +128,10 @@ struct pal_public_state {
 
     size_t mem_total;
 
-    PAL_CPU_INFO cpu_info; /*!< CPU information (only required ones) */
-    PAL_TOPO_INFO topo_info; /*!< Topology information (only required ones) */
+    struct pal_cpu_info cpu_info;
+
     bool enable_sysfs_topology;
+    struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
 };
 
 const struct pal_public_state* DkGetPalPublicState(void);

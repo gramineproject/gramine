@@ -10,7 +10,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 #include "sgx_arch.h"
 #include "spinlock.h"
 #include "toml.h"

@@ -678,9 +678,9 @@ sgx_ocall:
 
 	# Clear "extended" state (FPU aka x87, SSE, AVX, ...).
 	#
-	# g_pal_sec.enclave_attributes.xfrm will always be zero before init_enclave has been called by
-	# pal_linux_main. So during early init nothing should use features not covered by fxrstor, like
-	# AVX.
+	# g_pal_linuxsgx_state.enclave_info.attributes.xfrm will always be zero before init_enclave has
+	# been called by pal_linux_main. So during early init nothing should use features not covered by
+	# fxrstor, like AVX.
 	cmpl $0, g_xsave_enabled(%rip)
 	jne 1f
 	fxrstor64 g_xsave_reset_state(%rip)

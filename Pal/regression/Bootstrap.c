@@ -35,13 +35,14 @@ int main(int argc, char** argv, char** envp) {
         pal_public_state->user_address.start < pal_public_state->user_address.end)
         pal_printf("User Address Range OK\n");
 
-    pal_printf("CPU num: %ld\n", pal_public_state->cpu_info.online_logical_cores);
-    pal_printf("CPU vendor: %s\n", pal_public_state->cpu_info.cpu_vendor);
-    pal_printf("CPU brand: %s\n", pal_public_state->cpu_info.cpu_brand);
-    pal_printf("CPU family: %ld\n", pal_public_state->cpu_info.cpu_family);
-    pal_printf("CPU model: %ld\n", pal_public_state->cpu_info.cpu_model);
-    pal_printf("CPU stepping: %ld\n", pal_public_state->cpu_info.cpu_stepping);
-    pal_printf("CPU flags: %s\n", pal_public_state->cpu_info.cpu_flags);
+    const struct pal_cpu_info* ci = &pal_public_state->cpu_info;
+    pal_printf("CPU num: %ld\n",      pal_public_state->topo_info.online_logical_cores_cnt);
+    pal_printf("CPU vendor: %s\n",    ci->cpu_vendor);
+    pal_printf("CPU brand: %s\n",     ci->cpu_brand);
+    pal_printf("CPU family: %ld\n",   ci->cpu_family);
+    pal_printf("CPU model: %ld\n",    ci->cpu_model);
+    pal_printf("CPU stepping: %ld\n", ci->cpu_stepping);
+    pal_printf("CPU flags: %s\n",     ci->cpu_flags);
 
     return 0;
 }
