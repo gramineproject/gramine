@@ -22,7 +22,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 #include "protected-files/protected_files.h"
 #include "spinlock.h"
 

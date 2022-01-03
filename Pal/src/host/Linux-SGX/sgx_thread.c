@@ -11,7 +11,6 @@
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "pal_internal.h"
-#include "pal_security.h"
 #include "sgx_enclave.h"
 #include "sgx_internal.h"
 #include "sgx_log.h"

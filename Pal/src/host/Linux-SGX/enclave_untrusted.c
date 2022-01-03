@@ -7,7 +7,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_security.h"
 #include "spinlock.h"
 
 static spinlock_t g_malloc_lock = INIT_SPINLOCK_UNLOCKED;

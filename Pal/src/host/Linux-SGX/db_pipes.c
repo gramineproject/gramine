@@ -21,7 +21,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 
 static int pipe_session_key(PAL_PIPE_NAME* name, PAL_SESSION_KEY* session_key) {
     return lib_HKDF_SHA256((uint8_t*)&g_master_key, sizeof(g_master_key), /*salt=*/NULL,

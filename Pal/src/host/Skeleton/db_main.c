@@ -23,6 +23,6 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     return 0;
 }
 
-int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
+int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
     return 0;
 }

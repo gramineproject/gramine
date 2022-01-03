@@ -46,7 +46,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 
 int g_xsave_enabled = 0;
 uint64_t g_xsave_features = 0;
