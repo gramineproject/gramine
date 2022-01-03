@@ -533,10 +533,10 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     _DkGetAvailableUserAddressRange(&g_pal_public_state.user_address.start,
                                     &g_pal_public_state.user_address.end);
 
-    if (_DkGetCPUInfo(&g_pal_public_state.cpu_info) < 0) {
+    if (_DkGetCPUInfo(&g_pal_public_state.topo_info.cpu_info) < 0) {
         goto out_fail;
     }
-    g_pal_public_state.mem_info.mem_total = _DkMemoryQuota();
+    g_pal_public_state.mem_total = _DkMemoryQuota();
 
     /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
     bool enable_sysfs_topology;

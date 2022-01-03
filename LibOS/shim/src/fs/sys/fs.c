@@ -22,13 +22,13 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        pal_total = g_pal_public_state->topo_info.num_online_nodes;
+        pal_total = g_pal_public_state->topo_info.online_nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        pal_total = g_pal_public_state->cpu_info.online_logical_cores;
+        pal_total = g_pal_public_state->topo_info.online_logical_cores_cnt;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
-        pal_total = g_pal_public_state->topo_info.num_cache_index;
+        pal_total = g_pal_public_state->topo_info.cache_index_cnt;
         prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);

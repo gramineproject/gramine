@@ -6,7 +6,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_security.h"
 #include "spinlock.h"
 
 struct atomic_int g_allocated_pages;

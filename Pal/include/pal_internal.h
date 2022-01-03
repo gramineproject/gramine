@@ -16,6 +16,7 @@
 #include "log.h"
 #include "pal.h"
 #include "pal_error.h"
+#include "pal_topology.h"
 #include "toml.h"
 
 #ifndef IN_PAL
@@ -160,7 +161,7 @@ unsigned long _DkMemoryQuota(void);
 unsigned long _DkMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
 int _DkGetCPUInfo(PAL_CPU_INFO* info);
-int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info);
+int _DkGetTopologyInfo(struct pal_topo_info* topo_info);
 
 /* Internal DK calls, in case any of the internal routines needs to use them */
 /* DkStream calls */

@@ -47,7 +47,8 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     } else if (strcmp(name, "core_id") == 0) {
         str = core_topology->core_id;
     } else if (strcmp(name, "physical_package_id") == 0) {
-        snprintf(buf, sizeof(buf), "%d\n", g_pal_public_state->cpu_info.cpu_socket[cpu_num]);
+        snprintf(buf, sizeof(buf), "%d\n",
+                 g_pal_public_state->topo_info.cpu_to_socket[cpu_num]);
         str = buf;
     } else if (strcmp(name, "core_siblings") == 0) {
         str = core_topology->core_siblings;

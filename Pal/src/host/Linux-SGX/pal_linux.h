@@ -64,11 +64,11 @@ void init_untrusted_slab_mgr(void);
 extern const size_t g_page_size;
 extern size_t g_pal_internal_mem_size;
 
-struct pal_sec;
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
                              int parent_stream_fd, unsigned int host_euid, unsigned int host_egid,
-                             sgx_target_info_t* uptr_qe_targetinfo, struct pal_sec* uptr_sec_info);
+                             sgx_target_info_t* uptr_qe_targetinfo,
+                             struct pal_topo_info* uptr_topo_info);
 void pal_start_thread(void);
 
 extern char __text_start, __text_end, __data_start, __data_end;
@@ -86,8 +86,6 @@ enum cpu_extension {
 
 extern const uint32_t g_cpu_extension_sizes[];
 extern const uint32_t g_cpu_extension_offsets[];
-
-enum register_index { EAX, EBX, ECX, EDX };
 
 extern int g_xsave_enabled;
 extern uint64_t g_xsave_features;

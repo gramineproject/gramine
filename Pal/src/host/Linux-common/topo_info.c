@@ -102,9 +102,9 @@ int read_file_buffer(const char* filename, char* buf, size_t count) {
 
 /* Returns number of cache levels present on this system by counting "indexX" dir entries under
  * `/sys/devices/system/cpu/cpuX/cache` on success and negative UNIX error code on failure. */
-static int get_num_cache_level(const char* path) {
+static int get_cache_level_cnt(const char* path) {
     char buf[1024];
-    int num_dirs = 0;
+    int dirs_cnt = 0;
 
     int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
     if (fd < 0)
@@ -113,7 +113,7 @@ static int get_num_cache_level(const char* path) {
     while (true) {
         int nread = DO_SYSCALL(getdents64, fd, buf, 1024);
         if (nread < 0) {
-            num_dirs = nread;
+            dirs_cnt = nread;
             goto out;
         }
 
@@ -123,26 +123,26 @@ static int get_num_cache_level(const char* path) {
         for (int bpos = 0; bpos < nread;) {
             struct linux_dirent64* dirent64 = (struct linux_dirent64*)(buf + bpos);
             if (dirent64->d_type == DT_DIR && strstartswith(dirent64->d_name, "index"))
-                num_dirs++;
+                dirs_cnt++;
             bpos += dirent64->d_reclen;
         }
     }
 
 out:
     DO_SYSCALL(close, fd);
-    return num_dirs ?: -ENOENT;
+    return dirs_cnt ?: -ENOENT;
 }
 
-static int get_cache_topo_info(int num_cache_lvl, int core_idx, PAL_CORE_CACHE_INFO** cache_info) {
+static int get_cache_topo_info(int cache_index_cnt, int core_idx, PAL_CORE_CACHE_INFO** cache_info) {
     int ret;
     char filename[128];
-    PAL_CORE_CACHE_INFO* core_cache = (PAL_CORE_CACHE_INFO*)malloc(num_cache_lvl *
+    PAL_CORE_CACHE_INFO* core_cache = (PAL_CORE_CACHE_INFO*)malloc(cache_index_cnt *
                                                                    sizeof(PAL_CORE_CACHE_INFO));
     if (!core_cache) {
         return -ENOMEM;
     }
 
-    for (int lvl = 0; lvl < num_cache_lvl; lvl++) {
+    for (int lvl = 0; lvl < cache_index_cnt; lvl++) {
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%d/cache/index%d/shared_cpu_map", core_idx, lvl);
         READ_FILE_BUFFER(filename, core_cache[lvl].shared_cpu_map, /*failure_label=*/out_cache);
@@ -183,30 +183,79 @@ out_cache:
 }
 
 /* Get core topology-related info */
-static int get_core_topo_info(PAL_TOPO_INFO* topo_info) {
+static int get_core_topo_info(struct pal_topo_info* topo_info) {
     int ret;
+
+    /* we cannot use CPUID(0xb) because it counts even disabled-by-BIOS cores (e.g. HT cores);
+     * instead we extract info on total number of logical cores, number of physical cores,
+     * SMT support etc. by parsing sysfs pseudo-files */
+
     READ_FILE_BUFFER("/sys/devices/system/cpu/online", topo_info->online_logical_cores,
                      /*failure_label=*/out);
 
     READ_FILE_BUFFER("/sys/devices/system/cpu/possible", topo_info->possible_logical_cores,
                      /*failure_label=*/out);
 
-    int online_logical_cores = get_hw_resource("/sys/devices/system/cpu/online", /*count=*/true);
-    if (online_logical_cores < 0)
-        return online_logical_cores;
+    int online_logical_cores_cnt = get_hw_resource("/sys/devices/system/cpu/online", /*count=*/true);
+    if (online_logical_cores_cnt < 0)
+        return online_logical_cores_cnt;
+    topo_info->online_logical_cores_cnt = online_logical_cores_cnt;
 
-    int num_cache_lvl = get_num_cache_level("/sys/devices/system/cpu/cpu0/cache");
-    if (num_cache_lvl < 0)
-        return num_cache_lvl;
-    topo_info->num_cache_index = num_cache_lvl;
+    int cache_index_cnt = get_cache_level_cnt("/sys/devices/system/cpu/cpu0/cache");
+    if (cache_index_cnt < 0)
+        return cache_index_cnt;
+    topo_info->cache_index_cnt = cache_index_cnt;
 
-    PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores *
+    int possible_logical_cores_cnt = get_hw_resource("/sys/devices/system/cpu/possible",
+                                                 /*count=*/true);
+    if (possible_logical_cores_cnt < 0) {
+        return possible_logical_cores_cnt;
+    }
+    topo_info->possible_logical_cores_cnt = possible_logical_cores_cnt;
+
+    /* TODO: correctly support offline cores */
+    if (possible_logical_cores_cnt > 0 && possible_logical_cores_cnt > online_logical_cores_cnt) {
+         log_warning("some CPUs seem to be offline; Gramine doesn't take this into account which "
+                     "may lead to subpar performance");
+    }
+
+    int core_siblings = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/core_siblings_list",
+                                        /*count=*/true);
+    if (core_siblings < 0) {
+        return core_siblings;
+    }
+
+    int smt_siblings = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/thread_siblings_list",
+                                       /*count=*/true);
+    if (smt_siblings < 0) {
+        return smt_siblings;
+    }
+    topo_info->physical_cores_per_socket = core_siblings / smt_siblings;
+
+    /* array of "logical core -> socket" mappings */
+    int* cpu_to_socket = (int*)malloc(online_logical_cores_cnt * sizeof(int));
+    if (!cpu_to_socket) {
+        return -ENOMEM;
+    }
+
+    char filename[128];
+    for (int idx = 0; idx < online_logical_cores_cnt; idx++) {
+        snprintf(filename, sizeof(filename),
+                 "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", idx);
+        cpu_to_socket[idx] = get_hw_resource(filename, /*count=*/false);
+        if (cpu_to_socket[idx] < 0) {
+            log_warning("Cannot read %s", filename);
+            return cpu_to_socket[idx];
+        }
+    }
+    topo_info->cpu_to_socket = cpu_to_socket;
+
+    PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
                                                                     sizeof(PAL_CORE_TOPO_INFO));
     if (!core_topology)
         return -ENOMEM;
 
-    char filename[128];
-    for (int idx = 0; idx < online_logical_cores; idx++) {
+    for (int idx = 0; idx < online_logical_cores_cnt; idx++) {
         /* cpu0 is always online and thus the "online" file is not present. */
         if (idx != 0) {
             snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%d/online", idx);
@@ -227,7 +276,7 @@ static int get_core_topo_info(PAL_TOPO_INFO* topo_info) {
         READ_FILE_BUFFER(filename, core_topology[idx].thread_siblings,
                          /*failure_label=*/out_topology);
 
-        ret = get_cache_topo_info(num_cache_lvl, idx, &core_topology[idx].cache);
+        ret = get_cache_topo_info(cache_index_cnt, idx, &core_topology[idx].cache);
         if (ret < 0)
             goto out_topology;
     }
@@ -241,23 +290,23 @@ out:
 }
 
 /* Get NUMA topology-related info */
-static int get_numa_topo_info(PAL_TOPO_INFO* topo_info) {
+static int get_numa_topo_info(struct pal_topo_info* topo_info) {
     int ret;
     READ_FILE_BUFFER("/sys/devices/system/node/online", topo_info->online_nodes,
                      /*failure_label=*/out);
 
-    int num_nodes = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
-    if (num_nodes < 0)
-        return num_nodes;
-    topo_info->num_online_nodes = num_nodes;
+    int nodes_cnt = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
+    if (nodes_cnt < 0)
+        return nodes_cnt;
+    topo_info->online_nodes_cnt = nodes_cnt;
 
-    PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(num_nodes *
+    PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes_cnt *
                                                                     sizeof(PAL_NUMA_TOPO_INFO));
     if (!numa_topology)
         return -ENOMEM;
 
     char filename[128];
-    for (int idx = 0; idx < num_nodes; idx++) {
+    for (int idx = 0; idx < nodes_cnt; idx++) {
         snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%d/cpumap", idx);
         READ_FILE_BUFFER(filename, numa_topology[idx].cpumap, /*failure_label=*/out_topology);
 
@@ -278,7 +327,7 @@ out:
     return ret;
 }
 
-int get_topology_info(PAL_TOPO_INFO* topo_info) {
+int get_topology_info(struct pal_topo_info* topo_info) {
     /* Get CPU topology information */
     int ret = get_core_topo_info(topo_info);
     if (ret < 0)

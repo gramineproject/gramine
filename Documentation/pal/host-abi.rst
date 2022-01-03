@@ -97,15 +97,7 @@ PAL public state - topology information
    :project: pal
    :members:
 
-.. doxygentypedef:: PAL_TOPO_INFO
-   :project: pal
-.. doxygenstruct:: PAL_TOPO_INFO_
-   :project: pal
-   :members:
-
-.. doxygentypedef:: PAL_MEM_INFO
-   :project: pal
-.. doxygenstruct:: PAL_MEM_INFO_
+.. doxygenstruct:: pal_topo_info
    :project: pal
    :members:
 

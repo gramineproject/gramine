@@ -6,7 +6,6 @@
 #include "ecall_types.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_security.h"
 #include "rpc_queue.h"
 #include "sgx_arch.h"
 
@@ -97,8 +96,8 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
             return;
 
-        struct pal_sec* pal_sec = READ_ONCE(ms->ms_sec_info);
-        if (!pal_sec || !sgx_is_completely_outside_enclave(pal_sec, sizeof(*pal_sec)))
+        struct pal_topo_info* topo_info = READ_ONCE(ms->ms_topo_info);
+        if (!topo_info || !sgx_is_completely_outside_enclave(topo_info, sizeof(*topo_info)))
             return;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
@@ -117,7 +116,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
                        READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
                        READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd),
                        READ_ONCE(ms->ms_host_euid), READ_ONCE(ms->ms_host_egid),
-                       READ_ONCE(ms->ms_qe_targetinfo), pal_sec);
+                       READ_ONCE(ms->ms_qe_targetinfo), topo_info);
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

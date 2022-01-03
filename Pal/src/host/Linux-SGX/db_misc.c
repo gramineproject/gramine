@@ -20,7 +20,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
 #include "seqlock.h"
 #include "sgx_api.h"
 #include "sgx_attest.h"
@@ -34,6 +33,7 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
+#define CPU_VENDOR_LEAF     0x0
 #define EXTENDED_STATE_LEAF 0xD
 #define AMX_TILE_INFO_LEAF  0x1D
 #define AMX_TMUL_INFO_LEAF  0x1E
@@ -187,7 +187,12 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
-    if (leaf == EXTENDED_STATE_LEAF) {
+    if (leaf == CPU_VENDOR_LEAF) {
+        /* hardcode the only possible values for SGX PAL */
+        values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */
+        values[CPUID_WORD_EDX] = 0x49656e69; /* 'ineI' */
+        values[CPUID_WORD_ECX] = 0x6c65746e; /* 'ntel' */
+    } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
             case X87:
                 /* From the SDM: "EDX:EAX is a bitmap of all the user state components that can be
@@ -198,7 +203,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                  * On EENTER/ERESUME, the system installs xfrm into XCR0. Hence, we return xfrm here
                  * in EAX.
                  */
-                values[EAX] = xfrm;
+                values[CPUID_WORD_EAX] = xfrm;
 
                 /* From the SDM: "EBX enumerates the size (in bytes) required by the XSAVE
                  * instruction for an XSAVE area containing all the user state components
@@ -213,7 +218,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                         xsave_size = g_cpu_extension_offsets[i] + g_cpu_extension_sizes[i];
                     }
                 }
-                values[EBX] = xsave_size;
+                values[CPUID_WORD_EBX] = xsave_size;
 
                 /* From the SDM: "ECX enumerates the size (in bytes) required by the XSAVE
                  * instruction for an XSAVE area containing all the user state components supported
@@ -224,8 +229,8 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                  * different. Also, outside of SGX EBX can change at runtime, while ECX is a static
                  * property.
                  */
-                values[ECX] = values[EBX];
-                values[EDX] = 0;
+                values[CPUID_WORD_ECX] = values[CPUID_WORD_EBX];
+                values[CPUID_WORD_EDX] = 0;
 
                 break;
             case SSE: {
@@ -243,7 +248,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                 /* EBX reports the actual size occupied by those extensions irrespective of their
                  * offsets within the xsave area.
                  */
-                values[EBX] = save_size_bytes;
+                values[CPUID_WORD_EBX] = save_size_bytes;
 
                 break;
             }
@@ -263,18 +268,18 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                  *   - bit 2 is set only for AMX_TILEDATA (support for XFD faulting)
                  *   - bits 3-31 are reserved and are zeros
                  */
-                values[ECX] = 0x2;
+                values[CPUID_WORD_ECX] = 0x2;
                 if (subleaf == AMX_TILEDATA)
-                    values[ECX] |= 0x4;
+                    values[CPUID_WORD_ECX] |= 0x4;
 
-                if (values[EDX] != 0) {
+                if (values[CPUID_WORD_EDX] != 0) {
                     log_error("Non-null EDX value in Processor Extended State Enum CPUID leaf");
                     _DkProcessExit(1);
                 }
 
                 if (extension_enabled(xfrm, subleaf)) {
-                    if (values[EAX] != g_cpu_extension_sizes[subleaf] ||
-                            values[EBX] != g_cpu_extension_offsets[subleaf]) {
+                    if (values[CPUID_WORD_EAX] != g_cpu_extension_sizes[subleaf] ||
+                            values[CPUID_WORD_EBX] != g_cpu_extension_offsets[subleaf]) {
                         log_error("Unexpected values in Processor Extended State Enum CPUID leaf");
                         _DkProcessExit(1);
                     }
@@ -283,37 +288,37 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
                      * forcing EAX ("size in bytes of the save area for an extended state feature")
                      * and EBX ("offset in bytes of this extended state component's save area from
                      * the beginning of the XSAVE/XRSTOR area") to zero */
-                    values[EAX] = 0;
-                    values[EBX] = 0;
+                    values[CPUID_WORD_EAX] = 0;
+                    values[CPUID_WORD_EBX] = 0;
                 }
                 break;
         }
     } else if (leaf == AMX_TILE_INFO_LEAF) {
         if (subleaf == 0x0) {
             /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
-            if (!IS_IN_RANGE_INCL(values[EAX], 1, 16) || values[EBX] != 0 || values[ECX] != 0 ||
-                    values[EDX] != 0) {
+            if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX], 1, 16) || values[CPUID_WORD_EBX] != 0
+                    || values[CPUID_WORD_ECX] != 0 || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
                 _DkProcessExit(1);
             }
         } else {
             /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
-            if (!IS_IN_RANGE_INCL(values[EAX] & 0xFFFF, 1, 0xFFFF) || /* total_tile_bytes */
-                    !IS_IN_RANGE_INCL(values[EAX] >> 16, 1, 0xFFFF) || /* bytes_per_tile */
-                    !IS_IN_RANGE_INCL(values[EBX] & 0xFFFF, 1, 0xFFFF) || /* bytes_per_row */
-                    !IS_IN_RANGE_INCL(values[EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
-                    !IS_IN_RANGE_INCL(values[ECX] & 0xFFFF, 1, 256) || /* max_rows */
-                    (values[ECX] >> 16) != 0 || values[EDX] != 0) {
+            if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX] & 0xFFFF, 1, 0xFFFF) || /* total_tile_bytes */
+                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EAX] >> 16, 1, 0xFFFF) || /* bytes_per_tile */
+                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] & 0xFFFF, 1, 0xFFFF) || /* bytes_per_row */
+                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
+                    !IS_IN_RANGE_INCL(values[CPUID_WORD_ECX] & 0xFFFF, 1, 256) || /* max_rows */
+                    (values[CPUID_WORD_ECX] >> 16) != 0 || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%x)", subleaf);
                 _DkProcessExit(1);
             }
         }
     } else if (leaf == AMX_TMUL_INFO_LEAF) {
         /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
-        if (!IS_IN_RANGE_INCL(values[EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
-                !IS_IN_RANGE_INCL((values[EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
-                (values[EBX] >> 24) != 0 || values[EAX] != 0 || values[ECX] != 0 ||
-                values[EDX] != 0) {
+        if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
+                !IS_IN_RANGE_INCL((values[CPUID_WORD_EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
+                (values[CPUID_WORD_EBX] >> 24) != 0 || values[CPUID_WORD_EAX] != 0 || values[CPUID_WORD_ECX] != 0 ||
+                values[CPUID_WORD_EDX] != 0) {
             log_error("Unexpected values in TMUL Information CPUID Leaf");
             _DkProcessExit(1);
         }
@@ -732,6 +737,8 @@ uint64_t get_tsc_hz(void) {
     return base_frequency_mhz * 1000000;
 }
 
+// TODO: deduplicate with Linux PAL _DkGetCPUInfo() and move to a common, arch-specific source
+// directory, together with all other CPUID code.
 int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
@@ -747,11 +754,6 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     FOUR_CHARS_VALUE(&vendor_id[8], words[CPUID_WORD_ECX]);
     vendor_id[VENDOR_ID_SIZE - 1] = '\0';
     ci->cpu_vendor = vendor_id;
-    // Must be an Intel CPU
-    if (memcmp(vendor_id, "GenuineIntel", 12)) {
-        rv = -PAL_ERROR_INVAL;
-        goto out_vendor_id;
-    }
 
     const size_t BRAND_SIZE = 49;
     char* brand = malloc(BRAND_SIZE);
@@ -767,10 +769,6 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     memcpy(&brand[32], words, sizeof(unsigned int) * CPUID_WORD_NUM);
     brand[BRAND_SIZE - 1] = '\0';
     ci->cpu_brand = brand;
-
-    ci->online_logical_cores = g_pal_sec.online_logical_cores;
-    ci->physical_cores_per_socket = g_pal_sec.physical_cores_per_socket;
-    ci->cpu_socket = g_pal_sec.cpu_socket;
 
     _DkCpuIdRetrieve(1, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX],  8, 12) +
@@ -818,7 +816,8 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
         log_warning("bogomips could not be retrieved, passing 0.0 to the application");
     }
 
-    return rv;
+    return 0;
+
 out_flags:
     free(flags);
 out_brand:
@@ -828,20 +827,9 @@ out_vendor_id:
     return rv;
 }
 
-int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
-    if (!g_pal_public_state.enable_sysfs_topology) {
-        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
-        memset(topo_info, 0, sizeof(*topo_info));
-        return 0;
-    }
-
-    topo_info->num_online_nodes = g_pal_sec.topo_info.num_online_nodes;
-    topo_info->num_cache_index  = g_pal_sec.topo_info.num_cache_index;
-    topo_info->core_topology    = g_pal_sec.topo_info.core_topology;
-    topo_info->numa_topology    = g_pal_sec.topo_info.numa_topology;
-    COPY_ARRAY(topo_info->online_logical_cores, g_pal_sec.topo_info.online_logical_cores);
-    COPY_ARRAY(topo_info->possible_logical_cores, g_pal_sec.topo_info.possible_logical_cores);
-    COPY_ARRAY(topo_info->online_nodes, g_pal_sec.topo_info.online_nodes);
+// TODO: Refactor and remove? Or move the parsing from db_main:pal_linux_main to here?
+int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
+    __UNUSED(topo_info);
     return 0;
 }
 
