@@ -199,11 +199,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     uint64_t total;
     void* umem;
     ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
-    if (ret < 0) {
-        log_warning("load_trusted_or_allowed_file(%s, %d) failed", hdl->file.realpath,
-                    hdl->file.fd);
+    if (ret < 0)
         goto fail;
-    }
 
     hdl->file.chunk_hashes = chunk_hashes;
     hdl->file.total = total;

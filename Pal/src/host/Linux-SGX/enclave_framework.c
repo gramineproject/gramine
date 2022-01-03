@@ -336,8 +336,10 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     }
 
     /* trusted files: need integrity, so calculate chunk hashes and compare with hash in manifest */
-    if (!file->file.seekable)
+    if (!file->file.seekable) {
+        log_warning("Trusted file '%s' is not seekable, cannot load it", file->file.realpath);
         return -PAL_ERROR_DENIED;
+    }
 
     sgx_chunk_hash_t* chunk_hashes = NULL;
     uint8_t* tmp_chunk = NULL; /* scratch buf to calculate whole-file and chunk-of-file hashes */
@@ -421,6 +423,8 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
 
     /* check the generated hash-over-whole-file against the reference hash in the manifest */
     if (memcmp(&file_hash, &tf->file_hash, sizeof(file_hash))) {
+        log_warning("Hash of trusted file '%s' does not match with the reference hash in manifest",
+                    file->file.realpath);
         ret = -PAL_ERROR_DENIED;
         goto fail;
     }
