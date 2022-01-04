@@ -500,6 +500,7 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
         return;
     }
 
+    /* "quit" signal may occur during LibOS thread initialization (at which point `cur == NULL`) */
     struct shim_thread* cur = get_cur_thread();
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
@@ -510,6 +511,8 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
 static void interrupted_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     __UNUSED(addr);
 
+    /* "interrupted" signal may occur during LibOS thread initialization (at which point
+     * `cur == NULL`) */
     struct shim_thread* cur = get_cur_thread();
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
