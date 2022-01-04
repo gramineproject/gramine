@@ -106,6 +106,7 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
             ret_events[j] |= PAL_WAIT_ERROR;
 
         /* update handle's internal fields (flags) */
+        /* FIXME: something is wrong here, it reads and writes to flags without any locks... */
         PAL_HANDLE hdl = handle_array[j];
         assert(hdl);
         if (hdl->flags & PAL_HANDLE_FD_ERROR)

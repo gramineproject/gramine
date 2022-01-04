@@ -277,6 +277,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     PAL_HANDLE first_thread = calloc(1, HANDLE_SIZE(thread));
     if (!first_thread)
         INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
+
     init_handle_hdr(first_thread, PAL_TYPE_THREAD);
     first_thread->thread.tid = DO_SYSCALL(gettid);
 

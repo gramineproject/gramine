@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
             memset(buffer, 0, 20);
 
             switch (i) {
-                case 0:;
+                case 0:; /* pipe.srv */
                     PAL_HANDLE pipe = NULL;
                     ret = DkStreamWaitForClient(handles[i], &pipe, /*options=*/0);
 
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
                     break;
 
-                case 1:;
+                case 1:; /* udp.srv */
                     char uri[20];
 
                     size = sizeof(buffer);
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
                     break;
 
-                case 2:
+                case 2: /* file */
                     size = sizeof(buffer);
                     ret = DkStreamRead(handles[i], 0, &size, buffer, NULL, 0);
                     if (ret == 0 && size > 0)

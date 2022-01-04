@@ -98,7 +98,9 @@ int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     PAL_HANDLE new_thread = calloc(1, HANDLE_SIZE(thread));
     if (!new_thread)
         return -PAL_ERROR_NOMEM;
+
     init_handle_hdr(new_thread, PAL_TYPE_THREAD);
+
     /*
      * tid will be filled later by pal_start_thread()
      * tid is cleared to avoid random value here.

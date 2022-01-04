@@ -896,6 +896,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Out of memory");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
     init_handle_hdr(first_thread, PAL_TYPE_THREAD);
     first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);
     /* child threads are assigned TIDs 2,3,...; see pal_start_thread() */

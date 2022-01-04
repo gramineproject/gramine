@@ -344,16 +344,21 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         DO_SYSCALL(close, fd);
         return -PAL_ERROR_NOMEM;
     }
+
     init_handle_hdr(hdl, PAL_TYPE_DIR);
+
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
+
     char* path = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);
+
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
     hdl->dir.ptr         = NULL;
     hdl->dir.end         = NULL;
     hdl->dir.endofstream = false;
+
     *handle = hdl;
     return 0;
 }
