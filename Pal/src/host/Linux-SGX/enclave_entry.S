@@ -273,7 +273,7 @@ enclave_entry:
 	# Calling the stage-2 exception handler (CSSA=0) while SGX_PRE_OCALL_STACK != 0 would be
 	# problematic because stage-2 handler could issue nested OCALLs. This would mean the
 	# SGX_PRE_OCALL_STACK logic would need to handle nesting. So we don't set up the stage-2 handler
-	# _DkExceptionHandler().
+	# (i.e, the _DkExceptionHandler() function).
 	#
 	# Instead if we're in such situation, we emulate it as if RIP reached to the safe point,
 	# .Lcssa0_ocall_return_after_stack_restore. In other words, the stage-1 handler jumps to the
@@ -401,7 +401,7 @@ enclave_entry:
 	movq %rax, SGX_GPR_RSP(%rbx)
 
 .Lcssa1_exception_emulate_restore_sgx_context_inst2:
-	# emulate jmp *GS:SGX_TMP_RIP
+	# emulate `jmp *%gs:SGX_TMP_RIP`
 	movq %gs:SGX_TMP_RIP, %rax
 	movq %rax, SGX_GPR_RIP(%rbx)
 
@@ -542,8 +542,10 @@ enclave_entry:
 	movq %rbx, %rdx
 
 .Lcssa1_exception_eexit:
-	# .Lcssa0_ocall_or_cssa1_exception_eexit has an ABI that uses RSI, RDI, RSP;
-	# clear the relevant regs (note that stage-1 handler didn't clobber RSP)
+	# .Lcssa0_ocall_or_cssa1_exception_eexit has an ABI that uses RSI, RDI, RSP; clear the relevant
+	# regs (note that stage-1 handler didn't clobber RSP -- which contains an untrusted pointer to
+	# untrusted-runtime stack -- but this flow doesn't read/write RSP at all so there is no need to
+	# sanitize/zero RSP)
 	xorq %rdi, %rdi
 	xorq %rsi, %rsi
 
@@ -822,7 +824,7 @@ _restore_sgx_context:
 	# (5) thread returns back to SSA=0 and handles this new exception,
 	# (6) thread is done and returns from exception handler via _restore_sgx_context() and updates
 	#     SGX_TMP_RIP (overwrites enclave_tls::tmp_rip). Now the thread returned in the middle of
-	#     _restore_sgx_context() and will try to jmp *GS:SGX_TMP_RIP but this value is lost, and
+	#     _restore_sgx_context() and will try to `jmp *%gs:SGX_TMP_RIP` but this value is lost, and
 	#     SIGILL/SEGFAULT follows.
 	#
 	# The last 4 instructions that restore RIP, RSP and R15 (needed as tmp reg) need to be atomic
