@@ -19,6 +19,22 @@ typedef struct {
      */
     PAL_HDR hdr;
     uint32_t flags;
+
+    /*
+     * PAL has different kinds of handles, so you probably want to add an union with data specific
+     * for following types:
+     * - file,
+     * - pipe,
+     * - eventfd,
+     * - dev,
+     * - dir,
+     * - sock,
+     * - process,
+     * - thread,
+     * - event.
+     * Note that this is just a hint, not a requirement. You can check the Linux PAL for a sample
+     * implementation.
+     */
 }* PAL_HANDLE;
 
 #endif /* PAL_HOST_H */
