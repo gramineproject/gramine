@@ -89,6 +89,7 @@ long shim_do_wait4(pid_t pid, int* stat_addr, int options, struct __kernel_rusag
 long shim_do_kill(pid_t pid, int sig);
 long shim_do_uname(struct new_utsname* buf);
 long shim_do_fcntl(int fd, int cmd, unsigned long arg);
+long shim_do_flock(int fd, int operation);
 long shim_do_fsync(int fd);
 long shim_do_fdatasync(int fd);
 long shim_do_truncate(const char* path, loff_t length);

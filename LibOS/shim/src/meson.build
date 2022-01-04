@@ -70,6 +70,7 @@ libos_sources = files(
     'sys/shim_exec.c',
     'sys/shim_exit.c',
     'sys/shim_fcntl.c',
+    'sys/shim_flock.c',
     'sys/shim_file.c',
     'sys/shim_fork.c',
     'sys/shim_futex.c',
