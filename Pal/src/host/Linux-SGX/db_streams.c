@@ -277,8 +277,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     }
 
     /* construct ancillary data with FD-to-transfer in a control message */
-    char control_buf[CMSG_SPACE(sizeof(int))]
-        __attribute__((aligned(alignof(struct cmsghdr)))) = { 0 };
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
     control_hdr->cmsg_level     = SOL_SOCKET;
@@ -344,8 +343,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return -PAL_ERROR_DENIED;
     }
 
-    char control_buf[CMSG_SPACE(sizeof(int))]
-        __attribute__((aligned(alignof(struct cmsghdr)))) = { 0 };
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
     size_t control_buf_size = sizeof(control_buf);
 
     /* next receive FDs-to-transfer as ancillary data */
