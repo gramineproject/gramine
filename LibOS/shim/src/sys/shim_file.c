@@ -122,8 +122,9 @@ long shim_do_rmdir(const char* pathname) {
 
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW | LOOKUP_DIRECTORY, &dent);
-    if (ret < 0)
-        return ret;
+    if (ret < 0) {
+        goto out;
+    }
 
     if (!dent->parent) {
         ret = -EACCES;
