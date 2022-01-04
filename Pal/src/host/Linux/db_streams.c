@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/wait.h>
 #include <netinet/in.h>
+#include <stdalign.h>
 #include <stdbool.h>
 #include <sys/socket.h>
 
@@ -237,7 +238,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     }
 
     /* construct ancillary data with FD-to-transfer in a control message */
-    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
     message_hdr.msg_control    = control_buf;
     message_hdr.msg_controllen = sizeof(control_buf);
 
@@ -245,13 +246,13 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     control_hdr->cmsg_level = SOL_SOCKET;
     control_hdr->cmsg_type  = SCM_RIGHTS;
     if (hdl_hdr.has_fd) {
+        /* XXX: change to `SAME_TYPE` once `PAL_HANDLE` uses `int` to store fds */
+        static_assert(sizeof(cargo->generic.fd) == sizeof(int), "required");
         control_hdr->cmsg_len = CMSG_LEN(sizeof(int));
-        *(int*)CMSG_DATA(control_hdr) = cargo->generic.fd;
+        memcpy(CMSG_DATA(control_hdr), &cargo->generic.fd, sizeof(int));
     } else {
         control_hdr->cmsg_len = CMSG_LEN(0);
     }
-
-    message_hdr.msg_controllen = control_hdr->cmsg_len;
 
     /* finally send the serialized cargo as payload and FDs-to-transfer as ancillary data */
     iov[0].iov_base = hdl_data;
@@ -306,7 +307,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return -PAL_ERROR_DENIED;
     }
 
-    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
     message_hdr.msg_control    = control_buf;
     message_hdr.msg_controllen = sizeof(control_buf);
 
@@ -335,7 +336,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
 
     if (hdl_hdr.has_fd) {
         assert(control_hdr->cmsg_len == CMSG_LEN(sizeof(int)));
-        handle->generic.fd = *(int*)CMSG_DATA(control_hdr);
+        memcpy(&handle->generic.fd, CMSG_DATA(control_hdr), sizeof(int));
     } else {
         handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }

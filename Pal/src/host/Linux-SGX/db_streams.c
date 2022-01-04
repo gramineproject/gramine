@@ -15,6 +15,7 @@
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/wait.h>
+#include <stdalign.h>
 #include <stdbool.h>
 
 #include "api.h"
@@ -276,14 +277,16 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     }
 
     /* construct ancillary data with FD-to-transfer in a control message */
-    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
     control_hdr->cmsg_level     = SOL_SOCKET;
     control_hdr->cmsg_type      = SCM_RIGHTS;
     if (hdl_hdr.has_fd) {
+        /* XXX: change to `SAME_TYPE` once `PAL_HANDLE` uses `int` to store fds */
+        static_assert(sizeof(cargo->generic.fd) == sizeof(int), "required");
         control_hdr->cmsg_len = CMSG_LEN(sizeof(int));
-        *(int*)CMSG_DATA(control_hdr) = cargo->generic.fd;
+        memcpy(CMSG_DATA(control_hdr), &cargo->generic.fd, sizeof(int));
     } else {
         control_hdr->cmsg_len = CMSG_LEN(0);
     }
@@ -340,8 +343,8 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return -PAL_ERROR_DENIED;
     }
 
-    size_t control_buf_size = sizeof(struct cmsghdr) + sizeof(int);
-    char control_buf[control_buf_size];
+    alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
+    size_t control_buf_size = sizeof(control_buf);
 
     /* next receive FDs-to-transfer as ancillary data */
     char dummypayload[DUMMYPAYLOADSIZE];
@@ -349,6 +352,9 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
                      &control_buf_size);
     if (ret < 0)
         return unix_to_pal_error(ret);
+    if (control_buf_size < sizeof(struct cmsghdr)) {
+        return -PAL_ERROR_DENIED;
+    }
 
     /* finally receive the serialized cargo as payload (possibly encrypted) */
     char hdl_data[hdl_hdr.data_size];
@@ -364,13 +370,16 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return ret;
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
-    if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
+    if (control_hdr->cmsg_type != SCM_RIGHTS)
         return -PAL_ERROR_DENIED;
     if (hdl_hdr.has_fd && control_hdr->cmsg_len != CMSG_LEN(sizeof(int))) {
         return -PAL_ERROR_DENIED;
     }
 
-    int host_fd = hdl_hdr.has_fd ? *(int*)CMSG_DATA(control_hdr) : -1;
+    int host_fd = -1;
+    if (hdl_hdr.has_fd) {
+        memcpy(&host_fd, CMSG_DATA(control_hdr), sizeof(int));
+    }
 
     /* deserialize cargo handle from a blob hdl_data */
     PAL_HANDLE handle = NULL;
