@@ -137,6 +137,10 @@ long shim_do_sched_getscheduler(pid_t pid);
 long shim_do_sched_get_priority_max(int policy);
 long shim_do_sched_get_priority_min(int policy);
 long shim_do_sched_rr_get_interval(pid_t pid, struct timespec* interval);
+long shim_do_mlock(unsigned long start, size_t len);
+long shim_do_munlock(unsigned long start, size_t len);
+long shim_do_mlockall(int flags);
+long shim_do_munlockall(void);
 long shim_do_rt_sigsuspend(const __sigset_t* mask, size_t setsize);
 long shim_do_arch_prctl(int code, unsigned long addr);
 long shim_do_setrlimit(int resource, struct __kernel_rlimit* rlim);
@@ -195,6 +199,7 @@ long shim_do_eventfd2(unsigned int count, int flags);
 long shim_do_eventfd(unsigned int count);
 long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused);
 long shim_do_getrandom(char* buf, size_t count, unsigned int flags);
+long shim_do_mlock2(unsigned long start, size_t len, int flags);
 long shim_do_sysinfo(struct sysinfo* info);
 
 #define GRND_NONBLOCK 0x0001

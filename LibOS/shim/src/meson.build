@@ -80,6 +80,7 @@ libos_sources = files(
     'sys/shim_getrlimit.c',
     'sys/shim_getuid.c',
     'sys/shim_ioctl.c',
+    'sys/shim_mlock.c',
     'sys/shim_mmap.c',
     'sys/shim_open.c',
     'sys/shim_pipe.c',
