@@ -74,16 +74,6 @@ class TC_00_BasicSet2(RegressionTestCase):
         _, stderr = self.run_binary(['Segment'])
         self.assertIn('Test OK', stderr)
 
-    def test_Select(self):
-        _, stderr = self.run_binary(['Select'])
-        self.assertIn('Enter main thread', stderr)
-        self.assertIn('Waiting on event', stderr)
-        self.assertIn('Enter thread', stderr)
-        self.assertIn('Thread sets event', stderr)
-        self.assertIn('Event was called', stderr)
-        self.assertIn('Leave main thread', stderr)
-        self.assertIn('Leave thread', stderr)
-
     def test_Tcp(self):
         _, stderr = self.run_binary(['Tcp'])
         self.assertIn('start time = ', stderr)

@@ -70,7 +70,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPESRV);
-    HANDLE_HDR(hdl)->flags |= RFD(0);  /* cannot write to a listening socket */
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;  /* cannot write to a listening socket */
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -116,7 +116,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     }
 
     init_handle_hdr(HANDLE_HDR(clnt), PAL_TYPE_PIPECLI);
-    HANDLE_HDR(clnt)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(clnt)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd            = newfd;
     clnt->pipe.name          = handle->pipe.name;
     clnt->pipe.nonblocking   = !!(flags & SOCK_NONBLOCK);
@@ -165,7 +165,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPE);
-    HANDLE_HDR(hdl)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -178,49 +178,9 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
 }
 
 /*!
- * \brief Create PAL handle with read and write ends of a pipe.
- *
- * This function creates a PAL handle of type `pipeprv` (anonymous pipe). In contrast to other types
- * of pipes, `pipeprv` encapsulates both ends of the pipe, backed by a host-level socketpair. This
- * type of pipe is typically reserved for internal PAL uses, not for LibOS emulation.
- *
- * \param[out] handle  PAL handle of type `pipeprv` backed by a host-level socketpair.
- * \param[in]  options May contain PAL_OPTION_NONBLOCK.
- * \return             0 on success, negative PAL error code otherwise.
- */
-static int pipe_private(PAL_HANDLE* handle, pal_stream_options_t options) {
-    int fds[2];
-
-    int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
-
-    int ret = DO_SYSCALL(socketpair, AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | nonblock, 0, fds);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    PAL_HANDLE hdl = malloc(HANDLE_SIZE(pipeprv));
-    if (!hdl) {
-        DO_SYSCALL(close, fds[0]);
-        DO_SYSCALL(close, fds[1]);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_PIPEPRV);
-    HANDLE_HDR(hdl)->flags  |= RFD(0) | WFD(1); /* first FD for reads, second FD for writes */
-    hdl->pipeprv.fds[0]      = fds[0];
-    hdl->pipeprv.fds[1]      = fds[1];
-    hdl->pipeprv.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
-
-    *handle = hdl;
-    return 0;
-}
-
-/*!
- * \brief Create PAL handle of type `pipeprv`, `pipesrv`, or `pipe` depending on `type` and `uri`.
+ * \brief Create PAL handle of type `pipesrv` or `pipe` depending on `type` and `uri`.
  *
  * Depending on the combination of `type` and `uri`, the following PAL handles are created:
- *
- * - `type` is URI_TYPE_PIPE and `url` is empty: create `pipeprv` handle (with two connected
- *                                               ends of an anonymous pipe).
  *
  * - `type` is URI_TYPE_PIPE_SRV: create `pipesrv` handle (intermediate listening socket) with
  *                                the name created by `get_gramine_unix_socket_addr`. Caller is
@@ -229,7 +189,7 @@ static int pipe_private(PAL_HANDLE* handle, pal_stream_options_t options) {
  * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
  *                            `get_gramine_unix_socket_addr`.
  *
- * \param[out] handle  Created PAL handle of type `pipeprv`, `pipesrv`, or `pipe`.
+ * \param[out] handle  Created PAL handle of type `pipesrv` or `pipe`.
  * \param[in]  type    Can be URI_TYPE_PIPE or URI_TYPE_PIPE_SRV.
  * \param[in]  uri     Content is either NUL (for anonymous pipe) or a string with pipe name.
  * \param[in]  access  Not used.
@@ -248,9 +208,6 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
         return -PAL_ERROR_INVAL;
 
-    if (!strcmp(type, URI_TYPE_PIPE) && !*uri)
-        return pipe_private(handle, options);
-
     if (strlen(uri) + 1 > PIPE_NAME_MAX)
         return -PAL_ERROR_INVAL;
 
@@ -264,9 +221,9 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 }
 
 /*!
- * \brief Read from pipe (from read end in case of `pipeprv`).
+ * \brief Read from pipe.
  *
- * \param[in]  handle  PAL handle of type `pipeprv`, `pipecli`, or `pipe`.
+ * \param[in]  handle  PAL handle of type `pipecli` or `pipe`.
  * \param[in]  offset  Not used.
  * \param[in]  len     Size of user-supplied buffer.
  * \param[out] buffer  User-supplied buffer to read data to.
@@ -276,13 +233,10 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPEPRV &&
-        HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
-    int fd = HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV ? handle->pipeprv.fds[0] : handle->pipe.fd;
-
-    ssize_t bytes = DO_SYSCALL(read, fd, buffer, len);
+    ssize_t bytes = DO_SYSCALL(read, handle->pipe.fd, buffer, len);
     if (bytes < 0)
         return unix_to_pal_error(bytes);
 
@@ -290,9 +244,9 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
 }
 
 /*!
- * \brief Write to pipe (to write end in case of `pipeprv`).
+ * \brief Write to pipe.
  *
- * \param[in] handle  PAL handle of type `pipeprv`, `pipecli`, or `pipe`.
+ * \param[in] handle  PAL handle of type `pipecli` or `pipe`.
  * \param[in] offset  Not used.
  * \param[in] len     Size of user-supplied buffer.
  * \param[in] buffer  User-supplied buffer to write data from.
@@ -302,13 +256,10 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const 
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPEPRV &&
-        HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
-    int fd = HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV ? handle->pipeprv.fds[1] : handle->pipe.fd;
-
-    ssize_t bytes = DO_SYSCALL(write, fd, buffer, len);
+    ssize_t bytes = DO_SYSCALL(write, handle->pipe.fd, buffer, len);
     if (bytes < 0)
         return unix_to_pal_error(bytes);
 
@@ -316,33 +267,23 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const 
 }
 
 /*!
- * \brief Close pipe (both ends in case of `pipeprv`).
+ * \brief Close pipe.
  *
- * \param[in] handle  PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in] handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \return            0 on success, negative PAL error code otherwise.
  */
 static int pipe_close(PAL_HANDLE handle) {
-    if (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV) {
-        if (handle->pipeprv.fds[0] != PAL_IDX_POISON) {
-            DO_SYSCALL(close, handle->pipeprv.fds[0]);
-            handle->pipeprv.fds[0] = PAL_IDX_POISON;
-        }
-        if (handle->pipeprv.fds[1] != PAL_IDX_POISON) {
-            DO_SYSCALL(close, handle->pipeprv.fds[1]);
-            handle->pipeprv.fds[1] = PAL_IDX_POISON;
-        }
-    } else if (handle->pipe.fd != PAL_IDX_POISON) {
+    if (handle->pipe.fd != PAL_IDX_POISON) {
         DO_SYSCALL(close, handle->pipe.fd);
         handle->pipe.fd = PAL_IDX_POISON;
     }
-
     return 0;
 }
 
 /*!
- * \brief Shut down pipe (one or both ends in case of `pipeprv` depending on `access`).
+ * \brief Shut down pipe.
  *
- * \param[in] handle       PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in] handle       PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[in] delete_mode  See #pal_delete_mode.
  * \return                 0 on success, negative PAL error code otherwise.
  */
@@ -362,22 +303,8 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    if (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV) {
-        /* pipeprv has two underlying FDs, shut down the requested one(s) */
-        if (handle->pipeprv.fds[0] != PAL_IDX_POISON &&
-            (shutdown == SHUT_RD || shutdown == SHUT_RDWR)) {
-            DO_SYSCALL(shutdown, handle->pipeprv.fds[0], SHUT_RD);
-        }
-
-        if (handle->pipeprv.fds[1] != PAL_IDX_POISON &&
-            (shutdown == SHUT_WR || shutdown == SHUT_RDWR)) {
-            DO_SYSCALL(shutdown, handle->pipeprv.fds[1], SHUT_WR);
-        }
-    } else {
-        /* other types of pipes have a single underlying FD, shut it down */
-        if (handle->pipe.fd != PAL_IDX_POISON) {
-            DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
-        }
+    if (handle->pipe.fd != PAL_IDX_POISON) {
+        DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
     }
 
     return 0;
@@ -386,7 +313,7 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 /*!
  * \brief Retrieve attributes of PAL handle.
  *
- * \param[in]  handle  PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in]  handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[out] attr    User-supplied buffer to store handle's current attributes.
  * \return             0 on success, negative PAL error code otherwise.
  */
@@ -397,9 +324,8 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         return -PAL_ERROR_BADHANDLE;
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
-    attr->nonblocking  = HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV ? handle->pipeprv.nonblocking
-                                                                      : handle->pipe.nonblocking;
-    attr->disconnected = HANDLE_HDR(handle)->flags & ERROR(0);
+    attr->nonblocking  = handle->pipe.nonblocking;
+    attr->disconnected = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading (doesn't make sense for "listening" pipes) */
     attr->pending_size = 0;
@@ -413,34 +339,20 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     /* query if there is data available for reading/writing */
-    if (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV) {
-        /* for private pipe, readable and writable are queried on different fds */
-        struct pollfd pfd[2] = {{.fd = handle->pipeprv.fds[0], .events = POLLIN,  .revents = 0},
-                                {.fd = handle->pipeprv.fds[1], .events = POLLOUT, .revents = 0}};
-        struct timespec tp   = {0, 0};
-        ret = DO_SYSCALL(ppoll, &pfd, 2, &tp, NULL, 0);
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        attr->readable = ret >= 1 && (pfd[0].revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
-        attr->writable = ret >= 1 && (pfd[1].revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
-    } else {
-        /* for non-private pipes, both readable and writable are queried on the same fd */
-        short pfd_events = POLLIN;
-        if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV) {
-            /* querying for writing doesn't make sense for "listening" pipes */
-            pfd_events |= POLLOUT;
-        }
-
-        struct pollfd pfd  = {.fd = handle->pipe.fd, .events = pfd_events, .revents = 0};
-        struct timespec tp = {0, 0};
-        ret = DO_SYSCALL(ppoll, &pfd, 1, &tp, NULL, 0);
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        attr->readable = ret == 1 && (pfd.revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
-        attr->writable = ret == 1 && (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
+    short pfd_events = POLLIN;
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV) {
+        /* querying for writing doesn't make sense for "listening" pipes */
+        pfd_events |= POLLOUT;
     }
+
+    struct pollfd pfd  = {.fd = handle->pipe.fd, .events = pfd_events, .revents = 0};
+    struct timespec tp = {0, 0};
+    ret = DO_SYSCALL(ppoll, &pfd, 1, &tp, NULL, 0);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    attr->readable = ret == 1 && (pfd.revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
+    attr->writable = ret == 1 && (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
 
     return 0;
 }
@@ -450,21 +362,18 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  *
  * Currently only `nonblocking` attribute can be set.
  *
- * \param[in] handle  PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in] handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[in] attr    User-supplied buffer with new handle's attributes.
  * \return            0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->generic.fds[0] == PAL_IDX_POISON)
+    if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    bool* nonblocking = (HANDLE_HDR(handle)->type == PAL_TYPE_PIPEPRV)
-                         ? &handle->pipeprv.nonblocking
-                         : &handle->pipe.nonblocking;
+    bool* nonblocking = &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
-        int ret = DO_SYSCALL(fcntl, handle->generic.fds[0], F_SETFL,
-                             attr->nonblocking ? O_NONBLOCK : 0);
+        int ret = DO_SYSCALL(fcntl, handle->pipe.fd, F_SETFL, attr->nonblocking ? O_NONBLOCK : 0);
         if (ret < 0)
             return unix_to_pal_error(ret);
 
@@ -479,7 +388,7 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  *
  * Full URI is composed of the type and pipe name: "<type>:<pipename>".
  *
- * \param[in]  handle  PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
+ * \param[in]  handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[out] buffer  User-supplied buffer to write URI to.
  * \param[in]  count   Size of the user-supplied buffer.
  * \return             Number of bytes written on success, negative PAL error code otherwise.
@@ -501,7 +410,6 @@ static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
             prefix_len = static_strlen(URI_TYPE_PIPE);
             prefix     = URI_TYPE_PIPE;
             break;
-        case PAL_TYPE_PIPEPRV:
         default:
             return -PAL_ERROR_INVAL;
     }
@@ -535,15 +443,6 @@ struct handle_ops g_pipe_ops = {
     .write          = &pipe_write,
     .close          = &pipe_close,
     .delete         = &pipe_delete,
-    .attrquerybyhdl = &pipe_attrquerybyhdl,
-    .attrsetbyhdl   = &pipe_attrsetbyhdl,
-};
-
-struct handle_ops g_pipeprv_ops = {
-    .open           = &pipe_open,
-    .read           = &pipe_read,
-    .write          = &pipe_write,
-    .close          = &pipe_close,
     .attrquerybyhdl = &pipe_attrquerybyhdl,
     .attrsetbyhdl   = &pipe_attrsetbyhdl,
 };

@@ -49,7 +49,7 @@ typedef struct pal_handle {
     PAL_HDR hdr;
     union {
         struct {
-            PAL_IDX fds[MAX_FDS];
+            PAL_IDX fd;
         } generic;
 
         struct {
@@ -71,11 +71,6 @@ typedef struct pal_handle {
             PAL_NUM handshake_done;
             void* ssl_ctx;
         } pipe;
-
-        struct {
-            PAL_IDX fds[MAX_FDS];
-            bool nonblocking;
-        } pipeprv;
 
         struct {
             PAL_IDX fd;
@@ -141,10 +136,10 @@ typedef struct pal_handle {
     };
 }* PAL_HANDLE;
 
-#define RFD(n)   (1 << (MAX_FDS * 0 + (n)))
-#define WFD(n)   (1 << (MAX_FDS * 1 + (n)))
-#define ERROR(n) (1 << (MAX_FDS * 2 + (n)))
-
 #define HANDLE_TYPE(handle) ((handle)->hdr.type)
+
+#define PAL_HANDLE_FD_READABLE  1
+#define PAL_HANDLE_FD_WRITABLE  2
+#define PAL_HANDLE_FD_ERROR     4
 
 #endif /* PAL_HOST_H */

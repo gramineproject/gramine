@@ -49,7 +49,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_FILE);
-    HANDLE_HDR(hdl)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->file.fd = ret;
     hdl->file.map_start = NULL;
     char* path = (void*)hdl + HANDLE_SIZE(file);
@@ -230,7 +230,7 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
 
 /* 'attrquerybyhdl' operation for file streams */
 static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->generic.fds[0];
+    int fd = handle->file.fd;
     struct stat stat_buf;
 
     int ret = DO_SYSCALL(fstat, fd, &stat_buf);
@@ -243,7 +243,8 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->generic.fds[0], ret;
+    int ret;
+    int fd = handle->file.fd;
 
     ret = DO_SYSCALL(fchmod, fd, attr->share_flags);
     if (ret < 0)
@@ -344,7 +345,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         return -PAL_ERROR_NOMEM;
     }
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_DIR);
-    HANDLE_HDR(hdl)->flags |= RFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
     char* path = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);

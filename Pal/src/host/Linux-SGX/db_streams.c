@@ -15,6 +15,7 @@
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/wait.h>
+#include <stdbool.h>
 
 #include "api.h"
 #include "crypto.h"
@@ -35,10 +36,9 @@
 static int g_log_fd = PAL_LOG_DEFAULT_FD;
 
 struct hdl_header {
-    uint8_t fds;       /* bitmask of host file descriptors corresponding to PAL handle */
+    bool has_fd;       /* true if PAL handle has a corresponding host file descriptor */
     size_t  data_size; /* total size of serialized PAL handle */
 };
-static_assert((sizeof(((struct hdl_header*)0)->fds) * 8) >= MAX_FDS, "insufficient fds size");
 
 static size_t addr_size(const struct sockaddr* addr) {
     switch (addr->sa_family) {
@@ -108,7 +108,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             }
             break;
         case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPEPRV:
             break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
@@ -174,7 +173,7 @@ out:
     return hdlsz + dsz1 + dsz2;
 }
 
-static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int* fds) {
+static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int host_fd) {
     int ret;
 
     PAL_HANDLE hdl = malloc(size);
@@ -193,7 +192,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to deserialize SSL context */
-            hdl->pipe.fd = fds[0]; /* correct host FD must be passed to SSL context */
+            hdl->pipe.fd = host_fd; /* correct host FD must be passed to SSL context */
             ret = _DkStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
                                       (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
                                       (const uint8_t*)hdl + hdlsz, size - hdlsz);
@@ -203,7 +202,6 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             }
             break;
         case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPEPRV:
             break;
         case PAL_TYPE_DEV:
             break;
@@ -224,7 +222,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         }
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to deserialize SSL context */
-            hdl->process.stream = fds[0]; /* correct host FD must be passed to SSL context */
+            hdl->process.stream = host_fd; /* correct host FD must be passed to SSL context */
             ret = _DkStreamSecureInit(hdl, hdl->process.is_server, &hdl->process.session_key,
                                       (LIB_SSL_CONTEXT**)&hdl->process.ssl_ctx,
                                       (const uint8_t*)hdl + hdlsz, size - hdlsz);
@@ -264,17 +262,11 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         return hdl_data_size;
 
     ssize_t ret;
-    struct hdl_header hdl_hdr = {.fds = 0, .data_size = hdl_data_size};
+    struct hdl_header hdl_hdr = {
+        .has_fd = HANDLE_HDR(cargo)->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
+        .data_size = hdl_data_size
+    };
     int fd = hdl->process.stream;
-
-    /* apply bitmask of FDs-to-transfer to hdl_hdr.fds and populate `fds` with these FDs */
-    int fds[MAX_FDS];
-    int nfds = 0;
-    for (int i = 0; i < MAX_FDS; i++)
-        if (HANDLE_HDR(cargo)->flags & (RFD(i) | WFD(i))) {
-            hdl_hdr.fds |= 1U << i;
-            fds[nfds++] = cargo->generic.fds[i];
-        }
 
     /* first send hdl_hdr so the recipient knows how many FDs were transferred + how large is cargo */
     ret = ocall_send(fd, &hdl_hdr, sizeof(struct hdl_header), NULL, 0, NULL, 0);
@@ -283,17 +275,20 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         return unix_to_pal_error(ret);
     }
 
-    /* construct ancillary data of FDs-to-transfer in a control message */
-    size_t fds_size = nfds * sizeof(int);
-    char control_buf[sizeof(struct cmsghdr) + fds_size];
+    /* construct ancillary data with FD-to-transfer in a control message */
+    char control_buf[sizeof(struct cmsghdr) + sizeof(int)];
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
     control_hdr->cmsg_level     = SOL_SOCKET;
     control_hdr->cmsg_type      = SCM_RIGHTS;
-    control_hdr->cmsg_len       = CMSG_LEN(fds_size);
-    memcpy(CMSG_DATA(control_hdr), fds, fds_size);
+    if (hdl_hdr.has_fd) {
+        control_hdr->cmsg_len = CMSG_LEN(sizeof(int));
+        *(int*)CMSG_DATA(control_hdr) = cargo->generic.fd;
+    } else {
+        control_hdr->cmsg_len = CMSG_LEN(0);
+    }
 
-    /* next send FDs-to-transfer as ancillary data */
+    /* next send FD-to-transfer as ancillary data */
     ret = ocall_send(fd, DUMMYPAYLOAD, DUMMYPAYLOADSIZE, NULL, 0, control_hdr,
                      control_hdr->cmsg_len);
     if (ret < 0) {
@@ -345,13 +340,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         return -PAL_ERROR_DENIED;
     }
 
-    /* prepare control-message buffer to receive ancillary data of FDs-to-transfer */
-    int nfds = 0;
-    for (int i = 0; i < MAX_FDS; i++)
-        if (hdl_hdr.fds & (1U << i))
-            nfds++;
-
-    size_t control_buf_size = sizeof(struct cmsghdr) + nfds * sizeof(int);
+    size_t control_buf_size = sizeof(struct cmsghdr) + sizeof(int);
     char control_buf[control_buf_size];
 
     /* next receive FDs-to-transfer as ancillary data */
@@ -374,29 +363,26 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
     if (ret < 0)
         return ret;
 
-    /* prepare array of FDs from the received FDs-to-transfer */
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
     if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
         return -PAL_ERROR_DENIED;
+    if (hdl_hdr.has_fd && control_hdr->cmsg_len != CMSG_LEN(sizeof(int))) {
+        return -PAL_ERROR_DENIED;
+    }
 
-    int* fds = (int*)CMSG_DATA(control_hdr);
+    int host_fd = hdl_hdr.has_fd ? *(int*)CMSG_DATA(control_hdr) : -1;
 
     /* deserialize cargo handle from a blob hdl_data */
     PAL_HANDLE handle = NULL;
-    ret = handle_deserialize(&handle, hdl_data, hdl_hdr.data_size, fds);
+    ret = handle_deserialize(&handle, hdl_data, hdl_hdr.data_size, host_fd);
     if (ret < 0)
         return ret;
 
-    /* restore cargo handle's FDs from the received FDs-to-transfer */
-    int fds_idx = 0;
-    for (int i = 0; i < MAX_FDS; i++) {
-        if (hdl_hdr.fds & (1U << i)) {
-            if (fds_idx < nfds) {
-                handle->generic.fds[i] = fds[fds_idx++];
-            } else {
-                HANDLE_HDR(handle)->flags &= ~(RFD(i) | WFD(i));
-            }
-        }
+    /* restore cargo handle's FD from the received FD-to-transfer */
+    if (hdl_hdr.has_fd) {
+        handle->generic.fd = host_fd;
+    } else {
+        HANDLE_HDR(handle)->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
     *cargo = handle;

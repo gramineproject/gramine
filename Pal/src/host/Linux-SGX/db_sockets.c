@@ -230,7 +230,10 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_optio
 
     memset(hdl, 0, sizeof(struct pal_handle));
     init_handle_hdr(HANDLE_HDR(hdl), type);
-    HANDLE_HDR(hdl)->flags |= RFD(0) | (type != PAL_TYPE_TCPSRV ? WFD(0) : 0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
+    if (type != PAL_TYPE_TCPSRV) {
+        HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_WRITABLE;
+    }
     hdl->sock.fd = fd;
     uint8_t* addr = (uint8_t*)hdl + HANDLE_SIZE(sock);
     if (bind_addr) {
@@ -688,7 +691,7 @@ static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type           = HANDLE_HDR(handle)->type;
     attr->nonblocking           = handle->sock.nonblocking;
-    attr->disconnected          = HANDLE_HDR(handle)->flags & ERROR(0);
+    attr->disconnected          = HANDLE_HDR(handle)->flags & PAL_HANDLE_FD_ERROR;
 
     attr->socket.linger         = handle->sock.linger;
     attr->socket.receivebuf     = handle->sock.receivebuf;

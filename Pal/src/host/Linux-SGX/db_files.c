@@ -69,7 +69,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     }
 
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_FILE);
-    HANDLE_HDR(hdl)->flags |= RFD(0) | WFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
     memcpy((char*)hdl + HANDLE_SIZE(file), normpath, normpath_size);
     hdl->file.realpath = (const char*)hdl + HANDLE_SIZE(file);
@@ -896,7 +896,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         return -PAL_ERROR_NOMEM;
     }
     init_handle_hdr(HANDLE_HDR(hdl), PAL_TYPE_DIR);
-    HANDLE_HDR(hdl)->flags |= RFD(0);
+    HANDLE_HDR(hdl)->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
     char* path  = (void*)hdl + HANDLE_SIZE(dir);
     memcpy(path, uri, len + 1);

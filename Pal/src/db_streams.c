@@ -14,7 +14,6 @@
  * are not streams, so they need no handler. */
 extern struct handle_ops g_file_ops;
 extern struct handle_ops g_pipe_ops;
-extern struct handle_ops g_pipeprv_ops;
 extern struct handle_ops g_dev_ops;
 extern struct handle_ops g_dir_ops;
 extern struct handle_ops g_tcp_ops;
@@ -30,7 +29,6 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
     [PAL_TYPE_PIPE]    = &g_pipe_ops,
     [PAL_TYPE_PIPESRV] = &g_pipe_ops,
     [PAL_TYPE_PIPECLI] = &g_pipe_ops,
-    [PAL_TYPE_PIPEPRV] = &g_pipeprv_ops,
     [PAL_TYPE_DEV]     = &g_dev_ops,
     [PAL_TYPE_DIR]     = &g_dir_ops,
     [PAL_TYPE_TCP]     = &g_tcp_ops,
