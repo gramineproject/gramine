@@ -87,8 +87,6 @@ enum cpu_extension {
 extern const uint32_t g_cpu_extension_sizes[];
 extern const uint32_t g_cpu_extension_offsets[];
 
-enum register_index { EAX, EBX, ECX, EDX };
-
 extern int g_xsave_enabled;
 extern uint64_t g_xsave_features;
 extern uint32_t g_xsave_size;

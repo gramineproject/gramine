@@ -56,8 +56,6 @@ static void test_cpuid_leaf_0xd(void) {
         [PKRU] = 8,
         [AMX_TILECFG] = 64, [AMX_TILEDATA] = 8192,
     };
-    enum register_index { EAX, EBX, ECX, EDX };
-
 
     cpuid(leaf, AVX, &r);
     if (!(r.eax == extension_unavailable || r.eax == extension_sizes_bytes[AVX]))
