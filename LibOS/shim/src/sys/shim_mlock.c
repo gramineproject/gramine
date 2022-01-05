@@ -11,19 +11,22 @@
  * This (dummy) functionality is required by .NET workloads.
  */
 
+#include <asm-generic/mman-common.h>
 #include <sys/mman.h>
 
 #include "shim_table.h"
 
 long shim_do_mlock(unsigned long start, size_t len) {
-    __UNUSED(start);
-    __UNUSED(len);
+    if (!access_ok((void*)start, len)) {
+        return -EINVAL;
+    }
     return 0;
 }
 
 long shim_do_munlock(unsigned long start, size_t len) {
-    __UNUSED(start);
-    __UNUSED(len);
+    if (!access_ok((void*)start, len)) {
+        return -EINVAL;
+    }
     return 0;
 }
 
@@ -42,10 +45,12 @@ long shim_do_munlockall(void) {
 }
 
 long shim_do_mlock2(unsigned long start, size_t len, int flags) {
-    __UNUSED(start);
-    __UNUSED(len);
-    if (flags != 0) {
-        log_warning("Syscall mlock2 was called with unknown flag(s): %d\n", flags);
+    int unknown = flags & ~MLOCK_ONFAULT;
+    if (unknown != 0) {
+        log_warning("Syscall mlock2 was called with unknown flag(s): %d\n", unknown);
+        return -EINVAL;
+    }
+    if (!access_ok((void*)start, len)) {
         return -EINVAL;
     }
 
