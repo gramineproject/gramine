@@ -291,29 +291,40 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
     } else if (leaf == AMX_TILE_INFO_LEAF) {
         if (subleaf == 0x0) {
             /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
-            if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX], 1, 16) || values[CPUID_WORD_EBX] != 0 || values[CPUID_WORD_ECX] != 0 ||
-                    values[CPUID_WORD_EDX] != 0) {
+            if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX], 1, 16) || values[CPUID_WORD_EBX] != 0
+                    || values[CPUID_WORD_ECX] != 0
+                    || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
                 _DkProcessExit(1);
             }
         } else {
             /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
-            if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX] & 0xFFFF, 1, 0xFFFF) || /* total_tile_bytes */
-                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EAX] >> 16, 1, 0xFFFF) || /* bytes_per_tile */
-                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] & 0xFFFF, 1, 0xFFFF) || /* bytes_per_row */
-                    !IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] >> 16, 1, 256) || /* max_names (# of tile regs) */
-                    !IS_IN_RANGE_INCL(values[CPUID_WORD_ECX] & 0xFFFF, 1, 256) || /* max_rows */
-                    (values[CPUID_WORD_ECX] >> 16) != 0 || values[CPUID_WORD_EDX] != 0) {
-                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%x)", subleaf);
+            uint32_t total_tile_bytes = values[CPUID_WORD_EAX] & 0xFFFF;
+            uint32_t bytes_per_tile = values[CPUID_WORD_EAX] >> 16;
+            uint32_t bytes_per_row = values[CPUID_WORD_EBX] & 0xFFFF;
+            uint32_t max_names = values[CPUID_WORD_EBX] >> 16; /* (# of tile regs) */
+            uint32_t max_rows = values[CPUID_WORD_ECX] & 0xFFFF;
+            if (!IS_IN_RANGE_INCL(total_tile_bytes, 1, 0xFFFF)
+                    || !IS_IN_RANGE_INCL(bytes_per_tile, 1, 0xFFFF)
+                    || !IS_IN_RANGE_INCL(bytes_per_row, 1, 0xFFFF)
+                    || !IS_IN_RANGE_INCL(max_names, 1, 256)
+                    || !IS_IN_RANGE_INCL(max_rows, 1, 256)
+                    || (values[CPUID_WORD_ECX] >> 16) != 0 || values[CPUID_WORD_EDX] != 0) {
+                log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%#x)",
+                          subleaf);
                 _DkProcessExit(1);
             }
         }
     } else if (leaf == AMX_TMUL_INFO_LEAF) {
         /* EAX = 1EH, ECX = 0: returns TMUL hardware unit limits */
-        if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EBX] & 0xFF, 1, 0xFF) || /* tmul_maxk (rows or columns) */
-                !IS_IN_RANGE_INCL((values[CPUID_WORD_EBX] >> 8) & 0xFFFF, 1, 0xFFFF) || /* tmul_maxn */
-                (values[CPUID_WORD_EBX] >> 24) != 0 || values[CPUID_WORD_EAX] != 0 || values[CPUID_WORD_ECX] != 0 ||
-                values[CPUID_WORD_EDX] != 0) {
+        uint32_t tmul_maxk = values[CPUID_WORD_EBX] & 0xFF; /* (rows or columns) */
+        uint32_t tmul_maxn = (values[CPUID_WORD_EBX] >> 8) & 0xFFFF;
+        if (!IS_IN_RANGE_INCL(tmul_maxk, 1, 0xFF)
+                || !IS_IN_RANGE_INCL(tmul_maxn, 1, 0xFFFF)
+                || (values[CPUID_WORD_EBX] >> 24) != 0
+                || values[CPUID_WORD_EAX] != 0
+                || values[CPUID_WORD_ECX] != 0
+                || values[CPUID_WORD_EDX] != 0) {
             log_error("Unexpected values in TMUL Information CPUID Leaf");
             _DkProcessExit(1);
         }
