@@ -66,28 +66,41 @@ typedef struct PAL_NUMA_TOPO_INFO_ {
  * it would take ~8KB in memory. */
 // TODO: what does this ^ mean? the struct has constant size, much less than 1.6KB
 struct pal_topo_info {
-    PAL_CPU_INFO cpu_info; // TODO: should this be moved out to `pal_public_state` or kept here?
-                           // We don't need to take this from the untrusted host as a start argument
-                           // (but the rest of this struct _is_ used this way).
+    /* TODO: should this be moved out to `pal_public_state` or kept here? We don't need to take this
+     * from the untrusted host as a start argument (but the rest of this struct _is_ used this
+     * way). */
+    PAL_CPU_INFO cpu_info;
 
-    PAL_NUM online_logical_cores_cnt; /* Number of logical cores available in the host */
+    /* Number of logical cores available on the host. */
+    PAL_NUM online_logical_cores_cnt;
+
     char online_logical_cores[PAL_SYSFS_BUF_FILESZ];
-    int* cpu_to_socket; /* array of "logical core -> socket" mappings; has online_logical_cores_cnt
-                         * elements */
 
-    PAL_NUM possible_logical_cores_cnt; /* Max number of logical cores available in the host */
+    /* Array of "logical core -> socket" mappings; has online_logical_cores_cnt elements. */
+    int* cpu_to_socket;
+
+    /* Array of logical core topology info, owned by this struct. Has online_logical_cores_cnt
+     * elements. */
+    PAL_CORE_TOPO_INFO* core_topology;
+
+    /* Max number of logical cores available on the host. */
+    PAL_NUM possible_logical_cores_cnt;
+
     char possible_logical_cores[PAL_SYSFS_BUF_FILESZ];
 
-    PAL_NUM physical_cores_per_socket; /* Number of physical cores in a socket (physical package) */
+    /* Number of physical cores in a socket (physical package). */
+    PAL_NUM physical_cores_per_socket;
 
-    PAL_NUM online_nodes_cnt; /* Number of nodes available in the host */
+    /* Number of nodes available on the host. */
+    PAL_NUM online_nodes_cnt;
+
     char online_nodes[PAL_SYSFS_BUF_FILESZ];
 
-    PAL_NUM cache_index_cnt; /* cache index corresponds to number of cache levels (such as L2 or L3)
-                              * available on the host */
+    /* Array of numa topology info, owned by this struct. Has online_nodes_cnt elements. */
+    PAL_NUMA_TOPO_INFO* numa_topology;
 
-    PAL_CORE_TOPO_INFO* core_topology; /* array of logical core topology info, owned by this struct */ // TODO: what size?
-    PAL_NUMA_TOPO_INFO* numa_topology; /* array of numa topology info, owned by this struct */ // TODO: what size?
+    /* Number of cache levels (such as L2 or L3) available on the host. */
+    PAL_NUM cache_index_cnt;
 };
 
 #endif /* PAL_TOPOLOGY_H */

@@ -245,7 +245,8 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
         cpu_to_socket[idx] = get_hw_resource(filename, /*count=*/false);
         if (cpu_to_socket[idx] < 0) {
             log_warning("Cannot read %s", filename);
-            return cpu_to_socket[idx];
+            ret = cpu_to_socket[idx];
+            goto out_cpu_to_socket;
         }
     }
     topo_info->cpu_to_socket = cpu_to_socket;
@@ -285,6 +286,8 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
 
 out_topology:
     free(core_topology);
+out_cpu_to_socket:
+    free(cpu_to_socket);
 out:
     return ret;
 }
