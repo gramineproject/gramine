@@ -292,8 +292,7 @@ static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[
         if (subleaf == 0x0) {
             /* EAX = 1DH, ECX = 0: special subleaf, returns EAX=max_palette, EBX=ECX=EDX=0 */
             if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX], 1, 16) || values[CPUID_WORD_EBX] != 0
-                    || values[CPUID_WORD_ECX] != 0
-                    || values[CPUID_WORD_EDX] != 0) {
+                    || values[CPUID_WORD_ECX] != 0 || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
                 _DkProcessExit(1);
             }
