@@ -23,7 +23,7 @@ int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     } meminfo[] = {
         {
             "MemTotal:      %8lu kB\n",
-            g_pal_public_state->mem_info.mem_total / 1024,
+            g_pal_public_state->mem_total / 1024,
         },
         {
             "MemFree:       %8lu kB\n",

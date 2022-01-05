@@ -84,11 +84,11 @@ int main(int argc, char** argv, char** envp) {
         pal_printf("Memory Allocation with Address OK\n");
 
     /* Testing total memory */
-    pal_printf("Total Memory: %lu\n", DkGetPalPublicState()->mem_info.mem_total);
+    pal_printf("Total Memory: %lu\n", DkGetPalPublicState()->mem_total);
 
     /* Testing available memory (must be within valid range) */
     PAL_NUM avail = DkMemoryAvailableQuota();
-    if (avail > 0 && avail < DkGetPalPublicState()->mem_info.mem_total)
+    if (avail > 0 && avail < DkGetPalPublicState()->mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 
     return 0;

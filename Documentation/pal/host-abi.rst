@@ -103,12 +103,6 @@ PAL public state - topology information
    :project: pal
    :members:
 
-.. doxygentypedef:: PAL_MEM_INFO
-   :project: pal
-.. doxygenstruct:: PAL_MEM_INFO_
-   :project: pal
-   :members:
-
 PAL APIs
 --------
 

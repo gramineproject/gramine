@@ -83,10 +83,6 @@ typedef struct PAL_PTR_RANGE_ {
     PAL_PTR start, end;
 } PAL_PTR_RANGE;
 
-typedef struct PAL_MEM_INFO_ {
-    PAL_NUM mem_total;
-} PAL_MEM_INFO;
-
 /********** PAL APIs **********/
 
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
@@ -129,8 +125,9 @@ struct pal_public_state {
      */
     PAL_NUM alloc_align;
 
+    size_t mem_total;
+
     PAL_CPU_INFO cpu_info; /*!< CPU information (only required ones) */
-    PAL_MEM_INFO mem_info; /*!< memory information (only required ones) */
     PAL_TOPO_INFO topo_info; /*!< Topology information (only required ones) */
     bool enable_sysfs_topology;
 };
