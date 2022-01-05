@@ -541,8 +541,6 @@ failed:
 }
 
 static int register_file(const char* uri, const char* checksum_str, bool check_duplicates) {
-    int ret;
-
     if (checksum_str && strlen(checksum_str) != sizeof(sgx_file_hash_t) * 2) {
         log_error("Hash (%s) of a trusted file %s is not a SHA256 hash", checksum_str, uri);
         return -PAL_ERROR_INVAL;
@@ -581,15 +579,6 @@ static int register_file(const char* uri, const char* checksum_str, bool check_d
     memcpy(new->uri, uri, uri_len + 1);
 
     if (checksum_str) {
-        PAL_STREAM_ATTR attr;
-        ret = _DkStreamAttributesQuery(uri, &attr);
-        if (ret < 0) {
-            log_error("Could not find size of file: %s", uri);
-            free(new);
-            return ret;
-        }
-        new->size = attr.pending_size;
-
         assert(strlen(checksum_str) == sizeof(sgx_file_hash_t) * 2);
         for (size_t i = 0; i < sizeof(sgx_file_hash_t); i++) {
             int8_t byte1 = hex2dec(checksum_str[i * 2]);
