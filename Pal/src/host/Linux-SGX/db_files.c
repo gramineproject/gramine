@@ -198,6 +198,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     sgx_chunk_hash_t* chunk_hashes;
     uint64_t total;
     void* umem;
+
+    tf->size = st.st_size;
     ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
     if (ret < 0)
         goto fail;
