@@ -625,7 +625,7 @@ const char* const siglist[SIGRTMIN] = {
 #define SIGNAL_NAME_SIZE 7
 
 static const char* signal_name(int sig, char str[SIGNAL_NAME_SIZE]) {
-    if (sig <= 0 || sig > NUM_SIGS) {
+    if (sig <= 0 || sig > SIGS_CNT) {
         return "BAD SIGNAL";
     }
 

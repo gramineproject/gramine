@@ -777,7 +777,7 @@ static int rpc_thread_loop(void* arg) {
     return 0;
 }
 
-static int start_rpc(size_t num_of_threads) {
+static int start_rpc(size_t threads_cnt) {
     g_rpc_queue = (rpc_queue_t*)DO_SYSCALL(mmap, NULL,
                                            ALIGN_UP(sizeof(rpc_queue_t), PRESET_PAGESIZE),
                                            PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
@@ -788,7 +788,7 @@ static int start_rpc(size_t num_of_threads) {
     /* initialize g_rpc_queue just for sanity, it will be overwritten by in-enclave code */
     rpc_queue_init(g_rpc_queue);
 
-    for (size_t i = 0; i < num_of_threads; i++) {
+    for (size_t i = 0; i < threads_cnt; i++) {
         void* stack = (void*)DO_SYSCALL(mmap, NULL, RPC_STACK_SIZE, PROT_READ | PROT_WRITE,
                                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (IS_PTR_ERR(stack))

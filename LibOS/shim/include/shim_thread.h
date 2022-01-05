@@ -30,7 +30,7 @@ struct wake_queue_head {
 };
 
 struct shim_signal_dispositions {
-    struct __kernel_sigaction actions[NUM_SIGS];
+    struct __kernel_sigaction actions[SIGS_CNT];
     struct shim_lock lock;
     REFTYPE ref_count;
 };
@@ -53,7 +53,7 @@ struct shim_rt_signal_queue {
 struct shim_signal_queue {
     __sigset_t pending_mask;
     struct shim_signal standard_signals[SIGRTMIN - 1];
-    struct shim_rt_signal_queue rt_signal_queues[NUM_SIGS - SIGRTMIN + 1];
+    struct shim_rt_signal_queue rt_signal_queues[SIGS_CNT - SIGRTMIN + 1];
 };
 
 DEFINE_LIST(shim_thread);

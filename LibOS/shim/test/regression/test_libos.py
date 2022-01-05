@@ -855,7 +855,7 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['fdleak'], timeout=10)
         self.assertIn("Test succeeded.", stdout)
 
-    def get_num_cache_levels(self):
+    def get_cache_levels_cnt(self):
         cpu0 = '/sys/devices/system/cpu/cpu0/'
         self.assertTrue(os.path.exists(f'{cpu0}/cache/'))
 
@@ -867,14 +867,14 @@ class TC_40_FileSystem(RegressionTestCase):
         return n
 
     def test_040_sysfs(self):
-        num_cpus = os.cpu_count()
-        num_cache_levels = self.get_num_cache_levels()
+        cpus_cnt = os.cpu_count()
+        cache_levels_cnt = self.get_cache_levels_cnt()
 
         stdout, _ = self.run_binary(['sysfs_common'])
         lines = stdout.splitlines()
 
         self.assertIn('/sys/devices/system/cpu: directory', lines)
-        for i in range(num_cpus):
+        for i in range(cpus_cnt):
             cpu = f'/sys/devices/system/cpu/cpu{i}'
             self.assertIn(f'{cpu}: directory', lines)
             if i == 0:
@@ -887,7 +887,7 @@ class TC_40_FileSystem(RegressionTestCase):
             self.assertIn(f'{cpu}/topology/core_siblings: file', lines)
             self.assertIn(f'{cpu}/topology/thread_siblings: file', lines)
 
-            for j in range(num_cache_levels):
+            for j in range(cache_levels_cnt):
                 cache = f'{cpu}/cache/index{j}'
                 self.assertIn(f'{cache}: directory', lines)
                 self.assertIn(f'{cache}/shared_cpu_map: file', lines)
@@ -898,10 +898,10 @@ class TC_40_FileSystem(RegressionTestCase):
                 self.assertIn(f'{cache}/physical_line_partition: file', lines)
 
         self.assertIn('/sys/devices/system/node: directory', lines)
-        num_nodes = len([line for line in lines
+        nodes_cnt = len([line for line in lines
                          if re.match(r'/sys/devices/system/node/node[0-9]+:', line)])
-        self.assertGreater(num_nodes, 0)
-        for i in range(num_nodes):
+        self.assertGreater(nodes_cnt, 0)
+        for i in range(nodes_cnt):
             node = f'/sys/devices/system/node/node{i}'
             self.assertIn(f'{node}: directory', lines)
             self.assertIn(f'{node}/cpumap: file', lines)

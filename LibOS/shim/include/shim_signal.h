@@ -15,7 +15,7 @@ void thread_sigaction_reset_on_execve(void);
 #define BITS_PER_WORD (8 * sizeof(unsigned long))
 /* The standard def of this macro is dumb */
 #undef _SIGSET_NWORDS
-#define _SIGSET_NWORDS (NUM_SIGS / BITS_PER_WORD)
+#define _SIGSET_NWORDS (SIGS_CNT / BITS_PER_WORD)
 
 /* Return a mask that includes the bit for SIG only.  */
 #define __sigmask(sig) \

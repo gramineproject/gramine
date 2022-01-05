@@ -20,7 +20,7 @@ int arch_do_rt_sigprocmask(int sig, int how) {
 }
 
 int arch_do_rt_sigaction(int sig, void* handler,
-                         const int* async_signals, size_t num_async_signals) {
+                         const int* async_signals, size_t async_signals_cnt) {
     struct sigaction action = {0};
     action.sa_handler  = handler;
     action.sa_flags    = SA_SIGINFO | SA_ONSTACK | SA_RESTORER;
@@ -28,7 +28,7 @@ int arch_do_rt_sigaction(int sig, void* handler,
 
     /* disallow nested asynchronous signals during exception handling */
     __sigemptyset((__sigset_t*)&action.sa_mask);
-    for (size_t i = 0; i < num_async_signals; i++)
+    for (size_t i = 0; i < async_signals_cnt; i++)
         __sigaddset((__sigset_t*)&action.sa_mask, async_signals[i]);
 
     return DO_SYSCALL(rt_sigaction, sig, &action, NULL, sizeof(__sigset_t));

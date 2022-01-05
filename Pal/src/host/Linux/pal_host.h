@@ -121,6 +121,6 @@ typedef struct {
 
 int arch_do_rt_sigprocmask(int sig, int how);
 int arch_do_rt_sigaction(int sig, void* handler,
-                         const int* async_signals, size_t num_async_signals);
+                         const int* async_signals, size_t async_signals_cnt);
 
 #endif /* PAL_HOST_H */

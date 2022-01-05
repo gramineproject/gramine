@@ -77,7 +77,7 @@ typedef enum {
     SIGHANDLER_CORE,
 } SIGHANDLER_T;
 
-static const SIGHANDLER_T default_sighandler[NUM_SIGS] = {
+static const SIGHANDLER_T default_sighandler[SIGS_CNT] = {
     [SIGHUP    - 1] = SIGHANDLER_KILL,
     [SIGINT    - 1] = SIGHANDLER_KILL,
     [SIGQUIT   - 1] = SIGHANDLER_CORE,
@@ -212,7 +212,7 @@ static bool queue_append_signal(struct shim_signal_queue* queue, struct shim_sig
     int sig = (*signal)->siginfo.si_signo;
 
     bool ret = false;
-    if (sig < 1 || sig > NUM_SIGS) {
+    if (sig < 1 || sig > SIGS_CNT) {
         ret = false;
     } else if (sig < SIGRTMIN) {
         ret = append_standard_signal(&queue->standard_signals[sig - 1], *signal);
@@ -275,7 +275,7 @@ static bool pop_rt_signal(struct shim_rt_signal_queue* queue, struct shim_signal
 void free_signal_queue(struct shim_signal_queue* queue) {
     /* We ignore standard signals - they are stored by value. */
 
-    for (int sig = SIGRTMIN; sig <= NUM_SIGS; sig++) {
+    for (int sig = SIGRTMIN; sig <= SIGS_CNT; sig++) {
         struct shim_signal* signal;
         while (pop_rt_signal(&queue->rt_signal_queues[sig - SIGRTMIN], &signal)) {
             free(signal);
@@ -613,7 +613,7 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
             || __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE)) {
         lock(&current->lock);
         lock(&g_process_signal_queue_lock);
-        for (int sig = 1; sig <= NUM_SIGS; sig++) {
+        for (int sig = 1; sig <= SIGS_CNT; sig++) {
             if (!__sigismember(mask ? : &current->signal_mask, sig)) {
                 bool got = false;
                 bool was_process = false;
@@ -660,7 +660,7 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
         unlock(&g_process_signal_queue_lock);
         unlock(&current->lock);
     } else if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED) != 0) {
-        static_assert(NUM_SIGS < 0xff, "This code requires 0xff to be an invalid signal number");
+        static_assert(SIGS_CNT < 0xff, "This code requires 0xff to be an invalid signal number");
         lock(&current->lock);
         if (!__sigismember(mask ? : &current->signal_mask, SIGTERM)) {
             int sig = __atomic_exchange_n(&g_host_injected_signal, 0xff, __ATOMIC_RELAXED);

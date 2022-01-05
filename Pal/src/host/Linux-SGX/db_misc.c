@@ -845,10 +845,10 @@ int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
         return 0;
     }
 
-    topo_info->num_online_nodes = g_pal_sec.topo_info.num_online_nodes;
-    topo_info->num_cache_index  = g_pal_sec.topo_info.num_cache_index;
-    topo_info->core_topology    = g_pal_sec.topo_info.core_topology;
-    topo_info->numa_topology    = g_pal_sec.topo_info.numa_topology;
+    topo_info->online_nodes_cnt  = g_pal_sec.topo_info.online_nodes_cnt;
+    topo_info->cache_indices_cnt = g_pal_sec.topo_info.cache_indices_cnt;
+    topo_info->core_topology     = g_pal_sec.topo_info.core_topology;
+    topo_info->numa_topology     = g_pal_sec.topo_info.numa_topology;
     COPY_ARRAY(topo_info->online_logical_cores, g_pal_sec.topo_info.online_logical_cores);
     COPY_ARRAY(topo_info->possible_logical_cores, g_pal_sec.topo_info.possible_logical_cores);
     COPY_ARRAY(topo_info->online_nodes, g_pal_sec.topo_info.online_nodes);
