@@ -316,8 +316,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * + enclave->thread_num for normal stack
      * + enclave->thread_num for signal stack
      */
-    int area_num_max = 10 + enclave->thread_num * 2;
-    struct mem_area* areas = __alloca(sizeof(areas[0]) * area_num_max);
+    int max_area_cnt = 10 + enclave->thread_num * 2;
+    struct mem_area* areas = __alloca(sizeof(areas[0]) * max_area_cnt);
     int area_num = 0;
 
     /* The manifest needs to be allocated at the upper end of the enclave

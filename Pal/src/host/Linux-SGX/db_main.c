@@ -247,10 +247,10 @@ static long sanitize_hw_resource_count(const char* buf, bool ordered) {
 }
 
 static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cache_lvls,
-                                        int64_t num_cores) {
+                                        int64_t cores_cnt) {
     for (int64_t lvl = 0; lvl < cache_lvls; lvl++) {
         int64_t shared_cpu_map = count_bits_set_from_resource_map(cache[lvl].shared_cpu_map);
-        if (!IS_IN_RANGE_INCL(shared_cpu_map, 1, num_cores))
+        if (!IS_IN_RANGE_INCL(shared_cpu_map, 1, cores_cnt))
             return -EINVAL;
 
         int64_t level = extract_long_from_buffer(cache[lvl].level);
@@ -283,12 +283,12 @@ static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cach
     return 0;
 }
 
-static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_t num_cores,
+static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_t cores_cnt,
                                        int64_t cache_lvls) {
-    if (num_cores == 0 || cache_lvls == 0)
+    if (cores_cnt == 0 || cache_lvls == 0)
         return -ENOENT;
 
-    for (int64_t idx = 0; idx < num_cores; idx++) {
+    for (int64_t idx = 0; idx < cores_cnt; idx++) {
         if (idx != 0) {     /* core 0 is always online */
             int64_t is_core_online =
                 extract_long_from_buffer(core_topology[idx].is_logical_core_online);
@@ -297,11 +297,11 @@ static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_
         }
 
         int64_t core_id = extract_long_from_buffer(core_topology[idx].core_id);
-        if (!IS_IN_RANGE_INCL(core_id, 0, num_cores - 1))
+        if (!IS_IN_RANGE_INCL(core_id, 0, cores_cnt - 1))
             return -EINVAL;
 
         int64_t core_siblings = count_bits_set_from_resource_map(core_topology[idx].core_siblings);
-        if (!IS_IN_RANGE_INCL(core_siblings, 1, num_cores))
+        if (!IS_IN_RANGE_INCL(core_siblings, 1, cores_cnt))
             return -EINVAL;
 
         int64_t thread_siblings =
@@ -309,37 +309,37 @@ static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_
         if (!IS_IN_RANGE_INCL(thread_siblings, 1, 4)) /* x86 processors have max of 4 SMT siblings */
             return -EINVAL;
 
-        if (sanitize_cache_topology_info(core_topology[idx].cache, cache_lvls, num_cores) < 0)
+        if (sanitize_cache_topology_info(core_topology[idx].cache, cache_lvls, cores_cnt) < 0)
             return -EINVAL;
     }
     return 0;
 }
 
-static int sanitize_socket_info(int* cpu_socket, int64_t num_cores) {
-    if (num_cores == 0)
+static int sanitize_socket_info(int* cpu_socket, int64_t cores_cnt) {
+    if (cores_cnt == 0)
         return -ENOENT;
 
-    for (int64_t idx = 0; idx < num_cores; idx++) {
+    for (int64_t idx = 0; idx < cores_cnt; idx++) {
         /* Virtual environments such as QEMU may assign each core to a separate socket/package with
          * one or more NUMA nodes. So we check against the number of online logical cores. */
-        if (!IS_IN_RANGE_INCL(cpu_socket[idx], 0, num_cores - 1))
+        if (!IS_IN_RANGE_INCL(cpu_socket[idx], 0, cores_cnt - 1))
             return -EINVAL;
     }
     return 0;
 }
 
-static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, int64_t num_nodes,
-                                       int64_t num_cores) {
-    if (num_nodes == 0 || num_cores == 0)
+static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, int64_t nodes_cnt,
+                                       int64_t cores_cnt) {
+    if (nodes_cnt == 0 || cores_cnt == 0)
         return -ENOENT;
 
-    for (int64_t idx = 0; idx < num_nodes; idx++) {
+    for (int64_t idx = 0; idx < nodes_cnt; idx++) {
         int64_t cpumap = count_bits_set_from_resource_map(numa_topology[idx].cpumap);
-        if (!IS_IN_RANGE_INCL(cpumap, 1, num_cores))
+        if (!IS_IN_RANGE_INCL(cpumap, 1, cores_cnt))
             return -EINVAL;
 
         int64_t cnt = sanitize_hw_resource_count(numa_topology[idx].distance, /*ordered=*/false);
-        if (cnt < 0 || num_nodes != cnt)
+        if (cnt < 0 || nodes_cnt != cnt)
             return -EINVAL;
     }
     return 0;
@@ -418,7 +418,7 @@ static int parse_advanced_host_topo_info(bool enable_sysfs_topology, struct pal_
         return 0;
     }
 
-    if (ti->num_online_nodes > INT64_MAX || ti->num_cache_index > INT64_MAX)
+    if (ti->online_nodes_cnt > INT64_MAX || ti->cache_indices_cnt > INT64_MAX)
         return -1;
 
     PAL_CORE_TOPO_INFO* core_topology;
@@ -426,16 +426,16 @@ static int parse_advanced_host_topo_info(bool enable_sysfs_topology, struct pal_
     PAL_NUMA_TOPO_INFO* numa_topology;
 
     uint64_t cores  = g_pal_sec.online_logical_cores;
-    int64_t nodes   = (int64_t)ti->num_online_nodes;
-    int64_t caches  = (int64_t)ti->num_cache_index;
+    int64_t nodes   = (int64_t)ti->online_nodes_cnt;
+    int64_t caches  = (int64_t)ti->cache_indices_cnt;
 
     if (!IS_IN_RANGE_INCL(nodes, 1, 1 << 8)) {
-        log_error("Invalid sec_info.topo_info.num_online_nodes: %ld", nodes);
+        log_error("Invalid sec_info.topo_info.online_nodes_cnt: %ld", nodes);
         return -1;
     }
 
     if (!IS_IN_RANGE_INCL(caches, 1, 1 << 4)) {
-        log_error("Invalid sec_info.topo_info.num_cache_index: %ld", caches);
+        log_error("Invalid sec_info.topo_info.cache_indices_cnt: %ld", caches);
         return -1;
     }
 
@@ -508,8 +508,8 @@ static int parse_advanced_host_topo_info(bool enable_sysfs_topology, struct pal_
         return -1;
     }
 
-    g_pal_sec.topo_info.num_online_nodes = nodes;
-    g_pal_sec.topo_info.num_cache_index = caches;
+    g_pal_sec.topo_info.online_nodes_cnt = nodes;
+    g_pal_sec.topo_info.cache_indices_cnt = caches;
 
     COPY_ARRAY(g_pal_sec.topo_info.online_logical_cores, ti->online_logical_cores);
     COPY_ARRAY(g_pal_sec.topo_info.possible_logical_cores, ti->possible_logical_cores);

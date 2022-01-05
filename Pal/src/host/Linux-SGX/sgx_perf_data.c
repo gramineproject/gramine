@@ -48,7 +48,7 @@
 #define BUF_SIZE (32 * 1024 * 1024)
 
 /* Registers to sample - see arch/x86/include/uapi/asm/perf_regs.h */
-#define NUM_SAMPLE_REGS 18
+#define SAMPLE_REGS_CNT 18
 #define SAMPLE_REGS ((1 << PERF_REG_X86_AX)    | \
                      (1 << PERF_REG_X86_BX)    | \
                      (1 << PERF_REG_X86_CX)    | \
@@ -389,7 +389,7 @@ int pd_event_sample_stack(struct perf_data* pd, uint64_t ip, uint32_t pid, uint3
 
         struct {
             uint64_t abi;
-            uint64_t regs[NUM_SAMPLE_REGS];
+            uint64_t regs[SAMPLE_REGS_CNT];
         } regs;
     } extra = {
         .callchain = {
