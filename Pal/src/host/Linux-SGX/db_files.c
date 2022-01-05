@@ -198,6 +198,28 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     sgx_chunk_hash_t* chunk_hashes;
     uint64_t total;
     void* umem;
+
+    char* file_uri = malloc(URI_MAX);
+    if (!file_uri)
+        return -PAL_ERROR_NOMEM;
+
+    ret = _DkStreamGetName(hdl, file_uri, URI_MAX);
+    if (ret < 0) {
+        free(file_uri);
+        return ret;
+    }
+
+    PAL_STREAM_ATTR attr;
+    ret = _DkStreamAttributesQuery(file_uri, &attr);
+    if (ret < 0) {
+        log_error("Could not find size of file: %s\n", file_uri);
+        free(file_uri);
+        return ret;
+    }
+
+    free(file_uri);
+    tf->size = attr.pending_size;
+
     ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
     if (ret < 0)
         goto fail;
