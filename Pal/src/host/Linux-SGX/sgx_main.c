@@ -732,6 +732,31 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     /* EPID is used if SPID is a non-empty string in manifest, otherwise DCAP/ECDSA */
     enclave_info->use_epid_attestation = sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str);
 
+    /* check if not-security-critical HW features should be disabled for XSAVE/AEX performance */
+    ret = toml_bool_in(manifest_root, "sgx.disable_avx", /*defaultval=*/false,
+                       &enclave_info->avx_disabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.disable_avx' (the value must be `true` or `false`)");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_bool_in(manifest_root, "sgx.disable_avx512", /*defaultval=*/false,
+                       &enclave_info->avx512_disabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.disable_avx512' (the value must be `true` or `false`)");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_bool_in(manifest_root, "sgx.disable_amx", /*defaultval=*/false,
+                       &enclave_info->amx_disabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.disable_amx' (the value must be `true` or `false`)");
+        ret = -EINVAL;
+        goto out;
+    }
+
     char* profile_str = NULL;
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
     if (ret < 0) {
