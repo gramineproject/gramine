@@ -53,6 +53,11 @@ struct pal_enclave {
     bool use_epid_attestation; /* Valid only if `remote_attestation_enabled` is true, selects
                                 * EPID/DCAP attestation scheme. */
 
+    /* disable not-security-critical HW features (for performance of XSAVE/XRSTOR/AEX) */
+    bool avx_disabled;
+    bool avx512_disabled;
+    bool amx_disabled;
+
     /* files */
     int sigfile;
     int token;
