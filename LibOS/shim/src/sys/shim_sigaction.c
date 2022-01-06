@@ -30,7 +30,7 @@
 long shim_do_rt_sigaction(int signum, const struct __kernel_sigaction* act,
                           struct __kernel_sigaction* oldact, size_t sigsetsize) {
     /* SIGKILL and SIGSTOP cannot be caught or ignored */
-    if (signum == SIGKILL || signum == SIGSTOP || signum <= 0 || signum > NUM_SIGS ||
+    if (signum == SIGKILL || signum == SIGSTOP || signum <= 0 || signum > SIGS_CNT ||
             sigsetsize != sizeof(__sigset_t))
         return -EINVAL;
 
@@ -323,7 +323,7 @@ long shim_do_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
 
     /* ...and not ignored. */
     lock(&current->signal_dispositions->lock);
-    for (int sig = 1; sig <= NUM_SIGS; sig++) {
+    for (int sig = 1; sig <= SIGS_CNT; sig++) {
         if (current->signal_dispositions->actions[sig - 1].k_sa_handler == SIG_IGN) {
             __sigdelset(set, sig);
         }
@@ -431,7 +431,7 @@ int do_kill_pgroup(IDTYPE sender, IDTYPE pgid, int sig) {
 }
 
 long shim_do_kill(pid_t pid, int sig) {
-    if (sig < 0 || sig > NUM_SIGS) {
+    if (sig < 0 || sig > SIGS_CNT) {
         return -EINVAL;
     }
 
@@ -460,7 +460,7 @@ long shim_do_kill(pid_t pid, int sig) {
 }
 
 int do_kill_thread(IDTYPE sender, IDTYPE tgid, IDTYPE tid, int sig) {
-    if (sig < 0 || sig > NUM_SIGS)
+    if (sig < 0 || sig > SIGS_CNT)
         return -EINVAL;
 
     if (g_process.pid != tgid) {
