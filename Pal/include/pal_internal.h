@@ -223,9 +223,11 @@ int _DkSystemTimeQuery(uint64_t* out_usec);
  * 0 on success, negative on failure.
  */
 int _DkRandomBitsRead(void* buffer, size_t size);
+
+double _DkGetBogomips(void);
 int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
-int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]);
+int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]);
 int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
                          void* target_info, PAL_NUM* target_info_size, void* report,
                          PAL_NUM* report_size);

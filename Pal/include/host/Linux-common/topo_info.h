@@ -20,7 +20,7 @@ int get_hw_resource(const char* filename, bool count);
 /* Reads up to count bytes from the file into the buf passed.
  * Returns 0 or number of bytes read on success and UNIX error code on failure.
  */
-int read_file_buffer(const char* filename, char* buf, size_t count);
+ssize_t read_file_buffer(const char* filename, char* buf, size_t count);
 /* Fills topo_info with CPU and NUMA topology from the host */
 int get_topology_info(struct pal_topo_info* topo_info);
 

@@ -27,7 +27,7 @@ int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
+int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -55,4 +55,9 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
 int _DkSetProtectedFilesKey(const char* pf_key_hex) {
     __UNUSED(pf_key_hex);
     return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
+double _DkGetBogomips(void) {
+    /* this has to be implemented */
+    return 0.0;
 }
