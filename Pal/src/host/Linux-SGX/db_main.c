@@ -247,35 +247,35 @@ static long sanitize_hw_resource_count(const char* buf, bool ordered) {
 
 static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cache_indices_cnt,
                                         int64_t cores_cnt) {
-    for (int64_t lvl = 0; lvl < cache_indices_cnt; lvl++) {
-        int64_t shared_cpu_map = count_bits_set_from_resource_map(cache[lvl].shared_cpu_map);
+    for (int64_t idx = 0; idx < cache_indices_cnt; idx++) {
+        int64_t shared_cpu_map = count_bits_set_from_resource_map(cache[idx].shared_cpu_map);
         if (!IS_IN_RANGE_INCL(shared_cpu_map, 1, cores_cnt))
             return -EINVAL;
 
-        int64_t level = extract_long_from_buffer(cache[lvl].level);
+        int64_t level = extract_long_from_buffer(cache[idx].level);
         if (!IS_IN_RANGE_INCL(level, 1, 3))      /* x86 processors have max of 3 cache levels */
             return -EINVAL;
 
-        char* type = cache[lvl].type;
+        char* type = cache[idx].type;
         if (!strstartswith(type, "Data") && !strstartswith(type, "Instruction") &&
             !strstartswith(type, "Unified")) {
             return -EINVAL;
         }
 
-        int64_t size = extract_long_from_buffer(cache[lvl].size);
+        int64_t size = extract_long_from_buffer(cache[idx].size);
         if (!IS_IN_RANGE_INCL(size, 1, 1 << 30))
             return -EINVAL;
 
-        int64_t coherency_line_size = extract_long_from_buffer(cache[lvl].coherency_line_size);
+        int64_t coherency_line_size = extract_long_from_buffer(cache[idx].coherency_line_size);
         if (!IS_IN_RANGE_INCL(coherency_line_size, 1, 1 << 16))
             return -EINVAL;
 
-        int64_t number_of_sets = extract_long_from_buffer(cache[lvl].number_of_sets);
+        int64_t number_of_sets = extract_long_from_buffer(cache[idx].number_of_sets);
         if (!IS_IN_RANGE_INCL(number_of_sets, 1, 1 << 30))
             return -EINVAL;
 
         int64_t physical_line_partition =
-            extract_long_from_buffer(cache[lvl].physical_line_partition);
+            extract_long_from_buffer(cache[idx].physical_line_partition);
         if (!IS_IN_RANGE_INCL(physical_line_partition, 1, 1 << 16))
             return -EINVAL;
     }

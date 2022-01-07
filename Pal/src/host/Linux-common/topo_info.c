@@ -143,37 +143,37 @@ static int get_cache_topo_info(int cache_indices_cnt, int core_idx,
         return -ENOMEM;
     }
 
-    for (int lvl = 0; lvl < cache_indices_cnt; lvl++) {
+    for (int cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
+        PAL_CORE_CACHE_INFO* cache = &core_cache[cache_idx];
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/shared_cpu_map", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].shared_cpu_map, /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/shared_cpu_map", core_idx, cache_idx);
+        READ_FILE_BUFFER(filename, cache->shared_cpu_map, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/level", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].level, /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/level", core_idx, cache_idx);
+        READ_FILE_BUFFER(filename, cache->level, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/type", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].type, /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/type", core_idx, cache_idx);
+        READ_FILE_BUFFER(filename, cache->type, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/size", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].size, /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/size", core_idx, cache_idx);
+        READ_FILE_BUFFER(filename, cache->size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/coherency_line_size", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].coherency_line_size,
-                         /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/coherency_line_size", core_idx,
+                 cache_idx);
+        READ_FILE_BUFFER(filename, cache->coherency_line_size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/number_of_sets", core_idx, lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].number_of_sets, /*failure_label=*/out_cache);
+                 "/sys/devices/system/cpu/cpu%d/cache/index%d/number_of_sets", core_idx, cache_idx);
+        READ_FILE_BUFFER(filename, cache->number_of_sets, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%d/cache/index%d/physical_line_partition", core_idx,
-                 lvl);
-        READ_FILE_BUFFER(filename, core_cache[lvl].physical_line_partition,
-                         /*failure_label=*/out_cache);
+                 cache_idx);
+        READ_FILE_BUFFER(filename, cache->physical_line_partition, /*failure_label=*/out_cache);
     }
     *cache_info = core_cache;
     return 0;
