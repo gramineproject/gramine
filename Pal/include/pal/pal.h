@@ -775,7 +775,7 @@ int DkSetProtectedFilesKey(const char* pf_key_hex);
  *
  * \param[out] values the array of the results
  */
-int DkCpuIdRetrieve(PAL_IDX leaf, PAL_IDX subleaf, PAL_IDX values[CPUID_WORD_NUM]);
+int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[CPUID_WORD_NUM]);
 #endif
 
 void DkDebugMapAdd(const char* uri, PAL_PTR start_addr);

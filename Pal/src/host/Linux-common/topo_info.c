@@ -79,12 +79,12 @@ int get_hw_resource(const char* filename, bool count) {
     return retval;
 }
 
-int read_file_buffer(const char* filename, char* buf, size_t count) {
+ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
     int fd = DO_SYSCALL(open, filename, O_RDONLY);
     if (fd < 0)
         return fd;
 
-    int ret = DO_SYSCALL(read, fd, buf, count);
+    ssize_t ret = DO_SYSCALL(read, fd, buf, count);
     DO_SYSCALL(close, fd);
     if (ret < 0)
         return ret;
