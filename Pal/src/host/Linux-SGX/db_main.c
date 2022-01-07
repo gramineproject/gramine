@@ -245,9 +245,9 @@ static long sanitize_hw_resource_count(const char* buf, bool ordered) {
     return (long)resource_cnt ?: -EINVAL;
 }
 
-static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cache_lvls_cnt,
+static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cache_indices_cnt,
                                         int64_t cores_cnt) {
-    for (int64_t lvl = 0; lvl < cache_lvls_cnt; lvl++) {
+    for (int64_t lvl = 0; lvl < cache_indices_cnt; lvl++) {
         int64_t shared_cpu_map = count_bits_set_from_resource_map(cache[lvl].shared_cpu_map);
         if (!IS_IN_RANGE_INCL(shared_cpu_map, 1, cores_cnt))
             return -EINVAL;
@@ -283,8 +283,8 @@ static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache, int64_t cach
 }
 
 static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_t cores_cnt,
-                                       int64_t cache_lvls_cnt) {
-    if (cores_cnt == 0 || cache_lvls_cnt == 0)
+                                       int64_t cache_indices_cnt) {
+    if (cores_cnt == 0 || cache_indices_cnt == 0)
         return -ENOENT;
 
     for (int64_t idx = 0; idx < cores_cnt; idx++) {
@@ -308,7 +308,8 @@ static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology, int64_
         if (!IS_IN_RANGE_INCL(thread_siblings, 1, 4)) /* x86 processors have max of 4 SMT siblings */
             return -EINVAL;
 
-        if (sanitize_cache_topology_info(core_topology[idx].cache, cache_lvls_cnt, cores_cnt) < 0)
+        if (sanitize_cache_topology_info(core_topology[idx].cache, cache_indices_cnt,
+                                         cores_cnt) < 0)
             return -EINVAL;
     }
     return 0;
