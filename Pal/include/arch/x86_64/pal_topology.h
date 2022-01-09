@@ -22,17 +22,6 @@ enum {
     HUGEPAGES_MAX,
 };
 
-/* PAL_CPU_INFO holds /proc/cpuinfo data */
-typedef struct PAL_CPU_INFO_ {
-    const char* cpu_vendor;
-    const char* cpu_brand;
-    PAL_NUM cpu_family;
-    PAL_NUM cpu_model;
-    PAL_NUM cpu_stepping;
-    double cpu_bogomips;
-    const char* cpu_flags;
-} PAL_CPU_INFO;
-
 typedef struct PAL_CORE_CACHE_INFO_ {
     char shared_cpu_map[PAL_SYSFS_MAP_FILESZ];
     char level[PAL_SYSFS_INT_FILESZ];
@@ -63,11 +52,6 @@ typedef struct PAL_NUMA_TOPO_INFO_ {
 } PAL_NUMA_TOPO_INFO;
 
 struct pal_topo_info {
-    /* TODO: should this be moved out to `pal_public_state` or kept here? We don't need to take this
-     * from the untrusted host as a start argument (but the rest of this struct _is_ used this
-     * way). */
-    PAL_CPU_INFO cpu_info;
-
     /* Number of logical cores available on the host. */
     PAL_NUM online_logical_cores_cnt;
 

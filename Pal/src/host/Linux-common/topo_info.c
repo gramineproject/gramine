@@ -208,7 +208,7 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     topo_info->cache_indices_cnt = cache_indices_cnt;
 
     int possible_logical_cores_cnt = get_hw_resource("/sys/devices/system/cpu/possible",
-                                                 /*count=*/true);
+                                                     /*count=*/true);
     if (possible_logical_cores_cnt < 0) {
         return possible_logical_cores_cnt;
     }

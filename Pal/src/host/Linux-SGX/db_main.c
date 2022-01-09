@@ -684,7 +684,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
-    // TODO: change to `copy_and_sanitize_topo_info()`
+    // TODO: Change to `copy_and_sanitize_topo_info()` (a single API which securely imports and
+    // sanitizes the topology description).
     struct pal_topo_info topo_info;
     if (!sgx_copy_to_enclave(&topo_info, sizeof(topo_info),
                              uptr_topo_info, sizeof(*uptr_topo_info))) {

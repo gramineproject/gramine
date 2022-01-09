@@ -114,7 +114,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     } while (0)
 
     const struct pal_topo_info* ti = &g_pal_public_state->topo_info;
-    const PAL_CPU_INFO* ci = &ti->cpu_info;
+    const PAL_CPU_INFO* ci = &g_pal_public_state->cpu_info;
     for (size_t i = 0; i < ti->online_logical_cores_cnt; i++) {
         /* Below strings must match exactly the strings retrieved from /proc/cpuinfo
          * (see Linux's arch/x86/kernel/cpu/proc.c) */

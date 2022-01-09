@@ -177,9 +177,13 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
     return xfrm & feature_bit;
 }
 
-/**
- * Sanitize untrusted CPUID inputs.
+/*!
+ * \brief Sanitize untrusted CPUID inputs.
  *
+ * \param[in] leaf       CPUID leaf
+ * \param[in] subleaf    CPUID subleaf
+ * \param[in,out] values untrusted result to sanitize
+ * 
  * The basic idea is that there are only a handful of extensions and we know the size needed to
  * store each extension's state. Use this to sanitize host's untrusted cpuid output. We also know
  * through xfrm what extensions are enabled inside the enclave.
@@ -837,7 +841,7 @@ out_vendor_id:
     return rv;
 }
 
-// TODO: Refactor and remove? Or move the parsing from db_main:pal_linux_main to here?
+// TODO: Move the parsing from db_main:pal_linux_main to here.
 int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
     __UNUSED(topo_info);
     return 0;
