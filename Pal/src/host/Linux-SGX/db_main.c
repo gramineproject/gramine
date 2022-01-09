@@ -402,7 +402,6 @@ static int parse_host_topo_info(struct pal_topo_info* topo_info) {
         return -1;
     }
 
-    /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
     memset(&g_pal_public_state.topo_info, 0, sizeof(g_pal_public_state.topo_info));
     g_pal_public_state.topo_info.online_logical_cores_cnt = online_logical_cores_cnt;
     g_pal_public_state.topo_info.possible_logical_cores_cnt = possible_logical_cores_cnt;
@@ -684,8 +683,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
-    // TODO: Change to `copy_and_sanitize_topo_info()` (a single API which securely imports and
-    // sanitizes the topology description).
+    /* TODO: Change to `copy_and_sanitize_topo_info()` (a single API which securely imports and
+     * sanitizes the topology description). */
     struct pal_topo_info topo_info;
     if (!sgx_copy_to_enclave(&topo_info, sizeof(topo_info),
                              uptr_topo_info, sizeof(*uptr_topo_info))) {

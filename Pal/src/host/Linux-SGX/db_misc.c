@@ -188,7 +188,7 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
  * store each extension's state. Use this to sanitize host's untrusted cpuid output. We also know
  * through xfrm what extensions are enabled inside the enclave.
  */
-static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4] /* in/out */) {
+static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
     if (leaf == CPU_VENDOR_LEAF) {
