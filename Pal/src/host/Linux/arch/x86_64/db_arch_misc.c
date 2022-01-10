@@ -75,7 +75,7 @@ static const char* const g_cpu_flags[] = {
     "pbe",    // "pending break event"
 };
 
-int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
+int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
 

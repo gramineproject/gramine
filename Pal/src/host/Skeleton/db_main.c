@@ -18,7 +18,7 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     /* needs to be implemented */
 }
 
-int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
+int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     /* needs to be implemented */
     return 0;
 }

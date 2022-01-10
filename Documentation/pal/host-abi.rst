@@ -91,9 +91,7 @@ memorized in a global variable for ease of use.
 PAL public state - topology information
 """""""""""""""""""""""""""""""""""""""
 
-.. doxygentypedef:: PAL_CPU_INFO
-   :project: pal
-.. doxygenstruct:: PAL_CPU_INFO_
+.. doxygenstruct:: pal_cpu_info
    :project: pal
    :members:
 
