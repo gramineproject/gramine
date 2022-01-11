@@ -48,6 +48,7 @@ int init_procfs(void) {
 
     pseudo_add_str(root, "meminfo", &proc_meminfo_load);
     pseudo_add_str(root, "cpuinfo", &proc_cpuinfo_load);
+    pseudo_add_str(root, "stat", &proc_stat_load);
 
     pseudo_add_link(root, "self", &proc_self_follow_link);
 

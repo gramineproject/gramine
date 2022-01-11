@@ -74,6 +74,7 @@ tests = {
     'proc_common': {},
     'proc_cpuinfo': {},
     'proc_path': {},
+    'proc_stat': {},
     'pselect': {},
     'pthread_set_get_affinity': {},
     'readdir': {},
