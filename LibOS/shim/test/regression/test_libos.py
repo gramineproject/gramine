@@ -793,6 +793,7 @@ class TC_40_FileSystem(RegressionTestCase):
 
         self.assertIn('/proc/meminfo: file', lines)
         self.assertIn('/proc/cpuinfo: file', lines)
+        self.assertIn('/proc/stat: file', lines)
 
         # /proc/self, /proc/[pid]
         self.assertIn('/proc/self: link: 2', lines)
@@ -850,6 +851,12 @@ class TC_40_FileSystem(RegressionTestCase):
 
         # proc/cpuinfo Linux-based formatting
         self.assertIn('cpuinfo test passed', stdout)
+
+    def test_021_procstat(self):
+        stdout, _ = self.run_binary(['proc_stat'], timeout=50)
+
+        # proc/stat Linux-based formatting
+        self.assertIn('/proc/stat test passed', stdout)
 
     def test_030_fdleak(self):
         stdout, _ = self.run_binary(['fdleak'], timeout=10)
