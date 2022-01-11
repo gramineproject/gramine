@@ -188,11 +188,22 @@ static void split_vma(struct shim_vma* old_vma, struct shim_vma* new_vma, uintpt
 
     copy_vma(old_vma, new_vma);
     new_vma->begin = addr;
+    old_vma->end = addr;
+
     if (new_vma->file) {
         new_vma->offset += new_vma->begin - old_vma->begin;
-    }
 
-    old_vma->end = addr;
+        /* new VMA may start past the end of the associated file: remove the association (to avoid
+         * unnecessary file reopen/mmap during checkpoint restore, see BEGIN_RS_FUNC(vma)) */
+        uint64_t file_size = 0;
+        get_file_size(new_vma->file, &file_size);
+        if (new_vma->offset >= file_size) {
+            put_handle(new_vma->file);
+            new_vma->file   = NULL;
+            new_vma->offset = 0;
+            new_vma->flags &= ~VMA_TAINTED;
+        }
+    }
 }
 
 /*
@@ -1303,7 +1314,6 @@ BEGIN_RS_FUNC(vma) {
             get_handle(vma->file);
 
             if (need_mapped < vma->addr + vma->length) {
-                /* first try, use hstat to force it resumes pal handle */
                 if (!fs || !fs->fs_ops || !fs->fs_ops->mmap) {
                     return -EINVAL;
                 }
