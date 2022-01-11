@@ -86,17 +86,6 @@ typedef struct PAL_PTR_RANGE_ {
 
 /********** PAL APIs **********/
 
-/* holds /proc/cpuinfo data */
-struct pal_cpu_info {
-    const char* cpu_vendor;
-    const char* cpu_brand;
-    PAL_NUM cpu_family;
-    PAL_NUM cpu_model;
-    PAL_NUM cpu_stepping;
-    double cpu_bogomips;
-    const char* cpu_flags;
-};
-
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
  * started by PAL (usually our LibOS). */
 struct pal_public_state {

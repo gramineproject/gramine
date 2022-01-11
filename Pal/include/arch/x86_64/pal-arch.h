@@ -62,6 +62,17 @@ static inline unsigned long count_ulong_bits_set(unsigned long x) {
     return result;
 }
 
+/* holds /proc/cpuinfo data */
+struct pal_cpu_info {
+    const char* cpu_vendor;
+    const char* cpu_brand;
+    PAL_NUM cpu_family;
+    PAL_NUM cpu_model;
+    PAL_NUM cpu_stepping;
+    double cpu_bogomips;
+    const char* cpu_flags;
+};
+
 union pal_csgsfs {
     struct {
         uint16_t cs;
