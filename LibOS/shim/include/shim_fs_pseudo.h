@@ -175,6 +175,7 @@ extern struct shim_fs pseudo_builtin_fs;
 int init_procfs(void);
 int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
+int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int proc_self_follow_link(struct shim_dentry* dent, char** out_target);
 bool proc_thread_pid_name_exists(struct shim_dentry* parent, const char* name);
 int proc_thread_pid_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
