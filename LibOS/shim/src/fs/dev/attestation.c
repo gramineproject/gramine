@@ -86,11 +86,11 @@ static int user_report_data_save(struct shim_dentry* dent, const char* data, siz
 }
 
 /*!
- * \brief Modify target info used in `report` and `quote` pseudo-files.
+ * \brief Modify target info used in `report` pseudo-file.
  *
  * This file `/dev/attestation/target_info` can be opened for read and write. Typically, it is
- * opened and written into before opening and reading from `/dev/attestation/report` or
- * `/dev/attestation/quote` files, so they can use the provided target info.
+ * opened and written into before opening and reading from `/dev/attestation/report` file, so the
+ * latter can use the provided target info.
  *
  * In case of SGX, target info is an opaque blob of size 512B.
  */

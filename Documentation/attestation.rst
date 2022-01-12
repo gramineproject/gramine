@@ -10,23 +10,24 @@ initial state.
 There are two types of attestation: :term:`Local Attestation` and
 :term:`Remote Attestation`. Local attestation is used when two TEEs run on the
 same physical machine and remote attestation is used when a user attests a TEE
-running on a remote physical machine. In the following, we discuss only
-:term:`Remote Attestation`. Moreover, even though Gramine attestation flows are
-designed to be TEE-agnostic, we discuss only :term:`SGX` remote attestation
-flows (the SGX flows are currently the only ones implemented).
+running on a remote physical machine. In the following, even though Gramine
+attestation flows are designed to be TEE-agnostic, we discuss only :term:`SGX`
+attestation flows (the SGX flows are currently the only ones implemented).
 
-By itself, attestation only provides the assurance to the user that the remotely
-executing TEE is trusted, that the correct code is executed and that the data is
-processed securely. In addition to this assurance, the user needs to create a
-:term:`Secure Channel` for trusted communication with the remote TEE. In many
-cases, the user also wants :term:`Secret Provisioning` to transparently
+By itself, remote attestation only provides the assurance to the user that the
+remotely executing TEE is trusted, that the correct code is executed and that
+the data is processed securely. In addition to this assurance, the user needs to
+create a :term:`Secure Channel` for trusted communication with the remote TEE.
+In many cases, the user also wants :term:`Secret Provisioning` to transparently
 provision secret keys and other sensitive data to the remote TEE.
 
 Gramine provides support for all three levels of attestation flows:
 
-#. :term:`Remote Attestation` is exposed to the application via
-   ``/dev/attestation`` pseudo-filesystem. Remote attestation in Gramine uses
-   the Intel SGX PSW's AESM service and the Intel DCAP libraries under the hood.
+#. :term:`Local Attestation` and :term:`Remote Attestation` are exposed to the
+   application via ``/dev/attestation`` pseudo-filesystem. SGX local attestation
+   in Gramine relies on the ``EREPORT`` hardware instruction. SGX remote
+   attestation uses the Intel SGX PSW's AESM service and the Intel IAS service
+   (for EPID flows) or DCAP libraries (for ECDSA/DCAP flows) under the hood.
 
 #. :term:`Secure Channel` is constructed using the RA-TLS libraries.
    :term:`RA-TLS` uses raw ``/dev/attestation`` pseudo-files under the hood.
@@ -114,37 +115,54 @@ Low-level ``/dev/attestation`` interface
 
 The first level of the ``/dev/attestation`` pseudo-filesystem exposes the
 low-level abstractions of *attestation report* and *attestation quote* objects
-(:term:`SGX Report` and :term:`SGX Quote` in SGX parlance), in the form of two
-pseudo-files:
+(:term:`SGX Report` and :term:`SGX Quote` in SGX parlance), in the form of the
+below pseudo-files:
 
 - ``/dev/attestation/user_report_data`` pseudo-file can be opened for read or
   write access. Typically, it is opened and written into before opening and
-  reading from the ``/dev/attestation/quote`` file, such that the latter can use
-  the user-provided report data. In case of Intel SGX, user report data can be
-  an arbitrary string of size 64B; this string is embedded in the SGX quote.
+  reading from the ``/dev/attestation/report`` and ``/dev/attestation/quote``
+  files, such that they can use the user-provided report data. In case of Intel
+  SGX, user report data can be an arbitrary string of size 64B; this string is
+  embedded in the SGX report/quote.
 
-- ``/dev/attestation/quote`` pseudo-file can be opened for read access. Before
-  opening this file for read, user report data must be written into
-  ``/dev/attestation/user_report_data``. Otherwise the obtained attestation
-  quote will contain incorrect or stale user report data.
+- ``/dev/attestation/target_info`` pseudo-file can be opened for read and write.
+  Typically, it is opened and written into before opening and reading from the
+  ``/dev/attestation/report`` file, such that the latter can use the provided
+  target info. In case of Intel SGX, target info is an opaque blob of size 512B.
 
-  The resulting quote can be passed to another TEE or service as part of the
-  remote attestation flow. In case of Intel SGX, the obtained quote is the SGX
-  quote created by the :term:`Quoting Enclave`.
+- ``/dev/attestation/my_target_info`` pseudo-file can be opened for read and
+  will contain the target info of this enclave. The resulting target info blob
+  can be passed to another enclave as part of the local attestation flow. In
+  case of Intel SGX, target info is an opaque blob of size 512B.
 
-Using these two files, the user application may construct arbitrary attestation
+- ``/dev/attestation/report`` pseudo-file can be opened for read and will
+  contain the SGX report. Before opening this file for read, user report data
+  must be written into ``/dev/attestation/user_report_data`` and target info
+  must be written into ``/dev/attestation/target_info``. Otherwise the obtained
+  report will contain incorrect or stale user report data and target info.
+
+- ``/dev/attestation/quote`` pseudo-file can be opened for read and will contain
+  the SGX quote. Before opening this file for read, user report data must be
+  written into ``/dev/attestation/user_report_data``. Otherwise the obtained
+  attestation quote will contain incorrect or stale user report data.
+
+The resulting report can be passed to another TEE as part of the local
+attestation flow. In case of Intel SGX, the obtained report is the SGX report
+created by the ``EREPORT`` hardware instruction.
+
+The resulting quote can be passed to another TEE or service as part of the
+remote attestation flow. In case of Intel SGX, the obtained quote is the SGX
+quote created by the :term:`Quoting Enclave` (accessed via the AESM service).
+
+Using the above files, the user application may construct arbitrary attestation
 flows. Typically, the application will write a secure hash of the unique public
 key generated by the TEE instance into ``/dev/attestation/user_report_data``,
 such that when the remote user receives the SGX quote (with user report data
 embedded), the remote user can tie the TEE instance to the TEE's public key.
 
-In case of Intel SGX, the ``/dev/attestation/user_report_data`` pseudo-file uses
-the ``EREPORT`` hardware instruction and the ``/dev/attestation/quote``
-pseudo-file uses the Quoting Enclave accessed via the AESM service.
-
 Please note that these files are process-local, so there is no need to add
-locking between processes when setting the user report data or reading the
-quote.
+locking between processes when setting the user report data/target info or
+reading the report/quote.
 
 An example of this low-level interface can be found under
 ``LibOS/shim/test/regression/attestation.c``. Here is a C code snippet of how
