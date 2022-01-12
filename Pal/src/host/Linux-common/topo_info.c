@@ -16,6 +16,7 @@
 #include "syscall.h"
 #include "topo_info.h"
 
+/* TODO: This shouldn't mix error code and returned value in one variable. */
 int get_hw_resource(const char* filename, bool count) {
     int fd = DO_SYSCALL(open, filename, O_RDONLY | O_CLOEXEC, 0);
     if (fd < 0)
@@ -102,6 +103,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
 
 /* Returns number of cache levels present on this system by counting "indexX" dir entries under
  * `/sys/devices/system/cpu/cpuX/cache` on success and negative UNIX error code on failure. */
+/* TODO: This shouldn't mix error code and returned value in one variable. */
 static int get_cache_levels_cnt(const char* path) {
     char buf[1024];
     int dirs_cnt = 0;
@@ -133,7 +135,7 @@ out:
     return dirs_cnt ?: -ENOENT;
 }
 
-static int get_cache_topo_info(int cache_indices_cnt, int core_idx,
+static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
                                PAL_CORE_CACHE_INFO** cache_info) {
     int ret;
     char filename[128];
@@ -143,35 +145,37 @@ static int get_cache_topo_info(int cache_indices_cnt, int core_idx,
         return -ENOMEM;
     }
 
-    for (int cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
+    for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
         PAL_CORE_CACHE_INFO* cache = &core_cache[cache_idx];
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/shared_cpu_map", core_idx, cache_idx);
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", core_idx,
+                 cache_idx);
         READ_FILE_BUFFER(filename, cache->shared_cpu_map, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/level", core_idx, cache_idx);
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/level", core_idx, cache_idx);
         READ_FILE_BUFFER(filename, cache->level, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/type", core_idx, cache_idx);
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/type", core_idx, cache_idx);
         READ_FILE_BUFFER(filename, cache->type, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/size", core_idx, cache_idx);
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/size", core_idx, cache_idx);
         READ_FILE_BUFFER(filename, cache->size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/coherency_line_size", core_idx,
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/coherency_line_size", core_idx,
                  cache_idx);
         READ_FILE_BUFFER(filename, cache->coherency_line_size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/number_of_sets", core_idx, cache_idx);
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/number_of_sets", core_idx,
+                 cache_idx);
         READ_FILE_BUFFER(filename, cache->number_of_sets, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/cache/index%d/physical_line_partition", core_idx,
+                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition", core_idx,
                  cache_idx);
         READ_FILE_BUFFER(filename, cache->physical_line_partition, /*failure_label=*/out_cache);
     }
@@ -197,58 +201,61 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     READ_FILE_BUFFER("/sys/devices/system/cpu/possible", topo_info->possible_logical_cores,
                      /*failure_label=*/out);
 
-    int online_logical_cores_cnt = get_hw_resource("/sys/devices/system/cpu/online", /*count=*/true);
-    if (online_logical_cores_cnt < 0)
-        return online_logical_cores_cnt;
+    ret = get_hw_resource("/sys/devices/system/cpu/online", /*count=*/true);
+    if (ret < 0)
+        return ret;
+    size_t online_logical_cores_cnt = (size_t)ret;
     topo_info->online_logical_cores_cnt = online_logical_cores_cnt;
 
-    int cache_indices_cnt = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache");
-    if (cache_indices_cnt < 0)
-        return cache_indices_cnt;
+    ret = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache");
+    if (ret < 0)
+        return ret;
+    size_t cache_indices_cnt = (size_t)ret;
     topo_info->cache_indices_cnt = cache_indices_cnt;
 
-    int possible_logical_cores_cnt = get_hw_resource("/sys/devices/system/cpu/possible",
-                                                     /*count=*/true);
-    if (possible_logical_cores_cnt < 0) {
-        return possible_logical_cores_cnt;
+    ret = get_hw_resource("/sys/devices/system/cpu/possible", /*count=*/true);
+    if (ret < 0) {
+        return ret;
     }
+    size_t possible_logical_cores_cnt = (size_t)ret;
     topo_info->possible_logical_cores_cnt = possible_logical_cores_cnt;
 
     /* TODO: correctly support offline cores */
-    if (possible_logical_cores_cnt > 0 && possible_logical_cores_cnt > online_logical_cores_cnt) {
-         log_warning("some CPUs seem to be offline; Gramine doesn't take this into account which "
-                     "may lead to subpar performance");
+    if (possible_logical_cores_cnt > online_logical_cores_cnt) {
+        log_warning("some CPUs seem to be offline; Gramine doesn't take this into account which "
+                    "may lead to subpar performance");
     }
 
-    int core_siblings = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/core_siblings_list",
-                                        /*count=*/true);
-    if (core_siblings < 0) {
-        return core_siblings;
+    ret = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/core_siblings_list",
+                          /*count=*/true);
+    if (ret < 0) {
+        return ret;
     }
-
-    int smt_siblings = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/thread_siblings_list",
-                                       /*count=*/true);
-    if (smt_siblings < 0) {
-        return smt_siblings;
+    size_t core_siblings_cnt = (size_t)ret;
+    ret = get_hw_resource("/sys/devices/system/cpu/cpu0/topology/thread_siblings_list",
+                          /*count=*/true);
+    if (ret < 0) {
+        return ret;
     }
-    topo_info->physical_cores_per_socket = core_siblings / smt_siblings;
+    size_t smt_siblings_cnt = (size_t)ret;
+    topo_info->physical_cores_per_socket = core_siblings_cnt / smt_siblings_cnt;
 
     /* array of "logical core -> socket" mappings */
-    int* cpu_to_socket = (int*)malloc(online_logical_cores_cnt * sizeof(int));
+    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
     if (!cpu_to_socket) {
         return -ENOMEM;
     }
 
     char filename[128];
-    for (int idx = 0; idx < online_logical_cores_cnt; idx++) {
+    for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", idx);
-        cpu_to_socket[idx] = get_hw_resource(filename, /*count=*/false);
-        if (cpu_to_socket[idx] < 0) {
+                 "/sys/devices/system/cpu/cpu%zu/topology/physical_package_id", idx);
+        ret = get_hw_resource(filename, /*count=*/false);
+        if (ret < 0) {
             log_warning("Cannot read %s", filename);
-            ret = cpu_to_socket[idx];
             goto out_cpu_to_socket;
         }
+        cpu_to_socket[idx] = (size_t)ret;
     }
     topo_info->cpu_to_socket = cpu_to_socket;
 
@@ -257,24 +264,24 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     if (!core_topology)
         return -ENOMEM;
 
-    for (int idx = 0; idx < online_logical_cores_cnt; idx++) {
+    for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
         /* cpu0 is always online and thus the "online" file is not present. */
         if (idx != 0) {
-            snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%d/online", idx);
+            snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/online", idx);
             READ_FILE_BUFFER(filename, core_topology[idx].is_logical_core_online,
                              /*failure_label=*/out_topology);
         }
 
-        snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%d/topology/core_id", idx);
+        snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/topology/core_id", idx);
         READ_FILE_BUFFER(filename, core_topology[idx].core_id, /*failure_label=*/out_topology);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/topology/core_siblings", idx);
+                 "/sys/devices/system/cpu/cpu%zu/topology/core_siblings", idx);
         READ_FILE_BUFFER(filename, core_topology[idx].core_siblings,
                          /*failure_label=*/out_topology);
 
         snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%d/topology/thread_siblings", idx);
+                 "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings", idx);
         READ_FILE_BUFFER(filename, core_topology[idx].thread_siblings,
                          /*failure_label=*/out_topology);
 
@@ -299,9 +306,10 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
     READ_FILE_BUFFER("/sys/devices/system/node/online", topo_info->online_nodes,
                      /*failure_label=*/out);
 
-    int nodes_cnt = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
-    if (nodes_cnt < 0)
-        return nodes_cnt;
+    ret = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
+    if (ret < 0)
+        return ret;
+    size_t nodes_cnt = (size_t)ret;
     topo_info->online_nodes_cnt = nodes_cnt;
 
     PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes_cnt *
@@ -310,11 +318,11 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
         return -ENOMEM;
 
     char filename[128];
-    for (int idx = 0; idx < nodes_cnt; idx++) {
-        snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%d/cpumap", idx);
+    for (size_t idx = 0; idx < nodes_cnt; idx++) {
+        snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpumap", idx);
         READ_FILE_BUFFER(filename, numa_topology[idx].cpumap, /*failure_label=*/out_topology);
 
-        snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%d/distance", idx);
+        snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
         READ_FILE_BUFFER(filename, numa_topology[idx].distance, /*failure_label=*/out_topology);
 
         /* Since our /sys fs doesn't support writes, set persistent hugepages to their default value

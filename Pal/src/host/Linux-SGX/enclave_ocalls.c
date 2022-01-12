@@ -1893,7 +1893,8 @@ static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
     unsigned long invalid_cpumask = SET_HIGHEST_N_BITS(unsigned long, invalid_bits);
 
     /* Extract last 64bits to check if any invalid cpu bits are set */
-    int idx = (cpumask_size / sizeof(unsigned long)) - 1;
+    assert(cpumask_size >= sizeof(unsigned long));
+    size_t idx = (cpumask_size / sizeof(unsigned long)) - 1;
     unsigned long cpumask = ((unsigned long*)cpu_mask)[idx];
 
     return !(cpumask & invalid_cpumask);

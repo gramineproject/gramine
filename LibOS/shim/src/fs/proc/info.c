@@ -118,15 +118,15 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     for (size_t i = 0; i < ti->online_logical_cores_cnt; i++) {
         /* Below strings must match exactly the strings retrieved from /proc/cpuinfo
          * (see Linux's arch/x86/kernel/cpu/proc.c) */
-        ADD_INFO("processor\t: %lu\n",  i);
-        ADD_INFO("vendor_id\t: %s\n",   ci->cpu_vendor);
-        ADD_INFO("cpu family\t: %lu\n", ci->cpu_family);
-        ADD_INFO("model\t\t: %lu\n",    ci->cpu_model);
-        ADD_INFO("model name\t: %s\n",  ci->cpu_brand);
-        ADD_INFO("stepping\t: %lu\n",   ci->cpu_stepping);
-        ADD_INFO("physical id\t: %d\n", ti->cpu_to_socket[i]);
-        ADD_INFO("core id\t\t: %lu\n",  i);
-        ADD_INFO("cpu cores\t: %lu\n",  ti->physical_cores_per_socket);
+        ADD_INFO("processor\t: %lu\n",   i);
+        ADD_INFO("vendor_id\t: %s\n",    ci->cpu_vendor);
+        ADD_INFO("cpu family\t: %lu\n",  ci->cpu_family);
+        ADD_INFO("model\t\t: %lu\n",     ci->cpu_model);
+        ADD_INFO("model name\t: %s\n",   ci->cpu_brand);
+        ADD_INFO("stepping\t: %lu\n",    ci->cpu_stepping);
+        ADD_INFO("physical id\t: %zu\n", ti->cpu_to_socket[i]);
+        ADD_INFO("core id\t\t: %lu\n",   i);
+        ADD_INFO("cpu cores\t: %zu\n",   ti->physical_cores_per_socket);
         double bogomips = ci->cpu_bogomips;
         // Apparently Gramine snprintf cannot into floats.
         ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,

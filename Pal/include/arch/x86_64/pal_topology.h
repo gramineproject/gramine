@@ -6,9 +6,6 @@
 #ifndef PAL_TOPOLOGY_H
 #define PAL_TOPOLOGY_H
 
-// TODO: drop after removing PAL_NUM from here
-typedef uint64_t PAL_NUM;
-
 /* Used to represent plain integers (only numeric values) */
 #define PAL_SYSFS_INT_FILESZ 16
 /* Used to represent buffers having numeric values with text. E.g "1024576K" */
@@ -53,27 +50,27 @@ typedef struct PAL_NUMA_TOPO_INFO_ {
 
 struct pal_topo_info {
     /* Number of logical cores available on the host. */
-    PAL_NUM online_logical_cores_cnt;
+    size_t online_logical_cores_cnt;
 
     char online_logical_cores[PAL_SYSFS_BUF_FILESZ];
 
     /* Array of "logical core -> socket" mappings; has online_logical_cores_cnt elements. */
-    int* cpu_to_socket;
+    size_t* cpu_to_socket;
 
     /* Array of logical core topology info, owned by this struct. Has online_logical_cores_cnt
      * elements. */
     PAL_CORE_TOPO_INFO* core_topology;
 
     /* Max number of logical cores available on the host. */
-    PAL_NUM possible_logical_cores_cnt;
+    size_t possible_logical_cores_cnt;
 
     char possible_logical_cores[PAL_SYSFS_BUF_FILESZ];
 
     /* Number of physical cores in a socket (physical package). */
-    PAL_NUM physical_cores_per_socket;
+    size_t physical_cores_per_socket;
 
     /* Number of nodes available on the host. */
-    PAL_NUM online_nodes_cnt;
+    size_t online_nodes_cnt;
 
     char online_nodes[PAL_SYSFS_BUF_FILESZ];
 
@@ -81,7 +78,7 @@ struct pal_topo_info {
     PAL_NUMA_TOPO_INFO* numa_topology;
 
     /* Number of cache levels (such as L2 or L3) available on the host. */
-    PAL_NUM cache_indices_cnt;
+    size_t cache_indices_cnt;
 };
 
 #endif /* PAL_TOPOLOGY_H */
