@@ -856,8 +856,7 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['proc_stat'], timeout=50)
 
         # proc/stat Linux-based formatting
-        cpus_cnt = os.cpu_count()
-        self.assertIn(f'/proc/stat test passed (found {cpus_cnt} CPUs)', stdout)
+        self.assertIn('/proc/stat test passed', stdout)
 
     def test_030_fdleak(self):
         stdout, _ = self.run_binary(['fdleak'], timeout=10)

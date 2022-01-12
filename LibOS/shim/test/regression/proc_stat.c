@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define STAT_FILE "/proc/stat"
 #define BUFFSIZE  2048
@@ -80,7 +81,7 @@ static int check_procstat(struct procstat* ps) {
 
 static int parse_and_check_noncpu_line(char* line) {
     uint64_t val = UINT64_MAX;
-    char key[KEYSIZE] = "<none>";
+    char key[KEYSIZE] = "";
 
     if (!memcmp(line, "ctxt", sizeof("ctxt") - 1)) {
         sscanf(line, "%s %lu\n", key, &val);
@@ -92,6 +93,11 @@ static int parse_and_check_noncpu_line(char* line) {
         sscanf(line, "%s %lu\n", key, &val);
     } else if (!memcmp(line, "procs_blocked", sizeof("procs_blocked") - 1)) {
         sscanf(line, "%s %lu\n", key, &val);
+    }
+
+    if (strcmp(key, "") == 0) {
+        fprintf(stderr, "found unknown line '%s'\n", line);
+        return -1;
     }
 
     if (val == UINT64_MAX) {
@@ -108,6 +114,10 @@ int main(int argc, char* argv[]) {
     char cpu[KEYSIZE];
     struct procstat ps;
     int cpu_cnt = 0, rv = 0;
+
+    long actual_cpu_cnt = sysconf(_SC_NPROCESSORS_ONLN);
+    if (actual_cpu_cnt < 0)
+        errx(1, "cannot retrieve number of CPUs");
 
     if ((fp = fopen(STAT_FILE, "r")) == NULL)
         err(1, "fopen");
@@ -142,24 +152,19 @@ int main(int argc, char* argv[]) {
         cpu_cnt++;
     }
 
-    if (cpu_cnt == 0)
-        errx(1, "no 'cpuX' lines found");
+    if (cpu_cnt != actual_cpu_cnt)
+        errx(1, "expected to find %ld CPUs but found only %d CPUs", actual_cpu_cnt, cpu_cnt);
 
     /* next lines are 'ctxt', 'btime', 'processes', 'procs_running', 'procs_blocked' */
-    if (line[0] == '\n')
-        goto out;
-    if ((rv = parse_and_check_noncpu_line(line)) != 0)
-        errx(1, "checking non-cpu line failed");
-
-    while (fgets(line, sizeof(line), fp) != NULL) {
+    do {
         if (line[0] == '\n')
-            goto out;
+            break;
         if ((rv = parse_and_check_noncpu_line(line)) != 0)
             errx(1, "checking non-cpu line failed");
-    }
+    } while (fgets(line, sizeof(line), fp) != NULL);
 
-out:
     fclose(fp);
-    printf("/proc/stat test passed (found %d CPUs)\n", cpu_cnt);
+
+    printf("/proc/stat test passed\n");
     return 0;
 }
