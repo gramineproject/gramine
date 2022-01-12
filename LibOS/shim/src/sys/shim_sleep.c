@@ -3,6 +3,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include <stdatomic.h>
+
 #include "api.h"
 #include "cpu.h"
 #include "pal.h"
@@ -81,6 +83,15 @@ long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_time
     int ret = check_params(req, rem);
     if (ret < 0) {
         return ret;
+    }
+
+    if (clock_id == CLOCK_PROCESS_CPUTIME_ID) {
+        static atomic_bool warned = false;
+        if (!warned) {
+            warned = true;
+            log_warning("Per-process CPU-time clock is not supported in clock_nanosleep(); "
+                        "it is replaced with system-wide real-time clock.");
+        }
     }
 
     uint64_t timeout_us = timespec_to_us(req);

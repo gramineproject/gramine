@@ -6,6 +6,7 @@
  */
 
 #include <errno.h>
+#include <stdatomic.h>
 
 #include "pal.h"
 #include "pal_error.h"
@@ -64,6 +65,15 @@ long shim_do_clock_gettime(clockid_t which_clock, struct timespec* tp) {
     if (!is_user_memory_writable(tp, sizeof(*tp)))
         return -EFAULT;
 
+    if (which_clock == CLOCK_PROCESS_CPUTIME_ID || which_clock == CLOCK_THREAD_CPUTIME_ID) {
+        static atomic_bool warned = false;
+        if (!warned) {
+            warned = true;
+            log_warning("Per-process and per-thread CPU-time clocks are not supported in "
+                        "clock_gettime(); they are replaced with system-wide real-time clock.");
+        }
+    }
+
     uint64_t time = 0;
     int ret = DkSystemTimeQuery(&time);
     if (ret < 0) {
@@ -79,6 +89,15 @@ long shim_do_clock_getres(clockid_t which_clock, struct timespec* tp) {
     /* all clocks are the same */
     if (!(0 <= which_clock && which_clock < MAX_CLOCKS))
         return -EINVAL;
+
+    if (which_clock == CLOCK_PROCESS_CPUTIME_ID || which_clock == CLOCK_THREAD_CPUTIME_ID) {
+        static atomic_bool warned = false;
+        if (!warned) {
+            warned = true;
+            log_warning("Per-process and per-thread CPU-time clocks are not supported in "
+                        "clock_getres(); they are replaced with system-wide real-time clock.");
+        }
+    }
 
     if (tp) {
         if (!is_user_memory_writable(tp, sizeof(*tp)))
