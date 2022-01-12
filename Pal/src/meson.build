@@ -19,10 +19,10 @@ pal_common_sources = files(
     'slab.c',
 )
 
-pal_sources_arch = [
+pal_common_sources_arch = [
     'pal_cpuid.c',
 ]
-foreach src : pal_sources_arch
+foreach src : pal_common_sources_arch
     pal_common_sources += files(join_paths('arch', host_machine.cpu_family(), src))
 endforeach
 
