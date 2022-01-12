@@ -196,11 +196,19 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
+/* this dummy function is implemented to support opening TTY devices with O_TRUNC flag */
+static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
+    __UNUSED(handle);
+    __UNUSED(length);
+    return 0;
+}
+
 struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
     .close          = &dev_close,
+    .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
