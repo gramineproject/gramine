@@ -78,9 +78,24 @@ long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_time
         return -EINVAL;
     }
 
+    /* Linux supports only CLOCK_REALTIME, CLOCK_MONOTONIC, CLOCK_PROCESS_CPUTIME_ID;
+     * see https://elixir.bootlin.com/linux/v5.16/source/kernel/time/posix-timers.c#L1255 */
+    if (clock_id != CLOCK_REALTIME && clock_id != CLOCK_MONOTONIC &&
+            clock_id != CLOCK_PROCESS_CPUTIME_ID) {
+        return -EOPNOTSUPP;
+    }
+
     int ret = check_params(req, rem);
     if (ret < 0) {
         return ret;
+    }
+
+    if (clock_id == CLOCK_PROCESS_CPUTIME_ID) {
+        static unsigned int warned = 0;
+        if (__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED) == 0) {
+            log_warning("Per-process CPU-time clock is not supported in clock_nanosleep(); "
+                        "it is replaced with system-wide real-time clock.");
+        }
     }
 
     uint64_t timeout_us = timespec_to_us(req);

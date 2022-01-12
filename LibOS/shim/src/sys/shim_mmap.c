@@ -10,7 +10,6 @@
  */
 
 #include <errno.h>
-#include <stdatomic.h>
 #include <sys/mman.h>
 
 #include "pal.h"
@@ -316,11 +315,10 @@ long shim_do_mincore(void* addr, size_t len, unsigned char* vec) {
     if (!is_user_memory_writable(vec, pages))
         return -EFAULT;
 
-    static atomic_bool warned = false;
-    if (!warned) {
-        warned = true;
-        log_warning(
-            "mincore emulation always tells pages are _NOT_ in RAM. This may cause issues.");
+    static unsigned int warned = 0;
+    if (__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED) == 0) {
+        log_warning("mincore emulation always tells pages are _NOT_ in RAM. This may cause "
+                    "issues.");
     }
 
     /* There is no good way to know if the page is in RAM.
