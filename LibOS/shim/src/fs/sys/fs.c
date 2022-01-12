@@ -17,26 +17,22 @@
 static int sys_resource(struct shim_dentry* parent, const char* name, unsigned int* out_num,
                         readdir_callback_t callback, void* arg) {
     const char* parent_name = parent->name;
-    PAL_NUM pal_total;
-    unsigned int total;
+    size_t total;
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        pal_total = g_pal_public_state->topo_info.online_nodes_cnt;
+        total = g_pal_public_state->topo_info.online_nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        pal_total = g_pal_public_state->topo_info.online_logical_cores_cnt;
+        total = g_pal_public_state->topo_info.online_logical_cores_cnt;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
-        pal_total = g_pal_public_state->topo_info.cache_indices_cnt;
+        total = g_pal_public_state->topo_info.cache_indices_cnt;
         prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);
         return -ENOENT;
     }
-
-    assert(pal_total <= UINT_MAX);
-    total = pal_total;
 
     if (name) {
         if (total == 0)
@@ -53,9 +49,9 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
             *out_num = n;
         return 0;
     } else {
-        for (unsigned int i = 0; i < total; i++) {
+        for (size_t i = 0; i < total; i++) {
             char ent_name[42];
-            snprintf(ent_name, sizeof(ent_name), "%s%u", prefix, i);
+            snprintf(ent_name, sizeof(ent_name), "%s%zu", prefix, i);
             int ret = callback(ent_name, arg);
             if (ret < 0)
                 return ret;
