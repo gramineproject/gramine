@@ -103,6 +103,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
 
 /* Returns number of cache levels present on this system by counting "indexX" dir entries under
  * `/sys/devices/system/cpu/cpuX/cache` on success and negative UNIX error code on failure. */
+/* TODO: This shouldn't mix error code and returned value in one variable. */
 static int get_cache_levels_cnt(const char* path) {
     char buf[1024];
     int dirs_cnt = 0;
