@@ -56,6 +56,7 @@ tests = {
     'madvise': {},
     'mkfifo': {},
     'mmap_file': {},
+    'mmap_file_backed': {},
     'mprotect_file_fork': {},
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},
