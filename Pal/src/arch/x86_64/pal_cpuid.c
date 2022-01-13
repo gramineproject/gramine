@@ -59,9 +59,12 @@ static const char* const g_cpu_flags[] = {
 int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
+    char* flags = NULL;
+    char* brand = NULL;
+    char* vendor_id = NULL;
 
     const size_t VENDOR_ID_SIZE = 13;
-    char* vendor_id = malloc(VENDOR_ID_SIZE);
+    vendor_id = malloc(VENDOR_ID_SIZE);
     if (!vendor_id)
         return -PAL_ERROR_NOMEM;
 
@@ -73,10 +76,10 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     ci->cpu_vendor = vendor_id;
 
     const size_t BRAND_SIZE = 49;
-    char* brand = malloc(BRAND_SIZE);
+    brand = malloc(BRAND_SIZE);
     if (!brand) {
         rv = -PAL_ERROR_NOMEM;
-        goto out_vendor_id;
+        goto out_err;
     }
     _DkCpuIdRetrieve(0x80000002, 0, words);
     memcpy(&brand[ 0], words, sizeof(unsigned int) * CPUID_WORD_NUM);
@@ -99,10 +102,10 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
 
     size_t flen = 0;
     size_t fmax = 80;
-    char* flags = malloc(fmax);
+    flags = malloc(fmax);
     if (!flags) {
         rv = -PAL_ERROR_NOMEM;
-        goto out_brand;
+        goto out_err;
     }
 
     for (int i = 0; i < 32; i++) {
@@ -115,7 +118,7 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
                 char* new_flags = malloc(fmax * 2);
                 if (!new_flags) {
                     rv = -PAL_ERROR_NOMEM;
-                    goto out_flags;
+                    goto out_err;
                 }
                 memcpy(new_flags, flags, flen);
                 free(flags);
@@ -138,11 +141,9 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
 
     return 0;
 
-out_flags:
+out_err:
     free(flags);
-out_brand:
     free(brand);
-out_vendor_id:
     free(vendor_id);
     return rv;
 }
