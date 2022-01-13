@@ -649,7 +649,12 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('mmap test 5 passed', stdout)
         self.assertIn('mmap test 8 passed', stdout)
 
-    def test_052_large_mmap(self):
+    def test_052_mmap_file_backed(self):
+        stdout, _ = self.run_binary(['mmap_file_backed'], timeout=60)
+        self.assertIn('Child process done', stdout)
+        self.assertIn('Parent process done', stdout)
+
+    def test_053_large_mmap(self):
         try:
             stdout, _ = self.run_binary(['large_mmap'], timeout=480)
 
@@ -663,17 +668,17 @@ class TC_30_Syscall(RegressionTestCase):
             # This test generates a 4 GB file, don't leave it in FS.
             os.remove('testfile')
 
-    def test_053_mprotect_file_fork(self):
+    def test_054_mprotect_file_fork(self):
         stdout, _ = self.run_binary(['mprotect_file_fork'])
 
         self.assertIn('Test successful!', stdout)
 
-    def test_054_mprotect_prot_growsdown(self):
+    def test_055_mprotect_prot_growsdown(self):
         stdout, _ = self.run_binary(['mprotect_prot_growsdown'])
 
         self.assertIn('TEST OK', stdout)
 
-    def test_055_madvise(self):
+    def test_056_madvise(self):
         stdout, _ = self.run_binary(['madvise'])
         self.assertIn('TEST OK', stdout)
 
