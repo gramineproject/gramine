@@ -1244,8 +1244,7 @@ BEGIN_CP_FUNC(vma) {
             size_t send_size = vma->length;
             if (vma->file) {
                 /*
-                 * Chia-Che 8/13/2017:
-                 * A fix for cloning a private VMA which maps a file to a process.
+                 * Corner case of cloning a private VMA which maps a file to a process.
                  *
                  * (1) Application can access any page backed by the file, wholly
                  *     or partially.
@@ -1263,6 +1262,12 @@ BEGIN_CP_FUNC(vma) {
                         && vma->file_offset + vma->length > file_len) {
                     send_size = file_len > vma->file_offset ? file_len - vma->file_offset : 0;
                     send_size = ALLOC_ALIGN_UP(send_size);
+
+                    if (!send_size) {
+                        /* VMA starts past the last file-backed page. Accessing this VMA will cause
+                         * SIGBUS, so emulate it by skipping mmap during this VMA restore. */
+                        need_mapped = vma->addr + vma->length;
+                    }
                 }
             }
             if (send_size > 0) {
@@ -1270,6 +1275,7 @@ BEGIN_CP_FUNC(vma) {
                 DO_CP_SIZE(memory, send_addr, send_size, &mem);
                 mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
 
+                /* VMA contents are sent via "memory" entry, skip mmap during this VMA restore. */
                 need_mapped = vma->addr + vma->length;
             }
         }
@@ -1303,7 +1309,6 @@ BEGIN_RS_FUNC(vma) {
             get_handle(vma->file);
 
             if (need_mapped < vma->addr + vma->length) {
-                /* first try, use hstat to force it resumes pal handle */
                 if (!fs || !fs->fs_ops || !fs->fs_ops->mmap) {
                     return -EINVAL;
                 }
