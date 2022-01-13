@@ -542,6 +542,15 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
         off_t end = MIN(offset + size, handle->file.total);
+        if ((off_t)offset >= end) {
+            /* file is mmapped at offset beyond file size, there are no trusted-file contents to
+             * back mmapped enclave pages; this is a legit case, so simply zero out these enclave
+             * pages (for sanity) and return success */
+            memset(mem, 0, size);
+            *addr = mem;
+            return 0;
+        }
+
         off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
         off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
         off_t total_size     = aligned_end - aligned_offset;
@@ -558,6 +567,12 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         if (ret < 0) {
             log_error("file_map - copy & verify on trusted file returned %d", ret);
             goto out;
+        }
+
+        size_t bytes_filled = end - offset;
+        if (size > bytes_filled) {
+            /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
+            memset(mem + bytes_filled, 0, size - bytes_filled);
         }
     } else {
         /* case of allowed file: simply read from underlying file descriptor into enclave memory */
@@ -579,9 +594,8 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
             }
         }
 
-        if (size - bytes_read > 0) {
-            /* file ended before all requested memory was filled -- remaining memory has to be
-             * zeroed */
+        if (size > bytes_read) {
+            /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
             memset(mem + bytes_read, 0, size - bytes_read);
         }
     }
