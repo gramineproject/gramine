@@ -241,7 +241,7 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     topo_info->physical_cores_per_socket = core_siblings_cnt / smt_siblings_cnt;
 
     /* array of "logical core -> socket" mappings */
-    size_t* cpu_to_socket = (size_t*)malloc(online_logical_cores_cnt * sizeof(size_t));
+    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
     if (!cpu_to_socket) {
         return -ENOMEM;
     }

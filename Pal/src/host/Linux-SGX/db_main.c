@@ -136,7 +136,7 @@ static int extract_size_t_from_buffer(const char* buf, size_t* out_value) {
         buf++;
 
     /* Intentionally using unsigned long to adapt for variable bitness. */
-    if (str_to_ulong(buf, 10, &intval, &end) < 0 || intval > LONG_MAX)
+    if (str_to_ulong(buf, 10, &intval, &end) < 0)
         return -EINVAL;
 
     if (end[0] != '\0') {
@@ -392,14 +392,15 @@ static int parse_host_topo_info(struct pal_topo_info* topo_info) {
     }
 
     /* Allocate enclave memory to store "logical core -> socket" mappings */
-    size_t* cpu_to_socket = (size_t*)malloc(online_logical_cores_cnt * sizeof(size_t));
+    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
     if (!cpu_to_socket) {
         log_error("Allocation for logical core -> socket mappings failed");
         return -1;
     }
 
-    if (!sgx_copy_to_enclave(cpu_to_socket, online_logical_cores_cnt * sizeof(size_t),
-                             topo_info->cpu_to_socket, online_logical_cores_cnt * sizeof(size_t))) {
+    if (!sgx_copy_to_enclave(cpu_to_socket, online_logical_cores_cnt * sizeof(*cpu_to_socket),
+                             topo_info->cpu_to_socket,
+                             online_logical_cores_cnt * sizeof(*topo_info->cpu_to_socket))) {
         log_error("Copying cpu_to_socket into the enclave failed");
         return -1;
     }
