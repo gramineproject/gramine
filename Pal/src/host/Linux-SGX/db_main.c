@@ -361,176 +361,6 @@ static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology, size_t
     return 0;
 }
 
-/* The below two functions don't clean up resources on failure: we terminate the process anyway. */
-static int parse_host_topo_info(struct pal_topo_info* topo_info) {
-    /* topo_info is shallow-copied into trusted memory, so its content is untrusted */
-    int ret;
-
-    size_t online_logical_cores_cnt = topo_info->online_logical_cores_cnt;
-    size_t possible_logical_cores_cnt = topo_info->possible_logical_cores_cnt;
-    size_t physical_cores_per_socket = topo_info->physical_cores_per_socket;
-
-    if (!IS_IN_RANGE_INCL(online_logical_cores_cnt, 1, 1 << 16)) {
-        log_error("Invalid topo_info->online_logical_cores_cnt: %zu", online_logical_cores_cnt);
-        return -1;
-    }
-
-    if (!IS_IN_RANGE_INCL(possible_logical_cores_cnt, 1, 1 << 16)) {
-        log_error("Invalid topo_info->possible_logical_cores_cnt: %zu", possible_logical_cores_cnt);
-        return -1;
-    }
-
-    if (!IS_IN_RANGE_INCL(physical_cores_per_socket, 1, 1 << 13)) {
-        log_error("Invalid topo_info->physical_cores_per_socket: %zu", physical_cores_per_socket);
-        return -1;
-    }
-
-    if (online_logical_cores_cnt > possible_logical_cores_cnt) {
-        log_error("Impossible configuration: more online cores (%zu) than possible cores (%zu)",
-                  online_logical_cores_cnt, possible_logical_cores_cnt);
-        return -1;
-    }
-
-    /* Allocate enclave memory to store "logical core -> socket" mappings */
-    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
-    if (!cpu_to_socket) {
-        log_error("Allocation for logical core -> socket mappings failed");
-        return -1;
-    }
-
-    if (!sgx_copy_to_enclave(cpu_to_socket, online_logical_cores_cnt * sizeof(*cpu_to_socket),
-                             topo_info->cpu_to_socket,
-                             online_logical_cores_cnt * sizeof(*topo_info->cpu_to_socket))) {
-        log_error("Copying cpu_to_socket into the enclave failed");
-        return -1;
-    }
-
-    /* Sanitize logical core -> socket mappings */
-    ret = sanitize_socket_info(cpu_to_socket, online_logical_cores_cnt);
-    if (ret < 0) {
-        log_error("Sanitization of logical core -> socket mappings failed");
-        return -1;
-    }
-
-    memset(&g_pal_public_state.topo_info, 0, sizeof(g_pal_public_state.topo_info));
-    g_pal_public_state.topo_info.online_logical_cores_cnt = online_logical_cores_cnt;
-    g_pal_public_state.topo_info.possible_logical_cores_cnt = possible_logical_cores_cnt;
-    g_pal_public_state.topo_info.physical_cores_per_socket = physical_cores_per_socket;
-    g_pal_public_state.topo_info.cpu_to_socket = cpu_to_socket;
-    return 0;
-}
-
-static int parse_advanced_host_topo_info(bool enable_sysfs_topology,
-                                         struct pal_topo_info* topo_info) {
-    /* topo_info is shallow-copied into trusted memory, so its content is untrusted */
-    int ret;
-    int64_t cnt;
-
-    if (!enable_sysfs_topology) {
-        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
-        return 0;
-    }
-
-    PAL_CORE_TOPO_INFO* core_topology;
-    PAL_CORE_CACHE_INFO* cache_info;
-    PAL_NUMA_TOPO_INFO* numa_topology;
-
-    size_t cores = topo_info->online_logical_cores_cnt;
-    size_t nodes = topo_info->online_nodes_cnt;
-    size_t caches = topo_info->cache_indices_cnt;
-
-    if (!IS_IN_RANGE_INCL(nodes, 1, 1 << 8)) {
-        log_error("Invalid topo_info->online_nodes_cnt: %zu", nodes);
-        return -1;
-    }
-
-    if (!IS_IN_RANGE_INCL(caches, 1, 1 << 4)) {
-        log_error("Invalid topo_info->cache_indices_cnt: %zu", caches);
-        return -1;
-    }
-
-    cnt = sanitize_hw_resource_count(topo_info->online_logical_cores, /*ordered=*/true);
-    if (cnt < 0 || topo_info->online_logical_cores_cnt != (size_t)cnt) {
-        log_error("Invalid topo_info->online_logical_cores");
-        return -1;
-    }
-
-    cnt = sanitize_hw_resource_count(topo_info->possible_logical_cores, /*ordered=*/true);
-    if (cnt < 0 || topo_info->possible_logical_cores_cnt != (size_t)cnt) {
-        log_error("Invalid topo_info->possible_logical_cores");
-        return -1;
-    }
-
-    cnt = sanitize_hw_resource_count(topo_info->online_nodes, /*ordered=*/true);
-    if (cnt < 0 || nodes != (size_t)cnt) {
-        log_error("Invalid topo_info->online_nodes");
-        return -1;
-    }
-
-    core_topology = (PAL_CORE_TOPO_INFO*)malloc(cores * sizeof(PAL_CORE_TOPO_INFO));
-    if (!core_topology) {
-        log_error("Allocation for core topology failed");
-        return -1;
-    }
-
-    if (!sgx_copy_to_enclave(core_topology, cores * sizeof(PAL_CORE_TOPO_INFO),
-                             topo_info->core_topology, cores * sizeof(PAL_CORE_TOPO_INFO))) {
-        log_error("Copying core_topology into the enclave failed");
-        return -1;
-    }
-
-    cache_info = (PAL_CORE_CACHE_INFO*)malloc(caches * sizeof(PAL_CORE_CACHE_INFO));
-    if (!cache_info) {
-        log_error("Allocation for cache_info failed");
-        return -1;
-    }
-
-    if (!sgx_copy_to_enclave(cache_info, caches * sizeof(PAL_CORE_CACHE_INFO),
-                             topo_info->core_topology->cache,
-                             caches * sizeof(PAL_CORE_CACHE_INFO))) {
-        log_error("Copying cache_info into the enclave failed");
-        return -1;
-    }
-
-    numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes * sizeof(PAL_NUMA_TOPO_INFO));
-    if (!numa_topology) {
-        log_error("Allocation for numa topology failed");
-        return -1;
-    }
-
-    if (!sgx_copy_to_enclave(numa_topology, nodes * sizeof(PAL_NUMA_TOPO_INFO),
-                             topo_info->numa_topology, nodes * sizeof(PAL_NUMA_TOPO_INFO))) {
-        log_error("Copying numa_topology into the enclave failed");
-        return -1;
-    }
-
-    /* important to bind core_topology with cache_info before sanitize_core_topology_info() */
-    core_topology->cache = cache_info;
-
-    ret = sanitize_core_topology_info(core_topology, cores, caches);
-    if (ret < 0) {
-        log_error("Sanitization of core_topology failed");
-        return -1;
-    }
-
-    ret = sanitize_numa_topology_info(numa_topology, nodes, cores);
-    if (ret < 0) {
-        log_error("Sanitization of numa_topology failed");
-        return -1;
-    }
-
-    g_pal_public_state.topo_info.online_nodes_cnt = nodes;
-    g_pal_public_state.topo_info.cache_indices_cnt = caches;
-
-    COPY_ARRAY(g_pal_public_state.topo_info.online_logical_cores, topo_info->online_logical_cores);
-    COPY_ARRAY(g_pal_public_state.topo_info.possible_logical_cores, topo_info->possible_logical_cores);
-    COPY_ARRAY(g_pal_public_state.topo_info.online_nodes, topo_info->online_nodes);
-
-    g_pal_public_state.topo_info.core_topology = core_topology;
-    g_pal_public_state.topo_info.numa_topology = numa_topology;
-    return 0;
-}
-
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
@@ -651,6 +481,186 @@ out:
     return ret;
 }
 
+/* This function doesn't clean up resources on failure: we terminate the process anyway. */
+static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
+                                       bool enable_sysfs_topology) {
+    int ret;
+    int64_t cnt;
+
+    /* Extract topology information from untrusted pointer. Note this is only a shallow copy
+     * and we use this temp variable to do deep copy into `topo_info` struct part of
+     * g_pal_public_state */
+    struct pal_topo_info temp_topo_info;
+    if (!sgx_copy_to_enclave(&temp_topo_info, sizeof(temp_topo_info),
+                             uptr_topo_info, sizeof(*uptr_topo_info))) {
+        log_error("Copying topo_info into the enclave failed");
+        return -1;
+    }
+
+    size_t online_logical_cores_cnt = temp_topo_info.online_logical_cores_cnt;
+    if (!IS_IN_RANGE_INCL(online_logical_cores_cnt, 1, 1 << 16)) {
+        log_error("Invalid online_logical_cores_cnt: %zu", online_logical_cores_cnt);
+        return -1;
+    }
+
+    size_t possible_logical_cores_cnt = temp_topo_info.possible_logical_cores_cnt;
+    if (!IS_IN_RANGE_INCL(possible_logical_cores_cnt, 1, 1 << 16)) {
+        log_error("Invalid possible_logical_cores_cnt: %zu", possible_logical_cores_cnt);
+        return -1;
+    }
+
+    if (online_logical_cores_cnt > possible_logical_cores_cnt) {
+        log_error("Impossible configuration: more online cores (%zu) than possible cores (%zu)",
+                  online_logical_cores_cnt, possible_logical_cores_cnt);
+        return -1;
+    }
+
+    size_t physical_cores_per_socket = temp_topo_info.physical_cores_per_socket;
+    if (!IS_IN_RANGE_INCL(physical_cores_per_socket, 1, 1 << 13)) {
+        log_error("Invalid physical_cores_per_socket: %zu", physical_cores_per_socket);
+        return -1;
+    }
+
+    /* Allocate enclave memory to store "logical core -> socket" mappings */
+    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
+    if (!cpu_to_socket) {
+        log_error("Allocation for logical core -> socket mappings failed");
+        return -1;
+    }
+
+    if (!sgx_copy_to_enclave(cpu_to_socket, online_logical_cores_cnt * sizeof(*cpu_to_socket),
+                             temp_topo_info.cpu_to_socket,
+                             online_logical_cores_cnt * sizeof(*cpu_to_socket))) {
+        log_error("Copying cpu_to_socket into the enclave failed");
+        return -1;
+    }
+
+    /* Sanitize logical core -> socket mappings */
+    ret = sanitize_socket_info(cpu_to_socket, online_logical_cores_cnt);
+    if (ret < 0) {
+        log_error("Sanitization of logical core -> socket mappings failed");
+        return -1;
+    }
+
+    /* TODO: Move to the end of this function along with other trusted copy operations once
+     * enable_sysfs_topology flag is removed */
+    memset(&g_pal_public_state.topo_info, 0, sizeof(g_pal_public_state.topo_info));
+    g_pal_public_state.topo_info.online_logical_cores_cnt = online_logical_cores_cnt;
+    g_pal_public_state.topo_info.possible_logical_cores_cnt = possible_logical_cores_cnt;
+    g_pal_public_state.topo_info.physical_cores_per_socket = physical_cores_per_socket;
+    g_pal_public_state.topo_info.cpu_to_socket = cpu_to_socket;
+
+    /* Advanced host topology information */
+    if (!enable_sysfs_topology) {
+        /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
+        return 0;
+    }
+
+    cnt = sanitize_hw_resource_count(temp_topo_info.online_logical_cores, /*ordered=*/true);
+    if (cnt < 0 || (size_t)cnt != online_logical_cores_cnt) {
+        log_error("Malformed \"online\" cores string received from the host");
+        return -1;
+    }
+
+    cnt = sanitize_hw_resource_count(temp_topo_info.possible_logical_cores, /*ordered=*/true);
+    if (cnt < 0 || (size_t)cnt != possible_logical_cores_cnt) {
+        log_error("Malformed \"possible\" cores string received from the host");
+        return -1;
+    }
+
+    size_t nodes_cnt = temp_topo_info.online_nodes_cnt;
+    if (!IS_IN_RANGE_INCL(nodes_cnt, 1, 1 << 8)) {
+        log_error("Invalid nodes_cnt: %zu", nodes_cnt);
+        return -1;
+    }
+
+    cnt = sanitize_hw_resource_count(temp_topo_info.online_nodes, /*ordered=*/true);
+    if (cnt < 0 || (size_t)cnt != nodes_cnt) {
+        log_error("Malformed \"online\" nodes string received from the host");
+        return -1;
+    }
+
+    PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
+                                                                    sizeof(*core_topology));
+    if (!core_topology) {
+        log_error("Allocation for core topology failed");
+        return -1;
+    }
+
+    if (!sgx_copy_to_enclave(core_topology, online_logical_cores_cnt * sizeof(*core_topology),
+                             temp_topo_info.core_topology,
+                             online_logical_cores_cnt * sizeof(*core_topology))) {
+        log_error("Copying core_topology into the enclave failed");
+        return -1;
+    }
+
+    size_t cache_indices_cnt = temp_topo_info.cache_indices_cnt;
+    if (!IS_IN_RANGE_INCL(cache_indices_cnt, 1, 1 << 4)) {
+        log_error("Invalid cache_indices_cnt: %zu", cache_indices_cnt);
+        return -1;
+    }
+
+    /* Copy cache info for each online core */
+    for (size_t i = 0; i < online_logical_cores_cnt; i++) {
+        PAL_CORE_CACHE_INFO* cache_info = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
+                                                                       sizeof(*cache_info));
+        if (!cache_info) {
+            log_error("Allocation for cache_info failed");
+            return -1;
+        }
+
+        /* Contents of shallow pointer `core_topology[i].cache` are copied into `cache_info` */
+        if (!sgx_copy_to_enclave(cache_info, cache_indices_cnt * sizeof(*cache_info),
+                                 core_topology[i].cache, cache_indices_cnt * sizeof(*cache_info))) {
+            log_error("Copying cache_info into the enclave failed");
+            return -1;
+        }
+
+        /* Update the shallow pointer `cache` with the one allocated inside the enclave */
+        core_topology[i].cache = cache_info;
+    }
+
+    ret = sanitize_core_topology_info(core_topology, online_logical_cores_cnt, cache_indices_cnt);
+    if (ret < 0) {
+        log_error("Sanitization of core_topology failed");
+        return -1;
+    }
+
+    PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes_cnt *
+                                                                    sizeof(*numa_topology));
+    if (!numa_topology) {
+        log_error("Allocation for numa topology failed");
+        return -1;
+    }
+
+    if (!sgx_copy_to_enclave(numa_topology, nodes_cnt * sizeof(*numa_topology),
+                             temp_topo_info.numa_topology,
+                             nodes_cnt * sizeof(*numa_topology))) {
+        log_error("Copying numa_topology into the enclave failed");
+        return -1;
+    }
+
+    ret = sanitize_numa_topology_info(numa_topology, nodes_cnt, online_logical_cores_cnt);
+    if (ret < 0) {
+        log_error("Sanitization of numa_topology failed");
+        return -1;
+    }
+
+    g_pal_public_state.topo_info.online_nodes_cnt = nodes_cnt;
+    g_pal_public_state.topo_info.cache_indices_cnt = cache_indices_cnt;
+
+    COPY_ARRAY(g_pal_public_state.topo_info.online_logical_cores,
+               temp_topo_info.online_logical_cores);
+    COPY_ARRAY(g_pal_public_state.topo_info.possible_logical_cores,
+               temp_topo_info.possible_logical_cores);
+    COPY_ARRAY(g_pal_public_state.topo_info.online_nodes, temp_topo_info.online_nodes);
+
+    g_pal_public_state.topo_info.core_topology = core_topology;
+    g_pal_public_state.topo_info.numa_topology = numa_topology;
+
+    return 0;
+}
+
 __attribute_no_sanitize_address
 static void do_preheat_enclave(void) {
     for (uint8_t* i = g_pal_linuxsgx_state.heap_min; i < (uint8_t*)g_pal_linuxsgx_state.heap_max;
@@ -689,15 +699,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
-
-    /* TODO: Change to `copy_and_sanitize_topo_info()` (a single API which securely imports and
-     * sanitizes the topology description). */
-    struct pal_topo_info topo_info;
-    if (!sgx_copy_to_enclave(&topo_info, sizeof(topo_info),
-                             uptr_topo_info, sizeof(*uptr_topo_info))) {
-        log_error("Copying topo_info into the enclave failed");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
 
     g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TLS(heap_min);
     g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TLS(heap_max);
@@ -834,14 +835,10 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                   "or `false`)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    ret = parse_host_topo_info(&topo_info);
+
+    ret = copy_and_sanitize_topo_info(uptr_topo_info, enable_sysfs_topology);
     if (ret < 0) {
-        log_error("Cannot parse basic host topology info (cores)");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-    ret = parse_advanced_host_topo_info(enable_sysfs_topology, &topo_info);
-    if (ret < 0) {
-        log_error("Cannot parse advanced host topology info (cores, caches, NUMA nodes)");
+        log_error("Failed to copy and sanitize topology information");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
