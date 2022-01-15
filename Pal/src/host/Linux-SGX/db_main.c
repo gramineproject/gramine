@@ -488,7 +488,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
     int64_t cnt;
 
     /* Extract topology information from untrusted pointer. Note this is only a shallow copy
-     * and we use this a temp variable to do deep copy into `topo_info` struct part of
+     * and we use this temp variable to do deep copy into `topo_info` struct part of
      * g_pal_public_state */
     struct pal_topo_info temp_topo_info;
     if (!sgx_copy_to_enclave(&temp_topo_info, sizeof(temp_topo_info),
@@ -542,7 +542,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
         return -1;
     }
 
-    /* TODO: Move at the end along with other trusted copy operation once enable_sysfs_topology
+    /* TODO: Move to the end along with other trusted copy operation once enable_sysfs_topology
      * flag is removed */
     memset(&g_pal_public_state.topo_info, 0, sizeof(g_pal_public_state.topo_info));
     g_pal_public_state.topo_info.online_logical_cores_cnt = online_logical_cores_cnt;
@@ -550,21 +550,21 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
     g_pal_public_state.topo_info.physical_cores_per_socket = physical_cores_per_socket;
     g_pal_public_state.topo_info.cpu_to_socket = cpu_to_socket;
 
-    /* Advance host topology information */
+    /* Advanced host topology information */
     if (!enable_sysfs_topology) {
         /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
         return 0;
     }
 
     cnt = sanitize_hw_resource_count(temp_topo_info.online_logical_cores, /*ordered=*/true);
-    if (cnt < 0 || online_logical_cores_cnt != (size_t)cnt) {
-        log_error("Malformed online cores string from host");
+    if (cnt < 0 || (size_t)cnt != online_logical_cores_cnt) {
+        log_error("Malformed \"online\" cores string received from the host");
         return -1;
     }
 
     cnt = sanitize_hw_resource_count(temp_topo_info.possible_logical_cores, /*ordered=*/true);
-    if (cnt < 0 || possible_logical_cores_cnt!= (size_t)cnt) {
-        log_error("Malformed possible cores string from host");
+    if (cnt < 0 || (size_t)cnt != possible_logical_cores_cnt) {
+        log_error("Malformed \"possible\" cores string received from the host");
         return -1;
     }
 
@@ -575,8 +575,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
     }
 
     cnt = sanitize_hw_resource_count(temp_topo_info.online_nodes, /*ordered=*/true);
-    if (cnt < 0 || nodes_cnt != (size_t)cnt) {
-        log_error("Malformed online nodes string from host");
+    if (cnt < 0 || (size_t)cnt != nodes_cnt) {
+        log_error("Malformed \"online\" nodes string received from the host");
         return -1;
     }
 
@@ -609,8 +609,9 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
             return -1;
         }
 
+        PAL_CORE_TOPO_INFO* core_topo_info = temp_topo_info.core_topology + i;
         if (!sgx_copy_to_enclave(cache_info, cache_idx_cnt * sizeof(PAL_CORE_CACHE_INFO),
-                                 temp_topo_info.core_topology[i].cache,
+                                 core_topo_info->cache,
                                  cache_idx_cnt * sizeof(PAL_CORE_CACHE_INFO))) {
             log_error("Copying cache_info into the enclave failed");
             return -1;
