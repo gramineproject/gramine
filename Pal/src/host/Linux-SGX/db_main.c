@@ -609,15 +609,15 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info *uptr_topo_info,
             return -1;
         }
 
-        PAL_CORE_TOPO_INFO* core_topo_info = temp_topo_info.core_topology + i;
+        /* Contents of shallow pointer `core_topology[i].cache` is copied into `cache_info` */
         if (!sgx_copy_to_enclave(cache_info, cache_idx_cnt * sizeof(PAL_CORE_CACHE_INFO),
-                                 core_topo_info->cache,
+                                 core_topology[i].cache,
                                  cache_idx_cnt * sizeof(PAL_CORE_CACHE_INFO))) {
             log_error("Copying cache_info into the enclave failed");
             return -1;
         }
 
-        /* important to bind core_topology with cache_info before sanitize_core_topology_info() */
+        /* Update the shallow pointer `cache` with the one allocated inside the enclave */
         core_topology[i].cache = cache_info;
     }
 
