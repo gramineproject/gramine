@@ -695,6 +695,17 @@ int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
+ * \brief Get/Request XSTATE components permission
+ *
+ * \param[in] code the option of get/requst permission
+ * \param[in,out] addr the bit number in XFD as input 
+ *                     or a filled value with the permssion as output
+ *
+ * \return 0 on success, negative error value on failure
+ */
+int DkXCompPerm(int code, unsigned long* addr);
+
+/*!
  * \brief Return the amount of currently available memory for LibOS/application
  * usage.
  */

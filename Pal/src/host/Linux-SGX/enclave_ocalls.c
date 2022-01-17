@@ -1945,3 +1945,29 @@ int ocall_sched_getaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
     sgx_reset_ustack(old_ustack);
     return retval;
 }
+
+int ocall_xcomp_perm(int code, unsigned long* addr) {
+    int retval = 0;
+    ms_ocall_xcomp_perm_t* ms;
+    unsigned long data = *addr;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+    WRITE_ONCE(ms->code, code);
+    WRITE_ONCE(ms->addr, data);
+
+    do {
+        retval = sgx_ocall(OCALL_XCOMP_PERM, ms);
+    } while (retval == -EINTR);
+
+    if (!retval) {
+        *addr = READ_ONCE(ms->addr);
+    }
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}

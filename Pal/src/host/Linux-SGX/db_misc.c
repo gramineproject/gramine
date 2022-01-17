@@ -719,3 +719,9 @@ int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
             return -PAL_ERROR_INVAL;
     }
 }
+
+int _DkXCompPerm(int code, unsigned long* addr) {
+    int ret = ocall_xcomp_perm(code, addr);
+
+    return ret;
+}

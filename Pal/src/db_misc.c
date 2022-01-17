@@ -24,6 +24,10 @@ int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
 int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     return _DkSegmentBaseSet(reg, addr);
 }
+
+int DkXCompPerm(int code, unsigned long* addr) {
+    return _DkXCompPerm(code, addr);
+}
 #endif
 
 PAL_NUM DkMemoryAvailableQuota(void) {

@@ -38,3 +38,11 @@ int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     cpuid(leaf, subleaf, values);
     return 0;
 }
+
+int _DkXCompPerm(int code, unsigned long* addr) {
+    int ret = DO_SYSCALL(arch_prctl, code, addr);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return ret;
+}

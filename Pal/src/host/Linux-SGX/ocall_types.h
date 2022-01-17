@@ -66,6 +66,7 @@ enum {
     OCALL_DEBUG_DESCRIBE_LOCATION,
     OCALL_EVENTFD,
     OCALL_GET_QUOTE,
+    OCALL_XCOMP_PERM,
     OCALL_NR,
 };
 
@@ -300,6 +301,11 @@ typedef struct {
     char*             ms_quote;
     size_t            ms_quote_len;
 } ms_ocall_get_quote_t;
+
+typedef struct {
+    int code;
+    unsigned long addr;
+} ms_ocall_xcomp_perm_t;
 
 #pragma pack(pop)
 

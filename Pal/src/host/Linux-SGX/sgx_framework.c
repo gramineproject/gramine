@@ -6,6 +6,10 @@
 #include "sgx_arch.h"
 #include "sgx_internal.h"
 
+#if !defined(ARCH_REQ_XCOMP_PERM)
+#define ARCH_REQ_XCOMP_PERM	0x1023
+#endif
+
 static int g_gsgx_device = -1;
 static int g_isgx_device = -1;
 
@@ -183,6 +187,18 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     log_debug("    ssa_frame_size: %d",       secs->ssa_frame_size);
     log_debug("    isv_prod_id:    0x%08x",   secs->isv_prod_id);
     log_debug("    isv_svn:        0x%08x",   secs->isv_svn);
+
+    /* From linux kernel v5.16, AMX brings XFD state:
+     * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/fpu/xstate.c#L934
+     * by default, IA32_XFD[AMX_TILEDATA] = 1, and enclave entry instruction
+     * (ENCLU[EENTER] and ENCLU[ERESUME]) would genterate unhandled #NM exception if
+     * XCR0[AMX_TILEDATA] = IA32_XFD[AMX_TILEDATA] = 1, refer cahpter 3.2.6:
+     * https://software.intel.com/content/dam/develop/external/us/en/documents-tps/architecture-instruction-set-extensions-programming-reference.pdf
+     * request permission then the XFD could handle #NM exception:
+     * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/traps.c#L1165
+     */
+    if (secs->attributes.xfrm & (1 << AMX_TILEDATA))
+        DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
 
     return 0;
 }

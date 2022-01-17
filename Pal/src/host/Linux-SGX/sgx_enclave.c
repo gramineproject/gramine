@@ -30,6 +30,10 @@
     do {                 \
     } while (0)
 
+#if !defined(ARCH_REQ_XCOMP_PERM)
+#define ARCH_REQ_XCOMP_PERM	0x1023
+#endif
+
 static long sgx_ocall_exit(void* pms) {
     ms_ocall_exit_t* ms = (ms_ocall_exit_t*)pms;
     ODEBUG(OCALL_EXIT, NULL);
@@ -675,6 +679,19 @@ static long sgx_ocall_get_quote(void* pms) {
                           &ms->ms_nonce, &ms->ms_quote, &ms->ms_quote_len);
 }
 
+static long sgx_ocall_xcomp_perm(void* pms) {
+    ms_ocall_xcomp_perm_t* ms = (ms_ocall_xcomp_perm_t*)pms;
+    long ret;
+    ODEBUG(OCALL_XCOMP_PERM, ms);
+
+    if (ms->code == ARCH_REQ_XCOMP_PERM)
+        ret = DO_SYSCALL(arch_prctl, ms->code, ms->addr);
+    else
+        ret = DO_SYSCALL(arch_prctl, ms->code, &ms->addr);
+
+    return ret;
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -717,6 +734,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_DEBUG_DESCRIBE_LOCATION]  = sgx_ocall_debug_describe_location,
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
+    [OCALL_XCOMP_PERM]               = sgx_ocall_xcomp_perm,
 };
 
 #define EDEBUG(code, ms) \
