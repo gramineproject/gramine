@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 #include <err.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -14,8 +13,8 @@ int main(int argc, char** argv) {
     if (page_size < 0)
         err(1, "sysconf");
 
-    /* open the file (this executable's manifest) for read, find its size, mmap (with read-write
-     * protections) at least one page more than the file size and mprotect the last page */
+    /* open the file (this executable) for read, find its size, mmap (with read-write protections)
+     * at least one page more than the file size and mprotect the last page */
     FILE* fp = fopen(argv[0], "r");
     if (!fp)
         err(1, "fopen");

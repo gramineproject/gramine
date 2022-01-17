@@ -1265,17 +1265,16 @@ BEGIN_CP_FUNC(vma) {
                  *
                  *   - Only if VMA is both tainted and private, we must send the memory content.
                  *     This VMA will not be backed by a file in the child (i.e., it will be
-                 *     recreated in the child as anonymous memory). We rely on the fact that private
-                 *     mappings do not reflect updates of the file.
-                 *
-                 * FIXME: If file-backed VMA is not tainted but private, we currently re-map from
-                 *        file during restore in the child. But it is possible that the file was
-                 *        modified by another process, and the child's VMA content will differ from
-                 *        the parent's VMA content. Currently we ignore this possibility.
+                 *     recreated in the child as anonymous memory). We assume that all sane POSIX
+                 *     compliant applications will operate on this VMA as if this mapping does not
+                 *     reflect updates of the file (which is not always true on Linux, since Linux
+                 *     uses COW semantics for file-backed mappings).
                  */
                 if ((vma->flags & (VMA_TAINTED | MAP_PRIVATE)) == (VMA_TAINTED | MAP_PRIVATE)) {
                     uint64_t file_size = 0;
-                    get_file_size(vma->file, &file_size);
+                    int ret = get_file_size(vma->file, &file_size);
+                    if (ret < 0)
+                        BUG();
 
                     if (vma->file_offset < file_size) {
                         /* Access beyond the last file-backed page causes SIGBUS. To simulate this
