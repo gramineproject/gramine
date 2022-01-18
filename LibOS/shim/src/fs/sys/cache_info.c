@@ -26,22 +26,23 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_CACHE_INFO* cache = &g_pal_public_state->topo_info.core_topology[cpu_num].cache[cache_num];
+    PAL_CORE_CACHE_INFO* cache_info =
+        &g_pal_public_state->topo_info.core_topology_arr[cpu_num].cache_info_arr[cache_num];
     const char* str;
     if (strcmp(name, "shared_cpu_map") == 0) {
-        str = cache->shared_cpu_map;
+        str = cache_info->shared_cpu_map;
     } else if (strcmp(name, "level") == 0) {
-        str = cache->level;
+        str = cache_info->level;
     } else if (strcmp(name, "type") == 0) {
-        str = cache->type;
+        str = cache_info->type;
     } else if (strcmp(name, "size") == 0) {
-        str = cache->size;
+        str = cache_info->size;
     } else if (strcmp(name, "coherency_line_size") == 0) {
-        str = cache->coherency_line_size;
+        str = cache_info->coherency_line_size;
     } else if (strcmp(name, "number_of_sets") == 0) {
-        str = cache->number_of_sets;
+        str = cache_info->number_of_sets;
     } else if (strcmp(name, "physical_line_partition") == 0) {
-        str = cache->physical_line_partition;
+        str = cache_info->physical_line_partition;
     } else {
         log_debug("unrecognized file: %s", name);
         return -ENOENT;
