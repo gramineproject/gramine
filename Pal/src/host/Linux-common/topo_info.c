@@ -136,54 +136,55 @@ out:
 }
 
 static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-                               PAL_CORE_CACHE_INFO** cache_info) {
+                               PAL_CORE_CACHE_INFO** out_cache_info_arr) {
     int ret;
     char filename[128];
-    PAL_CORE_CACHE_INFO* core_cache = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
-                                                                   sizeof(PAL_CORE_CACHE_INFO));
-    if (!core_cache) {
+    PAL_CORE_CACHE_INFO* cache_info_arr = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
+                                                                       sizeof(*cache_info_arr));
+    if (!cache_info_arr) {
         return -ENOMEM;
     }
 
     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        PAL_CORE_CACHE_INFO* cache = &core_cache[cache_idx];
+        PAL_CORE_CACHE_INFO* cache_info = &cache_info_arr[cache_idx];
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", core_idx,
                  cache_idx);
-        READ_FILE_BUFFER(filename, cache->shared_cpu_map, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->shared_cpu_map, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/level", core_idx, cache_idx);
-        READ_FILE_BUFFER(filename, cache->level, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->level, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/type", core_idx, cache_idx);
-        READ_FILE_BUFFER(filename, cache->type, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->type, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/size", core_idx, cache_idx);
-        READ_FILE_BUFFER(filename, cache->size, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/coherency_line_size", core_idx,
                  cache_idx);
-        READ_FILE_BUFFER(filename, cache->coherency_line_size, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->coherency_line_size, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/number_of_sets", core_idx,
                  cache_idx);
-        READ_FILE_BUFFER(filename, cache->number_of_sets, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->number_of_sets, /*failure_label=*/out_cache);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition", core_idx,
                  cache_idx);
-        READ_FILE_BUFFER(filename, cache->physical_line_partition, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->physical_line_partition,
+                         /*failure_label=*/out_cache);
     }
-    *cache_info = core_cache;
+    *out_cache_info_arr = cache_info_arr;
     return 0;
 
 out_cache:
-    free(core_cache);
+    free(cache_info_arr);
     return ret;
 }
 
@@ -241,8 +242,8 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     topo_info->physical_cores_per_socket = core_siblings_cnt / smt_siblings_cnt;
 
     /* array of "logical core -> socket" mappings */
-    size_t* cpu_to_socket = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket));
-    if (!cpu_to_socket) {
+    size_t* cpu_to_socket_arr = malloc(online_logical_cores_cnt * sizeof(*cpu_to_socket_arr));
+    if (!cpu_to_socket_arr) {
         return -ENOMEM;
     }
 
@@ -255,47 +256,47 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
             log_warning("Cannot read %s", filename);
             goto out_cpu_to_socket;
         }
-        cpu_to_socket[idx] = (size_t)ret;
+        cpu_to_socket_arr[idx] = (size_t)ret;
     }
-    topo_info->cpu_to_socket = cpu_to_socket;
+    topo_info->cpu_to_socket_arr = cpu_to_socket_arr;
 
-    PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
-                                                                    sizeof(PAL_CORE_TOPO_INFO));
-    if (!core_topology)
+    PAL_CORE_TOPO_INFO* core_topology_arr = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
+                                                                        sizeof(*core_topology_arr));
+    if (!core_topology_arr)
         return -ENOMEM;
 
     for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
         /* cpu0 is always online and thus the "online" file is not present. */
         if (idx != 0) {
             snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/online", idx);
-            READ_FILE_BUFFER(filename, core_topology[idx].is_logical_core_online,
+            READ_FILE_BUFFER(filename, core_topology_arr[idx].is_logical_core_online,
                              /*failure_label=*/out_topology);
         }
 
         snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/topology/core_id", idx);
-        READ_FILE_BUFFER(filename, core_topology[idx].core_id, /*failure_label=*/out_topology);
+        READ_FILE_BUFFER(filename, core_topology_arr[idx].core_id, /*failure_label=*/out_topology);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/topology/core_siblings", idx);
-        READ_FILE_BUFFER(filename, core_topology[idx].core_siblings,
+        READ_FILE_BUFFER(filename, core_topology_arr[idx].core_siblings,
                          /*failure_label=*/out_topology);
 
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings", idx);
-        READ_FILE_BUFFER(filename, core_topology[idx].thread_siblings,
+        READ_FILE_BUFFER(filename, core_topology_arr[idx].thread_siblings,
                          /*failure_label=*/out_topology);
 
-        ret = get_cache_topo_info(cache_indices_cnt, idx, &core_topology[idx].cache);
+        ret = get_cache_topo_info(cache_indices_cnt, idx, &core_topology_arr[idx].cache_info_arr);
         if (ret < 0)
             goto out_topology;
     }
-    topo_info->core_topology = core_topology;
+    topo_info->core_topology_arr = core_topology_arr;
     return 0;
 
 out_topology:
-    free(core_topology);
+    free(core_topology_arr);
 out_cpu_to_socket:
-    free(cpu_to_socket);
+    free(cpu_to_socket_arr);
 out:
     return ret;
 }
@@ -309,32 +310,32 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
     ret = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
     if (ret < 0)
         return ret;
-    size_t nodes_cnt = (size_t)ret;
-    topo_info->online_nodes_cnt = nodes_cnt;
+    size_t online_nodes_cnt = (size_t)ret;
+    topo_info->online_nodes_cnt = online_nodes_cnt;
 
-    PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(nodes_cnt *
-                                                                    sizeof(PAL_NUMA_TOPO_INFO));
-    if (!numa_topology)
+    PAL_NUMA_TOPO_INFO* numa_topology_arr = (PAL_NUMA_TOPO_INFO*)malloc(online_nodes_cnt *
+                                                                        sizeof(*numa_topology_arr));
+    if (!numa_topology_arr)
         return -ENOMEM;
 
     char filename[128];
-    for (size_t idx = 0; idx < nodes_cnt; idx++) {
+    for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
         snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpumap", idx);
-        READ_FILE_BUFFER(filename, numa_topology[idx].cpumap, /*failure_label=*/out_topology);
+        READ_FILE_BUFFER(filename, numa_topology_arr[idx].cpumap, /*failure_label=*/out_topology);
 
         snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
-        READ_FILE_BUFFER(filename, numa_topology[idx].distance, /*failure_label=*/out_topology);
+        READ_FILE_BUFFER(filename, numa_topology_arr[idx].distance, /*failure_label=*/out_topology);
 
         /* Since our /sys fs doesn't support writes, set persistent hugepages to their default value
          * of zero */
-        memcpy(numa_topology[idx].hugepages[HUGEPAGES_2M].nr_hugepages, "0\n", 3);
-        memcpy(numa_topology[idx].hugepages[HUGEPAGES_1G].nr_hugepages, "0\n", 3);
+        memcpy(numa_topology_arr[idx].hugepages[HUGEPAGES_2M].nr_hugepages, "0\n", 3);
+        memcpy(numa_topology_arr[idx].hugepages[HUGEPAGES_1G].nr_hugepages, "0\n", 3);
     }
-    topo_info->numa_topology = numa_topology;
+    topo_info->numa_topology_arr = numa_topology_arr;
     return 0;
 
 out_topology:
-    free(numa_topology);
+    free(numa_topology_arr);
 out:
     return ret;
 }

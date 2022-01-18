@@ -124,7 +124,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("model\t\t: %lu\n",     ci->cpu_model);
         ADD_INFO("model name\t: %s\n",   ci->cpu_brand);
         ADD_INFO("stepping\t: %lu\n",    ci->cpu_stepping);
-        ADD_INFO("physical id\t: %zu\n", ti->cpu_to_socket[i]);
+        ADD_INFO("physical id\t: %zu\n", ti->cpu_to_socket_arr[i]);
         ADD_INFO("core id\t\t: %lu\n",   i);
         ADD_INFO("cpu cores\t: %zu\n",   ti->physical_cores_per_socket);
         double bogomips = ci->cpu_bogomips;

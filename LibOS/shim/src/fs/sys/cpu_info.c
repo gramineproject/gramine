@@ -36,7 +36,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_TOPO_INFO* core_topology = &g_pal_public_state->topo_info.core_topology[cpu_num];
+    PAL_CORE_TOPO_INFO* core_topology = &g_pal_public_state->topo_info.core_topology_arr[cpu_num];
     const char* str;
     char buf[12];
     if (strcmp(name, "online") == 0) {
@@ -47,7 +47,8 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     } else if (strcmp(name, "core_id") == 0) {
         str = core_topology->core_id;
     } else if (strcmp(name, "physical_package_id") == 0) {
-        snprintf(buf, sizeof(buf), "%zu\n", g_pal_public_state->topo_info.cpu_to_socket[cpu_num]);
+        snprintf(buf, sizeof(buf), "%zu\n",
+                 g_pal_public_state->topo_info.cpu_to_socket_arr[cpu_num]);
         str = buf;
     } else if (strcmp(name, "core_siblings") == 0) {
         str = core_topology->core_siblings;
