@@ -35,7 +35,7 @@ typedef struct PAL_CORE_TOPO_INFO_ {
     char core_id[PAL_SYSFS_INT_FILESZ];
     char core_siblings[PAL_SYSFS_MAP_FILESZ];
     char thread_siblings[PAL_SYSFS_MAP_FILESZ];
-    PAL_CORE_CACHE_INFO* cache; /* Array of size cache_indices_cnt, owned by this struct */
+    PAL_CORE_CACHE_INFO* cache_info_arr; /* Array of size cache_indices_cnt, owned by this struct */
 } PAL_CORE_TOPO_INFO;
 
 typedef struct PAL_NUMA_HUGEPAGE_INFO_ {
@@ -55,11 +55,11 @@ struct pal_topo_info {
     char online_logical_cores[PAL_SYSFS_BUF_FILESZ];
 
     /* Array of "logical core -> socket" mappings; has online_logical_cores_cnt elements. */
-    size_t* cpu_to_socket;
+    size_t* cpu_to_socket_arr;
 
     /* Array of logical core topology info, owned by this struct. Has online_logical_cores_cnt
      * elements. */
-    PAL_CORE_TOPO_INFO* core_topology;
+    PAL_CORE_TOPO_INFO* core_topology_arr;
 
     /* Max number of logical cores available on the host. */
     size_t possible_logical_cores_cnt;
@@ -75,7 +75,7 @@ struct pal_topo_info {
     char online_nodes[PAL_SYSFS_BUF_FILESZ];
 
     /* Array of numa topology info, owned by this struct. Has online_nodes_cnt elements. */
-    PAL_NUMA_TOPO_INFO* numa_topology;
+    PAL_NUMA_TOPO_INFO* numa_topology_arr;
 
     /* Number of cache levels (such as L2 or L3) available on the host. */
     size_t cache_indices_cnt;
