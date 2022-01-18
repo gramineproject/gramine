@@ -208,8 +208,15 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 /* this dummy function is implemented to support opening TTY devices with O_TRUNC flag */
 static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
-    __UNUSED(handle);
-    __UNUSED(length);
+    if (HANDLE_HDR(handle)->type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (!(handle->dev.fd == 0 || handle->dev.fd == 1))
+        return -PAL_ERROR_NOTSUPPORT;
+
+    if (length != 0)
+        return -PAL_ERROR_INVAL;
+
     return 0;
 }
 
