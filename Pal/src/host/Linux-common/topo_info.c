@@ -136,17 +136,17 @@ out:
 }
 
 static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-                               PAL_CORE_CACHE_INFO** cache_info_arr) {
+                               PAL_CORE_CACHE_INFO** out_cache_info_arr) {
     int ret;
     char filename[128];
-    PAL_CORE_CACHE_INFO* cache_info_array = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
-                                                                         sizeof(*cache_info_array));
-    if (!cache_info_array) {
+    PAL_CORE_CACHE_INFO* cache_info_arr = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
+                                                                       sizeof(*cache_info_arr));
+    if (!cache_info_arr) {
         return -ENOMEM;
     }
 
     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        PAL_CORE_CACHE_INFO* cache_info = &cache_info_array[cache_idx];
+        PAL_CORE_CACHE_INFO* cache_info = &cache_info_arr[cache_idx];
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", core_idx,
                  cache_idx);
@@ -177,13 +177,14 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition", core_idx,
                  cache_idx);
-        READ_FILE_BUFFER(filename, cache_info->physical_line_partition, /*failure_label=*/out_cache);
+        READ_FILE_BUFFER(filename, cache_info->physical_line_partition,
+                         /*failure_label=*/out_cache);
     }
-    *cache_info_arr = cache_info_array;
+    *out_cache_info_arr = cache_info_arr;
     return 0;
 
 out_cache:
-    free(cache_info_array);
+    free(cache_info_arr);
     return ret;
 }
 

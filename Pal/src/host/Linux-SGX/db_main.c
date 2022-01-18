@@ -530,9 +530,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
     }
 
     if (!sgx_copy_to_enclave(cpu_to_socket_arr,
-                             online_logical_cores_cnt * sizeof(*cpu_to_socket_arr),
-                             temp_topo_info.cpu_to_socket_arr,
-                             online_logical_cores_cnt * sizeof(*cpu_to_socket_arr))) {
+            online_logical_cores_cnt * sizeof(*cpu_to_socket_arr), temp_topo_info.cpu_to_socket_arr,
+            online_logical_cores_cnt * sizeof(*temp_topo_info.cpu_to_socket_arr))) {
         log_error("Copying cpu_to_socket_arr into the enclave failed");
         return -1;
     }
@@ -590,9 +589,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
     }
 
     if (!sgx_copy_to_enclave(core_topology_arr,
-                             online_logical_cores_cnt * sizeof(*core_topology_arr),
-                             temp_topo_info.core_topology_arr,
-                             online_logical_cores_cnt * sizeof(*core_topology_arr))) {
+            online_logical_cores_cnt * sizeof(*core_topology_arr), temp_topo_info.core_topology_arr,
+            online_logical_cores_cnt * sizeof(*temp_topo_info.core_topology_arr))) {
         log_error("Copying core_topology_arr into the enclave failed");
         return -1;
     }
@@ -615,8 +613,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
         /* Contents of shallow pointer `core_topology_arr[i].cache_info_arr` are copied
          * into `cache_info_arr` */
         if (!sgx_copy_to_enclave(cache_info_arr, cache_indices_cnt * sizeof(*cache_info_arr),
-                                 core_topology_arr[i].cache_info_arr,
-                                 cache_indices_cnt * sizeof(*cache_info_arr))) {
+                core_topology_arr[i].cache_info_arr,
+                cache_indices_cnt * sizeof(*core_topology_arr[i].cache_info_arr))) {
             log_error("Copying cache_info_arr into the enclave failed");
             return -1;
         }
@@ -641,7 +639,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
 
     if (!sgx_copy_to_enclave(numa_topology_arr, online_nodes_cnt * sizeof(*numa_topology_arr),
                              temp_topo_info.numa_topology_arr,
-                             online_nodes_cnt * sizeof(*numa_topology_arr))) {
+                             online_nodes_cnt * sizeof(*temp_topo_info.numa_topology_arr))) {
         log_error("Copying numa_topology_arr into the enclave failed");
         return -1;
     }
