@@ -689,12 +689,6 @@ uint64_t get_tsc_hz(void) {
     return base_frequency_mhz * 1000000;
 }
 
-// TODO: Move the parsing from db_main:pal_linux_main to here.
-int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
-    __UNUSED(topo_info);
-    return 0;
-}
-
 int _DkRandomBitsRead(void* buffer, size_t size) {
     uint32_t rand;
     for (size_t i = 0; i < size; i += sizeof(rand)) {

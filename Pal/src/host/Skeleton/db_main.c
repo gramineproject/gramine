@@ -17,7 +17,3 @@ void pal_start(void);
 void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
     /* needs to be implemented */
 }
-
-int _DkGetTopologyInfo(struct pal_topo_info* topo_info) {
-    return 0;
-}

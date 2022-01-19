@@ -25,6 +25,7 @@
 #include "pal_rtld.h"
 #include "toml.h"
 #include "toml_utils.h"
+#include "topo_info.h"
 
 char* g_pal_loader_path = NULL;
 /* Currently content of this variable is only passed as an argument while spawning new processes
@@ -267,6 +268,11 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL(-unix_to_pal_error(ret), "failed to init debug maps");
 #endif
+
+    /* Get host topology information */
+    ret = get_topology_info(&g_pal_public_state.topo_info);
+    if (ret < 0)
+        INIT_FAIL(-ret, "get_topology_info() failed");
 
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);
