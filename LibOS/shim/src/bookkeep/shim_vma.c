@@ -1238,8 +1238,16 @@ BEGIN_CP_FUNC(vma) {
 
         void* need_mapped = vma->addr;
 
-        /* Check whether we need to checkpoint memory this vma bookkeeps. */
-        if ((vma->flags & VMA_TAINTED || !vma->file) && !(vma->flags & VMA_UNMAPPED)) {
+        /*
+         * Check whether we need to checkpoint memory this vma bookkeeps: it should be mapped and it
+         * should be either anonymous memory or tainted private file-backed memory. In other cases,
+         * we re-map this vma during checkpoint restore in child (see function below).
+         *
+         * FIXME: In case of anonymous memory, we always checkpoint memory and ignore MAP_SHARED
+         *        flag. VMA content in parent and child may diverge.
+         */
+        if (!(vma->flags & VMA_UNMAPPED) && (!vma->file ||
+                    (vma->flags & (VMA_TAINTED | MAP_PRIVATE)) == (VMA_TAINTED | MAP_PRIVATE))) {
             void* send_addr  = vma->addr;
             size_t send_size = vma->length;
             if (vma->file) {
@@ -1303,7 +1311,6 @@ BEGIN_RS_FUNC(vma) {
             get_handle(vma->file);
 
             if (need_mapped < vma->addr + vma->length) {
-                /* first try, use hstat to force it resumes pal handle */
                 if (!fs || !fs->fs_ops || !fs->fs_ops->mmap) {
                     return -EINVAL;
                 }
