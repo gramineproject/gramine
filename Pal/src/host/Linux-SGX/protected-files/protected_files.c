@@ -32,15 +32,6 @@ static pf_random_f          g_cb_random          = NULL;
 #ifdef DEBUG
 #define PF_DEBUG_PRINT_SIZE_MAX 4096
 
-/* Debug print without function name prefix. Implicit param: pf (context pointer). */
-#define __DEBUG_PF(format, ...)                                                         \
-    do {                                                                                \
-        if (g_cb_debug) {                                                               \
-            snprintf(pf->debug_buffer, PF_DEBUG_PRINT_SIZE_MAX, format, ##__VA_ARGS__); \
-            g_cb_debug(pf->debug_buffer);                                               \
-        }                                                                               \
-    } while (0)
-
 /* Debug print with function name prefix. Implicit param: pf (context pointer). */
 #define DEBUG_PF(format, ...)                                                                \
     do {                                                                                     \
@@ -53,7 +44,6 @@ static pf_random_f          g_cb_random          = NULL;
 
 #else /* DEBUG */
 #define DEBUG_PF(...)
-#define __DEBUG_PF(...)
 #endif /* DEBUG */
 
 static pf_iv_t g_empty_iv = {0};
@@ -196,11 +186,11 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     if (!ipf_init_fields(pf))
         goto out;
 
-    DEBUG_PF("handle: %d, path: '%s', real size: %lu, mode: 0x%x\n", *(int*)file, path, real_size,
+    DEBUG_PF("handle: %d, path: '%s', real size: %lu, mode: 0x%x", *(int*)file, path, real_size,
              mode);
 
     if (kdk_key == NULL) {
-        DEBUG_PF("no key specified\n");
+        DEBUG_PF("no key specified");
         pf->last_error = PF_STATUS_INVALID_PARAMETER;
         goto out;
     }
@@ -219,7 +209,7 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     // omeg: Intel's implementation opens the file, we get the fd and size from the Gramine handler
 
     if (!file) {
-        DEBUG_PF("invalid handle\n");
+        DEBUG_PF("invalid handle");
         pf->last_error = PF_STATUS_INVALID_PARAMETER;
         goto out;
     }
@@ -245,14 +235,14 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     }
 
     pf->last_error = pf->file_status = PF_STATUS_SUCCESS;
-    DEBUG_PF("OK (data size %lu)\n", pf->encrypted_part_plain.size);
+    DEBUG_PF("OK (data size %lu)", pf->encrypted_part_plain.size);
 
 out:
     if (pf)
         *status = pf->last_error;
 
     if (pf && PF_FAILURE(pf->last_error)) {
-        DEBUG_PF("failed: %d\n", pf->last_error);
+        DEBUG_PF("failed: %d", pf->last_error);
         free(pf);
         pf = NULL;
     }
@@ -321,11 +311,11 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
                                   &pf->file_metadata.plain_part.metadata_gmac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
-        DEBUG_PF("failed to decrypt metadata: %d\n", status);
+        DEBUG_PF("failed to decrypt metadata: %d", status);
         return false;
     }
 
-    DEBUG_PF("data size %lu\n", pf->encrypted_part_plain.size);
+    DEBUG_PF("data size %lu", pf->encrypted_part_plain.size);
 
     if (path) {
         size_t path_len = strlen(pf->encrypted_part_plain.path);
@@ -381,7 +371,7 @@ static bool ipf_close(pf_context_t* pf) {
         retval = false;
     } else {
         if (!ipf_internal_flush(pf)) {
-            DEBUG_PF("internal flush failed\n");
+            DEBUG_PF("internal flush failed");
             retval = false;
         }
     }
@@ -412,7 +402,7 @@ static bool ipf_close(pf_context_t* pf) {
 static bool ipf_internal_flush(pf_context_t* pf) {
     if (!pf->need_writing) {
         // no changes at all
-        DEBUG_PF("no need to write\n");
+        DEBUG_PF("no need to write");
         return true;
     }
 
@@ -421,7 +411,7 @@ static bool ipf_internal_flush(pf_context_t* pf) {
         if (!ipf_update_all_data_and_mht_nodes(pf)) {
             // this is something that shouldn't happen, can't fix this...
             pf->file_status = PF_STATUS_CRYPTO_ERROR;
-            DEBUG_PF("failed to update data nodes\n");
+            DEBUG_PF("failed to update data nodes");
             return false;
         }
     }
@@ -429,14 +419,14 @@ static bool ipf_internal_flush(pf_context_t* pf) {
     if (!ipf_update_metadata_node(pf)) {
         // this is something that shouldn't happen, can't fix this...
         pf->file_status = PF_STATUS_CRYPTO_ERROR;
-        DEBUG_PF("failed to update metadata nodes\n");
+        DEBUG_PF("failed to update metadata nodes");
         return false;
     }
 
     if (!ipf_write_all_changes_to_disk(pf)) {
         pf->file_status = PF_STATUS_WRITE_TO_DISK_FAILED;
 
-        DEBUG_PF("failed to write changes to disk\n");
+        DEBUG_PF("failed to write changes to disk");
         return false;
     }
 
@@ -700,7 +690,7 @@ static void ipf_try_clear_error(pf_context_t* pf) {
         pf->file_status == PF_STATUS_CRYPTO_ERROR ||
         pf->file_status == PF_STATUS_CORRUPTED) {
         // can't fix these...
-        DEBUG_PF("Unrecoverable file status: %d\n", pf->file_status);
+        DEBUG_PF("Unrecoverable file status: %d", pf->file_status);
         return;
     }
 
@@ -741,13 +731,13 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
 
     if (PF_FAILURE(pf->file_status)) {
         pf->last_error = pf->file_status;
-        DEBUG_PF("bad file status %d\n", pf->last_error);
+        DEBUG_PF("bad file status %d", pf->last_error);
         return 0;
     }
 
     if (!(pf->mode & PF_FILE_MODE_WRITE)) {
         pf->last_error = PF_STATUS_INVALID_MODE;
-        DEBUG_PF("File is read-only\n");
+        DEBUG_PF("File is read-only");
         return 0;
     }
 
@@ -778,7 +768,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
         // if needed (and also the mht node if needed)
         file_data_node = ipf_get_data_node(pf);
         if (file_data_node == NULL) {
-            DEBUG_PF("failed to get data node\n");
+            DEBUG_PF("failed to get data node");
             break;
         }
 
@@ -1262,7 +1252,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (size > pf->encrypted_part_plain.size) {
         // extend the file
         pf->offset = pf->encrypted_part_plain.size;
-        DEBUG_PF("extending the file from %lu to %lu\n", pf->offset, size);
+        DEBUG_PF("extending the file from %lu to %lu", pf->offset, size);
         if (ipf_write(pf, NULL, size - pf->offset) != size - pf->offset)
             return pf->last_error;
 

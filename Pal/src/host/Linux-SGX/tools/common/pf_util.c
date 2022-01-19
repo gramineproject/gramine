@@ -215,7 +215,7 @@ static int pf_set_linux_callbacks(pf_debug_f debug_f) {
 
 /* Debug print callback for protected files */
 static void cb_debug(const char* msg) {
-    DBG("%s", msg);
+    DBG("%s\n", msg);
 }
 
 /* Initialize protected files for native environment */
