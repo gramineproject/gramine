@@ -548,10 +548,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_public_state.enable_sysfs_topology = enable_sysfs_topology;
 
-    if (_DkGetTopologyInfo(&g_pal_public_state.topo_info) < 0) {
-        goto out_fail;
-    }
-
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)
         INIT_FAIL(-ret, "Unable to load loader.entrypoint");
