@@ -46,7 +46,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
-    'breathe',
     'sphinx_rtd_theme',
 ]
 
@@ -87,17 +86,24 @@ rst_prolog = '''
 breathe_projects = {p: '_build/doxygen-{}/xml'.format(p)
     for p in ('libos', 'pal', 'pal-linux', 'pal-linux-sgx')}
 
-def generate_doxygen(app):
-    for p in breathe_projects:
-        subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
+breathe_domain_by_extension = {
+    'h': 'c',
+}
+
+try:
+    import breathe
+except ImportError:
+    def generate_doxygen(app):
+        pass
+else:
+    extensions.append('breathe')
+    def generate_doxygen(app):
+        for p in breathe_projects:
+            subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
 
 def setup(app):
     app.add_stylesheet('css/gramine.css')
     app.connect('builder-inited', generate_doxygen)
-
-breathe_domain_by_extension = {
-    'h': 'c',
-}
 
 todo_include_todos = True
 
