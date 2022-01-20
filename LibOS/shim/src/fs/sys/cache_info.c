@@ -26,7 +26,7 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_CACHE_INFO* cache_info =
+    struct pal_core_cache_info* cache_info =
         &g_pal_public_state->topo_info.core_topology_arr[cpu_num].cache_info_arr[cache_num];
     const char* str;
     if (strcmp(name, "shared_cpu_map") == 0) {

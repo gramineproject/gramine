@@ -136,17 +136,17 @@ out:
 }
 
 static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-                               PAL_CORE_CACHE_INFO** out_cache_info_arr) {
+                               struct pal_core_cache_info** out_cache_info_arr) {
     int ret;
     char filename[128];
-    PAL_CORE_CACHE_INFO* cache_info_arr = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
-                                                                       sizeof(*cache_info_arr));
+    struct pal_core_cache_info* cache_info_arr =
+        malloc(cache_indices_cnt * sizeof(*cache_info_arr));
     if (!cache_info_arr) {
         return -ENOMEM;
     }
 
     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        PAL_CORE_CACHE_INFO* cache_info = &cache_info_arr[cache_idx];
+        struct pal_core_cache_info* cache_info = &cache_info_arr[cache_idx];
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", core_idx,
                  cache_idx);
@@ -260,8 +260,8 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     }
     topo_info->cpu_to_socket_arr = cpu_to_socket_arr;
 
-    PAL_CORE_TOPO_INFO* core_topology_arr = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
-                                                                        sizeof(*core_topology_arr));
+    struct pal_core_topo_info* core_topology_arr =
+        malloc(online_logical_cores_cnt * sizeof(*core_topology_arr));
     if (!core_topology_arr)
         return -ENOMEM;
 
@@ -313,8 +313,8 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
     size_t online_nodes_cnt = (size_t)ret;
     topo_info->online_nodes_cnt = online_nodes_cnt;
 
-    PAL_NUMA_TOPO_INFO* numa_topology_arr = (PAL_NUMA_TOPO_INFO*)malloc(online_nodes_cnt *
-                                                                        sizeof(*numa_topology_arr));
+    struct pal_numa_topo_info* numa_topology_arr =
+        malloc(online_nodes_cnt * sizeof(*numa_topology_arr));
     if (!numa_topology_arr)
         return -ENOMEM;
 

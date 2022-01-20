@@ -32,7 +32,8 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_NUMA_TOPO_INFO* numa_topology = &g_pal_public_state->topo_info.numa_topology_arr[node_num];
+    struct pal_numa_topo_info* numa_topology =
+        &g_pal_public_state->topo_info.numa_topology_arr[node_num];
     const char* str = NULL;
     if (strcmp(name, "cpumap" ) == 0) {
         str = numa_topology->cpumap;

@@ -36,7 +36,8 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    PAL_CORE_TOPO_INFO* core_topology = &g_pal_public_state->topo_info.core_topology_arr[cpu_num];
+    struct pal_core_topo_info* core_topology =
+        &g_pal_public_state->topo_info.core_topology_arr[cpu_num];
     const char* str;
     char buf[12];
     if (strcmp(name, "online") == 0) {

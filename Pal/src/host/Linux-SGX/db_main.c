@@ -246,7 +246,7 @@ static long sanitize_hw_resource_count(const char* buf, bool ordered) {
     return (long)resource_cnt ?: -EINVAL;
 }
 
-static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache_info_arr,
+static int sanitize_cache_topology_info(struct pal_core_cache_info* cache_info_arr,
                                         size_t cache_indices_cnt, size_t cores_cnt) {
     int ret;
     for (size_t idx = 0; idx < cache_indices_cnt; idx++) {
@@ -290,8 +290,8 @@ static int sanitize_cache_topology_info(PAL_CORE_CACHE_INFO* cache_info_arr,
     return 0;
 }
 
-static int sanitize_core_topology_info(PAL_CORE_TOPO_INFO* core_topology_arr, size_t cores_cnt,
-                                       size_t cache_indices_cnt) {
+static int sanitize_core_topology_info(struct pal_core_topo_info* core_topology_arr,
+                                       size_t cores_cnt, size_t cache_indices_cnt) {
     int ret;
     if (cores_cnt == 0 || cache_indices_cnt == 0)
         return -ENOENT;
@@ -343,7 +343,7 @@ static int sanitize_socket_info(size_t* cpu_to_socket_arr, size_t cores_cnt) {
     return 0;
 }
 
-static int sanitize_numa_topology_info(PAL_NUMA_TOPO_INFO* numa_topology_arr,
+static int sanitize_numa_topology_info(struct pal_numa_topo_info* numa_topology_arr,
                                        size_t online_nodes_cnt, size_t cores_cnt) {
     int ret;
     if (online_nodes_cnt == 0 || cores_cnt == 0)
@@ -581,8 +581,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
         return -1;
     }
 
-    PAL_CORE_TOPO_INFO* core_topology_arr = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores_cnt *
-                                                                        sizeof(*core_topology_arr));
+    struct pal_core_topo_info* core_topology_arr =
+        malloc(online_logical_cores_cnt * sizeof(*core_topology_arr));
     if (!core_topology_arr) {
         log_error("Allocation for core topology failed");
         return -1;
@@ -603,8 +603,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
 
     /* Copy cache info for each online core */
     for (size_t i = 0; i < online_logical_cores_cnt; i++) {
-        PAL_CORE_CACHE_INFO* cache_info_arr = (PAL_CORE_CACHE_INFO*)malloc(cache_indices_cnt *
-                                                                           sizeof(*cache_info_arr));
+        struct pal_core_cache_info* cache_info_arr =
+            malloc(cache_indices_cnt * sizeof(*cache_info_arr));
         if (!cache_info_arr) {
             log_error("Allocation for cache_info_arr failed");
             return -1;
@@ -630,8 +630,8 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
         return -1;
     }
 
-    PAL_NUMA_TOPO_INFO* numa_topology_arr = (PAL_NUMA_TOPO_INFO*)malloc(online_nodes_cnt *
-                                                                        sizeof(*numa_topology_arr));
+    struct pal_numa_topo_info* numa_topology_arr =
+        malloc(online_nodes_cnt * sizeof(*numa_topology_arr));
     if (!numa_topology_arr) {
         log_error("Allocation for numa_topology_arr failed");
         return -1;
