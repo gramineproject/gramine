@@ -28,7 +28,7 @@ long shim_do_fstat(int fd, struct stat* statbuf);
 long shim_do_lstat(const char* file, struct stat* stat);
 long shim_do_statfs(const char* path, struct statfs* buf);
 long shim_do_fstatfs(int fd, struct statfs* buf);
-long shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout);
+long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout);
 long shim_do_lseek(int fd, off_t offset, int origin);
 void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsigned long offset);
 long shim_do_mprotect(void* addr, size_t len, int prot);
@@ -177,9 +177,9 @@ long shim_do_fchmodat(int dfd, const char* filename, mode_t mode);
 long shim_do_fchownat(int dfd, const char* filename, uid_t user, gid_t group, int flags);
 long shim_do_faccessat(int dfd, const char* filename, mode_t mode);
 long shim_do_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
-                      const struct __kernel_timespec* tsp, const __sigset_t* sigmask);
-long shim_do_ppoll(struct pollfd* fds, int nfds, struct timespec* tsp, const __sigset_t* sigmask,
-                   size_t sigsetsize);
+                      const struct __kernel_timespec* tsp, void* sigmask_argpack);
+long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
+                   const __sigset_t* sigmask_ptr, size_t sigsetsize);
 long shim_do_set_robust_list(struct robust_list_head* head, size_t len);
 long shim_do_get_robust_list(pid_t pid, struct robust_list_head** head, size_t* len);
 long shim_do_epoll_pwait(int epfd, struct __kernel_epoll_event* events, int maxevents,

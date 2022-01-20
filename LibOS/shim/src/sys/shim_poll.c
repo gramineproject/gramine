@@ -202,20 +202,26 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
     return nrevents ? (long)nrevents : error;
 }
 
-long shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
-    if (!is_user_memory_writable(fds, sizeof(*fds) * nfds))
+long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
+    if (!is_user_memory_writable(fds, nfds * sizeof(*fds)))
         return -EFAULT;
 
     return _shim_do_poll(fds, nfds, timeout_ms);
 }
 
-long shim_do_ppoll(struct pollfd* fds, int nfds, struct timespec* tsp, const __sigset_t* sigmask,
-                   size_t sigsetsize) {
-    __UNUSED(sigmask);
-    __UNUSED(sigsetsize);
+long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
+                   const __sigset_t* sigmask_ptr, size_t sigsetsize) {
+    if (!is_user_memory_writable(fds, nfds * sizeof(*fds))) {
+        return -EFAULT;
+    }
+
+    int ret = set_user_sigmask(sigmask_ptr, sigsetsize);
+    if (ret < 0) {
+        return ret;
+    }
 
     uint64_t timeout_ms = tsp ? tsp->tv_sec * 1000ULL + tsp->tv_nsec / 1000000 : POLL_NOTIMEOUT;
-    return shim_do_poll(fds, nfds, timeout_ms);
+    return _shim_do_poll(fds, nfds, timeout_ms);
 }
 
 long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
@@ -313,9 +319,23 @@ long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfd
     return ret;
 }
 
+struct sigset_argpack {
+    __sigset_t* p;
+    size_t size;
+};
+
 long shim_do_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
-                      const struct __kernel_timespec* tsp, const __sigset_t* sigmask) {
-    __UNUSED(sigmask);
+                      const struct __kernel_timespec* tsp, void* _sigmask_argpack) {
+    struct sigset_argpack* sigmask_argpack = _sigmask_argpack;
+    if (sigmask_argpack) {
+        if (!is_user_memory_readable(sigmask_argpack, sizeof(*sigmask_argpack))) {
+            return -EFAULT;
+        }
+        int ret = set_user_sigmask(sigmask_argpack->p, sigmask_argpack->size);
+        if (ret < 0) {
+            return ret;
+        }
+    }
 
     if (tsp) {
         struct __kernel_timeval tsv;

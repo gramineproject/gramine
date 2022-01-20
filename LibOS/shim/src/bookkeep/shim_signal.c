@@ -335,7 +335,7 @@ static void arithmetic_error_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* c
             .si_addr = (void*)addr,
         };
         force_signal(&info);
-        handle_signal(context, /*old_mask_ptr=*/NULL);
+        handle_signal(context);
     }
 }
 
@@ -387,7 +387,7 @@ static void memfault_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) 
     }
 
     force_signal(&info);
-    handle_signal(context, /*old_mask_ptr=*/NULL);
+    handle_signal(context);
 }
 
 /*
@@ -480,7 +480,7 @@ static void illegal_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
             .si_addr = (void*)addr,
         };
         force_signal(&info);
-        handle_signal(context, /*old_mask_ptr=*/NULL);
+        handle_signal(context);
     }
     /* else syscall was emulated. */
 }
@@ -505,7 +505,7 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
     }
-    handle_signal(context, /*old_mask_ptr=*/NULL);
+    handle_signal(context);
 }
 
 static void interrupted_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
@@ -517,7 +517,7 @@ static void interrupted_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* contex
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
     }
-    handle_signal(context, /*old_mask_ptr=*/NULL);
+    handle_signal(context);
 }
 
 int init_signal_handling(void) {
@@ -564,8 +564,34 @@ void set_sig_mask(struct shim_thread* thread, const __sigset_t* set) {
     assert(thread);
     assert(set);
     assert(locked(&thread->lock));
+    assert(thread == get_cur_thread() || !thread->pal_handle);
 
     thread->signal_mask = *set;
+}
+
+int set_user_sigmask(const __sigset_t* mask_ptr, size_t setsize) {
+    if (!mask_ptr) {
+        return 0;
+    }
+    if (setsize != sizeof(*mask_ptr)) {
+        return -EINVAL;
+    }
+    if (!is_user_memory_readable(mask_ptr, sizeof(*mask_ptr))) {
+        return -EFAULT;
+    }
+
+    __sigset_t mask = *mask_ptr;
+    clear_illegal_signals(&mask);
+
+    struct shim_thread* current = get_cur_thread();
+    lock(&current->lock);
+    assert(!current->has_saved_sigmask);
+    current->saved_sigmask = current->signal_mask;
+    current->has_saved_sigmask = true;
+    set_sig_mask(current, &mask);
+    unlock(&current->lock);
+
+    return 0;
 }
 
 /* XXX: This function assumes that the stack is growing towards lower addresses. */
@@ -683,7 +709,7 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
  * unless the user app changes context in any other way (e.g. `swapcontext`), in which case the next
  * signal might be delayed until the next issued syscall.
  */
-bool handle_signal(PAL_CONTEXT* context, __sigset_t* old_mask_ptr) {
+bool handle_signal(PAL_CONTEXT* context) {
     struct shim_thread* current = get_cur_thread();
     assert(current);
     assert(!is_internal(current));
@@ -755,12 +781,17 @@ bool handle_signal(PAL_CONTEXT* context, __sigset_t* old_mask_ptr) {
 
         __sigset_t old_mask;
         lock(&current->lock);
-        get_sig_mask(current, &old_mask);
+        if (current->has_saved_sigmask) {
+            old_mask = current->saved_sigmask;
+            current->has_saved_sigmask = false;
+        } else {
+            get_sig_mask(current, &old_mask);
+        }
         set_sig_mask(current, &new_mask);
         unlock(&current->lock);
 
         prepare_sigframe(context, &signal.siginfo, handler, sa->sa_restorer,
-                         !!(sa->sa_flags & SA_ONSTACK), old_mask_ptr ?: &old_mask);
+                         !!(sa->sa_flags & SA_ONSTACK), &old_mask);
 
         if (sa->sa_flags & SA_RESETHAND) {
             /* borysp: In my opinion it should be `sigaction_make_defaults(sa);`, but Linux does
@@ -774,7 +805,7 @@ bool handle_signal(PAL_CONTEXT* context, __sigset_t* old_mask_ptr) {
 
     if (!ret) {
         /* We have seen an ignored signal, retry. */
-        return handle_signal(context, old_mask_ptr);
+        return handle_signal(context);
     }
 
     return true;

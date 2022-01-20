@@ -184,46 +184,20 @@ long shim_do_sigaltstack(const stack_t* ss, stack_t* oss) {
 }
 
 long shim_do_rt_sigsuspend(const __sigset_t* mask_ptr, size_t setsize) {
-    if (setsize != sizeof(sigset_t)) {
-        return -EINVAL;
+    int ret = set_user_sigmask(mask_ptr, setsize);
+    if (ret < 0) {
+        return ret;
     }
-    if (!is_user_memory_readable(mask_ptr, sizeof(*mask_ptr)))
-        return -EFAULT;
-
-    __sigset_t mask = *mask_ptr;
-    clear_illegal_signals(&mask);
-
-    struct shim_thread* current = get_cur_thread();
-    __sigset_t old;
-    lock(&current->lock);
-    get_sig_mask(current, &old);
-    set_sig_mask(current, &mask);
-    unlock(&current->lock);
 
     thread_prepare_wait();
     while (!have_pending_signals()) {
-        int ret = thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/false);
+        ret = thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/false);
         if (ret < 0 && ret != -EINTR) {
             return ret;
         }
     }
 
-    /* XXX: This basicaly doubles the work of `shim_emulate_syscall`. The alternative would be to
-     * add handling of saved signal mask (probably inside `current`) to `shim_emulate_syscall`, but
-     * as it is specific to sigsuspend I'm leaving this here for now. */
-    int ret = -EINTR;
-    PAL_CONTEXT* context = SHIM_TCB_GET(context.regs);
-    pal_context_set_retval(context, ret);
-
-    debug_print_syscall_after(__NR_rt_sigsuspend, ret, ALL_SYSCALL_ARGS(context));
-
-    if (!handle_signal(context, &old)) {
-        restart_syscall(context, __NR_rt_sigsuspend);
-    }
-
-    SHIM_TCB_SET(context.syscall_nr, -1);
-    SHIM_TCB_SET(context.regs, NULL);
-    return_from_syscall(context);
+    return -EINTR;
 }
 
 long shim_do_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* info,
