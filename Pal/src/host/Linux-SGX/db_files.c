@@ -822,6 +822,13 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
+    struct protected_file* pf = get_protected_file(handle->file.realpath);
+
+    if (pf) {
+        log_error("Renaming of protected files is not supported yet.");
+        return -PAL_ERROR_NOTSUPPORT;
+    }
+
     char* tmp = strdup(uri);
     if (!tmp)
         return -PAL_ERROR_NOMEM;
