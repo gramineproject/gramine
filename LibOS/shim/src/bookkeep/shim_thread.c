@@ -287,6 +287,7 @@ struct shim_thread* get_new_thread(void) {
     lock(&thread->lock);
     set_sig_mask(thread, &cur_thread->signal_mask);
     unlock(&thread->lock);
+    thread->has_saved_sigmask = false;
 
     struct shim_handle_map* map = get_thread_handle_map(cur_thread);
     assert(map);

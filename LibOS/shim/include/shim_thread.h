@@ -86,8 +86,11 @@ struct shim_thread {
     int* clear_child_tid;    /* LibOS zeroes it to notify parent that thread exited */
     int clear_child_tid_pal; /* PAL zeroes it to notify LibOS that thread exited */
 
-    /* signal handling */
+    /* Thread signal mask. Should be accessed with `this_thread->lock` held. Must not be modified
+     * by threads other than the current thread. */
     __sigset_t signal_mask;
+    __sigset_t saved_sigmask; // old mask; accessible only by the current thread
+    bool has_saved_sigmask; // true if the above mask was set and needs to be restored
     /* If you need both locks, take `thread->signal_dispositions->lock` before `thread->lock`. */
     struct shim_signal_dispositions* signal_dispositions;
     struct shim_signal_queue signal_queue;

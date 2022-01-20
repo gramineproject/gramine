@@ -125,11 +125,8 @@ bool maybe_emulate_syscall(PAL_CONTEXT* context);
  * \brief Handle a signal
  *
  * \param context CPU context
- * \param old_mask_ptr pointer to the old signal mask
  *
  * If there is a signal to be handled, this function arranges its delivery using `prepare_sigframe`.
- * If \p old_mask_ptr is not `NULL`, it is stored into the signal frame, otherwise the current
- * signal mask is used.
  * Returns `true` if a not-ignored signal was handled (hence \p context was changed), `false`
  * otherwise.
  *
@@ -141,7 +138,7 @@ bool maybe_emulate_syscall(PAL_CONTEXT* context);
  * 2) The signal arrived in the middle of or after `handle_signal`. In such case delivery of this
  *    signal is delayed until the next syscall is issued or another signal arrives.
  */
-bool handle_signal(PAL_CONTEXT* context, __sigset_t* old_mask_ptr);
+bool handle_signal(PAL_CONTEXT* context);
 
 /*!
  * \brief Translate PAL error code into UNIX error code.

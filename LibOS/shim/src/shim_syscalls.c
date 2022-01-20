@@ -6,8 +6,11 @@
 #include "asan.h"
 #include "shim_defs.h"
 #include "shim_internal.h"
+#include "shim_lock.h"
+#include "shim_signal.h"
 #include "shim_table.h"
 #include "shim_tcb.h"
+#include "shim_thread.h"
 #include "shim_types.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
@@ -46,7 +49,7 @@ out:
 
     /* Some syscalls e.g. `sigreturn` could have changed context and in reality we might be not
      * returning from a syscall. */
-    if (!handle_signal(context, /*old_mask_ptr=*/NULL) && SHIM_TCB_GET(context.syscall_nr) >= 0) {
+    if (!handle_signal(context) && SHIM_TCB_GET(context.syscall_nr) >= 0) {
         switch (ret) {
             case -ERESTARTNOHAND:
             case -ERESTARTSYS:
@@ -56,6 +59,14 @@ out:
             default:
                 break;
         }
+    }
+
+    struct shim_thread* current = get_cur_thread();
+    if (current->has_saved_sigmask) {
+        lock(&current->lock);
+        set_sig_mask(current, &current->saved_sigmask);
+        unlock(&current->lock);
+        current->has_saved_sigmask = false;
     }
 
     SHIM_TCB_SET(context.syscall_nr, -1);

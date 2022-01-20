@@ -153,6 +153,19 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal);
 void get_sig_mask(struct shim_thread* thread, __sigset_t* mask);
 void set_sig_mask(struct shim_thread* thread, const __sigset_t* new_set);
 
+/*!
+ * \brief Set signal mask requested by user
+ *
+ * \param mask_ptr Pointer to the user signal mask (may be NULL)
+ * \param setsize Size of `__sigset_t`
+ *
+ * \return `0` on success, negative error code on failure.
+ *
+ * This function saves the current signal mask (in `struct shim_thread`) and sets it to \p mask_ptr.
+ * If \p mask_ptr is NULL, this does nothing.
+ */
+int set_user_sigmask(const __sigset_t* mask_ptr, size_t setsize);
+
 int kill_current_proc(siginfo_t* info);
 int do_kill_thread(IDTYPE sender, IDTYPE tgid, IDTYPE tid, int sig);
 int do_kill_proc(IDTYPE sender, IDTYPE pid, int sig);
