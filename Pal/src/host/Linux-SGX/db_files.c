@@ -805,6 +805,13 @@ static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
+    struct protected_file* pf = get_protected_file(handle->file.realpath);
+
+    if(pf) {
+        log_error("Renaming of protected files is not supported yet.");
+        return -PAL_ERROR_NOTSUPPORT;
+    }
+
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
