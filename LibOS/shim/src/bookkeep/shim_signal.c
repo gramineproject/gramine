@@ -585,6 +585,7 @@ int set_user_sigmask(const __sigset_t* mask_ptr, size_t setsize) {
 
     struct shim_thread* current = get_cur_thread();
     lock(&current->lock);
+    assert(!current->has_saved_sigmask);
     current->saved_sigmask = current->signal_mask;
     current->has_saved_sigmask = true;
     set_sig_mask(current, &mask);
