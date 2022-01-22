@@ -89,8 +89,10 @@ struct shim_thread {
     /* Thread signal mask. Should be accessed with `this_thread->lock` held. Must not be modified
      * by threads other than the current thread. */
     __sigset_t signal_mask;
-    __sigset_t saved_sigmask; // old mask; accessible only by the current thread
-    bool has_saved_sigmask; // true if the above mask was set and needs to be restored
+    /* Old, saved signal mask. Accessible only by the current thread. */
+    __sigset_t saved_sigmask;
+    /* True if the above mask was set and needs to be restored. */
+    bool has_saved_sigmask;
     /* If you need both locks, take `thread->signal_dispositions->lock` before `thread->lock`. */
     struct shim_signal_dispositions* signal_dispositions;
     struct shim_signal_queue signal_queue;

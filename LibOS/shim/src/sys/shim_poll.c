@@ -203,7 +203,7 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
 }
 
 long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
-    if (!is_user_memory_writable(fds, sizeof(*fds) * nfds))
+    if (!is_user_memory_writable(fds, nfds * sizeof(*fds)))
         return -EFAULT;
 
     return _shim_do_poll(fds, nfds, timeout_ms);
