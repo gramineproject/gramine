@@ -1883,7 +1883,7 @@ int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
 
 static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
     size_t max_cpumask_bits = cpumask_size * BITS_IN_BYTE;
-    size_t valid_cpumask_bits = g_pal_public_state.topo_info.online_logical_cores_cnt;
+    size_t valid_cpumask_bits = g_pal_public_state.topo_info.online_logical_cores.resource_cnt;
     size_t invalid_bits = max_cpumask_bits - valid_cpumask_bits;
 
     if (invalid_bits == 0)

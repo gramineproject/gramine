@@ -142,7 +142,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
 
     const struct pal_topo_info* ti = &g_pal_public_state->topo_info;
     const struct pal_cpu_info* ci = &g_pal_public_state->cpu_info;
-    for (size_t i = 0; i < ti->online_logical_cores_cnt; i++) {
+    for (size_t i = 0; i < ti->online_logical_cores.resource_cnt; i++) {
         /* Below strings must match exactly the strings retrieved from /proc/cpuinfo
          * (see Linux's arch/x86/kernel/cpu/proc.c) */
         ADD_INFO("processor\t: %lu\n",   i);
@@ -151,7 +151,9 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("model\t\t: %lu\n",     ci->cpu_model);
         ADD_INFO("model name\t: %s\n",   ci->cpu_brand);
         ADD_INFO("stepping\t: %lu\n",    ci->cpu_stepping);
-        ADD_INFO("physical id\t: %zu\n", ti->cpu_to_socket_arr[i]);
+        if (g_pal_public_state->enable_sysfs_topology) {
+            ADD_INFO("physical id\t: %zu\n", ti->core_topo_arr[i].socket_id);
+        }
         ADD_INFO("core id\t\t: %lu\n",   i);
         ADD_INFO("cpu cores\t: %zu\n",   ti->physical_cores_per_socket);
         double bogomips = ci->cpu_bogomips;
@@ -191,7 +193,7 @@ int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
      * (see Linux's fs/proc/stat.c) */
     ADD_INFO("cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", user, nice, system, idle, iowait,
              irq, softirq, steal, guest, guest_nice);
-    for (size_t n = 0; n < g_pal_public_state->topo_info.online_logical_cores_cnt; n++) {
+    for (size_t n = 0; n < g_pal_public_state->topo_info.online_logical_cores.resource_cnt; n++) {
         ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", n, user, nice, system, idle,
                  iowait, irq, softirq, steal, guest, guest_nice);
     }
