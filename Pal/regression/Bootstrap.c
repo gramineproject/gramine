@@ -36,7 +36,7 @@ int main(int argc, char** argv, char** envp) {
         pal_printf("User Address Range OK\n");
 
     const struct pal_cpu_info* ci = &pal_public_state->cpu_info;
-    pal_printf("CPU num: %zu\n",      pal_public_state->topo_info.online_logical_cores_cnt);
+    pal_printf("CPU num: %zu\n",      pal_public_state->topo_info.online_logical_cores.resource_cnt);
     pal_printf("CPU vendor: %s\n",    ci->cpu_vendor);
     pal_printf("CPU brand: %s\n",     ci->cpu_brand);
     pal_printf("CPU family: %ld\n",   ci->cpu_family);
