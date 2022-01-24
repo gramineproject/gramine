@@ -579,7 +579,7 @@ out:
 
     unlock(&hdl->lock);
     if (!ret) {
-        update_epolls(hdl);
+        interrupt_epolls(hdl);
     }
     put_handle(hdl);
     return ret;
@@ -877,7 +877,7 @@ out:
     unlock(&hdl->lock);
 
     if (pal_handle_updated) {
-        update_epolls(hdl);
+        interrupt_epolls(hdl);
     }
 
     put_handle(hdl);
@@ -1142,7 +1142,7 @@ static ssize_t do_sendmsg(int fd, struct iovec* bufs, int nbufs, int flags,
     unlock(&hdl->lock);
 
     if (needs_epolls_update) {
-        update_epolls(hdl);
+        interrupt_epolls(hdl);
     }
 
     if (uri) {

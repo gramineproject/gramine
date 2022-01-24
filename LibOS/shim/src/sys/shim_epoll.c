@@ -18,20 +18,25 @@
 #include "shim_thread.h"
 #include "shim_types.h"
 
+#ifndef EPOLLNVAL
+/* This was not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
+#define EPOLLNVAL ((uint32_t)0x00000020)
+#endif
+
 /* This bit is currently unoccupied in epoll events mask. */
 #define EPOLL_NEEDS_REARM ((uint32_t)(1u << 24))
 
 DEFINE_LIST(shim_epoll_item);
 struct shim_epoll_item {
-    /* Guarded by `epoll_handle->lock`. */
-    LIST_TYPE(shim_epoll_item) epoll_list; // shim_epoll_handle->items
+    /* Guarded by `epoll_handle->info.epoll.lock`. */
+    LIST_TYPE(shim_epoll_item) epoll_list; // epoll_handle->items
     /* Guarded by `handle->lock`. */
     LIST_TYPE(shim_epoll_item) handle_list; // handle->epoll_items
     /* `epoll_handle`, `handle` and `fd` are constant and thus require no locking. */
     struct shim_handle* epoll_handle;
     struct shim_handle* handle;
     int fd;
-    /* `events` and `data` are guarded by `epoll_handle->lock`. */
+    /* `events` and `data` are guarded by `epoll_handle->info.epoll.lock`. */
     uint32_t events;
     uint64_t data;
     REFTYPE ref_count;
@@ -39,7 +44,7 @@ struct shim_epoll_item {
 
 DEFINE_LIST(shim_epoll_waiter);
 struct shim_epoll_waiter {
-    LIST_TYPE(shim_epoll_waiter) list;
+    LIST_TYPE(shim_epoll_waiter) list; // shim_epoll_handle::waiters
     struct shim_pollable_event event;
 };
 
@@ -75,7 +80,7 @@ static void _interrupt_epoll_waiters(struct shim_epoll_handle* epoll) {
     assert(LISTP_EMPTY(&epoll->waiters));
 }
 
-void update_epolls(struct shim_handle* handle) {
+void interrupt_epolls(struct shim_handle* handle) {
     lock(&handle->lock);
     struct shim_epoll_item** items = NULL;
     /* 4 is an arbitrary number. We don't expect more than 1-2 epoll items per handle. */
@@ -125,7 +130,7 @@ void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool w
             __atomic_store_n(&handle->needs_et_poll_out, true, __ATOMIC_RELEASE);
         }
 
-        update_epolls(handle);
+        interrupt_epolls(handle);
     }
 }
 
@@ -668,6 +673,8 @@ struct shim_fs epoll_builtin_fs = {
     .fs_ops = &epoll_fs_ops,
 };
 
+/* Checkpoint list of `struct shim_epoll_item` from an epoll handle. Each checkpointed item is also
+ * linked into an appropriate handle (which it refers to). */
 BEGIN_CP_FUNC(epoll_items_list) {
     __UNUSED(size);
     assert(size == sizeof(LISTP_TYPE(shim_epoll_item)));
@@ -716,10 +723,14 @@ BEGIN_RS_FUNC(epoll_items_list) {
         get_handle(item->handle);
 
         CP_REBASE(item->epoll_list);
-        get_epoll_item(item);
+        if (!LIST_EMPTY(item, epoll_list)) {
+            get_epoll_item(item);
+        }
 
         CP_REBASE(item->handle_list);
-        get_epoll_item(item);
+        if (!LIST_EMPTY(item, handle_list)) {
+            get_epoll_item(item);
+        }
     }
 }
 END_RS_FUNC(epoll_items_list)

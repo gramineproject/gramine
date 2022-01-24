@@ -229,11 +229,14 @@ int object_wait_with_retry(PAL_HANDLE handle);
 struct shim_handle;
 
 /*!
- * \brief Wakeup all threads waiting on epolls which \p handle is associated with
+ * \brief Interrupt all threads waiting on epolls which \p handle is associated with
  *
- * \param handle handle to wakup waiters of
+ * \param handle handle to wakeup waiters of
+ *
+ * Currently the only usage of this function is on socket handles thare were just connected (in
+ * which case their PAL handle changed from NULL to a newly created handle).
  */
-void update_epolls(struct shim_handle* handle);
+void interrupt_epolls(struct shim_handle* handle);
 /*!
  * \brief Delete all epoll items associated with the pair \p fd and \p handle
  *

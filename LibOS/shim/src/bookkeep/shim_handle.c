@@ -742,6 +742,9 @@ BEGIN_CP_FUNC(handle) {
             entry->phandle = &new_hdl->pal_handle;
         }
 
+        /* This list is created empty and all necessary references are added when checkpointing
+         * items lists from specific epoll handles. See `epoll_items_list` checkpointing in
+         * `shim_epoll.c` for more details. */
         INIT_LISTP(&new_hdl->epoll_items);
         new_hdl->epoll_items_count = 0;
 

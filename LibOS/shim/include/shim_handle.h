@@ -154,6 +154,7 @@ struct shim_str_handle {
 DEFINE_LISTP(shim_epoll_item);
 DEFINE_LISTP(shim_epoll_waiter);
 struct shim_epoll_handle {
+    /* For details about this lock see `shim_epoll.c`. */
     struct shim_lock lock;
     LISTP_TYPE(shim_epoll_waiter) waiters;
     LISTP_TYPE(shim_epoll_item) items;
