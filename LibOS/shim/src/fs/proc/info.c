@@ -17,8 +17,11 @@ int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     size_t size, max = 128;
     char* str = NULL;
 
-    /* enumerate a minimal set of meminfo stats (as a reference workload that uses these stats, we
-     * use Python's psutil library -- see source code in `psutil/_pslinux.py`) */
+    /*
+     * Enumerate minimal set of meminfo stats; as reference workloads that use these stats, we use:
+     *   - Python's psutil library, see source code in `psutil/_pslinux.py`
+     *   - Rust's meminfo, see source code in `procfs/meminfo.rs`
+    */
     struct {
         const char* fmt;
         unsigned long val;
@@ -44,7 +47,7 @@ int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             /*dummy value=*/0,
         },
         {
-            "Shmem:         %8lu kB\n",
+            "SwapCached:    %8lu kB\n",
             /*dummy value=*/0,
         },
         {
@@ -56,7 +59,47 @@ int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             /*dummy value=*/0,
         },
         {
+            "SwapTotal:     %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "SwapFree:      %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "Dirty:         %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "Writeback:     %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "Mapped:        %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "Shmem:         %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
             "Slab:          %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "Committed_AS:  %8lu kB\n",
+            DkMemoryAvailableQuota() / 1024,
+        },
+        {
+            "VmallocTotal:  %8lu kB\n",
+            g_pal_public_state->mem_total / 1024,
+        },
+        {
+            "VmallocUsed:   %8lu kB\n",
+            /*dummy value=*/0,
+        },
+        {
+            "VmallocChunk:  %8lu kB\n",
             /*dummy value=*/0,
         },
     };
@@ -72,7 +115,7 @@ retry:
     for (size_t i = 0; i < ARRAY_SIZE(meminfo); i++) {
         int ret = snprintf(str + size, max - size, meminfo[i].fmt, meminfo[i].val);
 
-        if (size + ret == max)
+        if (size + ret >= max)
             goto retry;
 
         size += ret;
