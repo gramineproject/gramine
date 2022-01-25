@@ -233,7 +233,7 @@ struct shim_handle;
  *
  * \param handle handle to wakeup waiters of
  *
- * Currently the only usage of this function is on socket handles thare were just connected (in
+ * Currently the only usage of this function is on socket handles that were just connected (in
  * which case their PAL handle changed from NULL to a newly created handle).
  */
 void interrupt_epolls(struct shim_handle* handle);

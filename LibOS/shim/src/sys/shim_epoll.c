@@ -26,6 +26,37 @@
 /* This bit is currently unoccupied in epoll events mask. */
 #define EPOLL_NEEDS_REARM ((uint32_t)(1u << 24))
 
+/*
+ * The following diagram could help you understand relationships between different structs used in
+ * this code.
+
+                                     +-----------------------+
+                                     |                       |
+                                     |  shim_epoll_item      |         item in the interest
+                                     |                       |        list of epoll instance
+          item in the list           |    epoll_list   <-------------------------------------------+
+         of epoll instances          |                       |     guarded by handle::epoll::lock  |
++---------------------------------------> handle_list        |                                     |
+|     guarded by handle::lock        |                       |                                     |
+|                                    |    epoll_handle +-------+                                   |
+|                                    |                       | |                                   |
+|                                  +----+ handle             | +->+----------------------------+   |
+|                                  | |                       |    |                            |   |
+|  +----------------------------+<-+ |    fd                 |    |  shim_handle (epoll)       |   |
+|  |                            |    |                       |    |                            |   |
+|  | shim_handle (pipe,sock,..) |    +-----------------------+    |    epoll_items list        |   |
+|  |                            |                                 |                            |   |
++-----+ epoll_items list        |       +--------------------+    |    shim_epoll_handle epoll |   |
+   |                            |       |                    |    |                            |   |
+   |    lock                    |       |  shim_epoll_waiter | +--------+ waiters list         |   |
+   |                            |       |                    | |  |                            |   |
+   |                            |       |    list <------------+  |       items   list +-----------+
+   |                            |       |                    |    |                            |
+   +----------------------------+       |    event           |    |       lock                 |
+                                        |                    |    |                            |
+                                        +--------------------+    +----------------------------+
+*/
+
 DEFINE_LIST(shim_epoll_item);
 struct shim_epoll_item {
     /* Guarded by `epoll_handle->info.epoll.lock`. */
@@ -44,6 +75,8 @@ struct shim_epoll_item {
 
 DEFINE_LIST(shim_epoll_waiter);
 struct shim_epoll_waiter {
+    /* Guarded by `epoll_handle->info.epoll.lock`, where `epoll_handle` is handle this waiter called
+     * `epoll_wait` on. */
     LIST_TYPE(shim_epoll_waiter) list; // shim_epoll_handle::waiters
     struct shim_pollable_event event;
 };
