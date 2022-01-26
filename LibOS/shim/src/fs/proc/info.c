@@ -65,8 +65,10 @@ retry:
 
     for (size_t i = 0; i < ARRAY_SIZE(meminfo); i++) {
         int ret = snprintf(str + size, max - size, meminfo[i].fmt, meminfo[i].val);
-        if (ret < 0)
+        if (ret < 0) {
+            free(str);
             return ret;
+        }
 
         if (size + ret >= max)
             goto retry;
