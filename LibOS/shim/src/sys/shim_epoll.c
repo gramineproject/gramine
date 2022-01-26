@@ -12,9 +12,10 @@
  *   `fork()` call,
  * - `EPOLLEXCLUSIVE` is a no-op - this is correct semantically, but may reduce performance of apps
  *   using this flag,
- * - adding epoll to another epoll instance - should be implementable if need be,
+ * - adding an epoll to another epoll instance is not supported, but should be implementable without
+ *   design changes if need be,
  * - `EPOLLRDHUP` is not reported and `EPOLLHUP` is always reported together with `EPOLLERR` - this
- *   is current limiattion of PAL API, which does not distinguish these conditions.
+ *   is current limitation of PAL API, which does not distinguish these conditions.
  */
 
 #include <stdint.h>
@@ -301,6 +302,12 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
     get_handle(epoll_handle);
     new_item->data = event->data;
     new_item->events = event->events & ~EPOLL_NEEDS_REARM;
+    if (!(handle->acc_mode & MAY_READ)) {
+        new_item->events &= ~(EPOLLIN | EPOLLRDNORM);
+    }
+    if (!(handle->acc_mode & MAY_WRITE)) {
+        new_item->events &= ~(EPOLLOUT | EPOLLWRNORM);
+    }
     if (handle->type == TYPE_EVENTFD) {
         /* We do not support `EPOLLET` for eventfd, because our current handling of `EPOLLET` works
          * only for normal fds (like pipes or sockets). It should be fine to just ignore it - it
@@ -722,7 +729,7 @@ struct shim_fs epoll_builtin_fs = {
  * linked into an appropriate handle (which it refers to). */
 BEGIN_CP_FUNC(epoll_items_list) {
     __UNUSED(size);
-    assert(size == sizeof(LISTP_TYPE(shim_epoll_item)));
+    assert(size == sizeof(struct shim_handle));
 
     struct shim_handle* old_handle = (struct shim_handle*)obj;
     struct shim_handle* new_handle = (struct shim_handle*)objp;
@@ -771,9 +778,7 @@ BEGIN_RS_FUNC(epoll_items_list) {
         get_handle(item->handle);
 
         CP_REBASE(item->epoll_list);
-        if (!LIST_EMPTY(item, epoll_list)) {
-            get_epoll_item(item);
-        }
+        get_epoll_item(item);
 
         CP_REBASE(item->handle_list);
         if (!LIST_EMPTY(item, handle_list)) {

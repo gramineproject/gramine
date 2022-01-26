@@ -755,7 +755,7 @@ BEGIN_CP_FUNC(handle) {
                 INIT_LISTP(&epoll->waiters);
                 INIT_LISTP(&epoll->items);
                 epoll->items_count = 0;
-                DO_CP(epoll_items_list, &hdl->info.epoll.items, new_hdl);
+                DO_CP(epoll_items_list, hdl, new_hdl);
                 break;
             case TYPE_SOCK:
                 /* no support for multiple processes sharing options/peek buffer of the socket */

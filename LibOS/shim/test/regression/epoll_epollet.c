@@ -8,16 +8,7 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-int main(int argc, char* argv[]) {
-    if (argc != 1 && argc != 2) {
-        errx(1, "invalid arguments count");
-    }
-    uint32_t expected_events = EPOLLIN;
-    if (argc == 2 && !strcmp(argv[1], "EMULATE_GRAMINE_BUG")) {
-        /* More details: https://github.com/gramineproject/graphene/issues/1717 */
-        expected_events |= EPOLLOUT;
-    }
-
+int main(void) {
     int efd = epoll_create1(EPOLL_CLOEXEC);
     if (efd < 0) {
         err(1, "epoll_create1");
@@ -51,7 +42,7 @@ int main(int argc, char* argv[]) {
     if (event.data.fd != p[0]) {
         errx(1, "epoll invalid data: %d", event.data.fd);
     }
-    if (event.events != expected_events) {
+    if (event.events != EPOLLIN) {
         errx(1, "epoll invalid events: 0x%x", event.events);
     }
 
