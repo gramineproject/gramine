@@ -847,13 +847,13 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('proc path test success', stdout)
 
     def test_020_cpuinfo(self):
-        stdout, _ = self.run_binary(['proc_cpuinfo'], timeout=50)
+        stdout, _ = self.run_binary(['proc_cpuinfo'])
 
         # proc/cpuinfo Linux-based formatting
         self.assertIn('cpuinfo test passed', stdout)
 
     def test_021_procstat(self):
-        stdout, _ = self.run_binary(['proc_stat'], timeout=50)
+        stdout, _ = self.run_binary(['proc_stat'])
 
         # proc/stat Linux-based formatting
         self.assertIn('/proc/stat test passed', stdout)

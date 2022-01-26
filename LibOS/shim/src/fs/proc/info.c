@@ -17,91 +17,42 @@ int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     size_t size, max = 128;
     char* str = NULL;
 
+    assert(g_pal_public_state->mem_total >= DkMemoryAvailableQuota());
+
     /*
      * Enumerate minimal set of meminfo stats; as reference workloads that use these stats, we use:
-     *   - Python's psutil library, see source code in `psutil/_pslinux.py`
-     *   - Rust's meminfo, see source code in `procfs/meminfo.rs`
+     *
+     *   - Python's psutil library
+     *     https://github.com/giampaolo/psutil/blob/f716afc8/psutil/_pslinux.py#L339-L568
+     *
+     *   - Rust's procfs crate
+     *     https://github.com/eminence/procfs/blob/fc91e469/src/meminfo.rs#L321-L383
     */
+
     struct {
         const char* fmt;
         unsigned long val;
     } meminfo[] = {
-        {
-            "MemTotal:      %8lu kB\n",
-            g_pal_public_state->mem_total / 1024,
-        },
-        {
-            "MemFree:       %8lu kB\n",
-            DkMemoryAvailableQuota() / 1024,
-        },
-        {
-            "MemAvailable:  %8lu kB\n",
-            DkMemoryAvailableQuota() / 1024,
-        },
-        {
-            "Buffers:       %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Cached:        %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "SwapCached:    %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Active:        %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Inactive:      %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "SwapTotal:     %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "SwapFree:      %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Dirty:         %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Writeback:     %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Mapped:        %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Shmem:         %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Slab:          %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "Committed_AS:  %8lu kB\n",
-            DkMemoryAvailableQuota() / 1024,
-        },
-        {
-            "VmallocTotal:  %8lu kB\n",
-            g_pal_public_state->mem_total / 1024,
-        },
-        {
-            "VmallocUsed:   %8lu kB\n",
-            /*dummy value=*/0,
-        },
-        {
-            "VmallocChunk:  %8lu kB\n",
-            /*dummy value=*/0,
-        },
+        { "MemTotal:      %8lu kB\n", g_pal_public_state->mem_total / 1024 },
+        { "MemFree:       %8lu kB\n", DkMemoryAvailableQuota() / 1024 },
+        { "MemAvailable:  %8lu kB\n", DkMemoryAvailableQuota() / 1024 },
+        { "Buffers:       %8lu kB\n", /*dummy value=*/0 },
+        { "Cached:        %8lu kB\n", /*dummy value=*/0 },
+        { "SwapCached:    %8lu kB\n", /*dummy value=*/0 },
+        { "Active:        %8lu kB\n", /*dummy value=*/0 },
+        { "Inactive:      %8lu kB\n", /*dummy value=*/0 },
+        { "SwapTotal:     %8lu kB\n", /*dummy value=*/0 },
+        { "SwapFree:      %8lu kB\n", /*dummy value=*/0 },
+        { "Dirty:         %8lu kB\n", /*dummy value=*/0 },
+        { "Writeback:     %8lu kB\n", /*dummy value=*/0 },
+        { "Mapped:        %8lu kB\n", /*dummy value=*/0 },
+        { "Shmem:         %8lu kB\n", /*dummy value=*/0 },
+        { "Slab:          %8lu kB\n", /*dummy value=*/0 },
+        { "Committed_AS:  %8lu kB\n", (g_pal_public_state->mem_total - DkMemoryAvailableQuota())
+                                          / 1024 },
+        { "VmallocTotal:  %8lu kB\n", g_pal_public_state->mem_total / 1024 },
+        { "VmallocUsed:   %8lu kB\n", /*dummy value=*/0 },
+        { "VmallocChunk:  %8lu kB\n", /*dummy value=*/0 },
     };
 
 retry:
@@ -114,6 +65,8 @@ retry:
 
     for (size_t i = 0; i < ARRAY_SIZE(meminfo); i++) {
         int ret = snprintf(str + size, max - size, meminfo[i].fmt, meminfo[i].val);
+        if (ret < 0)
+            return ret;
 
         if (size + ret >= max)
             goto retry;
@@ -245,7 +198,6 @@ int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     ADD_INFO("processes %lu\n", 1);    /* at least this process was created */
     ADD_INFO("procs_running %u\n", 1); /* at least this process was created */
     ADD_INFO("procs_blocked %u\n", 0);
-    ADD_INFO("\n");
 
     *out_data = str;
     *out_size = size;

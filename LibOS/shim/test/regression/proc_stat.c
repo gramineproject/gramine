@@ -1,4 +1,5 @@
 #include <err.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +22,12 @@ struct procstat {
     uint64_t guest;
     uint64_t guest_nice;
 };
+
+static bool seen_ctxt          = false;
+static bool seen_btime         = false;
+static bool seen_processes     = false;
+static bool seen_procs_running = false;
+static bool seen_procs_blocked = false;
 
 static void init_procstat(struct procstat* ps) {
     ps->user       = UINT64_MAX;
@@ -80,27 +87,39 @@ static int check_procstat(struct procstat* ps) {
 }
 
 static int parse_and_check_noncpu_line(char* line) {
-    uint64_t val = UINT64_MAX;
-    char key[KEYSIZE] = "";
+    int ret;
 
-    if (!memcmp(line, "ctxt", sizeof("ctxt") - 1)) {
-        sscanf(line, "%s %lu\n", key, &val);
-    } else if (!memcmp(line, "btime", sizeof("btime") - 1)) {
-        sscanf(line, "%s %lu\n", key, &val);
-    } else if (!memcmp(line, "processes", sizeof("processes") - 1)) {
-        sscanf(line, "%s %lu\n", key, &val);
-    } else if (!memcmp(line, "procs_running", sizeof("procs_running") - 1)) {
-        sscanf(line, "%s %lu\n", key, &val);
-    } else if (!memcmp(line, "procs_blocked", sizeof("procs_blocked") - 1)) {
-        sscanf(line, "%s %lu\n", key, &val);
-    }
+#define CHECK_LINE(seen_var, fmt)                                          \
+    do {                                                                   \
+        uint64_t val = UINT64_MAX;                                         \
+        ret = sscanf(line, fmt, &val);                                     \
+        if (ret < 0) {                                                     \
+            fprintf(stderr, "cannot parse '%s'\n", line);                  \
+            return -1;                                                     \
+        }                                                                  \
+        if (ret == 1) {                                                    \
+            if (seen_var) {                                                \
+                fprintf(stderr, "saw line '%s' more than once\n", line);   \
+                return -1;                                                 \
+            }                                                              \
+            if (val == UINT64_MAX) {                                       \
+                fprintf(stderr, "found wrong value in line '%s'\n", line); \
+                return -1;                                                 \
+            }                                                              \
+            seen_var = true;                                               \
+            return 0;                                                      \
+        }                                                                  \
+    } while (0)
 
-    if (strcmp(key, "") == 0 || val == UINT64_MAX) {
-        fprintf(stderr, "found malformed line '%s'\n", line);
-        return -1;
-    }
+    CHECK_LINE(seen_ctxt,          "ctxt %lu\n");
+    CHECK_LINE(seen_btime,         "btime %lu\n");
+    CHECK_LINE(seen_processes,     "processes %lu\n");
+    CHECK_LINE(seen_procs_running, "procs_running %lu\n");
+    CHECK_LINE(seen_procs_blocked, "procs_blocked %lu\n");
+#undef CHECK_LINE
 
-    return 0;
+    fprintf(stderr, "found unrecognized line '%s'\n", line);
+    return -1;
 }
 
 int main(int argc, char* argv[]) {
@@ -108,7 +127,7 @@ int main(int argc, char* argv[]) {
     char line[BUFFSIZE];
     char cpu[KEYSIZE];
     struct procstat ps;
-    int cpu_cnt = 0, rv = 0;
+    int cpu_idx, cpu_cnt = 0, rv = 0;
 
     long actual_cpu_cnt = sysconf(_SC_NPROCESSORS_ONLN);
     if (actual_cpu_cnt < 0)
@@ -123,9 +142,11 @@ int main(int argc, char* argv[]) {
     if (fgets(line, sizeof(line), fp) == NULL)
         errx(1, "cannot read 'cpu' line");
 
-    sscanf(line, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", cpu, &ps.user, &ps.nice,
-           &ps.system, &ps.idle, &ps.iowait, &ps.irq, &ps.softirq, &ps.steal, &ps.guest,
-           &ps.guest_nice);
+    rv = sscanf(line, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", cpu, &ps.user, &ps.nice,
+                &ps.system, &ps.idle, &ps.iowait, &ps.irq, &ps.softirq, &ps.steal, &ps.guest,
+                &ps.guest_nice);
+    if (rv != 11)
+        errx(1, "cannot parse 'cpu' line");
 
     if (strcmp(cpu, "cpu"))
         errx(1, "did not find 'cpu' line");
@@ -139,9 +160,15 @@ int main(int argc, char* argv[]) {
             break;
 
         init_procstat(&ps);
-        sscanf(line, "%s %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", cpu, &ps.user, &ps.nice,
-               &ps.system, &ps.idle, &ps.iowait, &ps.irq, &ps.softirq, &ps.steal, &ps.guest,
-               &ps.guest_nice);
+        rv = sscanf(line, "cpu%d %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", &cpu_idx, &ps.user,
+                    &ps.nice, &ps.system, &ps.idle, &ps.iowait, &ps.irq, &ps.softirq, &ps.steal,
+                    &ps.guest, &ps.guest_nice);
+        if (rv != 11)
+            errx(1, "cannot parse 'cpu%d' line", cpu_cnt);
+
+        if (cpu_idx != cpu_cnt)
+            errx(1, "unexpected 'cpu%d' line (expected 'cpu%d')", cpu_idx, cpu_cnt);
+
         if ((rv = check_procstat(&ps)) != 0)
             errx(1, "unexpected values in 'cpu%d' line", cpu_cnt);
         cpu_cnt++;
@@ -157,6 +184,9 @@ int main(int argc, char* argv[]) {
         if ((rv = parse_and_check_noncpu_line(line)) != 0)
             errx(1, "checking non-cpu line failed");
     } while (fgets(line, sizeof(line), fp) != NULL);
+
+    if (!seen_ctxt || !seen_btime || !seen_processes || !seen_procs_running || !seen_procs_blocked)
+        errx(1, "did not find ctxt/btime/processes/procs_running/procs_blocked line(s)");
 
     fclose(fp);
 
