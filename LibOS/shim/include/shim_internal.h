@@ -242,6 +242,9 @@ void interrupt_epolls(struct shim_handle* handle);
  *
  * \param fd fd which was just closed/detached
  * \param handle handle which \p fd referred to
+ *
+ * This should be called once there is no possibility of adding new epoll items with this \p fd and
+ * \p handle, i.e. after \p fd was detached from fds map.
  */
 void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
 /*!
