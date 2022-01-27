@@ -154,11 +154,12 @@ struct shim_str_handle {
 DEFINE_LISTP(shim_epoll_item);
 DEFINE_LISTP(shim_epoll_waiter);
 struct shim_epoll_handle {
-    /* For details about this lock see `shim_epoll.c`. */
+    /* For details about these fields see `shim_epoll.c`. */
     struct shim_lock lock;
     LISTP_TYPE(shim_epoll_waiter) waiters;
     LISTP_TYPE(shim_epoll_item) items;
     size_t items_count;
+    size_t last_returned_index;
 };
 
 struct shim_fs;
@@ -202,17 +203,17 @@ struct shim_handle {
     /* Type-specific fields: when accessing, ensure that `type` field is appropriate first (at least
      * by using assert()) */
     union {
-        /* (no data) */                   /* TYPE_CHROOT */
-        /* (no data) */                   /* TYPE_DEV */
-        struct shim_str_handle str;       /* TYPE_STR */
-        /* (no data) */                   /* TYPE_PSEUDO */
-        /* (no data) */                   /* TYPE_TMPFS */
+        /* (no data) */                         /* TYPE_CHROOT */
+        /* (no data) */                         /* TYPE_DEV */
+        struct shim_str_handle str;             /* TYPE_STR */
+        /* (no data) */                         /* TYPE_PSEUDO */
+        /* (no data) */                         /* TYPE_TMPFS */
 
-        struct shim_pipe_handle pipe;     /* TYPE_PIPE */
-        struct shim_sock_handle sock;     /* TYPE_SOCK */
+        struct shim_pipe_handle pipe;           /* TYPE_PIPE */
+        struct shim_sock_handle sock;           /* TYPE_SOCK */
 
-        struct shim_epoll_handle epoll;   /* TYPE_EPOLL */
-        /* (no data) */                   /* TYPE_EVENTFD */
+        struct shim_epoll_handle epoll;         /* TYPE_EPOLL */
+        struct { bool is_semaphore; } eventfd;  /* TYPE_EVENTFD */
     } info;
 
     struct shim_dir_handle dir_info;

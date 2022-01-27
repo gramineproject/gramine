@@ -85,6 +85,8 @@ long shim_do_eventfd2(unsigned int count, int flags) {
     if ((ret = create_eventfd(&hdl->pal_handle, count, flags)) < 0)
         goto out;
 
+    hdl->info.eventfd.is_semaphore = !!(flags & EFD_SEMAPHORE);
+
     flags = flags & EFD_CLOEXEC ? FD_CLOEXEC : 0;
 
     /* get_new_handle() above increments hdl's refcount. Followed by another increment inside

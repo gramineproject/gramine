@@ -170,7 +170,21 @@ void interrupt_epolls(struct shim_handle* handle) {
 }
 
 void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool was_partial) {
-    if (ret == -EAGAIN || ret == -EWOULDBLOCK || was_partial) {
+    bool needs_et = false;
+    switch (handle->type) {
+        case TYPE_SOCK:
+        case TYPE_PIPE:
+            needs_et = ret == -EAGAIN || was_partial;
+            break;
+        case TYPE_EVENTFD:
+            needs_et = handle->info.eventfd.is_semaphore ? ret == -EAGAIN : true;
+            break;
+        default:
+            /* Type unsupported with EPOLLET. */
+            break;
+    }
+
+    if (needs_et) {
         if (in) {
             __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
         } else {
@@ -251,6 +265,7 @@ long shim_do_epoll_create1(int flags) {
     INIT_LISTP(&epoll->waiters);
     INIT_LISTP(&epoll->items);
     epoll->items_count = 0;
+    epoll->last_returned_index = -1;
     if (!create_lock(&epoll->lock)) {
         put_handle(handle);
         return -ENOMEM;
@@ -307,12 +322,6 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
     }
     if (!(handle->acc_mode & MAY_WRITE)) {
         new_item->events &= ~(EPOLLOUT | EPOLLWRNORM);
-    }
-    if (handle->type == TYPE_EVENTFD) {
-        /* We do not support `EPOLLET` for eventfd, because our current handling of `EPOLLET` works
-         * only for normal fds (like pipes or sockets). It should be fine to just ignore it - it
-         * should still be correct, just maybe less performant. */
-        new_item->events &= ~EPOLLET;
     }
     REF_SET(new_item->ref_count, 1);
 
@@ -607,8 +616,14 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             goto out_unlock;
         }
 
+        /* Round robin returned events to help avoid starvation scenarios. If there was
+         * an asynchronous update on the list of items, it isn't real round robin, but that's fine
+         * - no user app should depend on it anyway. */
+        size_t start_index = items_count ? (epoll->last_returned_index + 1) % items_count : 0;
+        size_t counter = 0;
         size_t ret_events_count = 0;
-        for (size_t i = 0; i < items_count; i++) {
+        for (; counter < items_count; counter++) {
+            size_t i = (start_index + counter) % items_count;
             if (!pal_ret_events[i]) {
                 continue;
             }
@@ -661,6 +676,12 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         put_epoll_items_array(items, items_count);
 
         if (ret_events_count) {
+            if (counter == items_count) {
+                /* All items were returned to user app. */
+                epoll->last_returned_index = -1;
+            } else {
+                epoll->last_returned_index = (start_index + counter) % items_count;
+            }
             ret = ret_events_count;
             break;
         }
