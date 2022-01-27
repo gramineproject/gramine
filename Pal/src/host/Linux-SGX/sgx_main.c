@@ -22,6 +22,7 @@
 #include "asan.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
+#include "gsgx.h"
 #include "linux_utils.h"
 #include "rpc_queue.h"
 #include "sgx_api.h"
@@ -242,15 +243,24 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         enclave_heap_min  = enclave->baseaddr;
     }
 
+#ifndef SGX_DCAP
     ret = read_enclave_token(enclave->token, &enclave_token);
     if (ret < 0) {
         log_error("Reading enclave token failed: %d", ret);
         goto out;
     }
+#endif
+
+    ret = read_enclave_sigstruct(enclave->sigfile, &enclave_sigstruct);
+    if (ret < 0) {
+        log_error("Reading enclave sigstruct failed: %d", ret);
+        goto out;
+    }
+
 
 #ifdef DEBUG
     if (enclave->profile_enable) {
-        if (!(enclave_token.body.attributes.flags & SGX_FLAGS_DEBUG)) {
+        if (!(enclave_sigstruct.body.attributes.flags & SGX_FLAGS_DEBUG)) {
             log_error("Cannot use 'sgx.profile' with a production enclave");
             ret = -EINVAL;
             goto out;
@@ -269,16 +279,10 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     }
 #endif
 
-    ret = read_enclave_sigstruct(enclave->sigfile, &enclave_sigstruct);
-    if (ret < 0) {
-        log_error("Reading enclave sigstruct failed: %d", ret);
-        goto out;
-    }
-
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
     enclave_secs.size = enclave->size;
-    ret = create_enclave(&enclave_secs, &enclave_token);
+    ret = create_enclave(&enclave_secs, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Creating enclave failed: %d", ret);
         goto out;
@@ -933,6 +937,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
     free(sig_path);
 
+#ifndef SGX_DCAP
     char* token_path = alloc_concat(g_pal_enclave.application_path, -1, ".token", -1);
     if (!token_path) {
         return -ENOMEM;
@@ -948,6 +953,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
     log_debug("Token file: %s", token_path);
     free(token_path);
+#endif
 
     ret = initialize_enclave(enclave, enclave->raw_manifest_data);
     if (ret < 0)
