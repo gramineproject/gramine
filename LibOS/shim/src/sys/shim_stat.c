@@ -102,6 +102,9 @@ long shim_do_fstat(int fd, struct stat* stat) {
     if (!hdl)
         return -EBADF;
 
+    if (!is_user_memory_writable(stat, sizeof(*stat)))
+        return -EFAULT;
+
     int ret = do_hstat(hdl, stat);
     put_handle(hdl);
     return ret;
