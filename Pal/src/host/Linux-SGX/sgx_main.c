@@ -14,6 +14,7 @@
 #include "asan.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
+#include "gsgx.h"
 #include "linux_utils.h"
 #include "pal_internal-arch.h"
 #include "pal_linux_defs.h"
@@ -200,15 +201,20 @@ out:
 static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure) {
     int ret = 0;
     int enclave_image = -1;
-    sgx_arch_token_t enclave_token;
-    sgx_arch_enclave_css_t enclave_sigstruct;
+    int enclave_mem = -1;
     sgx_arch_secs_t enclave_secs;
     unsigned long enclave_entry_addr;
     unsigned long enclave_heap_min;
+
+    sgx_arch_enclave_css_t enclave_sigstruct;
     char* sig_path = NULL;
+    int sigfile_fd = -1;
+
+    /* Launch Token (aka EINITTOKEN) is used only on EPID (non-FLC-based) platforms and completely
+     * ignored on DCAP (FLC-based) platforms */
+    sgx_arch_token_t enclave_token;
     char* token_path = NULL;
-    int sigfile_fd = -1, token_fd = -1;
-    int enclave_mem = -1;
+    int token_fd = -1;
 
     /* this array may overflow the stack, so we allocate it in BSS */
     static void* tcs_addrs[MAX_DBG_THREADS];
@@ -246,6 +252,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
+    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
+    if (ret < 0) {
+        log_error("Reading enclave sigstruct failed: %d", ret);
+        goto out;
+    }
+
+#ifndef SGX_DCAP
     token_path = alloc_concat(g_pal_enclave.application_path, -1, ".token", -1);
     if (!token_path) {
         ret = -ENOMEM;
@@ -266,10 +279,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         log_error("Reading enclave token failed: %d", ret);
         goto out;
     }
+#endif
 
 #ifdef DEBUG
     if (enclave->profile_enable) {
-        if (!(enclave_token.body.attributes.flags & SGX_FLAGS_DEBUG)) {
+        if (!(enclave_sigstruct.body.attributes.flags & SGX_FLAGS_DEBUG)) {
             log_error("Cannot use 'sgx.profile' with a production enclave");
             ret = -EINVAL;
             goto out;
@@ -288,16 +302,10 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     }
 #endif
 
-    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
-    if (ret < 0) {
-        log_error("Reading enclave sigstruct failed: %d", ret);
-        goto out;
-    }
-
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
     enclave_secs.size = enclave->size;
-    ret = create_enclave(&enclave_secs, &enclave_token);
+    ret = create_enclave(&enclave_secs, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Creating enclave failed: %d", ret);
         goto out;
