@@ -26,6 +26,7 @@
 #include "shim_table.h"
 #include "shim_tcb.h"
 #include "shim_thread.h"
+#include "shim_types.h"
 #include "shim_utils.h"
 #include "shim_vma.h"
 #include "stat.h"
@@ -55,6 +56,8 @@ static void parse_at_fdcwd(struct print_buf*, va_list*);
 static void parse_wait_options(struct print_buf*, va_list*);
 static void parse_waitid_which(struct print_buf*, va_list*);
 static void parse_getrandom_flags(struct print_buf*, va_list*);
+static void parse_epoll_op(struct print_buf*, va_list*);
+static void parse_epoll_event(struct print_buf* buf, va_list* ap);
 
 static void parse_string_arg(struct print_buf*, va_list* ap);
 static void parse_pointer_arg(struct print_buf*, va_list* ap);
@@ -443,8 +446,7 @@ struct parser_table {
                          parse_integer_arg, parse_pointer_arg, parse_integer_arg,
                          parse_integer_arg}},
     [__NR_epoll_ctl] = {.slow = false, .name = "epoll_ctl", .parser = {parse_long_arg,
-                        parse_integer_arg, parse_integer_arg, parse_integer_arg,
-                        parse_pointer_arg}},
+                        parse_integer_arg, parse_epoll_op, parse_integer_arg, parse_epoll_event}},
     [__NR_tgkill] = {.slow = false, .name = "tgkill", .parser = {parse_long_arg, parse_integer_arg,
                      parse_integer_arg, parse_signum}},
     [__NR_utimes] = {.slow = false, .name = "utimes", .parser = {NULL}},
@@ -1493,6 +1495,72 @@ static void parse_getrandom_flags(struct print_buf* buf, va_list* ap) {
     flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
     if (flags)
         buf_printf(buf, "|0x%x", flags);
+}
+
+static void parse_epoll_op(struct print_buf* buf, va_list* ap) {
+    int op = va_arg(*ap, int);
+    switch (op) {
+        case EPOLL_CTL_ADD:
+            buf_printf(buf, "ADD");
+            break;
+        case EPOLL_CTL_MOD:
+            buf_printf(buf, "MOD");
+            break;
+        case EPOLL_CTL_DEL:
+            buf_printf(buf, "DEL");
+            break;
+        default:
+            buf_printf(buf, "UNKNOWN(%d)", op);
+            break;
+    }
+}
+
+static void parse_epoll_event(struct print_buf* buf, va_list* ap) {
+    struct epoll_event* event = va_arg(*ap, struct epoll_event*);
+    if (!is_user_memory_readable(event, sizeof(*event))) {
+        /* Probably EPOLL_CTL_DEL */
+        buf_printf(buf, "(invalid ptr %p)", event);
+        return;
+    }
+
+    buf_printf(buf, "{.events=");
+
+    uint32_t events = event->events;
+    if (!events) {
+        buf_printf(buf, "0");
+    } else {
+        bool first = true;
+#define PUTS_FLAG(flag)                 \
+        if (events & flag) {            \
+            events &= ~flag;            \
+            if (first) {                \
+                first = false;          \
+            } else {                    \
+                buf_printf(buf, "|");   \
+            }                           \
+            buf_printf(buf, #flag);     \
+        }
+
+        PUTS_FLAG(EPOLLIN)
+        PUTS_FLAG(EPOLLPRI)
+        PUTS_FLAG(EPOLLOUT)
+        PUTS_FLAG(EPOLLERR)
+        PUTS_FLAG(EPOLLHUP)
+        PUTS_FLAG(EPOLLNVAL)
+        PUTS_FLAG(EPOLLRDNORM)
+        PUTS_FLAG(EPOLLRDBAND)
+        PUTS_FLAG(EPOLLWRNORM)
+        PUTS_FLAG(EPOLLWRBAND)
+        PUTS_FLAG(EPOLLMSG)
+        PUTS_FLAG(EPOLLRDHUP)
+        PUTS_FLAG(EPOLLEXCLUSIVE)
+        PUTS_FLAG(EPOLLWAKEUP)
+        PUTS_FLAG(EPOLLONESHOT)
+        PUTS_FLAG(EPOLLET)
+#undef PUTS_FLAG
+    }
+
+    buf_printf(buf, ", .data=%#llx}", event->data);
 }
 
 static void parse_string_arg(struct print_buf* buf, va_list* ap) {

@@ -178,6 +178,18 @@ void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool w
             break;
         case TYPE_EVENTFD:
             needs_et = handle->info.eventfd.is_semaphore ? ret == -EAGAIN : true;
+            if (!in) {
+                /*
+                 * Some workloads (e.g. rust's tokio crate) use eventfd with EPOLLET in a peculiar
+                 * way: each write to that eventfd increases counter by 1 and thanks to EPOLLET is
+                 * reported by epoll only once, even if there is no read from eventfd.
+                 * To handle such usage pattern, we mark eventfd as read-epollet-pollable on each
+                 * write - we assume that eventfd is not shared between processes.
+                 * Hopefully no app tries to increase the eventfd counter by 0...
+                 */
+                __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
+                needs_et = true;
+            }
             break;
         default:
             /* Type unsupported with EPOLLET. */
