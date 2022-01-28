@@ -90,20 +90,6 @@ def connect_aesmd(mrenclave, modulus, flags, xfrms):
 
     return ret_msg.ret.token
 
-def create_dummy_token(flags, xfrms, misc_select):
-    '''
-    Create dummy token with a few fields initialized with real values and others
-    with a placeholder ('\\0')
-    '''
-    token = bytearray(304)
-
-    # fields read by create_enclave() in sgx_framework.c
-    struct.pack_into('<Q', token, 48, flags)
-    struct.pack_into('<Q', token, 56, xfrms)
-    struct.pack_into('<L', token, 236, misc_select)
-
-    return token
-
 def get_token(sig, verbose=False):
     """Get SGX token (aka EINITTOKEN).
 
@@ -147,7 +133,11 @@ def get_token(sig, verbose=False):
               f'{sig["date_day"]:02d}')
 
     if is_dcap():
-        token = create_dummy_token(sig['attribute_flags'], xfrms, sig['misc_select'])
+        print(  'INFO: DCAP driver was detected. Launch tokens are not required in DCAP SGX'
+                'environments. To keep consistency of Gramine usage by higher-level tools and'
+                'flows this tool will output an empty dummy token which can - but does not need to'
+                'be - supplied during launch.'  )
+        token = bytearray(0)
     else:
         token = connect_aesmd(sig['enclave_hash'], sig['modulus'], sig['attribute_flags'], xfrms)
 
