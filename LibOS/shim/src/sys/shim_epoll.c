@@ -32,11 +32,6 @@
 #include "shim_thread.h"
 #include "shim_types.h"
 
-#ifndef EPOLLNVAL
-/* This was not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
-#define EPOLLNVAL ((uint32_t)0x00000020)
-#endif
-
 /* This bit is currently unoccupied in epoll events mask. */
 #define EPOLL_NEEDS_REARM ((uint32_t)(1u << 24))
 

@@ -73,6 +73,7 @@ int main(void) {
     if (close(efd) < 0) {
         err(1, "close");
     }
+
     efd = epoll_create1(EPOLL_CLOEXEC);
     if (efd < 0) {
         err(1, "epoll_create1");

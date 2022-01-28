@@ -1,11 +1,11 @@
 #define _GNU_SOURCE
-#include <sys/wait.h>
+#include <err.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <err.h>
 #include <sys/epoll.h>
+#include <sys/wait.h>
 #include <unistd.h>
-#include <stdio.h>
 
 #define CHECK(x) ({                             \
     __typeof__(x) _x = (x);                     \

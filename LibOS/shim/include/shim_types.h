@@ -331,4 +331,9 @@ struct shim_lock {
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_URI_SIZE 96
 
+#ifndef EPOLLNVAL
+/* This is not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
+#define EPOLLNVAL ((uint32_t)0x00000020)
+#endif
+
 #endif /* _SHIM_TYPES_H_ */
