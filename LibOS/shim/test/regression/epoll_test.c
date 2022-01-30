@@ -92,8 +92,61 @@ static void test_epoll_migration(void) {
     exit(0);
 }
 
+static void test_epoll_oneshot(void) {
+    int epfd = CHECK(epoll_create1(EPOLL_CLOEXEC));
+    int pipe_fds[2];
+    CHECK(pipe(pipe_fds));
+
+    struct epoll_event event = {
+        .events = EPOLLIN | EPOLLONESHOT,
+        .data.u64 = pipe_fds[0],
+    };
+    CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_fds[0], &event));
+
+    memset(&event, 0, sizeof(event));
+    int x = CHECK(epoll_wait(epfd, &event, 1, 1));
+    if (x != 0) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %lu", x, event.events, event.data.u64);
+    }
+
+    char c = 0;
+    ssize_t y = CHECK(write(pipe_fds[1], &c, sizeof(c)));
+    if (y != sizeof(c)) {
+        ERR("write: %zd", y);
+    }
+
+    memset(&event, 0, sizeof(event));
+    x = CHECK(epoll_wait(epfd, &event, 1, 1));
+    if (x != 1 || event.events != EPOLLIN || event.data.u64 != (uint64_t)pipe_fds[0]) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %lu", x, event.events, event.data.u64);
+    }
+
+    memset(&event, 0, sizeof(event));
+    x = CHECK(epoll_wait(epfd, &event, 1, 1));
+    if (x != 0) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %lu", x, event.events, event.data.u64);
+    }
+
+    /* rearm */
+    event.events = EPOLLIN | EPOLLONESHOT;
+    event.data.u64 = pipe_fds[0];
+    CHECK(epoll_ctl(epfd, EPOLL_CTL_MOD, pipe_fds[0], &event));
+
+    memset(&event, 0, sizeof(event));
+    x = CHECK(epoll_wait(epfd, &event, 1, 1));
+    if (x != 1 || event.events != EPOLLIN || event.data.u64 != (uint64_t)pipe_fds[0]) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %lu", x, event.events, event.data.u64);
+    }
+
+    CHECK(close(pipe_fds[0]));
+    CHECK(close(pipe_fds[1]));
+    CHECK(close(epfd));
+}
+
 int main(void) {
     test_epoll_migration();
+
+    test_epoll_oneshot();
 
     puts("TEST OK");
     return 0;
