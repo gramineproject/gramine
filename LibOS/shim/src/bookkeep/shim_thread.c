@@ -580,6 +580,8 @@ BEGIN_CP_FUNC(thread) {
 
         new_thread->pal_handle = NULL;
 
+        memset(&new_thread->pollable_event, 0, sizeof(new_thread->pollable_event));
+
         new_thread->handle_map = NULL;
         memset(&new_thread->signal_queue, 0, sizeof(new_thread->signal_queue));
         new_thread->robust_list = NULL;
@@ -633,8 +635,12 @@ BEGIN_RS_FUNC(thread) {
         return -ENOMEM;
     }
 
-    int ret = DkEventCreate(&thread->scheduler_event, /*init_signaled=*/false,
-                            /*auto_clear=*/true);
+    int ret = create_pollable_event(&thread->pollable_event);
+    if (ret < 0) {
+        return ret;
+    }
+
+    ret = DkEventCreate(&thread->scheduler_event, /*init_signaled=*/false, /*auto_clear=*/true);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
