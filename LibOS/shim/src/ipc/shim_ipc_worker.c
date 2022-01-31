@@ -415,7 +415,7 @@ int init_ipc_worker(void) {
 void terminate_ipc_worker(void) {
     set_pollable_event(&exit_notification_event, 1);
 
-    while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_RELAXED)) {
+    while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_ACQUIRE)) {
         CPU_RELAX();
     }
 

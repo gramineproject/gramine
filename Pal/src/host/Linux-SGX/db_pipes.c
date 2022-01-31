@@ -22,16 +22,16 @@
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 
-DEFINE_LIST(helper_handshake_thread);
-struct helper_handshake_thread {
+DEFINE_LIST(handshake_helper_thread);
+struct handshake_helper_thread {
     int clear_on_thread_exit;    /* 1 on init; set to 0 when the thread really exited */
     PAL_HANDLE thread_hdl;       /* thread PAL handle to free when clear_on_worker_exit == 0 */
-    LIST_TYPE(helper_handshake_thread) list;
+    LIST_TYPE(handshake_helper_thread) list;
 };
 
-static spinlock_t g_helper_handshake_thread_list_lock = INIT_SPINLOCK_UNLOCKED;
-DEFINE_LISTP(helper_handshake_thread);
-static LISTP_TYPE(helper_handshake_thread) g_helper_handshake_thread_list = LISTP_INIT;
+static spinlock_t g_handshake_helper_thread_list_lock = INIT_SPINLOCK_UNLOCKED;
+DEFINE_LISTP(handshake_helper_thread);
+static LISTP_TYPE(handshake_helper_thread) g_handshake_helper_thread_list = LISTP_INIT;
 
 static int pipe_session_key(PAL_PIPE_NAME* name, PAL_SESSION_KEY* session_key) {
     return lib_HKDF_SHA256((uint8_t*)&g_master_key, sizeof(g_master_key), /*salt=*/NULL,
@@ -48,37 +48,17 @@ static noreturn int thread_handshake_func(void* param) {
     assert(!handle->pipe.handshake_done);
 
     /* garbage collect finished helper threads, to prevent leakage of PAL handles */
-    spinlock_lock(&g_helper_handshake_thread_list_lock);
-    struct helper_handshake_thread* thread_to_gc;
-    struct helper_handshake_thread* tmp;
-    LISTP_FOR_EACH_ENTRY_SAFE(thread_to_gc, tmp, &g_helper_handshake_thread_list, list) {
-        if (__atomic_load_n(&thread_to_gc->clear_on_thread_exit, __ATOMIC_RELAXED) == 0) {
-            LISTP_DEL(thread_to_gc, &g_helper_handshake_thread_list, list);
-            free(thread_to_gc->thread_hdl);
+    spinlock_lock(&g_handshake_helper_thread_list_lock);
+    struct handshake_helper_thread* thread_to_gc;
+    struct handshake_helper_thread* tmp;
+    LISTP_FOR_EACH_ENTRY_SAFE(thread_to_gc, tmp, &g_handshake_helper_thread_list, list) {
+        if (__atomic_load_n(&thread_to_gc->clear_on_thread_exit, __ATOMIC_ACQUIRE) == 0) {
+            LISTP_DEL(thread_to_gc, &g_handshake_helper_thread_list, list);
+            _DkObjectClose(thread_to_gc->thread_hdl);
             free(thread_to_gc);
         }
     }
-    spinlock_unlock(&g_helper_handshake_thread_list_lock);
-
-    /* parent thread associates this child thread with the pipe handle during `pipe_connect()` */
-    while (!__atomic_load_n(&handle->pipe.thread_hdl, __ATOMIC_ACQUIRE))
-        CPU_RELAX();
-
-    struct helper_handshake_thread* thread = malloc(sizeof(*thread));
-    if (!thread) {
-        log_error("Failed to allocate helper handshake thread list item");
-        _DkProcessExit(1);
-    }
-
-    thread->thread_hdl = (PAL_HANDLE)handle->pipe.thread_hdl;
-    assert(HANDLE_HDR(thread->thread_hdl)->type == PAL_TYPE_THREAD);
-
-    INIT_LIST_HEAD(thread, list);
-    thread->clear_on_thread_exit = 1;
-
-    spinlock_lock(&g_helper_handshake_thread_list_lock);
-    LISTP_ADD_TAIL(thread, &g_helper_handshake_thread_list, list);
-    spinlock_unlock(&g_helper_handshake_thread_list_lock);
+    spinlock_unlock(&g_handshake_helper_thread_list_lock);
 
     int ret = _DkStreamSecureInit(handle, handle->pipe.is_server, &handle->pipe.session_key,
                                   (LIB_SSL_CONTEXT**)&handle->pipe.ssl_ctx, NULL, 0);
@@ -86,6 +66,26 @@ static noreturn int thread_handshake_func(void* param) {
         log_error("Failed to initialize secure pipe %s: %d", handle->pipe.name.str, ret);
         _DkProcessExit(1);
     }
+
+    /* parent thread associates this child thread with the pipe handle during `pipe_connect()` */
+    while (!__atomic_load_n(&handle->pipe.handshake_helper_thread_hdl, __ATOMIC_ACQUIRE))
+        CPU_RELAX();
+
+    struct handshake_helper_thread* thread = malloc(sizeof(*thread));
+    if (!thread) {
+        log_error("Failed to allocate helper handshake thread list item");
+        _DkProcessExit(1);
+    }
+
+    thread->thread_hdl = handle->pipe.handshake_helper_thread_hdl;
+    assert(HANDLE_HDR(thread->thread_hdl)->type == PAL_TYPE_THREAD);
+
+    INIT_LIST_HEAD(thread, list);
+    thread->clear_on_thread_exit = 1;
+
+    spinlock_lock(&g_handshake_helper_thread_list_lock);
+    LISTP_ADD_TAIL(thread, &g_handshake_helper_thread_list, list);
+    spinlock_unlock(&g_handshake_helper_thread_list_lock);
 
     __atomic_store_n(&handle->pipe.handshake_done, 1, __ATOMIC_RELEASE);
     _DkThreadExit(/*clear_child_tid=*/&thread->clear_on_thread_exit);
@@ -264,7 +264,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
         return -PAL_ERROR_DENIED;
     }
 
-    hdl->pipe.thread_hdl     = NULL;
+    hdl->pipe.handshake_helper_thread_hdl = NULL;
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = true;
     hdl->pipe.handshake_done = 0;
@@ -282,7 +282,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     }
 
     /* inform helper thread about its PAL thread handle `thread_hdl`; see thread_handshake_func() */
-    __atomic_store_n(&hdl->pipe.thread_hdl, thread_hdl, __ATOMIC_RELEASE);
+    __atomic_store_n(&hdl->pipe.handshake_helper_thread_hdl, thread_hdl, __ATOMIC_RELEASE);
 
     *handle = hdl;
     return 0;
