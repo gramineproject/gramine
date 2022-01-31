@@ -74,6 +74,7 @@ typedef struct {
             PAL_SESSION_KEY session_key;
             PAL_NUM handshake_done;
             void* ssl_ctx;
+            void* handshake_helper_thread_hdl;
         } pipe;
 
         struct {
