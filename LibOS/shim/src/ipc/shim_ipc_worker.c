@@ -38,7 +38,6 @@ static LISTP_TYPE(shim_ipc_connection) g_ipc_connections;
 static size_t g_ipc_connections_cnt = 0;
 
 static struct shim_thread* g_worker_thread = NULL;
-static struct shim_pollable_event exit_notification_event;
 /* Used by `DkThreadExit` to indicate that the thread really exited and is not using any resources
  * (e.g. stack) anymore. Awaited to be `0` (thread exited) in `terminate_ipc_worker()`. */
 static int g_clear_on_worker_exit = 1;
@@ -226,7 +225,7 @@ static noreturn void ipc_worker_main(void) {
     size_t prev_items_cnt = 0;
 
     while (1) {
-        /* Reserve 2 slots for `exit_notification_event` and `g_self_ipc_handle`. */
+        /* Reserve 2 slots for `g_worker_thread->pollable_event` and `g_self_ipc_handle`. */
         const size_t reserved_slots = 2;
         size_t items_cnt = g_ipc_connections_cnt + reserved_slots;
         if (items_cnt != prev_items_cnt) {
@@ -250,7 +249,7 @@ static noreturn void ipc_worker_main(void) {
         memset(ret_events, 0, items_cnt * sizeof(*ret_events));
 
         connections[0] = NULL;
-        handles[0] = exit_notification_event.read_handle;
+        handles[0] = g_worker_thread->pollable_event.read_handle;
         events[0] = PAL_WAIT_READ;
         connections[1] = NULL;
         handles[1] = g_self_ipc_handle;
@@ -279,7 +278,7 @@ static noreturn void ipc_worker_main(void) {
         }
 
         if (ret_events[0]) {
-            /* `exit_notification_event`. */
+            /* `g_worker_thread->pollable_event` */
             if (ret_events[0] & ~PAL_WAIT_READ) {
                 log_error(LOG_PREFIX "unexpected event (%d) on exit handle", ret_events[0]);
                 goto out_die;
@@ -403,17 +402,12 @@ static int create_ipc_worker(void) {
 }
 
 int init_ipc_worker(void) {
-    int ret = create_pollable_event(&exit_notification_event);
-    if (ret < 0) {
-        return ret;
-    }
-
     enable_locking();
     return create_ipc_worker();
 }
 
 void terminate_ipc_worker(void) {
-    set_pollable_event(&exit_notification_event, 1);
+    set_pollable_event(&g_worker_thread->pollable_event, 1);
 
     while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_ACQUIRE)) {
         CPU_RELAX();
