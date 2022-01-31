@@ -16,7 +16,8 @@
 #endif // DEBUG
 
 #ifdef IN_SHIM
-#include "shim_thread.h"
+/* Forward declare, so this header stays standalone. */
+static inline unsigned int get_cur_tid(void);
 
 #ifdef DEBUG_SPINLOCKS
 #define DEBUG_SPINLOCKS_SHIM

@@ -12,9 +12,10 @@
 #include <stdint.h>
 
 #include "api.h"
-#include "pal.h"
 #include "list.h"
+#include "pal.h"
 #include "shim_internal.h"
+#include "shim_pollable_event.h"
 #include "shim_signal.h"
 #include "shim_tcb.h"
 #include "shim_types.h"
@@ -116,6 +117,9 @@ struct shim_thread {
     PAL_HANDLE scheduler_event;
 
     struct wake_queue_node wake_queue;
+
+    /* Reusable event for thread usage. */
+    struct shim_pollable_event pollable_event;
 
     bool time_to_die;
 

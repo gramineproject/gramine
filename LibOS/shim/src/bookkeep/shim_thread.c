@@ -69,6 +69,13 @@ static struct shim_thread* alloc_new_thread(void) {
         return NULL;
     }
 
+    int ret = create_pollable_event(&thread->pollable_event);
+    if (ret < 0) {
+        destroy_lock(&thread->lock);
+        free(thread);
+        return NULL;
+    }
+
     REF_SET(thread->ref_count, 1);
     INIT_LIST_HEAD(thread, list);
     /* default value as sigalt stack isn't specified yet */
@@ -386,6 +393,8 @@ void put_thread(struct shim_thread* thread) {
         if (thread->tid && !is_internal(thread)) {
             release_id(thread->tid);
         }
+
+        destroy_pollable_event(&thread->pollable_event);
 
         destroy_lock(&thread->lock);
 

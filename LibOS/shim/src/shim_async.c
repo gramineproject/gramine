@@ -35,6 +35,7 @@ static enum { WORKER_NOTALIVE, WORKER_ALIVE } async_worker_state;
 static struct shim_thread* async_worker_thread;
 static struct shim_lock async_worker_lock;
 
+/* TODO: use async_worker_thread->pollable_event instead */
 static struct shim_pollable_event install_new_event;
 
 static int create_async_worker(void);
