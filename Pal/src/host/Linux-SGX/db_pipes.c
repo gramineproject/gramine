@@ -67,15 +67,15 @@ static noreturn int thread_handshake_func(void* param) {
         _DkProcessExit(1);
     }
 
-    /* parent thread associates this child thread with the pipe handle during `pipe_connect()` */
-    while (!__atomic_load_n(&handle->pipe.handshake_helper_thread_hdl, __ATOMIC_ACQUIRE))
-        CPU_RELAX();
-
     struct handshake_helper_thread* thread = malloc(sizeof(*thread));
     if (!thread) {
         log_error("Failed to allocate helper handshake thread list item");
         _DkProcessExit(1);
     }
+
+    /* parent thread associates this child thread with the pipe handle during `pipe_connect()` */
+    while (!__atomic_load_n(&handle->pipe.handshake_helper_thread_hdl, __ATOMIC_ACQUIRE))
+        CPU_RELAX();
 
     thread->thread_hdl = handle->pipe.handshake_helper_thread_hdl;
     assert(HANDLE_HDR(thread->thread_hdl)->type == PAL_TYPE_THREAD);
