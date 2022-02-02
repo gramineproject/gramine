@@ -53,7 +53,7 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
      * to keep track of the exact value (we would have to list the directory, and also take into
      * account synthetic files created by Graphene, such as named pipes and sockets).
      */
-    buf->st_nlink = (inode->type == FILE_DIR ? 2 : 1);
+    buf->st_nlink = (inode->type == S_IFDIR ? 2 : 1);
 
     if (inode->mount->uri)
         buf->st_dev = hash_str(inode->mount->uri);
@@ -64,7 +64,16 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
 
 int generic_inode_stat(struct shim_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
-    assert(dent->inode);
+    if (!dent->inode) {
+        /*
+         * TODO: This can happen for synthetic dentries (DENTRY_SYNTHETIC) created as intermediate
+         * directories to a mountpoint. These should be treated specially, same as other
+         * Gramine-internal files (pipes, sockets). For now, we fail `stat()` with -ENOENT.
+         */
+        assert(dent->state & DENTRY_SYNTHETIC);
+        log_debug("%s: disregarding synthetic dentry: %s", __func__, dent->name);
+        return -ENOENT;
+    }
 
     return generic_istat(dent->inode, buf);
 }
