@@ -29,7 +29,7 @@ noreturn void shim_emulate_syscall(PAL_CONTEXT* context) {
 
     if (sysnr == GRAMINE_CUSTOM_SYSCALL_NR) {
         unsigned long args[] = { ALL_SYSCALL_ARGS(context) };
-        ret = handle_call(args[0], args[1], args[2]);
+        ret = handle_libos_call(args[0], args[1], args[2]);
     } else {
         if (sysnr >= LIBOS_SYSCALL_BOUND || !shim_table[sysnr]) {
             warn_unsupported_syscall(sysnr);

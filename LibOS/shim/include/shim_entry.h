@@ -26,6 +26,6 @@ void syscalldb(void);
  * Invoked through the syscall interface with GRAMINE_CALL_SYSCALL_NR. The call numbers are defined
  * in `gramine_entry_api.h`.
  */
-long handle_call(int number, unsigned long arg1, unsigned long arg2);
+long handle_libos_call(int number, unsigned long arg1, unsigned long arg2);
 
 #endif /* SHIM_ENTRY_H_ */

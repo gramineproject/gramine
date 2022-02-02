@@ -98,7 +98,7 @@ static int run_test(const char* test_name) {
     return ret;
 }
 
-long handle_call(int number, unsigned long arg1, unsigned long arg2) {
+long handle_libos_call(int number, unsigned long arg1, unsigned long arg2) {
     switch (number) {
         case GRAMINE_CALL_REGISTER_LIBRARY:
             return register_library((const char*)arg1, arg2);
@@ -107,7 +107,7 @@ long handle_call(int number, unsigned long arg1, unsigned long arg2) {
             return run_test((const char*)arg1);
 
         default:
-            log_warning("handle_call: invalid number: %d", number);
+            log_warning("handle_libos_call: invalid number: %d", number);
             return -EINVAL;
     }
 }
