@@ -64,9 +64,7 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
 
 int generic_inode_stat(struct shim_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
-
-    if (!dent->inode)
-        return -ENOENT;
+    assert(dent->inode);
 
     return generic_istat(dent->inode, buf);
 }
