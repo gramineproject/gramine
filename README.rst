@@ -15,6 +15,7 @@ Gramine Library OS with Intel SGX Support
 
 .. highlight:: sh
 
+
 What is Gramine?
 ================
 
@@ -43,23 +44,6 @@ Note that the Gramine project was formerly known as Graphene. However, the name
 "Graphene" was deemed too common, could be impossible to trademark, and collided
 with several other software projects. Thus, a new name "Gramine" was chosen.
 
-Gramine 1.0 release
-===================
-
-Gramine has evolved a |nbsp| lot since our last major release. Over the last
-few months, we have made significant updates to provide a |nbsp| stable version
-that supports deploying key workloads with Intel SGX. We’ve rewritten major
-subsystems, done a |nbsp| significant update to the build and packaging
-scripts, extended test coverage, and improved the CI/CD process. We’ve reviewed
-and hardened specific security aspects of Gramine, and increased stability for
-long-running and heavy workloads.
-
-We recently published our first production-ready release - Gramine 1.0. This
-version was tested on various configurations and heavy workloads, we also
-ensured that all risky configurations are clearly warned about to prevent
-insecure deployments. More details (including a list of all breaking changes)
-are available on the `v1.0 release page
-<https://github.com/gramineproject/gramine/releases/tag/v1.0>`__.
 
 Gramine documentation
 =====================
