@@ -101,11 +101,11 @@ void* malloc(size_t size) {
     return mem;
 }
 
-void* calloc(size_t nmemb, size_t size) {
-    // This overflow checking is not a UB, because the operands are unsigned.
-    size_t total = nmemb * size;
-    if (total / size != nmemb)
+void* calloc(size_t num, size_t size) {
+    size_t total;
+    if (__builtin_mul_overflow(num, size, &total))
         return NULL;
+
     void* ptr = malloc(total);
     if (ptr)
         memset(ptr, 0, total);

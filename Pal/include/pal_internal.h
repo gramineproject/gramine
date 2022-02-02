@@ -250,7 +250,7 @@ int _DkSetProtectedFilesKey(const char* pf_key_hex);
 void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
 void* malloc(size_t size);
 void* malloc_copy(const void* mem, size_t size);
-void* calloc(size_t nmem, size_t size);
+void* calloc(size_t num, size_t size);
 void free(void* mem);
 
 #ifdef __GNUC__

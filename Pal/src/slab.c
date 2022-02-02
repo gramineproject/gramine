@@ -164,12 +164,14 @@ void* malloc_copy(const void* mem, size_t size) {
     return nmem;
 }
 
-void* calloc(size_t nmem, size_t size) {
-    void* ptr = malloc(nmem * size);
+void* calloc(size_t num, size_t size) {
+    size_t total;
+    if (__builtin_mul_overflow(num, size, &total))
+        return NULL;
 
+    void* ptr = malloc(total);
     if (ptr)
-        memset(ptr, 0, nmem * size);
-
+        memset(ptr, 0, total);
     return ptr;
 }
 
