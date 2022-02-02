@@ -250,39 +250,34 @@ Below, we will highlight some of the SGX-specific manifest options in
 
 First, here are the following SGX-specific lines in the manifest template::
 
-   sgx.trusted_files.python3 = "file:{{ entrypoint }}"
-   sgx.trusted_files.runtime = "file:{{ gramine.runtime() }}/"
+   sgx.trusted_files = [
+     "file:{{ entrypoint }}",
+     "file:{{ gramine.runtime() }}/",
+   ]
    ...
 
-``sgx.trusted_files.<name>`` specifies a file or a directory that will be
-verified and trusted by the SGX enclave (in the latter case it's recursively
-traversed and all files are added as trusted). Note that the key string
-``<name>`` may be an arbitrary legal string and does not have to be the same as
-the actual file name.
+``sgx.trusted_files`` specifies a list of files and directories that will be
+hashed during the generation of the final SGX manifest file (using the
+utility :command:`gramine-sgx-sign`) and appended to this manifest file. In
+runtime they will be allowed to be read only if the hash matches. In the case
+of directories they are recursively traversed and all files inside them are
+hashed.
 
-The way these Trusted Files work is before Gramine runs PyTorch inside the SGX
-enclave, Gramine generates the final SGX manifest file using
-:command:`gramine-sgx-sign` Gramine utility.  This utility calculates hashes
-of each trusted file and appends them as ``sgx.trusted_checksum.<name>`` to the
-final SGX manifest. When running PyTorch with SGX, Gramine reads trusted files,
-finds their corresponding trusted checksums, and compares the
-calculated-at-runtime checksum against the expected value in the manifest.
+The PyTorch manifest template also contains ``sgx.allowed_files`` list. It
+specifies files unconditionally allowed by the enclave::
 
-The PyTorch manifest template also contains ``sgx.allowed_files.<name>``
-entries. They specify files unconditionally allowed by the enclave::
-
-   sgx.allowed_files.pythonhome = "file:{{ env.HOME }}/.local/lib"
+   sgx.allowed_files = [
+     "file:{{ env.HOME }}/.local/lib",
+   ]
 
 This line unconditionally allows all Python libraries in the path to be loaded
-into the enclave.  Ideally, the developer needs to replace it with
+into the enclave. Ideally, the developer needs to replace it with
 ``sgx.trusted_files`` for each of the dependent Python libraries.
 
 Allowed files are *not* cryptographically hashed and verified.  Thus, this is
 *insecure* and discouraged for production use (unless you are sure that the
 contents of the files are irrelevant to security of your workload). Here, we use
-these allowed files only for simplicity. A next tutorial on PyTorch (with Docker
-integration) replaces all allowed files with trusted/protected files (that
-tutorial is work in progress).
+these allowed files only for simplicity.
 
 Now we desribed how the manifest template looks like and what the SGX-specific
 manifest entries represent. Let's prepare all the files needed to run PyTorch in
@@ -471,19 +466,18 @@ with your favorite text editor.
 
 Replace ``trusted_files`` with ``protected_files`` for the input files::
 
-   # sgx.trusted_files.classes = "file:classes.txt"
-   sgx.protected_files.classes = "file:classes.txt"
-
-   # sgx.trusted_files.image = "file:input.jpg"
-   sgx.protected_files.image = "file:input.jpg"
-
-   # sgx.trusted_files.model = "file:alexnet-pretrained.pt"
-   sgx.protected_files.model = "file:alexnet-pretrained.pt"
+   sgx.protected_files = [
+     "file:classes.txt",
+     "file:input.jpg",
+     "file:alexnet-pretrained.pt",
+   ]
 
 Also add ``result.txt`` as a protected file so that PyTorch writes the
 *encrypted* result into it::
 
-   sgx.protected_files.result = "file:result.txt"
+   sgx.protected_files = [
+     "file:result.txt",
+   ]
 
 Now, let's add the secret provisioning library to the manifest. Append the
 current directory ``./`` to ``LD_LIBRARY_PATH`` so that PyTorch and Gramine
@@ -507,8 +501,10 @@ the used environment variables and other manifest options, see `here
    loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "certs/test-ca-sha256.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
-   sgx.trusted_files.libsecretprovattest = "file:libsecret_prov_attest.so"
-   sgx.trusted_files.cachain = "file:certs/test-ca-sha256.crt"
+   sgx.trusted_files = [
+     "file:libsecret_prov_attest.so",
+     "file:certs/test-ca-sha256.crt",
+   ]
 
 The ``libsecret_prov_attest.so`` library provides the in-enclave logic to attest
 the SGX enclave, Gramine instance, and the application running in it to the

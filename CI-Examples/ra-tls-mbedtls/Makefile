@@ -45,7 +45,7 @@ MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
 	https://packages.gramineproject.io/distfiles
-MBEDTLS_CHECKSUM ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
+MBEDTLS_HASH ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
 
 ifeq ($(DEBUG),1)
 MBED_BUILD_TYPE=Debug
@@ -54,7 +54,7 @@ MBED_BUILD_TYPE=Release
 endif
 
 $(MBEDTLS_SRC):
-	../common_tools/download --output $@ $(foreach mirror,$(MBEDTLS_URI),--url $(mirror)/$(MBEDTLS_SRC)) --sha256 $(MBEDTLS_CHECKSUM)
+	../common_tools/download --output $@ $(foreach mirror,$(MBEDTLS_URI),--url $(mirror)/$(MBEDTLS_SRC)) --sha256 $(MBEDTLS_HASH)
 
 .SECONDARY: mbedtls/.mbedtls_downloaded
 mbedtls/.mbedtls_downloaded: $(MBEDTLS_SRC)

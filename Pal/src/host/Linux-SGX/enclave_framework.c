@@ -18,7 +18,7 @@
 #define LOCAL_ATTESTATION_TAG_PARENT_STR "GRAMINE_LOCAL_ATTESTATION_TAG_PARENT"
 #define LOCAL_ATTESTATION_TAG_CHILD_STR "GRAMINE_LOCAL_ATTESTATION_TAG_CHILD"
 
-static int register_file(const char* uri, const char* checksum_str, bool check_duplicates);
+static int register_file(const char* uri, const char* hash_str, bool check_duplicates);
 
 void* g_enclave_base;
 void* g_enclave_top;
@@ -323,7 +323,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
             return ret;
         }
 
-        ret = register_file(uri, /*checksum_str=*/NULL, /*check_duplicates=*/true);
+        ret = register_file(uri, /*hash_str=*/NULL, /*check_duplicates=*/true);
 
         free(uri);
         return ret;
@@ -540,9 +540,9 @@ failed:
     return ret;
 }
 
-static int register_file(const char* uri, const char* checksum_str, bool check_duplicates) {
-    if (checksum_str && strlen(checksum_str) != sizeof(sgx_file_hash_t) * 2) {
-        log_error("Hash (%s) of a trusted file %s is not a SHA256 hash", checksum_str, uri);
+static int register_file(const char* uri, const char* hash_str, bool check_duplicates) {
+    if (hash_str && strlen(hash_str) != sizeof(sgx_file_hash_t) * 2) {
+        log_error("Hash (%s) of a trusted file %s is not a SHA256 hash", hash_str, uri);
         return -PAL_ERROR_INVAL;
     }
 
@@ -578,14 +578,14 @@ static int register_file(const char* uri, const char* checksum_str, bool check_d
     new->uri_len = uri_len;
     memcpy(new->uri, uri, uri_len + 1);
 
-    if (checksum_str) {
-        assert(strlen(checksum_str) == sizeof(sgx_file_hash_t) * 2);
+    if (hash_str) {
+        assert(strlen(hash_str) == sizeof(sgx_file_hash_t) * 2);
         for (size_t i = 0; i < sizeof(sgx_file_hash_t); i++) {
-            int8_t byte1 = hex2dec(checksum_str[i * 2]);
-            int8_t byte2 = hex2dec(checksum_str[i * 2 + 1]);
+            int8_t byte1 = hex2dec(hash_str[i * 2]);
+            int8_t byte2 = hex2dec(hash_str[i * 2 + 1]);
 
             if (byte1 < 0 || byte2 < 0) {
-                log_error("Could not parse checksum of file: %s", uri);
+                log_error("Could not parse hash of file: %s", uri);
                 free(new);
                 return -PAL_ERROR_INVAL;
             }
@@ -618,7 +618,7 @@ static int register_file(const char* uri, const char* checksum_str, bool check_d
     return 0;
 }
 
-static int normalize_and_register_file(const char* uri, const char* checksum_str) {
+static int normalize_and_register_file(const char* uri, const char* hash_str) {
     int ret;
 
     if (!strstartswith(uri, URI_PREFIX_FILE)) {
@@ -640,96 +640,13 @@ static int normalize_and_register_file(const char* uri, const char* checksum_str
         goto out;
     }
 
-    ret = register_file(norm_uri, checksum_str, /*check_duplicates=*/false);
+    ret = register_file(norm_uri, hash_str, /*check_duplicates=*/false);
 out:
     free(norm_uri);
     return ret;
 }
 
-static int init_trusted_files_from_toml_table(void) {
-    int ret;
-
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
-    if (!manifest_sgx)
-        return 0;
-
-    toml_table_t* toml_trusted_files = toml_table_in(manifest_sgx, "trusted_files");
-    if (!toml_trusted_files)
-        return 0;
-
-    ssize_t toml_trusted_files_cnt = toml_table_nkval(toml_trusted_files);
-    if (toml_trusted_files_cnt < 0)
-        return -PAL_ERROR_DENIED;
-    if (toml_trusted_files_cnt == 0)
-        return 0;
-
-    char* toml_trusted_file_str     = NULL;
-    char* toml_trusted_checksum_key = NULL;
-    char* toml_trusted_checksum_str = NULL;
-
-    for (ssize_t i = 0; i < toml_trusted_files_cnt; i++) {
-        /* read sgx.trusted_file.<key> entry from manifest */
-        const char* toml_trusted_file_key = toml_key_in(toml_trusted_files, i);
-        assert(toml_trusted_file_key);
-
-        toml_raw_t toml_trusted_file_raw = toml_raw_in(toml_trusted_files, toml_trusted_file_key);
-        if (!toml_trusted_file_raw) {
-            log_error("Invalid trusted file in manifest: '%s'", toml_trusted_file_key);
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = toml_rtos(toml_trusted_file_raw, &toml_trusted_file_str);
-        if (ret < 0) {
-            log_error("Invalid trusted file in manifest: '%s' (not a string)",
-                      toml_trusted_file_key);
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        /* read corresponding sgx.trusted_checksum.<key> entry from manifest */
-        toml_trusted_checksum_key = alloc_concat3("sgx.trusted_checksum.\"", -1,
-                                                  toml_trusted_file_key, -1, "\"", -1);
-        if (!toml_trusted_checksum_key) {
-            ret = -PAL_ERROR_NOMEM;
-            goto out;
-        }
-
-        /* sgx.trusted_checksum entries are actually SHA-256 hashes, so the better name would be
-         * sgx.trusted_hash but we don't want to break old manifests so we keep the legacy name */
-        ret = toml_string_in(g_pal_public_state.manifest_root, toml_trusted_checksum_key,
-                             &toml_trusted_checksum_str);
-        if (ret < 0 || !toml_trusted_checksum_str) {
-            log_error("Invalid trusted checksum in manifest: '%s' (not found or not a string)",
-                      toml_trusted_checksum_key);
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = normalize_and_register_file(toml_trusted_file_str, toml_trusted_checksum_str);
-        if (ret < 0)
-            goto out;
-
-        free(toml_trusted_file_str);
-        free(toml_trusted_checksum_key);
-        free(toml_trusted_checksum_str);
-        toml_trusted_file_str     = NULL;
-        toml_trusted_checksum_key = NULL;
-        toml_trusted_checksum_str = NULL;
-    }
-
-    log_error("Detected deprecated syntax. Consider switching to new syntax: 'sgx.trusted_files "
-              "= [\"file1\", ..]'.");
-
-    ret = 0;
-out:
-    free(toml_trusted_file_str);
-    free(toml_trusted_checksum_key);
-    free(toml_trusted_checksum_str);
-    return ret;
-}
-
-static int init_trusted_files_from_toml_array(void) {
+int init_trusted_files(void) {
     int ret;
 
     toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
@@ -788,8 +705,11 @@ static int init_trusted_files_from_toml_array(void) {
         }
 
         ret = normalize_and_register_file(toml_trusted_uri_str, toml_trusted_sha256_str);
-        if (ret < 0)
+        if (ret < 0) {
+            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code %d",
+                      toml_trusted_uri_str, toml_trusted_sha256_str, ret);
             goto out;
+        }
 
         free(toml_trusted_uri_str);
         free(toml_trusted_sha256_str);
@@ -809,64 +729,7 @@ static void maybe_warn_about_allowed_files_usage(void) {
         g_allowed_files_warn = true;
 }
 
-static int init_allowed_files_from_toml_table(void) {
-    int ret;
-
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
-    if (!manifest_sgx)
-        return 0;
-
-    toml_table_t* toml_allowed_files = toml_table_in(manifest_sgx, "allowed_files");
-    if (!toml_allowed_files)
-        return 0;
-
-    maybe_warn_about_allowed_files_usage();
-
-    ssize_t toml_allowed_files_cnt = toml_table_nkval(toml_allowed_files);
-    if (toml_allowed_files_cnt < 0)
-        return -PAL_ERROR_DENIED;
-    if (toml_allowed_files_cnt == 0)
-        return 0;
-
-    char* toml_allowed_file_str = NULL;
-
-    for (ssize_t i = 0; i < toml_allowed_files_cnt; i++) {
-        const char* toml_allowed_file_key = toml_key_in(toml_allowed_files, i);
-        assert(toml_allowed_file_key);
-
-        toml_raw_t toml_allowed_file_raw = toml_raw_in(toml_allowed_files, toml_allowed_file_key);
-        if (!toml_allowed_file_raw) {
-            log_error("Invalid allowed file in manifest: '%s'", toml_allowed_file_key);
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = toml_rtos(toml_allowed_file_raw, &toml_allowed_file_str);
-        if (ret < 0) {
-            log_error("Invalid allowed file in manifest: '%s' (not a string)",
-                      toml_allowed_file_key);
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = normalize_and_register_file(toml_allowed_file_str, /*checksum_str=*/NULL);
-        if (ret < 0)
-            goto out;
-
-        free(toml_allowed_file_str);
-        toml_allowed_file_str = NULL;
-    }
-
-    log_error("Detected deprecated syntax. Consider switching to new syntax: 'sgx.allowed_files "
-              "= [\"file1\", ..]'.");
-
-    ret = 0;
-out:
-    free(toml_allowed_file_str);
-    return ret;
-}
-
-static int init_allowed_files_from_toml_array(void) {
+int init_allowed_files(void) {
     int ret;
 
     toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
@@ -902,9 +765,12 @@ static int init_allowed_files_from_toml_array(void) {
             goto out;
         }
 
-        ret = normalize_and_register_file(toml_allowed_file_str, /*checksum_str=*/NULL);
-        if (ret < 0)
+        ret = normalize_and_register_file(toml_allowed_file_str, /*hash_str=*/NULL);
+        if (ret < 0) {
+            log_error("normalize_and_register_file(\"%s\", NULL) failed with error code %d",
+                      toml_allowed_file_str, ret);
             goto out;
+        }
 
         free(toml_allowed_file_str);
         toml_allowed_file_str = NULL;
@@ -914,50 +780,6 @@ static int init_allowed_files_from_toml_array(void) {
 out:
     free(toml_allowed_file_str);
     return ret;
-}
-
-int init_trusted_files(void) {
-    int ret;
-
-    /* first try legacy manifest syntax with TOML tables, i.e. `sgx.trusted_files.key = "file"` */
-    ret = init_trusted_files_from_toml_table();
-    if (ret < 0) {
-        log_error("Reading trusted files (in TOML-table syntax) from the manifest failed: %s",
-                  pal_strerror(ret));
-        return ret;
-    }
-
-    /* use new manifest syntax with TOML arrays, i.e. `sgx.trusted_files = ["file1", ..]` */
-    ret = init_trusted_files_from_toml_array();
-    if (ret < 0) {
-        log_error("Reading trusted files (in TOML-array syntax) from the manifest failed: %s",
-                  pal_strerror(ret));
-        return ret;
-    }
-
-    return 0;
-}
-
-int init_allowed_files(void) {
-    int ret;
-
-    /* first try legacy manifest syntax with TOML tables, i.e. `sgx.allowed_files.key = "file"` */
-    ret = init_allowed_files_from_toml_table();
-    if (ret < 0) {
-        log_error("Reading allowed files (in TOML-table syntax) from the manifest failed: %s",
-                  pal_strerror(ret));
-        return ret;
-    }
-
-    /* use new manifest syntax with TOML arrays, i.e. `sgx.allowed_files = ["file1", ..]` */
-    ret = init_allowed_files_from_toml_array();
-    if (ret < 0) {
-        log_error("Reading allowed files (in TOML-array syntax) from the manifest failed: %s",
-                  pal_strerror(ret));
-        return ret;
-    }
-
-    return 0;
 }
 
 int init_file_check_policy(void) {

@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (c) 2021 Wojtek Porczyk <woju@invisiblethingslab.com>
-# Copyright (c) 2020 Intel Corporation
+# Copyright (c) 2022 Intel Corporation
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
-# Copyright (c) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 """
@@ -12,7 +11,6 @@ Gramine manifest management and rendering
 import hashlib
 import os
 import pathlib
-import sys
 
 import toml
 
@@ -105,31 +103,19 @@ class Manifest:
         loader = manifest.setdefault('loader', {})
         loader.setdefault('preload', '')
 
-        # TODO: uncomment once we drop the old syntax support completely.
-        #if not isinstance(sgx['trusted_files'], list):
-        #    raise ValueError("Unsupported trusted files syntax, more info: " +
-        #        "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
+        if not isinstance(sgx['trusted_files'], list):
+            raise ValueError("Unsupported trusted files syntax, more info: " +
+                  "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
 
         # Current toml versions (< 1.0) do not support non-homogeneous arrays
         trusted_files = []
-        if isinstance(sgx['trusted_files'], dict):
-            # Old, deprecated syntax "sgx.trusted_files.key = value".
-            print("This trusted files syntax is deprecated, please move to the new one: " +
-                  "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files",
-                  file=sys.stderr)
-            for _, tf in sgx['trusted_files'].items():
-                if isinstance(tf, str):
-                    append_tf(trusted_files, tf, None)
-                else:
-                    raise ManifestError(f'Unknown trusted file format: {tf!r}')
-        else:
-            for tf in sgx['trusted_files']:
-                if isinstance(tf, dict) and 'uri' in tf:
-                    trusted_files.append(tf)
-                elif isinstance(tf, str):
-                    append_tf(trusted_files, tf, None)
-                else:
-                    raise ManifestError(f'Unknown trusted file format: {tf!r}')
+        for tf in sgx['trusted_files']:
+            if isinstance(tf, dict) and 'uri' in tf:
+                trusted_files.append(tf)
+            elif isinstance(tf, str):
+                append_tf(trusted_files, tf, None)
+            else:
+                raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
         sgx['trusted_files'] = trusted_files
 
