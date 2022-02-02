@@ -236,7 +236,7 @@ void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, v
     sigframe->uc.uc_flags = UC_SIGCONTEXT_SS | UC_STRICT_RESTORE_SS;
     sigframe->uc.uc_link = NULL;
     /* TODO: add support for SA_AUTODISARM
-     * Tracked: https://github.com/gramineproject/graphene/issues/2140 */
+     * Tracked in https://github.com/gramineproject/gramine/issues/84. */
     sigframe->uc.uc_stack = current->signal_altstack;
 
     pal_context_to_ucontext(&sigframe->uc, context);

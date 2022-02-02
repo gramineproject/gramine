@@ -285,7 +285,7 @@ static int __mount_others(void) {
      * usually there are around 5 mountpoints with ~30 chars in paths, so it should still be quite
      * fast.
      *
-     * Corresponding issue: https://github.com/gramineproject/graphene/issues/2214.
+     * Corresponding issue: https://github.com/gramineproject/gramine/issues/23.
      */
     const char** keys = malloc(mounts_cnt * sizeof(*keys));
     if (!keys)

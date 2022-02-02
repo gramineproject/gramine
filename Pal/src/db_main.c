@@ -407,7 +407,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     /* Load argv */
     /* TODO: Add an option to specify argv inline in the manifest. 'loader.argv0_override' won't be
      * needed after implementing this feature and resolving
-     * https://github.com/gramineproject/graphene/issues/1053 (RFC: graphene invocation). */
+     * https://github.com/gramineproject/gramine/issues/13 (RFC: graphene invocation). */
     bool argv0_overridden = false;
     char* argv0_override = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv0_override",

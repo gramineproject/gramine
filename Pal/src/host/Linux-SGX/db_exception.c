@@ -275,7 +275,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
 /* TODO: remove this function (SGX signal handling needs to be revisited)
  * actually what is the point of this function?
- * Tracked: https://github.com/gramineproject/graphene/issues/2140 */
+ * Tracked in https://github.com/gramineproject/gramine/issues/84. */
 noreturn void _DkHandleExternalEvent(long event_, sgx_cpu_context_t* uc,
                                      PAL_XREGS_STATE* xregs_state) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
