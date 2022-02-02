@@ -96,9 +96,10 @@ Example
    path = "/lib"
    uri = "file:{{ gramine.runtimedir() }}"
 
-   [sgx.trusted_files]
-   entrypoint = "file:{{ entrypoint }}"
-   runtime = "file:{{ gramine.runtimedir() }}/"
+   sgx.trusted_files = [
+     "file:{{ entrypoint }}",
+     "file:{{ gramine.runtimedir() }}/",
+   ]
 
 :file:`Makefile`:
 

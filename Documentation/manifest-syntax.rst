@@ -828,19 +828,6 @@ Linux scheduler: the effective maximum is 250 samples per second.
 Deprecated options
 ------------------
 
-Allowed/Trusted/Protected Files (deprecated schema)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.allowed_files.[identifier] = "[URI]"
-    sgx.trusted_files.[identifier] = "[URI]"
-    sgx.protected_files.[identifier] = "[URI]"
-
-These manifest options used the TOML-table schema that had a bogus
-``[identifier]`` key. This excessive TOML-table schema was replaced with a more
-appropriate TOML-array one.
-
 Preloaded library (deprecated option)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
