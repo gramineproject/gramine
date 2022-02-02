@@ -389,8 +389,8 @@ void get_inode(struct shim_inode* inode) {
 
 void put_inode(struct shim_inode* inode) {
     if (REF_DEC(inode->ref_count) == 0) {
-        if (inode->fs->d_ops && inode->fs->d_ops->iput)
-            inode->fs->d_ops->iput(inode);
+        if (inode->fs->d_ops && inode->fs->d_ops->idrop)
+            inode->fs->d_ops->idrop(inode);
 
         put_mount(inode->mount);
 

@@ -367,7 +367,7 @@ struct shim_d_ops {
      * Deallocates any custom data stored in the inode by filesystem. Called before deleting the
      * inode.
      */
-    void (*iput)(struct shim_inode* inode);
+    void (*idrop)(struct shim_inode* inode);
 
     /*!
      * \brief Checkpoint inode data

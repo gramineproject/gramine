@@ -61,7 +61,7 @@ static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm
     return 0;
 }
 
-static void tmpfs_iput(struct shim_inode* inode) {
+static void tmpfs_idrop(struct shim_inode* inode) {
     if (inode->data) {
         mem_file_destroy(inode->data);
         free(inode->data);
@@ -380,7 +380,7 @@ struct shim_d_ops tmp_d_ops = {
     .unlink      = &tmpfs_unlink,
     .rename      = &tmpfs_rename,
     .chmod       = &tmpfs_chmod,
-    .iput        = &tmpfs_iput,
+    .idrop       = &tmpfs_idrop,
     .icheckpoint = &tmpfs_icheckpoint,
     .irestore    = &tmpfs_irestore,
 };
