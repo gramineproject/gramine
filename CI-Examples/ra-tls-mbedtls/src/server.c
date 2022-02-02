@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     unsigned char buf[1024];
     const char* pers = "ssl_server";
 
-    void* ra_tls_attest_lib         = NULL;
+    void* ra_tls_attest_lib = NULL;
     ra_tls_create_key_and_crt_der_f = NULL;
 
     uint8_t* der_key = NULL;
@@ -133,13 +133,13 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*)der_crt, der_crt_size);
+        ret = mbedtls_x509_crt_parse(&srvcert, (unsigned char*)der_crt, der_crt_size);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*)der_key, der_key_size, NULL, 0);
+        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
             goto exit;
