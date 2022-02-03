@@ -270,8 +270,8 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
 
     struct shim_inode* inode = hdl->inode;
 
-    lock(&hdl->lock);
     lock(&inode->lock);
+    lock(&hdl->lock);
 
     struct shim_mem_file* mem = inode->data;
 
@@ -287,8 +287,8 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
     /* keep `ret` */
 
 out:
-    unlock(&inode->lock);
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 
@@ -303,8 +303,8 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
 
     struct shim_inode* inode = hdl->inode;
 
-    lock(&hdl->lock);
     lock(&inode->lock);
+    lock(&hdl->lock);
     struct shim_mem_file* mem = inode->data;
 
     ret = mem_file_write(mem, hdl->pos, buf, size);
@@ -318,8 +318,8 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
     /* keep `ret` */
 
 out:
-    unlock(&inode->lock);
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 

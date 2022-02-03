@@ -367,6 +367,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
         return -EFBIG;
 
     struct shim_inode* inode = hdl->inode;
+    lock(&inode->lock);
     lock(&hdl->lock);
 
     file_off_t pos = hdl->pos;
@@ -390,15 +391,14 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
         hdl->pos = pos;
 
         /* Update file size if we just wrote past the end of file */
-        lock(&inode->lock);
         if (inode->size < pos)
             inode->size = pos;
-        unlock(&inode->lock);
     }
     ret = actual_count;
 
 out:
     unlock(&hdl->lock);
+    unlock(&inode->lock);
     return ret;
 }
 

@@ -732,10 +732,6 @@ BEGIN_CP_FUNC(handle) {
             DO_CP_MEMBER(dentry, hdl, new_hdl, dentry);
         }
 
-        if (hdl->inode) {
-            DO_CP_MEMBER(inode, hdl, new_hdl, inode);
-        }
-
         if (new_hdl->pal_handle) {
             struct shim_palhdl_entry* entry;
             DO_CP(palhdl_ptr, &hdl->pal_handle, &entry);
@@ -767,6 +763,12 @@ BEGIN_CP_FUNC(handle) {
         }
 
         unlock(&hdl->lock);
+        if (hdl->inode) {
+            /* NOTE: Checkpointing `inode` will take `inode->lock`, so we need to do it after
+             * `hdl->lock` is released. */
+            DO_CP_MEMBER(inode, hdl, new_hdl, inode);
+        }
+
         ADD_CP_FUNC_ENTRY(off);
     } else {
         new_hdl = (struct shim_handle*)(base + off);
