@@ -261,8 +261,8 @@ hashed during build and allowed to be read later in runtime only if the hash
 matches. In the case of directories they are recursively traversed and all
 files inside them are hashed.
 
-The PyTorch manifest template also contains ``sgx.allowed_files`` list. They
-specify files unconditionally allowed by the enclave::
+The PyTorch manifest template also contains ``sgx.allowed_files`` list. It
+specifies files unconditionally allowed by the enclave::
 
    sgx.allowed_files = [
      "file:{{ env.HOME }}/.local/lib",

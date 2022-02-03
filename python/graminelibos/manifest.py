@@ -11,7 +11,6 @@ Gramine manifest management and rendering
 import hashlib
 import os
 import pathlib
-import sys
 
 import toml
 
@@ -105,8 +104,8 @@ class Manifest:
         loader.setdefault('preload', '')
 
         if not isinstance(sgx['trusted_files'], list):
-           raise ValueError("Unsupported trusted files syntax, more info: " +
-                 "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
+            raise ValueError("Unsupported trusted files syntax, more info: " +
+                  "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
 
         # Current toml versions (< 1.0) do not support non-homogeneous arrays
         trusted_files = []

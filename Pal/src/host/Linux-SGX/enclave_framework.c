@@ -706,8 +706,8 @@ int init_trusted_files(void) {
 
         ret = normalize_and_register_file(toml_trusted_uri_str, toml_trusted_sha256_str);
         if (ret < 0) {
-            log_error("normalize_and_register_file(\"%s\", \"%s\") failed", toml_trusted_uri_str,
-                      toml_trusted_sha256_str);
+            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code %d",
+                      toml_trusted_uri_str, toml_trusted_sha256_str, ret);
             goto out;
         }
 
@@ -767,7 +767,8 @@ int init_allowed_files(void) {
 
         ret = normalize_and_register_file(toml_allowed_file_str, /*hash_str=*/NULL);
         if (ret < 0) {
-            log_error("normalize_and_register_file(\"%s\", NULL) failed", toml_allowed_file_str);
+            log_error("normalize_and_register_file(\"%s\", NULL) failed with error code %d",
+                      toml_allowed_file_str, ret);
             goto out;
         }
 
