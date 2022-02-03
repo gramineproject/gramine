@@ -257,9 +257,11 @@ First, here are the following SGX-specific lines in the manifest template::
    ...
 
 ``sgx.trusted_files`` specifies a list of files and directories that will be
-hashed during build and allowed to be read later in runtime only if the hash
-matches. In the case of directories they are recursively traversed and all
-files inside them are hashed.
+hashed during the generation of the final SGX manifest file (using the
+utility :command:`gramine-sgx-sign`) and appended to this manifest file. In
+runtime they will be allowed to be read only if the hash matches. In the case
+of directories they are recursively traversed and all files inside them are
+hashed.
 
 The PyTorch manifest template also contains ``sgx.allowed_files`` list. It
 specifies files unconditionally allowed by the enclave::
