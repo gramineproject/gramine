@@ -10,9 +10,9 @@ if you have questions, please use our mailing list: users@gramineproject.io
 ## Description of the problem
 
 ## Steps to reproduce
-<!-- NOTE: please specify the exact commit ID on which you reproduced the issue
+<!--
 
-### PLEASE ENSURE THAT THE ISSUE REPRODUCES ON THE CURRENT MASTER BRANCH ###
+@@@ PLEASE ENSURE THAT THE ISSUE REPRODUCES ON THE CURRENT MASTER BRANCH @@@
 
 -->
 
@@ -22,3 +22,9 @@ if you have questions, please use our mailing list: users@gramineproject.io
 
 <!-- ## Additional information -->
 <!-- if applicable, uncomment and fill this section -->
+
+## Gramine commit hash
+
+<!-- Please provide the hash of the commit you used to build Gramine.
+     If you installed Gramine from a repository or other prebuilt package,
+     please provide the exact version. -->
