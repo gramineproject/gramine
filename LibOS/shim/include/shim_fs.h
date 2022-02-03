@@ -21,7 +21,6 @@
 
 struct shim_handle;
 
-
 #define FS_POLL_RD 0x01
 #define FS_POLL_WR 0x02
 #define FS_POLL_ER 0x04
