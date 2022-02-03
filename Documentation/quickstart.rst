@@ -44,6 +44,7 @@ Prepare a signing key
 
 Only for SGX, and if you haven't already::
 
+   mkdir -p "$HOME"/.config/gramine/
    openssl genrsa -3 -out "$HOME"/.config/gramine/enclave-key.pem 3072
 
 Clone the repository and run sample application
