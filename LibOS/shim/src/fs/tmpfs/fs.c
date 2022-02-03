@@ -6,7 +6,8 @@
 
 /*
  * This file contains code for implementation of 'tmpfs' filesystem. The tmpfs files are *not*
- * cloned during fork/clone, except for files currently open.
+ * cloned during fork/clone (except for files currently open) and cannot be synchronized between
+ * processes.
  *
  * The tmpfs files are directly represented by their dentries and inodes (i.e. a file exists
  * whenever corresponding dentry exists, and is associated with inode). The file data is stored in
@@ -62,6 +63,8 @@ static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm
 }
 
 static void tmpfs_idrop(struct shim_inode* inode) {
+    assert(locked(&inode->lock));
+
     if (inode->data) {
         mem_file_destroy(inode->data);
         free(inode->data);
@@ -155,12 +158,10 @@ static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int fla
     return 0;
 }
 
-static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t mode) {
+static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
     mode_t type = S_IFREG;
-    mode_t perm = mode & ~S_IFMT;
-
     int ret = tmpfs_setup_dentry(dent, type, perm);
     if (ret < 0)
         return ret;
@@ -169,12 +170,10 @@ static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int fl
     return 0;
 }
 
-static int tmpfs_mkdir(struct shim_dentry* dent, mode_t mode) {
+static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
     mode_t type = S_IFREG;
-    mode_t perm = mode & ~S_IFDIR;
-
     return tmpfs_setup_dentry(dent, type, perm);
 }
 
@@ -227,21 +226,27 @@ static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
 
     /* TODO: this should be done in the syscall handler, not here */
 
-    struct shim_inode* inode = new->inode;
-    if (inode) {
+    struct shim_inode* new_inode = new->inode;
+    if (new_inode) {
         new->inode = NULL;
-        put_inode(inode);
+        put_inode(new_inode);
     }
+
+    struct shim_inode* old_inode = old->inode;
+
+    lock(&old_inode->lock);
 
     /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
      * from `old`. */
-    new->inode = old->inode;
+    new->inode = old_inode;
     new->type = old->type;
     new->perm = old->perm;
 
     old->inode = NULL;
 
-    new->inode->mtime = time_us / USEC_IN_SEC;
+    old_inode->ctime = time_us / USEC_IN_SEC;
+
+    unlock(&old_inode->lock);
 
     return 0;
 }

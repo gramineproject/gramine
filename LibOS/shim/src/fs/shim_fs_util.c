@@ -113,6 +113,9 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
         ret = 0;
         if (poll_type & FS_POLL_WR)
             ret |= FS_POLL_WR;
+        /* TODO: The `hdl->pos < hdl->inode->size` condition is wrong, the `poll` syscall treats
+         * end-of-file as readable. Check if removing this condition doesn't break anything
+         * in our `poll` implementation. */
         if ((poll_type & FS_POLL_RD) && hdl->pos < hdl->inode->size)
             ret |= FS_POLL_RD;
     } else {

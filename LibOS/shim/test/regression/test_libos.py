@@ -235,9 +235,9 @@ class TC_01_Bootstrap(RegressionTestCase):
         if os.path.exists(path):
             os.unlink(path)
         try:
-            self._test_send_handle('tmp/pf/send_handle_test')
+            self._test_send_handle(path)
             # TODO: Migrating a protected files handle is not supported when the file is deleted
-            # self._test_send_handle('tmp/pf/send_handle_test', delete=True)
+            # self._test_send_handle(path, delete=True)
         finally:
             if os.path.exists(path):
                 os.unlink(path)
