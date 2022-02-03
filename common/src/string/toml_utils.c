@@ -75,25 +75,14 @@ int toml_bool_in(const toml_table_t* root, const char* key, bool defaultval, boo
         *retval = defaultval;
         return 0;
     }
+
     int intval;
     int ret = toml_rtob(raw, &intval);
-    if (ret == 0) {
-        *retval = (bool)intval;
-    } else {
-        // Maybe someone used the old syntax?
-        // TODO: remove this fallback after some time.
-        int64_t int64_val;
-        ret = toml_int_in(root, key, (int)defaultval, &int64_val);
-        if (ret == 0 && (int64_val == 0 || int64_val == 1)) {
-            log_warning("Manifest contains a deprecated syntax for '%s' key. Please use true/false "
-                        "instead of 1/0", key);
-            *retval = (bool)int64_val;
-        } else {
-            ret = -1;
-        }
-    }
+    if (ret != 0)
+        return -1;
 
-    return ret;
+    *retval = (bool)intval;
+    return 0;
 }
 
 int toml_int_in(const toml_table_t* root, const char* key, int64_t defaultval, int64_t* retval) {
