@@ -126,6 +126,9 @@ static int migrate_fork(struct shim_cp_store* store, struct shim_process* proces
                         struct shim_thread* thread_description,
                         struct shim_ipc_ids* process_ipc_ids, va_list ap) {
     __UNUSED(ap);
+    /* Take `g_dcache_lock` for the whole checkpointing operation, so that we can access data from
+     * dentries. We recursively checkpoint various connected structures, so it's not practical to
+     * take the lock just for some part of this operation. */
     lock(&g_dcache_lock);
     int ret = START_MIGRATE(store, fork, process_description, thread_description, process_ipc_ids);
     unlock(&g_dcache_lock);
