@@ -14,8 +14,6 @@ LISTEN_HOST ?= 127.0.0.1
 LISTEN_PORT ?= 8002
 LISTEN_SSL_PORT ?= 8444
 
-SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
@@ -59,10 +57,7 @@ nginx.manifest.sgx: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
 		$(INSTALL_DIR)/conf/nginx-gramine.conf \
 		$(TEST_DATA) \
 		$(INSTALL_DIR)/conf/server.crt
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 

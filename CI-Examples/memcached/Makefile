@@ -1,7 +1,5 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
-
 SRCDIR = src
 MEMCACHED_SRC ?= memcached-1.5.21.tar.gz
 MEMCACHED_MIRRORS ?= \
@@ -41,10 +39,7 @@ memcached.manifest: memcached.manifest.template
 		$< > $@
 
 memcached.manifest.sgx: memcached.manifest memcached
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 

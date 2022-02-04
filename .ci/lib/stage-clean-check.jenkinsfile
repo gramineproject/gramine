@@ -7,6 +7,8 @@ stage('clean-check') {
      * invokes `gramine-test clean`.
      */
     sh '''
+        rm -rf XDG_CONFIG_HOME
+
         REL_PREFIX=$(realpath "$PREFIX" --relative-to=.)
 
         cd "$(./Scripts/clean-check-test-copy)"
@@ -17,8 +19,6 @@ stage('clean-check') {
         # We have a common `pytest.ini`, so Pytest considers the main directory to be the project
         # root, and keeps cache there
         rm -rf .pytest_cache
-
-        rm -f Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
         make -C LibOS/shim/test/regression clean
         make -C LibOS/shim/test/fs clean

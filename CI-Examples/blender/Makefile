@@ -3,8 +3,6 @@ PWD := $(shell pwd)
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
-
 BLENDER_DIR = $(PWD)/blender_dir
 BLENDER_SRC ?= blender-2.82-linux64.tar.xz
 BLENDER_MIRRORS ?= \
@@ -56,11 +54,8 @@ blender.sig blender.manifest.sgx: sgx_outputs
 
 .INTERMEDIATE: sgx_outputs
 sgx_outputs: $(BLENDER_DIR)/blender blender.manifest | $(RUN_DIR)
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
 		--output blender.manifest.sgx \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest blender.manifest
 
 blender.token: blender.sig

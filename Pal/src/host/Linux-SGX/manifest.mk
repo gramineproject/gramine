@@ -1,14 +1,10 @@
 SGX_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-SGX_SIGNER_KEY ?= $(SGX_DIR)/signer/enclave-key.pem
 
 # sgx manifest.sgx/sig/token
 drop_manifest_suffix = $(filter-out manifest,$(sort $(patsubst %.manifest,%,$(1))))
 expand_target_to_token = $(addsuffix .token,$(call drop_manifest_suffix,$(1)))
 expand_target_to_sig = $(addsuffix .sig,$(call drop_manifest_suffix,$(1)))
 expand_target_to_sgx = $(addsuffix .manifest.sgx,$(call drop_manifest_suffix,$(1)))
-
-$(SGX_SIGNER_KEY):
-	$(error "Cannot find any enclave key. Generate $(abspath $(SGX_SIGNER_KEY)) or specify 'SGX_SIGNER_KEY=' with make")
 
 %.token: %.sig
 	$(call cmd,sgx_get_token)
