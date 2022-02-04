@@ -1,4 +1,10 @@
 stage('test') {
+    if (env.SGX == '1') {
+        sh '''
+            gramine-sgx-gen-private-key
+        '''
+    }
+
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''

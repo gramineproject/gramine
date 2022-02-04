@@ -69,13 +69,6 @@ class TestConfig:
         else:
             raise Exception('Cannot determine coreutils libdir')
 
-        self.key = os.environ.get('SGX_SIGNER_KEY', None)
-        if not self.key:
-            toplevel = subprocess.check_output([
-                'git', 'rev-parse', '--show-toplevel',
-            ]).decode().strip()
-            self.key = os.path.join(toplevel, 'Pal/src/host/Linux-SGX/signer/enclave-key.pem')
-
         self.all_manifests = self.manifests + self.sgx_manifests
 
     @staticmethod
@@ -106,7 +99,6 @@ class TestConfig:
         ninja.variable('BINARY_DIR', self.binary_dir)
         ninja.variable('ARCH_LIBDIR', self.arch_libdir)
         ninja.variable('COREUTILS_LIBDIR', self.coreutils_libdir)
-        ninja.variable('KEY', self.key)
         ninja.variable('GRAMINE_LIBC', self.libc)
         ninja.newline()
 
@@ -125,7 +117,7 @@ class TestConfig:
 
         ninja.rule(
             name='sgx-sign',
-            command=('gramine-sgx-sign --quiet --manifest $in --key $KEY --depfile $out.d '
+            command=('gramine-sgx-sign --quiet --manifest $in --depfile $out.d '
                      '--output $out'),
             depfile='$out.d',
             description='SGX sign: $out',
@@ -191,7 +183,6 @@ class TestConfig:
                 implicit_outputs=[f'{name}.sig'],
                 rule='sgx-sign',
                 inputs=[f'{name}.manifest'],
-                implicit=([self.key]),
             )
 
             ninja.build(

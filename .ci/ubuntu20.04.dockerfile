@@ -50,6 +50,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-apt \
     python3-breathe \
     python3-click \
+    python3-cryptography \
     python3-jinja2 \
     python3-lxml \
     python3-numpy \
@@ -61,6 +62,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-scipy \
     python3-sphinx-rtd-theme \
     python3-toml \
+    python3-xdg \
     shellcheck \
     sphinx-doc \
     sqlite3 \
