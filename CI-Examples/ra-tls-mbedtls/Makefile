@@ -1,5 +1,4 @@
 GRAMINEDIR ?= ../..
-SGX_SIGNER_KEY ?= $(GRAMINEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
 GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
@@ -89,10 +88,7 @@ server.manifest: server.manifest.template
 		$< > $@
 
 server.manifest.sgx: server.manifest server
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 
@@ -110,10 +106,7 @@ client_dcap.manifest: client.manifest.template
 		$< >$@
 
 client_dcap.manifest.sgx: client_dcap.manifest client
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 
@@ -131,10 +124,7 @@ client_epid.manifest: client.manifest.template
 		$< >$@
 
 client_epid.manifest.sgx: client_epid.manifest client
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 

@@ -1,4 +1,8 @@
 stage('test-sgx') {
+    sh '''
+        gramine-sgx-gen-key
+    '''
+
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/helloworld

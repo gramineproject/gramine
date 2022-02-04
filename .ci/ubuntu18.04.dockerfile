@@ -49,6 +49,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-apt \
     python3-breathe \
     python3-click \
+    python3-cryptography \
     python3-jinja2 \
     python3-lxml \
     python3-numpy \
@@ -58,6 +59,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pytest \
     python3-pytest-xdist \
     python3-scipy \
+    python3-xdg \
     shellcheck \
     sqlite3 \
     texinfo \
