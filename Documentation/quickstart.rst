@@ -44,8 +44,11 @@ Prepare a signing key
 
 Only for SGX, and if you haven't already::
 
-   mkdir -p "$HOME"/.config/gramine/
-   openssl genrsa -3 -out "$HOME"/.config/gramine/enclave-key.pem 3072
+   gramine-sgx-gen-private-key
+
+This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
+stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
+be protected and should not be disclosed to anyone.
 
 Clone the repository and run sample application
 -----------------------------------------------
@@ -62,7 +65,7 @@ Without SGX::
 
 With SGX::
 
-   make SGX=1 SGX_SIGNER_KEY="$HOME"/.config/gramine/enclave-key.pem
+   make SGX=1
    gramine-sgx helloworld
 
 For more complex examples, see :file:`CI-Examples` directory.
