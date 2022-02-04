@@ -1,5 +1,3 @@
-SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
-
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 SRCDIR = src
@@ -46,10 +44,7 @@ busybox.manifest: busybox.manifest.template
 		$< > $@
 
 busybox.manifest.sgx: busybox.manifest busybox
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest $< \
 		--output $@
 	gramine-sgx-get-token \
