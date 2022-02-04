@@ -166,6 +166,7 @@ man_pages = [
     ('manpages/gramine', 'gramine-direct', 'Gramine', [author], 1),
     ('manpages/gramine', 'gramine-sgx', 'Gramine', [author], 1),
     ('manpages/gramine-manifest', 'gramine-manifest', 'Gramine manifest preprocessor', [author], 1),
+    ('manpages/gramine-sgx-gen-private-key', 'gramine-sgx-gen-private-key', 'Gramine SGX RSA key generator', [author], 1),
     ('manpages/gramine-sgx-get-token', 'gramine-sgx-get-token', 'Gramine SGX Token generator', [author], 1),
     ('manpages/gramine-sgx-ias-request', 'gramine-sgx-ias-request', 'Submit Intel Attestation Service request', [author], 1),
     ('manpages/gramine-sgx-ias-verify-report', 'gramine-sgx-ias-verify-report', 'Verify Intel Attestation Service report', [author], 1),

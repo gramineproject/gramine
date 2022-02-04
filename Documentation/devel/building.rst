@@ -74,7 +74,7 @@ running, and Intel SGX SDK/PSW/DCAP must be installed.
 Run the following commands on Ubuntu to install SGX-related dependencies::
 
     sudo apt-get install -y libcurl4-openssl-dev libprotobuf-c-dev \
-        protobuf-c-compiler python3-pip python3-protobuf
+        protobuf-c-compiler python3-cryptography python3-pip python3-protobuf
 
 2. Install Linux kernel with patched FSGSBASE
 """""""""""""""""""""""""""""""""""""""""""""
@@ -128,23 +128,6 @@ DCAP version of the Intel SGX driver from:
 Follow the installation instructions from:
 
 - https://github.com/intel/linux-sgx
-
-5. Generate signing keys
-""""""""""""""""""""""""
-
-A 3072-bit RSA private key (PEM format) is required for signing the manifest.
-If you don't have a private key, create it with the following command::
-
-   openssl genrsa -3 -out enclave-key.pem 3072
-
-You can either place the generated enclave key in the default path,
-:file:`Pal/src/host/Linux-SGX/signer/enclave-key.pem`, or specify the key's
-location through the environment variable ``SGX_SIGNER_KEY``.
-
-After signing the application's manifest, users may ship the application and
-Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
-extension), the SIGSTRUCT signature file (``.sig`` extension), and the
-EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
 
 Building
 --------

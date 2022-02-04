@@ -5,11 +5,19 @@
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
 # Copyright (c) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
+# Copyright (c) 2021-2022 Intel Corporation
+#                    Wojtek Porczyk <woju@invisiblethingslab.com>
+#
 
 import hashlib
 import os
+import pathlib
 import struct
 import subprocess
+
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from . import _CONFIG_PKGLIBDIR
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
@@ -17,11 +25,19 @@ from .manifest import Manifest
 from .sigstruct import Sigstruct
 
 
+_backend = backends.default_backend()
+
 # Default / Architectural Options
 
 ARCHITECTURE = 'amd64'
 
 SGX_LIBPAL = os.path.join(_CONFIG_PKGLIBDIR, 'sgx/libpal.so')
+
+SGX_RSA_PUBLIC_EXPONENT = 3
+SGX_RSA_KEY_SIZE = 3072
+_xdg_config_home = pathlib.Path(os.getenv('XDG_CONFIG_HOME',
+    pathlib.Path.home() / '.config'))
+SGX_RSA_KEY_PATH = _xdg_config_home / 'gramine' / 'enclave-key.pem'
 
 # Utilities
 
@@ -580,3 +596,25 @@ def sign_with_local_key(data, key):
     signature_int = int.from_bytes(signature, byteorder='big')
 
     return exponent_int, modulus_int, signature_int
+
+
+def generate_private_key():
+    """Generate RSA key suitable for use with SGX
+
+    Returns:
+        cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey: private key
+    """
+    return rsa.generate_private_key(
+        public_exponent=SGX_RSA_PUBLIC_EXPONENT, key_size=SGX_RSA_KEY_SIZE, backend=_backend
+    )
+
+def generate_private_key_pem():
+    """Generate PEM-encoded RSA key suitable for use with SGX
+
+    Returns:
+        bytes: PEM-encoded private key
+    """
+    return generate_private_key().private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption())
