@@ -25,6 +25,6 @@ if you have questions, please use our mailing list: users@gramineproject.io
 
 ## Gramine commit hash
 
-<!-- Please provide the hash of the commit you uesd to build Gramine.
+<!-- Please provide the hash of the commit you used to build Gramine.
      If you installed Gramine from a repository or other prebuilt package,
      please provide the exact version. -->
