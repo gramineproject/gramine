@@ -22,5 +22,5 @@ _env = make_env()
 from .manifest import Manifest, ManifestError
 if _CONFIG_SGX_ENABLED:
     from .sgx_get_token import get_token
-    from .sgx_sign import get_tbssigstruct, sign_with_local_key, SGX_LIBPAL
+    from .sgx_sign import get_tbssigstruct, sign_with_local_key, SGX_LIBPAL, SGX_RSA_KEY_PATH
     from .sigstruct import Sigstruct

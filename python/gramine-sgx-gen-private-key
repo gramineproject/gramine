@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (c) 2021 Intel Corporation
+#                    Wojtek Porczyk <woju@invisiblethingslab.com>
+
+import os
+import click
+from graminelibos import sgx_sign
+
+@click.command()
+@click.argument('--force/--no-force', '-f/',
+    help='force overwrite the existing key')
+@click.argument('output',
+    type=click.Path(file_okay=True, dir_okay=False),
+    default=sgx_sign.SGX_RSA_KEY_PATH)
+def main(output, force):
+    output = pathlib.Path(output)
+    old_umask = os.umask(0o77)
+    output.parent.mkdir(exists_ok=True, parents=True)
+    try:
+        with click.open_file(output, f'{"w" if force else "x"}b') as file:
+            file.write(sgx_sign.generate_private_key_pem())
+    except FileExistsError:
+        click.get_current_context().fail(f'refusing to overwrite {output}, use -f to force')
+    os.umask(old_umask)
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter
