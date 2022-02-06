@@ -307,7 +307,11 @@ static noreturn void ipc_worker_main(void) {
                 goto out_die;
             }
             PAL_HANDLE new_handle = NULL;
-            ret = DkStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
+            do {
+                /* Although IPC worker thread does not handle any signals (hence it should never be
+                 * interrupted), lets handle it for uniformity with the rest of the code. */
+                ret = DkStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
+            } while (ret == -PAL_ERROR_INTERRUPTED);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
                 log_error(LOG_PREFIX "DkStreamWaitForClient failed: %d", ret);

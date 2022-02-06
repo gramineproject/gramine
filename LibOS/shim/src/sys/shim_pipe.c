@@ -43,7 +43,9 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
         goto out;
     }
 
-    ret = DkStreamWaitForClient(hdl0, &hdl1, /*options=*/0);
+    do {
+        ret = DkStreamWaitForClient(hdl0, &hdl1, /*options=*/0);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         log_error("pipe acceptance failure");
