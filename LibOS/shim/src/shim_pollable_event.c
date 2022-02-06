@@ -25,14 +25,18 @@ int create_pollable_event(struct shim_pollable_event* event) {
                        PAL_OPTION_CLOEXEC, &write_handle);
     if (ret < 0) {
         log_error("%s: DkStreamOpen failed: %d", __func__, ret);
+        ret = pal_to_unix_errno(ret);
         goto out;
     }
 
     PAL_HANDLE read_handle;
-    ret = DkStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
+    do {
+        ret = DkStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("%s: DkStreamWaitForClient failed: %d", __func__, ret);
         DkObjectClose(write_handle);
+        ret = pal_to_unix_errno(ret);
         goto out;
     }
 
@@ -43,7 +47,7 @@ int create_pollable_event(struct shim_pollable_event* event) {
     ret = 0;
 
 out:;
-    int tmp_ret = DkStreamDelete(srv_handle, PAL_DELETE_ALL);
+    int tmp_ret = pal_to_unix_errno(DkStreamDelete(srv_handle, PAL_DELETE_ALL));
     DkObjectClose(srv_handle);
     if (!ret && tmp_ret) {
         DkObjectClose(read_handle);
