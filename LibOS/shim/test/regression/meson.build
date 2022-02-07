@@ -113,6 +113,7 @@ tests = {
         ),
     },
     'stat_invalid_args': {},
+    'synthetic': {},
     'syscall': {},
     'syscall_restart': {},
     'sysfs_common': {},

@@ -37,6 +37,7 @@ enum shim_handle_type {
                       * functions */
     TYPE_PSEUDO,     /* pseudo nodes (currently directories), handled by `pseudo_*` functions */
     TYPE_TMPFS,      /* string-based files (with data inside dentry), used by `tmpfs` filesystem */
+    TYPE_SYNTHETIC,  /* synthetic files, used by `synthetic` filesystem */
 
     /* Pipes and sockets: */
     TYPE_PIPE,       /* pipes, used by `pipe` filesystem */
@@ -211,6 +212,7 @@ struct shim_handle {
         struct shim_str_handle str;             /* TYPE_STR */
         /* (no data) */                         /* TYPE_PSEUDO */
         /* (no data) */                         /* TYPE_TMPFS */
+        /* (no data) */                         /* TYPE_SYNTHETIC */
 
         struct shim_pipe_handle pipe;           /* TYPE_PIPE */
         struct shim_sock_handle sock;           /* TYPE_SOCK */

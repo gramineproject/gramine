@@ -30,6 +30,7 @@ struct shim_fs* builtin_fs[] = {
     &epoll_builtin_fs,
     &eventfd_builtin_fs,
     &pseudo_builtin_fs,
+    &synthetic_builtin_fs,
 };
 
 static struct shim_lock mount_mgr_lock;

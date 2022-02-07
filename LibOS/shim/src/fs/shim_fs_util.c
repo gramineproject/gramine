@@ -40,6 +40,21 @@ int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
     return 0;
 }
 
+int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->type == S_IFDIR);
+
+    struct shim_dentry* child;
+    LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
+        if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) {
+            int ret = callback(child->name, arg);
+            if (ret < 0)
+                return ret;
+        }
+    }
+    return 0;
+}
+
 static int generic_istat(struct shim_inode* inode, struct stat* buf) {
     memset(buf, 0, sizeof(*buf));
 
@@ -64,16 +79,7 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
 
 int generic_inode_stat(struct shim_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
-    if (!dent->inode) {
-        /*
-         * TODO: This can happen for synthetic dentries (DENTRY_SYNTHETIC) created as intermediate
-         * directories to a mountpoint. These should be treated specially, same as other
-         * Gramine-internal files (pipes, sockets). For now, we fail `stat()` with -ENOENT.
-         */
-        assert(dent->state & DENTRY_SYNTHETIC);
-        log_debug("%s: disregarding synthetic dentry: %s", __func__, dent->name);
-        return -ENOENT;
-    }
+    assert(dent->inode);
 
     return generic_istat(dent->inode, buf);
 }

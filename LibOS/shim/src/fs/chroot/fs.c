@@ -265,13 +265,9 @@ out:
 
 static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
-    int ret;
-
-    if (!dent->inode)
-        return -ENOENT;
-
-    ret = chroot_do_open(hdl, dent, dent->type, flags, /*perm=*/0);
+    int ret = chroot_do_open(hdl, dent, dent->type, flags, /*perm=*/0);
     if (ret < 0)
         return ret;
 
@@ -282,6 +278,7 @@ static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
 
 static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
     int ret;
 
@@ -302,6 +299,7 @@ static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int f
 
 static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
     int ret;
 
@@ -493,6 +491,7 @@ out:
 
 static int chroot_unlink(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
     int ret;
 
@@ -514,6 +513,7 @@ static int chroot_unlink(struct shim_dentry* dent) {
 
 static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
     assert(locked(&g_dcache_lock));
+    assert(old->inode);
 
     int ret;
     char* new_uri = NULL;
@@ -556,6 +556,7 @@ out:
 
 static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
     int ret;
 

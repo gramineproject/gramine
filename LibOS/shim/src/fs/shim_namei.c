@@ -255,12 +255,11 @@ static int lookup_enter_dentry(struct lookup* lookup) {
          */
         if (lookup->flags & LOOKUP_MAKE_SYNTHETIC) {
             lookup->dent->state &= ~DENTRY_NEGATIVE;
-            lookup->dent->state |= DENTRY_VALID | DENTRY_SYNTHETIC;
-            if (!is_final || has_slash) {
-                lookup->dent->type = S_IFDIR;
-            } else {
-                lookup->dent->type = S_IFREG;
-            }
+            ret = synthetic_setup_dentry(lookup->dent, S_IFDIR, PERM_r_xr_xr_x);
+            if (ret < 0)
+                return ret;
+
+            lookup->dent->state |= DENTRY_VALID;
         } else if (is_final && (lookup->flags & LOOKUP_CREATE)) {
             /* proceed with a negative dentry */
         } else {
