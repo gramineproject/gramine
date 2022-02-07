@@ -21,8 +21,10 @@ int create_pollable_event(struct shim_pollable_event* event) {
     }
 
     PAL_HANDLE write_handle;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                       PAL_OPTION_CLOEXEC, &write_handle);
+    do {
+        ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                           PAL_OPTION_CLOEXEC, &write_handle);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("%s: DkStreamOpen failed: %d", __func__, ret);
         ret = pal_to_unix_errno(ret);
