@@ -127,6 +127,7 @@ static int tmpfs_flush(struct shim_handle* hdl) {
 
 static int tmpfs_lookup(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
     if (!dent->parent) {
         /* This is the root dentry, initialize it. */
@@ -150,9 +151,7 @@ static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int
 
 static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
-
-    if (!dent->inode)
-        return -ENOENT;
+    assert(dent->inode);
 
     tmpfs_do_open(hdl, dent, flags);
     return 0;
@@ -160,6 +159,7 @@ static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int fla
 
 static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
     mode_t type = S_IFREG;
     int ret = tmpfs_setup_dentry(dent, type, perm);
@@ -172,27 +172,15 @@ static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int fl
 
 static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
 
     mode_t type = S_IFREG;
     return tmpfs_setup_dentry(dent, type, perm);
 }
 
-static int tmpfs_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
-    assert(locked(&g_dcache_lock));
-
-    struct shim_dentry* child;
-    LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
-        if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) {
-            int ret = callback(child->name, arg);
-            if (ret < 0)
-                return ret;
-        }
-    }
-    return 0;
-}
-
 static int tmpfs_unlink(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
     if (dent->type == S_IFDIR) {
         struct shim_dentry* child;
@@ -207,10 +195,6 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
             return -ENOTEMPTY;
     }
 
-
-    if (!dent->inode)
-        return -ENOENT;
-
     struct shim_inode* inode = dent->inode;
     dent->inode = NULL;
     put_inode(inode);
@@ -219,6 +203,7 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
 
 static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
     assert(locked(&g_dcache_lock));
+    assert(old->inode);
 
     uint64_t time_us;
     if (DkSystemTimeQuery(&time_us) < 0)
@@ -253,6 +238,7 @@ static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
 
 static int tmpfs_chmod(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
     lock(&dent->inode->lock);
 
@@ -381,7 +367,7 @@ struct shim_d_ops tmp_d_ops = {
     .creat       = &tmpfs_creat,
     .mkdir       = &tmpfs_mkdir,
     .stat        = &generic_inode_stat,
-    .readdir     = &tmpfs_readdir,
+    .readdir     = &generic_readdir,
     .unlink      = &tmpfs_unlink,
     .rename      = &tmpfs_rename,
     .chmod       = &tmpfs_chmod,

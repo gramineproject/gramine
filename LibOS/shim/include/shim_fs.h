@@ -92,11 +92,6 @@ struct shim_fs_ops {
 //#define DENTRY_REACHABLE    0x0400  /* permission checked to be reachable */
 //#define DENTRY_UNREACHABLE  0x0800  /* permission checked to be unreachable */
 #define DENTRY_LISTED      0x1000 /* children in directory listed */
-#define DENTRY_SYNTHETIC   0x4000 /* Auto-generated dentry to connect a mount point in the        \
-                                   * manifest to the root, when one or more intermediate          \
-                                   * directories do not exist on the underlying FS. The semantics \
-                                   * of subsequent changes to such directories (or attempts to    \
-                                   * really create them) are not currently well-defined. */
 
 // Catch memory corruption issues by checking for invalid state values
 #define DENTRY_INVALID_FLAGS (~0x7FFF)
@@ -477,9 +472,9 @@ int init_mount(void);
  * As a result, multiple mount operations for the same path will create a chain (mount1 -> root1 ->
  * mount2 -> root2 ...), effectively stacking the mounts and ensuring only the last one is visible.
  *
- * The function will ensure that the mountpoint exists: new dentries marked with DENTRY_SYNTHETIC
- * will be created, if necessary. This is a departure from Unix mount, necessary to implement
- * Gramine manifest semantics.
+ * The function will ensure that the mountpoint exists: if necessary, new directories will be
+ * created using the `synthetic` filesystem. This is a departure from Unix mount, necessary to
+ * implement Gramine manifest semantics.
  *
  * TODO: On failure, this function does not clean the synthetic nodes it just created.
  */
@@ -576,8 +571,9 @@ int check_permissions(struct shim_dentry* dent, mode_t mask);
  * - LOOKUP_DIRECTORY: expect the file under `path` to be a directory, and fail with -ENOTDIR
  *   otherwise
  *
- * - LOOKUP_MAKE_SYNTHETIC: create pseudo-files (DENTRY_SYNTHETIC) for any components on the path
- *   that do not exist. This is intended for use when creating mountpoints specified in manifest.
+ * - LOOKUP_MAKE_SYNTHETIC: for any components on the path that do not exist, create directories
+ *   using the `synthetic` filesystem. This is intended for use when creating mountpoints specified
+ *   in manifest.
  *
  * Note that a path with trailing slash is always treated as a directory, and LOOKUP_FOLLOW /
  * LOOKUP_CREATE do not apply.
@@ -860,6 +856,7 @@ extern struct shim_fs fifo_builtin_fs;
 extern struct shim_fs socket_builtin_fs;
 extern struct shim_fs epoll_builtin_fs;
 extern struct shim_fs eventfd_builtin_fs;
+extern struct shim_fs synthetic_builtin_fs;
 
 struct shim_fs* find_fs(const char* name);
 
@@ -878,9 +875,13 @@ struct shim_fs* find_fs(const char* name);
 int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
                  file_off_t* out_pos);
 
+int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
+
 int generic_inode_stat(struct shim_dentry* dent, struct stat* buf);
 int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf);
 file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin);
 int generic_inode_poll(struct shim_handle* hdl, int poll_type);
+
+int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
 
 #endif /* _SHIM_FS_H_ */

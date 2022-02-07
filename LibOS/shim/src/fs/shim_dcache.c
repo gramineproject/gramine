@@ -438,11 +438,10 @@ static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
 
     struct print_buf buf = INIT_PRINT_BUF(dump_dentry_write_all);
 
-    buf_printf(&buf, "[%6.6s ", dent->mount ? dent->mount->fs->name : "");
+    buf_printf(&buf, "[%6.6s ", dent->fs ? dent->fs->name : "");
 
     DUMP_FLAG(DENTRY_VALID, "V", ".");
     DUMP_FLAG(DENTRY_LISTED, "L", ".");
-    DUMP_FLAG(DENTRY_SYNTHETIC, "S", ".");
     buf_printf(&buf, "%3d] ", (int)REF_GET(dent->ref_count));
 
     dump_dentry_mode(&buf, dent->type, dent->perm);
@@ -465,7 +464,11 @@ static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
         case S_IFLNK: buf_puts(&buf, " -> "); break;
         default: break;
     }
+    if (!dent->parent && dent->mount) {
+        buf_printf(&buf, " (%s \"%s\")", dent->mount->fs->name, dent->mount->uri);
+    }
     buf_flush(&buf);
+
 
     if (dent->attached_mount) {
         struct shim_dentry* root = dent->attached_mount->root;
