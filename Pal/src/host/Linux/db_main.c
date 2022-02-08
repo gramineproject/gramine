@@ -356,10 +356,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
     assert(manifest);
 
-    /* This depends on `g_vdso_start` and `g_vdso_end`, so it must be called only after they were
-     * initialized. */
-    signal_setup(first_process, g_vdso_start, g_vdso_end);
-
     g_pal_common_state.raw_manifest_data = manifest;
 
     char errbuf[256];
@@ -394,6 +390,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * this function). This Linux bug manifests itself on systems with 5-level paging enabled (e.g.,
      * newer Icelake Intel CPUs).
      *
+     * We cannot use vDSO if its location is different in the child processes, because the first
+     * process sets up a seccomp filter that allows inline `syscall` instructions only from the
+     * initial vDSO range.
+     *
      * The only way to completely circumvent this bug is to not use the vDSO library. The below code
      * prevents Gramine from using host vDSO unless `sys.enable_host_vdso = true` is set in the
      * manifest (i.e., Gramine ignores host vDSO). Note that the LibOS is still notified about the
@@ -412,6 +412,11 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         if (ret < 0)
             INIT_FAIL(-ret, "Setup of VDSO failed");
     }
+
+    /* This depends on `g_vdso_start` and `g_vdso_end`, so it must be called only after they were
+     * initialized. Note that if vDSO is disabled, we should not whitelist the vDSO range, thus we
+     * pass a dummy [g_vdso_start, g_vdso_start) range. */
+    signal_setup(first_process, g_vdso_start, enable_host_vdso ? g_vdso_end : g_vdso_start);
 
     /* call to main function */
     pal_main(instance_id, parent, first_thread, first_process ? argv + 3 : argv + 4, envp);
