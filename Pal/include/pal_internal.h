@@ -209,7 +209,7 @@ int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 /* DkObject calls */
 int _DkObjectClose(PAL_HANDLE object_handle);
 int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                         pal_wait_flags_t* ret_events, int64_t timeout_us);
+                         pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 
 /* DkException calls & structures */
 pal_event_handler_t _DkGetExceptionHandler(enum pal_event event);

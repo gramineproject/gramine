@@ -578,13 +578,29 @@ static long sgx_ocall_poll(void* pms) {
     ms_ocall_poll_t* ms = (ms_ocall_poll_t*)pms;
     long ret;
     ODEBUG(OCALL_POLL, ms);
-    struct timespec* ts = NULL;
-    if (ms->ms_timeout_us >= 0) {
-        ts = __alloca(sizeof(struct timespec));
-        ts->tv_sec  = ms->ms_timeout_us / 1000000;
-        ts->tv_nsec = (ms->ms_timeout_us - ts->tv_sec * 1000000) * 1000;
+
+    struct timespec* timeout = NULL;
+    struct timespec end_time = { 0 };
+    bool have_timeout = ms->ms_timeout_us != (uint64_t)-1;
+    if (have_timeout) {
+        uint64_t timeout_ns = ms->ms_timeout_us * TIME_NS_IN_US;
+        timeout = __alloca(sizeof(*timeout));
+        timeout->tv_sec = timeout_ns / TIME_NS_IN_S;
+        timeout->tv_nsec = timeout_ns % TIME_NS_IN_S;
+        time_get_now_plus_ns(&end_time, timeout_ns);
     }
-    ret = DO_SYSCALL_INTERRUPTIBLE(ppoll, ms->ms_fds, ms->ms_nfds, ts, NULL);
+
+    ret = DO_SYSCALL_INTERRUPTIBLE(ppoll, ms->ms_fds, ms->ms_nfds, timeout, NULL);
+
+    if (have_timeout) {
+        int64_t diff = time_ns_diff_from_now(&end_time);
+        if (diff < 0) {
+            /* We might have slept a bit too long. */
+            diff = 0;
+        }
+        ms->ms_timeout_us = (uint64_t)diff / TIME_NS_IN_US;
+    }
+
     return ret;
 }
 

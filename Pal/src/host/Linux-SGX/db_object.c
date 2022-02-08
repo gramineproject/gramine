@@ -19,10 +19,8 @@
 
 /* TODO: this should take into account `handle->pipe.handshake_done`. For more details see
  * "Pal/src/host/Linux-SGX/db_pipes.c". */
-/* Wait for specific events on all handles in the handle array and return multiple events
- * (including errors) reported by the host. Return 0 on success, PAL error on failure. */
 int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                         pal_wait_flags_t* ret_events, int64_t timeout_us) {
+                         pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     int ret;
 
     if (count == 0)

@@ -1070,14 +1070,14 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
     }
 
     if (timeout_us) {
-        uint64_t remaining_time = READ_ONCE(ms->ms_timeout_us);
+        uint64_t remaining_time_us = READ_ONCE(ms->ms_timeout_us);
         if (retval == -ETIMEDOUT) {
-            remaining_time = 0;
+            remaining_time_us = 0;
         }
-        if (remaining_time > *timeout_us) {
+        if (remaining_time_us > *timeout_us) {
             retval = -EPERM;
         } else {
-            *timeout_us = remaining_time;
+            *timeout_us = remaining_time_us;
         }
     }
 
@@ -1530,10 +1530,11 @@ void ocall_sched_yield(void) {
     sgx_reset_ustack(old_ustack);
 }
 
-int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us) {
+int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us) {
     int retval = 0;
     size_t nfds_bytes = nfds * sizeof(struct pollfd);
     ms_ocall_poll_t* ms;
+    uint64_t remaining_time_us = timeout_us ? *timeout_us : (uint64_t)-1;
 
     void* old_ustack = sgx_prepare_ustack();
     ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
@@ -1543,7 +1544,7 @@ int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us) {
     }
 
     WRITE_ONCE(ms->ms_nfds, nfds);
-    WRITE_ONCE(ms->ms_timeout_us, timeout_us);
+    WRITE_ONCE(ms->ms_timeout_us, remaining_time_us);
     void* untrusted_fds = sgx_copy_to_ustack(fds, nfds_bytes);
     if (!untrusted_fds) {
         retval = -EPERM;
@@ -1552,6 +1553,13 @@ int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us) {
     WRITE_ONCE(ms->ms_fds, untrusted_fds);
 
     retval = sgx_exitless_ocall(OCALL_POLL, ms);
+
+    if (timeout_us) {
+        remaining_time_us = retval == 0 ? 0 : READ_ONCE(ms->ms_timeout_us);
+        if (remaining_time_us > *timeout_us) {
+            remaining_time_us = *timeout_us;
+        }
+    }
 
     if (retval < 0 && retval != -EINTR && retval != -EINVAL && retval != -ENOMEM) {
         retval = -EPERM;
@@ -1569,6 +1577,9 @@ int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us) {
     }
 
 out:
+    if (timeout_us) {
+        *timeout_us = remaining_time_us;
+    }
     sgx_reset_ustack(old_ustack);
     return retval;
 }

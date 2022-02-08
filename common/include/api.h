@@ -404,6 +404,7 @@ int parse_size_str(const char* str, uint64_t* out_val);
 #define URI_PREFIX_FILE_LEN (static_strlen(URI_PREFIX_FILE))
 
 #define TIME_US_IN_S 1000000ul
+#define TIME_US_IN_MS 1000ul
 #define TIME_NS_IN_US 1000ul
 #define TIME_NS_IN_S (TIME_NS_IN_US * TIME_US_IN_S)
 

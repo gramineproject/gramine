@@ -11,17 +11,17 @@
 #include <linux/wait.h>
 
 #include "api.h"
+#include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 
-/* Wait for specific events on all handles in the handle array and return multiple events
- * (including errors) reported by the host. Return 0 on success, PAL error on failure. */
 int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                         pal_wait_flags_t* ret_events, int64_t timeout_us) {
+                         pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     int ret;
+    uint64_t remaining_time_us = timeout_us ? *timeout_us : 0;
 
     if (count == 0)
         return 0;
@@ -77,16 +77,26 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
         goto out;
     }
 
-    struct timespec timeout_ts;
-
-    if (timeout_us >= 0) {
-        int64_t sec        = timeout_us / 1000000;
-        int64_t microsec   = timeout_us - sec * 1000000;
-        timeout_ts.tv_sec  = sec;
-        timeout_ts.tv_nsec = microsec * 1000;
+    struct timespec* timeout = NULL;
+    struct timespec end_time = { 0 };
+    if (timeout_us) {
+        uint64_t timeout_ns = *timeout_us * TIME_NS_IN_US;
+        timeout = __alloca(sizeof(*timeout));
+        timeout->tv_sec = timeout_ns / TIME_NS_IN_S;
+        timeout->tv_nsec = timeout_ns % TIME_NS_IN_S;
+        time_get_now_plus_ns(&end_time, timeout_ns);
     }
 
-    ret = DO_SYSCALL(ppoll, fds, nfds, timeout_us >= 0 ? &timeout_ts : NULL, NULL, 0);
+    ret = DO_SYSCALL(ppoll, fds, nfds, timeout, NULL, 0);
+
+    if (timeout_us) {
+        int64_t diff = time_ns_diff_from_now(&end_time);
+        if (diff < 0) {
+            /* We might have slept a bit too long. */
+            diff = 0;
+        }
+        remaining_time_us = (uint64_t)diff / TIME_NS_IN_US;
+    }
 
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
@@ -123,7 +133,11 @@ int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
     }
 
     ret = 0;
+
 out:
+    if (timeout_us) {
+        *timeout_us = remaining_time_us;
+    }
     free(fds);
     free(offsets);
     return ret;

@@ -619,19 +619,20 @@ typedef uint32_t pal_wait_flags_t; /* bitfield */
 #define PAL_WAIT_ERROR  4 /*!< ignored in events */
 
 /*!
- * \brief Poll
+ * \brief Poll - wait for an event to happen on at least one handle
  *
- * \param count the number of items in the array
- * \param handle_array
- * \param events user-defined events
- * \param[out] ret_events polled-handles' events in `ret_events`
- * \param timeout_us is the maximum time that the API should wait (in
- *  microseconds), or `NO_TIMEOUT` to indicate it is to be blocked until at
- *  least one handle is ready.
+ * \param count               the number of items in \p handle_array
+ * \param handle_array        array of handles to poll
+ * \param events              requested events for each handle
+ * \param[out]                ret_events events that were detected on each handle
+ * \param[in,out] timeout_us  timeout for the wait (`NULL` to block indefinitely)
+ *
  * \return 0 if there was an event on at least one handle, negative error code otherwise
+ *
+ * \p timeout_us contains remaining timeout both on successful and failed calls.
  */
-int DkStreamsWaitEvents(PAL_NUM count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                        pal_wait_flags_t* ret_events, PAL_NUM timeout_us);
+int DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                        pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 
 /*!
  * \brief Close (deallocate) a PAL handle.

@@ -260,7 +260,7 @@ typedef struct {
 typedef struct {
     struct pollfd* ms_fds;
     size_t ms_nfds;
-    int64_t ms_timeout_us;
+    uint64_t ms_timeout_us;
 } ms_ocall_poll_t;
 
 typedef struct {

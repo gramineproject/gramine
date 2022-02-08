@@ -510,6 +510,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         return -EINVAL;
     }
 
+    uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
     struct shim_epoll_waiter waiter = {
         .event = &get_cur_thread()->pollable_event,
     };
@@ -595,9 +596,8 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         unlock(&epoll->lock);
 
         if (!have_pending_signals()) {
-            /* TODO: update timeout */
             ret = DkStreamsWaitEvents(items_count + 1, pal_handles, pal_events, pal_ret_events,
-                                      timeout_ms * 1000);
+                                      timeout_ms == -1 ? NULL : &timeout_us);
             ret = pal_to_unix_errno(ret);
         } else {
             ret = -EINTR;
@@ -611,6 +611,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         if (ret < 0) {
             if (ret == -EAGAIN) {
                 /* Timed out. */
+                assert(timeout_us == 0);
                 ret = 0;
             } else if (ret == -EINTR) {
                 /* `epoll_wait` and `epoll_pwait` are not restarted after being interrupted by

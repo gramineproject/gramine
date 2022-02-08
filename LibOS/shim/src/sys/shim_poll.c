@@ -43,15 +43,11 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
-#define POLL_NOTIMEOUT ((uint64_t)-1)
-
-static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, int timeout_ms) {
+static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
 
     struct shim_handle_map* map = get_cur_thread()->handle_map;
-
-    uint64_t timeout_us = timeout_ms < 0 ? POLL_NOTIMEOUT : timeout_ms * 1000ULL;
 
     /* nfds is the upper limit for actual number of handles */
     PAL_HANDLE* pals = malloc(nfds * sizeof(PAL_HANDLE));
@@ -206,7 +202,8 @@ long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
     if (!is_user_memory_writable(fds, nfds * sizeof(*fds)))
         return -EFAULT;
 
-    return _shim_do_poll(fds, nfds, timeout_ms);
+    uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
+    return _shim_do_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
 }
 
 long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
@@ -220,8 +217,8 @@ long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
         return ret;
     }
 
-    uint64_t timeout_ms = tsp ? tsp->tv_sec * 1000ULL + tsp->tv_nsec / 1000000 : POLL_NOTIMEOUT;
-    return _shim_do_poll(fds, nfds, timeout_ms);
+    uint64_t timeout_us = tsp ? tsp->tv_sec * TIME_US_IN_S + tsp->tv_nsec / TIME_NS_IN_US : 0;
+    return _shim_do_poll(fds, nfds, tsp ? &timeout_us : NULL);
 }
 
 long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
@@ -283,8 +280,8 @@ long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfd
     }
     unlock(&map->lock);
 
-    uint64_t timeout_ms = tsv ? tsv->tv_sec * 1000ULL + tsv->tv_usec / 1000 : POLL_NOTIMEOUT;
-    long ret = _shim_do_poll(fds_poll, nfds_poll, timeout_ms);
+    uint64_t timeout_us = tsv ? tsv->tv_sec * TIME_US_IN_S + tsv->tv_usec : 0;
+    long ret = _shim_do_poll(fds_poll, nfds_poll, tsv ? &timeout_us : NULL);
 
     if (ret < 0) {
         free(fds_poll);

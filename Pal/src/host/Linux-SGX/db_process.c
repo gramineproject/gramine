@@ -382,7 +382,8 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     /* query if there is data available for reading */
     struct pollfd pfd = {.fd = handle->process.stream, .events = POLLIN | POLLOUT, .revents = 0};
-    ret = ocall_poll(&pfd, 1, 0);
+    uint64_t timeout_us = 0;
+    ret = ocall_poll(&pfd, 1, &timeout_us);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

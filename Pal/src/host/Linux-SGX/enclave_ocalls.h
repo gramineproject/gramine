@@ -81,7 +81,7 @@ int ocall_gettime(uint64_t* microsec);
 
 void ocall_sched_yield(void);
 
-int ocall_poll(struct pollfd* fds, size_t nfds, int64_t timeout_us);
+int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us);
 
 int ocall_rename(const char* oldpath, const char* newpath);
 

@@ -286,7 +286,7 @@ static int shim_async_worker(void* arg) {
         unlock(&async_worker_lock);
 
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
-        ret = DkStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events, sleep_time);
+        ret = DkStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events, &sleep_time);
         if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
             ret = pal_to_unix_errno(ret);
             log_error("DkStreamsWaitEvents failed with: %d", ret);

@@ -265,7 +265,7 @@ static noreturn void ipc_worker_main(void) {
             i++;
         }
 
-        int ret = DkStreamsWaitEvents(items_cnt, handles, events, ret_events, NO_TIMEOUT);
+        int ret = DkStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED) {
                 /* Generally speaking IPC worker should not be interrupted, but this happens with
