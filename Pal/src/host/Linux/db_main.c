@@ -388,6 +388,17 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
     g_pal_internal_mem_addr = internal_mem_addr;
 
+    /*
+     * There is a bug in the Linux kernel: the placement of the vDSO library is randomized even
+     * though Gramine is started with `ADDR_NO_RANDOMIZE` in its personality (see the beginning of
+     * this function). This Linux bug manifests itself on systems with 5-level paging enabled (e.g.,
+     * newer Icelake Intel CPUs).
+     *
+     * The only way to completely circumvent this bug is to not use the vDSO library. The below code
+     * prevents Gramine from using host vDSO unless `sys.enable_host_vdso = true` is set in the
+     * manifest (i.e., Gramine ignores host vDSO). Note that the LibOS is still notified about the
+     * vDSO range (mapped by Linux on Gramine startup), see `add_preloaded_range()` above.
+     */
     bool enable_host_vdso;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.enable_host_vdso",
                        /*defaultval=*/false, &enable_host_vdso);
