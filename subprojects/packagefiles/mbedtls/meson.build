@@ -15,7 +15,7 @@ mbedtls_libs_output = [
 # PR for patch support in wraps: https://github.com/mesonbuild/meson/pull/4570
 mbedtls_libs = custom_target('mbedtls',
     command: [
-        find_program('compile.sh'),
+        find_program('compile-gramine.sh'),
         '@CURRENT_SOURCE_DIR@',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
@@ -82,6 +82,7 @@ mbedtls_inc = include_directories('include')
 mbedtls_dep = declare_dependency(
     link_with: [mbedtls_libs[1], mbedtls_libs[3], mbedtls_libs[5]],
     include_directories: mbedtls_inc,
+    compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-gramine.h"',
 )
 mbedtls_pal_dep = declare_dependency(
     # HACK: Apparently Meson considers the `mbedtls_pal_libs` to be "not linkable", because it has
