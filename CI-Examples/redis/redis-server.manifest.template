@@ -40,6 +40,15 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 # Allow for injecting SIGTERM signal from the host.
 sys.enable_sigterm_injection = true
 
+################################ PERFORMANCE ##################################
+
+# The vDSO library is provided by the Linux kernel and may be used by Gramine to
+# improve performance of frequently-used system calls such as `clock_gettime()`.
+# By default, Gramine disables host vDSO because of the bug in Linux that may
+# lead to sporadic failures of multi-process applications. Since Redis is
+# single-process, we can safely enable host vDSO to improve performance.
+sys.enable_host_vdso = true
+
 ################################# MOUNT FS  ###################################
 
 # General notes:

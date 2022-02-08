@@ -299,12 +299,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL(unix_to_pal_error(-ret), "pal_thread_init() failed");
 
-    if (sysinfo_ehdr) {
-        ret = setup_vdso(sysinfo_ehdr);
-        if (ret < 0)
-            INIT_FAIL(-ret, "Setup of VDSO failed");
-    }
-
     uintptr_t vdso_start = 0;
     uintptr_t vdso_end = 0;
     uintptr_t vvar_start = 0;
@@ -393,6 +387,20 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
     }
     g_pal_internal_mem_addr = internal_mem_addr;
+
+    bool enable_host_vdso;
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.enable_host_vdso",
+                       /*defaultval=*/false, &enable_host_vdso);
+    if (ret < 0) {
+        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'sys.enable_host_vdso' "
+                                            "(the value must be `true` or `false`)");
+    }
+
+    if (sysinfo_ehdr && enable_host_vdso) {
+        ret = setup_vdso(sysinfo_ehdr);
+        if (ret < 0)
+            INIT_FAIL(-ret, "Setup of VDSO failed");
+    }
 
     /* call to main function */
     pal_main(instance_id, parent, first_thread, first_process ? argv + 3 : argv + 4, envp);

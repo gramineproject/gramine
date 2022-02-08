@@ -12,6 +12,9 @@ fs.mount.entrypoint.type = "chroot"
 fs.mount.entrypoint.path = "{{ entrypoint }}"
 fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 
+# for testing only (multi_pthread is single-process so enabling host vDSO is definitely safe)
+sys.enable_host_vdso = true
+
 # app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8
 

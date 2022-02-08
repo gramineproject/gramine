@@ -299,8 +299,8 @@ Allowing eventfd
     sys.insecure__allow_eventfd = [true|false]
     (Default: false)
 
-This specifies whether to allow system calls `eventfd()` and `eventfd2()`. Since
-eventfd emulation currently relies on the host, these system calls are
+This specifies whether to allow system calls ``eventfd()`` and ``eventfd2()``.
+Since eventfd emulation currently relies on the host, these system calls are
 disallowed by default due to security concerns.
 
 External SIGTERM injection
@@ -316,6 +316,26 @@ into Gramine. Could be useful to handle graceful shutdown.
 Be careful! In SGX environment, the untrusted host could inject that signal in
 an arbitrary moment. Examine what your application's `SIGTERM` handler does and
 whether it poses any security threat.
+
+Enabling host vDSO
+^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.enable_host_vdso = [true|false]
+    (Default: false)
+
+This specifies whether Gramine can use the host vDSO library to improve
+performance of frequently-used system calls such as ``clock_gettime()``.
+By default, Gramine does not use the host vDSO library because of the bug in
+Linux that may lead to sporadic failures of multi-process applications. You can
+safely enable this option for single-process applications.
+
+Note that currently this manifest option does *not* apply to the SGX environment
+(because it doesn't use host vDSO anyway).
+
+For technical details on this Linux bug, please see
+https://lore.kernel.org/lkml/9b82908f-eed1-b6b7-62aa-ecbba7bf048b@gmail.com/.
 
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
