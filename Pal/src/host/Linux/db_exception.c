@@ -158,26 +158,6 @@ static int setup_seccomp(uintptr_t vdso_start, uintptr_t vdso_end) {
         return -1;
     }
 
-#ifdef __x86_64__
-    /*
-     * Hack ahead.
-     * On x64 Linux VDSO is randomized even if ASLR is disabled. This bug does not manifest on
-     * systems with 4-level paging, because stack is located at the highest available user space
-     * address, which does not leave any space for VDSO to be mapped after the stack. Now on systems
-     * with 5-level paging, stack is mapped at the exact same location, but highest available user
-     * space address is much greater, leaving space for VDSO and making the randomizatoin trigger.
-     * Relevant code: https://elixir.bootlin.com/linux/v5.14/source/arch/x86/entry/vdso/vma.c#L312
-     */
-    if (vdso_start >= ((1ul << 47) - PAGE_SIZE)) {
-        /* Maximal randomization for VDSO is the size of page middle directory (PMD).
-         * In theory something could be mapped in this region (besides VDSO), but in practice (i.e.
-         * accounting for how the Linux kernel and Gramine map memory) it's impossible. */
-        const size_t PMD_SIZE = 1ul << 21;
-        vdso_start = ALIGN_DOWN(vdso_start, PMD_SIZE);
-        vdso_end = ALIGN_UP(vdso_end, PMD_SIZE);
-    }
-#endif
-
     uint32_t syscalls_code_begin_low = (uintptr_t)gramine_raw_syscalls_code_begin;
     uint32_t syscalls_code_begin_high = (uintptr_t)gramine_raw_syscalls_code_begin >> 32;
     uint32_t syscalls_code_end_low = (uintptr_t)gramine_raw_syscalls_code_end;

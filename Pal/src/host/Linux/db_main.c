@@ -13,6 +13,7 @@
 
 #include "api.h"
 #include "asan.h"
+#include "cpu.h"
 #include "debug_map.h"
 #include "elf/elf.h"
 #include "init.h"
@@ -299,7 +300,36 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL(unix_to_pal_error(-ret), "pal_thread_init() failed");
 
-    if (sysinfo_ehdr) {
+    bool disable_vdso = false;
+#ifdef __x86_64__
+    /*
+     * Hack ahead.
+     * On x64 Linux VDSO is randomized even if ASLR is disabled. This bug does not manifest on
+     * systems with 4-level paging, because stack is located at the highest available user space
+     * address, which does not leave any space for VDSO to be mapped after the stack. Now on systems
+     * with 5-level paging, stack is mapped at the exact same location, but highest available user
+     * space address is much greater, leaving space for VDSO and making the randomization trigger.
+     * Relevant code: https://elixir.bootlin.com/linux/v5.14/source/arch/x86/entry/vdso/vma.c#L312
+     * If VDSO location was randomized, we wouldn't be able to use it due to seccomp filter, which
+     * allows us to catch "syscall" instructions. See "db_exception.c" for more details.
+     */
+    uint32_t cpuid_7_0_values[4] = { 0 };
+    cpuid(7, 0, cpuid_7_0_values);
+    if (cpuid_7_0_values[CPUID_WORD_ECX] & (1u << 16)) {
+        /*
+         * `LA57` bit is set - CPU supports 5-level paging - we cannot use VDSO.
+         * Note that we only check CPU support, not that the kernel enabled it. Unfortunately,
+         * the only way to test it is reading `cr4` register, which is a privileged operation that
+         * cannot be done from ring 3. The Linux kernel enabled 5-level paging by default around
+         * version 5.5, so we assume most users either have this turned on or their CPU does not
+         * support it. In theory we could try mmaping something at a high address, but it would be
+         * cumbersome and we didn't bother.
+         */
+        disable_vdso = true;
+    }
+#endif
+
+    if (sysinfo_ehdr && !disable_vdso) {
         ret = setup_vdso(sysinfo_ehdr);
         if (ret < 0)
             INIT_FAIL(-ret, "Setup of VDSO failed");
@@ -364,7 +394,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* This depends on `g_vdso_start` and `g_vdso_end`, so it must be called only after they were
      * initialized. */
-    signal_setup(first_process, g_vdso_start, g_vdso_end);
+    signal_setup(first_process, disable_vdso ? 0 : g_vdso_start, disable_vdso ? 0 : g_vdso_end);
 
     g_pal_common_state.raw_manifest_data = manifest;
 
