@@ -49,6 +49,7 @@ void DkObjectClose(PAL_HANDLE object_handle) {
 int DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                         pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     for (size_t i = 0; i < count; i++) {
+        assert(handle_array[i]);
         assert(!UNKNOWN_HANDLE(handle_array[i]));
     }
 
