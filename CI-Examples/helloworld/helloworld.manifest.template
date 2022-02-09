@@ -9,9 +9,13 @@ loader.argv0_override = "helloworld"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+]
 
 sgx.debug = true
 sgx.nonpie_binary = true

@@ -4,13 +4,18 @@ libos.entrypoint = "multi_pthread"
 loader.argv0_override = "multi_pthread"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "multi_pthread"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/multi_pthread"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "multi_pthread",
+    uri = "file:{{ binary_dir }}/multi_pthread"
+  },
+]
 
 # app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8

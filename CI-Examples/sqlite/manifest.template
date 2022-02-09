@@ -14,17 +14,23 @@ loader.env.PATH = "{{ execdir }}"
 # Set HOME to suppress "warning: cannot find home directory; cannot read ~/.sqliterc"
 loader.env.HOME = "/"
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib64.type = "chroot"
-fs.mount.lib64.path = "{{ arch_libdir }}"
-fs.mount.lib64.uri = "file:{{ arch_libdir }}"
-
-fs.mount.sqlite3.type = "chroot"
-fs.mount.sqlite3.path = "{{ execdir }}/sqlite3"
-fs.mount.sqlite3.uri = "file:{{ execdir }}/sqlite3"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ execdir }}/sqlite3",
+    uri = "file:{{ execdir }}/sqlite3"
+  },
+]
 
 sgx.debug = true
 sgx.enclave_size = "256M"

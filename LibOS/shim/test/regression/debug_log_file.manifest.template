@@ -9,13 +9,18 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 loader.log_level = "debug"
 loader.log_file = "tmp/debug_log_file.log"
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ entrypoint }}",
+    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+  },
+]
 
 sgx.nonpie_binary = true
 sgx.debug = true

@@ -8,33 +8,43 @@ loader.insecure__use_cmdline_argv = true
 # for eventfd test
 sys.insecure__allow_eventfd = true
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-
-fs.mount.exec_victim.type = "chroot"
-fs.mount.exec_victim.path = "exec_victim"
-fs.mount.exec_victim.uri = "file:{{ binary_dir }}/exec_victim"
-
-fs.mount.host_lib.type = "chroot"
-fs.mount.host_lib.path = "{{ arch_libdir }}"
-fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
-
-fs.mount.host_usr_lib.type = "chroot"
-fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
-fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
-
-fs.mount.bin.type = "chroot"
-fs.mount.bin.path = "/bin"
-fs.mount.bin.uri = "file:/bin"
-
-fs.mount.tmpfs.type = "tmpfs"
-fs.mount.tmpfs.path = "/mnt/tmpfs"
-fs.mount.tmpfs.uri = "file:dummy-unused-by-tmpfs-uri"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ entrypoint }}",
+    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+  },
+  {
+    type = "chroot",
+    path = "exec_victim",
+    uri = "file:{{ binary_dir }}/exec_victim"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr/{{ arch_libdir }}",
+    uri = "file:/usr/{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/bin",
+    uri = "file:/bin"
+  },
+  {
+    type = "tmpfs",
+    path = "/mnt/tmpfs",
+    uri = "file:dummy-unused-by-tmpfs-uri"
+  },
+]
 
 sgx.thread_num = 16
 sgx.nonpie_binary = true

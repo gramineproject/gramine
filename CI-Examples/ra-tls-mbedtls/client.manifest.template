@@ -14,21 +14,28 @@ loader.env.LC_ALL = "C"
 loader.insecure__use_cmdline_argv = true
 loader.insecure__use_host_env = true
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib2.type = "chroot"
-fs.mount.lib2.path = "{{ arch_libdir }}"
-fs.mount.lib2.uri = "file:{{ arch_libdir }}"
-
-fs.mount.lib3.type = "chroot"
-fs.mount.lib3.path = "/usr{{ arch_libdir }}"
-fs.mount.lib3.uri = "file:/usr{{ arch_libdir }}"
-
-fs.mount.etc.type = "chroot"
-fs.mount.etc.path = "/etc"
-fs.mount.etc.uri = "file:/etc"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr{{ arch_libdir }}",
+    uri = "file:/usr{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/etc",
+    uri = "file:/etc"
+  },
+]
 
 sgx.debug = true
 sgx.remote_attestation = true

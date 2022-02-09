@@ -13,21 +13,28 @@ loader.env.PATH = "{{ execdir }}"
 
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib64.type = "chroot"
-fs.mount.lib64.path = "{{ arch_libdir }}"
-fs.mount.lib64.uri = "file:{{ arch_libdir }}"
-
-fs.mount.usr_lib.type = "chroot"
-fs.mount.usr_lib.path = "/usr/lib"
-fs.mount.usr_lib.uri = "file:/usr/lib"
-
-fs.mount.bin.type = "chroot"
-fs.mount.bin.path = "{{ execdir }}"
-fs.mount.bin.uri = "file:{{ execdir }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr/lib",
+    uri = "file:/usr/lib"
+  },
+  {
+    type = "chroot",
+    path = "{{ execdir }}",
+    uri = "file:{{ execdir }}"
+  },
+]
 
 sgx.debug = true
 sgx.nonpie_binary = true

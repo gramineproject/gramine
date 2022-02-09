@@ -17,17 +17,23 @@ sgx.preheat_enclave = true
 # (by calling `sched_setaffinity` with NULL and expecting it to return either -EFAULT or -ENOSYS)
 # libos.check_invalid_pointers = false
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-
-fs.mount.host_usr_lib.type = "chroot"
-fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
-fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ entrypoint }}",
+    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr/{{ arch_libdir }}",
+    uri = "file:/usr/{{ arch_libdir }}"
+  },
+]
 
 sgx.thread_num = 32
 sgx.nonpie_binary = true

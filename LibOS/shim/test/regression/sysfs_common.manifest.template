@@ -4,13 +4,18 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ entrypoint }}",
+    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+  },
+]
 
 fs.experimental__enable_sysfs_topology = true
 

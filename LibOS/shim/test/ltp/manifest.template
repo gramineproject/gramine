@@ -10,29 +10,38 @@ loader.insecure__use_cmdline_argv = true
 fs.root.type = "chroot"
 fs.root.uri = "file:{{ binary_dir }}"
 
-fs.mount.etc.type = "chroot"
-fs.mount.etc.path = "etc"
-fs.mount.etc.uri = "file:/etc"
-
-fs.mount.shm.type = "chroot"
-fs.mount.shm.path = "/dev/shm"
-fs.mount.shm.uri = "file:/tmp"
-
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib64.type = "chroot"
-fs.mount.lib64.path = "{{ arch_libdir }}"
-fs.mount.lib64.uri = "file:{{ arch_libdir }}"
-
-fs.mount.usr.type = "chroot"
-fs.mount.usr.path = "/usr"
-fs.mount.usr.uri = "file:/usr"
-
-fs.mount.tmp.type = "chroot"
-fs.mount.tmp.path = "/tmp"
-fs.mount.tmp.uri = "file:/tmp"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "etc",
+    uri = "file:/etc"
+  },
+  {
+    type = "chroot",
+    path = "/dev/shm",
+    uri = "file:/tmp"
+  },
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr",
+    uri = "file:/usr"
+  },
+  {
+    type = "chroot",
+    path = "/tmp",
+    uri = "file:/tmp"
+  },
+]
 
 fs.experimental__enable_sysfs_topology = true
 sys.brk.max_size = "32M"

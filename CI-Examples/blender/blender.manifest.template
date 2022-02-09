@@ -13,29 +13,38 @@ loader.env.PWD = ""
 
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/gramine_lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.blender_lib.type = "chroot"
-fs.mount.blender_lib.path = "/blender_lib"
-fs.mount.blender_lib.uri = "file:{{ blender_dir }}/lib"
-
-fs.mount.usr_lib.type = "chroot"
-fs.mount.usr_lib.path = "/usr/{{ arch_libdir }}"
-fs.mount.usr_lib.uri = "file:/usr/{{ arch_libdir }}"
-
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "{{ arch_libdir }}"
-fs.mount.lib.uri = "file:{{ arch_libdir }}"
-
-fs.mount.scenes.type = "chroot"
-fs.mount.scenes.path = "/data"
-fs.mount.scenes.uri = "file:{{ data_dir }}"
-
-fs.mount.blender.type = "chroot"
-fs.mount.blender.path = "/blender"
-fs.mount.blender.uri = "file:{{ blender_dir }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/gramine_lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "/blender_lib",
+    uri = "file:{{ blender_dir }}/lib"
+  },
+  {
+    type = "chroot",
+    path = "/usr/{{ arch_libdir }}",
+    uri = "file:/usr/{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/data",
+    uri = "file:{{ data_dir }}"
+  },
+  {
+    type = "chroot",
+    path = "/blender",
+    uri = "file:{{ blender_dir }}"
+  },
+]
 
 sgx.debug = true
 sgx.nonpie_binary = true

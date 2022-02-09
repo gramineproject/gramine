@@ -2,8 +2,6 @@ loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 loader.log_level = "debug"
 
-fs.mount.root.uri = "file:"
-
 sgx.nonpie_binary = true
 sgx.debug = true
 

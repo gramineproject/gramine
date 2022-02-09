@@ -13,25 +13,33 @@ loader.insecure__use_cmdline_argv = true
 
 sys.enable_sigterm_injection = true
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
-
-fs.mount.lib2.type = "chroot"
-fs.mount.lib2.path = "{{ arch_libdir }}"
-fs.mount.lib2.uri = "file:{{ arch_libdir }}"
-
-fs.mount.usr.type = "chroot"
-fs.mount.usr.path = "/usr"
-fs.mount.usr.uri = "file:/usr"
-
-fs.mount.cwd.type = "chroot"
-fs.mount.cwd.path = "{{ install_dir_abspath }}"
-fs.mount.cwd.uri = "file:{{ install_dir }}"
-
-fs.mount.var_tmp.type = "tmpfs"
-fs.mount.var_tmp.path = "/var/tmp"
-fs.mount.var_tmp.uri = "file:dummy-unused-by-tmpfs-uri"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
+  {
+    type = "chroot",
+    path = "/usr",
+    uri = "file:/usr"
+  },
+  {
+    type = "chroot",
+    path = "{{ install_dir_abspath }}",
+    uri = "file:{{ install_dir }}"
+  },
+  {
+    type = "tmpfs",
+    path = "/var/tmp",
+    uri = "file:dummy-unused-by-tmpfs-uri"
+  },
+]
 
 sgx.debug = true
 sgx.nonpie_binary = true

@@ -92,15 +92,17 @@ default, or ``fs.start_dir`` if specified).
 The recommended usage is to provide an absolute path, and mount the executable
 at that path. For example::
 
-   [libos]
-   entrypoint = "/usr/bin/python3.8"
+   libos.entrypoint = "/usr/bin/python3.8"
 
-   [[fs.mount]]
-   type = "chroot"
-   path = "/usr/bin/python3.8"
-   uri = "file:/usr/bin/python3.8"
-   # Or, if using a binary from your local directory:
-   # uri = "file:python3.8"
+   fs.mount = [
+     {
+       type = "chroot",
+       path = "/usr/bin/python3.8",
+       uri = "file:/usr/bin/python3.8"
+       # Or, if using a binary from your local directory:
+       # uri = "file:python3.8"
+     },
+   ]
 
 .. note ::
    Earlier, ``libos.entrypoint`` was a PAL URI. If you used it with a relative
@@ -358,8 +360,9 @@ dynamically linked binaries, usually at least one `chroot` mount point is
 required in the manifest (the mount point of linked libraries). The filesystems
 will be mounted in the order in which they appear in the manifest.
 
-The ``fs.mount`` option is a TOML array. The easiest way to specify mount points
-is by using multiple ``[[fs.mount]]`` sections.
+The ``fs.mount`` option is a TOML array of tables. As shown in the examples
+above, you can either specify its value using the inline syntax, or use multiple
+``[[fs.mount]]`` sections.
 
 Gramine currently supports two types of mount points:
 

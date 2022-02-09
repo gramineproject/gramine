@@ -49,27 +49,37 @@ sys.enable_sigterm_injection = true
 # - In-Gramine visible path names may be arbitrary but we reuse host-OS URIs
 #   for simplicity (except for the first 'lib' case).
 
-# Mount host-OS directory to Gramine glibc/runtime libraries (in 'uri') into
-# in-Gramine visible directory /lib (in 'path').
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mount = [
+  # Mount host-OS directory to Gramine glibc/runtime libraries (in 'uri') into
+  # in-Gramine visible directory /lib (in 'path').
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir() }}"
+  },
 
-# Mount host-OS directory to Name Service Switch (NSS) libraries (in 'uri')
-# into in-Gramine visible directory /lib/x86_64-linux-gnu (in 'path').
-fs.mount.lib2.type = "chroot"
-fs.mount.lib2.path = "{{ arch_libdir }}"
-fs.mount.lib2.uri = "file:{{ arch_libdir }}"
+  # Mount host-OS directory to Name Service Switch (NSS) libraries (in 'uri')
+  # into in-Gramine visible directory /lib/x86_64-linux-gnu (in 'path').
+  {
+    type = "chroot",
+    path = "{{ arch_libdir }}",
+    uri = "file:{{ arch_libdir }}"
+  },
 
-fs.mount.lib3.type = "chroot"
-fs.mount.lib3.path = "/usr/{{ arch_libdir }}"
-fs.mount.lib3.uri = "file:/usr/{{ arch_libdir }}"
+  {
+    type = "chroot",
+    path = "/usr/{{ arch_libdir }}",
+    uri = "file:/usr/{{ arch_libdir }}"
+  },
 
-# Mount host-OS directory to NSS files required by Glibc + NSS libs (in 'uri')
-# into in-Gramine visible directory /etc (in 'path').
-fs.mount.etc.type = "chroot"
-fs.mount.etc.path = "/etc"
-fs.mount.etc.uri = "file:/etc"
+  # Mount host-OS directory to NSS files required by Glibc + NSS libs (in 'uri')
+  # into in-Gramine visible directory /etc (in 'path').
+  {
+    type = "chroot",
+    path = "/etc",
+    uri = "file:/etc"
+  },
+]
 
 ############################### SGX: GENERAL ##################################
 

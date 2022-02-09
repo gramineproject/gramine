@@ -8,13 +8,18 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 # in an SGX enclave restricted to 8GB of virtual space if ASLR is enabled
 loader.insecure__disable_aslr = true
 
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+fs.mount = [
+  {
+    type = "chroot",
+    path = "/lib",
+    uri = "file:{{ gramine.runtimedir(libc) }}"
+  },
+  {
+    type = "chroot",
+    path = "{{ entrypoint }}",
+    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+  },
+]
 
 sgx.enclave_size = "8G"
 sgx.nonpie_binary = true
