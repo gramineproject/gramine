@@ -1,8 +1,8 @@
 .. program:: gramine-sgx-ias-verify-report
 
-====================================================================================
-:program:`gramine-sgx-ias-verify-report` -- Submit Intel Attestation Service request
-====================================================================================
+===================================================================================
+:program:`gramine-sgx-ias-verify-report` -- Verify Intel Attestation Service report
+===================================================================================
 
 Synopsis
 ========
@@ -43,6 +43,10 @@ Command line arguments
 .. option:: -o, --allow-outdated-tcb
 
    Treat IAS status GROUP_OUT_OF_DATE as OK.
+
+.. option:: -d, --allow-debug-enclave
+
+   Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1).
 
 .. option:: -n, --nonce
 
