@@ -255,9 +255,7 @@ static int lookup_enter_dentry(struct lookup* lookup) {
          */
         if (lookup->flags & LOOKUP_MAKE_SYNTHETIC) {
             lookup->dent->state &= ~DENTRY_NEGATIVE;
-            mode_t type = S_IFDIR;
-            mode_t perm = PERM_r_xr_xr_x;
-            ret = synthetic_setup_dentry(lookup->dent, type, perm);
+            ret = synthetic_setup_dentry(lookup->dent, S_IFDIR, PERM_r_xr_xr_x);
             if (ret < 0)
                 return ret;
 

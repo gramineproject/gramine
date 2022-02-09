@@ -5,7 +5,7 @@
 
 /*
  * This file contains implementation of the "synthetic" filesystem. This filesystem handles
- * in-memory directories created in the process of mounting a filesystem.
+ * in-memory files (currently, only directories) created in the process of mounting a filesystem.
  *
  * For example, if the manifest specifies a mount at "/usr/bin", and "usr" does not exist, Gramine
  * will create synthetic directories for "/usr" and "/usr/bin". While "/usr/bin" will be immediately

@@ -491,6 +491,7 @@ out:
 
 static int chroot_unlink(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
     int ret;
 
