@@ -92,13 +92,15 @@ default, or ``fs.start_dir`` if specified).
 The recommended usage is to provide an absolute path, and mount the executable
 at that path. For example::
 
-   libos.entrypoint = "/usr/bin/python3.8"
+   [libos]
+   entrypoint = "/usr/bin/python3.8"
 
-   fs.mount.python.type = "chroot"
-   fs.mount.python.path = "/usr/bin/python3.8"
-   fs.mount.python.uri = "file:/usr/bin/python3.8"
+   [[fs.mount]]
+   type = "chroot"
+   path = "/usr/bin/python3.8"
+   uri = "file:/usr/bin/python3.8"
    # Or, if using a binary from your local directory:
-   # fs.mount.python.uri = "file:python3.8"
+   # uri = "file:python3.8"
 
 .. note ::
    Earlier, ``libos.entrypoint`` was a PAL URI. If you used it with a relative
@@ -334,21 +336,37 @@ FS mount points
 
 ::
 
-    fs.mount.[identifier].type = "[chroot|tmpfs]"
-    fs.mount.[identifier].path = "[PATH]"
-    fs.mount.[identifier].uri  = "[URI]"
+    fs.mount = [
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+    ]
+
+    or, as separate sections:
+
+    [[fs.mount]]
+    type = "[chroot|...]"
+    path = "[PATH]"
+    uri  = "[URI]"
+
+    [[fs.mount]]
+    type = "[chroot|...]"
+    path = "[PATH]"
+    uri  = "[URI]"
 
 This syntax specifies how file systems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
-required in the manifest (the mount point of linked libraries).
+required in the manifest (the mount point of linked libraries). The filesystems
+will be mounted in the order in which they appear in the manifest.
+
+The ``fs.mount`` option is a TOML array. The easiest way to specify mount points
+is by using multiple ``[[fs.mount]]`` sections.
 
 Gramine currently supports two types of mount points:
 
 * ``chroot``: Host-backed files. All host files and sub-directories found under
   ``[URI]`` are forwarded to the Gramine instance and placed under ``[PATH]``.
-  For example, with a host-level path specified as
-  ``fs.mount.lib.uri = "file:/one/path/"`` and forwarded to Gramine via
-  ``fs.mount.lib.path = "/another/path"``, a host-level file
+  For example, with a host-level path specified as ``uri = "file:/one/path/"``
+  and forwarded to Gramine via ``path = "/another/path"``, a host-level file
   ``/one/path/file`` is visible to graminized application as
   ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
@@ -840,3 +858,15 @@ This usually points to the LibOS library ``libsysdb.so``.
 
 Note that previously this syntax allowed to specify the list of URIs (separated
 by commas). This ability was never used and therefore was removed completely.
+
+FS mount points (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   fs.mount.[identifier].type = "[chroot|...]"
+   fs.mount.[identifier].path = "[PATH]"
+   fs.mount.[identifier].uri  = "[URI]"
+
+This syntax used a TOML table schema with keys for each mount. It has been
+replaced with a TOML array.

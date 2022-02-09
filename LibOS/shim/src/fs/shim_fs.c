@@ -88,7 +88,7 @@ static void free_mount(struct shim_mount* mount) {
 
 static bool mount_migrated = false;
 
-static int __mount_root(void) {
+static int mount_root(void) {
     int ret = 0;
     char* fs_root_type = NULL;
     char* fs_root_uri  = NULL;
@@ -130,7 +130,7 @@ out:
     return ret;
 }
 
-static int __mount_sys(void) {
+static int mount_sys(void) {
     int ret;
 
     log_debug("Mounting special proc filesystem: /proc");
@@ -162,15 +162,15 @@ static int __mount_sys(void) {
     return 0;
 }
 
-static int __mount_one_other(toml_table_t* mount) {
+/* TODO: Change `key` to `index` (integer) once the TOML-table syntax is gone */
+static int mount_one_other(toml_table_t* mount, const char* key) {
     assert(mount);
 
     int ret;
-    const char* key = toml_table_key(mount);
 
     toml_raw_t mount_type_raw = toml_raw_in(mount, "type");
     if (!mount_type_raw) {
-        log_error("Cannot find 'fs.mount.%s.type'", key);
+        log_error("Cannot find 'fs.mount.%s.path'", key);
         return -EINVAL;
     }
 
@@ -253,7 +253,12 @@ out:
     return ret;
 }
 
-static int __mount_others(void) {
+/*
+ * Mount filesystems using the deprecated TOML-table syntax.
+ *
+ * FIXME: This is deprecated in Gramine v1.2 and can be removed after releasing Gramine v1.3.
+ */
+static int mount_others_from_toml_table(void) {
     int ret = 0;
 
     assert(g_manifest_root);
@@ -266,24 +271,31 @@ static int __mount_others(void) {
         return 0;
 
     ssize_t mounts_cnt = toml_table_ntab(manifest_fs_mounts);
-    if (mounts_cnt <= 0)
+    if (mounts_cnt < 0)
+        return -EINVAL;
+    if (mounts_cnt == 0)
         return 0;
 
-    /* *** Warning: A _very_ ugly hack below (hopefully only temporary) ***
+    log_error("Detected deprecated syntax for 'fs.mount'. Consider converting 'fs.mount' to an "
+              "array: 'fs.mount = [{ type = \"chroot\", uri = \"...\", path = \"...\" }]'.");
+
+    /*
+     * *** Warning: A _very_ ugly hack below ***
      *
-     * Currently we don't use proper TOML syntax for declaring mountpoints, instead, we use a syntax
-     * which resembles the pre-TOML one used in Gramine. As a result, the entries are not ordered,
-     * but Gramine actually relies on the specific mounting order (e.g. you can't mount /lib/asdf
-     * first and then /lib, but the other way around works). The problem is, that TOML structure is
-     * just a dictionary, so the order of keys is not preserved.
+     * In the TOML-table syntax, the entries are not ordered, but Gramine actually relies on the
+     * specific mounting order (e.g. you can't mount /lib/asdf first and then /lib, but the other
+     * way around works). The problem is, that TOML structure is just a dictionary, so the order of
+     * keys is not preserved.
      *
-     * The correct solution is to change the manifest syntax for mounts, but this will be a huge,
-     * breaking change. For now, just to fix the issue, we use an ugly heuristic - we apply mounts
-     * sorted by the path length, which in most cases should result in a proper mount order.
+     * To fix the issue, we use an ugly heuristic - we apply mounts sorted by the path length, which
+     * in most cases should result in a proper mount order.
      *
      * We do this in O(n^2) because we don't have a sort function, but that shouldn't be an issue -
      * usually there are around 5 mountpoints with ~30 chars in paths, so it should still be quite
      * fast.
+     *
+     * Fortunately, the table syntax is deprecated, so we'll be able to remove this code at some
+     * point.
      *
      * Corresponding issue: https://github.com/gramineproject/gramine/issues/23.
      */
@@ -322,7 +334,7 @@ static int __mount_others(void) {
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
             assert(mount);
-            ret = __mount_one_other(mount);
+            ret = mount_one_other(mount, keys[j]);
             if (ret < 0)
                 goto out;
         }
@@ -333,16 +345,52 @@ out:
     return ret;
 }
 
+static int mount_others_from_toml_array(void) {
+    int ret;
+
+    assert(g_manifest_root);
+    toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
+    if (!manifest_fs)
+        return 0;
+
+    toml_array_t* manifest_fs_mounts = toml_array_in(manifest_fs, "mount");
+    if (!manifest_fs_mounts)
+        return 0;
+
+    ssize_t mounts_cnt = toml_array_nelem(manifest_fs_mounts);
+    if (mounts_cnt < 0)
+        return -EINVAL;
+
+    for (size_t i = 0; i < (size_t)mounts_cnt; i++) {
+        toml_table_t* mount = toml_table_at(manifest_fs_mounts, i);
+        if (!mount) {
+            log_error("Invalid mount in manifest at index %zd (not a TOML table)", i);
+            return -EINVAL;
+        }
+
+        /* Prepare a key for `mount_one_other`, so that it in case of errors it will display paths
+         * as `fs.mount.[0].type` etc. */
+        char key[23];
+        snprintf(key, sizeof(key), "[%zu]", i);
+
+        ret = mount_one_other(mount, key);
+        if (ret < 0)
+            return ret;
+    }
+    return 0;
+}
+
+
 int init_mount_root(void) {
     if (mount_migrated)
         return 0;
 
     int ret;
 
-    if ((ret = __mount_root()) < 0)
+    if ((ret = mount_root()) < 0)
         return ret;
 
-    if ((ret = __mount_sys()) < 0)
+    if ((ret = mount_sys()) < 0)
         return ret;
 
     return 0;
@@ -354,7 +402,10 @@ int init_mount(void) {
 
     int ret;
 
-    if ((ret = __mount_others()) < 0)
+    if ((ret = mount_others_from_toml_table()) < 0)
+        return ret;
+
+    if ((ret = mount_others_from_toml_array()) < 0)
         return ret;
 
     assert(g_manifest_root);
