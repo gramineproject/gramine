@@ -92,3 +92,32 @@ Commands
    .. option:: -R, --report-url
 
       URL for the IAS attestation report endpoint (optional).
+
+Examples
+========
+
+*SigRL* retrieval:
+
+.. code-block:: sh
+
+    $ gramine-sgx-ias-request sigrl -k $IAS_API_KEY -g ef0a0000 -i sigrl
+    No SigRL for given EPID group ID ef0a0000
+
+*Quote* verification:
+
+.. code-block:: sh
+
+    $ gramine-sgx-ias-request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -a ias.adv -v
+    Verbose output enabled
+    IAS request:
+    {"isvEnclaveQuote":"AgABAO8..."}
+    [...snip curl output...]
+    IAS response: 200
+    IAS report saved to: ias.report
+    IAS report signature saved to: ias.sig
+    IAS certificate saved to: ias.cert
+    IAS advisory saved to: ias.adv
+    IAS submission successful
+
+    $ cat ias.report
+    {"id":"205146415611480061439763344693868541328","timestamp":"2020-03-20T10:48:32.353294","version":3,"epidPseudonym":"Itmg0 [...]","isvEnclaveQuoteStatus":"GROUP_OUT_OF_DATE" [...]}

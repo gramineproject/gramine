@@ -40,3 +40,24 @@ Exit status
 
 4
    The ``aesmd`` :term:`PSW` daemon is not installed
+
+Example
+=======
+
+.. code-block:: sh
+
+    $ is-sgx-available
+    SGX supported by CPU: true
+    SGX1 (ECREATE, EENTER, ...): true
+    SGX2 (EAUG, EACCEPT, EMODPR, ...): false
+    Flexible Launch Control (IA32_SGXPUBKEYHASH{0..3} MSRs): false
+    SGX extensions for virtualizers (EINCVIRTCHILD, EDECVIRTCHILD, ESETCONTEXT): false
+    Extensions for concurrent memory management (ETRACKC, ELDBC, ELDUC, ERDINFO): false
+    CET enclave attributes support (See Table 37-5 in the SDM): false
+    Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, ISVFAMILYID report fields): false
+    Max enclave size (32-bit): 0x80000000
+    Max enclave size (64-bit): 0x1000000000
+    EPC size: 0x5d80000
+    SGX driver loaded: true
+    AESMD installed: true
+    SGX PSW/libsgx installed: true
