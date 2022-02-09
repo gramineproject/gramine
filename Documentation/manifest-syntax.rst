@@ -339,8 +339,16 @@ FS mount points
 ::
 
     fs.mount = [
-      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
-      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+      {
+        type = "[chroot|...]",
+        path = "[PATH]",
+        uri = "[URI]"
+      },
+      {
+        type = "[chroot|...]",
+        path = "[PATH]",
+        uri = "[URI]"
+      },
     ]
 
     or, as separate sections:
@@ -363,6 +371,10 @@ will be mounted in the order in which they appear in the manifest.
 The ``fs.mount`` option is a TOML array of tables. As shown in the examples
 above, you can either specify its value using the inline syntax, or use multiple
 ``[[fs.mount]]`` sections.
+
+.. note::
+   Keep in mind that TOML doesn't allow trailing commas in inline tables. Note
+   the lack of comma after ``uri = "[URI]"`` in the first example above.
 
 Gramine currently supports two types of mount points:
 
