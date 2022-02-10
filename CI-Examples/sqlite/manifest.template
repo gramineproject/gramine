@@ -15,21 +15,9 @@ loader.env.PATH = "{{ execdir }}"
 loader.env.HOME = "/"
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir() }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ arch_libdir }}",
-    uri = "file:{{ arch_libdir }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ execdir }}/sqlite3",
-    uri = "file:{{ execdir }}/sqlite3"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { type = "chroot", path = "{{ execdir }}/sqlite3", uri = "file:{{ execdir }}/sqlite3" },
 ]
 
 sgx.debug = true

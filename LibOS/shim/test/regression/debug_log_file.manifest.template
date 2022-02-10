@@ -10,16 +10,8 @@ loader.log_level = "debug"
 loader.log_file = "tmp/debug_log_file.log"
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir(libc) }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ entrypoint }}",
-    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
 sgx.nonpie_binary = true

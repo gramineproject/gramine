@@ -17,21 +17,9 @@ loader.env.HOSTNAME = "test"
 loader.insecure__use_cmdline_argv = true
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir() }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ arch_libdir }}",
-    uri = "file:{{ arch_libdir }}"
-  },
-  {
-    type = "chroot",
-    path = "/etc",
-    uri = "file:/etc"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { type = "chroot", path = "/etc", uri = "file:/etc" },
 ]
 
 sgx.debug = true

@@ -9,17 +9,9 @@ fs.root.path = "/"
 fs.root.uri = "file:/"
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir(libc) }}"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   # overwrite host "/etc" - we don't want host-level configuration files, e.g. dynamic loader caches
-  {
-    type = "tmpfs",
-    path = "/etc",
-    uri = "file:unused"
-  },
+  { type = "tmpfs", path = "/etc", uri = "file:unused" },
 ]
 
 sgx.nonpie_binary = true

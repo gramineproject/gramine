@@ -52,33 +52,17 @@ sys.enable_sigterm_injection = true
 fs.mount = [
   # Mount host-OS directory to Gramine glibc/runtime libraries (in 'uri') into
   # in-Gramine visible directory /lib (in 'path').
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir() }}"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
 
   # Mount host-OS directory to Name Service Switch (NSS) libraries (in 'uri')
   # into in-Gramine visible directory /lib/x86_64-linux-gnu (in 'path').
-  {
-    type = "chroot",
-    path = "{{ arch_libdir }}",
-    uri = "file:{{ arch_libdir }}"
-  },
+  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
 
-  {
-    type = "chroot",
-    path = "/usr/{{ arch_libdir }}",
-    uri = "file:/usr/{{ arch_libdir }}"
-  },
+  { type = "chroot", path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
 
   # Mount host-OS directory to NSS files required by Glibc + NSS libs (in 'uri')
   # into in-Gramine visible directory /etc (in 'path').
-  {
-    type = "chroot",
-    path = "/etc",
-    uri = "file:/etc"
-  },
+  { type = "chroot", path = "/etc", uri = "file:/etc" },
 ]
 
 ############################### SGX: GENERAL ##################################

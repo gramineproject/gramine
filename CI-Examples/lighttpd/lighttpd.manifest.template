@@ -14,31 +14,11 @@ loader.insecure__use_cmdline_argv = true
 sys.enable_sigterm_injection = true
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir() }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ arch_libdir }}",
-    uri = "file:{{ arch_libdir }}"
-  },
-  {
-    type = "chroot",
-    path = "/usr",
-    uri = "file:/usr"
-  },
-  {
-    type = "chroot",
-    path = "{{ install_dir_abspath }}",
-    uri = "file:{{ install_dir }}"
-  },
-  {
-    type = "tmpfs",
-    path = "/var/tmp",
-    uri = "file:dummy-unused-by-tmpfs-uri"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { type = "chroot", path = "/usr", uri = "file:/usr" },
+  { type = "chroot", path = "{{ install_dir_abspath }}", uri = "file:{{ install_dir }}" },
+  { type = "tmpfs", path = "/var/tmp", uri = "file:dummy-unused-by-tmpfs-uri" },
 ]
 
 sgx.debug = true

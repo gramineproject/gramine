@@ -9,21 +9,9 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 libos.check_invalid_pointers = false
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir(libc) }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ entrypoint }}",
-    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-  },
-  {
-    type = "chroot",
-    path = "/dev/host-zero",
-    uri = "dev:/dev/zero"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { type = "chroot", path = "/dev/host-zero", uri = "dev:/dev/zero" },
 ]
 
 sgx.nonpie_binary = true

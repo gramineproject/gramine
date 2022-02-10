@@ -9,16 +9,8 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 loader.insecure__disable_aslr = true
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir(libc) }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ entrypoint }}",
-    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
 sgx.enclave_size = "8G"

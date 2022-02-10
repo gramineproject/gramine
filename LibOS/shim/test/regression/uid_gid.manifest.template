@@ -8,16 +8,8 @@ loader.uid = 1338
 loader.gid = 1337
 
 fs.mount = [
-  {
-    type = "chroot",
-    path = "/lib",
-    uri = "file:{{ gramine.runtimedir(libc) }}"
-  },
-  {
-    type = "chroot",
-    path = "{{ entrypoint }}",
-    uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-  },
+  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
 sgx.nonpie_binary = true
