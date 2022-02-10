@@ -95,13 +95,9 @@ at that path. For example::
    libos.entrypoint = "/usr/bin/python3.8"
 
    fs.mount = [
-     {
-       type = "chroot",
-       path = "/usr/bin/python3.8",
-       uri = "file:/usr/bin/python3.8"
-       # Or, if using a binary from your local directory:
-       # uri = "file:python3.8"
-     },
+     { type = "chroot", path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" }
+     # Or, if using a binary from your local directory:
+     # uri = "file:python3.8"
    ]
 
 .. note ::
@@ -339,16 +335,8 @@ FS mount points
 ::
 
     fs.mount = [
-      {
-        type = "[chroot|...]",
-        path = "[PATH]",
-        uri = "[URI]"
-      },
-      {
-        type = "[chroot|...]",
-        path = "[PATH]",
-        uri = "[URI]"
-      },
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
     ]
 
     or, as separate sections:
@@ -373,8 +361,9 @@ above, you can either specify its value using the inline syntax, or use multiple
 ``[[fs.mount]]`` sections.
 
 .. note::
-   Keep in mind that TOML doesn't allow trailing commas in inline tables. Note
-   the lack of comma after ``uri = "[URI]"`` in the first example above.
+   If you use the inline table syntax (``{ ... }``), each table must fit in
+   a single line. While multi-line table are currently accepted by Gramine, they
+   are not valid TOML and Gramine might disallow them in the future.
 
 Gramine currently supports two types of mount points:
 
