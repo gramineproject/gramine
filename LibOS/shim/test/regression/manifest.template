@@ -9,12 +9,12 @@ loader.insecure__use_cmdline_argv = true
 sys.insecure__allow_eventfd = true
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  { type = "chroot", path = "exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },
-  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { type = "chroot", path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  { type = "chroot", path = "/bin", uri = "file:/bin" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/bin", uri = "file:/bin" },
   { type = "tmpfs", path = "/mnt/tmpfs", uri = "file:dummy-unused-by-tmpfs-uri" },
 ]
 

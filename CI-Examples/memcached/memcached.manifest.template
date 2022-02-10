@@ -14,10 +14,10 @@ loader.insecure__use_cmdline_argv = true
 sys.enable_sigterm_injection = true
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { type = "chroot", path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  { type = "chroot", path = "/etc", uri = "file:/etc" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/etc", uri = "file:/etc" },
 ]
 
 sgx.debug = true

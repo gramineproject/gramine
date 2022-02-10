@@ -14,10 +14,10 @@ loader.env.PATH = "{{ execdir }}"
 loader.insecure__use_cmdline_argv = true
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { type = "chroot", path = "/usr/lib", uri = "file:/usr/lib" },
-  { type = "chroot", path = "{{ execdir }}", uri = "file:{{ execdir }}" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr/lib", uri = "file:/usr/lib" },
+  { path = "{{ execdir }}", uri = "file:{{ execdir }}" },
 ]
 
 sgx.debug = true

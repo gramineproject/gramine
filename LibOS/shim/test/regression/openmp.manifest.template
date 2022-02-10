@@ -18,9 +18,9 @@ sgx.preheat_enclave = true
 # libos.check_invalid_pointers = false
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  { type = "chroot", path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
 ]
 
 sgx.thread_num = 32

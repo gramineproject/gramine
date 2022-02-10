@@ -5,11 +5,11 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  { type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { type = "chroot", path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  { type = "chroot", path = "/mounted", uri = "file:tmp" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/mounted", uri = "file:tmp" },
   { type = "tmpfs", path = "/mnt-tmpfs", uri = "file:dummy-unused-by-tmpfs-uri" },
 ]
 

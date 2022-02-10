@@ -10,8 +10,8 @@ loader.insecure__use_cmdline_argv = true
 loader.log_level = "warning"
 
 fs.mount = [
-  { type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { type = "chroot", path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
 sgx.nonpie_binary = true
