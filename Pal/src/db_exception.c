@@ -8,10 +8,7 @@
 
 #include <errno.h>
 
-#include "api.h"
-#include "list.h"
 #include "pal.h"
-#include "pal_error.h"
 #include "pal_internal.h"
 
 static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};

@@ -5,14 +5,7 @@
  * This file contains APIs to open, read, write and get attribute of streams.
  */
 
-#include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <asm/poll.h>
-#include <asm/socket.h>
-#include <linux/msg.h>
-#include <linux/socket.h>
-#include <linux/types.h>
-#include <linux/wait.h>
 #include <netinet/in.h>
 #include <stdalign.h>
 #include <stdbool.h>
@@ -24,7 +17,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "perm.h"
 #include "stat.h"
 

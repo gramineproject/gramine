@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 #include "pal.h"
-#include "shim_defs.h"
 #include "shim_ipc.h"
 #include "shim_process.h"
 #include "shim_thread.h"

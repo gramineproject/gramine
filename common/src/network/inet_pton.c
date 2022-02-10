@@ -15,9 +15,6 @@
  * SOFTWARE.
  */
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-
 #include "api.h"
 
 #ifndef NS_INADDRSZ

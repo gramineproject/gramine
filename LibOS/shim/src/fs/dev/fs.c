@@ -10,7 +10,6 @@
  */
 
 #include "pal.h"
-#include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
 static ssize_t dev_null_read(struct shim_handle* hdl, void* buf, size_t count) {

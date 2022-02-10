@@ -6,7 +6,6 @@
 
 #include <linux/poll.h>
 
-#include "api.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"

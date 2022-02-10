@@ -4,16 +4,13 @@
 #include <asm/errno.h>
 #include <asm/prctl.h>
 #include <asm/signal.h>
-#include <linux/futex.h>
 #include <linux/signal.h>
 
 #include "asan.h"
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
-#include "pal_internal.h"
 #include "sgx_enclave.h"
 #include "sgx_internal.h"
-#include "sgx_log.h"
 #include "spinlock.h"
 
 struct thread_map {

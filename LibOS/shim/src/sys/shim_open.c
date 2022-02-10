@@ -8,22 +8,17 @@
 
 #define _POSIX_C_SOURCE 200809L  /* for SSIZE_MAX */
 
-#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <linux/fcntl.h>
 #include <stdalign.h>
 
-#include "pal.h"
-#include "pal_error.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count) {

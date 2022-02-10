@@ -9,21 +9,14 @@
  * creation.
  */
 
-#include <asm/fcntl.h>
-#include <linux/fs.h>
-#include <linux/sched.h>
-#include <linux/types.h>
-
 #include "api.h"
 #include "crypto.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "protected-files/protected_files.h"
-#include "spinlock.h"
 
 /*
  * For SGX, the creation of a child process requires a clean enclave and a secure channel between

@@ -1,8 +1,6 @@
 #ifndef SGX_SYSCALL_H_
 #define SGX_SYSCALL_H_
 
-#include "syscall.h"
-
 long do_syscall_intr(long nr, ...);
 void do_syscall_intr_after_check1(void);
 void do_syscall_intr_after_check2(void);

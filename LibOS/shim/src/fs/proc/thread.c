@@ -7,7 +7,6 @@
  * Implementation of `/proc/<pid>` and `/proc/<pid>/task/<tid>`, for the local process.
  */
 
-#include "pal.h"
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 #include "shim_lock.h"

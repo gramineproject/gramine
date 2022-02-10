@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "sgx_arch.h"
 #include "sgx_attest.h"
 
 /*!

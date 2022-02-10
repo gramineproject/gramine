@@ -8,7 +8,6 @@
 
 #include <asm/socket.h>
 #include <errno.h>
-#include <linux/fcntl.h>
 #include <linux/in.h>
 #include <linux/in6.h>
 
@@ -16,7 +15,6 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "perm.h"
-#include "shim_checkpoint.h"
 #include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
@@ -25,7 +23,6 @@
 #include "shim_process.h"
 #include "shim_signal.h"
 #include "shim_table.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 /*

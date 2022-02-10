@@ -7,7 +7,6 @@
 
 #include <getopt.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "attestation.h"
 #include "util.h"

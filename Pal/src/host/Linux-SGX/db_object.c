@@ -6,7 +6,6 @@
 
 #include <linux/poll.h>
 
-#include "api.h"
 #include "cpu.h"
 #include "enclave_ocalls.h"
 #include "pal.h"

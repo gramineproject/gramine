@@ -8,7 +8,6 @@
  */
 
 #include "api.h"
-#include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 #include "shim_process.h"
 

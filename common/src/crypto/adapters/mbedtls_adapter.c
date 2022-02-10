@@ -13,7 +13,6 @@
 #include "mbedtls/aes.h"
 #include "mbedtls/cmac.h"
 #include "mbedtls/entropy_poll.h"
-#include "mbedtls/error.h"
 #include "mbedtls/gcm.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/net_sockets.h"

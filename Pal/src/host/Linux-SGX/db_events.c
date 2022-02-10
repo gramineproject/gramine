@@ -8,7 +8,6 @@
 #include <linux/futex.h>
 #include <stdbool.h>
 
-#include "api.h"
 #include "assert.h"
 #include "enclave_ocalls.h"
 #include "pal.h"

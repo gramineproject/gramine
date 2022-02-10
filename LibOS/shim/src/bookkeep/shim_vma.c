@@ -17,9 +17,6 @@
 #include "shim_checkpoint.h"
 #include "shim_defs.h"
 #include "shim_flags_conv.h"
-/* TODO: remove the include of "shim_fs.h" once the circular dependency of it and "shim_handle.h"
- * is fixed. */
-#include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"

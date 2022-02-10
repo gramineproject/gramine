@@ -12,15 +12,9 @@
 
 #include "api.h"
 #include "asan.h"
-#include "cpu.h"
-#include "ecall_types.h"
 #include "pal.h"
-#include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
-#include "sigset.h"
-#include "ucontext.h"
 
 #define ADDR_IN_PAL(addr) ((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END)
 

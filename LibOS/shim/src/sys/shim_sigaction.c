@@ -9,7 +9,6 @@
  * and "tgkill".
  */
 
-#include <asm/unistd.h>
 #include <errno.h>
 #include <stddef.h>  // FIXME(mkow): Without this we get:
                      //     asm/signal.h:126:2: error: unknown type name ‘size_t’
@@ -18,7 +17,6 @@
 #include <linux/signal.h>
 
 #include "pal.h"
-#include "pal_error.h"
 #include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"

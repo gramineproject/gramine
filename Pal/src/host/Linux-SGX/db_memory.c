@@ -10,10 +10,8 @@
 #include "enclave_pages.h"
 #include "pal.h"
 #include "pal_error.h"
-#include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 
 extern struct atomic_int g_allocated_pages;
 

@@ -7,14 +7,10 @@
 
 #include <errno.h>
 
-#include "pal.h"
-#include "pal_error.h"
-#include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_table.h"
 #include "shim_thread.h"
-#include "shim_utils.h"
 
 long shim_do_dup(unsigned int fd) {
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);

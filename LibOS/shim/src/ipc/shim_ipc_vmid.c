@@ -7,7 +7,6 @@
 #include "log.h"
 #include "shim_ipc.h"
 #include "shim_types.h"
-#include "shim_utils.h"
 
 static IDTYPE g_last_vmid = STARTING_VMID;
 

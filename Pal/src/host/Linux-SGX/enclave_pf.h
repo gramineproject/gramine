@@ -25,7 +25,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "api.h"
 #include "pal.h"
 #include "pal_internal.h"
 #include "protected_files.h"

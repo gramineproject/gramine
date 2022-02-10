@@ -4,7 +4,6 @@
 
 #include "api.h"
 #include "ecall_types.h"
-#include "pal_internal.h"
 #include "pal_linux.h"
 #include "rpc_queue.h"
 #include "sgx_arch.h"

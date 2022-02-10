@@ -22,16 +22,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
-#include "mbedtls/config.h"
-
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
-#include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
 

@@ -9,11 +9,8 @@
  * or remove them all (in case of `exec`).
  */
 
-#include "list.h"
 #include "pal.h"
 #include "shim_checkpoint.h"
-#include "shim_lock.h"
-#include "shim_types.h"
 #include "shim_utils.h"
 
 void shim_describe_location(uintptr_t addr, char* buf, size_t buf_size) {

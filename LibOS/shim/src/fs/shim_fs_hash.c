@@ -6,7 +6,6 @@
  */
 
 #include "shim_fs.h"
-#include "shim_internal.h"
 
 HASHTYPE hash_str(const char* p) {
     HASHTYPE hash = 0;

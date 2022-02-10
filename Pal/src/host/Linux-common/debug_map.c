@@ -9,7 +9,6 @@
 #include "api.h"
 #include "debug_map.h"
 #include "linux_utils.h"
-#include "pal_linux.h"
 #include "spinlock.h"
 
 struct debug_map* _Atomic g_debug_map = NULL;
