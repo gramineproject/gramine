@@ -1,9 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 
-#include <stdint.h>
-
 #include "api.h"
-#include "assert.h"
 #include "log.h"
 
 #undef memcpy

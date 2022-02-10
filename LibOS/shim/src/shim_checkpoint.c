@@ -7,19 +7,14 @@
 
 #include "shim_checkpoint.h"
 
-#include <asm/fcntl.h>
 #include <asm/mman.h>
 #include <stdarg.h>
 #include <stdint.h>
 
 #include "list.h"
 #include "pal.h"
-#include "pal_error.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_ipc.h"
-#include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_thread.h"
 #include "shim_utils.h"

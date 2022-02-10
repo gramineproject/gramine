@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#include "api.h"
 #include "asan.h"
 #include "enclave_ocalls.h"
 #include "pal_error.h"

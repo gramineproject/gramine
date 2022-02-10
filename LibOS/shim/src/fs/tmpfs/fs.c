@@ -14,17 +14,12 @@
  * the `data` field of the inode (as a pointer to `struct shim_mem_file`).
  */
 
-#include <asm/mman.h>
-#include <asm/unistd.h>
 #include <errno.h>
 
 #include "perm.h"
-#include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
-#include "shim_internal.h"
 #include "shim_lock.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 #define USEC_IN_SEC 1000000

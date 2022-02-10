@@ -6,7 +6,6 @@
  */
 
 #include "api.h"
-#include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_process.h"
 

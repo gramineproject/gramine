@@ -4,7 +4,6 @@
  */
 
 #include <limits.h>
-#include <stdint.h>
 
 #include "shim_internal.h"
 #include "shim_table.h"

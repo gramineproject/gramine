@@ -7,10 +7,7 @@
  */
 
 #include "pal.h"
-#include "pal_error.h"
 #include "shim_fs_lock.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"
 #include "shim_process.h"

@@ -35,17 +35,9 @@
  *
  */
 
-#include <stdbool.h>
-
 #include "api.h"
-#include "crypto.h"
-#include "enclave_pages.h"
-#include "list.h"
 #include "pal.h"
-#include "pal_error.h"
-#include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_error.h"
 
 int g_xsave_enabled = 0;
 uint64_t g_xsave_features = 0;

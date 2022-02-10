@@ -13,9 +13,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <mbedtls/cmac.h>

@@ -6,15 +6,11 @@
  */
 
 #include <linux/poll.h>
-#include <linux/time.h>
-#include <linux/wait.h>
 
-#include "api.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 
 /* TODO: this should take into account `handle->pipe.handshake_done`. For more details see

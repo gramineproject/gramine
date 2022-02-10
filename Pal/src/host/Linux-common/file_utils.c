@@ -5,7 +5,6 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include "api.h"

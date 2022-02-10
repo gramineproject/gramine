@@ -11,7 +11,6 @@
 
 #include "api.h"
 #include "assert.h"
-#include "cpu.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_internal.h"

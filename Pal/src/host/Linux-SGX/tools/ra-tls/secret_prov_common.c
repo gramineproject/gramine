@@ -11,13 +11,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "mbedtls/config.h"
-
-#include "mbedtls/error.h"
-#include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
 
 #include "secret_prov.h"

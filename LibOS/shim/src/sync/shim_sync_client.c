@@ -14,7 +14,6 @@
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_sync.h"
-#include "toml.h"
 #include "toml_utils.h"
 
 #define FATAL(fmt...)                                   \

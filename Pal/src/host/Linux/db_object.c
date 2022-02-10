@@ -5,17 +5,13 @@
  * This file contains APIs for waiting on PAL handles (polling).
  */
 
-#include <asm/errno.h>
 #include <linux/poll.h>
 #include <linux/time.h>
-#include <linux/wait.h>
 
-#include "api.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 
 /* Wait for specific events on all handles in the handle array and return multiple events
  * (including errors) reported by the host. Return 0 on success, PAL error on failure. */

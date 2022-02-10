@@ -5,10 +5,7 @@
  * This file contains operations to handle streams with URIs that have "eventfd:".
  */
 
-#include <asm/fcntl.h>
 #include <asm/poll.h>
-#include <linux/types.h>
-#include <linux/un.h>
 #include <sys/eventfd.h>
 
 #include "api.h"
@@ -16,7 +13,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 
 static inline int eventfd_type(int options) {

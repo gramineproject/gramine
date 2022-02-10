@@ -7,9 +7,7 @@
  * This file contains implementation of the "pseudo" filesystem.
  */
 
-#include "perm.h"
 #include "shim_fs_pseudo.h"
-#include "shim_internal.h"
 #include "shim_lock.h"
 #include "stat.h"
 

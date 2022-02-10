@@ -11,7 +11,6 @@
 #include "perm.h"
 #include "shim_checkpoint.h"
 #include "shim_fs.h"
-#include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_types.h"

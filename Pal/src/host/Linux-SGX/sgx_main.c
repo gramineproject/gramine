@@ -15,8 +15,6 @@
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "pal_rtld.h"
-#include "hex.h"
-#include "toml.h"
 #include "topo_info.h"
 
 #include "asan.h"
@@ -24,7 +22,6 @@
 #include "gdb_integration/sgx_gdb.h"
 #include "linux_utils.h"
 #include "rpc_queue.h"
-#include "sgx_api.h"
 #include "sgx_enclave.h"
 #include "sgx_internal.h"
 #include "sgx_log.h"
@@ -35,10 +32,7 @@
 #include <asm/errno.h>
 #include <asm/fcntl.h>
 #include <asm/socket.h>
-#include <ctype.h>
 #include <linux/fs.h>
-#include <linux/in.h>
-#include <linux/in6.h>
 #include <sys/auxv.h>
 
 const size_t g_page_size = PRESET_PAGESIZE;

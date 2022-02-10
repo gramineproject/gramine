@@ -6,20 +6,13 @@
  */
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
-#include <linux/mman.h>
-#include <linux/sched.h>
-#include <linux/signal.h>
-#include <linux/types.h>
-#include <linux/wait.h>
 
 #include "api.h"
-#include "ecall_types.h"
 #include "list.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "spinlock.h"
 

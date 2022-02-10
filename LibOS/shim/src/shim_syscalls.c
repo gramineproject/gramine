@@ -11,7 +11,6 @@
 #include "shim_table.h"
 #include "shim_tcb.h"
 #include "shim_thread.h"
-#include "shim_types.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
                                                  arch_syscall_arg_t, arch_syscall_arg_t,

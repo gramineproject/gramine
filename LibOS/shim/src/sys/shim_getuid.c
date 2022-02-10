@@ -4,13 +4,10 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include "api.h"
-#include "shim_checkpoint.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_table.h"
 #include "shim_thread.h"
-#include "shim_types.h"
 
 long shim_do_getuid(void) {
     struct shim_thread* current = get_cur_thread();

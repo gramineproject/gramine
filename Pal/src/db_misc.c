@@ -5,9 +5,7 @@
  * This file contains APIs for miscellaneous use.
  */
 
-#include "api.h"
 #include "pal.h"
-#include "pal_error.h"
 #include "pal_internal.h"
 
 int DkSystemTimeQuery(PAL_NUM* time) {

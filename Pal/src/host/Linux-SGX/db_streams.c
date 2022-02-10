@@ -6,15 +6,11 @@
  */
 
 #include <asm/fcntl.h>
-#include <asm/poll.h>
 #include <asm/socket.h>
 #include <asm/stat.h>
 #include <linux/in.h>
 #include <linux/in6.h>
-#include <linux/msg.h>
-#include <linux/socket.h>
 #include <linux/types.h>
-#include <linux/wait.h>
 #include <stdalign.h>
 #include <stdbool.h>
 
@@ -26,10 +22,8 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "perm.h"
-#include "stat.h"
 
 #define DUMMYPAYLOAD     "dummypayload"
 #define DUMMYPAYLOADSIZE (sizeof(DUMMYPAYLOAD))
