@@ -5,7 +5,6 @@
  * This file contains APIs to create, exit and yield a thread.
  */
 
-#include "api.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"

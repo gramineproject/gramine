@@ -12,7 +12,6 @@
 #include <stdint.h>
 
 #include "pal.h"
-#include "shim_defs.h"
 #include "shim_ipc.h"
 #include "shim_process.h"
 #include "shim_thread.h"
@@ -87,6 +86,8 @@ struct shim_cp_store {
     struct shim_palhdl_entry* last_palhdl_entry;
     size_t palhdl_entries_cnt;
 };
+
+#define CP_INIT_VMA_SIZE (64 * 1024 * 1024) /* 64MB */
 
 #define CP_FUNC_ARGS struct shim_cp_store* store, void* obj, size_t size, void** objp
 

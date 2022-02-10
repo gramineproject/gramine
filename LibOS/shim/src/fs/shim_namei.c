@@ -9,14 +9,11 @@
 #include <linux/fcntl.h>
 #include <stdbool.h>
 
-#include "pal.h"
 #include "perm.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
-#include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_process.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 int check_permissions(struct shim_dentry* dent, mode_t mask) {

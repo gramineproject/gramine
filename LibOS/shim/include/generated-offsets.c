@@ -1,5 +1,3 @@
-#include <stddef.h>
-
 #include "generated-offsets-build.h"
 #include "shim_internal.h"
 #include "shim_tcb.h"

@@ -4,7 +4,6 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <stdalign.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 
@@ -13,7 +12,6 @@
 #include "cpu.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"

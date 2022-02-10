@@ -9,7 +9,6 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <limits.h>
 
 #include "api.h"
 #include "pal_linux.h"

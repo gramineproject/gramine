@@ -7,13 +7,10 @@
 
 #include <errno.h>
 
-#include "pal.h"
-#include "pal_error.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_table.h"
-#include "shim_utils.h"
 
 long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen) {
     if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))

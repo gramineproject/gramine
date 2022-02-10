@@ -9,7 +9,6 @@
 #include <asm/ioctls.h>
 #include <asm/mman.h>
 #include <asm/unistd.h>
-#include <errno.h>
 #include <linux/fcntl.h>
 #include <linux/futex.h>
 #include <linux/in.h>
@@ -19,17 +18,11 @@
 #include <linux/wait.h>
 
 #include "api.h"
-#include "pal.h"
-#include "pal_error.h"
 #include "shim_internal.h"
 #include "shim_syscalls.h"
 #include "shim_table.h"
-#include "shim_tcb.h"
-#include "shim_thread.h"
 #include "shim_types.h"
-#include "shim_utils.h"
 #include "shim_vma.h"
-#include "stat.h"
 
 static void parse_open_flags(struct print_buf*, va_list*);
 static void parse_open_mode(struct print_buf*, va_list*);

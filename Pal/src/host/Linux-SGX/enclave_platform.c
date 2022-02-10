@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2019, Texas A&M University */
 
-#include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 

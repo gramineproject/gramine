@@ -16,7 +16,6 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "perm.h"
-#include "shim_checkpoint.h"
 #include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_handle.h"

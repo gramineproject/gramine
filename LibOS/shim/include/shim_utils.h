@@ -5,10 +5,8 @@
 #define _SHIM_UTILS_H_
 
 #include "api.h"
-#include "list.h"
 #include "pal.h"
 #include "shim_handle.h"
-#include "shim_internal.h"
 #include "shim_types.h"
 #include "toml.h"
 

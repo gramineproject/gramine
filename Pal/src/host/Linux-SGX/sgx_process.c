@@ -11,16 +11,10 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <linux/fs.h>
 
 #include "linux_utils.h"
-#include "pal_linux.h"
-#include "pal_rtld.h"
-#include "sgx_enclave.h"
 #include "sgx_internal.h"
-#include "sgx_log.h"
 #include "sgx_process.h"
-#include "sgx_tls.h"
 
 extern char* g_pal_loader_path;
 extern char* g_libpal_path;

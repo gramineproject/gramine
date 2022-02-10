@@ -7,9 +7,7 @@
  * This file contains the implementation of `/proc/meminfo` and `/proc/cpuinfo`.
  */
 
-#include "shim_fs.h"
 #include "shim_fs_pseudo.h"
-#include "stat.h"
 
 int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);

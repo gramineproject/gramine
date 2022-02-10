@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 
-#include <stdint.h>
-
 #include "api.h"
 
 #ifndef ASAN

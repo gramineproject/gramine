@@ -7,11 +7,8 @@
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 #include <errno.h>
-#include <linux/mman.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
-#include <linux/types.h>
-#include <linux/wait.h>
 #include <stdnoreturn.h>
 
 #include "api.h"

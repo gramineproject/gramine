@@ -6,12 +6,9 @@
  * "chmod", "fchmod", "fchmodat", "rename", "renameat" and "sendfile".
  */
 
-#include <asm/mman.h>
 #include <errno.h>
 #include <linux/fcntl.h>
 
-#include "pal.h"
-#include "pal_error.h"
 #include "perm.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
@@ -19,7 +16,6 @@
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_table.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 #define BUF_SIZE (64 * 1024) /* read/write in 64KB chunks for sendfile() */

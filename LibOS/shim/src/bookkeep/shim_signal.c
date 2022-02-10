@@ -16,18 +16,14 @@
 #include "cpu.h"
 #include "pal.h"
 #include "shim_checkpoint.h"
-#include "shim_entry.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
-#include "shim_process.h"
 #include "shim_signal.h"
-#include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_types.h"
 #include "shim_utils.h"
 #include "shim_vma.h"
-#include "toml.h"
 #include "toml_utils.h"
 
 static bool g_check_invalid_ptrs = true;

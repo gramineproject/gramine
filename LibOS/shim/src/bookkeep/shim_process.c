@@ -5,16 +5,13 @@
 
 #include "api.h"
 #include "list.h"
-#include "pal.h"
 #include "shim_checkpoint.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
-#include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_signal.h"
 #include "shim_thread.h"
-#include "shim_utils.h"
 
 typedef bool (*child_cmp_t)(const struct shim_child_process*, unsigned long);
 

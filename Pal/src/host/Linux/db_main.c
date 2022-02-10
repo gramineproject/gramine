@@ -6,8 +6,6 @@
  * arguments and manifest.
  */
 
-#include <asm/errno.h>
-#include <asm/ioctls.h>
 #include <asm/mman.h>
 #include <linux/personality.h>
 

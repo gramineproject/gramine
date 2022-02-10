@@ -6,8 +6,6 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
-#include <stdint.h>
-
 #include "api.h"
 
 char* strdup(const char* str) {

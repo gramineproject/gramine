@@ -8,24 +8,18 @@
 #include <asm/mman.h>
 #include <asm/socket.h>
 #include <limits.h>
-#include <linux/fs.h>
 #include <linux/futex.h>
 #include <linux/in.h>
 #include <linux/in6.h>
 #include <linux/signal.h>
-#include <math.h>
-#include <sys/wait.h>
 
 #include "cpu.h"
 #include "debug_map.h"
 #include "ecall_types.h"
 #include "linux_utils.h"
 #include "ocall_types.h"
-#include "pal_linux_error.h"
-#include "pal_topology.h"
 #include "rpc_queue.h"
 #include "sgx_internal.h"
-#include "sgx_log.h"
 #include "sgx_process.h"
 #include "sgx_tls.h"
 #include "sigset.h"

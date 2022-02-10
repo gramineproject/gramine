@@ -12,24 +12,19 @@
  */
 
 #define _POSIX_C_SOURCE 200809L /* for SSIZE_MAX */
-#include <asm/fcntl.h>
 #include <asm/mman.h>
-#include <asm/unistd.h>
 #include <errno.h>
 #include <limits.h>
 #include <linux/fcntl.h>
 
 #include "pal.h"
-#include "pal_error.h"
 #include "perm.h"
 #include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
-#include "shim_thread.h"
 #include "shim_utils.h"
-#include "shim_vma.h"
 #include "stat.h"
 
 #define KEEP_URI_PREFIX 0

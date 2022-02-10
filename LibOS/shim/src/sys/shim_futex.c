@@ -25,7 +25,6 @@
 #include "list.h"
 #include "pal.h"
 #include "shim_internal.h"
-#include "shim_signal.h"
 #include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_types.h"

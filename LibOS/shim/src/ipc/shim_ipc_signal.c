@@ -7,7 +7,6 @@
  * Inter process signal handling using IPC.
  */
 
-#include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_process.h"
 #include "shim_signal.h"

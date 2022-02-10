@@ -16,7 +16,6 @@
 #include "shim_table.h"
 #include "shim_utils.h"
 #include "shim_vma.h"
-#include "toml.h"
 #include "toml_utils.h"
 
 static struct {

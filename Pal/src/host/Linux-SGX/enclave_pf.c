@@ -3,8 +3,6 @@
  *                         Rafal Wojdyla <omeg@invisiblethingslab.com>
  */
 
-#include <linux/fs.h>
-
 #include "crypto.h"
 #include "enclave_pf.h"
 #include "hex.h"

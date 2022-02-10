@@ -5,14 +5,12 @@
 
 /* This file implements Gramine custom calls from userspace. See `shim_entry.h` for details. */
 
-#include <linux/errno.h>
 #include <limits.h>
 
 #include "api.h"
 #include "asan.h"
 #include "gramine_entry_api.h"
 #include "shim_entry.h"
-#include "shim_thread.h"
 #include "shim_utils.h"
 
 /* Test: do nothing, return success */

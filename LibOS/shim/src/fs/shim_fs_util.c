@@ -3,8 +3,6 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#include <stdint.h>
-
 #include "shim_fs.h"
 #include "shim_lock.h"
 #include "stat.h"

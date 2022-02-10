@@ -6,25 +6,20 @@
  */
 
 #include <asm/fcntl.h>
-#include <linux/time.h>
 #include <stdint.h>
 
 #include "api.h"
 #include "cpu.h"
 #include "enclave_pf.h"
-#include "gsgx.h"
 #include "hex.h"
-#include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "seqlock.h"
 #include "sgx_api.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
-#include "toml.h"
 #include "toml_utils.h"
 #include "topo_info.h"
 

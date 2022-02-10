@@ -19,8 +19,6 @@
 #define DEFAULT_BRK_MAX_SIZE   (256 * 1024)        /* 256KB */
 #define DEFAULT_SYS_STACK_SIZE (256 * 1024)        /* 256KB */
 
-#define CP_INIT_VMA_SIZE (64 * 1024 * 1024) /* 64MB */
-
 #define DEFAULT_VMA_COUNT 64
 
 /* ELF aux vectors  */

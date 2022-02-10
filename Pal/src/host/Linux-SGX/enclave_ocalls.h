@@ -7,7 +7,6 @@
 #include <linux/socket.h>
 
 #include "linux_types.h"
-#include "pal.h"
 #include "pal_linux.h"
 #include "sgx_attest.h"
 

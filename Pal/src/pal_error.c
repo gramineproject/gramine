@@ -4,8 +4,6 @@
 #include "api.h"
 #include "pal_error.h"
 
-#include "assert.h"
-
 static const char* g_pal_error_list[] = {
     [PAL_ERROR_SUCCESS] = "Success",
     [PAL_ERROR_NOTIMPLEMENTED] = "Function not implemented",

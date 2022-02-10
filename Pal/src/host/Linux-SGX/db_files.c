@@ -7,7 +7,6 @@
 
 #include <asm/fcntl.h>
 #include <asm/stat.h>
-#include <linux/fs.h>
 #include <linux/types.h>
 #include <sys/types.h>
 
@@ -22,7 +21,6 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "perm.h"
 #include "stat.h"
 
 #include "enclave_pages.h"

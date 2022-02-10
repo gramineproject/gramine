@@ -8,9 +8,7 @@
 #include <stdint.h>
 
 #include "api.h"
-#include "assert.h"
 #include "pal.h"
-#include "shim_defs.h"
 #include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"

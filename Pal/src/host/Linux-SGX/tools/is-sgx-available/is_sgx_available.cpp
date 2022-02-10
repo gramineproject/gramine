@@ -6,7 +6,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <iostream>
 #include <sys/stat.h>
 

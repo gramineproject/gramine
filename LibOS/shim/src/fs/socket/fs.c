@@ -6,13 +6,9 @@
  */
 
 #include <asm/fcntl.h>
-#include <asm/mman.h>
-#include <asm/unistd.h>
 #include <errno.h>
-#include <linux/fcntl.h>
 
 #include "pal.h"
-#include "pal_error.h"
 #include "shim_fs.h"
 #include "shim_internal.h"
 #include "shim_lock.h"

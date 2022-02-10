@@ -6,22 +6,14 @@
  */
 
 #include <errno.h>
-#include <linux/futex.h>
-#include <sys/mman.h>
-#include <sys/syscall.h>
 
 #include "pal.h"
-#include "pal_error.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
 #include "shim_internal.h"
-#include "shim_ipc.h"
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_vma.h"
-#include "stat.h"
 
 static int close_on_exec(struct shim_fd_handle* fd_hdl, struct shim_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {

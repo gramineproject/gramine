@@ -13,9 +13,7 @@
 #include <asm/fcntl.h>
 #include <asm/ioctls.h>
 #include <asm/poll.h>
-#include <linux/sched.h>
 #include <linux/time.h>
-#include <linux/types.h>
 #include <sys/socket.h>
 
 #include "api.h"
@@ -24,14 +22,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
-#include "pal_rtld.h"
-
-/*
- * This needs to be included here because it conflicts with sigset.h included in pal_linux.
- * TODO: Make sure we define WIFEXITED() etc. and remove this.
- */
-#include <sys/wait.h>
 
 extern char* g_pal_loader_path;
 extern char* g_libpal_path;

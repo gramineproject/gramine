@@ -1,5 +1,4 @@
 #include "api.h"
-#include "linux_utils.h"
 #include "pal_internal.h"
 #include "topo_info.h"
 

@@ -8,11 +8,8 @@
  * its sub-directories.
  */
 
-#include <limits.h>
-
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
-#include "stat.h"
 
 int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
                               char* str, size_t str_size) {

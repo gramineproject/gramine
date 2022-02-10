@@ -14,8 +14,6 @@
 #include "shim_process.h"
 #include "shim_table.h"
 #include "shim_thread.h"
-#include "shim_utils.h"
-#include "shim_vma.h"
 
 /*
  * TODO: implement actual limitation on each resource.

@@ -7,10 +7,8 @@
 
 #include <asm/prctl.h>
 
-#include "api.h"
 #include "cpu.h"
 #include "pal_linux.h"
-#include "topo_info.h"
 
 int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {

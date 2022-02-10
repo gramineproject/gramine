@@ -9,7 +9,6 @@
 #include <stdbool.h>
 
 #include "api.h"
-#include "elf/elf.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"

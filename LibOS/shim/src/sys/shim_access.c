@@ -8,14 +8,10 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
-#include "pal.h"
-#include "pal_error.h"
 #include "shim_fs.h"
-#include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
 #include "shim_table.h"
-#include "shim_thread.h"
 
 long shim_do_access(const char* file, mode_t mode) {
     return shim_do_faccessat(AT_FDCWD, file, mode);

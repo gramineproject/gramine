@@ -1,5 +1,4 @@
 #include <asm/errno.h>
-#include <stddef.h>
 
 #include "ecall_types.h"
 #include "generated-offsets-build.h"

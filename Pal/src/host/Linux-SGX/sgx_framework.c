@@ -3,12 +3,8 @@
 #include "gsgx.h"
 #include "hex.h"
 #include "linux_utils.h"
-#include "pal_linux.h"
-#include "pal_rtld.h"
 #include "sgx_arch.h"
-#include "sgx_enclave.h"
 #include "sgx_internal.h"
-#include "sgx_log.h"
 
 static int g_gsgx_device = -1;
 static int g_isgx_device = -1;

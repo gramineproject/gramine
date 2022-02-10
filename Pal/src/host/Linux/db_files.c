@@ -5,17 +5,13 @@
  * This file contains operands to handle streams with URIs that start with "file:" or "dir:".
  */
 
-#include <linux/types.h>
-
 #include "api.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 #include "pal_linux_error.h"
-#include "perm.h"
 #include "stat.h"
 
 /* 'open' operation for file streams */

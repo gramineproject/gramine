@@ -14,7 +14,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 
 static int g_rand_fd = -1;
 

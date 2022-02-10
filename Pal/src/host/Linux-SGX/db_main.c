@@ -9,27 +9,19 @@
  * arguments and manifest.
  */
 
-#include <asm/errno.h>
-#include <asm/ioctls.h>
-#include <asm/mman.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 
 #include "api.h"
-#include "ecall_types.h"
-#include "elf/elf.h"
-#include "enclave_pages.h"
 #include "enclave_pf.h"
 #include "enclave_tf.h"
 #include "init.h"
 #include "pal.h"
-#include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_rtld.h"
 #include "pal_topology.h"
-#include "protected_files.h"
 #include "toml.h"
 #include "toml_utils.h"
 

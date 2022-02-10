@@ -15,9 +15,6 @@
  * In addition, we report executable memory mappings to the profiling subsystem.
  */
 
-#include "api.h"
-#include "elf/elf.h"
-#include "pal.h"
 #include "pal_linux.h"
 #include "pal_rtld.h"
 

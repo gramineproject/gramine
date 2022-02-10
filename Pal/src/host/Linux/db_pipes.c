@@ -5,7 +5,6 @@
  * This file contains operands to handle streams with URIs that start with "pipe:" or "pipe.srv:".
  */
 
-#include <asm/errno.h>
 #include <asm/fcntl.h>
 #include <asm/ioctls.h>
 #include <asm/poll.h>
@@ -21,7 +20,6 @@
 #include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_linux_defs.h"
 
 /*!
  * \brief Create a listening abstract UNIX socket as preparation for connecting two ends of a pipe.

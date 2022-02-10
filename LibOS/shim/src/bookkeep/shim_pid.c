@@ -7,9 +7,7 @@
 
 #include "assert.h"
 #include "avl_tree.h"
-#include "cpu.h"
 #include "log.h"
-#include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"
 #include "shim_types.h"

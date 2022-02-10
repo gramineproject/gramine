@@ -4,7 +4,6 @@
  */
 
 #include "pal_internal.h"
-#include "pal_topology.h"
 
 #define BPI  32
 #define POWER2(power) \

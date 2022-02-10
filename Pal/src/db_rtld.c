@@ -27,8 +27,6 @@
  *    any adjustment (thus `l_base_diff == 0x0`).
  */
 
-#include <stdbool.h>
-
 #include "api.h"
 #include "elf/elf.h"
 #include "pal.h"

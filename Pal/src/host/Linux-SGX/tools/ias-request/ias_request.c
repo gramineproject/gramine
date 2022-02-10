@@ -5,13 +5,11 @@
 
 #define _GNU_SOURCE
 
-#include <errno.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "ias.h"
-#include "sgx_arch.h"
 #include "sgx_attest.h"
 #include "util.h"
 

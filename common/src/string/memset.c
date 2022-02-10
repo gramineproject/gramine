@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "api.h"
-#include "assert.h"
 #include "log.h"
 
 #undef memset

@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <mbedtls/pk.h>
 #include <mbedtls/sha256.h>

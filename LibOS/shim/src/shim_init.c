@@ -5,8 +5,6 @@
  * This file contains entry and exit functions of library OS.
  */
 
-#include <asm/fcntl.h>
-#include <asm/unistd.h>
 #include <sys/mman.h>
 
 #include "api.h"
@@ -25,11 +23,9 @@
 #include "shim_lock.h"
 #include "shim_process.h"
 #include "shim_sync.h"
-#include "shim_table.h"
 #include "shim_tcb.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
-#include "shim_vdso.h"
 #include "shim_vma.h"
 #include "toml.h"
 #include "toml_utils.h"

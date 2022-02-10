@@ -6,8 +6,6 @@
 #ifndef PF_UTIL_H
 #define PF_UTIL_H
 
-#include <stdint.h>
-
 #include "protected_files.h"
 
 /* High-level protected files helper functions */

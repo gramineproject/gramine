@@ -16,20 +16,14 @@
                      */
 
 
-#include <asm/errno.h>
 #include <linux/signal.h>
 #include <stdbool.h>
 
 #include "api.h"
 #include "cpu.h"
 #include "debug_map.h"
-#include "ecall_types.h"
-#include "ocall_types.h"
-#include "pal_linux.h"
 #include "rpc_queue.h"
-#include "sgx_enclave.h"
 #include "sgx_internal.h"
-#include "sgx_log.h"
 #include "sigreturn.h"
 #include "ucontext.h"
 

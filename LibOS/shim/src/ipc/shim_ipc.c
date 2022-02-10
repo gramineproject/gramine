@@ -19,7 +19,6 @@
 #include "shim_internal.h"
 #include "shim_ipc.h"
 #include "shim_lock.h"
-#include "shim_thread.h"
 #include "shim_types.h"
 #include "shim_utils.h"
 

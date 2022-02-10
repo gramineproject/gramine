@@ -7,7 +7,6 @@
 #include <linux/sched.h>
 #include <linux/signal.h>
 
-#include "shim_internal.h"
 #include "shim_table.h"
 
 long shim_do_fork(void) {
