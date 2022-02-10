@@ -95,9 +95,9 @@ at that path. For example::
    libos.entrypoint = "/usr/bin/python3.8"
 
    fs.mount = [
-     { type = "chroot", path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" }
+     { path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" }
      # Or, if using a binary from your local directory:
-     # uri = "file:python3.8"
+     # { path = "/usr/bin/python3.8", uri = "file:python3.8" }
    ]
 
 .. note ::
@@ -339,7 +339,7 @@ FS mount points
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
     ]
 
-    or, as separate sections:
+    # or, as separate sections:
 
     [[fs.mount]]
     type = "[chroot|...]"
@@ -362,16 +362,17 @@ above, you can either specify its value using the inline syntax, or use multiple
 
 .. note::
    If you use the inline table syntax (``{ ... }``), each table must fit in
-   a single line. While multi-line table are currently accepted by Gramine, they
-   are not valid TOML and Gramine might disallow them in the future.
+   a single line. While multi-line tables are currently accepted by Gramine,
+   they are not valid TOML and Gramine might disallow them in the future.
 
-Gramine currently supports two types of mount points:
+The ``type`` parameter specifies the mount point type. If omitted, it defaults
+to ``"chroot"``. Gramine currently supports two types of mount points:
 
-* ``chroot``: Host-backed files. All host files and sub-directories found under
-  ``[URI]`` are forwarded to the Gramine instance and placed under ``[PATH]``.
-  For example, with a host-level path specified as ``uri = "file:/one/path/"``
-  and forwarded to Gramine via ``path = "/another/path"``, a host-level file
-  ``/one/path/file`` is visible to graminized application as
+* ``chroot`` (default): Host-backed files. All host files and sub-directories
+  found under ``[URI]`` are forwarded to the Gramine instance and placed under
+  ``[PATH]``. For example, with a host-level path specified as ``uri =
+  "file:/one/path/"`` and forwarded to Gramine via ``path = "/another/path"``, a
+  host-level file ``/one/path/file`` is visible to graminized application as
   ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
