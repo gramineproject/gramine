@@ -98,10 +98,14 @@ Example
 
 Example SigRL retrieval::
 
+.. code-block:: console
+
     $ gramine-sgx-ias-request sigrl -k $IAS_API_KEY -g ef0a0000 -i sigrl
     No SigRL for given EPID group ID ef0a0000
 
 Example quote verification::
+
+.. code-block:: console
 
     $ gramine-sgx-ias-request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -a ias.adv -v
     Verbose output enabled

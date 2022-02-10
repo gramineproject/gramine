@@ -31,7 +31,7 @@ Example
 
 Example output::
 
-    $ gramine-sgx-quote-dump -m gr.quote
+    > gramine-sgx-quote-dump -m gr.quote
     version           : 0002
     sign_type         : 0001
     epid_group_id     : 00000aef

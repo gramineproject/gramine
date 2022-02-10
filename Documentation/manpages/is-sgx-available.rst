@@ -46,6 +46,8 @@ Example
 
 Example output::
 
+.. code-block:: console
+
     $ is-sgx-available
     SGX supported by CPU: true
     SGX1 (ECREATE, EENTER, ...): true
