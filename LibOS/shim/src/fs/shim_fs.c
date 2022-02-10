@@ -101,6 +101,13 @@ static int mount_root(void) {
         ret = -EINVAL;
         goto out;
     }
+    if (!fs_root_type) {
+        fs_root_type = strdup("chroot");
+        if (!fs_root_type) {
+            ret = -ENOMEM;
+            goto out;
+        }
+    }
 
     ret = toml_string_in(g_manifest_root, "fs.root.uri", &fs_root_uri);
     if (ret < 0) {
@@ -168,11 +175,8 @@ static int mount_one_other(toml_table_t* mount, const char* key) {
 
     int ret;
 
+    /* `type` can be omitted */
     toml_raw_t mount_type_raw = toml_raw_in(mount, "type");
-    if (!mount_type_raw) {
-        log_error("Cannot find 'fs.mount.%s.path'", key);
-        return -EINVAL;
-    }
 
     toml_raw_t mount_path_raw = toml_raw_in(mount, "path");
     if (!mount_path_raw) {
@@ -190,11 +194,19 @@ static int mount_one_other(toml_table_t* mount, const char* key) {
     char* mount_path = NULL;
     char* mount_uri  = NULL;
 
-    ret = toml_rtos(mount_type_raw, &mount_type);
-    if (ret < 0) {
-        log_error("Cannot parse 'fs.mount.%s.type'", key);
-        ret = -EINVAL;
-        goto out;
+    if (mount_type_raw) {
+        ret = toml_rtos(mount_type_raw, &mount_type);
+        if (ret < 0) {
+            log_error("Cannot parse 'fs.mount.%s.type'", key);
+            ret = -EINVAL;
+            goto out;
+        }
+    } else {
+        mount_type = strdup("chroot");
+        if (!mount_type) {
+            ret = -ENOMEM;
+            goto out;
+        }
     }
 
     ret = toml_rtos(mount_path_raw, &mount_path);
