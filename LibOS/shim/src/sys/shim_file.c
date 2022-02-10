@@ -136,10 +136,14 @@ long shim_do_rmdir(const char* pathname) {
         goto out;
     }
 
-    if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->unlink) {
-        if ((ret = dent->fs->d_ops->unlink(dent)) < 0)
-            goto out;
+    if (!dent->fs || !dent->fs->d_ops || !dent->fs->d_ops->unlink) {
+        ret = -EACCES;
+        goto out;
     }
+
+    ret = dent->fs->d_ops->unlink(dent);
+    if (ret < 0)
+        goto out;
 
     dent->state |= DENTRY_NEGATIVE;
 out:
