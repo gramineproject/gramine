@@ -94,11 +94,11 @@ at that path. For example::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
-   fs.mount.python.type = "chroot"
-   fs.mount.python.path = "/usr/bin/python3.8"
-   fs.mount.python.uri = "file:/usr/bin/python3.8"
-   # Or, if using a binary from your local directory:
-   # fs.mount.python.uri = "file:python3.8"
+   fs.mount = [
+     { path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" },
+     # Or, if using a binary from your local directory:
+     # { path = "/usr/bin/python3.8", uri = "file:python3.8" },
+   ]
 
 .. note ::
    Earlier, ``libos.entrypoint`` was a PAL URI. If you used it with a relative
@@ -326,42 +326,67 @@ Root FS mount point
     fs.root.uri  = "[URI]"
 
 This syntax specifies the root file system to be mounted inside the library OS.
-If not specified, then Gramine mounts the current working directory as the
-root. There can be only one root FS mount point specified in the manifest.
+Both parameters are optional. If not specified, then Gramine mounts the current
+working directory as the root.
 
 FS mount points
 ^^^^^^^^^^^^^^^
 
 ::
 
-    fs.mount.[identifier].type = "[chroot|tmpfs]"
-    fs.mount.[identifier].path = "[PATH]"
-    fs.mount.[identifier].uri  = "[URI]"
+    fs.mount = [
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+      { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
+    ]
+
+    # or, as separate sections:
+
+    [[fs.mount]]
+    type = "[chroot|...]"
+    path = "[PATH]"
+    uri  = "[URI]"
+
+    [[fs.mount]]
+    type = "[chroot|...]"
+    path = "[PATH]"
+    uri  = "[URI]"
 
 This syntax specifies how file systems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
-required in the manifest (the mount point of linked libraries).
+required in the manifest (the mount point of linked libraries). The filesystems
+will be mounted in the order in which they appear in the manifest.
 
-Gramine currently supports two types of mount points:
+The ``fs.mount`` option is a TOML array of tables. As shown in the examples
+above, you can either specify its value using the inline syntax, or use multiple
+``[[fs.mount]]`` sections.
 
-* ``chroot``: Host-backed files. All host files and sub-directories found under
-  ``[URI]`` are forwarded to the Gramine instance and placed under ``[PATH]``.
-  For example, with a host-level path specified as
-  ``fs.mount.lib.uri = "file:/one/path/"`` and forwarded to Gramine via
-  ``fs.mount.lib.path = "/another/path"``, a host-level file
-  ``/one/path/file`` is visible to graminized application as
+.. note::
+   If you use the inline table syntax (``{ ... }``), each table should fit in
+   a single line. While multi-line tables are currently accepted by Gramine,
+   they are not valid TOML and Gramine might disallow them in the future.
+
+The ``type`` parameter specifies the mount point type. If omitted, it defaults
+to ``"chroot"``. Gramine currently supports two types of mount points:
+
+* ``chroot`` (default): Host-backed files. All host files and sub-directories
+  found under ``[URI]`` are forwarded to the Gramine instance and placed under
+  ``[PATH]``. For example, with a host-level path specified as ``uri =
+  "file:/one/path/"`` and forwarded to Gramine via ``path = "/another/path"``, a
+  host-level file ``/one/path/file`` is visible to graminized application as
   ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
 
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
-  empty on Gramine instance startup) and are destroyed when a Gramine
-  instance terminates. The ``[URI]`` parameter is always ignored. ``tmpfs``
-  is especially useful in trusted environments (like Intel SGX) for securely
-  storing temporary files. This concept is similar to Linux's tmpfs. Files
-  under ``tmpfs`` mount points currently do *not* support mmap and each process
-  has its own, non-shared tmpfs (i.e. processes don't see each other's files).
+  empty on Gramine instance startup) and are destroyed when a Gramine instance
+  terminates. The ``[URI]`` parameter is always ignored, and can be omitted.
+
+  ``tmpfs`` is especially useful in trusted environments (like Intel SGX) for
+  securely storing temporary files. This concept is similar to Linux's tmpfs.
+  Files under ``tmpfs`` mount points currently do *not* support mmap and each
+  process has its own, non-shared tmpfs (i.e. processes don't see each other's
+  files).
 
 Start (current working) directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -840,3 +865,15 @@ This usually points to the LibOS library ``libsysdb.so``.
 
 Note that previously this syntax allowed to specify the list of URIs (separated
 by commas). This ability was never used and therefore was removed completely.
+
+FS mount points (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   fs.mount.[identifier].type = "[chroot|...]"
+   fs.mount.[identifier].path = "[PATH]"
+   fs.mount.[identifier].uri  = "[URI]"
+
+This syntax used a TOML table schema with keys for each mount. It has been
+replaced with a TOML array.
