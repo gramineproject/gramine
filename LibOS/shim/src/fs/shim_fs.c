@@ -86,8 +86,8 @@ static void free_mount(struct shim_mount* mount) {
 
 static bool mount_migrated = false;
 
-static int __mount_root(void) {
-    int ret = 0;
+static int mount_root(void) {
+    int ret;
     char* fs_root_type = NULL;
     char* fs_root_uri  = NULL;
 
@@ -107,143 +107,126 @@ static int __mount_root(void) {
         goto out;
     }
 
-    if (fs_root_type && fs_root_uri) {
-        log_debug("Mounting root as %s filesystem: from %s to /", fs_root_type, fs_root_uri);
-        if ((ret = mount_fs(fs_root_type, fs_root_uri, "/")) < 0) {
-            log_error("Mounting root filesystem failed (%d)", ret);
+    if (!fs_root_type && !fs_root_uri) {
+        ret = mount_fs("chroot", URI_PREFIX_FILE ".", "/");
+    } else if (!fs_root_type || !strcmp(fs_root_type, "chroot")) {
+        if (!fs_root_uri) {
+            log_error("No value provided for 'fs.root.uri'");
+            ret = -EINVAL;
             goto out;
         }
+        ret = mount_fs("chroot", fs_root_uri, "/");
     } else {
-        log_debug("Mounting root as chroot filesystem: from file:. to /");
-        if ((ret = mount_fs("chroot", URI_PREFIX_FILE, "/")) < 0) {
-            log_error("Mounting root filesystem failed (%d)", ret);
-            goto out;
-        }
+        ret = mount_fs(fs_root_type, fs_root_uri ?: "", "/");
     }
-
-    ret = 0;
 out:
     free(fs_root_type);
     free(fs_root_uri);
     return ret;
 }
 
-static int __mount_sys(void) {
+static int mount_sys(void) {
     int ret;
 
-    log_debug("Mounting special proc filesystem: /proc");
-    if ((ret = mount_fs("pseudo", "proc", "/proc")) < 0) {
-        log_error("Mounting proc filesystem failed (%d)", ret);
+    ret = mount_fs("pseudo", "proc", "/proc");
+    if (ret < 0)
         return ret;
-    }
 
-    log_debug("Mounting special dev filesystem: /dev");
-    if ((ret = mount_fs("pseudo", "dev", "/dev")) < 0) {
-        log_error("Mounting dev filesystem failed (%d)", ret);
+    ret = mount_fs("pseudo", "dev", "/dev");
+    if (ret < 0)
         return ret;
-    }
 
-    log_debug("Mounting terminal device /dev/tty under /dev");
-    if ((ret = mount_fs("chroot", URI_PREFIX_DEV "tty", "/dev/tty")) < 0) {
-        log_error("Mounting terminal device /dev/tty failed (%d)", ret);
+    ret = mount_fs("chroot", URI_PREFIX_DEV "tty", "/dev/tty");
+    if (ret < 0)
         return ret;
-    }
 
     if (g_pal_public_state->enable_sysfs_topology) {
-        log_debug("Mounting special sys filesystem: /sys");
-        if ((ret = mount_fs("pseudo", "sys", "/sys")) < 0) {
-            log_error("Mounting sys filesystem failed (%d)", ret);
+        ret = mount_fs("pseudo", "sys", "/sys");
+        if (ret < 0)
             return ret;
-        }
     }
 
     return 0;
 }
 
-static int __mount_one_other(toml_table_t* mount) {
+/* TODO: Change `key` to `index` (integer) when `mount_nonroot_from_toml_table` is gone */
+static int mount_one_nonroot(toml_table_t* mount, const char* key) {
     assert(mount);
 
     int ret;
-    const char* key = toml_table_key(mount);
-
-    toml_raw_t mount_type_raw = toml_raw_in(mount, "type");
-    if (!mount_type_raw) {
-        log_error("Cannot find 'fs.mount.%s.type'", key);
-        return -EINVAL;
-    }
-
-    toml_raw_t mount_path_raw = toml_raw_in(mount, "path");
-    if (!mount_path_raw) {
-        log_error("Cannot find 'fs.mount.%s.path'", key);
-        return -EINVAL;
-    }
-
-    toml_raw_t mount_uri_raw = toml_raw_in(mount, "uri");
-    if (!mount_uri_raw) {
-        log_error("Cannot find 'fs.mount.%s.uri'", key);
-        return -EINVAL;
-    }
 
     char* mount_type = NULL;
     char* mount_path = NULL;
     char* mount_uri  = NULL;
 
-    ret = toml_rtos(mount_type_raw, &mount_type);
+    ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
         log_error("Cannot parse 'fs.mount.%s.type'", key);
         ret = -EINVAL;
         goto out;
     }
 
-    ret = toml_rtos(mount_path_raw, &mount_path);
+    ret = toml_string_in(mount, "path", &mount_path);
     if (ret < 0) {
         log_error("Cannot parse 'fs.mount.%s.path'", key);
         ret = -EINVAL;
         goto out;
     }
 
-    ret = toml_rtos(mount_uri_raw, &mount_uri);
+    ret = toml_string_in(mount, "uri", &mount_uri);
     if (ret < 0) {
         log_error("Cannot parse 'fs.mount.%s.uri'", key);
         ret = -EINVAL;
         goto out;
     }
 
-    log_debug("Mounting as %s filesystem: from %s to %s", mount_type, mount_uri, mount_path);
-
-    if (!strcmp(mount_path, "/")) {
-        log_error(
-            "Root mount / already exists, verify that there are no duplicate mounts in manifest\n"
-            "(note that root / is automatically mounted in Gramine and can be changed via "
-            "'fs.root' manifest entry).\n");
-        ret = -EEXIST;
-        goto out;
-    }
-
-    if (!strcmp(mount_path, ".") || !strcmp(mount_path, "..")) {
-        log_error("Mount points '.' and '..' are not allowed, remove them from manifest.");
+    if (!mount_path) {
+        log_error("No value provided for 'fs.mount.%s.path'", key);
         ret = -EINVAL;
         goto out;
     }
 
-    if (!strcmp(mount_uri, "file:/proc") ||
-            !strcmp(mount_uri, "file:/sys") ||
-            !strcmp(mount_uri, "file:/dev") ||
-            !strncmp(mount_uri, "file:/proc/", strlen("file:/proc/")) ||
-            !strncmp(mount_uri, "file:/sys/", strlen("file:/sys/")) ||
-            !strncmp(mount_uri, "file:/dev/", strlen("file:/dev/"))) {
-        log_error("Mounting %s may expose unsanitized, unsafe files to unsuspecting application. "
-                  "Gramine will continue application execution, but this configuration is not "
-                  "recommended for use in production!", mount_uri);
-    }
-
-    if ((ret = mount_fs(mount_type, mount_uri, mount_path)) < 0) {
-        log_error("Mounting %s on %s (type=%s) failed (%d)", mount_uri, mount_path, mount_type,
-                  -ret);
+    if (!strcmp(mount_path, "/")) {
+        log_error("'fs.mount.%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
+                  "via the 'fs.root' manifest entry.", key);
+        ret = -EINVAL;
         goto out;
     }
 
-    ret = 0;
+    if (mount_path[0] != '/') {
+        /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow them
+         * completely two versions after it. */
+        if (!strcmp(mount_path, ".") || !strcmp(mount_path, "..")) {
+            log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
+            ret = -EINVAL;
+            goto out;
+        }
+        log_error("Detected deprecated syntax: 'fs.mount.%s.path' (\"%s\") is not absolute. "
+                  "Consider converting it to absolute by adding \"/\" at the beginning.",
+                  key, mount_path);
+    }
+
+    if (!mount_type || !strcmp(mount_type, "chroot")) {
+        if (!mount_uri) {
+            log_error("No value provided for 'fs.mount.%s.uri'", key);
+            ret = -EINVAL;
+            goto out;
+        }
+
+        if (!strcmp(mount_uri, "file:/proc") ||
+                !strcmp(mount_uri, "file:/sys") ||
+                !strcmp(mount_uri, "file:/dev") ||
+                !strncmp(mount_uri, "file:/proc/", strlen("file:/proc/")) ||
+                !strncmp(mount_uri, "file:/sys/", strlen("file:/sys/")) ||
+                !strncmp(mount_uri, "file:/dev/", strlen("file:/dev/"))) {
+            log_error("Mounting %s may expose unsanitized, unsafe files to unsuspecting "
+                      "application. Gramine will continue application execution, but this "
+                      "configuration is not recommended for use in production!", mount_uri);
+        }
+        ret = mount_fs("chroot", mount_uri, mount_path);
+    } else {
+        ret = mount_fs(mount_type, mount_uri ?: "", mount_path);
+    }
 out:
     free(mount_type);
     free(mount_path);
@@ -251,7 +234,12 @@ out:
     return ret;
 }
 
-static int __mount_others(void) {
+/*
+ * Mount filesystems using the deprecated TOML-table syntax.
+ *
+ * FIXME: This is deprecated starting from Gramine v1.2 and can be removed two versions after it.
+ */
+static int mount_nonroot_from_toml_table(void) {
     int ret = 0;
 
     assert(g_manifest_root);
@@ -264,24 +252,31 @@ static int __mount_others(void) {
         return 0;
 
     ssize_t mounts_cnt = toml_table_ntab(manifest_fs_mounts);
-    if (mounts_cnt <= 0)
+    if (mounts_cnt < 0)
+        return -EINVAL;
+    if (mounts_cnt == 0)
         return 0;
 
-    /* *** Warning: A _very_ ugly hack below (hopefully only temporary) ***
+    log_error("Detected deprecated syntax for 'fs.mount'. Consider converting 'fs.mount' to an "
+              "array: 'fs.mount = [{ type = \"chroot\", uri = \"...\", path = \"...\" }]'.");
+
+    /*
+     * *** Warning: A _very_ ugly hack below ***
      *
-     * Currently we don't use proper TOML syntax for declaring mountpoints, instead, we use a syntax
-     * which resembles the pre-TOML one used in Gramine. As a result, the entries are not ordered,
-     * but Gramine actually relies on the specific mounting order (e.g. you can't mount /lib/asdf
-     * first and then /lib, but the other way around works). The problem is, that TOML structure is
-     * just a dictionary, so the order of keys is not preserved.
+     * In the TOML-table syntax, the entries are not ordered, but Gramine actually relies on the
+     * specific mounting order (e.g. you can't mount /lib/asdf first and then /lib, but the other
+     * way around works). The problem is, that TOML structure is just a dictionary, so the order of
+     * keys is not preserved.
      *
-     * The correct solution is to change the manifest syntax for mounts, but this will be a huge,
-     * breaking change. For now, just to fix the issue, we use an ugly heuristic - we apply mounts
-     * sorted by the path length, which in most cases should result in a proper mount order.
+     * To fix the issue, we use an ugly heuristic - we apply mounts sorted by the path length, which
+     * in most cases should result in a proper mount order.
      *
      * We do this in O(n^2) because we don't have a sort function, but that shouldn't be an issue -
      * usually there are around 5 mountpoints with ~30 chars in paths, so it should still be quite
      * fast.
+     *
+     * Fortunately, the table syntax is deprecated, so we'll be able to remove this code in a future
+     * Gramine release.
      *
      * Corresponding issue: https://github.com/gramineproject/gramine/issues/23.
      */
@@ -320,7 +315,7 @@ static int __mount_others(void) {
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
             assert(mount);
-            ret = __mount_one_other(mount);
+            ret = mount_one_nonroot(mount, keys[j]);
             if (ret < 0)
                 goto out;
         }
@@ -331,16 +326,54 @@ out:
     return ret;
 }
 
+static int mount_nonroot_from_toml_array(void) {
+    int ret;
+
+    assert(g_manifest_root);
+    toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
+    if (!manifest_fs)
+        return 0;
+
+    toml_array_t* manifest_fs_mounts = toml_array_in(manifest_fs, "mount");
+    if (!manifest_fs_mounts)
+        return 0;
+
+    ssize_t mounts_cnt = toml_array_nelem(manifest_fs_mounts);
+    if (mounts_cnt < 0)
+        return -EINVAL;
+
+    for (size_t i = 0; i < (size_t)mounts_cnt; i++) {
+        toml_table_t* mount = toml_table_at(manifest_fs_mounts, i);
+        if (!mount) {
+            log_error("Invalid mount in manifest at index %zd (not a TOML table)", i);
+            return -EINVAL;
+        }
+
+        /* Prepare a key for `mount_one_nonroot`, so that in case of errors it will display paths as
+         * `fs.mount.[0].type` etc. */
+        char key[23];
+        snprintf(key, sizeof(key), "[%zu]", i);
+
+        ret = mount_one_nonroot(mount, key);
+        if (ret < 0)
+            return ret;
+    }
+    return 0;
+}
+
+
 int init_mount_root(void) {
     if (mount_migrated)
         return 0;
 
     int ret;
 
-    if ((ret = __mount_root()) < 0)
+    ret = mount_root();
+    if (ret < 0)
         return ret;
 
-    if ((ret = __mount_sys()) < 0)
+    ret = mount_sys();
+    if (ret < 0)
         return ret;
 
     return 0;
@@ -352,7 +385,12 @@ int init_mount(void) {
 
     int ret;
 
-    if ((ret = __mount_others()) < 0)
+    ret = mount_nonroot_from_toml_table();
+    if (ret < 0)
+        return ret;
+
+    ret = mount_nonroot_from_toml_array();
+    if (ret < 0)
         return ret;
 
     assert(g_manifest_root);
@@ -504,16 +542,20 @@ int mount_fs(const char* type, const char* uri, const char* mount_path) {
     int ret;
     struct shim_dentry* mount_point = NULL;
 
+    log_debug("mounting \"%s\" (%s) under %s", uri, type, mount_path);
+
     lock(&g_dcache_lock);
 
     int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
     if ((ret = path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point)) < 0) {
-        log_warning("error looking up mountpoint %s: %d", mount_path, ret);
+        log_error("error looking up mountpoint %s: %d", mount_path, ret);
         goto out;
     }
 
-    if ((ret = mount_fs_at_dentry(type, uri, mount_path, mount_point)) < 0)
+    if ((ret = mount_fs_at_dentry(type, uri, mount_path, mount_point)) < 0) {
+        log_error("error mounting \"%s\" (%s) under %s: %d", uri, type, mount_path, ret);
         goto out;
+    }
 
     ret = 0;
 out:
