@@ -4,7 +4,6 @@
  (c-mode . ((c-file-style . "k&r")
             (c-basic-offset . 4)))
  (makefile-mode . ((indent-tabs-mode . t)))
- (asm-mode . ((indent-tabs-mode . t)))
  (shell-script-mode . ((indent-tabs-mode . t)))
  ("\.git/COMMIT_EDITMSG" . ((nil . ((fill-column . 80)))))
  (markdown-mode . ((fill-column . 80)))
