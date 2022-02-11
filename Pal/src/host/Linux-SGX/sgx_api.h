@@ -26,28 +26,13 @@ bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usi
  * Caller is responsible for parameter alignment: 512B for `targetinfo`, 128B for `reportdata`,
  * and 512B for `report`.
  */
-static inline int sgx_report(const sgx_target_info_t* targetinfo, const void* reportdata,
-                             sgx_report_t* report) {
-    __asm__ volatile(
-        ENCLU "\n"
-        :: "a"(EREPORT), "b"(targetinfo), "c"(reportdata), "d"(report)
-        : "memory");
-    return 0;
-}
+int sgx_report(const sgx_target_info_t* targetinfo, const void* reportdata, sgx_report_t* report);
 
 /*!
  * \brief Low-level wrapper around EGETKEY instruction leaf.
  *
  * Caller is responsible for parameter alignment: 512B for `keyrequest` and 16B for `key`.
  */
-static inline int64_t sgx_getkey(sgx_key_request_t* keyrequest, sgx_key_128bit_t* key) {
-    int64_t rax = EGETKEY;
-    __asm__ volatile(
-        ENCLU "\n"
-        : "+a"(rax)
-        : "b"(keyrequest), "c"(key)
-        : "memory");
-    return rax;
-}
+int64_t sgx_getkey(sgx_key_request_t* keyrequest, sgx_key_128bit_t* key);
 
 #endif /* SGX_API_H */

@@ -3,15 +3,23 @@
 #ifndef _SHIM_INTERNAL_ARCH_H_
 #define _SHIM_INTERNAL_ARCH_H_
 
+/*
+ * The System V ABI (see section 3.4.1) expects us to set the following before jumping to the entry
+ * point:
+ *
+ * - RDX: function pointer to be registered with `atexit` (we pass 0)
+ * - RSP: the initial stack, contains program arguments and environment
+ * - FLAGS: should be zeroed out
+ */
 #define CALL_ELF_ENTRY(ENTRY, ARGP)         \
     do {                                    \
         __asm__ volatile(                   \
             "pushq $0\r\n"                  \
             "popfq\r\n"                     \
-            "movq %%rbx, %%rsp\r\n"         \
-            "jmp *%%rax\r\n"                \
+            "movq %1, %%rsp\r\n"            \
+            "jmp *%0\r\n"                   \
             :                               \
-            : "a"(ENTRY), "b"(ARGP), "d"(0) \
+            : "r"(ENTRY), "r"(ARGP), "d"(0) \
             : "memory", "cc");              \
         __builtin_unreachable();            \
     } while(0)
