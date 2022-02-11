@@ -44,9 +44,7 @@ Exit status
 Example
 =======
 
-Example output::
-
-.. code-block:: console
+.. code-block:: sh
 
     $ is-sgx-available
     SGX supported by CPU: true
