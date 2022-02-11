@@ -55,5 +55,4 @@ sgx_getkey:
     movq %r10, %rbx
     .cfi_restore %rbx
     ret
-
     .cfi_endproc
