@@ -8,10 +8,10 @@
         __asm__ volatile(                   \
             "pushq $0\r\n"                  \
             "popfq\r\n"                     \
-            "movq %%rbx, %%rsp\r\n"         \
-            "jmp *%%rax\r\n"                \
+            "movq %1, %%rsp\r\n"            \
+            "jmp *%0\r\n"                   \
             :                               \
-            : "a"(ENTRY), "b"(ARGP), "d"(0) \
+            : "r"(ENTRY), "r"(ARGP)         \
             : "memory", "cc");              \
         __builtin_unreachable();            \
     } while(0)

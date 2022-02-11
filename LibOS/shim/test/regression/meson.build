@@ -152,6 +152,10 @@ if sgx
         'attestation': {
             # for `sgx_arch.h`
             'include_directories': include_directories('../../../../Pal/src/host/Linux-SGX'),
+            'source': [
+                'attestation.c',
+                '../../../../Pal/src/host/Linux-SGX/enclave_api.S',
+            ],
 
             'dependencies': mbedtls_dep,
         },
