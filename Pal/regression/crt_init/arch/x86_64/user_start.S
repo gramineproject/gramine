@@ -2,9 +2,9 @@
  * For detailed description of the stack layout see Pal/src/db_rtld.c:start_execution().
  */
 
-	.text
-	.globl _start
-	.type _start,@function
+    .text
+    .globl _start
+    .type _start,@function
 _start:
     .cfi_startproc
 
@@ -22,7 +22,7 @@ _start:
 
     callq *main@GOTPCREL(%rip)
 
-	mov %rax, %rdi
+    mov %rax, %rdi
     callq *DkProcessExit@GOTPCREL(%rip)
 
     .cfi_endproc
