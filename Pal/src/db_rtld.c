@@ -234,6 +234,11 @@ static int perform_relocations(struct link_map* map) {
         dynamic_section_entry++;
     }
 
+    if (!relas_addr && relas_size) {
+        log_error("Incorrect relocations (no relocs found but size is non-zero)");
+        return -PAL_ERROR_DENIED;
+    }
+
     /* perform relocs: supported binaries may have only R_X86_64_RELATIVE/R_X86_64_GLOB_DAT relas */
     ElfW(Rela)* relas_addr_end = (ElfW(Rela)*)((uintptr_t)relas_addr + relas_size);
     for (ElfW(Rela)* rela = relas_addr; rela < relas_addr_end; rela++) {
@@ -256,8 +261,10 @@ static int perform_relocations(struct link_map* map) {
 
     }
 
-    if (!plt_relas_size)
-        return 0;
+    if (!plt_relas_addr && plt_relas_size) {
+        log_error("Incorrect PLT relocations (no relocs found but size is non-zero)");
+        return -PAL_ERROR_DENIED;
+    }
 
     /* perform PLT relocs: supported binaries may have only R_X86_64_JUMP_SLOT relas */
     ElfW(Rela)* plt_relas_addr_end = (void*)plt_relas_addr + plt_relas_size;
@@ -436,7 +443,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
                                         &g_entrypoint_map.symbol_table,
                                         &g_entrypoint_map.symbol_table_cnt);
     if (ret < 0)
-        return ret;
+        goto out;
 
     /* zero out the unused parts of loaded segments and perform relocations on loaded segments
      * (need to first change memory permissions to writable and then revert permissions back) */
