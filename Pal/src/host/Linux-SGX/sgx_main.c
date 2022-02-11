@@ -592,7 +592,14 @@ out:
 static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
+    char* dummy_sigfile_str = NULL;
     char* sgx_ra_client_spid_str = NULL;
+    char* profile_str = NULL;
+#ifdef DEBUG
+    char* profile_mode_str = NULL;
+#endif
+    char* log_level_str = NULL;
+    char* log_file = NULL;
 
     char errbuf[256];
     manifest_root = toml_parse(manifest, errbuf, sizeof(errbuf));
@@ -689,7 +696,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    char* dummy_sigfile_str = NULL;
     ret = toml_string_in(manifest_root, "sgx.sigfile", &dummy_sigfile_str);
     if (ret < 0 || dummy_sigfile_str) {
         log_error("sgx.sigfile is not supported anymore. Please update your manifest according to "
@@ -697,7 +703,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         ret = -EINVAL;
         goto out;
     }
-    free(dummy_sigfile_str);
 
     bool sgx_remote_attestation_enabled;
     ret = toml_bool_in(manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
@@ -732,7 +737,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     /* EPID is used if SPID is a non-empty string in manifest, otherwise DCAP/ECDSA */
     enclave_info->use_epid_attestation = sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str);
 
-    char* profile_str = NULL;
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.profile.enable' "
@@ -764,7 +768,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    char* profile_mode_str = NULL;
     ret = toml_string_in(manifest_root, "sgx.profile.mode", &profile_mode_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.profile.mode' "
@@ -826,7 +829,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 #endif
 
     int log_level = PAL_LOG_DEFAULT_LEVEL;
-    char* log_level_str = NULL;
     ret = toml_string_in(manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0) {
         log_error("Cannot parse 'loader.log_level'");
@@ -852,9 +854,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
             goto out;
         }
     }
-    free(log_level_str);
 
-    char* log_file = NULL;
     ret = toml_string_in(manifest_root, "loader.log_file", &log_file);
     if (ret < 0) {
         log_error("Cannot parse 'loader.log_file'");
@@ -869,14 +869,20 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
             goto out;
         }
     }
-    free(log_file);
 
     g_urts_log_level = log_level;
 
     ret = 0;
 
 out:
+    free(dummy_sigfile_str);
     free(sgx_ra_client_spid_str);
+    free(profile_str);
+#ifdef DEBUG
+    free(profile_mode_str);
+#endif
+    free(log_level_str);
+    free(log_file);
     toml_free(manifest_root);
     return ret;
 }
