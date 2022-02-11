@@ -551,6 +551,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)
         INIT_FAIL(-ret, "Unable to load loader.entrypoint");
+    free(entrypoint_name);
 
     /* Now we will start the execution */
     start_execution(arguments, final_environments);

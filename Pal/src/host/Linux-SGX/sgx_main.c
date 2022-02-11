@@ -731,6 +731,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 
     /* EPID is used if SPID is a non-empty string in manifest, otherwise DCAP/ECDSA */
     enclave_info->use_epid_attestation = sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str);
+    free(sgx_ra_client_spid_str);
 
     char* profile_str = NULL;
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
@@ -786,6 +787,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         ret = -EINVAL;
         goto out;
     }
+    free(profile_mode_str);
 
     bool profile_with_stack;
     ret = toml_bool_in(manifest_root, "sgx.profile.with_stack", /*defaultval=*/false,
@@ -824,6 +826,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 #endif
+    free(profile_str);
 
     int log_level = PAL_LOG_DEFAULT_LEVEL;
     char* log_level_str = NULL;
@@ -876,7 +879,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     ret = 0;
 
 out:
-    free(sgx_ra_client_spid_str);
     toml_free(manifest_root);
     return ret;
 }
