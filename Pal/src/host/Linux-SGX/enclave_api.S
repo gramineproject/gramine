@@ -4,61 +4,56 @@
 
 #include "sgx_arch.h"
 
-	.global sgx_report
-	.type sgx_report, @function
+    .global sgx_report
+    .type sgx_report, @function
 sgx_report:
-	.cfi_startproc
-	# Arguments:
-	#   RDI: targetinfo
-	#   RSI: reportdata
-	#   RDX: report
+    .cfi_startproc
+    # int sgx_report(const sgx_target_info_t* targetinfo, const void* reportdata,
+    #                sgx_report_t* report);
 
-	movq %rbx, %r10
-	.cfi_register %rbx, %r10
+    movq %rbx, %r10
+    .cfi_register %rbx, %r10
 
-	# EAX = EREPORT
-	# RBX = targetinfo
-	# RCX = reportdata
-	# RDX = report (already set)
-	movl $EREPORT, %eax
-	movq %rdi, %rbx
-	movq %rsi, %rcx
+    # EAX = EREPORT
+    # RBX = targetinfo
+    # RCX = reportdata
+    # RDX = report (already set)
+    movl $EREPORT, %eax
+    movq %rdi, %rbx
+    movq %rsi, %rcx
 
-	ENCLU
+    ENCLU
 
-	# return 0
-	xorq %rax, %rax
+    # return 0
+    xorq %rax, %rax
 
-	movq %r10, %rbx
-	.cfi_restore %rbx
-	ret
+    movq %r10, %rbx
+    .cfi_restore %rbx
+    ret
+    .cfi_endproc
 
-	.cfi_endproc
-
-	.global sgx_getkey
-	.type sgx_getkey, @function
+    .global sgx_getkey
+    .type sgx_getkey, @function
 sgx_getkey:
-	.cfi_startproc
-	# Arguments:
-	#   RDI: keyrequest
-	#   RSI: key
+    .cfi_startproc
+    # int64_t sgx_getkey(sgx_key_request_t* keyrequest, sgx_key_128bit_t* key);
 
-	movq %rbx, %r10
-	.cfi_register %rbx, %r10
+    movq %rbx, %r10
+    .cfi_register %rbx, %r10
 
-	# EAX = EGETKEY
-	# RBX = keyrequest
-	# RCX = key
-	movl $EGETKEY, %eax
-	movq %rdi, %rbx
-	movq %rsi, %rcx
+    # EAX = EGETKEY
+    # RBX = keyrequest
+    # RCX = key
+    movl $EGETKEY, %eax
+    movq %rdi, %rbx
+    movq %rsi, %rcx
 
-	ENCLU
+    ENCLU
 
-	# EGETKEY reports status in RAX, we return it
+    # EGETKEY reports status in RAX, we return it
 
-	movq %r10, %rbx
-	.cfi_restore %rbx
-	ret
+    movq %r10, %rbx
+    .cfi_restore %rbx
+    ret
 
-	.cfi_endproc
+    .cfi_endproc
