@@ -20,7 +20,7 @@
             "jmp *%0\r\n"                   \
             :                               \
             : "r"(ENTRY), "r"(ARGP), "d"(0) \
-            : "memory");                    \
+            : "memory", "cc");              \
         __builtin_unreachable();            \
     } while(0)
 
