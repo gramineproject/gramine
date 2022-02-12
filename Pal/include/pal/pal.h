@@ -621,11 +621,11 @@ typedef uint32_t pal_wait_flags_t; /* bitfield */
 /*!
  * \brief Poll - wait for an event to happen on at least one handle
  *
- * \param count the number of items in \p handle_array
- * \param handle_array array of handles to poll
- * \param events requested events for each handle
- * \param[out] ret_events events that were detected on each handle
- * \param[in,out] timeout_us timeout for the wait (`NULL` to block indefinitely)
+ * \param count               the number of items in \p handle_array
+ * \param handle_array        array of handles to poll
+ * \param events              requested events for each handle
+ * \param[out]                ret_events events that were detected on each handle
+ * \param[in,out] timeout_us  timeout for the wait (`NULL` to block indefinitely)
  *
  * \return 0 if there was an event on at least one handle, negative error code otherwise
  *
