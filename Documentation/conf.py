@@ -23,7 +23,7 @@ import subprocess
 # -- Project information -----------------------------------------------------
 
 project = 'Gramine'
-copyright = '2019-2021, Gramine Contributors'
+copyright = '2022, Gramine Contributors'
 author = 'Gramine Contributors'
 
 # The short X.Y version

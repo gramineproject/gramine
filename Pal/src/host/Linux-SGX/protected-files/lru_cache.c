@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2019-2020 Invisible Things Lab
- *                         Rafal Wojdyla <omeg@invisiblethingslab.com>
- * Copyright (C) 2011-2020 Intel Corporation
+/* Copyright (C) 2020 Invisible Things Lab
+ *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
+ * Copyright (C) 2020 Intel Corporation
  */
 
 /* TODO: add regression tests for this */
