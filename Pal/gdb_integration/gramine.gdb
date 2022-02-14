@@ -15,6 +15,8 @@ set libthread-db-search-path ""
 
 # Reenable address space layout randomization (ASLR). Gramine's features often take memory layout
 # into account, so running with ASLR enabled is more realistic and allows us to catch issues sooner.
+#
+# Note that Linux PAL disables ASLR on startup anyway, so this setting is irrelevant for Linux PAL.
 set disable-randomization off
 
 # Make GDB follow both sides of the fork - GDB (at least version 8.1) crashes on Gramine running
