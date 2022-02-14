@@ -8,10 +8,10 @@ PRs to the Gramine project. This page also describes typical flows that Gramine
 developers should follow to make the process of PR review pleasant to everyone
 involved.
 
-The Gramine community values quality above all. Therefore, the authors should
-take their time to create a good PR, even if this means contributing less
-patches. Bear in mind that Gramine is a security-related project and needs a
-very careful development process.
+The Gramine community values code correctness and quality over development
+speed. Therefore, the authors should take their time to create a good PR, even
+if this means contributing less patches. Bear in mind that Gramine is a
+security-related project and needs a very careful development process.
 
 This page is intended to be a Getting Started guide for new Gramine developers,
 *not* a reference manual on exact rules for contributing to Gramine. For the
@@ -64,7 +64,7 @@ programming. We recommend the following books and resources:
     (sometimes man pages have brief notes on semantics of the Linux syscalls
     under NOTES and BUGS).
 
-- Hardware architecture (especially for Gramine-SGX development)
+- Hardware architecture
 
   - "Computer Architecture: A Quantitative Approach" by D. Patterson and J.
     Hennessy
@@ -75,10 +75,11 @@ programming. We recommend the following books and resources:
 
 To meaningfully contribute to Gramine, the developer is expected to have a
 decent level of understanding of the concepts involved in any given subsystem of
-Gramine. For example, to contribute a patch/feature to Gramine's file system,
-the developer is expected to have the Linux/Unix specific knowledge of dentries,
-inodes, mount points. The Gramine subsystems (modelled after the Linux kernel)
-include:
+Gramine. For example, to contribute a patch/feature to Gramine's file system
+implementation, the developer is expected to have the Linux/Unix specific
+knowledge of dentries, inodes, mount points.
+
+The Gramine subsystems (modelled after the Linux kernel) include:
 
 - Virtual memory management (with the concept of Virtual Memory Areas, or VMAs)
 
@@ -182,12 +183,15 @@ GDB to debug Gramine:
   other processes (inferiors in GDB parlance), switch between them via
   ``inferior 1`` or (between processes + threads) ``thread 1.1``.
 
-  When started under GDB, Gramine defaults to the following options::
+- When started under GDB, Gramine defaults to the following options::
 
       set detach-on-fork off              # follow both parent and child
       set schedule-multiple on            # resume all processes after stop
       handle SIGCONT pass noprint nostop  # silence SIGCONT signals
-      set disable-randomization off       # run with ASLR enabled
+
+  Note that we silence ``SIGCONT`` signals: this is because Gramine uses
+  ``SIGCONT`` internally, so these signals are expected during normal Gramine
+  execution.
 
 - We highly recommend to get acquainted with different ways of stepping through
   code in GDB. Apart from the classic ``continue``, ``step`` and ``next``, we
@@ -195,14 +199,16 @@ GDB to debug Gramine:
   code: ``stepi`` and ``nexti``. Stepping through assembly is especially useful
   when debugging tricky bugs in SGX.
 
-Also, pay attention to Gramine-SGX quirks when debugged under GDB:
+Also, pay attention to the unexpected (but benign) behavior of Gramine with the
+SGX backend when debugged under GDB:
 
 - Periodically, when stepping through the code, GDB may unexpectedly jump to
   ``sgx_entry.S: async_exit_pointer``. This is the "landing pad" of the AEX flow
   of Intel SGX, and can happen at any moment in SGX enclave execution. Simply
   step through this ``async_exit_pointer`` function until the ``enclu``
   instruction (which performs ERESUME), and GDB will continue at the correct
-  in-enclave code.
+  in-enclave code. These unexpected jumps are a known bug in Gramine's
+  integration with GDB; unfortunately we don't have a fix for this bug yet.
 
 Typical Gramine development flows
 ---------------------------------
@@ -239,7 +245,7 @@ fine on native Linux but fails under Gramine::
          $ gramine-direct ./myapp
 
      If the bug is exposed with ``gramine-direct``, we recommend to debug it
-     first (it is simpler to debug ``gramine-direct`` rather than
+     there first (it is simpler to debug ``gramine-direct`` rather than
      ``gramine-sgx``).
 
    - Run Gramine with debug information: use ``loader.log_level = "all"`` in
@@ -369,7 +375,8 @@ fine on native Linux but fails under Gramine::
      environments.
 
    - When adding a test (options 1-3 above), the author must ensure that the
-     test is failing before the fix and succeeding afterwards.
+     test is failing before the fix and succeeding afterwards. Also, the author
+     must ensure that the test succeeds on normal Linux (without Gramine).
 
 #. Verify that your bug fix didn't break anything:
 
@@ -381,17 +388,17 @@ fine on native Linux but fails under Gramine::
          # build and run PAL regression tests
          $ cd Pal/regression
          $ gramine-test pytest -v
-         $ SGX=1 gramine-test pytest -v
+         $ gramine-test pytest -v --sgx
 
          # build and run LibOS regression tests
          $ cd LibOS/shim/test/regression
          $ gramine-test pytest -v
-         $ SGX=1 gramine-test pytest -v
+         $ gramine-test pytest -v --sgx
 
          # build and run LibOS FS tests
          $ cd LibOS/shim/test/fs
          $ gramine-test pytest -v
-         $ SGX=1 gramine-test pytest -v
+         $ gramine-test pytest -v --sgx
 
          # build and run LTP tests (only in non-SGX mode)
          $ cd LibOS/shim/test/ltp
@@ -447,8 +454,8 @@ fine on native Linux but fails under Gramine::
 
      The commit body message must not include GitHub issue numbers or links: we
      strive to make the Gramine repo self-contained and free of references to
-     GitHub. The commit body message may include previous-commit hashes (e.g.
-     "fixes a bug introduced in 3db1e28e27").
+     GitHub. The commit body message may include previous-commit one-liners
+     (e.g. ``fixes a bug introduced in commit "Add interrupt handling"``).
 
    - Create the corresponding PR on https://github.com/gramineproject/gramine.
      GitHub interface will notice that you pushed a new branch to the repository
@@ -635,10 +642,13 @@ continuously work with reviewers to refine your PR until all reviewers
 explicitly approve the PR. After that, you wait for the PR to be merged and then
 you notify all concerned parties about this fact.
 
-Below are several good examples of adding a new system call:
+Below are several examples of adding a new system call:
 
-- https://github.com/gramineproject/gramine/pull/309
-- https://github.com/gramineproject/gramine/pull/146
+- https://github.com/gramineproject/gramine/pull/309 (``mlock()`` and related
+  syscalls: the implementation is a no-op apart from error checking, but that's
+  enough for some applications)
+- https://github.com/gramineproject/gramine/pull/146 (``sysinfo()``: a minimal
+  implementation that reports available memory)
 
 Adding new features
 ^^^^^^^^^^^^^^^^^^^
@@ -711,8 +721,8 @@ sections -- you add the Makefile to download and/or build the application
 together with its manifest file locally, then git-commit and git-push them, then
 create a PR on GitHub and go through the review process. The obvious difference
 from other sections is that you do *not* need to run Gramine tests or other
-applications for verification -- running your application in Gramine cannot
-affect other tests/apps.
+applications for verification -- adding a new application example cannot affect
+other tests/apps.
 
 Below are several good examples of adding new applications in Gramine (but note
 that these examples are slightly outdated and were modified in subsequent PRs):
