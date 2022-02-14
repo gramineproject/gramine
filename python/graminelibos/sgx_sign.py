@@ -3,7 +3,7 @@
 # Copyright (C) 2014 Stony Brook University
 # Copyright (C) 2021 Intel Corporation
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
-# Copyright (c) 2021 Intel Corporation
+# Copyright (C) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import hashlib

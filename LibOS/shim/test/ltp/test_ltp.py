@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2019 Wojtek Porczyk <woju@invisiblethingslab.com>
-# Copyright (c) 2021 Intel Corporation
+# Copyright (C) 2021 Intel Corporation
 #                    Paweł Marczewski <pawel@invisiblethingslab.com>
 
 import configparser
