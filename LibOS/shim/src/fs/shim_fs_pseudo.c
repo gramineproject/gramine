@@ -166,6 +166,8 @@ static int pseudo_lookup(struct shim_dentry* dent) {
         case PSEUDO_DEV:
             type = S_IFCHR;
             break;
+        default:
+            BUG();
     }
 
     struct shim_inode* inode = get_new_inode(dent->mount, type, node->perm);
