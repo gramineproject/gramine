@@ -105,11 +105,6 @@ at that path. For example::
      # { path = "/usr/bin/python3.8", uri = "file:python3.8" },
    ]
 
-.. note ::
-   Earlier, ``libos.entrypoint`` was a PAL URI. If you used it with a relative
-   path, it's probably enough to remove ``file:`` prefix (convert
-   ``"file:hello"`` to ``"hello"``).
-
 Command-line arguments
 ^^^^^^^^^^^^^^^^^^^^^^
 
