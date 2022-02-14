@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2018-2020 Intel Labs */
+/* Copyright (C) 2020 Intel Labs */
 
 /*!
  * \file

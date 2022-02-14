@@ -165,6 +165,18 @@ Style Guidelines
 See `style guidelines
 <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
 
+Copyrights and Licenses
+^^^^^^^^^^^^^^^^^^^^^^^
+
+All new contributions should be licensed under LGPL-3.0-or-later. All source
+files should include a license notice in `SPDX format
+<https://spdx.org/licenses/>`__. If you modified a significant portion of a
+file then you should also add an entry to the list of per-file copyright
+notice. Please keep in mind that this list is only a courtesy notice for the
+readers with a rough summary of the copyrights. Because it's just a summary, we
+inlude only the year of the most recent copyrighted modification to the file
+(to know when all the copyright claims from a specific owner expire).
+
 .. _running_regression_tests:
 
 Running Regression Tests by Hand

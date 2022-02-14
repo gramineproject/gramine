@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2019-2020 Invisible Things Lab
- *                         Rafal Wojdyla <omeg@invisiblethingslab.com>
- * Copyright (C) 2011-2019 Intel Corporation
+/* Copyright (C) 2020 Invisible Things Lab
+ *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
+ * Copyright (C) 2019 Intel Corporation
  */
 
 #ifndef PROTECTED_FILES_INTERNAL_H_
