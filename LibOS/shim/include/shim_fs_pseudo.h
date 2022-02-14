@@ -66,17 +66,26 @@ struct shim_dev_ops {
 #define PSEUDO_PERM_FILE_R  PERM_r__r__r__  /* default for all other files */
 #define PSEUDO_PERM_FILE_RW PERM_rw_rw_rw_
 
+/* Maximum count of created nodes (`pseudo_add_*` calls) */
+#define PSEUDO_MAX_NODES 128
+
 /*
  * A node of the pseudo filesystem. A single node can describe either a single file, or a family of
  * files (see `name_exists` and `list_names` below).
  *
  * The constructors for `pseudo_node` (`pseudo_add_*`) take arguments for most commonly used fields.
  * The node can then be further customized by directly modifying other fields.
+ *
+ * NOTE: We assume that all Gramine processes within a single instance create exactly the same set
+ * of nodes, in the same order, during initialization. This is because we use the node number (`id`)
+ * for checkpointing.
  */
 DEFINE_LIST(pseudo_node);
 DEFINE_LISTP(pseudo_node);
 struct pseudo_node {
     enum pseudo_type type;
+
+    unsigned int id;
 
     LIST_TYPE(pseudo_node) siblings;
 
