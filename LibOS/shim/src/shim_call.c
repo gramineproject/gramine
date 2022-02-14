@@ -5,6 +5,8 @@
 
 /* This file implements Gramine custom calls from userspace. See `shim_entry.h` for details. */
 
+#include <limits.h>
+
 #include "api.h"
 #include "asan.h"
 #include "gramine_entry_api.h"

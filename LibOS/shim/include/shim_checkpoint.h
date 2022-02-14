@@ -87,6 +87,8 @@ struct shim_cp_store {
     size_t palhdl_entries_cnt;
 };
 
+#define CP_INIT_VMA_SIZE (64 * 1024 * 1024) /* 64MB */
+
 #define CP_FUNC_ARGS struct shim_cp_store* store, void* obj, size_t size, void** objp
 
 #define RS_FUNC_ARGS struct shim_cp_entry* entry, uintptr_t base, size_t* offset, size_t rebase
