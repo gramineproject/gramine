@@ -858,19 +858,6 @@ Linux scheduler: the effective maximum is 250 samples per second.
 Deprecated options
 ------------------
 
-Preloaded library (deprecated option)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-   loader.preload = "[URI]"
-
-This syntax specifies the library to be preloaded before loading the executable.
-This usually points to the LibOS library ``libsysdb.so``.
-
-Note that previously this syntax allowed to specify the list of URIs (separated
-by commas). This ability was never used and therefore was removed completely.
-
 FS mount points (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

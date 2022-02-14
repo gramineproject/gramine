@@ -99,10 +99,6 @@ class Manifest:
         sgx.setdefault('nonpie_binary', False)
         sgx.setdefault('enable_stats', False)
 
-        # NOTE: `loader.preload` is deprecated; remove the below in the future
-        loader = manifest.setdefault('loader', {})
-        loader.setdefault('preload', '')
-
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
                   "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
@@ -161,9 +157,8 @@ class Manifest:
     def expand_all_trusted_files(self):
         """Expand all trusted files entries.
 
-        Collects all trusted files entries and the file from ``loader.preload`` entry, hashes each
-        of them (skipping these which already had a hash present) and updates ``sgx.trusted_files``
-        manifest entry with the result.
+        Collects all trusted files entries, hashes each of them (skipping these which already had a
+        hash present) and updates ``sgx.trusted_files`` manifest entry with the result.
 
         Returns a list of all expanded files, i.e. files that we need to hash, and directories that
         we needed to list.
@@ -178,11 +173,6 @@ class Manifest:
         for tf in self['sgx']['trusted_files']:
             append_trusted_dir_or_file(trusted_files, tf, expanded)
 
-        # NOTE: `loader.preload` is deprecated; remove the below in the future
-        preload_str = self['loader']['preload']
-        if preload_str and not any(preload_str == tf['uri'] for tf in trusted_files):
-            append_trusted_dir_or_file(trusted_files, preload_str, expanded)
-
         self['sgx']['trusted_files'] = trusted_files
         return expanded
 
@@ -190,7 +180,7 @@ class Manifest:
         """Generate list of files which this manifest depends on.
 
         Collects all trusted files that are not yet expanded (do not have a hash in the entry) and
-        all files from ``loader.preload`` entry and returns them.
+        returns them.
 
         Returns:
             list(pathlib.Path): List of paths to the files this manifest depends on.
@@ -199,11 +189,6 @@ class Manifest:
             ManifestError: One of the found URIs is in an unsupported format.
         """
         deps = set()
-
-        # NOTE: `loader.preload` is deprecated; remove the below in the future
-        preload_str = self['loader']['preload']
-        if preload_str:
-            deps.add(uri2path(preload_str))
 
         for tf in self['sgx']['trusted_files']:
             if not tf.get('sha256'):
