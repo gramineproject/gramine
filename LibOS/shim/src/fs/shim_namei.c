@@ -9,6 +9,7 @@
 #include <linux/fcntl.h>
 #include <stdbool.h>
 
+#include "perm.h"
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_lock.h"
