@@ -170,7 +170,7 @@ file then you should also add an entry to the list of per-file copyright
 notice. Please keep in mind that this list is only a courtesy notice for the
 readers with a rough summary of the copyrights. Because it's just a summary, we
 inlude only the year of the most recent copyrighted modification to the file
-(to know when all the copyright claims from a specific owner vanish).
+(to know when all the copyright claims from a specific owner expire).
 
 Running Regression Tests by Hand
 --------------------------------
