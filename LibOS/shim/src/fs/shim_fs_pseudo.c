@@ -18,6 +18,9 @@
 
 LISTP_TYPE(pseudo_node) g_pseudo_roots = LISTP_INIT;
 
+/* Array of nodes by ID. Used for restoring a node from checkpoint (we send only node ID). We assume
+ * that all Gramine processes within a single instance create exactly the same set of nodes, in the
+ * same order, during initialization. */
 static struct pseudo_node* g_pseudo_nodes[PSEUDO_MAX_NODES];
 static unsigned int g_pseudo_node_count;
 

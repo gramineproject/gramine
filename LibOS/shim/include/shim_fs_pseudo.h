@@ -76,8 +76,8 @@ struct shim_dev_ops {
  * The constructors for `pseudo_node` (`pseudo_add_*`) take arguments for most commonly used fields.
  * The node can then be further customized by directly modifying other fields.
  *
- * NOTE: We assume that all Gramine processes within a single run create exactly the same set of
- * nodes, in the same order, during initialization. This is because we use the node number (`id`)
+ * NOTE: We assume that all Gramine processes within a single instance create exactly the same set
+ * of nodes, in the same order, during initialization. This is because we use the node number (`id`)
  * for checkpointing.
  */
 DEFINE_LIST(pseudo_node);
