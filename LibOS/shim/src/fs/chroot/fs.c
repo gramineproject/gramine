@@ -24,6 +24,7 @@
 #include "shim_handle.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
+#include "shim_utils.h"
 #include "stat.h"
 
 #define KEEP_URI_PREFIX 0

@@ -5,7 +5,7 @@
  * This file contains APIs to create, exit and yield a thread.
  */
 
-#include <stddef.h> /* needed by <linux/signal.h> for size_t */
+#include <stddef.h>
 
 #include "api.h"
 #include "list.h"

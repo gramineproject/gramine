@@ -15,6 +15,7 @@
 #include "shim_signal.h"
 #include "shim_table.h"
 #include "shim_thread.h"
+#include "shim_utils.h"
 
 typedef unsigned long __fd_mask;
 

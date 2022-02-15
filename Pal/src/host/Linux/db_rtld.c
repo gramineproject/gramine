@@ -15,6 +15,7 @@
 #include "api.h"
 #include "debug_map.h"
 #include "elf/elf.h"
+#include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_rtld.h"
 

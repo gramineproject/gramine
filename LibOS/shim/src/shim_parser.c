@@ -19,6 +19,7 @@
 
 #include "api.h"
 #include "shim_internal.h"
+#include "shim_syscalls.h"
 #include "shim_table.h"
 #include "shim_types.h"
 #include "shim_vma.h"

@@ -11,6 +11,7 @@
 #include "shim_ipc.h"
 #include "shim_lock.h"
 #include "shim_types.h"
+#include "shim_utils.h"
 
 /* Represents a range of ids `[start; end]` (i.e. `end` is included). There is no representation of
  * an empty range, but it's not needed. */
