@@ -11,16 +11,15 @@
  *   #define ElfW(type)       _ElfW(Elf, __ELF_NATIVE_CLASS, type)"
  * errors.
  */
-#include "pal_internal-arch.h"
-#include "pal_linux_defs.h"
-#include "pal_linux_error.h"
-#include "pal_rtld.h"
-#include "topo_info.h"
 
 #include "asan.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "linux_utils.h"
+#include "pal_internal-arch.h"
+#include "pal_linux_defs.h"
+#include "pal_linux_error.h"
+#include "pal_rtld.h"
 #include "rpc_queue.h"
 #include "sgx_enclave.h"
 #include "sgx_internal.h"
@@ -28,6 +27,7 @@
 #include "sgx_tls.h"
 #include "toml.h"
 #include "toml_utils.h"
+#include "topo_info.h"
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -53,8 +53,8 @@ static int read_file_fragment(int fd, void* buf, size_t size, off_t offset) {
     return read_all(fd, buf, size);
 }
 
-static int load_elf_headers(int fd, ElfW(Ehdr)* out_ehdr, ElfW(Phdr)** out_phdr) {
-    ElfW(Ehdr) ehdr;
+static int load_elf_headers(int fd, elf_ehdr_t* out_ehdr, elf_phdr_t** out_phdr) {
+    elf_ehdr_t ehdr;
 
     int ret = read_file_fragment(fd, &ehdr, sizeof(ehdr), /*offset=*/0);
     if (ret < 0)
@@ -63,8 +63,8 @@ static int load_elf_headers(int fd, ElfW(Ehdr)* out_ehdr, ElfW(Phdr)** out_phdr)
     if (memcmp(ehdr.e_ident, ELFMAG, SELFMAG) != 0)
         return -ENOEXEC;
 
-    size_t phdr_size = ehdr.e_phnum * sizeof(ElfW(Phdr));
-    ElfW(Phdr)* phdr = malloc(phdr_size);
+    size_t phdr_size = ehdr.e_phnum * sizeof(elf_phdr_t);
+    elf_phdr_t* phdr = malloc(phdr_size);
     if (!phdr)
         return -ENOMEM;
 
@@ -81,19 +81,19 @@ static int load_elf_headers(int fd, ElfW(Ehdr)* out_ehdr, ElfW(Phdr)** out_phdr)
 static int scan_enclave_binary(int fd, unsigned long* base, unsigned long* size,
                                unsigned long* entry) {
     int ret;
-    ElfW(Ehdr) ehdr;
-    ElfW(Phdr)* phdr;
+    elf_ehdr_t ehdr;
+    elf_phdr_t* phdr;
 
     ret = load_elf_headers(fd, &ehdr, &phdr);
     if (ret < 0)
         return ret;
 
     struct loadcmd {
-        ElfW(Addr) mapstart, mapend;
+        elf_addr_t mapstart, mapend;
     } loadcmds[16], *c;
     int nloadcmds = 0;
 
-    const ElfW(Phdr)* ph;
+    const elf_phdr_t* ph;
     for (ph = phdr; ph < &phdr[ehdr.e_phnum]; ph++)
         if (ph->p_type == PT_LOAD) {
             if (nloadcmds == 16) {
@@ -120,21 +120,21 @@ out:
 static int load_enclave_binary(sgx_arch_secs_t* secs, int fd, unsigned long base,
                                unsigned long prot) {
     int ret;
-    ElfW(Ehdr) ehdr;
-    ElfW(Phdr)* phdr;
+    elf_ehdr_t ehdr;
+    elf_phdr_t* phdr;
 
     ret = load_elf_headers(fd, &ehdr, &phdr);
     if (ret < 0)
         return ret;
 
     struct loadcmd {
-        ElfW(Addr) mapstart, mapend, datastart, dataend, allocend;
+        elf_addr_t mapstart, mapend, datastart, dataend, allocend;
         unsigned int mapoff;
         int prot;
     } loadcmds[16], *c;
     int nloadcmds = 0;
 
-    ElfW(Phdr)* ph;
+    elf_phdr_t* ph;
     for (ph = phdr; ph < &phdr[ehdr.e_phnum]; ph++)
         if (ph->p_type == PT_LOAD) {
             if (nloadcmds == 16) {
@@ -155,9 +155,9 @@ static int load_enclave_binary(sgx_arch_secs_t* secs, int fd, unsigned long base
 
     base -= loadcmds[0].mapstart;
     for (c = loadcmds; c < &loadcmds[nloadcmds]; c++) {
-        ElfW(Addr) zero     = c->dataend;
-        ElfW(Addr) zeroend  = ALLOC_ALIGN_UP(c->allocend);
-        ElfW(Addr) zeropage = ALLOC_ALIGN_UP(zero);
+        elf_addr_t zero     = c->dataend;
+        elf_addr_t zeroend  = ALLOC_ALIGN_UP(c->allocend);
+        elf_addr_t zeropage = ALLOC_ALIGN_UP(zero);
 
         if (zeroend < zeropage)
             zeropage = zeroend;

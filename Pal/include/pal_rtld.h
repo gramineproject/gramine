@@ -29,12 +29,12 @@ struct link_map {
      *   is the *base address*. One use of the base address is to relocate the memory image of the
      *   program during dynamic linking.
      */
-    ElfW(Addr)  l_base_diff;
+    elf_addr_t  l_base_diff;
 
-    ElfW(Addr)  l_map_start;  /* Address shared object (its first LOAD segment) is loaded at. */
+    elf_addr_t  l_map_start;  /* Address shared object (its first LOAD segment) is loaded at. */
     const char* l_name;       /* Absolute file name object was found in. */
-    ElfW(Dyn)*  l_ld;         /* Dynamic section of the shared object. */
-    ElfW(Addr)  l_entry;      /* Entry point location (may be empty, e.g., for libs). */
+    elf_dyn_t*  l_ld;         /* Dynamic section of the shared object. */
+    elf_addr_t  l_entry;      /* Entry point location (may be empty, e.g., for libs). */
 
     /* Chain of all shared objects loaded at startup. */
     struct link_map* l_next;
@@ -42,7 +42,7 @@ struct link_map {
 
     /* Relocation information, taken from DT_STRTAB, DT_SYMTAB and DT_HASH. */
     const char* string_table;
-    ElfW(Sym)* symbol_table;
+    elf_sym_t* symbol_table;
     uint32_t symbol_table_cnt;
 };
 
@@ -55,8 +55,8 @@ int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 int setup_pal_binary(void);
 void set_pal_binary_name(const char* name);
 int load_entrypoint(const char* uri);
-int find_string_and_symbol_tables(ElfW(Addr) ehdr_addr, ElfW(Addr) base_addr,
-                                  const char** out_string_table, ElfW(Sym)** out_symbol_table,
+int find_string_and_symbol_tables(elf_addr_t ehdr_addr, elf_addr_t base_addr,
+                                  const char** out_string_table, elf_sym_t** out_symbol_table,
                                   uint32_t* out_symbol_table_cnt);
 
 noreturn void start_execution(const char** arguments, const char** environs);

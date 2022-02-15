@@ -54,7 +54,7 @@ bool is_in_vdso(uintptr_t addr);
 int get_vdso_and_vvar_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end, uintptr_t* vvar_start,
                              uintptr_t* vvar_end);
 
-int setup_vdso(ElfW(Addr) base_addr);
+int setup_vdso(elf_addr_t base_addr);
 
 /* set/unset CLOEXEC flags of all fds in a handle */
 int handle_set_cloexec(PAL_HANDLE handle, bool enable);

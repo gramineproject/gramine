@@ -342,7 +342,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     // Perform a simple sanity check to verify if this looks like ELF (see TODO for DkDebugMapAdd in
     // Pal/src/db_rtld.c).
 
-    const ElfW(Ehdr)* ehdr = elf_addr;
+    const elf_ehdr_t* ehdr = elf_addr;
 
     if (elf_length < (off_t)sizeof(*ehdr) || memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
         log_error("sgx_profile_report_elf(%s): invalid ELF binary", filename);
@@ -352,7 +352,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     // Read the program headers and record mmap events for the segments that should be mapped as
     // executable.
 
-    const ElfW(Phdr)* phdr = (const ElfW(Phdr)*)((uintptr_t)elf_addr + ehdr->e_phoff);
+    const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
     spinlock_lock(&g_perf_data_lock);

@@ -14,6 +14,7 @@
 #define DEBUG_MAP_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 /* TODO: We don't really use the fact that `addr` is a pointer. It should be converted to
  * `uintptr_t` (here, and in all APIs that handle debug maps). */

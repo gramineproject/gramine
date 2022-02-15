@@ -55,22 +55,22 @@ struct link_map {
      *   is the *base address*. One use of the base address is to relocate the memory image of the
      *   program during dynamic linking.
      */
-    ElfW(Addr) l_base_diff;
+    elf_addr_t l_base_diff;
 
     /* Object identifier: file path, or PAL URI if path is unavailable. */
     const char* l_name;
 
     /* Pointer to program header table. */
-    ElfW(Phdr)* l_phdr;
+    elf_phdr_t* l_phdr;
 
     /* Entry point location. */
-    ElfW(Addr) l_entry;
+    elf_addr_t l_entry;
 
     /* Number of program header entries.  */
-    ElfW(Half) l_phnum;
+    elf_half_t l_phnum;
 
     /* Start and finish of memory map for this object. */
-    ElfW(Addr) l_map_start, l_map_end;
+    elf_addr_t l_map_start, l_map_end;
 
     const char* l_interp_libname;
 
@@ -93,20 +93,20 @@ struct loadcmd {
      */
 
     /* Start of memory area */
-    ElfW(Addr) start;
+    elf_addr_t start;
 
     /* End of file data (data_end .. alloc_end should be zeroed out) */
-    ElfW(Addr) data_end;
+    elf_addr_t data_end;
 
     /* End of mapped file data (data_end rounded up to page size, so that we can mmap
      * start .. map_end) */
-    ElfW(Addr) map_end;
+    elf_addr_t map_end;
 
     /* End of memory area */
-    ElfW(Addr) alloc_end;
+    elf_addr_t alloc_end;
 
     /* Offset from the beginning of file at which the first byte of the segment resides */
-    ElfW(Off) map_off;
+    elf_off_t map_off;
 
     /* Permissions for memory area */
     int prot;
@@ -131,7 +131,7 @@ static struct link_map* new_elf_object(const char* realname) {
     return new;
 }
 
-static int read_loadcmd(const ElfW(Phdr)* ph, struct loadcmd* c) {
+static int read_loadcmd(const elf_phdr_t* ph, struct loadcmd* c) {
     assert(ph->p_type == PT_LOAD);
 
     if (ph->p_align > 1) {
@@ -171,9 +171,9 @@ static int read_loadcmd(const ElfW(Phdr)* ph, struct loadcmd* c) {
     return 0;
 }
 
-static int read_all_loadcmds(const ElfW(Phdr)* phdr, size_t phnum, size_t* n_loadcmds,
+static int read_all_loadcmds(const elf_phdr_t* phdr, size_t phnum, size_t* n_loadcmds,
                              struct loadcmd** loadcmds) {
-    const ElfW(Phdr)* ph;
+    const elf_phdr_t* ph;
     int ret;
 
     size_t n = 0;
@@ -193,7 +193,7 @@ static int read_all_loadcmds(const ElfW(Phdr)* phdr, size_t phnum, size_t* n_loa
     }
 
     struct loadcmd* c = *loadcmds;
-    const ElfW(Phdr)* ph_prev = NULL;
+    const elf_phdr_t* ph_prev = NULL;
     for (ph = phdr; ph < &phdr[phnum]; ph++) {
         if (ph->p_type == PT_LOAD) {
             if (ph_prev && !(ph_prev->p_vaddr < ph->p_vaddr)) {
@@ -244,7 +244,7 @@ static int reserve_dyn(size_t total_size, void** addr) {
  * This function doesn't undo allocations in case of error: if it fails, it may leave some segments
  * already allocated.
  */
-static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) base_diff,
+static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
                            struct shim_handle* file) {
     int ret;
     int map_flags = MAP_FIXED | MAP_PRIVATE;
@@ -316,9 +316,9 @@ static int execute_loadcmd(const struct loadcmd* c, ElfW(Addr) base_diff,
     return 0;
 }
 
-static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehdr) {
-    ElfW(Phdr)* phdr = NULL;
-    ElfW(Addr) interp_libname_vaddr = 0;
+static struct link_map* map_elf_object(struct shim_handle* file, elf_ehdr_t* ehdr) {
+    elf_phdr_t* phdr = NULL;
+    elf_addr_t interp_libname_vaddr = 0;
     struct loadcmd* loadcmds = NULL;
     size_t n_loadcmds = 0;
     const char* errstring = NULL;
@@ -342,8 +342,8 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
 
     /* Load the program header table. */
 
-    size_t phdr_size = ehdr->e_phnum * sizeof(ElfW(Phdr));
-    phdr = (ElfW(Phdr)*)malloc(phdr_size);
+    size_t phdr_size = ehdr->e_phnum * sizeof(elf_phdr_t);
+    phdr = (elf_phdr_t*)malloc(phdr_size);
     if (!phdr) {
         errstring = "phdr malloc failure";
         ret = -ENOMEM;
@@ -369,7 +369,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
         goto err;
     }
 
-    const ElfW(Phdr)* ph;
+    const elf_phdr_t* ph;
     for (ph = phdr; ph < &phdr[ehdr->e_phnum]; ph++) {
         if (ph->p_type == PT_INTERP) {
             interp_libname_vaddr = ph->p_vaddr;
@@ -396,7 +396,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
             goto err;
         }
 
-        l->l_base_diff = (ElfW(Addr))addr;
+        l->l_base_diff = (elf_addr_t)addr;
     } else {
         /* This is a non-pie shared object (EXEC, executable), so the difference between virtual
          * addresses (p_vaddr) in the ELF file and the actual addresses in memory is zero. */
@@ -416,8 +416,8 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
         if (!l->l_phdr && ehdr->e_phoff >= c->map_off
                 && ehdr->e_phoff + phdr_size <= c->map_off + (c->data_end - c->start)) {
             /* Found the program header in this segment. */
-            ElfW(Addr) phdr_vaddr = ehdr->e_phoff - c->map_off + c->start;
-            l->l_phdr = (ElfW(Phdr)*)(phdr_vaddr + l->l_base_diff);
+            elf_addr_t phdr_vaddr = ehdr->e_phoff - c->map_off + c->start;
+            l->l_phdr = (elf_phdr_t*)(phdr_vaddr + l->l_base_diff);
         }
 
         if (interp_libname_vaddr != 0 && !l->l_interp_libname && c->start <= interp_libname_vaddr
@@ -437,7 +437,7 @@ static struct link_map* map_elf_object(struct shim_handle* file, ElfW(Ehdr)* ehd
         if (ehdr->e_entry != 0 && !l->l_entry && c->start <= ehdr->e_entry
                 && ehdr->e_entry < c->data_end) {
             /* Found the entry point in this segment. */
-            l->l_entry = (ElfW(Addr))(ehdr->e_entry + l->l_base_diff);
+            l->l_entry = (elf_addr_t)(ehdr->e_entry + l->l_base_diff);
         }
 
         if (!(c->prot & PROT_EXEC))
@@ -485,17 +485,8 @@ static void remove_elf_object(struct link_map* l) {
     free(l);
 }
 
-static int check_elf_header(ElfW(Ehdr)* ehdr) {
+static int check_elf_header(elf_ehdr_t* ehdr) {
     const char* errstring __attribute__((unused));
-
-#if __ELF_NATIVE_CLASS == 32
-#define elf_class ELFCLASS32
-#elif __ELF_NATIVE_CLASS == 64
-#define elf_class ELFCLASS64
-#else
-#error "Unknown __ELF_NATIVE_CLASS" __ELF_NATIVE_CLASS
-#define elf_class ELFCLASSNONE
-#endif
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define byteorder  ELFDATA2MSB
@@ -507,12 +498,11 @@ static int check_elf_header(ElfW(Ehdr)* ehdr) {
 #endif
 
     static const unsigned char expected[EI_NIDENT] = {
-        [EI_MAG0] = ELFMAG0,       [EI_MAG1] = ELFMAG1,      [EI_MAG2] = ELFMAG2,
-        [EI_MAG3] = ELFMAG3,       [EI_CLASS] = elf_class,   [EI_DATA] = byteorder,
+        [EI_MAG0] = ELFMAG0,       [EI_MAG1] = ELFMAG1,           [EI_MAG2] = ELFMAG2,
+        [EI_MAG3] = ELFMAG3,       [EI_CLASS] = ELF_NATIVE_CLASS, [EI_DATA] = byteorder,
         [EI_VERSION] = EV_CURRENT, [EI_OSABI] = 0,
     };
 
-#undef elf_class
 #undef byteorder
 
     /* See whether the ELF header is what we expect.  */
@@ -540,8 +530,8 @@ static int check_elf_header(ElfW(Ehdr)* ehdr) {
         goto verify_failed;
     }
 
-    /* check if phentsize match the size of ElfW(Phdr) */
-    if (ehdr->e_phentsize != sizeof(ElfW(Phdr))) {
+    /* check if phentsize match the size of elf_phdr_t */
+    if (ehdr->e_phentsize != sizeof(elf_phdr_t)) {
         errstring = "ELF file's phentsize has unexpected size";
         goto verify_failed;
     }
@@ -579,7 +569,7 @@ static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, 
     return 0;
 }
 
-static int load_elf_header(struct shim_handle* file, ElfW(Ehdr)* ehdr) {
+static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
     const char* errstring = NULL;
     int ret = read_file_fragment(file, ehdr, sizeof(*ehdr), /*offset=*/0);
     if (ret < 0) {
@@ -609,7 +599,7 @@ err:;
 }
 
 int check_elf_object(struct shim_handle* file) {
-    ElfW(Ehdr) ehdr;
+    elf_ehdr_t ehdr;
     return load_elf_header(file, &ehdr);
 }
 
@@ -620,7 +610,7 @@ int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
     const char* fname = file->uri;
     log_debug("loading \"%s\"", fname);
 
-    ElfW(Ehdr) ehdr;
+    elf_ehdr_t ehdr;
     if ((ret = load_elf_header(file, &ehdr)) < 0)
         return ret;
 
@@ -846,7 +836,7 @@ int register_library(const char* name, unsigned long load_address) {
  * unconditionally unpoison the LibOS stack for simplicity.
  */
 __attribute_no_sanitize_address
-noreturn static void cleanup_and_call_elf_entry(ElfW(Addr) entry, void* argp) {
+noreturn static void cleanup_and_call_elf_entry(elf_addr_t entry, void* argp) {
 #ifdef ASAN
     uintptr_t libos_stack_bottom = (uintptr_t)SHIM_TCB_GET(libos_stack_bottom);
     asan_unpoison_region(libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE,
@@ -856,7 +846,7 @@ noreturn static void cleanup_and_call_elf_entry(ElfW(Addr) entry, void* argp) {
     CALL_ELF_ENTRY(entry, argp);
 }
 
-noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(auxv_t)* auxp) {
+noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp) {
     if (exec_map) {
         /* If a new map is provided, it means we have cleared the existing one by calling
          * `remove_loaded_elf_objects`. This happens during `execve`. */
@@ -904,7 +894,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     auxp[5].a_type     = AT_RANDOM;
     auxp[5].a_un.a_val = 0; /* filled later */
     auxp[6].a_type     = AT_PHENT;
-    auxp[6].a_un.a_val = sizeof(ElfW(Phdr));
+    auxp[6].a_un.a_val = sizeof(elf_phdr_t);
     auxp[7].a_type     = AT_SYSINFO_EHDR;
     auxp[7].a_un.a_val = (uint64_t)g_vdso_addr;
     auxp[8].a_type     = AT_NULL;
@@ -912,9 +902,9 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
 
     /* populate extra memory space for aux vector data */
     static_assert(REQUIRED_ELF_AUXV_SPACE >= 16, "not enough space on stack for auxv");
-    ElfW(Addr) auxp_extra = (ElfW(Addr))&auxp[9];
+    elf_addr_t auxp_extra = (elf_addr_t)&auxp[9];
 
-    ElfW(Addr) random = auxp_extra; /* random 16B for AT_RANDOM */
+    elf_addr_t random = auxp_extra; /* random 16B for AT_RANDOM */
     ret = DkRandomBitsRead((void*)random, 16);
     if (ret < 0) {
         log_error("execute_elf_object: DkRandomBitsRead failed: %d", ret);
@@ -923,7 +913,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, ElfW(aux
     }
     auxp[5].a_un.a_val = random;
 
-    ElfW(Addr) entry = g_interp_map ? g_interp_map->l_entry : g_exec_map->l_entry;
+    elf_addr_t entry = g_interp_map ? g_interp_map->l_entry : g_exec_map->l_entry;
 
     cleanup_and_call_elf_entry(entry, argp);
 }

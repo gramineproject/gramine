@@ -43,7 +43,7 @@ const size_t g_page_size = PRESET_PAGESIZE;
 
 static void read_info_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
                                  const char*** out_envp, int* out_host_euid, int* out_host_egid,
-                                 ElfW(Addr)* out_sysinfo_ehdr) {
+                                 elf_addr_t* out_sysinfo_ehdr) {
     /* The stack layout on program entry is:
      *
      *            argc                  <-- `initial_rsp` points here
@@ -70,7 +70,7 @@ static void read_info_from_stack(void* initial_rsp, int* out_argc, const char***
     bool host_euid_set = false;
     bool host_egid_set = false;
     *out_sysinfo_ehdr = 0;
-    for (ElfW(auxv_t)* av = (ElfW(auxv_t)*)(e + 1); av->a_type != AT_NULL; av++) {
+    for (elf_auxv_t* av = (elf_auxv_t*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {
             case AT_PAGESZ:
                 if (av->a_un.a_val != g_page_size) {
@@ -200,7 +200,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     const char** argv;
     const char** envp;
     int host_euid = -1, host_egid = -1; // has to be set, otherwise GCC erroneously emits a warning
-    ElfW(Addr) sysinfo_ehdr;
+    elf_addr_t sysinfo_ehdr;
     read_info_from_stack(initial_rsp, &argc, &argv, &envp, &host_euid, &host_egid, &sysinfo_ehdr);
 
     if (argc < 4)
