@@ -46,11 +46,6 @@ static struct shim_dentry* alloc_dentry(void) {
     INIT_LISTP(&dent->children);
     INIT_LIST_HEAD(dent, siblings);
 
-    if (!create_lock(&dent->lock)) {
-        free_mem_obj_to_mgr(dentry_mgr, dent);
-        return NULL;
-    }
-
     return dent;
 }
 
@@ -130,11 +125,6 @@ static void free_dentry(struct shim_dentry* dent) {
         put_mount(dent->attached_mount);
     }
 
-    /* XXX: We are leaking `data` field here. This field seems to have different meaning for
-     * different dentries and how to free it is a mystery to me. */
-
-    destroy_lock(&dent->lock);
-
     free_mem_obj_to_mgr(dentry_mgr, dent);
 }
 
@@ -178,9 +168,6 @@ void reset_dentry(struct shim_dentry* dent) {
     dent->fs = dent->mount ? dent->mount->fs : NULL;
     dent->type = 0;
     dent->perm = 0;
-
-    /* XXX: This leaks `data` (same as `free_dentry`), but we're in the process of removing it. */
-    dent->data = NULL;
 
     if (dent->inode) {
         put_inode(dent->inode);
@@ -554,17 +541,13 @@ BEGIN_CP_FUNC(dentry) {
         ADD_TO_CP_MAP(obj, off);
         new_dent = (struct shim_dentry*)(base + off);
 
-        lock(&dent->lock);
         *new_dent = *dent;
         INIT_LISTP(&new_dent->children);
         INIT_LIST_HEAD(new_dent, siblings);
-        clear_lock(&new_dent->lock);
         REF_SET(new_dent->ref_count, 0);
 
         /* we don't checkpoint children dentries, so need to list directory again */
         new_dent->state &= ~DENTRY_LISTED;
-
-        new_dent->data = NULL;
 
         /* `fs_lock` is used only by process leader. */
         new_dent->fs_lock = NULL;
@@ -586,7 +569,6 @@ BEGIN_CP_FUNC(dentry) {
         if (dent->inode)
             DO_CP_MEMBER(inode, dent, new_dent, inode);
 
-        unlock(&dent->lock);
         ADD_CP_FUNC_ENTRY(off);
     } else {
         new_dent = (struct shim_dentry*)(base + off);
@@ -609,10 +591,6 @@ BEGIN_RS_FUNC(dentry) {
     CP_REBASE(dent->parent);
     CP_REBASE(dent->attached_mount);
     CP_REBASE(dent->inode);
-
-    if (!create_lock(&dent->lock)) {
-        return -ENOMEM;
-    }
 
     if (dent->mount) {
         get_mount(dent->mount);

@@ -149,8 +149,6 @@ static int chroot_lookup(struct shim_dentry* dent) {
 
     int ret;
 
-    lock(&dent->lock);
-
     /*
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix. Use
      * the file type from mount URI.
@@ -200,7 +198,6 @@ static int chroot_lookup(struct shim_dentry* dent) {
 
     ret = chroot_setup_dentry(dent, type, perm, size);
 out:
-    unlock(&dent->lock);
     free(uri);
     return ret;
 }

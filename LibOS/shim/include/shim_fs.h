@@ -149,9 +149,6 @@ struct shim_dentry {
     /* file permissions: PERM_rwxrwxrwx, etc. */
     mode_t perm;
 
-    /* Filesystem-specific data. Protected by `lock`. */
-    void* data;
-
     /* Inode associated with this dentry. Currently optional, and only for the use of underlying
      * filesystem (see `shim_inode` below). Protected by `g_dcache_lock`. */
     struct shim_inode* inode;
@@ -164,7 +161,6 @@ struct shim_dentry {
      * `shim_fs_lock.c`. */
     bool maybe_has_fs_locks;
 
-    struct shim_lock lock;
     REFTYPE ref_count;
 };
 
@@ -688,9 +684,9 @@ void put_dentry(struct shim_dentry* dent);
  *
  * \param  dent  the dentry (should be either invalid or negative)
  *
- * Resets the following dentry fields: `state`, `fs`, `type`, `perm`, `data`, `inode`. Ensures that
- * there is no leftover state from a file previously associated with the dentry, and the dentry can
- * be used for a new file.
+ * Resets the following dentry fields: `state`, `fs`, `type`, `perm`, `inode`. Ensures that there is
+ * no leftover state from a file previously associated with the dentry, and the dentry can be used
+ * for a new file.
  *
  * The caller should hold `g_dcache_lock`.
  *
