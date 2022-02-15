@@ -903,4 +903,8 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type);
 
 int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
 
+int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write);
+
+int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm);
+
 #endif /* _SHIM_FS_H_ */

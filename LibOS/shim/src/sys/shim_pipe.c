@@ -298,11 +298,10 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
     struct shim_dentry* dent = NULL;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
-        goto out;
+        return ret;
 
     lock(&g_dcache_lock);
     ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW | LOOKUP_CREATE, &dent);
-    unlock(&g_dcache_lock);
     if (ret < 0) {
         goto out;
     }
@@ -311,10 +310,6 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
         ret = -EEXIST;
         goto out;
     }
-
-    dent->fs = &fifo_builtin_fs;
-    dent->type = mode & S_IFMT;
-    dent->perm = mode & ~S_IFMT;
 
     /* create two pipe ends */
     hdl1 = get_new_handle();
@@ -325,8 +320,11 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
         goto out;
     }
 
+    /* HACK: We associate these temporary handles with `dent`, so that `dent` gets checkpointed and
+     * the child process sees it (since we do not checkpoint the whole dentry tree at the moment) */
+
     hdl1->type = TYPE_PIPE;
-    hdl1->fs =  &fifo_builtin_fs;
+    hdl1->fs = &fifo_builtin_fs;
     hdl1->flags = O_RDONLY;
     hdl1->acc_mode = MAY_READ;
     get_dentry(dent);
@@ -366,18 +364,16 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
         goto out;
     }
 
-    /* mark pseudo entry in file system as valid and stash FDs in data */
-    dent->state &= ~DENTRY_NEGATIVE;
+    /* set up the dentry for FIFO */
+    reset_dentry(dent);
+    ret = fifo_setup_dentry(dent, mode & ~S_IFMT, vfd1, vfd2);
+    if (ret < 0)
+        goto out;
     dent->state |= DENTRY_VALID;
-
-    static_assert(sizeof(vfd1) == sizeof(uint32_t) && sizeof(vfd2) == sizeof(uint32_t),
-                  "FDs must be 4B in size");
-    static_assert(sizeof(dent->data) >= sizeof(uint64_t),
-                  "dentry's data must be at least 8B in size");
-    dent->data = (void*)((uint64_t)vfd2 << 32 | (uint64_t)vfd1);
 
     ret = 0;
 out:
+    unlock(&g_dcache_lock);
     if (ret < 0) {
         undo_set_fd_handle(vfd1);
         undo_set_fd_handle(vfd2);

@@ -564,10 +564,7 @@ BEGIN_CP_FUNC(dentry) {
         /* we don't checkpoint children dentries, so need to list directory again */
         new_dent->state &= ~DENTRY_LISTED;
 
-        if (new_dent->type != S_IFIFO) {
-            /* not FIFO, no need to keep data (FIFOs stash internal FDs into data field) */
-            new_dent->data = NULL;
-        }
+        new_dent->data = NULL;
 
         /* `fs_lock` is used only by process leader. */
         new_dent->fs_lock = NULL;

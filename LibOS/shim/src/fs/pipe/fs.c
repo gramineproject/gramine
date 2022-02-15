@@ -2,7 +2,21 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 /*
- * This file contains code for implementation of 'pipe' filesystem.
+ * This file contains code for implementation of `pipe` and `fifo` filesystems.
+ *
+ * Named pipes (`fifo`) are implemented as special dentries/inodes in the filesystem, with `fs`
+ * fields overriden to `fifo_builtin_fs`.
+ *
+ * - We create two temporary handles for read and write end of pipe, with corresponding PAL handles,
+ *   and put them in process FD table (see `shim_pipe.c`)
+ * - We create an inode for the named pipe, and store both FDs with it (`struct fifo_data`)
+ * - When opening a file for reading or writing, we retrieve one of the temporary handles and
+ *   transfer the PAL handle to a newly initialized handle.
+ *
+ * Note that each end of a named pipe can only be retrieved once.
+ *
+ * It would be better to store the temporary handles directly, without allocating FDs for them.
+ * However, using FDs makes it easier to checkpoint a named pipe.
  */
 
 #include <asm/fcntl.h>
@@ -18,6 +32,60 @@
 #include "shim_signal.h"
 #include "shim_thread.h"
 #include "stat.h"
+
+struct fifo_data {
+    int fd_read;
+    int fd_write;
+};
+
+static int fifo_icheckpoint(struct shim_inode* inode, void** out_data, size_t* out_size) {
+    assert(locked(&inode->lock));
+
+    struct fifo_data* fifo_data = inode->data;
+    struct fifo_data* fifo_data_cp = malloc(sizeof(*fifo_data_cp));
+    if (!fifo_data_cp)
+        return -ENOMEM;
+
+    fifo_data_cp->fd_read = fifo_data->fd_read;
+    fifo_data_cp->fd_write = fifo_data->fd_write;
+
+    *out_data = fifo_data_cp;
+    *out_size = sizeof(*fifo_data_cp);
+    return 0;
+}
+
+static int fifo_irestore(struct shim_inode* inode, void* data) {
+    /* Use the data from checkpoint blob directly */
+    inode->data = data;
+    return 0;
+}
+
+int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
+
+    struct shim_inode* inode = get_new_inode(dent->mount, S_IFIFO, perm);
+    if (!inode)
+        return -ENOMEM;
+
+    struct fifo_data* fifo_data = malloc(sizeof(*fifo_data));
+    if (!fifo_data) {
+        put_inode(inode);
+        return -ENOMEM;
+    }
+    fifo_data->fd_read = fd_read;
+    fifo_data->fd_write = fd_write;
+
+    dent->fs = &fifo_builtin_fs;
+    inode->fs = &fifo_builtin_fs;
+    inode->data = fifo_data;
+
+    dent->type = S_IFIFO;
+    dent->perm = perm;
+    dent->inode = inode;
+
+    return 0;
+}
 
 static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count) {
     assert(hdl->type == TYPE_PIPE);
@@ -155,10 +223,10 @@ static int pipe_setflags(struct shim_handle* hdl, int flags) {
 }
 
 static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
-    assert(hdl);
-    assert(dent && dent->data && dent->fs);
-    static_assert(sizeof(dent->data) >= sizeof(uint64_t),
-                  "dentry's data must be at least 8B in size");
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
+    struct fifo_data* fifo_data = dent->inode->data;
 
     /* FIXME: man 7 fifo says "[with non-blocking flag], opening for write-only fails with ENXIO
      *        unless the other end has already been opened". We cannot enforce this failure since
@@ -173,16 +241,17 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
         flags = O_RDONLY;
     }
 
-    int fd = -1;
+    int fd;
+
+    lock(&dent->inode->lock);
     if (flags & O_WRONLY) {
-        /* write end of FIFO is stashed in upper bits of dentry's data; invalidate afterwards */
-        fd = (uint32_t)((uint64_t)dent->data >> 32);
-        dent->data = (void*)((uint64_t)dent->data | 0xFFFFFFFF00000000ULL);
+        fd = fifo_data->fd_write;
+        fifo_data->fd_write = -1;
     } else {
-        /* read end of FIFO is stashed in lower bits of dentry's data; invalidate afterwards */
-        fd = (uint32_t)((uint64_t)dent->data);
-        dent->data = (void*)((uint64_t)dent->data | 0x00000000FFFFFFFFULL);
+        fd = fifo_data->fd_read;
+        fifo_data->fd_read = -1;
     }
+    unlock(&dent->inode->lock);
 
     if (fd == -1) {
         /* fd is invalid, happens if app tries to open the same FIFO end twice; this is ok in
@@ -247,7 +316,9 @@ static struct shim_fs_ops fifo_fs_ops = {
 };
 
 static struct shim_d_ops fifo_d_ops = {
-    .open = &fifo_open,
+    .open        = &fifo_open,
+    .icheckpoint = &fifo_icheckpoint,
+    .irestore    = &fifo_irestore,
 };
 
 struct shim_fs pipe_builtin_fs = {
