@@ -1010,7 +1010,7 @@ static int __do_accept(struct shim_handle* hdl, int flags, struct sockaddr* addr
         inet_rebase_port(true, cli_sock->domain, &cli_sock->addr.in.conn, false);
 
         if (addr)
-            *addrlen = inet_copy_addr(sock->domain, addr, *addrlen, &sock->addr.in.conn);
+            *addrlen = inet_copy_addr(cli_sock->domain, addr, *addrlen, &cli_sock->addr.in.conn);
     }
 
     ret = set_new_fd_handle(cli, flags & O_CLOEXEC ? FD_CLOEXEC : 0, NULL);
