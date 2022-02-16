@@ -121,7 +121,7 @@ struct cmsghdr {
 
 struct sockopt {
     int receivebuf, sendbuf;
-    int receivetimeout, sendtimeout;
+    uint64_t receivetimeout_us, sendtimeout_us;
     int linger;
     int reuseaddr : 1;
     int tcp_cork : 1;

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -12,6 +13,7 @@
 #define SRV_IPV6 "::1/128"
 #define SRV_IPV4 "127.0.0.1"
 #define PORT     11112
+#define TIMEOUT  5
 
 int main(int argc, char** argv) {
     int socket_ipv4;
@@ -65,6 +67,40 @@ int main(int argc, char** argv) {
      */
     if (listen(socket_ipv6, 3) < 0) {
         perror("listen(ipv6)");
+        return 1;
+    }
+
+    struct timeval tv = {.tv_sec = TIMEOUT};
+    socklen_t optlen  = sizeof(tv);
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        perror("setsockopt(ipv6, SO_RCVTIMEO)");
+        return 1;
+    }
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+        perror("setsockopt(ipv6, SO_SNDTIMEO)");
+        return 1;
+    }
+
+    tv.tv_sec  = 0;
+    tv.tv_usec = 0;
+    if (getsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, &optlen) < 0) {
+        perror("getsockopt(ipv6, SO_RCVTIMEO)");
+        return 1;
+    }
+    if (tv.tv_sec != TIMEOUT || tv.tv_usec != 0 || optlen != sizeof(tv)) {
+        fprintf(stderr, "getsockopt(ipv6, SO_RCVTIMEO) returned wrong value\n");
+        return 1;
+    }
+
+    tv.tv_sec  = 0;
+    tv.tv_usec = 0;
+    optlen     = sizeof(tv);
+    if (getsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, &optlen) < 0) {
+        perror("getsockopt(ipv6, SO_SNDTIMEO)");
+        return 1;
+    }
+    if (tv.tv_sec != TIMEOUT || tv.tv_usec != 0 || optlen != sizeof(tv)) {
+        fprintf(stderr, "getsockopt(ipv6, SO_SNDTIMEO) returned wrong value\n");
         return 1;
     }
 

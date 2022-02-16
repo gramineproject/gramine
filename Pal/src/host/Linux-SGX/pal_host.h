@@ -105,8 +105,8 @@ typedef struct {
             PAL_NUM linger;
             PAL_NUM receivebuf;
             PAL_NUM sendbuf;
-            PAL_NUM receivetimeout;
-            PAL_NUM sendtimeout;
+            uint64_t receivetimeout_us;
+            uint64_t sendtimeout_us;
             bool tcp_cork;
             bool tcp_keepalive;
             bool tcp_nodelay;

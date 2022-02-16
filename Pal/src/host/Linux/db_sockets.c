@@ -266,11 +266,11 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_optio
         hdl->sock.sendbuf = ret < 0 ? 0 : val;
     }
 
-    hdl->sock.receivetimeout = 0;
-    hdl->sock.sendtimeout    = 0;
-    hdl->sock.tcp_cork       = false;
-    hdl->sock.tcp_keepalive  = false;
-    hdl->sock.tcp_nodelay    = false;
+    hdl->sock.receivetimeout_us = 0;
+    hdl->sock.sendtimeout_us    = 0;
+    hdl->sock.tcp_cork          = false;
+    hdl->sock.tcp_keepalive     = false;
+    hdl->sock.tcp_nodelay       = false;
     return hdl;
 }
 
@@ -930,14 +930,14 @@ static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->nonblocking  = handle->sock.nonblocking;
     attr->disconnected = handle->flags & PAL_HANDLE_FD_ERROR;
 
-    attr->socket.linger         = handle->sock.linger;
-    attr->socket.receivebuf     = handle->sock.receivebuf;
-    attr->socket.sendbuf        = handle->sock.sendbuf;
-    attr->socket.receivetimeout = handle->sock.receivetimeout;
-    attr->socket.sendtimeout    = handle->sock.sendtimeout;
-    attr->socket.tcp_cork       = handle->sock.tcp_cork;
-    attr->socket.tcp_keepalive  = handle->sock.tcp_keepalive;
-    attr->socket.tcp_nodelay    = handle->sock.tcp_nodelay;
+    attr->socket.linger            = handle->sock.linger;
+    attr->socket.receivebuf        = handle->sock.receivebuf;
+    attr->socket.sendbuf           = handle->sock.sendbuf;
+    attr->socket.receivetimeout_us = handle->sock.receivetimeout_us;
+    attr->socket.sendtimeout_us    = handle->sock.sendtimeout_us;
+    attr->socket.tcp_cork          = handle->sock.tcp_cork;
+    attr->socket.tcp_keepalive     = handle->sock.tcp_keepalive;
+    attr->socket.tcp_nodelay       = handle->sock.tcp_nodelay;
 
     /* get number of bytes available for reading (doesn't make sense for listening sockets) */
     attr->pending_size = 0;
@@ -977,59 +977,58 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         handle->sock.nonblocking = attr->nonblocking;
     }
 
-    if (HANDLE_HDR(handle)->type == PAL_TYPE_TCPSRV) {
-        if (attr->socket.linger != handle->sock.linger) {
-            struct __kernel_linger l;
-            l.l_onoff  = attr->socket.linger ? 1 : 0;
-            l.l_linger = attr->socket.linger;
-            ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_LINGER, &l,
-                             sizeof(struct __kernel_linger));
+    if (attr->socket.linger != handle->sock.linger) {
+        struct __kernel_linger l;
+        l.l_onoff  = attr->socket.linger ? 1 : 0;
+        l.l_linger = attr->socket.linger;
+        ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_LINGER, &l, sizeof(struct __kernel_linger));
 
-            if (ret < 0)
-                return unix_to_pal_error(ret);
+        if (ret < 0)
+            return unix_to_pal_error(ret);
 
-            handle->sock.linger = attr->socket.linger;
-        }
+        handle->sock.linger = attr->socket.linger;
+    }
 
-        if (attr->socket.receivebuf != handle->sock.receivebuf) {
-            int val = attr->socket.receivebuf;
-            ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(int));
+    if (attr->socket.receivebuf != handle->sock.receivebuf) {
+        int val = attr->socket.receivebuf;
+        ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(int));
 
-            if (ret < 0)
-                return unix_to_pal_error(ret);
+        if (ret < 0)
+            return unix_to_pal_error(ret);
 
-            handle->sock.receivebuf = attr->socket.receivebuf;
-        }
+        handle->sock.receivebuf = attr->socket.receivebuf;
+    }
 
-        if (attr->socket.sendbuf != handle->sock.sendbuf) {
-            int val = attr->socket.sendbuf;
-            ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_SNDBUF, &val, sizeof(int));
+    if (attr->socket.sendbuf != handle->sock.sendbuf) {
+        int val = attr->socket.sendbuf;
+        ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_SNDBUF, &val, sizeof(int));
 
-            if (ret < 0)
-                return unix_to_pal_error(ret);
+        if (ret < 0)
+            return unix_to_pal_error(ret);
 
-            handle->sock.sendbuf = attr->socket.sendbuf;
-        }
+        handle->sock.sendbuf = attr->socket.sendbuf;
+    }
+    if (attr->socket.receivetimeout_us != handle->sock.receivetimeout_us) {
+        struct timeval tv;
+        tv.tv_sec  = attr->socket.receivetimeout_us / TIME_US_IN_S;
+        tv.tv_usec = attr->socket.receivetimeout_us % TIME_US_IN_S;
+        ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        if (ret < 0)
+            return unix_to_pal_error(ret);
 
-        if (attr->socket.receivetimeout != handle->sock.receivetimeout) {
-            int val = attr->socket.receivetimeout;
-            ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_RCVTIMEO, &val, sizeof(int));
+        handle->sock.receivetimeout_us = attr->socket.receivetimeout_us;
+    }
 
-            if (ret < 0)
-                return unix_to_pal_error(ret);
+    if (attr->socket.sendtimeout_us != handle->sock.sendtimeout_us) {
+        struct timeval tv;
+        tv.tv_sec  = attr->socket.sendtimeout_us / TIME_US_IN_S;
+        tv.tv_usec = attr->socket.sendtimeout_us % TIME_US_IN_S;
+        ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
-            handle->sock.receivetimeout = attr->socket.receivetimeout;
-        }
+        if (ret < 0)
+            return unix_to_pal_error(ret);
 
-        if (attr->socket.sendtimeout != handle->sock.sendtimeout) {
-            int val = attr->socket.sendtimeout;
-            ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_SNDTIMEO, &val, sizeof(int));
-
-            if (ret < 0)
-                return unix_to_pal_error(ret);
-
-            handle->sock.sendtimeout = attr->socket.sendtimeout;
-        }
+        handle->sock.sendtimeout_us = attr->socket.sendtimeout_us;
     }
 
     if (HANDLE_HDR(handle)->type == PAL_TYPE_TCP || HANDLE_HDR(handle)->type == PAL_TYPE_TCPSRV) {

@@ -416,7 +416,7 @@ typedef struct _PAL_STREAM_ATTR {
         struct {
             PAL_NUM linger;
             PAL_NUM receivebuf, sendbuf;
-            PAL_NUM receivetimeout, sendtimeout;
+            uint64_t receivetimeout_us, sendtimeout_us;
             bool tcp_cork;
             bool tcp_keepalive;
             bool tcp_nodelay;
