@@ -28,33 +28,34 @@ static int run_test_ubsan_int_overflow(void) {
 #endif
 
 #ifdef ASAN
-/* Test: allocate a buffer on heap, write past the end of buffer (ASan only) */
+
+/*
+ * ASan tests: write past a heap/stack/global buffer. We use a volatile pointer in order to bypass
+ * compiler optimizations and warnings.
+ */
+
 __attribute__((no_sanitize("undefined")))
 static int run_test_asan_heap(void) {
-    uint8_t* buf = malloc(30);
-    buf[30] = 1;
+    char* buf = malloc(30);
+    char* volatile c = buf + 30;
+    *c = 1;
     free(buf);
     return 0;
 }
 
-/* Test: write past the end of a stack buffer (ASan only) */
 __attribute__((no_sanitize("undefined")))
 static int run_test_asan_stack(void) {
     char buf[30];
-    /* Take a pointer: direct assignment such as `buf[30] = 1;` triggers a compiler warning */
-    char* c = buf + 30;
+    char* volatile c = buf + 30;
     *c = 1;
-
     return 0;
 }
 
-/* Test: write past the end of a global (static local) buffer (ASan only) */
 __attribute__((no_sanitize("undefined")))
 static int run_test_asan_global(void) {
     static char buf[30];
-    char* c = buf + 30;
+    char* volatile c = buf + 30;
     *c = 1;
-
     return 0;
 }
 
