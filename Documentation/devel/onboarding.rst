@@ -388,17 +388,17 @@ fine on native Linux but fails under Gramine::
          # build and run PAL regression tests
          $ cd Pal/regression
          $ gramine-test pytest -v
-         $ gramine-test pytest -v --sgx
+         $ gramine-test --sgx pytest -v
 
          # build and run LibOS regression tests
          $ cd LibOS/shim/test/regression
          $ gramine-test pytest -v
-         $ gramine-test pytest -v --sgx
+         $ gramine-test --sgx pytest -v
 
          # build and run LibOS FS tests
          $ cd LibOS/shim/test/fs
          $ gramine-test pytest -v
-         $ gramine-test pytest -v --sgx
+         $ gramine-test --sgx pytest -v
 
          # build and run LTP tests (only in non-SGX mode)
          $ cd LibOS/shim/test/ltp
