@@ -1233,7 +1233,8 @@ BEGIN_CP_FUNC(vma) {
         if (vma->file)
             DO_CP(handle, vma->file, &new_vma->file);
 
-        void* need_mapped = vma->addr;
+        /* by default, file-backed memory (if shared and/or untainted) is re-mapped in child */
+        bool remap_from_file = !(vma->flags & VMA_UNMAPPED) && vma->file;
 
         /*
          * Check whether we need to checkpoint memory this vma bookkeeps: it should be mapped and it
@@ -1245,41 +1246,43 @@ BEGIN_CP_FUNC(vma) {
          */
         if (!(vma->flags & VMA_UNMAPPED) && (!vma->file ||
                     (vma->flags & (VMA_TAINTED | MAP_PRIVATE)) == (VMA_TAINTED | MAP_PRIVATE))) {
-            void* send_addr  = vma->addr;
-            size_t send_size = vma->length;
-            if (vma->file) {
-                /*
-                 * Chia-Che 8/13/2017:
-                 * A fix for cloning a private VMA which maps a file to a process.
-                 *
-                 * (1) Application can access any page backed by the file, wholly
-                 *     or partially.
-                 *
-                 * (2) Access beyond the last file-backed page will cause SIGBUS.
-                 *     For reducing fork latency, the following code truncates the
-                 *     memory size for migrating a process. The memory size is
-                 *     truncated to the file size, round up to pages.
-                 *
-                 * (3) Data in the last file-backed page is valid before or after
-                 *     forking. Has to be included in process migration.
-                 */
-                uint64_t file_len = 0;
-                if (!get_file_size(vma->file, &file_len)
-                        && vma->file_offset + vma->length > file_len) {
-                    send_size = file_len > vma->file_offset ? file_len - vma->file_offset : 0;
+            remap_from_file = false;
+
+            if (!vma->file) {
+                /* Send anonymous memory region. */
+                struct shim_mem_entry* mem;
+                DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
+                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+            } else {
+                /* Send file-backed memory region. */
+                uint64_t file_size = 0;
+                int ret = get_file_size(vma->file, &file_size);
+                if (ret < 0)
+                    return ret;
+
+                /* Access beyond the last file-backed page will cause SIGBUS. For reducing fork
+                 * latency, we send only those memory contents of VMA that are backed by the file,
+                 * round up to pages. Rest of VMA memory region will be inaccessible in the child
+                 * process. */
+                size_t send_size = vma->length;
+                if (vma->file_offset + vma->length > file_size) {
+                    send_size = file_size > vma->file_offset ? file_size - vma->file_offset : 0;
                     send_size = ALLOC_ALIGN_UP(send_size);
                 }
-            }
-            if (send_size > 0) {
-                struct shim_mem_entry* mem;
-                DO_CP_SIZE(memory, send_addr, send_size, &mem);
-                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
 
-                need_mapped = vma->addr + vma->length;
+                /* It may happen that the whole file-backed memory is beyond the file size (e.g.,
+                 * the file was truncated after the memory was allocated). In this case we consider
+                 * the whole memory region to be inaccessible. */
+                if (send_size > 0) {
+                    struct shim_mem_entry* mem;
+                    DO_CP_SIZE(memory, vma->addr, send_size, &mem);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                }
             }
         }
+
         ADD_CP_FUNC_ENTRY(off);
-        ADD_CP_ENTRY(ADDR, need_mapped);
+        ADD_CP_ENTRY(ADDR, (uintptr_t)remap_from_file);
     } else {
         new_vma = (struct shim_vma_info*)(base + off);
     }
@@ -1291,55 +1294,30 @@ END_CP_FUNC(vma)
 
 BEGIN_RS_FUNC(vma) {
     struct shim_vma_info* vma = (void*)(base + GET_CP_FUNC_ENTRY());
-    void* need_mapped = (void*)GET_CP_ENTRY(ADDR);
+    bool remap_from_file = (bool)GET_CP_ENTRY(ADDR);
     CP_REBASE(vma->file);
-
-    DEBUG_RS("vma: %p-%p flags 0x%x prot 0x%08x comment \"%s\"", vma->addr,
-             vma->addr + vma->length, vma->flags, vma->prot, vma->comment);
 
     int ret = bkeep_mmap_fixed(vma->addr, vma->length, vma->prot, vma->flags | MAP_FIXED, vma->file,
                                vma->file_offset, vma->comment);
     if (ret < 0)
         return ret;
 
-    if (!(vma->flags & VMA_UNMAPPED)) {
-        if (vma->file) {
-            struct shim_fs* fs = vma->file->fs;
-            get_handle(vma->file);
+    if (!(vma->flags & VMA_UNMAPPED) && vma->file) {
+        struct shim_fs* fs = vma->file->fs;
+        get_handle(vma->file);
 
-            if (need_mapped < vma->addr + vma->length) {
-                if (!fs || !fs->fs_ops || !fs->fs_ops->mmap) {
-                    return -EINVAL;
-                }
+        if (remap_from_file) {
+            /* Parent did not send file-backed memory region, need to mmap file contents. */
+            if (!fs || !fs->fs_ops || !fs->fs_ops->mmap)
+                return -EINVAL;
 
-                void* addr = need_mapped;
-                int ret = fs->fs_ops->mmap(vma->file, &addr, vma->addr + vma->length - need_mapped,
-                                           vma->prot, vma->flags | MAP_FIXED,
-                                           vma->file_offset + (need_mapped - vma->addr));
+            void* addr = vma->addr;
+            int ret = fs->fs_ops->mmap(vma->file, &addr, vma->length, vma->prot,
+                                       vma->flags | MAP_FIXED, vma->file_offset);
+            if (ret < 0)
+                return ret;
 
-                if (ret < 0)
-                    return ret;
-                if (!addr)
-                    return -ENOMEM;
-                if (addr != need_mapped)
-                    return -EACCES;
-
-                need_mapped += vma->length;
-            }
-        }
-
-        if (need_mapped < vma->addr + vma->length) {
-            int ret = DkVirtualMemoryAlloc(need_mapped, vma->addr + vma->length - need_mapped,
-                                           /*alloc_type=*/0,
-                                           LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0));
-            if (ret >= 0) {
-                need_mapped += vma->length;
-            }
-        }
-
-        if (need_mapped < vma->addr + vma->length) {
-            log_error("vma %p-%p cannot be allocated!", need_mapped, vma->addr + vma->length);
-            return -ENOMEM;
+            assert(addr == vma->addr);
         }
     }
 }
