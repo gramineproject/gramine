@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -65,6 +66,18 @@ int main(int argc, char** argv) {
      */
     if (listen(socket_ipv6, 3) < 0) {
         perror("listen(ipv6)");
+        return 1;
+    }
+
+    struct timeval tv = {0};
+    tv.tv_sec = 5;
+
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval)) < 0) {
+        perror("setsockopt(ipv6, SO_RCVTIMEO)");
+        return 1;
+    }
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval)) < 0) {
+        perror("setsockopt(ipv6, SO_SNDTIMEO)");
         return 1;
     }
 

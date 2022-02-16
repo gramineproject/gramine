@@ -725,7 +725,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         return -PAL_ERROR_BADHANDLE;
 
     int fd = handle->sock.fd, ret, val;
-
+    struct timeval tv = {0};
     if (attr->nonblocking != handle->sock.nonblocking) {
         ret = ocall_fsetnonblock(fd, attr->nonblocking);
 
@@ -735,7 +735,6 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         handle->sock.nonblocking = attr->nonblocking;
     }
 
-    if (HANDLE_TYPE(handle) != PAL_TYPE_TCPSRV) {
         struct __kernel_linger {
             int l_onoff;
             int l_linger;
@@ -771,8 +770,9 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         }
 
         if (attr->socket.receivetimeout != handle->sock.receivetimeout) {
-            val = attr->socket.receivetimeout;
-            ret = ocall_setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &val, sizeof(int));
+            tv.tv_sec = attr->socket.receivetimeout / TIME_US_IN_S;
+            tv.tv_usec = attr->socket.receivetimeout % TIME_US_IN_S;
+            ret = ocall_setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
             if (ret < 0)
                 return unix_to_pal_error(ret);
 
@@ -780,14 +780,14 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         }
 
         if (attr->socket.sendtimeout != handle->sock.sendtimeout) {
-            val = attr->socket.sendtimeout;
-            ret = ocall_setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &val, sizeof(int));
+            tv.tv_sec = attr->socket.sendtimeout / TIME_US_IN_S;
+            tv.tv_usec = attr->socket.sendtimeout % TIME_US_IN_S;
+            ret = ocall_setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval));
             if (ret < 0)
                 return unix_to_pal_error(ret);
 
             handle->sock.sendtimeout = attr->socket.sendtimeout;
         }
-    }
 
     if (HANDLE_TYPE(handle) == PAL_TYPE_TCP || HANDLE_TYPE(handle) == PAL_TYPE_TCPSRV) {
         if (attr->socket.tcp_cork != handle->sock.tcp_cork) {

@@ -1808,6 +1808,8 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
 
     bool need_set_attr = false;
     int intval = *((int*)optval);
+    struct timeval tv  = *(struct timeval*)optval;
+    uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
     bool boolval = !!intval;
 
     if (level == SOL_SOCKET) {
@@ -1840,14 +1842,14 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                 }
                 break;
             case SO_RCVTIMEO:
-                if (intval != (int)attr->socket.receivetimeout) {
-                    attr->socket.receivetimeout = intval;
+                if (timeout_us != (uint64_t)attr->socket.receivetimeout) {
+                    attr->socket.receivetimeout = timeout_us;
                     need_set_attr = true;
                 }
                 break;
             case SO_SNDTIMEO:
-                if (intval != (int)attr->socket.sendtimeout) {
-                    attr->socket.sendtimeout = intval;
+                if (timeout_us != (uint64_t)attr->socket.sendtimeout) {
+                    attr->socket.sendtimeout = timeout_us;
                     need_set_attr = true;
                 }
                 break;
