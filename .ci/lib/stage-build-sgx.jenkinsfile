@@ -32,6 +32,7 @@ stage('build') {
     try {
         sh '''
             meson setup build-dcap/ \
+                --werror \
                 --prefix="$PREFIX" \
                 --buildtype="$BUILDTYPE" \
                 -Ddirect=disabled \
@@ -49,6 +50,7 @@ stage('build') {
     try {
         sh '''
             meson setup build/ \
+                --werror \
                 --prefix="$PREFIX" \
                 --buildtype="$BUILDTYPE" \
                 -Ddirect=disabled \

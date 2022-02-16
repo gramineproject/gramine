@@ -14,7 +14,7 @@ debugging process easier.
 To build Gramine with debug symbols, the source code needs to be compiled with
 ``--buildtype=debug``::
 
-    meson setup build-debug/ --buildtype=debug -Ddirect=enabled
+    meson setup build-debug/ --werror --buildtype=debug -Ddirect=enabled
     ninja -C build-debug/
     sudo ninja -C build-debug/ install
 
@@ -37,7 +37,7 @@ execution *outside* the enclave).
 To build Gramine with debug symbols, the source code needs to be compiled with
 ``--buildtype=debug``::
 
-    meson setup build-debug/ --buildtype=debug -Dsgx=enabled
+    meson setup build-debug/ --werror --buildtype=debug -Dsgx=enabled
     ninja -C build-debug/
     sudo ninja -C build-debug/ install
 

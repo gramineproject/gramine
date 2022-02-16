@@ -158,6 +158,11 @@ means non-SGX version)::
 
 .. note::
 
+   If you plan to contribute changes to Gramine, then you should always build it
+   with ``--werror`` added to the invocation above.
+
+.. note::
+
    If you invoked ``meson setup`` once, the next invocation of this command will
    *not* have any effect. Instead, to change the build configuration, use
    ``meson configure``. For example, if you built with ``meson setup build/

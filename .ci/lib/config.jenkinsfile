@@ -1,4 +1,3 @@
-env.WERROR = '1'
 env.MAKEOPTS = '-j8'
 
 python_platlib = sh(returnStdout: true, script: 'python3 Scripts/get-python-platlib.py "$PREFIX"')

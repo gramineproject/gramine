@@ -13,6 +13,7 @@ stage('build') {
     try {
         sh '''
             meson setup build/ \
+                --werror \
                 --prefix="$PREFIX" \
                 --buildtype="$BUILDTYPE" \
                 -Dskeleton=enabled \
