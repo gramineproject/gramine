@@ -47,24 +47,6 @@ static struct shim_dentry* lookup_dcache_or_create(struct shim_dentry* parent, c
     return dent;
 }
 
-/*
- * HACK: Reset dentry state, in case this is a dentry for which we changed `fs` earlier.
- *
- * This is a workaround for a situation in which we create a special node (named pipe or socket) and
- * then delete or rename it. Currently that marks the old dentry as `DENTRY_NEGATIVE` and allows it
- * to be reused later, despite changed `fs` field.
- *
- * Ideally, we should always start with a fresh dentry, which would ensure all fields are in a valid
- * state. However, that requires fixing the memory leak of `dent->data` first (see `free_dentry()`
- * in `shim_dcache.c`).
- */
-static void reset_dentry(struct shim_dentry* dent) {
-    if (dent->fs != dent->mount->fs) {
-        dent->fs = dent->mount->fs;
-        dent->data = NULL;
-    }
-}
-
 /*!
  * \brief Validate a dentry, if necessary
  *
@@ -251,7 +233,7 @@ static int lookup_enter_dentry(struct lookup* lookup) {
          * - otherwise, fail with -ENOENT.
          */
         if (lookup->flags & LOOKUP_MAKE_SYNTHETIC) {
-            lookup->dent->state &= ~DENTRY_NEGATIVE;
+            reset_dentry(lookup->dent);
             ret = synthetic_setup_dentry(lookup->dent, S_IFDIR, PERM_r_xr_xr_x);
             if (ret < 0)
                 return ret;
@@ -560,7 +542,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
             ret = dir->fs->d_ops->mkdir(dent, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
-            dent->state &= ~DENTRY_NEGATIVE;
+            dent->state |= DENTRY_VALID;
             dent->type = S_IFDIR;
         } else {
             if (!dir->fs->d_ops->creat) {
@@ -570,7 +552,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
             ret = dir->fs->d_ops->creat(hdl, dent, flags, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
-            dent->state &= ~DENTRY_NEGATIVE;
+            dent->state |= DENTRY_VALID;
             assoc_handle_with_dentry(hdl, dent, flags);
             need_open = false;
         }

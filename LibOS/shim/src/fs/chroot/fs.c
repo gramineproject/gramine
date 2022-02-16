@@ -529,17 +529,14 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
         goto out;
     }
 
-    struct shim_inode* inode = new->inode;
-    if (inode) {
-        new->inode = NULL;
-        put_inode(inode);
-    }
+    reset_dentry(new);
 
     /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
      * from `old`. */
     new->inode = old->inode;
     new->type = old->type;
     new->perm = old->perm;
+    new->state |= DENTRY_VALID;
 
     old->inode = NULL;
     ret = 0;

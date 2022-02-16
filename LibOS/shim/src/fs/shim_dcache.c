@@ -171,6 +171,23 @@ void dentry_gc(struct shim_dentry* dent) {
     put_dentry(dent);
 }
 
+void reset_dentry(struct shim_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+
+    dent->state = 0;
+    dent->fs = dent->mount ? dent->mount->fs : NULL;
+    dent->type = 0;
+    dent->perm = 0;
+
+    /* XXX: This leaks `data` (same as `free_dentry`), but we're in the process of removing it. */
+    dent->data = NULL;
+
+    if (dent->inode) {
+        put_inode(dent->inode);
+        dent->inode = NULL;
+    }
+}
+
 struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry* parent,
                                    const char* name, size_t name_len) {
     assert(locked(&g_dcache_lock));
