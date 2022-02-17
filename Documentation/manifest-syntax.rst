@@ -359,9 +359,8 @@ required in the manifest (the mount point of linked libraries). The filesystems
 will be mounted in the order in which they appear in the manifest.
 
 .. note::
-   If you use the inline table syntax (``{ ... }``), each table should fit in
-   a single line. While multi-line tables are currently accepted by Gramine,
-   they are not valid TOML and Gramine might disallow them in the future.
+   Keep in mind that TOML does not allow trailing commas in inline tables:
+   ``{ path = "...", uri = "...", }`` is a syntax error.
 
 The ``type`` parameter specifies the mount point type. If omitted, it defaults
 to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e. must
