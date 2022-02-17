@@ -149,8 +149,8 @@ static int mount_sys(void) {
     return 0;
 }
 
-/* TODO: Change `key` to `index` (integer) when `mount_others_from_toml_table` is gone */
-static int mount_one_other(toml_table_t* mount, const char* key) {
+/* TODO: Change `key` to `index` (integer) when `mount_nonroot_from_toml_table` is gone */
+static int mount_one_nonroot(toml_table_t* mount, const char* key) {
     assert(mount);
 
     int ret;
@@ -239,7 +239,7 @@ out:
  *
  * FIXME: This is deprecated starting from Gramine v1.2 and can be removed two versions after it.
  */
-static int mount_others_from_toml_table(void) {
+static int mount_nonroot_from_toml_table(void) {
     int ret = 0;
 
     assert(g_manifest_root);
@@ -315,7 +315,7 @@ static int mount_others_from_toml_table(void) {
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
             assert(mount);
-            ret = mount_one_other(mount, keys[j]);
+            ret = mount_one_nonroot(mount, keys[j]);
             if (ret < 0)
                 goto out;
         }
@@ -326,7 +326,7 @@ out:
     return ret;
 }
 
-static int mount_others_from_toml_array(void) {
+static int mount_nonroot_from_toml_array(void) {
     int ret;
 
     assert(g_manifest_root);
@@ -349,12 +349,12 @@ static int mount_others_from_toml_array(void) {
             return -EINVAL;
         }
 
-        /* Prepare a key for `mount_one_other`, so that in case of errors it will display paths as
+        /* Prepare a key for `mount_one_nonroot`, so that in case of errors it will display paths as
          * `fs.mount.[0].type` etc. */
         char key[23];
         snprintf(key, sizeof(key), "[%zu]", i);
 
-        ret = mount_one_other(mount, key);
+        ret = mount_one_nonroot(mount, key);
         if (ret < 0)
             return ret;
     }
@@ -385,11 +385,11 @@ int init_mount(void) {
 
     int ret;
 
-    ret = mount_others_from_toml_table();
+    ret = mount_nonroot_from_toml_table();
     if (ret < 0)
         return ret;
 
-    ret = mount_others_from_toml_array();
+    ret = mount_nonroot_from_toml_array();
     if (ret < 0)
         return ret;
 
