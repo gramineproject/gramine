@@ -4,29 +4,15 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir() }}"
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/mounted", uri = "file:tmp" },
 
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
-
-fs.mount.host_lib.type = "chroot"
-fs.mount.host_lib.path = "{{ arch_libdir }}"
-fs.mount.host_lib.uri = "file:{{ arch_libdir }}"
-
-fs.mount.host_usr_lib.type = "chroot"
-fs.mount.host_usr_lib.path = "/usr/{{ arch_libdir }}"
-fs.mount.host_usr_lib.uri = "file:/usr/{{ arch_libdir }}"
-
-fs.mount.output.type = "chroot"
-fs.mount.output.path = "/mounted"
-fs.mount.output.uri = "file:tmp"
-
-fs.mount.tmpfs.type = "tmpfs"
-fs.mount.tmpfs.path = "/mnt-tmpfs"
-fs.mount.tmpfs.uri = "file:dummy-unused-by-tmpfs-uri"
+  { type = "tmpfs", path = "/mnt-tmpfs" },
+]
 
 sgx.nonpie_binary = true
 sgx.debug = true
