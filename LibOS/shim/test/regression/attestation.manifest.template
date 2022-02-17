@@ -5,6 +5,9 @@ loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.insecure__use_cmdline_argv = true
 
+# Keep the deprecated `fs.mount` syntax for test purposes
+# TODO: this syntax is deprecated in v1.2 and will be removed two versions after it.
+
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
 fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
