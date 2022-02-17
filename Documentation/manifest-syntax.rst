@@ -1,7 +1,12 @@
 Manifest syntax
 ===============
 
-.. highlight:: toml
+..
+   TODO: We would like to change the below to `.. highlight:: toml`. However,
+   Pygments (as of 2.11.2) fails to parse constructions such as unquoted
+   `[true|false]` (because of the `|` character inside).
+
+.. highlight:: text
 
 A |~| manifest file is an application-specific configuration text file that
 specifies the environment and resources for running an application inside
