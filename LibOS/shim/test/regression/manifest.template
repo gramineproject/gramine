@@ -10,11 +10,12 @@ sys.insecure__allow_eventfd = true
 
 fs.mount = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { path = "{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  { path = "exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/bin", uri = "file:/bin" },
+
   { type = "tmpfs", path = "/mnt/tmpfs" },
 ]
 

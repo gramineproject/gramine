@@ -1,7 +1,7 @@
 Manifest syntax
 ===============
 
-.. highlight:: text
+.. highlight:: toml
 
 A |~| manifest file is an application-specific configuration text file that
 specifies the environment and resources for running an application inside
@@ -339,7 +339,9 @@ FS mount points
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
     ]
 
-    # or, as separate sections:
+Or, as separate sections:
+
+::
 
     [[fs.mount]]
     type = "[chroot|...]"
@@ -356,17 +358,16 @@ dynamically linked binaries, usually at least one `chroot` mount point is
 required in the manifest (the mount point of linked libraries). The filesystems
 will be mounted in the order in which they appear in the manifest.
 
-The ``fs.mount`` option is a TOML array of tables. As shown in the examples
-above, you can either specify its value using the inline syntax, or use multiple
-``[[fs.mount]]`` sections.
-
 .. note::
    If you use the inline table syntax (``{ ... }``), each table should fit in
    a single line. While multi-line tables are currently accepted by Gramine,
    they are not valid TOML and Gramine might disallow them in the future.
 
 The ``type`` parameter specifies the mount point type. If omitted, it defaults
-to ``"chroot"``. Gramine currently supports two types of mount points:
+to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e. must
+begin with ``/``).
+
+Gramine currently supports two types of mount points:
 
 * ``chroot`` (default): Host-backed files. All host files and sub-directories
   found under ``[URI]`` are forwarded to the Gramine instance and placed under

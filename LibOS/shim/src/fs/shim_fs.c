@@ -186,6 +186,26 @@ static int mount_one_other(toml_table_t* mount, const char* key) {
         goto out;
     }
 
+    if (!strcmp(mount_path, "/")) {
+        log_error("'fs.mount.%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
+                  "via the 'fs.root' manifest entry.", key);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (mount_path[0] != '/') {
+        /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow them
+         * completely two versions after it. */
+        if (!strcmp(mount_path, ".") || !strcmp(mount_path, "..")) {
+            log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
+            ret = -EINVAL;
+            goto out;
+        }
+        log_error("Detected deprecated syntax: 'fs.mount.%s.path' (\"%s\") is not absolute. "
+                  "Consider converting it to absolute by adding \"/\" at the beginning.",
+                  key, mount_path);
+    }
+
     if (!mount_type || !strcmp(mount_type, "chroot")) {
         if (!mount_uri) {
             log_error("No value provided for 'fs.mount.%s.uri'", key);
@@ -329,8 +349,8 @@ static int mount_others_from_toml_array(void) {
             return -EINVAL;
         }
 
-        /* Prepare a key for `mount_one_other`, so that it in case of errors it will display paths
-         * as `fs.mount.[0].type` etc. */
+        /* Prepare a key for `mount_one_other`, so that in case of errors it will display paths as
+         * `fs.mount.[0].type` etc. */
         char key[23];
         snprintf(key, sizeof(key), "[%zu]", i);
 
