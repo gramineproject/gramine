@@ -1847,12 +1847,11 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
 
                 if (optname == SO_RCVTIMEO && timeout_us != attr->socket.receivetimeout_us) {
                     attr->socket.receivetimeout_us = timeout_us;
-                    need_set_attr = true;
                 }
                 if (optname == SO_SNDTIMEO && timeout_us != attr->socket.sendtimeout_us) {
                     attr->socket.sendtimeout_us = timeout_us;
-                    need_set_attr = true;
                 }
+                need_set_attr = true;
                 break;
             }
             case SO_REUSEADDR:
