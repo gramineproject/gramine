@@ -1010,7 +1010,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
     if (attr->socket.receivetimeout_us != handle->sock.receivetimeout_us) {
         struct timeval tv;
-        tv.tv_sec = attr->socket.receivetimeout_us / TIME_US_IN_S;
+        tv.tv_sec  = attr->socket.receivetimeout_us / TIME_US_IN_S;
         tv.tv_usec = attr->socket.receivetimeout_us % TIME_US_IN_S;
         ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (ret < 0)
@@ -1021,7 +1021,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.sendtimeout_us != handle->sock.sendtimeout_us) {
         struct timeval tv;
-        tv.tv_sec = attr->socket.sendtimeout_us / TIME_US_IN_S;
+        tv.tv_sec  = attr->socket.sendtimeout_us / TIME_US_IN_S;
         tv.tv_usec = attr->socket.sendtimeout_us % TIME_US_IN_S;
         ret = DO_SYSCALL(setsockopt, fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 

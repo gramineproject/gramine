@@ -1820,7 +1820,7 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                 break;
             case SO_LINGER: {
                 struct __kernel_linger* l = (struct __kernel_linger*)optval;
-                int linger = l->l_onoff ? l->l_linger : 0;
+                int linger                = l->l_onoff ? l->l_linger : 0;
                 if (linger != (int)attr->socket.linger) {
                     attr->socket.linger = linger;
                     need_set_attr = true;
@@ -2131,8 +2131,8 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
                 break;
             case SO_LINGER: {
                 struct __kernel_linger* l = (struct __kernel_linger*)optval;
-                l->l_onoff = attr.socket.linger ? 1 : 0;
-                l->l_linger = attr.socket.linger;
+                l->l_onoff                = attr.socket.linger ? 1 : 0;
+                l->l_linger               = attr.socket.linger;
                 break;
             }
             case SO_RCVBUF:

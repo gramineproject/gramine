@@ -70,8 +70,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    struct timeval tv = { .tv_sec = TIMEOUT };
-    socklen_t optlen = sizeof(tv);
+    struct timeval tv = {.tv_sec = TIMEOUT};
+    socklen_t optlen  = sizeof(tv);
     if (setsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         perror("setsockopt(ipv6, SO_RCVTIMEO)");
         return 1;
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    tv.tv_sec = 0;
+    tv.tv_sec  = 0;
     tv.tv_usec = 0;
     if (getsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, &optlen) < 0) {
         perror("getsockopt(ipv6, SO_RCVTIMEO)");
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
 
     tv.tv_sec  = 0;
     tv.tv_usec = 0;
-    optlen = sizeof(tv);
+    optlen     = sizeof(tv);
     if (getsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, &optlen) < 0) {
         perror("getsockopt(ipv6, SO_SNDTIMEO)");
         return 1;

@@ -770,7 +770,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.receivetimeout_us != handle->sock.receivetimeout_us) {
         struct timeval tv;
-        tv.tv_sec = attr->socket.receivetimeout_us / TIME_US_IN_S;
+        tv.tv_sec  = attr->socket.receivetimeout_us / TIME_US_IN_S;
         tv.tv_usec = attr->socket.receivetimeout_us % TIME_US_IN_S;
         ret = ocall_setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (ret < 0)
