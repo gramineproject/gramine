@@ -203,9 +203,10 @@ We mount the entire glibc host-level directory to the ``/lib`` directory seen
 inside Gramine. This trick allows to transparently replace standard C libraries
 with Gramine-patched libraries::
 
-   fs.mount.lib.type = "chroot"
-   fs.mount.lib.path = "/lib"
-   fs.mount.lib.uri  = "file:{{ gramine.runtime() }}/"
+   fs.mounts = [
+     { path = "/lib", uri = "file:{{ gramine.runtime() }}/" },
+     ...
+   ]
 
 We also mount other directories such as ``/usr``,  ``/etc``, and ``/tmp``
 required by Python and PyTorch (they search for libraries and utility files in
@@ -213,9 +214,10 @@ these system directories).
 
 Finally, we mount the path containing the Python packages installed via pip::
 
-   fs.mount.pip.type = "chroot"
-   fs.mount.pip.path = "{{ env.HOME }}/.local/lib"
-   fs.mount.pip.uri  = "file:{{ env.HOME }}/.local/lib"
+   fs.mounts = [
+     ...
+     { path = "{{ env.HOME }}/.local/lib", uri = "file:{{ env.HOME }}/.local/lib" },
+   ]
 
 Now we can run ``make`` to build/copy all required Gramine files::
 

@@ -19,8 +19,8 @@ static char* find_next_char(char* s, char ch) {
     return s;
 }
 
-/* Searches for a dotted-key (e.g. "fs.mount.lib1.type") from `root`; returns NULL if value for
- * such key is not found. Double quotes are respected, same as in TOML. */
+/* Searches for a dotted-key (e.g. "fs.root.uri") from `root`; returns NULL if value for such key is
+ * not found. Double quotes are respected, same as in TOML. */
 static toml_raw_t toml_raw_in_dottedkey(const toml_table_t* root, const char* _key) {
     char* key = strdup(_key);
     if (!key)

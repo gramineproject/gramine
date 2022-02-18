@@ -91,10 +91,9 @@ Example
    libos.entrypoint = "{{ entrypoint }}"
    loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
-   [fs.mount.runtime]
-   type = "chroot"
-   path = "/lib"
-   uri = "file:{{ gramine.runtimedir() }}"
+   fs.mounts = [
+     { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+   ]
 
    sgx.trusted_files = [
      "file:{{ entrypoint }}",
