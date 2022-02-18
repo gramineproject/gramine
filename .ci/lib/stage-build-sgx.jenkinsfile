@@ -53,7 +53,12 @@ stage('build') {
                 -Dsgx_driver=oot \
                 $MESON_OPTIONS
             ninja -vC build/
+        '''
+
+        // install
+        sh '''
             ninja -vC build/ install
+            gramine-sgx-gen-private-key
         '''
     } finally {
         archiveArtifacts 'build/meson-logs/**/*'
