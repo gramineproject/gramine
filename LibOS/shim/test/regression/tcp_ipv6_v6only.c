@@ -13,6 +13,7 @@
 #define SRV_IPV6 "::1/128"
 #define SRV_IPV4 "127.0.0.1"
 #define PORT     11112
+const time_t TIMEOUT = 5;
 
 int main(int argc, char** argv) {
     int socket_ipv4;
@@ -70,14 +71,34 @@ int main(int argc, char** argv) {
     }
 
     struct timeval tv = {0};
-    tv.tv_sec = 5;
-
-    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval)) < 0) {
+    socklen_t optlen = sizeof(tv);
+    tv.tv_sec = TIMEOUT;
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
         perror("setsockopt(ipv6, SO_RCVTIMEO)");
         return 1;
     }
-    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(struct timeval)) < 0) {
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
         perror("setsockopt(ipv6, SO_SNDTIMEO)");
+        return 1;
+    }
+
+    tv.tv_sec  = 0;
+    tv.tv_usec = 0;
+    if (getsockopt(socket_ipv6, SOL_SOCKET, SO_RCVTIMEO, &tv, &optlen) < 0) {
+        perror("getsockopt(ipv6, SO_RCVTIMEO)");
+        return 1;
+    }
+    if (tv.tv_sec != TIMEOUT) {
+        fprintf(stderr, "getsockopt(ipv6, SO_RCVTIMEO) returned wrong value\n");
+        return 1;
+    }
+
+    if (getsockopt(socket_ipv6, SOL_SOCKET, SO_SNDTIMEO, &tv, &optlen) < 0) {
+        perror("getsockopt(ipv6, SO_SNDTIMEO)");
+        return 1;
+    }
+    if (tv.tv_sec != TIMEOUT) {
+        fprintf(stderr, "getsockopt(ipv6, SO_SNDTIMEO) returned wrong value\n");
         return 1;
     }
 

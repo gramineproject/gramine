@@ -1796,8 +1796,8 @@ static void __populate_addr_with_defaults(PAL_STREAM_ATTR* attr) {
     attr->socket.sendbuf    = 212992;
 
     attr->socket.linger         = 0;
-    attr->socket.receivetimeout = 0;
-    attr->socket.sendtimeout    = 0;
+    attr->socket.receivetimeout_us = 0;
+    attr->socket.sendtimeout_us    = 0;
     attr->socket.tcp_cork       = false;
     attr->socket.tcp_keepalive  = false;
     attr->socket.tcp_nodelay    = false;
@@ -1808,8 +1808,6 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
 
     bool need_set_attr = false;
     int intval = *((int*)optval);
-    struct timeval tv  = *(struct timeval*)optval;
-    uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
     bool boolval = !!intval;
 
     if (level == SOL_SOCKET) {
@@ -1842,17 +1840,21 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                 }
                 break;
             case SO_RCVTIMEO:
-                if (timeout_us != (uint64_t)attr->socket.receivetimeout) {
-                    attr->socket.receivetimeout = timeout_us;
+                /* fallthrough */
+            case SO_SNDTIMEO: {
+                struct timeval tv   = *(struct timeval*)optval;
+                uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
+
+                if (optname == SO_RCVTIMEO && timeout_us != attr->socket.receivetimeout_us) {
+                    attr->socket.receivetimeout_us = timeout_us;
+                    need_set_attr = true;
+                }
+                if (optname == SO_SNDTIMEO && timeout_us != attr->socket.sendtimeout_us) {
+                    attr->socket.sendtimeout_us = timeout_us;
                     need_set_attr = true;
                 }
                 break;
-            case SO_SNDTIMEO:
-                if (timeout_us != (uint64_t)attr->socket.sendtimeout) {
-                    attr->socket.sendtimeout = timeout_us;
-                    need_set_attr = true;
-                }
-                break;
+            }
             case SO_REUSEADDR:
                 /* PAL always does REUSEADDR, no need to check or update */
                 break;
@@ -2140,12 +2142,22 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
             case SO_SNDBUF:
                 *intval = attr.socket.sendbuf;
                 break;
-            case SO_RCVTIMEO:
-                *intval = attr.socket.receivetimeout;
+            case SO_RCVTIMEO: {
+                struct timeval *tv;
+                tv = (struct timeval*)optval;
+                tv->tv_sec  = attr.socket.receivetimeout_us / TIME_US_IN_S;
+                tv->tv_usec = attr.socket.receivetimeout_us % TIME_US_IN_S;
+                *optlen = sizeof(struct timeval);
                 break;
-            case SO_SNDTIMEO:
-                *intval = attr.socket.sendtimeout;
+            }
+            case SO_SNDTIMEO: {
+                struct timeval *tv;
+                tv = (struct timeval*)optval;
+                tv->tv_sec = attr.socket.sendtimeout_us / TIME_US_IN_S;
+                tv->tv_usec = attr.socket.sendtimeout_us % TIME_US_IN_S;
+                *optlen = sizeof(struct timeval);
                 break;
+            }
             case SO_REUSEADDR:
                 *intval = 1;
                 break;
