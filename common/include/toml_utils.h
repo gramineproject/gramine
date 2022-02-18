@@ -46,7 +46,7 @@ int toml_int_in(const toml_table_t* root, const char* key, int64_t defaultval, i
  * \brief Find a string key-value in TOML manifest.
  *
  * \param root      Root table of the TOML manifest.
- * \param key       Dotted key (e.g. "fs.mount.lib1.type").
+ * \param key       Dotted key (e.g. "fs.root.uri").
  * \param retval    Pointer to output string.
  *
  * Returns 0 if there were no errors (but value may have not been found in manifest and was set to
