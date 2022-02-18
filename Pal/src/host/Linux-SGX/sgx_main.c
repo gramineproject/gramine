@@ -6,11 +6,10 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
-/* FIXME: Sorting+re-grouping includes here causes tons of
- * "../../../include/sysdeps/generic/ldsodefs.h:30:32: error: unknown type name ‘Elf__ELF_NATIVE_CLASS_Addr’
- *   #define ElfW(type)       _ElfW(Elf, __ELF_NATIVE_CLASS, type)"
- * errors.
- */
+#include <asm/errno.h>
+#include <asm/fcntl.h>
+#include <asm/socket.h>
+#include <linux/fs.h>
 
 #include "asan.h"
 #include "debug_map.h"
@@ -28,12 +27,6 @@
 #include "toml.h"
 #include "toml_utils.h"
 #include "topo_info.h"
-
-#include <asm/errno.h>
-#include <asm/fcntl.h>
-#include <asm/socket.h>
-#include <linux/fs.h>
-#include <sys/auxv.h>
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
@@ -1022,6 +1015,19 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     die_or_inf_loop();
 }
 
+static int get_aux_value(char** envp, uint64_t type, uint64_t* out_value) {
+    while (*envp)
+        envp++;
+
+    for (elf_auxv_t* auxv = (elf_auxv_t*)(envp + 1); auxv->a_type != AT_NULL; auxv++) {
+        if (auxv->a_type == type) {
+            *out_value = auxv->a_un.a_val;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 #ifdef ASAN
 /*
  * HACK: `setup_asan` is not called inside `main`, but defined as a constructor with a priority of
@@ -1076,7 +1082,8 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     /* check whether host kernel supports FSGSBASE feature, otherwise we need the GSGX driver */
-    if (getauxval(AT_HWCAP2) & 0x2) {
+    uint64_t at_hwcap2;
+    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) == 0 && (at_hwcap2 & 0x2)) {
         need_gsgx = false;
     }
 
