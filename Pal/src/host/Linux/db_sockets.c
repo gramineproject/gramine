@@ -320,6 +320,9 @@ static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t option
             case -EADDRINUSE:
                 ret = -PAL_ERROR_STREAMEXIST;
                 goto failed;
+            case -EADDRNOTAVAIL:
+                ret = -PAL_ERROR_ADDRNOTEXIST;
+                goto failed;
             default:
                 ret = -PAL_ERROR_DENIED;
                 goto failed;
