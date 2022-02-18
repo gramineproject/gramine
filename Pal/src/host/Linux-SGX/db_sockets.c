@@ -249,14 +249,14 @@ static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_optio
 
     hdl->sock.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
-    hdl->sock.linger         = sock_options->linger;
-    hdl->sock.receivebuf     = sock_options->receivebuf;
-    hdl->sock.sendbuf        = sock_options->sendbuf;
+    hdl->sock.linger            = sock_options->linger;
+    hdl->sock.receivebuf        = sock_options->receivebuf;
+    hdl->sock.sendbuf           = sock_options->sendbuf;
     hdl->sock.receivetimeout_us = sock_options->receivetimeout_us;
     hdl->sock.sendtimeout_us    = sock_options->sendtimeout_us;
-    hdl->sock.tcp_cork       = sock_options->tcp_cork;
-    hdl->sock.tcp_keepalive  = sock_options->tcp_keepalive;
-    hdl->sock.tcp_nodelay    = sock_options->tcp_nodelay;
+    hdl->sock.tcp_cork          = sock_options->tcp_cork;
+    hdl->sock.tcp_keepalive     = sock_options->tcp_keepalive;
+    hdl->sock.tcp_nodelay       = sock_options->tcp_nodelay;
     return hdl;
 }
 
@@ -685,18 +685,18 @@ static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->sock.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    attr->handle_type           = HANDLE_HDR(handle)->type;
-    attr->nonblocking           = handle->sock.nonblocking;
-    attr->disconnected          = handle->flags & PAL_HANDLE_FD_ERROR;
+    attr->handle_type              = HANDLE_HDR(handle)->type;
+    attr->nonblocking              = handle->sock.nonblocking;
+    attr->disconnected             = handle->flags & PAL_HANDLE_FD_ERROR;
 
-    attr->socket.linger         = handle->sock.linger;
-    attr->socket.receivebuf     = handle->sock.receivebuf;
-    attr->socket.sendbuf        = handle->sock.sendbuf;
+    attr->socket.linger            = handle->sock.linger;
+    attr->socket.receivebuf        = handle->sock.receivebuf;
+    attr->socket.sendbuf           = handle->sock.sendbuf;
     attr->socket.receivetimeout_us = handle->sock.receivetimeout_us;
     attr->socket.sendtimeout_us    = handle->sock.sendtimeout_us;
-    attr->socket.tcp_cork       = handle->sock.tcp_cork;
-    attr->socket.tcp_keepalive  = handle->sock.tcp_keepalive;
-    attr->socket.tcp_nodelay    = handle->sock.tcp_nodelay;
+    attr->socket.tcp_cork          = handle->sock.tcp_cork;
+    attr->socket.tcp_keepalive     = handle->sock.tcp_keepalive;
+    attr->socket.tcp_nodelay       = handle->sock.tcp_nodelay;
 
     /* get number of bytes available for reading (doesn't make sense for listening sockets) */
     attr->pending_size = 0;
@@ -741,7 +741,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.linger != handle->sock.linger) {
         struct __kernel_linger l;
-        l.l_onoff = attr->socket.linger ? 1 : 0;
+        l.l_onoff  = attr->socket.linger ? 1 : 0;
         l.l_linger = attr->socket.linger;
         ret = ocall_setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(struct __kernel_linger));
         if (ret < 0)
@@ -781,7 +781,7 @@ static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.sendtimeout_us != handle->sock.sendtimeout_us) {
         struct timeval tv;
-        tv.tv_sec = attr->socket.sendtimeout_us / TIME_US_IN_S;
+        tv.tv_sec  = attr->socket.sendtimeout_us / TIME_US_IN_S;
         tv.tv_usec = attr->socket.sendtimeout_us % TIME_US_IN_S;
         ret = ocall_setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
         if (ret < 0)

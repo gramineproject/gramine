@@ -1795,12 +1795,12 @@ static void __populate_addr_with_defaults(PAL_STREAM_ATTR* attr) {
     attr->socket.receivebuf = 212992;
     attr->socket.sendbuf    = 212992;
 
-    attr->socket.linger         = 0;
+    attr->socket.linger            = 0;
     attr->socket.receivetimeout_us = 0;
     attr->socket.sendtimeout_us    = 0;
-    attr->socket.tcp_cork       = false;
-    attr->socket.tcp_keepalive  = false;
-    attr->socket.tcp_nodelay    = false;
+    attr->socket.tcp_cork          = false;
+    attr->socket.tcp_keepalive     = false;
+    attr->socket.tcp_nodelay       = false;
 }
 
 static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* optval) {
@@ -1820,7 +1820,7 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                 break;
             case SO_LINGER: {
                 struct __kernel_linger* l = (struct __kernel_linger*)optval;
-                int linger                = l->l_onoff ? l->l_linger : 0;
+                int linger = l->l_onoff ? l->l_linger : 0;
                 if (linger != (int)attr->socket.linger) {
                     attr->socket.linger = linger;
                     need_set_attr = true;
@@ -2131,8 +2131,8 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
                 break;
             case SO_LINGER: {
                 struct __kernel_linger* l = (struct __kernel_linger*)optval;
-                l->l_onoff                = attr.socket.linger ? 1 : 0;
-                l->l_linger               = attr.socket.linger;
+                l->l_onoff = attr.socket.linger ? 1 : 0;
+                l->l_linger = attr.socket.linger;
                 break;
             }
             case SO_RCVBUF:
@@ -2142,19 +2142,17 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
                 *intval = attr.socket.sendbuf;
                 break;
             case SO_RCVTIMEO: {
-                struct timeval *tv;
-                tv = (struct timeval*)optval;
-                tv->tv_sec  = attr.socket.receivetimeout_us / TIME_US_IN_S;
+                struct timeval* tv = (struct timeval*)optval;
+                tv->tv_sec = attr.socket.receivetimeout_us / TIME_US_IN_S;
                 tv->tv_usec = attr.socket.receivetimeout_us % TIME_US_IN_S;
-                *optlen = sizeof(struct timeval);
+                *optlen = sizeof(*tv);
                 break;
             }
             case SO_SNDTIMEO: {
-                struct timeval *tv;
-                tv = (struct timeval*)optval;
+                struct timeval* tv = (struct timeval*)optval;
                 tv->tv_sec = attr.socket.sendtimeout_us / TIME_US_IN_S;
                 tv->tv_usec = attr.socket.sendtimeout_us % TIME_US_IN_S;
-                *optlen = sizeof(struct timeval);
+                *optlen = sizeof(*tv);
                 break;
             }
             case SO_REUSEADDR:
