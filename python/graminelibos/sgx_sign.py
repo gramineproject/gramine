@@ -23,7 +23,7 @@ from .manifest import Manifest
 from .sigstruct import Sigstruct
 
 
-_backend = backends.default_backend()
+_cryptography_backend = backends.default_backend()
 
 # Default / Architectural Options
 
@@ -603,8 +603,9 @@ def generate_private_key():
         cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey: private key
     """
     return rsa.generate_private_key(
-        public_exponent=SGX_RSA_PUBLIC_EXPONENT, key_size=SGX_RSA_KEY_SIZE, backend=_backend
-    )
+        public_exponent=SGX_RSA_PUBLIC_EXPONENT,
+        key_size=SGX_RSA_KEY_SIZE,
+        backend=_cryptography_backend)
 
 def generate_private_key_pem():
     """Generate PEM-encoded RSA key suitable for use with SGX

@@ -269,6 +269,24 @@ Additional build options
 
 .. _FSGSBASE:
 
+Prepare a signing key
+---------------------
+
+Only for SGX enclave development, and if you haven't already, run the following
+command::
+
+   gramine-sgx-gen-private-key
+
+This command generates a |~| RSA 3072 key suitable for signing SGX enclaves and
+stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
+be protected and should not be disclosed to anyone.
+
+After signing the application's manifest, users may ship the application and
+Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
+extension), the SIGSTRUCT signature file (``.sig`` extension), and the
+EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
+
+
 Advanced: installing Linux kernel with FSGSBASE patches
 -------------------------------------------------------
 
