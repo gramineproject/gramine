@@ -40,12 +40,12 @@ bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     return false;
 }
 
-int _DkVirtualMemoryAlloc(void** paddr, size_t size, pal_alloc_flags_t alloc_type,
+int _DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
                           pal_prot_flags_t prot) {
     assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
     assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
 
-    void* addr = *paddr;
+    void* addr = *addr_ptr;
 
     if (alloc_type & PAL_ALLOC_INTERNAL) {
         size = ALIGN_UP(size, g_page_size);
@@ -75,7 +75,7 @@ int _DkVirtualMemoryAlloc(void** paddr, size_t size, pal_alloc_flags_t alloc_typ
         return unix_to_pal_error(PTR_TO_ERR(addr));
     }
 
-    *paddr = addr;
+    *addr_ptr = addr;
     return 0;
 }
 

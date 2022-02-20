@@ -74,8 +74,8 @@ int main(int argc, char** argv, char** envp) {
 
     /* TODO: This does not take into account `DkGetPalPublicState()->preloaded_ranges`; we are not allowed
      * to ask for memory overlapping with these ranges */
-    void* mem3 = (void*)DkGetPalPublicState()->user_address.start;
-    void* mem4 = (void*)DkGetPalPublicState()->user_address.start + UNIT;
+    void* mem3 = (void*)DkGetPalPublicState()->user_address_start;
+    void* mem4 = (void*)DkGetPalPublicState()->user_address_start + UNIT;
 
     int ret2 = DkVirtualMemoryAlloc(&mem3, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
     ret = DkVirtualMemoryAlloc(&mem4, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);

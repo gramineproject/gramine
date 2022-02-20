@@ -529,8 +529,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     g_pal_public_state.first_thread    = first_thread;
     g_pal_public_state.disable_aslr    = disable_aslr;
 
-    _DkGetAvailableUserAddressRange(&g_pal_public_state.user_address.start,
-                                    &g_pal_public_state.user_address.end);
+    _DkGetAvailableUserAddressRange(&g_pal_public_state.user_address_start,
+                                    &g_pal_public_state.user_address_end);
 
     if (_DkGetCPUInfo(&g_pal_public_state.cpu_info) < 0) {
         goto out_fail;

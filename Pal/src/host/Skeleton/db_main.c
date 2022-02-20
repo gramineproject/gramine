@@ -14,6 +14,6 @@
 /* must implement "pal_start", and call "pal_main" inside */
 void pal_start(void);
 
-void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
+void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
     /* needs to be implemented */
 }

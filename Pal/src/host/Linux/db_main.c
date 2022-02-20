@@ -99,7 +99,7 @@ static void read_info_from_stack(void* initial_rsp, int* out_argc, const char***
     *out_envp = envp;
 }
 
-void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
+void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
     void* end_addr = (void*)ALLOC_ALIGN_DOWN_PTR(TEXT_START);
     void* start_addr = (void*)MMAP_MIN_ADDR;
 
@@ -120,8 +120,8 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
         start_addr = (void*)((unsigned long)start_addr << 1);
     }
 
-    *end   = (PAL_PTR)end_addr;
-    *start = (PAL_PTR)start_addr;
+    *out_end   = end_addr;
+    *out_start = start_addr;
 }
 
 noreturn static void print_usage_and_exit(const char* argv_0) {

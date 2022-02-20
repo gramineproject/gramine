@@ -27,7 +27,7 @@ bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     return false;
 }
 
-int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_type,
+int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
                           pal_prot_flags_t prot) {
     __UNUSED(prot);
 
@@ -37,7 +37,7 @@ int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_t
     if (!size)
         return -PAL_ERROR_INVAL;
 
-    void* addr = *paddr;
+    void* addr = *addr_ptr;
 
     void* mem = get_enclave_pages(addr, size, alloc_type & PAL_ALLOC_INTERNAL);
     if (!mem)
@@ -46,7 +46,7 @@ int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_t
     /* initialize contents of new memory region to zero (LibOS layer expects zeroed-out memory) */
     memset(mem, 0, size);
 
-    *paddr = mem;
+    *addr_ptr = mem;
     return 0;
 }
 

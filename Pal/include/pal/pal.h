@@ -25,7 +25,6 @@
 typedef struct toml_table_t toml_table_t;
 
 typedef uint64_t    PAL_NUM; /*!< a number */
-typedef void*       PAL_PTR; /*!< a pointer to memory or buffer (something other than string) */
 typedef uint32_t    PAL_IDX; /*!< an index */
 
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
@@ -80,10 +79,6 @@ enum {
 
 #define PAL_IDX_POISON         ((PAL_IDX)-1) /* PAL identifier poison value */
 
-typedef struct PAL_PTR_RANGE_ {
-    PAL_PTR start, end;
-} PAL_PTR_RANGE;
-
 /********** PAL APIs **********/
 
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
@@ -103,8 +98,9 @@ struct pal_public_state {
     /*
      * Memory layout
      */
-    bool disable_aslr;          /*!< disable ASLR (may be necessary for restricted environments) */
-    PAL_PTR_RANGE user_address; /*!< The range of user addresses */
+    bool disable_aslr;        /*!< disable ASLR (may be necessary for restricted environments) */
+    void* user_address_start; /*!< User address range start */
+    void* user_address_end;   /*!< User address range end */
 
     struct {
         uintptr_t start;
@@ -157,17 +153,17 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
 /*!
  * \brief Allocate virtual memory for the library OS and zero it out.
  *
- * \param[in,out] addr
- *  `*addr` can be any valid address aligned at the allocation alignment or `NULL`, in which case
- *  a suitable address will be picked automatically. Any memory previously allocated at the same
- *  address will be discarded (only if `*addr` was provided). Overwriting any part of PAL memory is
- *  forbidden. On successful return `*addr` will contain the allocated address (which can differ
- *  only in the `NULL` case).
+ * \param[in,out] addr_ptr
+ *  `*addr_ptr` can be any valid address aligned at the allocation alignment or `NULL`, in which
+ *  case a suitable address will be picked automatically. Any memory previously allocated at the
+ *  same address will be discarded (only if `*addr_ptr` was provided). Overwriting any part of PAL
+ *  memory is forbidden. On successful return `*addr_ptr` will contain the allocated address
+ *  (which can differ only in the `NULL` case).
  * \param size must be a positive number, aligned at the allocation alignment.
  * \param alloc_type a combination of any of the `PAL_ALLOC_*` flags
  * \param prot a combination of the `PAL_PROT_*` flags
  */
-int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_type,
+int DkVirtualMemoryAlloc(void** addr_ptr, PAL_NUM size, pal_alloc_flags_t alloc_type,
                          pal_prot_flags_t prot);
 
 /*!
@@ -178,7 +174,7 @@ int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_ty
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size);
+int DkVirtualMemoryFree(void* addr, PAL_NUM size);
 
 /*!
  * \brief Modify the permissions of a previously allocated memory mapping.
@@ -189,7 +185,7 @@ int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size);
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, pal_prot_flags_t prot);
+int DkVirtualMemoryProtect(void* addr, PAL_NUM size, pal_prot_flags_t prot);
 
 /*
  * PROCESS CREATION
@@ -355,14 +351,14 @@ int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
  * \brief Map a file to a virtual memory address in the current process.
  *
  * \param handle handle to the stream to be mapped.
- * \param[in,out] addr see #DkVirtualMemoryAlloc
+ * \param[in,out] addr_ptr see #DkVirtualMemoryAlloc
  * \param prot see #DkVirtualMemoryAlloc
  * \param offset offset in the stream to be mapped. Must be properly aligned.
  * \param size size of the requested mapping. Must be non-zero and properly aligned.
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM offset,
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_NUM offset,
                 PAL_NUM size);
 
 /*!
@@ -372,7 +368,7 @@ int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM
  *
  * \return 0 on success, negative error code on failure.
  */
-int DkStreamUnmap(PAL_PTR addr, PAL_NUM size);
+int DkStreamUnmap(void* addr, PAL_NUM size);
 
 /*!
  * \brief Set the length of the file referenced by handle to `length`.
@@ -779,8 +775,8 @@ int DkSetProtectedFilesKey(const char* pf_key_hex);
 int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[CPUID_WORD_NUM]);
 #endif
 
-void DkDebugMapAdd(const char* uri, PAL_PTR start_addr);
-void DkDebugMapRemove(PAL_PTR start_addr);
+void DkDebugMapAdd(const char* uri, void* start_addr);
+void DkDebugMapRemove(void* start_addr);
 
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without
  * DEBUG, falls back to raw value ("0x1234"). */

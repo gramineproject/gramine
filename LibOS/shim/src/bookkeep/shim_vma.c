@@ -578,12 +578,12 @@ int init_vma(void) {
         return ret;
     }
 
-    g_aslr_addr_top = g_pal_public_state->user_address.end;
+    g_aslr_addr_top = g_pal_public_state->user_address_end;
 
     if (!g_pal_public_state->disable_aslr) {
         /* Inspired by: https://elixir.bootlin.com/linux/v5.6.3/source/arch/x86/mm/mmap.c#L80 */
         size_t gap_max_size =
-            (g_pal_public_state->user_address.end - g_pal_public_state->user_address.start) / 6 * 5;
+            (g_pal_public_state->user_address_end - g_pal_public_state->user_address_start) / 6 * 5;
         /* We do address space randomization only if we have at least ASLR_BITS to randomize. */
         if (gap_max_size / ALLOC_ALIGNMENT >= (1ul << ASLR_BITS)) {
             size_t gap = 0;
@@ -1027,15 +1027,15 @@ out:
 
 int bkeep_mmap_any(size_t length, int prot, int flags, struct shim_handle* file, uint64_t offset,
                    const char* comment, void** ret_val_ptr) {
-    return bkeep_mmap_any_in_range(g_pal_public_state->user_address.start,
-                                   g_pal_public_state->user_address.end,
+    return bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
+                                   g_pal_public_state->user_address_end,
                                    length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
 int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct shim_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr) {
     int ret;
-    ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address.start, g_aslr_addr_top, length,
+    ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start, g_aslr_addr_top, length,
                                   prot, flags, file, offset, comment, ret_val_ptr);
     if (ret >= 0) {
         return ret;

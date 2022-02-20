@@ -615,7 +615,7 @@ void set_pal_binary_name(const char* name) {
  * protected files system, and a workaround would be ugly. Instead, the protected files system needs
  * rethinking.
  */
-void DkDebugMapAdd(const char* uri, PAL_PTR start_addr) {
+void DkDebugMapAdd(const char* uri, void* start_addr) {
 #ifndef DEBUG
     __UNUSED(uri);
     __UNUSED(start_addr);
@@ -629,7 +629,7 @@ void DkDebugMapAdd(const char* uri, PAL_PTR start_addr) {
 #endif
 }
 
-void DkDebugMapRemove(PAL_PTR start_addr) {
+void DkDebugMapRemove(void* start_addr) {
 #ifndef DEBUG
     __UNUSED(start_addr);
 #else

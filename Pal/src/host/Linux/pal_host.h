@@ -45,7 +45,7 @@ typedef struct {
              * address. When fork is emulated, the address is already
              * determined by parent process.
              */
-            PAL_PTR map_start;
+            void* map_start;
             bool seekable; /* regular files are seekable, FIFO pipes are not */
         } file;
 
@@ -98,7 +98,7 @@ typedef struct {
 
         struct {
             PAL_IDX tid;
-            PAL_PTR stack;
+            void* stack;
         } thread;
 
         struct {

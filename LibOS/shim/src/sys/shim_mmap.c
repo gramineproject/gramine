@@ -132,8 +132,8 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
 
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < g_pal_public_state->user_address.start
-                || (uintptr_t)g_pal_public_state->user_address.end < (uintptr_t)addr + length) {
+        if (addr < g_pal_public_state->user_address_start
+                || (uintptr_t)g_pal_public_state->user_address_end < (uintptr_t)addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
@@ -143,9 +143,9 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr && (uintptr_t)g_pal_public_state->user_address.start <= (uintptr_t)addr
-                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->user_address.end) {
-            ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address.start,
+        if (addr && (uintptr_t)g_pal_public_state->user_address_start <= (uintptr_t)addr
+                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->user_address_end) {
+            ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
                                           (char*)addr + length, length, prot, flags, hdl, offset,
                                           NULL, &addr);
         } else {

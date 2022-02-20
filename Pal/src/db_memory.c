@@ -10,10 +10,10 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_type,
+int DkVirtualMemoryAlloc(void** addr_ptr, PAL_NUM size, pal_alloc_flags_t alloc_type,
                          pal_prot_flags_t prot) {
-    assert(addr);
-    void* map_addr = *addr;
+    assert(addr_ptr);
+    void* map_addr = *addr_ptr;
 
     if ((map_addr && !IS_ALLOC_ALIGNED_PTR(map_addr)) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
@@ -31,10 +31,10 @@ int DkVirtualMemoryAlloc(PAL_PTR* addr, PAL_NUM size, pal_alloc_flags_t alloc_ty
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkVirtualMemoryAlloc(addr, size, alloc_type, prot);
+    return _DkVirtualMemoryAlloc(addr_ptr, size, alloc_type, prot);
 }
 
-int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size) {
+int DkVirtualMemoryFree(void* addr, PAL_NUM size) {
     if (!addr || !size) {
         return -PAL_ERROR_INVAL;
     }
@@ -43,14 +43,14 @@ int DkVirtualMemoryFree(PAL_PTR addr, PAL_NUM size) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable((void*)addr, size)) {
+    if (_DkCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkVirtualMemoryFree((void*)addr, size);
+    return _DkVirtualMemoryFree(addr, size);
 }
 
-int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, pal_prot_flags_t prot) {
+int DkVirtualMemoryProtect(void* addr, PAL_NUM size, pal_prot_flags_t prot) {
     if (!addr || !size) {
         return -PAL_ERROR_INVAL;
     }
@@ -59,11 +59,11 @@ int DkVirtualMemoryProtect(PAL_PTR addr, PAL_NUM size, pal_prot_flags_t prot) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable((void*)addr, size)) {
+    if (_DkCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkVirtualMemoryProtect((void*)addr, size, prot);
+    return _DkVirtualMemoryProtect(addr, size, prot);
 }
 
 int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment) {

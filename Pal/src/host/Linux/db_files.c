@@ -140,7 +140,7 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
      * as parent.
      */
     if (mem == NULL && handle->file.map_start != NULL) {
-        mem = (PAL_PTR)handle->file.map_start;
+        mem = handle->file.map_start;
         /* this address is used. don't over-map it later */
         handle->file.map_start = NULL;
     }

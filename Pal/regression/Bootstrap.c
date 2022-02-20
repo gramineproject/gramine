@@ -28,11 +28,11 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Allocation Alignment: %ld\n", pal_public_state->alloc_align);
 
     /* user address range */
-    pal_printf("User Address Range: %p - %p\n", pal_public_state->user_address.start,
-               pal_public_state->user_address.end);
+    pal_printf("User Address Range: %p - %p\n", pal_public_state->user_address_start,
+               pal_public_state->user_address_end);
 
-    if (pal_public_state->user_address.start && pal_public_state->user_address.end &&
-        pal_public_state->user_address.start < pal_public_state->user_address.end)
+    if (pal_public_state->user_address_start && pal_public_state->user_address_end &&
+        pal_public_state->user_address_start < pal_public_state->user_address_end)
         pal_printf("User Address Range OK\n");
 
     const struct pal_cpu_info* ci = &pal_public_state->cpu_info;

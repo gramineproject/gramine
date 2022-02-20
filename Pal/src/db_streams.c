@@ -387,10 +387,10 @@ int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size) {
 
 /* _DkStreamMap for internal use. Map specific handle to certain memory,
    with given protection, offset and size */
-int _DkStreamMap(PAL_HANDLE handle, void** paddr, pal_prot_flags_t prot, uint64_t offset,
+int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
                  uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset));
-    void* addr = *paddr;
+    void* addr = *addr_ptr;
     int ret;
 
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
@@ -406,14 +406,14 @@ int _DkStreamMap(PAL_HANDLE handle, void** paddr, pal_prot_flags_t prot, uint64_
     if ((ret = ops->map(handle, &addr, prot, offset, size)) < 0)
         return ret;
 
-    *paddr = addr;
+    *addr_ptr = addr;
     return 0;
 }
 
-int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM offset,
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_NUM offset,
                 PAL_NUM size) {
-    assert(addr);
-    void* map_addr = *addr;
+    assert(addr_ptr);
+    void* map_addr = *addr_ptr;
 
     if (!handle) {
         return -PAL_ERROR_INVAL;
@@ -435,19 +435,19 @@ int DkStreamMap(PAL_HANDLE handle, PAL_PTR* addr, pal_prot_flags_t prot, PAL_NUM
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkStreamMap(handle, addr, prot, offset, size);
+    return _DkStreamMap(handle, addr_ptr, prot, offset, size);
 }
 
-int DkStreamUnmap(PAL_PTR addr, PAL_NUM size) {
+int DkStreamUnmap(void* addr, PAL_NUM size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable((void*)addr, size)) {
+    if (_DkCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkStreamUnmap((void*)addr, size);
+    return _DkStreamUnmap(addr, size);
 }
 
 /* _DkStreamSetLength for internal use. This function truncate the stream

@@ -64,7 +64,7 @@ static inline void* __malloc(size_t size) {
      * must be careful though because LibOS doesn't know about PAL-internal memory, limited via
      * manifest option `loader.pal_internal_mem_size` and thus this malloc may return -ENOMEM. */
     int ret = _DkVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(size), PAL_ALLOC_INTERNAL,
-              PAL_PROT_READ | PAL_PROT_WRITE);
+                                    PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         log_error("*** Out-of-memory in PAL (try increasing `loader.pal_internal_mem_size`) ***");
         _DkProcessExit(ENOMEM);

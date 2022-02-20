@@ -14,7 +14,7 @@ bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     return true;
 }
 
-int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_type,
+int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
                           pal_prot_flags_t prot) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

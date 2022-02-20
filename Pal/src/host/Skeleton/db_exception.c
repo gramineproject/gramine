@@ -11,13 +11,5 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-typedef void (*PAL_UPCALL)(PAL_PTR, PAL_NUM, PAL_CONTEXT*);
-
-int (*_DkExceptionHandlers[PAL_EVENT_NUM_BOUND])(int, PAL_UPCALL, int) = {
-    /* reserved   */ NULL,
-    /* DivZero    */ NULL,
-    /* MemFault   */ NULL,
-    /* Illegal    */ NULL,
-    /* Quit       */ NULL,
-    /* Interrupt  */ NULL,
-};
+__attribute__((unused)) // Should be used by exception handling logic
+static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};

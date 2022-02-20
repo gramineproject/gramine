@@ -302,7 +302,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
 
             log_debug("memory entry [%p]: %p-%p", entry, entry->addr, entry->addr + entry->size);
 
-            PAL_PTR addr = ALLOC_ALIGN_DOWN_PTR(entry->addr);
+            void* addr = ALLOC_ALIGN_DOWN_PTR(entry->addr);
             PAL_NUM size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
             pal_prot_flags_t prot = entry->prot;
 
@@ -552,7 +552,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         log_error("failed unmaping checkpoint (ret = %d)", ret);
         goto out;
     }
-    if (DkVirtualMemoryFree((PAL_PTR)cpstore.base, cpstore.bound) < 0) {
+    if (DkVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {
         BUG();
     }
     bkeep_remove_tmp_vma(tmp_vma);
@@ -598,13 +598,13 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
     int ret = 0;
 
     void* base = hdr->addr;
-    PAL_PTR mapaddr = (PAL_PTR)ALLOC_ALIGN_DOWN_PTR(base);
-    PAL_NUM mapsize = (PAL_PTR)ALLOC_ALIGN_UP_PTR(base + hdr->size) - mapaddr;
+    void* mapaddr = ALLOC_ALIGN_DOWN_PTR(base);
+    PAL_NUM mapsize = (char*)ALLOC_ALIGN_UP_PTR(base + hdr->size) - (char*)mapaddr;
 
     /* first try allocating at address used by parent process */
-    if (g_pal_public_state->user_address.start <= mapaddr &&
-            mapaddr + mapsize <= g_pal_public_state->user_address.end) {
-        ret = bkeep_mmap_fixed((void*)mapaddr, mapsize, PROT_READ | PROT_WRITE,
+    if (g_pal_public_state->user_address_start <= mapaddr &&
+            mapaddr + mapsize <= g_pal_public_state->user_address_end) {
+        ret = bkeep_mmap_fixed(mapaddr, mapsize, PROT_READ | PROT_WRITE,
                                CP_MMAP_FLAGS | MAP_FIXED_NOREPLACE, NULL, 0, "cpstore");
         if (ret < 0) {
             /* the address used by parent overlaps with this child's memory regions */
@@ -623,7 +623,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
             return ret;
         }
 
-        mapaddr = (PAL_PTR)base;
+        mapaddr = base;
         mapsize = (PAL_NUM)ALLOC_ALIGN_UP(hdr->size);
     }
 
@@ -659,8 +659,8 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
         goto out_fail;
     }
 
-    migrated_memory_start = (void*)mapaddr;
-    migrated_memory_end   = (void*)mapaddr + mapsize;
+    migrated_memory_start = mapaddr;
+    migrated_memory_end   = (char*)mapaddr + mapsize;
 
     ret = restore_checkpoint(hdr, (uintptr_t)base);
     if (ret < 0) {

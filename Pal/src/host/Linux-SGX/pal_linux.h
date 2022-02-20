@@ -43,7 +43,8 @@ extern struct pal_linuxsgx_state {
     unsigned int host_egid;
 
     /* remaining heap usable by application */
-    PAL_PTR heap_min, heap_max;
+    void* heap_min;
+    void* heap_max;
 } g_pal_linuxsgx_state;
 
 

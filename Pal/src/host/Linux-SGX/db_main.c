@@ -34,16 +34,16 @@ size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
-void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
-    *start = (PAL_PTR)g_pal_linuxsgx_state.heap_min;
-    *end   = (PAL_PTR)g_pal_linuxsgx_state.heap_max;
+void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
+    *out_start = g_pal_linuxsgx_state.heap_min;
+    *out_end   = g_pal_linuxsgx_state.heap_max;
 
     /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
      * track of PAL memory, so without this limit it could overwrite internal PAL memory). See also
      * `enclave_pages.c`. */
-    *end = SATURATED_P_SUB(*end, g_pal_internal_mem_size, *start);
+    *out_end = SATURATED_P_SUB(*out_end, g_pal_internal_mem_size, *out_start);
 
-    if (*end <= *start) {
+    if (*out_end <= *out_start) {
         log_error("Not enough enclave memory, please increase enclave size!");
         ocall_exit(1, /*is_exitgroup=*/true);
     }

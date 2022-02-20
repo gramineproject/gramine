@@ -155,7 +155,7 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 
 /* For initialization */
 
-void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end);
+void _DkGetAvailableUserAddressRange(void** out_start, void** out_end);
 bool _DkCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _DkMemoryQuota(void);
 unsigned long _DkMemoryAvailableQuota(void);
@@ -174,7 +174,7 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
                        const char* addr, int addrlen);
 int _DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _DkStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _DkStreamMap(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
                  uint64_t size);
 int _DkStreamUnmap(void* addr, uint64_t size);
 int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
@@ -201,7 +201,7 @@ void _DkEventClear(PAL_HANDLE handle);
 int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 /* DkVirtualMemory calls */
-int _DkVirtualMemoryAlloc(void** paddr, uint64_t size, pal_alloc_flags_t alloc_type,
+int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
                           pal_prot_flags_t prot);
 int _DkVirtualMemoryFree(void* addr, uint64_t size);
 int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
