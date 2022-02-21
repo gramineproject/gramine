@@ -11,7 +11,6 @@ fs.root.uri = "file:{{ binary_dir }}"
 
 fs.mounts = [
   { path = "/etc", uri = "file:/etc" },
-  { path = "/dev/shm", uri = "file:/tmp" },
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr", uri = "file:/usr" },
