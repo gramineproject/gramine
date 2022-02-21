@@ -56,12 +56,12 @@ static int printf_padding(int (*write_callback)(const char* buf, size_t size, vo
 /*!
  * \brief Core printf implementation.
  *
- * \param write_callback function called on each generated chunk of data
- * \param arg passed to \p write_callback
- * \param fmt format string
- * \param ap list of optional variadic arguments
- * \param[out] out_size total size of written data (sum of sizes passed to all \p write_callback
- *                      invocations)
+ * \param      write_callback  Function called on each generated chunk of data.
+ * \param      arg             Passed to \p write_callback.
+ * \param      fmt             Format string.
+ * \param      ap              List of optional variadic arguments.
+ * \param[out] out_size        Total size of written data (sum of sizes passed to all
+ *                             \p write_callback invocations).
  *
  * \returns 0 on success, negative error code on failure.
  *

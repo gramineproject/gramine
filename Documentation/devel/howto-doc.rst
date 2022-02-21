@@ -150,19 +150,23 @@ Preferred Doxygen style
 
 #. Prefer Qt-style ``/*!`` and ``\param``:
 
+   .. Note that the snippet below is wrapped to 106 chars per line. This is
+      because it quotes C code (wrapped to 100), and the quote is itself
+      indented in reST.
+
    .. code-block:: c
 
       /*!
-       * \brief An example function
+       * \brief Sum two integers.
        *
-       * This function returns a number augmented by the Answer to the Ultimate
-       * Question of Life, the Universe, and Everything.
+       * \param first   First addend.
+       * \param second  Second addend.
        *
-       * \param n The number to be added
-       * \return A number 42 greater
+       * \returns Sum of the arguments. Sometimes a longer description is needed, then it should be
+       *          wrapped and aligned like this.
        */
-      int foo(int n) {
-          return n + 42;
+      int foo(int first, int second) {
+          return first + second;
       }
 
    ::

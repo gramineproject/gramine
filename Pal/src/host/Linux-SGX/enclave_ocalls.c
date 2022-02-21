@@ -81,16 +81,16 @@ static long sgx_exitless_ocall(uint64_t code, void* ms) {
     }
 
     /* wait till request processing is finished; try spinlock first */
-    int timedout = spinlock_lock_timeout(&req->lock, RPC_SPINLOCK_TIMEOUT);
+    bool locked = spinlock_lock_timeout(&req->lock, RPC_SPINLOCK_TIMEOUT);
 
     /* at this point:
      * - either RPC thread is done with OCALL and released the request's spinlock,
      *   and our enclave thread grabbed lock but it doesn't matter at this point
-     *   (OCALL is done, timedout = 0, no need to wait on futex)
+     *   (OCALL is done, locked == true, no need to wait on futex)
      * - or OCALL is still pending and the request is still blocked on spinlock
-     *   (OCALL is not done, timedout != 0, let's wait on futex) */
+     *   (OCALL is not done, locked == false, let's wait on futex) */
 
-    if (timedout) {
+    if (!locked) {
         /* OCALL takes a lot of time, so fallback to waiting on a futex; at this point we exit
          * enclave to perform syscall; this code is based on Mutex 2 from Futexes are Tricky */
         uint32_t c = SPINLOCK_UNLOCKED;

@@ -349,14 +349,14 @@ typedef int (*migrate_func_t)(struct shim_cp_store*, struct shim_process*, struc
  *
  * Called in parent process during fork/clone.
  *
- * \param migrate_func          Migration function defined by the caller.
- * \param child_process         Struct bookkeeping the child process, added to the children list.
- * \param process_description   Struct describing the new process (child).
- * \param thread_description    Struct describing main thread of the child process.
+ * \param migrate_func         Migration function defined by the caller.
+ * \param child_process        Struct bookkeeping the child process, added to the children list.
+ * \param process_description  Struct describing the new process (child).
+ * \param thread_description   Struct describing main thread of the child process.
  *
  * The remaining arguments are passed into the migration function.
  *
- * \return  0 on success, negative POSIX error code on failure.
+ * \returns 0 on success, negative POSIX error code on failure.
  */
 int create_process_and_send_checkpoint(migrate_func_t migrate_func,
                                        struct shim_child_process* child_process,
@@ -368,9 +368,9 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
  *
  * Called in child process during initialization.
  *
- * \param[in] hdr  Checkpoint header already received from the parent.
+ * \param hdr  Checkpoint header already received from the parent.
  *
- * \return         0 on success, negative POSIX error code on failure.
+ * \returns 0 on success, negative POSIX error code on failure.
  */
 int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr);
 

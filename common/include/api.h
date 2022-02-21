@@ -201,21 +201,18 @@ long strtol(const char* s, char** endptr, int base);
 long long strtoll(const char* s, char** endptr, int base);
 
 /*!
- * \brief Convert a string to number
+ * \brief Convert a string to number.
  *
- * \param str the string
- * \param base digit base, between 2 and 36
- * \param[out] out_value on success, set to the parsed number
- * \param[out] out_end on success, set to the rest of string
+ * \param      str        Input string.
+ * \param      base       Digit base, between 2 and 36.
+ * \param[out] out_value  On success, set to the parsed number.
+ * \param[out] out_end    On success, set to the rest of string.
  *
- * \return 0 on success, -1 on failure
+ * \returns 0 on success, negative on failure.
  *
  * Parses a number from the beginning of a string. The number should be non-empty, consist of digits
  * only (no `+`/`-` signs), and not overflow the `unsigned long` type. For base 16, the "0x" prefix
  * is allowed but not required.
- *
- * On success, returns 0, sets `*out_value` to the value of the number, and `*out_end` to the first
- * byte after the number.
  */
 int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
                  const char** out_end);
@@ -368,12 +365,11 @@ int get_base_name(const char* path, char* buf, size_t* inout_size);
 /*!
  * \brief Parse a size (number with optional "G"/"M"/"K" suffix) into an uint64_t.
  *
- * \param str A string containing a non-negative number. The string may end with "G"/"g" suffix
- *            denoting value in GBs, "M"/"m" for MBs, or "K"/"k" for KBs.
- * \param[out] out_val Parsed size (in bytes).
+ * \param      str      A string containing a non-negative, decimal number. The string may end with
+ *                      "G"/"g" suffix denoting value in GBs, "M"/"m" for MBs, or "K"/"k" for KBs.
+ * \param[out] out_val  Parsed size (in bytes).
  *
- * The number should be decimal. Returns -1 if string cannot be parsed into a size
- * (e.g., suffix is wrong).
+ * \returns 0 on success, negative if string cannot be parsed into a size (e.g., suffix is wrong).
  */
 int parse_size_str(const char* str, uint64_t* out_val);
 
