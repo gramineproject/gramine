@@ -92,7 +92,7 @@ Example
    loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
    fs.mount = [
-     { path = "/lib",  uri = "file:{{ gramine.runtimedir() }}" },
+     { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
    ]
 
    sgx.trusted_files = [
