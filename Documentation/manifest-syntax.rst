@@ -99,7 +99,7 @@ at that path. For example::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
-   fs.mount = [
+   fs.mounts = [
      { path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" },
      # Or, if using a binary from your local directory:
      # { path = "/usr/bin/python3.8", uri = "file:python3.8" },
@@ -339,7 +339,7 @@ FS mount points
 
 ::
 
-    fs.mount = [
+    fs.mounts = [
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
     ]
@@ -348,12 +348,12 @@ Or, as separate sections:
 
 ::
 
-    [[fs.mount]]
+    [[fs.mounts]]
     type = "[chroot|...]"
     path = "[PATH]"
     uri  = "[URI]"
 
-    [[fs.mount]]
+    [[fs.mounts]]
     type = "[chroot|...]"
     path = "[PATH]"
     uri  = "[URI]"
@@ -881,4 +881,4 @@ FS mount points (deprecated syntax)
    fs.mount.[identifier].uri  = "[URI]"
 
 This syntax used a TOML table schema with keys for each mount. It has been
-replaced with a TOML array.
+replaced with the ``fs.mounts`` TOML array.
