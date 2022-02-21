@@ -355,7 +355,7 @@ static int mount_nonroot_from_toml_array(void) {
             return -EINVAL;
         }
 
-        char prefix[static_strlen("fs.mounts[]") + 20];
+        char prefix[static_strlen("fs.mounts[]") + 21];
         snprintf(prefix, sizeof(prefix), "fs.mounts[%zu]", i);
 
         ret = mount_one_nonroot(mount, prefix);
