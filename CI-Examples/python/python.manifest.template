@@ -19,8 +19,9 @@ fs.mounts = [
   { path = "/usr", uri = "file:/usr" },
   { path = "{{ python.stdlib }}", uri = "file:{{ python.stdlib }}" },
   { path = "{{ python.distlib }}", uri = "file:{{ python.distlib }}" },
-  { path = "/tmp", uri = "file:/tmp" },
   { path = "/etc", uri = "file:/etc" },
+
+  { type = "tmpfs", path = "/tmp" },
 ]
 
 sgx.debug = true
@@ -51,5 +52,4 @@ sgx.allowed_files = [
   "file:/etc/gai.conf",
   "file:/etc/host.conf",
   "file:/etc/resolv.conf",
-  "file:/tmp",
 ]
