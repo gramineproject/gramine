@@ -184,6 +184,32 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     log_debug("    isv_prod_id:    0x%08x",   secs->isv_prod_id);
     log_debug("    isv_svn:        0x%08x",   secs->isv_svn);
 
+    /* Linux v5.16 introduced support for Intel AMX feature. Any process must opt-in for AMX
+     * by issuing an AMX-permission request. More technically, together with AMX, Intel intoduced
+     * Extended Feature Disable (XFD) which allows Linux to disable certain features from the
+     * XSAVE feature set for a particular process. By default, XFD[AMX_TILEDATA] = 1, thus Gramine
+     * process has AMX suppressed on startup. This would lead to an unhandled #NM exception on any
+     * SGX enclave entry instruction, resulting in fatal SIGILL in Gramine. For more details, see:
+     *
+     *   - https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/fpu/xstate.c#L934
+     *   - https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/traps.c#L1165
+     *   - Chapter 3.2.6 in Intel SDM
+     *
+     * We call arch_prctl() to request AMX permission if the SGX enclave allows/requests it
+     * (we examine  enclave's SECS.ATTRIBUTES.XFRM). It's enough to do it once: child processes
+     * will inherit the permission, but here for simplicity we call it in every child process as
+     * well. Some deployment environments run Linux systems earlier than v5.16 but with
+     * an AMX-specific patch; this patch doesn't introduce `arch_prctl(ARCH_REQ_XCOMP_PERM)`
+     * syscall so an attempt to call it may return EINVAL, EOPNOTSUPP or ENOSYS. In this case,
+     * we simply ignore the result of this syscall. */
+    if (secs->attributes.xfrm & (1 << AMX_TILEDATA)) {
+        ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
+        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
+            log_error("Requesting AMX permission failed: %d", ret);
+            return ret;
+        }
+    }
+
     return 0;
 }
 

@@ -231,6 +231,17 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
             ret = DO_SYSCALL(execve, "/proc/self/exe", argv, envp);
             INIT_FAIL(unix_to_pal_error(-ret), "execve to disable ASLR failed");
         }
+
+#ifdef __x86_64__
+        /* Linux v5.16 introduced support for Intel AMX feature. Any process must opt-in for AMX
+         * by issuing an AMX-permission request, so call arch_prctl() to request AMX permission
+         * unconditionally. For more details, see similar code in Linux-SGX PAL. */
+        ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
+        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
+            INIT_FAIL(unix_to_pal_error(-ret), "Requesting AMX permission failed");
+        }
+#endif
+
     }
 
     g_pal_linux_state.host_environ = envp;
