@@ -442,7 +442,7 @@ static void hash_dentry_path(struct shim_dentry* dent, char* buf, size_t size) {
 }
 
 /*
- * Retrieve or create a socket dentry at `path`. Used inside `bind()` and `connect()`.
+ * Retrieve or create a UNIX socket dentry at `path`. Used inside `bind()` and `connect()`.
  *
  * NOTE: Our implementation of `connect()` succeeds even if no dentry is found (and creates a new
  * one). This is because a socket might have been created by another Gramine process.
@@ -459,7 +459,7 @@ static int get_unix_socket_dentry(const char* path, bool is_bind, struct shim_de
     if (dent->state & DENTRY_NEGATIVE) {
         /* No file exists, create one. */
         reset_dentry(dent);
-        ret = socket_setup_dentry(dent, PERM_rw_______);
+        ret = unix_socket_setup_dentry(dent, PERM_rw_______);
         dent->state |= DENTRY_VALID;
     } else if (is_bind) {
         /* The file exists and we're inside `bind()`. We should fail. */

@@ -16,7 +16,7 @@
 #include "shim_signal.h"
 #include "stat.h"
 
-int socket_setup_dentry(struct shim_dentry* dent, mode_t perm) {
+int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
