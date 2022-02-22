@@ -76,12 +76,9 @@ int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd
     fifo_data->fd_read = fd_read;
     fifo_data->fd_write = fd_write;
 
-    dent->fs = &fifo_builtin_fs;
     inode->fs = &fifo_builtin_fs;
     inode->data = fifo_data;
 
-    dent->type = S_IFIFO;
-    dent->perm = perm;
     dent->inode = inode;
 
     return 0;

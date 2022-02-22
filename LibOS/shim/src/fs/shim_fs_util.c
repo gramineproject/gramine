@@ -40,11 +40,12 @@ int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
 
 int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
     assert(locked(&g_dcache_lock));
-    assert(dent->type == S_IFDIR);
+    assert(dent->inode);
+    assert(dent->inode->type == S_IFDIR);
 
     struct shim_dentry* child;
     LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
-        if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) {
+        if (child->inode) {
             int ret = callback(child->name, arg);
             if (ret < 0)
                 return ret;

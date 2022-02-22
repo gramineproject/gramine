@@ -456,11 +456,9 @@ static int get_unix_socket_dentry(const char* path, bool is_bind, struct shim_de
     if (ret < 0)
         goto out;
 
-    if (dent->state & DENTRY_NEGATIVE) {
+    if (!dent->inode) {
         /* No file exists, create one. */
-        reset_dentry(dent);
         ret = unix_socket_setup_dentry(dent, PERM_rw_______);
-        dent->state |= DENTRY_VALID;
     } else if (is_bind) {
         /* The file exists and we're inside `bind()`. We should fail. */
         ret = -EADDRINUSE;
@@ -468,7 +466,7 @@ static int get_unix_socket_dentry(const char* path, bool is_bind, struct shim_de
     } else {
         /* The file exists and we're inside `connect()`. We should fail if the file is not a
          * socket. */
-        if (dent->type != S_IFSOCK) {
+        if (dent->inode->type != S_IFSOCK) {
             ret = -ECONNREFUSED;
             goto out;
         }

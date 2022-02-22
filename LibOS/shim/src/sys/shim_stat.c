@@ -17,8 +17,9 @@
 
 static int do_stat(struct shim_dentry* dent, struct stat* stat) {
     assert(locked(&g_dcache_lock));
+    assert(dent->inode);
 
-    struct shim_fs* fs = dent->fs;
+    struct shim_fs* fs = dent->inode->fs;
 
     if (!fs || !fs->d_ops || !fs->d_ops->stat)
         return -EACCES;
@@ -135,13 +136,14 @@ long shim_do_readlinkat(int dirfd, const char* file, char* buf, int bufsize) {
     ret = -EINVAL;
     /* The correct behavior is to return -EINVAL if file is not a
        symbolic link */
-    if (dent->type != S_IFLNK)
+    if (dent->inode->type != S_IFLNK)
         goto out;
 
-    if (!dent->fs || !dent->fs->d_ops || !dent->fs->d_ops->follow_link)
+    struct shim_fs* fs = dent->inode->fs;
+    if (!fs->d_ops || !fs->d_ops->follow_link)
         goto out;
 
-    ret = dent->fs->d_ops->follow_link(dent, &target);
+    ret = fs->d_ops->follow_link(dent, &target);
     if (ret < 0)
         goto out;
 
@@ -230,12 +232,12 @@ static int do_fstatat_empty_path(int dirfd, struct stat* statbuf) {
 
     int ret;
 
-    if (dent->state & DENTRY_NEGATIVE) {
+    if (!dent->inode) {
         ret = -ENOENT;
         goto out;
     }
 
-    struct shim_d_ops* d_ops = dent->fs->d_ops;
+    struct shim_d_ops* d_ops = dent->inode->fs->d_ops;
     if (!(d_ops && d_ops->stat)) {
         ret = -EACCES;
         goto out;
@@ -287,7 +289,7 @@ long shim_do_newfstatat(int dirfd, const char* pathname, struct stat* statbuf, i
     if (ret < 0)
         goto out;
 
-    struct shim_d_ops* d_ops = dent->fs->d_ops;
+    struct shim_d_ops* d_ops = dent->inode->fs->d_ops;
     if (!(d_ops && d_ops->stat)) {
         ret = -EACCES;
         goto out;

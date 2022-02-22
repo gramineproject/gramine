@@ -28,9 +28,6 @@ static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    dent->type = type;
-    dent->perm = perm;
-
     struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
@@ -140,8 +137,6 @@ static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int
 
     hdl->type = TYPE_TMPFS;
     hdl->pos = 0;
-    hdl->inode = dent->inode;
-    get_inode(dent->inode);
 }
 
 static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
@@ -177,11 +172,11 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    if (dent->type == S_IFDIR) {
+    if (dent->inode->type == S_IFDIR) {
         struct shim_dentry* child;
         bool found = false;
         LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
-            if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) {
+            if (child->inode) {
                 found = true;
                 break;
             }
@@ -189,16 +184,13 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
         if (found)
             return -ENOTEMPTY;
     }
-
-    struct shim_inode* inode = dent->inode;
-    dent->inode = NULL;
-    put_inode(inode);
     return 0;
 }
 
 static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
     assert(locked(&g_dcache_lock));
     assert(old->inode);
+    __UNUSED(new);
 
     uint64_t time_us;
     if (DkSystemTimeQuery(&time_us) < 0)
@@ -206,41 +198,16 @@ static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
 
     /* TODO: this should be done in the syscall handler, not here */
 
-    struct shim_inode* new_inode = new->inode;
-    if (new_inode) {
-        new->inode = NULL;
-        put_inode(new_inode);
-    }
-
-    struct shim_inode* old_inode = old->inode;
-
-    lock(&old_inode->lock);
-
-    /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
-     * from `old`. */
-    new->inode = old_inode;
-    new->type = old->type;
-    new->perm = old->perm;
-
-    old->inode = NULL;
-
-    old_inode->ctime = time_us / USEC_IN_SEC;
-
-    unlock(&old_inode->lock);
+    lock(&old->inode->lock);
+    old->inode->ctime = time_us / USEC_IN_SEC;
+    unlock(&old->inode->lock);
 
     return 0;
 }
 
 static int tmpfs_chmod(struct shim_dentry* dent, mode_t perm) {
-    assert(locked(&g_dcache_lock));
-    assert(dent->inode);
-
-    lock(&dent->inode->lock);
-
-    /* `dent->perm` already updated by caller */
-    dent->inode->perm = perm;
-
-    unlock(&dent->inode->lock);
+    __UNUSED(dent);
+    __UNUSED(perm);
     return 0;
 }
 
