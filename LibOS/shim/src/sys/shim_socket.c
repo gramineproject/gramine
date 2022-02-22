@@ -1839,19 +1839,29 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                     need_set_attr = true;
                 }
                 break;
-            case SO_RCVTIMEO:
-                /* fallthrough */
+
+            /* TODO: Checks on the sufficient size of optval and the overflow of
+            tv -> timeout_us convertion in both the cases (SO_RCVTIMEO and SO_SNDTIMEO). Also these
+            checks and the corresponding error codes can be moved into shim_do_setsockopt()
+            function and not in these internal functions. optval is not required to be aligned
+            which means memcpy should be used instead of assignment through pointer. Same TODO is
+            applicable to shim_do_getsockopt function*/
+            case SO_RCVTIMEO: {
+                struct timeval tv   = *(struct timeval*)optval;
+                uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
+                if (timeout_us != attr->socket.receivetimeout_us) {
+                    attr->socket.receivetimeout_us = timeout_us;
+                    need_set_attr = true;
+                }
+                break;
+            }
             case SO_SNDTIMEO: {
                 struct timeval tv   = *(struct timeval*)optval;
                 uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
-
-                if (optname == SO_RCVTIMEO && timeout_us != attr->socket.receivetimeout_us) {
-                    attr->socket.receivetimeout_us = timeout_us;
-                }
-                if (optname == SO_SNDTIMEO && timeout_us != attr->socket.sendtimeout_us) {
+                if (timeout_us != attr->socket.sendtimeout_us) {
                     attr->socket.sendtimeout_us = timeout_us;
+                    need_set_attr = true;
                 }
-                need_set_attr = true;
                 break;
             }
             case SO_REUSEADDR:
