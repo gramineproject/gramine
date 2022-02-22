@@ -231,6 +231,17 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
             ret = DO_SYSCALL(execve, "/proc/self/exe", argv, envp);
             INIT_FAIL(unix_to_pal_error(-ret), "execve to disable ASLR failed");
         }
+
+        /* Call arch_prctl to request AMX permission unconditionally once, the child process will
+         * inherit the permission. Linux is smart enough to not actually enable AMX immediately
+         * until first AMX instruction. If ret is EINVAL or EOPNOTSUPP, then we are on
+         * older/patched Linux with no need for arch_prctl-style AMX enablement, simply ignore
+         * this syscall
+         */
+        ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
+        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP) {
+            INIT_FAIL(unix_to_pal_error(-ret), "request AMX permission failed");
+        }
     }
 
     g_pal_linux_state.host_environ = envp;

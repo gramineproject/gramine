@@ -17,6 +17,28 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
+
+// Common definitions used in PAL
+/* To support AMX in linux kernel v5.16, prctl add XSTATE components permission
+ * control APIs, refer:
+ * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/include/uapi/asm/prctl.h
+ */
+#if !defined(ARCH_GET_XCOMP_SUPP)
+#define ARCH_GET_XCOMP_SUPP	0x1021
+#endif
+#if !defined(ARCH_GET_XCOMP_PERM)
+#define ARCH_GET_XCOMP_PERM	0x1022
+#endif
+#if !defined(ARCH_REQ_XCOMP_PERM)
+#define ARCH_REQ_XCOMP_PERM	0x1023
+#endif
+
+enum cpu_extension {
+    X87, SSE, AVX, MPX_BNDREGS, MPX_BNDCSR, AVX512_OPMASK, AVX512_ZMM256, AVX512_ZMM512,
+    PKRU = 9,
+    AMX_TILECFG = 17, AMX_TILEDATA,
+    LAST_CPU_EXTENSION,
+};
 #endif
 
 /* TODO: we should `#include "toml.h"` here. However, this is currently inconvenient to do in Meson,

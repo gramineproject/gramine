@@ -78,13 +78,6 @@ extern char __text_start, __text_end, __data_start, __data_end;
 #define DATA_START ((void*)(&__data_start))
 #define DATA_END   ((void*)(&__data_end))
 
-enum cpu_extension {
-    X87, SSE, AVX, MPX_BNDREGS, MPX_BNDCSR, AVX512_OPMASK, AVX512_ZMM256, AVX512_ZMM512,
-    PKRU = 9,
-    AMX_TILECFG = 17, AMX_TILEDATA,
-    LAST_CPU_EXTENSION,
-};
-
 extern const uint32_t g_cpu_extension_sizes[];
 extern const uint32_t g_cpu_extension_offsets[];
 

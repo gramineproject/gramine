@@ -184,6 +184,25 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     log_debug("    isv_prod_id:    0x%08x",   secs->isv_prod_id);
     log_debug("    isv_svn:        0x%08x",   secs->isv_svn);
 
+    /* From linux kernel v5.16, AMX brings XFD state:
+     * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/fpu/xstate.c#L934
+     * by default, IA32_XFD[AMX_TILEDATA] = 1, and enclave entry instruction
+     * (ENCLU[EENTER] and ENCLU[ERESUME]) would genterate unhandled #NM exception if
+     * XCR0[AMX_TILEDATA] = IA32_XFD[AMX_TILEDATA] = 1, refer chapter 3.2.6:
+     * https://software.intel.com/content/dam/develop/external/us/en/documents-tps/architecture-instruction-set-extensions-programming-reference.pdf
+     * request permission then the XFD could handle #NM exception:
+     * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/kernel/traps.c#L1165
+     */
+    if (secs->attributes.xfrm & (1 << AMX_TILEDATA)) {
+        ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
+        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP) {
+            log_error("request AMX permission failed: %d", ret);
+            return ret;
+        }
+        /* if ret is EINVAL or EOPNOTSUPP, then we are on older/patched Linux with no need for
+         * arch_prctl-style AMX enablement; simply ignore this syscall */
+    }
+
     return 0;
 }
 
