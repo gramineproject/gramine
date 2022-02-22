@@ -17,7 +17,15 @@ enum CPUID_WORD {
     CPUID_WORD_NUM = 4,
 };
 
+enum cpu_extension {
+    X87, SSE, AVX, MPX_BNDREGS, MPX_BNDCSR, AVX512_OPMASK, AVX512_ZMM256, AVX512_ZMM512,
+    PKRU = 9,
+    AMX_TILECFG = 17, AMX_TILEDATA,
+    LAST_CPU_EXTENSION,
+};
+
 #define INTEL_SGX_LEAF 0x12 /* Intel SGX Capabilities: CPUID Leaf 12H */
+#define EXTENDED_STATE_LEAF 0xD /* Extended state (XSTATE): CPUID leaf 0DH */
 
 static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[]) {
     __asm__("cpuid"
