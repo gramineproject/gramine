@@ -306,7 +306,7 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
         goto out;
     }
 
-    if (!(dent->state & DENTRY_NEGATIVE)) {
+    if (dent->inode) {
         ret = -EEXIST;
         goto out;
     }
@@ -365,11 +365,9 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
     }
 
     /* set up the dentry for FIFO */
-    reset_dentry(dent);
     ret = fifo_setup_dentry(dent, mode & ~S_IFMT, vfd1, vfd2);
     if (ret < 0)
         goto out;
-    dent->state |= DENTRY_VALID;
 
     ret = 0;
 out:

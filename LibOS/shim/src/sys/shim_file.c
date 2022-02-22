@@ -35,7 +35,7 @@ long shim_do_unlinkat(int dfd, const char* pathname, int flag) {
 
     struct shim_dentry* dir = NULL;
     struct shim_dentry* dent = NULL;
-    int ret = 0;
+    int ret;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
@@ -51,25 +51,28 @@ long shim_do_unlinkat(int dfd, const char* pathname, int flag) {
     }
 
     if (flag & AT_REMOVEDIR) {
-        if (dent->type != S_IFDIR) {
+        if (dent->inode->type != S_IFDIR) {
             ret = -ENOTDIR;
             goto out;
         }
     } else {
-        if (dent->type == S_IFDIR) {
+        if (dent->inode->type == S_IFDIR) {
             ret = -EISDIR;
             goto out;
         }
     }
 
-    if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->unlink) {
-        ret = dent->fs->d_ops->unlink(dent);
+    struct shim_fs* fs = dent->inode->fs;
+    if (fs->d_ops && fs->d_ops->unlink) {
+        ret = fs->d_ops->unlink(dent);
         if (ret < 0) {
             goto out;
         }
     }
 
-    dent->state |= DENTRY_NEGATIVE;
+    put_inode(dent->inode);
+    dent->inode = NULL;
+    ret = 0;
 out:
     unlock(&g_dcache_lock);
     if (dir)
@@ -127,21 +130,24 @@ long shim_do_rmdir(const char* pathname) {
         goto out;
     }
 
-    if (dent->type != S_IFDIR) {
+    if (dent->inode->type != S_IFDIR) {
         ret = -ENOTDIR;
         goto out;
     }
 
-    if (!dent->fs || !dent->fs->d_ops || !dent->fs->d_ops->unlink) {
+    struct shim_fs* fs = dent->inode->fs;
+    if (!fs || !fs->d_ops || !fs->d_ops->unlink) {
         ret = -EACCES;
         goto out;
     }
 
-    ret = dent->fs->d_ops->unlink(dent);
+    ret = fs->d_ops->unlink(dent);
     if (ret < 0)
         goto out;
 
-    dent->state |= DENTRY_NEGATIVE;
+    put_inode(dent->inode);
+    dent->inode = NULL;
+    ret = 0;
 out:
     unlock(&g_dcache_lock);
     if (dent)
@@ -166,7 +172,7 @@ long shim_do_fchmodat(int dfd, const char* filename, mode_t mode) {
         return -EFAULT;
 
     /* This isn't documented, but that's what Linux does. */
-    mode &= 07777;
+    mode_t perm = mode & 07777;
 
     struct shim_dentry* dir = NULL;
     struct shim_dentry* dent = NULL;
@@ -180,12 +186,16 @@ long shim_do_fchmodat(int dfd, const char* filename, mode_t mode) {
     if (ret < 0)
         goto out;
 
-    if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->chmod) {
-        if ((ret = dent->fs->d_ops->chmod(dent, mode)) < 0)
+    struct shim_fs* fs = dent->inode->fs;
+    if (fs && fs->d_ops && fs->d_ops->chmod) {
+        if ((ret = fs->d_ops->chmod(dent, perm)) < 0)
             goto out_dent;
     }
 
-    dent->perm = mode;
+    lock(&dent->inode->lock);
+    dent->inode->perm = perm;
+    unlock(&dent->inode->lock);
+
 out_dent:
     put_dentry(dent);
 out:
@@ -201,7 +211,7 @@ long shim_do_fchmod(int fd, mode_t mode) {
         return -EBADF;
 
     /* This isn't documented, but that's what Linux does. */
-    mode &= 07777;
+    mode_t perm = mode & 07777;
 
     struct shim_dentry* dent = hdl->dentry;
     int ret = 0;
@@ -212,21 +222,24 @@ long shim_do_fchmod(int fd, mode_t mode) {
         goto out;
     }
 
-    assert(dent->state & DENTRY_VALID);
-    if (dent->state & DENTRY_NEGATIVE) {
+    if (!dent->inode) {
         /* TODO: the `chmod` callback should take a handle, not dentry; otherwise we're not able to
          * chmod an unlinked file */
         ret = -ENOENT;
         goto out;
     }
 
-    if (dent->fs && dent->fs->d_ops && dent->fs->d_ops->chmod) {
-        ret = dent->fs->d_ops->chmod(dent, mode);
+    struct shim_fs* fs = dent->inode->fs;
+    if (fs && fs->d_ops && fs->d_ops->chmod) {
+        ret = fs->d_ops->chmod(dent, perm);
         if (ret < 0)
             goto out;
     }
 
-    dent->perm = mode;
+    lock(&dent->inode->lock);
+    dent->inode->perm = perm;
+    unlock(&dent->inode->lock);
+
 out:
     unlock(&g_dcache_lock);
     put_handle(hdl);
@@ -280,36 +293,34 @@ long shim_do_fchown(int fd, uid_t uid, gid_t gid) {
 
 static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent) {
     assert(locked(&g_dcache_lock));
+    assert(old_dent->inode);
 
-    if ((old_dent->type != S_IFREG) ||
-            (!(new_dent->state & DENTRY_NEGATIVE) && (new_dent->type != S_IFREG))) {
+    if ((old_dent->inode->type != S_IFREG) || (new_dent->inode &&
+                                               new_dent->inode->type != S_IFREG)) {
         /* Current implementation of fs does not allow for renaming anything but regular files */
         return -ENOSYS;
     }
 
-    if (old_dent->fs != new_dent->fs) {
+    if (old_dent->mount != new_dent->mount) {
         /* Disallow cross mount renames */
         return -EXDEV;
     }
 
-    if (!old_dent->fs || !old_dent->fs->d_ops || !old_dent->fs->d_ops->rename) {
+    struct shim_fs* fs = old_dent->inode->fs;
+    if (!fs || !fs->d_ops || !fs->d_ops->rename) {
         return -EPERM;
     }
 
-    if (old_dent->type == S_IFDIR) {
-        if (!(new_dent->state & DENTRY_NEGATIVE)) {
-            if (new_dent->type != S_IFDIR) {
+    if (old_dent->inode->type == S_IFDIR) {
+        if (new_dent->inode) {
+            if (new_dent->inode->type != S_IFDIR) {
                 return -ENOTDIR;
             }
             if (new_dent->nchildren > 0) {
                 return -ENOTEMPTY;
             }
-        } else {
-            /* destination is a negative dentry and needs to be marked as a directory, since source
-             * is a directory */
-            new_dent->type = S_IFDIR;
         }
-    } else if (new_dent->type == S_IFDIR) {
+    } else if (new_dent->inode && new_dent->inode->type == S_IFDIR) {
         return -EISDIR;
     }
 
@@ -319,13 +330,15 @@ static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent)
 
     /* TODO: Add appropriate checks for hardlinks once they get implemented. */
 
-    int ret = old_dent->fs->d_ops->rename(old_dent, new_dent);
-    if (!ret) {
-        old_dent->state |= DENTRY_NEGATIVE;
-        new_dent->state &= ~DENTRY_NEGATIVE;
-    }
+    int ret = fs->d_ops->rename(old_dent, new_dent);
+    if (ret < 0)
+        return ret;
 
-    return ret;
+    if (new_dent->inode)
+        put_inode(new_dent->inode);
+    new_dent->inode = old_dent->inode;
+    old_dent->inode = NULL;
+    return 0;
 }
 
 long shim_do_rename(const char* oldpath, const char* newpath) {
@@ -354,7 +367,7 @@ long shim_do_renameat(int olddirfd, const char* oldpath, int newdirfd, const cha
         goto out;
     }
 
-    if (old_dent->state & DENTRY_NEGATIVE) {
+    if (!old_dent->inode) {
         ret = -ENOENT;
         goto out;
     }

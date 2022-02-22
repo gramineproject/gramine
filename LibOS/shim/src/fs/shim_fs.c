@@ -498,7 +498,7 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
         goto err;
     }
 
-    /* Trigger filesystem lookup for the root dentry, so that it's already valid. If there is a
+    /* Trigger filesystem lookup for the root dentry, so that it's already positive. If there is a
      * problem looking up the root, we want the mount operation to fail. */
 
     struct shim_dentry* root;
@@ -550,10 +550,18 @@ int mount_fs(const char* type, const char* uri, const char* mount_path) {
 
     lock(&g_dcache_lock);
 
-    int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
-    if ((ret = path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point)) < 0) {
-        log_error("error looking up mountpoint %s: %d", mount_path, ret);
-        goto out;
+    if (!g_dentry_root->attached_mount && !strcmp(mount_path, "/")) {
+        /* `g_dentry_root` does not belong to any mounted filesystem, so lookup will fail. Use it
+         * directly. */
+        mount_point = g_dentry_root;
+        get_dentry(g_dentry_root);
+    } else {
+        int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
+        ret = path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point);
+        if (ret < 0) {
+            log_error("error looking up mountpoint %s: %d", mount_path, ret);
+            goto out;
+        }
     }
 
     if ((ret = mount_fs_at_dentry(type, uri, mount_path, mount_point)) < 0) {

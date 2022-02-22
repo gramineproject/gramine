@@ -63,22 +63,23 @@ int init_dcache(void) {
         return 0;
     }
 
+    /*
+     * Prepare `g_dentry_root`. Note that this dentry is special:
+     *
+     * - It has an extra reference, so that it's never deallocated
+     * - It doesn't have `mount`
+     * - It's always negative (doesn't have `inode`)
+     *
+     * Most functions do not need to handle `g_dentry_root`, because it's used only as a mountpoint
+     * for the root filesystem. For instance, a lookup of "/" will not retrieve `g_dentry_root`, but
+     * the root dentry of the filesystem mounted there.
+     */
     g_dentry_root = alloc_dentry();
     if (!g_dentry_root) {
         return -ENOMEM;
     }
 
-    /* The root is special; we assume it won't change or be freed, so we artificially increase its
-     * refcount by 1. */
     get_dentry(g_dentry_root);
-
-    /* Initialize the root to a valid state, as a low-level lookup
-     *  will fail. */
-    g_dentry_root->state |= DENTRY_VALID;
-
-    /* The root should be a directory too */
-    g_dentry_root->perm = PERM_rwx______;
-    g_dentry_root->type = S_IFDIR;
 
     char* name = strdup("");
     if (!name) {
@@ -152,27 +153,13 @@ void dentry_gc(struct shim_dentry* dent) {
     if (REF_GET(dent->ref_count) != 1)
         return;
 
-    if ((dent->state & DENTRY_VALID) && !(dent->state & DENTRY_NEGATIVE))
+    if (dent->inode)
         return;
 
     LISTP_DEL_INIT(dent, &dent->parent->children, siblings);
     dent->parent->nchildren--;
     /* This should delete `dent` */
     put_dentry(dent);
-}
-
-void reset_dentry(struct shim_dentry* dent) {
-    assert(locked(&g_dcache_lock));
-
-    dent->state = 0;
-    dent->fs = dent->mount ? dent->mount->fs : NULL;
-    dent->type = 0;
-    dent->perm = 0;
-
-    if (dent->inode) {
-        put_inode(dent->inode);
-        dent->inode = NULL;
-    }
 }
 
 struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry* parent,
@@ -201,7 +188,6 @@ struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry*
     if (mount) {
         get_mount(mount);
         dent->mount = mount;
-        dent->fs = mount->fs;
     }
 
     if (parent) {
@@ -434,44 +420,41 @@ static void dump_dentry_mode(struct print_buf* buf, mode_t type, mode_t perm) {
     buf_putc(buf, ' ');
 }
 
-#define DUMP_FLAG(flag, s, empty) buf_puts(&buf, (dent->state & (flag)) ? (s) : (empty))
-
 static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
     assert(locked(&g_dcache_lock));
 
     struct print_buf buf = INIT_PRINT_BUF(dump_dentry_write_all);
 
-    buf_printf(&buf, "[%6.6s ", dent->fs ? dent->fs->name : "");
+    buf_printf(&buf, "[%6.6s ", dent->inode ? dent->inode->fs->name : "");
 
-    DUMP_FLAG(DENTRY_VALID, "V", ".");
-    DUMP_FLAG(DENTRY_LISTED, "L", ".");
     buf_printf(&buf, "%3d] ", (int)REF_GET(dent->ref_count));
 
-    dump_dentry_mode(&buf, dent->type, dent->perm);
-
-    if (dent->attached_mount) {
-        buf_puts(&buf, "M");
-    } else if (!dent->parent) {
-        buf_puts(&buf, "*");
+    if (dent->inode) {
+        dump_dentry_mode(&buf, dent->inode->type, dent->inode->perm);
     } else {
-        buf_puts(&buf, " ");
+        buf_puts(&buf, "------ ---- ");
     }
-    DUMP_FLAG(DENTRY_NEGATIVE, "-", " ");
+
+    buf_puts(&buf, dent->attached_mount ? "M" : " ");
 
     for (unsigned int i = 0; i < level; i++)
         buf_puts(&buf, "  ");
 
     buf_puts(&buf, dent->name);
-    switch (dent->type) {
-        case S_IFDIR: buf_puts(&buf, "/"); break;
-        case S_IFLNK: buf_puts(&buf, " -> "); break;
-        default: break;
+
+    if (dent->inode) {
+        switch (dent->inode->type) {
+            case S_IFDIR: buf_puts(&buf, "/"); break;
+            case S_IFLNK: buf_puts(&buf, " -> "); break;
+            default: break;
+        }
     }
+
     if (!dent->parent && dent->mount) {
         buf_printf(&buf, " (%s \"%s\")", dent->mount->fs->name, dent->mount->uri);
     }
-    buf_flush(&buf);
 
+    buf_flush(&buf);
 
     if (dent->attached_mount) {
         struct shim_dentry* root = dent->attached_mount->root;
@@ -546,9 +529,6 @@ BEGIN_CP_FUNC(dentry) {
         INIT_LIST_HEAD(new_dent, siblings);
         REF_SET(new_dent->ref_count, 0);
 
-        /* we don't checkpoint children dentries, so need to list directory again */
-        new_dent->state &= ~DENTRY_LISTED;
-
         /* `fs_lock` is used only by process leader. */
         new_dent->fs_lock = NULL;
 
@@ -556,9 +536,6 @@ BEGIN_CP_FUNC(dentry) {
 
         if (new_dent->mount)
             DO_CP_MEMBER(mount, dent, new_dent, mount);
-
-        if (new_dent->fs)
-            DO_CP_MEMBER(fs, dent, new_dent, fs);
 
         if (dent->parent)
             DO_CP_MEMBER(dentry, dent, new_dent, parent);
@@ -587,7 +564,6 @@ BEGIN_RS_FUNC(dentry) {
     CP_REBASE(dent->children);
     CP_REBASE(dent->siblings);
     CP_REBASE(dent->mount);
-    CP_REBASE(dent->fs);
     CP_REBASE(dent->parent);
     CP_REBASE(dent->attached_mount);
     CP_REBASE(dent->inode);

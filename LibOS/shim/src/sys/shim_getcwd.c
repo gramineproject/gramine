@@ -88,7 +88,7 @@ long shim_do_fchdir(int fd) {
 
     struct shim_dentry* dent = hdl->dentry;
 
-    if (dent->type != S_IFDIR) {
+    if (!dent->inode || dent->inode->type != S_IFDIR) {
         char* path = NULL;
         dentry_abs_path(dent, &path, /*size=*/NULL);
         log_debug("%s is not a directory", path);

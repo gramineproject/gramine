@@ -139,8 +139,6 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
             break;
         }
     }
-    hdl->inode = dent->inode;
-    get_inode(dent->inode);
 
     return 0;
 }
@@ -177,8 +175,6 @@ static int pseudo_lookup(struct shim_dentry* dent) {
 
     inode->data = node;
 
-    dent->type = type;
-    dent->perm = node->perm;
     dent->inode = inode;
     return 0;
 }

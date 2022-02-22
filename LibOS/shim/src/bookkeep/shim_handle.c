@@ -47,12 +47,12 @@ int open_executable(struct shim_handle* hdl, const char* path) {
         goto out;
     }
 
-    if (dent->type != S_IFREG) {
+    if (dent->inode->type != S_IFREG) {
         ret = -EACCES;
         goto out;
     }
 
-    if (!(dent->perm & S_IXUSR)) {
+    if (!(dent->inode->perm & S_IXUSR)) {
         ret = -EACCES;
         goto out;
     }
@@ -718,16 +718,17 @@ BEGIN_CP_FUNC(handle) {
         if (hdl->uri)
             DO_CP_MEMBER(str, hdl, new_hdl, uri);
 
+        if (hdl->is_dir) {
+            /*
+             * We don't checkpoint children dentries of a directory dentry, so the child process
+             * will need to list the directory again. However, we keep `dir_info.pos` unchanged
+             * so that `getdents/getdents64` will resume from the same place.
+             */
+            new_hdl->dir_info.dents = NULL;
+            new_hdl->dir_info.count = 0;
+        }
+
         if (hdl->dentry) {
-            if (hdl->dentry->type == S_IFDIR) {
-                /*
-                 * We don't checkpoint children dentries of a directory dentry, so the child process
-                 * will need to list the directory again. However, we keep `dir_info.pos` unchanged
-                 * so that `getdents/getdents64` will resume from the same place.
-                 */
-                new_hdl->dir_info.dents = NULL;
-                new_hdl->dir_info.count = 0;
-            }
             DO_CP_MEMBER(dentry, hdl, new_hdl, dentry);
         }
 

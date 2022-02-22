@@ -22,15 +22,11 @@ int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    dent->type = type;
-    dent->perm = perm;
-
     struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
     dent->inode = inode;
 
-    dent->fs = &synthetic_builtin_fs;
     inode->fs = &synthetic_builtin_fs;
 
     return 0;
@@ -39,11 +35,10 @@ int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
 static int synthetic_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
+    __UNUSED(dent);
     __UNUSED(flags);
 
     hdl->type = TYPE_SYNTHETIC;
-    hdl->inode = dent->inode;
-    get_inode(dent->inode);
     return 0;
 }
 

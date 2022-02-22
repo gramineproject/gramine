@@ -55,8 +55,9 @@ static const char* strip_prefix(const char* uri) {
 
 /*
  * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It
- * needs to be passed separately (instead of using `dent->type`) because the dentry might not have
- * this information yet: we might be creating a new file, or looking up a file we don't know yet.
+ * needs to be passed separately (instead of using `dent->inode->type`) because the dentry might not
+ * have inode associated yet: we might be creating a new file, or looking up a file we don't know
+ * yet.
  *
  * If `type` is KEEP_URI_PREFIX, we keep the URI prefix from mount URI.
  */
@@ -132,9 +133,6 @@ static int chroot_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t per
                                file_off_t size) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
-
-    dent->type = type;
-    dent->perm = perm;
 
     struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
@@ -259,13 +257,7 @@ static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    int ret = chroot_do_open(hdl, dent, dent->type, flags, /*perm=*/0);
-    if (ret < 0)
-        return ret;
-
-    hdl->inode = dent->inode;
-    get_inode(dent->inode);
-    return 0;
+    return chroot_do_open(hdl, dent, dent->inode->type, flags, /*perm=*/0);
 }
 
 static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
@@ -280,13 +272,7 @@ static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int f
     if (ret < 0)
         return ret;
 
-    ret = chroot_setup_dentry(dent, type, perm, /*size=*/0);
-    if (ret < 0)
-        return ret;
-
-    hdl->inode = dent->inode;
-    get_inode(dent->inode);
-    return 0;
+    return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
 static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
@@ -488,7 +474,7 @@ static int chroot_unlink(struct shim_dentry* dent) {
     int ret;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
     if (ret < 0)
         return ret;
 
@@ -497,9 +483,6 @@ static int chroot_unlink(struct shim_dentry* dent) {
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    struct shim_inode* inode = dent->inode;
-    dent->inode = NULL;
-    put_inode(inode);
     return 0;
 }
 
@@ -510,12 +493,12 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
     int ret;
     char* new_uri = NULL;
 
-    ret = chroot_dentry_uri(new, old->type, &new_uri);
+    ret = chroot_dentry_uri(new, old->inode->type, &new_uri);
     if (ret < 0)
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(old, old->type, &palhdl);
+    ret = chroot_temp_open(old, old->inode->type, &palhdl);
     if (ret < 0)
         goto out;
 
@@ -525,17 +508,6 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
-
-    reset_dentry(new);
-
-    /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
-     * from `old`. */
-    new->inode = old->inode;
-    new->type = old->type;
-    new->perm = old->perm;
-    new->state |= DENTRY_VALID;
-
-    old->inode = NULL;
     ret = 0;
 
 out:
@@ -552,7 +524,7 @@ static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
     lock(&dent->inode->lock);
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
     if (ret < 0)
         goto out;
 
@@ -565,7 +537,6 @@ static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
         goto out;
     }
 
-    /* `dent->perm` already updated by caller */
     dent->inode->perm = perm;
     ret = 0;
 

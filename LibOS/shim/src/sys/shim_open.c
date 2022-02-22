@@ -369,7 +369,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         goto out_no_unlock;
     }
 
-    if (hdl->dentry->state & DENTRY_NEGATIVE) {
+    if (!hdl->dentry->inode) {
         ret = -ENOENT;
         goto out_no_unlock;
     }
@@ -385,6 +385,8 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     assert(hdl->pos >= 0);
     while ((size_t)hdl->pos < dirhdl->count) {
         struct shim_dentry* dent = dirhdl->dents[hdl->pos];
+        assert(dent->inode);
+
         const char* name;
         size_t name_len;
 
@@ -400,7 +402,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         }
 
         uint64_t d_ino = dentry_ino(dent);
-        char d_type = get_dirent_type(dent->type);
+        char d_type = get_dirent_type(dent->inode->type);
 
         size_t ent_size;
 

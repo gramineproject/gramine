@@ -24,11 +24,8 @@ int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm) {
     if (!inode)
         return -ENOMEM;
 
-    dent->fs = &socket_builtin_fs;
     inode->fs = &socket_builtin_fs;
 
-    dent->type = S_IFSOCK;
-    dent->perm = perm;
     dent->inode = inode;
     return 0;
 }

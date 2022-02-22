@@ -18,9 +18,8 @@
 
 int check_permissions(struct shim_dentry* dent, mode_t mask) {
     assert(locked(&g_dcache_lock));
-    assert(dent->state & DENTRY_VALID);
 
-    if (dent->state & DENTRY_NEGATIVE)
+    if (!dent->inode)
         return -ENOENT;
 
     /* If we only check if the file exists, at this point we know that */
@@ -28,14 +27,14 @@ int check_permissions(struct shim_dentry* dent, mode_t mask) {
         return 0;
 
     /* Check the "user" part of mode against mask */
-    if (((dent->perm >> 6) & mask) == mask)
+    if (((dent->inode->perm >> 6) & mask) == mask)
         return 0;
 
     return -EACCES;
 }
 
 /* This function works like `lookup_dcache`, but if the dentry is not in cache, it creates a new,
- * not yet valid one. */
+ * negative one. */
 static struct shim_dentry* lookup_dcache_or_create(struct shim_dentry* parent, const char* name,
                                                    size_t name_len) {
     assert(locked(&g_dcache_lock));
@@ -47,51 +46,25 @@ static struct shim_dentry* lookup_dcache_or_create(struct shim_dentry* parent, c
     return dent;
 }
 
-/*!
- * \brief Validate a dentry, if necessary
- *
- * \param dent dentry to query
- *
- * \return 0 on success, negative error code otherwise
- *
- * This function makes sure a dentry is valid. If the dentry is not yet valid (DENTRY_VALID is not
- * set), it invokes the lookup operation of the underlying filesystem. On success, it returns 0 and
- * marks the dentry as valid.
- *
- * A negative filesystem lookup (ENOENT) is also considered a success, and the dentry is marked as
- * valid and negative.
- *
- * If the dentry is already valid, this function succeeds without doing anything.
- *
- * The caller should hold `g_dcache_lock`.
- */
-static int validate_dentry(struct shim_dentry* dent) {
+/* Performs lookup operation in the underlying filesystem. Treats -ENOENT from lookup operation as
+ * success (but leaves the dentry negative). */
+static int lookup_dentry(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
-    if (dent->state & DENTRY_VALID)
+    if (dent->inode)
         return 0;
 
-    reset_dentry(dent);
-
-    /* This is an invalid dentry: either we just created it, or it got left over from a previous
-     * failed lookup. Perform the lookup. */
-    assert(dent->fs);
-    assert(dent->fs->d_ops);
-    assert(dent->fs->d_ops->lookup);
-    int ret = dent->fs->d_ops->lookup(dent);
-
-    if (ret == 0) {
-        /* Lookup succeeded. */
-        dent->state |= DENTRY_VALID;
-        return 0;
-    } else if (ret == -ENOENT) {
-        /* File not found, mark dentry as negative */
-        dent->state |= DENTRY_VALID | DENTRY_NEGATIVE;
-        return 0;
-    } else {
-        /* Lookup failed, keep dentry as invalid */
-        return ret;
+    assert(dent->mount);
+    assert(dent->mount->fs->d_ops);
+    assert(dent->mount->fs->d_ops->lookup);
+    int ret = dent->mount->fs->d_ops->lookup(dent);
+    if (ret < 0) {
+        assert(!dent->inode);
+        /* Treat -ENOENT as successful lookup (but leave the dentry negative) */
+        return ret == -ENOENT ? 0 : ret;
     }
+    assert(dent->inode);
+    return 0;
 }
 
 static int do_path_lookupat(struct shim_dentry* start, const char* path, int flags,
@@ -105,10 +78,11 @@ static int path_lookupat_follow(struct shim_dentry* link, int flags, struct shim
 
     assert(locked(&g_dcache_lock));
 
-    assert(link->fs);
-    assert(link->fs->d_ops);
-    assert(link->fs->d_ops->follow_link);
-    ret = link->fs->d_ops->follow_link(link, &target);
+    assert(link->inode);
+    struct shim_fs* fs = link->inode->fs;
+    assert(fs->d_ops);
+    assert(fs->d_ops->follow_link);
+    ret = fs->d_ops->follow_link(link, &target);
     if (ret < 0)
         goto out;
 
@@ -123,15 +97,15 @@ out:
 }
 
 /*!
- * \brief Traverse mountpoints and validate dentry
+ * \brief Traverse mountpoints and look up a dentry
  *
  * \param[in,out] dent the dentry
  *
  * \return 0 on success, negative error code otherwise
  *
  * If `*dent` is a mountpoint, this function converts it to the underlying filesystem root
- * (iterating if necessary). All dentries on the way are validated. As a result, on success `*dent`
- * is guaranteed to be valid and not a mountpoint.
+ * (iterating if necessary), then performs a lookup on the last dentry. As in `lookup_dentry`, if
+ * the file is not found, the function will still return 0 (but `*dent` will be negative).
  *
  * The caller should hold a reference to `*dent`. On success, the reference will be converted: the
  * function will decrease the reference count for the original dentry, and increase it for the new
@@ -139,34 +113,24 @@ out:
  *
  * The caller should hold `g_dcache_lock`.
  */
-static int traverse_mount_and_validate(struct shim_dentry** dent) {
+static int traverse_mount_and_lookup(struct shim_dentry** dent) {
     assert(locked(&g_dcache_lock));
-    int ret;
 
     struct shim_dentry* cur_dent = *dent;
-    get_dentry(cur_dent);
-
-    if ((ret = validate_dentry(cur_dent)) < 0)
-        goto out;
-
     while (cur_dent->attached_mount) {
-        get_dentry(cur_dent->attached_mount->root);
-        put_dentry(cur_dent);
         cur_dent = cur_dent->attached_mount->root;
-        if ((ret = validate_dentry(cur_dent)) < 0)
-            goto out;
     }
+
+    int ret = lookup_dentry(cur_dent);
+    if (ret < 0)
+        return ret;
 
     if (cur_dent != *dent) {
-        put_dentry(*dent);
         get_dentry(cur_dent);
+        put_dentry(*dent);
         *dent = cur_dent;
     }
-    ret = 0;
-
-out:
-    put_dentry(cur_dent);
-    return ret;
+    return 0;
 }
 
 /* State of the lookup algorithm */
@@ -188,16 +152,16 @@ struct lookup {
 };
 
 /* Process a new dentry in the lookup: follow mounts and symbolic links, then check if the resulting
- * dentry is valid. */
+ * dentry is positive. */
 static int lookup_enter_dentry(struct lookup* lookup) {
     int ret;
     bool is_final = (*lookup->name == '\0');
     bool has_slash = lookup->has_slash;
 
-    if ((ret = traverse_mount_and_validate(&lookup->dent)) < 0)
+    if ((ret = traverse_mount_and_lookup(&lookup->dent)) < 0)
         return ret;
 
-    if (!(lookup->dent->state & DENTRY_NEGATIVE) && (lookup->dent->type == S_IFLNK)) {
+    if (lookup->dent->inode && lookup->dent->inode->type == S_IFLNK) {
         /* Traverse the symbolic link. This applies to all intermediate segments, final segments
          * ending with slash, and to all final segments if LOOKUP_FOLLOW is set. */
         if (!is_final || has_slash || (lookup->flags & LOOKUP_FOLLOW)) {
@@ -224,7 +188,7 @@ static int lookup_enter_dentry(struct lookup* lookup) {
         }
     }
 
-    if (lookup->dent->state & DENTRY_NEGATIVE) {
+    if (!lookup->dent->inode) {
         /*
          * The file does not exist:
          *
@@ -233,18 +197,15 @@ static int lookup_enter_dentry(struct lookup* lookup) {
          * - otherwise, fail with -ENOENT.
          */
         if (lookup->flags & LOOKUP_MAKE_SYNTHETIC) {
-            reset_dentry(lookup->dent);
             ret = synthetic_setup_dentry(lookup->dent, S_IFDIR, PERM_r_xr_xr_x);
             if (ret < 0)
                 return ret;
-
-            lookup->dent->state |= DENTRY_VALID;
         } else if (is_final && (lookup->flags & LOOKUP_CREATE)) {
             /* proceed with a negative dentry */
         } else {
             return -ENOENT;
         }
-    } else if (lookup->dent->type != S_IFDIR) {
+    } else if (lookup->dent->inode->type != S_IFDIR) {
         /*
          * The file exists, but is not a directory. We expect a directory (and need to fail with
          * -ENOTDIR) in the following cases:
@@ -409,21 +370,27 @@ static inline int open_flags_to_lookup_flags(int flags) {
 }
 
 static void assoc_handle_with_dentry(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
-    hdl->fs = dent->fs;
-    get_dentry(dent);
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
     hdl->dentry = dent;
+    get_dentry(dent);
+
+    hdl->inode = dent->inode;
+    get_inode(dent->inode);
+
+    hdl->fs = dent->inode->fs;
     hdl->flags = flags;
     hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
 }
 
 int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
-    assert(dent->state & DENTRY_VALID);
-    assert(!(dent->state & DENTRY_NEGATIVE));
+    assert(dent->inode);
     assert(!hdl->dentry);
 
     int ret = 0;
-    struct shim_fs* fs = dent->fs;
+    struct shim_fs* fs = dent->inode->fs;
 
     if (!(fs->d_ops && fs->d_ops->open)) {
         ret = -EINVAL;
@@ -436,7 +403,7 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
 
     assoc_handle_with_dentry(hdl, dent, flags);
 
-    if (dent->type == S_IFDIR) {
+    if (dent->inode->type == S_IFDIR) {
         /* Initialize directory handle */
         hdl->is_dir = true;
 
@@ -445,8 +412,8 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
 
     /* truncate regular writable file if O_TRUNC is given */
     if ((flags & O_TRUNC) && ((flags & O_RDWR) | (flags & O_WRONLY))
-            && (dent->type != S_IFDIR)
-            && (dent->type != S_IFLNK)) {
+            && (dent->inode->type != S_IFDIR)
+            && (dent->inode->type != S_IFLNK)) {
 
         if (!(fs->fs_ops && fs->fs_ops->truncate)) {
             ret = -EINVAL;
@@ -491,9 +458,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
     if (ret < 0)
         goto err;
 
-    assert(dent->state & DENTRY_VALID);
-
-    if (dent->type == S_IFDIR) {
+    if (dent->inode && dent->inode->type == S_IFDIR) {
         if (flags & O_WRONLY || flags & O_RDWR ||
                 ((flags & O_CREAT) && !(flags & O_DIRECTORY) && !(flags & O_EXCL))) {
             ret = -EISDIR;
@@ -501,7 +466,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         }
     }
 
-    if (dent->type == S_IFLNK) {
+    if (dent->inode && dent->inode->type == S_IFLNK) {
         /*
          * Can happen if user specified O_NOFOLLOW, or O_TRUNC | O_EXCL. Posix requires us to fail
          * with -ELOOP when trying to open a symlink.
@@ -513,7 +478,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
     }
 
     bool need_open = true;
-    if (dent->state & DENTRY_NEGATIVE) {
+    if (!dent->inode) {
         if (!(flags & O_CREAT)) {
             ret = -ENOENT;
             goto err;
@@ -521,38 +486,35 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
 
         /* The root always exists, so if we got here, the dentry should have a parent */
         struct shim_dentry* dir = dent->parent;
-        assert(dir);
-        assert(dir->fs);
-        assert(dir->fs->d_ops);
+        if (!dir->inode) {
+            ret = -ENOENT;
+            goto err;
+        }
 
         /* Check the parent permission first */
         ret = check_permissions(dir, MAY_WRITE | MAY_EXEC);
         if (ret < 0)
             goto err;
 
-        reset_dentry(dent);
-
+        struct shim_fs* fs = dir->inode->fs;
         /* Create directory or file, depending on O_DIRECTORY. Return -EINVAL if the operation is
          * not supported for this filesystem. */
         if (flags & O_DIRECTORY) {
-            if (!dir->fs->d_ops->mkdir) {
+            if (!fs->d_ops->mkdir) {
                 ret = -EINVAL;
                 goto err;
             }
-            ret = dir->fs->d_ops->mkdir(dent, mode & ~S_IFMT);
+            ret = fs->d_ops->mkdir(dent, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
-            dent->state |= DENTRY_VALID;
-            dent->type = S_IFDIR;
         } else {
-            if (!dir->fs->d_ops->creat) {
+            if (!fs->d_ops->creat) {
                 ret = -EINVAL;
                 goto err;
             }
-            ret = dir->fs->d_ops->creat(hdl, dent, flags, mode & ~S_IFMT);
+            ret = fs->d_ops->creat(hdl, dent, flags, mode & ~S_IFMT);
             if (ret < 0)
                 goto err;
-            dent->state |= DENTRY_VALID;
             assoc_handle_with_dentry(hdl, dent, flags);
             need_open = false;
         }
@@ -620,8 +582,8 @@ static int add_name(const char* name, void* arg) {
 }
 
 /*
- * Ensure that a directory has a complete list of dentries, by calling `readdir` and then
- * ensuring every name corresponds to a valid dentry.
+ * Ensure that a directory has a complete list of dentries, by calling `readdir` and then looking up
+ * every name.
  *
  * While `readdir` is callback-based, we don't look up the names inside of callback, but first
  * finish `readdir`. Otherwise, the two filesystem operations (`readdir` and `lookup`) might
@@ -630,36 +592,36 @@ static int add_name(const char* name, void* arg) {
 static int populate_directory(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
-    if (dent->state & DENTRY_NEGATIVE)
+    if (!dent->inode)
         return -ENOENT;
 
-    if (!dent->fs || !dent->fs->d_ops || !dent->fs->d_ops->readdir)
+    struct shim_fs* fs = dent->inode->fs;
+    if (!fs->d_ops || !fs->d_ops->readdir)
         return -EINVAL;
 
     LISTP_TYPE(temp_dirent) ents = LISTP_INIT;
-    int ret = dent->fs->d_ops->readdir(dent, &add_name, &ents);
+    int ret = fs->d_ops->readdir(dent, &add_name, &ents);
     if (ret < 0)
         log_error("readdir error: %d", ret);
 
     struct shim_dentry* child;
     LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
-        struct temp_dirent* ent;
-        bool removed = true;
-        LISTP_FOR_EACH_ENTRY(ent, &ents, list) {
-            if (strcmp(ent->name, child->name) == 0) {
-                removed = false;
-                break;
+        struct shim_inode* inode = child->inode;
+        /* Check `inode->fs` so that we don't remove files added by Gramine (named pipes, sockets,
+         * synthetic mountpoints) */
+        if (inode && inode->fs == inode->mount->fs) {
+            struct temp_dirent* ent;
+            bool removed = true;
+            LISTP_FOR_EACH_ENTRY(ent, &ents, list) {
+                if (strcmp(ent->name, child->name) == 0) {
+                    removed = false;
+                    break;
+                }
             }
-        }
-
-        if (removed) {
-            /* Do not remove dentries added by Gramine (named pipes, sockets, synthetic
-             * mountpoints). */
-            if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE) &&
-                (child->fs == child->mount->fs)) {
-                log_debug("Directory no longer present, removing dentry: %s", child->name);
-                child->state &= ~DENTRY_VALID;
-                child->state |= DENTRY_NEGATIVE;
+            if (removed) {
+                log_debug("File no longer present, detaching inode: %s", child->name);
+                child->inode = NULL;
+                put_inode(inode);
             }
         }
     }
@@ -674,17 +636,14 @@ static int populate_directory(struct shim_dentry* dent) {
             goto out;
         }
 
-        ret = traverse_mount_and_validate(&child);
+        ret = traverse_mount_and_lookup(&child);
         put_dentry(child);
-        if (ret < 0) {
-            if (ret != -EACCES) {
-                /* Fail on underlying lookup errors, except -EACCES (for which we will just ignore
-                 * the file). The lookup might fail with -EACCES for host symlinks pointing to
-                 * inaccessible target, since the "chroot" filesystem transparently follows symlinks
-                 * instead of reporting them to Gramine. */
-                goto out;
-            }
-            continue;
+        if (ret < 0 && ret != -EACCES) {
+            /* Fail on underlying lookup errors, except -EACCES (for which we will just ignore the
+             * file). The lookup might fail with -EACCES for host symlinks pointing to inaccessible
+             * target, since the "chroot" filesystem transparently follows symlinks instead of
+             * reporting them to Gramine. */
+            goto out;
         }
     }
 
@@ -732,19 +691,16 @@ int populate_directory_handle(struct shim_handle* hdl) {
     struct shim_dentry* tmp;
     struct shim_dentry* dent;
     LISTP_FOR_EACH_ENTRY_SAFE(dent, tmp, &hdl->dentry->children, siblings) {
-        if (dent->state & DENTRY_VALID) {
-            /* Traverse mount */
-            struct shim_dentry* cur_dent = dent;
-            while (cur_dent->attached_mount) {
-                cur_dent = cur_dent->attached_mount->root;
-            }
+        /* Traverse mount */
+        struct shim_dentry* cur_dent = dent;
+        while (cur_dent->attached_mount) {
+            cur_dent = cur_dent->attached_mount->root;
+        }
 
-            assert(cur_dent->state & DENTRY_VALID);
-            if (!(cur_dent->state & DENTRY_NEGATIVE)) {
-                get_dentry(cur_dent);
-                assert(dirhdl->count < capacity);
-                dirhdl->dents[dirhdl->count++] = cur_dent;
-            }
+        if (cur_dent->inode) {
+            get_dentry(cur_dent);
+            assert(dirhdl->count < capacity);
+            dirhdl->dents[dirhdl->count++] = cur_dent;
         }
         dentry_gc(dent);
     }
