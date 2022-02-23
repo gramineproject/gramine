@@ -641,6 +641,27 @@ static int populate_directory(struct shim_dentry* dent) {
     if (ret < 0)
         log_error("readdir error: %d", ret);
 
+    struct shim_dentry* child;
+    LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
+        struct temp_dirent* ent;
+        bool removed = true;
+        LISTP_FOR_EACH_ENTRY(ent, &ents, list) {
+            if (strcmp(ent->name, child->name) == 0) {
+                removed = false;
+                break;
+            }
+        }
+
+        if (removed) {
+            /* Dentry that does not correspond to a real file is still valid. */
+            if (((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) &&
+                (child->fs == child->mount->fs)) {
+                child->state &= ~DENTRY_VALID;
+                child->state |= DENTRY_NEGATIVE;
+            }
+        }
+    }
+
     struct temp_dirent* ent;
     struct temp_dirent* tmp;
 
