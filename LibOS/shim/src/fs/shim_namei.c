@@ -653,9 +653,11 @@ static int populate_directory(struct shim_dentry* dent) {
         }
 
         if (removed) {
-            /* Dentry that does not correspond to a real file is still valid. */
+            /* Do not remove dentries added by Gramine (named pipes, sockets, synthetic
+             * mountpoints). */
             if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE) &&
                 (child->fs == child->mount->fs)) {
+                log_debug("Directory no longer present, removing dentry: %s", child->name);
                 child->state &= ~DENTRY_VALID;
                 child->state |= DENTRY_NEGATIVE;
             }
