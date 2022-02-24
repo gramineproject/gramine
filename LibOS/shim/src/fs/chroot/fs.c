@@ -483,9 +483,6 @@ static int chroot_unlink(struct shim_dentry* dent) {
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    struct shim_inode* inode = dent->inode;
-    dent->inode = NULL;
-    put_inode(inode);
     return 0;
 }
 
