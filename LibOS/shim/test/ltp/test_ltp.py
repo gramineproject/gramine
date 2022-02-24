@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2019 Wojtek Porczyk <woju@invisiblethingslab.com>
 # Copyright (C) 2021 Intel Corporation

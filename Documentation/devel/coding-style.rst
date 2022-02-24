@@ -159,7 +159,16 @@ Conventions and high-level style
 Python
 ------
 
-.. todo:: TBD
+#. Executable Python scripts must use the shebang with the hardcoded path to
+   system Python (e.g., ``#!/usr/bin/python3``). This is required because custom
+   Python installations ("custom" meaning not provided by distro) lead to a
+   problem where packages installed via e.g. ``apt install`` are not available
+   to this custom Python. If Python scripts would use the ``#!/usr/bin/env
+   python3`` shebang, Gramine would not be able to locate system-wide-installed
+   Python packages.
+
+   Since Gramine currently supports only Debian/Ubuntu and CentOS/RHEL/Fedora
+   distros, the shebang must always be ``#!/usr/bin/python3``.
 
 Meson
 -----

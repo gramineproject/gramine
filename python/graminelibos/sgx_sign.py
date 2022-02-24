@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2014 Stony Brook University
 # Copyright (C) 2022 Intel Corporation

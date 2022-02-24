@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import filecmp
 import os
 import shutil
