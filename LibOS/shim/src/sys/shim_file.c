@@ -411,12 +411,6 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
         goto out;
     }
 
-    if (!((out_hdl->flags & O_WRONLY) || (out_hdl->flags & O_RDWR))) {
-        /* Linux errors out if output fd doesn't have WRITE flag set */
-        ret = -EBADF;
-        goto out;
-    }
-
     if (out_hdl->flags & O_APPEND) {
         /* Linux errors out if output fd has the O_APPEND flag set; comply with this behavior */
         ret = -EINVAL;
@@ -459,6 +453,12 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
         if (ret < 0) {
             goto out;
         }
+    }
+
+    if (!((out_hdl->flags & O_WRONLY) || (out_hdl->flags & O_RDWR))) {
+        /* Linux errors out if output fd doesn't have WRITE flag set */
+        ret = -EBADF;
+        goto out;
     }
 
     while (copied_to_out < count) {
