@@ -1,6 +1,6 @@
 /*
  *  SSL client demonstration program (with RA-TLS).
- *  This program is heavily based on an mbedTLS 2.26.0 example ssl_client1.c
+ *  This program is heavily based on an mbedTLS 3.1.0 example ssl_client1.c
  *  but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
  *  is required by user.
  *
@@ -21,7 +21,7 @@
  *  limitations under the License.
  */
 
-#include "mbedtls/config.h"
+#include "mbedtls/build_info.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -38,13 +38,14 @@
 #define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
+
+#include "certs.h"
 
 /* RA-TLS: on client, only need to register ra_tls_verify_callback() for cert verification */
 int (*ra_tls_verify_callback_f)(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
@@ -322,7 +323,7 @@ int main(int argc, char** argv) {
     fflush(stdout);
 
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*)mbedtls_test_cas_pem,
-                                 mbedtls_test_cas_pem_len);
+                                 sizeof(mbedtls_test_cas_pem));
     if (ret < 0) {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
         goto exit;

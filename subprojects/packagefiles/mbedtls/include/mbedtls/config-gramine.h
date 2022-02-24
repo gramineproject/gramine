@@ -11,7 +11,7 @@
 #ifndef MBEDTLS_CONFIG_GRAMINE_H_
 #define MBEDTLS_CONFIG_GRAMINE_H_
 
-#include "mbedtls/config.h"
+#include "mbedtls/mbedtls_config.h"
 
 #define MBEDTLS_CMAC_C
 

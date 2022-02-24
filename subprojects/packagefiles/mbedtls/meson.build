@@ -3,11 +3,11 @@ project('mbedtls', 'c')
 pkgconfig = import('pkgconfig')
 
 mbedtls_libs_output = [
-    'libmbedcrypto_gramine.so.6',
+    'libmbedcrypto_gramine.so.11',
     'libmbedcrypto_gramine.so',
-    'libmbedtls_gramine.so.13',
+    'libmbedtls_gramine.so.17',
     'libmbedtls_gramine.so',
-    'libmbedx509_gramine.so.1',
+    'libmbedx509_gramine.so.4',
     'libmbedx509_gramine.so',
 ]
 
