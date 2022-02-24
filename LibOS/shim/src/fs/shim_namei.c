@@ -654,7 +654,7 @@ static int populate_directory(struct shim_dentry* dent) {
 
         if (removed) {
             /* Dentry that does not correspond to a real file is still valid. */
-            if (((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE)) &&
+            if ((child->state & DENTRY_VALID) && !(child->state & DENTRY_NEGATIVE) &&
                 (child->fs == child->mount->fs)) {
                 child->state &= ~DENTRY_VALID;
                 child->state |= DENTRY_NEGATIVE;
