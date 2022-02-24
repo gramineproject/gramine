@@ -82,14 +82,14 @@ static inline void spinlock_init(spinlock_t* lock) {
 /*!
  * \brief Try to acquire spinlock.
  *
- * \returns  0 if acquiring the lock succeeded, 1 if it was already taken.
+ * \returns  0 if acquiring the lock succeeded, -1 if it was already taken.
  */
 static inline int spinlock_trylock(spinlock_t* lock) {
     if (__atomic_exchange_n(&lock->lock, SPINLOCK_LOCKED, __ATOMIC_ACQUIRE) == SPINLOCK_UNLOCKED) {
         debug_spinlock_take_ownership(lock);
         return 0;
     }
-    return 1;
+    return -1;
 }
 
 /*!
