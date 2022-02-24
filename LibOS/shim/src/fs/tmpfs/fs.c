@@ -152,8 +152,7 @@ static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int fl
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    mode_t type = S_IFREG;
-    int ret = tmpfs_setup_dentry(dent, type, perm);
+    int ret = tmpfs_setup_dentry(dent, S_IFREG, perm);
     if (ret < 0)
         return ret;
 
@@ -165,8 +164,7 @@ static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    mode_t type = S_IFREG;
-    return tmpfs_setup_dentry(dent, type, perm);
+    return tmpfs_setup_dentry(dent, S_IFDIR, perm);
 }
 
 static int tmpfs_unlink(struct shim_dentry* dent) {
