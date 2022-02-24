@@ -35,6 +35,7 @@ int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
 static int synthetic_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
+    __UNUSED(dent);
     __UNUSED(flags);
 
     hdl->type = TYPE_SYNTHETIC;

@@ -133,6 +133,7 @@ static int tmpfs_lookup(struct shim_dentry* dent) {
 static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
+    __UNUSED(dent);
     __UNUSED(flags);
 
     hdl->type = TYPE_TMPFS;
