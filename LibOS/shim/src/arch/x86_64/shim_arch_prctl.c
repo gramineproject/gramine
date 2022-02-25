@@ -44,7 +44,7 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
          * same in Gramine (because PAL always enables all it can at startup). */
         case ARCH_GET_XCOMP_SUPP:
         case ARCH_GET_XCOMP_PERM:
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_FEATURES, values);
+            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
@@ -64,7 +64,7 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
                 return -EOPNOTSUPP;
             }
 
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_FEATURES, values);
+            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
