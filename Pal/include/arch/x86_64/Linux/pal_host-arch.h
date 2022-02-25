@@ -19,15 +19,9 @@
 #include "syscall.h"
 
 /* Linux v5.16 supports Intel AMX. To enable this feature, Linux added several XSTATE-related
- * arch_prctl() commands. To support Gramine on older Linux kernels, we explicitly define these
- * commands. See
+ * arch_prctl() commands. To support Gramine on older Linux kernels, we explicitly define
+ * the required ARCH_REQ_XCOMP_PERM command. See
  * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/include/uapi/asm/prctl.h */
-#ifndef ARCH_GET_XCOMP_SUPP
-#define ARCH_GET_XCOMP_SUPP 0x1021
-#endif
-#ifndef ARCH_GET_XCOMP_PERM
-#define ARCH_GET_XCOMP_PERM 0x1022
-#endif
 #ifndef ARCH_REQ_XCOMP_PERM
 #define ARCH_REQ_XCOMP_PERM 0x1023
 #endif
