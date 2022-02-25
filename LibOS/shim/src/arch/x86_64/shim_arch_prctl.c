@@ -69,7 +69,7 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
                 return pal_to_unix_errno(ret);
             }
 
-            if ((values[CPUID_WORD_EAX] & (1 << AMX_TILEDATA)) != (1 << AMX_TILEDATA)) {
+            if (!(values[CPUID_WORD_EAX] & (1 << AMX_TILEDATA))) {
                 log_warning("AMX is not supported on this CPU (XSAVE bits are %#x)",
                             values[CPUID_WORD_EAX]);
                 return -EINVAL;
