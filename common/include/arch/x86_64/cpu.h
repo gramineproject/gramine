@@ -28,7 +28,7 @@ enum cpu_extension {
  * n = 0: bitmap of all the user state components that can be managed using the XSAVE feature set
  * n = 1: bitmap of extensions of XSAVE feature set
  * n > 1: details (size and offset) of each state component, where n corresponds to
- * `enum cpu_extension`
+ *        `enum cpu_extension`
  * For more information, see CPUID description in Intel SDM, Vol. 2A, Chapter 3.2. */
 enum extended_state_sub_leaf {
     EXTENDED_STATE_SUBLEAF_FEATURES = 0,
