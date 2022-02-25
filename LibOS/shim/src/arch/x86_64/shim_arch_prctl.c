@@ -38,10 +38,10 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
         case ARCH_GET_FS:
             return pal_to_unix_errno(DkSegmentBaseGet(PAL_SEGMENT_FS, (unsigned long*)addr));
 
-        /* Emulate ARCH_GET_XCOMP_SUPP, ARCH_GET_XCOMP_PERM, ARCH_REQ_XCOMP_PERM by
-         * querying CPUID, it's safe because the PAL already requested AMX permission
-         * at startup. Note that supported and currently enabled sets are always the
-         * same in Gramine (because PAL always enables all it can at startup). */
+        /* Emulate ARCH_GET_XCOMP_SUPP, ARCH_GET_XCOMP_PERM, ARCH_REQ_XCOMP_PERM by querying CPUID,
+         * it's safe because the PAL already requested AMX permission at startup. Note that
+         * supported and currently enabled sets are always the same in Gramine (because PAL always
+         * enables all it can at startup). */
         case ARCH_GET_XCOMP_SUPP:
         case ARCH_GET_XCOMP_PERM:
             ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
@@ -69,8 +69,7 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
                 return pal_to_unix_errno(ret);
             }
 
-            unsigned int amx_mask = (1 << AMX_TILEDATA);
-            if ((values[CPUID_WORD_EAX] & amx_mask) != amx_mask) {
+            if ((values[CPUID_WORD_EAX] & (1 << AMX_TILEDATA)) != (1 << AMX_TILEDATA)) {
                 log_warning("AMX is not supported on this CPU (XSAVE bits are %#x)",
                             values[CPUID_WORD_EAX]);
                 return -EINVAL;
