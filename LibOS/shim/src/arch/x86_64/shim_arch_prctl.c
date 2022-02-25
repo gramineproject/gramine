@@ -12,9 +12,22 @@
 #include "shim_table.h"
 #include "shim_tcb.h"
 
+/* Linux v5.16 supports Intel AMX. To enable this feature, Linux added several XSTATE-related
+ * arch_prctl() commands. To support Gramine on older Linux kernels, we explicitly define these
+ * commands. See
+ * https://elixir.bootlin.com/linux/v5.16/source/arch/x86/include/uapi/asm/prctl.h */
+#ifndef ARCH_GET_XCOMP_SUPP
+#define ARCH_GET_XCOMP_SUPP 0x1021
+#endif
+#ifndef ARCH_GET_XCOMP_PERM
+#define ARCH_GET_XCOMP_PERM 0x1022
+#endif
+#ifndef ARCH_REQ_XCOMP_PERM
+#define ARCH_REQ_XCOMP_PERM 0x1023
+#endif
+
 long shim_do_arch_prctl(int code, unsigned long addr) {
     unsigned int values[CPUID_WORD_NUM];
-    unsigned int amx_mask;
     int ret;
 
     switch (code) {
@@ -27,13 +40,19 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
 
         /* Emulate ARCH_GET_XCOMP_SUPP, ARCH_GET_XCOMP_PERM, ARCH_REQ_XCOMP_PERM by
          * querying CPUID, it's safe because the PAL already requested AMX permission
-         * at startup */
+         * at startup. Note that supported and currently enabled sets are always the
+         * same in Gramine (because PAL always enables all it can at startup). */
         case ARCH_GET_XCOMP_SUPP:
         case ARCH_GET_XCOMP_PERM:
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, 0, values);
+            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
+
+            if (!is_user_memory_writable((uint64_t*)addr, sizeof(uint64_t))) {
+                return -EFAULT;
+            }
+
             *(uint64_t*)addr = values[CPUID_WORD_EAX] | ((uint64_t)values[CPUID_WORD_EDX] << 32);
             return 0;
 
@@ -45,14 +64,14 @@ long shim_do_arch_prctl(int code, unsigned long addr) {
                 return -EOPNOTSUPP;
             }
 
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, 0, values);
+            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
 
-            amx_mask = (1 << AMX_TILECFG) | (1 << AMX_TILEDATA);
+            unsigned int amx_mask = (1 << AMX_TILEDATA);
             if ((values[CPUID_WORD_EAX] & amx_mask) != amx_mask) {
-                log_warning("AMX is not supported on this CPU (XSAVE bits are 0x%x)",
+                log_warning("AMX is not supported on this CPU (XSAVE bits are %#x)",
                             values[CPUID_WORD_EAX]);
                 return -EINVAL;
             }
