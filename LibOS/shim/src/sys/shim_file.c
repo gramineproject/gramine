@@ -456,7 +456,7 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     }
 
     if (!((out_hdl->flags & O_WRONLY) || (out_hdl->flags & O_RDWR))) {
-        /* Linux errors out if output fd doesn't have WRITE flag set */
+        /* Linux errors out if output fd isn't writable */
         ret = -EBADF;
         goto out;
     }
