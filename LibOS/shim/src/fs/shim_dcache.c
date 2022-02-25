@@ -435,6 +435,8 @@ static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
         buf_puts(&buf, "------ ---- ");
     }
 
+    buf_puts(&buf, dent->attached_mount ? "M" : " ");
+
     for (unsigned int i = 0; i < level; i++)
         buf_puts(&buf, "  ");
 

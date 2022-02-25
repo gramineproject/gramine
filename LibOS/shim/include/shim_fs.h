@@ -235,13 +235,13 @@ struct shim_d_ops {
     /*
      * \brief Unlink a file
      *
-     * \param dent dentry, full, must have a parent
+     * \param dent dentry, positive, must have a parent
      *
      * Unlinks a file described by `dent`. Note that there might be handles for that file; if
      * possible, they should still work.
      *
-     * The caller should hold `g_dcache_lock`. On success, the caller detach the inode from the
-     * dentry.
+     * The caller should hold `g_dcache_lock`. On success, the caller should detach the inode from
+     * the dentry.
      */
     int (*unlink)(struct shim_dentry* dent);
 
