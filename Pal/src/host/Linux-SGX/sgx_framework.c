@@ -198,11 +198,13 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
      * We call arch_prctl() to request AMX permission if the SGX enclave allows/requests it
      * (we examine  enclave's SECS.ATTRIBUTES.XFRM). It's enough to do it once: child processes
      * will inherit the permission, but here for simplicity we call it in every child process as
-     * well. If arch_prctl() returns EINVAL or EOPNOTSUPP, then we are on older/patched Linux with
-     * no need for arch_prctl-style AMX enablement, simply ignore the result of this syscall. */
+     * well. Some deployment environments run Linux systems earlier than v5.16 but with
+     * an AMX-specific patch; this patch doesn't introduce `arch_prctl(ARCH_REQ_XCOMP_PERM)`
+     * syscall so an attempt to call it may return EINVAL, EOPNOTSUPP or ENOSYS. In this case,
+     * we simply ignore the result of this syscall. */
     if (secs->attributes.xfrm & (1 << AMX_TILEDATA)) {
         ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
-        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP) {
+        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
             log_error("Requesting AMX permission failed: %d", ret);
             return ret;
         }
