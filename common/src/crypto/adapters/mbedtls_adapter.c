@@ -22,10 +22,6 @@
 /* This is declared in pal_internal.h, but that can't be included here. */
 int _DkRandomBitsRead(void* buffer, size_t size);
 
-/* This is declared in mbedtls library/entropy_poll.h, but that can't be included here. */
-int mbedtls_hardware_poll(void *data,
-                          unsigned char *output, size_t len, size_t *olen);
-
 static int mbedtls_to_pal_error(int error) {
     switch (error) {
         case 0:

@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mbedtls/mbedtls_config.h"
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
