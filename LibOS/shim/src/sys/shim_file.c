@@ -456,7 +456,7 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     }
 
     int mode = out_hdl->flags & O_ACCMODE;
-    if (!((mode == O_WRONLY) || (mode == O_RDWR))) {
+    if (!(mode == O_WRONLY || mode == O_RDWR)) {
         /* Linux errors out if output fd isn't writable */
         ret = -EBADF;
         goto out;
