@@ -17,6 +17,7 @@ sgx_inc = [
 cflags_pal_sgx = [
     cflags_pal_common,
     '-DHOST_TYPE=Linux-SGX',
+    '-DDB_LINUX_SGX',
     # Some of the code uses `alignof` on expressions, which is a GNU extension. Silence Clang - it
     # complains but does support it.
     '-Wno-gnu-alignof-expression',
@@ -53,7 +54,6 @@ pal_sgx_map = custom_target('pal.map',
 pal_sgx_lds = join_paths(meson.current_source_dir(), 'enclave.lds')
 
 libpal_sgx = shared_library('pal',
-    'db_devices.c',
     'db_eventfd.c',
     'db_events.c',
     'db_exception.c',
@@ -82,6 +82,7 @@ libpal_sgx = shared_library('pal',
     'protected-files/protected_files.c',
     pal_sgx_asm_offsets_h,
     pal_common_sources,
+    pal_linux_common_sources_db,
     pal_linux_common_sources_enclave,
     gsgx_h,
 
