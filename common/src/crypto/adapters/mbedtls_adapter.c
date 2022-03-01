@@ -263,6 +263,8 @@ exit:
     return ret;
 }
 
+/* mbedTLS library will use this implementation of a hardware entropy collector, see
+ * https://github.com/ARMmbed/mbedtls/blob/v3.1.0/include/mbedtls/mbedtls_config.h#L459 */
 int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t* olen) {
     __UNUSED(data);
     assert(output && olen);
