@@ -509,15 +509,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (ret < 0)
         INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.entrypoint'");
 
-    if (!entrypoint_name) {
-        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.preload", &entrypoint_name);
-        if (ret < 0)
-            INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.preload'");
-
-        if (entrypoint_name)
-            log_warning("'loader.preload' is deprecated; please switch to 'loader.entrypoint'");
-    }
-
     if (!entrypoint_name)
         INIT_FAIL(PAL_ERROR_INVAL, "No 'loader.entrypoint' is specified in the manifest");
 

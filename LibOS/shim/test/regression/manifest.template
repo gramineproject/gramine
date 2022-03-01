@@ -8,7 +8,7 @@ loader.insecure__use_cmdline_argv = true
 # for eventfd test
 sys.insecure__allow_eventfd = true
 
-fs.mount = [
+fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
   { path = "/exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },

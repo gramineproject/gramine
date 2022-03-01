@@ -441,6 +441,48 @@ static void hash_dentry_path(struct shim_dentry* dent, char* buf, size_t size) {
     BYTES2HEXSTR(hashbytes, buf, size);
 }
 
+/*
+ * Retrieve or create a UNIX socket dentry at `path`. Used inside `bind()` and `connect()`.
+ *
+ * NOTE: Our implementation of `connect()` succeeds even if no dentry is found (and creates a new
+ * one). This is because a socket might have been created by another Gramine process.
+ */
+static int get_unix_socket_dentry(const char* path, bool is_bind, struct shim_dentry** out_dent) {
+    struct shim_dentry* dent = NULL;
+
+    lock(&g_dcache_lock);
+
+    int ret = path_lookupat(/*start=*/NULL, path, LOOKUP_NO_FOLLOW | LOOKUP_CREATE, &dent);
+    if (ret < 0)
+        goto out;
+
+    if (dent->state & DENTRY_NEGATIVE) {
+        /* No file exists, create one. */
+        reset_dentry(dent);
+        ret = unix_socket_setup_dentry(dent, PERM_rw_______);
+        dent->state |= DENTRY_VALID;
+    } else if (is_bind) {
+        /* The file exists and we're inside `bind()`. We should fail. */
+        ret = -EADDRINUSE;
+        goto out;
+    } else {
+        /* The file exists and we're inside `connect()`. We should fail if the file is not a
+         * socket. */
+        if (dent->type != S_IFSOCK) {
+            ret = -ECONNREFUSED;
+            goto out;
+        }
+    }
+
+    *out_dent = dent;
+    ret = 0;
+out:
+    unlock(&g_dcache_lock);
+    if (ret < 0 && dent)
+        put_dentry(dent);
+    return ret;
+}
+
 long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
     if (_addrlen < 0)
         return -EINVAL;
@@ -488,18 +530,10 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
             goto out;
         }
 
-        struct shim_dentry* dent = NULL;
-        lock(&g_dcache_lock);
-        ret = path_lookupat(/*start=*/NULL, saddr->sun_path, LOOKUP_NO_FOLLOW | LOOKUP_CREATE,
-                            &dent);
-        unlock(&g_dcache_lock);
+        struct shim_dentry* dent;
+        ret = get_unix_socket_dentry(saddr->sun_path, /*is_bind=*/true, &dent);
         if (ret < 0)
             goto out;
-
-        if (!(dent->state & DENTRY_NEGATIVE)) {
-            ret = -EADDRINUSE;
-            goto out;
-        }
 
         /* instead of user-specified sun_path of UNIX socket, use its deterministic hash as name
          * (deterministic so that independent parent and child connect to the same socket) */
@@ -534,17 +568,6 @@ long shim_do_bind(int sockfd, struct sockaddr* addr, int _addrlen) {
         goto out;
     }
 
-    if (sock->domain == AF_UNIX) {
-        struct shim_dentry* dent = sock->addr.un.dentry;
-
-        dent->state &= ~DENTRY_NEGATIVE;
-        dent->state |= DENTRY_VALID;
-        dent->fs   = &socket_builtin_fs;
-        dent->type = S_IFSOCK;
-        dent->perm = PERM_rw_______;
-        dent->data = NULL;
-    }
-
     if (sock->domain == AF_INET || sock->domain == AF_INET6) {
         char uri[SOCK_URI_SIZE];
 
@@ -571,8 +594,10 @@ out:
         sock->error      = -ret;
 
         if (sock->domain == AF_UNIX) {
-            if (sock->addr.un.dentry)
+            if (sock->addr.un.dentry) {
+                /* TODO: This leaves a file at `dentry` when we failed to bind. */
                 put_dentry(sock->addr.un.dentry);
+            }
         }
     }
 
@@ -775,19 +800,10 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
             goto out;
         }
 
-        struct shim_dentry* dent = NULL;
-        lock(&g_dcache_lock);
-        ret = path_lookupat(/*start=*/NULL, saddr->sun_path, LOOKUP_FOLLOW | LOOKUP_CREATE,
-                            &dent);
-        unlock(&g_dcache_lock);
+        struct shim_dentry* dent;
+        ret = get_unix_socket_dentry(saddr->sun_path, /*is_bind=*/false, &dent);
         if (ret < 0)
             goto out;
-
-        if (!(dent->state & DENTRY_NEGATIVE) && dent->type != S_IFSOCK) {
-            ret = -ECONNREFUSED;
-            put_dentry(dent);
-            goto out;
-        }
 
         /* instead of user-specified sun_path of UNIX socket, use its deterministic hash as name
          * (deterministic so that independent parent and child connect to the same socket) */
@@ -829,18 +845,6 @@ long shim_do_connect(int sockfd, struct sockaddr* addr, int _addrlen) {
     hdl->pal_handle = pal_hdl;
     pal_handle_updated = true;
 
-    if (sock->domain == AF_UNIX) {
-        struct shim_dentry* dent = sock->addr.un.dentry;
-        lock(&dent->lock);
-        dent->state &= ~DENTRY_NEGATIVE;
-        dent->state |= DENTRY_VALID;
-        dent->fs   = &socket_builtin_fs;
-        dent->type = S_IFSOCK;
-        dent->perm = PERM_rw_______;
-        dent->data = NULL;
-        unlock(&dent->lock);
-    }
-
     if (sock->domain == AF_INET || sock->domain == AF_INET6) {
         char uri[SOCK_URI_SIZE];
 
@@ -868,8 +872,10 @@ out:
         sock->error      = -ret;
 
         if (sock->domain == AF_UNIX) {
-            if (sock->addr.un.dentry)
+            if (sock->addr.un.dentry) {
+                /* TODO: This leaves a file at `dentry` after we failed to connect. */
                 put_dentry(sock->addr.un.dentry);
+            }
         }
     }
 
@@ -1795,12 +1801,12 @@ static void __populate_addr_with_defaults(PAL_STREAM_ATTR* attr) {
     attr->socket.receivebuf = 212992;
     attr->socket.sendbuf    = 212992;
 
-    attr->socket.linger         = 0;
-    attr->socket.receivetimeout = 0;
-    attr->socket.sendtimeout    = 0;
-    attr->socket.tcp_cork       = false;
-    attr->socket.tcp_keepalive  = false;
-    attr->socket.tcp_nodelay    = false;
+    attr->socket.linger            = 0;
+    attr->socket.receivetimeout_us = 0;
+    attr->socket.sendtimeout_us    = 0;
+    attr->socket.tcp_cork          = false;
+    attr->socket.tcp_keepalive     = false;
+    attr->socket.tcp_nodelay       = false;
 }
 
 static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* optval) {
@@ -1839,18 +1845,31 @@ static bool __update_attr(PAL_STREAM_ATTR* attr, int level, int optname, char* o
                     need_set_attr = true;
                 }
                 break;
-            case SO_RCVTIMEO:
-                if (intval != (int)attr->socket.receivetimeout) {
-                    attr->socket.receivetimeout = intval;
+            /*
+             * TODOs:
+             *   -  Check for sufficient size of `optval` and overflow of `tv->timeout_us`
+             *      convertion in both cases (SO_RCVTIMEO and SO_SNDTIMEO); probably add these
+             *      checks in shim_do_{set,get}sockopt instead of this internal func.
+             *   -  `optval` may be not aligned, so should do memcpy() instead of pointer deref.
+             */
+            case SO_RCVTIMEO: {
+                struct timeval tv = *(struct timeval*)optval;
+                uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
+                if (timeout_us != attr->socket.receivetimeout_us) {
+                    attr->socket.receivetimeout_us = timeout_us;
                     need_set_attr = true;
                 }
                 break;
-            case SO_SNDTIMEO:
-                if (intval != (int)attr->socket.sendtimeout) {
-                    attr->socket.sendtimeout = intval;
+            }
+            case SO_SNDTIMEO: {
+                struct timeval tv = *(struct timeval*)optval;
+                uint64_t timeout_us = tv.tv_sec * TIME_US_IN_S + tv.tv_usec;
+                if (timeout_us != attr->socket.sendtimeout_us) {
+                    attr->socket.sendtimeout_us = timeout_us;
                     need_set_attr = true;
                 }
                 break;
+            }
             case SO_REUSEADDR:
                 /* PAL always does REUSEADDR, no need to check or update */
                 break;
@@ -2138,12 +2157,20 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
             case SO_SNDBUF:
                 *intval = attr.socket.sendbuf;
                 break;
-            case SO_RCVTIMEO:
-                *intval = attr.socket.receivetimeout;
+            case SO_RCVTIMEO: {
+                struct timeval* tv = (struct timeval*)optval;
+                tv->tv_sec = attr.socket.receivetimeout_us / TIME_US_IN_S;
+                tv->tv_usec = attr.socket.receivetimeout_us % TIME_US_IN_S;
+                *optlen = sizeof(*tv);
                 break;
-            case SO_SNDTIMEO:
-                *intval = attr.socket.sendtimeout;
+            }
+            case SO_SNDTIMEO: {
+                struct timeval* tv = (struct timeval*)optval;
+                tv->tv_sec = attr.socket.sendtimeout_us / TIME_US_IN_S;
+                tv->tv_usec = attr.socket.sendtimeout_us % TIME_US_IN_S;
+                *optlen = sizeof(*tv);
                 break;
+            }
             case SO_REUSEADDR:
                 *intval = 1;
                 break;

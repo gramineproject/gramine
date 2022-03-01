@@ -149,8 +149,7 @@ static int mount_sys(void) {
     return 0;
 }
 
-/* TODO: Change `key` to `index` (integer) when `mount_nonroot_from_toml_table` is gone */
-static int mount_one_nonroot(toml_table_t* mount, const char* key) {
+static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     assert(mount);
 
     int ret;
@@ -161,34 +160,34 @@ static int mount_one_nonroot(toml_table_t* mount, const char* key) {
 
     ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
-        log_error("Cannot parse 'fs.mount.%s.type'", key);
+        log_error("Cannot parse '%s.type'", prefix);
         ret = -EINVAL;
         goto out;
     }
 
     ret = toml_string_in(mount, "path", &mount_path);
     if (ret < 0) {
-        log_error("Cannot parse 'fs.mount.%s.path'", key);
+        log_error("Cannot parse '%s.path'", prefix);
         ret = -EINVAL;
         goto out;
     }
 
     ret = toml_string_in(mount, "uri", &mount_uri);
     if (ret < 0) {
-        log_error("Cannot parse 'fs.mount.%s.uri'", key);
+        log_error("Cannot parse '%s.uri'", prefix);
         ret = -EINVAL;
         goto out;
     }
 
     if (!mount_path) {
-        log_error("No value provided for 'fs.mount.%s.path'", key);
+        log_error("No value provided for '%s.path'", prefix);
         ret = -EINVAL;
         goto out;
     }
 
     if (!strcmp(mount_path, "/")) {
-        log_error("'fs.mount.%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
-                  "via the 'fs.root' manifest entry.", key);
+        log_error("'%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
+                  "via the 'fs.root' manifest entry.", prefix);
         ret = -EINVAL;
         goto out;
     }
@@ -201,14 +200,14 @@ static int mount_one_nonroot(toml_table_t* mount, const char* key) {
             ret = -EINVAL;
             goto out;
         }
-        log_error("Detected deprecated syntax: 'fs.mount.%s.path' (\"%s\") is not absolute. "
+        log_error("Detected deprecated syntax: '%s.path' (\"%s\") is not absolute. "
                   "Consider converting it to absolute by adding \"/\" at the beginning.",
-                  key, mount_path);
+                  prefix, mount_path);
     }
 
     if (!mount_type || !strcmp(mount_type, "chroot")) {
         if (!mount_uri) {
-            log_error("No value provided for 'fs.mount.%s.uri'", key);
+            log_error("No value provided for '%s.uri'", prefix);
             ret = -EINVAL;
             goto out;
         }
@@ -257,8 +256,8 @@ static int mount_nonroot_from_toml_table(void) {
     if (mounts_cnt == 0)
         return 0;
 
-    log_error("Detected deprecated syntax for 'fs.mount'. Consider converting 'fs.mount' to an "
-              "array: 'fs.mount = [{ type = \"chroot\", uri = \"...\", path = \"...\" }]'.");
+    log_error("Detected deprecated syntax: 'fs.mount'. Consider converting to the new array "
+              "syntax: 'fs.mounts = [{ type = \"chroot\", uri = \"...\", path = \"...\" }]'.");
 
     /*
      * *** Warning: A _very_ ugly hack below ***
@@ -315,7 +314,14 @@ static int mount_nonroot_from_toml_table(void) {
                 continue;
             toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
             assert(mount);
-            ret = mount_one_nonroot(mount, keys[j]);
+
+            char* prefix = alloc_concat("fs.mount.", -1, keys[j], -1);
+            if (!prefix) {
+                ret = -ENOMEM;
+                goto out;
+            }
+            ret = mount_one_nonroot(mount, prefix);
+            free(prefix);
             if (ret < 0)
                 goto out;
         }
@@ -334,7 +340,7 @@ static int mount_nonroot_from_toml_array(void) {
     if (!manifest_fs)
         return 0;
 
-    toml_array_t* manifest_fs_mounts = toml_array_in(manifest_fs, "mount");
+    toml_array_t* manifest_fs_mounts = toml_array_in(manifest_fs, "mounts");
     if (!manifest_fs_mounts)
         return 0;
 
@@ -349,12 +355,10 @@ static int mount_nonroot_from_toml_array(void) {
             return -EINVAL;
         }
 
-        /* Prepare a key for `mount_one_nonroot`, so that in case of errors it will display paths as
-         * `fs.mount.[0].type` etc. */
-        char key[23];
-        snprintf(key, sizeof(key), "[%zu]", i);
+        char prefix[static_strlen("fs.mounts[]") + 21];
+        snprintf(prefix, sizeof(prefix), "fs.mounts[%zu]", i);
 
-        ret = mount_one_nonroot(mount, key);
+        ret = mount_one_nonroot(mount, prefix);
         if (ret < 0)
             return ret;
     }

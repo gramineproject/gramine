@@ -4,18 +4,13 @@ libos.entrypoint = "{{ binary_dir }}/{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-fs.root.type = "chroot"
-fs.root.path = "/"
 fs.root.uri = "file:/"
 
-fs.mount.gramine_lib.type = "chroot"
-fs.mount.gramine_lib.path = "/lib"
-fs.mount.gramine_lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-# overwrite host "/etc" - we don't want host-level configuration files, e.g. dynamic loader caches
-fs.mount.disable_etc.type = "tmpfs"
-fs.mount.disable_etc.path = "/etc"
-fs.mount.disable_etc.uri = "file:unused"
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  # overwrite host "/etc" - we don't want host-level configuration files, e.g. dynamic loader caches
+  { type = "tmpfs", path = "/etc" },
+]
 
 sgx.nonpie_binary = true
 sgx.debug = true

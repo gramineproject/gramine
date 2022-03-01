@@ -149,8 +149,6 @@ static int chroot_lookup(struct shim_dentry* dent) {
 
     int ret;
 
-    lock(&dent->lock);
-
     /*
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix. Use
      * the file type from mount URI.
@@ -200,7 +198,6 @@ static int chroot_lookup(struct shim_dentry* dent) {
 
     ret = chroot_setup_dentry(dent, type, perm, size);
 out:
-    unlock(&dent->lock);
     free(uri);
     return ret;
 }
@@ -529,17 +526,14 @@ static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
         goto out;
     }
 
-    struct shim_inode* inode = new->inode;
-    if (inode) {
-        new->inode = NULL;
-        put_inode(inode);
-    }
+    reset_dentry(new);
 
     /* No need to adjust refcount of `old->inode`: we add a reference from `new` and remove the one
      * from `old`. */
     new->inode = old->inode;
     new->type = old->type;
     new->perm = old->perm;
+    new->state |= DENTRY_VALID;
 
     old->inode = NULL;
     ret = 0;

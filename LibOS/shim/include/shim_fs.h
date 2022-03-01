@@ -149,9 +149,6 @@ struct shim_dentry {
     /* file permissions: PERM_rwxrwxrwx, etc. */
     mode_t perm;
 
-    /* Filesystem-specific data. Protected by `lock`. */
-    void* data;
-
     /* Inode associated with this dentry. Currently optional, and only for the use of underlying
      * filesystem (see `shim_inode` below). Protected by `g_dcache_lock`. */
     struct shim_inode* inode;
@@ -164,7 +161,6 @@ struct shim_dentry {
      * `shim_fs_lock.c`. */
     bool maybe_has_fs_locks;
 
-    struct shim_lock lock;
     REFTYPE ref_count;
 };
 
@@ -242,7 +238,7 @@ struct shim_d_ops {
      * \brief Create and open a new regular file
      *
      * \param hdl a newly created handle
-     * \param dent dentry, valid and negative (file to be created)
+     * \param dent dentry, not valid (file to be created)
      * \param flags open flags, including access mode (O_RDONLY / O_WRONLY / O_RDWR)
      * \param perm permissions of the new file
      *
@@ -257,7 +253,7 @@ struct shim_d_ops {
     /*
      * \brief Create a directory
      *
-     * \param dent dentry, valid and negative (directory to be created)
+     * \param dent dentry, not valid (directory to be created)
      * \param perm permissions of the new directory
      *
      * Creates a new directory at path described by `dent`. On success, prepares the dentry for use
@@ -684,6 +680,25 @@ void get_dentry(struct shim_dentry* dent);
 void put_dentry(struct shim_dentry* dent);
 
 /*!
+ * \brief Reset dentry state related to a file
+ *
+ * \param  dent  the dentry (should be either invalid or negative)
+ *
+ * Resets the following dentry fields: `state`, `fs`, `type`, `perm`, `inode`. Ensures that there is
+ * no leftover state from a file previously associated with the dentry, and the dentry can be used
+ * for a new file.
+ *
+ * The caller should hold `g_dcache_lock`.
+ *
+ * Should be called before initializing the dentry for a new file (e.g. `lookup`, `create`,
+ * `mkdir`).
+ *
+ * TODO: This function should not be necessary after the inode migration, as most of the fields
+ * listed above will be removed.
+ */
+void reset_dentry(struct shim_dentry* dent);
+
+/*!
  * \brief Get the dentry one level up
  *
  * \param dent the dentry
@@ -883,5 +898,9 @@ file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int or
 int generic_inode_poll(struct shim_handle* hdl, int poll_type);
 
 int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
+
+int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write);
+
+int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm);
 
 #endif /* _SHIM_FS_H_ */

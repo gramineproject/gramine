@@ -99,16 +99,11 @@ at that path. For example::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
-   fs.mount = [
+   fs.mounts = [
      { path = "/usr/bin/python3.8", uri = "file:/usr/bin/python3.8" },
      # Or, if using a binary from your local directory:
      # { path = "/usr/bin/python3.8", uri = "file:python3.8" },
    ]
-
-.. note ::
-   Earlier, ``libos.entrypoint`` was a PAL URI. If you used it with a relative
-   path, it's probably enough to remove ``file:`` prefix (convert
-   ``"file:hello"`` to ``"hello"``).
 
 Command-line arguments
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -339,7 +334,7 @@ FS mount points
 
 ::
 
-    fs.mount = [
+    fs.mounts = [
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
       { type = "[chroot|...]", path = "[PATH]", uri = "[URI]" },
     ]
@@ -348,12 +343,12 @@ Or, as separate sections:
 
 ::
 
-    [[fs.mount]]
+    [[fs.mounts]]
     type = "[chroot|...]"
     path = "[PATH]"
     uri  = "[URI]"
 
-    [[fs.mount]]
+    [[fs.mounts]]
     type = "[chroot|...]"
     path = "[PATH]"
     uri  = "[URI]"
@@ -858,19 +853,6 @@ Linux scheduler: the effective maximum is 250 samples per second.
 Deprecated options
 ------------------
 
-Preloaded library (deprecated option)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-   loader.preload = "[URI]"
-
-This syntax specifies the library to be preloaded before loading the executable.
-This usually points to the LibOS library ``libsysdb.so``.
-
-Note that previously this syntax allowed to specify the list of URIs (separated
-by commas). This ability was never used and therefore was removed completely.
-
 FS mount points (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -881,4 +863,4 @@ FS mount points (deprecated syntax)
    fs.mount.[identifier].uri  = "[URI]"
 
 This syntax used a TOML table schema with keys for each mount. It has been
-replaced with a TOML array.
+replaced with the ``fs.mounts`` TOML array.

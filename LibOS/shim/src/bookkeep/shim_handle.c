@@ -104,10 +104,11 @@ static int init_exec_handle(void) {
     exec_path = entrypoint;
 
     if (strstartswith(exec_path, URI_PREFIX_FILE)) {
-        /* TODO: change to error after some deprecation period */
-        log_error("'libos.entrypoint' is now a Gramine path, not URI. "
-                  "Ignoring the 'file:' prefix.");
-        exec_path += strlen(URI_PREFIX_FILE);
+        /* Technically we could skip this check, but it's something easy to confuse with
+         * loader.entrypoint, so better to have this handled nicely for the users. */
+        log_error("'libos.entrypoint' should be an in-Gramine path, not URI.");
+        ret = -EINVAL;
+        goto out;
     }
 
     hdl = get_new_handle();

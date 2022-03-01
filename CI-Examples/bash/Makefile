@@ -1,5 +1,3 @@
-SGX_SIGNER_KEY ?= ../../Pal/src/host/Linux-SGX/signer/enclave-key.pem
-
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 ifeq ($(DEBUG),1)
@@ -22,10 +20,7 @@ bash.manifest: manifest.template
 		$< >$@
 
 bash.manifest.sgx: bash.manifest
-	@test -s $(SGX_SIGNER_KEY) || \
-	    { echo "SGX signer private key was not found, please specify SGX_SIGNER_KEY!"; exit 1; }
 	gramine-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
 		--manifest bash.manifest \
 		--output $@
 

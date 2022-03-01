@@ -2,7 +2,7 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 /*
- * This file contains code for implementation of 'socket' filesystem.
+ * This file contains code for implementation of the `socket` filesystem.
  */
 
 #include <asm/fcntl.h>
@@ -15,6 +15,23 @@
 #include "shim_process.h"
 #include "shim_signal.h"
 #include "stat.h"
+
+int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
+
+    struct shim_inode* inode = get_new_inode(dent->mount, S_IFSOCK, perm);
+    if (!inode)
+        return -ENOMEM;
+
+    dent->fs = &socket_builtin_fs;
+    inode->fs = &socket_builtin_fs;
+
+    dent->type = S_IFSOCK;
+    dent->perm = perm;
+    dent->inode = inode;
+    return 0;
+}
 
 static int socket_close(struct shim_handle* hdl) {
     /* XXX: Shouldn't this do something? */
