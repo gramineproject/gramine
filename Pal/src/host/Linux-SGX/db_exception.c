@@ -166,6 +166,11 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         return false;
     } else if (instr[0] == 0x0f && instr[1] == 0x05) {
         /* syscall: LibOS may know how to handle this */
+        static int log_once = 1;
+        if (__atomic_exchange_n(&log_once, 0, __ATOMIC_RELAXED)) {
+            log_always("Emulating a raw syscall instruction. This degrades performance, consider"
+                       " patching your application to use Gramine syscall API.");
+        }
         return false;
     }
     log_error("Unknown or illegal instruction executed");
