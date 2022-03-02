@@ -412,6 +412,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         free_area = &areas[area_num++];
     }
 
+    log_warning("Adding pages to SGX enclave, this may take some time...");
     for (int i = 0; i < area_num; i++) {
         if (areas[i].data_src == ELF_FD) {
             ret = load_enclave_binary(&enclave_secs, areas[i].fd, areas[i].addr, areas[i].prot);
@@ -486,6 +487,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             goto out;
         }
     }
+    log_warning("Added all pages to SGX enclave");
 
     ret = init_enclave(&enclave_secs, &enclave_sigstruct, &enclave_token);
     if (ret < 0) {
@@ -587,8 +589,9 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 #endif
     char* log_level_str = NULL;
     char* log_file = NULL;
-
     char errbuf[256];
+
+    log_always("Parsing TOML manifest file, this may take some time...");
     manifest_root = toml_parse(manifest, errbuf, sizeof(errbuf));
     if (!manifest_root) {
         log_error("PAL failed at parsing the manifest: %s", errbuf);
@@ -856,8 +859,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
             goto out;
         }
     }
-
     g_urts_log_level = log_level;
+    log_warning("Parsed TOML manifest file successfully");
 
     ret = 0;
 
