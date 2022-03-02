@@ -150,6 +150,10 @@ Preferred Doxygen style
 
 #. Prefer Qt-style ``/*!`` and ``\param``:
 
+   .. Note that the snippet below is wrapped to 106 chars per line. This is
+      because it quotes C code (wrapped to 100), and the quote is itself
+      indented in reST.
+
    .. code-block:: c
 
       /*!
