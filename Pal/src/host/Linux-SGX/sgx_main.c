@@ -412,6 +412,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         free_area = &areas[area_num++];
     }
 
+    log_always("\033[0;35m Adding pages to enclave... Might take some time..........\033[0m");
     for (int i = 0; i < area_num; i++) {
         if (areas[i].data_src == ELF_FD) {
             ret = load_enclave_binary(&enclave_secs, areas[i].fd, areas[i].addr, areas[i].prot);
@@ -587,8 +588,9 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 #endif
     char* log_level_str = NULL;
     char* log_file = NULL;
-
     char errbuf[256];
+
+    log_always("\033[0;35m Parsing loader config ... Might take some time..........\033[0m");
     manifest_root = toml_parse(manifest, errbuf, sizeof(errbuf));
     if (!manifest_root) {
         log_error("PAL failed at parsing the manifest: %s", errbuf);
