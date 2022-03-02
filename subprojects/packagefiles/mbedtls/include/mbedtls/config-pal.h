@@ -51,7 +51,8 @@
 
 void* calloc(size_t num, size_t size);
 void free(void*);
-int snprintf(char* buf, size_t buf_size, const char* fmt, ...);
+int snprintf(char* buf, size_t buf_size, const char* fmt, ...)
+    __attribute__((format(printf, 3, 4)));
 
 #define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_PLATFORM_SNPRINTF_ALT
