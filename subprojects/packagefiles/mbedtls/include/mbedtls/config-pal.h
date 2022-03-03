@@ -49,10 +49,13 @@
 #include <limits.h>
 #include <stddef.h>
 
+/* Prevent conflict with `api_fortified.h` which might redefine `snprintf` as macro */
+#ifndef API_H
 void* calloc(size_t num, size_t size);
 void free(void*);
 int snprintf(char* buf, size_t buf_size, const char* fmt, ...)
     __attribute__((format(printf, 3, 4)));
+#endif
 
 #define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_PLATFORM_SNPRINTF_ALT
