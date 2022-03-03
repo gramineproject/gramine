@@ -16,7 +16,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "protected-files/protected_files.h"
+#include "protected_files.h"
 
 /*
  * For SGX, the creation of a child process requires a clean enclave and a secure channel between

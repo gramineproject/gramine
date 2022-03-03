@@ -6,11 +6,11 @@ gsgx_h = configure_file(
 
 sgx_inc = [
     includes_pal_common,
+    protected_files_inc,
     include_directories(
         '.',
         '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
         '../../../include/host/Linux-common',
-        'protected-files',
     ),
 ]
 
@@ -78,8 +78,6 @@ libpal_sgx = shared_library('pal',
     'enclave_platform.c',
     'enclave_untrusted.c',
     'enclave_xstate.c',
-    'protected-files/lru_cache.c',
-    'protected-files/protected_files.c',
     pal_sgx_asm_offsets_h,
     pal_common_sources,
     pal_linux_common_sources_enclave,
@@ -121,6 +119,7 @@ libpal_sgx = shared_library('pal',
     dependencies: [
         common_dep,
         cryptoadapter_pal_dep,
+        protected_files_dep,
     ],
 
     install: true,
@@ -217,5 +216,4 @@ if debug
     )
 endif
 
-subdir('protected-files')
 subdir('tools')

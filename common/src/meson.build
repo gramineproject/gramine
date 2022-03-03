@@ -49,3 +49,5 @@ if sgx
         ],
     )
 endif
+
+subdir('protected_files')
