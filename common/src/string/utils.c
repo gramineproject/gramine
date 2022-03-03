@@ -30,11 +30,11 @@ char* alloc_concat3(const char* a, size_t a_len, const char* b, size_t b_len,
     if (!buf)
         return NULL;
 
-    if (a_len)
+    if (a != NULL && a_len)
         memcpy(buf, a, a_len);
-    if (b_len)
+    if (b != NULL && b_len)
         memcpy(buf + a_len, b, b_len);
-    if (c_len)
+    if (c != NULL && c_len)
         memcpy(buf + a_len + b_len, c, c_len);
 
     buf[a_len + b_len + c_len] = '\0';
