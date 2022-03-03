@@ -114,8 +114,8 @@ bool have_pending_signals(void);
 /*!
  * \brief Return stack pointer to use in a signal handler.
  *
- * \param sp Current stack pointer value.
- * \param use_altstack True if alternative stack should be used.
+ * \param sp            Current stack pointer value.
+ * \param use_altstack  True if alternative stack should be used.
  *
  * Returns value to be used as a new stack pointer in the signal handler, depending on the current
  * thread's settings.
@@ -124,10 +124,10 @@ uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack);
 /*!
  * \brief Check whether address is on alternative stack.
  *
- * \param sp Stack pointer value.
- * \param alt_stack Pointer to the alternative stack.
+ * \param sp         Stack pointer value.
+ * \param alt_stack  Pointer to the alternative stack.
  *
- * Returns `true` if \p sp is on \p alt_stack.
+ * \returns `true` if \p sp is on \p alt_stack.
  */
 bool is_on_altstack(uintptr_t sp, stack_t* alt_stack);
 
@@ -154,12 +154,12 @@ void get_sig_mask(struct shim_thread* thread, __sigset_t* mask);
 void set_sig_mask(struct shim_thread* thread, const __sigset_t* new_set);
 
 /*!
- * \brief Set signal mask requested by user
+ * \brief Set signal mask requested by user.
  *
- * \param mask_ptr Pointer to the user signal mask (may be NULL)
- * \param setsize Size of `__sigset_t`
+ * \param mask_ptr  Pointer to the user signal mask (may be NULL).
+ * \param setsize   Size of `__sigset_t`.
  *
- * \return `0` on success, negative error code on failure.
+ * \returns `0` on success, negative error code on failure.
  *
  * This function saves the current signal mask (in `struct shim_thread`) and sets it to \p mask_ptr.
  * If \p mask_ptr is NULL, this does nothing.

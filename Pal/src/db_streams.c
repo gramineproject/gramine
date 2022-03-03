@@ -504,23 +504,21 @@ int DkStreamFlush(PAL_HANDLE handle) {
     return _DkStreamFlush(handle);
 }
 
-int DkSendHandle(PAL_HANDLE handle, PAL_HANDLE cargo) {
-    // Return error if any of the handle is NULL
-    if (!handle || !cargo) {
+int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
+    if (!target_process || !cargo) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkSendHandle(handle, cargo);
+    return _DkSendHandle(target_process, cargo);
 }
 
-int DkReceiveHandle(PAL_HANDLE handle, PAL_HANDLE* cargo) {
-    // return error if any of the handle is NULL
-    if (!handle) {
+int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+    if (!source_process) {
         return -PAL_ERROR_INVAL;
     }
 
-    *cargo = NULL;
-    return _DkReceiveHandle(handle, cargo);
+    *out_cargo = NULL;
+    return _DkReceiveHandle(source_process, out_cargo);
 }
 
 int DkStreamChangeName(PAL_HANDLE hdl, const char* uri) {

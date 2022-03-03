@@ -139,16 +139,16 @@ int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
 #define ALLOC_ALIGN_DOWN_PTR(addr) ALIGN_DOWN_PTR_POW2(addr, g_pal_public_state.alloc_align)
 
 /*!
- * \brief Main initialization function
+ * \brief Main initialization function.
  *
  * This function must be called by the host-specific loader.
  *
- * \param instance_id       current instance id
- * \param exec_uri          executable URI
- * \param parent_process    parent process if it's a child
- * \param first_thread      first thread handle
- * \param arguments         application arguments
- * \param environments      environment variables
+ * \param instance_id     Current instance ID.
+ * \param exec_uri        Executable URI.
+ * \param parent_process  Parent process if it's a child.
+ * \param first_thread    First thread handle.
+ * \param arguments       Application arguments.
+ * \param environments    Environment variables.
  */
 noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
                        const char** arguments, const char** environments);
@@ -181,8 +181,8 @@ int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _DkStreamFlush(PAL_HANDLE handle);
 int _DkStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
 const char* _DkStreamRealpath(PAL_HANDLE hdl);
-int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo);
-int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo);
+int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
+int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 /* DkProcess and DkThread calls */
 int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);

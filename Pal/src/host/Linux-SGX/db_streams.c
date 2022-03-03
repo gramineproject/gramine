@@ -237,17 +237,8 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     return 0;
 }
 
-/*!
- * \brief Send `cargo` handle to a process identified via `hdl` handle.
- *
- * If `hdl` has an SSL context (i.e., its stream is encrypted), then `cargo` is sent encrypted.
- *
- * \param[in] hdl    Process stream on which to send `cargo`.
- * \param[in] cargo  Arbitrary handle to serialize and send on `hdl`.
- * \return           0 on success, negative PAL error code otherwise.
- */
-int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
-    if (HANDLE_HDR(hdl)->type != PAL_TYPE_PROCESS)
+int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
+    if (HANDLE_HDR(target_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
     /* serialize cargo handle into a blob hdl_data */
@@ -261,7 +252,7 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
         .has_fd = cargo->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE),
         .data_size = hdl_data_size
     };
-    int fd = hdl->process.stream;
+    int fd = target_process->process.stream;
 
     /* first send hdl_hdr so the recipient knows how many FDs were transferred + how large is cargo */
     ret = ocall_send(fd, &hdl_hdr, sizeof(struct hdl_header), NULL, 0, NULL, 0);
@@ -294,9 +285,10 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     }
 
     /* finally send the serialized cargo as payload (possibly encrypted) */
-    if (hdl->process.ssl_ctx) {
-        ret = _DkStreamSecureWrite(hdl->process.ssl_ctx, (uint8_t*)hdl_data, hdl_hdr.data_size,
-                                   /*is_blocking=*/!hdl->process.nonblocking);
+    if (target_process->process.ssl_ctx) {
+        ret = _DkStreamSecureWrite(target_process->process.ssl_ctx, (uint8_t*)hdl_data,
+                                   hdl_hdr.data_size,
+                                   /*is_blocking=*/!target_process->process.nonblocking);
     } else {
         ret = ocall_write(fd, hdl_data, hdl_hdr.data_size);
         ret = ret < 0 ? unix_to_pal_error(ret) : ret;
@@ -306,22 +298,13 @@ int _DkSendHandle(PAL_HANDLE hdl, PAL_HANDLE cargo) {
     return ret < 0 ? ret : 0;
 }
 
-/*!
- * \brief Receive `cargo` handle from a process identified via `hdl` handle.
- *
- * If `hdl` has an SSL context (i.e., its stream is encrypted), then `cargo` is sent encrypted.
- *
- * \param[in] hdl    Process stream on which to receive `cargo`.
- * \param[in] cargo  Arbitrary handle to receive on `hdl` and deserialize.
- * \return           0 on success, negative PAL error code otherwise.
- */
-int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
-    if (HANDLE_HDR(hdl)->type != PAL_TYPE_PROCESS)
+int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+    if (HANDLE_HDR(source_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
     ssize_t ret;
     struct hdl_header hdl_hdr;
-    int fd = hdl->process.stream;
+    int fd = source_process->process.stream;
 
     /* first receive hdl_hdr so that we know how many FDs were transferred + how large is cargo */
     ret = ocall_recv(fd, &hdl_hdr, sizeof(hdl_hdr), NULL, NULL, NULL, NULL);
@@ -353,9 +336,10 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
     /* finally receive the serialized cargo as payload (possibly encrypted) */
     char hdl_data[hdl_hdr.data_size];
 
-    if (hdl->process.ssl_ctx) {
-        ret = _DkStreamSecureRead(hdl->process.ssl_ctx, (uint8_t*)hdl_data, hdl_hdr.data_size,
-                                  /*is_blocking=*/!hdl->process.nonblocking);
+    if (source_process->process.ssl_ctx) {
+        ret = _DkStreamSecureRead(source_process->process.ssl_ctx,
+                                  (uint8_t*)hdl_data, hdl_hdr.data_size,
+                                  /*is_blocking=*/!source_process->process.nonblocking);
     } else {
         ret = ocall_read(fd, hdl_data, hdl_hdr.data_size);
         ret = ret < 0 ? unix_to_pal_error(ret) : ret;
@@ -388,7 +372,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
-    *cargo = handle;
+    *out_cargo = handle;
     return 0;
 }
 

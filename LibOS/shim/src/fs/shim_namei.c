@@ -97,11 +97,11 @@ out:
 }
 
 /*!
- * \brief Traverse mountpoints and look up a dentry
+ * \brief Traverse mountpoints and look up a dentry.
  *
- * \param[in,out] dent the dentry
+ * \param[in,out] dent  The dentry.
  *
- * \return 0 on success, negative error code otherwise
+ * \returns 0 on success, negative error code otherwise.
  *
  * If `*dent` is a mountpoint, this function converts it to the underlying filesystem root
  * (iterating if necessary), then performs a lookup on the last dentry. As in `lookup_dentry`, if

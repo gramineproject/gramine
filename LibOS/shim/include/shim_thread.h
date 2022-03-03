@@ -149,21 +149,22 @@ static inline bool is_internal(struct shim_thread* thread) {
 }
 
 /*!
- * \brief Allocates new ID
+ * \brief Allocate a new ID.
  *
- * \param move_ownership_to VMID of the process to pass ownership of ID to; if set, ID is removed
- *                          from owned and locally tracked IDs
+ * \param move_ownership_to  VMID of the process to pass ownership of ID to; if set, ID is removed
+ *                           from owned and locally tracked IDs.
  *
- * \returns new ID on success, `0` on failure (`0` is an invalid ID)
+ * \returns new ID on success, `0` on failure (`0` is an invalid ID).
  *
  * If \p move_ownership_to is set, the returned ID should not be freed with #release_id since it's
  * no longer locally tracked and the current process no longer owns it.
  */
 IDTYPE get_new_id(IDTYPE move_ownership_to);
+
 /*!
- * \brief Releases (frees) previously allocated ID
+ * \brief Release (free) a previously allocated ID.
  *
- * \param id ID to release
+ * \param id  ID to release.
  */
 void release_id(IDTYPE id);
 
@@ -271,18 +272,18 @@ static inline void wake_queue(struct wake_queue_head* queue) {
 }
 
 /*!
- * \brief Look up the thread for a given id.
+ * \brief Look up the thread for a given ID.
  *
- * \param tid Thread id to look for.
+ * \param tid  Thread ID to look for.
  *
- * Searches global threads list for a thread with id equal to \p tid.
+ * Searches global threads list for a thread with ID equal to \p tid.
  * If no thread was found returns NULL.
  * Increases refcount of the returned thread.
  */
 struct shim_thread* lookup_thread(IDTYPE tid);
 
 /*!
- * \brief Create a new thread structure, which is a copy of the current thread
+ * \brief Create a new thread structure, which is a copy of the current thread.
  *
  * `tid` field is not initialized (i.e. is `0`) and it is the caller's responsibility to initialize
  * it.
@@ -293,9 +294,10 @@ struct shim_thread* get_new_internal_thread(void);
 /*!
  * \brief Allocate a new stack for LibOS calls (emulated syscalls).
  *
- * \param thread Thread for which to allocate a new stack.
+ * \param thread  Thread for which to allocate a new stack.
  *
- * On success returns `0`, on failure - negative error code.
+ * \returns `0` on success and negative error code on failure.
+ *
  * Should be called only once per thread.
  */
 int alloc_thread_libos_stack(struct shim_thread* thread);

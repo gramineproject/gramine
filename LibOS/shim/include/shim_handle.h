@@ -270,9 +270,9 @@ struct shim_handle* get_fd_handle(uint32_t fd, int* flags, struct shim_handle_ma
 /*!
  * \brief Assign new fd to a handle.
  *
- * \param hdl A handle to be mapped to the new fd.
- * \param flags Flags assigned to new shim_fd_handle.
- * \param handle_map Handle map to be used. If NULL is passed, current thread's handle map is used.
+ * \param hdl         A handle to be mapped to the new fd.
+ * \param flags       Flags assigned to new shim_fd_handle.
+ * \param handle_map  Handle map to be used. If NULL is passed, current thread's handle map is used.
  *
  * Creates mapping for the given handle to a new file descriptor which is then returned.
  * Uses the lowest, non-negative available number for the new fd.

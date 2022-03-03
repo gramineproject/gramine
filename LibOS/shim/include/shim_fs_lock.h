@@ -58,11 +58,11 @@ struct posix_lock {
 };
 
 /*!
- * \brief Set or remove a lock on a file
+ * \brief Set or remove a lock on a file.
  *
- * \param dent the dentry for a file
- * \param pl parameters of new lock
- * \param wait if true, will wait until a lock can be taken
+ * \param dent  The dentry for a file.
+ * \param pl    Parameters of new lock.
+ * \param wait  If true, will wait until a lock can be taken.
  *
  * This is the equivalent of `fnctl(F_SETLK/F_SETLKW)`.
  *
@@ -77,11 +77,11 @@ struct posix_lock {
 int posix_lock_set(struct shim_dentry* dent, struct posix_lock* pl, bool wait);
 
 /*!
- * \brief Check for conflicting locks on a file
+ * \brief Check for conflicting locks on a file.
  *
- * \param dent the dentry for a file
- * \param pl parameters of new lock (type cannot be `F_UNLCK`)
- * \param[out] out_pl on success, set to `F_UNLCK` or details of a conflicting lock
+ * \param      dent    The dentry for a file.
+ * \param      pl      Parameters of new lock (type cannot be `F_UNLCK`).
+ * \param[out] out_pl  On success, set to `F_UNLCK` or details of a conflicting lock.
  *
  * This is the equivalent of `fcntl(F_GETLK)`.
  *
@@ -95,13 +95,13 @@ int posix_lock_get(struct shim_dentry* dent, struct posix_lock* pl, struct posix
 int posix_lock_clear_pid(IDTYPE pid);
 
 /*!
- * \brief Set or remove a lock on a file (IPC handler)
+ * \brief Set or remove a lock on a file (IPC handler).
  *
- * \param path absolute path for a file
- * \param pl parameters of new lock
- * \param wait if true, will postpone the response until a lock can be taken
- * \param vmid target process for IPC response
- * \param seq sequence number for IPC response
+ * \param path  Absolute path for a file.
+ * \param pl    Parameters of new lock.
+ * \param wait  If true, will postpone the response until a lock can be taken.
+ * \param vmid  Target process for IPC response.
+ * \param seq   Sequence number for IPC response.
  *
  * This is a version of `posix_lock_set` called from an IPC callback. This function is responsible
  * for either sending an IPC response immediately, or scheduling one for later (if `wait` is true
@@ -114,11 +114,11 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
                             unsigned long seq);
 
 /*!
- * \brief Check for conflicting locks on a file (IPC handler)
+ * \brief Check for conflicting locks on a file (IPC handler).
  *
- * \param path absolute path for a file
- * \param pl parameters of new lock (type cannot be `F_UNLCK`)
- * \param[out] out_pl on success, set to `F_UNLCK` or details of a conflicting lock
+ * \param      path    Absolute path for a file.
+ * \param      pl      Parameters of new lock (type cannot be `F_UNLCK`).
+ * \param[out] out_pl  On success, set to `F_UNLCK` or details of a conflicting lock.
  *
  * This is a version of `posix_lock_get` called from an IPC callback. The caller is responsible to
  * send the returned value and `out_pl` in an IPC response.

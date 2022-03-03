@@ -150,13 +150,13 @@ struct pseudo_node {
 };
 
 /*
- * \brief Convert a string to number (for use in paths)
+ * \brief Convert a string to number (for use in paths).
  *
- * \param str the string
- * \param max_value maximum value
- * \param[out] out_value on success, set to the parsed number
+ * \param      str        The string.
+ * \param      max_value  Maximum value.
+ * \param[out] out_value  On success, set to the parsed number.
  *
- * \return 0 on success, -1 on failure
+ * \returns 0 on success, -1 on failure.
  *
  * Recognizes a string that is a unique representation of a number (0 <= value <= max_value):
  * the string should be non-empty, consist only of digits, and have no leading zeroes.

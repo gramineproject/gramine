@@ -57,24 +57,26 @@ int init_ipc(void);
 int init_ipc_ids(void);
 
 /*!
- * \brief Initialize the IPC worker thread
+ * \brief Initialize the IPC worker thread.
  */
 int init_ipc_worker(void);
+
 /*!
- * \brief Terminate the IPC worker thread
+ * \brief Terminate the IPC worker thread.
  */
 void terminate_ipc_worker(void);
 
 /*!
- * \brief Establish a one-way IPC connection to another process
+ * \brief Establish a one-way IPC connection to another process.
  *
- * \param dest vmid of the destination process to connect to
+ * \param dest  VMID of the destination process to connect to.
  */
 int connect_to_process(IDTYPE dest);
+
 /*!
- * \brief Remove an outgoing IPC connection
+ * \brief Remove an outgoing IPC connection.
  *
- * \param dest vmid of the destination process
+ * \param dest  VMID of the destination process.
  *
  * If there is no outgoing connection to \p dest, does nothing. If any thread waits for a response
  * to a message sent to \p dest, it is woken up and notified about the disconnect.
@@ -100,18 +102,19 @@ void init_ipc_msg(struct shim_ipc_msg* msg, unsigned char code, size_t size);
 void init_ipc_response(struct shim_ipc_msg* msg, uint64_t seq, size_t size);
 
 /*!
- * \brief Send an IPC message
+ * \brief Send an IPC message.
  *
- * \param dest vmid of the destination process
- * \param msg message to send
+ * \param dest  VMID of the destination process.
+ * \param msg   Message to send.
  */
 int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
+
 /*!
- * \brief Send an IPC message and wait for a response
+ * \brief Send an IPC message and wait for a response.
  *
- * \param dest vmid of the destination process
- * \param msg message to send
- * \param[out] resp upon successful return contains a pointer to the response
+ * \param      dest  VMID of the destination process.
+ * \param      msg   Message to send.
+ * \param[out] resp  Upon successful return contains a pointer to the response.
  *
  * Send an IPC message to the \p dest process and wait for a response. An unique number is assigned
  * before sending the message and this thread will wait for a response IPC message, which contains
@@ -120,22 +123,23 @@ int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
  * discarded, but still awaited for.
  */
 int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** resp);
+
 /*!
- * \brief Broadcast an IPC message
+ * \brief Broadcast an IPC message.
  *
- * \param msg message to send
- * \param exclude_vmid vmid of process to be excluded
+ * \param msg           Message to send.
+ * \param exclude_vmid  VMID of process to be excluded.
  *
  * Send an IPC message \p msg to all known (connected) processes except for \p exclude_vmid.
  */
 int ipc_broadcast(struct shim_ipc_msg* msg, IDTYPE exclude_vmid);
 
 /*!
- * \brief Handle a response to a previously sent message
+ * \brief Handle a response to a previously sent message.
  *
- * \param src ID of sender
- * \param data body of the response
- * \param seq sequence number of the original message
+ * \param src   ID of sender.
+ * \param data  Body of the response.
+ * \param seq   Sequence number of the original message.
  *
  * Searches for a thread waiting for a response to a message previously sent to \p src with
  * the sequence number \p seq. If such thread is found, it is woken up and \p data is passed to it
@@ -146,9 +150,9 @@ int ipc_broadcast(struct shim_ipc_msg* msg, IDTYPE exclude_vmid);
 int ipc_response_callback(IDTYPE src, void* data, uint64_t seq);
 
 /*!
- * \brief Get a new VMID
+ * \brief Get a new VMID.
  *
- * \param[out] vmid contains the new VMID
+ * \param[out] vmid  Contains the new VMID.
  */
 int ipc_get_new_vmid(IDTYPE* vmid);
 int ipc_get_new_vmid_callback(IDTYPE src, void* data, uint64_t seq);
@@ -167,10 +171,10 @@ void ipc_child_disconnect_callback(IDTYPE vmid);
 #define MAX_RANGE_SIZE 0x20
 
 /*!
- * \brief Request a new ID range from the IPC leader
+ * \brief Request a new ID range from the IPC leader.
  *
- * \param[out] out_start start of the new ID range
- * \param[out] out_end end of the new ID range
+ * \param[out] out_start  Start of the new ID range.
+ * \param[out] out_end    End of the new ID range.
  *
  * Sender becomes the owner of the returned ID range.
  */
@@ -178,10 +182,10 @@ int ipc_alloc_id_range(IDTYPE* out_start, IDTYPE* out_end);
 int ipc_alloc_id_range_callback(IDTYPE src, void* data, uint64_t seq);
 
 /*!
- * \brief Release a previously allocated ID range
+ * \brief Release a previously allocated ID range.
  *
- * \param start start of the ID range
- * \param end end of the ID range
+ * \param start  Start of the ID range.
+ * \param end    End of the ID range.
  *
  * \p start and \p end must denote a full range (for details check #ipc_change_id_owner).
  */
@@ -189,10 +193,10 @@ int ipc_release_id_range(IDTYPE start, IDTYPE end);
 int ipc_release_id_range_callback(IDTYPE src, void* data, uint64_t seq);
 
 /*!
- * \brief Change owner of an ID
+ * \brief Change owner of an ID.
  *
- * \param id ID to change the ownership of
- * \param new_owner new owner of \p id
+ * \param id         ID to change the ownership of.
+ * \param new_owner  New owner of \p id.
  *
  * This operation effectively splits an existing ID range. Each (if any) of the range parts must be
  * later on freed separately. Example:
@@ -209,10 +213,10 @@ int ipc_change_id_owner(IDTYPE id, IDTYPE new_owner);
 int ipc_change_id_owner_callback(IDTYPE src, void* data, uint64_t seq);
 
 /*!
- * \brief Find the owner of a given id
+ * \brief Find the owner of a given id.
  *
- * \param id id to find the owner of
- * \param[out] out_owner contains vmid of the process owning \p id
+ * \param      id         ID to find the owner of.
+ * \param[out] out_owner  Contains VMID of the process owning \p id.
  *
  * If nobody owns \p id then `0` is returned in \p out_owner.
  */
