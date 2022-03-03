@@ -83,7 +83,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     size_t dsz1 = 0;
     size_t dsz2 = 0;
     bool free_d1 = false;
-    bool free_d2 = false;
 
     /* find fields to serialize (depends on the handle type) and assign them to d1/d2; note that
      * no handle type has more than two such fields, and some have none at all */
@@ -159,8 +158,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
 out:
     if (free_d1)
         free((void*)d1);
-    if (free_d2)
-        free((void*)d2);
     if (ret < 0)
         return ret;
 
