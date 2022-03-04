@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *               2022, Intel Corporation
+ */
+
 /*
- *  X.509 test certificates.
- *  This file is heavily based on an mbedTLS 3.1.0 test certs.
- *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *                2022, Intel Corporation
- *  SPDX-License-Identifier: Apache-2.0
+ * X.509 test certificates.
+ * This file is heavily based on mbedTLS 3.1.0 test certs.
  */
 
 #ifndef CERTS_H
