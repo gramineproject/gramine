@@ -180,7 +180,8 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     if (strstr(crt_issuer, "PolarSSL Test CA"))
         printf("%s", SECRET_PROVISION_WARNING_TEST_CERTS);
 
-    ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL, mbedtls_ctr_drbg_random, &ctr_drbg);
+    ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL, mbedtls_ctr_drbg_random,
+                                   &ctr_drbg);
     if (ret < 0) {
         goto out;
     }
