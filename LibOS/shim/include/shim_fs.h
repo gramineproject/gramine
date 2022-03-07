@@ -82,6 +82,32 @@ struct shim_fs_ops {
      */
     ssize_t (*write)(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos);
 
+    /*!
+     * \brief Read a continuous data chunk into multiple buffers.
+     *
+     * \param         handle   Handle.
+     * \param         iov      Array of buffers to read to.
+     * \param         iov_len  Length of \p iov.
+     * \param[in,out] pos      Position at which to start reading. Might be updated on success.
+     *
+     * \returns Number of bytes read on success, negative error code on failure.
+     */
+    ssize_t (*readv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                     file_off_t* pos);
+
+    /*!
+     * \brief Write a continuous data chunk from multiple buffers.
+     *
+     * \param         handle   Handle.
+     * \param         iov      Array of buffers to write from.
+     * \param         iov_len  Length of \p iov.
+     * \param[in,out] pos      Position at which to start writing. Might be updated on success.
+     *
+     * \returns Number of bytes written on success, negative error code on failure.
+     */
+    ssize_t (*writev)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                      file_off_t* pos);
+
     /*
      * \brief Map file at an address.
      *
@@ -889,6 +915,7 @@ extern struct shim_d_ops str_d_ops;
 extern struct shim_fs_ops tmp_fs_ops;
 extern struct shim_d_ops tmp_d_ops;
 
+/* XXX: why these are called "builtin"? */
 extern struct shim_fs chroot_builtin_fs;
 extern struct shim_fs chroot_encrypted_builtin_fs;
 extern struct shim_fs tmp_builtin_fs;
@@ -931,8 +958,6 @@ int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int
 int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
 
 int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write);
-
-int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm);
 
 /*
  * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It

@@ -94,8 +94,7 @@ static void server(void) {
     size_t written = 0;
     while (written < sizeof(buffer)) {
         ssize_t n;
-        /* we specify dummy MSG_DONTWAIT just to test this flag */
-        if ((n = sendto(client_socket, buffer + written, sizeof(buffer) - written, MSG_DONTWAIT,
+        if ((n = sendto(client_socket, buffer + written, sizeof(buffer) - written, 0,
                         /*dest_addr=*/0, /*addrlen=*/0)) < 0) {
             if (errno == EINTR || errno == EAGAIN)
                 continue;
@@ -176,7 +175,7 @@ static void client(void) {
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_port   = htons((PORT));
-    if (inet_aton(SRV_IP, &address.sin_addr) == 0) {
+    if (inet_aton(SRV_IP, &address.sin_addr) != 1) {
         perror("inet_aton");
         exit(1);
     }
@@ -186,15 +185,13 @@ static void client(void) {
         exit(1);
     }
 
-    /* we specify dummy MSG_DONTWAIT and MSG_WAITALL just to test these flags */
+    /* we specify dummy MSG_DONTWAIT just to test this flag */
     printf("[client] receiving with MSG_PEEK: ");
-    count = client_recv(server_socket, buffer, sizeof(buffer),
-                        MSG_WAITALL | MSG_DONTWAIT | MSG_PEEK);
+    count = client_recv(server_socket, buffer, sizeof(buffer), MSG_DONTWAIT | MSG_PEEK);
     fwrite(buffer, count, 1, stdout);
 
     printf("[client] receiving with MSG_PEEK again: ");
-    count = client_recv(server_socket, buffer, sizeof(buffer),
-                        MSG_WAITALL | MSG_DONTWAIT | MSG_PEEK);
+    count = client_recv(server_socket, buffer, sizeof(buffer), MSG_DONTWAIT | MSG_PEEK);
     fwrite(buffer, count, 1, stdout);
 
     printf("[client] receiving without MSG_PEEK: ");

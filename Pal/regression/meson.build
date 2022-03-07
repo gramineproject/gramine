@@ -27,15 +27,12 @@ tests = {
     'Pipe': {},
     'Process': {},
     'Process4': {},
-    'SendHandle': {},
-    'Socket': {},
     'Symbols': {},
-    'Tcp': {},
     'Thread2': {},
-    'Udp': {},
     'avl_tree_test': {},
     'normalize_path': {},
     'printf_test': {},
+    'send_handle': {},
 }
 
 if host_machine.cpu_family() == 'x86_64'

@@ -1249,14 +1249,6 @@ static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
         return false;
 
-    /*
-     * XXX: Strictly speaking, reading `vma->file->acc_mode` requires taking `vma->file->lock`,
-     * which we cannot do in this function. However, the `acc_mode` field is only modified for
-     * sockets, and at this point we know that `vma->file` is not a socket (since it implements
-     * `msync`).
-     *
-     * TODO: Remove this comment when the socket code is rewritten.
-     */
     if (!(vma->file->acc_mode & MAY_WRITE))
         return false;
 

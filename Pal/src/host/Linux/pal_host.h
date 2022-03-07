@@ -77,18 +77,20 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
-            struct sockaddr* bind;
-            struct sockaddr* conn;
-            bool nonblocking;
-            bool reuseaddr;
+            enum pal_socket_domain domain;
+            enum pal_socket_type type;
+            struct socket_ops* ops;
             uint64_t linger;
-            size_t receivebuf;
-            size_t sendbuf;
-            uint64_t receivetimeout_us;
+            size_t recv_buf_size;
+            size_t send_buf_size;
+            uint64_t recvtimeout_us;
             uint64_t sendtimeout_us;
+            bool is_nonblocking;
+            bool reuseaddr;
+            bool keepalive;
             bool tcp_cork;
-            bool tcp_keepalive;
             bool tcp_nodelay;
+            bool ipv6_v6only;
         } sock;
 
         struct {

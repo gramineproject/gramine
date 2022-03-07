@@ -58,7 +58,7 @@ static void do_test(void) {
 int main(void) {
     setbuf(stdout, NULL);
 
-    for (int i = 0; i < TEST_TIMES; ++i) {
+    for (int i = 0; i < TEST_TIMES; i++) {
         do_test();
     }
 

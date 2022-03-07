@@ -50,6 +50,8 @@ libos_sources = files(
     'ipc/shim_ipc_sync.c',
     'ipc/shim_ipc_vmid.c',
     'ipc/shim_ipc_worker.c',
+    'net/ip.c',
+    'net/unix.c',
     'shim_async.c',
     'shim_call.c',
     'shim_checkpoint.c',

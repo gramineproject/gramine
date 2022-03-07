@@ -12,7 +12,7 @@ sgx.nonpie_binary = true # all tests are currently non-PIE unless overridden
 
 sgx.allowed_files = [
   "file:test.txt", # for File2 test
-  "file:to_send.tmp", # for SendHandle test
+  "file:to_send.tmp", # for DkSendHandle test
 ]
 
 sgx.trusted_files = [

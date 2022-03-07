@@ -842,3 +842,16 @@ out:
     free(signal);
     return 0;
 }
+
+bool is_eintr_like(int ret) {
+    assert(ret <= 0);
+    switch (ret) {
+        case -EINTR:
+        case -ERESTARTSYS:
+        case -ERESTARTNOINTR:
+        case -ERESTARTNOHAND:
+            return true;
+        default:
+            return false;
+    }
+}

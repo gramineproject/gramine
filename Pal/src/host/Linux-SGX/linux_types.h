@@ -6,11 +6,10 @@
 #include <asm/stat.h>
 #include <linux/poll.h>
 #include <linux/sched.h>
-#include <linux/socket.h>
 #include <linux/time.h>
-#include <linux/uio.h>
 #include <stdint.h>
 
+#include "linux_socket.h"
 #include "sigset.h"
 
 typedef __kernel_off_t off_t;
@@ -38,65 +37,9 @@ struct linux_dirent64 {
 #define DT_SOCK    12
 #define DT_WHT     14
 
-typedef unsigned short int sa_family_t;
-
 struct sockaddr {
-    sa_family_t sa_family;
+    unsigned short sa_family;
     char sa_data[128 - sizeof(unsigned short)];
-};
-
-#ifndef AF_UNIX
-#define AF_UNIX 1
-#endif
-
-#ifndef AF_INET
-#define AF_INET 2
-#endif
-
-#ifndef AF_INET6
-#define AF_INET6 10
-#endif
-
-#ifndef SOCK_STREAM
-#define SOCK_STREAM 1
-#endif
-
-#ifndef SOCK_DGRAM
-#define SOCK_DGRAM 2
-#endif
-
-#ifndef SOCK_NONBLOCK
-#define SOCK_NONBLOCK 04000
-#endif
-
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 02000000
-#endif
-
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0x4000
-#endif
-
-#ifndef SHUT_RD
-#define SHUT_RD 0
-#endif
-
-#ifndef SHUT_WR
-#define SHUT_WR 1
-#endif
-
-#ifndef SHUT_RDWR
-#define SHUT_RDWR 2
-#endif
-
-struct msghdr {
-    void* msg_name;
-    int msg_namelen;
-    struct iovec* msg_iov;
-    size_t msg_iovlen;
-    void* msg_control;
-    size_t msg_controllen;
-    int msg_flags;
 };
 
 struct cmsghdr {
@@ -118,33 +61,5 @@ struct cmsghdr {
 #define CMSG_ALIGN(len) ALIGN_UP(len, sizeof(size_t))
 #define CMSG_SPACE(len) (CMSG_ALIGN(len) + CMSG_ALIGN(sizeof(struct cmsghdr)))
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
-
-struct sockopt {
-    int receivebuf, sendbuf;
-    uint64_t receivetimeout_us, sendtimeout_us;
-    int linger;
-    int reuseaddr : 1;
-    int tcp_cork : 1;
-    int tcp_keepalive : 1;
-    int tcp_nodelay : 1;
-};
-
-/* POSIX.1g specifies this type name for the `sa_family' member.  */
-typedef unsigned short int sa_family_t;
-
-/* This macro is used to declare the initial common members
-   of the data types used for socket addresses, `struct sockaddr',
-   `struct sockaddr_in', `struct sockaddr_un', etc.  */
-
-#define __SOCKADDR_COMMON(sa_prefix) \
-  sa_family_t sa_prefix##family
-
-/* From bits/socket.h */
-/* Structure large enough to hold any socket address (with the historical
-   exception of AF_UNIX).  */
-struct sockaddr_storage {
-    __SOCKADDR_COMMON(ss_); /* Address family, etc.  */
-    char __ss_padding[128 - sizeof(sa_family_t)];
-};
 
 #endif /* LINUX_TYPES_H */

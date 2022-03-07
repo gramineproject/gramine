@@ -6,7 +6,7 @@
 #include <asm/errno.h>
 #include <asm/ioctls.h>
 #include <asm/mman.h>
-#include <asm/socket.h>
+#include <asm/poll.h>
 #include <limits.h>
 #include <linux/futex.h>
 #include <linux/in.h>
@@ -334,6 +334,48 @@ static long sgx_ocall_futex(void* pms) {
     return ret;
 }
 
+static long sgx_ocall_socket(void* pms) {
+    ms_ocall_socket_t* ms = pms;
+    return DO_SYSCALL(socket, ms->ms_family, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
+}
+
+static long sgx_ocall_bind(void* pms) {
+    ms_ocall_bind_t* ms = pms;
+    int ret = DO_SYSCALL(bind, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    struct sockaddr_storage addr = { 0 };
+    int addrlen = sizeof(addr);
+    ret = DO_SYSCALL(getsockname, ms->ms_fd, &addr, &addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    switch (addr.ss_family) {
+        case AF_INET:
+            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in, sin_port),
+                   sizeof(ms->ms_new_port));
+            break;
+        case AF_INET6:
+            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in6, sin6_port),
+                   sizeof(ms->ms_new_port));
+            break;
+        default:
+            log_error("%s: unknown address family: %d", __func__, addr.ss_family);
+            DO_SYSCALL(exit_group, 1);
+            die_or_inf_loop();
+    }
+
+    return 0;
+}
+
+static long sgx_ocall_listen_simple(void* pms) {
+    ms_ocall_listen_simple_t* ms = pms;
+    return DO_SYSCALL(listen, ms->ms_fd, ms->ms_backlog);
+}
+
 static long sgx_ocall_listen(void* pms) {
     ms_ocall_listen_t* ms = (ms_ocall_listen_t*)pms;
     long ret;
@@ -481,11 +523,49 @@ err:
     return ret;
 }
 
+static long sgx_ocall_connect_simple(void* pms) {
+    ms_ocall_connect_simple_t* ms = pms;
+    int ret = DO_SYSCALL_INTERRUPTIBLE(connect, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+    if (ret < 0) {
+        /* XXX: Non blocking socket. Currently there is no way of notifying LibOS of successful or
+         * failed connection, so we have to block and wait. */
+        if (ret != -EINPROGRESS) {
+            return ret;
+        }
+        struct pollfd pfd = {
+            .fd = ms->ms_fd,
+            .events = POLLOUT,
+        };
+        ret = DO_SYSCALL(poll, &pfd, 1, /*timeout=*/-1);
+        if (ret != 1 || pfd.revents == 0) {
+            return ret < 0 ? ret : -EINVAL;
+        }
+        int val = 0;
+        unsigned int len = sizeof(val);
+        ret = DO_SYSCALL(getsockopt, ms->ms_fd, SOL_SOCKET, SO_ERROR, &val, &len);
+        if (ret < 0 || val < 0) {
+            return ret < 0 ? ret : -EINVAL;
+        }
+        if (val) {
+            return -val;
+        }
+        /* Connect succeeded. */
+    }
+
+    int addrlen = sizeof(*ms->ms_addr);
+    ret = DO_SYSCALL(getsockname, ms->ms_fd, ms->ms_addr, &addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    ms->ms_addrlen = addrlen;
+    return 0;
+}
+
 static long sgx_ocall_recv(void* pms) {
     ms_ocall_recv_t* ms = (ms_ocall_recv_t*)pms;
     long ret;
     ODEBUG(OCALL_RECV, ms);
-    struct sockaddr* addr = ms->ms_addr;
 
     if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
         return -EINVAL;
@@ -497,7 +577,7 @@ static long sgx_ocall_recv(void* pms) {
 
     iov[0].iov_base    = ms->ms_buf;
     iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = addr;
+    hdr.msg_name       = ms->ms_addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;
@@ -505,7 +585,7 @@ static long sgx_ocall_recv(void* pms) {
     hdr.msg_controllen = ms->ms_controllen;
     hdr.msg_flags      = 0;
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(recvmsg, ms->ms_sockfd, &hdr, 0);
+    ret = DO_SYSCALL_INTERRUPTIBLE(recvmsg, ms->ms_sockfd, &hdr, ms->ms_flags);
 
     if (ret >= 0 && hdr.msg_name) {
         /* note that ms->ms_addr is filled by recvmsg() itself */
@@ -524,7 +604,6 @@ static long sgx_ocall_send(void* pms) {
     ms_ocall_send_t* ms = (ms_ocall_send_t*)pms;
     long ret;
     ODEBUG(OCALL_SEND, ms);
-    const struct sockaddr* addr = ms->ms_addr;
 
     if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
         return -EINVAL;
@@ -536,7 +615,7 @@ static long sgx_ocall_send(void* pms) {
 
     iov[0].iov_base    = (void*)ms->ms_buf;
     iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = (void*)addr;
+    hdr.msg_name       = (void*)ms->ms_addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;
@@ -715,9 +794,13 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_CLONE_THREAD]             = sgx_ocall_clone_thread,
     [OCALL_CREATE_PROCESS]           = sgx_ocall_create_process,
     [OCALL_FUTEX]                    = sgx_ocall_futex,
+    [OCALL_SOCKET]                   = sgx_ocall_socket,
+    [OCALL_BIND]                     = sgx_ocall_bind,
+    [OCALL_LISTEN_SIMPLE]            = sgx_ocall_listen_simple,
     [OCALL_LISTEN]                   = sgx_ocall_listen,
     [OCALL_ACCEPT]                   = sgx_ocall_accept,
     [OCALL_CONNECT]                  = sgx_ocall_connect,
+    [OCALL_CONNECT_SIMPLE]           = sgx_ocall_connect_simple,
     [OCALL_RECV]                     = sgx_ocall_recv,
     [OCALL_SEND]                     = sgx_ocall_send,
     [OCALL_SETSOCKOPT]               = sgx_ocall_setsockopt,

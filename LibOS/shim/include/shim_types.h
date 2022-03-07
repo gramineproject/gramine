@@ -28,6 +28,7 @@
 #include <linux/version.h>
 
 #include "elf.h"
+#include "linux_socket.h"
 #include "pal.h"
 #include "shim_types-arch.h"
 
@@ -109,70 +110,6 @@ struct __kernel_rlimit {
 
 struct __kernel_rlimit64 {
     uint64_t rlim_cur, rlim_max;
-};
-
-/* bits/socket.h */
-enum {
-    MSG_OOB      = 0x01,   /* Process out-of-band data. */
-    MSG_PEEK     = 0x02,   /* Peek at incoming messages. */
-    MSG_DONTWAIT = 0x40,   /* Nonblocking IO. */
-    MSG_WAITALL  = 0x100,  /* Wait for full request or error */
-    MSG_NOSIGNAL = 0x4000, /* Do not generate SIGPIPE. */
-#define MSG_OOB      MSG_OOB
-#define MSG_PEEK     MSG_PEEK
-#define MSG_DONTWAIT MSG_DONTWAIT
-#define MSG_WAITALL  MSG_WAITALL
-#define MSG_NOSIGNAL MSG_NOSIGNAL
-};
-
-struct msghdr {
-    void* msg_name;  /* Address to send to/receive from.  */
-    int msg_namelen; /* Length of address data.  */
-
-    struct iovec* msg_iov; /* Vector of data to send/receive into.  */
-    size_t msg_iovlen;     /* Number of elements in the vector.  */
-
-    void* msg_control;     /* Ancillary data (eg BSD filedesc passing). */
-    size_t msg_controllen; /* Ancillary data buffer length. */
-
-    unsigned int msg_flags; /* Flags on received message.  */
-};
-
-/* For `recvmmsg'.  */
-struct mmsghdr {
-    struct msghdr msg_hdr; /* Actual message header. */
-    unsigned int msg_len;  /* Number of received bytes for the entry. */
-};
-
-/* POSIX.1g specifies this type name for the `sa_family' member.  */
-typedef unsigned short int sa_family_t;
-
-/* This macro is used to declare the initial common members
-   of the data types used for socket addresses, `struct sockaddr',
-   `struct sockaddr_in', `struct sockaddr_un', etc.  */
-
-#define __SOCKADDR_COMMON(sa_prefix) \
-    sa_family_t sa_prefix##family
-
-/* Structure describing a generic socket address.  */
-struct sockaddr {
-    __SOCKADDR_COMMON(sa_); /* Common data: address family and length. */
-    char sa_data[14];       /* Address data. */
-};
-
-/* From bits/socket.h */
-/* Structure large enough to hold any socket address (with the historical
-   exception of AF_UNIX).  */
-struct sockaddr_storage {
-    __SOCKADDR_COMMON(ss_); /* Address family, etc. */
-    char __ss_padding[128 - sizeof(sa_family_t)];
-};
-
-/* bits/uio.h */
-/* Structure for scatter/gather I/O.  */
-struct iovec {
-    void* iov_base; /* Pointer to data. */
-    size_t iov_len; /* Length of data. */
 };
 
 struct getcpu_cache {

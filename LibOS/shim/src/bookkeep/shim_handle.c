@@ -498,11 +498,6 @@ void put_handle(struct shim_handle* hdl) {
         if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->close)
             hdl->fs->fs_ops->close(hdl);
 
-        if (hdl->type == TYPE_SOCK && hdl->info.sock.peek_buffer) {
-            free(hdl->info.sock.peek_buffer);
-            hdl->info.sock.peek_buffer = NULL;
-        }
-
         if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->hdrop)
             hdl->fs->fs_ops->hdrop(hdl);
 
@@ -709,11 +704,16 @@ BEGIN_CP_FUNC(handle) {
         ADD_TO_CP_MAP(obj, off);
         new_hdl = (struct shim_handle*)(base + off);
 
+        if (hdl->type == TYPE_SOCK) {
+            /* We need this lock taken before `hdl->lock`. This checkpointing mess needs to be
+             * untangled. */
+            lock(&hdl->info.sock.lock);
+        }
+
+        /* TODO: this lock is not released on errors. The main problem here is that `DO_CP` can
+         * just return... */
         lock(&hdl->lock);
         *new_hdl = *hdl;
-
-        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->checkout)
-            hdl->fs->fs_ops->checkout(new_hdl);
 
         new_hdl->dentry = NULL;
         REF_SET(new_hdl->ref_count, 0);
@@ -739,37 +739,52 @@ BEGIN_CP_FUNC(handle) {
             DO_CP_MEMBER(dentry, hdl, new_hdl, dentry);
         }
 
-        if (new_hdl->pal_handle) {
-            struct shim_palhdl_entry* entry;
-            DO_CP(palhdl_ptr, &hdl->pal_handle, &entry);
-            entry->phandle = &new_hdl->pal_handle;
-        }
-
         /* This list is created empty and all necessary references are added when checkpointing
          * items lists from specific epoll handles. See `epoll_items_list` checkpointing in
          * `shim_epoll.c` for more details. */
         INIT_LISTP(&new_hdl->epoll_items);
         new_hdl->epoll_items_count = 0;
 
-        switch (hdl->type) {
-            case TYPE_EPOLL:;
-                struct shim_epoll_handle* epoll = &new_hdl->info.epoll;
-                clear_lock(&epoll->lock);
-                INIT_LISTP(&epoll->waiters);
-                INIT_LISTP(&epoll->items);
-                epoll->items_count = 0;
-                DO_CP(epoll_items_list, hdl, new_hdl);
-                break;
-            case TYPE_SOCK:
-                /* no support for multiple processes sharing options/peek buffer of the socket */
-                new_hdl->info.sock.pending_options = NULL;
-                new_hdl->info.sock.peek_buffer     = NULL;
-                break;
-            default:
-                break;
+        /* TODO: move this into epoll specific `checkout` callback.
+         * It's impossible at the moment, because `DO_CP` is a macro that can be only used inside
+         * BEGIN_CP_FUNC. */
+        if (hdl->type == TYPE_EPOLL) {
+            struct shim_epoll_handle* epoll = &new_hdl->info.epoll;
+            clear_lock(&epoll->lock);
+            INIT_LISTP(&epoll->waiters);
+            INIT_LISTP(&epoll->items);
+            epoll->items_count = 0;
+            DO_CP(epoll_items_list, hdl, new_hdl);
+        }
+
+        if (hdl->type == TYPE_SOCK) {
+            PAL_HANDLE pal_handle = __atomic_load_n(&hdl->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            new_hdl->info.sock.pal_handle = NULL;
+            if (pal_handle) {
+                struct shim_palhdl_entry* entry;
+                DO_CP(palhdl_ptr, &pal_handle, &entry);
+                entry->phandle = &new_hdl->info.sock.pal_handle;
+            }
+        }
+
+        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->checkout) {
+            int ret = hdl->fs->fs_ops->checkout(new_hdl);
+            if (ret < 0) {
+                return ret;
+            }
+        }
+
+        if (new_hdl->pal_handle) {
+            struct shim_palhdl_entry* entry;
+            DO_CP(palhdl_ptr, &hdl->pal_handle, &entry);
+            entry->phandle = &new_hdl->pal_handle;
         }
 
         unlock(&hdl->lock);
+        if (hdl->type == TYPE_SOCK) {
+            unlock(&hdl->info.sock.lock);
+        }
+
         if (hdl->inode) {
             /* NOTE: Checkpointing `inode` will take `inode->lock`, so we need to do it after
              * `hdl->lock` is released. */
@@ -811,6 +826,7 @@ BEGIN_RS_FUNC(handle) {
         get_inode(hdl->inode);
     }
 
+    /* TODO: move this to epoll specific `checkin` callback. */
     switch (hdl->type) {
         case TYPE_EPOLL:;
             struct shim_epoll_handle* epoll = &hdl->info.epoll;
