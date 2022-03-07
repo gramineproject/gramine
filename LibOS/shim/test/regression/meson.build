@@ -19,7 +19,9 @@ tests = {
     'eventfd': {},
     'exec': {},
     'exec_fork': {},
-    'exec_invalid_args': {},
+    'exec_invalid_args': {
+        'c_args': '-Wno-error',
+    },
     'exec_same': {},
     'exec_victim': {},
     'exit': {},
@@ -112,7 +114,9 @@ tests = {
             join_paths('../../../../common/include/arch', host_machine.cpu_family()),
         ),
     },
-    'stat_invalid_args': {},
+    'stat_invalid_args': {
+        'c_args': '-Wno-error',
+    },
     'synthetic': {},
     'syscall': {},
     'syscall_restart': {},
