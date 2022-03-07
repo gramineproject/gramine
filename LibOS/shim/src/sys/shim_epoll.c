@@ -324,13 +324,16 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
     get_handle(epoll_handle);
     new_item->data = event->data;
     new_item->events = event->events & ~EPOLL_NEEDS_REARM;
+    REF_SET(new_item->ref_count, 1);
+
+    lock(&handle->lock);
     if (!(handle->acc_mode & MAY_READ)) {
         new_item->events &= ~(EPOLLIN | EPOLLRDNORM);
     }
     if (!(handle->acc_mode & MAY_WRITE)) {
         new_item->events &= ~(EPOLLOUT | EPOLLWRNORM);
     }
-    REF_SET(new_item->ref_count, 1);
+    unlock(&handle->lock);
 
     struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
 
@@ -547,10 +550,12 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         struct shim_epoll_item* item;
         size_t items_count = 0;
         LISTP_FOR_EACH_ENTRY(item, &epoll->items, epoll_list) {
-            /* XXX: this is not correct if `pal_handle` can change (we hold no lock)
-             * see: https://github.com/gramineproject/gramine/issues/322 */
-            if (!item->handle->pal_handle) {
-                /* Sockets that are still not connected have no `pal_handle`. */
+            PAL_HANDLE pal_handle = item->handle->pal_handle;
+            if (item->handle->type == TYPE_SOCK) {
+                pal_handle = __atomic_load_n(&item->handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            }
+            if (!pal_handle) {
+                /* UNIX sockets that are still not connected have no `pal_handle`. */
                 continue;
             }
 
@@ -564,7 +569,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
 
             /* Since we have a reference to `item` (saved above), we can safely copy and use this
              * PAL handle, even after releasing `epoll->lock`. */
-            pal_handles[items_count] = item->handle->pal_handle;
+            pal_handles[items_count] = pal_handle;
 
             pal_events[items_count] = 0;
             if (item->events & (EPOLLIN | EPOLLRDNORM)) {

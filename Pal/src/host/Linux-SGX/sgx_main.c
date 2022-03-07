@@ -8,7 +8,6 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <asm/socket.h>
 #include <linux/fs.h>
 
 #include "asan.h"

@@ -2,7 +2,7 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 /*
- * Implementation of system calls "pipe", "pipe2", "socketpair", "mknod", and "mknodat".
+ * Implementation of system calls "pipe", "pipe2", "mknod", and "mknodat".
  */
 
 #include <asm/fcntl.h>
@@ -180,86 +180,6 @@ out:
 
 long shim_do_pipe(int* filedes) {
     return shim_do_pipe2(filedes, 0);
-}
-
-long shim_do_socketpair(int domain, int type, int protocol, int* sv) {
-    int ret = 0;
-
-    if (domain != AF_UNIX)
-        return -EAFNOSUPPORT;
-
-    if ((type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC)) != SOCK_STREAM)
-        return -EPROTONOSUPPORT;
-
-    if (!is_user_memory_writable(sv, 2 * sizeof(int)))
-        return -EFAULT;
-
-    int vfd1 = -1;
-    int vfd2 = -1;
-
-    struct shim_handle* hdl1 = get_new_handle();
-    struct shim_handle* hdl2 = get_new_handle();
-
-    if (!hdl1 || !hdl2) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-
-    hdl1->type = TYPE_SOCK;
-    hdl1->fs = &socket_builtin_fs;
-    hdl1->flags = O_RDONLY;
-    hdl1->acc_mode = MAY_READ | MAY_WRITE;
-
-    struct shim_sock_handle* sock1 = &hdl1->info.sock;
-    sock1->domain     = domain;
-    sock1->sock_type  = type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC);
-    sock1->protocol   = protocol;
-    sock1->sock_state = SOCK_ACCEPTED;
-
-    hdl2->type = TYPE_SOCK;
-    hdl2->fs = &socket_builtin_fs;
-    hdl2->flags = O_WRONLY;
-    hdl2->acc_mode = MAY_READ | MAY_WRITE;
-
-    struct shim_sock_handle* sock2 = &hdl2->info.sock;
-    sock2->domain     = domain;
-    sock2->sock_type  = type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC);
-    sock2->protocol   = protocol;
-    sock2->sock_state = SOCK_CONNECTED;
-
-    ret = create_pipes(hdl1, hdl2, type & SOCK_NONBLOCK ? O_NONBLOCK : 0, sock1->addr.un.name);
-    if (ret < 0)
-        goto out;
-
-    memcpy(sock2->addr.un.name, sock1->addr.un.name, sizeof(sock2->addr.un.name));
-
-    vfd1 = set_new_fd_handle(hdl1, type & SOCK_CLOEXEC ? FD_CLOEXEC : 0, NULL);
-    if (vfd1 < 0) {
-        ret = vfd1;
-        goto out;
-    }
-
-    vfd2 = set_new_fd_handle(hdl2, type & SOCK_CLOEXEC ? FD_CLOEXEC : 0, NULL);
-    if (vfd2 < 0) {
-        ret = vfd2;
-        goto out;
-    }
-
-    sv[0] = vfd1;
-    sv[1] = vfd2;
-
-    ret = 0;
-out:
-    if (ret < 0) {
-        undo_set_fd_handle(vfd1);
-        undo_set_fd_handle(vfd2);
-    }
-    if (hdl1)
-        put_handle(hdl1);
-    if (hdl2)
-        put_handle(hdl2);
-    return ret;
 }
 
 long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {

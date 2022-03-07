@@ -6,7 +6,6 @@
  */
 
 #include <asm/fcntl.h>
-#include <asm/socket.h>
 #include <asm/stat.h>
 #include <linux/in.h>
 #include <linux/in6.h>
@@ -34,17 +33,6 @@ struct hdl_header {
     size_t  data_size; /* total size of serialized PAL handle */
 };
 
-static size_t addr_size(const struct sockaddr* addr) {
-    switch (addr->sa_family) {
-        case AF_INET:
-            return sizeof(struct sockaddr_in);
-        case AF_INET6:
-            return sizeof(struct sockaddr_in6);
-        default:
-            return 0;
-    }
-}
-
 /* _DkStreamUnmap for internal use. Unmap stream at certain memory address.
    The memory is unmapped as a whole.*/
 int _DkStreamUnmap(void* addr, uint64_t size) {
@@ -54,13 +42,13 @@ int _DkStreamUnmap(void* addr, uint64_t size) {
 static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     int ret;
     const void* d1;
-    const void* d2;
     size_t dsz1 = 0;
-    size_t dsz2 = 0;
     bool free_d1 = false;
 
-    /* find fields to serialize (depends on the handle type) and assign them to d1/d2; note that
-     * no handle type has more than two such fields, and some have none at all */
+    /* find a field to serialize (depends on the handle type) and assign it to d1; note that
+     * no handle type has more than one such field, and some have none */
+    /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
+     * work? Probably unused. Or pure luck. */
     switch (PAL_GET_TYPE(handle)) {
         case PAL_TYPE_FILE:
             d1   = handle->file.realpath;
@@ -87,18 +75,8 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
                 dsz1 = strlen(handle->dir.realpath) + 1;
             }
             break;
-        case PAL_TYPE_TCP:
-        case PAL_TYPE_TCPSRV:
-        case PAL_TYPE_UDP:
-        case PAL_TYPE_UDPSRV:
-            if (handle->sock.bind) {
-                d1   = (const void*)handle->sock.bind;
-                dsz1 = addr_size(handle->sock.bind);
-            }
-            if (handle->sock.conn) {
-                d2   = (const void*)handle->sock.conn;
-                dsz2 = addr_size(handle->sock.conn);
-            }
+        case PAL_TYPE_SOCKET:
+            serialize_socket_handle(handle, &d1, &dsz1);
             break;
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to serialize SSL context */
@@ -116,7 +94,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     }
 
     size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz1 + dsz2);
+    void* buffer = malloc(hdlsz + dsz1);
     if (!buffer) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
@@ -126,8 +104,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     memcpy(buffer, handle, hdlsz);
     if (dsz1)
         memcpy(buffer + hdlsz, d1, dsz1);
-    if (dsz2)
-        memcpy(buffer + hdlsz + dsz1, d2, dsz2);
 
     ret = 0;
 out:
@@ -137,7 +113,7 @@ out:
         return ret;
 
     *data = buffer;
-    return hdlsz + dsz1 + dsz2;
+    return hdlsz + dsz1;
 }
 
 static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int host_fd) {
@@ -175,18 +151,9 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_DIR:
             hdl->dir.realpath = hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL;
             break;
-        case PAL_TYPE_TCP:
-        case PAL_TYPE_TCPSRV:
-        case PAL_TYPE_UDP:
-        case PAL_TYPE_UDPSRV: {
-            size_t s1 = hdl->sock.bind ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz)) : 0;
-            size_t s2 = hdl->sock.conn ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz + s1)) : 0;
-            if (s1)
-                hdl->sock.bind = (struct sockaddr*)((uint8_t*)hdl + hdlsz);
-            if (s2)
-                hdl->sock.conn = (struct sockaddr*)((uint8_t*)hdl + hdlsz + s2);
+        case PAL_TYPE_SOCKET:
+            deserialize_socket_handle(hdl, (const char*)hdl + hdlsz);
             break;
-        }
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to deserialize SSL context */
             hdl->process.stream = host_fd; /* correct host FD must be passed to SSL context */
@@ -227,7 +194,11 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     int fd = target_process->process.stream;
 
     /* first send hdl_hdr so the recipient knows how many FDs were transferred + how large is cargo */
-    ret = ocall_send(fd, &hdl_hdr, sizeof(struct hdl_header), NULL, 0, NULL, 0);
+    struct iovec iov = {
+        .iov_base = &hdl_hdr,
+        .iov_len = sizeof(struct hdl_header),
+    };
+    ret = ocall_send(fd, &iov, 1, NULL, 0, NULL, 0);
     if (ret < 0) {
         free(hdl_data);
         return unix_to_pal_error(ret);
@@ -249,8 +220,9 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     }
 
     /* next send FD-to-transfer as ancillary data */
-    ret = ocall_send(fd, DUMMYPAYLOAD, DUMMYPAYLOADSIZE, NULL, 0, control_hdr,
-                     control_hdr->cmsg_len);
+    iov.iov_base = (void*)DUMMYPAYLOAD;
+    iov.iov_len = DUMMYPAYLOADSIZE;
+    ret = ocall_send(fd, &iov, 1, NULL, 0, control_hdr, control_hdr->cmsg_len);
     if (ret < 0) {
         free(hdl_data);
         return unix_to_pal_error(ret);
@@ -279,7 +251,11 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     int fd = source_process->process.stream;
 
     /* first receive hdl_hdr so that we know how many FDs were transferred + how large is cargo */
-    ret = ocall_recv(fd, &hdl_hdr, sizeof(hdl_hdr), NULL, NULL, NULL, NULL);
+    struct iovec iov = {
+        .iov_base = &hdl_hdr,
+        .iov_len = sizeof(hdl_hdr),
+    };
+    ret = ocall_recv(fd, &iov, 1, NULL, NULL, NULL, NULL);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -297,8 +273,9 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
 
     /* next receive FDs-to-transfer as ancillary data */
     char dummypayload[DUMMYPAYLOADSIZE];
-    ret = ocall_recv(fd, dummypayload, DUMMYPAYLOADSIZE, NULL, NULL, control_buf,
-                     &control_buf_size);
+    iov.iov_base = dummypayload;
+    iov.iov_len = sizeof(dummypayload);
+    ret = ocall_recv(fd, &iov, 1, NULL, NULL, control_buf, &control_buf_size);
     if (ret < 0)
         return unix_to_pal_error(ret);
     if (control_buf_size < sizeof(struct cmsghdr)) {

@@ -1224,14 +1224,15 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('This is packet 8', stdout)
         self.assertIn('This is packet 9', stdout)
 
-    def test_300_socket_tcp_msg_peek(self):
-        stdout, _ = self.run_binary(['tcp_msg_peek'], timeout=50)
-        self.assertIn('[client] receiving with MSG_PEEK: Hello from server!', stdout)
-        self.assertIn('[client] receiving with MSG_PEEK again: Hello from server!', stdout)
-        self.assertIn('[client] receiving without MSG_PEEK: Hello from server!', stdout)
-        self.assertIn('[client] checking how many bytes are left unread: 0', stdout)
-        self.assertIn('[client] done', stdout)
-        self.assertIn('[server] done', stdout)
+    # TODO: PEEK not supported atm
+    # def test_300_socket_tcp_msg_peek(self):
+    #     stdout, _ = self.run_binary(['tcp_msg_peek'], timeout=50)
+    #     self.assertIn('[client] receiving with MSG_PEEK: Hello from server!', stdout)
+    #     self.assertIn('[client] receiving with MSG_PEEK again: Hello from server!', stdout)
+    #     self.assertIn('[client] receiving without MSG_PEEK: Hello from server!', stdout)
+    #     self.assertIn('[client] checking how many bytes are left unread: 0', stdout)
+    #     self.assertIn('[client] done', stdout)
+    #     self.assertIn('[server] done', stdout)
 
     def test_310_socket_tcp_ipv6_v6only(self):
         stdout, _ = self.run_binary(['tcp_ipv6_v6only'], timeout=50)

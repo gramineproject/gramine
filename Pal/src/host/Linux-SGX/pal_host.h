@@ -99,17 +99,19 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
-            struct sockaddr* bind;
-            struct sockaddr* conn;
-            bool nonblocking;
-            PAL_NUM linger;
-            PAL_NUM receivebuf;
-            PAL_NUM sendbuf;
-            uint64_t receivetimeout_us;
+            enum pal_socket_domain domain;
+            struct socket_ops* ops;
+            uint64_t linger;
+            size_t recv_buf_size;
+            size_t send_buf_size;
+            uint64_t recvtimeout_us;
             uint64_t sendtimeout_us;
+            bool is_nonblocking;
+            bool reuseaddr;
+            bool keepalive;
             bool tcp_cork;
-            bool tcp_keepalive;
             bool tcp_nodelay;
+            bool ipv6_v6only;
         } sock;
 
         struct {

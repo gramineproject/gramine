@@ -10,14 +10,12 @@
 
 #include <asm/fcntl.h>
 #include <asm/resource.h>
-#include <linux/in.h>
-#include <linux/in6.h>
-#include <linux/un.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "atomic.h"  // TODO: migrate to stdatomic.h
+#include "linux_socket.h"
 #include "list.h"
 #include "pal.h"
 #include "shim_defs.h"
@@ -69,77 +67,38 @@ struct shim_pipe_handle {
     char name[PIPE_URI_SIZE];
 };
 
-#define SOCK_STREAM   1
-#define SOCK_DGRAM    2
-#define SOCK_NONBLOCK 04000
-#define SOCK_CLOEXEC  02000000
-
-#define SOL_TCP 6
-
-#define PF_LOCAL 1
-#define PF_UNIX  PF_LOCAL
-#define PF_FILE  PF_LOCAL
-#define PF_INET  2
-#define PF_INET6 10
-
-#define AF_UNIX  PF_UNIX
-#define AF_INET  PF_INET
-#define AF_INET6 PF_INET6
-
-#define SOCK_URI_SIZE 108
-
 enum shim_sock_state {
-    SOCK_CREATED,
+    SOCK_NEW,
     SOCK_BOUND,
     SOCK_CONNECTED,
-    SOCK_BOUNDCONNECTED,
-    SOCK_LISTENED,
-    SOCK_ACCEPTED,
-    SOCK_SHUTDOWN,
+    SOCK_LISTENING,
 };
 
+/*
+ * Accecss to `state`, `remote_addr`, `remote_addrlen`, `local_addr`, `local_addrlen, `last_error`,
+ * `sendtimeout_us`, `receivetimeout_us`, `read_shutdown`, `write_shutdown` is protected by `lock`.
+ * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
+ * `pal_handle` should be accessed using atomic operations. It can be NULL. Once it's set, it cannot
+ * change anymore.
+ */
 struct shim_sock_handle {
+    struct shim_lock lock;
+    struct shim_sock_ops* ops;
+    PAL_HANDLE pal_handle;
     int domain;
-    int sock_type;
+    int type;
     int protocol;
-    int error;
-
-    enum shim_sock_state sock_state;
-
-    union shim_sock_addr {
-        // INET addr
-        struct {
-            struct addr_inet {
-                unsigned short port;
-                unsigned short ext_port;
-                union {
-                    struct in_addr v4;
-                    struct in6_addr v6;
-                } addr;
-            } bind, conn;
-        } in;
-        // UNIX addr
-        struct addr_unix {
-            struct shim_dentry* dentry;
-            char name[PIPE_URI_SIZE];
-        } un;
-    } addr;
-
-    struct shim_sock_option {
-        struct shim_sock_option* next;
-        int level;
-        int optname;
-        int optlen;
-        char optval[];
-    }* pending_options;
-
-    struct shim_peek_buffer {
-        size_t size;             /* total size (capacity) of buffer `buf` */
-        size_t start;            /* beginning of buffered but yet unread data in `buf` */
-        size_t end;              /* end of buffered but yet unread data in `buf` */
-        char uri[SOCK_URI_SIZE]; /* cached URI for recvfrom(udp_socket) case */
-        char buf[];              /* peek buffer of size `size` */
-    }* peek_buffer;
+    enum shim_sock_state state;
+    struct sockaddr_storage remote_addr;
+    size_t remote_addrlen;
+    struct sockaddr_storage local_addr;
+    size_t local_addrlen;
+    unsigned int last_error;
+    uint64_t sendtimeout_us;
+    uint64_t receivetimeout_us;
+    bool was_bound;
+    bool read_shutdown;
+    bool write_shutdown;
 };
 
 struct shim_dir_handle {

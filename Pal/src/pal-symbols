@@ -20,6 +20,13 @@ DkStreamUnmap
 DkStreamSetLength
 DkStreamFlush
 DkStreamDelete
+DkSocketCreate
+DkSocketBind
+DkSocketListen
+DkSocketAccept
+DkSocketConnect
+DkSocketSend
+DkSocketRecv
 DkSendHandle
 DkReceiveHandle
 DkStreamWaitForClient

@@ -72,22 +72,6 @@ class TC_00_BasicSet2(RegressionTestCase):
         _, stderr = self.run_binary(['Segment'])
         self.assertIn('Test OK', stderr)
 
-    def test_Tcp(self):
-        _, stderr = self.run_binary(['Tcp'])
-        self.assertIn('start time = ', stderr)
-        self.assertIn('server bound on tcp.srv:127.0.0.1:8000', stderr)
-        self.assertIn('client accepted on tcp:127.0.0.1:8000:127.0.0.1:', stderr)
-        self.assertIn('client connected on tcp:127.0.0.1:', stderr)
-        self.assertIn('read from server: Hello World', stderr)
-
-    def test_Udp(self):
-        _, stderr = self.run_binary(['Udp'])
-        self.assertIn('server bound on udp.srv:127.0.0.1:8000', stderr)
-        self.assertIn('client connected on udp:127.0.0.1:8000', stderr)
-        self.assertIn('read on server (from udp:127.0.0.1:', stderr)
-        self.assertIn('Hello World', stderr)
-        self.assertIn('wall time = ', stderr)
-
 
 class TC_01_Bootstrap(RegressionTestCase):
     def test_100_basic_boostrapping(self):
@@ -409,43 +393,6 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertIn('Pipe Write 2 OK', stderr)
         self.assertIn('Pipe Read 2: Hello World 2', stderr)
 
-    def test_410_socket(self):
-        _, stderr = self.run_binary(['Socket'])
-
-        # TCP Socket Creation
-        self.assertIn('TCP Creation 1 OK', stderr)
-
-        # TCP Socket Connection
-        self.assertIn('TCP Connection 1 OK', stderr)
-
-        # TCP Socket Transmission
-        self.assertIn('TCP Write 1 OK', stderr)
-        self.assertIn('TCP Read 1: Hello World 1', stderr)
-        self.assertIn('TCP Write 2 OK', stderr)
-        self.assertIn('TCP Read 2: Hello World 2', stderr)
-
-        # TCP (IPv6)
-        self.assertIn('TCP (IPv6) Creation 1 OK', stderr)
-        self.assertIn('TCP (IPv6) Connection 1 OK', stderr)
-
-        # UDP Socket Creation
-        self.assertIn('UDP Creation 1 OK', stderr)
-
-        # UDP Socket Connection
-        self.assertIn('UDP Connection 1 OK', stderr)
-
-        # UDP Socket Transmission
-        self.assertIn('UDP Write 1 OK', stderr)
-        self.assertIn('UDP Read 1: Hello World 1', stderr)
-        self.assertIn('UDP Write 2 OK', stderr)
-        self.assertIn('UDP Read 2: Hello World 2', stderr)
-
-        # Bound UDP Socket Transmission
-        self.assertIn('UDP Write 3 OK', stderr)
-        self.assertIn('UDP Read 3: Hello World 1', stderr)
-        self.assertIn('UDP Write 4 OK', stderr)
-        self.assertIn('UDP Read 4: Hello World 2', stderr)
-
     @unittest.skipUnless(ON_X86, "x86-specific")
     def test_500_thread(self):
         _, stderr = self.run_binary(['Thread'])
@@ -528,23 +475,24 @@ class TC_21_ProcessCreation(RegressionTestCase):
         self.assertEqual(counter['Process Write 2 OK'], 3)
         self.assertEqual(counter['Process Read 2: Hello World 2'], 3)
 
-class TC_23_SendHandle(RegressionTestCase):
-    def test_000_send_handle(self):
-        _, stderr = self.run_binary(['SendHandle'])
-        counter = collections.Counter(stderr.split('\n'))
-
-        # Send and Receive Handles across Processes
-        self.assertEqual(counter['Send Handle OK'], 3)
-        self.assertEqual(counter['Receive Handle OK'], 3)
-
-        # Send Pipe Handle
-        self.assertEqual(counter['Receive Pipe Handle: Hello World'], 1)
-
-        # Send Socket Handle
-        self.assertEqual(counter['Receive Socket Handle: Hello World'], 1)
-
-        # Send File Handle
-        self.assertEqual(counter['Receive File Handle: Hello World'], 1)
+# TODO: rewrite
+#class TC_23_SendHandle(RegressionTestCase):
+#    def test_000_send_handle(self):
+#        _, stderr = self.run_binary(['SendHandle'])
+#        counter = collections.Counter(stderr.split('\n'))
+#
+#        # Send and Receive Handles across Processes
+#        self.assertEqual(counter['Send Handle OK'], 3)
+#        self.assertEqual(counter['Receive Handle OK'], 3)
+#
+#        # Send Pipe Handle
+#        self.assertEqual(counter['Receive Pipe Handle: Hello World'], 1)
+#
+#        # Send Socket Handle
+#        self.assertEqual(counter['Receive Socket Handle: Hello World'], 1)
+#
+#        # Send File Handle
+#        self.assertEqual(counter['Receive File Handle: Hello World'], 1)
 
 @unittest.skipUnless(HAS_SGX, 'This test is only meaningful on SGX PAL')
 class TC_50_Attestation(RegressionTestCase):

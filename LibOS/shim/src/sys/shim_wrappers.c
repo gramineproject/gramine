@@ -12,7 +12,7 @@
 #include "shim_internal.h"
 #include "shim_table.h"
 
-long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen) {
+long shim_do_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
     if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
         return -EINVAL;
 
@@ -38,7 +38,17 @@ long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen
         goto out;
     }
 
-    if (!(hdl->acc_mode & MAY_READ) || !hdl->fs || !hdl->fs->fs_ops || !hdl->fs->fs_ops->read) {
+    if (!(hdl->acc_mode & MAY_READ) || !hdl->fs || !hdl->fs->fs_ops) {
+        ret = -EACCES;
+        goto out;
+    }
+
+    if (hdl->fs->fs_ops->readv) {
+        ret = hdl->fs->fs_ops->readv(hdl, vec, vlen, &hdl->pos);
+        goto out;
+    }
+
+    if (!hdl->fs->fs_ops->read) {
         ret = -EACCES;
         goto out;
     }
@@ -82,7 +92,7 @@ out:
  * actually written. Otherwise, it shall return a value of -1, the file-pointer
  * shall remain unchanged, and errno shall be set to indicate an error
  */
-long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vlen) {
+long shim_do_writev(unsigned long fd, struct iovec* vec, unsigned long vlen) {
     if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
         return -EINVAL;
 
@@ -108,13 +118,22 @@ long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vle
         goto out;
     }
 
-    if (!(hdl->acc_mode & MAY_WRITE) || !hdl->fs || !hdl->fs->fs_ops || !hdl->fs->fs_ops->write) {
+    if (!(hdl->acc_mode & MAY_WRITE) || !hdl->fs || !hdl->fs->fs_ops) {
+        ret = -EACCES;
+        goto out;
+    }
+
+    if (hdl->fs->fs_ops->writev) {
+        ret = hdl->fs->fs_ops->writev(hdl, vec, vlen, &hdl->pos);
+        goto out;
+    }
+
+    if (!hdl->fs->fs_ops->write) {
         ret = -EACCES;
         goto out;
     }
 
     ssize_t bytes = 0;
-
     for (size_t i = 0; i < vlen; i++) {
         if (!vec[i].iov_base)
             continue;

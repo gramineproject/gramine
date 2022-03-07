@@ -1088,19 +1088,19 @@ static void parse_timespec(struct print_buf* buf, va_list* ap) {
 }
 
 static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
-    const struct sockaddr* addr = va_arg(*ap, const struct sockaddr*);
+    unsigned short* addr = va_arg(*ap, unsigned short*);
 
     if (!addr) {
         buf_puts(buf, "NULL");
         return;
     }
 
-    if (!is_user_memory_readable((void*)addr, sizeof(*addr))) {
+    if (!is_user_memory_readable(addr, sizeof(*addr))) {
         buf_printf(buf, "(invalid-addr %p)", addr);
         return;
     }
 
-    switch (addr->sa_family) {
+    switch (*addr) {
         case AF_INET: {
             struct sockaddr_in* a = (void*)addr;
             unsigned char* ip     = (void*)&a->sin_addr.s_addr;
@@ -1135,53 +1135,27 @@ static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
 static void parse_domain(struct print_buf* buf, va_list* ap) {
     int domain = va_arg(*ap, int);
 
-#define PF_UNSPEC    0  /* Unspecified.  */
-#define PF_INET      2  /* IP protocol family.  */
-#define PF_AX25      3  /* Amateur Radio AX.25.  */
-#define PF_IPX       4  /* Novell Internet Protocol.  */
-#define PF_APPLETALK 5  /* Appletalk DDP.  */
-#define PF_ATMPVC    8  /* ATM PVCs.  */
-#define PF_X25       9  /* Reserved for X.25 project.  */
-#define PF_INET6     10 /* IP version 6.  */
-#define PF_NETLINK   16
-#define PF_PACKET    17 /* Packet family.  */
-
     switch (domain) {
-        case PF_UNSPEC:
+        case AF_UNSPEC:
             buf_puts(buf, "UNSPEC");
             break;
-        case PF_UNIX:
+        case AF_UNIX:
             buf_puts(buf, "UNIX");
             break;
-        case PF_INET:
+        case AF_INET:
             buf_puts(buf, "INET");
             break;
-        case PF_INET6:
+        case AF_INET6:
             buf_puts(buf, "INET6");
             break;
-        case PF_IPX:
-            buf_puts(buf, "IPX");
-            break;
-        case PF_NETLINK:
+        case AF_NETLINK:
             buf_puts(buf, "NETLINK");
             break;
-        case PF_X25:
-            buf_puts(buf, "X25");
-            break;
-        case PF_AX25:
-            buf_puts(buf, "AX25");
-            break;
-        case PF_ATMPVC:
-            buf_puts(buf, "ATMPVC");
-            break;
-        case PF_APPLETALK:
-            buf_puts(buf, "APPLETALK");
-            break;
-        case PF_PACKET:
+        case AF_PACKET:
             buf_puts(buf, "PACKET");
             break;
         default:
-            buf_puts(buf, "UNKNOWN");
+            buf_printf(buf, "UNKNOWN(%d)", domain);
             break;
     }
 }

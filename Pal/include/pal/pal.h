@@ -33,10 +33,18 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* maximum length of URIs */
 #define URI_MAX 4096
 
+/* TODO: dependency order is UGHMMMM */
+enum pal_socket_domain {
+    PAL_DISCONNECT,
+    IPV4,
+    IPV6,
+};
+
 #ifdef IN_PAL
 
 typedef struct {
     PAL_IDX type;
+    struct handle_ops* ops;
 } PAL_HDR;
 
 #include "pal_host.h"
@@ -66,10 +74,7 @@ enum {
     PAL_TYPE_PIPECLI,
     PAL_TYPE_DEV,
     PAL_TYPE_DIR,
-    PAL_TYPE_TCP,
-    PAL_TYPE_TCPSRV,
-    PAL_TYPE_UDP,
-    PAL_TYPE_UDPSRV,
+    PAL_TYPE_SOCKET,
     PAL_TYPE_PROCESS,
     PAL_TYPE_THREAD,
     PAL_TYPE_EVENT,
@@ -255,9 +260,8 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
 #define PAL_OPTION_CLOEXEC         0x1
 #define PAL_OPTION_EFD_SEMAPHORE   0x2 /*!< specific to `eventfd` syscall */
 #define PAL_OPTION_NONBLOCK        0x4
-#define PAL_OPTION_DUALSTACK       0x8 /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
-#define PAL_OPTION_PASSTHROUGH    0x10 /*!< Disregard `sgx.{allowed,trusted}_files` */
-#define PAL_OPTION_MASK           0x1F
+#define PAL_OPTION_PASSTHROUGH     0x8 /*!< Disregard `sgx.{allowed,trusted}_files` */
+#define PAL_OPTION_MASK            0xF
 
 /*!
  * \brief Open/create a stream resource specified by `uri`.
@@ -279,10 +283,6 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  * * `pipe.srv:<name>`, `pipe:<name>`, `pipe:`: Open a byte stream that can be used for RPC between
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
- * * `tcp.srv:<ADDR>:<PORT>`, `tcp:<ADDR>:<PORT>`: Open a TCP socket to listen or connect to
- *   a remote TCP socket.
- * * `udp.srv:<ADDR>:<PORT>`, `udp:<ADDR>:<PORT>`: Open a UDP socket to listen or connect to
- *   a remote UDP socket.
  */
 int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share_flags,
                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
@@ -294,8 +294,7 @@ int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t shar
  * \param[out] client   On success holds handle for the new connection.
  * \param      options  Flags to set on \p client handle.
  *
- * This API is only available for handles that are opened with `pipe.srv:...`, `tcp.srv:...`, and
- * `udp.srv:...`.
+ * This API is only available for handles that are opened with `pipe.srv:...`.
  */
 int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options);
 
@@ -407,6 +406,7 @@ int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
  */
 int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
+// TODO: this needs to be redesigned, most of these fields are type specific
 /* stream attribute structure */
 typedef struct _PAL_STREAM_ATTR {
     PAL_IDX handle_type;
@@ -416,11 +416,14 @@ typedef struct _PAL_STREAM_ATTR {
     union {
         struct {
             PAL_NUM linger;
-            PAL_NUM receivebuf, sendbuf;
+            size_t recv_buf_size;
+            size_t send_buf_size;
             uint64_t receivetimeout_us, sendtimeout_us;
+            bool reuseaddr;
+            bool keepalive;
             bool tcp_cork;
-            bool tcp_keepalive;
             bool tcp_nodelay;
+            bool ipv6_v6only;
         } socket;
     };
 } PAL_STREAM_ATTR;
@@ -453,6 +456,136 @@ int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size);
  * \brief This API changes the name of an open stream.
  */
 int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
+
+enum pal_socket_type {
+    PAL_SOCKET_TCP,
+    PAL_SOCKET_UDP,
+};
+
+struct pal_socket_addr {
+    enum pal_socket_domain domain;
+    union {
+        struct {
+            uint32_t addr;
+            uint16_t port;
+        } ipv4;
+        struct {
+            uint32_t flowinfo;
+            uint32_t scope_id;
+            uint8_t addr[16];
+            uint16_t port;
+        } ipv6;
+    };
+};
+
+/* This could be just `struct iovec` from Linux, but we don't want to set a precedent of using Linux
+ * types in PAL API. */
+struct pal_iovec {
+    void* iov_base;
+    size_t iov_len;
+};
+
+/*!
+ * \brief Create a socket handle.
+ *
+ * \param      domain      Domain of the socket.
+ * \param      type        Type of the socket.
+ * \param      options     Flags to set on the handle.
+ * \param[out] handle_ptr  On success contains the socket handle.
+ *
+ * \returns 0 on success, negative error code on failure.
+ */
+int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
+                   pal_stream_options_t options, PAL_HANDLE* handle_ptr);
+
+/*!
+ * \brief Bind a socket to a local address.
+ *
+ * \param         handle  Handle to the socket.
+ * \param[in,out] addr    Address to bind to. If the protocol allows for some ephemeral data (e.g.
+ *                        port `0` in IPv4), it will be overwritten to the actual data used.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Can be called only once per socket.
+ */
+int DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
+
+/*!
+ * \biref Turn a socket into listening one.
+ *
+ * \param handle   Handle to the socket.
+ * \param backlog  Size of the pending connections queue.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Can be called multiple times, to change \p backlog.
+ */
+int DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
+
+/*!
+ * \brief Accept a new connection on a socket.
+ *
+ * \param      handle       Handle to the socket. Must be in listening mode.
+ * \param      options      Flags to set on the new handle.
+ * \param[out] client_ptr   On success contains a handle for the new connection.
+ * \param[out] client_addr  On success contains the remote address of the new connection.
+ *                          Can be NULL, to ignore the result.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * This function can be safely called concurrently.
+ */
+int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+                   struct pal_socket_addr* client_addr);
+
+/*!
+ * \brief Connect a socket to a remote address.
+ *
+ * \param      handle      Handle to the socket.
+ * \param      addr        Address to connect to.
+ * \param[out] local_addr  On success contains the local address of the socket. If the connect
+ *                         operation was successful, but the address retrieval failed, it contains
+ *                         #PAL_DISCONNECT. Can be NULL, to ignore the result.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Can also be used to disconnect the socket, if #PAL_DISCONNECT is passed in \p addr.
+ */
+int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                    struct pal_socket_addr* local_addr);
+
+/*!
+ * \brief Send data.
+ *
+ * \param      handle    Handle to the socket.
+ * \param      iov       Array of buffers with data to send.
+ * \param      iov_len   Length of \p iov array.
+ * \param[out] size_out  On success contains the number of bytes sent.
+ * \param      addr      Destination address. Can be NULL if the socket was connected.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Data is sent atomically, i.e. data from two `DkSocketSend` calls will not be interleaved.
+ */
+int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                 struct pal_socket_addr* addr);
+
+/*!
+ * \brief Receive data.
+ *
+ * \param      handle    Handle to the socket.
+ * \param      iov       Array of buffers for received data.
+ * \param      iov_len   Length of \p iov array.
+ * \param[out] size_out  On success contains the number of bytes received.
+ * \param[out] addr      Source address. Can be NULL to ignore the source address..
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Data is received atomically, i.e. data from two `DkSocketRecv` calls will not be interleaved.
+ */
+int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                 struct pal_socket_addr* addr);
 
 /*
  * Thread creation

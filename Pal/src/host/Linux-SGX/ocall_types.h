@@ -49,9 +49,13 @@ enum {
     OCALL_CLONE_THREAD,
     OCALL_CREATE_PROCESS,
     OCALL_FUTEX,
+    OCALL_SOCKET,
+    OCALL_BIND,
+    OCALL_LISTEN_SIMPLE,
     OCALL_LISTEN,
     OCALL_ACCEPT,
     OCALL_CONNECT,
+    OCALL_CONNECT_SIMPLE,
     OCALL_RECV,
     OCALL_SEND,
     OCALL_SETSOCKOPT,
@@ -194,6 +198,24 @@ typedef struct {
 } ms_ocall_futex_t;
 
 typedef struct {
+    int ms_family;
+    int ms_type;
+    int ms_protocol;
+} ms_ocall_socet_t;
+
+typedef struct {
+    int ms_fd;
+    struct sockaddr* ms_addr;
+    size_t ms_addrlen;
+    uint16_t ms_new_port;
+} ms_ocall_bind_t;
+
+typedef struct {
+    int ms_fd;
+    unsigned int ms_backlog;
+} ms_ocall_listen_simple_t;
+
+typedef struct {
     int ms_domain;
     int ms_type;
     int ms_protocol;
@@ -219,6 +241,12 @@ typedef struct {
     struct sockaddr* ms_bind_addr;
     size_t ms_bind_addrlen;
 } ms_ocall_connect_t;
+
+typedef struct {
+    int ms_fd;
+    struct sockaddr_storage* ms_addr;
+    size_t ms_addrlen;
+} ms_ocall_connect_simple_t;
 
 typedef struct {
     PAL_IDX ms_sockfd;

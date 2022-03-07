@@ -36,6 +36,7 @@ struct pal_common_state {
 extern struct pal_common_state g_pal_common_state;
 extern struct pal_public_state g_pal_public_state;
 
+// TODO: clean unused stuff
 /* handle_ops is the operators provided for each handler type. They are mostly used by
  * stream-related PAL calls, but can also be used by some others in special ways. */
 struct handle_ops {
@@ -109,6 +110,10 @@ static inline const struct handle_ops* HANDLE_OPS(PAL_HANDLE handle) {
     int _type = PAL_GET_TYPE(handle);
     if (_type < 0 || _type >= PAL_HANDLE_TYPE_BOUND)
         return NULL;
+    if (handle->hdr.ops) {
+        /* TODO: remove this hack or (preferably) add this for every type of handle. */
+        return handle->hdr.ops;
+    }
     return g_pal_handle_ops[_type];
 }
 
@@ -120,6 +125,19 @@ extern PAL_HANDLE _h;
 static inline size_t handle_size(PAL_HANDLE handle) {
     return sizeof(*handle);
 }
+
+struct socket_ops {
+    int (*bind)(PAL_HANDLE handle, struct pal_socket_addr* addr);
+    int (*listen)(PAL_HANDLE handle, unsigned int backlog);
+    int (*accept)(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+                  struct pal_socket_addr* client_addr);
+    int (*connect)(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                   struct pal_socket_addr* local_addr);
+    int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                struct pal_socket_addr* addr);
+    int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                struct pal_socket_addr* addr);
+};
 
 /*
  * failure notify. The rountine is called whenever a PAL call return error code. As the current
@@ -183,6 +201,19 @@ int _DkStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
 const char* _DkStreamRealpath(PAL_HANDLE hdl);
 int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
+
+int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
+                    pal_stream_options_t options, PAL_HANDLE* handle_ptr);
+int _DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
+int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
+int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+                    struct pal_socket_addr* client_addr);
+int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                     struct pal_socket_addr* local_addr);
+int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                  struct pal_socket_addr* addr);
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                  struct pal_socket_addr* addr);
 
 /* DkProcess and DkThread calls */
 int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);

@@ -6,6 +6,7 @@ common_src = files(
     'network/inet_pton.c',
     'path.c',
     'printf.c',
+    'socket_utils.c',
     'stack_protector.c',
     'string/atoi.c',
     'string/ctype.c',

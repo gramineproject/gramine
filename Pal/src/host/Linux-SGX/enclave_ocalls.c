@@ -1082,6 +1082,97 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
     return retval;
 }
 
+int ocall_socket(int family, int type, int protocol) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    ms_ocall_socet_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ms->ms_family, family);
+    WRITE_ONCE(ms->ms_type, type);
+    WRITE_ONCE(ms->ms_protocol, protocol);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_SOCKET, ms);
+    } while (ret == -EINTR);
+
+    if (ret < 0 && ret != -EINVAL && ret != -EACCES && ret != -EMFILE && ret != -ENFILE
+            && ret != -ENOMEM && ret != -EAFNOSUPPORT && ret != -EPROTONOSUPPORT) {
+        ret = -EPERM;
+    }
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* new_port) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    ms_ocall_bind_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ms->ms_fd, fd);
+    WRITE_ONCE(ms->ms_addrlen, addrlen);
+
+    void* untrusted_addr = sgx_copy_to_ustack(addr, addrlen);
+    if (!untrusted_addr) {
+        ret = -EPERM;
+        goto out;
+    }
+    WRITE_ONCE(ms->ms_addr, untrusted_addr);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_BIND, ms);
+    } while (ret == -EINTR);
+
+    if (ret < 0) {
+        if (ret != -EACCES && ret != -EADDRINUSE && ret != -EBADF && ret != -EINVAL
+                && ret != -ENOTSOCK) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+
+    *new_port = READ_ONCE(ms->ms_new_port);
+    ret = 0;
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+int ocall_listen_simple(int fd, unsigned int backlog) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    ms_ocall_listen_simple_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ms->ms_fd, fd);
+    WRITE_ONCE(ms->ms_backlog, backlog);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_LISTEN_SIMPLE, ms);
+    } while (ret == -EINTR);
+
+    if (ret < 0 && ret != -EADDRINUSE && ret != -EBADF && ret != -ENOTSOCK && ret != -EOPNOTSUPP) {
+        ret = -EPERM;
+    }
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
                  size_t* addrlen) {
     int retval = 0;
@@ -1239,7 +1330,60 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
     return retval;
 }
 
-ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, size_t* addrlenptr,
+int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    ms_ocall_bind_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ms->ms_fd, fd);
+    WRITE_ONCE(ms->ms_addrlen, *addrlen);
+
+    assert(*addrlen <= sizeof(*addr));
+    void* untrusted_addr = sgx_copy_to_ustack(addr, sizeof(*addr));
+    if (!untrusted_addr) {
+        ret = -EPERM;
+        goto out;
+    }
+    WRITE_ONCE(ms->ms_addr, untrusted_addr);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_CONNECT_SIMPLE, ms);
+    } while (ret == -EINTR);
+
+    if (ret < 0) {
+        if (ret != -EACCES && ret != -EPERM && ret != -EADDRINUSE && ret != -EADDRNOTAVAIL
+                && ret != -EAFNOSUPPORT && ret != -EAGAIN && ret != -EALREADY && ret != -EBADF
+                && ret != -ECONNREFUSED && ret != -EINPROGRESS && ret != -EISCONN
+                && ret != -ENETUNREACH && ret != -ENOTSOCK && ret != -EPROTOTYPE
+                && ret != -ETIMEDOUT) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+
+    size_t new_addrlen = READ_ONCE(ms->ms_addrlen);
+    if (new_addrlen > sizeof(*addr)) {
+        ret = -EPERM;
+        goto out;
+    }
+    bool copied = sgx_copy_to_enclave(addr, sizeof(*addr), READ_ONCE(ms->ms_addr), new_addrlen);
+    if (!copied) {
+        ret = -EPERM;
+        goto out;
+    }
+    *addrlen = new_addrlen;
+    ret = 0;
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, size_t* addrlenptr,
                    void* control, size_t* controllenptr) {
     ssize_t retval = 0;
     void* obuf = NULL;
@@ -1251,14 +1395,19 @@ ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, s
 
     void* old_ustack = sgx_prepare_ustack();
 
-    if ((count + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
-        retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(count), &obuf, &need_munmap);
+    size_t size = 0;
+    for (size_t i = 0; i < iov_len; i++) {
+        size += iov[i].iov_len;
+    }
+
+    if ((size + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
+        retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(size), &obuf, &need_munmap);
         if (retval < 0) {
             goto out;
         }
         is_obuf_mapped = true;
     } else {
-        obuf = sgx_alloc_on_ustack(count);
+        obuf = sgx_alloc_on_ustack(size);
         if (!obuf) {
             retval = -EPERM;
             goto out;
@@ -1272,7 +1421,7 @@ ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, s
     }
 
     WRITE_ONCE(ms->ms_sockfd, sockfd);
-    WRITE_ONCE(ms->ms_count, count);
+    WRITE_ONCE(ms->ms_count, size);
     WRITE_ONCE(ms->ms_addrlen, addrlen);
     void* untrusted_addr = addr ? sgx_alloc_on_ustack_aligned(addrlen, alignof(*addr)) : NULL;
     void* untrusted_control = control ? sgx_alloc_on_ustack(controllen) : NULL;
@@ -1294,7 +1443,7 @@ ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, s
     }
 
     if (retval >= 0) {
-        if ((size_t)retval > count) {
+        if ((size_t)retval > size) {
             retval = -EPERM;
             goto out;
         }
@@ -1318,20 +1467,29 @@ ssize_t ocall_recv(int sockfd, void* buf, size_t count, struct sockaddr* addr, s
             *controllenptr = untrusted_controllen;
         }
 
-        if (retval > 0 && !sgx_copy_to_enclave(buf, count, READ_ONCE(ms->ms_buf), retval)) {
-            retval = -EPERM;
-            goto out;
+        if (retval > 0) {
+            char* urts_buf = READ_ONCE(ms->ms_buf);
+            size_t urts_buf_idx = 0;
+            for (size_t i = 0; i < iov_len && urts_buf_idx < (size_t)retval; i++) {
+                size_t this_size = MIN((size_t)retval - urts_buf_idx, iov[i].iov_len);
+                if (!sgx_copy_to_enclave(iov[i].iov_base, iov[i].iov_len,
+                                         urts_buf + urts_buf_idx, this_size)) {
+                    retval = -EPERM;
+                    goto out;
+                }
+                urts_buf_idx += this_size;
+            }
         }
     }
 
 out:
     sgx_reset_ustack(old_ustack);
     if (is_obuf_mapped)
-        ocall_munmap_untrusted_cache(obuf, ALLOC_ALIGN_UP(count), need_munmap);
+        ocall_munmap_untrusted_cache(obuf, ALLOC_ALIGN_UP(size), need_munmap);
     return retval;
 }
 
-ssize_t ocall_send(int sockfd, const void* buf, size_t count, const struct sockaddr* addr,
+ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const void* addr,
                    size_t addrlen, void* control, size_t controllen) {
     ssize_t retval = 0;
     void* obuf = NULL;
@@ -1341,28 +1499,29 @@ ssize_t ocall_send(int sockfd, const void* buf, size_t count, const struct socka
 
     void* old_ustack = sgx_prepare_ustack();
 
-    if (sgx_is_completely_outside_enclave(buf, count)) {
-        /* buf is in untrusted memory (e.g., allowed file mmaped in untrusted memory) */
-        obuf = (void*)buf;
-    } else if (sgx_is_completely_within_enclave(buf, count)) {
-        /* typical case of buf inside of enclave memory */
-        if ((count + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
-            /* buf is too big and may overflow untrusted stack, so use untrusted heap */
-            retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(count), &obuf, &need_munmap);
-            if (retval < 0)
-                goto out;
-            is_obuf_mapped = true;
-            memcpy(obuf, buf, count);
-        } else {
-            obuf = sgx_copy_to_ustack(buf, count);
-        }
+    size_t size = 0;
+    for (size_t i = 0; i < iov_len; i++) {
+        size += iov[i].iov_len;
+    }
+
+    if ((size + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
+        /* buf is too big and may overflow untrusted stack, so use untrusted heap */
+        retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(size), &obuf, &need_munmap);
+        if (retval < 0)
+            goto out;
+        is_obuf_mapped = true;
     } else {
-        /* buf is partially in/out of enclave memory */
-        obuf = NULL;
+        obuf = sgx_alloc_on_ustack(size);
     }
     if (!obuf) {
         retval = -EPERM;
         goto out;
+    }
+
+    size = 0;
+    for (size_t i = 0; i < iov_len; i++) {
+        memcpy((char*)obuf + size, iov[i].iov_base, iov[i].iov_len);
+        size += iov[i].iov_len;
     }
 
     ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
@@ -1372,7 +1531,7 @@ ssize_t ocall_send(int sockfd, const void* buf, size_t count, const struct socka
     }
 
     WRITE_ONCE(ms->ms_sockfd, sockfd);
-    WRITE_ONCE(ms->ms_count, count);
+    WRITE_ONCE(ms->ms_count, size);
     WRITE_ONCE(ms->ms_addrlen, addrlen);
     void* untrusted_addr = addr ? sgx_copy_to_ustack(addr, addrlen) : NULL;
     void* untrusted_control = control ? sgx_copy_to_ustack(control, controllen) : NULL;
@@ -1395,7 +1554,7 @@ ssize_t ocall_send(int sockfd, const void* buf, size_t count, const struct socka
         retval = -EPERM;
     }
 
-    if (retval > 0 && (size_t)retval > count) {
+    if (retval > 0 && (size_t)retval > size) {
         retval = -EPERM;
         goto out;
     }
@@ -1403,7 +1562,7 @@ ssize_t ocall_send(int sockfd, const void* buf, size_t count, const struct socka
 out:
     sgx_reset_ustack(old_ustack);
     if (is_obuf_mapped)
-        ocall_munmap_untrusted_cache(obuf, ALLOC_ALIGN_UP(count), need_munmap);
+        ocall_munmap_untrusted_cache(obuf, ALLOC_ALIGN_UP(size), need_munmap);
     return retval;
 }
 

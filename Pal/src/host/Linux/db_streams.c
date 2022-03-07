@@ -27,17 +27,6 @@ struct hdl_header {
     size_t  data_size; /* total size of serialized PAL handle */
 };
 
-static size_t addr_size(const struct sockaddr* addr) {
-    switch (addr->sa_family) {
-        case AF_INET:
-            return sizeof(struct sockaddr_in);
-        case AF_INET6:
-            return sizeof(struct sockaddr_in6);
-        default:
-            return 0;
-    }
-}
-
 int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
     if (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE)) {
         long flags = enable ? FD_CLOEXEC : 0;
@@ -63,12 +52,12 @@ int _DkStreamUnmap(void* addr, uint64_t size) {
 
 int handle_serialize(PAL_HANDLE handle, void** data) {
     const void* d1;
-    const void* d2;
     size_t dsz1 = 0;
-    size_t dsz2 = 0;
 
-    /* find fields to serialize (depends on the handle type) and assign them to d1/d2; note that
-     * no handle type has more than two such fields, and some have none at all */
+    /* find a field to serialize (depends on the handle type) and assign it to d1; note that
+     * no handle type has more than one such field, and some have none */
+    /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
+     * work? Probably unused. Or pure luck. */
     switch (PAL_GET_TYPE(handle)) {
         case PAL_TYPE_FILE:
             d1   = handle->file.realpath;
@@ -88,18 +77,8 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
                 dsz1 = strlen(handle->dir.realpath) + 1;
             }
             break;
-        case PAL_TYPE_TCP:
-        case PAL_TYPE_TCPSRV:
-        case PAL_TYPE_UDP:
-        case PAL_TYPE_UDPSRV:
-            if (handle->sock.bind) {
-                d1   = (const void*)handle->sock.bind;
-                dsz1 = addr_size(handle->sock.bind);
-            }
-            if (handle->sock.conn) {
-                d2   = (const void*)handle->sock.conn;
-                dsz2 = addr_size(handle->sock.conn);
-            }
+        case PAL_TYPE_SOCKET:
+            serialize_socket_handle(handle, &d1, &dsz1);
             break;
         case PAL_TYPE_PROCESS:
         case PAL_TYPE_EVENTFD:
@@ -109,7 +88,7 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
     }
 
     size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz1 + dsz2);
+    void* buffer = malloc(hdlsz + dsz1);
     if (!buffer)
         return -PAL_ERROR_NOMEM;
 
@@ -117,11 +96,9 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
     memcpy(buffer, handle, hdlsz);
     if (dsz1)
         memcpy(buffer + hdlsz, d1, dsz1);
-    if (dsz2)
-        memcpy(buffer + hdlsz + dsz1, d2, dsz2);
 
     *data = buffer;
-    return hdlsz + dsz1 + dsz2;
+    return hdlsz + dsz1;
 }
 
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
@@ -146,18 +123,9 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_DIR:
             hdl->dir.realpath = (hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL);
             break;
-        case PAL_TYPE_TCP:
-        case PAL_TYPE_TCPSRV:
-        case PAL_TYPE_UDP:
-        case PAL_TYPE_UDPSRV: {
-            size_t s1 = hdl->sock.bind ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz)) : 0;
-            size_t s2 = hdl->sock.conn ? addr_size((struct sockaddr*)((uint8_t*)hdl + hdlsz + s1)) : 0;
-            if (s1)
-                hdl->sock.bind = (struct sockaddr*)((uint8_t*)hdl + hdlsz);
-            if (s2)
-                hdl->sock.conn = (struct sockaddr*)((uint8_t*)hdl + hdlsz + s2);
+        case PAL_TYPE_SOCKET:
+            deserialize_socket_handle(hdl, (const char*)hdl + hdlsz);
             break;
-        }
         case PAL_TYPE_PROCESS:
         case PAL_TYPE_EVENTFD:
             break;

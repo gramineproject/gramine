@@ -41,8 +41,8 @@ long shim_do_rt_sigreturn(void);
 long shim_do_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 long shim_do_pread64(int fd, char* buf, size_t count, loff_t pos);
 long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t pos);
-long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen);
-long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vlen);
+long shim_do_readv(unsigned long fd, struct iovec* vec, unsigned long vlen);
+long shim_do_writev(unsigned long fd, struct iovec* vec, unsigned long vlen);
 long shim_do_access(const char* file, mode_t mode);
 long shim_do_pipe(int* fildes);
 long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
@@ -62,19 +62,17 @@ long shim_do_setitimer(int which, struct __kernel_itimerval* value,
 long shim_do_getpid(void);
 long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count);
 long shim_do_socket(int family, int type, int protocol);
-long shim_do_connect(int sockfd, struct sockaddr* addr, int addrlen);
-long shim_do_accept(int fd, struct sockaddr* addr, int* addrlen);
-long shim_do_sendto(int fd, const void* buf, size_t len, int flags,
-                    const struct sockaddr* dest_addr, int addrlen);
-long shim_do_recvfrom(int fd, void* buf, size_t len, int flags, struct sockaddr* addr,
-                      int* addrlen);
-long shim_do_bind(int sockfd, struct sockaddr* addr, int addrlen);
-long shim_do_listen(int sockfd, int backlog);
-long shim_do_sendmsg(int fd, struct msghdr* msg, int flags);
-long shim_do_recvmsg(int fd, struct msghdr* msg, int flags);
-long shim_do_shutdown(int sockfd, int how);
-long shim_do_getsockname(int sockfd, struct sockaddr* addr, int* addrlen);
-long shim_do_getpeername(int sockfd, struct sockaddr* addr, int* addrlen);
+long shim_do_connect(int fd, void* addr, int addrlen);
+long shim_do_accept(int fd, void* addr, int* addrlen);
+long shim_do_sendto(int fd, void* buf, size_t len, unsigned int flags, void* addr, int addrlen);
+long shim_do_recvfrom(int fd, void* buf, size_t len, unsigned int flags, void* addr, int* addrlen);
+long shim_do_bind(int fd, void* addr, int addrlen);
+long shim_do_listen(int fd, int backlog);
+long shim_do_sendmsg(int fd, struct msghdr* msg, unsigned int flags);
+long shim_do_recvmsg(int fd, struct msghdr* msg, unsigned int flags);
+long shim_do_shutdown(int fd, int how);
+long shim_do_getsockname(int fd, void* addr, int* addrlen);
+long shim_do_getpeername(int fd, void* addr, int* addrlen);
 long shim_do_socketpair(int domain, int type, int protocol, int* sv);
 long shim_do_setsockopt(int fd, int level, int optname, char* optval, int optlen);
 long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optlen);
@@ -184,17 +182,17 @@ long shim_do_set_robust_list(struct robust_list_head* head, size_t len);
 long shim_do_get_robust_list(pid_t pid, struct robust_list_head** head, size_t* len);
 long shim_do_epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms,
                          const __sigset_t* sigmask, size_t sigsetsize);
-long shim_do_accept4(int sockfd, struct sockaddr* addr, int* addrlen, int flags);
+long shim_do_accept4(int fd, void* addr, int* addrlen, int flags);
 long shim_do_dup3(unsigned int oldfd, unsigned int newfd, int flags);
 long shim_do_epoll_create1(int flags);
 long shim_do_pipe2(int* fildes, int flags);
 long shim_do_mknod(const char* pathname, mode_t mode, dev_t dev);
 long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev);
-long shim_do_recvmmsg(int sockfd, struct mmsghdr* msg, unsigned int vlen, int flags,
+long shim_do_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags,
                       struct __kernel_timespec* timeout);
 long shim_do_prlimit64(pid_t pid, int resource, const struct __kernel_rlimit64* new_rlim,
                        struct __kernel_rlimit64* old_rlim);
-long shim_do_sendmmsg(int sockfd, struct mmsghdr* msg, unsigned int vlen, int flags);
+long shim_do_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags);
 long shim_do_eventfd2(unsigned int count, int flags);
 long shim_do_eventfd(unsigned int count);
 long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused);

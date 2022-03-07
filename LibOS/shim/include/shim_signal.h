@@ -173,6 +173,13 @@ int do_kill_pgroup(IDTYPE sender, IDTYPE pgid, int sig);
 
 void fill_siginfo_code_and_status(siginfo_t* info, int signal, int exit_code);
 
+/*!
+ * \brief Checks whether `ret` indicates that the syscall was interrupted.
+ *
+ * \param ret  Return value from some syscall.
+ */
+bool is_eintr_like(int ret);
+
 int do_nanosleep(uint64_t timeout_us, struct __kernel_timespec* rem);
 
 #endif /* _SHIM_SIGNAL_H_ */

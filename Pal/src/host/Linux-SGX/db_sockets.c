@@ -1,926 +1,649 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
-
-/*
- * This file contains operands for streams with URIs that start with "tcp:", "tcp.srv:", "udp:",
- * "udp.srv:".
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <asm-generic/socket.h>
-#include <asm/fcntl.h>
-#include <linux/in.h>
-#include <linux/in6.h>
-#include <linux/poll.h>
-#include <linux/types.h>
+#include <asm/ioctls.h>
+#include <limits.h>
+#include <linux/time.h>
 
-#include "api.h"
 #include "pal.h"
-#include "pal_error.h"
-#include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
+#include "socket_utils.h"
 
-#ifndef SOL_TCP
-#define SOL_TCP 6
-#endif
+static struct handle_ops g_tcp_handle_ops;
+static struct handle_ops g_udp_handle_ops;
+static struct socket_ops g_tcp_sock_ops;
+static struct socket_ops g_udp_sock_ops;
 
-#ifndef TCP_NODELAY
-#define TCP_NODELAY 1
-#endif
+static size_t g_default_recv_buf_size = 0;
+static size_t g_default_send_buf_size = 0;
 
-#ifndef TCP_CORK
-#define TCP_CORK 3
-#endif
+static size_t sanitize_size(size_t size) {
+    if (size > (1ull << 47)) {
+        /* Some random approximation of what is a valid size. */
+        return 0;
+    }
+    return size;
+}
 
-/* 96 bytes is the minimal size of buffer to store a IPv4/IPv6
-   address */
-#define PAL_SOCKADDR_SIZE 96
-
-static size_t addr_size(const struct sockaddr* addr) {
-    switch (addr->sa_family) {
-        case AF_INET:
-            return sizeof(struct sockaddr_in);
-        case AF_INET6:
-            return sizeof(struct sockaddr_in6);
+static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage* addr,
+                          size_t addrlen) {
+    if (addrlen < sizeof(addr->ss_family)) {
+        return -PAL_ERROR_DENIED;
+    }
+    switch (domain) {
+        case IPV4:
+            if (addr->ss_family != AF_INET) {
+                return -PAL_ERROR_DENIED;
+            }
+            if (addrlen != sizeof(struct sockaddr_in)) {
+                return -PAL_ERROR_DENIED;
+            }
+            break;
+        case IPV6:
+            if (addr->ss_family != AF_INET6) {
+                return -PAL_ERROR_DENIED;
+            }
+            if (addrlen != sizeof(struct sockaddr_in6)) {
+                return -PAL_ERROR_DENIED;
+            }
+            break;
         default:
-            return 0;
+            BUG();
     }
-}
-
-/* parsing the string of uri, and fill in the socket address structure.
-   the latest pointer of uri, length of socket address are returned. */
-static int inet_parse_uri(char** uri, struct sockaddr* addr, size_t* addrlen) {
-    char* tmp      = *uri;
-    char* end;
-    char* addr_str = NULL;
-    char* port_str;
-    int af;
-    void* addr_buf;
-    int addr_len;
-    __be16* port_buf;
-    size_t slen;
-
-    assert(addrlen);
-
-    if (tmp[0] == '[') {
-        /* for IPv6, the address will be in the form of
-           "[xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx]:port". */
-        struct sockaddr_in6* addr_in6 = (struct sockaddr_in6*)addr;
-
-        slen = sizeof(*addr_in6);
-        if (*addrlen < slen)
-            goto inval;
-
-        memset(addr, 0, slen);
-
-        end = strchr(tmp + 1, ']');
-        if (!end || *(end + 1) != ':')
-            goto inval;
-
-        addr_str = tmp + 1;
-        addr_len = end - tmp - 1;
-        port_str = end + 2;
-        for (end = port_str; *end >= '0' && *end <= '9'; end++)
-            ;
-        addr_in6->sin6_family = af = AF_INET6;
-        addr_buf                   = &addr_in6->sin6_addr.s6_addr;
-        port_buf                   = &addr_in6->sin6_port;
-    } else {
-        /* for IP, the address will be in the form of "x.x.x.x:port". */
-        struct sockaddr_in* addr_in = (struct sockaddr_in*)addr;
-
-        slen = sizeof(*addr_in);
-        if (*addrlen < slen)
-            goto inval;
-
-        memset(addr, 0, slen);
-
-        end = strchr(tmp, ':');
-        if (!end)
-            goto inval;
-
-        addr_str = tmp;
-        addr_len = end - tmp;
-        port_str = end + 1;
-        for (end = port_str; *end >= '0' && *end <= '9'; end++)
-            ;
-        addr_in->sin_family = af = AF_INET;
-        addr_buf                 = &addr_in->sin_addr.s_addr;
-        port_buf                 = &addr_in->sin_port;
-    }
-
-    if (af == AF_INET) {
-        if (!inet_pton4(addr_str, addr_len, addr_buf))
-            goto inval;
-    } else {
-        if (!inet_pton6(addr_str, addr_len, addr_buf))
-            goto inval;
-    }
-
-    *port_buf = __htons(atoi(port_str));
-    *uri      = *end ? end + 1 : NULL;
-
-    *addrlen = slen;
-
-    return 0;
-
-inval:
-    return -PAL_ERROR_INVAL;
-}
-
-/* create the string of uri from the given socket address */
-static int inet_create_uri(char* buf, size_t buf_size, struct sockaddr* addr, size_t addrlen,
-                           size_t* output_len) {
-    int len = 0; /* snprintf returns `int` */
-
-    if (addr->sa_family == AF_INET) {
-        if (addrlen < sizeof(struct sockaddr_in))
-            return -PAL_ERROR_INVAL;
-
-        struct sockaddr_in* addr_in = (struct sockaddr_in*)addr;
-        char* addr = (char*)&addr_in->sin_addr.s_addr;
-
-        /* for IP, the address will be in the form of "x.x.x.x:port". */
-        len = snprintf(buf, buf_size, "%u.%u.%u.%u:%u", (unsigned char)addr[0],
-                       (unsigned char)addr[1], (unsigned char)addr[2], (unsigned char)addr[3],
-                       __ntohs(addr_in->sin_port));
-    } else if (addr->sa_family == AF_INET6) {
-        if (addrlen < sizeof(struct sockaddr_in6))
-            return -PAL_ERROR_INVAL;
-
-        struct sockaddr_in6* addr_in6 = (struct sockaddr_in6*)addr;
-        unsigned short* addr          = (unsigned short*)&addr_in6->sin6_addr.s6_addr;
-
-        /* for IPv6, the address will be in the form of
-           "[xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx]:port". */
-        len = snprintf(buf, buf_size, "[%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x]:%u",
-                       __ntohs(addr[0]), __ntohs(addr[1]), __ntohs(addr[2]), __ntohs(addr[3]),
-                       __ntohs(addr[4]), __ntohs(addr[5]), __ntohs(addr[6]), __ntohs(addr[7]),
-                       __ntohs(addr_in6->sin6_port));
-    } else {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (len < 0)
-        return len;
-    if ((size_t)len >= buf_size)
-        return -PAL_ERROR_TOOLONG;
-
-    if (output_len)
-        *output_len = (size_t)len;
     return 0;
 }
 
-/*
- * Parse a URI for a socket stream. The URI might have both binding address and connecting
- * address, or connecting address only. The form of URI will be either
- * "bind-addr:bind-port:connect-addr:connect-port" or "addr:port".
- */
-static int socket_parse_uri(char* uri, struct sockaddr** bind_addr, size_t* bind_addrlen,
-                            struct sockaddr** dest_addr, size_t* dest_addrlen) {
-    int ret;
-
-    if (!bind_addr && !dest_addr)
-        return 0;
-
-    if (!uri || !(*uri)) {
-        if (bind_addr)
-            *bind_addr = NULL;
-        if (bind_addrlen)
-            *bind_addrlen = 0;
-        if (dest_addr)
-            *dest_addr = NULL;
-        if (dest_addrlen)
-            *dest_addrlen = 0;
-        return 0;
-    }
-
-    /* at least parse uri once */
-    if ((ret = inet_parse_uri(&uri, bind_addr ? *bind_addr : *dest_addr,
-                              bind_addr ? bind_addrlen : dest_addrlen)) < 0)
-        return ret;
-
-    if (!(bind_addr && dest_addr))
-        return 0;
-
-    /* if you reach here, it can only be connection address */
-    if (!uri || (ret = inet_parse_uri(&uri, *dest_addr, dest_addrlen)) < 0) {
-        *dest_addr    = *bind_addr;
-        *dest_addrlen = *bind_addrlen;
-        *bind_addr    = NULL;
-        *bind_addrlen = 0;
-    }
-
-    return 0;
-}
-
-/* fill in the PAL handle based on the file descriptors and address given. */
-static inline PAL_HANDLE socket_create_handle(int type, int fd, pal_stream_options_t options,
-                                              struct sockaddr* bind_addr, size_t bind_addrlen,
-                                              struct sockaddr* dest_addr, size_t dest_addrlen,
-                                              struct sockopt* sock_options) {
-    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(sock) + (bind_addr ? bind_addrlen : 0)
-                               + (dest_addr ? dest_addrlen : 0));
-    if (!hdl)
+static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
+                                     struct handle_ops* handle_ops, struct socket_ops* ops,
+                                     bool is_nonblocking) {
+    PAL_HANDLE handle = calloc(1, sizeof(*handle));
+    if (!handle) {
         return NULL;
-
-    init_handle_hdr(hdl, type);
-    hdl->flags |= PAL_HANDLE_FD_READABLE;
-    if (type != PAL_TYPE_TCPSRV) {
-        hdl->flags |= PAL_HANDLE_FD_WRITABLE;
-    }
-    hdl->sock.fd = fd;
-    uint8_t* addr = (uint8_t*)hdl + HANDLE_SIZE(sock);
-    if (bind_addr) {
-        hdl->sock.bind = (struct sockaddr*)addr;
-        memcpy(addr, bind_addr, bind_addrlen);
-        addr += bind_addrlen;
-    } else {
-        hdl->sock.bind = NULL;
-    }
-    if (dest_addr) {
-        hdl->sock.conn = (struct sockaddr*)addr;
-        memcpy(addr, dest_addr, dest_addrlen);
-        addr += dest_addrlen;
-    } else {
-        hdl->sock.conn = NULL;
     }
 
-    hdl->sock.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
-
-    hdl->sock.linger            = sock_options->linger;
-    hdl->sock.receivebuf        = sock_options->receivebuf;
-    hdl->sock.sendbuf           = sock_options->sendbuf;
-    hdl->sock.receivetimeout_us = sock_options->receivetimeout_us;
-    hdl->sock.sendtimeout_us    = sock_options->sendtimeout_us;
-    hdl->sock.tcp_cork          = sock_options->tcp_cork;
-    hdl->sock.tcp_keepalive     = sock_options->tcp_keepalive;
-    hdl->sock.tcp_nodelay       = sock_options->tcp_nodelay;
-    return hdl;
-}
-
-static inline int sock_type(int type, pal_stream_options_t options) {
-    if (options & PAL_OPTION_NONBLOCK)
-        type |= SOCK_NONBLOCK;
-    return type;
-}
-
-/* listen on a tcp socket */
-static int tcp_listen(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
-    struct sockaddr_storage buffer;
-    struct sockaddr* bind_addr = (struct sockaddr*)&buffer;
-    size_t bind_addrlen = sizeof(buffer);
-    int ret;
-
-    if ((ret = socket_parse_uri(uri, &bind_addr, &bind_addrlen, NULL, NULL)) < 0)
-        return ret;
-    if (!bind_addr)
-        return -PAL_ERROR_INVAL;
-
-    int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
-    ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_STREAM, options), 0, ipv6_v6only,
-                       bind_addr, &bind_addrlen);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    struct sockopt sock_options = {
-        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
-    };
-
-    *handle = socket_create_handle(PAL_TYPE_TCPSRV, ret, options, bind_addr, bind_addrlen, NULL, 0,
-                                   &sock_options);
-    if (!(*handle)) {
-        ocall_close(ret);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    return 0;
-}
-
-/* accept a tcp connection */
-static int tcp_accept(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCPSRV || !handle->sock.bind || handle->sock.conn)
-        return -PAL_ERROR_NOTSERVER;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    struct sockaddr* bind_addr = handle->sock.bind;
-    size_t bind_addrlen = addr_size(bind_addr);
-    struct sockaddr_storage dest_addr;
-    size_t dest_addrlen = sizeof(dest_addr);
-    int ret = 0;
-    static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
-    int flags = PAL_OPTION_TO_LINUX_OPEN(options);
-
-    ret = ocall_accept(handle->sock.fd, (struct sockaddr*)&dest_addr, &dest_addrlen, flags);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    struct sockopt sock_options = {
-        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
-    };
-
-    *client = socket_create_handle(PAL_TYPE_TCP, ret, options, bind_addr, bind_addrlen,
-                                   (struct sockaddr*)&dest_addr, dest_addrlen, &sock_options);
-
-    if (!(*client)) {
-        ocall_close(ret);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    return 0;
-}
-
-/* connect on a tcp socket */
-static int tcp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
-    struct sockaddr_storage buffer[2];
-    struct sockaddr* bind_addr = (struct sockaddr*)&buffer[0];
-    size_t bind_addrlen = sizeof(buffer[0]);
-    struct sockaddr* dest_addr = (struct sockaddr*)&buffer[1];
-    size_t dest_addrlen = sizeof(buffer[1]);
-    int ret;
-
-    /* accepting two kind of different uri:
-       dest-ip:dest-port or bind-ip:bind-port:dest-ip:dest-port */
-    if ((ret = socket_parse_uri(uri, &bind_addr, &bind_addrlen, &dest_addr, &dest_addrlen)) < 0)
-        return ret;
-
-    if (!dest_addr)
-        return -PAL_ERROR_INVAL;
-
-    if (bind_addr && bind_addr->sa_family != dest_addr->sa_family)
-        return -PAL_ERROR_INVAL;
-
-    ret = ocall_connect(dest_addr->sa_family, sock_type(SOCK_STREAM, options), 0, /*ipv6_v6only=*/0,
-                        dest_addr, dest_addrlen, bind_addr, &bind_addrlen);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    struct sockopt sock_options = {
-        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
-    };
-
-    *handle = socket_create_handle(PAL_TYPE_TCP, ret, options, bind_addr, bind_addrlen, dest_addr,
-                                   dest_addrlen, &sock_options);
-
-    if (!(*handle)) {
-        ocall_close(ret);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    return 0;
-}
-
-/* 'open' operation of tcp stream */
-static int tcp_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                    pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
-    __UNUSED(access);
-    __UNUSED(share);
-    __UNUSED(create);
-    assert(create == PAL_CREATE_IGNORED);
-
-    assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(options, PAL_OPTION_MASK));
-
-    size_t uri_size = strlen(uri) + 1;
-
-    if (uri_size > PAL_SOCKADDR_SIZE)
-        return -PAL_ERROR_TOOLONG;
-
-    char uri_buf[PAL_SOCKADDR_SIZE];
-    memcpy(uri_buf, uri, uri_size);
-
-    if (!strcmp(type, URI_TYPE_TCP_SRV))
-        return tcp_listen(handle, uri_buf, options);
-
-    if (!strcmp(type, URI_TYPE_TCP))
-        return tcp_connect(handle, uri_buf, options);
-
-    return -PAL_ERROR_NOTSUPPORT;
-}
-
-/* 'read' operation of tcp stream */
-static int64_t tcp_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buf) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCP || !handle->sock.conn)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return 0;
-
-    ssize_t bytes = ocall_recv(handle->sock.fd, buf, len, NULL, NULL, NULL, NULL);
-
-    if (bytes < 0)
-        return unix_to_pal_error(bytes);
-
-    return bytes;
-}
-
-/* write' operation of tcp stream */
-static int64_t tcp_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, const void* buf) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCP || !handle->sock.conn)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_CONNFAILED;
-
-    ssize_t bytes = ocall_send(handle->sock.fd, buf, len, NULL, 0, NULL, 0);
-    if (bytes < 0)
-        return unix_to_pal_error(bytes);
-
-    return bytes;
-}
-
-/* used by 'open' operation of tcp stream for bound socket */
-static int udp_bind(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
-    struct sockaddr_storage buffer;
-    struct sockaddr* bind_addr = (struct sockaddr*)&buffer;
-    size_t bind_addrlen = sizeof(buffer);
-    int ret = 0;
-
-    if ((ret = socket_parse_uri(uri, &bind_addr, &bind_addrlen, NULL, NULL)) < 0)
-        return ret;
-
-    if (!bind_addr)
-        return -PAL_ERROR_INVAL;
-    assert(bind_addrlen == addr_size(bind_addr));
-
-    int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
-    ret = ocall_listen(bind_addr->sa_family, sock_type(SOCK_DGRAM, options), 0, ipv6_v6only,
-                       bind_addr, &bind_addrlen);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    struct sockopt sock_options = {
-        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
-    };
-
-    *handle = socket_create_handle(PAL_TYPE_UDPSRV, ret, options, bind_addr, bind_addrlen, NULL, 0,
-                                   &sock_options);
-
-    if (!(*handle)) {
-        ocall_close(ret);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    return 0;
-}
-
-/* used by 'open' operation of tcp stream for connected socket */
-static int udp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t options) {
-    struct sockaddr_storage buffer[2];
-    struct sockaddr* bind_addr = (struct sockaddr*)&buffer[0];
-    size_t bind_addrlen = sizeof(buffer[0]);
-    struct sockaddr* dest_addr = (struct sockaddr*)&buffer[1];
-    size_t dest_addrlen = sizeof(buffer[1]);
-    int ret;
-
-    if ((ret = socket_parse_uri(uri, &bind_addr, &bind_addrlen, &dest_addr, &dest_addrlen)) < 0)
-        return ret;
-
-    int ipv6_v6only = options & PAL_OPTION_DUALSTACK ? 0 : 1;
-    ret = ocall_connect(dest_addr ? dest_addr->sa_family : AF_INET, sock_type(SOCK_DGRAM, options),
-                        0, ipv6_v6only, dest_addr, dest_addrlen, bind_addr, &bind_addrlen);
-
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    struct sockopt sock_options = {
-        .reuseaddr = 1, /* sockets are always set as reusable in Gramine */
-    };
-
-    *handle = socket_create_handle(dest_addr ? PAL_TYPE_UDP : PAL_TYPE_UDPSRV, ret, options,
-                                   bind_addr, bind_addrlen, dest_addr, dest_addrlen, &sock_options);
-
-    if (!(*handle)) {
-        ocall_close(ret);
-        return -PAL_ERROR_NOMEM;
-    }
-
-    return 0;
-}
-
-static int udp_open(PAL_HANDLE* hdl, const char* type, const char* uri, enum pal_access access,
-                    pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
-    __UNUSED(access);
-    __UNUSED(share);
-    __UNUSED(create);
-    assert(create == PAL_CREATE_IGNORED);
-
-    assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(options, PAL_OPTION_MASK));
-
-    char buf[PAL_SOCKADDR_SIZE];
-    size_t len = strlen(uri);
-
-    if (len >= PAL_SOCKADDR_SIZE)
-        return -PAL_ERROR_TOOLONG;
-
-    memcpy(buf, uri, len + 1);
-
-    if (!strcmp(type, URI_TYPE_UDP_SRV))
-        return udp_bind(hdl, buf, options);
-
-    if (!strcmp(type, URI_TYPE_UDP))
-        return udp_connect(hdl, buf, options);
-
-    return -PAL_ERROR_NOTSUPPORT;
-}
-
-static int64_t udp_receive(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buf) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_UDP)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    ssize_t ret = ocall_recv(handle->sock.fd, buf, len, NULL, NULL, NULL, NULL);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
-}
-
-static int64_t udp_receivebyaddr(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buf,
-                                 char* addr, size_t addrlen) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_UDPSRV)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    struct sockaddr_storage conn_addr;
-    size_t conn_addrlen = sizeof(conn_addr);
-
-    ssize_t bytes = ocall_recv(handle->sock.fd, buf, len, (struct sockaddr*)&conn_addr,
-                               &conn_addrlen, NULL, NULL);
-
-    if (bytes < 0)
-        return unix_to_pal_error(bytes);
-
-    char* addr_uri = strcpy_static(addr, URI_PREFIX_UDP, addrlen);
-    if (!addr_uri)
-        return -PAL_ERROR_OVERFLOW;
-
-    int ret = inet_create_uri(addr_uri, addr + addrlen - addr_uri, (struct sockaddr*)&conn_addr,
-                              conn_addrlen, NULL);
-    if (ret < 0)
-        return ret;
-
-    return bytes;
-}
-
-static int64_t udp_send(PAL_HANDLE handle, uint64_t offset, uint64_t len, const void* buf) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_UDP)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    ssize_t bytes = ocall_send(handle->sock.fd, buf, len, NULL, 0, NULL, 0);
-    if (bytes < 0)
-        return unix_to_pal_error(bytes);
-
-    return bytes;
-}
-
-static int64_t udp_sendbyaddr(PAL_HANDLE handle, uint64_t offset, uint64_t len, const void* buf,
-                              const char* addr, size_t addrlen) {
-    if (offset)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_UDPSRV)
-        return -PAL_ERROR_NOTCONNECTION;
-
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    if (!strstartswith(addr, URI_PREFIX_UDP))
-        return -PAL_ERROR_INVAL;
-
-    addr += static_strlen(URI_PREFIX_UDP);
-    addrlen -= static_strlen(URI_PREFIX_UDP);
-
-    char* addrbuf = __alloca(addrlen + 1);
-    memcpy(addrbuf, addr, addrlen);
-    addrbuf[addrlen] = '\0';
-
-    struct sockaddr_storage conn_addr;
-    size_t conn_addrlen = sizeof(conn_addr);
-
-    int ret = inet_parse_uri(&addrbuf, (struct sockaddr*)&conn_addr, &conn_addrlen);
-    if (ret < 0)
-        return ret;
-
-    ssize_t bytes = ocall_send(handle->sock.fd, buf, len, (struct sockaddr*)&conn_addr,
-                               conn_addrlen, NULL, 0);
-    if (bytes < 0)
-        return unix_to_pal_error(bytes);
-
-    return bytes;
-}
-
-static int socket_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return 0;
-
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCP && delete_mode != PAL_DELETE_ALL)
-        return -PAL_ERROR_INVAL;
-
-    if (HANDLE_HDR(handle)->type == PAL_TYPE_TCP || HANDLE_HDR(handle)->type == PAL_TYPE_TCPSRV) {
-        int shutdown;
-        switch (delete_mode) {
-            case PAL_DELETE_ALL:
-                shutdown = SHUT_RDWR;
-                break;
-            case PAL_DELETE_READ:
-                shutdown = SHUT_RD;
-                break;
-            case PAL_DELETE_WRITE:
-                shutdown = SHUT_WR;
-                break;
-            default:
-                return -PAL_ERROR_INVAL;
+    init_handle_hdr(handle, PAL_TYPE_SOCKET);
+    handle->hdr.ops = handle_ops;
+    handle->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
+    handle->sock.fd = fd;
+    handle->sock.domain = domain;
+    handle->sock.ops = ops;
+
+    handle->sock.recv_buf_size = __atomic_load_n(&g_default_recv_buf_size, __ATOMIC_RELAXED);
+    if (!handle->sock.recv_buf_size) {
+        /* TODO: this or just ignore this?
+        int val = 0;
+        int len = sizeof(val);
+        int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_RCVBUF, &val, &len);
+        if (ret < 0) {
+            log_error("%s: getsockopt SO_RCVBUF failed: %d", __func__, ret);
+            free(handle);
+            return NULL;
         }
-
-        ocall_shutdown(handle->sock.fd, shutdown);
+        val = sanitize_size(val);
+        handle->sock.recv_buf_size = val;
+        __atomic_store_n(&g_default_recv_buf_size, val, __ATOMIC_RELAXED);
+        */
     }
 
+    handle->sock.send_buf_size = __atomic_load_n(&g_default_send_buf_size, __ATOMIC_RELAXED);
+    if (!handle->sock.send_buf_size) {
+        /* TODO: this or just ignore this?
+        int val = 0;
+        int len = sizeof(val);
+        int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_SNDBUF, &val, &len);
+        if (ret < 0) {
+            log_error("%s: getsockopt SO_SNDBUF failed: %d", __func__, ret);
+            free(handle);
+            return NULL;
+        }
+        val = sanitize_size(val);
+        handle->sock.send_buf_size = val;
+        __atomic_store_n(&g_default_send_buf_size, val, __ATOMIC_RELAXED);
+        */
+    }
+
+    handle->sock.linger = 0;
+    handle->sock.recvtimeout_us = 0;
+    handle->sock.sendtimeout_us = 0;
+    handle->sock.is_nonblocking = is_nonblocking;
+    handle->sock.reuseaddr = false;
+    handle->sock.keepalive = false;
+    handle->sock.tcp_cork = false;
+    handle->sock.tcp_nodelay = false;
+    handle->sock.ipv6_v6only = false;
+
+    return handle;
+}
+
+int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
+                    pal_stream_options_t options, PAL_HANDLE* handle_ptr) {
+    int linux_domain;
+    int linux_type;
+    switch (domain) {
+        case IPV4:
+            linux_domain = AF_INET;
+            break;
+        case IPV6:
+            linux_domain = AF_INET6;
+            break;
+        default:
+            BUG();
+    }
+    struct handle_ops* handle_ops = NULL;
+    struct socket_ops* sock_ops = NULL;
+    switch (type) {
+        case PAL_SOCKET_TCP:
+            linux_type = SOCK_STREAM;
+            handle_ops = &g_tcp_handle_ops;
+            sock_ops = &g_tcp_sock_ops;
+            break;
+        case PAL_SOCKET_UDP:
+            linux_type = SOCK_DGRAM;
+            handle_ops = &g_udp_handle_ops;
+            sock_ops = &g_udp_sock_ops;
+            break;
+        default:
+            BUG();
+    }
+
+    if (options & PAL_OPTION_NONBLOCK) {
+        linux_type |= SOCK_NONBLOCK;
+    }
+    linux_type |= SOCK_CLOEXEC;
+
+    int fd = ocall_socket(linux_domain, linux_type, 0);
+    if (fd < 0) {
+        return unix_to_pal_error(fd);
+    }
+
+    PAL_HANDLE handle = create_sock_handle(fd, domain, handle_ops, sock_ops,
+                                           !!(options & PAL_OPTION_NONBLOCK));
+    if (!handle) {
+        int ret = ocall_close(fd);
+        if (ret < 0) {
+            log_error("%s:%d closing socket fd failed: %d", __func__, __LINE__, ret);
+        }
+        return -PAL_ERROR_NOMEM;
+    }
+
+    *handle_ptr = handle;
     return 0;
 }
 
-static int socket_close(PAL_HANDLE handle) {
-    if (handle->sock.fd != PAL_IDX_POISON) {
-        ocall_close(handle->sock.fd);
-        handle->sock.fd = PAL_IDX_POISON;
+static int close(PAL_HANDLE handle) {
+    int ret = ocall_close(handle->sock.fd);
+    if (ret < 0) {
+        log_error("%s: closing socket fd failed: %d", __func__, ret);
+        /* We cannot do anything about it anyway... */
     }
-
-    if (handle->sock.bind)
-        handle->sock.bind = NULL;
-
-    if (handle->sock.conn)
-        handle->sock.conn = NULL;
-
     return 0;
 }
 
-static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int ret;
+static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    if (addr->domain != handle->sock.domain) {
+        return -PAL_ERROR_INVAL;
+    }
 
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
+    struct sockaddr_storage sa_storage;
+    size_t linux_addrlen;
+    pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
+    assert(linux_addrlen <= INT_MAX);
+    uint16_t new_port = 0;
 
-    attr->handle_type              = HANDLE_HDR(handle)->type;
-    attr->nonblocking              = handle->sock.nonblocking;
+    int ret = ocall_bind(handle->sock.fd, &sa_storage, linux_addrlen, &new_port);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
 
-    attr->socket.linger            = handle->sock.linger;
-    attr->socket.receivebuf        = handle->sock.receivebuf;
-    attr->socket.sendbuf           = handle->sock.sendbuf;
-    attr->socket.receivetimeout_us = handle->sock.receivetimeout_us;
-    attr->socket.sendtimeout_us    = handle->sock.sendtimeout_us;
-    attr->socket.tcp_cork          = handle->sock.tcp_cork;
-    attr->socket.tcp_keepalive     = handle->sock.tcp_keepalive;
-    attr->socket.tcp_nodelay       = handle->sock.tcp_nodelay;
+    switch (addr->domain) {
+        case IPV4:
+            if (!addr->ipv4.port) {
+                addr->ipv4.port = new_port;
+            }
+            break;
+        case IPV6:
+            if (!addr->ipv6.port) {
+                addr->ipv6.port = new_port;
+            }
+            break;
+        default:
+            BUG();
+    }
+    return 0;
+}
 
-    /* get number of bytes available for reading (doesn't make sense for listening sockets) */
-    attr->pending_size = 0;
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_TCPSRV) {
-        ret = ocall_fionread(handle->sock.fd);
-        if (ret < 0)
+static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    int ret = ocall_listen_simple(handle->sock.fd, backlog);
+    return unix_to_pal_error(ret);
+}
+
+static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+                      struct pal_socket_addr* client_addr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+
+    struct sockaddr_storage sa_storage = { 0 };
+    size_t linux_addrlen = sizeof(sa_storage);
+    int flags = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
+    flags |= SOCK_CLOEXEC;
+
+    int fd = ocall_accept(handle->sock.fd, (void*)&sa_storage, &linux_addrlen, flags);
+    if (fd < 0) {
+        return unix_to_pal_error(fd);
+    }
+
+    PAL_HANDLE client = create_sock_handle(fd, handle->sock.domain, handle->hdr.ops,
+                                           handle->sock.ops, !!(options & PAL_OPTION_NONBLOCK));
+    if (!client) {
+        int ret = ocall_close(fd);
+        if (ret < 0) {
+            log_error("%s:%d closing socket fd failed: %d", __func__, __LINE__, ret);
+        }
+        return -PAL_ERROR_NOMEM;
+    }
+
+    int ret = verify_ip_addr(client->sock.domain, &sa_storage, linux_addrlen);
+    if (ret < 0) {
+        _DkObjectClose(client);
+        return ret;
+    }
+
+    linux_to_pal_sockaddr(&sa_storage, client_addr);
+    assert(client_addr->domain == client->sock.domain);
+    *client_ptr = client;
+    return 0;
+}
+
+static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                   struct pal_socket_addr* local_addr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    struct sockaddr_storage sa_storage;
+    size_t linux_addrlen;
+    pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
+    assert(linux_addrlen <= INT_MAX);
+
+    int ret = ocall_connect_simple(handle->sock.fd, &sa_storage, &linux_addrlen);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+
+    if (local_addr) {
+        ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
+        if (ret < 0) {
+            return ret;
+        }
+        linux_to_pal_sockaddr(&sa_storage, local_addr);
+    }
+    return 0;
+}
+
+static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+
+    memset(attr, 0, sizeof(*attr));
+
+    attr->handle_type = PAL_TYPE_SOCKET;
+    attr->nonblocking = handle->sock.is_nonblocking;
+
+    int ret = ocall_fionread(handle->sock.fd);
+    attr->pending_size = ret >= 0 ? sanitize_size(ret) : 0;
+
+    attr->socket.linger = handle->sock.linger;
+    attr->socket.recv_buf_size = handle->sock.recv_buf_size;
+    attr->socket.send_buf_size = handle->sock.send_buf_size;
+    attr->socket.receivetimeout_us = handle->sock.recvtimeout_us;
+    attr->socket.sendtimeout_us = handle->sock.sendtimeout_us;
+    attr->socket.reuseaddr = handle->sock.reuseaddr;
+    attr->socket.keepalive = handle->sock.keepalive;
+    attr->socket.tcp_cork = handle->sock.tcp_cork;
+    attr->socket.tcp_nodelay = handle->sock.tcp_nodelay;
+    attr->socket.ipv6_v6only = handle->sock.ipv6_v6only;
+
+    return 0;
+};
+
+/* TODO: if this is used to change two fields and the second set fails, caller won't know about it
+ * do we care? */
+/* TODO: this would need some locking, but LibOS provides it. Should we add redundant locks here? */
+static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    if (attr->handle_type != PAL_TYPE_SOCKET) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    if (attr->nonblocking != handle->sock.is_nonblocking) {
+        int ret = ocall_fsetnonblock(handle->sock.fd, attr->nonblocking);
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
-        attr->pending_size = ret;
+        }
+        handle->sock.is_nonblocking = attr->nonblocking;
     }
-
-    return 0;
-}
-
-static int socket_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->sock.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
-    int fd = handle->sock.fd, ret, val;
-    if (attr->nonblocking != handle->sock.nonblocking) {
-        ret = ocall_fsetnonblock(fd, attr->nonblocking);
-
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        handle->sock.nonblocking = attr->nonblocking;
-    }
-
-    struct __kernel_linger {
-        int l_onoff;
-        int l_linger;
-    };
 
     if (attr->socket.linger != handle->sock.linger) {
-        struct __kernel_linger l;
-        l.l_onoff  = attr->socket.linger ? 1 : 0;
-        l.l_linger = attr->socket.linger;
-        ret = ocall_setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(struct __kernel_linger));
-        if (ret < 0)
+        if (attr->socket.linger > INT_MAX) {
+            return -PAL_ERROR_INVAL;
+        }
+        struct linger linger = {
+            .l_onoff = attr->socket.linger ? 1 : 0,
+            .l_linger = attr->socket.linger,
+        };
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
+        }
         handle->sock.linger = attr->socket.linger;
     }
 
-    if (attr->socket.receivebuf != handle->sock.receivebuf) {
-        val = attr->socket.receivebuf;
-        ret = ocall_setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(int));
-        if (ret < 0)
+    if (attr->socket.recv_buf_size != handle->sock.recv_buf_size) {
+        if (attr->socket.recv_buf_size > INT_MAX) {
+            return -PAL_ERROR_INVAL;
+        }
+        int val = attr->socket.recv_buf_size;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(val));
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
-        handle->sock.receivebuf = attr->socket.receivebuf;
+        }
+        handle->sock.recv_buf_size = attr->socket.recv_buf_size;
     }
 
-    if (attr->socket.sendbuf != handle->sock.sendbuf) {
-        val = attr->socket.sendbuf;
-        ret = ocall_setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &val, sizeof(int));
-        if (ret < 0)
+    if (attr->socket.send_buf_size != handle->sock.send_buf_size) {
+        if (attr->socket.send_buf_size > INT_MAX) {
+            return -PAL_ERROR_INVAL;
+        }
+        int val = attr->socket.send_buf_size;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_SNDBUF, &val, sizeof(val));
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
-        handle->sock.sendbuf = attr->socket.sendbuf;
+        }
+        handle->sock.send_buf_size = attr->socket.send_buf_size;
     }
 
-    if (attr->socket.receivetimeout_us != handle->sock.receivetimeout_us) {
-        struct timeval tv;
-        tv.tv_sec  = attr->socket.receivetimeout_us / TIME_US_IN_S;
-        tv.tv_usec = attr->socket.receivetimeout_us % TIME_US_IN_S;
-        ret = ocall_setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-        if (ret < 0)
+    if (attr->socket.receivetimeout_us != handle->sock.recvtimeout_us) {
+        struct timeval tv = {
+            .tv_sec = attr->socket.receivetimeout_us / TIME_US_IN_S,
+            .tv_usec = attr->socket.receivetimeout_us % TIME_US_IN_S,
+        };
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
-        handle->sock.receivetimeout_us = attr->socket.receivetimeout_us;
+        }
+        handle->sock.recvtimeout_us = attr->socket.receivetimeout_us;
     }
 
     if (attr->socket.sendtimeout_us != handle->sock.sendtimeout_us) {
-        struct timeval tv;
-        tv.tv_sec  = attr->socket.sendtimeout_us / TIME_US_IN_S;
-        tv.tv_usec = attr->socket.sendtimeout_us % TIME_US_IN_S;
-        ret = ocall_setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-        if (ret < 0)
+        struct timeval tv = {
+            .tv_sec = attr->socket.sendtimeout_us / TIME_US_IN_S,
+            .tv_usec = attr->socket.sendtimeout_us % TIME_US_IN_S,
+        };
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+        if (ret < 0) {
             return unix_to_pal_error(ret);
-
+        }
         handle->sock.sendtimeout_us = attr->socket.sendtimeout_us;
     }
 
-    if (HANDLE_TYPE(handle) == PAL_TYPE_TCP || HANDLE_TYPE(handle) == PAL_TYPE_TCPSRV) {
-        if (attr->socket.tcp_cork != handle->sock.tcp_cork) {
-            val = attr->socket.tcp_cork ? 1 : 0;
-            ret = ocall_setsockopt(fd, SOL_TCP, TCP_CORK, &val, sizeof(int));
-            if (ret < 0)
-                return unix_to_pal_error(ret);
-
-            handle->sock.tcp_cork = attr->socket.tcp_cork;
+    if (attr->socket.keepalive != handle->sock.keepalive) {
+        int val = attr->socket.keepalive ? 1 : 0;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
         }
+        handle->sock.keepalive = attr->socket.keepalive;
+    }
 
-        if (attr->socket.tcp_keepalive != handle->sock.tcp_keepalive) {
-            val = attr->socket.tcp_keepalive ? 1 : 0;
-            ret = ocall_setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(int));
-            if (ret < 0)
-                return unix_to_pal_error(ret);
-
-            handle->sock.tcp_keepalive = attr->socket.tcp_keepalive;
+    if (attr->socket.reuseaddr != handle->sock.reuseaddr) {
+        int val = attr->socket.reuseaddr ? 1 : 0;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
         }
+        handle->sock.reuseaddr = attr->socket.reuseaddr;
+    }
 
-        if (attr->socket.tcp_nodelay != handle->sock.tcp_nodelay) {
-            val = attr->socket.tcp_nodelay ? 1 : 0;
-            ret = ocall_setsockopt(fd, SOL_TCP, TCP_NODELAY, &val, sizeof(int));
-            if (ret < 0)
-                return unix_to_pal_error(ret);
-
-            handle->sock.tcp_nodelay = attr->socket.tcp_nodelay;
+    if (attr->socket.ipv6_v6only != handle->sock.ipv6_v6only) {
+        int val = attr->socket.ipv6_v6only ? 1 : 0;
+        int ret = ocall_setsockopt(handle->sock.fd, IPPROTO_IPV6, IPV6_V6ONLY, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
         }
+        handle->sock.ipv6_v6only = attr->socket.ipv6_v6only;
     }
 
     return 0;
 }
 
-static int socket_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    size_t orig_count = count;
-    int ret;
+static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    int ret = attrsetbyhdl_common(handle, attr);
+    if (ret < 0) {
+        return ret;
+    }
 
-    const char* prefix = NULL;
-    size_t prefix_len = 0;
-    struct sockaddr* bind_addr = NULL;
-    struct sockaddr* dest_addr = NULL;
+    if (attr->socket.tcp_cork != handle->sock.tcp_cork) {
+        int val = attr->socket.tcp_cork ? 1 : 0;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_TCP, TCP_CORK, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.tcp_cork = attr->socket.tcp_cork;
+    }
 
-    switch (PAL_GET_TYPE(handle)) {
-        case PAL_TYPE_TCPSRV:
-            prefix_len = static_strlen(URI_PREFIX_TCP_SRV);
-            prefix = URI_PREFIX_TCP_SRV;
-            bind_addr = handle->sock.bind;
+    if (attr->socket.tcp_nodelay != handle->sock.tcp_nodelay) {
+        int val = attr->socket.tcp_nodelay ? 1 : 0;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_TCP, TCP_NODELAY, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.tcp_nodelay = attr->socket.tcp_nodelay;
+    }
+
+    return 0;
+}
+
+static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    return attrsetbyhdl_common(handle, attr);
+}
+
+static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* size_out,
+                struct pal_socket_addr* addr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    if (addr && addr->domain != handle->sock.domain) {
+        return -PAL_ERROR_INVAL;
+    }
+    if (handle->sock.ops == &g_udp_sock_ops && !addr) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    struct sockaddr_storage sa_storage;
+    size_t linux_addrlen = 0;
+    if (addr) {
+        pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
+        assert(linux_addrlen <= INT_MAX);
+    }
+
+    struct iovec* iov = (struct iovec*)pal_iov;
+    static_assert(sizeof(*pal_iov) == sizeof(*iov)
+                  && SAME_TYPE(pal_iov->iov_base, iov->iov_base)
+                  && offsetof(struct pal_iovec, iov_base) == offsetof(struct iovec, iov_base)
+                  && SAME_TYPE(pal_iov->iov_len, iov->iov_len)
+                  && offsetof(struct pal_iovec, iov_len) == offsetof(struct iovec, iov_len),
+                  "not compatible");
+    ssize_t ret = ocall_send(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
+                             linux_addrlen, NULL, 0);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+    *size_out = ret;
+    return 0;
+}
+
+static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* size_out,
+                struct pal_socket_addr* addr) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+
+    struct sockaddr_storage sa_storage;
+    size_t linux_addrlen = addr ? sizeof(sa_storage) : 0;
+
+    struct iovec* iov = (struct iovec*)pal_iov;
+    static_assert(sizeof(*pal_iov) == sizeof(*iov)
+                  && SAME_TYPE(pal_iov->iov_base, iov->iov_base)
+                  && offsetof(struct pal_iovec, iov_base) == offsetof(struct iovec, iov_base)
+                  && SAME_TYPE(pal_iov->iov_len, iov->iov_len)
+                  && offsetof(struct pal_iovec, iov_len) == offsetof(struct iovec, iov_len),
+                  "not compatible");
+    ssize_t ret = ocall_recv(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
+                             &linux_addrlen, NULL, NULL);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+    size_t size = ret;
+    if (addr) {
+        ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
+        if (ret < 0) {
+            return ret;
+        }
+        linux_to_pal_sockaddr(&sa_storage, addr);
+    }
+    *size_out = size;
+    return 0;
+}
+
+static int delete_tcp(PAL_HANDLE handle, enum pal_delete_mode mode) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    int how;
+    switch (mode) {
+        case PAL_DELETE_ALL:
+            how = SHUT_RDWR;
             break;
-        case PAL_TYPE_TCP:
-            prefix_len = static_strlen(URI_PREFIX_TCP);
-            prefix = URI_PREFIX_TCP;
-            bind_addr = handle->sock.bind;
-            dest_addr = handle->sock.conn;
+        case PAL_DELETE_READ:
+            how = SHUT_RD;
             break;
-        case PAL_TYPE_UDPSRV:
-            prefix_len = static_strlen(URI_PREFIX_UDP_SRV);
-            prefix = URI_PREFIX_UDP_SRV;
-            bind_addr = handle->sock.bind;
-            break;
-        case PAL_TYPE_UDP:
-            prefix_len = static_strlen(URI_PREFIX_UDP);
-            prefix = URI_PREFIX_UDP;
-            bind_addr = handle->sock.bind;
-            dest_addr = handle->sock.conn;
+        case PAL_DELETE_WRITE:
+            how = SHUT_WR;
             break;
         default:
             return -PAL_ERROR_INVAL;
     }
 
-    if (count < prefix_len + 1) {
-        return -PAL_ERROR_OVERFLOW;
-    }
-
-    memcpy(buffer, prefix, prefix_len + 1);
-    buffer += prefix_len;
-    count -= prefix_len;
-
-    if (bind_addr) {
-        size_t uri_size;
-        ret = inet_create_uri(buffer, count, bind_addr, addr_size(bind_addr), &uri_size);
-        if (ret < 0) {
-            return ret;
-        }
-
-        buffer += uri_size;
-        count -= uri_size;
-    }
-
-    if (dest_addr) {
-        if (bind_addr) {
-            if (count < 2) {
-                return -PAL_ERROR_OVERFLOW;
-            }
-
-            *buffer++ = ':';
-            *buffer = '\0';
-            count--;
-        }
-
-        size_t uri_size;
-        ret = inet_create_uri(buffer, count, dest_addr, addr_size(dest_addr), &uri_size);
-        if (ret < 0) {
-            return ret;
-        }
-
-        buffer += uri_size;
-        count -= uri_size;
-    }
-
-    return orig_count - count;
+    int ret = ocall_shutdown(handle->sock.fd, how);
+    return unix_to_pal_error(ret);
 }
 
-struct handle_ops g_tcp_ops = {
-    .getname        = &socket_getname,
-    .open           = &tcp_open,
-    .waitforclient  = &tcp_accept,
-    .read           = &tcp_read,
-    .write          = &tcp_write,
-    .delete         = &socket_delete,
-    .close          = &socket_close,
-    .attrquerybyhdl = &socket_attrquerybyhdl,
-    .attrsetbyhdl   = &socket_attrsetbyhdl,
+static int delete_udp(PAL_HANDLE handle, enum pal_delete_mode mode) {
+    __UNUSED(handle);
+    __UNUSED(mode);
+    return 0;
+}
+
+static struct socket_ops g_tcp_sock_ops = {
+    .bind = bind,
+    .listen = tcp_listen,
+    .accept = tcp_accept,
+    .connect = connect,
+    .send = send,
+    .recv = recv,
 };
 
-struct handle_ops g_udp_ops = {
-    .getname        = &socket_getname,
-    .open           = &udp_open,
-    .read           = &udp_receive,
-    .write          = &udp_send,
-    .delete         = &socket_delete,
-    .close          = &socket_close,
-    .attrquerybyhdl = &socket_attrquerybyhdl,
-    .attrsetbyhdl   = &socket_attrsetbyhdl,
+static struct socket_ops g_udp_sock_ops = {
+    .bind = bind,
+    .connect = connect,
+    .send = send,
+    .recv = recv,
 };
 
-struct handle_ops g_udpsrv_ops = {
-    .getname        = &socket_getname,
-    .open           = &udp_open,
-    .readbyaddr     = &udp_receivebyaddr,
-    .writebyaddr    = &udp_sendbyaddr,
-    .delete         = &socket_delete,
-    .close          = &socket_close,
-    .attrquerybyhdl = &socket_attrquerybyhdl,
-    .attrsetbyhdl   = &socket_attrsetbyhdl,
+static struct handle_ops g_tcp_handle_ops = {
+    .attrquerybyhdl = attrquerybyhdl,
+    .attrsetbyhdl = attrsetbyhdl_tcp,
+    .delete = delete_tcp,
+    .close = close,
 };
+
+static struct handle_ops g_udp_handle_ops = {
+    .attrquerybyhdl = attrquerybyhdl,
+    .attrsetbyhdl = attrsetbyhdl_udp,
+    .delete = delete_udp,
+    .close = close,
+};
+
+/* God have mercy on us all. */
+void serialize_socket_handle(const PAL_HANDLE handle, const void** data_out, size_t* data_len_out) {
+    if (handle->sock.ops == &g_tcp_sock_ops) {
+        *data_out = "a";
+        *data_len_out = 1;
+    } else if (handle->sock.ops == &g_udp_sock_ops) {
+        *data_out = "b";
+        *data_len_out = 1;
+    } else {
+        BUG();
+    }
+}
+
+void deserialize_socket_handle(PAL_HANDLE handle, const char* data) {
+    switch (*data) {
+        case 'a':
+            handle->sock.ops = &g_tcp_sock_ops;
+            handle->hdr.ops = &g_tcp_handle_ops;
+            break;
+        case 'b':
+            handle->sock.ops = &g_udp_sock_ops;
+            handle->hdr.ops = &g_udp_handle_ops;
+            break;
+        default:
+            BUG();
+    }
+}
+
+int _DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
+    if (!handle->sock.ops->bind) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    return handle->sock.ops->bind(handle, addr);
+}
+
+int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog) {
+    if (!handle->sock.ops->listen) {
+        return -PAL_ERROR_INVAL;
+    }
+    return handle->sock.ops->listen(handle, backlog);
+}
+
+int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+                    struct pal_socket_addr* client_addr) {
+    if (!handle->sock.ops->accept) {
+        return -PAL_ERROR_INVAL;
+    }
+    return handle->sock.ops->accept(handle, options, client_ptr, client_addr);
+}
+
+int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                     struct pal_socket_addr* local_addr) {
+    if (!handle->sock.ops->connect) {
+        return -PAL_ERROR_INVAL;
+    }
+    return handle->sock.ops->connect(handle, addr, local_addr);
+}
+
+int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                  struct pal_socket_addr* addr) {
+    if (!handle->sock.ops->send) {
+        return -PAL_ERROR_INVAL;
+    }
+    return handle->sock.ops->send(handle, iov, iov_len, size_out, addr);
+}
+
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                  struct pal_socket_addr* addr) {
+    if (!handle->sock.ops->recv) {
+        return -PAL_ERROR_INVAL;
+    }
+    return handle->sock.ops->recv(handle, iov, iov_len, size_out, addr);
+}

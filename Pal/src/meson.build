@@ -12,6 +12,7 @@ pal_common_sources = files(
     'db_object.c',
     'db_process.c',
     'db_rtld.c',
+    'db_sockets.c',
     'db_streams.c',
     'db_threading.c',
     'pal_error.c',

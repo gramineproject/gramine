@@ -30,15 +30,20 @@ static int unix_to_pal_error_positive(int unix_errno) {
         case EEXIST:
         case EADDRINUSE:
             return PAL_ERROR_STREAMEXIST;
+        case EADDRNOTAVAIL:
+            return PAL_ERROR_ADDRNOTEXIST;
         case ENOTDIR:
             return PAL_ERROR_STREAMISFILE;
         case EINVAL:
             return PAL_ERROR_INVAL;
+        case EMSGSIZE:
         case ENAMETOOLONG:
             return PAL_ERROR_TOOLONG;
         case EISDIR:
             return PAL_ERROR_STREAMISDIR;
+        case ECONNABORTED:
         case ECONNRESET:
+        case ECONNREFUSED:
             return PAL_ERROR_CONNFAILED;
         case EPIPE:
             return PAL_ERROR_CONNFAILED_PIPE;

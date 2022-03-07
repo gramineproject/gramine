@@ -122,7 +122,14 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us)
             continue;
         }
 
-        if (!hdl->pal_handle) {
+        PAL_HANDLE pal_handle;
+        if (hdl->type == TYPE_SOCK) {
+            pal_handle = __atomic_load_n(&hdl->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+        } else {
+            pal_handle = hdl->pal_handle;
+        }
+
+        if (!pal_handle) {
             fds[i].revents = POLLNVAL;
             nrevents++;
             continue;
@@ -144,7 +151,7 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us)
         get_handle(hdl);
         fds_mapping[i].hdl = hdl;
         fds_mapping[i].idx = pal_cnt;
-        pals[pal_cnt] = hdl->pal_handle;
+        pals[pal_cnt] = pal_handle;
         pal_events[pal_cnt] = allowed_events;
         ret_events[pal_cnt] = 0;
         pal_cnt++;

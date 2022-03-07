@@ -6,7 +6,6 @@
 #include <asm/errno.h>
 #include <asm/ioctls.h>
 #include <asm/mman.h>
-#include <asm/socket.h>
 #include <limits.h>
 #include <linux/futex.h>
 #include <linux/in.h>
@@ -319,6 +318,48 @@ static long sgx_ocall_futex(void* pms) {
     return ret;
 }
 
+static long sgx_ocall_socket(void* pms) {
+    ms_ocall_socet_t* ms = pms;
+    return DO_SYSCALL(socket, ms->ms_family, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
+}
+
+static long sgx_ocall_bind(void* pms) {
+    ms_ocall_bind_t* ms = pms;
+    int ret = DO_SYSCALL(bind, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    struct sockaddr_storage addr = { 0 };
+    int addrlen = sizeof(addr);
+    ret = DO_SYSCALL(getsockname, ms->ms_fd, &addr, &addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    switch (addr.ss_family) {
+        case AF_INET:;
+            struct sockaddr_in* ip_addr = (void*)&addr;
+            ms->ms_new_port = ip_addr->sin_port;
+            break;
+        case AF_INET6:;
+            struct sockaddr_in6* ip6_addr = (void*)&addr;
+            ms->ms_new_port = ip6_addr->sin6_port;
+            break;
+        default:
+            log_error("%s: unknown address family: %d", __func__, addr.ss_family);
+            DO_SYSCALL(exit_group, 1);
+            die_or_inf_loop();
+    }
+
+    return 0;
+}
+
+static long sgx_ocall_listen_simple(void* pms) {
+    ms_ocall_listen_simple_t* ms = pms;
+    return DO_SYSCALL(listen, ms->ms_fd, ms->ms_backlog);
+}
+
 static long sgx_ocall_listen(void* pms) {
     ms_ocall_listen_t* ms = (ms_ocall_listen_t*)pms;
     long ret;
@@ -464,6 +505,23 @@ err_fd:
     DO_SYSCALL(close, fd);
 err:
     return ret;
+}
+
+static long sgx_ocall_connect_simple(void* pms) {
+    ms_ocall_connect_simple_t* ms = pms;
+    int ret = DO_SYSCALL(connect, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    int addrlen = sizeof(*ms->ms_addr);
+    ret = DO_SYSCALL(getsockname, ms->ms_fd, ms->ms_addr, &addrlen);
+    if (ret < 0) {
+        return ret;
+    }
+
+    ms->ms_addrlen = addrlen;
+    return 0;
 }
 
 static long sgx_ocall_recv(void* pms) {
@@ -700,9 +758,13 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_CLONE_THREAD]             = sgx_ocall_clone_thread,
     [OCALL_CREATE_PROCESS]           = sgx_ocall_create_process,
     [OCALL_FUTEX]                    = sgx_ocall_futex,
+    [OCALL_SOCKET]                   = sgx_ocall_socket,
+    [OCALL_BIND]                     = sgx_ocall_bind,
+    [OCALL_LISTEN_SIMPLE]            = sgx_ocall_listen_simple,
     [OCALL_LISTEN]                   = sgx_ocall_listen,
     [OCALL_ACCEPT]                   = sgx_ocall_accept,
     [OCALL_CONNECT]                  = sgx_ocall_connect,
+    [OCALL_CONNECT_SIMPLE]           = sgx_ocall_connect_simple,
     [OCALL_RECV]                     = sgx_ocall_recv,
     [OCALL_SEND]                     = sgx_ocall_send,
     [OCALL_SETSOCKOPT]               = sgx_ocall_setsockopt,
