@@ -59,6 +59,8 @@ int handle_set_cloexec(PAL_HANDLE handle, bool enable);
 /* serialize/deserialize a handle into/from a malloc'ed buffer */
 int handle_serialize(PAL_HANDLE handle, void** data);
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size);
+void serialize_socket_handle(const PAL_HANDLE handle, const void** data_out, size_t* data_len_out);
+void deserialize_socket_handle(PAL_HANDLE handle, const char* data);
 
 void init_child_process(int parent_stream_fd, PAL_HANDLE* parent, char** manifest_out,
                         uint64_t* instance_id);

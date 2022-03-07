@@ -6,15 +6,6 @@
 #include "pal_error.h"
 #include "pal_regression.h"
 
-#define CHECK(x) ({                                                     \
-    __typeof__(x) _x = (x);                                             \
-    if (_x < 0) {                                                       \
-        pal_printf("Error at line %u, pal_errno: %d\n", __LINE__, _x);  \
-        DkProcessExit(1);                                               \
-    }                                                                   \
-    _x;                                                                 \
-})
-
 static void wait_for(int* ptr, int val) {
     while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != val) {
         CPU_RELAX();

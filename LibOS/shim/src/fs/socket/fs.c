@@ -1,186 +1,159 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
-
-/*
- * This file contains code for implementation of the `socket` filesystem.
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
 #include <asm/fcntl.h>
-#include <errno.h>
 
+#include "api.h"
 #include "pal.h"
+#include "perm.h"
 #include "shim_fs.h"
-#include "shim_internal.h"
 #include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_signal.h"
+#include "shim_socket.h"
 #include "stat.h"
 
-int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm) {
-    assert(locked(&g_dcache_lock));
-    assert(!dent->inode);
-
-    struct shim_inode* inode = get_new_inode(dent->mount, S_IFSOCK, perm);
-    if (!inode)
-        return -ENOMEM;
-
-    inode->fs = &socket_builtin_fs;
-
-    dent->inode = inode;
+static int close(struct shim_handle* handle) {
+    assert(handle->type == TYPE_SOCK);
+    if (lock_created(&handle->info.sock.lock)) {
+        destroy_lock(&handle->info.sock.lock);
+    }
+    if (lock_created(&handle->info.sock.recv_lock)) {
+        destroy_lock(&handle->info.sock.recv_lock);
+    }
+    /* No need for atomics - we are releaseing the last reference, nothing can access it anymore. */
+    if (handle->info.sock.pal_handle) {
+        DkObjectClose(handle->info.sock.pal_handle);
+    }
     return 0;
 }
 
-static int socket_close(struct shim_handle* hdl) {
-    /* XXX: Shouldn't this do something? */
-    __UNUSED(hdl);
+static ssize_t read(struct shim_handle* handle, void* buf, size_t size, file_off_t* pos) {
+    __UNUSED(pos);
+    struct iovec iov = {
+        .iov_base = buf,
+        .iov_len = size,
+    };
+    return do_recvmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/NULL, /*flags=*/0);
+}
+
+static ssize_t write(struct shim_handle* handle, const void* buf, size_t size, file_off_t* pos) {
+    __UNUSED(pos);
+    struct iovec iov = {
+        .iov_base = (void*)buf,
+        .iov_len = size,
+    };
+    return do_sendmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/0, /*flags=*/0);
+}
+
+static ssize_t readv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                     file_off_t* pos) {
+    __UNUSED(pos);
+    return do_recvmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/NULL, /*flags=*/0);
+}
+
+static ssize_t writev(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                      file_off_t* pos) {
+    __UNUSED(pos);
+    return do_sendmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/0, /*flags=*/0);
+}
+
+static int hstat(struct shim_handle* handle, struct stat* stat) {
+    __UNUSED(handle);
+    assert(stat);
+
+    memset(stat, 0, sizeof(*stat));
+
+    /* TODO: what do we put in `dev` and `ino`? */
+    stat->st_dev = 0;
+    stat->st_ino = 0;
+    stat->st_mode = S_IFSOCK | PERM_rwxrwxrwx;
+    stat->st_nlink = 1;
+    stat->st_blksize = PAGE_SIZE;
+
+    /* TODO: maybe set `st_size` - query PAL for pending size? */
+
     return 0;
 }
 
-static ssize_t socket_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
-    assert(hdl->type == TYPE_SOCK);
-    __UNUSED(pos);
+static int setflags(struct shim_handle* handle, int flags) {
+    assert(handle->type == TYPE_SOCK);
 
-    struct shim_sock_handle* sock = &hdl->info.sock;
-
-    lock(&hdl->lock);
-
-    if (sock->sock_type == SOCK_STREAM && sock->sock_state != SOCK_ACCEPTED &&
-        sock->sock_state != SOCK_CONNECTED && sock->sock_state != SOCK_BOUNDCONNECTED) {
-        sock->error = ENOTCONN;
-        unlock(&hdl->lock);
-        return -ENOTCONN;
+    if (!WITHIN_MASK(flags, O_NONBLOCK)) {
+        return -EINVAL;
     }
 
-    if (sock->sock_type == SOCK_DGRAM && sock->sock_state != SOCK_CONNECTED &&
-        sock->sock_state != SOCK_BOUNDCONNECTED) {
-        sock->error = EDESTADDRREQ;
-        unlock(&hdl->lock);
-        return -EDESTADDRREQ;
+    bool nonblocking = flags & O_NONBLOCK;
+
+    PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+    if (!pal_handle) {
+        log_warning("Trying to set flags on not bound / not connected UNIX socket. This is not "
+                    "supported in Gramine.");
+        return -EINVAL;
     }
-
-    unlock(&hdl->lock);
-
-    size_t orig_count = count;
-    int ret = DkStreamRead(hdl->pal_handle, 0, &count, buf, NULL, 0);
-    ret = pal_to_unix_errno(ret);
-    maybe_epoll_et_trigger(hdl, ret, /*in=*/true, ret == 0 ? count < orig_count : false);
-    if (ret < 0) {
-        lock(&hdl->lock);
-        sock->error = -ret;
-        unlock(&hdl->lock);
-        return ret;
-    }
-
-    return (ssize_t)count;
-}
-
-static ssize_t socket_write(struct shim_handle* hdl, const void* buf, size_t count,
-                            file_off_t* pos) {
-    assert(hdl->type == TYPE_SOCK);
-    __UNUSED(pos);
-
-    struct shim_sock_handle* sock = &hdl->info.sock;
-
-    lock(&hdl->lock);
-
-    if (sock->sock_type == SOCK_STREAM && sock->sock_state != SOCK_ACCEPTED &&
-        sock->sock_state != SOCK_CONNECTED && sock->sock_state != SOCK_BOUNDCONNECTED) {
-        sock->error = ENOTCONN;
-        unlock(&hdl->lock);
-        return -ENOTCONN;
-    }
-
-    if (sock->sock_type == SOCK_DGRAM && sock->sock_state != SOCK_CONNECTED &&
-        sock->sock_state != SOCK_BOUNDCONNECTED) {
-        sock->error = EDESTADDRREQ;
-        unlock(&hdl->lock);
-        return -EDESTADDRREQ;
-    }
-
-    unlock(&hdl->lock);
-
-    size_t orig_count = count;
-    int ret = DkStreamWrite(hdl->pal_handle, 0, &count, (void*)buf, NULL);
-    ret = pal_to_unix_errno(ret);
-    maybe_epoll_et_trigger(hdl, ret, /*in=*/false, ret == 0 ? count < orig_count : false);
-    if (ret < 0) {
-        if (ret == -EPIPE) {
-            siginfo_t info = {
-                .si_signo = SIGPIPE,
-                .si_pid = g_process.pid,
-                .si_code = SI_USER,
-            };
-            if (kill_current_proc(&info) < 0) {
-                log_error("socket_write: failed to deliver a signal");
-            }
-        }
-
-        lock(&hdl->lock);
-        sock->error = -ret;
-        unlock(&hdl->lock);
-        return ret;
-    }
-
-    return (ssize_t)count;
-}
-
-static int socket_hstat(struct shim_handle* hdl, struct stat* stat) {
-    if (!stat)
-        return 0;
 
     PAL_STREAM_ATTR attr;
-
-    int ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
+    int ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
-    memset(stat, 0, sizeof(struct stat));
-
-    stat->st_ino  = 0;
-    stat->st_size = (off_t)attr.pending_size;
-    stat->st_mode = S_IFSOCK;
-
-    return 0;
-}
-
-static int socket_setflags(struct shim_handle* hdl, int flags) {
-    if (!hdl->pal_handle)
-        return 0;
-
-    PAL_STREAM_ATTR attr;
-
-    int ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-
-    if (attr.nonblocking) {
-        if (flags & O_NONBLOCK)
-            return 0;
-
-        attr.nonblocking = false;
+    if (attr.nonblocking != nonblocking) {
+        attr.nonblocking = nonblocking;
+        ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
+        ret = pal_to_unix_errno(ret);
     } else {
-        if (!(flags & O_NONBLOCK))
-            return 0;
-
-        attr.nonblocking = true;
+        ret = 0;
     }
 
-    ret = DkStreamAttributesSetByHandle(hdl->pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
+    return ret;
+}
 
+static int checkout(struct shim_handle* handle) {
+    assert(handle->type == TYPE_SOCK);
+    struct shim_sock_handle* sock = &handle->info.sock;
+    sock->ops = NULL;
+    clear_lock(&sock->lock);
+    clear_lock(&sock->recv_lock);
+    /* XXX: this should actually copy the data, but:
+     * - we cannot take `sock->recv_lock` here, because we already hold `handle->lock`,
+     * - we have no way of allocating memory in the checkpointing blob here. */
+    sock->peek.buf = NULL;
+    sock->peek.buf_size = 0;
+    sock->peek.data_size = 0;
+    return 0;
+}
+
+static int checkin(struct shim_handle* handle) {
+    assert(handle->type == TYPE_SOCK);
+    struct shim_sock_handle* sock = &handle->info.sock;
+    switch (sock->domain) {
+        case AF_UNIX:
+            sock->ops = &sock_unix_ops;
+            break;
+        case AF_INET:
+        case AF_INET6:
+            sock->ops = &sock_ip_ops;
+            break;
+        default:
+            BUG();
+    }
+    if (!create_lock(&sock->lock) || !create_lock(&sock->recv_lock)) {
+        return -ENOMEM;
+    }
     return 0;
 }
 
 struct shim_fs_ops socket_fs_ops = {
-    .close    = &socket_close,
-    .read     = &socket_read,
-    .write    = &socket_write,
-    .hstat    = &socket_hstat,
-    .setflags = &socket_setflags,
+    .close    = close,
+    .read     = read,
+    .write    = write,
+    .readv    = readv,
+    .writev   = writev,
+    .hstat    = hstat,
+    .setflags = setflags,
+    .checkout = checkout,
+    .checkin  = checkin,
 };
 
 struct shim_fs socket_builtin_fs = {

@@ -1,6 +1,8 @@
 PAL host ABI
 ============
 
+TODO: This document is outdated and needs a proper review.
+
 PAL Host ABI is the interface used by Gramine to interact with its host. It is translated into
 the host's native ABI (e.g. system calls for UNIX) by a layer called the Platform Adaptation Layer
 (PAL). A PAL not only exports a set of APIs (PAL APIs) that can be called by the library OS, but
@@ -230,6 +232,44 @@ Flags used for stream manipulation
 
 .. doxygentypedef:: pal_wait_flags_t
    :project: pal
+
+
+Socket handling
+^^^^^^^^^^^^^^^
+
+.. doxygenenum:: pal_socket_domain
+   :project: pal
+
+.. doxygenenum:: pal_socket_type
+   :project: pal
+
+.. doxygenstruct:: pal_socket_addr
+   :project: pal
+
+.. doxygenstruct:: pal_iovec
+   :project: pal
+
+.. doxygenfunction:: DkSocketCreate
+   :project: pal
+
+.. doxygenfunction:: DkSocketBind
+   :project: pal
+
+.. doxygenfunction:: DkSocketListen
+   :project: pal
+
+.. doxygenfunction:: DkSocketAccept
+   :project: pal
+
+.. doxygenfunction:: DkSocketConnect
+   :project: pal
+
+.. doxygenfunction:: DkSocketSend
+   :project: pal
+
+.. doxygenfunction:: DkSocketRecv
+   :project: pal
+
 
 Thread creation
 ^^^^^^^^^^^^^^^
