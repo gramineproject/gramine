@@ -363,7 +363,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     }
     spinlock_unlock(&g_trusted_file_lock);
 
-    chunk_hashes = malloc(sizeof(sgx_chunk_hash_t) * DIV_ROUND_UP(tf->size, TRUSTED_CHUNK_SIZE));
+    chunk_hashes = malloc(sizeof(sgx_chunk_hash_t) * UDIV_ROUND_UP(tf->size, TRUSTED_CHUNK_SIZE));
     if (!chunk_hashes) {
         ret = -PAL_ERROR_NOMEM;
         goto fail;

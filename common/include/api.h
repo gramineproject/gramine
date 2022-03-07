@@ -77,12 +77,15 @@ typedef ptrdiff_t ssize_t;
         (((x) & ((x) - 1)) == 0); \
     })
 
-#define DIV_ROUND_UP(n,d)               (((n) + (d) - 1) / (d))
+/* Safe against overflows. May be slower than `(((n) + (d) - 1) / (d))` (which is not
+ * overflow-safe!), but hopefully the compiler will merge division and modulo into one
+ * instruction. */
+#define UDIV_ROUND_UP(n, d)             ((n) / (d) + !!((n) % (d)))
 
 #define BITS_IN_BYTE                    8
 #define BITS_IN_TYPE(type)              (sizeof(type) * BITS_IN_BYTE)
-#define BITS_TO_UINT32S(nr)             DIV_ROUND_UP(nr, BITS_IN_TYPE(uint32_t))
-#define BITS_TO_LONGS(nr)               DIV_ROUND_UP(nr, BITS_IN_TYPE(long))
+#define BITS_TO_UINT32S(nr)             UDIV_ROUND_UP(nr, BITS_IN_TYPE(uint32_t))
+#define BITS_TO_LONGS(nr)               UDIV_ROUND_UP(nr, BITS_IN_TYPE(long))
 /* Note: This macro is not intended for use when nbits == BITS_IN_TYPE(type) */
 #define SET_HIGHEST_N_BITS(type, nbits) (~(((uint64_t)1 << (BITS_IN_TYPE(type) - (nbits))) - 1))
 #define WITHIN_MASK(val, mask) (((val) | (mask)) == (mask))
