@@ -34,8 +34,6 @@
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
 
-#include "certs.h"
-
 /* RA-TLS: on client, only need to register ra_tls_verify_callback() for cert verification */
 int (*ra_tls_verify_callback_f)(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
 
@@ -121,6 +119,7 @@ int main(int argc, char** argv) {
     unsigned char buf[1024];
     const char* pers = "ssl_client1";
     bool in_sgx = getenv_client_inside_sgx();
+    const char* ca_crt_path = "ssl/ca.crt";
 
     char* error;
     void* ra_tls_verify_lib           = NULL;
@@ -311,10 +310,9 @@ int main(int argc, char** argv) {
     mbedtls_printf("  . Loading the CA root certificate ...");
     fflush(stdout);
 
-    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*)mbedtls_test_cas_pem,
-                                 sizeof(mbedtls_test_cas_pem));
+    ret = mbedtls_x509_crt_parse_file(&cacert, ca_crt_path);
     if (ret < 0) {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", -ret );
         goto exit;
     }
 
