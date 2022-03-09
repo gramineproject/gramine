@@ -34,7 +34,10 @@ ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count) {
     if (hdl->is_dir)
         return -EISDIR;
 
-    return fs->fs_ops->read(hdl, buf, count);
+    lock(&hdl->pos_lock);
+    ssize_t ret = fs->fs_ops->read(hdl, buf, count, &hdl->pos);
+    unlock(&hdl->pos_lock);
+    return ret;
 }
 
 long shim_do_read(int fd, void* buf, size_t count) {
@@ -72,7 +75,10 @@ ssize_t do_handle_write(struct shim_handle* hdl, const void* buf, size_t count) 
     if (hdl->is_dir)
         return -EISDIR;
 
-    return fs->fs_ops->write(hdl, buf, count);
+    lock(&hdl->pos_lock);
+    ssize_t ret = fs->fs_ops->write(hdl, buf, count, &hdl->pos);
+    unlock(&hdl->pos_lock);
+    return ret;
 }
 
 long shim_do_write(int fd, const void* buf, size_t count) {
@@ -166,6 +172,7 @@ static file_off_t do_lseek_dir(struct shim_handle* hdl, off_t offset, int origin
     assert(hdl->is_dir);
 
     lock(&g_dcache_lock);
+    lock(&hdl->pos_lock);
     lock(&hdl->lock);
 
     file_off_t ret;
@@ -186,6 +193,7 @@ static file_off_t do_lseek_dir(struct shim_handle* hdl, off_t offset, int origin
 
 out:
     unlock(&hdl->lock);
+    unlock(&hdl->pos_lock);
     unlock(&g_dcache_lock);
     return ret;
 }
@@ -219,11 +227,11 @@ out:
     return ret;
 }
 
-long shim_do_pread64(int fd, char* buf, size_t count, loff_t pos) {
+long shim_do_pread64(int fd, char* buf, size_t count, loff_t offset) {
     if (!is_user_memory_writable(buf, count))
         return -EFAULT;
 
-    if (pos < 0)
+    if (offset < 0)
         return -EINVAL;
 
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
@@ -254,33 +262,18 @@ long shim_do_pread64(int fd, char* buf, size_t count, loff_t pos) {
         goto out;
     }
 
-    int offset = fs->fs_ops->seek(hdl, 0, SEEK_CUR);
-    if (offset < 0) {
-        ret = offset;
-        goto out;
-    }
-
-    ret = fs->fs_ops->seek(hdl, pos, SEEK_SET);
-    if (ret < 0)
-        goto out;
-
-    int bytes = fs->fs_ops->read(hdl, buf, count);
-
-    ret = fs->fs_ops->seek(hdl, offset, SEEK_SET);
-    if (ret < 0)
-        goto out;
-
-    ret = bytes;
+    file_off_t pos = offset;
+    ret = fs->fs_ops->read(hdl, buf, count, &pos);
 out:
     put_handle(hdl);
     return ret;
 }
 
-long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t pos) {
+long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t offset) {
     if (!is_user_memory_readable(buf, count))
         return -EFAULT;
 
-    if (pos < 0)
+    if (offset < 0)
         return -EINVAL;
 
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
@@ -311,23 +304,8 @@ long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t pos) {
         goto out;
     }
 
-    int offset = fs->fs_ops->seek(hdl, 0, SEEK_CUR);
-    if (offset < 0) {
-        ret = offset;
-        goto out;
-    }
-
-    ret = fs->fs_ops->seek(hdl, pos, SEEK_SET);
-    if (ret < 0)
-        goto out;
-
-    int bytes = fs->fs_ops->write(hdl, buf, count);
-
-    ret = fs->fs_ops->seek(hdl, offset, SEEK_SET);
-    if (ret < 0)
-        goto out;
-
-    ret = bytes;
+    file_off_t pos = offset;
+    ret = fs->fs_ops->write(hdl, buf, count, &pos);
 out:
     put_handle(hdl);
     return ret;
@@ -375,6 +353,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     }
 
     lock(&g_dcache_lock);
+    lock(&hdl->pos_lock);
     lock(&hdl->lock);
 
     struct shim_dir_handle* dirhdl = &hdl->dir_info;
@@ -382,7 +361,6 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         goto out;
 
     size_t buf_pos = 0;
-    assert(hdl->pos >= 0);
     while ((size_t)hdl->pos < dirhdl->count) {
         struct shim_dentry* dent = dirhdl->dents[hdl->pos];
         assert(dent->inode);
@@ -462,6 +440,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     ret = buf_pos;
 out:
     unlock(&hdl->lock);
+    unlock(&hdl->pos_lock);
     unlock(&g_dcache_lock);
 out_no_unlock:
     put_handle(hdl);

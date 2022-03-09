@@ -342,6 +342,11 @@ struct shim_handle* get_new_handle(void) {
         free_mem_obj_to_mgr(handle_mgr, new_handle);
         return NULL;
     }
+    if (!create_lock(&new_handle->pos_lock)) {
+        destroy_lock(&new_handle->lock);
+        free_mem_obj_to_mgr(handle_mgr, new_handle);
+        return NULL;
+    }
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
     return new_handle;
@@ -470,6 +475,7 @@ void get_handle(struct shim_handle* hdl) {
 
 static void destroy_handle(struct shim_handle* hdl) {
     destroy_lock(&hdl->lock);
+    destroy_lock(&hdl->pos_lock);
 
     free_mem_obj_to_mgr(handle_mgr, hdl);
 }
@@ -712,6 +718,7 @@ BEGIN_CP_FUNC(handle) {
         new_hdl->dentry = NULL;
         REF_SET(new_hdl->ref_count, 0);
         clear_lock(&new_hdl->lock);
+        clear_lock(&new_hdl->pos_lock);
 
         DO_CP(fs, hdl->fs, &new_hdl->fs);
 
@@ -789,6 +796,10 @@ BEGIN_RS_FUNC(handle) {
     CP_REBASE(hdl->epoll_items);
 
     if (!create_lock(&hdl->lock)) {
+        return -ENOMEM;
+    }
+
+    if (!create_lock(&hdl->pos_lock)) {
         return -ENOMEM;
     }
 

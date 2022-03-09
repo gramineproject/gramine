@@ -210,7 +210,7 @@ static int tmpfs_chmod(struct shim_dentry* dent, mode_t perm) {
     return 0;
 }
 
-static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
+static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size, file_off_t* pos) {
     ssize_t ret;
 
     assert(hdl->type == TYPE_TMPFS);
@@ -218,15 +218,14 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
     struct shim_inode* inode = hdl->inode;
 
     lock(&inode->lock);
-    lock(&hdl->lock);
 
     struct shim_mem_file* mem = inode->data;
 
-    ret = mem_file_read(mem, hdl->pos, buf, size);
+    ret = mem_file_read(mem, *pos, buf, size);
     if (ret < 0)
         goto out;
 
-    hdl->pos += ret;
+    *pos += ret;
 
     /* technically, we should update access time here, but we skip this because it could hurt
      * performance on Linux-SGX host */
@@ -234,12 +233,11 @@ static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size) {
     /* keep `ret` */
 
 out:
-    unlock(&hdl->lock);
     unlock(&inode->lock);
     return ret;
 }
 
-static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size) {
+static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size, file_off_t* pos) {
     ssize_t ret;
 
     assert(hdl->type == TYPE_TMPFS);
@@ -251,21 +249,19 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
     struct shim_inode* inode = hdl->inode;
 
     lock(&inode->lock);
-    lock(&hdl->lock);
     struct shim_mem_file* mem = inode->data;
 
-    ret = mem_file_write(mem, hdl->pos, buf, size);
+    ret = mem_file_write(mem, *pos, buf, size);
     if (ret < 0)
         goto out;
 
     inode->size = mem->size;
 
-    hdl->pos += ret;
+    *pos += ret;
     inode->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
 out:
-    unlock(&hdl->lock);
     unlock(&inode->lock);
     return ret;
 }

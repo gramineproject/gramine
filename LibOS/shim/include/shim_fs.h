@@ -33,11 +33,39 @@ struct shim_fs_ops {
     /* close: clean up the file state inside the handle */
     int (*close)(struct shim_handle* hdl);
 
-    /* read: the content from the file opened as handle */
-    ssize_t (*read)(struct shim_handle* hdl, void* buf, size_t count);
+    /*
+     * \brief Read from file.
+     *
+     * \param         hdl    File handle.
+     * \param         buf    Buffer to read into.
+     * \param         count  Size of `buffer`.
+     * \param[in,out] pos    Position at which to start reading. Might be updated on success.
+     *
+     * \returns Number of bytes read on success, negative error code on failure.
+     *
+     * This callback updates `*pos` if the file is seekable (e.g. not a pipe or socket).
+     *
+     * TODO: Callers should make sure that `count` doesn't overflow `ssize_t`, and `*pos + count`
+     * doesn't overflow `file_off_t`.
+     */
+    ssize_t (*read)(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos);
 
-    /* write: the content from the file opened as handle */
-    ssize_t (*write)(struct shim_handle* hdl, const void* buf, size_t count);
+    /*
+     * \brief Write to file.
+     *
+     * \param         hdl    File handle.
+     * \param         buf    Buffer to write from.
+     * \param         count  Size of `buffer`.
+     * \param[in,out] pos    Position at which to start writing. Might be updated on success.
+     *
+     * \returns Number of bytes written on success, negative error code on failure.
+     *
+     * This callback updates `*pos` if the file is seekable (e.g. not a pipe or socket).
+     *
+     * TODO: Callers should make sure that `count` doesn't overflow `ssize_t`, and `*pos + count`
+     * doesn't overflow `file_off_t`.
+     */
+    ssize_t (*write)(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos);
 
     /* mmap: mmap handle to address */
     int (*mmap)(struct shim_handle* hdl, void** addr, size_t size, int prot, int flags,

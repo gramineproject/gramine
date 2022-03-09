@@ -11,10 +11,8 @@
  * finished.
  */
 
-#define _POSIX_C_SOURCE 200809L /* for SSIZE_MAX */
 #include <asm/mman.h>
 #include <errno.h>
-#include <limits.h>
 #include <linux/fcntl.h>
 
 #include "pal.h"
@@ -297,85 +295,40 @@ static int chroot_flush(struct shim_handle* hdl) {
     return pal_to_unix_errno(ret);
 }
 
-static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
-    ssize_t ret;
-
-    if (count > SSIZE_MAX)
-        return -EFBIG;
-
-    struct shim_inode* inode = hdl->inode;
-    lock(&hdl->lock);
-
-    file_off_t pos = hdl->pos;
-
-    /* Make sure we won't overflow `pos` */
-    file_off_t max_end_pos;
-    if (inode->type == S_IFREG && __builtin_add_overflow(pos, count, &max_end_pos)) {
-        ret = -EFBIG;
-        goto out;
-    }
-
     size_t actual_count = count;
-    ret = DkStreamRead(hdl->pal_handle, pos, &actual_count, buf, /*source=*/NULL, /*size=*/0);
+    int ret = DkStreamRead(hdl->pal_handle, *pos, &actual_count, buf, /*source=*/NULL, /*size=*/0);
     if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
+        return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
-    if (inode->type == S_IFREG) {
-        hdl->pos += actual_count;
+    if (hdl->inode->type == S_IFREG) {
+        *pos += actual_count;
     }
-    ret = actual_count;
-
-out:
-    unlock(&hdl->lock);
-    return ret;
+    return actual_count;
 }
 
-static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t count) {
+static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t count,
+                            file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
-    ssize_t ret;
-
-    if (count > SSIZE_MAX)
-        return -EFBIG;
-
-    struct shim_inode* inode = hdl->inode;
-    lock(&inode->lock);
-    lock(&hdl->lock);
-
-    file_off_t pos = hdl->pos;
-
-    /* Make sure we won't overflow `pos` */
-    file_off_t max_end_pos;
-    if (inode->type == S_IFREG && __builtin_add_overflow(pos, count, &max_end_pos)) {
-        ret = -EFBIG;
-        goto out;
-    }
-
     size_t actual_count = count;
-    ret = DkStreamWrite(hdl->pal_handle, pos, &actual_count, (void*)buf, /*dest=*/NULL);
+    int ret = DkStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf, /*dest=*/NULL);
     if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
+        return pal_to_unix_errno(ret);
     }
-    assert(count <= actual_count);
-    if (inode->type == S_IFREG) {
-        pos += actual_count;
-        hdl->pos = pos;
-
+    assert(actual_count <= count);
+    if (hdl->inode->type == S_IFREG) {
+        *pos += actual_count;
         /* Update file size if we just wrote past the end of file */
-        if (inode->size < pos)
-            inode->size = pos;
+        lock(&hdl->inode->lock);
+        if (hdl->inode->size < *pos)
+            hdl->inode->size = *pos;
+        unlock(&hdl->inode->lock);
     }
-    ret = actual_count;
-
-out:
-    unlock(&hdl->lock);
-    unlock(&inode->lock);
-    return ret;
+    return actual_count;
 }
 
 static int chroot_mmap(struct shim_handle* hdl, void** addr, size_t size, int prot, int flags,

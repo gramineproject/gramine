@@ -547,20 +547,11 @@ static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, 
     if (!file)
         return -EINVAL;
 
-    if (!file->fs || !file->fs->fs_ops)
+    if (!file->fs || !file->fs->fs_ops || !file->fs->fs_ops->read)
         return -EACCES;
 
-    ssize_t (*read)(struct shim_handle*, void*, size_t)      = file->fs->fs_ops->read;
-    file_off_t (*seek)(struct shim_handle*, file_off_t, int) = file->fs->fs_ops->seek;
-
-    if (!read || !seek)
-        return -EACCES;
-
-    file_off_t seek_ret = seek(file, offset, SEEK_SET);
-    if (seek_ret < 0)
-        return seek_ret;
-
-    ssize_t read_ret = read(file, buf, size);
+    ssize_t pos = offset;
+    ssize_t read_ret = file->fs->fs_ops->read(file, buf, size, &pos);
     if (read_ret < 0)
         return read_ret;
 

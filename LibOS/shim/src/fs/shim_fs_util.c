@@ -92,8 +92,8 @@ int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf) {
 file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin) {
     file_off_t ret;
 
+    lock(&hdl->pos_lock);
     lock(&hdl->inode->lock);
-    lock(&hdl->lock);
     file_off_t pos = hdl->pos;
     file_off_t size = hdl->inode->size;
 
@@ -102,16 +102,16 @@ file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int or
         hdl->pos = pos;
         ret = pos;
     }
-    unlock(&hdl->lock);
     unlock(&hdl->inode->lock);
+    unlock(&hdl->pos_lock);
     return ret;
 }
 
 int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
     int ret;
 
+    lock(&hdl->pos_lock);
     lock(&hdl->inode->lock);
-    lock(&hdl->lock);
 
     if (hdl->inode->type == S_IFREG) {
         ret = 0;
@@ -126,7 +126,7 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
         ret = -EAGAIN;
     }
 
-    unlock(&hdl->lock);
     unlock(&hdl->inode->lock);
+    unlock(&hdl->pos_lock);
     return ret;
 }

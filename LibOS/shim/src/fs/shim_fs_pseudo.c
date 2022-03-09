@@ -299,15 +299,15 @@ static int pseudo_readdir(struct shim_dentry* dent, readdir_callback_t callback,
     return 0;
 }
 
-static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size) {
+static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size, file_off_t* pos) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
-            ssize_t ret = mem_file_read(&hdl->info.str.mem, hdl->pos, buf, size);
+            ssize_t ret = mem_file_read(&hdl->info.str.mem, *pos, buf, size);
             if (ret > 0)
-                hdl->pos += ret;
+                *pos += ret;
             unlock(&hdl->lock);
             return ret;
         }
@@ -322,15 +322,16 @@ static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size) {
     }
 }
 
-static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t size) {
+static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t size,
+                            file_off_t* pos) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
-            ssize_t ret = mem_file_write(&hdl->info.str.mem, hdl->pos, buf, size);
+            ssize_t ret = mem_file_write(&hdl->info.str.mem, *pos, buf, size);
             if (ret > 0) {
-                hdl->pos += ret;
+                *pos += ret;
                 hdl->info.str.dirty = true;
             }
             unlock(&hdl->lock);
@@ -455,9 +456,11 @@ static int pseudo_poll(struct shim_handle* hdl, int poll_type) {
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
+            lock(&hdl->pos_lock);
             lock(&hdl->lock);
             int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, poll_type);
             unlock(&hdl->lock);
+            unlock(&hdl->pos_lock);
             return ret;
         }
 

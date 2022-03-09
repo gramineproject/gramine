@@ -84,8 +84,10 @@ int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd
     return 0;
 }
 
-static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_PIPE);
+    __UNUSED(pos);
+
     if (!hdl->info.pipe.ready_for_ops)
         return -EACCES;
 
@@ -100,8 +102,10 @@ static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count) {
     return (ssize_t)count;
 }
 
-static ssize_t pipe_write(struct shim_handle* hdl, const void* buf, size_t count) {
+static ssize_t pipe_write(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_PIPE);
+    __UNUSED(pos);
+
     if (!hdl->info.pipe.ready_for_ops)
         return -EACCES;
 

@@ -29,6 +29,8 @@ long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen
     if (!hdl)
         return -EBADF;
 
+    lock(&hdl->pos_lock);
+
     int ret = 0;
 
     if (hdl->is_dir) {
@@ -42,12 +44,11 @@ long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen
     }
 
     ssize_t bytes = 0;
-
     for (size_t i = 0; i < vlen; i++) {
         if (!vec[i].iov_base)
             continue;
 
-        ssize_t b_vec = hdl->fs->fs_ops->read(hdl, vec[i].iov_base, vec[i].iov_len);
+        ssize_t b_vec = hdl->fs->fs_ops->read(hdl, vec[i].iov_base, vec[i].iov_len, &hdl->pos);
         if (b_vec < 0) {
             ret = bytes ?: b_vec;
             goto out;
@@ -58,6 +59,7 @@ long shim_do_readv(unsigned long fd, const struct iovec* vec, unsigned long vlen
 
     ret = bytes;
 out:
+    unlock(&hdl->pos_lock);
     put_handle(hdl);
     if (ret == -EINTR) {
         ret = -ERESTARTSYS;
@@ -97,6 +99,8 @@ long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vle
     if (!hdl)
         return -EBADF;
 
+    lock(&hdl->pos_lock);
+
     int ret = 0;
 
     if (hdl->is_dir) {
@@ -115,7 +119,7 @@ long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vle
         if (!vec[i].iov_base)
             continue;
 
-        ssize_t b_vec = hdl->fs->fs_ops->write(hdl, vec[i].iov_base, vec[i].iov_len);
+        ssize_t b_vec = hdl->fs->fs_ops->write(hdl, vec[i].iov_base, vec[i].iov_len, &hdl->pos);
         if (b_vec < 0) {
             ret = bytes ?: b_vec;
             goto out;
@@ -126,6 +130,7 @@ long shim_do_writev(unsigned long fd, const struct iovec* vec, unsigned long vle
 
     ret = bytes;
 out:
+    unlock(&hdl->pos_lock);
     put_handle(hdl);
     if (ret == -EINTR) {
         ret = -ERESTARTSYS;

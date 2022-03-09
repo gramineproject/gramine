@@ -186,7 +186,7 @@ struct shim_handle {
      */
     struct shim_inode* inode;
 
-    /* Offset in file */
+    /* Offset in file. Protected by `pos_lock`. */
     file_off_t pos;
 
     /* This list contains `shim_epoll_item` objects this handle is part of. All accesses should be
@@ -229,6 +229,11 @@ struct shim_handle {
     int flags; /* Linux' O_* flags */
     int acc_mode;
     struct shim_lock lock;
+
+    /* Lock for handle position (`pos`). Intended for operations that change the position (e.g.
+     * `read`, `seek` but not `pread`). This lock should be taken *before* `shim_handle.lock` and
+     * `shim_inode.lock`. */
+    struct shim_lock pos_lock;
 };
 
 /* allocating / manage handle */

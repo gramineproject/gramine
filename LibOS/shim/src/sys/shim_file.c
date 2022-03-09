@@ -432,11 +432,7 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
 
     /* FIXME: This sendfile() emulation is very simple and not particularly efficient: it reads from
      *        input FD in BUF_SIZE chunks and writes into output FD. Mmap-based emulation may be
-     *        more efficient but adds complexity (not all handle types provide mmap callback).
-     *
-     *        Also, since this emulation relies on the `read()` callback, performing sendfile from
-     *        one thread and reads from another thread will lead to discrepancies in copied data.
-     *        For proper emulation, a `read()` callback with explicit offsets is needed. */
+     *        more efficient but adds complexity (not all handle types provide mmap callback). */
     buf = malloc(BUF_SIZE);
     if (!buf) {
         ret = -ENOMEM;
@@ -448,24 +444,27 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
         goto out;
     }
 
-    file_off_t old_offset = 0;
-
+    /*
+     * If `offset` is not NULL, we use `*offset` as starting offset for reading, and update
+     * `*offset` afterwards (and keep the offset in input handle unchanged).
+     *
+     * If `offset` is NULL, we use the offset in input handle, and update it afterwards.
+     */
+    file_off_t pos_in = 0;
     if (offset) {
         if (!in_hdl->fs->fs_ops->seek) {
             ret = -ESPIPE;
             goto out;
         }
-
-        old_offset = in_hdl->fs->fs_ops->seek(in_hdl, 0, SEEK_CUR);
-        if (old_offset < 0) {
-            ret = old_offset;
+        pos_in = *offset;
+        if (pos_in < 0) {
+            ret = -EINVAL;
             goto out;
         }
-
-        ret = in_hdl->fs->fs_ops->seek(in_hdl, *offset, SEEK_SET);
-        if (ret < 0) {
-            goto out;
-        }
+    } else {
+        lock(&in_hdl->pos_lock);
+        pos_in = in_hdl->pos;
+        unlock(&in_hdl->pos_lock);
     }
 
     int mode = out_hdl->flags & O_ACCMODE;
@@ -478,10 +477,10 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     while (copied_to_out < count) {
         size_t to_copy = count - copied_to_out > BUF_SIZE ? BUF_SIZE : count - copied_to_out;
 
-        ssize_t x = in_hdl->fs->fs_ops->read(in_hdl, buf, to_copy);
+        ssize_t x = in_hdl->fs->fs_ops->read(in_hdl, buf, to_copy, &pos_in);
         if (x < 0) {
             ret = x;
-            goto out;
+            goto out_update;
         }
         assert(x <= (ssize_t)to_copy);
 
@@ -492,10 +491,12 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
             break;
         }
 
-        ssize_t y = out_hdl->fs->fs_ops->write(out_hdl, buf, x);
+        lock(&out_hdl->pos_lock);
+        ssize_t y = out_hdl->fs->fs_ops->write(out_hdl, buf, x, &out_hdl->pos);
+        unlock(&out_hdl->pos_lock);
         if (y < 0) {
             ret = y;
-            goto out;
+            goto out_update;
         }
         assert(y <= x);
 
@@ -510,18 +511,19 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
         }
     }
 
-    if (offset) {
-        /* manpage: "if offset != NULL, then sendfile() does not modify file offset of in_fd..." */
-        ret = in_hdl->fs->fs_ops->seek(in_hdl, old_offset, SEEK_SET);
-        if (ret < 0) {
-            goto out;
-        }
+    ret = 0;
 
-        /* "...and the file offset will be updated by the call" */
-        *offset = *offset + read_from_in;
+out_update:
+    /* Update either `*offset` or the offset in input file (see the comment above `pos_in`
+     * declaration). Note that we do it even if one of the read/write operations failed. */
+    if (offset) {
+        *offset = pos_in;
+    } else {
+        lock(&in_hdl->pos_lock);
+        in_hdl->pos = pos_in;
+        unlock(&in_hdl->pos_lock);
     }
 
-    ret = 0;
 out:
     free(buf);
     put_handle(in_hdl);

@@ -13,7 +13,9 @@
 #include "shim_internal.h"
 #include "shim_lock.h"
 
-static ssize_t eventfd_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t eventfd_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
+    __UNUSED(pos);
+
     if (count < sizeof(uint64_t))
         return -EINVAL;
 
@@ -28,7 +30,10 @@ static ssize_t eventfd_read(struct shim_handle* hdl, void* buf, size_t count) {
     return (ssize_t)count;
 }
 
-static ssize_t eventfd_write(struct shim_handle* hdl, const void* buf, size_t count) {
+static ssize_t eventfd_write(struct shim_handle* hdl, const void* buf, size_t count,
+                             file_off_t* pos) {
+    __UNUSED(pos);
+
     if (count < sizeof(uint64_t))
         return -EINVAL;
 
