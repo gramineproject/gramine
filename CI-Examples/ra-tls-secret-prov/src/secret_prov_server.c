@@ -21,6 +21,9 @@
 #define WRAP_KEY_FILENAME "files/wrap-key"
 #define WRAP_KEY_SIZE     16
 
+#define SRV_CRT_PATH "ssl/server.crt"
+#define SRV_KEY_PATH "ssl/server.key"
+
 static pthread_mutex_t g_print_lock;
 char g_secret_pf_key_hex[WRAP_KEY_SIZE * 2 + 1];
 
@@ -143,7 +146,7 @@ int main(int argc, char** argv) {
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
     ret = secret_provision_start_server((uint8_t*)g_secret_pf_key_hex, sizeof(g_secret_pf_key_hex),
-                                        "4433", "certs/server2-sha256.crt", "certs/server2.key",
+                                        "4433", SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         communicate_with_client_callback);
     if (ret < 0) {

@@ -3,3 +3,5 @@
 /client
 /mbedtls
 /server
+/ssl/ca.*
+/ssl/server.*

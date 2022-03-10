@@ -444,7 +444,7 @@ Also, copy the server-identifying certificates so that in-Gramine secret
 provisioning library can verify the provisioning server (via classical X.509
 PKI)::
 
-   cp -R <gramine repository>/CI-Examples/ra-tls-secret-prov/certs ./
+   cp -R <gramine repository>/CI-Examples/ra-tls-secret-prov/ssl ./
 
 These certificates are dummy mbedTLS-provided certificates; in production, you
 would want to generate real certificates for your secret-provisioning server and
@@ -491,7 +491,7 @@ add-ons search for libraries in the current directory::
 Add the following lines to enable remote secret provisioning and allow protected
 files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
-re-use the same ``certs/`` directory and specify ``localhost``. For more info on
+re-use the same ``ssl/`` directory and specify ``localhost``. For more info on
 the used environment variables and other manifest options, see `here
 <https://github.com/gramineproject/gramine/tree/master/Pal/src/host/Linux-SGX/tools#secret-provisioning-libraries>`__::
 
@@ -500,12 +500,12 @@ the used environment variables and other manifest options, see `here
    loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
    loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
    loader.env.SECRET_PROVISION_SET_PF_KEY = "1"
-   loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "certs/test-ca-sha256.crt"
+   loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "ssl/ca.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
    sgx.trusted_files = [
      "file:libsecret_prov_attest.so",
-     "file:certs/test-ca-sha256.crt",
+     "file:ssl/ca.crt",
    ]
 
 The ``libsecret_prov_attest.so`` library provides the in-enclave logic to attest

@@ -13,6 +13,8 @@
 
 #define SEND_STRING "MORE"
 
+#define CA_CRT_PATH "ssl/ca.crt"
+
 int main(int argc, char** argv) {
     int ret;
     int bytes;
@@ -32,7 +34,7 @@ int main(int argc, char** argv) {
     if (!is_constructor) {
         /* secret provisioning was not run as part of initialization, run it now */
         ret = secret_provision_start("dummyserver:80;localhost:4433;anotherdummy:4433",
-                                     "certs/test-ca-sha256.crt", &ctx);
+                                     CA_CRT_PATH, &ctx);
         if (ret < 0) {
             fprintf(stderr, "[error] secret_provision_start() returned %d\n", ret);
             goto out;
