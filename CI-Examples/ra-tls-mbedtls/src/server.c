@@ -33,7 +33,6 @@
 #define mbedtls_fprintf fprintf
 #define mbedtls_printf printf
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
@@ -54,6 +53,10 @@ int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, 
 #define DEBUG_LEVEL 0
 
 #define MALICIOUS_STR "MALICIOUS DATA"
+
+#define CA_CRT_PATH "ssl/ca.crt"
+#define SRV_CRT_PATH "ssl/server.crt"
+#define SRV_KEY_PATH "ssl/server.key"
 
 static void my_debug(void* ctx, int level, const char* file, int line, const char* str) {
     ((void)level);
@@ -170,28 +173,24 @@ int main(int argc, char** argv) {
             mbedtls_printf(" ok\n");
         }
     } else {
-        /* no RA-TLS, use embedded test certificate */
         mbedtls_printf("\n  . Creating normal server cert and key...");
         fflush(stdout);
 
-        ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*)mbedtls_test_srv_crt,
-                                     mbedtls_test_srv_crt_len);
+        ret = mbedtls_x509_crt_parse_file(&srvcert, SRV_CRT_PATH);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse_file returned %d\n\n", ret);
             goto exit;
         }
 
-        ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*)mbedtls_test_cas_pem,
-                                     mbedtls_test_cas_pem_len);
+        ret = mbedtls_x509_crt_parse_file(&srvcert, CA_CRT_PATH);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse_file returned %d\n\n", ret);
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*)mbedtls_test_srv_key,
-                                   mbedtls_test_srv_key_len, NULL, 0);
+        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, /*password=*/NULL);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_pk_parse_keyfile returned %d\n\n", ret);
             goto exit;
         }
 

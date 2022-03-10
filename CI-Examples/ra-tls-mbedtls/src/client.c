@@ -38,7 +38,6 @@
 #define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
@@ -58,6 +57,8 @@ void (*ra_tls_set_measurement_callback_f)(int (*f_cb)(const char* mrenclave, con
 #define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
 
 #define DEBUG_LEVEL 0
+
+#define CA_CRT_PATH "ssl/ca.crt"
 
 static void my_debug(void* ctx, int level, const char* file, int line, const char* str) {
     ((void)level);
@@ -321,10 +322,9 @@ int main(int argc, char** argv) {
     mbedtls_printf("  . Loading the CA root certificate ...");
     fflush(stdout);
 
-    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*)mbedtls_test_cas_pem,
-                                 mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse_file(&cacert, CA_CRT_PATH);
     if (ret < 0) {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", -ret );
         goto exit;
     }
 

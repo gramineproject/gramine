@@ -3,13 +3,6 @@
 
 #include <stdint.h>
 
-#define SECRET_PROVISION_WARNING_TEST_CERTS \
-    "********************************************************************\n" \
-    "*** Secret Provisioning library detected mbedTLS test certificates *\n" \
-    "*** loaded into it. If this is a production system, please         *\n" \
-    "*** terminate this application.                                    *\n" \
-    "********************************************************************\n"
-
 /* envvars for client (attester) */
 #define SECRET_PROVISION_CONSTRUCTOR    "SECRET_PROVISION_CONSTRUCTOR"
 #define SECRET_PROVISION_CA_CHAIN_PATH  "SECRET_PROVISION_CA_CHAIN_PATH"

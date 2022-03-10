@@ -23,7 +23,6 @@
 
 #include "mbedtls/config.h"
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/error.h"
@@ -178,8 +177,6 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     if (ret < 0) {
         goto out;
     }
-    if (strstr(crt_issuer, "PolarSSL Test CA"))
-        printf("%s", SECRET_PROVISION_WARNING_TEST_CERTS);
 
     ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL);
     if (ret < 0) {
