@@ -35,10 +35,10 @@ extern verify_measurements_cb_t g_verify_measurements_cb;
 #define IAS_URL_BASE "https://api.trustedservices.intel.com/sgx/dev"
 
 /** Default URL for IAS "verify attestation evidence" API endpoint. */
-#define IAS_URL_REPORT IAS_URL_BASE "/attestation/v3/report"
+#define IAS_URL_REPORT IAS_URL_BASE "/attestation/v4/report"
 
 /** Default URL for IAS "Retrieve SigRL" API endpoint. EPID group id is added at the end. */
-#define IAS_URL_SIGRL IAS_URL_BASE "/attestation/v3/sigrl"
+#define IAS_URL_SIGRL IAS_URL_BASE "/attestation/v4/sigrl"
 
 static char* g_api_key    = NULL;
 static char* g_report_url = NULL;
@@ -125,12 +125,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     char* report_data   = NULL;
     char* sig_data      = NULL;
     char* cert_data     = NULL;
-    char* advisory_data = NULL;
 
     size_t report_data_size   = 0;
     size_t sig_data_size      = 0;
     size_t cert_data_size     = 0;
-    size_t advisory_data_size = 0;
 
     uint8_t* quote_from_ias    = NULL;
     size_t quote_from_ias_size = 0;
@@ -190,8 +188,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
 
     ret = ias_verify_quote_raw(ias, quote, quote_size, nonce, &report_data, &report_data_size,
-                               &sig_data, &sig_data_size, &cert_data, &cert_data_size,
-                               &advisory_data, &advisory_data_size);
+                               &sig_data, &sig_data_size, &cert_data, &cert_data_size);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_FATAL_ERROR;
         goto out;
@@ -219,7 +216,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
 
     /* below function verifies `isvEnclaveQuoteStatus` returned in the IAS attestation report; it
      * fails if the SGX quote is invalid or if the EPID group/private key/signature is revoked (see
-     * also https://api.trustedservices.intel.com/documents/IAS-API-Spec-rev-5.0.pdf) */
+     * https://www.intel.com/content/dam/develop/public/us/en/documents/sgx-attestation-api-spec.pdf
+     * for details) */
     ret = verify_ias_report_extract_quote((uint8_t*)report_data, report_data_size,
                                           (uint8_t*)sig_data, sig_data_size,
                                           allow_outdated_tcb, nonce,
@@ -271,7 +269,6 @@ out:
     free(report_data);
     free(sig_data);
     free(cert_data);
-    free(advisory_data);
 
     return ret;
 }

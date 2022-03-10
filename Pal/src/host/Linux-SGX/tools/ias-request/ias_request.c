@@ -17,10 +17,10 @@
 #define IAS_URL_BASE "https://api.trustedservices.intel.com/sgx/dev"
 
 /** Default URL for IAS "verify attestation evidence" API endpoint. */
-#define IAS_URL_REPORT IAS_URL_BASE "/attestation/v3/report"
+#define IAS_URL_REPORT IAS_URL_BASE "/attestation/v4/report"
 
 /** Default URL for IAS "Retrieve SigRL" API endpoint. EPID group id is added at the end. */
-#define IAS_URL_SIGRL IAS_URL_BASE "/attestation/v3/sigrl"
+#define IAS_URL_SIGRL IAS_URL_BASE "/attestation/v4/sigrl"
 
 struct option g_options[] = {
     { "help", no_argument, 0, 'h' },
@@ -32,7 +32,6 @@ struct option g_options[] = {
     { "report-path", required_argument, 0, 'r' },
     { "sig-path", required_argument, 0, 's' },
     { "cert-path", required_argument, 0, 'c' },
-    { "advisory-path", required_argument, 0, 'a' },
     { "gid", required_argument, 0, 'g' },
     { "sigrl-path", required_argument, 0, 'i' },
     { "report-url", required_argument, 0, 'R' },
@@ -61,14 +60,12 @@ static void usage(const char* exec) {
     INFO("  --sig-path, -s PATH       Path to save IAS report's signature to\n");
     INFO("  --nonce, -n STRING        Nonce to use (optional)\n");
     INFO("  --cert-path, -c PATH      Path to save IAS certificate to (optional)\n");
-    INFO("  --advisory-path, -a PATH  Path to save IAS security advisories to (optional)\n");
     INFO("  --report-url, -R URL      URL for the IAS attestation report endpoint (default:\n"
          "                            %s)\n", IAS_URL_REPORT);
 }
 
 static int report(struct ias_context_t* ias, const char* quote_path, const char* nonce,
-                  const char* report_path, const char* sig_path, const char* cert_path,
-                  const char* advisory_path) {
+                  const char* report_path, const char* sig_path, const char* cert_path) {
     int ret = -1;
     void* quote_data = NULL;
 
@@ -96,8 +93,7 @@ static int report(struct ias_context_t* ias, const char* quote_path, const char*
     }
     quote_size = sizeof(sgx_quote_t) + quote->signature_size;
 
-    ret = ias_verify_quote(ias, quote_data, quote_size, nonce, report_path, sig_path, cert_path,
-                           advisory_path);
+    ret = ias_verify_quote(ias, quote_data, quote_size, nonce, report_path, sig_path, cert_path);
     if (ret != 0) {
         ERROR("Failed to submit quote to IAS\n");
         goto out;
@@ -141,7 +137,6 @@ int main(int argc, char* argv[]) {
     char* report_path       = NULL;
     char* sig_path          = NULL;
     char* cert_path         = NULL;
-    char* advisory_path     = NULL;
     char* gid               = NULL;
     char* sigrl_path        = NULL;
     const char* report_url  = IAS_URL_REPORT;
@@ -181,9 +176,6 @@ int main(int argc, char* argv[]) {
                 break;
             case 'c':
                 cert_path = optarg;
-                break;
-            case 'a':
-                advisory_path = optarg;
                 break;
             case 'g':
                 gid = optarg;
@@ -229,7 +221,7 @@ int main(int argc, char* argv[]) {
             ERROR("Report or signature path not specified\n");
             return -1;
         }
-        return report(ias, quote_path, nonce, report_path, sig_path, cert_path, advisory_path);
+        return report(ias, quote_path, nonce, report_path, sig_path, cert_path);
     } else if (mode[0] == 's') {
         if (!sigrl_path) {
             ERROR("SigRL path not specified\n");

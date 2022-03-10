@@ -243,6 +243,22 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
             )) {
         ret = 0;
         INFO("IAS report: allowing quote status %s\n", node->valuestring);
+
+        cJSON* url_node = cJSON_GetObjectItem(json, "advisoryURL");
+        if (url_node && url_node->type == cJSON_String)
+            INFO("            [ advisory URL: %s ]\n", url_node->valuestring);
+
+        cJSON* ids_node = cJSON_GetObjectItem(json, "advisoryIDs");
+        if (ids_node && ids_node->type == cJSON_Array) {
+            char* ids_str = cJSON_Print(ids_node);
+            if (!ids_str) {
+                ERROR("IAS report: out-of-memory during reading advisoryIDs\n");
+                ret = -1;
+                goto out;
+            }
+            INFO("            [ advisory IDs: %s ]\n", ids_str);
+            free(ids_str);
+        }
     }
 
     if (ret != 0) {

@@ -54,7 +54,6 @@ int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_s
  * \param[in] report_path   (Optional) File to save IAS report to.
  * \param[in] sig_path      (Optional) File to save IAS report's signature to.
  * \param[in] cert_path     (Optional) File to save IAS certificate to.
- * \param[in] advisory_path (Optional) File to save IAS security advisories to.
  * \return 0 on success, -1 otherwise.
  *
  *  This version of the function is convenient for command-line utilities. To get raw IAS contents,
@@ -64,7 +63,7 @@ int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_s
  */
 int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t quote_size,
                      const char* nonce, const char* report_path, const char* sig_path,
-                     const char* cert_path, const char* advisory_path);
+                     const char* cert_path);
 
 /*!
  * \brief Send quote to IAS for verification (same as ias_verify_quote() but not saving to files).
@@ -79,13 +78,11 @@ int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t qu
  * \param[out] sig_data_size      (Optional) Size of allocated IAS report's signature.
  * \param[out] cert_data_ptr      (Optional) Pointer to allocated IAS certificate.
  * \param[out] cert_data_size     (Optional) Size of allocated IAS certificate.
- * \param[out] advisory_data_ptr  (Optional) Pointer to allocated IAS security advisories.
- * \param[out] advisory_data_size (Optional) Size of allocated IAS security advisories.
  * \return 0 on success, -1 otherwise.
  *
  *  This version of the function is convenient for library usage. This function allocates buffers
- *  for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr,
- *  \a cert_data_ptr and \a advisory_data_ptr. The caller is responsible for freeing them.
+ *  for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr and
+ *  \a cert_data_ptr. The caller is responsible for freeing them.
  *  To save IAS contents to files, use ias_verify_quote().
  *
  * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
@@ -93,6 +90,5 @@ int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t qu
 int ias_verify_quote_raw(struct ias_context_t* context, const void* quote, size_t quote_size,
                          const char* nonce, char** report_data_ptr, size_t* report_data_size,
                          char** sig_data_ptr, size_t* sig_data_size, char** cert_data_ptr,
-                         size_t* cert_data_size, char** advisory_data_ptr,
-                         size_t* advisory_data_size);
+                         size_t* cert_data_size);
 #endif /* _IAS_H */

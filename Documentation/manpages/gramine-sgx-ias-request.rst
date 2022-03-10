@@ -85,10 +85,6 @@ Commands
 
       Path to save IAS certificate to (optional).
 
-   .. option:: -a, --advisory-path
-
-      Path to save IAS security advisories to (optional).
-
    .. option:: -R, --report-url
 
       URL for the IAS attestation report endpoint (optional).
@@ -107,7 +103,7 @@ Examples
 
 .. code-block:: sh
 
-    $ gramine-sgx-ias-request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -a ias.adv -v
+    $ gramine-sgx-ias-request report -k $IAS_API_KEY -q gr.quote -r ias.report -s ias.sig -c ias.cert -v
     Verbose output enabled
     IAS request:
     {"isvEnclaveQuote":"AgABAO8..."}
@@ -116,7 +112,6 @@ Examples
     IAS report saved to: ias.report
     IAS report signature saved to: ias.sig
     IAS certificate saved to: ias.cert
-    IAS advisory saved to: ias.adv
     IAS submission successful
 
     $ cat ias.report

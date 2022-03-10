@@ -40,10 +40,6 @@ struct ias_request_resp {
     size_t signature_size;    /*!< size of \a signature string */
     char* certificate;        /*!< x-iasreport-signing-certificate data, NULL terminated string */
     size_t certificate_size;  /*!< size of \a certificate string */
-    char* advisory_url;       /*!< Advisory-URL data, NULL terminated string */
-    size_t advisory_url_size; /*!< size of \a advisory_url string */
-    char* advisory_ids;       /*!< Advisory-IDs data, NULL terminated string */
-    size_t advisory_ids_size; /*!< size of \a advisory_ids string */
     char* data;               /*!< response data */
     size_t data_size;         /*!< size of \a data field */
 };
@@ -100,10 +96,7 @@ static void urldecode(const char* src, char* dst) {
  */
 static size_t header_callback(char* buffer, size_t size, size_t count, void* context) {
     const char* sig_hdr = "x-iasreport-signature: "; // header containing IAS signature
-    const char* cert_hdr =
-        "x-iasreport-signing-certificate: "; // header containing IAS certificate
-    const char* adv_url_hdr = "Advisory-URL: "; // header containing URL to IAS security advisories
-    const char* adv_ids_hdr = "Advisory-IDs: "; // header containing security advisory IDs
+    const char* cert_hdr = "x-iasreport-signing-certificate: "; // header containing IAS certificate
     size_t total_size = size * count;
     struct ias_request_resp* resp_data = context;
     char** save_to;
@@ -120,14 +113,6 @@ static size_t header_callback(char* buffer, size_t size, size_t count, void* con
         save_to = &resp_data->certificate;
         save_to_size = &resp_data->certificate_size;
         hdr_len = strlen(cert_hdr);
-    } else if (!strncasecmp(buffer, adv_url_hdr, strlen(adv_url_hdr))) {
-        save_to = &resp_data->advisory_url;
-        save_to_size = &resp_data->advisory_url_size;
-        hdr_len = strlen(adv_url_hdr);
-    } else if (!strncasecmp(buffer, adv_ids_hdr, strlen(adv_ids_hdr))) {
-        save_to = &resp_data->advisory_ids;
-        save_to_size = &resp_data->advisory_ids_size;
-        hdr_len = strlen(adv_ids_hdr);
     } else {
         /* don't save */
         return total_size;
@@ -475,7 +460,7 @@ out:
 
 int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t quote_size,
                      const char* nonce, const char* report_path, const char* sig_path,
-                     const char* cert_path, const char* advisory_path) {
+                     const char* cert_path) {
     int ret;
     struct ias_request_resp ias_resp = {0};
 
@@ -514,33 +499,6 @@ int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t qu
         DBG("IAS certificate saved to: %s\n", cert_path);
     }
 
-    if (advisory_path) {
-        ret = remove(advisory_path);
-        if (ret != 0 && errno != ENOENT) {
-            ERROR("Failed to overwrite %s: %s\n", advisory_path, strerror(errno));
-            goto out;
-        }
-
-        if (ias_resp.advisory_url_size > 0) {
-            ret = append_file(advisory_path, ias_resp.advisory_url_size, ias_resp.advisory_url);
-            if (ret != 0) {
-                ERROR("Failed to write IAS advisory URL to %s: %s\n", advisory_path,
-                      strerror(errno));
-                goto out;
-            }
-        }
-
-        if (ias_resp.advisory_ids_size > 0) {
-            ret = append_file(advisory_path, ias_resp.advisory_ids_size, ias_resp.advisory_ids);
-            if (ret != 0) {
-                ERROR("Failed to write IAS advisory IDs to %s: %s\n", advisory_path,
-                      strerror(errno));
-                goto out;
-            }
-        }
-        DBG("IAS advisory saved to: %s\n", advisory_path);
-    }
-
     /* body_callback and header_callback always add terminating \0, but
      * don't count it in respective resp_data->*_size, finalize the process
      */
@@ -553,8 +511,6 @@ out:
     /* cleanup */
     free(ias_resp.signature);
     free(ias_resp.certificate);
-    free(ias_resp.advisory_url);
-    free(ias_resp.advisory_ids);
     free(ias_resp.data);
 
     return ret;
@@ -563,15 +519,13 @@ out:
 int ias_verify_quote_raw(struct ias_context_t* context, const void* quote, size_t quote_size,
                          const char* nonce, char** report_data_ptr, size_t* report_data_size,
                          char** sig_data_ptr, size_t* sig_data_size, char** cert_data_ptr,
-                         size_t* cert_data_size, char** advisory_data_ptr,
-                         size_t* advisory_data_size) {
+                         size_t* cert_data_size) {
     int ret;
     struct ias_request_resp ias_resp = {0};
 
     char* report_data   = NULL;
     char* sig_data      = NULL;
     char* cert_data     = NULL;
-    char* advisory_data = NULL;
 
     ret = ias_send_request(context, &ias_resp, quote, quote_size, nonce);
     if (ret < 0) {
@@ -632,48 +586,18 @@ int ias_verify_quote_raw(struct ias_context_t* context, const void* quote, size_
         *cert_data_size = ias_resp.certificate_size;
     }
 
-    if (advisory_data_ptr) {
-        assert(advisory_data_size);
-
-        *advisory_data_ptr  = NULL;
-        *advisory_data_size = 0;
-
-        if (ias_resp.advisory_url_size > 0 || ias_resp.advisory_ids_size > 0) {
-            size_t dummy_size_t_int;
-            if (__builtin_add_overflow(ias_resp.advisory_url_size, ias_resp.advisory_ids_size,
-                                       &dummy_size_t_int)) {
-                ERROR("Sum of sizes of IAS advisory URL and advisory IDs overflows\n");
-                goto out;
-            }
-            advisory_data = malloc(ias_resp.advisory_url_size + ias_resp.advisory_ids_size);
-            if (!advisory_data) {
-                ERROR("Failed to allocate memory for IAS advisory URL and IDs\n");
-                goto out;
-            }
-            memcpy(advisory_data, ias_resp.advisory_url, ias_resp.advisory_url_size);
-            memcpy(advisory_data + ias_resp.advisory_url_size, ias_resp.advisory_ids,
-                   ias_resp.advisory_ids_size);
-
-            *advisory_data_ptr  = advisory_data;
-            *advisory_data_size = ias_resp.advisory_url_size + ias_resp.advisory_ids_size;
-        }
-    }
-
     ret = 0;
 
 out:
     /* cleanup */
     free(ias_resp.signature);
     free(ias_resp.certificate);
-    free(ias_resp.advisory_url);
-    free(ias_resp.advisory_ids);
     free(ias_resp.data);
 
     if (ret < 0) {
         free(report_data);
         free(sig_data);
         free(cert_data);
-        free(advisory_data);
     }
 
     return ret;
