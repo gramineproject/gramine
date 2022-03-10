@@ -162,8 +162,6 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     if (ret < 0) {
         goto out;
     }
-    if (strstr(crt_issuer, "PolarSSL Test CA"))
-        printf("%s", SECRET_PROVISION_WARNING_TEST_CERTS);
 
     mbedtls_ssl_conf_authmode(&g_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_ca_chain(&g_conf, &g_verifier_ca_chain, NULL);
