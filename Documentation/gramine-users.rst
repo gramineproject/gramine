@@ -27,3 +27,10 @@ alphabetically).
   implement several SGX-based solutions by running unmodified Linux
   applications. One example is the recent launch of the Tencent Cloud
   Shuliantong product, announced at the Tencent Digital Ecosystem Summit.
+
+- The national digital health agency `gematik <https://www.gematik.de/>`__ is
+  responsible for the *ePrescription* project in Germany. `IBM
+  <https://www.ibm.com/>`__ uses Gramine to implement the "VAU"-concept on SGX
+  to ensure a maximum of privacy and request-context isolation. The VAU-concept
+  is used for confidential computing in different implementations as well, such
+  as the electronic health record.
