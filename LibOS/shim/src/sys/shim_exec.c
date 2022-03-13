@@ -95,7 +95,7 @@ error:
     process_exit(/*error_code=*/0, /*term_signal=*/SIGKILL);
 }
 
-static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const char** envp) {
+static int shim_do_execve_rtld(struct shim_handle* hdl, char** argv, const char** envp) {
     struct shim_thread* cur_thread = get_cur_thread();
     int ret;
 
@@ -119,12 +119,20 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
 
     const char** new_argp;
     elf_auxv_t* new_auxv;
-    ret = init_stack(argv, envp, &new_argp, &new_auxv);
+
+    /* TODO: init_stack() and its call chain have a wrong signature for `argv`; for now explicitly
+     *       cast it to the expected type to silence compiler warnings */
+    ret = init_stack((const char**)argv, envp, &new_argp, &new_auxv);
     if (ret < 0)
         return ret;
 
     /* We are done using this handle and we got the ownership from the caller. */
     put_handle(hdl);
+
+    /* We copied the arguments on the stack and we got the ownership from the caller (note that
+     * *argv was allocated as a single object -- concatenation of all argv strings). */
+    free(*argv);
+    free(argv);
 
     __shim_do_execve_rtld(new_argp, new_auxv);
     /* UNREACHABLE */
@@ -159,19 +167,9 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    if (!(exec = get_new_handle())) {
-        return -ENOMEM;
-    }
-
-    if ((ret = open_executable(exec, file)) < 0) {
-        put_handle(exec);
-        return ret;
-    }
-
-    /* TODO: consider handling shebangs, if necessary */
-    if ((ret = check_elf_object(exec)) < 0) {
-        log_warning("file not recognized as ELF");
-        put_handle(exec);
+    char** new_argv = NULL;
+    ret = load_and_check_exec(file, argv, &exec, &new_argv);
+    if (ret < 0) {
         return ret;
     }
 
@@ -188,8 +186,8 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
      * instance and call execve again. */
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
-    /* Passing ownership of `exec`. */
-    ret = shim_do_execve_rtld(exec, argv, envp);
+    /* Passing ownership of `exec` and `new_argv`. */
+    ret = shim_do_execve_rtld(exec, new_argv, envp);
     assert(ret < 0);
 
     put_handle(exec);

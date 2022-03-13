@@ -214,6 +214,14 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('execve(invalid-argv) correctly returned error', stdout)
         self.assertIn('execve(invalid-envp) correctly returned error', stdout)
 
+    @unittest.skipIf(USES_MUSL, 'Test uses /bin/sh from the host which is built against Glibc')
+    def test_211_exec_script(self):
+        stdout, _ = self.run_binary(['exec_script'])
+        self.assertIn('Printing Args: '
+            'scripts/baz.sh ECHO FOXTROT GOLF scripts/bar.sh '
+            'ALPHA BRAVO CHARLIE DELTA '
+            'scripts/foo.sh STRING FROM EXECVE', stdout)
+
     def test_220_send_handle(self):
         path = 'tmp/send_handle_test'
         try:

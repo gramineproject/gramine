@@ -21,6 +21,7 @@ tests = {
     'exec_fork': {},
     'exec_invalid_args': {},
     'exec_same': {},
+    'exec_script': {},
     'exec_victim': {},
     'exit': {},
     'exit_group': {},

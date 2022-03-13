@@ -28,8 +28,9 @@ sgx.debug = true
 
 sgx.allowed_files = [
   "file:tmp/",
-  "file:root", # for getdents test
+  "file:root",     # for getdents test
   "file:testfile", # for mmap_file test
+  "file:scripts/", # for exec_script test
 ]
 
 sgx.trusted_files = [
@@ -39,6 +40,7 @@ sgx.trusted_files = [
   "file:/usr{{ arch_libdir }}/libstdc++.so.6",
   "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ binary_dir }}/exec_victim",
+  "file:/bin/sh",
 ]
 
 sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"

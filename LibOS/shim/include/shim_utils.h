@@ -37,6 +37,8 @@ int init_elf_objects(void);
 int check_elf_object(struct shim_handle* file);
 int load_elf_object(struct shim_handle* file, struct link_map** out_map);
 int load_elf_interp(struct link_map* exec_map);
+int load_and_check_exec(const char* path, const char** argv, struct shim_handle** out_exec,
+                        char*** out_new_argv);
 noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp);
 void remove_loaded_elf_objects(void);
 int init_brk_from_executable(struct link_map* exec_map);
