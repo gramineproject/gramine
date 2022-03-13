@@ -214,6 +214,13 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('execve(invalid-argv) correctly returned error', stdout)
         self.assertIn('execve(invalid-envp) correctly returned error', stdout)
 
+    def test_211_exec_nonelf(self):
+        stdout, _ = self.run_binary(['exec_nonelf'])
+        self.assertIn('Printing Args: '
+            'scripts/baz.sh ECHO FOXTROT GOLF scripts/bar.sh '
+            'ALPHA BRAVO CHARLIE DELTA '
+            'scripts/foo.sh', stdout)
+
     def test_220_send_handle(self):
         path = 'tmp/send_handle_test'
         try:
