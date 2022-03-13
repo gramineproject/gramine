@@ -132,6 +132,7 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
 
 long shim_do_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
+    const char** new_argv = NULL;
 
     if (!is_user_string_readable(file))
         return -EFAULT;
@@ -159,19 +160,8 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    if (!(exec = get_new_handle())) {
-        return -ENOMEM;
-    }
-
-    if ((ret = open_executable(exec, file)) < 0) {
-        put_handle(exec);
-        return ret;
-    }
-
-    /* TODO: consider handling shebangs, if necessary */
-    if ((ret = check_elf_object(exec)) < 0) {
-        log_warning("file not recognized as ELF");
-        put_handle(exec);
+    ret = check_and_load_exec(&exec, file, argv, &new_argv);
+    if (ret < 0) {
         return ret;
     }
 
@@ -189,7 +179,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec`. */
-    ret = shim_do_execve_rtld(exec, argv, envp);
+    ret = shim_do_execve_rtld(exec, new_argv ? new_argv : argv, envp);
     assert(ret < 0);
 
     put_handle(exec);
