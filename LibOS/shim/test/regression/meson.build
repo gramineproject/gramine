@@ -20,6 +20,7 @@ tests = {
     'exec': {},
     'exec_fork': {},
     'exec_invalid_args': {},
+    'exec_nonelf': {},
     'exec_same': {},
     'exec_victim': {},
     'exit': {},
