@@ -560,7 +560,38 @@ static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, 
     return 0;
 }
 
-static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
+int check_and_load_shebang(struct shim_handle* file, char* interpreter) {
+    const char* errstring = NULL;
+    char shebang[BINPRM_BUF_SIZE];
+    int ret = read_file_fragment(file, shebang, sizeof(shebang), /*offset=*/0);
+    
+    if ((shebang[0] != '#') || (shebang[1] != '!')) {
+        errstring = "Failed to read shebang line from %s";
+        ret = -ENOEXEC;
+        goto err;
+    }
+    else {
+         for (size_t i=2; shebang[i] != '\n'; i++) {
+            interpreter[i-2] = shebang[i];
+            interpreter[i-1] = '\0';
+        }
+        log_debug("Interpreter to be used %s", interpreter);
+    }
+
+    return 0;
+
+err:;
+    char* path = NULL;
+    if (file->dentry) {
+        // This may fail, but we are already inside a more serious error handler.
+        dentry_abs_path(file->dentry, &path, /*size=*/NULL);
+    }
+    log_error(errstring, path ? path : "(unknown)");
+    free(path);
+    return ret;
+}
+
+static int load_elf_header(struct shim_handle* file, ElfW(Ehdr)* ehdr) {
     const char* errstring = NULL;
     int ret = read_file_fragment(file, ehdr, sizeof(*ehdr), /*offset=*/0);
     if (ret < 0) {

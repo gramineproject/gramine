@@ -7,6 +7,7 @@
 #define ERESTARTSYS     512 /* Usual case - restart if SA_RESTART is set. */
 #define ERESTARTNOINTR  513 /* Always restart. */
 #define ERESTARTNOHAND  514 /* Restart if no signal handler. */
+#define BINPRM_BUF_SIZE 256 /* Default shebang size */
 
 /* Internal LibOS stack size: 7 pages + one guard page normally, 15 pages + one guard page when ASan
  * is enabled (stack sanitization causes functions to take up more space). */

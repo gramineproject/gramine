@@ -159,20 +159,32 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    if (!(exec = get_new_handle())) {
-        return -ENOMEM;
-    }
+    while (1)
+    {
+        if (!(exec = get_new_handle())) {
+            return -ENOMEM;
+        }
 
-    if ((ret = open_executable(exec, file)) < 0) {
-        put_handle(exec);
-        return ret;
-    }
+        if ((ret = open_executable(exec, file)) < 0) {
+            put_handle(exec);
+            return ret;
+        }
 
-    /* TODO: consider handling shebangs, if necessary */
-    if ((ret = check_elf_object(exec)) < 0) {
-        log_warning("file not recognized as ELF");
-        put_handle(exec);
-        return ret;
+        if ((ret = check_elf_object(exec)) < 0) {
+            log_warning("file not recognized as ELF, look for shebang");
+            char interp_path[BINPRM_BUF_SIZE];
+            if((ret = check_and_load_shebang(exec, interp_path)) < 0)
+            {
+                put_handle(exec);
+                return ret;
+            }
+            file = interp_path;
+            const char* args[] = {file, *argv, NULL};
+            argv = args;
+            put_handle(exec);
+            continue;
+        }
+        break;
     }
 
     /* If `execve` is invoked concurrently by multiple threads, let only one succeed. From this
