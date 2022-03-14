@@ -158,7 +158,7 @@ if sgx
                 '../../../../Pal/src/host/Linux-SGX/enclave_api.S',
             ],
 
-            'dependencies': mbedtls_dep,
+            'dependencies': mbedtls_static_dep,
         },
     }
 endif

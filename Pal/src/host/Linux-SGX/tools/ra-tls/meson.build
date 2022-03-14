@@ -1,3 +1,7 @@
+# Link mbedtls statically to Gramine-provided libraries, e.g., RA-TLS and Secret Provisioning
+# libraries. This is because they are loaded dynamically to users' software and we don't want our
+# patched mbedtls to collide with libraries the program already uses.
+
 libra_tls_inc = include_directories('.')
 
 ra_tls_args = [
@@ -9,7 +13,7 @@ libra_tls_attest = shared_library('ra_tls_attest',
     c_args: ra_tls_args,
     include_directories: sgx_inc,
     dependencies: [
-        mbedtls_dep,
+        mbedtls_static_dep,
     ],
     install: true,
     install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
@@ -28,7 +32,7 @@ libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
     include_directories: sgx_inc,
     dependencies: [
         sgx_util_dep,
-        mbedtls_dep,
+        mbedtls_static_dep,
     ],
     install: true,
     install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
@@ -48,7 +52,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
     c_args: ra_tls_args,
     include_directories: sgx_inc,
     dependencies: [
-        mbedtls_dep,
+        mbedtls_static_dep,
         sgx_util_dep,
     ],
     install: true,
@@ -72,7 +76,7 @@ libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
     dependencies: [
         threads_dep,
         sgx_util_dep,
-        mbedtls_dep,
+        mbedtls_static_dep,
     ],
     install: true,
     install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
@@ -93,7 +97,7 @@ if dcap
         dependencies: [
             sgx_dcap_quoteverify_dep,
             sgx_util_dep,
-            mbedtls_dep,
+            mbedtls_static_dep,
         ],
         install: true,
         install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
@@ -114,7 +118,7 @@ if dcap
         dependencies: [
             sgx_dcap_quoteverify_dep,
             sgx_util_dep,
-            mbedtls_dep,
+            mbedtls_static_dep,
         ],
         install: true,
         install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
@@ -138,7 +142,7 @@ if dcap
             threads_dep,
             sgx_dcap_quoteverify_dep,
             sgx_util_dep,
-            mbedtls_dep,
+            mbedtls_static_dep,
         ],
         install: true,
         install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
