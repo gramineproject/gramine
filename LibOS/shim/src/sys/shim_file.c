@@ -445,16 +445,10 @@ long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     }
 
     /*
-     * `man sendfile` says:
+     * If `offset` is not NULL, we use `*offset` as starting offset for reading, and update
+     * `*offset` afterwards (and keep the offset in input handle unchanged).
      *
-     *     If `offset` is not NULL, then it points to a variable holding the file offset from which
-     *     sendfile() will start reading data from `in_fd`. When `sendfile()` returns, this variable
-     *     will be set to the offset of the byte following the last byte that was read. If `offset`
-     *     is not NULL, then `sendfile()` does not modify the file offset of `in_fd`; otherwise the
-     *     file offset is adjusted to reflect the number of bytes read from `in_fd`.
-     *
-     *     If `offset` is NULL, then data will be read from `in_fd` starting at the file offset, and
-     *     the file offset will be updated by the call.
+     * If `offset` is NULL, we use the offset in input handle, and update it afterwards.
      */
     file_off_t pos_in = 0;
     if (offset) {
