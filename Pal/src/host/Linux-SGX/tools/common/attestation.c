@@ -253,6 +253,7 @@ int verify_ias_report_extract_quote(const uint8_t* ias_report, size_t ias_report
             char* ids_str = cJSON_Print(ids_node);
             if (!ids_str) {
                 ERROR("IAS report: out-of-memory during reading advisoryIDs\n");
+                ret = -1;
                 goto out;
             }
             INFO("            [ advisory IDs: %s ]\n", ids_str);
