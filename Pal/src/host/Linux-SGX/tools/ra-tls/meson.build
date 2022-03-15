@@ -1,7 +1,6 @@
-# Link mbedtls statically to Gramine-provided libraries, e.g., RA-TLS and secret
-# provisioning libraries.
-# This is because they are loaded dynamically to users' software and we don't
-# want our patched mbedtls to collide with libraries the program already uses.
+# Link mbedtls statically to Gramine-provided libraries, e.g., RA-TLS and Secret Provisioning
+# libraries. This is because they are loaded dynamically to users' software and we don't want our
+# patched mbedtls to collide with libraries the program already uses.
 
 libra_tls_inc = include_directories('.')
 
