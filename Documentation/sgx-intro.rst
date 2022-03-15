@@ -63,7 +63,7 @@ Official Documentation
 
 - `Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 3D:
   System Programming Guide, Part 4
-  <https://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-vol-3d-part-4-manual.html>`__
+  <https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3d-part-4-manual.pdf>`__
 - `SDK for Linux <https://01.org/intel-software-guard-extensions/downloads>`__
   (download of both the binaries and the documentation)
 
