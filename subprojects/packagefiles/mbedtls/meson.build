@@ -9,6 +9,9 @@ mbedtls_libs_output = [
     'libmbedtls_gramine.so',
     'libmbedx509_gramine.so.1',
     'libmbedx509_gramine.so',
+    'libmbedcrypto_gramine.a',
+    'libmbedtls_gramine.a',
+    'libmbedx509_gramine.a',
 ]
 
 # TODO: This is custom_target, because we need to patch mbedtls before compiling.
@@ -48,28 +51,6 @@ pkgconfig.generate(
     ],
 )
 
-mbedtls_static_libs = custom_target('mbedtls_static',
-    command: [
-        find_program('compile-gramine.sh'),
-        '@CURRENT_SOURCE_DIR@',
-        meson.current_build_dir(),
-        '@PRIVATE_DIR@',
-        '@OUTPUT@',
-        '--',
-        'SUFFIX=_gramine',
-    ],
-
-    input: ['Makefile', 'gramine.patch'],
-
-    output: [
-        'libmbedcrypto_gramine.a',
-        'libmbedtls_gramine.a',
-        'libmbedx509_gramine.a',
-    ],
-
-    build_by_default: true,
-)
-
 foreach output : mbedtls_libs_output
     meson.add_install_script('/bin/sh', '-c',
         ('ln -sf ../../../@0@ ' +
@@ -101,13 +82,8 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
 
 mbedtls_inc = include_directories('include')
 
-mbedtls_dep = declare_dependency(
-    link_with: [mbedtls_libs[1], mbedtls_libs[3], mbedtls_libs[5]],
-    include_directories: mbedtls_inc,
-    compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-gramine.h"',
-)
 mbedtls_static_dep = declare_dependency(
-    link_with: [mbedtls_static_libs[0], mbedtls_static_libs[1], mbedtls_static_libs[2]],
+    link_with: [mbedtls_libs[6], mbedtls_libs[7], mbedtls_libs[8]],
     include_directories: mbedtls_inc,
     compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-gramine.h"',
 )

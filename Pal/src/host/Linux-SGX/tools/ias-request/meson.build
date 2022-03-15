@@ -3,7 +3,6 @@ executable('gramine-sgx-ias-request',
 
     dependencies: [
         sgx_util_dep,
-        mbedtls_dep,
     ],
 
     install: true,

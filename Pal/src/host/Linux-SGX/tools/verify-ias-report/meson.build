@@ -3,7 +3,6 @@ executable('gramine-sgx-ias-verify-report',
 
     dependencies: [
         sgx_util_dep,
-        mbedtls_dep,
     ],
 
     install: true,

@@ -3,7 +3,6 @@ executable('gramine-sgx-pf-tamper',
 
     dependencies: [
         sgx_util_dep,
-        mbedtls_dep,
         protected_files_dep,
     ],
 
