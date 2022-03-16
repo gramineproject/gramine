@@ -83,7 +83,6 @@ Table of Contents
    manpages/*
 
 .. TODO manpages:
-   gramine-argv-serializer
    gramine-direct
    gramine-sgx
 

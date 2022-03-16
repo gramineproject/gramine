@@ -132,7 +132,7 @@ or
 If you want your application to use commandline arguments you need to either set
 ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases) or point
 ``loader.argv_src_file`` to a file containing output of
-:program:`gramine-argv-serializer`.
+:ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or a
 protected file. The former allows to securely hardcode arguments (current
@@ -178,9 +178,10 @@ environment variable from the host, specify a TOML table with the key-value pair
 value or be a passthrough.
 
 ``loader.env_src_file`` allows to specify a URI to a file containing serialized
-environment, which can be generated using :program:`gramine-argv-serializer`.
-This option is intended to point to either a trusted file or a protected file.
-The former allows to securely hardcode environments (in a more flexible way than
+environment, which can be generated using
+:ref:`gramine-argv-serializer<gramine-argv-serializer>`. This option is intended
+to point to either a trusted file or a protected file. The former allows to
+securely hardcode environments (in a more flexible way than
 ``loader.env.[ENVIRON]`` option), the latter allows the environments to be
 provided at runtime from an external (trusted) source.
 

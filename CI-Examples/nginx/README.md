@@ -26,14 +26,18 @@ make SGX=1
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
-# run Nginx in non-SGX Gramine against HTTP and HTTPS benchmarks
-gramine-direct ./nginx -c conf/nginx-gramine.conf &
+# Run Nginx in non-SGX Gramine against HTTP and HTTPS benchmarks.
+# Note: The command-line arguments are passed using `loader.argv_src_file`
+# manifest option.
+gramine-direct ./nginx &
 ../common_tools/benchmark-http.sh 127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
-# run Nginx in Gramine-SGX against HTTP and HTTPS benchmarks
-gramine-sgx ./nginx -c conf/nginx-gramine.conf &
+# Run Nginx in Gramine-SGX against HTTP and HTTPS benchmarks.
+# Note: The command-line arguments are securely passed using
+# `loader.argv_src_file` manifest option.
+gramine-sgx ./nginx &
 ../common_tools/benchmark-http.sh 127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%

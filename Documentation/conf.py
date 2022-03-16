@@ -184,6 +184,7 @@ html_static_path = ['_static']
 man_pages = [
     ('manpages/gramine', 'gramine-direct', 'Gramine', [author], 1),
     ('manpages/gramine', 'gramine-sgx', 'Gramine', [author], 1),
+    ('manpages/gramine-argv-serializer', 'gramine-argv-serializer', 'Serialize command line arguments', [author], 1),
     ('manpages/gramine-manifest', 'gramine-manifest', 'Gramine manifest preprocessor', [author], 1),
     ('manpages/gramine-sgx-gen-private-key', 'gramine-sgx-gen-private-key', 'Gramine SGX key generator', [author], 1),
     ('manpages/gramine-sgx-get-token', 'gramine-sgx-get-token', 'Gramine SGX Token generator', [author], 1),

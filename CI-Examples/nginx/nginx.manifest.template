@@ -7,8 +7,7 @@ loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/local/lib:/usr/lib:/usr/{{ arch_libdir }}"
 
-loader.insecure__use_cmdline_argv = true
-
+loader.argv_src_file = "file:nginx_args"
 sys.enable_sigterm_injection = true
 
 fs.mounts = [
@@ -36,6 +35,7 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
+  "file:nginx_args",
 ]
 
 sgx.allowed_files = [

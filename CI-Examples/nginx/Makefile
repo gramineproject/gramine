@@ -21,7 +21,7 @@ GRAMINE_LOG_LEVEL = error
 endif
 
 .PHONY: all
-all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata
+all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata nginx_args
 ifeq ($(SGX),1)
 all: nginx.manifest.sgx nginx.sig nginx.token
 endif
@@ -109,6 +109,9 @@ $(INSTALL_DIR)/conf/server.crt: ssl/ca_config.conf $(INSTALL_DIR)/sbin/nginx
 .PHONY: ssldata
 ssldata: $(INSTALL_DIR)/conf/server.crt
 
+nginx_args:
+	gramine-argv-serializer "nginx" "-c" "conf/nginx-gramine.conf" > $@
+
 .PHONY: start-native-server
 start-native-server: all
 	$(INSTALL_DIR)/sbin/nginx -c conf/nginx-gramine.conf
@@ -121,11 +124,11 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) ./nginx -c conf/nginx-gramine.conf
+	$(GRAMINE) ./nginx
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp
+	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp nginx_args
 
 .PHONY: distclean
 distclean: clean
