@@ -240,7 +240,21 @@ class TC_01_Bootstrap(RegressionTestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
-    def test_222_send_handle_tmpfs(self):
+    def test_222_send_handle_enc(self):
+        path = 'tmp/enc/send_handle_test'
+        os.makedirs('tmp/enc', exist_ok=True)
+        # Delete the file: the test truncates the file anyway, but it may fail to open a malformed
+        # encrypted file.
+        if os.path.exists(path):
+            os.unlink(path)
+        try:
+            self._test_send_handle(path)
+            self._test_send_handle(path, delete=True)
+        finally:
+            if os.path.exists(path):
+                os.unlink(path)
+
+    def test_223_send_handle_tmpfs(self):
         path = '/mnt/tmpfs/send_handle_test'
         self._test_send_handle(path)
         self._test_send_handle(path, delete=True)

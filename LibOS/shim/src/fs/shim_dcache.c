@@ -635,8 +635,15 @@ BEGIN_CP_FUNC(inode) {
             memcpy(new_inode->data, cp_data, cp_size);
             free(cp_data);
         } else {
-            assert(!inode->data);
-            new_inode->data = NULL;
+            /* HACK: For the `chroot_encrypted` filesystem, the `icheckpoint` mechanism is not
+             * adequate, because we need to also send the underlying PAL handle. We special-case
+             * this filesystem and invoke `DO_CP(encrypted_file)` directly. */
+            if (inode->data && !strcmp(inode->fs->name, "encrypted")) {
+                DO_CP(encrypted_file, inode->data, &new_inode->data);
+            } else {
+                assert(!inode->data);
+                new_inode->data = NULL;
+            }
         }
 
         unlock(&inode->lock);
@@ -674,7 +681,8 @@ BEGIN_RS_FUNC(inode) {
         if (ret < 0)
             return ret;
     } else {
-        assert(!inode->data);
+        if (strcmp(inode->fs->name, "encrypted"))
+            assert(!inode->data);
     }
 }
 END_RS_FUNC(inode)

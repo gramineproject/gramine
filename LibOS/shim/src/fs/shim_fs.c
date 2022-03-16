@@ -10,6 +10,7 @@
 #include "pal.h"
 #include "shim_checkpoint.h"
 #include "shim_fs.h"
+#include "shim_fs_encrypted.h"
 #include "shim_fs_pseudo.h"
 #include "shim_internal.h"
 #include "shim_lock.h"
@@ -20,6 +21,7 @@
 
 struct shim_fs* builtin_fs[] = {
     &chroot_builtin_fs,
+    &chroot_encrypted_builtin_fs,
     &tmp_builtin_fs,
     &pipe_builtin_fs,
     &fifo_builtin_fs,
@@ -57,6 +59,9 @@ int init_fs(void) {
         ret = -ENOMEM;
         goto err;
     }
+
+    if ((ret = init_encrypted_files()) < 0)
+        goto err;
 
     if ((ret = init_procfs()) < 0)
         goto err;
@@ -498,16 +503,22 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
         goto err;
     }
 
-    /* Trigger filesystem lookup for the root dentry, so that it's already positive. If there is a
-     * problem looking up the root, we want the mount operation to fail. */
-
-    struct shim_dentry* root;
-    if ((ret = path_lookupat(g_dentry_root, mount_path, LOOKUP_NO_FOLLOW, &root))) {
-        log_warning("error looking up mount root %s: %d", mount_path, ret);
-        goto err;
+    /*
+     * Trigger filesystem lookup for the root dentry, so that it's already positive. If there is a
+     * problem looking up the root, we want the mount operation to fail.
+     *
+     * We skip the lookup for the `encrypted` filesystem, because the key for encrypted files might
+     * not be set yet.
+     */
+    if (strcmp(type, "encrypted") != 0) {
+        struct shim_dentry* root;
+        if ((ret = path_lookupat(g_dentry_root, mount_path, LOOKUP_NO_FOLLOW, &root))) {
+            log_warning("error looking up mount root %s: %d", mount_path, ret);
+            goto err;
+        }
+        assert(root == mount->root);
+        put_dentry(root);
     }
-    assert(root == mount->root);
-    put_dentry(root);
 
     /* Add `mount` to the global list */
 

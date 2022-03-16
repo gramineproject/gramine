@@ -32,6 +32,8 @@
 enum shim_handle_type {
     /* Files: */
     TYPE_CHROOT,     /* host files, used by `chroot` filesystem */
+    TYPE_CHROOT_ENCRYPTED,
+                     /* encrypted host files, used by `chroot_encrypted` filesystem */
     TYPE_DEV,        /* emulated devices, used by `dev` filesystem */
     TYPE_STR,        /* string-based files (with data inside handle), handled by `pseudo_*`
                       * functions */
@@ -208,6 +210,7 @@ struct shim_handle {
      * by using assert()) */
     union {
         /* (no data) */                         /* TYPE_CHROOT */
+        /* (no data) */                         /* TYPE_CHROOT_ENCRYPTED */
         /* (no data) */                         /* TYPE_DEV */
         struct shim_str_handle str;             /* TYPE_STR */
         /* (no data) */                         /* TYPE_PSEUDO */

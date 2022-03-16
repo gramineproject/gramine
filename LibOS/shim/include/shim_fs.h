@@ -399,7 +399,7 @@ struct shim_d_ops {
 
 struct shim_fs {
     /* Null-terminated, used in manifest and for uniquely identifying a filesystem. */
-    char name[8];
+    char name[16];
     struct shim_fs_ops* fs_ops;
     struct shim_d_ops* d_ops;
 };
@@ -847,6 +847,7 @@ extern struct shim_fs_ops tmp_fs_ops;
 extern struct shim_d_ops tmp_d_ops;
 
 extern struct shim_fs chroot_builtin_fs;
+extern struct shim_fs chroot_encrypted_builtin_fs;
 extern struct shim_fs tmp_builtin_fs;
 extern struct shim_fs pipe_builtin_fs;
 extern struct shim_fs fifo_builtin_fs;
@@ -884,5 +885,16 @@ int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
 int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write);
 
 int unix_socket_setup_dentry(struct shim_dentry* dent, mode_t perm);
+
+/*
+ * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It
+ * needs to be passed separately (instead of using `dent->inode->type`) because the dentry might not
+ * have inode associated yet: we might be creating a new file, or looking up a file we don't know
+ * yet.
+ */
+int chroot_dentry_uri(struct shim_dentry* dent, mode_t type, char** out_uri);
+
+int chroot_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
+int chroot_unlink(struct shim_dentry* dent);
 
 #endif /* _SHIM_FS_H_ */
