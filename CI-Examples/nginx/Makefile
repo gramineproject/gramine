@@ -23,7 +23,7 @@ endif
 .PHONY: all
 all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata
 ifeq ($(SGX),1)
-all: nginx.manifest.sgx nginx.sig nginx.token
+all: nginx_secure_args nginx.manifest.sgx nginx.sig nginx.token
 endif
 
 # Note that Gramine doesn't support eventfd() and PR_SET_DUMPABLE, so we manually
@@ -109,6 +109,9 @@ $(INSTALL_DIR)/conf/server.crt: ssl/ca_config.conf $(INSTALL_DIR)/sbin/nginx
 .PHONY: ssldata
 ssldata: $(INSTALL_DIR)/conf/server.crt
 
+nginx_secure_args:
+	gramine-argv-serializer "nginx" "-c" "conf/nginx-gramine.conf" > $@
+
 .PHONY: start-native-server
 start-native-server: all
 	$(INSTALL_DIR)/sbin/nginx -c conf/nginx-gramine.conf
@@ -121,11 +124,11 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) ./nginx -c conf/nginx-gramine.conf
+	$(GRAMINE) ./nginx
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp
+	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp nginx_secure_args
 
 .PHONY: distclean
 distclean: clean
