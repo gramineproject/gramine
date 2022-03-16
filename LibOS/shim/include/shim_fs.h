@@ -90,8 +90,13 @@ struct shim_fs_ops {
     /* setflags: set flags of the file */
     int (*setflags)(struct shim_handle* hdl, int flags);
 
-    /* hput: delete the handle and close the PAL handle. */
-    void (*hput)(struct shim_handle* hdl);
+    /*
+     * \brief Deallocate handle data.
+     *
+     * Deallocates any filesystem-specific resources associated with the handle. Called just before
+     * destroying the handle.
+     */
+    void (*hdrop)(struct shim_handle* hdl);
 
     /* lock and unlock the file */
     int (*lock)(const char* trim_name);

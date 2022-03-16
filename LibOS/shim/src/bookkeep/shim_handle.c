@@ -503,8 +503,8 @@ void put_handle(struct shim_handle* hdl) {
             hdl->info.sock.peek_buffer = NULL;
         }
 
-        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->hput)
-            hdl->fs->fs_ops->hput(hdl);
+        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->hdrop)
+            hdl->fs->fs_ops->hdrop(hdl);
 
         free(hdl->uri);
 

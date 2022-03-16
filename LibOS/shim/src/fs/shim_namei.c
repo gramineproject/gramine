@@ -389,19 +389,20 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     assert(dent->inode);
     assert(!hdl->dentry);
 
-    int ret = 0;
+    int ret;
     struct shim_fs* fs = dent->inode->fs;
 
-    if (!(fs->d_ops && fs->d_ops->open)) {
-        ret = -EINVAL;
-        goto err;
-    }
+    if (!(fs->d_ops && fs->d_ops->open))
+        return -EINVAL;
 
     ret = fs->d_ops->open(hdl, dent, flags);
     if (ret < 0)
-        goto err;
+        return ret;
 
     assoc_handle_with_dentry(hdl, dent, flags);
+
+    /* NOTE: If we fail after this step, the handle will remain open and associated with dentry, but
+     * the caller is going to delete it. */
 
     if (dent->inode->type == S_IFDIR) {
         /* Initialize directory handle */
@@ -415,27 +416,15 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
             && (dent->inode->type != S_IFDIR)
             && (dent->inode->type != S_IFLNK)) {
 
-        if (!(fs->fs_ops && fs->fs_ops->truncate)) {
-            ret = -EINVAL;
-            goto err;
-        }
+        if (!(fs->fs_ops && fs->fs_ops->truncate))
+            return -EINVAL;
+
         ret = fs->fs_ops->truncate(hdl, 0);
         if (ret < 0)
-            goto err;
+            return ret;
     }
 
     return 0;
-
-err:
-    /* If we failed after calling `open`, undo it */
-    if (hdl->dentry) {
-        if (fs->fs_ops && fs->fs_ops->hput)
-            fs->fs_ops->hput(hdl);
-
-        hdl->dentry = NULL;
-        put_dentry(dent);
-    }
-    return ret;
 }
 
 int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* path, int flags,
