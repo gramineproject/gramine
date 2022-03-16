@@ -173,6 +173,7 @@ man_pages = [
     ('manpages/gramine-sgx-quote-dump', 'gramine-sgx-quote-dump', 'Display SGX quote', [author], 1),
     ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),
     ('manpages/is-sgx-available', 'is-sgx-available', 'Check SGX compatibility', [author], 1),
+    ('manpages/gramine-argv-serializer', 'gramine-argv-serializer', 'Serialize command line arguments', [author], 1),
 ]
 
 # barf if a page is not included

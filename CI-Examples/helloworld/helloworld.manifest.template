@@ -5,6 +5,10 @@ libos.entrypoint = "helloworld"
 loader.log_level = "{{ log_level }}"
 loader.argv0_override = "helloworld"
 
+# Use `gramine-argv-serializer` to generate the file containing secure arguments.
+# Example: gramine-argv-serializer Gramine says hi! > helloworld_secure_args
+loader.argv_src_file = "file:helloworld_secure_args"
+
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mounts = [
@@ -17,5 +21,6 @@ sgx.nonpie_binary = true
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:helloworld",
+  "file:helloworld_secure_args",
   "file:{{ gramine.runtimedir() }}/",
 ]
