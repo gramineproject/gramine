@@ -484,19 +484,15 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
             goto err;
         }
 
-        /* The root always exists, so if we got here, the dentry should have a parent */
-        struct shim_dentry* dir = dent->parent;
-        if (!dir->inode) {
-            ret = -ENOENT;
-            goto err;
+        /* Check the parent permission first */
+        struct shim_dentry* dir = dentry_up(dent);
+        if (dir) {
+            ret = check_permissions(dir, MAY_WRITE | MAY_EXEC);
+            if (ret < 0)
+                goto err;
         }
 
-        /* Check the parent permission first */
-        ret = check_permissions(dir, MAY_WRITE | MAY_EXEC);
-        if (ret < 0)
-            goto err;
-
-        struct shim_fs* fs = dir->inode->fs;
+        struct shim_fs* fs = dent->mount->fs;
         /* Create directory or file, depending on O_DIRECTORY. Return -EINVAL if the operation is
          * not supported for this filesystem. */
         if (flags & O_DIRECTORY) {
