@@ -230,14 +230,14 @@ tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
 
 uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 
+mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0-1')
+mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
+mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
+
 if sgx
     protoc_c_prog = find_program('protoc-c')
 
     threads_dep = dependency('threads')
-
-    mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0-1')
-    mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
-    mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
     libcurl_dep = dependency('libcurl', version: '>=7.58.0')
 

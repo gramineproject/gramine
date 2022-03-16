@@ -175,6 +175,8 @@ libos = shared_library('sysdb',
     ],
     dependencies: [
         common_dep,
+        cryptoadapter_dep,
+        protected_files_dep,
         libpal,
     ],
 

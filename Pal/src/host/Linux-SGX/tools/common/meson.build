@@ -8,6 +8,10 @@ sgx_util = shared_library('sgx_util',
     'util.c',
     'util.h',
 
+    c_args: [
+        '-DIN_TOOLS',
+    ],
+
     include_directories: [
         sgx_inc,
         common_inc,

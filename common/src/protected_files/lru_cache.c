@@ -6,14 +6,12 @@
 
 /* TODO: add regression tests for this */
 
+#include "assert.h"
 #include "lru_cache.h"
 #include "list.h"
 
-#ifdef IN_PAL
-#include "assert.h"
-#include "pal_linux.h"
-#else
-#include <assert.h>
+#ifdef IN_TOOLS
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,8 +20,20 @@
         fprintf(stderr, "uthash error: %s\n", msg);  \
         exit(-1);                                    \
     } while(0)
-#include <uthash.h>
+
+#else
+
+#include "api.h"
+
+#define uthash_fatal(msg)                            \
+    do {                                             \
+        log_error("uthash error: %s", msg);          \
+        abort();                                     \
+    } while(0)
+
 #endif
+
+#include "uthash.h"
 
 DEFINE_LIST(_lruc_list_node);
 typedef struct _lruc_list_node {

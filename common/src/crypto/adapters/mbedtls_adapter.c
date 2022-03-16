@@ -21,7 +21,7 @@
 #include "pal_error.h"
 
 /* This is declared in pal_internal.h, but that can't be included here. */
-int _DkRandomBitsRead(void* buffer, size_t size);
+int DkRandomBitsRead(void* buffer, size_t size);
 
 static int mbedtls_to_pal_error(int error) {
     switch (error) {
@@ -269,7 +269,7 @@ int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t*
     assert(output && olen);
     *olen = 0;
 
-    int ret = _DkRandomBitsRead(output, len);
+    int ret = DkRandomBitsRead(output, len);
     if (ret < 0)
         return MBEDTLS_ERR_ENTROPY_SOURCE_FAILED;
 
@@ -427,7 +427,7 @@ int lib_SSLSave(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t buf_size, size_t*
  * and expects a return value of 0 for success and nonzero for failure. */
 static int random_wrapper(void* private, unsigned char* data, size_t size) {
     __UNUSED(private);
-    return _DkRandomBitsRead(data, size);
+    return DkRandomBitsRead(data, size);
 }
 
 int lib_DhInit(LIB_DH_CONTEXT* context) {

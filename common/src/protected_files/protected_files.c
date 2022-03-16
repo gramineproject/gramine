@@ -4,14 +4,6 @@
  * Copyright (C) 2019 Intel Corporation
  */
 
-#ifndef IN_PAL
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#define USE_STDLIB
-#endif
-
 #include "protected_files.h"
 #include "protected_files_format.h"
 #include "protected_files_internal.h"

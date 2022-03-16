@@ -40,14 +40,12 @@ common_dep = declare_dependency(
 
 generated_offsets_print_src = files('generated-offsets-print.c')
 
-if sgx
-    cryptoadapter_pal_dep = declare_dependency(
-        dependencies: mbedtls_pal_dep,
-        sources: 'crypto/adapters/mbedtls_adapter.c',
-        compile_args: [
-            '-DCRYPTO_USE_MBEDTLS',
-        ],
-    )
-endif
+cryptoadapter_dep = declare_dependency(
+    dependencies: mbedtls_pal_dep,
+    sources: 'crypto/adapters/mbedtls_adapter.c',
+    compile_args: [
+        '-DCRYPTO_USE_MBEDTLS',
+    ],
+)
 
 subdir('protected_files')

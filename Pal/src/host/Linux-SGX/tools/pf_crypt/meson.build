@@ -3,7 +3,6 @@ executable('gramine-sgx-pf-crypt',
 
     dependencies: [
         sgx_util_dep,
-        protected_files_dep,
     ],
 
     install: true,
