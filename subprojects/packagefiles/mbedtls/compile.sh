@@ -4,9 +4,10 @@ set -x
 set -e
 
 CURRENT_SOURCE_DIR="$1"
-CURRENT_BUILD_DIR="$2"
-PRIVATE_DIR="$3"
-shift 3
+VENDOR_SOURCE_DIR="$2"
+CURRENT_BUILD_DIR="$3"
+PRIVATE_DIR="$4"
+shift 4
 
 OUTPUTS=""
 while test "$#" -gt 0 && ! test "$1" = --
@@ -21,7 +22,8 @@ fi
 
 rm -rf "$PRIVATE_DIR"
 
-cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
+cp -ar "$VENDOR_SOURCE_DIR" "$PRIVATE_DIR"
+cp "$CURRENT_SOURCE_DIR"/include/mbedtls/*.h "$PRIVATE_DIR"/include/mbedtls/
 patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/gramine.patch
 
 make -C "$PRIVATE_DIR" lib "$@"

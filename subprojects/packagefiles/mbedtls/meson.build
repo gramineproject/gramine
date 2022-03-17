@@ -20,6 +20,7 @@ mbedtls_libs = custom_target('mbedtls',
     command: [
         find_program('compile-gramine.sh'),
         '@CURRENT_SOURCE_DIR@',
+        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-2.26.0',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         '@OUTPUT@',
@@ -28,7 +29,7 @@ mbedtls_libs = custom_target('mbedtls',
         'SHARED=1',
     ],
 
-    input: ['Makefile', 'gramine.patch'],
+    input: ['mbedtls-mbedtls-2.26.0/Makefile', 'gramine.patch'],
 
     # NOTE we need real sonames here (.so.N, not .so), please keep synced with
     # mbedtls/library/Makefile, variables SOEXT_{TLS,X509,CRYPTO}
@@ -62,6 +63,7 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
     command: [
         find_program('compile-pal.sh'),
         '@CURRENT_SOURCE_DIR@',
+        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-2.26.0',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         '@OUTPUT@',
@@ -69,7 +71,7 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
         'SUFFIX=_pal',
     ],
 
-    input: ['Makefile', 'gramine.patch'],
+    input: ['mbedtls-mbedtls-2.26.0/Makefile', 'gramine.patch'],
 
     output: [
         'libmbedcrypto_pal.a',
@@ -80,7 +82,7 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
     build_by_default: true,
 )
 
-mbedtls_inc = include_directories('include')
+mbedtls_inc = include_directories('include', 'mbedtls-mbedtls-2.26.0/include')
 
 mbedtls_static_dep = declare_dependency(
     link_with: [mbedtls_libs[6], mbedtls_libs[7], mbedtls_libs[8]],
