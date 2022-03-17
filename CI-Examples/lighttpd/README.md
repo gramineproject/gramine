@@ -9,7 +9,7 @@ For this example, we build lighttpd from source instead of using an existing
 binary. To build lighttpd on Ubuntu 18.04, please make sure that the following
 packages are installed:
 
-    sudo apt-get install -y build-essential apache2-utils
+    sudo apt-get install -y build-essential libssl-dev zlib1g-dev
 
 ## Linux
 
@@ -37,9 +37,10 @@ Once the server has started, you can test it with `wget` or `curl`
     wget http://127.0.0.1:8003/random/10K.1.html
     curl --compressed http://127.0.0.1:8003/random/10K.1.html -o 10K.1.html
 
-You may also run the benchmark script using `ab` (Apachebench)
+You may also run the benchmark script using `wrk` (wrk2). Please refer to
+https://github.com/giltene/wrk2 for more information.
 
-    ../common_tools/benchmark-http.sh 127.0.0.1:8003
+    ../common_tools/benchmark-http.sh http://127.0.0.1:8003
 
 Use Ctrl-C to terminate the server once you are finished testing lighttpd.
 
