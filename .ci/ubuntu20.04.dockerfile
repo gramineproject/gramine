@@ -2,7 +2,6 @@ FROM ubuntu:20.04
 
 # Add steps here to set up dependencies
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    apache2-utils \
     autoconf \
     bison \
     build-essential \
@@ -72,6 +71,14 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     wget \
     zlib1g \
     zlib1g-dev
+
+# Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
+RUN git clone https://github.com/giltene/wrk2.git \
+    && cd wrk2 \
+    && make \
+    && cp wrk /usr/local/bin \
+    && cd .. \
+    && rm -rf wrk2
 
 # NOTE about meson version: we support "0.55 or newer", so in CI we pin to latest patch version of
 # the earliest supported minor version (pip implicitly installs latest version satisfying the
