@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# On Ubuntu, this script requires apache2-utils for the ab binary.
+# On Ubuntu, this script requires wrk2 tool installed for the wrk binary.
 #
 # Run like: ./benchmark-http.sh host:port
 #
@@ -11,12 +11,54 @@ declare -A LATENCIES
 LOOP=${LOOP:-1}
 DOWNLOAD_HOST=$1
 DOWNLOAD_FILE=random/10K.1.html
+CONNECTIONS=100
 REQUESTS=10000
-CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64 128 256"}
-OPTIONS="-k"
+DURATION=30
+CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64"}
 RESULT=result-$(date +%y%m%d-%H%M%S)
 
 touch "$RESULT"
+throughput_in_bytes() {
+    local THROUGHPUT_STR=$1
+    local THROUGHPUT_VAL=$(echo ${THROUGHPUT_STR} | tr -cd '.[0-9]')
+    local THROUGHPUT_UNIT=$(echo ${THROUGHPUT_STR} | tr -dc '[A-za-z]')
+
+    if [ -z "$THROUGHPUT_UNIT" ]; then
+        THROUGHPUT=$THROUGHPUT_VAL
+    elif [ "$THROUGHPUT_UNIT" = "k" ]; then
+        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000}" | bc`
+    elif [ "$THROUGHPUT_UNIT" = "M" ]; then
+        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000000}" | bc`
+    elif [ "$THROUGHPUT_UNIT" = "G" ]; then
+        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000000000}" | bc`
+    else
+        THROUGHPUT=0
+    fi
+
+    echo "$THROUGHPUT"
+}
+
+latency_in_milliseconds() {
+    local LATENCY_STR=$1
+    local LATENCY_VAL=$(echo ${LATENCY_STR} | tr -cd '.[0-9]')
+    local LATENCY_UNIT=$(echo ${LATENCY_STR} | tr -dc '[A-za-z]')
+
+    if [ -z "$LATENCY_UNIT" ] || [ "$LATENCY_UNIT" = "ms" ]; then
+        LATENCY=$LATENCY_VAL
+    elif [ "$LATENCY_UNIT" = "us" ]; then
+        LATENCY=`echo "scale=3; {$LATENCY_VAL/1000}" | bc`
+    elif [ "$LATENCY_UNIT" = "s" ]; then
+        LATENCY=`echo "{$LATENCY_VAL*1000}" | bc`
+    elif [ "$LATENCY_UNIT" = "m" ]; then
+        LATENCY=`echo "{$LATENCY_VAL*1000*60}" | bc`
+    elif [ "$LATENCY_UNIT" = "h" ]; then
+        LATENCY=`echo "{$LATENCY_VAL*1000*3600}" | bc`
+    else
+        LATENCY=0
+    fi
+
+    echo "$LATENCY"
+}
 
 RUN=0
 while [ $RUN -lt "$LOOP" ]
@@ -24,26 +66,42 @@ do
     for CONCURRENCY in $CONCURRENCY_LIST
     do
         rm -f OUTPUT
-        echo "ab $OPTIONS -n $REQUESTS -c $CONCURRENCY $DOWNLOAD_HOST/$DOWNLOAD_FILE"
-        ab $OPTIONS -n $REQUESTS -c "$CONCURRENCY" "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
+        echo "wrk -c $CONNECTIONS -d $DURATION -t $CONCURRENCY -R $REQUESTS $DOWNLOAD_HOST/$DOWNLOAD_FILE"
+        wrk -c "$CONNECTIONS" -d "$DURATION" -t "$CONCURRENCY" -R "$REQUESTS" "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
 
         sleep 5
 
-        THROUGHPUT=$(grep -m1 "Requests per second:" OUTPUT | awk '{ print $4 }')
-        LATENCY=$(grep -m1 "Time per request:" OUTPUT | awk '{ print $4 }')
-        FAILED=$(grep -m1 "Failed requests:" OUTPUT | awk '{print $3 }')
-        THROUGHPUTS[$CONCURRENCY]="${THROUGHPUTS[$CONCURRENCY]} $THROUGHPUT"
-        LATENCIES[$CONCURRENCY]="${LATENCIES[$CONCURRENCY]} $LATENCY"
-        echo "concurrency=$CONCURRENCY, throughput=$THROUGHPUT, latency=$LATENCY, failed=$FAILED"
+        THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
+        THROUGHPUT=$(throughput_in_bytes $THROUGHPUT_STR)
+        if [ "$THROUGHPUT" = "0" ]; then
+            echo "Throughput is empty!"; exit 1;
+        fi
+
+        LATENCY_STR=$(grep -m1 "Latency" OUTPUT | awk '{ print $2 }')
+        LATENCY=$(latency_in_milliseconds $LATENCY_STR)
+        if [ "$LATENCY" = "0" ]; then
+            echo "Latency is empty!"; exit 1;
+        fi
+
+        if [ ${#THROUGHPUTS[$CONCURRENCY]} -eq 0 ] || [ ${#LATENCIES[$CONCURRENCY]} -eq 0 ]; then
+            THROUGHPUTS[$CONCURRENCY]="$THROUGHPUT"
+            LATENCIES[$CONCURRENCY]="$LATENCY"
+        else
+            THROUGHPUTS[$CONCURRENCY]="${THROUGHPUTS[$CONCURRENCY]} $THROUGHPUT"
+            LATENCIES[$CONCURRENCY]="${LATENCIES[$CONCURRENCY]} $LATENCY"
+        fi
+        echo "Run:$(($RUN+1)) Concurrency:$CONCURRENCY Per thread Throughput(bytes) = $THROUGHPUT, Latency(ms) = $LATENCY"
+
     done
     (( RUN++ ))
 done
 
 for CONCURRENCY in $CONCURRENCY_LIST
 do
-    THROUGHPUT=$(echo "${THROUGHPUTS[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[int(NR/2)+1];else print(a[NR/2-1]+a[NR/2])/2}')
-    LATENCY=$(echo "${LATENCIES[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[int(NR/2)+1];else print(a[NR/2-1]+a[NR/2])/2}')
-    echo "$THROUGHPUT,$LATENCY" >> "$RESULT"
+    THROUGHPUT=$(echo "${THROUGHPUTS[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
+    LATENCY=$(echo "${LATENCIES[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
+    printf "Concurrency = %3d: Per Thread Median Througput(bytes) = %9.3f, Latency(ms) = %9.3f\n" \
+        "$CONCURRENCY" "$THROUGHPUT" "$LATENCY" | tee -a $RESULT
 done
 
 echo "Result file: $RESULT"

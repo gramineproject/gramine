@@ -69,7 +69,7 @@ stage('test-direct') {
             make -j8 all
             make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8003
-            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8003
+            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh http://127.0.0.1:8003
         '''
     }
     timeout(time: 10, unit: 'MINUTES') {
@@ -78,7 +78,7 @@ stage('test-direct') {
             make -j8 all
             make start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 8002
-            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:8002
+            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh http://127.0.0.1:8002
         '''
     }
     timeout(time: 15, unit: 'MINUTES') {
