@@ -62,6 +62,10 @@ int main(void) {
     if (fstat(fd, &statbuf) == -1)
         err(1, "fstat");
 
+    /* fsync on the directory is only for testing that it doesn't fail (and is a no-op) */
+    if (fsync(fd) == -1)
+        err(1, "fsync");
+
     if (close(fd) == -1)
         err(1, "close");
 

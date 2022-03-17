@@ -463,17 +463,22 @@ long shim_do_fsync(int fd) {
     if (!hdl)
         return -EBADF;
 
-    int ret = -EACCES;
+    int ret;
     struct shim_fs* fs = hdl->fs;
 
-    if (!fs || !fs->fs_ops)
+    if (!fs || !fs->fs_ops) {
+        ret = -EACCES;
         goto out;
+    }
 
-    if (hdl->is_dir)
+    if (hdl->is_dir) {
+        /* FS subsystem doesn't do anything meaningful with dirs, so flushing a dir is a no-op */
+        ret = 0;
         goto out;
+    }
 
     if (!fs->fs_ops->flush) {
-        ret = -EROFS;
+        ret = -EINVAL; /* Linux kernel returns EINVAL on special files (not EROFS) */
         goto out;
     }
 
@@ -483,9 +488,8 @@ out:
     return ret;
 }
 
-// DEP 10/20/16: Assuming fsync >> fdatasync for now
-//  and no app depends on only syncing data for correctness.
 long shim_do_fdatasync(int fd) {
+    /* assume fsync() >> fdatasync(); no app should depend on only syncing data for correctness */
     return shim_do_fsync(fd);
 }
 

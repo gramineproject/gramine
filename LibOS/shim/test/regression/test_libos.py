@@ -993,6 +993,10 @@ class TC_40_FileSystem(RegressionTestCase):
             self.assertNotIn('READING FROM MODIFIED ENCLAVE OK', stdout)
             self.assertIn('Permission denied', stdout)
 
+    def test_060_synthetic(self):
+        stdout, _ = self.run_binary(['synthetic'])
+        self.assertIn("TEST OK", stdout)
+
 
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
