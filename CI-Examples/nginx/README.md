@@ -6,13 +6,10 @@ recent version of Nginx web server (as of this writing, version 1.16.1).
 We build Nginx from the source code instead of using an existing installation.
 On Ubuntu 18.04, please make sure that the following packages are installed:
 ```sh
-sudo apt-get install -y build-essential apache2-utils libssl-dev
+sudo apt-get install -y build-essential libssl-dev zlib1g-dev
 ```
-
-NOTE: The "benchmark-http.sh" script uses the Apache Benchmark (ab) under the
-hood. At least the default version of ab shipped with Ubuntu 18.04 (v2.3) does
-not work correctly with Nginx and HTTPS (it fails on KeepAlive HTTPS requests).
-We recommend to use the wrk benchmarking tool.
+NOTE: The "benchmark-http.sh" script uses the wrk Benchmark (wrk2) under the
+hood. Please refer to https://github.com/giltene/wrk2.
 
 # Quick Start
 
@@ -20,9 +17,9 @@ We recommend to use the wrk benchmarking tool.
 # build Nginx and the final manifest
 make SGX=1
 
-# run original Nginx against HTTP and HTTPS benchmarks (benchmark-http.sh, uses ab)
+# run original Nginx against HTTP and HTTPS benchmarks (benchmark-http.sh, uses wrk2)
 ./install/sbin/nginx -c conf/nginx-gramine.conf &
-../common_tools/benchmark-http.sh 127.0.0.1:8002
+../common_tools/benchmark-http.sh http://127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 

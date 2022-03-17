@@ -3,7 +3,6 @@ FROM ubuntu:18.04
 
 # Add steps here to set up dependencies
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    apache2-utils \
     autoconf \
     bison \
     build-essential \
