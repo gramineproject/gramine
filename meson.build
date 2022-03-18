@@ -235,7 +235,7 @@ if sgx
 
     threads_dep = dependency('threads')
 
-    mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0')
+    mbedtls_proj = subproject('mbedtls-mbedtls-3.1.0')
     mbedtls_dep = mbedtls_proj.get_variable('mbedtls_dep')
     mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 

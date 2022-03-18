@@ -1,27 +1,16 @@
-/*
- *  SSL client demonstration program (with RA-TLS).
- *  This program is heavily based on an mbedTLS 2.26.0 example ssl_client1.c
- *  but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
- *  is required by user.
- *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *                2020, Intel Labs
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *               2020, Intel Labs
  */
 
-#include "mbedtls/config.h"
+/*
+ * SSL client demonstration program (with RA-TLS).
+ * This program is heavily based on an mbedTLS 3.1.0 example ssl_client1.c
+ * but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
+ * is required by user.
+ */
+
+#include "mbedtls/build_info.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -38,7 +27,6 @@
 #define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
 #define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
@@ -56,6 +44,8 @@ void (*ra_tls_set_measurement_callback_f)(int (*f_cb)(const char* mrenclave, con
 #define SERVER_PORT "4433"
 #define SERVER_NAME "localhost"
 #define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
+
+#define CA_CRT_PATH "ssl/ca.crt"
 
 #define DEBUG_LEVEL 0
 
@@ -321,10 +311,9 @@ int main(int argc, char** argv) {
     mbedtls_printf("  . Loading the CA root certificate ...");
     fflush(stdout);
 
-    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*)mbedtls_test_cas_pem,
-                                 mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse_file(&cacert, CA_CRT_PATH);
     if (ret < 0) {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse_file returned -0x%x\n\n", -ret );
         goto exit;
     }
 

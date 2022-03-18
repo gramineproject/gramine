@@ -23,13 +23,23 @@ LDFLAGS += -pie
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
 
 .PHONY: app
-app: mbedtls/.mbedtls_configured server.manifest.sgx server.sig server.token client
+app: ssl/server.crt mbedtls/.mbedtls_configured server.manifest.sgx server.sig server.token client
 
 .PHONY: epid
 epid: client_epid.manifest.sgx client_epid.sig client_epid.token
 
 .PHONY: dcap
 dcap: client_dcap.manifest.sgx client_dcap.sig client_dcap.token
+
+############################# SSL DATA DEPENDENCY #############################
+
+# SSL data: key and x.509 self-signed certificate
+ssl/server.crt: ssl/ca_config.conf
+	openssl genrsa -out ssl/ca.key 2048
+	openssl req -x509 -new -nodes -key ssl/ca.key -sha256 -days 1024 -out ssl/ca.crt -config ssl/ca_config.conf
+	openssl genrsa -out ssl/server.key 2048
+	openssl req -new -key ssl/server.key -out ssl/server.csr -config ssl/ca_config.conf
+	openssl x509 -req -days 360 -in ssl/server.csr -CA ssl/ca.crt -CAkey ssl/ca.key -CAcreateserial -out ssl/server.crt
 
 ############################# MBEDTLS DEPENDENCY ##############################
 
@@ -39,12 +49,12 @@ dcap: client_dcap.manifest.sgx client_dcap.sig client_dcap.token
 # TODO: install headers, and `make install` before copying them
 #
 
-MBEDTLS_VERSION ?= 2.26.0
+MBEDTLS_VERSION ?= 3.1.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
 	https://packages.gramineproject.io/distfiles
-MBEDTLS_HASH ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
+MBEDTLS_HASH ?= 64d01a3b22b91cf3a25630257f268f11bc7bfa37981ae6d397802dd4ccec4690
 
 ifeq ($(DEBUG),1)
 MBED_BUILD_TYPE=Debug
@@ -184,4 +194,4 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -r mbedtls/ *.tar.gz
+	$(RM) -r mbedtls/ *.tar.gz ssl/ca.* ssl/server.*

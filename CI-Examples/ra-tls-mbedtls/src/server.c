@@ -1,28 +1,17 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *               2020, Intel Labs
+ */
+
 /*
- *  SSL server demonstration program (with RA-TLS)
- *  This program is heavily based on an mbedTLS 2.26.0 example ssl_server.c
- *  but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
- *  is required by user.
- *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *                2020, Intel Labs
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * SSL server demonstration program (with RA-TLS)
+ * This program is heavily based on an mbedTLS 3.1.0 example ssl_server.c
+ * but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
+ * is required by user.
  */
 
 #define _GNU_SOURCE
-#include "mbedtls/config.h"
+#include "mbedtls/build_info.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -33,7 +22,6 @@
 #define mbedtls_fprintf fprintf
 #define mbedtls_printf printf
 
-#include "mbedtls/certs.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
@@ -54,6 +42,10 @@ int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, 
 #define DEBUG_LEVEL 0
 
 #define MALICIOUS_STR "MALICIOUS DATA"
+
+#define CA_CRT_PATH "ssl/ca.crt"
+#define SRV_CRT_PATH "ssl/server.crt"
+#define SRV_KEY_PATH "ssl/server.key"
 
 static void my_debug(void* ctx, int level, const char* file, int line, const char* str) {
     ((void)level);
@@ -120,6 +112,18 @@ int main(int argc, char** argv) {
         }
     }
 
+    mbedtls_printf("  . Seeding the random number generator...");
+    fflush(stdout);
+
+    ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                (const unsigned char*)pers, strlen(pers));
+    if (ret != 0) {
+        mbedtls_printf(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
+        goto exit;
+    }
+
+    mbedtls_printf(" ok\n");
+
     if (ra_tls_attest_lib) {
         mbedtls_printf("\n  . Creating the RA-TLS server cert and key...");
         fflush(stdout);
@@ -139,7 +143,8 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0);
+        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0,
+                                   mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
             goto exit;
@@ -174,24 +179,22 @@ int main(int argc, char** argv) {
         mbedtls_printf("\n  . Creating normal server cert and key...");
         fflush(stdout);
 
-        ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*)mbedtls_test_srv_crt,
-                                     mbedtls_test_srv_crt_len);
+        ret = mbedtls_x509_crt_parse_file(&srvcert, SRV_CRT_PATH);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse_file returned %d\n\n", ret);
             goto exit;
         }
 
-        ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*)mbedtls_test_cas_pem,
-                                     mbedtls_test_cas_pem_len);
+        ret = mbedtls_x509_crt_parse_file(&srvcert, CA_CRT_PATH);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_x509_crt_parse_file returned %d\n\n", ret);
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*)mbedtls_test_srv_key,
-                                   mbedtls_test_srv_key_len, NULL, 0);
+        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, NULL,
+                                       mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
-            mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
+            mbedtls_printf(" failed\n  !  mbedtls_pk_parse_keyfile returned %d\n\n", ret);
             goto exit;
         }
 
@@ -204,18 +207,6 @@ int main(int argc, char** argv) {
     ret = mbedtls_net_bind(&listen_fd, NULL, "4433", MBEDTLS_NET_PROTO_TCP);
     if (ret != 0) {
         mbedtls_printf(" failed\n  ! mbedtls_net_bind returned %d\n\n", ret);
-        goto exit;
-    }
-
-    mbedtls_printf(" ok\n");
-
-    mbedtls_printf("  . Seeding the random number generator...");
-    fflush(stdout);
-
-    ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                (const unsigned char*)pers, strlen(pers));
-    if (ret != 0) {
-        mbedtls_printf(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
         goto exit;
     }
 
