@@ -203,12 +203,13 @@ SGX terminology
       .. todo:: TBD
 
    Architectural Enclave Service Manager
+   AESM
 
       The Architectural Enclave Service Manager is responsible for providing SGX
       applications with access to the :term:`Architectural Enclaves`. It consists
       of the Architectural Enclave Service Manager Daemon and a component of the
       SGX SDK, which communicate over a Unix socket with the fixed path
-      `/var/run/aesmd/aesm.sock`.
+      ``/var/run/aesmd/aesm.sock``.
 
    AEX
       .. todo:: TBD
