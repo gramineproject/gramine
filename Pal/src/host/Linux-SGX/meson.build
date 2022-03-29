@@ -159,6 +159,8 @@ libpal_sgx_urts = executable('loader',
     dependencies: [
         common_dep,
         protobuf_dep,
+        vtune_dep,
+        dl_dep,
     ],
 
     install: true,

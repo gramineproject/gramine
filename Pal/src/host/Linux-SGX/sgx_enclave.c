@@ -30,6 +30,8 @@
     do {                 \
     } while (0)
 
+extern bool g_vtune_profile_enabled;
+
 static long sgx_ocall_exit(void* pms) {
     ms_ocall_exit_t* ms = (ms_ocall_exit_t*)pms;
     ODEBUG(OCALL_EXIT, NULL);
@@ -46,6 +48,13 @@ static long sgx_ocall_exit(void* pms) {
 #ifdef DEBUG
         sgx_profile_finish();
 #endif
+
+#ifdef SGX_VTUNE_PROFILE
+        if (g_vtune_profile_enabled) {
+            extern void __itt_fini_ittlib(void);
+            __itt_fini_ittlib();
+        }
+#endif
         DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
         die_or_inf_loop();
     }
@@ -61,6 +70,12 @@ static long sgx_ocall_exit(void* pms) {
         update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
         sgx_profile_finish();
+#endif
+#ifdef SGX_VTUNE_PROFILE
+        if (g_vtune_profile_enabled) {
+            extern void __itt_fini_ittlib(void);
+            __itt_fini_ittlib();
+        }
 #endif
         DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
         die_or_inf_loop();
