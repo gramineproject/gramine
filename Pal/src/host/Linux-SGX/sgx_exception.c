@@ -27,6 +27,12 @@
 #include "sigreturn.h"
 #include "ucontext.h"
 
+#ifdef VTUNE_SGX_PROFILING
+extern bool g_enable_vtune_profiling;
+#include "ittnotify.h"
+extern void __itt_fini_ittlib(void);
+#endif
+
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
 
 static int block_signal(int sig, bool block) {
@@ -144,6 +150,11 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
     }
 
     log_error("Unexpected %s occurred inside untrusted PAL (%s)", event_name, buf);
+#ifdef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+        __itt_fini_ittlib();
+    }
+#endif
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
 }
@@ -245,6 +256,11 @@ err:
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
  * any PAL execution context, including this untrusted context. */
 noreturn void pal_abort(void) {
+#ifdef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+        __itt_fini_ittlib();
+    }
+#endif
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
 }

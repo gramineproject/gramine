@@ -24,6 +24,12 @@
 #include "sgx_tls.h"
 #include "sigset.h"
 
+#ifdef VTUNE_SGX_PROFILING
+#include "ittnotify.h"
+extern bool g_enable_vtune_profiling;
+extern void __itt_fini_ittlib(void);
+#endif
+
 #define DEFAULT_BACKLOG 2048
 
 #define ODEBUG(code, ms) \
@@ -46,6 +52,12 @@ static long sgx_ocall_exit(void* pms) {
 #ifdef DEBUG
         sgx_profile_finish();
 #endif
+
+#ifdef VTUNE_SGX_PROFILING
+        if (g_enable_vtune_profiling) {
+            __itt_fini_ittlib();
+        }
+#endif
         DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
         die_or_inf_loop();
     }
@@ -61,6 +73,11 @@ static long sgx_ocall_exit(void* pms) {
         update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
         sgx_profile_finish();
+#endif
+#ifdef VTUNE_SGX_PROFILING
+        if (g_enable_vtune_profiling) {
+            __itt_fini_ittlib();
+        }
 #endif
         DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
         die_or_inf_loop();

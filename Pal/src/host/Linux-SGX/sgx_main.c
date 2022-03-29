@@ -28,11 +28,22 @@
 #include "toml_utils.h"
 #include "topo_info.h"
 
+#ifdef VTUNE_SGX_PROFILING
+#include "ittnotify.h"
+#include "ittnotify_config.h"
+#include "ittnotify_types.h"
+
+extern int __itt_init_ittlib(const char*, __itt_group_id);
+extern void __itt_fini_ittlib(void);
+#endif
+
 const size_t g_page_size = PRESET_PAGESIZE;
 
 char* g_pal_loader_path = NULL;
 char* g_libpal_path = NULL;
 pid_t g_host_pid;
+
+bool g_enable_vtune_profiling = false;
 
 struct pal_enclave g_pal_enclave;
 
@@ -513,7 +524,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             dbg->tcs_addrs[i] = tcs_addrs[i];
     }
 
-    if (g_sgx_enable_stats) {
+    if (g_sgx_enable_stats || g_enable_vtune_profiling) {
         /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
         ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE, 0);
         if (ret < 0) {
@@ -543,6 +554,15 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             }
         }
     }
+
+#ifdef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+        uint64_t enclave_start_addr = (uint64_t) enclave_secs.base;
+        uint64_t enclave_end_addr = enclave_start_addr + (uint64_t) enclave_secs.size - 1;
+
+        __itt_module_load((void*)pal_area->addr, (void*) enclave_end_addr, g_libpal_path);
+    }
+#endif
 
 #ifdef DEBUG
     /*
@@ -731,6 +751,19 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         ret = -EINVAL;
         goto out;
     }
+
+    ret = toml_bool_in(manifest_root, "sgx.vtune_profiling", /*defaultval=*/false, &g_enable_vtune_profiling);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.vtune_profiling' (the value must be `true` or `false`)");
+        ret = -EINVAL;
+        goto out;
+    }
+
+#ifndef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+        log_always("Gramine is not built with VTune support. sgx.vtune_profiling setting in manifest will have no impact.");
+    }
+#endif
 
 #ifdef DEBUG
     enclave_info->profile_enable = false;
@@ -991,6 +1024,11 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
+#ifdef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+        __itt_fini_ittlib();
+    }
+#endif
     DO_SYSCALL(exit, 0);
     die_or_inf_loop();
 }

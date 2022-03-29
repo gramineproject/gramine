@@ -16,6 +16,12 @@
 #include "sgx_internal.h"
 #include "sgx_process.h"
 
+#ifdef VTUNE_SGX_PROFILING
+#include "ittnotify.h"
+extern bool g_enable_vtune_profiling;
+extern void __itt_fini_ittlib(void);
+#endif
+
 extern char* g_pal_loader_path;
 extern char* g_libpal_path;
 
@@ -31,6 +37,11 @@ static int vfork_exec(const char** argv) {
 
     extern char** environ;
     DO_SYSCALL(execve, g_pal_loader_path, argv, environ);
+#ifdef VTUNE_SGX_PROFILING
+    if (g_enable_vtune_profiling) {
+    __itt_fini_ittlib();
+    }
+#endif
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
 }

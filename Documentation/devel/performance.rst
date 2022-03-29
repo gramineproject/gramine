@@ -558,10 +558,41 @@ OCALL is executed, and ``perf report`` displays percentages based on the number
 of samples.
 
 
+.. _vtune:
+
+Profiling SGX hotspots with ``Intel VTune Profiler``
+----------------------------------------------------
+
+This section describes how to use `vtune
+<https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/introduction.html>`__
+profiler to find SGX hotspots.
+
+Installing ``vtune``
+""""""""""""""""""""
+
+Please download and install Intel(R) VTune Profiler from `here<https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/installation.html>`__. 
+
+Collecting SGX hotspots and viewing the report
+""""""""""""""""""""""""""""""""""""""""""""""
+
+#. Compile Gramine with ``-Dvtune_sgx_profiling=enabled -Dvtune_sdk_path=<VTune SDK installation path>``.
+
+   If ``vtune_sdk_path`` is not provided, Gramine will take the default VTune installation path.
+
+#. Add ``sgx.vtune_profiling = true`` to the manifest.
+
+#. Run your application under vtune.
+
+   ``vtune -collect sgx-hotspots -- gramine-sgx <workload>``
+
+   It will output the data collected to a directory of the format ``r000sgxhs``.
+
+#. To view the report, run ``vtune -report hotspots -r <vtune data collection output directory>``
+
+
 Other useful tools for profiling
 --------------------------------
 
-* Intel VTune Profiler (TODO)
 * ``strace -c`` will display Linux system call statistics
 * Valgrind (with `Callgrind
   <https://valgrind.org/docs/manual/cl-manual.html>`__) unfortunately doesn't
