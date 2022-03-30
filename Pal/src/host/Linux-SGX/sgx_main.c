@@ -949,6 +949,9 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (ret < 0)
         return ret;
 
+    DO_SYSCALL(close, enclave->token);
+    DO_SYSCALL(close, enclave->sigfile);
+
     ret = sgx_signal_setup();
     if (ret < 0)
         return ret;
