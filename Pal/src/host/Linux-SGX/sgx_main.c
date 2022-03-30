@@ -203,7 +203,9 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     sgx_arch_secs_t enclave_secs;
     unsigned long enclave_entry_addr;
     unsigned long enclave_heap_min;
-
+    char* sig_path = NULL;
+    char* token_path = NULL;
+    int sigfile_fd = -1, token_fd = -1;
     int enclave_mem = -1;
 
     /* this array may overflow the stack, so we allocate it in BSS */
@@ -229,7 +231,35 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         enclave_heap_min  = enclave->baseaddr;
     }
 
-    ret = read_enclave_token(enclave->token, &enclave_token);
+    sig_path = alloc_concat(g_pal_enclave.application_path, -1, ".sig", -1);
+    if (!sig_path) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    sigfile_fd = DO_SYSCALL(open, sig_path, O_RDONLY | O_CLOEXEC, 0);
+    if (sigfile_fd < 0) {
+        log_error("Cannot open sigstruct file %s", sig_path);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    token_path = alloc_concat(g_pal_enclave.application_path, -1, ".token", -1);
+    if (!token_path) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    token_fd = DO_SYSCALL(open, token_path, O_RDONLY | O_CLOEXEC, 0);
+    if (token_fd < 0) {
+        log_error("Cannot open token %s. Use gramine-sgx-get-token on the runtime host to create "
+                  "the token file.", token_path);
+        ret = -EINVAL;
+        goto out;
+    }
+    log_debug("Token file: %s", token_path);
+
+    ret = read_enclave_token(token_fd, &enclave_token);
     if (ret < 0) {
         log_error("Reading enclave token failed: %d", ret);
         goto out;
@@ -256,7 +286,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     }
 #endif
 
-    ret = read_enclave_sigstruct(enclave->sigfile, &enclave_sigstruct);
+    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Reading enclave sigstruct failed: %d", ret);
         goto out;
@@ -573,7 +603,12 @@ out:
         DO_SYSCALL(close, enclave_image);
     if (enclave_mem >= 0)
         DO_SYSCALL(close, enclave_mem);
-
+    if (sigfile_fd >= 0)
+        DO_SYSCALL(close, sigfile_fd);
+    if (token_fd >= 0)
+        DO_SYSCALL(close, token_fd);
+    free(sig_path);
+    free(token_path);
     return ret;
 }
 
@@ -916,34 +951,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         log_error("Path to in-enclave PAL (%s) must be absolute", enclave->libpal_uri);
         return -EINVAL;
     }
-
-    char* sig_path = alloc_concat(g_pal_enclave.application_path, -1, ".sig", -1);
-    if (!sig_path) {
-        return -ENOMEM;
-    }
-
-    enclave->sigfile = DO_SYSCALL(open, sig_path, O_RDONLY | O_CLOEXEC, 0);
-    if (enclave->sigfile < 0) {
-        log_error("Cannot open sigstruct file %s", sig_path);
-        return -EINVAL;
-    }
-    free(sig_path);
-
-    char* token_path = alloc_concat(g_pal_enclave.application_path, -1, ".token", -1);
-    if (!token_path) {
-        return -ENOMEM;
-    }
-
-    enclave->token = DO_SYSCALL(open, token_path, O_RDONLY | O_CLOEXEC, 0);
-    if (enclave->token < 0) {
-        log_error(
-            "Cannot open token %s. Use gramine-sgx-get-token on the runtime host or run "
-            "`make SGX=1 sgx-tokens` in the Gramine source to create the token file.",
-            token_path);
-        return -EINVAL;
-    }
-    log_debug("Token file: %s", token_path);
-    free(token_path);
 
     ret = initialize_enclave(enclave, enclave->raw_manifest_data);
     if (ret < 0)

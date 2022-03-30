@@ -52,11 +52,6 @@ struct pal_enclave {
     bool remote_attestation_enabled;
     bool use_epid_attestation; /* Valid only if `remote_attestation_enabled` is true, selects
                                 * EPID/DCAP attestation scheme. */
-
-    /* files */
-    int sigfile;
-    int token;
-
     char* libpal_uri; /* Path to the PAL binary */
 
 #ifdef DEBUG
