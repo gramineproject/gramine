@@ -253,8 +253,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     token_fd = DO_SYSCALL(open, token_path, O_RDONLY | O_CLOEXEC, 0);
     if (token_fd < 0) {
         log_error("Cannot open token %s. Use gramine-sgx-get-token on the runtime host or run "
-            "`make SGX=1 sgx-tokens` in the Gramine source to create the token file.",
-            token_path);
+                  "`make SGX=1 sgx-tokens` in the Gramine source to create the token file.",
+                  token_path);
         ret = -EINVAL;
         goto out;
     }
