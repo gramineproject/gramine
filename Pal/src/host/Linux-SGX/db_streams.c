@@ -46,26 +46,6 @@ static size_t addr_size(const struct sockaddr* addr) {
     }
 }
 
-bool stataccess(struct stat* stat, int acc) {
-    unsigned int mode = stat->st_mode;
-
-    if (g_pal_linuxsgx_state.host_euid && g_pal_linuxsgx_state.host_euid == stat->st_uid) {
-        mode >>= 6;
-        goto out;
-    }
-
-    if (g_pal_linuxsgx_state.host_egid && g_pal_linuxsgx_state.host_egid == stat->st_gid) {
-        mode >>= 3;
-        goto out;
-    }
-
-    if (!g_pal_linuxsgx_state.host_euid)
-        mode >>= 6;
-
-out:
-    return (mode & acc);
-}
-
 /* _DkStreamUnmap for internal use. Unmap stream at certain memory address.
    The memory is unmapped as a whole.*/
 int _DkStreamUnmap(void* addr, uint64_t size) {

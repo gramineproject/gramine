@@ -200,9 +200,6 @@ static inline void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat) {
     attr->handle_type  = file_stat_type(stat);
     attr->disconnected = false;
     attr->nonblocking  = false;
-    attr->readable     = stataccess(stat, ACCESS_R);
-    attr->writable     = stataccess(stat, ACCESS_W);
-    attr->runnable     = stataccess(stat, ACCESS_X);
     attr->share_flags  = stat->st_mode & PAL_SHARE_MASK;
     attr->pending_size = stat->st_size;
 }

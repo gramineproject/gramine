@@ -142,9 +142,6 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 
     if (!strcmp(uri, "tty")) {
         /* special case of "dev:tty" device which is the standard input + standard output */
-        attr->readable     = true; /* we don't know if it's stdin/stdout so simply return true */
-        attr->writable     = true; /* we don't know if it's stdin/stdout so simply return true */
-        attr->runnable     = false;
         attr->share_flags  = PERM_rw_rw_rw_;
         attr->pending_size = 0;
     } else {
@@ -154,9 +151,6 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         if (ret < 0)
             return unix_to_pal_error(ret);
 
-        attr->readable     = stataccess(&stat_buf, ACCESS_R);
-        attr->writable     = stataccess(&stat_buf, ACCESS_W);
-        attr->runnable     = stataccess(&stat_buf, ACCESS_X);
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
     }
@@ -172,9 +166,6 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (handle->dev.fd == 0 || handle->dev.fd == 1) {
         /* special case of "dev:tty" device which is the standard input + standard output */
-        attr->readable     = handle->flags & PAL_HANDLE_FD_READABLE;
-        attr->writable     = handle->flags & PAL_HANDLE_FD_WRITABLE;
-        attr->runnable     = false;
         attr->share_flags  = 0;
         attr->pending_size = 0;
     } else {
@@ -184,9 +175,6 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         if (ret < 0)
             return unix_to_pal_error(ret);
 
-        attr->readable     = stataccess(&stat_buf, ACCESS_R);
-        attr->writable     = stataccess(&stat_buf, ACCESS_W);
-        attr->runnable     = stataccess(&stat_buf, ACCESS_X);
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
     }

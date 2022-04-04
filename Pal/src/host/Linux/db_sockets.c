@@ -953,15 +953,6 @@ static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         attr->pending_size = val;
     }
 
-    /* query if there is data available for reading */
-    struct pollfd pfd  = {.fd = handle->sock.fd, .events = POLLIN | POLLOUT, .revents = 0};
-    struct timespec tp = {0, 0};
-    ret = DO_SYSCALL(ppoll, &pfd, 1, &tp, NULL, 0);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    attr->readable = ret == 1 && (pfd.revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
-    attr->writable = ret == 1 && (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
     return 0;
 }
 

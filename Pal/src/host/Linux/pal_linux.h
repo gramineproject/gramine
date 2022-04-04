@@ -63,12 +63,6 @@ int handle_set_cloexec(PAL_HANDLE handle, bool enable);
 int handle_serialize(PAL_HANDLE handle, void** data);
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size);
 
-#define ACCESS_R 4
-#define ACCESS_W 2
-#define ACCESS_X 1
-
-bool stataccess(struct stat* stats, int acc);
-
 void init_child_process(int parent_stream_fd, PAL_HANDLE* parent, char** manifest_out,
                         uint64_t* instance_id);
 

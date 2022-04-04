@@ -48,13 +48,6 @@ extern struct pal_linuxsgx_state {
 } g_pal_linuxsgx_state;
 
 
-#define ACCESS_R 4
-#define ACCESS_W 2
-#define ACCESS_X 1
-
-struct stat;
-bool stataccess(struct stat* stats, int acc);
-
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
 
 #ifdef IN_ENCLAVE
