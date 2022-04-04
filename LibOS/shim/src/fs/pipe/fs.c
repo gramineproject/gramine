@@ -158,40 +158,6 @@ static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
     return 0;
 }
 
-static int pipe_poll(struct shim_handle* hdl, int poll_type) {
-    int ret = 0;
-
-    assert(hdl->type == TYPE_PIPE);
-    if (!hdl->info.pipe.ready_for_ops)
-        return -EACCES;
-
-    lock(&hdl->lock);
-
-    if (!hdl->pal_handle) {
-        ret = -EBADF;
-        goto out;
-    }
-
-    PAL_STREAM_ATTR attr;
-    int query_ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
-    if (query_ret < 0) {
-        ret = pal_to_unix_errno(query_ret);
-        goto out;
-    }
-
-    ret = 0;
-    if (attr.disconnected)
-        ret |= FS_POLL_ER;
-    if ((poll_type & FS_POLL_RD) && attr.readable)
-        ret |= FS_POLL_RD;
-    if ((poll_type & FS_POLL_WR) && attr.writable)
-        ret |= FS_POLL_WR;
-
-out:
-    unlock(&hdl->lock);
-    return ret;
-}
-
 static int pipe_setflags(struct shim_handle* hdl, int flags) {
     if (!hdl->pal_handle)
         return 0;
@@ -305,14 +271,12 @@ static struct shim_fs_ops pipe_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
     .hstat    = &pipe_hstat,
-    .poll     = &pipe_poll,
     .setflags = &pipe_setflags,
 };
 
 static struct shim_fs_ops fifo_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
-    .poll     = &pipe_poll,
     .setflags = &pipe_setflags,
 };
 

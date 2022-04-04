@@ -144,73 +144,6 @@ static int socket_hstat(struct shim_handle* hdl, struct stat* stat) {
     return 0;
 }
 
-static int socket_poll(struct shim_handle* hdl, int poll_type) {
-    assert(hdl->type == TYPE_SOCK);
-    struct shim_sock_handle* sock = &hdl->info.sock;
-    int ret = 0;
-
-    lock(&hdl->lock);
-
-    if (poll_type & FS_POLL_RD) {
-        if (sock->sock_type == SOCK_STREAM) {
-            if (sock->sock_state == SOCK_CREATED || sock->sock_state == SOCK_BOUND ||
-                sock->sock_state == SOCK_SHUTDOWN) {
-                ret = -ENOTCONN;
-                goto out;
-            }
-        }
-
-        if (sock->sock_type == SOCK_DGRAM && sock->sock_state == SOCK_SHUTDOWN) {
-            ret = -ENOTCONN;
-            goto out;
-        }
-    }
-
-    if (poll_type & FS_POLL_WR) {
-        if (sock->sock_type == SOCK_STREAM) {
-            if (sock->sock_state == SOCK_CREATED || sock->sock_state == SOCK_BOUND ||
-                sock->sock_state == SOCK_LISTENED || sock->sock_state == SOCK_SHUTDOWN) {
-                ret = -ENOTCONN;
-                goto out;
-            }
-        }
-
-        if (sock->sock_type == SOCK_DGRAM && sock->sock_state == SOCK_SHUTDOWN) {
-            ret = -ENOTCONN;
-            goto out;
-        }
-    }
-
-    if (!hdl->pal_handle) {
-        ret = -EBADF;
-        goto out;
-    }
-
-    PAL_STREAM_ATTR attr;
-    int query_ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
-    if (query_ret < 0) {
-        ret = pal_to_unix_errno(query_ret);
-        goto out;
-    }
-
-    ret = 0;
-    if (attr.disconnected)
-        ret |= FS_POLL_ER;
-    if ((poll_type & FS_POLL_RD) && attr.readable)
-        ret |= FS_POLL_RD;
-    if ((poll_type & FS_POLL_WR) && attr.writable)
-        ret |= FS_POLL_WR;
-
-out:
-    if (ret < 0) {
-        log_error("socket_poll failed (%d)", ret);
-        sock->error = -ret;
-    }
-
-    unlock(&hdl->lock);
-    return ret;
-}
-
 static int socket_setflags(struct shim_handle* hdl, int flags) {
     if (!hdl->pal_handle)
         return 0;
@@ -247,7 +180,6 @@ struct shim_fs_ops socket_fs_ops = {
     .read     = &socket_read,
     .write    = &socket_write,
     .hstat    = &socket_hstat,
-    .poll     = &socket_poll,
     .setflags = &socket_setflags,
 };
 

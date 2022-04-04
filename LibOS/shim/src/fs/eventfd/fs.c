@@ -48,40 +48,9 @@ static ssize_t eventfd_write(struct shim_handle* hdl, const void* buf, size_t co
     return (ssize_t)count;
 }
 
-static int eventfd_poll(struct shim_handle* hdl, int poll_type) {
-    int ret = 0;
-
-    lock(&hdl->lock);
-
-    if (!hdl->pal_handle) {
-        ret = -EBADF;
-        goto out;
-    }
-
-    PAL_STREAM_ATTR attr;
-    int query_ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
-    if (query_ret < 0) {
-        ret = pal_to_unix_errno(query_ret);
-        goto out;
-    }
-
-    ret = 0;
-    if (attr.disconnected)
-        ret |= FS_POLL_ER;
-    if ((poll_type & FS_POLL_RD) && attr.readable)
-        ret |= FS_POLL_RD;
-    if ((poll_type & FS_POLL_WR) && attr.writable)
-        ret |= FS_POLL_WR;
-
-out:
-    unlock(&hdl->lock);
-    return ret;
-}
-
 struct shim_fs_ops eventfd_fs_ops = {
     .read  = &eventfd_read,
     .write = &eventfd_write,
-    .poll  = &eventfd_poll,
 };
 
 struct shim_fs eventfd_builtin_fs = {
