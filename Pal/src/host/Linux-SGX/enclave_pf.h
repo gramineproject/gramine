@@ -105,4 +105,7 @@ struct protected_file* find_protected_file_handle(PAL_HANDLE handle);
 /* Initialize the PF library, register PFs from the manifest */
 int init_protected_files(void);
 
+/* Сalculates the hash and compares with the given one */
+bool protected_file_check_hash(pf_context_t* pf, const sgx_file_hash_t *file_hash);
+
 #endif /* ENCLAVE_PF_H_ */

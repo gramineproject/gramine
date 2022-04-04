@@ -156,6 +156,22 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
             goto fail_pf_unlock;
         }
 
+        if (tf && !tf->allowed) {
+            if (do_create || (pal_access == PAL_ACCESS_RDWR) || (pal_access == PAL_ACCESS_WRONLY)) {
+                log_error("Disallowing create/write/append to a protected file '%s' with fixed hash",
+                          hdl->file.realpath);
+                ret = -PAL_ERROR_DENIED;
+                goto fail_pf_unlock;
+            }
+
+            if (!protected_file_check_hash(pf->context, &tf->file_hash)) {
+                log_error("Hash of trusted/protected file '%s' does not match with the reference hash in manifest",
+                            pf->path);
+                ret = -PAL_ERROR_DENIED;
+                goto fail_pf_unlock;
+            }
+        }
+
         if (pf_mode & PF_FILE_MODE_WRITE) {
             pf->writable_fd = fd;
         }

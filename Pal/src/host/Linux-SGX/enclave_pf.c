@@ -809,3 +809,66 @@ int set_protected_files_key(const char* pf_key_hex) {
 
     return 0;
 }
+
+bool protected_file_check_hash(pf_context_t* pf, const sgx_file_hash_t *file_hash)
+{
+    if (!pf) {
+        log_warning("protected_file_check_hash: PF not initialized");
+        return false;
+    }
+
+    if (!file_hash) {
+        log_warning("protected_file_check_hash: file_hash must be initialized");
+        return false;
+    }
+
+    uint64_t file_size = 0u;
+    pf_get_size(pf, &file_size);
+
+    LIB_SHA256_CONTEXT file_sha;
+    int ret = lib_SHA256Init(&file_sha);
+    if (ret < 0) {
+        log_error("Error during hash initialization");
+        return false;
+    }
+
+    uint64_t offset = 0;
+    size_t bytes_read = 0;
+    pf_status_t pfs = PF_STATUS_SUCCESS;
+    uint8_t buffer[PF_NODE_SIZE];
+
+    while (true) {
+        uint64_t chunk_size = MIN(file_size - offset, PF_NODE_SIZE);
+        if (chunk_size == 0) {
+            break;
+        }
+
+        pfs = pf_read(pf, offset, chunk_size, buffer, &bytes_read);
+        if (bytes_read != chunk_size) {
+            pfs = PF_STATUS_CORRUPTED;
+        }
+
+        if (PF_FAILURE(pfs)) {
+            log_error("Read from protected file failed (offset %lu, size %lu): %s\n",
+                      offset, chunk_size, pf_strerror(pfs));
+            return false;
+        }
+
+        ret = lib_SHA256Update(&file_sha, buffer, chunk_size);
+        if (ret < 0) {
+            log_error("Error during hash update");
+            return false;
+        }
+
+        offset += bytes_read;
+    }
+
+    sgx_file_hash_t pf_file_hash;
+    ret = lib_SHA256Final(&file_sha, pf_file_hash.bytes);
+
+    if (memcmp(&pf_file_hash, file_hash, sizeof(pf_file_hash))) {
+        return false;
+    }
+
+    return true;
+}
