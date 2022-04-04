@@ -413,7 +413,6 @@ typedef struct _PAL_STREAM_ATTR {
     PAL_IDX handle_type;
     bool disconnected;
     bool nonblocking;
-    bool readable, writable, runnable;
     pal_share_flags_t share_flags;
     PAL_NUM pending_size;
     union {

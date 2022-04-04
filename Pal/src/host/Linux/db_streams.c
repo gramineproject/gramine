@@ -38,26 +38,6 @@ static size_t addr_size(const struct sockaddr* addr) {
     }
 }
 
-bool stataccess(struct stat* stat, int acc) {
-    mode_t mode = stat->st_mode;
-
-    if (g_pal_linux_state.host_euid && g_pal_linux_state.host_euid == stat->st_uid) {
-        mode >>= 6;
-        goto out;
-    }
-
-    if (g_pal_linux_state.host_egid && g_pal_linux_state.host_egid == stat->st_gid) {
-        mode >>= 3;
-        goto out;
-    }
-
-    if (!g_pal_linux_state.host_euid)
-        mode >>= 6;
-
-out:
-    return (mode & acc);
-}
-
 int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
     if (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE)) {
         long flags = enable ? FD_CLOEXEC : 0;

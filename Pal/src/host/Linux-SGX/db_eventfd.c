@@ -120,16 +120,6 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
 
     attr->pending_size = ret;
 
-    /* query if there is data available for reading */
-    struct pollfd pfd = {.fd = handle->eventfd.fd, .events = POLLIN | POLLOUT, .revents = 0};
-    uint64_t timeout_us = 0;
-    ret = ocall_poll(&pfd, 1, &timeout_us);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    attr->readable = ret == 1 && (pfd.revents & (POLLIN | POLLERR | POLLHUP)) == POLLIN;
-    attr->writable = ret == 1 && (pfd.revents & (POLLOUT | POLLERR | POLLHUP)) == POLLOUT;
-
     return 0;
 }
 
