@@ -26,8 +26,6 @@ typedef struct {
     char*                 ms_env;
     size_t                ms_env_size;
     int                   ms_parent_stream_fd;
-    unsigned int          ms_host_euid;
-    unsigned int          ms_host_egid;
     sgx_target_info_t*    ms_qe_targetinfo;
     struct pal_topo_info* ms_topo_info;
 
