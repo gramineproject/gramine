@@ -30,8 +30,6 @@ struct timeval;
 extern struct pal_linux_state {
     const char** host_environ;
     unsigned int host_pid;
-    unsigned int host_euid;
-    unsigned int host_egid;
     unsigned long memory_quota;
     long int (*vdso_clock_gettime)(long int clk, struct timespec* tp);
 } g_pal_linux_state;

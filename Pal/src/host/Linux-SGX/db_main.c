@@ -892,8 +892,7 @@ static void do_preheat_enclave(void) {
 __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
-                             int parent_stream_fd, unsigned int host_euid, unsigned int host_egid,
-                             sgx_target_info_t* uptr_qe_targetinfo,
+                             int parent_stream_fd, sgx_target_info_t* uptr_qe_targetinfo,
                              struct pal_topo_info* uptr_topo_info) {
     /* All our arguments are coming directly from the urts. We are responsible to check them. */
     int ret;
@@ -951,9 +950,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Copying qe_targetinfo into the enclave failed");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-
-    g_pal_linuxsgx_state.host_euid = host_euid;
-    g_pal_linuxsgx_state.host_egid = host_egid;
 
     /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
      * because the slab manager can use normal allocations (`_DkVirtualMemoryAlloc`) right away. */

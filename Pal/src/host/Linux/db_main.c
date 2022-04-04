@@ -42,8 +42,7 @@ char* g_pal_internal_mem_addr = NULL;
 const size_t g_page_size = PRESET_PAGESIZE;
 
 static void read_info_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
-                                 const char*** out_envp, int* out_host_euid, int* out_host_egid,
-                                 elf_addr_t* out_sysinfo_ehdr) {
+                                 const char*** out_envp, elf_addr_t* out_sysinfo_ehdr) {
     /* The stack layout on program entry is:
      *
      *            argc                  <-- `initial_rsp` points here
@@ -67,8 +66,6 @@ static void read_info_from_stack(void* initial_rsp, int* out_argc, const char***
     const char** e = envp;
     for (; *e; e++) {}
 
-    bool host_euid_set = false;
-    bool host_egid_set = false;
     *out_sysinfo_ehdr = 0;
     for (elf_auxv_t* av = (elf_auxv_t*)(e + 1); av->a_type != AT_NULL; av++) {
         switch (av->a_type) {
@@ -77,21 +74,10 @@ static void read_info_from_stack(void* initial_rsp, int* out_argc, const char***
                     INIT_FAIL(PAL_ERROR_INVAL, "Unexpected AT_PAGESZ auxiliary vector");
                 }
                 break;
-            case AT_EUID:
-                *out_host_euid = av->a_un.a_val;
-                host_euid_set = true;
-                break;
-            case AT_EGID:
-                *out_host_egid = av->a_un.a_val;
-                host_egid_set = true;
-                break;
             case AT_SYSINFO_EHDR:
                 *out_sysinfo_ehdr = av->a_un.a_val;
                 break;
         }
-    }
-    if (!host_euid_set || !host_egid_set) {
-        INIT_FAIL(PAL_ERROR_INVAL, "Missing AT_EUID or AT_EGID in auxiliary vector");
     }
 
     *out_argc = argc;
@@ -199,9 +185,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     int argc;
     const char** argv;
     const char** envp;
-    int host_euid = -1, host_egid = -1; // has to be set, otherwise GCC erroneously emits a warning
     elf_addr_t sysinfo_ehdr;
-    read_info_from_stack(initial_rsp, &argc, &argv, &envp, &host_euid, &host_egid, &sysinfo_ehdr);
+    read_info_from_stack(initial_rsp, &argc, &argv, &envp, &sysinfo_ehdr);
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);  // may be NULL!
@@ -378,8 +363,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     g_pal_linux_state.host_pid = DO_SYSCALL(getpid);
-    g_pal_linux_state.host_euid = host_euid;
-    g_pal_linux_state.host_egid = host_egid;
 
     PAL_HANDLE parent = NULL;
     char* manifest = NULL;

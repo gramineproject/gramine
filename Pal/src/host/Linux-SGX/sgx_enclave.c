@@ -834,8 +834,7 @@ static int start_rpc(size_t threads_cnt) {
 }
 
 int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd, unsigned int host_euid,
-                        unsigned int host_egid, sgx_target_info_t* qe_targetinfo,
+                        size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
                         struct pal_topo_info* topo_info) {
     g_rpc_queue = NULL;
 
@@ -856,8 +855,6 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
     ms.ms_env              = env;
     ms.ms_env_size         = env_size;
     ms.ms_parent_stream_fd = parent_stream_fd;
-    ms.ms_host_euid        = host_euid;
-    ms.ms_host_egid        = host_egid;
     ms.ms_qe_targetinfo    = qe_targetinfo;
     ms.ms_topo_info        = topo_info;
     ms.rpc_queue           = g_rpc_queue;
