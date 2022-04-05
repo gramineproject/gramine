@@ -78,9 +78,28 @@ pygments_style = None
 highlight_language = 'c'
 primary_domain = 'c'
 
-rst_prolog = '''
+rst_stable_checkout = '\\'
+if 'READTHEDOCS' in os.environ:
+    rtd_current_version = os.environ['READTHEDOCS_VERSION']
+
+    if rtd_current_version.startswith('v'):
+        rst_stable_checkout = rtd_current_version
+
+    elif rtd_current_version == 'stable':
+        # we don't have a version, we may be able to check from git
+        try:
+            tags = [tag for tag in subprocess.check_output(
+                    ['git', 'tag', '--points-at']).decode().strip().split()
+                if tag.startswith('v')]
+            rst_stable_checkout = tags.pop()
+        except (subprocess.CalledProcessError, IndexError):
+            pass
+
+rst_prolog = f'''
 .. |~| unicode:: 0xa0
    :trim:
+
+.. |stable-checkout| replace:: {rst_stable_checkout}
 '''
 
 breathe_projects = {p: '_build/doxygen-{}/xml'.format(p)
