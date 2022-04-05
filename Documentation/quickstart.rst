@@ -53,9 +53,9 @@ be protected and should not be disclosed to anyone.
 Clone the repository and run sample application
 -----------------------------------------------
 
-::
+.. parsed-literal::
 
-   git clone --depth 1 https://github.com/gramineproject/gramine.git
+   git clone --depth 1 \https://github.com/gramineproject/gramine.git |stable-checkout|
    cd gramine/CI-Examples/helloworld
 
 Without SGX::
