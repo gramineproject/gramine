@@ -182,6 +182,9 @@ omitted, Gramine's build system will try to determine the right path.
    for executables under this path. If your system reports that Gramine
    programs can not be found, you might need to edit your configuration files so
    that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
+   
+   For distros that do not patch python, such as Archlinux, you may need to
+   set $PYTHONPATH to /usr/local/lib/python3.10/site-packages/
 
 Set ``-Dglibc=`` or ``-Dmusl=`` options to ``disabled`` if you wish not to build
 the support for any (they are both built by default).
