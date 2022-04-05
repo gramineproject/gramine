@@ -7,7 +7,7 @@ stage('clean-check') {
      * invokes `gramine-test clean`.
      */
     sh '''
-        rm -rf XDG_CONFIG_HOME
+        rm -rf XDG_CONFIG_HOME CARGO_HOME
 
         REL_PREFIX=$(realpath "$PREFIX" --relative-to=.)
 
@@ -39,6 +39,7 @@ stage('clean-check') {
         make -C CI-Examples/nginx distclean
         make -C CI-Examples/blender distclean
         make -C CI-Examples/sqlite distclean
+        make -C CI-Examples/rust distclean
 
         make -C CI-Examples/ra-tls-mbedtls distclean
         make -C CI-Examples/ra-tls-secret-prov distclean

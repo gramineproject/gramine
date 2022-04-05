@@ -343,6 +343,51 @@ be aware that they have severe SGX-hardware limitations. In particular:
    enclave threads and enclave memory across several NUMA domains, which will
    lead to higher memory access latencies and overall worse performance.
 
+Glibc malloc tuning
+-------------------
+
+Depending on the number of threads and the value of ``sgx.enclave_size``, you
+might encounter pathological performance due to a combination of various factors.
+
+Specifically, the default settings of glibc's ``malloc`` assume that virtual memory is
+virtually unlimited, and, as an optimization, request a per-thread arena
+of 64 MiB from the kernel when a thread first calls ``malloc``.
+
+Due to the limitations of SGX v1, we must back each allocation with physical memory
+immediately, which breaks the assumption that speculatively allocating 64 MiB is not
+a big deal — when many threads are spawned (and call ``malloc``), the per-thread arenas
+might consume a large portion of the memory reserved for the enclave.
+
+When this happens, calls to ``malloc`` won't fail, as the allocator will
+allocate a single page to serve the request instead. However, no attempt will
+be made to make use of the rest of the page, wasting most of the memory.
+Moreover, glibc will retry allocating the arena each time ``malloc`` gets
+called, perhaps in a hope that the memory situation that prevented the previous
+attempt from succeeding has since passed.
+
+All together, this means that, unless ``64M * (application's thread count)`` fits
+comfortably in ``sgx.enclave_size``, ``malloc`` will be much slower and much less
+memory-efficient than it should be, on some of the threads involved, because each
+call will now cause multiple relatively expensive calls to ``mmap``, and effectively
+round up the request size to a multiple of 4096.
+
+One way to solve this is to limit the number of threads that are allowed to have
+their own arena. This can be done with either a call to ``mallopt``, or an environment
+variable set in the manifest::
+
+    # Only create one malloc arena.
+    loader.env.MALLOC_ARENA_MAX = "1"
+
+This does have its own performance implications, but the impact is much smaller
+than the pathological behavior described above.
+
+Another solution would be to set ``sgx.enclave_size`` to a much higher value,
+to accomodate each thread creating its own arena. Do keep in mind, however,
+that each process spawns its own enclave, so in a multi-process application,
+the actual memory consumption will be a multiple of this setting. If the memory
+consumption is not a problem for your usecase, you might observe better
+performance with this approach than when limiting ``MALLOC_ARENA_MAX``.
+
 Other considerations
 --------------------
 

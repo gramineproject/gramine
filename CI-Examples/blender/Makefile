@@ -48,7 +48,7 @@ blender.manifest: blender.manifest.template | $(RUN_DIR)
 		$< >$@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# we need to hack around.
+# see the helloworld example for details on this workaround.
 blender.sig blender.manifest.sgx: sgx_outputs
 	@:
 
