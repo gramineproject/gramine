@@ -28,7 +28,6 @@
  * - mounting with other keys than "default"
  * - mounting with special keys (SGX MRENCLAVE and MRSIGNER)
  * - setting keys through /dev/attestation (and making sure they're copied to child process)
- * - rename (needs support in the `protected_files` module)
  * - mmap
  * - truncate (the current `truncate` operation works only for extending the file, support for
  *   truncation needs to be added to the `protected_files` module)
@@ -272,6 +271,34 @@ out:
     return ret;
 }
 
+static int chroot_encrypted_rename(struct shim_dentry* old, struct shim_dentry* new) {
+    assert(locked(&g_dcache_lock));
+    assert(old->inode);
+    assert(old->inode->type == S_IFREG);
+
+    int ret;
+    char* new_uri = NULL;
+
+    ret = chroot_dentry_uri(new, old->inode->type, &new_uri);
+    if (ret < 0)
+        return ret;
+
+    lock(&old->inode->lock);
+
+    struct shim_encrypted_file* enc = old->inode->data;
+
+    ret = encrypted_file_get(enc);
+    if (ret < 0)
+        goto out;
+
+    ret = encrypted_file_rename(enc, new_uri);
+    encrypted_file_put(enc);
+out:
+    unlock(&old->inode->lock);
+    free(new_uri);
+    return ret;
+}
+
 static int chroot_encrypted_chmod(struct shim_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
@@ -411,6 +438,7 @@ struct shim_d_ops chroot_encrypted_d_ops = {
     .stat          = &generic_inode_stat,
     .readdir       = &chroot_readdir, /* same as in `chroot` filesystem */
     .unlink        = &chroot_unlink,  /* same as in `chroot` filesystem */
+    .rename        = &chroot_encrypted_rename,
     .chmod         = &chroot_encrypted_chmod,
     .idrop         = &chroot_encrypted_idrop,
 };

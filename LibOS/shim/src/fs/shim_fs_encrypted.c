@@ -515,6 +515,53 @@ int encrypted_file_set_size(struct shim_encrypted_file* enc, file_off_t size) {
     return 0;
 }
 
+int encrypted_file_rename(struct shim_encrypted_file* enc, const char* new_uri) {
+    assert(enc->pf);
+
+    char* new_uri_copy = strdup(new_uri);
+    if (!new_uri_copy)
+        return -ENOMEM;
+
+    int ret;
+
+    assert(strstartswith(enc->uri, URI_PREFIX_FILE));
+    const char* old_path = enc->uri + static_strlen(URI_PREFIX_FILE);
+
+    assert(strstartswith(new_uri, URI_PREFIX_FILE));
+    const char* new_path = new_uri + static_strlen(URI_PREFIX_FILE);
+
+    pf_status_t pfs = pf_rename(enc->pf, new_path);
+    if (PF_FAILURE(pfs)) {
+        log_warning("%s: pf_rename failed: %s", __func__, pf_strerror(pfs));
+        ret = -EACCES;
+        goto out;
+    }
+
+    ret = DkStreamChangeName(enc->pal_handle, new_uri);
+    if (ret < 0) {
+        log_warning("%s: DkStreamChangeName failed: %d", __func__, ret);
+
+        /* We failed to rename the file. Try to restore the name in header. */
+        pfs = pf_rename(enc->pf, old_path);
+        if (PF_FAILURE(pfs)) {
+            log_warning("%s: pf_rename (during cleanup) failed, the file might be unusable: %s",
+                        __func__, pf_strerror(pfs));
+        }
+
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    free(enc->uri);
+    enc->uri = new_uri_copy;
+    new_uri_copy = NULL;
+    ret = 0;
+
+out:
+    free(new_uri_copy);
+    return ret;
+}
+
 BEGIN_CP_FUNC(encrypted_file) {
     __UNUSED(size);
 

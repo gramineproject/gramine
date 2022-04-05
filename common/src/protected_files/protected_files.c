@@ -1254,6 +1254,26 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     return PF_STATUS_NOT_IMPLEMENTED;
 }
 
+pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
+    if (!g_initialized)
+        return PF_STATUS_UNINITIALIZED;
+
+    if (!(pf->mode & PF_FILE_MODE_WRITE))
+        return PF_STATUS_INVALID_MODE;
+
+    size_t new_path_size = strlen(new_path) + 1;
+    if (new_path_size > PATH_MAX_SIZE)
+        return PF_STATUS_PATH_TOO_LONG;
+
+    memset(pf->encrypted_part_plain.path, 0, sizeof(pf->encrypted_part_plain.path));
+    memcpy(pf->encrypted_part_plain.path, new_path, new_path_size);
+    pf->need_writing = true;
+    if (!ipf_internal_flush(pf))
+        return pf->last_error;
+
+    return PF_STATUS_SUCCESS;
+}
+
 pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output,
                     size_t* bytes_read) {
     if (!g_initialized)
