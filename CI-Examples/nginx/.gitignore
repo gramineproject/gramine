@@ -5,3 +5,4 @@
 /result-*
 /ssl/ca.*
 /ssl/server.*
+/nginx_secure_args
