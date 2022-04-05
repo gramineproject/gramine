@@ -21,9 +21,9 @@ GRAMINE_LOG_LEVEL = error
 endif
 
 .PHONY: all
-all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata
+all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata nginx_secure_args
 ifeq ($(SGX),1)
-all: nginx_secure_args nginx.manifest.sgx nginx.sig nginx.token
+all: nginx.manifest.sgx nginx.sig nginx.token
 endif
 
 # Note that Gramine doesn't support eventfd() and PR_SET_DUMPABLE, so we manually
