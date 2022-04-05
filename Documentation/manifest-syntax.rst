@@ -539,11 +539,39 @@ Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
     sgx.require_amx    = [true|false]
     (Default: false)
 
-This syntax ensures that the CPU features are available and enabled for the
-enclave. If the options are set in the manifest but the features are unavailable
-on the platform, enclave initialization will fail. If the options are unset,
-enclave initialization will succeed even if these features are unavailable on
-the platform.
+    sgx.disable_avx    = [true|false]
+    sgx.disable_avx512 = [true|false]
+    sgx.disable_amx    = [true|false]
+    (Default: false)
+
+The ``sgx.require_[feature]`` syntax ensures that the corresponding CPU feature
+is available and enabled for the SGX enclave. If the option is set in the
+manifest but the corresponding CPU feature is unavailable on the platform,
+enclave initialization will fail. If the option is unset, enclave initialization
+will succeed even if the corresponding feature is unavailable on the platform.
+
+The ``sgx.disable_[feature]`` syntax disables the corresponding CPU feature
+inside the SGX enclave even if this CPU feature is available on the platform:
+this may improve enclave performance because this CPU feature will *not* be
+saved and restored during enclave entry/exit. This syntax is provided to improve
+performance of applications that are known to *not* rely on certain CPU
+features. Be aware that if the application relies on some disabled CPU features,
+the application will fail with SIGILL ("illegal instruction"). For example, if
+the application is built with AVX support, and AVX is disabled in the manifest,
+the application will crash. Only not-security-critical CPU features may be
+disabled (currently these are AVX, AVX512 and AMX).
+
+It is meaningless to set a CPU feature as both required and disabled. Currently
+Gramine doesn't disallow this, but the feature will be disabled in such case.
+For example, setting both ``sgx.require_avx = true`` and ``sgx.disable_avx =
+true`` will result in the SGX enclave running with AVX disabled.
+
+In case of doubt, it is recommended to keep the default values for these
+features (e.g. ``sgx.require_avx = false`` and ``sgx.disable_avx =
+false``). In this case, Gramine auto-detects the corresponding CPU features on
+the platform and enables them if available, regardless of whether the
+application uses them or not.
+
 
 ISV Product ID and SVN
 ^^^^^^^^^^^^^^^^^^^^^^

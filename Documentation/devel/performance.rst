@@ -233,6 +233,17 @@ platform and use very slow functions, leading to 10-100x overhead over native
 your case, enable the features in the manifest, e.g., set ``sgx.require_avx =
 true``.
 
+Gramine also allows to explicitly disable not-security-critical CPU features
+using the following manifest options: ``sgx.disable_avx``,
+``sgx.disable_avx512``, ``sgx.disable_amx``. By default, all of these options
+are set to ``false`` -- this means that Gramine will enable the CPU feature if
+available on the system. Setting each of these options to ``true`` disables the
+corresponding CPU feature inside the SGX enclave even if this CPU feature is
+available on the system: this may improve enclave performance because this CPU
+feature will *not* be saved and restored during enclave entry/exit. But be aware
+that if the graminized application relies on this CPU feature, the application
+will crash with "illegal instruction".
+
 For more information on SGX logic regarding optional CPU features, see the Intel
 Software Developer Manual, Table 38-3 ("Layout of ATTRIBUTES Structure") under
 the SGX section.

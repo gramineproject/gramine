@@ -58,7 +58,9 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
         return bytes;
 
 #ifdef SGX_DCAP
-    log_debug("Read dummy DCAP token");
+    log_debug("Read dummy DCAP token (only `attr` field is used):");
+    log_debug("    attr.flags:            0x%016lx", token->body.attributes.flags);
+    log_debug("    attr.xfrm:             0x%016lx", token->body.attributes.xfrm);
 #else
     log_debug("Read token:");
     log_debug("    valid:                 0x%08x",   token->body.valid);
@@ -117,6 +119,14 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     secs->ssa_frame_size = SSA_FRAME_SIZE / g_page_size; /* SECS expects SSA frame size in pages */
     secs->misc_select    = token->masked_misc_select_le;
     memcpy(&secs->attributes, &token->body.attributes, sizeof(sgx_attributes_t));
+
+    /* disable not-security-critical HW features for XSAVE/AEX performance; see also sgx_arch.h */
+    if (g_pal_enclave.avx_disabled)
+        secs->attributes.xfrm &= ~SGX_XFRM_AVX;
+    if (g_pal_enclave.avx512_disabled)
+        secs->attributes.xfrm &= ~SGX_XFRM_AVX512;
+    if (g_pal_enclave.amx_disabled)
+        secs->attributes.xfrm &= ~SGX_XFRM_AMX;
 
     /* Do not initialize secs->mr_signer and secs->mr_enclave here as they are
      * not used by ECREATE to populate the internal SECS. SECS's mr_enclave is
