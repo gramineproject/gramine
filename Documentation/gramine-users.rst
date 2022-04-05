@@ -20,6 +20,12 @@ alphabetically).
   kinds of ML/AI applications, and Eder Labs is a firm supporter and beneficiary
   of this future-defining paradigm.
 
+- `enclaive.io <https://enclaive.io>`__ uses among other technologies Gramine to
+  generically enclavize applications. Enclaive builds and deploys confidential
+  containers for the zero-trust Web. Use cases are in the area of GDPR-compliant
+  Web analytics and AI. Specifically, Gramine Shielded Containers (GSC) ease the
+  design of confidential containers.
+
 - `JD Cloud <https://www.jdcloud.com/>`__ is experimenting with Gramine for
   several solutions.
 
