@@ -18,7 +18,12 @@ foreach src : pal_linux_common_sources_urts_arch
     pal_linux_common_sources_urts += files(join_paths('arch', host_machine.cpu_family(), src))
 endforeach
 
+pal_linux_common_sources_db = files(
+    'db_devices.c',
+)
+
 pal_linux_common_sources = [
+    pal_linux_common_sources_db,
     pal_linux_common_sources_enclave,
     pal_linux_common_sources_urts,
 ]

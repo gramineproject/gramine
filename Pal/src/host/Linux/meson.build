@@ -1,5 +1,4 @@
 pal_direct_sources = files(
-    'db_devices.c',
     'db_eventfd.c',
     'db_events.c',
     'db_exception.c',
@@ -52,6 +51,7 @@ libpal_direct = shared_library('pal',
         cflags_sanitizers,
         cflags_custom_stack_protector,
         '-DHOST_TYPE=Linux',
+        '-DDB_LINUX',
     ],
 
     link_args: [
