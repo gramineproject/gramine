@@ -25,7 +25,6 @@
  *
  * TODO (most items are needed for feature parity with PAL protected files):
  *
- * - mounting with other keys than "default"
  * - mounting with special keys (SGX MRENCLAVE and MRSIGNER)
  * - setting keys through /dev/attestation (and making sure they're copied to child process)
  * - rename (needs support in the `protected_files` module)
@@ -50,12 +49,14 @@
  */
 #define HOST_PERM(perm) ((perm) | PERM_rw_______)
 
-static int chroot_encrypted_mount(const char* uri, void** mount_data) {
-    if (!strstartswith(uri, URI_PREFIX_FILE))
+static int chroot_encrypted_mount(struct shim_mount_params* params, void** mount_data) {
+    if (!params->uri || !strstartswith(params->uri, URI_PREFIX_FILE))
         return -EINVAL;
 
+    const char* key_name = params->key ?: "default";
+
     struct shim_encrypted_files_key* key;
-    int ret = get_encrypted_files_key("default", &key);
+    int ret = get_encrypted_files_key(key_name, &key);
     if (ret < 0)
         return ret;
 

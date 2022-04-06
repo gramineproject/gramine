@@ -86,8 +86,10 @@ static int pseudo_irestore(struct shim_inode* inode, void* data) {
     return 0;
 }
 
-static int pseudo_mount(const char* uri, void** mount_data) {
-    __UNUSED(uri);
+static int pseudo_mount(struct shim_mount_params* params, void** mount_data) {
+    if (!params->uri)
+        return -EINVAL;
+
     __UNUSED(mount_data);
     return 0;
 }
