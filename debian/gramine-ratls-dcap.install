@@ -1,0 +1,4 @@
+usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_verify_dcap*
+usr/lib/${DEB_HOST_MULTIARCH}/libsecret_prov_verify_dcap*
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libra_tls_verify_dcap*
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libsecret_prov_verify_dcap*
