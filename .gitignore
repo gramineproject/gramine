@@ -1,5 +1,6 @@
 /build
 /install
+/obj-*
 
 # No editor backup files.
 *.sw*

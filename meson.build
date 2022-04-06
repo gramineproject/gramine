@@ -238,13 +238,21 @@ mbedtls_proj = subproject('mbedtls-mbedtls-3.2.1')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
+curl_proj = subproject('curl-7.84.0')
+cjson_proj = subproject('cJSON-1.7.12')
+
 if sgx
+    # XXX: do not call subproject() from under "if sgx" conditional, because it
+    # breaks `meson dist`: `-Dsgx` checks for presence of sgx.h header and we
+    # don't want to bother with finding the header just to create a tarball
+    # TODO: this ^ probably can be revised when all distros will have the header
+    # in <asm/sgx.h> so we won't have to mess with the paths anymore
+
     protoc_c_prog = find_program('protoc-c')
     protoc_prog = find_program('protoc')
 
     threads_dep = dependency('threads')
 
-    curl_proj = subproject('curl-7.84.0')
     libcurl_dep = curl_proj.get_variable('curl_minimal_dep')
 
     cjson_dep = dependency('cjson', required: false)
@@ -255,7 +263,7 @@ if sgx
     endif
     if not cjson_dep.found()
         # Ubuntu 18.04 does not have cjson at all
-        cjson_dep = subproject('cJSON-1.7.12').get_variable('cjson_dep')
+        cjson_dep = cjson_proj.get_variable('cjson_dep')
     endif
 
     protobuf_dep = dependency('libprotobuf-c')

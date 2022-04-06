@@ -1,0 +1,15 @@
+usr/bin/gramine-*
+usr/bin/is-sgx-available
+usr/lib/python3/dist-packages/graminelibos/
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/direct/libpal.so
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/direct/loader
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/libsysdb.so
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/musl/
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/libpal.so
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/loader
+usr/lib/${DEB_HOST_MULTIARCH}/libmbed*_gramine.*
+usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/libsecret_prov_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/libsgx_util.a*
+usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/*.pc

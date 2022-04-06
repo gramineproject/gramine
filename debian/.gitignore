@@ -1,0 +1,10 @@
+/*.debhelper.log
+/*.substvars
+/.debhelper
+/build*
+/debhelper-build-stamp
+/files
+/gramine
+/gramine-ratls-dcap
+/gramine-ratls-epid
+/tmp
