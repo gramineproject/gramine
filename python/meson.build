@@ -18,7 +18,6 @@ endif
 if sgx
     install_data([
         'gramine-sgx-gen-private-key',
-        'gramine-sgx-get-token',
         'gramine-sgx-sign',
     ], install_dir: get_option('bindir'))
 

@@ -1,0 +1,11 @@
+# Meson always goes through Scripts/run-cargo.sh, which will put
+# the target directory within Meson's builddir, whatever its name.
+# We optimistically set it here assuming the typical builddir name,
+# to have manual Cargo invokations reuse it.
+[build]
+target-dir = "build/target"
+
+# Meson-Cargo integration: handle Meson's debugoptimized profile.
+[profile.debugoptimized]
+inherits = "release"
+debug = 1

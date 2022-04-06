@@ -1,0 +1,19 @@
+[package]
+name = "gramine-sgx-get-token"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[features]
+# Only the oot driver needs to issue a token through AESM.
+oot = ["aesm-client"]
+
+[dependencies]
+gramine_common = { path = "../../../../../../common/rust" }
+aesm-client = { version = "0.5.3", features = ["sgxs"], optional = true }
+argh = "0.1.7"
+failure = "0.1.8"
+hex = "0.4.3"
+sgx-isa = "0.3.3"
+sgxs = "0.7.2"
+sha2 = "0.10.2"

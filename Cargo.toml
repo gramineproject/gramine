@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "common/rust",
+    "Pal/src/host/Linux-SGX/tools/get-token",
+]
