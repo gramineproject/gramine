@@ -1,0 +1,9 @@
+Documentation/_build/man/gramine-direct.1
+Documentation/_build/man/gramine-manifest.1
+Documentation/_build/man/gramine-sgx-get-token.1
+Documentation/_build/man/gramine-sgx-ias-request.1
+Documentation/_build/man/gramine-sgx-ias-verify-report.1
+Documentation/_build/man/gramine-sgx-quote-dump.1
+Documentation/_build/man/gramine-sgx-sign.1
+Documentation/_build/man/gramine-sgx.1
+Documentation/_build/man/is-sgx-available.1

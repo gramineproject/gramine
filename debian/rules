@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+export DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#
+# we need to completely disable LDFLAGS until completely retiring makefiles
+export DEB_BUILD_MAINT_OPTIONS = hardening=-all reproducible=-all
+export DEB_CFLAGS_MAINT_SET =
+export DEB_CPPFLAGS_MAINT_SET =
+export DEB_CXXFLAGS_MAINT_SET =
+export DEB_FCFLAGS_MAINT_SET =
+export DEB_FFLAGS_MAINT_SET =
+export DEB_GCJFLAGS_MAINT_SET =
+export DEB_LDFLAGS_MAINT_SET =
+export DEB_OBJCFLAGS_MAINT_SET =
+export DEB_OBJCXXFLAGS_MAINT_SET =
+
+%:
+	dh $@ --buildsystem=meson+ninja
+
+override_dh_clean:
+	dh_clean
+	$(MAKE) -C Documentation clean
+	rm -rf \
+		python/graminelibos/__pycache__ \
+		subprojects/packagecache
+
+SGX_DRIVER_INCLUDE_PATH_UPSTREAM = $(shell debian/get-linux-src-path.sh)/arch/x86/include/uapi
+
+override_dh_auto_configure:
+	dpkg-buildflags --status
+	
+	dh_auto_configure -- \
+		--buildtype=release \
+		-Ddirect=enabled \
+		-Dsgx=enabled \
+		-Dsgx_driver=upstream \
+		-Dsgx_driver_include_path=$(SGX_DRIVER_INCLUDE_PATH_UPSTREAM) \
+		-Ddcap=enabled
+	
+override_dh_auto_build:
+	dh_auto_build
+	$(MAKE) -C Documentation man
+
+override_dh_strip override_dh_makeshlibs override_dh_shlibdeps override_dh_dwz:
+
+# direct/libpal.so must be executable
+override_dh_fixperms:
+
+# TODO run tests
+override_dh_auto_test:

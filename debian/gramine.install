@@ -1,0 +1,15 @@
+usr/bin/gramine-*
+usr/bin/is-sgx-available
+usr/lib/python3/dist-packages/graminelibos/
+usr/lib/x86_64-linux-gnu/gramine/direct/libpal.so
+usr/lib/x86_64-linux-gnu/gramine/direct/loader
+usr/lib/x86_64-linux-gnu/gramine/libsysdb.so
+usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/
+usr/lib/x86_64-linux-gnu/gramine/runtime/musl/
+usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so
+usr/lib/x86_64-linux-gnu/gramine/sgx/loader
+usr/lib/x86_64-linux-gnu/libmbed*_gramine.*
+usr/lib/x86_64-linux-gnu/libra_tls_attest.so*
+usr/lib/x86_64-linux-gnu/libsecret_prov_attest.so*
+usr/lib/x86_64-linux-gnu/libsgx_util.so*
+usr/lib/x86_64-linux-gnu/pkgconfig/*.pc
