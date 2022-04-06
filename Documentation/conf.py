@@ -91,7 +91,6 @@ if 'READTHEDOCS' in os.environ:
             tags = [tag for tag in subprocess.check_output(
                     ['git', 'tag', '--points-at']).decode().strip().split()
                 if tag.startswith('v')]
-            print(tags)
             rst_stable_checkout = tags.pop()
         except (subprocess.CalledProcessError, IndexError):
             pass
