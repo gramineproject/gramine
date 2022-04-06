@@ -31,7 +31,7 @@ rust.manifest: rust.manifest.template
 		-Dself_exe=$(SELF_EXE) \
 		$< $@
 
-rust.manifest.sgx: rust.manifest $(SELF_EXE)
+rust.manifest.sgx: rust.manifest build-rust
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $@
