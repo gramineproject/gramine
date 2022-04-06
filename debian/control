@@ -1,0 +1,108 @@
+Source: gramine
+Priority: optional
+Maintainer: Wojtek Porczyk <woju@invisiblethingslab.com>
+Build-Depends: debhelper (>= 11),
+ autoconf,
+ bison,
+ gawk,
+ libcjson-dev,
+ libcurl4-openssl-dev,
+ libprotobuf-c-dev,
+ libsgx-dcap-quote-verify-dev,
+ linux-headers-amd64 (>= 5.11),
+ meson,
+ nasm,
+ ninja-build,
+ pkg-config,
+ protobuf-c-compiler,
+ python3-breathe,
+ python3-sphinx,
+ python3-sphinx-rtd-theme,
+#libunwind8,
+#python3-pytest,
+Standards-Version: 4.1.3
+Section: misc
+Homepage: https://gramine.readthedocs.io/
+Vcs-Browser: https://github.com/gramineproject/gramine
+Vcs-Git: https://github.com/gramineproject/gramine.git
+
+Package: gramine
+Architecture: amd64
+Description: A lightweight guest OS designed to run a single application
+Depends:
+ python3,
+ python3-click,
+ python3-cryptography,
+ python3-jinja2,
+ python3-protobuf,
+ python3-toml (>= 0.10),
+ libprotobuf-c1,
+Recommends:
+ gramine-ratls-dcap,
+ gramine-ratls-epid,
+Conflicts:
+ gramine-oot,
+ gramine-dcap
+
+Package: gramine-ratls-dcap
+Architecture: amd64
+Description: A lightweight guest OS designed to run a single application
+Depends:
+ gramine,
+ libsgx-dcap-quote-verify,
+#libc6 (>= 2.28),
+
+Package: gramine-ratls-epid
+Architecture: amd64
+Description: A lightweight guest OS designed to run a single application
+Depends:
+ gramine,
+#libc6 (>= 2.28),
+
+#Package: gramine-dcap
+#Architecture: amd64
+#Description: A lightweight guest OS designed to run a single application
+#Depends:
+# python3,
+# python3-click,
+# python3-cryptography,
+# python3-jinja2,
+# python3-protobuf,
+# python3-toml (>= 0.10),
+# libprotobuf-c1,
+#Recommends:
+# gramine-dcap-ratls-dcap,
+# gramine-dcap-ratls-epid,
+#Conflicts:
+# gramine,
+# gramine-oot
+#
+#Package: gramine-dcap-ratls-dcap
+#Architecture: amd64
+#Description: A lightweight guest OS designed to run a single application
+#Depends:
+# gramine-dcap,
+# libsgx-dcap-quote-verify,
+##libc6 (>= 2.28),
+#
+#Package: gramine-dcap-ratls-epid
+#Architecture: amd64
+#Description: A lightweight guest OS designed to run a single application
+#Depends:
+# gramine-dcap,
+##libc6 (>= 2.28),
+#
+#Package: gramine-oot
+#Architecture: amd64
+#Description: A lightweight guest OS designed to run a single application
+#Depends:
+# python3,
+# python3-click,
+# python3-cryptography,
+# python3-jinja2,
+# python3-protobuf,
+# python3-toml (>= 0.10),
+# libprotobuf-c1,
+#Conflicts:
+# gramine,
+# gramine-dcap
