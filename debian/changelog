@@ -1,0 +1,23 @@
+gramine (1.1~post) UNRELEASED; urgency=medium
+
+  *
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 08 Apr 2022 17:00:00 +0200
+
+gramine (1.1-1) stable; urgency=medium
+
+  * update to v1.1
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 02 Feb 2022 19:15:49 +0100
+
+gramine (1.1~a2-1) stable; urgency=medium
+
+  * prerelease version from commit 0e6ffa9e7eec735a094faa072c1fd61ac28f9981
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 20 Jan 2022 07:59:05 +0100
+
+gramine (1.0-1) stable; urgency=medium
+
+  * update to v1.0
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Fri, 09 Oct 2021 19:20:00 +0200

@@ -1,0 +1,8 @@
+/.debhelper
+/build*
+/debhelper-build-stamp
+/files
+/gramine
+/gramine-dcap
+/gramine-oot
+/*.substvars
