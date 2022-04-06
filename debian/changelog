@@ -1,0 +1,75 @@
+gramine (1.2~post) UNRELEASED; urgency=medium
+
+  *
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Tue, 21 Jun 2022 15:00:00 +0200
+
+gramine (1.2-1) stable; urgency=medium
+
+  * bump to upstream version 1.2
+  * fix manpages installation in -dcap and -oot variants
+  * drop fcntl patch (merged upstream)
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Fri, 27 May 2022 12:00:00 +0200
+
+gramine (1.2~rc1-6) unstable; urgency=medium
+
+  * patch to eliminate fcntl function from libc6, for compatibility with
+    bionic's libc6
+  * remove libc6 dependencies
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 26 May 2022 20:30:00 +0200
+
+gramine (1.2~rc1-5) unstable; urgency=medium
+
+  * fix dependencies, again
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 26 May 2022 20:00:00 +0200
+
+gramine (1.2~rc1-4) unstable; urgency=medium
+
+  * fix dependencies and cleanup
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 26 May 2022 19:00:00 +0200
+
+gramine (1.2~rc1-3) unstable; urgency=medium
+
+  * split ratls packages for precise dependencies
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 26 May 2022 18:00:00 +0200
+
+gramine (1.2~rc1-2) unstable; urgency=medium
+
+  * add missing python3-cryptography dependency
+  * add missing runtime dependencies for -Ddcap
+  * fix debian/rules clean for bumped paths in subprojects/
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Tue, 24 May 2022 20:00:00 +0200
+
+gramine (1.2~rc1-1) UNRELEASED; urgency=medium
+
+  * update to upstream commit e8735ea06cc6b27932e97cc8173fa492b6f8a488
+  * add nasm dependency per upstream
+  * -Ddcap=enable, add respective dependencies
+  * add missing libprotobuf-c1 dependency
+  * fill debian/copyright
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Mon, 23 May 2022 18:00:00 +0200
+
+gramine (1.1-1) stable; urgency=medium
+
+  * update to v1.1
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 02 Feb 2022 19:15:49 +0100
+
+gramine (1.1~a2-1) stable; urgency=medium
+
+  * prerelease version from commit 0e6ffa9e7eec735a094faa072c1fd61ac28f9981
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 20 Jan 2022 07:59:05 +0100
+
+gramine (1.0-1) stable; urgency=medium
+
+  * update to v1.0
+
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Fri, 09 Oct 2021 19:20:00 +0200

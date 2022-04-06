@@ -1,0 +1,113 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+export DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#
+# we need to completely disable LDFLAGS until completely retiring makefiles
+export DEB_BUILD_MAINT_OPTIONS = hardening=-all reproducible=-all
+export DEB_CFLAGS_MAINT_SET =
+export DEB_CPPFLAGS_MAINT_SET =
+export DEB_CXXFLAGS_MAINT_SET =
+export DEB_FCFLAGS_MAINT_SET =
+export DEB_FFLAGS_MAINT_SET =
+export DEB_GCJFLAGS_MAINT_SET =
+export DEB_LDFLAGS_MAINT_SET =
+export DEB_OBJCFLAGS_MAINT_SET =
+export DEB_OBJCXXFLAGS_MAINT_SET =
+
+%:
+	dh $@
+
+override_dh_clean:
+	$(MAKE) -C Documentation clean
+	rm -rf \
+		debian/build* \
+		debian/gramine \
+		debian/gramine-ratls-* \
+		debian/gramine-dcap \
+		debian/gramine-dcap-ratls-* \
+		debian/gramine-oot \
+		python/graminelibos/__pycache__
+
+DEBIANDIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+MESONARGS := \
+	--prefix=/usr \
+	--buildtype=release \
+	--wrap-mode=nodownload \
+	-Ddirect=enabled \
+	-Dsgx=enabled \
+
+SGX_DRIVER_INCLUDE_PATH_UPSTREAM = $(shell $(DEBIANDIR)/get-linux-src-path.sh)/arch/x86/include/uapi
+
+override_dh_auto_build:
+	dpkg-buildflags --status
+	
+	meson setup \
+		$(MESONARGS) \
+		-Dsgx_driver=upstream \
+		-Dsgx_driver_include_path=$(SGX_DRIVER_INCLUDE_PATH_UPSTREAM) \
+		-Ddcap=enabled \
+		debian/build
+#	meson setup \
+#		$(MESONARGS) \
+#		-Dsgx_driver=dcap1.10 \
+#		-Dsgx_driver_include_path=$(DEBIANDIR)/../SGXDataCenterAttestationPrimitives/driver/linux/include \
+#		-Ddcap=enabled \
+#		debian/build-dcap
+#	meson setup \
+#		$(MESONARGS) \
+#		-Dsgx_driver=oot \
+#		-Dsgx_driver_include_path=$(DEBIANDIR)/../linux-sgx-driver \
+#		debian/build-oot
+	
+	ninja -C debian/build
+#	ninja -C debian/build-dcap
+#	ninja -C debian/build-oot
+	
+	$(MAKE) -C Documentation man
+	
+override_dh_auto_install:
+	DESTDIR=$(DEBIANDIR)/gramine ninja -C debian/build install
+#	DESTDIR=$(DEBIANDIR)/gramine-dcap ninja -C debian/build-dcap install
+#	DESTDIR=$(DEBIANDIR)/gramine-oot ninja -C debian/build-oot install
+	
+	install -d \
+		$(DEBIANDIR)/gramine-ratls-dcap/usr/lib/x86_64-linux-gnu \
+		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu \
+		$(DEBIANDIR)/gramine-dcap-ratls-dcap/usr/lib/x86_64-linux-gnu \
+		$(DEBIANDIR)/gramine-dcap-ratls-epid/usr/lib/x86_64-linux-gnu
+	
+	mv \
+		$(DEBIANDIR)/gramine/usr/lib/x86_64-linux-gnu/libra_tls_verify_dcap* \
+		$(DEBIANDIR)/gramine-ratls-dcap/usr/lib/x86_64-linux-gnu
+	mv \
+		$(DEBIANDIR)/gramine/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
+		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu
+#	mv \
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_dcap* \
+#		$(DEBIANDIR)/gramine-dcap-ratls-dcap/usr/lib/x86_64-linux-gnu
+#	mv \
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
+#		$(DEBIANDIR)/gramine-dcap-ratls-epid/usr/lib/x86_64-linux-gnu
+
+
+#	chmod +x debian/gramine*/usr/lib/x86_64-linux-gnu/gramine/direct/libpal.so
+
+override_dh_strip override_dh_makeshlibs override_dh_shlibdeps:
+	:
+# direct/libpal.so must be executable
+override_dh_fixperms:
+	:
+
+# TODO run tests
+override_dh_auto_test:
+	:
+
+# dh_make generated override targets
+# This is example for Cmake (See https://bugs.debian.org/641051 )
+#override_dh_auto_configure:
+#	dh_auto_configure -- #	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH)
+
