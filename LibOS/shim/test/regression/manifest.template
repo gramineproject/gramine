@@ -17,7 +17,7 @@ fs.mounts = [
   { path = "/bin", uri = "file:/bin" },
 
   { type = "tmpfs", path = "/mnt/tmpfs" },
-  { type = "encrypted", path = "/tmp/enc", uri = "file:tmp/enc" },
+  { type = "encrypted", path = "/tmp/enc", uri = "file:tmp/enc", key_name = "my_custom_key" },
 ]
 
 sgx.thread_num = 16
@@ -44,7 +44,7 @@ sgx.protected_files = [
   "file:tmp/pf/",
 ]
 
-fs.insecure__keys.default = "00112233445566778899aabbccddeeff"
+fs.insecure__keys.my_custom_key = "00112233445566778899aabbccddeeff"
 
 # for sealed_file_mrenclave* tests
 sgx.protected_mrenclave_files = [

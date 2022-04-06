@@ -35,6 +35,9 @@ struct shim_mount_params {
 
     /* PAL URI, or NULL if not applicable */
     const char* uri;
+
+    /* Key name (used by `chroot_encrypted` filesystem), or NULL if not applicable */
+    const char* key_name;
 };
 
 struct shim_fs_ops {
