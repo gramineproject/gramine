@@ -6,6 +6,8 @@ loader.log_level = "{{ log_level }}"
 loader.argv0_override = "{{ self_exe }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
+
+# For easier debugging — not strictly required to run this workload
 loader.env.RUST_BACKTRACE = "full"
 
 fs.mounts = [
