@@ -71,7 +71,7 @@ long shim_do_socket(int family, int type, int protocol) {
     hdl->type = TYPE_SOCK;
     hdl->fs = &socket_builtin_fs;
     hdl->flags = type & SOCK_NONBLOCK ? O_NONBLOCK : 0;
-    hdl->acc_mode = 0;
+    hdl->acc_mode = MAY_READ | MAY_WRITE;
 
     struct shim_sock_handle* sock = &hdl->info.sock;
     sock->domain    = family;
@@ -93,9 +93,7 @@ long shim_do_socket(int family, int type, int protocol) {
 
     switch (sock->sock_type) {
         case SOCK_STREAM:  // TCP
-            break;
         case SOCK_DGRAM:  // UDP
-            hdl->acc_mode = MAY_READ | MAY_WRITE;
             break;
 
         default:
