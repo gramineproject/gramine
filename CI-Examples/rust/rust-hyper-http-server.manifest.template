@@ -26,3 +26,10 @@ sgx.trusted_files = [
 # The Tokio runtime requires eventfd, and the Gramine implementation
 # currently relies on the host.
 sys.insecure__allow_eventfd = true
+
+# The maximum number of threads in a single process needs to be declared in advance.
+# You need to account for:
+# - one main thread
+# - the tokio worker threads
+# - any threads and threadpools you might be starting
+sgx.thread_num = 8
