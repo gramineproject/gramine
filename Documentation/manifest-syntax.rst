@@ -132,7 +132,7 @@ or
 If you want your application to use commandline arguments you need to either set
 ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases) or point
 ``loader.argv_src_file`` to a file containing output of
-:ref:`gramine-argv-serializer<gramine-argv-serializer>`
+:ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or a
 protected file. The former allows to securely hardcode arguments (current
