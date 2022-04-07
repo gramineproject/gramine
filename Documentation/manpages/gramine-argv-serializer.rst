@@ -14,11 +14,10 @@ Synopsis
 Description
 ===========
 
-`gramine-argv-serializer` serializes the command line arguments and displays it
-to stdout. Typically, the output is redirected to a file that can be used as a
-trusted or a protected file and this file path can be pointed to
-``loader.argv_src_file`` manifest option for passing command-line arguments to
-Gramine.
+`gramine-argv-serializer` serializes the command line arguments and prints it
+to stdout. to stdout. The result is intended to be redirected to a file that can
+be used as a trusted or a protected file and ``loader.argv_src_file`` manifest
+option pointed to it.
 For more information on the usage, please refer to :doc:`../manifest-syntax`.
 
 For an example on how to use this utility from Python, please refer to `this
@@ -29,4 +28,8 @@ Example
 
 .. code-block:: sh
 
-   gramine-argv-serializer "binary_name" "arg1" "arg2" > gramine_secure_args.txt
+   gramine-argv-serializer "binary_name" "arg1" "arg2" > gramine_args.txt
+.. note ::
+
+   The arguments can be empty strings as well based on your application
+   requirements.

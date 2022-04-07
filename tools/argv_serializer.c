@@ -11,7 +11,10 @@
 #include <string.h>
 
 static void usage(const char* exec) {
-    printf("Usage: %s \"executable name\" [\"arg1\"]...\n", exec);
+    printf("Usage: %s [\"arg0\"] [\"arg1\"]...\n", exec);
+    printf("       Typically, \"arg0\" is your application name followed by\n");
+    printf("       other command-line parameters but these strings can be\n");
+    printf("       empty as well based on your application requirements.\n");
 }
 
 int main(int argc, char* argv[]) {
