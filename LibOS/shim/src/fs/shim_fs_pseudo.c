@@ -124,7 +124,6 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
 
             hdl->type = TYPE_STR;
             mem_file_init(&hdl->info.str.mem, str, len);
-            hdl->info.str.dirty = false;
             hdl->pos = 0;
             break;
         }
@@ -328,12 +327,33 @@ static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t siz
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
+
+            ssize_t ret;
+
             lock(&hdl->lock);
-            ssize_t ret = mem_file_write(&hdl->info.str.mem, *pos, buf, size);
-            if (ret > 0) {
-                *pos += ret;
-                hdl->info.str.dirty = true;
+
+            struct shim_mem_file* mem = &hdl->info.str.mem;
+
+            if (node->str.save) {
+                /* If there's a `save` method, we want to invoke it, and the write should replace
+                 * existing content. */
+
+                ret = node->str.save(hdl->dentry, buf, size);
+                if (ret < 0)
+                    goto out;
+
+                ret = mem_file_truncate(mem, 0);
+                if (ret < 0)
+                    goto out;
+                *pos = 0;
             }
+
+            ret = mem_file_write(mem, *pos, buf, size);
+            if (ret < 0)
+                goto out;
+            *pos += ret;
+
+        out:
             unlock(&hdl->lock);
             return ret;
         }
@@ -382,8 +402,6 @@ static int pseudo_truncate(struct shim_handle* hdl, file_off_t size) {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->lock);
             int ret = mem_file_truncate(&hdl->info.str.mem, size);
-            if (ret == 0)
-                hdl->info.str.dirty = true;
             unlock(&hdl->lock);
             return ret;
 
@@ -397,26 +415,9 @@ static int pseudo_truncate(struct shim_handle* hdl, file_off_t size) {
     }
 }
 
-static int pseudo_str_flush(struct pseudo_node* node, struct shim_handle* hdl) {
-    assert(locked(&hdl->lock));
-    assert(hdl->type == TYPE_STR);
-
-    if (hdl->info.str.dirty && node->str.save) {
-        struct shim_mem_file* mem = &hdl->info.str.mem;
-        int ret = node->str.save(hdl->dentry, mem->buf, mem->size);
-        if (ret < 0)
-            return ret;
-    }
-    hdl->info.str.dirty = false;
-    return 0;
-}
-
 static int pseudo_flush(struct shim_handle* hdl) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
-        case PSEUDO_STR:
-            return pseudo_str_flush(node, hdl);
-
         case PSEUDO_DEV:
             if (!node->dev.dev_ops.flush)
                 return -EINVAL;
@@ -432,13 +433,9 @@ static int pseudo_close(struct shim_handle* hdl) {
     switch (node->type) {
         case PSEUDO_STR: {
             lock(&hdl->lock);
-            int ret = pseudo_str_flush(node, hdl);
-            if (ret < 0) {
-                log_debug("pseudo_str_flush() failed, proceeding with close");
-            }
             mem_file_destroy(&hdl->info.str.mem);
             unlock(&hdl->lock);
-            return ret;
+            return 0;
         }
 
         case PSEUDO_DEV:

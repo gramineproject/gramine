@@ -151,7 +151,6 @@ struct shim_dir_handle {
 
 struct shim_str_handle {
     struct shim_mem_file mem;
-    bool dirty;
 };
 
 DEFINE_LISTP(shim_epoll_item);
