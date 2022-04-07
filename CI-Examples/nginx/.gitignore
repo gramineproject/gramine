@@ -1,8 +1,8 @@
 *.tar.gz
 /install/*
 /nginx-*/*
+/nginx_secure_args
 /OUTPUT
 /result-*
 /ssl/ca.*
 /ssl/server.*
-/nginx_secure_args

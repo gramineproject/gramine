@@ -7,18 +7,17 @@
  * documentation for usage.
  */
 
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
 static void usage(const char* exec) {
-    printf("Usage: %s <executable name followed by command line arguments>\n", exec);
+    printf("Usage: %s \"executable name\" [\"arg1\"]...\n", exec);
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
+    if (argc < 2 || !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
         usage(argv[0]);
-        return -1;
+        return 1;
     }
 
     for (int i = 1; i < argc; i++)
