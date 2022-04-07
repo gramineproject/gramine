@@ -126,7 +126,9 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
                 ret = node->str.load(dent, &str, &len);
                 if (ret < 0)
                     return ret;
-                assert(str);
+
+                if (len > 0)
+                    assert(str);
             } else {
                 len = 0;
                 str = NULL;

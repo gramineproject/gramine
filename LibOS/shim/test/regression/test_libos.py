@@ -268,6 +268,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(cmd)
         self.assertIn('TEST OK', stdout, 'test failed: {}'.format(cmd))
 
+    def test_230_keys(self):
+        stdout, _ = self.run_binary(['keys'])
+        self.assertIn('TEST OK', stdout)
+
     def test_300_shared_object(self):
         stdout, _ = self.run_binary(['shared_object'])
 

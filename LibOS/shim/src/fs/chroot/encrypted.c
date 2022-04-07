@@ -26,7 +26,6 @@
  * TODO (most items are needed for feature parity with PAL protected files):
  *
  * - mounting with special keys (SGX MRENCLAVE and MRSIGNER)
- * - setting keys through /dev/attestation (and making sure they're copied to child process)
  * - mmap
  * - truncate (the current `truncate` operation works only for extending the file, support for
  *   truncation needs to be added to the `protected_files` module)
@@ -55,7 +54,7 @@ static int chroot_encrypted_mount(struct shim_mount_params* params, void** mount
     const char* key_name = params->key_name ?: "default";
 
     struct shim_encrypted_files_key* key;
-    int ret = get_encrypted_files_key(key_name, &key);
+    int ret = get_or_create_encrypted_files_key(key_name, &key);
     if (ret < 0)
         return ret;
 
@@ -76,7 +75,7 @@ static int chroot_encrypted_migrate(void* checkpoint, void** mount_data) {
     const char* name = checkpoint;
 
     struct shim_encrypted_files_key* key;
-    int ret = get_encrypted_files_key(name, &key);
+    int ret = get_or_create_encrypted_files_key(name, &key);
     if (ret < 0)
         return ret;
     *mount_data = key;

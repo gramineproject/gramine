@@ -196,6 +196,28 @@ static int encrypted_file_internal_open(struct shim_encrypted_file* enc, PAL_HAN
     return 0;
 }
 
+static int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
+    size_t len = strlen(key_str);
+    if (len != PF_KEY_SIZE * 2) {
+        log_warning("%s: wrong key length (%zu instead of %zu)", __func__, len,
+                    (size_t)(PF_KEY_SIZE * 2));
+        return -1;
+    }
+
+    pf_key_t tmp_pf_key;
+    for (size_t i = 0; i < len; i += 2) {
+        int8_t hi = hex2dec(key_str[i]);
+        int8_t lo = hex2dec(key_str[i+1]);
+        if (hi < 0 || lo < 0) {
+            log_warning("%s: unexpected character encountered", __func__);
+            return -1;
+        }
+        tmp_pf_key[i / 2] = hi * 16 + lo;
+    }
+    memcpy(pf_key, &tmp_pf_key, sizeof(tmp_pf_key));
+    return 0;
+}
+
 static void encrypted_file_internal_close(struct shim_encrypted_file* enc) {
     assert(enc->pf);
 
@@ -244,7 +266,7 @@ int init_encrypted_files(void) {
         assert(name);
 
         struct shim_encrypted_files_key* key;
-        ret = get_encrypted_files_key(name, &key);
+        ret = get_or_create_encrypted_files_key(name, &key);
         if (ret < 0)
             goto out;
 
@@ -256,12 +278,15 @@ int init_encrypted_files(void) {
         }
         assert(key_str);
 
-        ret = update_encrypted_files_key(key, key_str);
+        pf_key_t pf_key;
+        ret = parse_pf_key(key_str, &pf_key);
         if (ret < 0) {
-            log_error("Cannot update key '%s': %d", name, ret);
+            log_error("Cannot parse key 'fs.insecure__keys.%s' as a hex key", name);
+            ret = -EINVAL;
             goto out;
-
         }
+
+        update_encrypted_files_key(key, &pf_key);
         free(key_str);
         key_str = NULL;
     }
@@ -273,7 +298,7 @@ out:
     return ret;
 }
 
-static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
+static struct shim_encrypted_files_key* get_key(const char* name) {
     assert(locked(&g_keys_lock));
 
     struct shim_encrypted_files_key* key;
@@ -282,6 +307,16 @@ static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
             return key;
         }
     }
+
+    return NULL;
+}
+
+static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
+    assert(locked(&g_keys_lock));
+
+    struct shim_encrypted_files_key* key = get_key(name);
+    if (key)
+        return key;
 
     key = calloc(1, sizeof(*key));
     if (!key)
@@ -296,50 +331,66 @@ static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
     return key;
 }
 
-int get_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key) {
+struct shim_encrypted_files_key* get_encrypted_files_key(const char* name) {
     lock(&g_keys_lock);
-
-    struct shim_encrypted_files_key* key = get_or_create_key(name);
-    if (!key)
-        return -ENOMEM;
-
-    /* TODO: load special keys (MRENCLAVE, MRSIGNER) here */
-
-    *out_key = key;
-
+    struct shim_encrypted_files_key* key = get_key(name);
     unlock(&g_keys_lock);
-    return 0;
+    return key;
 }
 
-int update_encrypted_files_key(struct shim_encrypted_files_key* key, char* key_str) {
+int list_encrypted_files_keys(int (*callback)(struct shim_encrypted_files_key* key, void* arg),
+                              void* arg) {
+    lock(&g_keys_lock);
+
     int ret;
 
-    lock(&g_keys_lock);
-    size_t len = strlen(key_str);
-    if (len != PF_KEY_SIZE * 2) {
-        log_warning("%s: wrong key length (%zu instead of %zu)", __func__, len,
-                    (size_t)(PF_KEY_SIZE * 2));
-        ret = -EINVAL;
-        goto out;
-    }
-
-    pf_key_t pf_key;
-    for (size_t i = 0; i < len; i += 2) {
-        int8_t hi = hex2dec(key_str[i]);
-        int8_t lo = hex2dec(key_str[i+1]);
-        if (hi < 0 || lo < 0) {
-            log_warning("%s: unexpected character encountered", __func__);
-            ret = -EINVAL;
+    struct shim_encrypted_files_key* key;
+    LISTP_FOR_EACH_ENTRY(key, &g_keys, list) {
+        ret = callback(key, arg);
+        if (ret < 0)
             goto out;
-        }
-        pf_key[i / 2] = hi * 16 + lo;
     }
-    memcpy(key->pf_key, &pf_key, sizeof(pf_key));
-    key->is_set = true;
     ret = 0;
 out:
     unlock(&g_keys_lock);
     return ret;
+}
+
+int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key) {
+    lock(&g_keys_lock);
+
+    int ret;
+
+    struct shim_encrypted_files_key* key = get_or_create_key(name);
+    if (!key) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    /* TODO: load special keys (MRENCLAVE, MRSIGNER) here */
+
+    *out_key = key;
+    ret = 0;
+out:
+    unlock(&g_keys_lock);
+    return ret;
+}
+
+bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf_key) {
+    lock(&g_keys_lock);
+    bool is_set = key->is_set;
+    if (is_set) {
+        memcpy(pf_key, &key->pf_key, sizeof(key->pf_key));
+    }
+    unlock(&g_keys_lock);
+    return is_set;
+}
+
+void update_encrypted_files_key(struct shim_encrypted_files_key* key, const pf_key_t* pf_key) {
+    lock(&g_keys_lock);
+    memcpy(&key->pf_key, pf_key, sizeof(*pf_key));
+    key->is_set = true;
+    unlock(&g_keys_lock);
 }
 
 static int encrypted_file_alloc(const char* uri, struct shim_encrypted_files_key* key,
@@ -562,6 +613,73 @@ out:
     return ret;
 }
 
+/* Checkpoint the `g_keys` list. */
+BEGIN_CP_FUNC(all_encrypted_files_keys) {
+    __UNUSED(size);
+    __UNUSED(obj);
+    __UNUSED(objp);
+
+    lock(&g_keys_lock);
+    struct shim_encrypted_files_key* key;
+    LISTP_FOR_EACH_ENTRY(key, &g_keys, list) {
+        DO_CP(encrypted_files_key, key, /*objp=*/NULL);
+    }
+    unlock(&g_keys_lock);
+}
+END_CP_FUNC_NO_RS(all_encrypted_files_keys)
+
+BEGIN_CP_FUNC(encrypted_files_key) {
+    __UNUSED(size);
+
+    assert(locked(&g_keys_lock));
+
+    struct shim_encrypted_files_key* key     = obj;
+    struct shim_encrypted_files_key* new_key = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) {
+        off = ADD_CP_OFFSET(sizeof(struct shim_encrypted_files_key));
+        ADD_TO_CP_MAP(obj, off);
+        new_key = (struct shim_encrypted_files_key*)(base + off);
+
+        DO_CP_MEMBER(str, key, new_key, name);
+        new_key->is_set = key->is_set;
+        memcpy(&new_key->pf_key, &key->pf_key, sizeof(key->pf_key));
+        INIT_LIST_HEAD(new_key, list);
+
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_key = (struct shim_encrypted_files_key*)(base + off);
+    }
+
+    if (objp)
+        *objp = (void*)new_key;
+}
+END_CP_FUNC(encrypted_files_key)
+
+BEGIN_RS_FUNC(encrypted_files_key) {
+    __UNUSED(offset);
+    struct shim_encrypted_files_key* migrated_key = (void*)(base + GET_CP_FUNC_ENTRY());
+
+    CP_REBASE(migrated_key->name);
+
+    /*
+     * NOTE: We do not add `migrated_key` directly to the list, because a key with this name might
+     * already have been created (e.g. during `init_encrypted_files`). Instead, we retrieve (or
+     * create) a key in the usual way, and update its value.
+     */
+    struct shim_encrypted_files_key* key;
+    int ret = get_or_create_encrypted_files_key(migrated_key->name, &key);
+    if (ret < 0)
+        return ret;
+
+    lock(&g_keys_lock);
+    key->is_set = migrated_key->is_set;
+    memcpy(&key->pf_key, &migrated_key->pf_key, sizeof(migrated_key->pf_key));
+    unlock(&g_keys_lock);
+}
+END_RS_FUNC(encrypted_files_key)
+
 BEGIN_CP_FUNC(encrypted_file) {
     __UNUSED(size);
 
@@ -578,13 +696,9 @@ BEGIN_CP_FUNC(encrypted_file) {
     new_enc->use_count = enc->use_count;
     DO_CP_MEMBER(str, enc, new_enc, uri);
 
-    /*
-     * HACK: Instead of `enc->key`, send the key name.
-     *
-     * TODO: Once we can change the keys through `/dev/attestation`, this will not be enough: we'll
-     * need to copy the current key value. Convert this to `DEFINE_CP_FUNC(encrypted_file_key)` etc.
-     */
-    DO_CP(str, enc->key->name, &new_enc->key);
+    lock(&g_keys_lock);
+    DO_CP_MEMBER(encrypted_files_key, enc, new_enc, key);
+    unlock(&g_keys_lock);
 
     /* `enc->pf` will be recreated during restore */
     new_enc->pf = NULL;
@@ -606,20 +720,14 @@ BEGIN_RS_FUNC(encrypted_file) {
     __UNUSED(offset);
 
     CP_REBASE(enc->uri);
-
-    /* `enc->key` was set to the key name, retrieve the key */
     CP_REBASE(enc->key);
-    const char* name = (const char*)enc->key;
-    int ret = get_encrypted_files_key(name, &enc->key);
-    if (ret < 0)
-        return ret;
 
     /* If the file was used, recreate `enc->pf` based on the PAL handle */
     assert(!enc->pf);
     if (enc->use_count > 0) {
         assert(enc->pal_handle);
-        ret = encrypted_file_internal_open(enc, enc->pal_handle, /*create=*/false,
-                                           /*share_flags=*/0);
+        int ret = encrypted_file_internal_open(enc, enc->pal_handle, /*create=*/false,
+                                               /*share_flags=*/0);
         if (ret < 0)
             return ret;
     } else {
