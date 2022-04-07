@@ -133,7 +133,18 @@ struct pseudo_node {
              */
             int (*load)(struct shim_dentry* dent, char** out_data, size_t* out_size);
 
-            /* Invoked when saving a modified file (on `close` or `flush`). Optional. */
+            /*
+             * Invoked on every write operation.
+             *
+             * This is used to implement writable files similar to the ones in Linux sysfs. The
+             * callback is triggered on write, not on close, because otherwise there is no good way
+             * to report errors to the application (which might even exit without closing the file
+             * explicitly).
+             *
+             * As a consequence, pseudo-files that implement `save` are meant to be written using a
+             * single `write` operation. For consistency with later reads, for such files we replace
+             * existing content on every write.
+             */
             int (*save)(struct shim_dentry* dent, const char* data, size_t size);
         } str;
 
