@@ -20,9 +20,11 @@
 #include "protected_files.h"
 #include "shim_types.h"
 
+#define KEY_HEX_LEN (2 * sizeof(pf_key_t))
+
 /*
  * Represents a named key for opening files. The key might not be set yet: value of a key can be
- * specified in the manifest, or set using `set_encrypted_files_key`. Before the key is set,
+ * specified in the manifest, or set using `update_encrypted_files_key`. Before the key is set,
  * operations that use it will fail.
  */
 DEFINE_LIST(shim_encrypted_files_key);
@@ -62,21 +64,46 @@ int init_encrypted_files(void);
 /*
  * \brief Retrieve a key.
  *
- * Sets `*out_key` to a key with a given name. Note that the key might not be set yet (see
- * `struct shim_encrypted_files_key`).
- *
- * This does not pass ownership of `*out_key`: the key objects are still managed by this module.
+ * Returns a key with a given name, or NULL if it has not been created yet. Note that the even if
+ * the key exists, it might not be set yet (see `struct shim_encrypted_files_key`).
  */
-int get_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key);
+struct shim_encrypted_files_key* get_encrypted_files_key(const char* name);
+
+/*
+ * \brief List existing keys.
+ *
+ * Calls `callback` on each currently existing key.
+ */
+int list_encrypted_files_keys(int (*callback)(struct shim_encrypted_files_key* key, void* arg),
+                              void* arg);
+
+/*
+ * \brief Retrieve or create a key.
+ *
+ * Sets `*out_key` to a key with given name. If the key has not been created yet, creates a new one.
+ */
+int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key);
+
+/*
+ * \brief Read value of given key.
+ *
+ * \param key       The key to read.
+ * \param buf       Buffer for new value.
+ * \param buf_size  Size of the buffer. Must be at least KEY_HEX_LEN + 1.
+ *
+ * Writes the current value of the key to `buf`, as a null-terminated hex string. If the key is not
+ * set yet, `buf` will contain an empty string.
+ */
+int read_encrypted_files_key(struct shim_encrypted_files_key* key, char* buf, size_t buf_size);
 
 /*
  * \brief Update value of given key.
  *
  * \param key      The key to update.
- * \param key_str  New value for the key. Must be a 32-char null-terminated hex string (AES-GCM
- *                 encryption key).
+ * \param key_str  New value for the key. Must be a null-terminated hex string (AES-GCM
+ *                 encryption key), KEY_HEX_LEN characters long.
  */
-int update_encrypted_files_key(struct shim_encrypted_files_key* key, char* key_str);
+int update_encrypted_files_key(struct shim_encrypted_files_key* key, const char* key_str);
 
 /*
  * \brief Open an existing encrypted file.

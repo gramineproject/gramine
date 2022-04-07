@@ -15,6 +15,7 @@
  * be generally single-threaded and therefore do not introduce synchronization here.
  */
 
+#include "shim_fs_encrypted.h"
 #include "shim_fs_pseudo.h"
 
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently
@@ -281,29 +282,105 @@ static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     return 0;
 }
 
-int init_attestation(struct pseudo_node* dev) {
-    if (strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
-        log_debug("host is not Linux-SGX, skipping /dev/attestation setup");
-        return 0;
+static bool key_name_exists(struct shim_dentry* parent, const char* name) {
+    __UNUSED(parent);
+
+    struct shim_encrypted_files_key* key = get_encrypted_files_key(name);
+    return key != NULL;
+}
+
+struct key_list_names_data {
+    readdir_callback_t callback;
+    void* arg;
+};
+
+static int key_list_names_callback(struct shim_encrypted_files_key* key, void* arg) {
+    struct key_list_names_data* data = arg;
+    return data->callback(key->name, data->arg);
+}
+
+static int key_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+    __UNUSED(parent);
+
+    struct key_list_names_data data = {
+        .callback = callback,
+        .arg = arg,
+    };
+    return list_encrypted_files_keys(&key_list_names_callback, &data);
+}
+
+static int key_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+    struct shim_encrypted_files_key* key = get_encrypted_files_key(dent->name);
+    if (!key)
+        return -ENOENT;
+
+    size_t buf_size = KEY_HEX_LEN + 1;
+    char* buf = malloc(buf_size);
+    if (!buf)
+        return -ENOMEM;
+
+    int ret = read_encrypted_files_key(key, buf, buf_size);
+    if (ret < 0) {
+        free(buf);
+        return ret;
     }
 
+    *out_data = buf;
+    *out_size = strlen(buf);
+    return 0;
+}
+
+static int key_save(struct shim_dentry* dent, const char* data, size_t size) {
+    struct shim_encrypted_files_key* key = get_encrypted_files_key(dent->name);
+    if (!key)
+        return -ENOENT;
+
+    if (size != KEY_HEX_LEN) {
+        log_debug("/dev/attestation/protected_files_key: invalid length");
+        return -EACCES;
+    }
+
+    /* Build a null-terminated string */
+    char buf[KEY_HEX_LEN + 1];
+    memcpy(buf, data, KEY_HEX_LEN);
+    buf[KEY_HEX_LEN] = '\0';
+
+    int ret = update_encrypted_files_key(key, buf);
+    if (ret < 0)
+        return -EACCES;
+
+    return 0;
+}
+
+
+int init_attestation(struct pseudo_node* dev) {
     struct pseudo_node* attestation = pseudo_add_dir(dev, "attestation");
 
-    struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
-    user_report_data->perm = PSEUDO_PERM_FILE_RW;
-    user_report_data->str.save = &user_report_data_save;
+    if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
+        struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
+        user_report_data->perm = PSEUDO_PERM_FILE_RW;
+        user_report_data->str.save = &user_report_data_save;
 
-    struct pseudo_node* target_info = pseudo_add_str(attestation, "target_info", NULL);
-    target_info->perm = PSEUDO_PERM_FILE_RW;
-    target_info->str.save = &target_info_save;
+        struct pseudo_node* target_info = pseudo_add_str(attestation, "target_info", NULL);
+        target_info->perm = PSEUDO_PERM_FILE_RW;
+        target_info->str.save = &target_info_save;
 
-    pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
-    pseudo_add_str(attestation, "report", &report_load);
-    pseudo_add_str(attestation, "quote", &quote_load);
+        pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
+        pseudo_add_str(attestation, "report", &report_load);
+        pseudo_add_str(attestation, "quote", &quote_load);
 
-    struct pseudo_node* pfkey = pseudo_add_str(attestation, "protected_files_key",
-                                               &pfkey_load);
-    pfkey->perm = PSEUDO_PERM_FILE_RW;
-    pfkey->str.save = &pfkey_save;
+        struct pseudo_node* pfkey = pseudo_add_str(attestation, "protected_files_key",
+                                                   &pfkey_load);
+        pfkey->perm = PSEUDO_PERM_FILE_RW;
+        pfkey->str.save = &pfkey_save;
+    }
+
+    struct pseudo_node* keys = pseudo_add_dir(attestation, "keys");
+    struct pseudo_node* key = pseudo_add_str(keys, /*name=*/NULL, &key_load);
+    key->name_exists = &key_name_exists;
+    key->list_names = &key_list_names;
+    key->perm = PSEUDO_PERM_FILE_RW;
+    key->str.save = &key_save;
+
     return 0;
 }

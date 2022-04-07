@@ -50,6 +50,11 @@ static inline int8_t hex2dec(char c) {
         return -1;
 }
 
+static inline char dec2hex(uint8_t n) {
+    assert(n < 16);
+    return "0123456789abcdef"[n];
+}
+
 /*
  * BYTES2HEXSTR converts an array into a hexadecimal string and fills into a
  * given buffer. The buffer size is given as an extra argument.
