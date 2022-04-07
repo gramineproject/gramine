@@ -687,7 +687,6 @@ static int socket_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type              = HANDLE_HDR(handle)->type;
     attr->nonblocking              = handle->sock.nonblocking;
-    attr->disconnected             = handle->flags & PAL_HANDLE_FD_ERROR;
 
     attr->socket.linger            = handle->sock.linger;
     attr->socket.receivebuf        = handle->sock.receivebuf;

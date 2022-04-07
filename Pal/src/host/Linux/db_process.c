@@ -344,7 +344,6 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->process.nonblocking;
-    attr->disconnected = handle->flags & PAL_HANDLE_FD_ERROR;
 
     /* get number of bytes available for reading */
     ret = DO_SYSCALL(ioctl, handle->process.stream, FIONREAD, &val);

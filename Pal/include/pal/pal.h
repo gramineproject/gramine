@@ -411,7 +411,6 @@ int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 /* stream attribute structure */
 typedef struct _PAL_STREAM_ATTR {
     PAL_IDX handle_type;
-    bool disconnected;
     bool nonblocking;
     pal_share_flags_t share_flags;
     PAL_NUM pending_size;

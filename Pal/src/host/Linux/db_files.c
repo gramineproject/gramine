@@ -198,7 +198,6 @@ static inline int file_stat_type(struct stat* stat) {
 /* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
 static inline void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat) {
     attr->handle_type  = file_stat_type(stat);
-    attr->disconnected = false;
     attr->nonblocking  = false;
     attr->share_flags  = stat->st_mode & PAL_SHARE_MASK;
     attr->pending_size = stat->st_size;
