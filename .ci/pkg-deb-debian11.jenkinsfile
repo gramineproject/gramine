@@ -1,0 +1,22 @@
+pipeline {
+    agent {
+        dockerfile { filename '.ci/debian11.dockerfile' }
+    }
+    stages {
+        stage('build') {
+            steps {
+                sh '''
+                    ./scripts/makedist.sh
+                    tar -xzf gramine_*.orig.tar.gz
+                    cd gramine-*
+                    debuild
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts 'gramine_*.orig.tar.gz, *.build, *.buildinfo, *.changes, *.deb, *.dsc, gramine-*.tar.xz'
+        }
+    }
+}
