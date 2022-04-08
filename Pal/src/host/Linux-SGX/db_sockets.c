@@ -206,10 +206,17 @@ static int socket_parse_uri(char* uri, struct sockaddr** bind_addr, size_t* bind
 
     /* if you reach here, it can only be connection address */
     if (!uri || (ret = inet_parse_uri(&uri, *dest_addr, dest_addrlen)) < 0) {
+        /* swap buffer pointer and keep bind_addr as output buffer of connect() */
+        struct sockaddr* addr = *dest_addr;
+        size_t addrlen        = *bind_addrlen;
+
         *dest_addr    = *bind_addr;
         *dest_addrlen = *bind_addrlen;
-        *bind_addr    = NULL;
-        *bind_addrlen = 0;
+        *bind_addr    = addr;
+        *bind_addrlen = addrlen;
+
+        /* bind_addr is invalid for input of connect() */
+        (*bind_addr)->sa_family = 0;
     }
 
     return 0;
@@ -350,7 +357,7 @@ static int tcp_connect(PAL_HANDLE* handle, char* uri, pal_stream_options_t optio
     if (!dest_addr)
         return -PAL_ERROR_INVAL;
 
-    if (bind_addr && bind_addr->sa_family != dest_addr->sa_family)
+    if (bind_addr && !(bind_addr->sa_family == dest_addr->sa_family || bind_addr->sa_family == 0))
         return -PAL_ERROR_INVAL;
 
     ret = ocall_connect(dest_addr->sa_family, sock_type(SOCK_STREAM, options), 0, /*ipv6_v6only=*/0,
