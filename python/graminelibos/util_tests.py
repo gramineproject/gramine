@@ -50,7 +50,7 @@ class TestConfig:
         data = toml.load(path)
 
         self.manifests = self.get_manifests(data)
-        arch = platform.processor()
+        arch = platform.machine()
         arch_data = data.get('arch', {}).get(arch, {})
         self.manifests += self.get_manifests(arch_data)
 
