@@ -1,0 +1,12 @@
+pipeline {
+    agent {
+        dockerfile { filename '.ci/debian11.dockerfile' }
+    }
+    stages {
+        stage('build') {
+            steps {
+                sh 'debuilder'
+            }
+        }
+    }
+}
