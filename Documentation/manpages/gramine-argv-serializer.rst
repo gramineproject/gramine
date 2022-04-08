@@ -29,6 +29,4 @@ Example
 .. code-block:: sh
 
    gramine-argv-serializer "binary_name" "arg1" "arg2" > gramine_args.txt
-.. note ::
 
-   The arguments can be empty as well based on your application requirements.
