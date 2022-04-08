@@ -186,8 +186,8 @@ static void client(void) {
         exit(1);
     }
 
-    char local_ip[16];
-    unsigned int local_port;
+    char local_ip[INET_ADDRSTRLEN];
+    uint16_t local_port;
     struct sockaddr_in local_addr;
     bzero(&local_addr, sizeof(local_addr));
     socklen_t len = sizeof(local_addr);
@@ -200,7 +200,7 @@ static void client(void) {
     inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, sizeof(local_ip));
     local_port = ntohs(local_addr.sin_port);
 
-    printf("[client] local ip address: %s\n", local_ip);
+    printf("[client] local IP address: %s\n", local_ip);
     printf("[client] local port : %u\n", local_port);
 
     /* we specify dummy MSG_DONTWAIT and MSG_WAITALL just to test these flags */

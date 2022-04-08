@@ -1186,7 +1186,6 @@ class TC_80_Socket(RegressionTestCase):
 
     def test_300_socket_tcp_msg_peek(self):
         stdout, _ = self.run_binary(['tcp_msg_peek'], timeout=50)
-        self.assertIn('[client] local ip address: 127.0.0.1', stdout)
         self.assertNotIn('[client] local port : 11111', stdout)
         self.assertIn('[client] receiving with MSG_PEEK: Hello from server!', stdout)
         self.assertIn('[client] receiving with MSG_PEEK again: Hello from server!', stdout)
