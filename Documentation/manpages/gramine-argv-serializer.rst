@@ -20,8 +20,8 @@ be used as a trusted or a protected file and ``loader.argv_src_file`` manifest
 option pointed to it.
 For more information on the usage, please refer to :doc:`../manifest-syntax`.
 
-For an example on how to use this utility from Python, please refer to `this
-file <https://github.com/gramineproject/gramine/blob/master/LibOS/shim/test/regression/test_libos.py>`__.
+For an example on how to use this utility from Python, please refer to
+:file:`LibOS/shim/test/regression/test_libos.py`.
 
 Example
 =======
