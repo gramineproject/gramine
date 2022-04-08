@@ -36,9 +36,10 @@
  */
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
-static int chroot_mount(const char* uri, void** mount_data) {
+static int chroot_mount(struct shim_mount_params* params, void** mount_data) {
     __UNUSED(mount_data);
-    if (!(strstartswith(uri, URI_PREFIX_FILE) || strstartswith(uri, URI_PREFIX_DEV)))
+    if (!params->uri || (!strstartswith(params->uri, URI_PREFIX_FILE) &&
+                         !strstartswith(params->uri, URI_PREFIX_DEV)))
         return -EINVAL;
     return 0;
 }

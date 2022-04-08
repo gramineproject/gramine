@@ -25,9 +25,21 @@ struct shim_handle;
 #define FS_POLL_WR 0x02
 #define FS_POLL_ER 0x04
 
+/* Describes mount parameters. Passed to `mount_fs`, and to the `mount` callback. */
+struct shim_mount_params {
+    /* Filesystem type (corresponds to `name` field of `shim_fs` */
+    const char* type;
+
+    /* Path to the mountpoint */
+    const char* path;
+
+    /* PAL URI, or NULL if not applicable */
+    const char* uri;
+};
+
 struct shim_fs_ops {
     /* mount: mount an uri to the certain location */
-    int (*mount)(const char* uri, void** mount_data);
+    int (*mount)(struct shim_mount_params* params, void** mount_data);
     int (*unmount)(void* mount_data);
 
     /* close: clean up the file state inside the handle */
@@ -454,18 +466,14 @@ int init_mount(void);
 /*!
  * \brief Mount a new filesystem.
  *
- * \param type        Filesystem type (currently defined in `mountable_fs` in `shim_fs.c`).
- * \param uri         PAL URI to mount, or NULL if not applicable.
- * \param mount_path  Path to the mountpoint.
- *
  * Creates a new `shim_mount` structure (mounted filesystem) and attaches to the dentry under
- * `mount_path`. That means (assuming the dentry is called `mount_point`):
+ * `params->path`. That means (assuming the dentry is called `mount_point`):
  *
  * - `mount_point->attached_mount` is the new filesystem,
  * - `mount_point->attached_mount->root` is the dentry of new filesystem's root.
  *
- * Subsequent lookups for `mount_path` and paths starting with `mount_path` will retrieve the new
- * filesystem's root, not the mountpoint.
+ * Subsequent lookups for `params->path` and paths starting with `params->path` will retrieve the
+ * new filesystem's root, not the mountpoint.
  *
  * As a result, multiple mount operations for the same path will create a chain (mount1 -> root1 ->
  * mount2 -> root2 ...), effectively stacking the mounts and ensuring only the last one is visible.
@@ -476,7 +484,7 @@ int init_mount(void);
  *
  * TODO: On failure, this function does not clean the synthetic nodes it just created.
  */
-int mount_fs(const char* type, const char* uri, const char* mount_path);
+int mount_fs(struct shim_mount_params* params);
 
 void get_mount(struct shim_mount* mount);
 void put_mount(struct shim_mount* mount);

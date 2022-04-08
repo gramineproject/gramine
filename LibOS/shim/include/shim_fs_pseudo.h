@@ -13,9 +13,10 @@
  *     pseudo_add_link(root, "self", &proc_self_follow_link);
  *     pseudo_add_str(root, "cpuinfo", &proc_cpuinfo_load);
  *
- * It can then be mounted by providing the root name ("proc" in the example):
+ * It can then be mounted by providing the root name as the `uri` parameter:
  *
- *     ret = mount_fs("pseudo", "proc", "/proc");
+ *     struct shim_mount_params params = { .type = "pseudo", .path = "/proc", .uri = "proc" };
+ *     ret = mount_fs(&params);
  *
  * See the documentation of `pseudo_node` structure for details.
  *

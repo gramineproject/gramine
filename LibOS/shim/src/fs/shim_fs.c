@@ -112,18 +112,25 @@ static int mount_root(void) {
         goto out;
     }
 
+    struct shim_mount_params params = { .path = "/" };
+
     if (!fs_root_type && !fs_root_uri) {
-        ret = mount_fs("chroot", URI_PREFIX_FILE ".", "/");
+        params.type = "chroot";
+        params.uri = URI_PREFIX_FILE ".";
     } else if (!fs_root_type || !strcmp(fs_root_type, "chroot")) {
         if (!fs_root_uri) {
             log_error("No value provided for 'fs.root.uri'");
             ret = -EINVAL;
             goto out;
         }
-        ret = mount_fs("chroot", fs_root_uri, "/");
+        params.type = "chroot";
+        params.uri = fs_root_uri;
     } else {
-        ret = mount_fs(fs_root_type, fs_root_uri ?: "", "/");
+        params.type = fs_root_type;
+        params.uri = fs_root_uri;
     }
+    ret = mount_fs(&params);
+
 out:
     free(fs_root_type);
     free(fs_root_uri);
@@ -133,20 +140,36 @@ out:
 static int mount_sys(void) {
     int ret;
 
-    ret = mount_fs("pseudo", "proc", "/proc");
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "pseudo",
+        .path = "/proc",
+        .uri = "proc",
+    });
     if (ret < 0)
         return ret;
 
-    ret = mount_fs("pseudo", "dev", "/dev");
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "pseudo",
+        .path = "/dev",
+        .uri = "dev",
+    });
     if (ret < 0)
         return ret;
 
-    ret = mount_fs("chroot", URI_PREFIX_DEV "tty", "/dev/tty");
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "chroot",
+        .path = "/dev/tty",
+        .uri = URI_PREFIX_DEV "tty",
+    });
     if (ret < 0)
         return ret;
 
     if (g_pal_public_state->enable_sysfs_topology) {
-        ret = mount_fs("pseudo", "sys", "/sys");
+        ret = mount_fs(&(struct shim_mount_params){
+            .type = "pseudo",
+            .path = "/sys",
+            .uri = "sys",
+        });
         if (ret < 0)
             return ret;
     }
@@ -227,10 +250,15 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
                       "application. Gramine will continue application execution, but this "
                       "configuration is not recommended for use in production!", mount_uri);
         }
-        ret = mount_fs("chroot", mount_uri, mount_path);
-    } else {
-        ret = mount_fs(mount_type, mount_uri ?: "", mount_path);
     }
+
+    struct shim_mount_params params = {
+        .type = mount_type ?: "chroot",
+        .path = mount_path,
+        .uri = mount_uri,
+    };
+    ret = mount_fs(&params);
+
 out:
     free(mount_type);
     free(mount_path);
@@ -443,13 +471,12 @@ struct shim_fs* find_fs(const char* name) {
     return NULL;
 }
 
-static int mount_fs_at_dentry(const char* type, const char* uri, const char* mount_path,
-                              struct shim_dentry* mount_point) {
+static int mount_fs_at_dentry(struct shim_mount_params* params, struct shim_dentry* mount_point) {
     assert(locked(&g_dcache_lock));
     assert(!mount_point->attached_mount);
 
     int ret;
-    struct shim_fs* fs = find_fs(type);
+    struct shim_fs* fs = find_fs(params->type);
     if (!fs || !fs->fs_ops || !fs->fs_ops->mount)
         return -ENODEV;
 
@@ -459,7 +486,7 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
     void* mount_data = NULL;
 
     /* Call filesystem-specific mount operation */
-    if ((ret = fs->fs_ops->mount(uri, &mount_data)) < 0)
+    if ((ret = fs->fs_ops->mount(params, &mount_data)) < 0)
         return ret;
 
     /* Allocate and set up `shim_mount` object */
@@ -471,13 +498,13 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
     }
     memset(mount, 0, sizeof(*mount));
 
-    mount->path = strdup(mount_path);
+    mount->path = strdup(params->path);
     if (!mount->path) {
         ret = -ENOMEM;
         goto err;
     }
-    if (uri) {
-        mount->uri = strdup(uri);
+    if (params->uri) {
+        mount->uri = strdup(params->uri);
         if (!mount->uri) {
             ret = -ENOMEM;
             goto err;
@@ -510,10 +537,10 @@ static int mount_fs_at_dentry(const char* type, const char* uri, const char* mou
      * We skip the lookup for the `encrypted` filesystem, because the key for encrypted files might
      * not be set yet.
      */
-    if (strcmp(type, "encrypted") != 0) {
+    if (strcmp(params->type, "encrypted") != 0) {
         struct shim_dentry* root;
-        if ((ret = path_lookupat(g_dentry_root, mount_path, LOOKUP_NO_FOLLOW, &root))) {
-            log_warning("error looking up mount root %s: %d", mount_path, ret);
+        if ((ret = path_lookupat(g_dentry_root, params->path, LOOKUP_NO_FOLLOW, &root))) {
+            log_warning("error looking up mount root %s: %d", params->path, ret);
             goto err;
         }
         assert(root == mount->root);
@@ -546,37 +573,38 @@ err:
     if (fs->fs_ops->unmount) {
         int ret_unmount = fs->fs_ops->unmount(mount_data);
         if (ret_unmount < 0) {
-            log_warning("error unmounting %s: %d", mount_path, ret_unmount);
+            log_warning("error unmounting %s: %d", params->path, ret_unmount);
         }
     }
 
     return ret;
 }
 
-int mount_fs(const char* type, const char* uri, const char* mount_path) {
+int mount_fs(struct shim_mount_params* params) {
     int ret;
     struct shim_dentry* mount_point = NULL;
 
-    log_debug("mounting \"%s\" (%s) under %s", uri, type, mount_path);
+    log_debug("mounting \"%s\" (%s) under %s", params->uri, params->type, params->path);
 
     lock(&g_dcache_lock);
 
-    if (!g_dentry_root->attached_mount && !strcmp(mount_path, "/")) {
+    if (!g_dentry_root->attached_mount && !strcmp(params->path, "/")) {
         /* `g_dentry_root` does not belong to any mounted filesystem, so lookup will fail. Use it
          * directly. */
         mount_point = g_dentry_root;
         get_dentry(g_dentry_root);
     } else {
         int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
-        ret = path_lookupat(g_dentry_root, mount_path, lookup_flags, &mount_point);
+        ret = path_lookupat(g_dentry_root, params->path, lookup_flags, &mount_point);
         if (ret < 0) {
-            log_error("error looking up mountpoint %s: %d", mount_path, ret);
+            log_error("error looking up mountpoint %s: %d", params->path, ret);
             goto out;
         }
     }
 
-    if ((ret = mount_fs_at_dentry(type, uri, mount_path, mount_point)) < 0) {
-        log_error("error mounting \"%s\" (%s) under %s: %d", uri, type, mount_path, ret);
+    if ((ret = mount_fs_at_dentry(params, mount_point)) < 0) {
+        log_error("error mounting \"%s\" (%s) under %s: %d", params->uri, params->type,
+                  params->path, ret);
         goto out;
     }
 

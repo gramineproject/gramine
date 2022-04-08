@@ -106,8 +106,8 @@ static int tmpfs_irestore(struct shim_inode* inode, void* data) {
     return 0;
 }
 
-static int tmpfs_mount(const char* uri, void** mount_data) {
-    __UNUSED(uri);
+static int tmpfs_mount(struct shim_mount_params* params, void** mount_data) {
+    __UNUSED(params);
     __UNUSED(mount_data);
     return 0;
 }
