@@ -558,7 +558,7 @@ OCALL is executed, and ``perf report`` displays percentages based on the number
 of samples.
 
 
-.. _vtune:
+.. _vtune-sgx-profiling:
 
 Profiling SGX hotspots with ``Intel VTune Profiler``
 ----------------------------------------------------
@@ -570,14 +570,17 @@ profiler to find SGX hotspots.
 Installing ``vtune``
 """"""""""""""""""""
 
-Please download and install Intel(R) VTune Profiler from `here<https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/installation.html>`__. 
+Please download and install Intel(R) VTune(TM) Profiler from `here
+<https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/installation.html>`__.
 
 Collecting SGX hotspots and viewing the report
 """"""""""""""""""""""""""""""""""""""""""""""
 
-#. Compile Gramine with ``-Dvtune_sgx_profiling=enabled -Dvtune_sdk_path=<VTune SDK installation path>``.
+#. Compile Gramine with
+   ``-Dvtune_sgx_profiling=enabled -Dvtune_sdk_path=<VTune SDK install path>``.
 
-   If ``vtune_sdk_path`` is not provided, Gramine will take the default VTune installation path.
+   If ``vtune_sdk_path`` is not provided, Gramine will take the default VTune
+   installation path.
 
 #. Add ``sgx.vtune_profiling = true`` to the manifest.
 
@@ -587,7 +590,9 @@ Collecting SGX hotspots and viewing the report
 
    It will output the data collected to a directory of the format ``r000sgxhs``.
 
-#. To view the report, run ``vtune -report hotspots -r <vtune data collection output directory>``
+#. To view the report, run
+   ``vtune -report hotspots -r <vtune data collection output directory>`` or use
+   Intel(R) VTune(TM) Profiler GUI application
 
 
 Other useful tools for profiling

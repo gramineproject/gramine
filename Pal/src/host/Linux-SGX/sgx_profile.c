@@ -26,6 +26,12 @@
 #include "sgx_tls.h"
 #include "spinlock.h"
 
+#ifdef VTUNE_SGX_PROFILING
+#include "ittnotify.h"
+#endif
+
+extern bool g_enable_vtune_profiling;
+
 // FIXME: this is glibc realpath, declared here because the headers will conflict with PAL
 char* realpath(const char* path, char* resolved_path);
 
@@ -301,7 +307,7 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
 void sgx_profile_report_elf(const char* filename, void* addr) {
     int ret;
 
-    if (!g_profile_enabled)
+    if (!g_profile_enabled && !g_enable_vtune_profiling)
         return;
 
     if (!strcmp(filename, ""))
@@ -355,19 +361,29 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
-    spinlock_lock(&g_perf_data_lock);
+    if (g_profile_enabled)
+        spinlock_lock(&g_perf_data_lock);
+
     for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
             uint64_t mapstart = ALLOC_ALIGN_DOWN(phdr[i].p_vaddr);
             uint64_t mapend = ALLOC_ALIGN_UP(phdr[i].p_vaddr + phdr[i].p_filesz);
             uint64_t offset = ALLOC_ALIGN_DOWN(phdr[i].p_offset);
-            ret = pd_event_mmap(g_perf_data, path, g_host_pid,
-                                (uint64_t)addr + mapstart, mapend - mapstart, offset);
-            if (ret < 0)
-                break;
+            if (g_profile_enabled) {
+                ret = pd_event_mmap(g_perf_data, path, g_host_pid,
+                        (uint64_t)addr + mapstart, mapend - mapstart, offset);
+                if (ret < 0)
+                    break;
+            }
+#ifdef VTUNE_SGX_PROFILING
+            if (g_enable_vtune_profiling)
+                __itt_module_load((void*)addr + mapstart, (void*) addr + mapend - 1, path);
+#endif
         }
     }
-    spinlock_unlock(&g_perf_data_lock);
+
+    if (g_profile_enabled)
+        spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0)
         log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %d", filename, ret);

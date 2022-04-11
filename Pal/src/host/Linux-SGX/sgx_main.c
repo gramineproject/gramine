@@ -28,15 +28,6 @@
 #include "toml_utils.h"
 #include "topo_info.h"
 
-#ifdef VTUNE_SGX_PROFILING
-#include "ittnotify.h"
-#include "ittnotify_config.h"
-#include "ittnotify_types.h"
-
-extern int __itt_init_ittlib(const char*, __itt_group_id);
-extern void __itt_fini_ittlib(void);
-#endif
-
 const size_t g_page_size = PRESET_PAGESIZE;
 
 char* g_pal_loader_path = NULL;
@@ -554,15 +545,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             }
         }
     }
-
-#ifdef VTUNE_SGX_PROFILING
-    if (g_enable_vtune_profiling) {
-        uint64_t enclave_start_addr = (uint64_t) enclave_secs.base;
-        uint64_t enclave_end_addr = enclave_start_addr + (uint64_t) enclave_secs.size - 1;
-
-        __itt_module_load((void*)pal_area->addr, (void*) enclave_end_addr, g_libpal_path);
-    }
-#endif
 
 #ifdef DEBUG
     /*

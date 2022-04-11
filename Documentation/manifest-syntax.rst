@@ -849,6 +849,19 @@ Linux scheduler: the effective maximum is 250 samples per second.
    This option applies only to ``aex`` mode. In the ``ocall_*`` modes, currently
    all samples are taken.
 
+SGX profiling with Intel(R) VTune(TM) Profiler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.vtune_profiling = [true|false]
+    (Default: false)
+
+This syntax specifies whether to enable SGX profiling with Intel(R) VTune(TM)
+Profiler. Gramine must be compiled with ``DEBUG=1`` or ``DEBUGOPT=1`` for this
+option to work (the latter is advised).
+
+See :ref:`vtune-sgx-profiling` for more information.
 
 Deprecated options
 ------------------
