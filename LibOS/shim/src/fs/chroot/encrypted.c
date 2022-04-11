@@ -51,7 +51,7 @@
 #define HOST_PERM(perm) ((perm) | PERM_rw_______)
 
 static int chroot_encrypted_mount(struct shim_mount_params* params, void** mount_data) {
-    if (!strstartswith(params->uri, URI_PREFIX_FILE))
+    if (!params->uri || !strstartswith(params->uri, URI_PREFIX_FILE))
         return -EINVAL;
 
     struct shim_encrypted_files_key* key;

@@ -25,6 +25,7 @@ struct shim_handle;
 #define FS_POLL_WR 0x02
 #define FS_POLL_ER 0x04
 
+/* Describes mount parameters. Passed to `mount_fs`, and to the `mount` callback. */
 struct shim_mount_params {
     /* Filesystem type (corresponds to `name` field of `shim_fs` */
     const char* type;

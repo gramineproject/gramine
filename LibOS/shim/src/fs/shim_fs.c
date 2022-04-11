@@ -112,8 +112,7 @@ static int mount_root(void) {
         goto out;
     }
 
-    struct shim_mount_params params = {0};
-    params.path = "/";
+    struct shim_mount_params params = { .path = "/" };
 
     if (!fs_root_type && !fs_root_uri) {
         params.type = "chroot";
@@ -141,34 +140,36 @@ out:
 static int mount_sys(void) {
     int ret;
 
-    struct shim_mount_params params = {0};
-
-    params.type = "pseudo";
-    params.path = "/proc";
-    params.uri = "proc";
-    ret = mount_fs(&params);
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "pseudo",
+        .path = "/proc",
+        .uri = "proc",
+    });
     if (ret < 0)
         return ret;
 
-    params.type = "pseudo";
-    params.path = "/dev";
-    params.uri = "dev";
-    ret = mount_fs(&params);
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "pseudo",
+        .path = "/dev",
+        .uri = "dev",
+    });
     if (ret < 0)
         return ret;
 
-    params.type = "chroot";
-    params.path = "/dev/tty";
-    params.uri = URI_PREFIX_DEV "tty";
-    ret = mount_fs(&params);
+    ret = mount_fs(&(struct shim_mount_params){
+        .type = "chroot",
+        .path = "/dev/tty",
+        .uri = URI_PREFIX_DEV "tty",
+    });
     if (ret < 0)
         return ret;
 
     if (g_pal_public_state->enable_sysfs_topology) {
-        params.type = "pseudo";
-        params.path = "/sys";
-        params.uri = "sys";
-        ret = mount_fs(&params);
+        ret = mount_fs(&(struct shim_mount_params){
+            .type = "pseudo",
+            .path = "/sys",
+            .uri = "sys",
+        });
         if (ret < 0)
             return ret;
     }
