@@ -8,20 +8,16 @@ endif
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
-CARGO_TARGET = debug
-CARGO_PROFILE = dev
 else
 GRAMINE_LOG_LEVEL = error
-CARGO_TARGET = release
-CARGO_PROFILE = release
 endif
 
 # Defer incremental compilation of Rust to Cargo.
 .PHONY: build-rust
 build-rust:
-	cargo build --profile $(CARGO_PROFILE)
+	cargo build --release
 
-SELF_EXE := target/$(CARGO_TARGET)/rust-hyper-http-server
+SELF_EXE = target/release/rust-hyper-http-server
 
 rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template
 	gramine-manifest \
