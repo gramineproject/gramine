@@ -16,11 +16,12 @@ CARGO_TARGET = release
 CARGO_PROFILE = release
 endif
 
+# Defer incremental compilation of Rust to Cargo.
 .PHONY: build-rust
 build-rust:
 	cargo build --profile $(CARGO_PROFILE)
 
-SELF_EXE = target/$(CARGO_TARGET)/rust-hyper-http-server
+SELF_EXE := target/$(CARGO_TARGET)/rust-hyper-http-server
 
 rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template
 	gramine-manifest \
@@ -46,7 +47,7 @@ else
 GRAMINE = gramine-sgx
 endif
 
-.PHONY: check
+.PHONY: start-gramine-server
 start-gramine-server: all
 	$(GRAMINE) rust-hyper-http-server
 
