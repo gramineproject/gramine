@@ -237,13 +237,7 @@ static int do_fstatat_empty_path(int dirfd, struct stat* statbuf) {
         goto out;
     }
 
-    struct shim_d_ops* d_ops = dent->inode->fs->d_ops;
-    if (!(d_ops && d_ops->stat)) {
-        ret = -EACCES;
-        goto out;
-    }
-
-    ret = d_ops->stat(dent, statbuf);
+    ret = do_stat(dent, statbuf);
 out:
     unlock(&g_dcache_lock);
     put_dentry(dent);
@@ -289,13 +283,7 @@ long shim_do_newfstatat(int dirfd, const char* pathname, struct stat* statbuf, i
     if (ret < 0)
         goto out;
 
-    struct shim_d_ops* d_ops = dent->inode->fs->d_ops;
-    if (!(d_ops && d_ops->stat)) {
-        ret = -EACCES;
-        goto out;
-    }
-
-    ret = d_ops->stat(dent, statbuf);
+    ret = do_stat(dent, statbuf);
 out:
     unlock(&g_dcache_lock);
     if (dent)
