@@ -67,11 +67,17 @@ Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may
 be reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD]. All complaints will be reviewed and
-investigated promptly and fairly.
+gramine-coc@googlegroups.com. All complaints will be reviewed and investigated
+promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security
 of the reporter of any incident.
+
+Community leaders may determine that a violation of this Code of Conduct was
+inadvertent, perhaps arising from cultural differences (for example, use of a
+slang term which is harmless in one language and offensive in another) or a
+misguided attempt at humor. Such cases will be treated as opportunities for
+education rather than reprimand.
 
 Enforcement Guidelines
 ----------------------
@@ -131,10 +137,12 @@ within the community.
 Attribution
 -----------
 
-This Code of Conduct is adapted from the `Contributor
-Covenant <https://www.contributor-covenant.org>`__, version 2.0,
-available at
+This Code of Conduct is adapted from the `Contributor Covenant
+<https://www.contributor-covenant.org>`__, version 2.0, available at
 https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
 
 Community Impact Guidelines were inspired by `Mozilla's code of conduct
 enforcement ladder <https://github.com/mozilla/diversity>`__.
+
+Enforcement was partially inspired by the `PostgreSQL Code of Conduct
+<https://www.postgresql.org/about/policies/coc/>`__.
