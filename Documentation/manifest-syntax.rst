@@ -399,22 +399,6 @@ Start (current working) directory
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
 
-Experimental sysfs topology support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    fs.experimental__enable_sysfs_topology = [true|false]
-    (Default: false)
-
-This syntax enables sysfs topology feature in Gramine: pseudo-files under
-``/sys/devices/system/cpu`` and ``/sys/devices/system/node``.
-
-.. warning::
-   This feature is still under development and may contain security
-   vulnerabilities. This is temporary; the feature will be enabled in future
-   after thorough validation and this syntax will be removed then.
-
 SGX syntax
 ----------
 
@@ -883,3 +867,12 @@ FS mount points (deprecated syntax)
 
 This syntax used a TOML table schema with keys for each mount. It has been
 replaced with the ``fs.mounts`` TOML array.
+
+Experimental sysfs topology support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    fs.experimental__enable_sysfs_topology = [true|false]
+
+This feature is now enabled by default and the option was removed.

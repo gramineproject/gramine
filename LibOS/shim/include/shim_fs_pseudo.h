@@ -70,6 +70,10 @@ struct shim_dev_ops {
 /* Maximum count of created nodes (`pseudo_add_*` calls) */
 #define PSEUDO_MAX_NODES 128
 
+/* Used to represent cpumaps like "00000000,ffffffff,00000000,ffffffff".
+ * Note: Used to allocate on stack; increase with caution or use malloc instead. */
+#define PAL_SYSFS_MAP_FILESZ 256
+
 /*
  * A node of the pseudo filesystem. A single node can describe either a single file, or a family of
  * files:
@@ -232,26 +236,25 @@ int sys_resource_list_names(struct shim_dentry* parent, readdir_callback_t callb
 int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
-int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
+int sys_cpu_load_online(struct shim_dentry* dent, char** out_data, size_t* out_size);
+int sys_cpu_load_topology(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
-int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
+bool sys_cpu_exists_only_if_online(struct shim_dentry* parent, const char* name);
 
 /* Find resource number for a given name; e.g. `sys_resource_find(dent, "cpu", &n)` will search for
  * "cpu/cpuN" in the path of `dent`, and set `n` to the number N */
 int sys_resource_find(struct shim_dentry* parent, const char* parent_name, unsigned int* out_num);
 
-/* Converts struct pal_res_range_info to a string representation.
- * Example output when sep == ',': "10-63,68,70-127".
- * Note: This function adds a newline at the end of the string. */
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
-                              char* str, size_t str_size);
+/* Print into the sysfs ranges format (e.g. "10-63,68,70-127\n"). */
+int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
+                        bool (*is_present)(size_t ind, const void* arg), const void* callback_arg);
 
-/* Converts struct pal_res_range_info to a sysfs CPU bitmask representation with bitmask size based
- * on the possible cores count in the system.
- * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff".
- * Note: This function adds a newline at the end of the string. */
-int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
-                                         char* str, size_t str_size);
+/* Print into the sysfs bitmask format, with bitmask size based on `count`.
+ * Example: count=64, indices 0-15,48-55 present: "00ff0000,0000ffff\n".
+ */
+int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
+                         bool (*is_present)(size_t ind, const void* arg),
+                         const void* callback_arg);
 
 #endif /* SHIM_FS_PSEUDO_H_ */

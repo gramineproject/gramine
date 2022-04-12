@@ -175,7 +175,7 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 
 long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned long* user_mask_ptr) {
     int ret;
-    size_t cpu_cnt = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
+    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
 
     /* Check if user_mask_ptr is valid */
     if (!is_user_memory_writable(user_mask_ptr, cpumask_size))
@@ -183,7 +183,7 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 
     /* Linux kernel bitmap is based on long. So according to its implementation, round up the result
      * to sizeof(long) */
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(cpu_cnt) * sizeof(long);
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(long);
     if (cpumask_size < bitmask_size_in_bytes) {
         log_warning("size of cpumask must be at least %lu but supplied cpumask is %u",
                     bitmask_size_in_bytes, cpumask_size);

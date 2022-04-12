@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
+ *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
 /*
  * This file contains the APIs to expose host topology information.
+ * All of them are not suitable for untrusted inputs! (due to overflows and liberal parsing)
  */
 
 #include <asm/errno.h>
@@ -15,21 +17,33 @@
 #include "syscall.h"
 #include "topo_info.h"
 
-/* Opens a pseudo-file describing HW resources and simply reads the value stored in the file.
- * Returns UNIX error code on failure and 0 on success. */
-static int get_hw_resource_value(const char* filename, size_t* out_value) {
-    assert(out_value);
+ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
+    int fd = DO_SYSCALL(open, filename, O_RDONLY);
+    if (fd < 0)
+        return fd;
 
-    char str[PAL_SYSFS_BUF_FILESZ];
-    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
+    ssize_t ret = DO_SYSCALL(read, fd, buf, count);
+    long close_ret = DO_SYSCALL(close, fd);
+    if (ret == 0 && close_ret < 0)
+        ret = close_ret;
+
+    return ret;
+}
+
+/* Opens a pseudo-file describing HW resources and reads the value stored in the file, optionally
+ * honoring a 'K' unit suffix. */
+static int get_hw_resource_value(const char* filename, size_t* out_value) {
+    char buf[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(filename, buf, sizeof(buf) - 1);
     if (ret < 0)
         return ret;
 
-    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+    buf[ret] = '\0';
 
-    char* end;
-    long val = strtol(str, &end, 10);
-    if (val < 0)
+    const char* end;
+    unsigned long val;
+    ret = str_to_ulong(buf, 10, &val, &end);
+    if (ret < 0)
         return -EINVAL;
 
     if (*end != '\n' && *end != '\0' && *end != 'K') {
@@ -46,420 +60,377 @@ static int get_hw_resource_value(const char* filename, size_t* out_value) {
     return 0;
 }
 
-/* Opens a pseudo-file describing HW resources such as online CPUs and counts the number of
- * HW resources and their ranges present in the file. The result is stored in `out_info`.
- * Returns UNIX error code on failure and 0 on success.
- * N.B: Understands complex formats like "1,3-5,7". */
-static int get_hw_resource_range(const char* filename, struct pal_res_range_info* out_info) {
-    assert(out_info);
-
-    /* Clear user supplied buffer */
-    out_info->resource_cnt = 0;
-    out_info->ranges_cnt = 0;
-    out_info->ranges_arr = NULL;
-
-    char str[PAL_SYSFS_BUF_FILESZ];
-    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
+/* Read a space-separated list of numbers.
+ * The file has to contain at least `count` numbers, otherwise this function returns `-EINVAL`. */
+static int read_numbers_from_file(const char* path, size_t* out_arr, size_t count) {
+    char buf[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
         return ret;
+    buf[ret] = '\0';
 
-    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
-
-    char* ptr = str;
-    while (*ptr) {
-        while (*ptr == ' ' || *ptr == ',')
-            ptr++;
-
-        char* end;
-        long start_val = strtol(ptr, &end, 10);
-        if (start_val < 0) {
-            ret = -ENOENT;
-            goto fail;
-        }
-
-        if (ptr == end)
-            break;
-
-        size_t range_start;
-        size_t range_end;
-
-        if (*end == '\0' || *end == ',' || *end == '\n' || *end == ' ') {
-            range_start = start_val;
-            range_end = start_val;
-
-            if (__builtin_add_overflow(out_info->resource_cnt, 1, &out_info->resource_cnt)) {
-                ret = -EOVERFLOW;
-                goto fail;
-            }
-        } else if (*end == '-') {
-            ptr = end + 1;
-            long end_val = strtol(ptr, &end, 10);
-            if (end_val < 0 || end_val < start_val) {
-                ret = -EINVAL;
-                goto fail;
-            }
-
-            range_start = start_val;
-            range_end = end_val;
-
-            size_t diff = end_val - start_val + 1; /* +1 because of inclusive range */
-            if (__builtin_add_overflow(out_info->resource_cnt, diff, &out_info->resource_cnt)) {
-                ret = -EOVERFLOW;
-                goto fail;
-            }
-        } else {
-            /* Illegal character found */
-            ret = -EINVAL;
-            goto fail;
-        }
-
-        /* Update range info */
-        out_info->ranges_cnt++;
-
-        /* Realloc the array of ranges (expand by one range) */
-        size_t new_size = sizeof(struct pal_range_info) * out_info->ranges_cnt;
-        size_t old_size = new_size - sizeof(struct pal_range_info);
-        /* TODO: Optimize realloc by doing some overestimation and trimming later once the
-         * range count is known */
-        struct pal_range_info* tmp = malloc(new_size);
-        if (!tmp) {
-            ret = -ENOMEM;
-            goto fail;
-        }
-
-        if (out_info->ranges_arr) {
-            memcpy(tmp, out_info->ranges_arr, old_size);
-            free(out_info->ranges_arr);
-        }
-        out_info->ranges_arr = tmp;
-        out_info->ranges_arr[out_info->ranges_cnt - 1].start = range_start;
-        out_info->ranges_arr[out_info->ranges_cnt - 1].end = range_end;
-
-        ptr = end;
+    const char* buf_it = buf;
+    const char* end;
+    for (size_t i = 0; i < count; i++) {
+        unsigned long val;
+        ret = str_to_ulong(buf_it, 10, &val, &end);
+        if (ret < 0)
+            return -EINVAL;
+        char expected_separator = (i != count - 1) ? ' ' : '\n';
+        if (*end != expected_separator)
+            return -EINVAL;
+        buf_it = end + 1;
+        out_arr[i] = (size_t)val;
     }
-
-    if (!out_info->resource_cnt || !out_info->ranges_cnt) {
-        ret = -EINVAL;
-        goto fail;
-    }
-
     return 0;
-
-fail:
-    free(out_info->ranges_arr);
-    out_info->resource_cnt = 0;
-    out_info->ranges_cnt = 0;
-    out_info->ranges_arr = NULL;
-
-    return ret;
 }
 
-ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
-    int fd = DO_SYSCALL(open, filename, O_RDONLY);
-    if (fd < 0)
-        return fd;
-
-    ssize_t ret = DO_SYSCALL(read, fd, buf, count);
-    DO_SYSCALL(close, fd);
+static int iterate_ranges_from_file(const char* path, int (*callback)(size_t index, void* arg),
+                                    void* callback_arg) {
+    char buf[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
         return ret;
+    buf[ret] = '\0';
 
-    return ret;
+    const char* buf_it = buf;
+    long prev = -1;
+    while (*buf_it && *buf_it != '\n') {
+        const char* parse_end;
+        unsigned long val;
+        ret = str_to_ulong(buf_it, 10, &val, &parse_end);
+        if (ret < 0)
+            return -EINVAL;
+        buf_it = parse_end;
+
+        if (*buf_it == ',' || *buf_it == '\n') {
+            if (prev == -1) {
+                // single index
+                ret = callback(val, callback_arg);
+                if (ret < 0)
+                    return ret;
+            } else {
+                // range
+                for (size_t i = prev; i <= (size_t)val; i++) {
+                    ret = callback(i, callback_arg);
+                    if (ret < 0)
+                        return ret;
+                }
+            }
+            prev = -1;
+        } else if (*buf_it == '-' && prev == -1) {
+            // range start
+            prev = val;
+        } else {
+            log_error("Invalid range format when parsing %s", path);
+            return -EINVAL;
+        }
+        buf_it++;
+    }
+    if (prev != -1) {
+        log_error("Invalid range format when parsing %s", path);
+        return -EINVAL;
+    }
+    return 0;
 }
 
-#define READ_FILE_BUFFER(filepath, buf, failure_label)                           \
-    ({                                                                           \
-        ret = read_file_buffer(filepath, buf, ARRAY_SIZE(buf)-1);                \
-        if (ret < 0)                                                             \
-            goto failure_label;                                                  \
-        buf[ret] = '\0';                                                         \
-    })
-
-/* This function stores the number of cache levels present on the system by counting "indexX" dir
- * entries under `/sys/devices/system/cpu/cpuX/cache` in `out_cache_indices_cnt`. Returns 0 on
- * success and negative UNIX error code on failure. */
-static int get_cache_levels_cnt(const char* path, size_t* out_cache_indices_cnt) {
-    assert(out_cache_indices_cnt);
-
-    char buf[1024];
-    int ret;
-    size_t dirs_cnt = 0;
-
-    int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
-    if (fd < 0)
-        return fd;
-
-    while (true) {
-        int nread = DO_SYSCALL(getdents64, fd, buf, 1024);
-        if (nread < 0) {
-            ret = nread;
-            goto out;
-        }
-
-        if (nread == 0)
-            break;
-
-        for (int bpos = 0; bpos < nread;) {
-            struct linux_dirent64* dirent64 = (struct linux_dirent64*)(buf + bpos);
-            if (dirent64->d_type == DT_DIR && strstartswith(dirent64->d_name, "index"))
-                dirs_cnt++;
-            bpos += dirent64->d_reclen;
-        }
-    }
-
-    if (!dirs_cnt) {
-        ret = -ENOENT;
-        goto out;
-    }
-
-    *out_cache_indices_cnt = dirs_cnt;
-    ret = 0;
-
-out:
-    DO_SYSCALL(close, fd);
-    return ret;
-}
-
-static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-                               struct pal_core_cache_info** out_cache_info_arr) {
+static int read_cache_info(struct pal_cache_info* ci, size_t thread_idx, size_t cache_idx) {
     int ret;
 
-    struct pal_core_cache_info* cache_info_arr =
-        malloc(cache_indices_cnt * sizeof(*cache_info_arr));
-    if (!cache_info_arr) {
-        return -ENOMEM;
-    }
+    char path[128];
 
-    char dirname[PAL_SYSFS_PATH_SIZE];
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu/cache/index%zu",
-                       core_idx, cache_idx);
-        if (ret < 0)
-            goto fail;
-
-        ret = snprintf(filename, sizeof(filename), "%s/shared_cpu_list", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_range(filename, &cache_info_arr[cache_idx].shared_cpu_map);
-        if (ret < 0)
-            goto fail;
-
-        ret = snprintf(filename, sizeof(filename), "%s/level", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].level);
-        if (ret < 0)
-            goto fail;
-
-        char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
-        ret = snprintf(filename, sizeof(filename), "%s/type", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = read_file_buffer(filename, type, sizeof(type) - 1);
-        if (ret < 0)
-            goto fail;
-        type[ret] = '\0';
-
-        if (!strcmp(type, "Unified\n")) {
-            cache_info_arr[cache_idx].type = CACHE_TYPE_UNIFIED;
-        } else if (!strcmp(type, "Instruction\n")) {
-            cache_info_arr[cache_idx].type = CACHE_TYPE_INSTRUCTION;
-        } else if (!strcmp(type, "Data\n")) {
-            cache_info_arr[cache_idx].type = CACHE_TYPE_DATA;
-        } else {
-            ret = -EINVAL;
-            goto fail;
-        }
-
-        ret = snprintf(filename, sizeof(filename), "%s/size", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].size);
-        if (ret < 0)
-            goto fail;
-
-        ret = snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].coherency_line_size);
-        if (ret < 0)
-            goto fail;
-
-        ret = snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].number_of_sets);
-        if (ret < 0)
-            goto fail;
-
-        ret = snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].physical_line_partition);
-        if (ret < 0)
-            goto fail;
-    }
-    *out_cache_info_arr = cache_info_arr;
-    return 0;
-
-fail:
-    free(cache_info_arr);
-    return ret;
-}
-
-/* Get core topology-related info */
-static int get_core_topo_info(struct pal_topo_info* topo_info) {
-    int ret = get_hw_resource_range("/sys/devices/system/cpu/online",
-                                    &topo_info->online_logical_cores);
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/level", thread_idx, cache_idx);
+    if (ret < 0)
+        return ret;
+    ret = get_hw_resource_value(path, &ci->level);
     if (ret < 0)
         return ret;
 
-    ret = get_hw_resource_range("/sys/devices/system/cpu/possible",
-                                &topo_info->possible_logical_cores);
+    char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/type", thread_idx, cache_idx);
     if (ret < 0)
         return ret;
+    ret = read_file_buffer(path, type, sizeof(type) - 1);
+    if (ret < 0)
+        return ret;
+    type[ret] = '\0';
 
-    size_t online_logical_cores_cnt = topo_info->online_logical_cores.resource_cnt;
-
-    size_t possible_logical_cores_cnt = topo_info->possible_logical_cores.resource_cnt;
-
-    /* TODO: correctly support offline cores */
-    if (possible_logical_cores_cnt > online_logical_cores_cnt) {
-        log_error("Some CPUs seem to be offline; Gramine currently doesn't support core offlining");
+    if (!strcmp(type, "Unified\n")) {
+       ci->type = CACHE_TYPE_UNIFIED;
+    } else if (!strcmp(type, "Instruction\n")) {
+       ci->type = CACHE_TYPE_INSTRUCTION;
+    } else if (!strcmp(type, "Data\n")) {
+       ci->type = CACHE_TYPE_DATA;
+    } else {
         return -EINVAL;
     }
 
-    ret = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache", &topo_info->cache_indices_cnt);
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/size", thread_idx, cache_idx);
+    if (ret < 0)
+        return ret;
+    ret = get_hw_resource_value(path, &ci->size);
     if (ret < 0)
         return ret;
 
-    struct pal_core_topo_info* core_topo_arr =
-        malloc(online_logical_cores_cnt * sizeof(*core_topo_arr));
-    if (!core_topo_arr)
-        return -ENOMEM;
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/coherency_line_size",
+                   thread_idx, cache_idx);
+    if (ret < 0)
+        return ret;
+    ret = get_hw_resource_value(path, &ci->coherency_line_size);
+    if (ret < 0)
+        return ret;
 
-    size_t current_max_socket = 0;
-    char dirname[PAL_SYSFS_PATH_SIZE];
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
-        ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu", idx);
-        if (ret < 0)
-            goto out;
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/number_of_sets",
+                   thread_idx, cache_idx);
+    if (ret < 0)
+        return ret;
+    ret = get_hw_resource_value(path, &ci->number_of_sets);
+    if (ret < 0)
+        return ret;
 
-        if (idx != 0) {
-            ret = snprintf(filename, sizeof(filename), "%s/online", dirname);
-            if (ret < 0)
-                goto out;
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition",
+                   thread_idx, cache_idx);
+    if (ret < 0)
+        return ret;
+    ret = get_hw_resource_value(path, &ci->physical_line_partition);
+    if (ret < 0)
+        return ret;
 
-            size_t is_logical_core_online = 0;
-            ret = get_hw_resource_value(filename, &is_logical_core_online);
-            if (ret < 0)
-                goto out;
-            core_topo_arr[idx].is_logical_core_online = (bool)is_logical_core_online;
-        } else {
-            /* cpu0 is always online and thus the "online" file is not present. */
-            core_topo_arr[idx].is_logical_core_online = true;
-        }
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/core_id", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_value(filename, &core_topo_arr[idx].core_id);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/core_siblings_list", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &core_topo_arr[idx].core_siblings);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/thread_siblings_list", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &core_topo_arr[idx].thread_siblings);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/physical_package_id", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_value(filename, &core_topo_arr[idx].socket_id);
-        if (ret < 0)
-            goto out;
-
-        if (core_topo_arr[idx].socket_id > current_max_socket)
-            current_max_socket = core_topo_arr[idx].socket_id;
-
-        ret = get_cache_topo_info(topo_info->cache_indices_cnt, idx,
-                                  &core_topo_arr[idx].cache_info_arr);
-        if (ret < 0)
-            goto out;
-    }
-
-    topo_info->core_topo_arr = core_topo_arr;
-    topo_info->sockets_cnt = current_max_socket + 1;
-    topo_info->physical_cores_per_socket = core_topo_arr[0].core_siblings.resource_cnt /
-                                           core_topo_arr[0].thread_siblings.resource_cnt;
     return 0;
-
-out:
-    free(core_topo_arr);
-    return ret;
 }
 
-/* Get NUMA topology-related info */
-static int get_numa_topo_info(struct pal_topo_info* topo_info) {
-    int ret = get_hw_resource_range("/sys/devices/system/node/online", &topo_info->online_nodes);
-    if (ret < 0)
-        return ret;
-    size_t online_nodes_cnt = topo_info->online_nodes.resource_cnt;
-
-    struct pal_numa_topo_info* numa_topo_arr = malloc(online_nodes_cnt * sizeof(*numa_topo_arr));
-    if (!numa_topo_arr)
-        return -ENOMEM;
-
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
-        ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpulist", idx);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &numa_topo_arr[idx].cpumap);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &numa_topo_arr[idx].distance);
-        if (ret < 0)
-            goto out;
-
-        /* Since our /sys fs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_1G] = 0;
-    }
-    topo_info->numa_topo_arr = numa_topo_arr;
+static int get_ranges_end(size_t ind, void* _arg) {
+    *(size_t*)_arg = ind + 1; // can overflow, but this function is used only on trusted data
     return 0;
+}
 
-out:
-    free(numa_topo_arr);
-    return ret;
+static int set_thread_online(size_t ind, void* _threads) {
+    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    threads[ind].is_online = true;
+    return 0;
+}
+
+static int set_numa_node_online(size_t ind, void* _numa_nodes) {
+    struct pal_numa_node_info* numa_nodes = (struct pal_numa_node_info*)_numa_nodes;
+    numa_nodes[ind].is_online = true;
+    return 0;
+}
+
+struct set_core_id_args {
+    struct pal_cpu_thread_info* threads;
+    size_t id_to_set;
+};
+
+static int set_core_id(size_t ind, void* _args) {
+    struct set_core_id_args* args = _args;
+    args->threads[ind].core_id = args->id_to_set;
+    return 0;
+}
+
+struct set_socket_id_args {
+    struct pal_cpu_thread_info* threads;
+    struct pal_cpu_core_info* cores;
+    size_t id_to_set;
+};
+
+static int set_socket_id(size_t ind, void* _args) {
+    struct set_socket_id_args* args = _args;
+    if (!args->threads[ind].is_online)
+        return 0;
+    args->cores[args->threads[ind].core_id].socket_id = args->id_to_set;
+    return 0;
+}
+
+struct set_cache_id_args {
+    struct pal_cpu_thread_info* threads;
+    size_t cache_ind;
+    size_t id_to_set;
+};
+
+static int set_cache_id(size_t ind, void* _args) {
+    struct set_cache_id_args* args = _args;
+    args->threads[ind].ids_of_caches[args->cache_ind] = args->id_to_set;
+    return 0;
+}
+
+struct set_node_id_args {
+    struct pal_cpu_thread_info* threads;
+    struct pal_cpu_core_info* cores;
+    size_t id_to_set;
+};
+
+static int set_node_id(size_t thr_ind, void* _args) {
+    struct set_node_id_args* args = _args;
+    if (!args->threads[thr_ind].is_online)
+        return 0;
+    args->cores[args->threads[thr_ind].core_id].node_id = args->id_to_set;
+    return 0;
 }
 
 int get_topology_info(struct pal_topo_info* topo_info) {
-    /* Get CPU topology information */
-    int ret = get_core_topo_info(topo_info);
+    size_t threads_cnt = 0;
+    int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
+    if (ret < 0)
+        return ret;
+    size_t nodes_cnt = 0;
+    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
     if (ret < 0)
         return ret;
 
-    /* Get NUMA topology information */
-    ret = get_numa_topo_info(topo_info);
-    if (ret < 0)
-        return ret;
+    struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
+    size_t caches_cnt = 0;
+    struct pal_cache_info* caches = malloc(threads_cnt * sizeof(*caches) * MAX_CACHES); // overapproximate the count
+    size_t cores_cnt = 0;
+    struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
+    size_t sockets_cnt = 0;
+    struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
+    struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
+    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
+    if (!threads || !caches || !cores || !sockets || !numa_nodes || !distances) {
+        ret = -ENOMEM;
+        goto fail;
+    }
 
+    for (size_t i = 0; i < threads_cnt; i++) {
+        cores[i].node_id = -1;
+        cores[i].socket_id = -1;
+        threads[i].is_online = false;
+        threads[i].core_id = -1;
+        for (size_t j = 0; j < MAX_CACHES; j++) {
+            threads[i].ids_of_caches[j] = (size_t)-1;
+        }
+    }
+    for (size_t i = 0; i < nodes_cnt; i++)
+        numa_nodes[i].is_online = false;
+
+    ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
+    if (ret < 0)
+        goto fail;
+    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
+                                   numa_nodes);
+    if (ret < 0)
+        goto fail;
+
+    char path[128];
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            /* No information is available for offline threads. */
+            continue;
+
+        if (threads[i].core_id == (size_t)-1) {
+            /* Insert new core to the list. */
+            snprintf(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings_list", i); // includes ourselves
+            ret = iterate_ranges_from_file(path, set_core_id, &(struct set_core_id_args) {
+                .threads = threads,
+                .id_to_set = cores_cnt,
+            });
+            if (ret < 0)
+                goto fail;
+            cores_cnt++;
+        }
+    }
+
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            continue;
+
+        size_t core_id = threads[i].core_id;
+        if (cores[core_id].socket_id == (size_t)-1) {
+            /* Insert new socket to the list. */
+            snprintf(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", i);
+            ret = iterate_ranges_from_file(path, set_socket_id, &(struct set_socket_id_args) {
+                .threads = threads,
+                .cores = cores,
+                .id_to_set = sockets_cnt,
+            });
+            if (ret < 0)
+                goto fail;
+            sockets_cnt++;
+        }
+    }
+
+    for (size_t i = 0; i < nodes_cnt; i++) {
+        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+        ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
+            .threads = threads,
+            .cores = cores,
+            .id_to_set = i,
+        });
+        if (ret < 0)
+            goto fail;
+
+        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+        if (ret < 0)
+            goto fail;
+        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
+        if (ret < 0)
+            goto fail;
+
+        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+         * of zero */
+        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+    }
+
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            continue;
+
+        for (size_t j = 0; j < MAX_CACHES; j++) {
+            if (threads[i].ids_of_caches[j] == (size_t)-1) {
+                /* Insert new cache to the list.
+                 * `shared_cpu_map` lists threads sharing this very cache. All sharing is
+                 * between caches on the same cache level. */
+                snprintf(path, sizeof(path),
+                         "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_list", i, j);
+                ret = iterate_ranges_from_file(path, set_cache_id, &(struct set_cache_id_args) {
+                    .threads = threads,
+                    .cache_ind = j,
+                    .id_to_set = caches_cnt,
+                });
+                if (ret == -ENOENT) {
+                    // No more caches.
+                    break;
+                }
+                if (ret < 0)
+                    goto fail;
+                ret = read_cache_info(&caches[caches_cnt], i, j);
+                if (ret < 0)
+                    goto fail;
+                caches_cnt++;
+            }
+        }
+    }
+    /* Note: We could add realloc here to save memory after we know the final sizes of all the
+     * buffers (after we implement realloc()). But the savings would rather be negligible. */
+
+    topo_info->caches_cnt     = caches_cnt;
+    topo_info->threads_cnt    = threads_cnt;
+    topo_info->cores_cnt      = cores_cnt;
+    topo_info->sockets_cnt    = sockets_cnt;
+    topo_info->numa_nodes_cnt = nodes_cnt;
+    topo_info->caches               = caches;
+    topo_info->threads              = threads;
+    topo_info->cores                = cores;
+    topo_info->sockets              = sockets;
+    topo_info->numa_nodes           = numa_nodes;
+    topo_info->numa_distance_matrix = distances;
     return 0;
+
+fail:
+    free(caches);
+    free(threads);
+    free(cores);
+    free(sockets);
+    free(numa_nodes);
+    free(distances);
+    return ret;
 }

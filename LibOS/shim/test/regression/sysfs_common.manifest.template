@@ -9,8 +9,6 @@ fs.mounts = [
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
-fs.experimental__enable_sysfs_topology = true
-
 sgx.nonpie_binary = true
 sgx.debug = true
 
