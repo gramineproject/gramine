@@ -34,22 +34,17 @@ make PYTHONPATH=<python install path> PYTHONVERSION=python3.6 SGX=1
 # Run Python with Gramine
 
 Here's an example of running Python scripts under Gramine:
-
-Without SGX:
-```
-gramine-direct ./python scripts/helloworld.py
-gramine-direct ./python scripts/test-numpy.py
-gramine-direct ./python scripts/test-scipy.py
-```
-
-With SGX:
 ```
 gramine-sgx ./python scripts/helloworld.py
 gramine-sgx ./python scripts/test-numpy.py
 gramine-sgx ./python scripts/test-scipy.py
+gramine-sgx ./python scripts/sgx-quote.py
 ```
 
 You can also manually run included tests:
 ```
 SGX=1 ./run-tests.sh
 ```
+
+To run Gramine in non-SGX (direct) mode, replace `gramine-sgx` with
+`gramine-direct` and remove `SGX=1` in the commands above.

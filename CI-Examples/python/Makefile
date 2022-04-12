@@ -36,6 +36,9 @@ check: all
 	@grep -q "Success 2/4" TEST_STDOUT
 	@grep -q "Success 3/4" TEST_STDOUT
 	@grep -q "Success 4/4" TEST_STDOUT
+ifeq ($(SGX),1)
+	@grep -q "Success SGX quote" TEST_STDOUT
+endif
 
 .PHONY: clean
 clean:

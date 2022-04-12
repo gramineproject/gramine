@@ -40,3 +40,11 @@ rm OUTPUT
 $GRAMINE ./python scripts/test-scipy.py > OUTPUT
 grep -q "cholesky: " OUTPUT && echo "[ Success 4/4 ]"
 rm OUTPUT
+
+# === SGX quote ===
+if test -n "$SGX"
+then
+    $GRAMINE ./python scripts/sgx-quote.py > OUTPUT
+    grep -q "Extracted SGX quote" OUTPUT && echo "[ Success SGX quote ]"
+    rm OUTPUT
+fi
