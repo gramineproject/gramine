@@ -67,8 +67,8 @@ Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
-gramine-coc@googlegroups.com or by contacting any individual `member of the
-Management Team
+coc@gramineproject.io or by contacting any individual `member of the Management
+Team
 <https://github.com/gramineproject/gramine/blob/master/CONTRIBUTING.rst#management-team>`__.
 All complaints will be reviewed and investigated promptly and fairly.
 
@@ -146,5 +146,5 @@ https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
 Community Impact Guidelines were inspired by `Mozilla's code of conduct
 enforcement ladder <https://github.com/mozilla/diversity>`__.
 
-Enforcement was partially inspired by the `PostgreSQL Code of Conduct
+Enforcement chapter was partially inspired by the `PostgreSQL Code of Conduct
 <https://www.postgresql.org/about/policies/coc/>`__.
