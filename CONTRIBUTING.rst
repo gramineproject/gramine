@@ -77,7 +77,7 @@ In general, a |nbsp| PR should:
    code is deep enough in Gramine that it would require extra hooks for
    testing) or cannot be easily tested (e.g., a performance fix).
 #. Follow project's `style guidelines
-   <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
+   <https://gramine.readthedocs.io/en/latest/devel/coding-style.html>`__.
 #. Be signed-off by the author of the PR in git (i.e., using the ``git commit -s``, indicating
    that the authors are agreeing to the terms of the `project Developer
    Certificate of Origin <DCO>`__
@@ -120,7 +120,7 @@ Before a pull request is merged, it must:
 
 #. Pass all CI tests
 #. Follow project's `style guidelines
-   <https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
+   <https://gramine.readthedocs.io/en/latest/devel/coding-style.html>`__.
 #. Be signed-off by the contributor.
 #. Introduce no new compilation errors or warnings
 #. Have all discussions from reviewers resolved
@@ -163,7 +163,7 @@ Reviewing Guidelines
 Style Guidelines
 ^^^^^^^^^^^^^^^^
 See `style guidelines
-<https://gramine.rtfd.io/en/latest/devel/coding-style.html>`__.
+<https://gramine.readthedocs.io/en/latest/devel/coding-style.html>`__.
 
 Copyrights and Licenses
 ^^^^^^^^^^^^^^^^^^^^^^^
