@@ -12,7 +12,13 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
-# Defer incremental compilation of Rust to Cargo.
+# We don't attempt to instruct Make on when the executable is stale and needs rebuilding.
+# Instead, we make use of Cargo's own incremental compilation, liberally executing Cargo
+# itself, with the understanding that it won't actually compile anything in most cases.
+#
+# Also note that we're compiling in release mode regardless of the DEBUG setting passed
+# to Make, as compiling in debug mode results in an order of magnitude's difference in
+# performance that makes testing by running a benchmark with ab painful.
 .PHONY: build-rust
 build-rust:
 	cargo build --release
