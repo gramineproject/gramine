@@ -17,6 +17,7 @@ static_assert(offsetof(PAL_TCB_URTS, last_async_event) == PAL_TCB_URTS_LAST_ASYN
               "error");
 
 __asm__ (
+".pushsection .text\n"
 ".global do_syscall_intr\n"
 ".type do_syscall_intr, @function\n"
 ".global do_syscall_intr_after_check1\n"
@@ -42,4 +43,5 @@ __asm__ (
 "do_syscall_intr_eintr:\n"
     "mov $" XSTRINGIFY(-EINTR) ", %rax\n"
     "ret\n"
+".popsection\n"
 );

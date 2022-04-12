@@ -144,6 +144,7 @@ __attribute__((used)) static int is_xstate_extended(const struct shim_xstate* xs
 /* Written in asm because we need to make sure it does not touch FPU/SSE after restoring their
  * state. Older gcc versions do not support `naked` attribute on x86, hence: */
 __asm__(
+".pushsection .text\n"
 ".global shim_xstate_restore\n"
 ".type shim_xstate_restore, @function\n"
 "shim_xstate_restore:\n"
@@ -161,6 +162,7 @@ __asm__(
     ".Lnot_xstate:\n"
     "fxrstor64 (%rdi)\n"
     "ret\n"
+".popsection\n"
 );
 
 /* Copies FPU state. Returns whether the copied state was xsave-made. */
