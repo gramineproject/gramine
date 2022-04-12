@@ -499,6 +499,17 @@ of thread slots). The application cannot have more threads than this limit *at
 a time* (however, it is possible to create new threads after old threads are
 destroyed).
 
+Note that Gramine uses two helper threads internally: the IPC thread to
+facilitate inter-process communication and the Async thread to implement timers
+and other asynchronous events/notifications. The IPC thread is always spawned;
+its activity depends on the communication patterns among Gramine processes (if
+there is only one Gramine process, the IPC thread always sleeps). The Async
+thread is spawned on demand; it terminates itself if there are no pending
+events/notifications. Therefore, ``sgx.thread_num`` should be set to at least
+``3`` even for single-threaded applications (to accommodate for the main thread,
+the IPC thread and the Async thread).
+
+
 Number of RPC threads (Exitless feature)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
