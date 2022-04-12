@@ -132,6 +132,7 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
 
 long shim_do_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
+    const char** argv_new = argv;
 
     if (!is_user_string_readable(file))
         return -EFAULT;
@@ -172,15 +173,32 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
 
         if ((ret = check_elf_object(exec)) < 0) {
             log_warning("file not recognized as ELF, look for shebang");
-            char interp_path[BINPRM_BUF_SIZE];
+            char interp_path[BINPRM_BUF_SIZE], interp[BINPRM_BUF_SIZE];
             if((ret = check_and_load_shebang(exec, interp_path)) < 0)
             {
                 put_handle(exec);
                 return ret;
             }
-            file = interp_path;
+
+            int j = 0;
+            for (size_t i=0; interp_path[i] != ' '; i++) {
+                if (interp_path[i] == '\0')
+                    break;
+
+                interp[i] = interp_path[i];
+                j = i;
+            }
+
+            interp[++j] = '\0';
+            file = interp;
             const char* args[] = {file, *argv, NULL};
-            argv = args;
+            argv_new = args;
+
+            if (0 != (strcmp(interp_path, interp))) {
+                const char* args_mod[] = {file, &interp_path[j+1], *argv_new, NULL};
+                argv_new = args_mod;
+            }
+
             put_handle(exec);
             continue;
         }
@@ -201,7 +219,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec`. */
-    ret = shim_do_execve_rtld(exec, argv, envp);
+    ret = shim_do_execve_rtld(exec, argv_new, envp);
     assert(ret < 0);
 
     put_handle(exec);

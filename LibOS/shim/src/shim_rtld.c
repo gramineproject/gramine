@@ -570,13 +570,13 @@ int check_and_load_shebang(struct shim_handle* file, char* interpreter) {
         ret = -ENOEXEC;
         goto err;
     }
-    else {
-         for (size_t i=2; shebang[i] != '\n'; i++) {
-            interpreter[i-2] = shebang[i];
-            interpreter[i-1] = '\0';
-        }
-        log_debug("Interpreter to be used %s", interpreter);
+
+    for (size_t i=2; shebang[i] != '\n'; i++) {
+        interpreter[i-2] = shebang[i];
+        interpreter[i-1] = '\0';
     }
+
+    log_debug("Interpreter to be used %s", interpreter);
 
     return 0;
 
