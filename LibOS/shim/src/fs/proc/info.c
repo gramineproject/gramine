@@ -138,23 +138,36 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     if (!str)
         return -ENOMEM;
 
-    const struct pal_topo_info* ti = &g_pal_public_state->topo_info;
-    const struct pal_cpu_info* ci = &g_pal_public_state->cpu_info;
-    for (size_t i = 0; i < ti->online_logical_cores.resource_cnt; i++) {
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_cpu_info* cpu = &g_pal_public_state->cpu_info;
+    for (size_t i = 0; i < topo->threads_cnt; i++) {
+        struct pal_cpu_thread_info* thread = &topo->threads[i];
+        if (!thread->is_online) {
+            /* Offline cores are skipped in cpuinfo, with gaps in numbering. */
+            continue;
+        }
+        struct pal_cpu_core_info* core = &topo->cores[thread->core_id];
         /* Below strings must match exactly the strings retrieved from /proc/cpuinfo
          * (see Linux's arch/x86/kernel/cpu/proc.c) */
         ADD_INFO("processor\t: %lu\n",   i);
-        ADD_INFO("vendor_id\t: %s\n",    ci->cpu_vendor);
-        ADD_INFO("cpu family\t: %lu\n",  ci->cpu_family);
-        ADD_INFO("model\t\t: %lu\n",     ci->cpu_model);
-        ADD_INFO("model name\t: %s\n",   ci->cpu_brand);
-        ADD_INFO("stepping\t: %lu\n",    ci->cpu_stepping);
-        if (g_pal_public_state->enable_sysfs_topology) {
-            ADD_INFO("physical id\t: %zu\n", ti->core_topo_arr[i].socket_id);
+        ADD_INFO("vendor_id\t: %s\n",    cpu->cpu_vendor);
+        ADD_INFO("cpu family\t: %lu\n",  cpu->cpu_family);
+        ADD_INFO("model\t\t: %lu\n",     cpu->cpu_model);
+        ADD_INFO("model name\t: %s\n",   cpu->cpu_brand);
+        ADD_INFO("stepping\t: %lu\n",    cpu->cpu_stepping);
+        ADD_INFO("physical id\t: %zu\n", core->socket_id);
+
+        /* Linux keeps this numbering socket-local, but we can use a different one, and it's
+         * documented as "hardware platform's identifier (rather than the kernel's)" anyways. */
+        ADD_INFO("core id\t\t: %lu\n",   thread->core_id);
+
+        size_t cores_in_socket = 0;
+        for (size_t j = 0; j < topo->cores_cnt; j++) { // slow, but shouldn't matter
+            if (topo->cores[j].socket_id == core->socket_id)
+                cores_in_socket++;
         }
-        ADD_INFO("core id\t\t: %lu\n",   i);
-        ADD_INFO("cpu cores\t: %zu\n",   ti->physical_cores_per_socket);
-        double bogomips = ci->cpu_bogomips;
+        ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
+        double bogomips = cpu->cpu_bogomips;
         // Apparently Gramine snprintf cannot into floats.
         ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,
                  (unsigned long)(bogomips * 100.0 + 0.5) % 100);
@@ -191,8 +204,10 @@ int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
      * (see Linux's fs/proc/stat.c) */
     ADD_INFO("cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", user, nice, system, idle, iowait,
              irq, softirq, steal, guest, guest_nice);
-    for (size_t n = 0; n < g_pal_public_state->topo_info.online_logical_cores.resource_cnt; n++) {
-        ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", n, user, nice, system, idle,
+    for (size_t i = 0; i < g_pal_public_state->topo_info.threads_cnt; i++) {
+        if (!g_pal_public_state->topo_info.threads[i].is_online)
+            continue;
+        ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", i, user, nice, system, idle,
                  iowait, irq, softirq, steal, guest, guest_nice);
     }
 

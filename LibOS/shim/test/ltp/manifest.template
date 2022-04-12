@@ -17,7 +17,6 @@ fs.mounts = [
   { path = "/tmp", uri = "file:/tmp" },
 ]
 
-fs.experimental__enable_sysfs_topology = true
 sys.brk.max_size = "32M"
 sys.stack.size = "4M"
 sgx.nonpie_binary = true

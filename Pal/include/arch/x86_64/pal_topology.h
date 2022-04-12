@@ -11,22 +11,20 @@
 
 /* Used to represent buffers having numeric values and unit suffixes if present, e.g. "1024576K".
  * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
-#define PAL_SYSFS_BUF_FILESZ 64
-/* Used to represent cpumaps like "00000000,ffffffff,00000000,ffffffff".
- * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
-#define PAL_SYSFS_MAP_FILESZ 256
+#define PAL_SYSFS_BUF_FILESZ 512
 
-/* Used to represent length of file/directory paths.
- * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
-#define PAL_SYSFS_PATH_SIZE 128
-
-#define MAX_HYPERTHREADS_PER_CORE 4
-#define MAX_CACHE_LEVELS          3
+/* Max number of caches (such as L1i, L1d, L2, etc.) supported. */
+#define MAX_CACHES 4
 
 enum {
     HUGEPAGES_2M = 0,
     HUGEPAGES_1G,
     HUGEPAGES_MAX,
+};
+
+static const size_t hugepage_size[] = {
+    [HUGEPAGES_2M] = (1 << 21),
+    [HUGEPAGES_1G] = (1 << 30),
 };
 
 enum cache_type {
@@ -35,73 +33,87 @@ enum cache_type {
     CACHE_TYPE_UNIFIED,
 };
 
-/* `start` and `end` are inclusive */
-struct pal_range_info {
-    size_t start;
-    size_t end;
-};
-
-struct pal_res_range_info {
-    /* Total number of resources present. E.g. if output of `/sys/devices/system/cpu/online` was
-     * 0-15,21,32-63 then `resource_cnt` will be 49 */
-    size_t resource_cnt;
-
-    /* Total number of ranges present. E.g. if output of `/sys/devices/system/cpu/online` was
-     * 0-15,21,32-63 then `ranges_cnt` will be 3 */
-    size_t ranges_cnt;
-
-    /* Array of ranges, with `ranges_cnt` items. E.g. if output of `/sys/devices/system/cpu/online`
-     * was 0-12,16-30,31 then `ranges_arr` will be [{0, 12}, {16, 30}, {31, 31}].
-     * Note: The ranges should not overlap */
-    struct pal_range_info* ranges_arr;
-};
-
-struct pal_core_cache_info {
-    struct pal_res_range_info shared_cpu_map;
-    size_t level;
+struct pal_cache_info {
     enum cache_type type;
+    size_t level;
     size_t size;
     size_t coherency_line_size;
     size_t number_of_sets;
     size_t physical_line_partition;
 };
 
-struct pal_core_topo_info {
-    bool is_logical_core_online;
-    size_t core_id;
-    /* Socket (physical package) where the core is present */
-    size_t socket_id;
-    struct pal_res_range_info core_siblings;
-    struct pal_res_range_info thread_siblings;
-    /* Array of size cache_indices_cnt, owned by this struct */
-    struct pal_core_cache_info* cache_info_arr;
+struct pal_cpu_thread_info {
+    /* Threads are currently numbered same as on host, so we may have "holes" for offline ones. */
+    bool is_online;
+    /* Everything below is valid only if the thread is online! */
+
+    size_t core_id; // containing core; index into pal_topo_info::cores
+    size_t ids_of_caches[MAX_CACHES]; // indices into pal_topo_info::caches, -1 if not present
 };
 
-struct pal_numa_topo_info {
-    struct pal_res_range_info cpumap;
-    struct pal_res_range_info distance;
+struct pal_cpu_core_info {
+    /* We have our own numbering of physical cores (not taken from the host), so we can just ignore
+     * offline cores and thus skip `is_online` here. */
+
+    size_t socket_id;
+
+    /*
+     * Surprisingly, there's no relation between sockets and NUMA nodes - a NUMA node can contain
+     * multiple sockets (qemu does this), but also a socket can contain more than one NUMA node
+     * inside (see "Sub-NUMA Clustering"). So, NUMA nodes seem to rather be a subset of cores in a
+     * system, not a subset of sockets.
+     */
+    size_t node_id;
+};
+
+struct pal_socket_info {
+    /* We have our own numbering of sockets (not taken from the host), so we can just ignore
+     * offline sockets and thus skip `is_online` from here. */
+
+    // TODO: move info from struct pal_cpu_info to here
+    char unused;
+};
+
+struct pal_numa_node_info {
+    /* Nodes are currently numbered same as on host, so we may have "holes" for offline ones. */
+    bool is_online;
+    /* Everything below is valid only if the node is online! */
+
     size_t nr_hugepages[HUGEPAGES_MAX];
 };
 
+/* We store the platform topology in a series of flat arrays, and use IDs (array indices) for
+ * relationships between objects, much like in a relational database. This serves two purposes:
+ * - There's no data redundancy, so it's easier to verify the data when crossing untrusted ->
+ *   trusted boundary.
+ * - There are no nested pointers, so it's harder to mishandle the data during importing and
+ *   sanitization. To copy the data, you just need to copy all the arrays.
+ *
+ * It's supposed to be immutable after initialization, hence no locks are needed (but also no
+ * support for hot-plugging CPUs).
+ *
+ * Note: We can't simplify this to remove sockets (assuming each node has exactly one socket),
+ * because qemu likes to put multiple sockets inside a single node.
+ */
 struct pal_topo_info {
-    struct pal_res_range_info possible_logical_cores;
+    size_t caches_cnt;
+    struct pal_cache_info* caches;
 
-    struct pal_res_range_info online_logical_cores;
-    /* Array of logical core topology info, owned by this struct.
-     * Has online_logical_cores.resource_cnt elements. */
-    struct pal_core_topo_info* core_topo_arr;
+    size_t threads_cnt;
+    struct pal_cpu_thread_info* threads;
 
-    struct pal_res_range_info online_nodes;
-    /* Array of numa topology info, owned by this struct. Has online_nodes.resource_cnt elements. */
-    struct pal_numa_topo_info* numa_topo_arr;
+    size_t cores_cnt;
+    struct pal_cpu_core_info* cores;
 
-    /* Number of physical packages in the system */
     size_t sockets_cnt;
-    /* Number of physical cores in a socket (physical package). */
-    size_t physical_cores_per_socket;
+    struct pal_socket_info* sockets;
 
-    /* Number of cache levels (such as L2 or L3) available on the host. */
-    size_t cache_indices_cnt;
+    size_t numa_nodes_cnt;
+    struct pal_numa_node_info* numa_nodes;
+
+    /* Has `numa_nodes_cnt * numa_nodes_cnt` elements.
+     * numa_distance_matrix[i*numa_nodes_cnt + j] is NUMA distance from node i to node j. */
+    size_t* numa_distance_matrix;
 };
 
 #endif /* PAL_TOPOLOGY_H */

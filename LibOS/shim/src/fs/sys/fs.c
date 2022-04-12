@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
+ *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
 /*
@@ -11,115 +12,100 @@
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
-                              char* str, size_t str_size) {
-    size_t ranges_cnt = resource_range_info->ranges_cnt;
-    if (!ranges_cnt)
-        return -EINVAL;
+int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
+                        bool (*is_present)(size_t ind, const void* arg), const void* callback_arg) {
+    size_t buf_pos = 0;
+    const char* sep = "";
+    for (size_t i = 0; i < count;) {
+        while (i < count && !is_present(i, callback_arg))
+            i++;
+        size_t range_start = i;
+        while (i < count && is_present(i, callback_arg))
+            i++;
+        size_t range_end = i; // exclusive
 
-    str[0] = '\0';
-    size_t offset = 0;
-    for (size_t i = 0; i < ranges_cnt; i++) {
-        if (offset >= str_size)
-            return -ENOMEM;
-
+        if (range_start == range_end)
+            break;
         int ret;
-        if (resource_range_info->ranges_arr[i].end == resource_range_info->ranges_arr[i].start) {
-            ret = snprintf(str + offset, str_size - offset, "%zu%s",
-                           resource_range_info->ranges_arr[i].start,
-                           (i + 1 == ranges_cnt) ? "\n" : sep);
+        if (range_start + 1 == range_end) {
+            ret = snprintf(buf + buf_pos, buf_size - buf_pos, "%s%zu", sep, range_start);
         } else {
-            ret = snprintf(str + offset, str_size - offset, "%zu-%zu%s",
-                           resource_range_info->ranges_arr[i].start,
-                           resource_range_info->ranges_arr[i].end,
-                           (i + 1 == ranges_cnt) ? "\n" : sep);
+            ret = snprintf(buf + buf_pos, buf_size - buf_pos, "%s%zu-%zu", sep, range_start,
+                           range_end - 1);
         }
-
+        sep = ",";
         if (ret < 0)
             return ret;
-
-        /* Truncation has occurred */
-        if ((size_t)ret >= str_size - offset)
+        if ((size_t)ret >= buf_size - buf_pos)
             return -EOVERFLOW;
+        buf_pos += ret;
+    }
+    if (buf_pos + 2 > buf_size)
+        return -EOVERFLOW;
+    buf[buf_pos]   = '\n';
+    buf[buf_pos+1] = '\0';
+    return 0;
+}
 
-        offset += ret;
+int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
+                         bool (*is_present)(size_t ind, const void* arg),
+                         const void* callback_arg) {
+    if (count == 0)
+        return strcpy_static(buf, "0\n", buf_size) ? 0 : -EOVERFLOW;
+
+    size_t buf_pos = 0;
+    int ret;
+    size_t pos = count - 1;
+    uint32_t word = 0;
+    while (1) {
+        if (is_present(pos, callback_arg))
+            word |= 1 << pos % 32;
+        if (pos % 32 == 0) {
+            if (count <= 32) {
+                /* Linux sysfs quirk: small bitmasks are printed without leading zeroes. */
+                ret = snprintf(buf, buf_size, "%x\n", word); // pos == 0, loop exits afterwards
+            } else {
+                ret = snprintf(buf + buf_pos, buf_size - buf_pos,
+                               "%08x%c", word, pos != 0 ? ',' : '\n');
+            }
+            if (ret < 0)
+                return ret;
+            if ((size_t)ret >= buf_size - buf_pos)
+                return -EOVERFLOW;
+            buf_pos += ret;
+            word = 0;
+        }
+
+        if (pos == 0)
+            break;
+        pos--;
     }
     return 0;
 }
 
-int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
-                                         char* str, size_t str_size) {
-    int ret;
-
-    /* Extract cpumask from the ranges */
-    size_t possible_logical_cores_cnt =
-        g_pal_public_state->topo_info.possible_logical_cores.resource_cnt;
-    size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
-    assert(cpumask_cnt > 0);
-
-    uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
-    if (!bitmap)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < resource_range_info->ranges_cnt; i++) {
-        size_t start = resource_range_info->ranges_arr[i].start;
-        size_t end = resource_range_info->ranges_arr[i].end;
-
-        for (size_t j = start; j <= end; j++) {
-            size_t index = j / BITS_IN_TYPE(uint32_t);
-            assert(index < cpumask_cnt);
-
-            bitmap[index] |= 1U << (j % BITS_IN_TYPE(uint32_t));
-        }
-    }
-
-    /* Convert cpumask to strings */
-    size_t offset = 0;
-    for (size_t j = cpumask_cnt; j > 0; j--) {
-        if (offset >= str_size) {
-            ret = -ENOMEM;
-            goto out;
-        }
-
-        /* Linux doesn't print leading zeroes for systems with less than 32 cores, e.g. "fff" for
-         * 12 cores; we mimic this behavior. */
-        if (possible_logical_cores_cnt >= 32) {
-            ret = snprintf(str + offset, str_size - offset, "%08x%s", bitmap[j-1],
-                           (j-1 == 0) ? "\n" : ",");
-        } else {
-            ret = snprintf(str + offset, str_size - offset, "%x%s", bitmap[j-1],
-                           (j-1 == 0) ? "\n" : ",");
-        }
-
-        if (ret < 0)
-            goto out;
-
-        /* Truncation has occurred */
-        if ((size_t)ret >= str_size - offset) {
-            ret = -EOVERFLOW;
-            goto out;
-        }
-
-        offset += ret;
-    }
-    ret = 0;
-
-out:
-    free(bitmap);
-    return ret;
-}
-
 static int sys_resource_info(const char* parent_name, size_t* out_total, const char** out_prefix) {
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     if (strcmp(parent_name, "node") == 0) {
-        *out_total = g_pal_public_state->topo_info.online_nodes.resource_cnt;
+        *out_total = topo->numa_nodes_cnt;
         *out_prefix = "node";
         return 0;
     } else if (strcmp(parent_name, "cpu") == 0) {
-        *out_total = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
+        *out_total = topo->threads_cnt;
         *out_prefix = "cpu";
         return 0;
     } else if (strcmp(parent_name, "cache") == 0) {
-        *out_total = g_pal_public_state->topo_info.cache_indices_cnt;
+        size_t max = 0;
+        /* Find the largest cache index used. */
+        for (size_t i = 0; i < topo->threads_cnt; i++) {
+            if (topo->threads[i].is_online) {
+                for (size_t j = 0; j < MAX_CACHES; j++) {
+                    if (topo->threads[i].ids_of_caches[j] != (size_t)-1) {
+                        max = MAX(max, j + 1); // +1 to convert max index to elements count
+                    }
+                }
+            }
+        }
+        *out_total = max;
         *out_prefix = "index";
         return 0;
     } else {
@@ -227,16 +213,20 @@ static void init_cpu_dir(struct pseudo_node* cpu) {
     cpuX->list_names = &sys_resource_list_names;
 
     /* `cpu/cpuX/online` exists for all CPUs *except* `cpu0`. */
-    struct pseudo_node* online = pseudo_add_str(cpuX, "online", &sys_cpu_load);
+    struct pseudo_node* online = pseudo_add_str(cpuX, "online", &sys_cpu_load_online);
     online->name_exists = &sys_cpu_online_name_exists;
 
+    /* `cpu/cpuX/topology` exists only for online CPUs. */
     struct pseudo_node* topology = pseudo_add_dir(cpuX, "topology");
-    pseudo_add_str(topology, "core_id", &sys_cpu_load);
-    pseudo_add_str(topology, "physical_package_id", &sys_cpu_load);
-    pseudo_add_str(topology, "core_siblings", &sys_cpu_load);
-    pseudo_add_str(topology, "thread_siblings", &sys_cpu_load);
+    topology->name_exists = &sys_cpu_exists_only_if_online;
+    pseudo_add_str(topology, "core_id", &sys_cpu_load_topology);
+    pseudo_add_str(topology, "physical_package_id", &sys_cpu_load_topology);
+    pseudo_add_str(topology, "core_siblings", &sys_cpu_load_topology);
+    pseudo_add_str(topology, "thread_siblings", &sys_cpu_load_topology);
 
+    /* `cpu/cpuX/cache` exists only for online CPUs. */
     struct pseudo_node* cache = pseudo_add_dir(cpuX, "cache");
+    cache->name_exists = &sys_cpu_exists_only_if_online;
     struct pseudo_node* indexX = pseudo_add_dir(cache, NULL);
     indexX->name_exists = &sys_resource_name_exists;
     indexX->list_names = &sys_resource_list_names;
@@ -252,6 +242,7 @@ static void init_cpu_dir(struct pseudo_node* cpu) {
 
 static void init_node_dir(struct pseudo_node* node) {
     pseudo_add_str(node, "online", &sys_node_general_load);
+    pseudo_add_str(node, "possible", &sys_node_general_load);
 
     struct pseudo_node* nodeX = pseudo_add_dir(node, NULL);
     nodeX->name_exists = &sys_resource_name_exists;
@@ -260,6 +251,8 @@ static void init_node_dir(struct pseudo_node* node) {
     pseudo_add_str(nodeX, "cpumap", &sys_node_load);
     pseudo_add_str(nodeX, "distance", &sys_node_load);
 
+    // TODO(mkow): Does this show up for offline nodes? I never succeeded in shutting down one, even
+    // after shutting down all CPUs inside the node it shows up as online on `node/online` list.
     struct pseudo_node* hugepages = pseudo_add_dir(nodeX, "hugepages");
     struct pseudo_node* hugepages_2m = pseudo_add_dir(hugepages, "hugepages-2048kB");
     pseudo_add_str(hugepages_2m, "nr_hugepages", &sys_node_load);
@@ -268,9 +261,6 @@ static void init_node_dir(struct pseudo_node* node) {
 }
 
 int init_sysfs(void) {
-    if (!g_pal_public_state->enable_sysfs_topology)
-        return 0;
-
     struct pseudo_node* root = pseudo_add_root_dir("sys");
     struct pseudo_node* devices = pseudo_add_dir(root, "devices");
     struct pseudo_node* system = pseudo_add_dir(devices, "system");

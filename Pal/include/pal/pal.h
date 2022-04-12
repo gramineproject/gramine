@@ -125,8 +125,6 @@ struct pal_public_state {
     size_t mem_total;
 
     struct pal_cpu_info cpu_info;
-
-    bool enable_sysfs_topology;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
 };
 

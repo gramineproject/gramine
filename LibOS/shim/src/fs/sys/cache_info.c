@@ -8,33 +8,54 @@
  * sub-directories.
  */
 
+#include <stdbool.h>
+
 #include "api.h"
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
+struct callback_arg {
+    size_t cache_id_to_match; // index in global caches list (topo_info->caches[])
+    size_t cache_class; // index in ids_of_caches[]
+};
+
+static bool is_same_cache(size_t idx, const void* _arg) {
+    const struct callback_arg* arg = _arg;
+    const struct pal_cpu_thread_info* thread = &g_pal_public_state->topo_info.threads[idx];
+    return thread->is_online
+           && thread->ids_of_caches[arg->cache_class] == arg->cache_id_to_match;
+}
+
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
 
-    unsigned int cache_num;
-    ret = sys_resource_find(dent, "cache", &cache_num);
+    unsigned int cache_class;
+    ret = sys_resource_find(dent, "cache", &cache_class);
     if (ret < 0)
         return ret;
 
-    unsigned int cpu_num;
-    ret = sys_resource_find(dent, "cpu", &cpu_num);
+    unsigned int thread_id;
+    ret = sys_resource_find(dent, "cpu", &thread_id);
     if (ret < 0)
         return ret;
 
     const char* name = dent->name;
-    struct pal_core_cache_info* cache_info =
-        &g_pal_public_state->topo_info.core_topo_arr[cpu_num].cache_info_arr[cache_num];
+
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    size_t cache_idx = topo->threads[thread_id].ids_of_caches[cache_class];
+    const struct pal_cache_info* cache = &topo->caches[cache_idx];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "shared_cpu_map") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&cache_info->shared_cpu_map, str, sizeof(str));
+        struct callback_arg callback_arg = {
+            .cache_id_to_match = cache_idx,
+            .cache_class = cache_class,
+        };
+        ret = sys_print_as_bitmask(str, sizeof(str), topo->threads_cnt,
+                                   is_same_cache, &callback_arg);
     } else if (strcmp(name, "level") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->level);
+        ret = snprintf(str, sizeof(str), "%zu\n", cache->level);
     } else if (strcmp(name, "type") == 0) {
-        switch (cache_info->type) {
+        switch (cache->type) {
             case CACHE_TYPE_DATA:
                 ret = snprintf(str, sizeof(str), "Data\n");
                 break;
@@ -45,16 +66,16 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
                 ret = snprintf(str, sizeof(str), "Unified\n");
                 break;
             default:
-                ret = -ENOENT;
+                __builtin_unreachable();
         }
     } else if (strcmp(name, "size") == 0) {
-        ret = snprintf(str, sizeof(str), "%zuK\n", cache_info->size >> 10);
+        ret = snprintf(str, sizeof(str), "%zuK\n", cache->size >> 10);
     } else if (strcmp(name, "coherency_line_size") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->coherency_line_size);
+        ret = snprintf(str, sizeof(str), "%zu\n", cache->coherency_line_size);
     } else if (strcmp(name, "number_of_sets") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->number_of_sets);
+        ret = snprintf(str, sizeof(str), "%zu\n", cache->number_of_sets);
     } else if (strcmp(name, "physical_line_partition") == 0) {
-        snprintf(str, sizeof(str), "%zu\n", cache_info->physical_line_partition);
+        snprintf(str, sizeof(str), "%zu\n", cache->physical_line_partition);
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;

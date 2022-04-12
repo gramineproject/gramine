@@ -143,6 +143,35 @@ bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usi
     return true;
 }
 
+void* sgx_import_to_enclave(const void* uptr, size_t usize) {
+    if (!sgx_is_completely_outside_enclave(uptr, usize))
+        return NULL;
+
+    void* buf = malloc(usize);
+    if (!buf)
+        return NULL;
+
+    memcpy(buf, uptr, usize);
+    return buf;
+}
+
+void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt) {
+    size_t size;
+    if (__builtin_mul_overflow(elem_size, elem_cnt, &size))
+        return NULL;
+
+    return sgx_import_to_enclave(uptr, size);
+}
+
+void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt1,
+                                    size_t elem_cnt2) {
+    size_t elem_cnt;
+    if (__builtin_mul_overflow(elem_cnt1, elem_cnt2, &elem_cnt))
+        return NULL;
+
+    return sgx_import_array_to_enclave(uptr, elem_size, elem_cnt);
+}
+
 static void print_report(sgx_report_t* r) {
     log_debug("  cpu_svn:     %s",     ALLOCA_BYTES2HEXSTR(r->body.cpu_svn.svn));
     log_debug("  mr_enclave:  %s",     ALLOCA_BYTES2HEXSTR(r->body.mr_enclave.m));
