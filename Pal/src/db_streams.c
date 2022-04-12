@@ -560,3 +560,29 @@ const char* _DkStreamRealpath(PAL_HANDLE hdl) {
 int DkDebugLog(const void* buffer, PAL_NUM size) {
     return _DkDebugLog(buffer, size);
 }
+
+int _DkStreamFallocate(PAL_HANDLE handle, int mode, uint64_t offset, uint64_t len) {
+    const struct handle_ops* ops = HANDLE_OPS(handle);
+
+    if (!ops)
+        return -PAL_ERROR_BADHANDLE;
+
+    if (!ops->fallocate)
+        return -PAL_ERROR_NOTSUPPORT;
+
+    return ops->fallocate(handle, mode, offset, len);
+}
+
+int DkStreamFallocate(PAL_HANDLE handle, int mode, PAL_NUM offset, PAL_NUM len) {
+    if (!handle) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    int ret = _DkStreamFallocate(handle, mode, offset, len);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    return ret;
+}

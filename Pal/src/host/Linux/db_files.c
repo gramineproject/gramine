@@ -286,6 +286,11 @@ static const char* file_getrealpath(PAL_HANDLE handle) {
     return handle->file.realpath;
 }
 
+static int file_fallocate(PAL_HANDLE handle, int mode, uint64_t offset, uint64_t len) {
+    int ret = DO_SYSCALL(fallocate, handle->file.fd, mode, offset, len);
+    return ret;
+}
+
 struct handle_ops g_file_ops = {
     .getname        = &file_getname,
     .getrealpath    = &file_getrealpath,
@@ -301,6 +306,7 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .fallocate      = &file_fallocate,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a

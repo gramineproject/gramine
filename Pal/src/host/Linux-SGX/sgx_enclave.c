@@ -675,6 +675,14 @@ static long sgx_ocall_get_quote(void* pms) {
                           &ms->ms_nonce, &ms->ms_quote, &ms->ms_quote_len);
 }
 
+static long sgx_ocall_fallocate(void* pms) {
+    ms_ocall_fallocate_t* ms = (ms_ocall_fallocate_t*)pms;
+    long ret;
+    ODEBUG(OCALL_FALLOCATE, ms);
+    ret = DO_SYSCALL(fallocate, ms->ms_fd, ms->ms_mode, ms->ms_offset, ms->ms_len);
+    return ret;
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -717,6 +725,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_DEBUG_DESCRIBE_LOCATION]  = sgx_ocall_debug_describe_location,
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
+    [OCALL_FALLOCATE]                = sgx_ocall_fallocate,
 };
 
 #define EDEBUG(code, ms) \

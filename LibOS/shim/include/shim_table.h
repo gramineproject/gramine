@@ -200,6 +200,7 @@ long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused);
 long shim_do_getrandom(char* buf, size_t count, unsigned int flags);
 long shim_do_mlock2(unsigned long start, size_t len, int flags);
 long shim_do_sysinfo(struct sysinfo* info);
+long shim_do_fallocate(int fd, int mode, loff_t offset, loff_t len);
 
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM   0x0002

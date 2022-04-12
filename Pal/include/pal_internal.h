@@ -101,6 +101,10 @@ struct handle_ops {
 
     /* 'rename' is used to change name of a stream, or reset its share option */
     int (*rename)(PAL_HANDLE handle, const char* type, const char* uri);
+
+    /* 'fallocate' is used by DkStreamFallocate. It manipulates the
+     * allocated disk space of the file handle */
+    int (*fallocate)(PAL_HANDLE handle, int mode, uint64_t offset, uint64_t len);
 };
 
 extern const struct handle_ops* g_pal_handle_ops[];
@@ -233,6 +237,7 @@ int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data
 int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                         PAL_NUM* quote_size);
 int _DkSetProtectedFilesKey(const char* pf_key_hex);
+int _DkStreamFallocate(PAL_HANDLE handle, int mode, uint64_t offset, uint64_t len);
 
 #define INIT_FAIL(exitcode, reason)                                                              \
     do {                                                                                         \

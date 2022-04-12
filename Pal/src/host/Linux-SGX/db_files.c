@@ -860,6 +860,18 @@ static const char* file_getrealpath(PAL_HANDLE handle) {
     return handle->file.realpath;
 }
 
+static int file_fallocate(PAL_HANDLE handle, int mode, uint64_t offset, uint64_t len) {
+    struct protected_file* pf = find_protected_file_handle(handle);
+    if (pf)
+        return PAL_ERROR_NOTSUPPORT;
+
+    int ret = ocall_fallocate(handle->file.fd, mode, offset, len);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return ret;
+}
+
 struct handle_ops g_file_ops = {
     .getname        = &file_getname,
     .getrealpath    = &file_getrealpath,
@@ -875,6 +887,7 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .fallocate      = &file_fallocate,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a

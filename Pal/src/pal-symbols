@@ -46,3 +46,4 @@ DkAttestationQuote
 DkSetProtectedFilesKey
 DkDebugLog
 DkGetPalPublicState
+DkStreamFallocate

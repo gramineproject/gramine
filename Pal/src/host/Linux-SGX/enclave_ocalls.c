@@ -1889,6 +1889,30 @@ int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
     return retval;
 }
 
+int ocall_fallocate(int fd, int mode, uint64_t offset, uint64_t len) {
+    int retval = 0;
+    ms_ocall_fallocate_t* ms;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    WRITE_ONCE(ms->ms_fd, fd);
+    WRITE_ONCE(ms->ms_mode, mode);
+    WRITE_ONCE(ms->ms_offset, offset);
+    WRITE_ONCE(ms->ms_len, len);
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_FALLOCATE, ms);
+    } while (retval == -EINTR);
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}
+
 static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
     size_t max_cpumask_bits = cpumask_size * BITS_IN_BYTE;
     size_t valid_cpumask_bits = g_pal_public_state.topo_info.online_logical_cores.resource_cnt;

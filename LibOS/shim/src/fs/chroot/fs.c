@@ -557,6 +557,20 @@ static int chroot_checkin(struct shim_handle* hdl) {
     return 0;
 }
 
+static int chroot_fallocate(struct shim_handle* hdl, int mode, file_off_t offset, file_off_t len) {
+    assert(hdl->type == TYPE_CHROOT);
+
+    int ret;
+
+    lock(&hdl->inode->lock);
+    ret = DkStreamFallocate(hdl->pal_handle, mode, offset, len);
+    if (ret != 0) {
+        ret = pal_to_unix_errno(ret);
+    }
+    unlock(&hdl->inode->lock);
+    return ret;
+}
+
 struct shim_fs_ops chroot_fs_ops = {
     .mount      = &chroot_mount,
     .flush      = &chroot_flush,
@@ -572,6 +586,7 @@ struct shim_fs_ops chroot_fs_ops = {
     .poll       = &generic_inode_poll,
     .checkout   = &chroot_checkout,
     .checkin    = &chroot_checkin,
+    .fallocate  = &chroot_fallocate,
 };
 
 struct shim_d_ops chroot_d_ops = {

@@ -128,6 +128,9 @@ struct shim_fs_ops {
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
     int (*migrate)(void* checkpoint, void** mount_data);
+
+    /* fallocate: manipulate file space */
+    int (*fallocate)(struct shim_handle* hdl, int mode, off_t offset, off_t len);
 };
 
 /* Limit for the number of dentry children. This is mostly to prevent overflow if (untrusted) host

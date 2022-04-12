@@ -556,3 +556,35 @@ out:
     put_handle(hdl);
     return ret;
 }
+
+long shim_do_fallocate(int fd, int mode, loff_t offset, loff_t len) {
+    if (len < 0)
+        return -EINVAL;
+
+    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    if (!hdl)
+        return -EBADF;
+
+    struct shim_fs* fs = hdl->fs;
+    int ret;
+
+    if (!fs || !fs->fs_ops) {
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (hdl->is_dir || !fs->fs_ops->fallocate) {
+        ret = -EINVAL;
+        goto out;
+    }
+
+    /* Only the default operation (i.e., mode is zero) is supported. */
+    if (!mode) {
+        ret = fs->fs_ops->fallocate(hdl, mode, offset, len);
+    } else {
+        ret = -EINVAL;
+    }
+out:
+    put_handle(hdl);
+    return ret;
+}

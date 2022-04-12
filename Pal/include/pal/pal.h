@@ -516,6 +516,19 @@ int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned lon
  */
 int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
+/*!
+ * \brief fallocate() allows the caller to directly manipulate the allocated disk space for the
+ *        file referred to by handle for the byte range starting at offset and continuing for len
+ *        bytes.
+ *
+ * \param mode   Determines the operation to be performed on the given range.
+ * \param offset Byte range starting location.
+ * \param len    Byte range length.
+ *
+ * \returns 0 on success, -1 on failure and errno is set to indicate the error.
+ */
+int DkStreamFallocate(PAL_HANDLE handle, int mode, PAL_NUM offset, PAL_NUM len);
+
 /*
  * Exception Handling
  */
