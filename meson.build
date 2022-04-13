@@ -30,7 +30,7 @@ endif
 
 direct = get_option('direct') == 'enabled'
 sgx = get_option('sgx') == 'enabled'
-vtune_sgx_profiling = get_option('vtune_sgx_profiling') == 'enabled'
+vtune = get_option('vtune') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'
 
 dcap = get_option('dcap') == 'enabled'
@@ -151,12 +151,11 @@ if sgx
                   sgx_driver_header, sgx_driver_include_path))
     endif
 
-  if vtune_sgx_profiling
-    add_project_arguments('-DVTUNE_SGX_PROFILING', language: 'c')
-    vtune_sdk_default_path = '/opt/intel/oneapi/vtune/2022.1.0/sdk'
+  if vtune
+    add_project_arguments('-DSGX_VTUNE_PROFILE', language: 'c')
     vtune_sdk_path = get_option('vtune_sdk_path')
     if vtune_sdk_path == ''
-      vtune_sdk_path = vtune_sdk_default_path
+      vtune_sdk_path = '/opt/intel/oneapi/vtune/2022.1.0/sdk'
     endif
   endif
 

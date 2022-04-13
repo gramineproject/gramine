@@ -570,21 +570,21 @@ profiler to find SGX hotspots.
 Installing ``vtune``
 """"""""""""""""""""
 
-Please download and install Intel(R) VTune(TM) Profiler from `here
+Please download and install Intel VTune Profiler from `here
 <https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/installation.html>`__.
 
 Collecting SGX hotspots and viewing the report
 """"""""""""""""""""""""""""""""""""""""""""""
 
 #. Compile Gramine with
-   ``-Dvtune_sgx_profiling=enabled -Dvtune_sdk_path=<VTune SDK install path>``.
+   ``-Dvtune=enabled -Dvtune_sdk_path=<VTune SDK install path>``.
 
-   If ``vtune_sdk_path`` is not provided, Gramine will take the default VTune
+   If ``vtune_sdk_path`` is not provided, Gramine will use the default VTune
    installation path.
 
-#. Add ``sgx.vtune_profiling = true`` to the manifest.
+#. Add ``sgx.vtune_profile = true`` to the manifest.
 
-#. Run your application under vtune.
+#. Run your application under VTune.
 
    ``vtune -collect sgx-hotspots -- gramine-sgx <workload>``
 
@@ -592,7 +592,7 @@ Collecting SGX hotspots and viewing the report
 
 #. To view the report, run
    ``vtune -report hotspots -r <vtune data collection output directory>`` or use
-   Intel(R) VTune(TM) Profiler GUI application
+   Intel VTune Profiler GUI application.
 
 
 Other useful tools for profiling

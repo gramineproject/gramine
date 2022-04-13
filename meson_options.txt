@@ -34,7 +34,7 @@ option('sgx_driver_device', type: 'string',
 option('syslibdir', type: 'string',
     description: 'Path to the system library directory')
 
-option('vtune_sgx_profiling', type: 'combo', choices: ['disabled', 'enabled'],
-    description: 'Enable profiling with vtune for gramine-sgx (aka Linux-SGX)')
+option('vtune', type: 'combo', choices: ['disabled', 'enabled'],
+    description: 'Enable profiling with VTune for Gramine with SGX')
 option('vtune_sdk_path', type: 'string',
-    description: 'Path to the VTune SDK installation path')
+    description: 'Path to the VTune SDK installation')

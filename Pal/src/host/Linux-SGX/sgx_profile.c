@@ -26,11 +26,11 @@
 #include "sgx_tls.h"
 #include "spinlock.h"
 
-#ifdef VTUNE_SGX_PROFILING
+#ifdef SGX_VTUNE_PROFILE
 #include "ittnotify.h"
 #endif
 
-extern bool g_enable_vtune_profiling;
+extern bool g_vtune_profile_enabled;
 
 // FIXME: this is glibc realpath, declared here because the headers will conflict with PAL
 char* realpath(const char* path, char* resolved_path);
@@ -307,7 +307,7 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
 void sgx_profile_report_elf(const char* filename, void* addr) {
     int ret;
 
-    if (!g_profile_enabled && !g_enable_vtune_profiling)
+    if (!g_profile_enabled && !g_vtune_profile_enabled)
         return;
 
     if (!strcmp(filename, ""))
@@ -375,8 +375,8 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
                 if (ret < 0)
                     break;
             }
-#ifdef VTUNE_SGX_PROFILING
-            if (g_enable_vtune_profiling)
+#ifdef SGX_VTUNE_PROFILE
+            if (g_vtune_profile_enabled)
                 __itt_module_load((void*)addr + mapstart, (void*) addr + mapend - 1, path);
 #endif
         }

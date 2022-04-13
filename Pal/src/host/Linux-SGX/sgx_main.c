@@ -34,7 +34,7 @@ char* g_pal_loader_path = NULL;
 char* g_libpal_path = NULL;
 pid_t g_host_pid;
 
-bool g_enable_vtune_profiling = false;
+bool g_vtune_profile_enabled = false;
 
 struct pal_enclave g_pal_enclave;
 
@@ -515,7 +515,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             dbg->tcs_addrs[i] = tcs_addrs[i];
     }
 
-    if (g_sgx_enable_stats || g_enable_vtune_profiling) {
+    if (g_sgx_enable_stats || g_vtune_profile_enabled) {
         /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
         ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE, 0);
         if (ret < 0) {
@@ -734,15 +734,15 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    ret = toml_bool_in(manifest_root, "sgx.vtune_profiling", /*defaultval=*/false, &g_enable_vtune_profiling);
+    ret = toml_bool_in(manifest_root, "sgx.vtune_profile", /*defaultval=*/false, &g_vtune_profile_enabled);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.vtune_profiling' (the value must be `true` or `false`)");
         ret = -EINVAL;
         goto out;
     }
 
-#ifndef VTUNE_SGX_PROFILING
-    if (g_enable_vtune_profiling) {
+#ifndef SGX_VTUNE_PROFILE
+    if (g_vtune_profile_enabled) {
         log_always("Gramine is not built with VTune support. sgx.vtune_profiling setting in manifest will have no impact.");
     }
 #endif
@@ -1006,11 +1006,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
-#ifdef VTUNE_SGX_PROFILING
-    if (g_enable_vtune_profiling) {
-        __itt_fini_ittlib();
-    }
-#endif
     DO_SYSCALL(exit, 0);
     die_or_inf_loop();
 }

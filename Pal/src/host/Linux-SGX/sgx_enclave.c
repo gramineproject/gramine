@@ -30,7 +30,7 @@
     do {                 \
     } while (0)
 
-extern bool g_enable_vtune_profiling;
+extern bool g_vtune_profile_enabled;
 
 static long sgx_ocall_exit(void* pms) {
     ms_ocall_exit_t* ms = (ms_ocall_exit_t*)pms;
@@ -49,8 +49,8 @@ static long sgx_ocall_exit(void* pms) {
         sgx_profile_finish();
 #endif
 
-#ifdef VTUNE_SGX_PROFILING
-        if (g_enable_vtune_profiling) {
+#ifdef SGX_VTUNE_PROFILE
+        if (g_vtune_profile_enabled) {
             extern void __itt_fini_ittlib(void);
             __itt_fini_ittlib();
         }
@@ -71,8 +71,8 @@ static long sgx_ocall_exit(void* pms) {
 #ifdef DEBUG
         sgx_profile_finish();
 #endif
-#ifdef VTUNE_SGX_PROFILING
-        if (g_enable_vtune_profiling) {
+#ifdef SGX_VTUNE_PROFILE
+        if (g_vtune_profile_enabled) {
             extern void __itt_fini_ittlib(void);
             __itt_fini_ittlib();
         }
