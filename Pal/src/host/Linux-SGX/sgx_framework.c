@@ -174,7 +174,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
 
     secs->attributes.flags |= SGX_FLAGS_INITIALIZED;
 
-    log_debug("enclave created:");
+    log_debug("Enclave created:");
     log_debug("    base:           0x%016lx", secs->base);
     log_debug("    size:           0x%016lx", secs->size);
     log_debug("    misc_select:    0x%08x",   secs->misc_select);
@@ -265,9 +265,9 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     }
 
     if (size == g_page_size)
-        log_debug("adding page  to enclave: %p [%s:%s] (%s)%s", addr, t, p, comment, m);
+        log_debug("Adding page  to enclave: %p [%s:%s] (%s)%s", addr, t, p, comment, m);
     else
-        log_debug("adding pages to enclave: %p-%p [%s:%s] (%s)%s", addr, addr + size, t, p,
+        log_debug("Adding pages to enclave: %p-%p [%s:%s] (%s)%s", addr, addr + size, t, p,
                   comment, m);
 
 #ifdef SGX_DCAP
@@ -383,7 +383,7 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
 #endif
     unsigned long enclave_valid_addr = secs->base + secs->size - g_page_size;
 
-    log_debug("enclave initializing:");
+    log_debug("Enclave initializing:");
     log_debug("    enclave id:   0x%016lx", enclave_valid_addr);
     log_debug("    mr_enclave:   %s", ALLOCA_BYTES2HEXSTR(sigstruct->body.enclave_hash.m));
 
