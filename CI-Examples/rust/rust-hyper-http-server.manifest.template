@@ -15,6 +15,8 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
 #
 # Thus, unless 64M * thread_count fits comfortably in sgx.enclave_size, we need to
 # limit the number of arenas allocated.
+#
+# See also: https://github.com/gramineproject/gramine/issues/342
 loader.env.MALLOC_ARENA_MAX = "1"
 
 # For easier debugging — not strictly required to run this workload
