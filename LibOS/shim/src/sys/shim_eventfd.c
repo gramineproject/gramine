@@ -33,6 +33,11 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
 
     if (!allow_eventfd) {
         /* eventfd is not explicitly allowed in manifest */
+        if (FIRST_TIME()) {
+            log_warning("The app tried to use eventfd, but it's turned off "
+                        "(sys.insecure__allow_eventfd = false)");
+        }
+
         return -ENOSYS;
     }
 
