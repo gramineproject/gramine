@@ -7,6 +7,16 @@ loader.argv0_override = "{{ self_exe }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
 
+# The default malloc settings assume that virtual memory is virtually unlimited.
+# Due to fundamental SGX limitations, this is not the case when running under
+# Gramine-SGX, and all allocations are immediately fully backed. This doesn't work
+# too well when all threads allocate 64 MiB of virtual memory and cause everything
+# else to be starved for memory, significantly slowing down all calls to malloc().
+#
+# Thus, unless 64M * thread_count fits comfortably in sgx.enclave_size, we need to
+# limit the number of arenas allocated.
+loader.env.MALLOC_ARENA_MAX = "1"
+
 # For easier debugging — not strictly required to run this workload
 loader.env.RUST_BACKTRACE = "full"
 
