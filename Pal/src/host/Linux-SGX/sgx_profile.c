@@ -361,8 +361,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
-    if (g_profile_enabled)
-        spinlock_lock(&g_perf_data_lock);
+    spinlock_lock(&g_perf_data_lock);
 
     for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
@@ -382,8 +381,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
         }
     }
 
-    if (g_profile_enabled)
-        spinlock_unlock(&g_perf_data_lock);
+    spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0)
         log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %d", filename, ret);
