@@ -16,4 +16,5 @@ manifests = [
   "seek_tell",
   "stat",
   "truncate",
+  "open_mmap",
 ]

@@ -228,3 +228,16 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
             else:
                 print('[!] Fail: successfully decrypted file: ' + name)
                 self.fail()
+
+    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
+    def test_501_open_mmap(self):
+        # the test binary expects a path to read-only (existing) file or a path to file that
+        # will get created
+        input_path = self.ENCRYPTED_FILES[-1] # existing file
+        stdout, stderr = self.run_binary(['open_mmap', input_path])
+        self.assertNotIn('ERROR: ', stderr)
+        self.assertIn('mmap PROT_READ, MAP_SHARED succeeded as expected', stdout)
+        self.assertIn('mmap PROT_WRITE, MAP_SHARED succeeded as expected', stdout)
+        self.assertIn('mmap PROT_READ, MAP_PRIVATE succeeded as expected', stdout)
+        self.assertIn('mmap PROT_WRITE, MAP_PRIVATE succeeded as expected', stdout)
+        self.assertIn('mmap PROT_READ | PROT_WRITE, MAP_PRIVATE succeeded as expected', stdout)
