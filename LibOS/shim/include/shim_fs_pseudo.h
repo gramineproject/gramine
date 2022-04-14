@@ -72,7 +72,13 @@ struct shim_dev_ops {
 
 /*
  * A node of the pseudo filesystem. A single node can describe either a single file, or a family of
- * files (see `name_exists` and `list_names` below).
+ * files:
+ *
+ * - For a single file with a pre-determined name, set `name`
+ * - For a single file with a pre-determined name that, depending on circumstances, might not exist,
+ *   set `name` and provide the `name_exists` callback
+ * - For any other case (e.g. a dynamically-generated list of files), keep `name` set to NULL, and
+ *   provide both `name_exists` and `list_names` callbacks
  *
  * The constructors for `pseudo_node` (`pseudo_add_*`) take arguments for most commonly used fields.
  * The node can then be further customized by directly modifying other fields.
@@ -95,7 +101,8 @@ struct pseudo_node {
     /* File name. Can be NULL if the node provides the below callbacks. */
     const char* name;
 
-    /* Returns true if a file with a given name exists. */
+    /* Returns true if a file with a given name exists. If both `name` and `name_exists` are
+     * provided, both are used to determine if the file exists. */
     bool (*name_exists)(struct shim_dentry* parent, const char* name);
 
     /* Retrieves all file names for this node. Works the same as `readdir`. */

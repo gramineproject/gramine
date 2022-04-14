@@ -51,12 +51,20 @@ static struct pseudo_node* pseudo_find(struct shim_dentry* dent) {
     assert(parent_node->type == PSEUDO_DIR);
     struct pseudo_node* node;
     LISTP_FOR_EACH_ENTRY(node, &parent_node->dir.children, siblings) {
-        if (node->name && strcmp(dent->name, node->name) == 0) {
-            return node;
+        /* The node might have `name`, `name_exists`, or both. */
+        bool match;
+        if (node->name && node->name_exists) {
+            match = !strcmp(dent->name, node->name) && node->name_exists(dent->parent, dent->name);
+        } else if (node->name) {
+            match = !strcmp(dent->name, node->name);
+        } else if (node->name_exists) {
+            match = node->name_exists(dent->parent, dent->name);
+        } else {
+            match = false;
         }
-        if (node->name_exists && node->name_exists(dent->parent, dent->name)) {
+
+        if (match)
             return node;
-        }
     }
     return NULL;
 }
@@ -214,7 +222,9 @@ static int pseudo_istat(struct shim_dentry* dent, struct shim_inode* inode, stru
             struct pseudo_node* child_node;
             LISTP_FOR_EACH_ENTRY(child_node, &node->dir.children, siblings) {
                 if (child_node->name) {
-                    nlink++;
+                    /* If `name_exists` callback is provided, check it. */
+                    if (!child_node->name_exists || node->name_exists(dent, child_node->name))
+                        nlink++;
                 }
                 if (child_node->list_names) {
                     int ret = child_node->list_names(dent, &count_nlink, &nlink);
@@ -287,9 +297,12 @@ static int pseudo_readdir(struct shim_dentry* dent, readdir_callback_t callback,
     struct pseudo_node* node;
     LISTP_FOR_EACH_ENTRY(node, &parent_node->dir.children, siblings) {
         if (node->name) {
-            ret = callback(node->name, arg);
-            if (ret < 0)
-                return ret;
+            /* If `name_exists` callback is provided, check it. */
+            if (!node->name_exists || node->name_exists(dent, node->name)) {
+                ret = callback(node->name, arg);
+                if (ret < 0)
+                    return ret;
+            }
         }
         if (node->list_names) {
             ret = node->list_names(dent, callback, arg);

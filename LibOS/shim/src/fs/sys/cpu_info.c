@@ -82,19 +82,3 @@ bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name) {
 
     return cpu_num != 0;
 }
-
-int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
-    int ret;
-    unsigned int cpu_num;
-    ret = sys_resource_find(parent, "cpu", &cpu_num);
-    if (ret < 0)
-        return ret;
-
-    if (cpu_num != 0) {
-        ret = callback("online", arg);
-        if (ret < 0)
-            return ret;
-    }
-
-    return 0;
-}

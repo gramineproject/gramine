@@ -199,11 +199,9 @@ static void init_cpu_dir(struct pseudo_node* cpu) {
     cpuX->name_exists = &sys_resource_name_exists;
     cpuX->list_names = &sys_resource_list_names;
 
-    /* Create a node for `cpu/cpuX/online`. We provide name callbacks instead of a hardcoded name,
-     * because we want the file to exist for all CPUs *except* `cpu0`. */
-    struct pseudo_node* online = pseudo_add_str(cpuX, NULL, &sys_cpu_load);
+    /* `cpu/cpuX/online` exists for all CPUs *except* `cpu0`. */
+    struct pseudo_node* online = pseudo_add_str(cpuX, "online", &sys_cpu_load);
     online->name_exists = &sys_cpu_online_name_exists;
-    online->list_names = &sys_cpu_online_list_names;
 
     struct pseudo_node* topology = pseudo_add_dir(cpuX, "topology");
     pseudo_add_str(topology, "core_id", &sys_cpu_load);
