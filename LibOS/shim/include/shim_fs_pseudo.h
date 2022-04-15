@@ -227,7 +227,6 @@ int init_attestation(struct pseudo_node* dev);
 
 int init_sysfs(void);
 int sys_load(const char* str, char** out_data, size_t* out_size);
-int sys_resource_find(struct shim_dentry* parent, const char* name, unsigned int* num);
 bool sys_resource_name_exists(struct shim_dentry* parent, const char* name);
 int sys_resource_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
@@ -237,6 +236,10 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
+
+/* Find resource number for a given name; e.g. `sys_resource_find(dent, "cpu", &n)` will search for
+ * "cpu/cpuN" in the path of `dent`, and set `n` to the number N */
+int sys_resource_find(struct shim_dentry* parent, const char* parent_name, unsigned int* out_num);
 
 /* Converts struct pal_res_range_info to a string representation.
  * Example output when sep == ',': "10-63,68,70-127".
