@@ -37,8 +37,8 @@ Common dependencies
 Run the following command on Ubuntu LTS to install dependencies::
 
     sudo apt-get install -y build-essential \
-        autoconf bison gawk ninja-build python3 python3-click python3-jinja2 \
-        wget
+        autoconf bison gawk nasm ninja-build python3 python3-click \
+        python3-jinja2 wget
     sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 You can also install Meson and python3-toml from apt instead of pip, but only if
