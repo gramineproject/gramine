@@ -38,6 +38,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     linux-headers-4.15.0-20-generic \
     musl \
     musl-tools \
+    nasm \
     net-tools \
     netcat-openbsd \
     ninja-build \

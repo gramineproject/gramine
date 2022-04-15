@@ -54,6 +54,20 @@ python3_pkgdir = join_paths(python3_platlib, 'graminelibos')
 
 pkgconfig = import('pkgconfig')
 
+nasm_gen = generator(
+    find_program('nasm'),
+    output: '@BASENAME@.o',
+    depfile: '@BASENAME@.dep',
+    arguments: [
+        '-f', 'elf64',
+        '-I', '@0@/'.format(meson.current_build_dir()),
+        '-MQ', '@OUTPUT@', '-MF', '@DEPFILE@',
+        '@EXTRA_ARGS@',
+        '@INPUT@',
+        '-o', '@OUTPUT@'
+    ]
+)
+
 add_project_arguments(
     '-Wa,--noexecstack',
 

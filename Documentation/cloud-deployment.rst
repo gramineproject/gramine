@@ -31,9 +31,9 @@ Update and install the required packages for Gramine::
 
    sudo apt-get update
    sudo apt-get install -y build-essential \
-       autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev ninja-build \
-       pkg-config protobuf-c-compiler python3 python3-click python3-jinja2 \
-       python3-pip python3-protobuf wget
+       autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev nasm \
+       ninja-build pkg-config protobuf-c-compiler python3 python3-click \
+       python3-jinja2 python3-pip python3-protobuf wget
    sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
