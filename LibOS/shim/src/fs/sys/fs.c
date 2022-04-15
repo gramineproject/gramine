@@ -109,57 +109,50 @@ out:
     return ret;
 }
 
-static int sys_resource(struct shim_dentry* parent, const char* name, unsigned int* out_num,
-                        readdir_callback_t callback, void* arg) {
-    const char* parent_name = parent->name;
-    size_t total;
-    const char* prefix;
-
+static int sys_resource_info(const char* parent_name, size_t* out_total, const char** out_prefix) {
     if (strcmp(parent_name, "node") == 0) {
-        total = g_pal_public_state->topo_info.online_nodes.resource_cnt;
-        prefix = "node";
+        *out_total = g_pal_public_state->topo_info.online_nodes.resource_cnt;
+        *out_prefix = "node";
+        return 0;
     } else if (strcmp(parent_name, "cpu") == 0) {
-        total = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
-        prefix = "cpu";
+        *out_total = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
+        *out_prefix = "cpu";
+        return 0;
     } else if (strcmp(parent_name, "cache") == 0) {
-        total = g_pal_public_state->topo_info.cache_indices_cnt;
-        prefix = "index";
+        *out_total = g_pal_public_state->topo_info.cache_indices_cnt;
+        *out_prefix = "index";
+        return 0;
     } else {
         log_debug("unrecognized resource: %s", parent_name);
         return -ENOENT;
     }
-
-    if (name) {
-        if (total == 0)
-            return -ENOENT;
-
-        if (!strstartswith(name, prefix))
-            return -ENOENT;
-        size_t prefix_len = strlen(prefix);
-        unsigned long n;
-        if (pseudo_parse_ulong(&name[prefix_len], total - 1, &n) < 0)
-            return -ENOENT;
-
-        if (out_num)
-            *out_num = n;
-        return 0;
-    } else {
-        for (size_t i = 0; i < total; i++) {
-            char ent_name[42];
-            snprintf(ent_name, sizeof(ent_name), "%s%zu", prefix, i);
-            int ret = callback(ent_name, arg);
-            if (ret < 0)
-                return ret;
-        }
-        return 0;
-    }
 }
 
-int sys_resource_find(struct shim_dentry* dent, const char* name, unsigned int* num) {
+int sys_resource_find(struct shim_dentry* dent, const char* parent_name, unsigned int* out_num) {
+    size_t total;
+    const char* prefix;
+    int ret = sys_resource_info(parent_name, &total, &prefix);
+    if (ret < 0)
+        return ret;
+
+    if (total == 0)
+        return -ENOENT;
+
+    /* Search for "{parent_name}/{prefix}N", parse N (must be less than total) */
+
     struct shim_dentry* parent = dent->parent;
     while (parent) {
-        if (strcmp(parent->name, name) == 0) {
-            return sys_resource(parent, dent->name, num, /*callback=*/NULL, /*arg=*/NULL);
+        if (strcmp(parent->name, parent_name) == 0) {
+            if (!strstartswith(dent->name, prefix))
+                return -ENOENT;
+
+            size_t prefix_len = strlen(prefix);
+            unsigned long n;
+            if (pseudo_parse_ulong(&dent->name[prefix_len], total - 1, &n) < 0)
+                return -ENOENT;
+
+            *out_num = n;
+            return 0;
         }
 
         dent = parent;
@@ -169,12 +162,46 @@ int sys_resource_find(struct shim_dentry* dent, const char* name, unsigned int* 
 }
 
 bool sys_resource_name_exists(struct shim_dentry* parent, const char* name) {
-    int ret = sys_resource(parent, name, /*num=*/NULL, /*callback=*/NULL, /*arg=*/NULL);
-    return ret == 0;
+    size_t total;
+    const char* prefix;
+    int ret = sys_resource_info(parent->name, &total, &prefix);
+    if (ret < 0)
+        return false;
+
+    if (total == 0)
+        return false;
+
+    /* Recognize "{prefix}N", check if N is less than total */
+
+    if (!strstartswith(name, prefix))
+        return false;
+
+    size_t prefix_len = strlen(prefix);
+    unsigned long n;
+    if (pseudo_parse_ulong(&name[prefix_len], total - 1, &n) < 0)
+        return false;
+
+    return true;
 }
 
 int sys_resource_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
-    return sys_resource(parent, /*name=*/NULL, /*num=*/NULL, callback, arg);
+    size_t total;
+    const char* prefix;
+    int ret = sys_resource_info(parent->name, &total, &prefix);
+    if (ret < 0)
+        return -ENOENT;
+
+    /* Generate "{prefix}N" names for all N less than total */
+
+    for (size_t i = 0; i < total; i++) {
+        char ent_name[strlen(prefix) + 22];
+        snprintf(ent_name, sizeof(ent_name), "%s%zu", prefix, i);
+        int ret = callback(ent_name, arg);
+        if (ret < 0)
+            return ret;
+    }
+
+    return 0;
 }
 
 int sys_load(const char* str, char** out_data, size_t* out_size) {
