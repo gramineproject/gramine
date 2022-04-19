@@ -154,9 +154,6 @@ if sgx
   if vtune
     add_project_arguments('-DSGX_VTUNE_PROFILE', language: 'c')
     vtune_sdk_path = get_option('vtune_sdk_path')
-    if vtune_sdk_path == ''
-      vtune_sdk_path = '/opt/intel/oneapi/vtune/2022.1.0/sdk'
-    endif
   endif
 
     conf_sgx.set('CONFIG_SGX_DRIVER_HEADER_ABSPATH', sgx_driver_header_abspath)
@@ -266,6 +263,17 @@ if sgx
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
     endif
+
+  vtune_inc = []
+  vtune_dep = []
+  dl_dep = []
+
+  if vtune
+      vtune_inc = include_directories(join_paths(vtune_sdk_path, 'include'))
+      vtune_dep = cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true)
+      dl_dep = cc.find_library('dl', required: true)
+  endif
+
 endif
 
 #

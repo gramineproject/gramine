@@ -4,23 +4,6 @@ gsgx_h = configure_file(
     configuration: conf_sgx,
 )
 
-vtune_inc = []
-vtune_ldflags = []
-
-if vtune
-    vtune_sdk_lib_dir = join_paths(vtune_sdk_path, 'lib64')
-    vtune_sdk_include_dir = join_paths(vtune_sdk_path, 'include')
-    vtune_sdk_ittnotify_include_dir = join_paths(vtune_sdk_path, 'src', 'ittnotify')
-    vtune_inc = [
-        include_directories(
-            vtune_sdk_include_dir,
-            vtune_sdk_ittnotify_include_dir,
-        ),
-    ]
-    vtune_ldflags = ['-L' + vtune_sdk_lib_dir, '-littnotify']
-    vtune_ldflags += '-ldl'
-endif
-
 sgx_inc = [
     includes_pal_common,
     include_directories(
@@ -175,13 +158,14 @@ libpal_sgx_urts = executable('loader',
     link_args: [
         '-Wl,-zrelro',
         '-Wl,-znow',
-        vtune_ldflags,
     ],
     pie: true,
 
     dependencies: [
         common_dep,
         protobuf_dep,
+        vtune_dep,
+        dl_dep,
     ],
 
     install: true,
