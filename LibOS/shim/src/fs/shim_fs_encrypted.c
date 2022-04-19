@@ -157,8 +157,8 @@ static int encrypted_file_internal_open(struct shim_encrypted_file* enc, PAL_HAN
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
-        ret = DkStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode, /*options=*/0,
-                           &pal_handle);
+        ret = DkStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
+                           PAL_OPTION_PASSTHROUGH, &pal_handle);
         if (ret < 0) {
             log_warning("%s: DkStreamOpen failed: %d", __func__, ret);
             return pal_to_unix_errno(ret);

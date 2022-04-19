@@ -16,4 +16,5 @@ clean:
 		*.xml \
 		testfile \
 		trusted_testfile \
-		tmp/*
+		tmp/* \
+		tmp_enc/*

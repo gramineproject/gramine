@@ -17,7 +17,7 @@ fs.mounts = [
   { path = "/bin", uri = "file:/bin" },
 
   { type = "tmpfs", path = "/mnt/tmpfs" },
-  { type = "encrypted", path = "/tmp/enc", uri = "file:tmp/enc", key_name = "my_custom_key" },
+  { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
 ]
 
 sgx.thread_num = 16
