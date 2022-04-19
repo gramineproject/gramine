@@ -359,16 +359,21 @@ out:
 int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key) {
     lock(&g_keys_lock);
 
+    int ret;
+
     struct shim_encrypted_files_key* key = get_or_create_key(name);
-    if (!key)
-        return -ENOMEM;
+    if (!key) {
+        ret = -ENOMEM;
+        goto out;
+    }
 
     /* TODO: load special keys (MRENCLAVE, MRSIGNER) here */
 
     *out_key = key;
-
+    ret = 0;
+out:
     unlock(&g_keys_lock);
-    return 0;
+    return ret;
 }
 
 bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf_key) {
