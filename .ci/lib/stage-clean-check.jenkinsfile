@@ -22,6 +22,12 @@ stage('clean-check') {
 
         make -C LibOS/shim/test/regression clean
         make -C LibOS/shim/test/fs clean
+
+        gramine-test -C LibOS/shim/test/abi/x86_64 clean
+        rm -rf LibOS/shim/test/abi/x86_64/.pytest_cache \
+               LibOS/shim/test/abi/x86_64/__pycache__ \
+               LibOS/shim/test/abi/x86_64/*.xml
+
         make -C Pal/regression clean
 
         make -C CI-Examples/helloworld clean

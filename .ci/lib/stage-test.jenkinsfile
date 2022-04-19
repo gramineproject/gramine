@@ -43,6 +43,18 @@ stage('test') {
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
+                cd LibOS/shim/test/abi/x86_64
+                gramine-test build -v
+                python3 -m pytest -v --junit-xml abi.xml
+            '''
+        } finally {
+            junit 'LibOS/shim/test/abi/x86_64/*.xml'
+        }
+    }
+
+    timeout(time: 15, unit: 'MINUTES') {
+        try {
+            sh '''
                 cd LibOS/shim/test/fs
                 gramine-test build -v
                 python3 -m pytest -v --junit-xml fs.xml
