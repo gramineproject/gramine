@@ -25,7 +25,6 @@
  *
  * TODO (most items are needed for feature parity with PAL protected files):
  *
- * - mounting with special keys (SGX MRENCLAVE and MRSIGNER)
  * - mmap
  * - truncate (the current `truncate` operation works only for extending the file, support for
  *   truncation needs to be added to the `protected_files` module)

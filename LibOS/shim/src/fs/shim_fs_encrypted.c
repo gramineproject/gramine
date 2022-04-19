@@ -311,12 +311,14 @@ static struct shim_encrypted_files_key* get_key(const char* name) {
     return NULL;
 }
 
-static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
+static struct shim_encrypted_files_key* get_or_create_key(const char* name, bool* out_created) {
     assert(locked(&g_keys_lock));
 
     struct shim_encrypted_files_key* key = get_key(name);
-    if (key)
+    if (key) {
+        *out_created = false;
         return key;
+    }
 
     key = calloc(1, sizeof(*key));
     if (!key)
@@ -328,6 +330,7 @@ static struct shim_encrypted_files_key* get_or_create_key(const char* name) {
     }
     key->is_set = false;
     LISTP_ADD_TAIL(key, &g_keys, list);
+    *out_created = true;
     return key;
 }
 
@@ -361,13 +364,37 @@ int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_fi
 
     int ret;
 
-    struct shim_encrypted_files_key* key = get_or_create_key(name);
+    bool created;
+    struct shim_encrypted_files_key* key = get_or_create_key(name, &created);
     if (!key) {
         ret = -ENOMEM;
         goto out;
     }
 
-    /* TODO: load special keys (MRENCLAVE, MRSIGNER) here */
+    if (created && name[0] == '_') {
+        pf_key_t pf_key;
+        size_t size = sizeof(pf_key);
+        ret = DkGetSpecialKey(name, &pf_key, &size);
+
+        if (ret == 0) {
+            if (size != sizeof(pf_key)) {
+                log_debug("DkGetSpecialKey(\"%s\") returned wrong size: %zu", name, size);
+                ret = -EINVAL;
+                goto out;
+            }
+            log_debug("Successfully retrieved special key \"%s\"", name);
+            memcpy(&key->pf_key, &pf_key, sizeof(pf_key));
+            key->is_set = true;
+        } else if (ret == -PAL_ERROR_NOTIMPLEMENTED) {
+            log_debug("Special key \"%s\" is not supported by current PAL. Mounts using this key "
+                      "will not work.", name);
+            /* proceed without setting value */
+        } else {
+            log_debug("DkGetSpecialKey(\"%s\") failed: %d", name, ret);
+            ret = pal_to_unix_errno(ret);
+            goto out;
+        }
+    }
 
     *out_key = key;
     ret = 0;

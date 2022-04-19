@@ -763,6 +763,22 @@ int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_si
  */
 int DkSetProtectedFilesKey(const char* pf_key_hex);
 
+/*!
+ * \brief Get special key (specific to PAL host).
+ *
+ * \param[in]     name      Key name.
+ * \param[out]    key       On success, will be set to retrieved key.
+ * \param[in,out] key_size  Caller specifies maximum size for `key`. On success, will contain actual
+ *                          size.
+ *
+ * Retrieve the value of a special key. Currently implemented for Linux-SGX PAL, which supports two
+ * such keys: `_sgx_mrenclave` and `_sgx_mrsigner`.
+ *
+ * If a given key is not supported by the current PAL host, the function will return
+ * -PAL_ERROR_NOTIMPLEMENTED.
+ */
+int DkGetSpecialKey(const char* name, void* key, size_t* key_size);
+
 #ifdef __GNUC__
 #define symbol_version_default(real, name, version) \
     __asm__(".symver " #real "," #name "@@" #version "\n")

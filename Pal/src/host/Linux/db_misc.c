@@ -77,3 +77,10 @@ int _DkSetProtectedFilesKey(const char* pf_key_hex) {
     __UNUSED(pf_key_hex);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
+
+int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {
+    __UNUSED(name);
+    __UNUSED(key);
+    __UNUSED(key_size);
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}

@@ -626,6 +626,28 @@ int _DkSetProtectedFilesKey(const char* pf_key_hex) {
     return set_protected_files_key(pf_key_hex);
 }
 
+int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {
+    sgx_key_128bit_t sgx_key;
+
+    if (*key_size < sizeof(sgx_key))
+        return -PAL_ERROR_INVAL;
+
+    int ret;
+    if (!strcmp(name, "_sgx_mrenclave")) {
+        ret = sgx_get_seal_key(SGX_KEYPOLICY_MRENCLAVE, &sgx_key);
+    } else if (!strcmp(name, "_sgx_mrsigner")) {
+        ret = sgx_get_seal_key(SGX_KEYPOLICY_MRSIGNER, &sgx_key);
+    } else {
+        return -PAL_ERROR_NOTIMPLEMENTED;
+    }
+    if (ret < 0)
+        return ret;
+
+    memcpy(key, &sgx_key, sizeof(sgx_key));
+    *key_size = sizeof(sgx_key);
+    return 0;
+}
+
 /* Rest is moved from old `db_main-x86_64.c`. */
 
 #define CPUID_LEAF_INVARIANT_TSC 0x80000007
