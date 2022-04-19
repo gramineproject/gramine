@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "list.h"
 #include "pal.h"

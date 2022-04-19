@@ -18,6 +18,7 @@
 #include <linux/wait.h>
 
 #include "api.h"
+#include "shim_fs.h"
 #include "shim_internal.h"
 #include "shim_syscalls.h"
 #include "shim_table.h"

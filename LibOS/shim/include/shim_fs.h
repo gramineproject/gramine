@@ -440,11 +440,9 @@ struct shim_mount {
 extern struct shim_dentry* g_dentry_root;
 
 #define F_OK 0
-// XXX: Duplicate definition; should probably weed out includes of host system
-// include of unistd.h in future work
-//#define R_OK        001
-//#define W_OK        002
-//#define X_OK        004
+#define R_OK        001
+#define W_OK        002
+#define X_OK        004
 #define MAY_EXEC  001
 #define MAY_WRITE 002
 #define MAY_READ  004

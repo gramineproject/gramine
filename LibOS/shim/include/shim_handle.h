@@ -12,7 +12,6 @@
 #include <asm/resource.h>
 #include <linux/in.h>
 #include <linux/in6.h>
-#include <linux/shm.h>
 #include <linux/un.h>
 #include <stdalign.h>
 #include <stdbool.h>

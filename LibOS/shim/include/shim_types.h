@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <asm/errno.h>
 #include <asm/poll.h>
 #include <asm/posix_types.h>
 #include <asm/siginfo.h>
@@ -19,7 +20,6 @@
 #include <linux/msg.h>
 #include <linux/perf_event.h>
 #include <linux/sem.h>
-#include <linux/shm.h>
 #include <linux/times.h>
 #include <linux/timex.h>
 #include <linux/types.h>
