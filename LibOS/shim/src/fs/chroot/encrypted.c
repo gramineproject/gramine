@@ -251,8 +251,8 @@ static int chroot_encrypted_mkdir(struct shim_dentry* dent, mode_t perm) {
 
     /* This opens a "dir:..." URI */
     PAL_HANDLE palhdl;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS, /*options=*/0,
-                       &palhdl);
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
+                       PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -267,6 +267,36 @@ static int chroot_encrypted_mkdir(struct shim_dentry* dent, mode_t perm) {
 
 out:
     put_inode(inode);
+    free(uri);
+    return ret;
+}
+
+static int chroot_encrypted_unlink(struct shim_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
+    char* uri = NULL;
+
+    int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
+    if (ret < 0)
+        goto out;
+
+    PAL_HANDLE palhdl;
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                       PAL_OPTION_PASSTHROUGH, &palhdl);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    ret = DkStreamDelete(palhdl, PAL_DELETE_ALL);
+    DkObjectClose(palhdl);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+    ret = 0;
+out:
     free(uri);
     return ret;
 }
@@ -311,8 +341,8 @@ static int chroot_encrypted_chmod(struct shim_dentry* dent, mode_t perm) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER, /*options=*/0,
-                       &palhdl);
+    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                       PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -437,7 +467,7 @@ struct shim_d_ops chroot_encrypted_d_ops = {
     .mkdir         = &chroot_encrypted_mkdir,
     .stat          = &generic_inode_stat,
     .readdir       = &chroot_readdir, /* same as in `chroot` filesystem */
-    .unlink        = &chroot_unlink,  /* same as in `chroot` filesystem */
+    .unlink        = &chroot_encrypted_unlink,
     .rename        = &chroot_encrypted_rename,
     .chmod         = &chroot_encrypted_chmod,
     .idrop         = &chroot_encrypted_idrop,

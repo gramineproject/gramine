@@ -241,8 +241,8 @@ class TC_01_Bootstrap(RegressionTestCase):
                 os.unlink(path)
 
     def test_222_send_handle_enc(self):
-        path = 'tmp/enc/send_handle_test'
-        os.makedirs('tmp/enc', exist_ok=True)
+        path = 'tmp_enc/send_handle_test'
+        os.makedirs('tmp_enc', exist_ok=True)
         # Delete the file: the test truncates the file anyway, but it may fail to open a malformed
         # encrypted file.
         if os.path.exists(path):
@@ -623,9 +623,9 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     def test_035_rename_unlink_enc(self):
-        os.makedirs('tmp/enc', exist_ok=True)
-        file1 = 'tmp/enc/file1'
-        file2 = 'tmp/enc/file2'
+        os.makedirs('tmp_enc', exist_ok=True)
+        file1 = 'tmp_enc/file1'
+        file2 = 'tmp_enc/file2'
         # Delete the files: the test overwrites them anyway, but it may fail if they are malformed.
         for path in [file1, file2]:
             if os.path.exists(path):
