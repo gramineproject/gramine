@@ -743,7 +743,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 
 #ifndef SGX_VTUNE_PROFILE
     if (g_vtune_profile_enabled)
-        log_always("Gramine was not built with VTune profiling support, 'sgx.vtune_profile' manifest option has no impact.");
+        log_always("Gramine was not built with VTune profiling support,"
+                   "'sgx.vtune_profile' manifest option has no impact.");
 #endif
 
 #ifdef DEBUG

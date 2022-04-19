@@ -27,7 +27,7 @@
 #include "spinlock.h"
 
 #ifdef SGX_VTUNE_PROFILE
-#include "ittnotify.h"
+#include "ittnotify.h" // for __itt_module_load(...) which is defined as a macro
 #endif
 
 extern bool g_vtune_profile_enabled;
