@@ -1,0 +1,16 @@
+; SPDX-License-Identifier: LGPL-3.0-or-later
+; Copyright (C) 2022 Intel Corporation
+;                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
+
+; rdx contains a function pointer that the application should register with atexit.
+; We decided to set rdx to NULL.
+
+extern    gramine_exit
+global    _start
+
+section   .text
+
+_start:
+    ; mov   rdi, rdx ; XXX:osho
+    mov   rdi, 0
+    jmp   gramine_exit

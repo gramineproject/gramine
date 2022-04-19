@@ -1,0 +1,13 @@
+binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/entrypoint"
+
+manifests = [
+  "atexit_func",
+  "fpu_control_word",
+  "mxcsr",
+  "rflags",
+  "stack",
+  "stack_argc1",
+  "stack_argc3",
+  "stack_argv1",
+  "stack_argv3",
+]
