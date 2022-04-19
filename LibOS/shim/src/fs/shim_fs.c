@@ -93,9 +93,9 @@ static bool mount_migrated = false;
 
 static int mount_root(void) {
     int ret;
-    char* fs_root_type = NULL;
-    char* fs_root_uri  = NULL;
-    char* fs_root_key  = NULL;
+    char* fs_root_type     = NULL;
+    char* fs_root_uri      = NULL;
+    char* fs_root_key_name = NULL;
 
     assert(g_manifest_root);
 
@@ -113,16 +113,16 @@ static int mount_root(void) {
         goto out;
     }
 
-    ret = toml_string_in(g_manifest_root, "fs.root.key", &fs_root_key);
+    ret = toml_string_in(g_manifest_root, "fs.root.key_name", &fs_root_key_name);
     if (ret < 0) {
-        log_error("Cannot parse 'fs.root.key'");
+        log_error("Cannot parse 'fs.root.key_name'");
         ret = -EINVAL;
         goto out;
     }
 
     struct shim_mount_params params = {
         .path = "/",
-        .key_name = fs_root_key,
+        .key_name = fs_root_key_name,
     };
 
     if (!fs_root_type && !fs_root_uri) {
@@ -193,10 +193,10 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
 
     int ret;
 
-    char* mount_type = NULL;
-    char* mount_path = NULL;
-    char* mount_uri  = NULL;
-    char* mount_key  = NULL;
+    char* mount_type     = NULL;
+    char* mount_path     = NULL;
+    char* mount_uri      = NULL;
+    char* mount_key_name = NULL;
 
     ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
@@ -219,9 +219,9 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         goto out;
     }
 
-    ret = toml_string_in(mount, "key", &mount_key);
+    ret = toml_string_in(mount, "key_name", &mount_key_name);
     if (ret < 0) {
-        log_error("Cannot parse '%s.key'", prefix);
+        log_error("Cannot parse '%s.key_name'", prefix);
         ret = -EINVAL;
         goto out;
     }
@@ -275,7 +275,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         .type = mount_type ?: "chroot",
         .path = mount_path,
         .uri = mount_uri,
-        .key_name = mount_key,
+        .key_name = mount_key_name,
     };
     ret = mount_fs(&params);
 
@@ -283,7 +283,7 @@ out:
     free(mount_type);
     free(mount_path);
     free(mount_uri);
-    free(mount_key);
+    free(mount_key_name);
     return ret;
 }
 
