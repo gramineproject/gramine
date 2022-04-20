@@ -223,7 +223,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
          * by issuing an AMX-permission request, so call arch_prctl() to request AMX permission
          * unconditionally. For more details, see similar code in Linux-SGX PAL. */
         ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
-        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
+        if (ret < 0 && ret != -EINVAL && ret != /*-ENOTSUPP*/-524 && ret != -EOPNOTSUPP &&
+                ret != -ENOSYS) {
             INIT_FAIL("Requesting AMX permission failed: %d", unix_to_pal_error(ret));
         }
 #endif

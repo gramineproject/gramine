@@ -203,11 +203,12 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
      * will inherit the permission, but here for simplicity we call it in every child process as
      * well. Some deployment environments run Linux systems earlier than v5.16 but with
      * an AMX-specific patch; this patch doesn't introduce `arch_prctl(ARCH_REQ_XCOMP_PERM)`
-     * syscall so an attempt to call it may return EINVAL, EOPNOTSUPP or ENOSYS. In this case,
-     * we simply ignore the result of this syscall. */
+     * syscall so an attempt to call it may return EINVAL, ENOTSUPP, EOPNOTSUPP or ENOSYS. In this
+     * case, we simply ignore the result of this syscall. */
     if (secs->attributes.xfrm & (1 << AMX_TILEDATA)) {
         ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
-        if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
+        if (ret < 0 && ret != -EINVAL && ret != /*-ENOTSUPP*/-524 && ret != -EOPNOTSUPP &&
+                ret != -ENOSYS) {
             log_error("Requesting AMX permission failed: %d", ret);
             return ret;
         }
