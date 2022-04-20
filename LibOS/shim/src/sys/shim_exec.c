@@ -192,10 +192,16 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
             interp[++j] = '\0';
             file = interp;
 
-            const char* argv_new[] = {file, (0 != strcmp(interp_path, interp))?&interp_path[j+1]:*argv, *argv, NULL};
+            const char* argv_new[] = {file, (0 != strcmp(interp_path, interp))?&interp_path[j+1]:NULL, NULL};
 
             size_t size_total = 0, arr_size = 0;
             for (const char** a = argv_new; *a; a++) {
+                size_t size = strlen(*a) + 1;
+                size_total += size;
+                ++arr_size;
+            }
+
+            for (const char** a = argv; *a; a++) {
                 size_t size = strlen(*a) + 1;
                 size_total += size;
                 ++arr_size;
@@ -211,7 +217,16 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
                 size_t size = strlen(*a) + 1;
                 memcpy(argv_cur, *a, size);
                 *(argv_n + arr) = argv_cur;
-                log_debug("printing elements %s", argv_n[arr]);
+                log_debug("printing arguments from script %s", argv_n[arr]);
+                arr++;
+                argv_cur += size;
+            }
+
+            for (const char** a = argv; *a; a++) {
+                size_t size = strlen(*a) + 1;
+                memcpy(argv_cur, *a, size);
+                *(argv_n + arr) = argv_cur;
+                log_debug("printing arguments from execve %s", argv_n[arr]);
                 arr++;
                 argv_cur += size;
             }
