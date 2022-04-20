@@ -736,14 +736,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 
     ret = toml_bool_in(manifest_root, "sgx.vtune_profile", /*defaultval=*/false, &g_vtune_profile_enabled);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.vtune_profiling' (the value must be `true` or `false`)");
+        log_error("Cannot parse 'sgx.vtune_profile' (the value must be `true` or `false`)");
         ret = -EINVAL;
         goto out;
     }
 
 #ifndef SGX_VTUNE_PROFILE
     if (g_vtune_profile_enabled)
-        log_always("Gramine was not built with VTune profiling support,"
+        log_always("Gramine was not built with VTune profiling support, "
                    "'sgx.vtune_profile' manifest option has no impact.");
 #endif
 
