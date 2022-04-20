@@ -271,15 +271,16 @@ out:
     return ret;
 }
 
+/* NOTE: this function is different from generic `chroot_unlink` only to add PAL_OPTION_PASSTHROUGH.
+ * Once that option is removed, we can safely go back to using `chroot_unlink`. */
 static int chroot_encrypted_unlink(struct shim_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    char* uri = NULL;
-
+    char* uri;
     int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
-        goto out;
+        return ret;
 
     PAL_HANDLE palhdl;
     ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
