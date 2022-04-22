@@ -12,7 +12,6 @@ sgx_inc = [
         '../../../include/host/Linux-common',
         'protected-files',
     ),
-    vtune_inc,
 ]
 
 cflags_pal_sgx = [

@@ -264,14 +264,18 @@ if sgx
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
     endif
 
-  vtune_inc = []
   vtune_dep = []
   dl_dep = []
 
   if vtune
-      vtune_inc = include_directories(join_paths(vtune_sdk_path, 'include'))
-      vtune_dep = cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true)
       dl_dep = cc.find_library('dl', required: true)
+      vtune_dep = declare_dependency(
+          dependencies: [
+              cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
+              dl_dep,
+          ],
+          include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
+      )
   endif
 
 endif
