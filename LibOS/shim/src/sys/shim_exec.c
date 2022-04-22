@@ -15,6 +15,8 @@
 #include "shim_thread.h"
 #include "shim_vma.h"
 
+#define INTERP_PATH_SIZE 256 /* Default shebang size */
+
 static int close_on_exec(struct shim_fd_handle* fd_hdl, struct shim_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {
         struct shim_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
@@ -133,6 +135,7 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
 long shim_do_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
     const char** argv_n = NULL;
+    char *interp_path;
 
     if (!is_user_string_readable(file))
         return -EFAULT;
@@ -160,8 +163,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    while (1)
-    {
+    while (1) {
         if (!(exec = get_new_handle())) {
             return -ENOMEM;
         }
@@ -173,64 +175,12 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
 
         if ((ret = check_elf_object(exec)) < 0) {
             log_warning("file not recognized as ELF, look for shebang");
-            char interp_path[BINPRM_BUF_SIZE], interp[BINPRM_BUF_SIZE];
-            if((ret = check_and_load_shebang(exec, interp_path)) < 0)
-            {
+
+            if((ret = check_and_load_shebang(exec, &interp_path, INTERP_PATH_SIZE, argv, &argv_n)) < 0) {
                 put_handle(exec);
                 return ret;
             }
-
-            int j = 0;
-            for (size_t i=0; interp_path[i] != ' '; i++) {
-                if (interp_path[i] == '\0')
-                    break;
-
-                interp[i] = interp_path[i];
-                j = i;
-            }
-
-            interp[++j] = '\0';
-            file = interp;
-
-            const char* argv_new[] = {file, (0 != strcmp(interp_path, interp))?&interp_path[j+1]:NULL, NULL};
-
-            size_t size_total = 0, arr_size = 0;
-            for (const char** a = argv_new; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                size_total += size;
-                ++arr_size;
-            }
-
-            for (const char** a = argv; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                size_total += size;
-                ++arr_size;
-            }
-            log_debug("size of args %lu, array size %lu", size_total, arr_size);
-
-            argv_n = (const char**)malloc(arr_size * sizeof(char*));
-            char* argv_cur;
-            argv_cur = (char*)malloc(size_total);
-
-            size_t arr = 0;
-            for (const char** a = argv_new; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                memcpy(argv_cur, *a, size);
-                *(argv_n + arr) = argv_cur;
-                log_debug("printing arguments from script %s", argv_n[arr]);
-                arr++;
-                argv_cur += size;
-            }
-
-            for (const char** a = argv; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                memcpy(argv_cur, *a, size);
-                *(argv_n + arr) = argv_cur;
-                log_debug("printing arguments from execve %s", argv_n[arr]);
-                arr++;
-                argv_cur += size;
-            }
-            *(argv_n + arr) = NULL;
+            file = interp_path;
 
             put_handle(exec);
             continue;
