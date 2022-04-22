@@ -1,0 +1,32 @@
+# Hello World manifest file example
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+#loader.log_level = "debug"
+loader.argv0_override = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/bin", uri = "file:/bin" },
+  { path = "/usr/local/lib", uri = "file:/usr/local/lib" },
+  { path = "/usr/bin", uri = "file:/usr/bin" },
+  { path = "/usr/lib", uri = "file:/usr/lib" },
+  { path = "/lib/x86_64-linux-gnu", uri = "file:/lib/x86_64-linux-gnu" },
+  { path = "/usr/local/bin", uri = "file:/usr/local/bin" },
+  { path = "/exec_nonelf", uri = "file:{{ binary_dir }}/exec_nonelf" },
+  
+]
+
+sgx.debug = true
+sgx.nonpie_binary = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:helloworld",
+  "file:hello.sh",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ binary_dir }}/exec_nonelf",
+]
+sgx.file_check_policy = "allow_all_but_log"
