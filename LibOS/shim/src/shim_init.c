@@ -444,6 +444,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     elf_auxv_t* new_auxv;
     RUN_INIT(init_stack, argv, envp, &new_argp, &new_auxv);
 
+    /* TODO: Support running non-ELF executables (scripts) */
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);

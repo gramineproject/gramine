@@ -839,6 +839,10 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/lock_file')
         self.assertIn('TEST OK', stdout)
 
+    def test_111_exec_nonelf(self):
+        stdout, _ = self.run_binary(['exec_nonelf'])
+        self.assertIn('TEST OK', stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
