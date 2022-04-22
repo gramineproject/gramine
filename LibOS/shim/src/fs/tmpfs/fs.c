@@ -20,6 +20,7 @@
 #include "shim_fs.h"
 #include "shim_handle.h"
 #include "shim_lock.h"
+#include "shim_vma.h"
 #include "stat.h"
 
 #define USEC_IN_SEC 1000000
@@ -113,8 +114,7 @@ static int tmpfs_mount(struct shim_mount_params* params, void** mount_data) {
 }
 
 static int tmpfs_flush(struct shim_handle* hdl) {
-    __UNUSED(hdl);
-    return 0;
+    return msync_handle(hdl);
 }
 
 static int tmpfs_lookup(struct shim_dentry* dent) {
@@ -289,33 +289,17 @@ out:
     return ret;
 }
 
-/* TODO: tmpfs_mmap() function is not implemented because shim_do_mmap() and shim_do_munmap()
-   are currently not flexible enough for correct tmpfs implementation. In particular, shim_do_mmap()
-   pre-allocates memory region at a specific address (making it impossible to have two mmaps on the
-   same tmpfs file), and shim_do_munmap() doesn't have a callback into tmpfs at all. */
-static int tmpfs_mmap(struct shim_handle* hdl, void** addr, size_t size, int prot, int flags,
-                      uint64_t offset) {
-    __UNUSED(hdl);
-    __UNUSED(addr);
-    __UNUSED(size);
-    __UNUSED(prot);
-    __UNUSED(flags);
-    __UNUSED(offset);
-
-    log_error("tmpfs_mmap(): mmap() function for tmpfs mount type is not implemented.");
-    return -ENOSYS;
-}
-
 struct shim_fs_ops tmp_fs_ops = {
     .mount    = &tmpfs_mount,
     .flush    = &tmpfs_flush,
     .read     = &tmpfs_read,
     .write    = &tmpfs_write,
-    .mmap     = &tmpfs_mmap,
     .seek     = &generic_inode_seek,
     .hstat    = &generic_inode_hstat,
     .truncate = &tmpfs_truncate,
     .poll     = &generic_inode_poll,
+    .mmap     = &generic_emulated_mmap,
+    .msync    = &generic_emulated_msync,
 };
 
 struct shim_d_ops tmp_d_ops = {

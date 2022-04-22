@@ -137,6 +137,13 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
             ret = -EINVAL;
             goto out_handle;
         }
+        if (!(flags & MAP_FIXED_NOREPLACE)) {
+            /* Flush any file mappings we're about to replace */
+            ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+            if (ret < 0) {
+                goto out_handle;
+            }
+        }
         ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
         if (ret < 0) {
             goto out_handle;
@@ -174,12 +181,7 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
             }
         }
     } else {
-        void* ret_addr = addr;
-        ret = hdl->fs->fs_ops->mmap(hdl, &ret_addr, length, prot, flags, offset);
-        if (ret_addr != addr) {
-            log_error("Requested address (%p) differs from allocated (%p)!", addr, ret_addr);
-            BUG();
-        }
+        ret = hdl->fs->fs_ops->mmap(hdl, addr, length, prot, flags, offset);
     }
 
     if (ret < 0) {
@@ -280,8 +282,16 @@ long shim_do_munmap(void* addr, size_t length) {
     if (!IS_ALLOC_ALIGNED(length))
         length = ALLOC_ALIGN_UP(length);
 
+    int ret;
+
+    /* Flush any file mappings we're about to remove */
+    ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+    if (ret < 0) {
+        return ret;
+    }
+
     void* tmp_vma = NULL;
-    int ret = bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma);
+    ret = bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma);
     if (ret < 0) {
         return ret;
     }
@@ -433,20 +443,25 @@ long shim_do_msync(unsigned long start, size_t len_orig, int flags) {
         return -ENOMEM;
     }
 
-    if (!flags) {
-        /* Currently Linux treats empty flags with semantics equal to `MS_ASYNC`. */
-        flags = MS_ASYNC;
-    }
-
-    if (flags != MS_ASYNC) {
-        log_warning("Gramine does not support flags to msync other than MS_ASYNC");
-        return -ENOSYS;
+    if (!(flags & (MS_SYNC | MS_ASYNC))) {
+        /* Currently Linux permits a call without either `MS_SYNC` or `MS_ASYNC`, and treats it as
+         * equivalent to specifying `MS_ASYNC`. */
+        flags |= MS_ASYNC;
     }
 
     if (!is_user_memory_readable((void*)start, len)) {
         return -ENOMEM;
     }
 
-    /* `MS_ASYNC` is a no-op on Linux. */
-    return 0;
+    if (flags & MS_INVALIDATE) {
+        log_warning("Gramine does not support MS_INVALIDATE");
+        return -ENOSYS;
+    }
+
+    if (flags & MS_SYNC) {
+        return msync_range(start, start + len);
+    } else {
+        /* `MS_ASYNC` is a no-op on Linux. */
+        return 0;
+    }
 }

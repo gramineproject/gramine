@@ -322,17 +322,23 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
     return actual_count;
 }
 
-static int chroot_mmap(struct shim_handle* hdl, void** addr, size_t size, int prot, int flags,
+static int chroot_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                        uint64_t offset) {
     assert(hdl->type == TYPE_CHROOT);
+    assert(addr);
 
     pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
 
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
 
-    int ret = DkStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
-    return pal_to_unix_errno(ret);
+    void* actual_addr = addr;
+    int ret = DkStreamMap(hdl->pal_handle, &actual_addr, pal_prot, offset, size);
+    if (ret < 0)
+        return pal_to_unix_errno(ret);
+
+    assert(actual_addr == addr);
+    return 0;
 }
 
 static int chroot_truncate(struct shim_handle* hdl, file_off_t size) {

@@ -58,6 +58,7 @@ tests = {
     'mkfifo': {},
     'mmap_file': {},
     'mmap_file_backed': {},
+    'mmap_file_emulated': {},
     'mprotect_file_fork': {},
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},
