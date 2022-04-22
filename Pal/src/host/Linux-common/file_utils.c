@@ -5,7 +5,7 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <unistd.h>
+#include <linux/fs.h>
 
 #include "api.h"
 #include "linux_utils.h"

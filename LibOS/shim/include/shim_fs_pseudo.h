@@ -72,7 +72,13 @@ struct shim_dev_ops {
 
 /*
  * A node of the pseudo filesystem. A single node can describe either a single file, or a family of
- * files (see `name_exists` and `list_names` below).
+ * files:
+ *
+ * - For a single file with a pre-determined name, set `name`
+ * - For a single file with a pre-determined name that, depending on circumstances, might not exist,
+ *   set `name` and provide the `name_exists` callback
+ * - For any other case (e.g. a dynamically-generated list of files), keep `name` set to NULL, and
+ *   provide both `name_exists` and `list_names` callbacks
  *
  * The constructors for `pseudo_node` (`pseudo_add_*`) take arguments for most commonly used fields.
  * The node can then be further customized by directly modifying other fields.
@@ -95,7 +101,8 @@ struct pseudo_node {
     /* File name. Can be NULL if the node provides the below callbacks. */
     const char* name;
 
-    /* Returns true if a file with a given name exists. */
+    /* Returns true if a file with a given name exists. If both `name` and `name_exists` are
+     * provided, both are used to determine if the file exists. */
     bool (*name_exists)(struct shim_dentry* parent, const char* name);
 
     /* Retrieves all file names for this node. Works the same as `readdir`. */
@@ -220,7 +227,6 @@ int init_attestation(struct pseudo_node* dev);
 
 int init_sysfs(void);
 int sys_load(const char* str, char** out_data, size_t* out_size);
-int sys_resource_find(struct shim_dentry* parent, const char* name, unsigned int* num);
 bool sys_resource_name_exists(struct shim_dentry* parent, const char* name);
 int sys_resource_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
@@ -230,6 +236,10 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
+
+/* Find resource number for a given name; e.g. `sys_resource_find(dent, "cpu", &n)` will search for
+ * "cpu/cpuN" in the path of `dent`, and set `n` to the number N */
+int sys_resource_find(struct shim_dentry* parent, const char* parent_name, unsigned int* out_num);
 
 /* Converts struct pal_res_range_info to a string representation.
  * Example output when sep == ',': "10-63,68,70-127".

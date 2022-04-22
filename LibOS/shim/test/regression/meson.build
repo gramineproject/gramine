@@ -49,6 +49,7 @@ tests = {
     'helloworld': {},
     'host_root_fs': {},
     'init_fail': {},
+    'keys': {},
     'kill_all': {},
     'large_dir_read': {},
     'large_file': {},

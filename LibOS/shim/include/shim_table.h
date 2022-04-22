@@ -93,6 +93,7 @@ long shim_do_fsync(int fd);
 long shim_do_fdatasync(int fd);
 long shim_do_truncate(const char* path, loff_t length);
 long shim_do_ftruncate(int fd, loff_t length);
+long shim_do_fallocate(int fd, int mode, loff_t offset, loff_t len);
 long shim_do_getdents(int fd, struct linux_dirent* buf, unsigned int count);
 long shim_do_getcwd(char* buf, size_t size);
 long shim_do_chdir(const char* filename);

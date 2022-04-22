@@ -13,7 +13,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <unistd.h>
+
+#include "api.h"
 
 #define SHA256_DIGEST_LEN 32
 #define DH_SIZE           384 /* DH_SIZE is tied to the choice of parameters in mbedtls_adapter.c */

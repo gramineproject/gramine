@@ -254,11 +254,12 @@ enum pal_create_mode {
 
 /*! stream misc flags */
 typedef uint32_t pal_stream_options_t; /* bitfield */
-#define PAL_OPTION_CLOEXEC         1
-#define PAL_OPTION_EFD_SEMAPHORE   2 /*!< specific to `eventfd` syscall */
-#define PAL_OPTION_NONBLOCK        4
-#define PAL_OPTION_DUALSTACK       8 /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
-#define PAL_OPTION_MASK          0xF
+#define PAL_OPTION_CLOEXEC         0x1
+#define PAL_OPTION_EFD_SEMAPHORE   0x2 /*!< specific to `eventfd` syscall */
+#define PAL_OPTION_NONBLOCK        0x4
+#define PAL_OPTION_DUALSTACK       0x8 /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
+#define PAL_OPTION_PASSTHROUGH    0x10 /*!< Disregard `sgx.{allowed,trusted,protected}_files` */
+#define PAL_OPTION_MASK           0x1F
 
 /*!
  * \brief Open/create a stream resource specified by `uri`.

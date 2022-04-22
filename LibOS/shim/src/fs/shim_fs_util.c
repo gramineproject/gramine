@@ -3,6 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
+#include "cpu.h"
 #include "shim_fs.h"
 #include "shim_lock.h"
 #include "stat.h"
@@ -60,6 +61,10 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
     lock(&inode->lock);
     buf->st_mode = inode->type | inode->perm;
     buf->st_size = inode->size;
+    /* Some programs (e.g. some tests from LTP) require this value. We've picked some random,
+     * pretty looking constant - exact value should not affect anything (perhaps except
+     * performance). */
+    buf->st_blksize = 0x1000;
     /*
      * Pretend `nlink` is 2 for directories (to account for "." and ".."), 1 for other files.
      *

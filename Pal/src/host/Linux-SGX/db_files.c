@@ -75,20 +75,25 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     free(normpath); /* was copied into the file PAL handle object, not needed anymore */
     normpath = NULL;
 
-    struct protected_file* pf = get_protected_file(hdl->file.realpath);
-    struct trusted_file* tf   = get_trusted_or_allowed_file(hdl->file.realpath);
+    struct protected_file* pf = NULL;
+    struct trusted_file* tf   = NULL;
 
-    if (!pf && !tf && get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
-        log_warning("Disallowing access to file '%s'; file is not protected, trusted or allowed.",
-                    hdl->file.realpath);
-        ret = -PAL_ERROR_DENIED;
-        goto fail;
+    if (!(pal_options & PAL_OPTION_PASSTHROUGH)) {
+        pf = get_protected_file(hdl->file.realpath);
+        tf = get_trusted_or_allowed_file(hdl->file.realpath);
+        if (!pf && !tf) {
+            if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
+                log_warning("Disallowing access to file '%s'; file is not protected, trusted or "
+                            "allowed.", hdl->file.realpath);
+                ret = -PAL_ERROR_DENIED;
+                goto fail;
+            }
+            log_warning("Allowing access to unknown file '%s' due to file_check_policy settings.",
+                        hdl->file.realpath);
+        }
     }
 
     if (!pf && !tf) {
-        log_warning("Allowing access to unknown file '%s' due to file_check_policy settings.",
-                    hdl->file.realpath);
-
         fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {
             ret = unix_to_pal_error(fd);

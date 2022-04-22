@@ -18,6 +18,7 @@
 #include <linux/wait.h>
 
 #include "api.h"
+#include "shim_fs.h"
 #include "shim_internal.h"
 #include "shim_syscalls.h"
 #include "shim_table.h"
@@ -515,7 +516,8 @@ struct parser_table {
     [__NR_timerfd_create] = {.slow = false, .name = "timerfd_create", .parser = {NULL}},
     [__NR_eventfd] = {.slow = false, .name = "eventfd", .parser = {parse_long_arg,
                       parse_integer_arg}},
-    [__NR_fallocate] = {.slow = false, .name = "fallocate", .parser = {NULL}},
+    [__NR_fallocate] = {.slow = false, .name = "fallocate", .parser = {parse_long_arg,
+                        parse_integer_arg, parse_integer_arg, parse_long_arg, parse_long_arg}},
     [__NR_timerfd_settime] = {.slow = false, .name = "timerfd_settime", .parser = {NULL}},
     [__NR_timerfd_gettime] = {.slow = false, .name = "timerfd_gettime", .parser = {NULL}},
     [__NR_accept4] = {.slow = true, .name = "accept4", .parser = {parse_long_arg, parse_integer_arg,
