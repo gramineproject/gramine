@@ -139,9 +139,9 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     uint64_t addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
                                PROT_NONE, /* newer DCAP driver requires such initial mmap */
 #ifdef SGX_DCAP
-                               MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                               MAP_FIXED_NOREPLACE | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #else
-                               MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
+                               MAP_FIXED_NOREPLACE | MAP_SHARED, g_isgx_device, 0);
 #endif
 
     if (IS_PTR_ERR(addr)) {
