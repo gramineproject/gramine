@@ -160,82 +160,9 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    while (1)
-    {
-        if (!(exec = get_new_handle())) {
-            return -ENOMEM;
-        }
-
-        if ((ret = open_executable(exec, file)) < 0) {
-            put_handle(exec);
-            return ret;
-        }
-
-        if ((ret = check_elf_object(exec)) < 0) {
-            log_warning("file not recognized as ELF, look for shebang");
-            char interp_path[BINPRM_BUF_SIZE], interp[BINPRM_BUF_SIZE];
-            if((ret = check_and_load_shebang(exec, interp_path)) < 0)
-            {
-                put_handle(exec);
-                return ret;
-            }
-
-            int j = 0;
-            for (size_t i=0; interp_path[i] != ' '; i++) {
-                if (interp_path[i] == '\0')
-                    break;
-
-                interp[i] = interp_path[i];
-                j = i;
-            }
-
-            interp[++j] = '\0';
-            file = interp;
-
-            const char* argv_new[] = {file, (0 != strcmp(interp_path, interp))?&interp_path[j+1]:NULL, NULL};
-
-            size_t size_total = 0, arr_size = 0;
-            for (const char** a = argv_new; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                size_total += size;
-                ++arr_size;
-            }
-
-            for (const char** a = argv; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                size_total += size;
-                ++arr_size;
-            }
-            log_debug("size of args %lu, array size %lu", size_total, arr_size);
-
-            argv_n = (const char**)malloc(arr_size * sizeof(char*));
-            char* argv_cur;
-            argv_cur = (char*)malloc(size_total);
-
-            size_t arr = 0;
-            for (const char** a = argv_new; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                memcpy(argv_cur, *a, size);
-                *(argv_n + arr) = argv_cur;
-                log_debug("printing arguments from script %s", argv_n[arr]);
-                arr++;
-                argv_cur += size;
-            }
-
-            for (const char** a = argv; *a; a++) {
-                size_t size = strlen(*a) + 1;
-                memcpy(argv_cur, *a, size);
-                *(argv_n + arr) = argv_cur;
-                log_debug("printing arguments from execve %s", argv_n[arr]);
-                arr++;
-                argv_cur += size;
-            }
-            *(argv_n + arr) = NULL;
-
-            put_handle(exec);
-            continue;
-        }
-        break;
+    ret = check_and_load_exec(&exec, file, argv, &argv_n);
+    if (ret < 0) {
+        return ret;
     }
 
     /* If `execve` is invoked concurrently by multiple threads, let only one succeed. From this
@@ -252,7 +179,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec`. */
-    ret = shim_do_execve_rtld(exec, argv_n?argv_n:argv, envp);
+    ret = shim_do_execve_rtld(exec, argv_n ? argv_n : argv, envp);
     assert(ret < 0);
 
     put_handle(exec);
