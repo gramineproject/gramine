@@ -35,6 +35,8 @@
 #include "shim_vdso-arch.h"
 #include "shim_vma.h"
 
+# define SHEBANG_MIN_SIZE 2
+
 /*
  * Structure describing a loaded ELF object. Originally based on glibc link_map structure.
  */
@@ -116,6 +118,8 @@ static struct link_map* g_exec_map = NULL;
 static struct link_map* g_interp_map = NULL;
 
 static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset);
+
+static int read_partial_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset, size_t* bytes_read);
 
 static struct link_map* new_elf_object(const char* realname) {
     struct link_map* new;
@@ -560,27 +564,140 @@ static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, 
     return 0;
 }
 
-int check_and_load_shebang(struct shim_handle* file, char* interpreter) {
+static int read_partial_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset, size_t* bytes_read) {
+    if (!file)
+        return -EINVAL;
+
+    if (!file->fs || !file->fs->fs_ops || !file->fs->fs_ops->read)
+        return -EACCES;
+
+    ssize_t pos = offset;
+    ssize_t read_ret = file->fs->fs_ops->read(file, buf, size, &pos);
+
+    if (read_ret < 0)
+        return read_ret;
+
+    if (bytes_read)
+        *bytes_read = (size_t)read_ret;
+
+    return 0;
+}
+
+/*This function is used in execve() syscall to load the interpreter scripts.*/
+int check_and_load_shebang(struct shim_handle* file, char** interp_path, size_t interp_path_size, const char** argv, const char*** argv_n) {
     const char* errstring = NULL;
-    char shebang[BINPRM_BUF_SIZE];
-    int ret = read_file_fragment(file, shebang, sizeof(shebang), /*offset=*/0);
-    
-    if ((shebang[0] != '#') || (shebang[1] != '!')) {
+    const char** new_argv = NULL;
+    char* interp = NULL;
+    char* argv_cur = NULL;
+    char shebang[interp_path_size];
+    int ret;
+
+    size_t shebang_size = 0;
+    ret = read_partial_fragment(file, shebang, sizeof(shebang), /*offset=*/0, &shebang_size);
+    if ((ret < 0) || (shebang_size <= SHEBANG_MIN_SIZE) || (shebang[0] != '#') || (shebang[1] != '!')) {
         errstring = "Failed to read shebang line from %s";
         ret = -ENOEXEC;
         goto err;
     }
 
-    for (size_t i=2; shebang[i] != '\n'; i++) {
-        interpreter[i-2] = shebang[i];
-        interpreter[i-1] = '\0';
+    // strip shebang starting sequence
+    shebang_size -= SHEBANG_MIN_SIZE;
+    memmove(&shebang[0], &shebang[SHEBANG_MIN_SIZE], shebang_size);
+
+    // strip extra space characters
+    for (char* p = shebang; *p; p++) {
+        if (*p != ' ') {
+            shebang_size -= p - shebang;
+            memmove(shebang, p, shebang_size);
+            break;
+        }
+    }
+    shebang[shebang_size + 1] = '\0';
+
+    //strip new line character
+    char* newlineptr, *spaceptr;
+    newlineptr = strchr(shebang, '\n');
+    if (newlineptr)
+        *newlineptr = '\0';
+
+    interp = malloc(interp_path_size);
+    if (!interp) {
+        ret = -ENOMEM;
+        errstring = "malloc failure";
+        goto err;
     }
 
-    log_debug("Interpreter to be used %s", interpreter);
+    memcpy(interp, shebang, shebang_size);
+    interp[shebang_size + 1] = '\0';
+    *interp_path = interp;
+
+    //strip space
+    spaceptr = strchr(interp, ' ');
+    if(spaceptr)
+        *spaceptr = '\0';
+
+    const char* argv_new[] = {interp, (0 != strcmp(shebang, interp))?(spaceptr + 1):NULL, NULL};
+
+    size_t size_total = 0, arr_size = 0;
+    for (const char** a = argv_new; *a; a++) {
+        size_t size = strlen(*a) + 1;
+        size_total += size;
+        ++arr_size;
+    }
+
+    for (const char** a = argv; *a; a++) {
+        size_t size = strlen(*a) + 1;
+        size_total += size;
+        ++arr_size;
+    }
+    log_debug("size of args %lu, array size %lu", size_total, arr_size);
+
+    new_argv = malloc(arr_size * sizeof(char*));
+    if (!new_argv) {
+        ret = -ENOMEM;
+        errstring = "malloc failure";
+        goto err;
+    }
+
+    argv_cur = (char*)malloc(size_total);
+    if (!argv_cur) {
+        ret = -ENOMEM;
+        errstring = "malloc failure";
+        goto err;
+    }
+
+    size_t arr = 0;
+    for (const char** a = argv_new; *a; a++) {
+        size_t size = strlen(*a) + 1;
+        memcpy(argv_cur, *a, size);
+        *(new_argv + arr) = argv_cur;
+        log_debug("printing arguments from script %s", new_argv[arr]);
+        arr++;
+        argv_cur += size;
+    }
+
+    for (const char** a = argv; *a; a++) {
+        size_t size = strlen(*a) + 1;
+        memcpy(argv_cur, *a, size);
+        *(new_argv + arr) = argv_cur;
+        log_debug("printing arguments from execve %s", new_argv[arr]);
+        arr++;
+        argv_cur += size;
+    }
+    *(new_argv + arr) = NULL;
+    *argv_n = new_argv;
+
+    log_debug("Path to the interpreter to be used %s", interp);
 
     return 0;
-
 err:;
+    if (new_argv)
+       free(new_argv);
+    if (interp)
+       free(interp);
+    if (argv_cur)
+       free(argv_cur);
+
     char* path = NULL;
     if (file->dentry) {
         // This may fail, but we are already inside a more serious error handler.
@@ -591,33 +708,20 @@ err:;
     return ret;
 }
 
-static int load_elf_header(struct shim_handle* file, ElfW(Ehdr)* ehdr) {
-    const char* errstring = NULL;
+static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
     int ret = read_file_fragment(file, ehdr, sizeof(*ehdr), /*offset=*/0);
     if (ret < 0) {
-        errstring = "Failed to read ELF header from %s";
         ret = -ENOEXEC;
-        goto err;
+        return ret;
     }
 
     ret = check_elf_header(ehdr);
     if (ret < 0) {
-        errstring = "%s is not an ELF executable. Please note that Gramine doesn't support "
-                    "executing scripts as executables.";
         ret = -ENOEXEC;
-        goto err;
+        return ret;
     }
 
     return 0;
-err:;
-    char* path = NULL;
-    if (file->dentry) {
-        // This may fail, but we are already inside a more serious error handler.
-        dentry_abs_path(file->dentry, &path, /*size=*/NULL);
-    }
-    log_error(errstring, path ? path : "(unknown)");
-    free(path);
-    return ret;
 }
 
 int check_elf_object(struct shim_handle* file) {
