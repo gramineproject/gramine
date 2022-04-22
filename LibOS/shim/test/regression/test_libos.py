@@ -729,17 +729,34 @@ class TC_30_Syscall(RegressionTestCase):
             # This test generates a 4 GB file, don't leave it in FS.
             os.remove('testfile')
 
-    def test_055_mprotect_file_fork(self):
+    def test_055_mmap_emulated_tmpfs(self):
+        path = '/mnt/tmpfs/test_mmap'
+        stdout, _ = self.run_binary(['mmap_file_emulated', path])
+        self.assertIn('TEST OK', stdout)
+
+    def test_056_mmap_emulated_enc(self):
+        path = 'tmp_enc/test_mmap'
+        os.makedirs('tmp_enc', exist_ok=True)
+        if os.path.exists(path):
+            os.remove(path)
+        try:
+            stdout, _ = self.run_binary(['mmap_file_emulated', path])
+            self.assertIn('TEST OK', stdout)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_057_mprotect_file_fork(self):
         stdout, _ = self.run_binary(['mprotect_file_fork'])
 
         self.assertIn('Test successful!', stdout)
 
-    def test_056_mprotect_prot_growsdown(self):
+    def test_058_mprotect_prot_growsdown(self):
         stdout, _ = self.run_binary(['mprotect_prot_growsdown'])
 
         self.assertIn('TEST OK', stdout)
 
-    def test_057_madvise(self):
+    def test_059_madvise(self):
         stdout, _ = self.run_binary(['madvise'])
         self.assertIn('TEST OK', stdout)
 

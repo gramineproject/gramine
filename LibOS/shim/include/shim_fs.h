@@ -82,8 +82,34 @@ struct shim_fs_ops {
      */
     ssize_t (*write)(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos);
 
-    /* mmap: mmap handle to address */
-    int (*mmap)(struct shim_handle* hdl, void** addr, size_t size, int prot, int flags,
+    /*
+     * \brief Map file at an address.
+     *
+     * \param hdl     File handle.
+     * \param addr    Address of the memory region. Cannot be NULL.
+     * \param size    Size of the memory region.
+     * \param prot    Permissions for the memory region (`PAL_PROT_*`).
+     * \param flags   `mmap` flags (`MAP_*`).
+     * \param offset  Offset in file.
+     *
+     * Maps the file at given address. This might involve mapping directly (`DkStreamMap`), or
+     * mapping anonymous memory (`DkVirtualMemoryAlloc`) and writing data.
+     *
+     * `addr`, `offset` and `size` must be alloc-aligned (see `IS_ALLOC_ALIGNED*` macros in
+     * `shim_internal.h`).
+     */
+    int (*mmap)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+                uint64_t offset);
+
+    /*
+     * \brief Write back mapped memory to file.
+     *
+     * Writes back any changes made by the user.
+     *
+     * Should be called for a region originally mapped with `mmap` callback, or for a part of that
+     * region.
+     */
+    int (*msync)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                 uint64_t offset);
 
     /* flush: flush out user buffer */
@@ -888,6 +914,11 @@ int generic_inode_stat(struct shim_dentry* dent, struct stat* buf);
 int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf);
 file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin);
 int generic_inode_poll(struct shim_handle* hdl, int poll_type);
+
+int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+                          uint64_t offset);
+int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+                           uint64_t offset);
 
 int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
 

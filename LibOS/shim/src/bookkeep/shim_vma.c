@@ -1106,8 +1106,8 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot) {
     return is_continuous && ctx.is_ok;
 }
 
-static size_t dump_all_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
-                                     bool include_unmapped) {
+static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
+                                 bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
     size_t size = 0;
     struct shim_vma_info* vma_info = infos;
 
@@ -1115,9 +1115,8 @@ static size_t dump_all_vmas_with_buf(struct shim_vma_info* infos, size_t max_cou
     struct shim_vma* vma;
 
     for (vma = _get_first_vma(); vma; vma = _get_next_vma(vma)) {
-        if (vma->flags & ((include_unmapped ? 0 : VMA_UNMAPPED) | VMA_INTERNAL)) {
+        if (!vma_filter(vma, arg))
             continue;
-        }
         if (size < max_count) {
             dump_vma(vma_info, vma);
             vma_info++;
@@ -1130,7 +1129,8 @@ static size_t dump_all_vmas_with_buf(struct shim_vma_info* infos, size_t max_cou
     return size;
 }
 
-int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
+static int dump_vmas(struct shim_vma_info** ret_infos, size_t* ret_count,
+              bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
     size_t count = DEFAULT_VMA_COUNT;
 
     while (true) {
@@ -1139,7 +1139,7 @@ int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool incl
             return -ENOMEM;
         }
 
-        size_t needed_count = dump_all_vmas_with_buf(vmas, count, include_unmapped);
+        size_t needed_count = dump_vmas_with_buf(vmas, count, vma_filter, arg);
         if (needed_count <= count) {
             *ret_infos = vmas;
             *ret_count = needed_count;
@@ -1149,6 +1149,26 @@ int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool incl
         free_vma_info_array(vmas, count);
         count = needed_count;
     }
+}
+
+static bool vma_filter_all(struct shim_vma* vma, void* arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+    __UNUSED(arg);
+
+    return !(vma->flags & VMA_INTERNAL);
+}
+
+static bool vma_filter_exclude_unmapped(struct shim_vma* vma, void* arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+    __UNUSED(arg);
+
+    return !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
+}
+
+int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
+    return dump_vmas(ret_infos, ret_count,
+                     include_unmapped ? &vma_filter_all : &vma_filter_exclude_unmapped,
+                     /*arg=*/NULL);
 }
 
 void free_vma_info_array(struct shim_vma_info* vma_infos, size_t count) {
@@ -1213,6 +1233,73 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     return ctx.error;
 }
 
+struct msync_ctx {
+    uintptr_t begin;
+    uintptr_t end;
+    struct shim_handle* hdl;
+};
+
+static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
+    struct msync_ctx* ctx = (struct msync_ctx*)arg;
+
+    if (ctx->end <= vma->begin || vma->end <= ctx->begin)
+        return false;
+
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
+        return false;
+
+    if (!vma->file)
+        return false;
+
+    if (ctx->hdl && vma->file != ctx->hdl)
+        return false;
+
+    if (!(vma->file->acc_mode & MAY_WRITE))
+        return false;
+
+    if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
+        return false;
+
+    return true;
+}
+
+static int _msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
+    struct shim_vma_info* vma_infos;
+    size_t count;
+
+    struct msync_ctx ctx = { .begin = begin, .end = end, .hdl = hdl };
+
+    int ret = dump_vmas(&vma_infos, &count, &vma_filter_needs_msync, &ctx);
+    if (ret < 0)
+        return ret;
+
+    for (size_t i = 0; i < count; i++) {
+        struct shim_vma_info* vma_info = &vma_infos[i];
+
+        struct shim_handle* file = vma_info->file;
+        assert(file && file->fs && file->fs->fs_ops && file->fs->fs_ops->msync);
+
+        uintptr_t msync_begin = MAX(begin, (uintptr_t)vma_info->addr);
+        uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->length);
+        ret = file->fs->fs_ops->msync(file, (void*)msync_begin, msync_end - msync_begin,
+                                      vma_info->prot, vma_info->flags, vma_info->file_offset);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free_vma_info_array(vma_infos, count);
+    return ret;
+}
+
+int msync_range(uintptr_t begin, uintptr_t end) {
+    return _msync_all(begin, end, /*hdl=*/NULL);
+}
+
+int msync_handle(struct shim_handle* hdl) {
+    return _msync_all(/*begin=*/0, /*end=*/(uintptr_t)-1, hdl);
+}
 
 BEGIN_CP_FUNC(vma) {
     __UNUSED(size);
@@ -1311,13 +1398,10 @@ BEGIN_RS_FUNC(vma) {
             if (!fs || !fs->fs_ops || !fs->fs_ops->mmap)
                 return -EINVAL;
 
-            void* addr = vma->addr;
-            int ret = fs->fs_ops->mmap(vma->file, &addr, vma->length, vma->prot,
+            int ret = fs->fs_ops->mmap(vma->file, vma->addr, vma->length, vma->prot,
                                        vma->flags | MAP_FIXED, vma->file_offset);
             if (ret < 0)
                 return ret;
-
-            assert(addr == vma->addr);
         }
     }
 }

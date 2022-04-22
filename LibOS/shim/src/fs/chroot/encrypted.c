@@ -23,12 +23,12 @@
  *   `shim_encrypted_file` object for its inode. As a result, multiple handles for a given file
  *   still correspond to one PAL handle.
  *
- * TODO (most items are needed for feature parity with PAL protected files):
+ * TODO:
  *
  * - mounting with special keys (SGX MRENCLAVE and MRSIGNER)
- * - mmap
  * - truncate (the current `truncate` operation works only for extending the file, support for
  *   truncation needs to be added to the `protected_files` module)
+ * - flush all files on process exit
  */
 
 #define _POSIX_C_SOURCE 200809L /* for SSIZE_MAX */
@@ -37,6 +37,7 @@
 #include "perm.h"
 #include "shim_fs.h"
 #include "shim_fs_encrypted.h"
+#include "shim_vma.h"
 #include "stat.h"
 #include "toml_utils.h"
 
@@ -369,10 +370,14 @@ static int chroot_encrypted_flush(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
     assert(hdl->inode->type == S_IFREG);
 
+    int ret = msync_handle(hdl);
+    if (ret < 0)
+        return ret;
+
     struct shim_encrypted_file* enc = hdl->inode->data;
 
     lock(&hdl->inode->lock);
-    int ret = encrypted_file_flush(enc);
+    ret = encrypted_file_flush(enc);
     unlock(&hdl->inode->lock);
     return ret;
 }
@@ -459,6 +464,8 @@ struct shim_fs_ops chroot_encrypted_fs_ops = {
     .hdrop      = &chroot_encrypted_hdrop,
     .checkpoint = &chroot_encrypted_checkpoint,
     .migrate    = &chroot_encrypted_migrate,
+    .mmap       = &generic_emulated_mmap,
+    .msync      = &generic_emulated_msync,
 };
 
 struct shim_d_ops chroot_encrypted_d_ops = {

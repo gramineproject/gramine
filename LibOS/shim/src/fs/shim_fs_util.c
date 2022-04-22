@@ -4,6 +4,7 @@
  */
 
 #include "cpu.h"
+#include "shim_flags_conv.h"
 #include "shim_fs.h"
 #include "shim_lock.h"
 #include "stat.h"
@@ -133,5 +134,108 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
 
     unlock(&hdl->inode->lock);
     unlock(&hdl->pos_lock);
+    return ret;
+}
+
+int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+                          uint64_t offset) {
+    assert(addr);
+
+    int ret;
+
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
+    pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
+
+    void* actual_addr = addr;
+    ret = DkVirtualMemoryAlloc(&actual_addr, size, /*alloc_type=*/0, pal_prot_writable);
+    if (ret < 0)
+        return pal_to_unix_errno(ret);
+
+    assert(actual_addr == addr);
+
+    size_t read_size = size;
+    void* read_addr = addr;
+    file_off_t pos = offset;
+    while (read_size > 0) {
+        ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, read_size, &pos);
+        if (count < 0) {
+            if (count == -EINTR)
+                continue;
+            ret = count;
+            goto err;
+        }
+
+        if (count == 0)
+            break;
+
+        assert((size_t)count <= read_size);
+        read_size -= count;
+        read_addr += count;
+    }
+
+    if (pal_prot != pal_prot_writable) {
+        ret = DkVirtualMemoryProtect(addr, size, pal_prot);
+        if (ret < 0) {
+            ret = pal_to_unix_errno(ret);
+            goto err;
+        }
+    }
+
+    return 0;
+
+err:
+    if (DkVirtualMemoryFree(addr, size) < 0) {
+        BUG();
+    }
+    return ret;
+}
+
+int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+                           uint64_t offset) {
+    assert(!(flags & MAP_PRIVATE));
+    lock(&hdl->inode->lock);
+    file_off_t file_size = hdl->inode->size;
+    unlock(&hdl->inode->lock);
+
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
+    pal_prot_flags_t pal_prot_readable = pal_prot | PAL_PROT_READ;
+
+    int ret;
+    if (pal_prot != pal_prot_readable) {
+        ret = DkVirtualMemoryProtect(addr, size, pal_prot_readable);
+        if (ret < 0)
+            return pal_to_unix_errno(ret);
+    }
+
+    size_t write_size = offset > (uint64_t)file_size ? 0 : MIN(size, (uint64_t)file_size - offset);
+    void* write_addr = addr;
+    file_off_t pos = offset;
+    while (write_size > 0) {
+        ssize_t count = hdl->fs->fs_ops->write(hdl, write_addr, write_size, &pos);
+        if (count < 0) {
+            if (count == -EINTR)
+                continue;
+            ret = count;
+            goto out;
+        }
+
+        if (count == 0)
+            break;
+
+        assert((size_t)count <= write_size);
+        write_size -= count;
+        write_addr += count;
+    }
+
+    ret = 0;
+
+out:
+    if (pal_prot != pal_prot_readable) {
+        int protect_ret = DkVirtualMemoryProtect(addr, size, pal_prot);
+        if (ret < 0) {
+            log_debug("%s: DkVirtualMemoryProtect failed on cleanup: %d; memory will be left "
+                      "readable", __func__, protect_ret);
+        }
+    }
     return ret;
 }

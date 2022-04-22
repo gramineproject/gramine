@@ -124,6 +124,12 @@ void free_vma_info_array(struct shim_vma_info* vma_infos, size_t count);
 /* Implementation of madvise(MADV_DONTNEED) syscall */
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end);
 
+/* Call `msync` for file mappings in given range */
+int msync_range(uintptr_t begin, uintptr_t end);
+
+/* Call `msync` for file mappings of `hdl` */
+int msync_handle(struct shim_handle* hdl);
+
 void debug_print_all_vmas(void);
 
 #endif /* _SHIM_VMA_H_ */

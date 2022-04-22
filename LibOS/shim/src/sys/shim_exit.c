@@ -15,6 +15,7 @@
 #include "shim_table.h"
 #include "shim_thread.h"
 #include "shim_utils.h"
+#include "shim_vma.h"
 
 static noreturn void libos_clean_and_exit(int exit_code) {
     /*
