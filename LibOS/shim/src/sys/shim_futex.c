@@ -255,6 +255,7 @@ static struct shim_thread* remove_futex_waiter(struct futex_waiter* waiter,
  */
 static void move_futex_waiter(struct futex_waiter* waiter, struct shim_futex* futex1,
                               struct shim_futex* futex2) {
+    assert(spinlock_is_locked(&g_futex_tree_lock));
     assert(spinlock_is_locked(&futex1->lock));
     assert(spinlock_is_locked(&futex2->lock));
 
@@ -633,7 +634,6 @@ static int futex_requeue(uint32_t* uaddr1, uint32_t* uaddr2, int to_wake, int to
     futex1 = find_futex(uaddr1);
 
     lock_two_futexes(futex1, futex2);
-    spinlock_unlock(&g_futex_tree_lock);
 
     if (val != NULL) {
         if (__atomic_load_n(uaddr1, __ATOMIC_RELAXED) != *val) {
@@ -668,6 +668,7 @@ static int futex_requeue(uint32_t* uaddr1, uint32_t* uaddr2, int to_wake, int to
 
 out_unlock:
     unlock_two_futexes(futex1, futex2);
+    spinlock_unlock(&g_futex_tree_lock);
 
     if (needs_dequeue1 || needs_dequeue2) {
         maybe_dequeue_two_futexes(futex1, futex2);
