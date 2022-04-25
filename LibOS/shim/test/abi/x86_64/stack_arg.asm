@@ -40,9 +40,7 @@ _start:
     cmp   rdi, 1
     je    gramine_exit
 
-    mov   rdi, 0x0         ; Verify argv[3]
-    mov   rsi, [rsp + 8 * 4]
-    xor   rdi, rsi
+    mov   rdi, [rsp + 8 * 4]
     jmp   gramine_exit
 
 section   .data
