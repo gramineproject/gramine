@@ -3,7 +3,7 @@
 ;                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
 
 ; rdx contains a function pointer that the application should register with atexit.
-; We decided to set rdx to NULL.
+; Gramine sets rdx to NULL - it does not use this feature at all.
 
 extern    gramine_exit
 global    _start
