@@ -12,8 +12,8 @@ import click
 from graminelibos import util_tests, _CONFIG_SGX_ENABLED
 
 def change_dir(ctx, param, value):
-    os.chdir(value)
-
+    if value:
+        os.chdir(value)
 
 @click.group(help='Helper program for running Gramine tests.')
 @click.option('--sgx/--no-sgx', default=(os.environ.get('SGX') == '1'),
