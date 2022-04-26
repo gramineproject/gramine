@@ -11,20 +11,22 @@ import click
 
 from graminelibos import util_tests, _CONFIG_SGX_ENABLED
 
+def change_dir(_ctx, _param, value):
+    if value:
+        os.chdir(value)
 
 @click.group(help='Helper program for running Gramine tests.')
 @click.option('--sgx/--no-sgx', default=(os.environ.get('SGX') == '1'),
               help='Enable SGX mode (you can also set SGX=1 before running)')
 @click.option('--conf-file-name', '-n', type=click.Path(exists=True, dir_okay=False),
               default='tests.toml', help='Configuration file name to use')
-@click.option('--directory', '-C', metavar='dir', type=click.Path(file_okay=False),
+@click.option('--directory', '-C', callback=change_dir, expose_value=False, is_eager=True,
+              metavar='dir', type=click.Path(file_okay=False),
               help='Change directory before running')
 @click.pass_context
-def main(ctx, sgx, conf_file_name, directory):
+def main(ctx, sgx, conf_file_name):
     if sgx and not _CONFIG_SGX_ENABLED:
         raise click.ClickException('This version of Gramine is built without SGX')
-    if directory:
-        os.chdir(directory)
     ctx.obj = {
         'sgx': sgx,
         'conf_file_name': conf_file_name,
