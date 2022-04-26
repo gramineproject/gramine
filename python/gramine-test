@@ -20,10 +20,11 @@ def change_dir(_ctx, _param, value):
               help='Enable SGX mode (you can also set SGX=1 before running)')
 @click.option('--conf-file-name', '-n', type=click.Path(exists=True, dir_okay=False),
               default='tests.toml', help='Configuration file name to use')
-@click.option('--directory', '-C', callback=change_dir, is_eager=True, metavar='dir',
-              type=click.Path(file_okay=False), help='Change directory before running')
+@click.option('--directory', '-C', callback=change_dir, expose_value=False, is_eager=True,
+              metavar='dir', type=click.Path(file_okay=False),
+              help='Change directory before running')
 @click.pass_context
-def main(ctx, sgx, conf_file_name, directory): # pylint: disable=unused-argument
+def main(ctx, sgx, conf_file_name):
     if sgx and not _CONFIG_SGX_ENABLED:
         raise click.ClickException('This version of Gramine is built without SGX')
     ctx.obj = {
