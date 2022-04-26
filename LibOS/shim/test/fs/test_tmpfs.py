@@ -66,6 +66,18 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
     def verify_copy_content(self, input_path, output_path):
         pass
 
+    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
+    def test_204_copy_dir_mmap_whole(self):
+        self.do_copy_test('copy_mmap_whole', 30)
+
+    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
+    def test_205_copy_dir_mmap_seq(self):
+        self.do_copy_test('copy_mmap_seq', 60)
+
+    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
+    def test_206_copy_dir_mmap_rev(self):
+        self.do_copy_test('copy_mmap_rev', 60)
+
     @unittest.skip("not applicable for tmpfs")
     def test_210_copy_dir_mounted(self):
         test_fs.TC_00_FileSystem.test_210_copy_dir_mounted(self)
