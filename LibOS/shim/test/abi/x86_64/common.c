@@ -13,7 +13,7 @@ int gramine_strcmp(const char* orig, const char* new) {
     if (orig == new)
         return 0;
 
-    while (*orig != 0x00 && *orig == *new) {
+    while (*orig && *orig == *new) {
         orig++;
         new++;
     }

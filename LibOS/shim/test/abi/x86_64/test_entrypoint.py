@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-from graminelibos.regression import (
-    RegressionTestCase,
-)
+from graminelibos.regression import RegressionTestCase
 
 class TC_00_Entrypoint(RegressionTestCase):
     def test_000_atexit_func(self):
