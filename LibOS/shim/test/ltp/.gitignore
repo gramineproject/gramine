@@ -1,10 +1,4 @@
-/*.manifest
-
 /build/
 /install/
-/ltp*.xml
 
 /etc
-
-/build.ninja
-/.ninja_*
