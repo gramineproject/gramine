@@ -7,12 +7,18 @@
 #include "shim_fs.h"
 #include "shim_fs_mem.h"
 
+/* Minimum allocation size in `slabmgr.h` */
+#define MIN_RESIZE ((size_t)16)
+
 static int mem_file_resize(struct shim_mem_file* mem, size_t buf_size) {
+    assert(buf_size > 0);
+
     char* buf = malloc(buf_size);
     if (!buf)
         return -ENOMEM;
 
     memcpy(buf, mem->buf, MIN(buf_size, (size_t)mem->size));
+
     free(mem->buf);
     mem->buf = buf;
     mem->buf_size = buf_size;
@@ -57,7 +63,7 @@ ssize_t mem_file_write(struct shim_mem_file* mem, file_off_t pos_start, const vo
 
     if (size > 0) {
         if ((size_t)pos_end > mem->buf_size) {
-            size_t buf_size = MAX(mem->buf_size, 1U);
+            size_t buf_size = MAX(mem->buf_size, MIN_RESIZE);
             while (buf_size < (size_t)pos_end)
                 if (__builtin_mul_overflow(buf_size, 2, &buf_size))
                     return -EFBIG;
@@ -83,7 +89,7 @@ int mem_file_truncate(struct shim_mem_file* mem, file_off_t size) {
 
     size_t buf_size = mem->buf_size;
     if ((size_t)size > buf_size) {
-        buf_size = MAX(buf_size, 1U);
+        buf_size = MAX(buf_size, MIN_RESIZE);
         while (buf_size < (size_t)size) {
             if (__builtin_mul_overflow(buf_size, 2, &buf_size))
                 return -EFBIG;
@@ -91,6 +97,7 @@ int mem_file_truncate(struct shim_mem_file* mem, file_off_t size) {
     } else {
         while (buf_size / 2 > (size_t)size)
             buf_size /= 2;
+        buf_size = MAX(buf_size, MIN_RESIZE);
     }
 
     assert((size_t)size <= buf_size);
