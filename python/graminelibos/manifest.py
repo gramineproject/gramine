@@ -28,7 +28,8 @@ class ManifestError(Exception):
 def hash_file_contents(path):
     with open(path, 'rb') as f:
         sha = hashlib.sha256()
-        sha.update(f.read())
+        for chunk in iter(lambda: f.read(128 * sha.block_size), b''):
+            sha.update(chunk)
         return sha.hexdigest()
 
 def uri2path(uri):
