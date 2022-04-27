@@ -62,7 +62,7 @@ ssize_t mem_file_write(struct shim_mem_file* mem, file_off_t pos_start, const vo
         return -EFBIG;
 
     if (size > 0) {
-        if ((size_t)pos_end > mem->buf_size) {
+        if (mem->buf_size < (size_t)pos_end) {
             size_t buf_size = MAX(mem->buf_size, MIN_RESIZE);
             while (buf_size < (size_t)pos_end)
                 if (__builtin_mul_overflow(buf_size, 2, &buf_size))
@@ -88,16 +88,18 @@ int mem_file_truncate(struct shim_mem_file* mem, file_off_t size) {
         return -EFBIG;
 
     size_t buf_size = mem->buf_size;
-    if ((size_t)size > buf_size) {
+    if (buf_size < (size_t)size) {
         buf_size = MAX(buf_size, MIN_RESIZE);
         while (buf_size < (size_t)size) {
             if (__builtin_mul_overflow(buf_size, 2, &buf_size))
                 return -EFBIG;
         }
-    } else {
-        while (buf_size / 2 > (size_t)size)
+    } else if (size > 0) {
+        while (buf_size / 2 >= (size_t)size)
             buf_size /= 2;
         buf_size = MAX(buf_size, MIN_RESIZE);
+    } else {
+        buf_size = MIN_RESIZE;
     }
 
     assert((size_t)size <= buf_size);
