@@ -1,13 +1,6 @@
-/*.dat
-/*.manifest
-/*.xml
-
 /nonexisting_testfile
 /testfile
 /trusted_testfile
 
 /tmp
 /tmp_enc
-
-/build.ninja
-/.ninja_*
