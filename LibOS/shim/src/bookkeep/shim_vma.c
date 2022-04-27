@@ -1249,7 +1249,8 @@ static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
         return false;
 
-    /* TODO: remove `lock()` here after we ensure that `acc_mode` never changes */
+    /* TODO: remove `lock()` here after we ensure that the `acc_mode` field never changes in
+     * handles */
     lock(&vma->file->lock);
     int acc_mode = vma->file->acc_mode;
     unlock(&vma->file->lock);
