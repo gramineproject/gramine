@@ -5,11 +5,11 @@
 ; rdx contains a function pointer that the application should register with atexit.
 ; Gramine sets rdx to NULL - it does not use this feature at all.
 
-extern    gramine_exit
+extern    test_exit
 global    _start
 
 section   .text
 
 _start:
     mov   rdi, rdx
-    jmp   gramine_exit
+    jmp   test_exit

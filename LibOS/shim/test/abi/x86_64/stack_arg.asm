@@ -6,8 +6,8 @@
 
 default   rel
 
-extern    gramine_exit
-extern    gramine_strcmp
+extern    test_exit
+extern    test_str_neq
 
 global    _start
 
@@ -17,31 +17,31 @@ _start:
     mov   rdi, [rsp]        ; Verify argc
     cmp   rdi, 3
     mov   rdi, 1
-    jne   gramine_exit
+    jne   test_exit
 
     lea   rdi, [argv0]      ; Verify argv[0]
     mov   rsi, [rsp + 8 * 1]
-    call  gramine_strcmp
+    call  test_str_neq
     mov   rdi, rax
     cmp   rdi, 1
-    je    gramine_exit
+    je    test_exit
 
     lea   rdi, [argv1]      ; Verify argv[1]
     mov   rsi, [rsp + 8 * 2]
-    call  gramine_strcmp
+    call  test_str_neq
     mov   rdi, rax
     cmp   rdi, 1
-    je    gramine_exit
+    je    test_exit
 
     lea   rdi, [argv2]      ; Verify argv[2]
     mov   rsi, [rsp + 8 * 3]
-    call  gramine_strcmp
+    call  test_str_neq
     mov   rdi, rax
     cmp   rdi, 1
-    je    gramine_exit
+    je    test_exit
 
     mov   rdi, [rsp + 8 * 4]
-    jmp   gramine_exit
+    jmp   test_exit
 
 section   .data
 

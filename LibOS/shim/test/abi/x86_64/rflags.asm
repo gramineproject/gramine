@@ -13,7 +13,7 @@
 ; | 1| 1| 0| 0| 1| 1| 0| 1| 0| 1| 0| 1|
 ; +--+--+--+--+--+--+--+--+--+--+--+--+
 
-extern    gramine_exit
+extern    test_exit
 
 global    _start
 
@@ -25,4 +25,4 @@ _start:
 
     and   rdi, 0b110011010101
 
-    jmp   gramine_exit
+    jmp   test_exit

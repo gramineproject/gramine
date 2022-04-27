@@ -2,13 +2,13 @@
 ; Copyright (C) 2022 Intel Corporation
 ;                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
 
-global    gramine_exit
+global    test_exit
 
 %define   __NR_exit   60
 
 section   .text
 
-gramine_exit:
+test_exit:
     xor   rax, rax
     test  rdi, rdi
     setne al

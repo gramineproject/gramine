@@ -11,7 +11,7 @@
 ; | X| 0  0| 1  1| X| X| 1| 1| 1| 1| 1| 1|
 ; +--+--+--+--+--+--+--+--+--+--+--+--+--+
 
-extern    gramine_exit
+extern    test_exit
 global    _start
 
 section   .text
@@ -24,4 +24,4 @@ _start:
     and   rdi, 0b0111100111111
     xor   rdi, 0b0001100111111
 
-    jmp   gramine_exit
+    jmp   test_exit

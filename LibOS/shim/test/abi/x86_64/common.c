@@ -7,9 +7,9 @@
  * We have to add a function declaration to avoid warnings.
  * This function is used with NASM, so creating a header is pointless.
  */
-int gramine_strcmp(const char* orig, const char* new);
+int test_str_neq(const char* orig, const char* new);
 
-int gramine_strcmp(const char* orig, const char* new) {
+int test_str_neq(const char* orig, const char* new) {
     if (orig == new)
         return 0;
 

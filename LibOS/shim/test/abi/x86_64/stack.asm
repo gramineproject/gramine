@@ -4,7 +4,7 @@
 
 ; "The end of the input argument area shall be aligned on a 16..."
 
-extern    gramine_exit
+extern    test_exit
 
 global    _start
 
@@ -17,4 +17,4 @@ _start:
     and   rax, 0xF
     setne dil
 
-    jmp   gramine_exit
+    jmp   test_exit
