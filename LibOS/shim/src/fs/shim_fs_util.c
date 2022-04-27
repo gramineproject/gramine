@@ -183,8 +183,10 @@ int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int 
 
     return 0;
 
-err:
-    if (DkVirtualMemoryFree(addr, size) < 0) {
+err:;
+    int free_ret = DkVirtualMemoryFree(addr, size);
+    if (free_ret < 0) {
+        log_debug("%s: DkVirtualMemoryFree failed on cleanup: %d", __func__, free_ret);
         BUG();
     }
     return ret;
@@ -235,9 +237,9 @@ int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int
 out:
     if (pal_prot != pal_prot_readable) {
         int protect_ret = DkVirtualMemoryProtect(addr, size, pal_prot);
-        if (ret < 0) {
-            log_debug("%s: DkVirtualMemoryProtect failed on cleanup: %d; memory will be left "
-                      "readable", __func__, protect_ret);
+        if (protect_ret < 0) {
+            log_debug("%s: DkVirtualMemoryProtect failed on cleanup: %d", __func__, protect_ret);
+            BUG();
         }
     }
     return ret;

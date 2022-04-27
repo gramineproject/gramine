@@ -88,7 +88,7 @@ struct shim_fs_ops {
      * \param hdl     File handle.
      * \param addr    Address of the memory region. Cannot be NULL.
      * \param size    Size of the memory region.
-     * \param prot    Permissions for the memory region (`PAL_PROT_*`).
+     * \param prot    Permissions for the memory region (`PROT_*`).
      * \param flags   `mmap` flags (`MAP_*`).
      * \param offset  Offset in file.
      *
@@ -104,10 +104,18 @@ struct shim_fs_ops {
     /*
      * \brief Write back mapped memory to file.
      *
+     * \param hdl     File handle.
+     * \param addr    Address of the memory region. Cannot be NULL.
+     * \param size    Size of the memory region.
+     * \param prot    Permissions for the memory region (`PROT_*`).
+     * \param flags   `mmap` flags (`MAP_*`).
+     * \param offset  Offset in file.
+     *
      * Writes back any changes made by the user.
      *
-     * Should be called for a region originally mapped with `mmap` callback, or for a part of that
-     * region.
+     * The parameters should describe either a region originally mapped with `mmap` callback, or a
+     * part of that region. This function should only be called for a shared mapping, i.e. `flags`
+     * must contain `MAP_SHARED`.
      */
     int (*msync)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                  uint64_t offset);

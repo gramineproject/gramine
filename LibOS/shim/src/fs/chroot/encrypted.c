@@ -370,12 +370,14 @@ static int chroot_encrypted_flush(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
     assert(hdl->inode->type == S_IFREG);
 
+    struct shim_encrypted_file* enc = hdl->inode->data;
+
+    /* If there are any MAP_SHARED mappings for the file, this will write data to `enc` */
     int ret = msync_handle(hdl);
     if (ret < 0)
         return ret;
 
-    struct shim_encrypted_file* enc = hdl->inode->data;
-
+    /* This will write changes from `enc` to host file */
     lock(&hdl->inode->lock);
     ret = encrypted_file_flush(enc);
     unlock(&hdl->inode->lock);

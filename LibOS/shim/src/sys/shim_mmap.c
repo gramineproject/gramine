@@ -137,10 +137,12 @@ void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsig
             ret = -EINVAL;
             goto out_handle;
         }
-        /* Flush any file mappings we're about to replace */
-        ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
-        if (ret < 0) {
-            goto out_handle;
+        if (!(flags & MAP_FIXED_NOREPLACE)) {
+            /* Flush any file mappings we're about to replace */
+            ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+            if (ret < 0) {
+                goto out_handle;
+            }
         }
         ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
         if (ret < 0) {
@@ -441,9 +443,14 @@ long shim_do_msync(unsigned long start, size_t len_orig, int flags) {
         return -ENOMEM;
     }
 
-    if (!flags) {
-        /* Currently Linux treats empty flags with semantics equal to `MS_ASYNC`. */
-        flags = MS_ASYNC;
+    if (!(flags & (MS_SYNC | MS_ASYNC))) {
+        /* Currently Linux permits a call without either `MS_SYNC` or `MS_ASYNC`, and treats it as
+         * equivalent to specifying `MS_ASYNC`. */
+        flags |= MS_ASYNC;
+    }
+
+    if (!is_user_memory_readable((void*)start, len)) {
+        return -ENOMEM;
     }
 
     if (flags & MS_INVALIDATE) {
@@ -451,14 +458,9 @@ long shim_do_msync(unsigned long start, size_t len_orig, int flags) {
         return -ENOSYS;
     }
 
-    if (!is_user_memory_readable((void*)start, len)) {
-        return -ENOMEM;
-    }
-
     if (flags & MS_SYNC) {
         return msync_range(start, start + len);
     } else {
-        assert(flags & MS_ASYNC);
         /* `MS_ASYNC` is a no-op on Linux. */
         return 0;
     }

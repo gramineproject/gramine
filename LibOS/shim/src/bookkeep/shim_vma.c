@@ -1116,8 +1116,6 @@ static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
     struct shim_vma* vma;
 
     for (vma = _lookup_vma(begin); vma && vma->begin < end; vma = _get_next_vma(vma)) {
-        if (vma->end <= begin)
-            continue;
         if (!vma_filter(vma, arg))
             continue;
         if (size < max_count) {
@@ -1170,8 +1168,8 @@ static bool vma_filter_exclude_unmapped(struct shim_vma* vma, void* arg) {
 }
 
 int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
-    return dump_vmas(ret_infos, ret_count, /*begin=*/0, /*end=*/(uintptr_t)-1,
-                     include_unmapped ? &vma_filter_all : &vma_filter_exclude_unmapped,
+    return dump_vmas(ret_infos, ret_count, /*begin=*/0, /*end=*/UINTPTR_MAX,
+                     include_unmapped ? vma_filter_all : vma_filter_exclude_unmapped,
                      /*arg=*/NULL);
 }
 
@@ -1243,26 +1241,33 @@ static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
 
-    if (!vma->file)
-        return false;
+    assert(vma->file);
 
     if (hdl && vma->file != hdl)
-        return false;
-
-    if (!(vma->file->acc_mode & MAY_WRITE))
         return false;
 
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
         return false;
 
+    /* TODO: remove `lock()` here after we ensure that `acc_mode` never changes */
+    lock(&vma->file->lock);
+    int acc_mode = vma->file->acc_mode;
+    unlock(&vma->file->lock);
+
+    if (!(acc_mode & MAY_WRITE))
+        return false;
+
     return true;
 }
 
-static int _msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
+static int msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
+    assert(IS_ALLOC_ALIGNED(begin));
+    assert(end == UINTPTR_MAX || IS_ALLOC_ALIGNED(end));
+
     struct shim_vma_info* vma_infos;
     size_t count;
 
-    int ret = dump_vmas(&vma_infos, &count, begin, end, &vma_filter_needs_msync, hdl);
+    int ret = dump_vmas(&vma_infos, &count, begin, end, vma_filter_needs_msync, hdl);
     if (ret < 0)
         return ret;
 
@@ -1276,6 +1281,9 @@ static int _msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
          * another thread by the time we get to `msync`. */
         uintptr_t msync_begin = MAX(begin, (uintptr_t)vma_info->addr);
         uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->length);
+        assert(IS_ALLOC_ALIGNED(msync_begin));
+        assert(IS_ALLOC_ALIGNED(msync_end));
+
         ret = file->fs->fs_ops->msync(file, (void*)msync_begin, msync_end - msync_begin,
                                       vma_info->prot, vma_info->flags, vma_info->file_offset);
         if (ret < 0)
@@ -1289,11 +1297,11 @@ out:
 }
 
 int msync_range(uintptr_t begin, uintptr_t end) {
-    return _msync_all(begin, end, /*hdl=*/NULL);
+    return msync_all(begin, end, /*hdl=*/NULL);
 }
 
 int msync_handle(struct shim_handle* hdl) {
-    return _msync_all(/*begin=*/0, /*end=*/(uintptr_t)-1, hdl);
+    return msync_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
 }
 
 BEGIN_CP_FUNC(vma) {

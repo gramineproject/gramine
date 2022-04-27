@@ -25,9 +25,6 @@
 #define MESSAGE_LEN (sizeof(MESSAGE1) - 1)
 
 int main(int argc, char** argv) {
-    ssize_t ret;
-    int fd;
-
     if (argc != 2)
         errx(1, "Usage: %s path", argv[0]);
 
@@ -45,11 +42,11 @@ int main(int argc, char** argv) {
 
     /* Create a new file */
 
-    fd = open(path, O_WRONLY | O_CREAT, 0666);
+    int fd = open(path, O_WRONLY | O_CREAT, 0666);
     if (fd < 0)
         err(1, "open");
 
-    ret = ftruncate(fd, file_size);
+    ssize_t ret = ftruncate(fd, file_size);
     if (ret < 0)
         err(1, "ftruncate");
 
@@ -59,7 +56,7 @@ int main(int argc, char** argv) {
     if (ret < 0)
         err(1, "failed to write file");
     if ((size_t)ret < MESSAGE_LEN)
-        err(1, "not enough bytes written");
+        errx(1, "not enough bytes written");
 
     /* Write MESSAGE2 at position `page_size` */
 
@@ -71,18 +68,18 @@ int main(int argc, char** argv) {
     if (ret < 0)
         err(1, "failed to write file");
     if ((size_t)ret < MESSAGE_LEN)
-        err(1, "not enough bytes written");
+        errx(1, "not enough bytes written");
 
     ret = close(fd);
     if (ret < 0)
         err(1, "close");
 
-    printf("CREATE OK\n");
+    puts("CREATE OK");
 
     /* Open and map it: MAP_SHARED at offset 0, MAP_PRIVATE at offset `page_size` */
 
     fd = open(path, O_RDWR, 0);
-    if (fd == -1)
+    if (fd < 0)
         err(1, "open");
 
     char* addr_shared = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -93,6 +90,11 @@ int main(int argc, char** argv) {
     if (addr_private == MAP_FAILED)
         err(1, "mmap");
 
+    /* Close the FD early, so that we know `munmap(addr_shared)` will flush changes */
+    ret = close(fd);
+    if (ret == -1)
+        err(1, "close");
+
     if (memcmp(addr_shared, MESSAGE1, MESSAGE_LEN))
         errx(1, "wrong mapping content at addr_shared (%s)", addr_shared);
 
@@ -100,11 +102,13 @@ int main(int argc, char** argv) {
         errx(1, "wrong mapping content at addr_private (%s)", addr_private);
 
     for (size_t i = MESSAGE_LEN; i < mmap_size; i++) {
+        if (addr_shared[i] != 0)
+            errx(1, "unexpected non-zero byte at addr_shared[%zu]", i);
         if (addr_private[i] != 0)
             errx(1, "unexpected non-zero byte at addr_private[%zu]", i);
     }
 
-    printf("MAP OK\n");
+    puts("MAP OK");
 
     /* Write new message through mmap, then close it */
 
@@ -119,19 +123,17 @@ int main(int argc, char** argv) {
     if (ret < 0)
         err(1, "munmap");
 
-    ret = close(fd);
-    if (ret == -1)
-        err(1, "close");
-
-    printf("WRITE OK\n");
+    puts("WRITE OK");
 
     /* Verify the file: only the first write should be applied */
 
     char buf[file_size];
 
     ret = posix_file_read(path, buf, sizeof(buf));
+    if (ret < 0)
+        err(1, "failed to read file");
     if ((size_t)ret < file_size)
-        err(1, "not enough bytes read");
+        errx(1, "not enough bytes read");
 
     if (memcmp(&buf[0], MESSAGE2, MESSAGE_LEN))
         errx(1, "wrong file content");
@@ -139,7 +141,7 @@ int main(int argc, char** argv) {
     if (memcmp(&buf[page_size], MESSAGE2, MESSAGE_LEN))
         errx(1, "wrong file content");
 
-    printf("TEST OK\n");
+    puts("TEST OK");
 
     return 0;
 }
