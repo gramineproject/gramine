@@ -110,7 +110,7 @@ struct shim_fs_ops {
      * region.
      */
     int (*msync)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
-                uint64_t offset);
+                 uint64_t offset);
 
     /* flush: flush out user buffer */
     int (*flush)(struct shim_handle* hdl);
