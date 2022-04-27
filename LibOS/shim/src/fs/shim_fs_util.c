@@ -154,7 +154,7 @@ int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int 
     assert(actual_addr == addr);
 
     size_t read_size = size;
-    void* read_addr = addr;
+    char* read_addr = addr;
     file_off_t pos = offset;
     while (read_size > 0) {
         ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, read_size, &pos);
@@ -208,7 +208,7 @@ int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int
     }
 
     size_t write_size = offset > (uint64_t)file_size ? 0 : MIN(size, (uint64_t)file_size - offset);
-    void* write_addr = addr;
+    char* write_addr = addr;
     file_off_t pos = offset;
     while (write_size > 0) {
         ssize_t count = hdl->fs->fs_ops->write(hdl, write_addr, write_size, &pos);
@@ -219,8 +219,11 @@ int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int
             goto out;
         }
 
-        if (count == 0)
-            break;
+        if (count == 0) {
+            log_debug("%s: Failed to write back the whole mapping", __func__);
+            ret = -EIO;
+            goto out;
+        }
 
         assert((size_t)count <= write_size);
         write_size -= count;

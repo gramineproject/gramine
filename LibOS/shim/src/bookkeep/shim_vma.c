@@ -1107,6 +1107,7 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot) {
 }
 
 static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
+                                 uintptr_t begin, uintptr_t end,
                                  bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
     size_t size = 0;
     struct shim_vma_info* vma_info = infos;
@@ -1114,7 +1115,9 @@ static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
     spinlock_lock(&vma_tree_lock);
     struct shim_vma* vma;
 
-    for (vma = _get_first_vma(); vma; vma = _get_next_vma(vma)) {
+    for (vma = _lookup_vma(begin); vma && vma->begin < end; vma = _get_next_vma(vma)) {
+        if (vma->end <= begin)
+            continue;
         if (!vma_filter(vma, arg))
             continue;
         if (size < max_count) {
@@ -1130,7 +1133,8 @@ static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
 }
 
 static int dump_vmas(struct shim_vma_info** ret_infos, size_t* ret_count,
-              bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
+                     uintptr_t begin, uintptr_t end,
+                     bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
     size_t count = DEFAULT_VMA_COUNT;
 
     while (true) {
@@ -1139,7 +1143,7 @@ static int dump_vmas(struct shim_vma_info** ret_infos, size_t* ret_count,
             return -ENOMEM;
         }
 
-        size_t needed_count = dump_vmas_with_buf(vmas, count, vma_filter, arg);
+        size_t needed_count = dump_vmas_with_buf(vmas, count, begin, end, vma_filter, arg);
         if (needed_count <= count) {
             *ret_infos = vmas;
             *ret_count = needed_count;
@@ -1166,7 +1170,7 @@ static bool vma_filter_exclude_unmapped(struct shim_vma* vma, void* arg) {
 }
 
 int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
-    return dump_vmas(ret_infos, ret_count,
+    return dump_vmas(ret_infos, ret_count, /*begin=*/0, /*end=*/(uintptr_t)-1,
                      include_unmapped ? &vma_filter_all : &vma_filter_exclude_unmapped,
                      /*arg=*/NULL);
 }
@@ -1233,17 +1237,8 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     return ctx.error;
 }
 
-struct msync_ctx {
-    uintptr_t begin;
-    uintptr_t end;
-    struct shim_handle* hdl;
-};
-
 static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
-    struct msync_ctx* ctx = (struct msync_ctx*)arg;
-
-    if (ctx->end <= vma->begin || vma->end <= ctx->begin)
-        return false;
+    struct shim_handle* hdl = arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
@@ -1251,7 +1246,7 @@ static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
     if (!vma->file)
         return false;
 
-    if (ctx->hdl && vma->file != ctx->hdl)
+    if (hdl && vma->file != hdl)
         return false;
 
     if (!(vma->file->acc_mode & MAY_WRITE))
@@ -1267,9 +1262,7 @@ static int _msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
     struct shim_vma_info* vma_infos;
     size_t count;
 
-    struct msync_ctx ctx = { .begin = begin, .end = end, .hdl = hdl };
-
-    int ret = dump_vmas(&vma_infos, &count, &vma_filter_needs_msync, &ctx);
+    int ret = dump_vmas(&vma_infos, &count, begin, end, &vma_filter_needs_msync, hdl);
     if (ret < 0)
         return ret;
 
@@ -1279,6 +1272,8 @@ static int _msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
         struct shim_handle* file = vma_info->file;
         assert(file && file->fs && file->fs->fs_ops && file->fs->fs_ops->msync);
 
+        /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
+         * another thread by the time we get to `msync`. */
         uintptr_t msync_begin = MAX(begin, (uintptr_t)vma_info->addr);
         uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->length);
         ret = file->fs->fs_ops->msync(file, (void*)msync_begin, msync_end - msync_begin,
