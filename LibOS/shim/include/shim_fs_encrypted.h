@@ -171,4 +171,7 @@ int encrypted_file_rename(struct shim_encrypted_file* enc, const char* new_uri);
 int encrypted_file_get_size(struct shim_encrypted_file* enc, file_off_t* out_size);
 int encrypted_file_set_size(struct shim_encrypted_file* enc, file_off_t size);
 
+int parse_pf_key(const char* key_str, pf_key_t* pf_key);
+int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size);
+
 #endif /* SHIM_FS_ENCRYPTED_ */

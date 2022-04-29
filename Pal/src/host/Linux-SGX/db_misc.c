@@ -10,7 +10,6 @@
 
 #include "api.h"
 #include "cpu.h"
-#include "enclave_pf.h"
 #include "hex.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -620,10 +619,6 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
     *quote_size = pal_quote_size;
     free(pal_quote);
     return 0;
-}
-
-int _DkSetProtectedFilesKey(const char* pf_key_hex) {
-    return set_protected_files_key(pf_key_hex);
 }
 
 int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {

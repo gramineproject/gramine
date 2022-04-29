@@ -16,7 +16,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "protected_files.h"
 
 /*
  * For SGX, the creation of a child process requires a clean enclave and a secure channel between
@@ -172,24 +171,6 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
     if (ret != sizeof(g_master_key))
         goto failed;
 
-    /* securely send the wrap key for protected files to child (only if there is one) */
-    char pf_wrap_key_set_char[1];
-    pf_wrap_key_set_char[0] = g_pf_wrap_key_set ? '1' : '0';
-
-    ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&pf_wrap_key_set_char,
-                               sizeof(pf_wrap_key_set_char),
-                               /*is_blocking=*/!child->process.nonblocking);
-    if (ret != sizeof(pf_wrap_key_set_char))
-        goto failed;
-
-    if (g_pf_wrap_key_set) {
-        ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&g_pf_wrap_key,
-                                   sizeof(g_pf_wrap_key),
-                                   /*is_blocking=*/!child->process.nonblocking);
-        if (ret != sizeof(g_pf_wrap_key))
-            goto failed;
-    }
-
     /* Send this Gramine instance ID. */
     uint64_t instance_id = g_pal_common_state.instance_id;
     ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
@@ -244,26 +225,6 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
                               sizeof(g_master_key), /*is_blocking=*/!parent->process.nonblocking);
     if (ret != sizeof(g_master_key))
         goto out_error;
-
-    /* securely receive the wrap key for protected files from parent (only if there is one) */
-    char pf_wrap_key_set_char[1] = {0};
-    ret = _DkStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&pf_wrap_key_set_char,
-                              sizeof(pf_wrap_key_set_char),
-                              /*is_blocking=*/!parent->process.nonblocking);
-    if (ret != sizeof(pf_wrap_key_set_char))
-        goto out_error;
-
-    if (pf_wrap_key_set_char[0] == '1') {
-        ret = _DkStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&g_pf_wrap_key,
-                                  sizeof(g_pf_wrap_key),
-                                  /*is_blocking=*/!parent->process.nonblocking);
-        if (ret != sizeof(g_pf_wrap_key)) {
-            g_pf_wrap_key_set = false;
-            goto out_error;
-        }
-
-        g_pf_wrap_key_set = true;
-    }
 
     uint64_t instance_id;
     ret = _DkStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),

@@ -32,6 +32,7 @@ sgx_util_dep = declare_dependency(
     include_directories: [
         include_directories('.'),
         sgx_inc, # this is mostly for sgx_arch.h
+        protected_files_inc,
     ],
 )
 

@@ -256,7 +256,7 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
 #define PAL_OPTION_EFD_SEMAPHORE   0x2 /*!< specific to `eventfd` syscall */
 #define PAL_OPTION_NONBLOCK        0x4
 #define PAL_OPTION_DUALSTACK       0x8 /*!< Create dual-stack socket (opposite of IPV6_V6ONLY) */
-#define PAL_OPTION_PASSTHROUGH    0x10 /*!< Disregard `sgx.{allowed,trusted,protected}_files` */
+#define PAL_OPTION_PASSTHROUGH    0x10 /*!< Disregard `sgx.{allowed,trusted}_files` */
 #define PAL_OPTION_MASK           0x1F
 
 /*!
@@ -749,18 +749,6 @@ int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_
  */
 int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                        PAL_NUM* quote_size);
-
-/*!
- * \brief Set wrap key (master key) for protected files.
- *
- * \param[in] pf_key_hex  Wrap key for protected files. Must be a 32-char null-terminated hex string
- *                        in case of SGX PAL (AES-GCM encryption key).
- *
- * Currently works only for Linux-SGX PAL. This function is supposed to be called during
- * remote attestation and secret provisioning, before the user application starts.
- */
-int DkSetProtectedFilesKey(const char* pf_key_hex);
-
 /*!
  * \brief Get special key (specific to PAL host).
  *

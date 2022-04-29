@@ -33,9 +33,6 @@ static size_t g_target_info_size = 0;
 
 static size_t g_report_size = 0;
 
-#define PF_KEY_HEX_SIZE 32
-static char g_pf_key_hex[PF_KEY_HEX_SIZE] = {0};
-
 static int init_attestation_struct_sizes(void) {
     if (g_user_report_data_size && g_target_info_size && g_report_size) {
         /* already initialized, nothing to do here */
@@ -242,43 +239,55 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
 static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t size = sizeof(g_pf_key_hex);
-    char* pf_key_hex = malloc(size);
-    if (!pf_key_hex)
-        return -ENOMEM;
+    struct shim_encrypted_files_key* key = get_encrypted_files_key("default");
+    if (!key)
+        return -ENOENT;
 
-    memcpy(pf_key_hex, &g_pf_key_hex, size);
-    *out_data = pf_key_hex;
-    *out_size = size;
+    pf_key_t pf_key;
+    bool is_set = read_encrypted_files_key(key, &pf_key);
+    if (is_set) {
+        size_t buf_size = sizeof(pf_key) * 2 + 1;
+        char* buf = malloc(buf_size);
+        if (!buf)
+            return -ENOMEM;
+
+        int ret = dump_pf_key(&pf_key, buf, buf_size);
+        if (ret < 0) {
+            free(buf);
+            return -EACCES;
+        }
+
+        *out_data = buf;
+        *out_size = sizeof(pf_key) * 2;
+    } else {
+        *out_data = NULL;
+        *out_size = 0;
+    }
     return 0;
 }
 
-/*!
- * \brief Set new wrap key (master key) for protected files.
- *
- * This file must be open for write after successful remote attestation and secret provisioning.
- * Typically, the remote user/service provisions the PF key as part of remote attestation before
- * the user application starts running. The PF key is applied when this file is closed.
- *
- * The PF key must be a 32-char null-terminated AES-GCM encryption key in hex format.
- */
 static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
-    if (size != sizeof(g_pf_key_hex)) {
+    struct shim_encrypted_files_key* key = get_encrypted_files_key("default");
+    if (!key)
+        return -ENOENT;
+
+    pf_key_t pf_key;
+    if (size != sizeof(pf_key) * 2) {
         log_debug("/dev/attestation/protected_files_key: invalid length");
         return -EACCES;
     }
 
-    /* Build a null-terminated string and pass it to `DkSetProtectedFilesKey`. */
-    char buffer[sizeof(g_pf_key_hex) + 1];
-    memcpy(buffer, data, sizeof(g_pf_key_hex));
-    buffer[sizeof(g_pf_key_hex)] = '\0';
-    int ret = DkSetProtectedFilesKey(buffer);
+    char* key_str = alloc_substr(data, size);
+    if (!key_str)
+        return -ENOMEM;
+    int ret = parse_pf_key(key_str, &pf_key);
+    free(key_str);
     if (ret < 0)
         return -EACCES;
 
-    memcpy(g_pf_key_hex, data, sizeof(g_pf_key_hex));
+    update_encrypted_files_key(key, &pf_key);
     return 0;
 }
 
@@ -368,6 +377,7 @@ int init_attestation(struct pseudo_node* dev) {
         pseudo_add_str(attestation, "report", &report_load);
         pseudo_add_str(attestation, "quote", &quote_load);
 
+        /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
         struct pseudo_node* pfkey = pseudo_add_str(attestation, "protected_files_key",
                                                    &pfkey_load);
         pfkey->perm = PSEUDO_PERM_FILE_RW;
