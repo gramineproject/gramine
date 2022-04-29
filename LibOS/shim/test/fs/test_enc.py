@@ -7,13 +7,14 @@ import unittest
 # Named import, so that Pytest does not pick up TC_00_FileSystem as belonging to this module.
 import test_fs
 
-from graminelibos.regression import (
-    HAS_SGX,
-    expectedFailureIf,
-)
+from graminelibos import _CONFIG_SGX_ENABLED
 
-@unittest.skipUnless(HAS_SGX, 'Protected files require SGX support')
-class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
+# TODO: While encrypted files are no longer SGX-only, the related tools (gramine-sgx-pf-crypt,
+# gramine-sgx-pf-tamper) are still part of Linux-SGX PAL. As a result, we are able to run the tests
+# with other PALs, but only if Gramine was built with SGX enabled.
+
+@unittest.skipUnless(_CONFIG_SGX_ENABLED, 'Encrypted files tests require SGX to be enabled')
+class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -24,13 +25,13 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
         # CONST_WRAP_KEY must match the one in manifest
         cls.CONST_WRAP_KEY = [0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
                               0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00]
-        cls.ENCRYPTED_DIR = os.path.join(cls.TEST_DIR, 'pf_input')
+        cls.ENCRYPTED_DIR = os.path.join(cls.TEST_DIR, 'enc_input')
         cls.ENCRYPTED_FILES = [os.path.join(cls.ENCRYPTED_DIR, str(v)) for v in cls.FILE_SIZES]
         cls.LIB_PATH = os.path.join(os.getcwd(), 'lib')
 
         if not os.path.exists(cls.ENCRYPTED_DIR):
             os.mkdir(cls.ENCRYPTED_DIR)
-        cls.OUTPUT_DIR = os.path.join(cls.TEST_DIR, 'pf_output')
+        cls.OUTPUT_DIR = os.path.join(cls.TEST_DIR, 'enc_output')
         cls.OUTPUT_FILES = [os.path.join(cls.OUTPUT_DIR, str(x)) for x in cls.FILE_SIZES]
         # create encrypted files
         cls.__set_default_key(cls)
@@ -82,24 +83,18 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_100_open_close(self):
-        # the test binary expects a path to read-only (existing) file or a path to file that
-        # will get created
         input_path = self.ENCRYPTED_FILES[-1] # existing file
         output_path = os.path.join(self.OUTPUT_DIR, 'test_100') # new file
         stdout, stderr = self.run_binary(['open_close', 'R', input_path])
         self.verify_open_close(stdout, stderr, input_path, 'input')
-        # the following test tries to open multiple handles to a single writable PF, should fail
-        try:
-            stdout, stderr = self.run_binary(['open_close', 'W', output_path])
-            self.assertIn('ERROR: Failed to open output file', stderr)
-        except subprocess.CalledProcessError as exc:
-            self.assertNotEqual(exc.returncode, 0)
-            self.assertTrue(os.path.isfile(output_path))
-        else:
-            print('[!] Fail: open_close returned 0')
-            self.fail()
+        stdout, stderr = self.run_binary(['open_close', 'W', output_path])
+        self.verify_open_close(stdout, stderr, output_path, 'output')
+        self.assertTrue(os.path.isfile(output_path))
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
+    # doesn't work because encrypted files do not support truncation (and the test opens an
+    # existing, non-empty file with O_TRUNC)
+    @unittest.expectedFailure
     def test_101_open_flags(self):
         # the test binary expects a path to file that will get created
         file_path = os.path.join(self.OUTPUT_DIR, 'test_101') # new file
@@ -138,7 +133,7 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
         self.__decrypt_file(file, dec_path)
         self.assertEqual(os.stat(dec_path).st_size, size)
 
-    @expectedFailureIf(HAS_SGX)
+    @unittest.expectedFailure
     # pylint: disable=fixme
     def test_140_file_truncate(self):
         self.fail() # TODO: port these to the new file format
@@ -170,30 +165,24 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
                                          timeout=timeout)
         self.verify_copy(stdout, stderr, self.ENCRYPTED_DIR, executable)
 
-    # TODO: `mmap` on protected files is broken, because we fail to properly register that memory is
-    # unmapped. The `copy_mmap*` tests technically work, but trigger AddressSanitizer.
-
     # overrides TC_00_FileSystem to not skip this on SGX
-    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
 
     # overrides TC_00_FileSystem to not skip this on SGX
-    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_205_copy_dir_mmap_seq(self):
         self.do_copy_test('copy_mmap_seq', 60)
 
     # overrides TC_00_FileSystem to not skip this on SGX
-    @unittest.skipIf(os.environ.get('ASAN') == '1', 'mapping protected files is broken')
     def test_206_copy_dir_mmap_rev(self):
         self.do_copy_test('copy_mmap_rev', 60)
 
     # overrides TC_00_FileSystem to change dirs (from plaintext to encrypted)
     def test_210_copy_dir_mounted(self):
         executable = 'copy_whole'
-        stdout, stderr = self.run_binary([executable, '/mounted/pf_input', '/mounted/pf_output'],
+        stdout, stderr = self.run_binary([executable, '/mounted/enc_input', '/mounted/enc_output'],
                                          timeout=30)
-        self.verify_copy(stdout, stderr, '/mounted/pf_input', executable)
+        self.verify_copy(stdout, stderr, '/mounted/enc_input', executable)
 
     def __corrupt_file(self, input_path, output_path):
         cmd = [self.PF_TAMPER, '-w', self.WRAP_KEY, '-i', input_path, '-o', output_path]
@@ -201,7 +190,7 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
 
     # invalid/corrupted files
     def test_500_invalid(self):
-        invalid_dir = os.path.join(self.TEST_DIR, 'pf_invalid')
+        invalid_dir = os.path.join(self.TEST_DIR, 'enc_invalid')
         if not os.path.exists(invalid_dir):
             os.mkdir(invalid_dir)
 

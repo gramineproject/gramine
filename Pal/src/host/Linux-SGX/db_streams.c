@@ -17,7 +17,6 @@
 #include "api.h"
 #include "crypto.h"
 #include "enclave_pages.h"
-#include "enclave_pf.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -49,10 +48,6 @@ static size_t addr_size(const struct sockaddr* addr) {
 /* _DkStreamUnmap for internal use. Unmap stream at certain memory address.
    The memory is unmapped as a whole.*/
 int _DkStreamUnmap(void* addr, uint64_t size) {
-    int ret = flush_pf_maps(/*pf=*/NULL, addr, /*remove=*/true);
-    if (ret < 0)
-        return ret;
-
     return free_enclave_pages(addr, size);
 }
 

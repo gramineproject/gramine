@@ -6,7 +6,6 @@ gsgx_h = configure_file(
 
 sgx_inc = [
     includes_pal_common,
-    protected_files_inc,
     include_directories(
         '.',
         '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
@@ -74,7 +73,6 @@ libpal_sgx = shared_library('pal',
     'enclave_framework.c',
     'enclave_ocalls.c',
     'enclave_pages.c',
-    'enclave_pf.c',
     'enclave_platform.c',
     'enclave_untrusted.c',
     'enclave_xstate.c',
@@ -119,7 +117,6 @@ libpal_sgx = shared_library('pal',
     dependencies: [
         common_dep,
         cryptoadapter_dep,
-        protected_files_dep,
     ],
 
     install: true,

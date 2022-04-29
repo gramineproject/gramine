@@ -196,12 +196,12 @@ static int encrypted_file_internal_open(struct shim_encrypted_file* enc, PAL_HAN
     return 0;
 }
 
-static int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
+int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     size_t len = strlen(key_str);
-    if (len != PF_KEY_SIZE * 2) {
+    if (len != sizeof(*pf_key) * 2) {
         log_warning("%s: wrong key length (%zu instead of %zu)", __func__, len,
-                    (size_t)(PF_KEY_SIZE * 2));
-        return -1;
+                    (size_t)(sizeof(*pf_key) * 2));
+        return -EINVAL;
     }
 
     pf_key_t tmp_pf_key;
@@ -210,11 +210,19 @@ static int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
         int8_t lo = hex2dec(key_str[i+1]);
         if (hi < 0 || lo < 0) {
             log_warning("%s: unexpected character encountered", __func__);
-            return -1;
+            return -EINVAL;
         }
         tmp_pf_key[i / 2] = hi * 16 + lo;
     }
     memcpy(pf_key, &tmp_pf_key, sizeof(tmp_pf_key));
+    return 0;
+}
+
+int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size) {
+    if (buf_size < sizeof(*pf_key) * 2 + 1)
+        return -EINVAL;
+
+    __bytes2hexstr(pf_key, sizeof(*pf_key), buf, buf_size);
     return 0;
 }
 
@@ -232,6 +240,23 @@ static void encrypted_file_internal_close(struct shim_encrypted_file* enc) {
     return;
 }
 
+static int parse_and_update_key(const char* key_name, const char* key_str) {
+    pf_key_t pf_key;
+    int ret = parse_pf_key(key_str, &pf_key);
+    if (ret < 0) {
+        log_error("Cannot parse hex key: '%s'", key_str);
+        return ret;
+    }
+
+    struct shim_encrypted_files_key* key;
+    ret = get_or_create_encrypted_files_key(key_name, &key);
+    if (ret < 0)
+        return ret;
+
+    update_encrypted_files_key(key, &pf_key);
+    return 0;
+}
+
 int init_encrypted_files(void) {
     pf_debug_f cb_debug_ptr = NULL;
 #ifdef DEBUG
@@ -244,58 +269,63 @@ int init_encrypted_files(void) {
                      &cb_aes_cmac, &cb_aes_gcm_encrypt, &cb_aes_gcm_decrypt,
                      &cb_random, cb_debug_ptr);
 
+    int ret;
+
     /* Parse `fs.insecure__keys.*` */
 
     toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
-    if (!manifest_fs)
-        return 0;
+    toml_table_t* manifest_fs_keys =
+        manifest_fs ? toml_table_in(manifest_fs, "insecure__keys") : NULL;
+    if (manifest_fs && manifest_fs_keys) {
+        ssize_t keys_cnt = toml_table_nkval(manifest_fs_keys);
+        if (keys_cnt < 0)
+            return -EINVAL;
 
-    toml_table_t* manifest_fs_keys = toml_table_in(manifest_fs, "insecure__keys");
-    if (!manifest_fs_keys)
-        return 0;
+        for (ssize_t i = 0; i < keys_cnt; i++) {
+            const char* key_name = toml_key_in(manifest_fs_keys, i);
+            assert(key_name);
 
-    ssize_t keys_cnt = toml_table_nkval(manifest_fs_keys);
-    if (keys_cnt < 0)
-        return -EINVAL;
+            char* key_str;
+            ret = toml_string_in(manifest_fs_keys, key_name, &key_str);
+            if (ret < 0) {
+                log_error("Cannot parse 'fs.insecure__keys.%s'", key_name);
+                return -EINVAL;
+            }
+            assert(key_str);
 
-    int ret;
-    char* key_str = NULL;
-
-    for (ssize_t i = 0; i < keys_cnt; i++) {
-        const char* name = toml_key_in(manifest_fs_keys, i);
-        assert(name);
-
-        struct shim_encrypted_files_key* key;
-        ret = get_or_create_encrypted_files_key(name, &key);
-        if (ret < 0)
-            goto out;
-
-        ret = toml_string_in(manifest_fs_keys, name, &key_str);
-        if (ret < 0) {
-            log_error("Cannot parse 'fs.insecure__keys.%s'", name);
-            ret = -EINVAL;
-            goto out;
+            ret = parse_and_update_key(key_name, key_str);
+            free(key_str);
+            if (ret < 0)
+                return ret;
         }
-        assert(key_str);
-
-        pf_key_t pf_key;
-        ret = parse_pf_key(key_str, &pf_key);
-        if (ret < 0) {
-            log_error("Cannot parse key 'fs.insecure__keys.%s' as a hex key", name);
-            ret = -EINVAL;
-            goto out;
-        }
-
-        update_encrypted_files_key(key, &pf_key);
-        free(key_str);
-        key_str = NULL;
     }
 
-    ret = 0;
+    /*
+     * If we're under SGX PAL, parse `sgx.insecure__protected_files_key` (and interpret it as the
+     * "default" key).
+     *
+     * TODO: this is deprecated in v1.2, remove two versions later.
+     */
+    if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
+        char* key_str;
+        ret = toml_string_in(g_manifest_root, "sgx.insecure__protected_files_key", &key_str);
+        if (ret < 0) {
+            log_error("Cannot parse 'sgx.insecure__protected_files_key'");
+            return -EINVAL;
+        }
 
-out:
-    free(key_str);
-    return ret;
+        if (key_str) {
+            log_error("Detected deprecated syntax: 'sgx.insecure__protected_files_key'. "
+                      "Consider converting it to 'fs.insecure__keys.default'.");
+
+            ret = parse_and_update_key("default", key_str);
+            free(key_str);
+            if (ret < 0)
+                return ret;
+        }
+    }
+
+    return 0;
 }
 
 static struct shim_encrypted_files_key* get_key(const char* name) {

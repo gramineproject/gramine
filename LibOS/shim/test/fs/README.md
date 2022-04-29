@@ -1,7 +1,8 @@
 Test purpose
 ------------
 
-These tests perform common FS operations in various ways to exercise the Gramine FS subsystem:
+These tests perform common FS operations in various ways to exercise the Gramine
+FS subsystem:
 
 - open/close
 - read/write
@@ -15,12 +16,10 @@ These tests perform common FS operations in various ways to exercise the Gramine
 How to execute
 --------------
 
-- `make test` to run all tests
-- `make fs-test` to test regular files
-- `make tmpfs-test` to test tmpfs (temporary in-memory) files
-- `make pf-test` to test protected files (SGX only)
+- `gramine-test pytest -v`
 
-(SGX only) Protected file tests assume that the SGX tools were installed in this directory:
+Encrypted file tests assume that Gramine was built with SGX enabled (see comment
+in `test_enc.py`).
 
 ```
 cd $gramine/Pal/src/host/Linux-SGX/tools

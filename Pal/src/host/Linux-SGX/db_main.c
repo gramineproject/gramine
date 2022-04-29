@@ -14,7 +14,6 @@
 #include <stdnoreturn.h>
 
 #include "api.h"
-#include "enclave_pf.h"
 #include "enclave_tf.h"
 #include "init.h"
 #include "pal.h"
@@ -266,6 +265,9 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
         /* Warn only in the first process. */
         return 0;
     }
+
+    /* TODO: `sgx.insecure__protected_files_key` is deprecated in v1.2, remove two versions
+     * later. */
 
     bool verbose_log_level    = false;
     bool sgx_debug            = false;
@@ -595,7 +597,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
     g_pal_internal_mem_size = extra_mem_size + PAL_INITIAL_MEM_SIZE;
 
-    /* seal-key material initialization must come before protected-files initialization */
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
@@ -613,11 +614,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_protected_files()) < 0) {
-        log_error("Failed to initialize protected files: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 

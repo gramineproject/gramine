@@ -19,7 +19,7 @@
  * str is the caller-provided buffer, len is the length of the buffer.
  * The len must be at least (size * 2)+1.
  */
-static inline char* __bytes2hexstr(void* hex, size_t size, char* str, size_t len) {
+static inline char* __bytes2hexstr(const void* hex, size_t size, char* str, size_t len) {
     static const char* ch = "0123456789abcdef";
     __UNUSED(len);
     assert(len >= size * 2 + 1);

@@ -443,7 +443,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
         if (argv_src_file) {
             /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
-             * be achieved using protected or trusted files). */
+             * be achieved using trusted files). */
             if (arguments[0] && arguments[1])
                 log_error("Discarding cmdline arguments (%s %s [...]) because loader.argv_src_file "
                           "was specified in the manifest.", arguments[0], arguments[1]);
@@ -481,7 +481,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     if (env_src_file) {
         /* Insert environment variables from a file. We trust the file contents (this can be
-         * achieved using protected or trusted files). */
+         * achieved using trusted files). */
         ret = load_cstring_array(env_src_file, &orig_environments);
         if (ret < 0)
             INIT_FAIL(-ret, "Cannot load environment variables from 'loader.env_src_file'");

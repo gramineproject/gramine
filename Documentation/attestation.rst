@@ -204,13 +204,23 @@ use the :program:`quote_dump`, :program:`ias_request` and
 EPID based quote verification) or to use the Intel DCAP libraries and tools (for
 DCAP based quote verification).
 
-The ``/dev/attestation`` pseudo-filesystem also exposes a pseudo-file to set the
-protected files wrap (master) key (see also :doc:`manifest-syntax`):
+The ``/dev/attestation`` pseudo-filesystem also exposes pseudo-files to set the
+encryption keys (see also :doc:`manifest-syntax`):
 
-- ``/dev/attestation/protected_files_key`` pseudo-file can be opened for write
-  access. Typically, it is opened before the actual application runs and filled
-  with a 128-bit key obtained from a remote secret provisioning service.
+- ``/dev/attestation/keys/<key_name>`` file contains the encryption key with a
+  given name (the default key name is ``default``). Typically, it is opened
+  before the actual application runs and filled with a 128-bit key obtained from
+  a remote secret provisioning service. The format of the file is a 16-byte raw
+  binary value.
 
+.. note::
+   Previously, ``/dev/attestation/protected_files_key`` was used for setting the
+   default encryption key, and Gramine still supports that file for backward
+   compatibility.
+
+   Note that the old file (``/dev/attestation/protected_files_key``) uses a
+   32-character hex value, and the new files
+   (``/dev/attestation/keys/<key_name>``) use a 16-byte raw binary value.
 
 Mid-level RA-TLS interface
 --------------------------
@@ -398,7 +408,7 @@ EPID based ``secret_prov_verify_epid.so`` and DCAP/ECDSA based
 
 The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-secret-prov``.
 The examples include minimalistic provisioning of constant-string secrets as
-well as provisioning of an encryption key and its later use for protected files.
+well as provisioning of an encryption key and its later use for encrypted files.
 
 ``secret_prov_attest.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^

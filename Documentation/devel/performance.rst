@@ -425,7 +425,7 @@ encrypts many means of communication:
 #. Inter-Process Communication (IPC) is encrypted via TLS-PSK. Regular pipes,
    FIFO pipes, UNIX domain sockets are all transparently encrypted.
 
-#. Files marked as ``sgx.protected_files`` are transparently encrypted/decrypted
+#. Files mounted as ``type = "encrypted"`` are transparently encrypted/decrypted
    on each file access via SGX SDK Merkle-tree format.
 
 #. ``Fork/vfork/clone`` all require to generate an encrypted checkpoint of the

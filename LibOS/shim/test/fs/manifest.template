@@ -11,8 +11,14 @@ fs.mounts = [
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/mounted", uri = "file:tmp" },
 
+  { type = "encrypted", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+  { type = "encrypted", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
   { type = "tmpfs", path = "/mnt-tmpfs" },
 ]
+
+fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"
 
 sgx.nonpie_binary = true
 sgx.debug = true
@@ -27,10 +33,4 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
-]
-
-sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"
-sgx.protected_files = [
-  "file:tmp/pf_input",
-  "file:tmp/pf_output",
 ]

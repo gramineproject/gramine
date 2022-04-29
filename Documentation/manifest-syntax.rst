@@ -134,14 +134,15 @@ If you want your application to use commandline arguments you need to either set
 ``loader.argv_src_file`` to a file containing output of
 :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
-``loader.argv_src_file`` is intended to point to either a trusted file or a
-protected file. The former allows to securely hardcode arguments (current
+``loader.argv_src_file`` is intended to point to either a trusted file or an
+encrypted file. The former allows to securely hardcode arguments (current
 manifest syntax doesn't allow to include them inline), the latter allows the
 arguments to be provided at runtime from an external (trusted) source.
 
 .. note ::
-   Pointing to a protected file is currently not supported, due to the fact that
-   PF wrap key provisioning currently happens after setting up arguments.
+   Pointing to an encrypted file is currently not supported, due to the fact
+   that encryption key provisioning currently happens after setting up
+   arguments.
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
@@ -180,15 +181,15 @@ value or be a passthrough.
 ``loader.env_src_file`` allows to specify a URI to a file containing serialized
 environment, which can be generated using
 :ref:`gramine-argv-serializer<gramine-argv-serializer>`. This option is intended
-to point to either a trusted file or a protected file. The former allows to
+to point to either a trusted file or an encrypted file. The former allows to
 securely hardcode environments (in a more flexible way than
 ``loader.env.[ENVIRON]`` option), the latter allows the environments to be
 provided at runtime from an external (trusted) source.
 
 .. note ::
-   Pointing to a protected file is currently not supported, due to the fact that
-   PF wrap key provisioning currently happens after setting up environment
-   variables.
+   Pointing to an encrypted file is currently not supported, due to the fact
+   that encryption key provisioning currently happens after setting up
+   environment variables.
 
 If the same variable is set in both, then ``loader.env.[ENVIRON]`` takes
 precedence. It is prohibited to specify both ``value`` and ``passthrough`` keys
@@ -254,7 +255,7 @@ Gramine internal metadata size
     (default: "0")
 
 This syntax specifies how much additional memory Gramine reserves for its
-internal use (e.g., metadata for trusted/protected files, internal handles,
+internal use (e.g., metadata for trusted files, internal handles,
 etc.). By default, Gramine pre-allocates 64MB of internal memory for this
 metadata, but for huge workloads this limit may be not enough. In this case,
 Gramine loudly fails with "out of PAL memory" error. To run huge workloads,
@@ -367,7 +368,7 @@ The ``type`` parameter specifies the mount point type. If omitted, it defaults
 to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e. must
 begin with ``/``).
 
-Gramine currently supports two types of mount points:
+Gramine currently supports the following types of mount points:
 
 * ``chroot`` (default): Host-backed files. All host files and sub-directories
   found under ``[URI]`` are forwarded to the Gramine instance and placed under
@@ -377,6 +378,9 @@ Gramine currently supports two types of mount points:
   ``/another/path/file``. This concept is similar to FreeBSD's chroot and to
   Docker's named volumes. Files under ``chroot`` mount points support mmap and
   fork/clone.
+
+* ``encrypted``: Host-backed encrypted files. See :ref:`encrypted-files` for
+  more information.
 
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
@@ -598,7 +602,7 @@ are not cryptographically hashed and are thus not protected.
 
 .. warning::
    It is insecure to allow files containing code or critical information;
-   developers must not allow files blindly! Instead, use trusted or protected
+   developers must not allow files blindly! Instead, use trusted or encrypted
    files.
 
 Trusted files
@@ -631,67 +635,67 @@ Marking files as trusted is especially useful for shared libraries: a |~|
 trusted library cannot be silently replaced by a malicious host because the hash
 verification will fail.
 
-Protected files
+.. _encrypted-files:
+
+Encrypted files
 ^^^^^^^^^^^^^^^
 
 ::
 
-    sgx.insecure__protected_files_key = "[16-byte hex value]"
-
-    sgx.protected_files = [
-      "[URI]",
-      "[URI]",
+    fs.mounts = [
+      { type = "encrypted", path = "[PATH]", uri = "[URI]", key_name = "[KEY_NAME]" },
     ]
 
-    sgx.protected_mrenclave_files = [
-      "[URI]",
-      "[URI]",
-    ]
+    fs.insecure__keys.[KEY_NAME] = "[32-character hex value]"
 
-    sgx.protected_mrsigner_files = [
-      "[URI]",
-      "[URI]",
-    ]
-
-This syntax specifies the files that are encrypted on disk and transparently
+This syntax allows mounting files that are encrypted on disk and transparently
 decrypted when accessed by Gramine or by application running inside Gramine.
-Protected files guarantee data confidentiality and integrity (tamper
-resistance), as well as file swap protection (a protected file can only be
-accessed when in a specific path).
+Encrypted files guarantee data confidentiality and integrity (tamper
+resistance), as well as file swap protection (an encrypted file can only be
+accessed when in a specific host path).
 
-URI can be a file or a directory. If a directory is specified, all existing
-files/directories within it are registered as protected recursively (and are
-expected to be encrypted in the PF format). New files created in a protected
-directory are automatically treated as protected.
+Encrypted files were previously known as *protected files*, and some Gramine
+tools might still use the old name.
 
-Note that path size of a protected file is limited to 512 bytes and filename
-size is limited to 260 bytes.
-
-``sgx.insecure__protected_files_key`` specifies the wrap (master) encryption key
-and must be used only for debugging purposes.
+URI can be a file or a directory. If a directory is mounted, all existing
+files/directories within it are recursively treated as encrypted (and are
+expected to be encrypted in the PF format). New files created in an encrypted
+mount are also automatically treated as encrypted.
 
 .. warning::
-   ``sgx.insecure__protected_files_key`` hard-codes the key in the manifest.
-   This option is thus insecure and must not be used in production environments!
-   Typically, you want to provision the protected files wrap key using SGX
-   local/remote attestation, thus you should not specify the
-   ``sgx.insecure__protected_files_key`` manifest option at all. Instead, use
-   the Secret Provisioning interface (see :doc:`attestation`).
+   The current implementation assumes that ``type = "encrypted"`` mounts do not
+   overlap on host, i.e. there are no host files reachable through more than one
+   ``type = "encrypted"`` mount. Otherwise, changes made to such files might not
+   be correctly persisted by Gramine.
 
-There are three types of protected files:
+Note that path size of an encrypted file is limited to 512 bytes and filename
+size is limited to 260 bytes.
 
-* ``sgx.protected_files`` are encrypted using the wrap (master) encryption key;
-  they are well-suited for input files encrypted by the user and sent to the
-  deployment platform as well as for output files sent back to the user and
-  decrypted at the user side.
+The ``key_name`` mount parameter specifies the name of the encryption key. If
+omitted, it will default to ``"default"``. This feature can be used to mount
+different files or directories with different encryption keys.
 
-* ``sgx.protected_mrenclave_files`` are encrypted using the SGX sealing key
-  based on the MRENCLAVE identity of the enclave; they are useful to allow only
-  the same enclave (on the same platform) to unseal files.
+``fs.insecure__keys.[KEY_NAME]`` can be used to specify the encryption keys
+directly in manifest. This option must be used only for debugging purposes.
 
-* ``sgx.protected_mrsigner_files`` are encrypted using the SGX sealing key based
-  on the MRSIGNER identity of the enclave; they are useful to allow all enclaves
-  signed with the same key (and on the same platform) to unseal files.
+.. warning::
+   ``sgx.insecure__keys.[KEY_NAME]`` hard-codes the key in the manifest. This
+   option is thus insecure and must not be used in production environments!
+   Typically, you want to provision the encryption keys using SGX
+   local/remote attestation, thus you should not specify any
+   ``sgx.insecure__keys.[KEY_NAME]`` manifest options at all. Instead, use the
+   Secret Provisioning interface (see :doc:`attestation`).
+
+Key names beginning with underscore (``_``) denote special keys provided by
+Gramine:
+
+* ``"_sgx_mrenclave"`` (SGX only) is the SGX sealing key based on the MRENCLAVE
+  identity of the enclave. This is useful to allow only the same enclave (on the
+  same platform) to unseal files.
+
+* ``"_sgx_mrsigner"`` (SGX only) is the SGX sealing key based on the MRSIGNER
+  identity of the enclave. This is useful to allow all enclaves signed with the
+  same key (and on the same platform) to unseal files.
 
 File check policy
 ^^^^^^^^^^^^^^^^^
@@ -876,3 +880,40 @@ Experimental sysfs topology support
     fs.experimental__enable_sysfs_topology = [true|false]
 
 This feature is now enabled by default and the option was removed.
+
+Protected files (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.protected_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+    sgx.protected_mrenclave_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+    sgx.protected_mrsigner_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+This syntax specified the previous SGX-only protected files. It has been
+replaced with ``type = "encrypted"`` mounts (see :ref:`encrypted-files`).
+
+.. warning::
+   Gramine will attempt to convert this syntax to mounted filesystems, but might
+   fail to do so correctly in more complicated cases (e.g. when a single host
+   file belongs to multiple mounts). It is recommended to rewrite all usages of
+   this syntax to ``type = "encrypted"`` mounts.
+
+::
+
+   fs.insecure__protected_files_key = "[32-character hex value]"
+
+This syntax allowed specifying the default encryption key for protected files.
+It has been replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old
+and new syntax are suitable for debugging purposes only.
