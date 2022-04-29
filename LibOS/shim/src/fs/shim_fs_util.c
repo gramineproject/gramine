@@ -140,12 +140,10 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
 int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset) {
     assert(addr);
-    __UNUSED(flags);
 
     int ret;
 
-    /* The underlying PAL mapping should always be private. */
-    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, MAP_PRIVATE);
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
     pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
 
     void* actual_addr = addr;
@@ -197,14 +195,12 @@ err:;
 int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset) {
     assert(!(flags & MAP_PRIVATE));
-    __UNUSED(flags);
 
     lock(&hdl->inode->lock);
     file_off_t file_size = hdl->inode->size;
     unlock(&hdl->inode->lock);
 
-    /* The underlying PAL mapping should always be private. */
-    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, MAP_PRIVATE);
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
     pal_prot_flags_t pal_prot_readable = pal_prot | PAL_PROT_READ;
 
     int ret;
