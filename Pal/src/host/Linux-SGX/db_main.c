@@ -170,10 +170,7 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
     for (size_t i = 0; i < topo_info->cores_cnt; i++) {
         if (topo_info->cores[i].socket_id >= topo_info->sockets_cnt)
             return -PAL_ERROR_INVAL;
-    }
-
-    for (size_t i = 0; i < topo_info->sockets_cnt; i++) {
-        if (topo_info->sockets[i].node_id >= topo_info->numa_nodes_cnt)
+        if (topo_info->cores[i].node_id >= topo_info->numa_nodes_cnt)
             return -PAL_ERROR_INVAL;
     }
 

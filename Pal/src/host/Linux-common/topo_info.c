@@ -262,7 +262,6 @@ static int set_cache_id(size_t ind, void* _args) {
 struct set_node_id_args {
     struct pal_cpu_thread_info* threads;
     struct pal_cpu_core_info* cores;
-    struct pal_socket_info* sockets;
     size_t id_to_set;
 };
 
@@ -270,7 +269,7 @@ static int set_node_id(size_t thr_ind, void* _args) {
     struct set_node_id_args* args = _args;
     if (!args->threads[thr_ind].is_online)
         return 0;
-    args->sockets[args->cores[args->threads[thr_ind].core_id].socket_id].node_id = args->id_to_set;
+    args->cores[args->threads[thr_ind].core_id].node_id = args->id_to_set;
     return 0;
 }
 
@@ -299,7 +298,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
-        sockets[i].node_id = -1;
+        cores[i].node_id = -1;
         cores[i].socket_id = -1;
         threads[i].is_online = false;
         threads[i].core_id = -1;
@@ -363,7 +362,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
             .threads = threads,
             .cores = cores,
-            .sockets = sockets,
             .id_to_set = i,
         });
         if (ret < 0)

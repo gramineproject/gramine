@@ -56,14 +56,22 @@ struct pal_cpu_core_info {
      * offline cores and thus skip `is_online` here. */
 
     size_t socket_id;
+
+    /*
+     * Surprisingly, there's no relation between sockets and NUMA nodes - a NUMA node can contain
+     * multiple sockets (qemu does this), but also a socket can contain more than one NUMA node
+     * inside (see "Sub-NUMA Clustering"). So, NUMA nodes seem to rather be a subset of cores in a
+     * system, not a subset of sockets.
+     */
+    size_t node_id;
 };
 
-// TODO: move info from struct pal_cpu_info to here
 struct pal_socket_info {
     /* We have our own numbering of sockets (not taken from the host), so we can just ignore
      * offline sockets and thus skip `is_online` from here. */
 
-    size_t node_id;
+    // TODO: move info from struct pal_cpu_info to here
+    char unused;
 };
 
 struct pal_numa_node_info {
