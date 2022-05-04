@@ -45,7 +45,7 @@ rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig: sgx_sign
 sgx_sign: rust-hyper-http-server.manifest build-rust
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
+		--output $<.sgx
 
 rust-hyper-http-server.token: rust-hyper-http-server.sig
 	gramine-sgx-get-token \

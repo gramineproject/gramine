@@ -43,7 +43,7 @@ helloworld.sig helloworld.manifest.sgx: sgx_sign
 sgx_sign: helloworld.manifest helloworld
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
+		--output $<.sgx
 
 helloworld.token: helloworld.sig
 	gramine-sgx-get-token \
