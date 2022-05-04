@@ -239,9 +239,12 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
 static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    struct shim_encrypted_files_key* key = get_encrypted_files_key("default");
-    if (!key)
-        return -ENOENT;
+    int ret;
+
+    struct shim_encrypted_files_key* key;
+    ret = get_or_create_encrypted_files_key("default", &key);
+    if (ret < 0)
+        return ret;
 
     pf_key_t pf_key;
     bool is_set = read_encrypted_files_key(key, &pf_key);
@@ -251,7 +254,7 @@ static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         if (!buf)
             return -ENOMEM;
 
-        int ret = dump_pf_key(&pf_key, buf, buf_size);
+        ret = dump_pf_key(&pf_key, buf, buf_size);
         if (ret < 0) {
             free(buf);
             return -EACCES;
@@ -269,9 +272,12 @@ static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
 static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
-    struct shim_encrypted_files_key* key = get_encrypted_files_key("default");
-    if (!key)
-        return -ENOENT;
+    int ret;
+
+    struct shim_encrypted_files_key* key;
+    ret = get_or_create_encrypted_files_key("default", &key);
+    if (ret < 0)
+        return ret;
 
     pf_key_t pf_key;
     if (size != sizeof(pf_key) * 2) {
@@ -282,7 +288,7 @@ static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     char* key_str = alloc_substr(data, size);
     if (!key_str)
         return -ENOMEM;
-    int ret = parse_pf_key(key_str, &pf_key);
+    ret = parse_pf_key(key_str, &pf_key);
     free(key_str);
     if (ret < 0)
         return -EACCES;
