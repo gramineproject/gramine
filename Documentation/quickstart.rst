@@ -21,8 +21,8 @@ We supply a tool :doc:`manpages/is-sgx-available`, which you can use to check
 your hardware and system. It's installed together with the respective gramine
 package (see below).
 
-Installation
-------------
+Install Gramine
+---------------
 
 On Ubuntu 18.04 or 20.04::
 
@@ -50,12 +50,19 @@ This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
 stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
 be protected and should not be disclosed to anyone.
 
-Clone the repository and run sample application
------------------------------------------------
+Run sample application
+----------------------
+
+Core Gramine repository contains several sample applications. Thus, to test
+Gramine installation, we clone the Gramine repo:
 
 .. parsed-literal::
 
    git clone --depth 1 \https://github.com/gramineproject/gramine.git |stable-checkout|
+
+We don't want to build Gramine (it is already installed on the system). Instead,
+we want to build and run the HelloWorld example::
+
    cd gramine/CI-Examples/helloworld
 
 Without SGX::
@@ -68,10 +75,8 @@ With SGX::
    make SGX=1
    gramine-sgx helloworld
 
-For more complex examples, see :file:`CI-Examples` directory.
-
-Other example applications
---------------------------
+Other sample applications
+-------------------------
 
 We prepared and tested several applications to demonstrate Gramine usability.
 These applications can be found in the :file:`CI-Examples` directory in the
