@@ -343,6 +343,51 @@ be aware that they have severe SGX-hardware limitations. In particular:
    enclave threads and enclave memory across several NUMA domains, which will
    lead to higher memory access latencies and overall worse performance.
 
+Glibc malloc tuning
+-------------------
+
+Depending on the number of threads and the value of ``sgx.enclave_size``, you
+might encounter pathological performance due to a combination of various factors.
+
+Specifically, the default settings of glibc's malloc assume that virtual memory is
+virtually unlimited, and, as an optimization, request a per-thread arena
+of 64 MiB from the kernel when a thread first calls malloc.
+
+Because the performance characteristics of a page fault are significantly
+different under SGX, we do not implement the overcommit mechanism provided
+by the Linux kernel, and fully back each allocation with physical memory
+the moment the memory is requested by the application.
+
+Moreover, the total amount of memory available to each process needs to be
+declared before the enclave gets started, which makes running out of available
+memory is more of a concern than usual (this particular aspect will change
+with support for SGXv2's EDMM).
+
+To put a final nail in the coffin, glibc will retry allocating a per-thread
+arena each time malloc gets called, perhaps in a hope that the memory situation
+that prevented the previous attempt from succeeding has since passed.
+
+All together, this means that, unless ``64M * (application's thread count)`` fits
+comfortably in sgx.enclave_size, ``malloc`` will be much slower than it should be,
+on some of the threads involved, because each call will now cause multiple
+relatively expensive calls to ``mmap``.
+
+One way to solve this is to limit the number of threads that are allowed to have
+their own arena, with the following setting::
+
+    loader.env.MALLOC_ARENA_MAX = "1"
+
+This does have its own performance implications, but the impact is much smaller
+than the pathological behavior described above.
+
+Another solution would be to set ``sgx.enclave_size`` to a much higher value,
+to accomodate each thread creating its own arena. Do keep in mind, however, that
+each process in the enclave will consume its own lot of ``sgx.enclave_size``.
+If the memory consumption is not a problem for your usecase, you might observe
+better performance than when limiting ``MALLOC_ARENA_MAX``.
+
+See also: `Issue #342 <https://github.com/gramineproject/gramine/issues/342>`_.
+
 Other considerations
 --------------------
 

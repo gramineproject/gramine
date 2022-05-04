@@ -47,8 +47,7 @@ blender.manifest: blender.manifest.template | $(RUN_DIR)
 		-Dblender_ver=$(BLENDER_VER) \
 		$< >$@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# we need to hack around.
+# See the helloworld example for details on this Makefile hack.
 blender.sig blender.manifest.sgx: sgx_outputs
 	@:
 
