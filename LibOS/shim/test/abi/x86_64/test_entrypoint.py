@@ -23,3 +23,6 @@ class TC_00_Entrypoint(RegressionTestCase):
 
     def test_000_env(self):
         self.run_binary(['stack_env'])
+
+    def test_000_auxv(self):
+        self.run_binary(['stack_auxiliary'])

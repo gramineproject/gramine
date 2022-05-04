@@ -8,4 +8,5 @@ manifests = [
   "stack",
   "stack_arg",
   "stack_env",
+  "stack_auxiliary",
 ]
