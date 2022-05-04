@@ -10,6 +10,7 @@ tests = {
     'rflags': {},
     'stack': {},
     'stack_arg': {},
+    'stack_env': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')

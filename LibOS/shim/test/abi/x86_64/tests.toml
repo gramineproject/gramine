@@ -7,4 +7,5 @@ manifests = [
   "rflags",
   "stack",
   "stack_arg",
+  "stack_env",
 ]
