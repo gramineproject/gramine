@@ -495,74 +495,6 @@ out:
     return ret;
 }
 
-static int chroot_reopen(struct shim_handle* hdl, PAL_HANDLE* out_palhdl) {
-    PAL_HANDLE palhdl;
-
-    mode_t mode = 0;
-    enum pal_access access = LINUX_OPEN_FLAGS_TO_PAL_ACCESS(hdl->flags);
-    enum pal_create_mode create = PAL_CREATE_NEVER;
-    pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(hdl->flags);
-    int ret = DkStreamOpen(hdl->uri, access, mode, create, options, &palhdl);
-    if (ret < 0)
-        return pal_to_unix_errno(ret);
-    *out_palhdl = palhdl;
-    return 0;
-}
-
-/*
- * Prepare the handle to be sent to child process. If the corresponding file still exists on the
- * host, we will not checkpoint its PAL handle, but let the child process open another one.
- *
- * TODO: this is only necessary because PAL handles for protected files cannot be sent to child
- * process (`DkSendHandle`). This workaround limits the damage: inheriting a handle by child process
- * will now fail to work only if it's a handle for a protected file *and* the file has been deleted
- * from host.
- */
-static int chroot_checkout(struct shim_handle* hdl) {
-    assert(hdl->type == TYPE_CHROOT);
-    assert(hdl->pal_handle);
-
-    /* We should be holding `g_dcache_lock` for the whole checkpointing process. */
-    assert(locked(&g_dcache_lock));
-
-    /* We don't take `hdl->lock` because this is actually the handle *copied* for checkpointing (and
-     * the lock isn't even properly initialized). */
-
-    /* First, check if we have not deleted or renamed the file (the dentry contains the same
-     * inode). */
-    bool is_in_dentry = (hdl->dentry->inode == hdl->inode);
-
-    if (is_in_dentry) {
-        /* Then check if the file still exists on host. If so, we assume it can be opened by the
-         * child process, so the PAL handle doesn't need sending. */
-        PAL_STREAM_ATTR attr;
-        if (DkStreamAttributesQuery(hdl->uri, &attr) == 0) {
-            hdl->pal_handle = NULL;
-        }
-    }
-
-    return 0;
-}
-
-static int chroot_checkin(struct shim_handle* hdl) {
-    assert(hdl->type == TYPE_CHROOT);
-
-    /* We don't take `hdl->lock` because this handle is being initialized (during checkpoint
-     * restore). */
-
-    if (!hdl->pal_handle) {
-        PAL_HANDLE palhdl = NULL;
-        int ret = chroot_reopen(hdl, &palhdl);
-        if (ret < 0) {
-            log_warning("%s: failed to open %s: %d", __func__, hdl->uri, ret);
-            return ret;
-        }
-        assert(palhdl);
-        hdl->pal_handle = palhdl;
-    }
-    return 0;
-}
-
 struct shim_fs_ops chroot_fs_ops = {
     .mount      = &chroot_mount,
     .flush      = &chroot_flush,
@@ -576,8 +508,6 @@ struct shim_fs_ops chroot_fs_ops = {
     .hstat      = &generic_inode_hstat,
     .truncate   = &chroot_truncate,
     .poll       = &generic_inode_poll,
-    .checkout   = &chroot_checkout,
-    .checkin    = &chroot_checkin,
 };
 
 struct shim_d_ops chroot_d_ops = {
