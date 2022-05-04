@@ -367,7 +367,8 @@ out:
 
 static int chroot_encrypted_flush(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
-    assert(hdl->inode->type == S_IFREG);
+    if (hdl->inode->type != S_IFREG)
+        return 0;
 
     struct shim_encrypted_file* enc = hdl->inode->data;
 
@@ -385,7 +386,8 @@ static int chroot_encrypted_flush(struct shim_handle* hdl) {
 
 static void chroot_encrypted_hdrop(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
-    assert(hdl->inode->type == S_IFREG);
+    if (hdl->inode->type != S_IFREG)
+        return;
 
     struct shim_encrypted_file* enc = hdl->inode->data;
 
@@ -397,7 +399,10 @@ static void chroot_encrypted_hdrop(struct shim_handle* hdl) {
 static ssize_t chroot_encrypted_read(struct shim_handle* hdl, void* buf, size_t count,
                                      file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
-    assert(hdl->inode->type == S_IFREG);
+    if (hdl->inode->type != S_IFREG) {
+        assert(hdl->inode->type == S_IFDIR);
+        return -EISDIR;
+    }
 
     struct shim_encrypted_file* enc = hdl->inode->data;
     size_t actual_count;
@@ -416,7 +421,10 @@ static ssize_t chroot_encrypted_read(struct shim_handle* hdl, void* buf, size_t 
 static ssize_t chroot_encrypted_write(struct shim_handle* hdl, const void* buf, size_t count,
                                       file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
-    assert(hdl->inode->type == S_IFREG);
+    if (hdl->inode->type != S_IFREG) {
+        assert(hdl->inode->type == S_IFDIR);
+        return -EISDIR;
+    }
 
     struct shim_encrypted_file* enc = hdl->inode->data;
     size_t actual_count;
@@ -439,7 +447,10 @@ out:
 
 static int chroot_encrypted_truncate(struct shim_handle* hdl, file_off_t size) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
-    assert(hdl->inode->type == S_IFREG);
+    if (hdl->inode->type != S_IFREG) {
+        assert(hdl->inode->type == S_IFDIR);
+        return -EISDIR;
+    }
 
     int ret;
     struct shim_encrypted_file* enc = hdl->inode->data;
