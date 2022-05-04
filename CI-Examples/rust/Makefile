@@ -63,7 +63,8 @@ start-gramine-server: all
 
 .PHONY: clean
 clean:
-	$(RM) -rf *.token *.sig *.manifest.sgx *.manifest target/ result-* OUTPUT
+	$(RM) -rf *.token *.sig *.manifest.sgx *.manifest result-* OUTPUT
 
 .PHONY: distclean
 distclean: clean
+	$(RM) -rf target/
