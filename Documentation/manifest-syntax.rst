@@ -878,6 +878,7 @@ Protected files (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
+
     sgx.protected_files = [
       "[URI]",
       "[URI]",
