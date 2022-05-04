@@ -387,7 +387,7 @@ static int chroot_encrypted_flush(struct shim_handle* hdl) {
 static void chroot_encrypted_hdrop(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
     if (hdl->inode->type != S_IFREG)
-        return 0;
+        return;
 
     struct shim_encrypted_file* enc = hdl->inode->data;
 
