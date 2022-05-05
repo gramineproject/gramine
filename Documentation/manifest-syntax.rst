@@ -141,7 +141,8 @@ arguments to be provided at runtime from an external (trusted) source.
 
 .. note ::
    Pointing to an encrypted file is currently not supported, due to the fact
-   that wrap key provisioning currently happens after setting up arguments.
+   that encryption key provisioning currently happens after setting up
+   arguments.
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
@@ -187,8 +188,8 @@ provided at runtime from an external (trusted) source.
 
 .. note ::
    Pointing to an encrypted file is currently not supported, due to the fact
-   that wrap key provisioning currently happens after setting up environment
-   variables.
+   that encryption key provisioning currently happens after setting up
+   environment variables.
 
 If the same variable is set in both, then ``loader.env.[ENVIRON]`` takes
 precedence. It is prohibited to specify both ``value`` and ``passthrough`` keys
@@ -645,7 +646,7 @@ Encrypted files
       { type = "encrypted", path = "[PATH]", uri = "[URI]", key_name = "[KEY_NAME]" },
     ]
 
-    fs.insecure__keys.[KEY_NAME] = "[16-byte hex value]"
+    fs.insecure__keys.[KEY_NAME] = "[32-character hex value]"
 
 This syntax allows mounting files that are encrypted on disk and transparently
 decrypted when accessed by Gramine or by application running inside Gramine.
@@ -661,20 +662,26 @@ files/directories within it are recursively treated as encrypted (and are
 expected to be encrypted in the PF format). New files created in an encrypted
 mount are also automatically treated as encrypted.
 
+.. warning::
+   The current implementation assumes that each encrypted file is reachable
+   through a single path in Gramine. If the same encrypted file on host can be
+   reached through multiple paths in Gramine (e.g. because of host-level
+   symlinks, or multiple Gramine mounts), data loss may occur.
+
 Note that path size of an encrypted file is limited to 512 bytes and filename
 size is limited to 260 bytes.
 
-The ``key_name`` mount parameter specifies the name of the wrap key. If
+The ``key_name`` mount parameter specifies the name of the encryption key. If
 omitted, it will default to ``"default"``. This feature can be used to mount
 different files or directories with different encryption keys.
 
-``fs.insecure__keys.[KEY_NAME]`` can be used to specify the wrap keys
+``fs.insecure__keys.[KEY_NAME]`` can be used to specify the encryption keys
 directly in manifest. This option must be used only for debugging purposes.
 
 .. warning::
    ``sgx.insecure__keys.[KEY_NAME]`` hard-codes the key in the manifest. This
    option is thus insecure and must not be used in production environments!
-   Typically, you want to provision the encrypted files wrap key using SGX
+   Typically, you want to provision the encryption keys using SGX
    local/remote attestation, thus you should not specify any
    ``sgx.insecure__keys.[KEY_NAME]`` manifest options at all. Instead, use the
    Secret Provisioning interface (see :doc:`attestation`).
@@ -895,7 +902,7 @@ Protected files (deprecated syntax)
     ]
 
 This syntax specified the previous SGX-only protected files. It has been
-replaced with ``type = "encrypted"`` mounts.
+replaced with ``type = "encrypted"`` mounts (see :ref:`encrypted-files`).
 
 .. warning::
    Gramine will attempt to convert this syntax to mounted filesystems, but might
@@ -905,8 +912,8 @@ replaced with ``type = "encrypted"`` mounts.
 
 ::
 
-   fs.insecure__protected_files_key = "[16-byte hex value]"
+   fs.insecure__protected_files_key = "[32-character hex value]"
 
-This syntax allowed specifying the wrap key for protected files. It has been
-replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old and new syntax
-are suitable for debugging purposes only.
+This syntax allowed specifying the default encryption key for protected files.
+It has been replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old
+and new syntax are suitable for debugging purposes only.

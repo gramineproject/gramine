@@ -210,7 +210,7 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
         int8_t lo = hex2dec(key_str[i+1]);
         if (hi < 0 || lo < 0) {
             log_warning("%s: unexpected character encountered", __func__);
-            return -1;
+            return -EINVAL;
         }
         tmp_pf_key[i / 2] = hi * 16 + lo;
     }
@@ -219,7 +219,7 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
 }
 
 int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size) {
-    if (buf_size != sizeof(*pf_key) * 2)
+    if (buf_size < sizeof(*pf_key) * 2 + 1)
         return -EINVAL;
 
     __bytes2hexstr(pf_key, sizeof(*pf_key), buf, buf_size);
@@ -274,33 +274,30 @@ int init_encrypted_files(void) {
     /* Parse `fs.insecure__keys.*` */
 
     toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
-    if (!manifest_fs)
-        return 0;
-
-    toml_table_t* manifest_fs_keys = toml_table_in(manifest_fs, "insecure__keys");
-    if (!manifest_fs_keys)
-        return 0;
-
-    ssize_t keys_cnt = toml_table_nkval(manifest_fs_keys);
-    if (keys_cnt < 0)
-        return -EINVAL;
-
-    for (ssize_t i = 0; i < keys_cnt; i++) {
-        const char* key_name = toml_key_in(manifest_fs_keys, i);
-        assert(key_name);
-
-        char* key_str;
-        ret = toml_string_in(manifest_fs_keys, key_name, &key_str);
-        if (ret < 0) {
-            log_error("Cannot parse 'fs.insecure__keys.%s'", key_name);
+    toml_table_t* manifest_fs_keys =
+        manifest_fs ? toml_table_in(manifest_fs, "insecure__keys") : NULL;
+    if (manifest_fs && manifest_fs_keys) {
+        ssize_t keys_cnt = toml_table_nkval(manifest_fs_keys);
+        if (keys_cnt < 0)
             return -EINVAL;
-        }
-        assert(key_str);
 
-        ret = parse_and_update_key(key_name, key_str);
-        free(key_str);
-        if (ret < 0)
-            return ret;
+        for (ssize_t i = 0; i < keys_cnt; i++) {
+            const char* key_name = toml_key_in(manifest_fs_keys, i);
+            assert(key_name);
+
+            char* key_str;
+            ret = toml_string_in(manifest_fs_keys, key_name, &key_str);
+            if (ret < 0) {
+                log_error("Cannot parse 'fs.insecure__keys.%s'", key_name);
+                return -EINVAL;
+            }
+            assert(key_str);
+
+            ret = parse_and_update_key(key_name, key_str);
+            free(key_str);
+            if (ret < 0)
+                return ret;
+        }
     }
 
     /*
@@ -309,7 +306,7 @@ int init_encrypted_files(void) {
      *
      * TODO: this is deprecated in v1.2, remove two versions later.
      */
-    if (strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
+    if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
         char* key_str;
         ret = toml_string_in(g_manifest_root, "sgx.insecure__protected_files_key", &key_str);
         if (ret < 0) {

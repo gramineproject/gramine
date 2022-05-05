@@ -236,7 +236,7 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     return 0;
 }
 
-static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int deprecated_pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret;
@@ -260,6 +260,7 @@ static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             return -EACCES;
         }
 
+        /* NOTE: we disregard the null terminator here, the caller expects raw data */
         *out_data = buf;
         *out_size = sizeof(pf_key) * 2;
     } else {
@@ -269,7 +270,7 @@ static int pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     return 0;
 }
 
-static int pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
+static int deprecated_pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
     int ret;
@@ -384,10 +385,10 @@ int init_attestation(struct pseudo_node* dev) {
         pseudo_add_str(attestation, "quote", &quote_load);
 
         /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
-        struct pseudo_node* pfkey = pseudo_add_str(attestation, "protected_files_key",
-                                                   &pfkey_load);
-        pfkey->perm = PSEUDO_PERM_FILE_RW;
-        pfkey->str.save = &pfkey_save;
+        struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
+                                                              &deprecated_pfkey_load);
+        deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
+        deprecated_pfkey->str.save = &deprecated_pfkey_save;
     }
 
     struct pseudo_node* keys = pseudo_add_dir(attestation, "keys");

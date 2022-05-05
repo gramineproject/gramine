@@ -1,6 +1,5 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
-loader.log_level = "trace"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
@@ -12,10 +11,10 @@ fs.mounts = [
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/mounted", uri = "file:tmp" },
 
-  { type = "encrypted", path = "/tmp/pf_input", uri = "file:tmp/pf_input" },
-  { type = "encrypted", path = "/tmp/pf_output", uri = "file:tmp/pf_output" },
-  { type = "encrypted", path = "/mounted/pf_input", uri = "file:tmp/pf_input" },
-  { type = "encrypted", path = "/mounted/pf_output", uri = "file:tmp/pf_output" },
+  { type = "encrypted", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+  { type = "encrypted", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
   { type = "tmpfs", path = "/mnt-tmpfs" },
 ]
 

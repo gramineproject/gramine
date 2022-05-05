@@ -420,23 +420,24 @@ static int mount_nonroot_from_toml_array(void) {
 /*
  * Find where a file with given URI was supposed to be mounted. For instance, if the URI is
  * `file:a/b/c/d`, and there is a mount `{ uri = "file:a/b", path = "/x/y" }`, then this function
- * will set `full_mount_path` to `/x/y/c/d`. Only "chroot" mounts are considered.
+ * will set `*out_file_path` to `/x/y/c/d`. Only "chroot" mounts are considered.
  *
- * The caller is supposed to free `full_mount_path`.
+ * The caller is supposed to free `*out_file_path`.
  *
  * This function is used for interpreting legacy `sgx.protected_files` syntax as mounts.
  */
-static int find_host_file_mount_path(const char* uri, char** full_mount_path) {
+static int find_host_file_mount_path(const char* uri, char** out_file_path) {
     if (!strstartswith(uri, URI_PREFIX_FILE))
         return -EINVAL;
 
     size_t uri_len = strlen(uri);
 
-    const char* mount_path = NULL;
-    const char* rel_path = NULL;
+    bool found = false;
+    char* file_path = NULL;
 
     /* Traverse the mount list in reverse: we want to find the latest mount that applies. */
     struct shim_mount* mount;
+    lock(&mount_list_lock);
     LISTP_FOR_EACH_ENTRY_REVERSE(mount, &mount_list, list) {
         if (strcmp(mount->fs->name, "chroot") != 0 || !strstartswith(mount->uri, URI_PREFIX_FILE))
             continue;
@@ -447,27 +448,29 @@ static int find_host_file_mount_path(const char* uri, char** full_mount_path) {
         /* Check if `mount_uri` is equal to `uri`, or is an ancestor of `uri` */
         if (mount_uri_len <= uri_len && !memcmp(mount_uri, uri, mount_uri_len) &&
                 (!uri[mount_uri_len] || uri[mount_uri_len] == '/')) {
-            mount_path = mount->path;
-            rel_path = uri + mount_uri_len;
+            /* `rest` is either empty, or begins with '/' */
+            const char* rest = uri + mount_uri_len;
+            found = true;
+            file_path = alloc_concat(mount->path, -1, rest, -1);
             break;
         }
 
-        /* Special case: this the mount of the current directory, and `uri` is not absolute */
-        if ((!strcmp(mount_uri, "file:.") || !strcmp(mount_uri, "file:")) &&
-                uri[static_strlen(URI_PREFIX_FILE)] != '/') {
-            mount_path = "";
-            rel_path = uri + static_strlen(URI_PREFIX_FILE);
+        /* Special case: this is the mount of the current directory, and `uri` is not absolute */
+        if (!strcmp(mount_uri, "file:.") && uri[static_strlen(URI_PREFIX_FILE)] != '/') {
+            found = true;
+            file_path = strdup(uri + static_strlen(URI_PREFIX_FILE));
             break;
         }
     }
-    if (!mount_path)
+    unlock(&mount_list_lock);
+
+    if (!found)
         return -ENOENT;
 
-    char* result = alloc_concat(mount_path, -1, rel_path, -1);
-    if (!result)
+    if (!file_path)
         return -ENOMEM;
 
-    *full_mount_path = result;
+    *out_file_path = file_path;
     return 0;
 }
 
@@ -539,6 +542,8 @@ static int mount_protected_files(const char* array_name, const char* key_name) {
 
         free(uri);
         uri = NULL;
+        free(mount_path);
+        mount_path = NULL;
     }
     ret = 0;
 out:

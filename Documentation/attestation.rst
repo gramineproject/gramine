@@ -205,17 +205,18 @@ EPID based quote verification) or to use the Intel DCAP libraries and tools (for
 DCAP based quote verification).
 
 The ``/dev/attestation`` pseudo-filesystem also exposes pseudo-files to set the
-encrypted files wrap (master) keys (see also :doc:`manifest-syntax`):
+encryption keys (see also :doc:`manifest-syntax`):
 
-- ``/dev/attestation/keys/<key_name>`` file contains the wrap key with a given
-  name (the default key name is ``default``). Typically, it is opened before the
-  actual application runs and filled with a 128-bit key obtained from a remote
-  secret provisioning service. The format of the file is a 16-byte raw binary
-  value.
+- ``/dev/attestation/keys/<key_name>`` file contains the encryption key with a
+  given name (the default key name is ``default``). Typically, it is opened
+  before the actual application runs and filled with a 128-bit key obtained from
+  a remote secret provisioning service. The format of the file is a 16-byte raw
+  binary value.
 
 .. note::
    Previously, ``/dev/attestation/protected_files_key`` was used for setting the
-   wrap key, and Gramine still supports that file for backward compatibility.
+   default encryption key, and Gramine still supports that file for backward
+   compatibility.
 
    Note that the old file (``/dev/attestation/protected_files_key``) uses a
    32-character hex value, and the new files

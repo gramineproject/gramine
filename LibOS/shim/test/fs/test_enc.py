@@ -9,12 +9,12 @@ import test_fs
 
 from graminelibos import _CONFIG_SGX_ENABLED
 
-# TODO: While protected (encrypted) files are no longer SGX-only, the related tools
-# (gramine-sgx-pf-crypt, gramine-sgx-tamper) are still part of Linux-SGX PAL. As a result, we are
-# able to run the tests with other PALs, but only if Gramine was build with SGX enabled.
+# TODO: While encrypted files are no longer SGX-only, the related tools (gramine-sgx-pf-crypt,
+# gramine-sgx-pf-tamper) are still part of Linux-SGX PAL. As a result, we are able to run the tests
+# with other PALs, but only if Gramine was built with SGX enabled.
 
-@unittest.skipUnless(_CONFIG_SGX_ENABLED, 'Protected files tests require SGX to be enabled')
-class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
+@unittest.skipUnless(_CONFIG_SGX_ENABLED, 'Encrypted files tests require SGX to be enabled')
+class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -25,13 +25,13 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
         # CONST_WRAP_KEY must match the one in manifest
         cls.CONST_WRAP_KEY = [0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
                               0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00]
-        cls.ENCRYPTED_DIR = os.path.join(cls.TEST_DIR, 'pf_input')
+        cls.ENCRYPTED_DIR = os.path.join(cls.TEST_DIR, 'enc_input')
         cls.ENCRYPTED_FILES = [os.path.join(cls.ENCRYPTED_DIR, str(v)) for v in cls.FILE_SIZES]
         cls.LIB_PATH = os.path.join(os.getcwd(), 'lib')
 
         if not os.path.exists(cls.ENCRYPTED_DIR):
             os.mkdir(cls.ENCRYPTED_DIR)
-        cls.OUTPUT_DIR = os.path.join(cls.TEST_DIR, 'pf_output')
+        cls.OUTPUT_DIR = os.path.join(cls.TEST_DIR, 'enc_output')
         cls.OUTPUT_FILES = [os.path.join(cls.OUTPUT_DIR, str(x)) for x in cls.FILE_SIZES]
         # create encrypted files
         cls.__set_default_key(cls)
@@ -180,9 +180,9 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
     # overrides TC_00_FileSystem to change dirs (from plaintext to encrypted)
     def test_210_copy_dir_mounted(self):
         executable = 'copy_whole'
-        stdout, stderr = self.run_binary([executable, '/mounted/pf_input', '/mounted/pf_output'],
+        stdout, stderr = self.run_binary([executable, '/mounted/enc_input', '/mounted/enc_output'],
                                          timeout=30)
-        self.verify_copy(stdout, stderr, '/mounted/pf_input', executable)
+        self.verify_copy(stdout, stderr, '/mounted/enc_input', executable)
 
     def __corrupt_file(self, input_path, output_path):
         cmd = [self.PF_TAMPER, '-w', self.WRAP_KEY, '-i', input_path, '-o', output_path]
@@ -190,7 +190,7 @@ class TC_50_ProtectedFiles(test_fs.TC_00_FileSystem):
 
     # invalid/corrupted files
     def test_500_invalid(self):
-        invalid_dir = os.path.join(self.TEST_DIR, 'pf_invalid')
+        invalid_dir = os.path.join(self.TEST_DIR, 'enc_invalid')
         if not os.path.exists(invalid_dir):
             os.mkdir(invalid_dir)
 
