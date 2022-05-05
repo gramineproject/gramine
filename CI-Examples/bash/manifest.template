@@ -34,3 +34,7 @@ sgx.trusted_files = [
 sgx.allowed_files = [
   "file:scripts/",
 ]
+
+sgx.remote_attestation = true
+sgx.ra_client_spid     = ""
+

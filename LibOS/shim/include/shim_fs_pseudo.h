@@ -225,6 +225,7 @@ int proc_ipc_thread_follow_link(struct shim_dentry* dent, char** out_target);
 /* devfs */
 
 int init_devfs(void);
+int init_amber(struct pseudo_node* dev);
 int init_attestation(struct pseudo_node* dev);
 
 /* sysfs */
