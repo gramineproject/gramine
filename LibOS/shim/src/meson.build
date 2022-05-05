@@ -100,15 +100,20 @@ libos_sources = files(
     'utils/log.c',
 )
 
-libos_sources_arch = [
-    'shim_arch_prctl.c',
-    'shim_context.c',
-    'shim_table.c',
-    'start.S',
-    'syscallas.S',
-]
-foreach src : libos_sources_arch
-    libos_sources += files(join_paths('arch', host_machine.cpu_family(), src))
+libos_sources_arch = {
+    'shim_arch_prctl.c': {},
+    'shim_elf_entry.asm': { 'type': 'nasm' },
+    'shim_context.c': {},
+    'shim_table.c': {},
+    'start.S': {},
+    'syscallas.S': {},
+}
+foreach src, params : libos_sources_arch
+    if params.get('type', '') == 'nasm'
+        libos_sources += nasm_gen.process(join_paths('arch', host_machine.cpu_family(), src))
+    else
+        libos_sources += files(join_paths('arch', host_machine.cpu_family(), src))
+    endif
 endforeach
 
 shim_map = join_paths(meson.current_source_dir(), 'shim.map')
