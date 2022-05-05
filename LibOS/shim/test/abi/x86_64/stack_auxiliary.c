@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <elf/elf.h>
+#include <elf.h>
 
 /*
  * We have to add a function declaration to avoid warnings.
