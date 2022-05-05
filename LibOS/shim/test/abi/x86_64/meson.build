@@ -12,7 +12,7 @@ tests = {
     'stack_arg': {},
     'stack_env': {},
     'stack_auxiliary': {
-        'filename': [
+        'filenames': [
             'stack_auxiliary.c',
             nasm_gen.process('call_auxiliary.asm')
         ],
@@ -28,8 +28,8 @@ install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')
 
 foreach name, params : tests
     filename = ''
-    if (params.has_key('filename'))
-        filename = params.get('filename')
+    if (params.has_key('filenames'))
+        filename = params.get('filenames')
     elif (params.get('type', 'asm') == 'asm')
         filename = nasm_gen.process('@0@.asm'.format(name))
     else
