@@ -21,7 +21,7 @@ class TC_00_Entrypoint(RegressionTestCase):
     def test_000_arg(self):
         self.run_binary(['stack_arg', 'foo', 'bar'])
 
-    def test_000_env(self):
+    def test_070_env(self):
         self.run_binary(['stack_env'])
 
     def test_000_auxv(self):
