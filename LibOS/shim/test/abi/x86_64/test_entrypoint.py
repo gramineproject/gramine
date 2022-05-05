@@ -3,20 +3,20 @@
 from graminelibos.regression import RegressionTestCase
 
 class TC_00_Entrypoint(RegressionTestCase):
-    def test_000_atexit_func(self):
+    def test_010_atexit_func(self):
         self.run_binary(['atexit_func'])
 
-    def test_000_fpu_control_word(self):
+    def test_020_fpu_control_word(self):
         self.run_binary(['fpu_control_word'])
 
-    def test_000_rflags(self):
+    def test_030_rflags(self):
         self.run_binary(['rflags'])
 
-    def test_000_mxcsr(self):
+    def test_040_mxcsr(self):
         self.run_binary(['mxcsr'])
 
-    def test_000_stack(self):
+    def test_050_stack(self):
         self.run_binary(['stack'])
 
-    def test_000_arg(self):
+    def test_060_arg(self):
         self.run_binary(['stack_arg', 'foo', 'bar'])
