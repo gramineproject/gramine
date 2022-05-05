@@ -27,9 +27,9 @@ helloworld.manifest: helloworld.manifest.template
 # hard to express properly in Make. The simple solution would be to use
 # "Rules with Grouped Targets" (`&:`), however make on Ubuntu <= 20.04 doesn't support it.
 #
-# Simply using a normal rule with "two outputs" is equivalent to creating separate rules
-# for each output, and might cause two instances of gramine-sgx-sign to get launched
-# simultaneously.
+# Simply using a normal rule with "two targets" is equivalent to creating separate rules
+# for each output, and when using `make -j`, might cause two instances of gramine-sgx-sign
+# to get launched simultaneously, potentially breaking the build.
 #
 # As a workaround, we use a dummy intermediate target, and mark both files as depending on it, to
 # get the dependency graph we want. We mark this dummy target as .INTERMEDIATE, which means

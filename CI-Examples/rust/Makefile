@@ -37,7 +37,8 @@ rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template
 		-Dself_exe=$(SELF_EXE) \
 		$< $@
 
-# See the helloworld example for details on this Makefile hack.
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
 rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig: sgx_sign
 	@:
 
@@ -67,4 +68,4 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -rf target/
+	$(RM) -rf target/ Cargo.lock

@@ -86,7 +86,8 @@ redis-server.manifest: redis-server.manifest.template
 # EINITTOKEN must be generated on the machine where the application will run,
 # not where it was built.
 
-# See the helloworld example for details on this Makefile hack.
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
 redis-server.sig redis-server.manifest.sgx: sgx_outputs
 	@:
 
