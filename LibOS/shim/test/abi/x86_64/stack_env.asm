@@ -5,6 +5,8 @@
 ; Verify envp which should be in 'rsp + 8 + 8 * (argc + 1)'
 ; In this test we don't pass any additional arguments so argc is 1.
 
+default   rel
+
 extern    test_exit
 extern    test_str_neq
 
