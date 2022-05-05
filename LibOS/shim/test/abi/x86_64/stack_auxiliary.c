@@ -3,10 +3,9 @@
  *                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
  */
 
+#include <elf.h>
 #include <stdbool.h>
 #include <stddef.h>
-
-#include <elf.h>
 
 /*
  * We have to add a function declaration to avoid warnings.
@@ -21,14 +20,14 @@ static struct {
     uint64_t type;
     bool exists;
 } auxv_gramine_defaults[] = {
-    { AT_PHDR, 0 },
-    { AT_PHNUM, 0 },
-    { AT_PAGESZ, 0 },
-    { AT_ENTRY, 0 },
-    { AT_BASE, 0 },
-    { AT_RANDOM, 0 },
-    { AT_PHENT, 0 },
-    { AT_SYSINFO_EHDR, 0 },
+    { AT_PHDR, false },
+    { AT_PHNUM, false },
+    { AT_PAGESZ, false },
+    { AT_ENTRY, false },
+    { AT_BASE, false },
+    { AT_RANDOM, false },
+    { AT_PHENT, false },
+    { AT_SYSINFO_EHDR, false },
 };
 
 int verify_auxiliary(Elf64_auxv_t* auxv) {
