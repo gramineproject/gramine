@@ -360,7 +360,7 @@ might consume a large portion of the memory reserved for the enclave.
 
 When this happens, calls to ``malloc`` won't fail, as the allocator will
 fallback to the main thread's arena, or request a smaller mapping. However,
-glibc will retry allocating the area each time ``malloc`` gets called, perhaps
+glibc will retry allocating the arena each time ``malloc`` gets called, perhaps
 in a hope that the memory situation that prevented the previous attempt from
 succeeding has since passed.
 
