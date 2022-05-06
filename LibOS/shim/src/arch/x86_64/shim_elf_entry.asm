@@ -15,6 +15,6 @@ call_elf_entry:
     xor     rdx, rdx ; set RDX to 0
     push    0
     popf             ; set lower part of rFLAGS to 0
-    mov     rsp, rsi ; set stack pointer to secend arg
+    mov     rsp, rsi ; set stack pointer to second arg
     mov     rax, rdi ; jmp to entry point (first arg)
     jmp     rax
