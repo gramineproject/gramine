@@ -359,22 +359,26 @@ a big deal — when many threads are spawned (and call ``malloc``), the per-thre
 might consume a large portion of the memory reserved for the enclave.
 
 When this happens, calls to ``malloc`` won't fail, as the allocator will
-fallback to the main thread's arena, or request a smaller mapping. However,
-glibc will retry allocating the arena each time ``malloc`` gets called, perhaps
-in a hope that the memory situation that prevented the previous attempt from
-succeeding has since passed.
+allocate a single page to serve the request instead. However, no attempt will
+be made to make use of the rest of the page, wasting most of the memory.
+Moreover, glibc will retry allocating the arena each time ``malloc`` gets
+called, perhaps in a hope that the memory situation that prevented the previous
+attempt from succeeding has since passed.
 
 All together, this means that, unless ``64M * (application's thread count)`` fits
-comfortably in ``sgx.enclave_size``, ``malloc`` will be much slower than it should be,
-on some of the threads involved, because each call will now cause multiple
-relatively expensive calls to ``mmap``.
+comfortably in ``sgx.enclave_size``, ``malloc`` will be much slower and much less
+memory-efficient than it should be, on some of the threads involved, because each
+call will now cause multiple relatively expensive calls to ``mmap``, and effectively
+round up the request size to a multiple of 4096.
 
 One way to solve this is to limit the number of threads that are allowed to have
 their own arena. This can be done with either a call to ``mallopt``, or an environment
 variable set in the manifest::
 
-    # Only one thread can have its own malloc arena.
+    # Only the main thread can have its own malloc arena.
     loader.env.MALLOC_ARENA_MAX = "1"
+    # Only four threads may have their own arena.
+    loader.env.MALLOC_ARENA_MAX = "4"
 
 This does have its own performance implications, but the impact is much smaller
 than the pathological behavior described above.
