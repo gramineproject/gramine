@@ -1,5 +1,5 @@
-pal_skeleton_lds = join_paths(
-    meson.current_source_dir(), 'arch', host_machine.cpu_family(), 'pal.lds')
+# Arch specific meson.build must define a full path to PAL linker script in `pal_skeleton_lds`.
+subdir('arch')
 
 pal_skeleton_map = custom_target('pal.map[skeleton]',
     command: [gen_pal_map_prog, '@INPUT@', '@OUTPUT@'],
