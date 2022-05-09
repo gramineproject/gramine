@@ -111,7 +111,7 @@ static void save_pal_context(PAL_CONTEXT* ctx, sgx_cpu_context_t* uc,
 }
 
 static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
-    if (DO_ONCE) {
+    if (DO_ONCE()) {
         /* if we end up emulating RDTSC/RDTSCP instruction, we cannot use invariant TSC */
         extern uint64_t g_tsc_hz;
         g_tsc_hz = 0;
@@ -165,7 +165,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         return false;
     } else if (instr[0] == 0x0f && instr[1] == 0x05) {
         /* syscall: LibOS may know how to handle this */
-        if (DO_ONCE) {
+        if (DO_ONCE()) {
             log_always("Emulating a raw syscall instruction. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }

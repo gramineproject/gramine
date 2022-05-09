@@ -91,7 +91,7 @@ long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_time
     }
 
     if (clock_id == CLOCK_PROCESS_CPUTIME_ID) {
-        if (DO_ONCE) {
+        if (DO_ONCE()) {
             log_warning("Per-process CPU-time clock is not supported in clock_nanosleep(); "
                         "it is replaced with system-wide real-time clock.");
         }

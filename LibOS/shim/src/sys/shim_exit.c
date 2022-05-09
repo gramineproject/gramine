@@ -153,7 +153,7 @@ noreturn void process_exit(int error_code, int term_signal) {
 
     /* If process_exit is invoked multiple times, only a single invocation proceeds past this
      * point. */
-    if (!DO_ONCE) {
+    if (!DO_ONCE()) {
         /* Just exit current thread. */
         thread_exit(error_code, term_signal);
     }
