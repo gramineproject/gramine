@@ -11,7 +11,7 @@ pal_linux_common_sources_urts = files(
     'topo_info.c',
 )
 
-# Arch specific meson.build must define a list of arch specific sources in
+# Arch-specific meson.build must define a list of arch-specific sources in
 # `pal_linux_common_sources_urts_arch`.
 subdir('arch')
 pal_linux_common_sources_urts += pal_linux_common_sources_urts_arch
