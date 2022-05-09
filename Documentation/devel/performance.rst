@@ -375,10 +375,8 @@ One way to solve this is to limit the number of threads that are allowed to have
 their own arena. This can be done with either a call to ``mallopt``, or an environment
 variable set in the manifest::
 
-    # Only the main thread can have its own malloc arena.
+    # Only create one malloc arena.
     loader.env.MALLOC_ARENA_MAX = "1"
-    # Only four threads may have their own arena.
-    loader.env.MALLOC_ARENA_MAX = "4"
 
 This does have its own performance implications, but the impact is much smaller
 than the pathological behavior described above.
