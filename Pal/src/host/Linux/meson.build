@@ -16,17 +16,11 @@ pal_direct_sources = files(
     'db_threading.c',
 )
 
-pal_direct_sources_arch = [
-    'db_arch_exception.c',
-    'db_arch_misc.c',
-    'pal_start.S',
-]
-foreach src : pal_direct_sources_arch
-    pal_direct_sources += join_paths('arch', host_machine.cpu_family(), src)
-endforeach
-
-pal_direct_lds = join_paths(
-    meson.current_source_dir(), 'arch', host_machine.cpu_family(), 'pal.lds')
+# Arch-specific meson.build must define the following Meson variables:
+#   - `pal_direct_sources_arch` - a list of arch-specific sources,
+#   - `pal_direct_lds` - a full path to PAL linker script.
+subdir('arch')
+pal_direct_sources += pal_direct_sources_arch
 
 pal_direct_map = custom_target('pal.map[direct]',
     command: [gen_pal_map_prog, '@INPUT@', '@OUTPUT@'],

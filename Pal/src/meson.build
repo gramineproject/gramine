@@ -19,11 +19,9 @@ pal_common_sources = files(
     'slab.c',
 )
 
-pal_common_sources_arch = [
-    'pal_cpuid.c',
-]
-foreach src : pal_common_sources_arch
-    pal_common_sources += files(join_paths('arch', host_machine.cpu_family(), src))
-endforeach
+# Arch-specific meson.build must define the following Meson variables:
+#   - `pal_common_sources_arch` - a list of arch-specific sources.
+subdir('arch')
+pal_common_sources += pal_common_sources_arch
 
 subdir('host')

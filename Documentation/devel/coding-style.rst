@@ -187,6 +187,12 @@ Meson
 #. Otherwise, whitespace should generally follow PEP8 instead of meson suggested
    style (i.e., no space inside parens, no space before ``:``).
 
+#. No changing (overwriting) variables in different :file:`meson.build` than it
+   was defined in. If you really need to do this, create a temporary variable
+   in subdir and use it in the parent :file:`meson.build`. You can check
+   ``libos_sources_arch`` in :file:`LibOS/shim/src/meson.build` for example
+   usage of this pattern (appending arch-specific source files to a list).
+
 #. Variables named ``_prog`` refer to things obtained from ``find_program()``.
    Auxiliary commands should reside in ``Scripts/``, and the variable name is
    tied to the script name (see :file:`meson.build` there). The scripts should
