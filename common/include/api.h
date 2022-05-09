@@ -192,6 +192,13 @@ typedef ptrdiff_t ssize_t;
 
 #define IS_IN_RANGE_INCL(value, start, end) (((value) < (start) || (value) > (end)) ? false : true)
 
+/* Each occurence of this macro in the source code will return `true` only once per process.
+ *
+ * We use __ATOMIC_RELAXED here, as a consistent ordering within the accesses to `first` is enough
+ * for us — FIRST_TIME is not a synchronization primitive, as the macro returning `false` doesn't
+ * actually guarantee that the code path entered when it returned `true` has finished executing. */
+#define FIRST_TIME() ({ static uint8_t first = 0; __atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) == 0; })
+
 /* LibC functions */
 
 /* LibC string functions */

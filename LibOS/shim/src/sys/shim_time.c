@@ -62,8 +62,7 @@ long shim_do_clock_gettime(clockid_t which_clock, struct timespec* tp) {
         return -EFAULT;
 
     if (which_clock == CLOCK_PROCESS_CPUTIME_ID || which_clock == CLOCK_THREAD_CPUTIME_ID) {
-        static unsigned int warned = 0;
-        if (__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED) == 0) {
+        if (FIRST_TIME()) {
             log_warning("Per-process and per-thread CPU-time clocks are not supported in "
                         "clock_gettime(); they are replaced with system-wide real-time clock.");
         }
@@ -86,8 +85,7 @@ long shim_do_clock_getres(clockid_t which_clock, struct timespec* tp) {
         return -EINVAL;
 
     if (which_clock == CLOCK_PROCESS_CPUTIME_ID || which_clock == CLOCK_THREAD_CPUTIME_ID) {
-        static unsigned int warned = 0;
-        if (__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED) == 0) {
+        if (FIRST_TIME()) {
             log_warning("Per-process and per-thread CPU-time clocks are not supported in "
                         "clock_getres(); they are replaced with system-wide real-time clock.");
         }

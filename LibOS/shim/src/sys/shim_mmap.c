@@ -325,8 +325,7 @@ long shim_do_mincore(void* addr, size_t len, unsigned char* vec) {
     if (!is_user_memory_writable(vec, pages))
         return -EFAULT;
 
-    static unsigned int warned = 0;
-    if (__atomic_exchange_n(&warned, 1, __ATOMIC_RELAXED) == 0) {
+    if (FIRST_TIME()) {
         log_warning("mincore emulation always tells pages are _NOT_ in RAM. This may cause "
                     "issues.");
     }

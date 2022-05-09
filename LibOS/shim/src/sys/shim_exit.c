@@ -153,8 +153,7 @@ noreturn void process_exit(int error_code, int term_signal) {
 
     /* If process_exit is invoked multiple times, only a single invocation proceeds past this
      * point. */
-    static int first = 0;
-    if (__atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) != 0) {
+    if (!FIRST_TIME()) {
         /* Just exit current thread. */
         thread_exit(error_code, term_signal);
     }
