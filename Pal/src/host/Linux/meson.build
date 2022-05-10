@@ -16,8 +16,9 @@ pal_direct_sources = files(
     'db_threading.c',
 )
 
-# Arch-specific meson.build must define a list of arch-specific sources in `pal_direct_sources_arch`
-# and a full path to PAL linker script in `pal_direct_lds`.
+# Arch-specific meson.build must define the following Meson variables:
+#   - `pal_direct_sources_arch` - a list of arch-specific sources,
+#   - `pal_direct_lds` - a full path to PAL linker script.
 subdir('arch')
 pal_direct_sources += pal_direct_sources_arch
 

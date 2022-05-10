@@ -19,7 +19,8 @@ pal_common_sources = files(
     'slab.c',
 )
 
-# Arch-specific meson.build must define a list of arch-specific sources in `pal_common_sources_arch`
+# Arch-specific meson.build must define the following Meson variables:
+#   - `pal_common_sources_arch` - a list of arch-specific sources.
 subdir('arch')
 pal_common_sources += pal_common_sources_arch
 

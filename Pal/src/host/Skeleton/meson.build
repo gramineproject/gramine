@@ -1,4 +1,5 @@
-# Arch-specific meson.build must define a full path to PAL linker script in `pal_skeleton_lds`.
+# Arch-specific meson.build must define the following Meson variables:
+#   - `pal_skeleton_lds` - a full path to PAL linker script.
 subdir('arch')
 
 pal_skeleton_map = custom_target('pal.map[skeleton]',
