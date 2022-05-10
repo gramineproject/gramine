@@ -195,11 +195,9 @@ typedef ptrdiff_t ssize_t;
 /* Each occurence of this macro in the source code will return `true` only once per process.
  *
  * We use __ATOMIC_RELAXED here, as a consistent ordering within the accesses to `first` is enough
- * for us — if we return `false`, that doesn't actually guarantee anything meaningful as far
- * as memory ordering is concerned. In particular, since there isn't any synchronization to
- * signal when an `if (DO_ONCE())` block is done executing, returning `false` doesn't constitute
- * any guarantees about the variables modified within said `if (DO_ONCE())` block. */
-#define DO_ONCE() ({ static uint8_t first = 0; __atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) == 0; })
+ * for us — FIRST_TIME is not a synchronization primitive, as the macro returning `false` doesn't
+ * actually guarantee that the code path entered when it returned `true` has finished executing. */
+#define FIRST_TIME() ({ static uint8_t first = 0; __atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) == 0; })
 
 /* LibC functions */
 
