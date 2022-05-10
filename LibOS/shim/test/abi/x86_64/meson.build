@@ -1,6 +1,6 @@
 common_lib = static_library('common_lib',
     'common.c',
-    nasm_gen.process('exit.asm')
+    nasm_gen.process('exit.nasm')
 )
 
 tests = {
@@ -14,7 +14,7 @@ tests = {
     'stack_auxiliary': {
         'filenames': [
             'stack_auxiliary.c',
-            nasm_gen.process('call_auxiliary.asm')
+            nasm_gen.process('call_auxiliary.nasm')
         ],
     },
 }
@@ -25,8 +25,8 @@ foreach name, params : tests
     filenames = ''
     if (params.has_key('filenames'))
         filenames = params.get('filenames')
-    elif (params.get('type', 'asm') == 'asm')
-        filenames = nasm_gen.process('@0@.asm'.format(name))
+    elif (params.get('type', 'nasm') == 'nasm')
+        filenames = nasm_gen.process('@0@.nasm'.format(name))
     else
         filenames = '@0@.c'.format(name)
     endif
