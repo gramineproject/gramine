@@ -663,10 +663,10 @@ expected to be encrypted in the PF format). New files created in an encrypted
 mount are also automatically treated as encrypted.
 
 .. warning::
-   The current implementation assumes that each encrypted file is reachable
-   through a single path in Gramine. If the same encrypted file on host can be
-   reached through multiple paths in Gramine (e.g. because of host-level
-   symlinks, or multiple Gramine mounts), data loss may occur.
+   The current implementation assumes that ``type = "encrypted"`` mounts do not
+   overlap on host, i.e. there are no host files reachable through more than one
+   ``type = "encrypted"`` mount. Otherwise, changes made to such files might not
+   be correctly persisted by Gramine.
 
 Note that path size of an encrypted file is limited to 512 bytes and filename
 size is limited to 260 bytes.

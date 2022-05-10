@@ -143,8 +143,9 @@ static int write_key(const char* key) {
  * Test the deprecated `/dev/attestation/protected_files_key` file (and setting the initial key
  * using deprecated `sgx.insecure__protected_files_key` manifest syntax).
  *
- * TODO: remove this part of the test when these deprecated interfaces are removed. The new way of
- * setting keys (`/dev/attestation/keys`, `fs.insecure__keys`) is already tested in `keys.c`.
+ * TODO: remove this part of the test when these deprecated interfaces are removed (two versions
+ * after v1.2). The new way of setting keys (`/dev/attestation/keys`, `fs.insecure__keys`) is
+ * already tested in `keys.c`.
  */
 static int test_protected_files_key(void) {
     int ret = expect_key(MANIFEST_KEY);
