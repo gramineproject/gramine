@@ -171,7 +171,10 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         }
         return false;
     }
-    log_error("Unknown or illegal instruction executed");
+
+    char buf[LOCATION_BUF_SIZE];
+    pal_describe_location(uc->rip, buf, sizeof(buf));
+    log_warning("Unknown or illegal instruction executed at %s", buf);
     return false;
 }
 
