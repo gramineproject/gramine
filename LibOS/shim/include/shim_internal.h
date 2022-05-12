@@ -287,7 +287,7 @@ void* allocate_stack(size_t size, size_t protect_size, bool user);
 int init_stack(const char** argv, const char** envp, const char*** out_argp, elf_auxv_t** out_auxv);
 
 /*!
- * \brief Assembly function that jumps to the defined entry point.
+ * \brief Jump to the defined entry point.
  *
  * \param entry Address defined in the elf entry point.
  * \param argp Pointer to the initial stack, contains program arguments and environment.
