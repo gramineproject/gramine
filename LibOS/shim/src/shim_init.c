@@ -34,7 +34,7 @@ static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
               "shim_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
 
 const toml_table_t* g_manifest_root = NULL;
-const struct pal_public_state* g_pal_public_state = NULL;
+struct pal_public_state* g_pal_public_state = NULL;
 
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by

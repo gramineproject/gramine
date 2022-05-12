@@ -23,7 +23,7 @@ struct pal_public_state g_pal_public_state = {
     .log_level = PAL_LOG_DEFAULT_LEVEL,
 };
 
-const struct pal_public_state* DkGetPalPublicState(void) {
+struct pal_public_state* DkGetPalPublicState(void) {
     return &g_pal_public_state;
 }
 

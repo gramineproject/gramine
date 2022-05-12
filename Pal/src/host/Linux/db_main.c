@@ -264,10 +264,13 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL(-unix_to_pal_error(ret), "failed to init debug maps");
 #endif
 
-    /* Get host topology information */
-    ret = get_topology_info(&g_pal_public_state.topo_info);
-    if (ret < 0)
-        INIT_FAIL(-ret, "get_topology_info() failed");
+    /* Get host topology information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (first_process) {
+        ret = get_topology_info(&g_pal_public_state.topo_info);
+        if (ret < 0)
+            INIT_FAIL(-ret, "get_topology_info() failed");
+    }
 
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);

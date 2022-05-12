@@ -940,9 +940,13 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    ret = get_topology_info(&topo_info);
-    if (ret < 0)
-        return ret;
+    /* Get host topology information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (g_pal_enclave.is_first_process) {
+        ret = get_topology_info(&topo_info);
+        if (ret < 0)
+            return ret;
+    }
 
     enclave->libpal_uri = alloc_concat(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN, g_libpal_path, -1);
     if (!enclave->libpal_uri) {
