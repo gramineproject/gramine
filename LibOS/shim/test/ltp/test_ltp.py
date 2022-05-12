@@ -174,7 +174,7 @@ def check_must_pass(passed, failed, must_pass):
 
     if must_pass_failed or must_pass_unknown:
         pytest.fail('Failed or unknown subtests specified in must-pass: {}'.format(
-            must_pass_failed + must_pass_unknown))
+            must_pass_failed | must_pass_unknown))
 
     if not failed and passed == must_pass_passed:
         pytest.fail('The must-pass list specifies all tests, remove it from config')
