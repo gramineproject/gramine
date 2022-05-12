@@ -834,7 +834,7 @@ noreturn static void cleanup_and_call_elf_entry(elf_addr_t entry, void* argp) {
                          SHIM_THREAD_LIBOS_STACK_SIZE);
 
 #endif
-    CALL_ELF_ENTRY(entry, argp);
+    call_elf_entry(entry, argp);
 }
 
 noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp) {

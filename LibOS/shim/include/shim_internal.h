@@ -286,4 +286,16 @@ void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool w
 void* allocate_stack(size_t size, size_t protect_size, bool user);
 int init_stack(const char** argv, const char** envp, const char*** out_argp, elf_auxv_t** out_auxv);
 
+/*!
+ * \brief Jump to the defined entry point.
+ *
+ * \param entry  Address defined in the elf entry point.
+ * \param argp   Pointer to the initial stack, contains program arguments and environment.
+ *
+ * This function does not return.
+ *
+ * The implementation of this function depends on the used architecture.
+ */
+noreturn void call_elf_entry(elf_addr_t entry, void* argp);
+
 #endif /* _SHIM_INTERNAL_H_ */
