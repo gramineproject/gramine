@@ -931,7 +931,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
-    struct pal_topo_info topo_info;
+    struct pal_topo_info topo_info = {0};
 
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
@@ -955,9 +955,13 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    ret = get_topology_info(&topo_info);
-    if (ret < 0)
-        return ret;
+    /* Get host topology information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
+        ret = get_topology_info(&topo_info);
+        if (ret < 0)
+            return ret;
+    }
 
     enclave->libpal_uri = alloc_concat(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN, g_libpal_path, -1);
     if (!enclave->libpal_uri) {

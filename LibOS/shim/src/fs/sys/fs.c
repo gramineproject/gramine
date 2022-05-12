@@ -9,6 +9,7 @@
  * its sub-directories.
  */
 
+#include "shim_checkpoint.h"
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
@@ -273,3 +274,62 @@ int init_sysfs(void) {
 
     return 0;
 }
+
+BEGIN_CP_FUNC(topo_info) {
+    __UNUSED(size);
+    __UNUSED(obj);
+    __UNUSED(objp);
+
+    struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
+    size_t off = ADD_CP_OFFSET(sizeof(*topo_info));
+    struct pal_topo_info* new_topo_info = (void*)(base + off);
+    memset(new_topo_info, 0, sizeof(*new_topo_info));
+
+    new_topo_info->caches_cnt = topo_info->caches_cnt;
+    size_t caches_size = topo_info->caches_cnt * sizeof(*topo_info->caches);
+    new_topo_info->caches = (void*)(base + ADD_CP_OFFSET(caches_size));
+    memcpy(new_topo_info->caches, topo_info->caches, caches_size);
+
+    new_topo_info->threads_cnt = topo_info->threads_cnt;
+    size_t threads_size = topo_info->threads_cnt * sizeof(*topo_info->threads);
+    new_topo_info->threads = (void*)(base + ADD_CP_OFFSET(threads_size));
+    memcpy(new_topo_info->threads, topo_info->threads, threads_size);
+
+    new_topo_info->cores_cnt = topo_info->cores_cnt;
+    size_t cores_size = topo_info->cores_cnt * sizeof(*topo_info->cores);
+    new_topo_info->cores = (void*)(base + ADD_CP_OFFSET(cores_size));
+    memcpy(new_topo_info->cores, topo_info->cores, cores_size);
+
+    new_topo_info->sockets_cnt = topo_info->sockets_cnt;
+    size_t sockets_size = topo_info->sockets_cnt * sizeof(*topo_info->sockets);
+    new_topo_info->sockets = (void*)(base + ADD_CP_OFFSET(sockets_size));
+    memcpy(new_topo_info->sockets, topo_info->sockets, sockets_size);
+
+    new_topo_info->numa_nodes_cnt = topo_info->numa_nodes_cnt;
+    size_t numa_nodes_size = topo_info->numa_nodes_cnt * sizeof(*topo_info->numa_nodes);
+    new_topo_info->numa_nodes = (void*)(base + ADD_CP_OFFSET(numa_nodes_size));
+    memcpy(new_topo_info->numa_nodes, topo_info->numa_nodes, numa_nodes_size);
+
+    size_t numa_dm_size = topo_info->numa_nodes_cnt * topo_info->numa_nodes_cnt
+                          * sizeof(*topo_info->numa_distance_matrix);
+    new_topo_info->numa_distance_matrix = (void*)(base + ADD_CP_OFFSET(numa_dm_size));
+    memcpy(new_topo_info->numa_distance_matrix, topo_info->numa_distance_matrix, numa_dm_size);
+
+    ADD_CP_FUNC_ENTRY(off);
+}
+END_CP_FUNC(topo_info)
+
+BEGIN_RS_FUNC(topo_info) {
+    __UNUSED(offset);
+    struct pal_topo_info* topo_info = (void*)(base + GET_CP_FUNC_ENTRY());
+
+    CP_REBASE(topo_info->caches);
+    CP_REBASE(topo_info->threads);
+    CP_REBASE(topo_info->cores);
+    CP_REBASE(topo_info->sockets);
+    CP_REBASE(topo_info->numa_nodes);
+    CP_REBASE(topo_info->numa_distance_matrix);
+
+    memcpy(&g_pal_public_state->topo_info, topo_info, sizeof(*topo_info));
+}
+END_RS_FUNC(topo_info)

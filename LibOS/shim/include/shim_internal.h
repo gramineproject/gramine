@@ -25,7 +25,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp);
 
 extern int g_log_level;
 
-extern const struct pal_public_state* g_pal_public_state;
+extern struct pal_public_state* g_pal_public_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
