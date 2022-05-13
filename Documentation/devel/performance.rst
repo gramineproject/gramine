@@ -582,7 +582,7 @@ Collecting SGX hotspots and viewing the report
    If ``vtune_sdk_path`` is not provided, Gramine will use the default VTune
    installation path.
 
-#. Add ``sgx.vtune_profile = true`` to the manifest.
+#. Add ``sgx.vtune_profile = true`` and ``sgx.debug = true`` to the manifest.
 
 #. Run your application under VTune.
 

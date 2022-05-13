@@ -859,7 +859,8 @@ SGX profiling with Intel VTune Profiler
 
 This syntax specifies whether to enable SGX profiling with Intel VTune Profiler.
 Gramine must be compiled with ``DEBUG=1`` or ``DEBUGOPT=1`` for this option to
-work (the latter is advised).
+work (the latter is advised). In addition, the application manifest must also
+contain ``sgx.debug = true``.
 
 .. note::
    The manifest options ``sgx.vtune_profile`` and ``sgx.profile.*`` can work

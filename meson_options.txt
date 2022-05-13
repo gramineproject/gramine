@@ -37,5 +37,5 @@ option('syslibdir', type: 'string',
 option('vtune', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable profiling with VTune for Gramine with SGX')
 option('vtune_sdk_path', type: 'string',
-    value: '/opt/intel/oneapi/vtune/2022.1.0/sdk',
+    value: '/opt/intel/oneapi/vtune/latest/sdk',
     description: 'Path to the VTune SDK installation')
