@@ -521,16 +521,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* if there is a parent, create parent handle */
     PAL_HANDLE parent = NULL;
-    bool is_first_process;
     uint64_t instance_id = 0;
     if (parent_stream_fd != -1) {
-        is_first_process = false;
         if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
             log_error("Failed to initialize child process: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }
-    } else {
-        is_first_process = true;
     }
 
     uint64_t manifest_size = GET_ENCLAVE_TLS(manifest_size);
@@ -566,7 +562,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
 
-    if (is_first_process) {
+    /* Get host topology information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
         /* parse and store host topology info into g_pal_public_state struct */
         ret = import_and_sanitize_topo_info(uptr_topo_info);
         if (ret < 0) {

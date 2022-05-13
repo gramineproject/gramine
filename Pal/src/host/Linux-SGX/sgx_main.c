@@ -916,7 +916,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
-    struct pal_topo_info topo_info;
+    struct pal_topo_info topo_info = {0};
 
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
@@ -942,7 +942,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* Get host topology information only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
-    if (g_pal_enclave.is_first_process) {
+    if (parent_stream_fd < 0) {
         ret = get_topology_info(&topo_info);
         if (ret < 0)
             return ret;
