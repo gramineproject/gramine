@@ -560,14 +560,14 @@ of samples.
 
 .. _vtune-sgx-profiling:
 
-Profiling SGX hotspots with ``Intel VTune Profiler``
+Profiling SGX hotspots with Intel VTune Profiler
 ----------------------------------------------------
 
-This section describes how to use `vtune
+This section describes how to use `VTune
 <https://www.intel.com/content/www/us/en/develop/documentation/vtune-help/top/introduction.html>`__
 profiler to find SGX hotspots.
 
-Installing ``vtune``
+Installing VTune
 """"""""""""""""""""
 
 Please download and install Intel VTune Profiler from `here

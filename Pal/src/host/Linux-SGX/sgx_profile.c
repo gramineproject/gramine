@@ -376,7 +376,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
             }
 #ifdef SGX_VTUNE_PROFILE
             if (g_vtune_profile_enabled)
-                __itt_module_load((void*)addr + mapstart, (void*) addr + mapend - 1, path);
+                __itt_module_load((void*)addr + mapstart, (void*)addr + mapend - 1, path);
 #endif
         }
     }
