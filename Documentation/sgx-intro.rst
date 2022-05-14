@@ -250,10 +250,11 @@ SGX terminology
       has a |~| reference launch enclave and is backed by the DCAP-enabled SGX
       driver.
 
-      This allows for launching enclaves without Intel's remote infrastructure.
-      But this requires deployment of own infrastructure, so is operationally
-      more complicated. Therefore it is intended for server environments (where
-      you control all the machines).
+      This allows for launching enclaves with Intel's remote infrastructure
+      only involved in the initial setup. Naturally however, this requires
+      deployment of own infrastructure, so is operationally more complicated.
+      Therefore it is intended for server environments (where you control all
+      the machines).
 
       .. seealso::
 
@@ -286,17 +287,39 @@ SGX terminology
    Enhanced Privacy Identifier
    EPID
 
-      .. todo:: short description
+      EPID is the attestation protocol originally shipped with SGX. Unlike
+      :term:`DCAP`, a |~| remote verifier making use of the EPID protocol needs
+      to contact the :term:`Intel Attestation Service` each time it wishes
+      to attest an |~| enclave.
 
       Contrary to DCAP, EPID may be understood as "opinionated", with most
       moving parts fixed and tied to services provided by Intel. This is
       intended for client enclaves and deprecated for server environments.
+
+      EPID attestation can operate in two modes: *fully-anonymous (unlinkable)
+      quotes* and *pseudonymous (linkable) quotes*.  Unlike fully-anonymous
+      quotes, pseudonymous quotes include an |~| identifier dependent on the
+      identity of the CPU and the developer of the enclave being quoted, which
+      allows determining whether two instances of your enclave are running on
+      the same hardware or not.
+
+      If your security model depends on enforcing that the identifiers are
+      different (e.g. because you want to prevent sybil attacks), keep in mind
+      that the enclave host can generate a new identity by performing an
+      epoch reset. The previous identity will then become inaccessible, though.
+
+      The attestation mode being used can be chosen by the application enclave,
+      but it must match what was chosen when generating the :term:`SPID`.
 
       .. seealso::
 
          :term:`DCAP`
             A way to launch enclaves without relying on the Intel's
             infrastructure.
+
+         :term:`SPID`
+            An identifier one can obtain from Intel, required to make use of EPID
+            attestation.
 
    Flexible Launch Control
    FLC
@@ -509,6 +532,17 @@ SGX terminology
       were introduced after the release of the original SGX1.
 
       Encompasses at least :term:`EDMM`, but is still work in progress.
+
+   Service Provider ID
+   SPID
+
+      An identifier provided by Intel, used together with an |~| :term:`EPID`
+      API key to authenticate to the :term:`Intel Attestation Service`. You can
+      obtain an |~| SPID through Intel's `Trusted Services Portal
+      <https://api.portal.trustedservices.intel.com/EPID-attestation>`_.
+
+      See :term:`EPID` for a |~| description of the difference between *linkable*
+      and *unlinkable* quotes.
 
    State Save Area
    SSA

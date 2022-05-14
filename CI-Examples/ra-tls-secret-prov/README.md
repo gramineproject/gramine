@@ -27,11 +27,16 @@ There are two versions of the server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
 build time.
 
-Because this example builds and uses debug SGX enclaves
-(`SIGSTRUCT.ATTRIBUTES.DEBUG` bit is set to one), we use environment variable
-`RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`. Note that in production environments,
+Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
+to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
+Note that in production environments,
 you must *not* use this option!
 
+Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
+the tests when some of Intel's security advisories haven't been addressed (for
+example, when the microcode or architectural enclaves aren't fully up-to-date).
+As the name of this setting suggests, this is not secure and likewise should not
+be used in production.
 
 ## Secret Provisioning clients
 
@@ -59,14 +64,17 @@ build time.
 
 # Quick Start
 
-- Secret Provisioning flows, EPID-based (IAS) attestation:
+- Secret Provisioning flows, EPID-based (IAS) attestation (you will need to
+  provide an [SPID and the corresponding IAS API keys][spid]):
+
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 ```sh
-RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app epid files/input.txt
+RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app epid files/input.txt
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-RA_TLS_EPID_API_KEY=12345678901234567890123456789012 \
+RA_TLS_EPID_API_KEY=<your EPID API key> \
 ./secret_prov_server_epid &
 
 # test minimal client

@@ -52,13 +52,27 @@ RA-TLS verification callback that compares `MRENCLAVE`, `MRSIGNER`,
 variables. To run the client with its own verification callback, execute it with
 four additional command-line arguments (see the source code for details).
 
-Also, because this example builds and uses debug SGX enclaves
-(`SIGSTRUCT.ATTRIBUTES.DEBUG` bit is set to one), we use environment variable
-`RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`. Note that in production environments,
-you must *not* use this option!
+Also, because this example builds and uses debug SGX enclaves (`sgx.debug` is
+set to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
+Note that in production environments, you must *not* use this option!
 
+Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
+the tests when some of Intel's security advisories haven't been addressed (for
+example, when the microcode or architectural enclaves aren't fully up-to-date).
+As the name of this setting suggests, this is not secure and likewise should not
+be used in production.
 
 # Quick Start
+
+In most of the examples below, you need to tell the client what values it should
+expect for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID` and `ISV_SVN`. One way to
+obtain them is to note them down when they get printed by `gramine-sgx-get-token`
+when generating `server.token`.
+
+Moreover, for EPID-based (IAS) attestation, you will need to provide
+an [SPID and the corresponding IAS API keys][spid].
+
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 - Normal non-RA-TLS flows; without SGX and without Gramine:
 
@@ -73,18 +87,18 @@ kill %%
 - RA-TLS flows with SGX and with Gramine, EPID-based (IAS) attestation:
 
 ```sh
-# replace dummy values with your SPID, linkable setting, API key, MRENCLAVE, etc!
 make clean
-RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app epid
+RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app epid
 
 gramine-sgx ./server epid &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-RA_TLS_EPID_API_KEY=12345678901234567890123456789012 \
-RA_TLS_MRENCLAVE=1234567890123456789012345678901234567890123456789012345678901234 \
-RA_TLS_MRSIGNER=1234567890123456789012345678901234567890123456789012345678901234 \
-RA_TLS_ISV_PROD_ID=0 RA_TLS_ISV_SVN=0 \
+RA_TLS_EPID_API_KEY=<your EPID API key> \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
 ./client epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
@@ -94,7 +108,6 @@ kill %%
 - RA-TLS flows with SGX and with Gramine, ECDSA-based (DCAP) attestation:
 
 ```sh
-# replace dummy values with your MRENCLAVE, MRSIGNER, etc!
 make clean
 make app dcap
 
@@ -102,9 +115,10 @@ gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-RA_TLS_MRENCLAVE=1234567890123456789012345678901234567890123456789012345678901234 \
-RA_TLS_MRSIGNER=1234567890123456789012345678901234567890123456789012345678901234 \
-RA_TLS_ISV_PROD_ID=0 RA_TLS_ISV_SVN=0 \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
 ./client dcap
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
@@ -114,17 +128,16 @@ kill %%
 - RA-TLS flows with SGX and with Gramine, client with its own verification callback:
 
 ```sh
-# replace dummy values with your MRENCLAVE, MRSIGNER, etc!
 make clean
 make app dcap
 
 gramine-sgx ./server dcap &
 
-# arguments are: MRENCLAVE in hex, MRSIGNER in hex, ISV_PROD_ID as dec, ISV_SVN as dec
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
-    1234567890123456789012345678901234567890123456789012345678901234 \
-    1234567890123456789012345678901234567890123456789012345678901234 \
-    0 0
+    <MRENCLAVE of the server enclave> \
+    <MRSIGNER of the server enclave> \
+    <ISV_PROD_ID of the server enclave> \
+    <ISV_SVN of the server enclave>
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%
@@ -152,11 +165,11 @@ as `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`, `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`,
 
 ```sh
 make clean
-RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make app client_epid.manifest.sgx
+RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app client_epid.manifest.sgx
 
 gramine-sgx ./server epid &
 
-RA_TLS_EPID_API_KEY=12345678901234567890123456789012 gramine-sgx ./client_epid epid
+RA_TLS_EPID_API_KEY=<your EPID API key> gramine-sgx ./client_epid epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
 kill %%
@@ -172,9 +185,10 @@ gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 gramine-sgx \
     ./client_dcap dcap \
-    1234567890123456789012345678901234567890123456789012345678901234 \
-    1234567890123456789012345678901234567890123456789012345678901234 \
-    0 0
+    <MRENCLAVE of the server enclave> \
+    <MRSIGNER of the server enclave> \
+    <ISV_PROD_ID of the server enclave> \
+    <ISV_SVN of the server enclave>
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%
