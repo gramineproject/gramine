@@ -108,7 +108,7 @@ out:
 static int sigrl(struct ias_context_t* ias, const char* gid_str, const char* sigrl_path) {
     uint8_t gid[4];
 
-    if (parse_hex(gid_str, gid, sizeof(gid)) != 0) {
+    if (parse_hex(gid_str, gid, sizeof(gid), NULL) != 0) {
         ERROR("Invalid EPID group ID\n");
         return -1;
     }

@@ -56,14 +56,14 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
     /* any of the below variables may be NULL (and then not used in validation) */
     mrsigner_hex = getenv_critical(RA_TLS_MRSIGNER);
     if (mrsigner_hex) {
-        if (parse_hex(mrsigner_hex, mrsigner, sizeof(*mrsigner)) != 0)
+        if (parse_hex(mrsigner_hex, mrsigner, sizeof(*mrsigner), NULL) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrsigner = true;
     }
 
     mrenclave_hex = getenv_critical(RA_TLS_MRENCLAVE);
     if (mrenclave_hex) {
-        if (parse_hex(mrenclave_hex, mrenclave, sizeof(*mrenclave)) != 0)
+        if (parse_hex(mrenclave_hex, mrenclave, sizeof(*mrenclave), NULL) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrenclave = true;
     }

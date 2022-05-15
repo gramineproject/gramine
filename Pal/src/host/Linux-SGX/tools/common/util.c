@@ -198,18 +198,27 @@ void hexdump_mem(const void* data, size_t size) {
 }
 
 /* Parse hex string to buffer */
-int parse_hex(const char* hex, void* buffer, size_t buffer_size) {
+int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask) {
     if (!hex || !buffer || buffer_size == 0)
         return -1;
 
+    char sep_l, sep_r;
+    if (mask) {
+        sep_l = '<';
+        sep_r = '>';
+    } else {
+        mask = hex;
+        sep_l = sep_r = '\'';
+    }
+
     if (strlen(hex) != buffer_size * 2) {
-        ERROR("Invalid hex string (%s) length\n", hex);
+        ERROR("Invalid length of hex string %c%s%c\n", sep_l, mask, sep_r);
         return -1;
     }
 
     for (size_t i = 0; i < buffer_size; i++) {
         if (!isxdigit(hex[i * 2]) || !isxdigit(hex[i * 2 + 1])) {
-            ERROR("Invalid hex string '%s'\n", hex);
+            ERROR("Invalid hex string %c%s%c\n", sep_l, mask, sep_r);
             return -1;
         }
 

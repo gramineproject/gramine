@@ -352,7 +352,7 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
     sgx_measurement_t expected_mr;
     if (mr_signer) {
         if (expected_as_str) {
-            if (parse_hex(mr_signer, &expected_mr, sizeof(expected_mr)) != 0)
+            if (parse_hex(mr_signer, &expected_mr, sizeof(expected_mr), NULL) != 0)
                 goto out;
         } else {
             memcpy(&expected_mr, mr_signer, sizeof(expected_mr));
@@ -374,7 +374,7 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
 
     if (mr_enclave) {
         if (expected_as_str) {
-            if (parse_hex(mr_enclave, &expected_mr, sizeof(expected_mr)) != 0)
+            if (parse_hex(mr_enclave, &expected_mr, sizeof(expected_mr), NULL) != 0)
                 goto out;
         } else {
             memcpy(&expected_mr, mr_enclave, sizeof(expected_mr));
@@ -434,7 +434,7 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
         sgx_report_data_t rd;
 
         if (expected_as_str) {
-            if (parse_hex(report_data, &rd, sizeof(rd)) != 0)
+            if (parse_hex(report_data, &rd, sizeof(rd), NULL) != 0)
                 goto out;
         } else {
             memcpy(&rd, report_data, sizeof(rd));
