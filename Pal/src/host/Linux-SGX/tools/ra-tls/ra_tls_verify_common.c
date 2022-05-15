@@ -23,6 +23,22 @@
 
 verify_measurements_cb_t g_verify_measurements_cb = NULL;
 
+static char* getenv_critical(const char* name) {
+    char* value = getenv(name);
+    if (!value) {
+        INFO("WARNING: The default enclave verification hook is being used, but %s is not set. "
+             "This is deprecated and will become an error in the future. "
+             "If you wish to accept any value, please specify %s=any explicitly.\n",
+             name, name);
+    }
+
+    if (value && strcmp(value, "any") == 0) {
+        value = NULL;
+    }
+
+    return value;
+}
+
 static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* validate_mrsigner,
                                        sgx_measurement_t* mrenclave, bool* validate_mrenclave,
                                        sgx_prod_id_t* isv_prod_id, bool* validate_isv_prod_id,
@@ -38,21 +54,21 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
     const char* isv_svn_dec;
 
     /* any of the below variables may be NULL (and then not used in validation) */
-    mrsigner_hex = getenv(RA_TLS_MRSIGNER);
+    mrsigner_hex = getenv_critical(RA_TLS_MRSIGNER);
     if (mrsigner_hex) {
         if (parse_hex(mrsigner_hex, mrsigner, sizeof(*mrsigner)) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrsigner = true;
     }
 
-    mrenclave_hex = getenv(RA_TLS_MRENCLAVE);
+    mrenclave_hex = getenv_critical(RA_TLS_MRENCLAVE);
     if (mrenclave_hex) {
         if (parse_hex(mrenclave_hex, mrenclave, sizeof(*mrenclave)) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrenclave = true;
     }
 
-    isv_prod_id_dec = getenv(RA_TLS_ISV_PROD_ID);
+    isv_prod_id_dec = getenv_critical(RA_TLS_ISV_PROD_ID);
     if (isv_prod_id_dec) {
         errno = 0;
         *isv_prod_id = strtoul(isv_prod_id_dec, NULL, 10);
@@ -61,13 +77,18 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
         *validate_isv_prod_id = true;
     }
 
-    isv_svn_dec = getenv(RA_TLS_ISV_SVN);
+    isv_svn_dec = getenv_critical(RA_TLS_ISV_SVN);
     if (isv_svn_dec) {
         errno = 0;
         *isv_svn = strtoul(isv_svn_dec, NULL, 10);
         if (errno)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_isv_svn = true;
+    }
+
+    if (!*validate_mrsigner && !*validate_mrenclave) {
+        INFO("WARNING: Neither " RA_TLS_MRSIGNER " nor " RA_TLS_MRENCLAVE " are specified. "
+             "This will accept any enclave and provides no security whatsoever.\n");
     }
 
     return 0;

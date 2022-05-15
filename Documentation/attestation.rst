@@ -307,16 +307,21 @@ Service (IAS) and retrieving the attestation report from IAS. This library is
 *not* thread-safe.
 
 The library uses the following SGX-specific environment variables, representing
-SGX measurements, if available:
+SGX measurements:
 
-- ``RA_TLS_MRSIGNER`` (optional) -- verify that the attesting enclave has this
+- ``RA_TLS_MRSIGNER`` -- verify that the attesting enclave has this
   ``MRSIGNER``. This is a hex string.
-- ``RA_TLS_MRENCLAVE`` (optional) -- verify that the attesting enclave has this
+- ``RA_TLS_MRENCLAVE`` -- verify that the attesting enclave has this
   ``MRENCLAVE``. This is a hex string.
-- ``RA_TLS_ISV_PROD_ID`` (optional) -- verify that the attesting enclave has
-  this ``ISV_PROD_ID``. This is a decimal string.
-- ``RA_TLS_ISV_SVN`` (optional) -- verify that the attesting enclave has this
-  ``ISV_SVN``. This is a decimal string.
+- ``RA_TLS_ISV_PROD_ID`` -- verify that the attesting enclave has this
+  ``ISV_PROD_ID``. This is a decimal string.
+- ``RA_TLS_ISV_SVN`` -- verify that the attesting enclave has this ``ISV_SVN``.
+  This is a decimal string.
+
+For each of these settings, you may specify the special value ``any`` to skip
+verifying a particular measurement. This used to be the default, which would
+be used if a particular environment variable wasn't present. This behavior
+has been deprecated and will become a hard error in the future.
 
 The four SGX measurements above may be also verified via a user-specified
 callback with the signature ``int (*callback)(char* mrenclave, char* mrsigner,
