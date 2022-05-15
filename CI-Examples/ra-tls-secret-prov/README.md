@@ -20,7 +20,7 @@ The server is supposed to run on a trusted machine (not in the SGX enclave). The
 server listens for client connections. For each connected client, the server
 verifies the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends the first secret back to the client (the master key
-for protected files, read from `files/wrap-key`). If the client requests a
+for encrypted files, read from `files/wrap-key`). If the client requests a
 second secret, the server sends the dummy string `42` as the second secret.
 
 There are two versions of the server: the EPID one and the DCAP one. Each of
@@ -42,9 +42,9 @@ There are three clients in this example:
    `SECRET_PROVISION_SECRET_STRING`.
 2. Feature-rich client. It uses a programmatic C API to get two secrets from the
    server.
-3. Protected-files client. Similarly to the minimal client, it relies on
+3. Encrypted-files client. Similarly to the minimal client, it relies on
    constructor-time secret provisioning and instructs Gramine to consider the
-   provisioned secret as the wrap (master) key for the Protected Files feature.
+   provisioned secret as the encryption key for the Encrypted Files feature.
    After the master key is applied, the client reads an encrypted file
    `files/input.txt`.
 
@@ -52,7 +52,7 @@ As part of secret provisioning flow, all clients create a self-signed RA-TLS
 certificate with the embedded SGX quote, send it to the server for verification,
 and expect secrets in return.
 
-The minimal and the protected-files clients rely on the `LD_PRELOAD` trick that
+The minimal and the encrypted-files clients rely on the `LD_PRELOAD` trick that
 preloads `libsecret_prov_attest.so` and runs it before the clients' main logic.
 The feature-rich client links against `libsecret_prov_attest.so` explicitly at
 build time.
@@ -75,7 +75,7 @@ gramine-sgx ./secret_prov_min_client
 # test feature-rich client
 gramine-sgx ./secret_prov_client
 
-# test protected-files client
+# test encrypted-files client
 gramine-sgx ./secret_prov_pf_client
 
 kill %%
@@ -96,7 +96,7 @@ gramine-sgx ./secret_prov_min_client
 # test feature-rich client
 gramine-sgx ./secret_prov_client
 
-# test protected-files client
+# test encrypted-files client
 gramine-sgx ./secret_prov_pf_client
 
 kill %%

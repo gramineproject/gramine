@@ -31,6 +31,7 @@
 
 #include "ra_tls.h"
 #include "secret_prov.h"
+#include "util.h"
 
 /* these are globals because the user may continue using the SSL session even after invoking
  * secret_provision_start() (in the user-supplied callback) */
@@ -289,7 +290,7 @@ out:
 }
 
 __attribute__((constructor)) static void secret_provision_constructor(void) {
-    char* e = getenv(SECRET_PROVISION_CONSTRUCTOR);
+    const char* e = getenv(SECRET_PROVISION_CONSTRUCTOR);
     if (!e)
         return;
 
@@ -317,19 +318,36 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
             return;
         }
 
-        size_t secret_len = secret_size - 1; /* length without null terminator */
+        /* successfully retrieved the secret: is it a key for encrypted files? */
+        e = getenv(SECRET_PROVISION_SET_KEY);
+        if (!e) {
+            /* no key name specified - check old PF env var for compatibility */
+            e = getenv(SECRET_PROVISION_SET_PF_KEY);
+            if (e && (!strcmp(e, "1") || !strcmp(e, "true") || !strcmp(e, "TRUE"))) {
+                INFO(SECRET_PROVISION_SET_PF_KEY " is deprecated, consider setting "
+                     SECRET_PROVISION_SET_KEY "=default instead.\n");
+                e = "default";
+            }
+        }
 
-        /* successfully retrieved the secret: is it a protected files key? */
-        e = getenv(SECRET_PROVISION_SET_PF_KEY);
-        if (e && (!strcmp(e, "1") || !strcmp(e, "true") || !strcmp(e, "TRUE"))) {
-            /* the secret is a PF key, apply it to Gramine via pseudo-FS */
-            int fd = open("/dev/attestation/protected_files_key", O_WRONLY);
+        if (e) {
+            char keydata[16];
+            if (parse_hex((char*)secret, keydata, 16, "provisioned secret") < 0)
+                return;
+
+            char path_buf[256];
+            if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", e) >= 256) {
+                ERROR("Key name '%s' too long\n", path_buf);
+                return;
+            }
+
+            int fd = open(path_buf, O_WRONLY);
             if (fd < 0)
                 return;
 
             size_t total_written = 0;
-            while (total_written < secret_len) {
-                ssize_t written = write(fd, secret + total_written, secret_len - total_written);
+            while (total_written < 16) {
+                ssize_t written = write(fd, keydata + total_written, 16 - total_written);
                 if (written > 0) {
                     total_written += written;
                 } else if (written == 0) {
@@ -343,7 +361,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                 }
             }
 
-            close(fd);  /* applies retrieved PF key */
+            close(fd);  /* applies retrieved encryption key */
         }
 
         /* put the secret into an environment variable */
