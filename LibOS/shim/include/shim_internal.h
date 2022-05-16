@@ -289,8 +289,8 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp, elf
 /*!
  * \brief Jump to the defined entry point.
  *
- * \param entry Address defined in the elf entry point.
- * \param argp  Pointer to the initial stack, contains program arguments and environment.
+ * \param entry  Address defined in the elf entry point.
+ * \param argp   Pointer to the initial stack, contains program arguments and environment.
  *
  * This function does not return.
  *
