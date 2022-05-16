@@ -441,16 +441,6 @@ BEGIN_RS_FUNC(topo_info) {
         assert(!topo_info->numa_nodes);
     }
 
-    g_pal_public_state->topo_info.caches_cnt = topo_info->caches_cnt;
-    g_pal_public_state->topo_info.caches = topo_info->caches;
-    g_pal_public_state->topo_info.threads_cnt = topo_info->threads_cnt;
-    g_pal_public_state->topo_info.threads = topo_info->threads;
-    g_pal_public_state->topo_info.cores_cnt = topo_info->cores_cnt;
-    g_pal_public_state->topo_info.cores = topo_info->cores;
-    g_pal_public_state->topo_info.sockets_cnt = topo_info->sockets_cnt;
-    g_pal_public_state->topo_info.sockets = topo_info->sockets;
-    g_pal_public_state->topo_info.numa_nodes_cnt = topo_info->numa_nodes_cnt;
-    g_pal_public_state->topo_info.numa_nodes = topo_info->numa_nodes;
-    g_pal_public_state->topo_info.numa_distance_matrix = topo_info->numa_distance_matrix;
+    memcpy(&g_pal_public_state->topo_info, topo_info, sizeof(*topo_info));
 }
 END_RS_FUNC(topo_info)

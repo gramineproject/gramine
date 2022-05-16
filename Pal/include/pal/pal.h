@@ -129,7 +129,7 @@ struct pal_public_state {
 };
 
 /* We cannot mark this as returning a pointer to `const` object, because LibOS can
- * change `pal_public_state.topo_info` during  checkpoint restore in the child */
+ * change `pal_public_state.topo_info` during checkpoint restore in the child */
 struct pal_public_state* DkGetPalPublicState(void);
 
 /*
