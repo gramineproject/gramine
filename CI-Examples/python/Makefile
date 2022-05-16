@@ -19,12 +19,16 @@ python.manifest: python.manifest.template
 		-Dentrypoint=$(realpath $(shell sh -c "command -v python3")) \
 		$< >$@
 
-python.manifest.sgx: python.manifest
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
+python.manifest.sgx python.sig: sgx_sign
+	@:
+
+.INTERMEDIATE: sgx_sign
+sgx_sign: python.manifest
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-python.sig: python.manifest.sgx
+		--output $<.sgx
 
 python.token: python.sig
 	gramine-sgx-get-token --output $@ --sig $<

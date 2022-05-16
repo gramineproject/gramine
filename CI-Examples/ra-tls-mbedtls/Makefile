@@ -97,12 +97,16 @@ server.manifest: server.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-server.manifest.sgx: server.manifest server
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
+server.manifest.sgx server.sig: sgx_sign_server
+	@:
+
+.INTERMEDIATE: sgx_sign_server
+sgx_sign_server: server.manifest server
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-server.sig: server.manifest.sgx
+		--output $<.sgx
 
 server.token: server.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -115,12 +119,14 @@ client_dcap.manifest: client.manifest.template
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
-client_dcap.manifest.sgx: client_dcap.manifest client
+client_dcap.manifest.sgx client_dcap.sig: sgx_sign_client_dcap
+	@:
+
+.INTERMEDIATE: sgx_sign_client_dcap
+sgx_sign_client_dcap: client_dcap.manifest client
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-client_dcap.sig: client_dcap.manifest.sgx
+		--output $<.sgx
 
 client_dcap.token: client_dcap.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -133,12 +139,14 @@ client_epid.manifest: client.manifest.template
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
-client_epid.manifest.sgx: client_epid.manifest client
+client_epid.manifest.sgx client_epid.sig: sgx_sign_client_epid
+	@:
+
+.INTERMEDIATE: sgx_sign_client_epid
+sgx_sign_client_epid: client_epid.manifest client
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-client_epid.sig: client_epid.manifest.sgx
+		--output $<.sgx
 
 client_epid.token: client_epid.sig
 	gramine-sgx-get-token --output $@ --sig $<

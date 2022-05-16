@@ -19,12 +19,16 @@ sqlite3.manifest: manifest.template
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
-sqlite3.manifest.sgx: sqlite3.manifest
-	gramine-sgx-sign \
-		--manifest sqlite3.manifest \
-		--output $@
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
+sqlite3.manifest.sgx sqlite3.sig: sgx_sign
+	@:
 
-sqlite3.sig: sqlite3.manifest.sgx
+.INTERMEDIATE: sgx_sign
+sgx_sign: sqlite3.manifest
+	gramine-sgx-sign \
+		--manifest $< \
+		--output $<.sgx
 
 sqlite3.token: sqlite3.sig
 	gramine-sgx-get-token --output sqlite3.token --sig sqlite3.sig
