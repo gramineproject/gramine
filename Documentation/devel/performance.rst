@@ -586,9 +586,9 @@ Collecting SGX hotspots and viewing the report
 
 #. Run your application under VTune.
 
-   ``vtune -collect sgx-hotspots -- gramine-sgx <workload>``
+   ``vtune -collect sgx-hotspots -result-dir results -- gramine-sgx <workload>``
 
-   It will output the data collected to a directory of the format ``r000sgxhs``.
+   It will output the data collected to a directory ``results``.
 
 #. To view the report, run
    ``vtune -report hotspots -r <vtune data collection output directory>`` or use
