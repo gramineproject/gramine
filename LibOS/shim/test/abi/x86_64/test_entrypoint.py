@@ -29,3 +29,6 @@ class TC_00_Entrypoint(RegressionTestCase):
 
     def test_090_syscall_registers(self):
         self.run_binary(['syscall_registers'])
+
+    def test_100_syscall_fpu(self):
+        self.run_binary(['syscall_fpu'])

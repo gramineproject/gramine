@@ -17,6 +17,7 @@ tests = {
             nasm_gen.process('call_auxiliary.nasm')
         ],
     },
+    'syscall_fpu': {},
     'syscall_registers': {},
 }
 
