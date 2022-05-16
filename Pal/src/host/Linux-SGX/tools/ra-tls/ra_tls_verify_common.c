@@ -89,8 +89,7 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
 
     if (!*validate_mrsigner && !*validate_mrenclave) {
         INFO("WARNING: Neither " RA_TLS_MRSIGNER " nor " RA_TLS_MRENCLAVE " are specified. "
-             "This will accept any enclave and provides no security whatsoever. "
-             "This configuration does not make sense and will become an error in the future.\n");
+             "This will accept any enclave and provides no security whatsoever.\n");
     }
 
     return 0;
