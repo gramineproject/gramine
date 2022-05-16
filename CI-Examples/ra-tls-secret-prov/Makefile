@@ -82,12 +82,16 @@ secret_prov_client.manifest: secret_prov_client.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-secret_prov_client.manifest.sgx: secret_prov_client.manifest secret_prov_client
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
+secret_prov_client.manifest.sgx secret_prov_client.sig: sgx_sign_secret_prov_client
+	@:
+
+.INTERMEDIATE: sgx_sign_secret_prov_client
+sgx_sign_secret_prov_client: secret_prov_client.manifest secret_prov_client
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-secret_prov_client.sig: secret_prov_client.manifest.sgx
+		--output $<.sgx
 
 secret_prov_client.token: secret_prov_client.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -102,12 +106,14 @@ secret_prov_min_client.manifest: secret_prov_min_client.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-secret_prov_min_client.manifest.sgx: secret_prov_min_client.manifest secret_prov_min_client
+secret_prov_min_client.manifest.sgx secret_prov_min_client.sig: sgx_sign_secret_prov_min_client
+	@:
+
+.INTERMEDIATE: sgx_sign_secret_prov_min_client
+sgx_sign_secret_prov_min_client: secret_prov_min_client.manifest secret_prov_min_client
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-secret_prov_min_client.sig: secret_prov_min_client.manifest.sgx
+		--output $<.sgx
 
 secret_prov_min_client.token: secret_prov_min_client.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -127,12 +133,14 @@ secret_prov_pf_client.manifest: secret_prov_pf_client.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-secret_prov_pf_client.manifest.sgx: secret_prov_pf_client.manifest secret_prov_pf_client
+secret_prov_pf_client.manifest.sgx secret_prov_pf_client.sig: sgx_sign_secret_prov_pf_client
+	@:
+
+.INTERMEDIATE: sgx_sign_secret_prov_pf_client
+sgx_sign_secret_prov_pf_client: secret_prov_pf_client.manifest secret_prov_pf_client
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-secret_prov_pf_client.sig: secret_prov_pf_client.manifest.sgx
+		--output $<.sgx
 
 secret_prov_pf_client.token: secret_prov_pf_client.sig
 	gramine-sgx-get-token --output $@ --sig $<

@@ -53,15 +53,19 @@ nginx.manifest: nginx.manifest.template
 		-Dinstall_dir_abspath=$(abspath $(INSTALL_DIR)) \
 		$< >$@
 
-nginx.manifest.sgx: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
+nginx.manifest.sgx nginx.sig: sgx_sign
+	@:
+
+.INTERMEDIATE: sgx_sign
+sgx_sign: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
 		$(INSTALL_DIR)/conf/nginx-gramine.conf \
 		$(TEST_DATA) \
 		$(INSTALL_DIR)/conf/server.crt
 	gramine-sgx-sign \
 		--manifest $< \
-		--output $@
-
-nginx.sig: nginx.manifest.sgx
+		--output $<.sgx
 
 nginx.token: nginx.sig
 	gramine-sgx-get-token --output $@ --sig $<
