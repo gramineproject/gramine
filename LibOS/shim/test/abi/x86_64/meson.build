@@ -18,6 +18,7 @@ tests = {
         ],
     },
     'syscall_registers': {},
+    'syscall_fpu_sse': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')
