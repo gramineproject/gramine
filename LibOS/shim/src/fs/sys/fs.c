@@ -275,132 +275,55 @@ int init_sysfs(void) {
     return 0;
 }
 
-BEGIN_CP_FUNC(caches) {
-    assert(size == sizeof(struct pal_cache_info));
-
-    struct pal_cache_info* caches = (struct pal_cache_info*)obj;
-    struct pal_cache_info* new_caches = NULL;
-
-    size_t caches_cnt = g_pal_public_state->topo_info.caches_cnt;
-    size_t caches_size = caches_cnt * sizeof(struct pal_cache_info);
-
-    size_t off = ADD_CP_OFFSET(caches_size);
-    new_caches = (struct pal_cache_info*)(base + off);
-    memcpy(new_caches, caches, caches_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_caches;
-}
-END_CP_FUNC_NO_RS(caches)
-
-BEGIN_CP_FUNC(threads) {
-    assert(size == sizeof(struct pal_cpu_thread_info));
-
-    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)obj;
-    struct pal_cpu_thread_info* new_threads = NULL;
-
-    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
-    size_t threads_size = threads_cnt * sizeof(struct pal_cpu_thread_info);
-
-    size_t off = ADD_CP_OFFSET(threads_size);
-    new_threads = (struct pal_cpu_thread_info*)(base + off);
-    memcpy(new_threads, threads, threads_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_threads;
-}
-END_CP_FUNC_NO_RS(threads)
-
-BEGIN_CP_FUNC(cores) {
-    assert(size == sizeof(struct pal_cpu_core_info));
-
-    struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)obj;
-    struct pal_cpu_core_info* new_cores = NULL;
-
-    size_t cores_cnt = g_pal_public_state->topo_info.cores_cnt;
-    size_t cores_size = cores_cnt * sizeof(struct pal_cpu_core_info);
-
-    size_t off = ADD_CP_OFFSET(cores_size);
-    new_cores = (struct pal_cpu_core_info*)(base + off);
-    memcpy(new_cores, cores, cores_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_cores;
-}
-END_CP_FUNC_NO_RS(cores)
-
-BEGIN_CP_FUNC(sockets) {
-    assert(size == sizeof(struct pal_socket_info));
-
-    struct pal_socket_info* sockets = (struct pal_socket_info*)obj;
-    struct pal_socket_info* new_sockets = NULL;
-
-    size_t sockets_cnt = g_pal_public_state->topo_info.sockets_cnt;
-    size_t sockets_size = sockets_cnt * sizeof(struct pal_socket_info);
-
-    size_t off = ADD_CP_OFFSET(sockets_size);
-    new_sockets = (struct pal_socket_info*)(base + off);
-    memcpy(new_sockets, sockets, sockets_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_sockets;
-}
-END_CP_FUNC_NO_RS(sockets)
-
-BEGIN_CP_FUNC(numa_nodes) {
-    assert(size == sizeof(struct pal_numa_node_info));
-
-    struct pal_numa_node_info* numa_nodes = (struct pal_numa_node_info*)obj;
-    struct pal_numa_node_info* new_numa_nodes = NULL;
-
-    size_t numa_nodes_cnt = g_pal_public_state->topo_info.numa_nodes_cnt;
-    size_t numa_nodes_size = numa_nodes_cnt * sizeof(struct pal_numa_node_info);
-
-    size_t off = ADD_CP_OFFSET(numa_nodes_size);
-    new_numa_nodes = (struct pal_numa_node_info*)(base + off);
-    memcpy(new_numa_nodes, numa_nodes, numa_nodes_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_numa_nodes;
-}
-END_CP_FUNC_NO_RS(numa_nodes)
-
-BEGIN_CP_FUNC(numa_distances) {
-    assert(size == sizeof(size_t));
-
-    size_t* distance_matrix = (size_t*)obj;
-    size_t* new_distance_matrix = NULL;
-
-    size_t numa_nodes_cnt = g_pal_public_state->topo_info.numa_nodes_cnt;
-    size_t distance_size = numa_nodes_cnt * numa_nodes_cnt * sizeof(size_t);
-
-    size_t off = ADD_CP_OFFSET(distance_size);
-    new_distance_matrix = (size_t*)(base + off);
-    memcpy(new_distance_matrix, distance_matrix, distance_size);
-
-    ADD_CP_FUNC_ENTRY(off);
-    *objp = (void*)new_distance_matrix;
-}
-END_CP_FUNC_NO_RS(numa_distances)
-
 BEGIN_CP_FUNC(topo_info) {
     __UNUSED(size);
     __UNUSED(obj);
     __UNUSED(objp);
 
     struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
-    struct pal_topo_info* new_topo_info = NULL;
+    size_t off = ADD_CP_OFFSET(sizeof(*topo_info));
+    struct pal_topo_info* new_topo_info = (void*)(base + off);
+    memset(new_topo_info, 0, sizeof(*new_topo_info));
 
-    size_t off = ADD_CP_OFFSET(sizeof(struct pal_topo_info));
-    new_topo_info = (struct pal_topo_info*)(base + off);
-    *new_topo_info = *topo_info;
+    if (topo_info->caches_cnt) {
+        new_topo_info->caches_cnt = topo_info->caches_cnt;
+        size_t caches_size = topo_info->caches_cnt * sizeof(*topo_info->caches);
+        new_topo_info->caches = (void*)(base + ADD_CP_OFFSET(caches_size));
+        memcpy(new_topo_info->caches, topo_info->caches, caches_size);
+    }
 
-    DO_CP(caches, topo_info->caches, &new_topo_info->caches);
-    DO_CP(threads, topo_info->threads, &new_topo_info->threads);
-    DO_CP(cores, topo_info->cores, &new_topo_info->cores);
-    DO_CP(sockets, topo_info->sockets, &new_topo_info->sockets);
-    DO_CP(numa_nodes, topo_info->numa_nodes, &new_topo_info->numa_nodes);
-    DO_CP(numa_distances, topo_info->numa_distance_matrix, &new_topo_info->numa_distance_matrix);
+    if (topo_info->threads_cnt) {
+        new_topo_info->threads_cnt = topo_info->threads_cnt;
+        size_t threads_size = topo_info->threads_cnt * sizeof(*topo_info->threads);
+        new_topo_info->threads = (void*)(base + ADD_CP_OFFSET(threads_size));
+        memcpy(new_topo_info->threads, topo_info->threads, threads_size);
+    }
+
+    if (topo_info->cores_cnt) {
+        new_topo_info->cores_cnt = topo_info->cores_cnt;
+        size_t cores_size = topo_info->cores_cnt * sizeof(*topo_info->cores);
+        new_topo_info->cores = (void*)(base + ADD_CP_OFFSET(cores_size));
+        memcpy(new_topo_info->cores, topo_info->cores, cores_size);
+    }
+
+    if (topo_info->sockets_cnt) {
+        new_topo_info->sockets_cnt = topo_info->sockets_cnt;
+        size_t sockets_size = topo_info->sockets_cnt * sizeof(*topo_info->sockets);
+        new_topo_info->sockets = (void*)(base + ADD_CP_OFFSET(sockets_size));
+        memcpy(new_topo_info->sockets, topo_info->sockets, sockets_size);
+    }
+
+    if (topo_info->numa_nodes_cnt) {
+        new_topo_info->numa_nodes_cnt = topo_info->numa_nodes_cnt;
+        size_t numa_nodes_size = topo_info->numa_nodes_cnt * sizeof(*topo_info->numa_nodes);
+        new_topo_info->numa_nodes = (void*)(base + ADD_CP_OFFSET(numa_nodes_size));
+        memcpy(new_topo_info->numa_nodes, topo_info->numa_nodes, numa_nodes_size);
+
+        size_t numa_dm_size = topo_info->numa_nodes_cnt * topo_info->numa_nodes_cnt
+                              * sizeof(*topo_info->numa_distance_matrix);
+        new_topo_info->numa_distance_matrix = (void*)(base + ADD_CP_OFFSET(numa_dm_size));
+        memcpy(new_topo_info->numa_distance_matrix, topo_info->numa_distance_matrix, numa_dm_size);
+    }
 
     ADD_CP_FUNC_ENTRY(off);
 }
@@ -413,32 +336,32 @@ BEGIN_RS_FUNC(topo_info) {
     if (topo_info->caches_cnt > 0) {
         CP_REBASE(topo_info->caches);
     } else {
-        assert(!topo_info->caches);
+        assert(topo_info->caches);
     }
 
     if (topo_info->threads_cnt > 0) {
         CP_REBASE(topo_info->threads);
     } else {
-        assert(!topo_info->threads);
+        assert(topo_info->threads);
     }
 
     if (topo_info->cores_cnt > 0) {
         CP_REBASE(topo_info->cores);
     } else {
-        assert(!topo_info->cores);
+        assert(topo_info->cores);
     }
 
     if (topo_info->sockets_cnt > 0) {
         CP_REBASE(topo_info->sockets);
     } else {
-        assert(!topo_info->sockets);
+        assert(topo_info->sockets);
     }
 
     if (topo_info->numa_nodes_cnt > 0) {
         CP_REBASE(topo_info->numa_nodes);
         CP_REBASE(topo_info->numa_distance_matrix);
     } else {
-        assert(!topo_info->numa_nodes);
+        assert(topo_info->numa_nodes);
     }
 
     memcpy(&g_pal_public_state->topo_info, topo_info, sizeof(*topo_info));
