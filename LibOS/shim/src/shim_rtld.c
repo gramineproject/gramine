@@ -745,12 +745,12 @@ err:
 static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
     int ret = read_file_fragment(file, ehdr, sizeof(*ehdr), /*offset=*/0);
     if (ret < 0) {
-        return ret;
+        return -ENOEXEC;
     }
 
     ret = check_elf_header(ehdr);
     if (ret < 0) {
-        return ret;
+        return -ENOEXEC;
     }
 
     return 0;
