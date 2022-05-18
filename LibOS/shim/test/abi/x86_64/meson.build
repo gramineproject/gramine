@@ -17,6 +17,7 @@ tests = {
             nasm_gen.process('call_auxiliary.nasm')
         ],
     },
+    'syscall_registers': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')
