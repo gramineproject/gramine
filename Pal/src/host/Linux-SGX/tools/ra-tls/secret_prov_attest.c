@@ -331,13 +331,13 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         }
 
         if (e) {
-            char keydata[16];
-            if (parse_hex((char*)secret, keydata, 16, "provisioned secret") < 0)
+            sgx_key_128bit_t keydata;
+            if (parse_hex((char*)secret, keydata, sizeof(keydata), "provisioned secret") < 0)
                 return;
 
             char path_buf[256];
             if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", e) >= 256) {
-                ERROR("Key name '%s' too long\n", path_buf);
+                ERROR("Key name '%s' too long\n", e);
                 return;
             }
 
@@ -346,8 +346,8 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                 return;
 
             size_t total_written = 0;
-            while (total_written < 16) {
-                ssize_t written = write(fd, keydata + total_written, 16 - total_written);
+            while (total_written < sizeof(keydata)) {
+                ssize_t written = write(fd, keydata + total_written, sizeof(keydata) - total_written);
                 if (written > 0) {
                     total_written += written;
                 } else if (written == 0) {
