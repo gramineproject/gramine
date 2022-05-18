@@ -62,9 +62,10 @@ build time.
 
 # Quick Start
 
-- Secret Provisioning flows, EPID-based (IAS) attestation:
+- Secret Provisioning flows, EPID-based (IAS) attestation (you will need to
+  provide an [SPID and the corresponding IAS API keys][spid]):
 
-  For EPID-based (IAS) attestation, you will need to provide an [SPID and the corresponding IAS API keys][spid].
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 ```sh
 RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app epid files/input.txt

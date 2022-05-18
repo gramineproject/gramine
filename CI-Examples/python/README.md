@@ -18,7 +18,25 @@ Run `make` (non-debug) or `make DEBUG=1` (debug) in the directory.
 
 ## Building for SGX
 
-Run `make SGX=1` (non-debug) or `make SGX=1 DEBUG=1` (debug) in the directory.
+To facilitate the `scripts/sgx-quote.py` example, the enclave is set up for
+remote attestation. By default it will be built for DCAP attestation, which
+means that you need a working DCAP setup to launch the enclave.
+
+If you do have DCAP set up, run `make SGX=1` (non-debug) or
+`make SGX=1 DEBUG=1` (debug) in this directory.
+
+Otherwise, you will probably want to use EPID attestation. For this, you will
+need to provide an SPID and specify whether it is set up for linkable quotes or not:
+
+```
+RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make SGX=1
+```
+
+The above dummy values will suffice for simple experiments, but if you wish to
+run `sgx-quote.py` and verify the output, you will need to provide an
+[SPID recognized by Intel][spid].
+
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 ## Building with a local Python installation
 

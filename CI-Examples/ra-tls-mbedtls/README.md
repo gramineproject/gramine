@@ -64,8 +64,9 @@ this is not secure and likewise should not be used in production.
 # Quick Start
 
 In most of the examples below, you need to tell the client what values it should
-expect for `mr_enclave`, `mr_signer`, `isv_prod_id` and `isv_svn`. They will get
-printed by `gramine-sgx-get-token` when generating `server.token`.
+expect for `mr_enclave`, `mr_signer`, `isv_prod_id` and `isv_svn`. One way to
+obtain them is to note them down when they get printed by `gramine-sgx-get-token`
+when generating `server.token`.
 
 Moreover, for EPID-based (IAS) attestation, you will need to provide
 an [SPID and the corresponding IAS API keys][spid].
@@ -83,11 +84,6 @@ kill %%
 ```
 
 - RA-TLS flows with SGX and with Gramine, EPID-based (IAS) attestation:
-
-  IAS attestation requires API keys for interacting with Intel's servers. Obtain
-  below. Moreover the client needs to know what values for
-  it should expect, they will get printed by
-  `gramine-sgx-get-token` during compilation.
 
 ```sh
 make clean
