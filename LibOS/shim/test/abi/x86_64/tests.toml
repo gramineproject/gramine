@@ -11,4 +11,5 @@ manifests = [
   "stack_auxiliary",
   "syscall_fpu",
   "syscall_registers",
+  "syscall_sse",
 ]
