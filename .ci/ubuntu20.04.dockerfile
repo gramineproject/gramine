@@ -31,7 +31,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpcre3-dev \
     libprotobuf-c-dev \
     libssl-dev \
-    libtinfo5 \
     libunwind8 \
     libxfixes3 \
     libxi6 \

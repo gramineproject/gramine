@@ -594,6 +594,7 @@ static int load_and_check_shebang(struct shim_handle* file, char** argv,
             dentry_abs_path(file->dentry, &path, /*size=*/NULL);
         }
         log_error("Failed to read shebang line from %s", path ? path : "(unknown)");
+        free(path);
         return -ENOEXEC;
     }
 
@@ -687,7 +688,6 @@ int load_and_check_exec(const char* path, const char** argv, struct shim_handle*
     int ret;
 
     struct shim_handle* file = NULL;
-    char** new_argv = NULL;
 
     /* immediately copy `argv` into `curr_argv`; this simplifies ownership tracking because this way
      * `*out_new_argv` must be always freed by caller */
@@ -719,7 +719,12 @@ int load_and_check_exec(const char* path, const char** argv, struct shim_handle*
     }
     curr_argv[curr_argv_idx] = NULL;
 
-    size_t depth = 1;
+    if (curr_argv_idx == 0) {
+        /* tricky corner case: if argv is empty, then `free(*curr_argv)` is a no-op */
+        free(curr_argv_ptr);
+    }
+
+    size_t depth = 0;
     while (true) {
         if (depth++ > 5) {
             ret = -ELOOP;
@@ -732,7 +737,7 @@ int load_and_check_exec(const char* path, const char** argv, struct shim_handle*
             goto err;
         }
 
-        ret = open_executable(file, new_argv ? new_argv[0] : path);
+        ret = open_executable(file, depth > 1 ? curr_argv[0] : path);
         if (ret < 0) {
             goto err;
         }
@@ -740,13 +745,13 @@ int load_and_check_exec(const char* path, const char** argv, struct shim_handle*
         ret = check_elf_object(file);
         if (ret == 0) {
             /* Success */
-            new_argv = curr_argv;
             break;
         }
 
         log_debug("File %s not recognized as ELF, looking for shebang",
-                  new_argv ? new_argv[0] : path);
+                  depth > 1 ? curr_argv[0] : path);
 
+        char** new_argv = NULL;
         ret = load_and_check_shebang(file, curr_argv, &new_argv);
         if (ret < 0) {
             goto err;
@@ -761,7 +766,7 @@ int load_and_check_exec(const char* path, const char** argv, struct shim_handle*
     }
 
     *out_exec = file;
-    *out_new_argv = new_argv;
+    *out_new_argv = curr_argv;
     return 0;
 
 err:
