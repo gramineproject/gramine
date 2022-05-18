@@ -584,7 +584,7 @@ static int read_partial_fragment(struct shim_handle* file, void* buf, size_t siz
     return 0;
 }
 
-int check_and_load_exec(struct shim_handle** exec, const char* path,
+int load_and_check_exec(struct shim_handle** exec, const char* path,
                         const char** argv, const char*** out_new_argv) {
 
     int ret;
@@ -613,7 +613,7 @@ int check_and_load_exec(struct shim_handle** exec, const char* path,
 
         log_debug("file not recognized as ELF, look for shebang");
 
-        if((ret = check_and_load_shebang(file, in_argv, &new_argv)) < 0) {
+        if((ret = load_and_check_shebang(file, in_argv, &new_argv)) < 0) {
             goto err;
         }
         if (in_argv != argv) {
@@ -641,7 +641,7 @@ err:
 }
 
 /* This function is used in execve() syscall to load the interpreter scripts. */
-int check_and_load_shebang(struct shim_handle* file, const char** argv,
+int load_and_check_shebang(struct shim_handle* file, const char** argv,
                             const char*** out_new_argv) {
 
     int ret;

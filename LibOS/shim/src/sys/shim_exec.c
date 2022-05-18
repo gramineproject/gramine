@@ -160,7 +160,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    ret = check_and_load_exec(&exec, file, argv, &new_argv);
+    ret = load_and_check_exec(&exec, file, argv, &new_argv);
     if (ret < 0) {
         return ret;
     }
