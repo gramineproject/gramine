@@ -119,6 +119,9 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, char** argv, const char*
 
     const char** new_argp;
     elf_auxv_t* new_auxv;
+
+    /* TODO: init_stack() and its call chain have a wrong signature for `argv`; for now explicitly
+     *       cast it to the expected type to silence compiler warnings */
     ret = init_stack((const char**)argv, envp, &new_argp, &new_auxv);
     if (ret < 0)
         return ret;
