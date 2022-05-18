@@ -119,8 +119,6 @@ static struct link_map* g_interp_map = NULL;
 
 static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset);
 
-static int read_partial_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset, size_t* bytes_read);
-
 static struct link_map* new_elf_object(const char* realname) {
     struct link_map* new;
 
@@ -547,23 +545,6 @@ verify_failed:
     return -EINVAL;
 }
 
-static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset) {
-    if (!file)
-        return -EINVAL;
-
-    if (!file->fs || !file->fs->fs_ops || !file->fs->fs_ops->read)
-        return -EACCES;
-
-    ssize_t pos = offset;
-    ssize_t read_ret = file->fs->fs_ops->read(file, buf, size, &pos);
-    if (read_ret < 0)
-        return read_ret;
-
-    if ((size_t)read_ret < size)
-        return -EINVAL;
-    return 0;
-}
-
 static int read_partial_fragment(struct shim_handle* file, void* buf, size_t size,
                                  file_off_t offset, size_t* out_bytes_read) {
     if (!file)
@@ -578,93 +559,48 @@ static int read_partial_fragment(struct shim_handle* file, void* buf, size_t siz
     if (read_ret < 0)
         return read_ret;
 
-    if (out_bytes_read)
-        *out_bytes_read = (size_t)read_ret;
+    *out_bytes_read = (size_t)read_ret;
 
     return 0;
 }
 
-int load_and_check_exec(struct shim_handle** exec, const char* path,
-                        const char** argv, const char*** out_new_argv) {
-
-    int ret;
-    struct shim_handle* file = NULL;
-    const char** new_argv = NULL;
-
-    const char* in_path = path;
-    const char** in_argv = argv;
-    assert(*out_new_argv == NULL);
-
-    while (true) {
-        if (!(file = get_new_handle())) {
-            ret = -ENOMEM;
-            goto err;
-        }
-
-        if ((ret = open_executable(file, in_path)) < 0) {
-            goto err;
-        }
-
-        ret = check_elf_object(file);
-        if (ret == 0) {
-            /* Success */
-            break;
-        }
-
-        log_debug("file not recognized as ELF, look for shebang");
-
-        if((ret = load_and_check_shebang(file, in_argv, &new_argv)) < 0) {
-            goto err;
-        }
-        if (in_argv != argv) {
-            free((void*)*in_argv);
-            free(in_argv);
-        }
-        put_handle(file);
-
-        in_path = *new_argv;
-        in_argv = new_argv;
+static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset) {
+    size_t read_size = 0;
+    int ret = read_partial_fragment(file, buf, size, offset, &read_size);
+    if (ret < 0) {
+        return ret;
     }
 
-    *exec = file;
-    *out_new_argv = new_argv;
-
+    if (read_size < size) {
+        return -EINVAL;
+    }
     return 0;
-err:
-    if (file)
-        put_handle(file);
-    if (in_argv != argv) {
-        free((void*)*in_argv);
-        free(in_argv);
-    }
-    return ret;
 }
 
-/* This function is used in execve() syscall to load the interpreter scripts. */
-int load_and_check_shebang(struct shim_handle* file, const char** argv,
-                            const char*** out_new_argv) {
+/* This function is used in execve() syscall to load the interpreter scripts.
+   out_new_argv is single object which is a concatenation of all argv strings.
+   The caller of this function should free this object with a single
+   free(*out_new_argv). */
+static int load_and_check_shebang(struct shim_handle* file, char** argv,
+                                  char*** out_new_argv) {
 
     int ret;
-    const char* errstring = NULL;
-    const char** new_argv = NULL;
+    char** new_argv = NULL;
     char* argv_cur = NULL;
     char shebang[INTERP_PATH_SIZE];
 
-    /* Length of the "#!" shebang prefix */
-    const size_t prefix_len = 2;
-
     size_t shebang_len = 0;
     ret = read_partial_fragment(file, shebang, sizeof(shebang), /*offset=*/0, &shebang_len);
-    if ((ret < 0) || (shebang_len <= prefix_len) || (shebang[0] != '#') || (shebang[1] != '!')) {
-        errstring = "Failed to read shebang line from %s";
+    if (ret < 0 || shebang_len <= 2 || shebang[0] != '#' || shebang[1] != '!') {
+        log_error("Failed to read shebang line from %s", shebang);
         ret = -ENOEXEC;
         goto err;
     }
 
     /* Strip shebang starting sequence */
-    shebang_len -= prefix_len;
-    memmove(&shebang[0], &shebang[prefix_len], shebang_len);
-    shebang[shebang_len] = '\0';
+    shebang_len -= 2;
+    memmove(&shebang[0], &shebang[2], shebang_len);
+    shebang[shebang_len] = 0;
 
     /* Strip extra space characters */
     for (char* p = shebang; *p; p++) {
@@ -674,21 +610,19 @@ int load_and_check_shebang(struct shim_handle* file, const char** argv,
             break;
         }
     }
-    shebang[shebang_len] = '\0';
+    shebang[shebang_len] = 0;
 
     /* Strip new line character */
-    char* newlineptr = NULL;
-    newlineptr = strchr(shebang, '\n');
+    char* newlineptr = strchr(shebang, '\n');
     if (newlineptr)
-        *newlineptr = '\0';
+        *newlineptr = 0;
 
     char* interp = shebang;
 
     /* Separate args and interp path */
-    char* spaceptr = NULL;
-    spaceptr = strchr(interp, ' ');
-    if(spaceptr)
-        *spaceptr = '\0';
+    char* spaceptr = strchr(interp, ' ');
+    if (spaceptr)
+        *spaceptr = 0;
 
     const char* argv_shebang[] = {interp, spaceptr ? spaceptr + 1 : NULL, NULL};
 
@@ -698,24 +632,22 @@ int load_and_check_shebang(struct shim_handle* file, const char** argv,
         new_argv_size++;
     }
 
-    for (const char** a = argv; *a; a++) {
+    for (char** a = argv; *a; a++) {
         new_argv_total_bytes += strlen(*a) + 1;
         new_argv_size++;
     }
-    log_debug("Assembling %lu execve arguments (total size is %lu bytes)",
-                            new_argv_size, new_argv_total_bytes);
+    log_debug("Assembling %zu execve arguments (total size is %zu bytes)", new_argv_size,
+                new_argv_total_bytes);
 
-    new_argv = calloc((new_argv_size + 1), sizeof(char*));
+    new_argv = calloc(new_argv_size + 1, sizeof(*new_argv));
     if (!new_argv) {
         ret = -ENOMEM;
-        errstring = "malloc failure";
         goto err;
     }
 
     argv_cur = malloc(new_argv_total_bytes);
     if (!argv_cur) {
         ret = -ENOMEM;
-        errstring = "malloc failure";
         goto err;
     }
 
@@ -728,7 +660,7 @@ int load_and_check_shebang(struct shim_handle* file, const char** argv,
         argv_cur += size;
     }
 
-    for (const char** a = argv; *a; a++) {
+    for (char** a = argv; *a; a++) {
         size_t size = strlen(*a) + 1;
         memcpy(argv_cur, *a, size);
         new_argv[new_argv_idx] = argv_cur;
@@ -742,19 +674,71 @@ int load_and_check_shebang(struct shim_handle* file, const char** argv,
     log_debug("Interpreter to be used for execve: %s", *new_argv);
 
     return 0;
-err:;
+
+err:
     if (new_argv) {
-        free((void*)*new_argv);
+        free(*new_argv);
         free(new_argv);
     }
+    return ret;
+}
 
-    char* path = NULL;
-    if (file->dentry) {
-        // This may fail, but we are already inside a more serious error handler.
-        dentry_abs_path(file->dentry, &path, /*size=*/NULL);
+int load_and_check_exec(const char* path, const char** argv, struct shim_handle** out_exec, 
+                            const char*** out_new_argv) {
+
+    int ret;
+    struct shim_handle* file = NULL;
+    char** new_argv = NULL;
+
+    char* curr_path = (char*)path;
+    char** curr_argv = (char**)argv;
+
+    size_t script_depth = 1;
+    while (true) {
+        file = get_new_handle();
+        if (!file || script_depth++ > 5) {
+            ret = -ENOMEM;
+            goto err;
+        }
+
+        ret = open_executable(file, curr_path);
+        if (ret < 0) {
+            goto err;
+        }
+
+        ret = check_elf_object(file);
+        if (ret == 0) {
+            /* Success */
+            break;
+        }
+
+        log_debug("file not recognized as ELF, look for shebang");
+
+        ret = load_and_check_shebang(file, curr_argv, &new_argv);
+        if (ret < 0) {
+            goto err;
+        }
+        if (curr_argv != (char**)argv) {
+            free(*curr_argv);
+            free(curr_argv);
+        }
+        put_handle(file);
+
+        curr_path = *new_argv;
+        curr_argv = new_argv;
     }
-    log_error(errstring, path ? path : "(unknown)");
-    free(path);
+
+    *out_exec = file;
+    *out_new_argv = (const char**)new_argv;
+
+    return 0;
+err:
+    if (file)
+        put_handle(file);
+    if (curr_argv != (char**)argv) {
+        free(*curr_argv);
+        free(curr_argv);
+    }
     return ret;
 }
 

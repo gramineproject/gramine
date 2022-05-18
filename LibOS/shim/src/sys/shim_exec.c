@@ -132,7 +132,6 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, const char** argv, const
 
 long shim_do_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
-    const char** new_argv = NULL;
 
     if (!is_user_string_readable(file))
         return -EFAULT;
@@ -160,7 +159,8 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     }
 
     struct shim_handle* exec = NULL;
-    ret = load_and_check_exec(&exec, file, argv, &new_argv);
+    const char** new_argv = NULL;
+    ret = load_and_check_exec(file, argv, &exec, &new_argv);
     if (ret < 0) {
         return ret;
     }
@@ -179,7 +179,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec`. */
-    ret = shim_do_execve_rtld(exec, new_argv ? new_argv : argv, envp);
+    ret = shim_do_execve_rtld(exec, new_argv ?: argv, envp);
     assert(ret < 0);
 
     put_handle(exec);

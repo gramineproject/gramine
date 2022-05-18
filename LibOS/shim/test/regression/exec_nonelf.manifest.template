@@ -6,10 +6,10 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { path = "/bin", uri = "file:/bin" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  { path = "/exec_nonelf", uri = "file:{{ binary_dir }}/exec_nonelf" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/bin", uri = "file:/bin" },
 ]
 
 sgx.debug = true
@@ -18,7 +18,7 @@ sgx.nonpie_binary = true
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir() }}/",
-  "file:{{ binary_dir }}/exec_nonelf",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
   "file:/bin/",
