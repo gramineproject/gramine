@@ -637,7 +637,7 @@ static int load_and_check_shebang(struct shim_handle* file, char** argv,
         new_argv_size++;
     }
     log_debug("Assembling %zu execve arguments (total size is %zu bytes)", new_argv_size,
-                new_argv_total_bytes);
+              new_argv_total_bytes);
 
     new_argv = calloc(new_argv_size + 1, sizeof(*new_argv));
     if (!new_argv) {
@@ -684,7 +684,7 @@ err:
 }
 
 int load_and_check_exec(const char* path, const char** argv, struct shim_handle** out_exec, 
-                            const char*** out_new_argv) {
+                        const char*** out_new_argv) {
 
     int ret;
     struct shim_handle* file = NULL;
