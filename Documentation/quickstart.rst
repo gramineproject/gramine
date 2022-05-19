@@ -61,16 +61,22 @@ Gramine installation, we clone the Gramine repo:
    git clone --depth 1 \https://github.com/gramineproject/gramine.git |stable-checkout|
 
 We don't want to build Gramine (it is already installed on the system). Instead,
-we want to build and run the HelloWorld example::
+we want to build and run the HelloWorld example. To build the HelloWorld
+application, we need the ``gcc`` compiler and the ``make`` build system::
+
+   sudo apt-get install gcc make  # for Ubuntu distribution
+   sudo dnf install gcc make      # for RHEL-8-like distribution
+
+Go to the HelloWorld example directory::
 
    cd gramine/CI-Examples/helloworld
 
-Without SGX::
+Build and run without SGX::
 
    make
    gramine-direct helloworld
 
-With SGX::
+Build and run with SGX::
 
    make SGX=1
    gramine-sgx helloworld
