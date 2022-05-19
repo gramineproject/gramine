@@ -18,53 +18,51 @@ Azure confidential computing VMs
 available and provide access to VMs with Intel SGX enabled in `DCsv2
 <https://docs.microsoft.com/en-us/azure/virtual-machines/dcv2-series>`__ and
 `DCsv3 <https://docs.microsoft.com/en-us/azure/virtual-machines/dcv3-series>`__
-VM instances. The description below uses a *DCsv3 VM* running Ubuntu 20.04.
+VM instances. The description below uses a *DCsv3 VM* running Ubuntu
+18.04/20.04.
 
-Prerequisites
-^^^^^^^^^^^^^
+Install Gramine
+^^^^^^^^^^^^^^^
 
-.. NOTE to anyone who will be sorting this list: build-essential should not be
-   sorted together with others, because it is implicit when specifying package
-   dependecies, so when copying to debian/control, it should be omitted
+Add a Gramine repository::
 
-Update and install the required packages for Gramine::
-
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
    sudo apt-get update
-   sudo apt-get install -y build-essential \
-       autoconf bison gawk libcurl4-openssl-dev libprotobuf-c-dev nasm \
-       ninja-build pkg-config protobuf-c-compiler python3 python3-click \
-       python3-jinja2 python3-pip python3-protobuf wget
-   sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
-Gramine requires the kernel to support FSGSBASE x86 instructions. Older Azure
-Confidential Compute VMs may not contain the required kernel patches and need to
-be updated.
+Install Gramine (DCAP driver version) on Ubuntu 18.04::
 
-To be able to run all tests also install::
+   sudo apt-get install gramine-dcap
 
-    sudo apt-get install -y libunwind8 python3-pyelftools python3-pytest
+Install Gramine (in-kernel driver version) on Ubuntu 20.04::
 
-Building
-^^^^^^^^
+   sudo apt-get install gramine
 
-#. Clone Gramine::
+Prepare a signing key
+^^^^^^^^^^^^^^^^^^^^^
 
-       git clone https://github.com/gramineproject/gramine.git
-       cd gramine
+Only if you haven't already::
 
-#. Prepare the signing keys::
+   gramine-sgx-gen-private-key
 
-       openssl genrsa -3 -out Pal/src/host/Linux-SGX/signer/enclave-key.pem 3072
+Run sample application
+^^^^^^^^^^^^^^^^^^^^^^
 
-#. Build Gramine::
+Core Gramine repository contains several sample applications. Thus, to test
+Gramine installation, we clone the Gramine repo and use the HelloWorld example
+from there:
 
-       meson setup build/ --buildtype=release \
-           -Dsgx=enabled -Ddirect=disabled -Ddcap=enabled
-       ninja -C build/
-       sudo ninja -C build/ install
+.. parsed-literal::
 
-#. Build and run :program:`helloworld`::
+   git clone --depth 1 \https://github.com/gramineproject/gramine.git |stable-checkout|
 
-       cd CI-Examples/helloworld
-       make SGX=1
-       gramine-sgx helloworld
+To build the HelloWorld application, we need the ``gcc`` compiler and the
+``make`` build system::
+
+   sudo apt-get install gcc make
+
+Run the HelloWorld example with SGX::
+
+   cd gramine/CI-Examples/helloworld
+   make SGX=1
+   gramine-sgx helloworld
