@@ -67,7 +67,7 @@ application, we need the ``gcc`` compiler and the ``make`` build system::
    sudo apt-get install gcc make  # for Ubuntu distribution
    sudo dnf install gcc make      # for RHEL-8-like distribution
 
-Change to the HelloWorld example directory::
+Go to the HelloWorld example directory::
 
    cd gramine/CI-Examples/helloworld
 
