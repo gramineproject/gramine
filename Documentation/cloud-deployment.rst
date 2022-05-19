@@ -24,19 +24,17 @@ VM instances. The description below uses a *DCsv3 VM* running Ubuntu
 Install Gramine
 ^^^^^^^^^^^^^^^
 
-On Ubuntu 18.04::
+Add a Gramine repository::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
    echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
    sudo apt-get update
+
+Install Gramine (DCAP driver version) on Ubuntu 18.04::
 
    sudo apt-get install gramine-dcap
 
-On Ubuntu 20.04::
-
-   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
-   sudo apt-get update
+Install Gramine (in-kernel driver version) on Ubuntu 20.04::
 
    sudo apt-get install gramine
 
