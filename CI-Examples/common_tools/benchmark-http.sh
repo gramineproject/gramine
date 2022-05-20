@@ -10,27 +10,30 @@ declare -A THROUGHPUTS
 declare -A LATENCIES
 LOOP=${LOOP:-1}
 DOWNLOAD_HOST=$1
-DOWNLOAD_FILE=random/10K.1.html
-CONNECTIONS=100
-REQUESTS=10000
-DURATION=30
-CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64"}
+DOWNLOAD_FILE=${DOWNLOAD_FILE:-random/10K.1.html}
+CONNECTIONS=${CONNECTIONS:-300}
+REQUESTS=${REQUESTS:-10000}
+DURATION=${DURATION:-30}
+CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64 128 256"}
 RESULT=result-$(date +%y%m%d-%H%M%S)
 
 touch "$RESULT"
 throughput_in_bytes() {
-    local THROUGHPUT_STR=$1
-    local THROUGHPUT_VAL=$(echo ${THROUGHPUT_STR} | tr -cd '.[0-9]')
-    local THROUGHPUT_UNIT=$(echo ${THROUGHPUT_STR} | tr -dc '[A-za-z]')
+    local THROUGHPUT_VAL=0
+    local THROUGHPUT_UNIT=""
+    if [[ "$1" =~ ^([0-9]*)(\.[0-9]*)?([kMG]?)$ ]]; then
+        THROUGHPUT_VAL="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        THROUGHPUT_UNIT=${BASH_REMATCH[3]}
+    fi
 
     if [ -z "$THROUGHPUT_UNIT" ]; then
         THROUGHPUT=$THROUGHPUT_VAL
     elif [ "$THROUGHPUT_UNIT" = "k" ]; then
-        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000}" | bc`
+        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000"`
     elif [ "$THROUGHPUT_UNIT" = "M" ]; then
-        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000000}" | bc`
+        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000000"`
     elif [ "$THROUGHPUT_UNIT" = "G" ]; then
-        THROUGHPUT=`echo "{$THROUGHPUT_VAL*1000000000}" | bc`
+        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000000000"`
     else
         THROUGHPUT=0
     fi
@@ -39,20 +42,23 @@ throughput_in_bytes() {
 }
 
 latency_in_milliseconds() {
-    local LATENCY_STR=$1
-    local LATENCY_VAL=$(echo ${LATENCY_STR} | tr -cd '.[0-9]')
-    local LATENCY_UNIT=$(echo ${LATENCY_STR} | tr -dc '[A-za-z]')
+    local LATENCY_VAL=0
+    local LATENCY_UNIT=""
+    if [[ "$1" =~ ^([0-9]*)(\.[0-9]*)?([umsh]*)$ ]]; then
+        LATENCY_VAL="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        LATENCY_UNIT=${BASH_REMATCH[3]}
+    fi
 
     if [ -z "$LATENCY_UNIT" ] || [ "$LATENCY_UNIT" = "ms" ]; then
         LATENCY=$LATENCY_VAL
     elif [ "$LATENCY_UNIT" = "us" ]; then
-        LATENCY=`echo "scale=3; {$LATENCY_VAL/1000}" | bc`
+        LATENCY=`bc <<< "scale=3; $LATENCY_VAL/1000"`
     elif [ "$LATENCY_UNIT" = "s" ]; then
-        LATENCY=`echo "{$LATENCY_VAL*1000}" | bc`
+        LATENCY=`bc <<< "$LATENCY_VAL*1000"`
     elif [ "$LATENCY_UNIT" = "m" ]; then
-        LATENCY=`echo "{$LATENCY_VAL*1000*60}" | bc`
+        LATENCY=`bc <<< "$LATENCY_VAL*1000*60"`
     elif [ "$LATENCY_UNIT" = "h" ]; then
-        LATENCY=`echo "{$LATENCY_VAL*1000*3600}" | bc`
+        LATENCY=`bc <<< "$LATENCY_VAL*1000*3600"`
     else
         LATENCY=0
     fi
