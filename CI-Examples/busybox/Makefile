@@ -43,6 +43,7 @@ busybox.manifest: busybox.manifest.template
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
+ifeq ($(SGX),1)
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
 busybox.manifest.sgx busybox.sig: sgx_sign
@@ -57,6 +58,7 @@ sgx_sign: busybox.manifest busybox
 busybox.token: busybox.sig:
 	gramine-sgx-get-token \
 		--output $@ --sig $<
+endif
 
 # Copy Busybox binary to our root directory for simplicity.
 busybox: $(SRCDIR)/busybox
