@@ -8,7 +8,7 @@ On Ubuntu 18.04, please make sure that the following packages are installed:
 ```sh
 sudo apt-get install -y build-essential libssl-dev zlib1g-dev
 ```
-NOTE: The "benchmark-http.sh" script uses the wrk Benchmark (wrk2) under the
+NOTE: The "benchmark-http.sh" script uses the wrk benchmark (wrk2) under the
 hood. Please refer to https://github.com/giltene/wrk2.
 
 # Quick Start
@@ -27,7 +27,7 @@ kill -SIGINT %%
 # Note: The command-line arguments are passed using `loader.argv_src_file`
 # manifest option.
 gramine-direct ./nginx &
-../common_tools/benchmark-http.sh 127.0.0.1:8002
+../common_tools/benchmark-http.sh http://127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
@@ -35,7 +35,7 @@ kill -SIGINT %%
 # Note: The command-line arguments are securely passed using
 # `loader.argv_src_file` manifest option.
 gramine-sgx ./nginx &
-../common_tools/benchmark-http.sh 127.0.0.1:8002
+../common_tools/benchmark-http.sh http://127.0.0.1:8002
 ../common_tools/benchmark-http.sh https://127.0.0.1:8444
 kill -SIGINT %%
 
