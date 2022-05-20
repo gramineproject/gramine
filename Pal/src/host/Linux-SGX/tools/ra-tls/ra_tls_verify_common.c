@@ -26,11 +26,10 @@ verify_measurements_cb_t g_verify_measurements_cb = NULL;
 static char* getenv_critical(const char* name) {
     char* value = getenv(name);
     if (!value) {
-        INFO(
-            "WARNING: The default enclave verification hook is being used, but %s is not set. "
-            "This is deprecated and will become an error in the future. "
-            "If you wish to accept any value, please specify %s=any explicitly.\n",
-            name, name);
+        INFO("WARNING: The default enclave verification hook is being used, but %s is not set. "
+             "This is deprecated and will become an error in the future. "
+             "If you wish to accept any value, please specify %s=any explicitly.\n",
+             name, name);
     }
 
     if (value && strcmp(value, "any") == 0) {
