@@ -289,7 +289,7 @@ out:
     return ret;
 }
 
-static bool truthy(const char *s) {
+static bool truthy(const char* s) {
     return !strcmp(s, "1") || !strcmp(s, "true") || !strcmp(s, "TRUE");
 }
 
@@ -320,10 +320,10 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         }
 
         /* successfully retrieved the secret: is it a key for encrypted files? */
-        const char *key_name = getenv(SECRET_PROVISION_SET_KEY);
+        const char* key_name = getenv(SECRET_PROVISION_SET_KEY);
         if (!key_name) {
             /* no key name specified - check old PF env var for compatibility */
-            const char *pf_key = getenv(SECRET_PROVISION_SET_PF_KEY);
+            const char* pf_key = getenv(SECRET_PROVISION_SET_PF_KEY);
             if (pf_key && truthy(pf_key)) {
                 INFO(SECRET_PROVISION_SET_PF_KEY " is deprecated, consider setting "
                      SECRET_PROVISION_SET_KEY "=default instead.\n");
