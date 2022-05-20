@@ -96,11 +96,11 @@ void hexdump_mem(const void* data, size_t size);
  *  \param[in] hex          Hex string to be parsed.
  *  \param[in] buffer       Output buffer.
  *  \param[in] buffer_size  Size of the buffer.
- *  \param[in] masked       If non-NULL, this string will be used in error messages instead
+ *  \param[in] mask         If non-NULL, this string will be used in error messages instead
  *                          of the input hexstring itself. Use when parsing sensitive data.
  *  \return On success, returns 0. On failure, returns -1.
  *  \details Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
  */
-int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* masked);
+int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask);
 
 #endif /* UTIL_H */

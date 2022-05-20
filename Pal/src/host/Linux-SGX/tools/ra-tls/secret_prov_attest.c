@@ -289,12 +289,13 @@ out:
     return ret;
 }
 
-__attribute__((constructor)) static void secret_provision_constructor(void) {
-    const char* e = getenv(SECRET_PROVISION_CONSTRUCTOR);
-    if (!e)
-        return;
+static bool truthy(const char *s) {
+    return !strcmp(s, "1") || !strcmp(s, "true") || !strcmp(s, "TRUE");
+}
 
-    if (!strcmp(e, "1") || !strcmp(e, "true") || !strcmp(e, "TRUE")) {
+__attribute__((constructor)) static void secret_provision_constructor(void) {
+    const char* constructor = getenv(SECRET_PROVISION_CONSTRUCTOR);
+    if (constructor && truthy(constructor)) {
         /* user wants to provision secret before application runs */
         uint8_t* secret = NULL;
         size_t secret_size = 0;
@@ -319,25 +320,25 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         }
 
         /* successfully retrieved the secret: is it a key for encrypted files? */
-        e = getenv(SECRET_PROVISION_SET_KEY);
-        if (!e) {
+        const char *key_name = getenv(SECRET_PROVISION_SET_KEY);
+        if (!key_name) {
             /* no key name specified - check old PF env var for compatibility */
-            e = getenv(SECRET_PROVISION_SET_PF_KEY);
-            if (e && (!strcmp(e, "1") || !strcmp(e, "true") || !strcmp(e, "TRUE"))) {
+            const char *pf_key = getenv(SECRET_PROVISION_SET_PF_KEY);
+            if (pf_key && truthy(pf_key)) {
                 INFO(SECRET_PROVISION_SET_PF_KEY " is deprecated, consider setting "
                      SECRET_PROVISION_SET_KEY "=default instead.\n");
-                e = "default";
+                key_name = "default";
             }
         }
 
-        if (e) {
+        if (key_name) {
             sgx_key_128bit_t keydata;
             if (parse_hex((char*)secret, keydata, sizeof(keydata), "provisioned secret") < 0)
                 return;
 
             char path_buf[256];
-            if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", e) >= 256) {
-                ERROR("Key name '%s' too long\n", e);
+            if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", key_name) >= 256) {
+                ERROR("Key name '%s' too long\n", key_name);
                 return;
             }
 
