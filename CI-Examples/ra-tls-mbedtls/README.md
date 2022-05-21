@@ -95,10 +95,10 @@ gramine-sgx ./server epid &
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
-RA_TLS_MRENCLAVE=<mr_enclave of the server enclave> \
-RA_TLS_MRSIGNER=<mr_signer of the server enclave> \
-RA_TLS_ISV_PROD_ID=<isv_prod_id of the server enclave> \
-RA_TLS_ISV_SVN=<isv_svn of the server enclave> \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
 ./client epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
@@ -115,10 +115,10 @@ gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-RA_TLS_MRENCLAVE=<mr_enclave of the server enclave> \
-RA_TLS_MRSIGNER=<mr_signer of the server enclave> \
-RA_TLS_ISV_PROD_ID=<isv_prod_id of the server enclave> \
-RA_TLS_ISV_SVN=<isv_svn of the server enclave> \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
 ./client dcap
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
@@ -134,10 +134,10 @@ make app dcap
 gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
-    <mr_enclave of the server enclave> \
-    <mr_signer of the server enclave> \
-    <isv_prod_id of the server enclave> \
-    <isv_svn of the server enclave>
+    <MRENCLAVE of the server enclave> \
+    <MRSIGNER of the server enclave> \
+    <ISV_PROD_ID of the server enclave> \
+    <ISV_SVN of the server enclave>
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%
@@ -185,10 +185,10 @@ gramine-sgx ./server dcap &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 gramine-sgx \
     ./client_dcap dcap \
-    <mr_enclave of the server enclave> \
-    <mr_signer of the server enclave> \
-    <isv_prod_id of the server enclave> \
-    <isv_svn of the server enclave>
+    <MRENCLAVE of the server enclave> \
+    <MRSIGNER of the server enclave> \
+    <ISV_PROD_ID of the server enclave> \
+    <ISV_SVN of the server enclave>
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%
