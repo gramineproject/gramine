@@ -57,14 +57,15 @@ set to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE
 Note that in production environments, you must *not* use this option!
 
 Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
-the tests without up-to-date microcode. As the name of this setting suggests,
-this is not secure and likewise should not be used in production.
-
+the tests when some of Intel's security advisories haven't been addressed (for
+example, when the microcode or architectual enclaves aren't fully up-to-date).
+As the name of this setting suggests, this is not secure and likewise should
+not be used in production.
 
 # Quick Start
 
 In most of the examples below, you need to tell the client what values it should
-expect for `mr_enclave`, `mr_signer`, `isv_prod_id` and `isv_svn`. One way to
+expect for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID` and `ISV_SVN`. One way to
 obtain them is to note them down when they get printed by `gramine-sgx-get-token`
 when generating `server.token`.
 

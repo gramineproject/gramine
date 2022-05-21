@@ -33,8 +33,10 @@ Note that in production environments,
 you must *not* use this option!
 
 Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
-the tests without up-to-date microcode. As the name of this setting suggests,
-this is not secure and likewise should not be used in production.
+the tests when some of Intel's security advisories haven't been addressed (for
+example, when the microcode or architectual enclaves aren't fully up-to-date).
+As the name of this setting suggests, this is not secure and likewise should
+not be used in production.
 
 ## Secret Provisioning clients
 

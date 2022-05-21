@@ -303,7 +303,7 @@ SGX terminology
       allows determining whether two instances of your enclave are running on
       the same hardware or not.
 
-      If your security models depends on enforcing that the identifiers are
+      If your security model depends on enforcing that the identifiers are
       different (e.g. because you want to prevent sybil attacks), keep in mind
       that the enclave host can generate a new identity by performing an
       epoch reset. The previous identity will then become inaccessible, though.
