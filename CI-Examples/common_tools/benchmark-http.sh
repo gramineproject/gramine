@@ -44,7 +44,7 @@ throughput_in_bytes() {
 latency_in_milliseconds() {
     local LATENCY_VAL=0
     local LATENCY_UNIT=""
-    if [[ "$1" =~ ^([0-9]*)(\.[0-9]*)?([umsh]*)$ ]]; then
+    if [[ "$1" =~ ^([0-9]*)(\.[0-9]*)?(us|ms|s|m|h)?$ ]]; then
         LATENCY_VAL="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
         LATENCY_UNIT=${BASH_REMATCH[3]}
     fi
