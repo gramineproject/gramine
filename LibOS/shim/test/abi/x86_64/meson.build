@@ -1,5 +1,5 @@
 common_lib = static_library('common_lib',
-    'common.c',
+    '../common/common.c',
     nasm_gen.process('exit.nasm')
 )
 
@@ -13,7 +13,7 @@ tests = {
     'stack_env': {},
     'stack_auxiliary': {
         'filenames': [
-            'stack_auxiliary.c',
+            '../common/stack_auxiliary.c',
             nasm_gen.process('call_auxiliary.nasm')
         ],
     },
