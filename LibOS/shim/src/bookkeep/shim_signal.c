@@ -747,8 +747,6 @@ bool handle_signal(PAL_CONTEXT* context) {
     }
     if (handler != SIG_IGN) {
         /* User provided handler. */
-        assert(sa->sa_flags & SA_RESTORER);
-
         long sysnr = shim_get_tcb()->context.syscall_nr;
         if (sysnr >= 0) {
             switch (pal_context_get_retval(context)) {
@@ -786,7 +784,8 @@ bool handle_signal(PAL_CONTEXT* context) {
         set_sig_mask(current, &new_mask);
         unlock(&current->lock);
 
-        prepare_sigframe(context, &signal.siginfo, handler, sa->sa_restorer,
+        prepare_sigframe(context, &signal.siginfo, handler,
+                         sa->sa_flags & SA_RESTORER ? sa->sa_restorer : NULL,
                          !!(sa->sa_flags & SA_ONSTACK), &old_mask);
 
         if (sa->sa_flags & SA_RESETHAND) {
