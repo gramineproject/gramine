@@ -34,9 +34,11 @@ PAL_NUM DkMemoryAvailableQuota(void) {
     return (PAL_NUM)quota;
 }
 
+#if defined(__x86_64__)
 int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return _DkCpuIdRetrieve(leaf, subleaf, values);
 }
+#endif
 
 int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
                         void* target_info, PAL_NUM* target_info_size, void* report,
