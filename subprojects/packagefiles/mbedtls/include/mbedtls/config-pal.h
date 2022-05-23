@@ -23,7 +23,9 @@
 #define MBEDTLS_GENPRIME
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_SSE2
+#if defined(__x86_64__)
 #define MBEDTLS_HAVE_X86_64
+#endif
 #define MBEDTLS_HKDF_C
 #define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 #define MBEDTLS_MD_C
