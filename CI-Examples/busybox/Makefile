@@ -54,7 +54,7 @@ sgx_sign: busybox.manifest busybox
 		--manifest $< \
 		--output $<.sgx
 
-busybox.token: busybox.sig:
+busybox.token: busybox.sig
 	gramine-sgx-get-token \
 		--output $@ --sig $<
 
