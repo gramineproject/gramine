@@ -62,9 +62,21 @@ busybox.token: busybox.sig
 busybox: $(SRCDIR)/busybox
 	cp $(SRCDIR)/busybox busybox
 
+ifeq ($(SGX),)
+GRAMINE = gramine-direct
+else
+GRAMINE = gramine-sgx
+endif
+
+.PHONY: check
+check: all
+	$(GRAMINE) ./busybox echo "Hello" > OUTPUT
+	@grep -q "Hello" OUTPUT && echo "[ Success 1/1 ]"
+	@rm OUTPUT
+
 .PHONY: clean
 clean:
-	$(RM) *.token *.sig *.manifest.sgx *.manifest busybox
+	$(RM) *.token *.sig *.manifest.sgx *.manifest busybox OUTPUT
 
 .PHONY: distclean
 distclean: clean

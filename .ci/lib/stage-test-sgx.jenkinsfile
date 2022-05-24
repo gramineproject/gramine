@@ -20,6 +20,13 @@ stage('test-sgx') {
             make ${MAKEOPTS} regression
         '''
     }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
+            cd CI-Examples/busybox
+            make ${MAKEOPTS}
+            make ${MAKEOPTS} check
+        '''
+    }
     timeout(time: 15, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/memcached

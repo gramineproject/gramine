@@ -37,6 +37,13 @@ stage('test-direct') {
             make ${MAKEOPTS} regression
         '''
     }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
+            cd CI-Examples/busybox
+            make ${MAKEOPTS} all
+            make ${MAKEOPTS} check
+        '''
+    }
     timeout(time: 10, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/memcached
