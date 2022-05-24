@@ -129,6 +129,19 @@ Follow the installation instructions from:
 
 - https://github.com/intel/linux-sgx
 
+5. Install dependencies for DCAP
+""""""""""""""""""""""""""""""""
+
+If you plan on enabling ``-Ddcap`` option, you need to install
+``libsgx-dcap-quote-verify`` package (and it's development counterpart)::
+
+   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+   # (if you're on Ubuntu 18.04, write "bionic" instead of "focal" above)
+
+   sudo apt-get update
+   sudo apt-get install libsgx-dcap-quote-verify-dev
+
 Building
 --------
 

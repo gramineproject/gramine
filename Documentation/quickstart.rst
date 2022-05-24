@@ -24,10 +24,16 @@ package (see below).
 Install Gramine
 ---------------
 
-On Ubuntu 18.04 or 20.04::
+On Ubuntu 18.04 or 20.04 (for 18.04, in :file:`intel-sgx.list`, replace
+``focal`` with ``bionic``)::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
    echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
+
+   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+   # (if you're on Ubuntu 18.04, remember to write "bionic" instead of "focal")
+
    sudo apt-get update
 
    sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
