@@ -33,6 +33,7 @@ stage('clean-check') {
         make -C CI-Examples/helloworld clean
         make -C CI-Examples/python clean
         make -C CI-Examples/bash clean
+        make -C CI-Examples/busybox distclean
         make -C CI-Examples/memcached distclean
         make -C CI-Examples/redis distclean
         make -C CI-Examples/lighttpd distclean

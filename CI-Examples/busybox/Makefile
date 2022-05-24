@@ -1,8 +1,11 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 SRCDIR = src
-BUSYBOX_URL ?= https://busybox.net/downloads/busybox-1.32.0.tar.bz2
 BUSYBOX_SHA256 ?= c35d87f1d04b2b153d33c275c2632e40d388a88f19a9e71727e0bbbff51fe689
+BUSYBOX_SRC ?= busybox-1.32.0.tar.bz2
+BUSYBOX_MIRRORS ?= \
+    https://busybox.net/downloads \
+    https://packages.gramineproject.io/distfiles
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
@@ -18,8 +21,8 @@ all: busybox.manifest.sgx busybox.sig busybox.token
 endif
 
 $(SRCDIR)/Makefile:
-	../common_tools/download --output busybox.tar.bz2 \
-		--sha256 $(BUSYBOX_SHA256) --url $(BUSYBOX_URL)
+	../common_tools/download --output busybox.tar.bz2 --sha256 $(BUSYBOX_SHA256) \
+		$(foreach mirror,$(BUSYBOX_MIRRORS),--url $(mirror)/$(BUSYBOX_SRC))
 	mkdir $(SRCDIR)
 	tar -C $(SRCDIR) --strip-components=1 -xf busybox.tar.bz2
 
@@ -62,9 +65,21 @@ busybox.token: busybox.sig
 busybox: $(SRCDIR)/busybox
 	cp $(SRCDIR)/busybox busybox
 
+ifeq ($(SGX),)
+GRAMINE = gramine-direct
+else
+GRAMINE = gramine-sgx
+endif
+
+.PHONY: check
+check: all
+	$(GRAMINE) ./busybox echo "Hello" > OUTPUT
+	@grep -q "Hello" OUTPUT && echo "[ Success 1/1 ]"
+	@rm OUTPUT
+
 .PHONY: clean
 clean:
-	$(RM) *.token *.sig *.manifest.sgx *.manifest busybox
+	$(RM) *.token *.sig *.manifest.sgx *.manifest busybox OUTPUT
 
 .PHONY: distclean
 distclean: clean
