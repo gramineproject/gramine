@@ -201,7 +201,7 @@ typedef struct {
     int ms_family;
     int ms_type;
     int ms_protocol;
-} ms_ocall_socet_t;
+} ms_ocall_socket_t;
 
 typedef struct {
     int ms_fd;

@@ -77,21 +77,6 @@ out:
     return ret;
 }
 
-/*
- * Writev can not be implemented as write because :
- * writev() has the same requirements as write() with respect to write requests
- * of <= PIPE_BUF bytes to a pipe or FIFO: no interleaving and no partial
- * writes. Neither of these can be guaranteed in the general case if writev()
- * simply calls write() for each struct iovec.
- */
-
-/*
- * The problem here is that we have to guarantee atomic writev
- *
- * Upon successful completion, writev() shall return the number of bytes
- * actually written. Otherwise, it shall return a value of -1, the file-pointer
- * shall remain unchanged, and errno shall be set to indicate an error
- */
 long shim_do_writev(unsigned long fd, struct iovec* vec, unsigned long vlen) {
     if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
         return -EINVAL;

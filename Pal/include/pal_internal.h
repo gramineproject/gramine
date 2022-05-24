@@ -129,13 +129,13 @@ static inline size_t handle_size(PAL_HANDLE handle) {
 struct socket_ops {
     int (*bind)(PAL_HANDLE handle, struct pal_socket_addr* addr);
     int (*listen)(PAL_HANDLE handle, unsigned int backlog);
-    int (*accept)(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
-                  struct pal_socket_addr* client_addr);
+    int (*accept)(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                  struct pal_socket_addr* out_client_addr);
     int (*connect)(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                   struct pal_socket_addr* local_addr);
-    int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                   struct pal_socket_addr* out_local_addr);
+    int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr);
-    int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+    int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool is_nonblocking);
 };
 
@@ -203,16 +203,16 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                    pal_stream_options_t options, PAL_HANDLE* handle_ptr);
+                    pal_stream_options_t options, PAL_HANDLE* out_handle);
 int _DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
 int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
-int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
-                    struct pal_socket_addr* client_addr);
+int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                    struct pal_socket_addr* out_client_addr);
 int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                     struct pal_socket_addr* local_addr);
-int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+                     struct pal_socket_addr* out_local_addr);
+int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr);
-int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr, bool is_nonblocking);
 
 /* DkProcess and DkThread calls */

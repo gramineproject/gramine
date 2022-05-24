@@ -75,8 +75,9 @@ enum shim_sock_state {
 };
 
 /*
- * Accecss to `state`, `remote_addr`, `remote_addrlen`, `local_addr`, `local_addrlen, `last_error`,
- * `sendtimeout_us`, `receivetimeout_us`, `read_shutdown`, `write_shutdown` is protected by `lock`.
+ * Access to `state`, `remote_addr`, `remote_addrlen`, `local_addr`, `local_addrlen, `last_error`,
+ * `sendtimeout_us`, `receivetimeout_us`, `read_shutdown`, `write_shutdown` and `was_bound` are
+ * protected by `lock`.
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
  * stream reads (see the comment in `do_recvmsg` in "LibOS/shim/src/sys/shim_socket.c").
@@ -104,6 +105,7 @@ struct shim_sock_handle {
     unsigned int last_error;
     uint64_t sendtimeout_us;
     uint64_t receivetimeout_us;
+    /* This field denotes whether the socket was ever bound. */
     bool was_bound;
     bool read_shutdown;
     bool write_shutdown;

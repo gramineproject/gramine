@@ -76,7 +76,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             }
             break;
         case PAL_TYPE_SOCKET:
-            serialize_socket_handle(handle, &d1, &dsz1);
             break;
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to serialize SSL context */
@@ -152,7 +151,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->dir.realpath = hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL;
             break;
         case PAL_TYPE_SOCKET:
-            deserialize_socket_handle(hdl, (const char*)hdl + hdlsz);
+            deserialize_socket_handle(hdl);
             break;
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to deserialize SSL context */

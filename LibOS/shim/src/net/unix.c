@@ -18,19 +18,22 @@
 #include "shim_internal.h"
 #include "shim_socket.h"
 
-static int unaddr_to_sockname(void* _addr, size_t addrlen, char* sock_name, size_t sock_name_size) {
-    struct sockaddr_un* addr = _addr;
-    if (addrlen > sizeof(*addr)) {
-        addrlen = sizeof(*addr);
+static int unaddr_to_sockname(void* addr, size_t addrlen, char* sock_name, size_t sock_name_size) {
+    if (addrlen > sizeof(struct sockaddr_un)) {
+        addrlen = sizeof(struct sockaddr_un);
     }
     if (addrlen < offsetof(struct sockaddr_un, sun_path) + 1) {
         return -EINVAL;
     }
-    if (addr->sun_family != AF_UNIX) {
+    static_assert(offsetof(struct sockaddr_un, sun_family) < offsetof(struct sockaddr_un, sun_path),
+                  "ops");
+    unsigned short family;
+    memcpy(&family, (char*)addr + offsetof(struct sockaddr_un, sun_family), sizeof(family));
+    if (family != AF_UNIX) {
         return -EAFNOSUPPORT;
     }
 
-    const char* path = addr->sun_path;
+    const char* path = (char*)addr + offsetof(struct sockaddr_un, sun_path);
     size_t pathlen = addrlen - offsetof(struct sockaddr_un, sun_path);
     assert(pathlen >= 1);
     if (path[0]) {
@@ -58,16 +61,14 @@ static int unaddr_to_sockname(void* _addr, size_t addrlen, char* sock_name, size
 }
 
 static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* addrlen) {
-    /* This does not violate the strict aliasing rule, because we never dereference `ss_addr`. */
-    struct sockaddr_un* addr = (void*)ss_addr;
     /* We know the addr is valid, but it might not contain the ending nullbyte or contain some
      * unnecessary garbage after it. */
-    assert(*addrlen <= sizeof(*addr));
+    assert(*addrlen <= sizeof(struct sockaddr_un));
     assert(offsetof(struct sockaddr_un, sun_path) < *addrlen);
-    assert(sizeof(*addr) < sizeof(*ss_addr));
+    assert(sizeof(struct sockaddr_un) < sizeof(*ss_addr));
     assert(*addrlen < sizeof(*ss_addr));
 
-    char* path = addr->sun_path;
+    char* path = (char*)ss_addr + offsetof(struct sockaddr_un, sun_path);
     size_t pathlen = *addrlen - offsetof(struct sockaddr_un, sun_path);
     assert(pathlen >= 1);
     if (!path[0]) {
@@ -149,7 +150,7 @@ static int listen(struct shim_handle* handle, unsigned int backlog) {
 }
 
 static int accept(struct shim_handle* handle, bool is_nonblocking,
-                  struct shim_handle** client_ptr) {
+                  struct shim_handle** out_client) {
     pal_stream_options_t options = is_nonblocking ? PAL_OPTION_NONBLOCK : 0;
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
     /* Since this socket is listening, it must have a PAL handle. */
@@ -195,7 +196,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
     unlock(&handle->info.sock.lock);
 
-    *client_ptr = client_handle;
+    *out_client = client_handle;
     return 0;
 }
 
@@ -275,7 +276,7 @@ static int getsockopt(struct shim_handle* handle, int level, int optname, void* 
     return -ENOPROTOOPT;
 }
 
-static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
+static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen) {
     __UNUSED(addr);
     __UNUSED(addrlen);
@@ -320,11 +321,11 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     if (ret < 0) {
         return (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     }
-    *size_out = size;
+    *out_size = size;
     return 0;
 }
 
-static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
+static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t* addrlen, bool is_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
@@ -340,11 +341,12 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     }
 
     if (is_nonblocking) {
-        // TODO: what to do? DkStremRead has no way to specify this
         lock(&handle->lock);
         bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
         unlock(&handle->lock);
         if (!handle_is_nonblocking) {
+            /* `DkStremRead` has no way of making one-time nonblocking read, so we have no other
+             * option but to fail. */
             return -EINVAL;
         }
     }
@@ -373,7 +375,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
     } else {
-        *size_out = size;
+        *out_size = size;
         if (backing_buf) {
             /* Need to copy back to user buffers. */
             size_t copied = 0;

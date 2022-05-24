@@ -704,6 +704,8 @@ BEGIN_CP_FUNC(handle) {
         ADD_TO_CP_MAP(obj, off);
         new_hdl = (struct shim_handle*)(base + off);
 
+        /* TODO: this lock is not released on errors. The main problem here is that `DO_CP` can
+         * just return... */
         lock(&hdl->lock);
         *new_hdl = *hdl;
 
@@ -737,9 +739,9 @@ BEGIN_CP_FUNC(handle) {
         INIT_LISTP(&new_hdl->epoll_items);
         new_hdl->epoll_items_count = 0;
 
-        /* TODO: move this info epoll specific `checkout` callback.
-         * Ooof, impossible, `DO_CP` is a macro that can be only used inside BEGIN_CP_FUNC.
-         * What now? */
+        /* TODO: move this into epoll specific `checkout` callback.
+         * It's impossible at the moment, because `DO_CP` is a macro that can be only used inside
+         * BEGIN_CP_FUNC. */
         if (hdl->type == TYPE_EPOLL) {
             struct shim_epoll_handle* epoll = &new_hdl->info.epoll;
             clear_lock(&epoll->lock);

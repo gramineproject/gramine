@@ -1085,7 +1085,7 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
 int ocall_socket(int family, int type, int protocol) {
     int ret;
     void* old_ustack = sgx_prepare_ustack();
-    ms_ocall_socet_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    ms_ocall_socket_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
     if (!ms) {
         ret = -EPERM;
         goto out;
@@ -1333,7 +1333,7 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
 int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen) {
     int ret;
     void* old_ustack = sgx_prepare_ustack();
-    ms_ocall_bind_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    ms_ocall_connect_simple_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
     if (!ms) {
         ret = -EPERM;
         goto out;
@@ -1343,7 +1343,7 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
     WRITE_ONCE(ms->ms_addrlen, *addrlen);
 
     assert(*addrlen <= sizeof(*addr));
-    void* untrusted_addr = sgx_copy_to_ustack(addr, sizeof(*addr));
+    void* untrusted_addr = sgx_copy_to_ustack(addr, *addrlen);
     if (!untrusted_addr) {
         ret = -EPERM;
         goto out;
@@ -1401,6 +1401,7 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
     }
 
     if ((size + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
+        /* Buffer is too big for untrusted stack - use untrusted heap instead. */
         retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(size), &obuf, &need_munmap);
         if (retval < 0) {
             goto out;
@@ -1506,7 +1507,7 @@ ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const vo
     }
 
     if ((size + addrlen + controllen) > MAX_UNTRUSTED_STACK_BUF) {
-        /* buf is too big and may overflow untrusted stack, so use untrusted heap */
+        /* Buffer is too big for untrusted stack - use untrusted heap instead. */
         retval = ocall_mmap_untrusted_cache(ALLOC_ALIGN_UP(size), &obuf, &need_munmap);
         if (retval < 0)
             goto out;

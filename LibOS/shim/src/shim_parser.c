@@ -1088,19 +1088,22 @@ static void parse_timespec(struct print_buf* buf, va_list* ap) {
 }
 
 static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
-    unsigned short* addr = va_arg(*ap, unsigned short*);
+    void* addr = va_arg(*ap, void*);
 
     if (!addr) {
         buf_puts(buf, "NULL");
         return;
     }
 
-    if (!is_user_memory_readable(addr, sizeof(*addr))) {
+    /* Each socket address struct has address family as `unsigned short` at the begining. */
+    unsigned short addr_family;
+    if (!is_user_memory_readable(addr, sizeof(addr_family))) {
         buf_printf(buf, "(invalid-addr %p)", addr);
         return;
     }
+    memcpy(&addr_family, addr, sizeof(addr_family));
 
-    switch (*addr) {
+    switch (addr_family) {
         case AF_INET: {
             struct sockaddr_in* a = (void*)addr;
             unsigned char* ip     = (void*)&a->sin_addr.s_addr;

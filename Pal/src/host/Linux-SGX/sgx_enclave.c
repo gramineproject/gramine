@@ -335,7 +335,7 @@ static long sgx_ocall_futex(void* pms) {
 }
 
 static long sgx_ocall_socket(void* pms) {
-    ms_ocall_socet_t* ms = pms;
+    ms_ocall_socket_t* ms = pms;
     return DO_SYSCALL(socket, ms->ms_family, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
 }
 
@@ -354,13 +354,13 @@ static long sgx_ocall_bind(void* pms) {
     }
 
     switch (addr.ss_family) {
-        case AF_INET:;
-            struct sockaddr_in* ip_addr = (void*)&addr;
-            ms->ms_new_port = ip_addr->sin_port;
+        case AF_INET:
+            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in, sin_port),
+                   sizeof(ms->ms_new_port));
             break;
-        case AF_INET6:;
-            struct sockaddr_in6* ip6_addr = (void*)&addr;
-            ms->ms_new_port = ip6_addr->sin6_port;
+        case AF_INET6:
+            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in6, sin6_port),
+                   sizeof(ms->ms_new_port));
             break;
         default:
             log_error("%s: unknown address family: %d", __func__, addr.ss_family);
@@ -566,7 +566,6 @@ static long sgx_ocall_recv(void* pms) {
     ms_ocall_recv_t* ms = (ms_ocall_recv_t*)pms;
     long ret;
     ODEBUG(OCALL_RECV, ms);
-    struct sockaddr* addr = ms->ms_addr;
 
     if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
         return -EINVAL;
@@ -578,7 +577,7 @@ static long sgx_ocall_recv(void* pms) {
 
     iov[0].iov_base    = ms->ms_buf;
     iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = addr;
+    hdr.msg_name       = ms->ms_addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;
@@ -605,7 +604,6 @@ static long sgx_ocall_send(void* pms) {
     ms_ocall_send_t* ms = (ms_ocall_send_t*)pms;
     long ret;
     ODEBUG(OCALL_SEND, ms);
-    const struct sockaddr* addr = ms->ms_addr;
 
     if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
         return -EINVAL;
@@ -617,7 +615,7 @@ static long sgx_ocall_send(void* pms) {
 
     iov[0].iov_base    = (void*)ms->ms_buf;
     iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = (void*)addr;
+    hdr.msg_name       = (void*)ms->ms_addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;

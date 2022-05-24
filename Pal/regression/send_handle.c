@@ -84,16 +84,16 @@ static void set_reuseaddr(PAL_HANDLE handle) {
 }
 
 static void do_parent(void) {
-    PAL_HANDLE child_handle;
+    PAL_HANDLE child_process;
     const char* args[] = { "send_handle", "child", NULL };
-    CHECK(DkProcessCreate(args, &child_handle));
+    CHECK(DkProcessCreate(args, &child_process));
 
     PAL_HANDLE handle;
 
     /* pipe.srv handle */
     CHECK(DkStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                        /*options=*/0, &handle));
-    CHECK(DkSendHandle(child_handle, handle));
+    CHECK(DkSendHandle(child_process, handle));
     DkObjectClose(handle);
 
     CHECK(DkStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
@@ -102,9 +102,9 @@ static void do_parent(void) {
     DkObjectClose(handle);
 
     /* TCP socket */
-    CHECK(DkSocketCreate(IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
+    CHECK(DkSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
     struct pal_socket_addr addr = {
-        .domain = IPV4,
+        .domain = PAL_IPV4,
         .ipv4 = {
             .addr = __htonl(0x7f000001), // localhost
             .port = __htons(PORT),
@@ -113,18 +113,18 @@ static void do_parent(void) {
     set_reuseaddr(handle);
     CHECK(DkSocketBind(handle, &addr));
     CHECK(DkSocketListen(handle, /*backlog=*/3));
-    CHECK(DkSendHandle(child_handle, handle));
+    CHECK(DkSendHandle(child_process, handle));
     DkObjectClose(handle);
 
-    CHECK(DkSocketCreate(IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
+    CHECK(DkSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
     CHECK(DkSocketConnect(handle, &addr, /*local_addr=*/NULL));
     recv_and_check(handle, PAL_TYPE_SOCKET);
     DkObjectClose(handle);
 
     /* UDP IPv6 socket */
-    CHECK(DkSocketCreate(IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
+    CHECK(DkSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
     addr = (struct pal_socket_addr) {
-        .domain = IPV6,
+        .domain = PAL_IPV6,
         .ipv6 = {
             .addr = { [15] = 1 }, // localhost
             .port = __htons(PORT),
@@ -132,10 +132,10 @@ static void do_parent(void) {
     };
     set_reuseaddr(handle);
     CHECK(DkSocketBind(handle, &addr));
-    CHECK(DkSendHandle(child_handle, handle));
+    CHECK(DkSendHandle(child_process, handle));
     DkObjectClose(handle);
 
-    CHECK(DkSocketCreate(IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
+    CHECK(DkSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
     CHECK(DkSocketConnect(handle, &addr, /*local_addr=*/NULL));
     write_msg(handle, PAL_TYPE_SOCKET);
     DkObjectClose(handle);
@@ -144,7 +144,7 @@ static void do_parent(void) {
     CHECK(DkStreamOpen("file:to_send.tmp", PAL_ACCESS_RDWR, /*share_flags=*/0600, PAL_CREATE_TRY,
                        /*options=*/0, &handle));
     write_msg(handle, PAL_TYPE_FILE);
-    CHECK(DkSendHandle(child_handle, handle));
+    CHECK(DkSendHandle(child_process, handle));
     DkObjectClose(handle);
 }
 

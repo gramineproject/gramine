@@ -38,7 +38,7 @@
  */
 
 static int create_sock_handle(int family, int type, int protocol, bool is_nonblocking,
-                              struct shim_handle** handle_out) {
+                              struct shim_handle** out_handle) {
     struct shim_handle* handle = get_new_handle();
     if (!handle) {
         return -ENOMEM;
@@ -82,7 +82,7 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
     }
 
     get_handle(handle);
-    *handle_out = handle;
+    *out_handle = handle;
     ret = 0;
 
 out:
@@ -195,7 +195,7 @@ long shim_do_socketpair(int family, int type, int protocol, int* sv) {
     }
     sock1->state = SOCK_LISTENING;
     sock1->read_shutdown = false;
-    /* Socketpair UNIX sockets has no meaningful addresses, but correct domain. */
+    /* Socketpair UNIX sockets have no meaningful addresses, but correct domain. */
     sock1->remote_addr.ss_family = AF_UNIX;
     sock1->remote_addrlen = sizeof(sock1->remote_addr.ss_family);
     sock1->local_addr.ss_family = AF_UNIX;
@@ -211,7 +211,7 @@ long shim_do_socketpair(int family, int type, int protocol, int* sv) {
     sock2->state = SOCK_CONNECTED;
     sock2->read_shutdown = false;
     sock2->write_shutdown = false;
-    /* Socketpair UNIX sockets has no meaningful addresses, but correct domain. */
+    /* Socketpair UNIX sockets have no meaningful addresses, but correct domain. */
     sock2->remote_addr.ss_family = AF_UNIX;
     sock2->remote_addrlen = sizeof(sock2->remote_addr.ss_family);
     sock2->local_addr.ss_family = AF_UNIX;
@@ -312,9 +312,9 @@ out:
 long shim_do_listen(int fd, int backlog) {
     int ret;
 
-    if ((unsigned int)backlog > SHIM_SOCK_MAX_CONNS) {
+    if ((unsigned int)backlog > SHIM_SOCK_MAX_PENDING_CONNS) {
         /* Linux kernel verifies `backlog` this way. */
-        backlog = SHIM_SOCK_MAX_CONNS;
+        backlog = SHIM_SOCK_MAX_PENDING_CONNS;
     }
 
     struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
@@ -398,7 +398,7 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
     } else if (sock->read_shutdown) {
         ret = -EINVAL;
     } else {
-        has_recvtimeout_set = sock->receivetimeout_us;
+        has_recvtimeout_set = !!sock->receivetimeout_us;
     }
     unlock(&sock->lock);
     if (ret) {
@@ -426,8 +426,8 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
 
 out:
     if (ret == -EINTR) {
-        /* XXX: timeout could have been changed in the meantime. Do we care? Antyhing we can do
-         * about it? */
+        /* Timeout could have been changed in the meantime, but it should not matter - this is
+         * a peculiar corner case that nothing should really care about. */
         if (has_recvtimeout_set) {
             ret = -ERESTARTNOHAND;
         } else {
@@ -593,7 +593,7 @@ ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     struct shim_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
-    bool has_sendtimeout_set = sock->sendtimeout_us;
+    bool has_sendtimeout_set = !!sock->sendtimeout_us;
 
     ret = -sock->last_error;
     sock->last_error = 0;
@@ -632,8 +632,8 @@ out:
         }
     }
     if (ret == -EINTR) {
-        /* XXX: timeout could have been changed in the meantime. Do we care? Antyhing we can do
-         * about it? */
+        /* Timeout could have been changed in the meantime, but it should not matter - this is
+         * a peculiar corner case that nothing should really care about. */
         if (has_sendtimeout_set) {
             ret = -ERESTARTNOHAND;
         } else {
@@ -749,7 +749,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     struct shim_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
-    bool has_recvtimeout_set = sock->receivetimeout_us;
+    bool has_recvtimeout_set = !!sock->receivetimeout_us;
     ret = -sock->last_error;
     sock->last_error = 0;
     unlock(&sock->lock);
@@ -826,7 +826,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
         }
 
         if (sock->peek.data_size == 0) {
-            /* Not data to return. */
+            /* No data to return. */
             ret = 0;
             goto out;
         }
@@ -864,8 +864,8 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
 out:
     unlock(&sock->recv_lock);
     if (ret == -EINTR) {
-        /* XXX: timeout could have been changed in the meantime. Do we care? Antyhing we can do
-         * about it? */
+        /* Timeout could have been changed in the meantime, but it should not matter - this is
+         * a peculiar corner case that nothing should really care about. */
         if (has_recvtimeout_set) {
             ret = -ERESTARTNOHAND;
         } else {

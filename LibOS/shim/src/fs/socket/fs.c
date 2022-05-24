@@ -21,7 +21,8 @@ static int close(struct shim_handle* handle) {
     if (lock_created(&handle->info.sock.recv_lock)) {
         destroy_lock(&handle->info.sock.recv_lock);
     }
-    /* No need for atomics - we are releaseing the last reference, nothing can access it anymore. */
+    free(handle->info.sock.peek.buf);
+    /* No need for atomics - we are releasing the last reference, nothing can access it anymore. */
     if (handle->info.sock.pal_handle) {
         DkObjectClose(handle->info.sock.pal_handle);
     }
@@ -64,14 +65,14 @@ static int hstat(struct shim_handle* handle, struct stat* stat) {
 
     memset(stat, 0, sizeof(*stat));
 
-    /* TODO: what do we put in `dev` and `ino`? */
+    /* XXX: maybe we should put something meaningful in `dev` and `ino`? */
     stat->st_dev = 0;
     stat->st_ino = 0;
     stat->st_mode = S_IFSOCK | PERM_rwxrwxrwx;
     stat->st_nlink = 1;
     stat->st_blksize = PAGE_SIZE;
 
-    /* TODO: maybe set `st_size` - query PAL for pending size? */
+    /* XXX: maybe set `st_size` - query PAL for pending size? Otoh nothing seems to be using it. */
 
     return 0;
 }
@@ -144,7 +145,7 @@ static int checkin(struct shim_handle* handle) {
     return 0;
 }
 
-struct shim_fs_ops socket_fs_ops = {
+static struct shim_fs_ops socket_fs_ops = {
     .close    = close,
     .read     = read,
     .write    = write,

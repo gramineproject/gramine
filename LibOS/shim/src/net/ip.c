@@ -13,6 +13,36 @@
 #include "shim_socket.h"
 #include "socket_utils.h"
 
+static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
+    unsigned short family;
+    switch (expected_family) {
+        case AF_INET:
+            if (*addrlen < sizeof(struct sockaddr_in)) {
+                return -EINVAL;
+            }
+            memcpy(&family, (char*)addr + offsetof(struct sockaddr_in, sin_family), sizeof(family));
+            if (family != AF_INET) {
+                return -EAFNOSUPPORT;
+            }
+            *addrlen = sizeof(struct sockaddr_in);
+            break;
+        case AF_INET6:
+            if (*addrlen < sizeof(struct sockaddr_in6)) {
+                return -EINVAL;
+            }
+            memcpy(&family, (char*)addr + offsetof(struct sockaddr_in6, sin6_family),
+                   sizeof(family));
+            if (family != AF_INET6) {
+                return -EAFNOSUPPORT;
+            }
+            *addrlen = sizeof(struct sockaddr_in6);
+            break;
+        default:
+            BUG();
+    }
+    return 0;
+}
+
 static int create(struct shim_handle* handle) {
     assert(handle->info.sock.domain == AF_INET || handle->info.sock.domain == AF_INET6);
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
@@ -20,10 +50,10 @@ static int create(struct shim_handle* handle) {
     enum pal_socket_domain pal_domain;
     switch (handle->info.sock.domain) {
         case AF_INET:
-            pal_domain = IPV4;
+            pal_domain = PAL_IPV4;
             break;
         case AF_INET6:
-            pal_domain = IPV6;
+            pal_domain = PAL_IPV6;
             break;
         default:
             BUG();
@@ -69,39 +99,19 @@ static int create(struct shim_handle* handle) {
     return 0;
 }
 
-static int bind(struct shim_handle* handle, void* _addr, size_t addrlen) {
+static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
     struct shim_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
-    switch (sock->domain) {
-        case AF_INET:;
-            struct sockaddr_in* addr = _addr;
-            if (addrlen < sizeof(*addr)) {
-                return -EINVAL;
-            }
-            addrlen = sizeof(*addr);
-            if (addr->sin_family != AF_INET) {
-                return -EAFNOSUPPORT;
-            }
-            break;
-        case AF_INET6:;
-            struct sockaddr_in6* addr6 = _addr;
-            if (addrlen < sizeof(*addr6)) {
-                return -EINVAL;
-            }
-            addrlen = sizeof(*addr6);
-            if (addr6->sin6_family != AF_INET6) {
-                return -EAFNOSUPPORT;
-            }
-            break;
-        default:
-            __builtin_unreachable();
+    int ret = verify_sockaddr(sock->domain, addr, &addrlen);
+    if (ret < 0) {
+        return ret;
     }
 
     struct pal_socket_addr pal_ip_addr;
-    linux_to_pal_sockaddr(_addr, &pal_ip_addr);
+    linux_to_pal_sockaddr(addr, &pal_ip_addr);
 
-    int ret = DkSocketBind(sock->pal_handle, &pal_ip_addr);
+    ret = DkSocketBind(sock->pal_handle, &pal_ip_addr);
     if (ret < 0) {
         return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
@@ -122,7 +132,7 @@ static int listen(struct shim_handle* handle, unsigned int backlog) {
 }
 
 static int accept(struct shim_handle* handle, bool is_nonblocking,
-                  struct shim_handle** client_ptr) {
+                  struct shim_handle** out_client) {
     PAL_HANDLE client_pal_handle;
     struct pal_socket_addr pal_ip_addr = { 0 };
     int ret = DkSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
@@ -167,49 +177,29 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
     unlock(&handle->info.sock.lock);
 
-    *client_ptr = client_handle;
+    *out_client = client_handle;
     return 0;
 }
 
-static int connect(struct shim_handle* handle, void* _addr, size_t addrlen) {
+static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     struct shim_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
-    switch (sock->domain) {
-        case AF_INET:;
-            struct sockaddr_in* addr = _addr;
-            if (addrlen < sizeof(*addr)) {
-                return -EINVAL;
-            }
-            addrlen = sizeof(*addr);
-            if (addr->sin_family != AF_INET) {
-                return -EAFNOSUPPORT;
-            }
-            break;
-        case AF_INET6:;
-            struct sockaddr_in6* addr6 = _addr;
-            if (addrlen < sizeof(*addr6)) {
-                return -EINVAL;
-            }
-            addrlen = sizeof(*addr6);
-            if (addr6->sin6_family != AF_INET6) {
-                return -EAFNOSUPPORT;
-            }
-            break;
-        default:
-            __builtin_unreachable();
+    int ret = verify_sockaddr(sock->domain, addr, &addrlen);
+    if (ret < 0) {
+        return ret;
     }
 
-    struct pal_socket_addr pal_ip_addr;
-    linux_to_pal_sockaddr(_addr, &pal_ip_addr);
+    struct pal_socket_addr pal_remote_addr;
+    linux_to_pal_sockaddr(addr, &pal_remote_addr);
     struct pal_socket_addr pal_local_addr;
 
-    int ret = DkSocketConnect(sock->pal_handle, &pal_ip_addr, &pal_local_addr);
+    ret = DkSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr);
     if (ret < 0) {
         return ret == -PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
     }
 
-    memcpy(&sock->remote_addr, _addr, addrlen);
+    memcpy(&sock->remote_addr, addr, addrlen);
     sock->remote_addrlen = addrlen;
     if (sock->state != SOCK_BOUND) {
         assert(sock->state == SOCK_NEW);
@@ -396,8 +386,8 @@ static int getsockopt(struct shim_handle* handle, int level, int optname, void* 
     }
 }
 
-static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
-                void* _addr, size_t addrlen) {
+static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
+                void* addr, size_t addrlen) {
     assert(handle->type == TYPE_SOCK);
 
     struct shim_sock_handle* sock = &handle->info.sock;
@@ -405,12 +395,12 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
 
     switch (sock->type) {
         case SOCK_STREAM:
-            /* TCP sockets ignore destionation address - they must have been connected. */
-            _addr = NULL;
+            /* TCP sockets ignore destination address - they must have been connected. */
+            addr = NULL;
             addrlen = 0;
             break;
         case SOCK_DGRAM:
-            if (!_addr) {
+            if (!addr) {
                 lock(&sock->lock);
                 if (sock->remote_addr.ss_family == AF_UNSPEC) {
                     /* Not connected. */
@@ -420,7 +410,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
                 addrlen = sock->remote_addrlen;
                 assert(addrlen <= sizeof(sock_addr));
                 memcpy(&sock_addr, &sock->remote_addr, addrlen);
-                _addr = &sock_addr;
+                addr = &sock_addr;
                 unlock(&sock->lock);
             }
             break;
@@ -429,30 +419,12 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     }
 
     struct pal_socket_addr pal_ip_addr;
-    if (_addr) {
-        switch (sock->domain) {
-            case AF_INET:;
-                struct sockaddr_in* addr = _addr;
-                if (addrlen < sizeof(*addr)) {
-                    return -EINVAL;
-                }
-                if (addr->sin_family != AF_INET) {
-                    return -EAFNOSUPPORT;
-                }
-                break;
-            case AF_INET6:;
-                struct sockaddr_in6* addr6 = _addr;
-                if (addrlen < sizeof(*addr6)) {
-                    return -EINVAL;
-                }
-                if (addr6->sin6_family != AF_INET6) {
-                    return -EAFNOSUPPORT;
-                }
-                break;
-            default:
-                __builtin_unreachable();
+    if (addr) {
+        int ret = verify_sockaddr(sock->domain, addr, &addrlen);
+        if (ret < 0) {
+            return ret;
         }
-        linux_to_pal_sockaddr(_addr, &pal_ip_addr);
+        linux_to_pal_sockaddr(addr, &pal_ip_addr);
     }
 
     struct pal_iovec* pal_iov = malloc(iov_len * sizeof(*pal_iov));
@@ -464,14 +436,14 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         pal_iov[i].iov_len = iov[i].iov_len;
     }
 
-    int ret = DkSocketSend(sock->pal_handle, pal_iov, iov_len, size_out,
-                           _addr ? &pal_ip_addr : NULL);
+    int ret = DkSocketSend(sock->pal_handle, pal_iov, iov_len, out_size,
+                           addr ? &pal_ip_addr : NULL);
     ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     free(pal_iov);
     return ret;
 }
 
-static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
+static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* _addr, size_t* addrlen, bool is_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
@@ -479,7 +451,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         case SOCK_STREAM:
             /* TCP - not interested in remote address (we know it already). */
             _addr = NULL;
-            addrlen = 0;
+            addrlen = NULL;
             break;
         case SOCK_DGRAM:
             break;
@@ -497,7 +469,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     }
 
     struct pal_socket_addr pal_ip_addr;
-    int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, size_out,
+    int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_size,
                            _addr ? &pal_ip_addr : NULL, is_nonblocking);
     free(pal_iov);
     if (ret < 0) {

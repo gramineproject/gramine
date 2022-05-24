@@ -100,6 +100,7 @@ typedef struct {
         struct {
             PAL_IDX fd;
             enum pal_socket_domain domain;
+            enum pal_socket_type type;
             struct socket_ops* ops;
             uint64_t linger;
             size_t recv_buf_size;

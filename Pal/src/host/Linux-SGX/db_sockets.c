@@ -35,7 +35,7 @@ static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage
         return -PAL_ERROR_DENIED;
     }
     switch (domain) {
-        case IPV4:
+        case PAL_IPV4:
             if (addr->ss_family != AF_INET) {
                 return -PAL_ERROR_DENIED;
             }
@@ -43,7 +43,7 @@ static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage
                 return -PAL_ERROR_DENIED;
             }
             break;
-        case IPV6:
+        case PAL_IPV6:
             if (addr->ss_family != AF_INET6) {
                 return -PAL_ERROR_DENIED;
             }
@@ -58,18 +58,19 @@ static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage
 }
 
 static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
-                                     struct handle_ops* handle_ops, struct socket_ops* ops,
-                                     bool is_nonblocking) {
+                                     enum pal_socket_type type, struct handle_ops* handle_ops,
+                                     struct socket_ops* ops, bool is_nonblocking) {
     PAL_HANDLE handle = calloc(1, sizeof(*handle));
     if (!handle) {
         return NULL;
     }
 
-    init_handle_hdr(handle, PAL_TYPE_SOCKET);
+    handle->hdr.type = PAL_TYPE_SOCKET;
     handle->hdr.ops = handle_ops;
     handle->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     handle->sock.fd = fd;
     handle->sock.domain = domain;
+    handle->sock.type = type;
     handle->sock.ops = ops;
 
     handle->sock.recv_buf_size = __atomic_load_n(&g_default_recv_buf_size, __ATOMIC_RELAXED);
@@ -124,10 +125,10 @@ int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     int linux_domain;
     int linux_type;
     switch (domain) {
-        case IPV4:
+        case PAL_IPV4:
             linux_domain = AF_INET;
             break;
-        case IPV6:
+        case PAL_IPV6:
             linux_domain = AF_INET6;
             break;
         default:
@@ -160,7 +161,7 @@ int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
         return unix_to_pal_error(fd);
     }
 
-    PAL_HANDLE handle = create_sock_handle(fd, domain, handle_ops, sock_ops,
+    PAL_HANDLE handle = create_sock_handle(fd, domain, type, handle_ops, sock_ops,
                                            !!(options & PAL_OPTION_NONBLOCK));
     if (!handle) {
         int ret = ocall_close(fd);
@@ -201,12 +202,12 @@ static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
     }
 
     switch (addr->domain) {
-        case IPV4:
+        case PAL_IPV4:
             if (!addr->ipv4.port) {
                 addr->ipv4.port = new_port;
             }
             break;
-        case IPV6:
+        case PAL_IPV6:
             if (!addr->ipv6.port) {
                 addr->ipv6.port = new_port;
             }
@@ -237,8 +238,9 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return unix_to_pal_error(fd);
     }
 
-    PAL_HANDLE client = create_sock_handle(fd, handle->sock.domain, handle->hdr.ops,
-                                           handle->sock.ops, !!(options & PAL_OPTION_NONBLOCK));
+    PAL_HANDLE client = create_sock_handle(fd, handle->sock.domain, handle->sock.type,
+                                           handle->hdr.ops, handle->sock.ops,
+                                           !!(options & PAL_OPTION_NONBLOCK));
     if (!client) {
         int ret = ocall_close(fd);
         if (ret < 0) {
@@ -263,7 +265,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 }
 
 static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                   struct pal_socket_addr* local_addr) {
+                   struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
         return -PAL_ERROR_INVAL;
@@ -279,12 +281,12 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
         return unix_to_pal_error(ret);
     }
 
-    if (local_addr) {
+    if (out_local_addr) {
         ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
         if (ret < 0) {
             return ret;
         }
-        linux_to_pal_sockaddr(&sa_storage, local_addr);
+        linux_to_pal_sockaddr(&sa_storage, out_local_addr);
     }
     return 0;
 }
@@ -455,7 +457,7 @@ static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return attrsetbyhdl_common(handle, attr);
 }
 
-static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* size_out,
+static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
@@ -469,38 +471,45 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
         assert(linux_addrlen <= INT_MAX);
     }
 
-    struct iovec* iov = (struct iovec*)pal_iov;
-    static_assert(sizeof(*pal_iov) == sizeof(*iov)
-                  && SAME_TYPE(pal_iov->iov_base, iov->iov_base)
-                  && offsetof(struct pal_iovec, iov_base) == offsetof(struct iovec, iov_base)
-                  && SAME_TYPE(pal_iov->iov_len, iov->iov_len)
-                  && offsetof(struct pal_iovec, iov_len) == offsetof(struct iovec, iov_len),
-                  "not compatible");
+    struct iovec* iov = malloc(iov_len * sizeof(*iov));
+    if (!iov) {
+        return -PAL_ERROR_NOMEM;
+    }
+    for (size_t i = 0; i < iov_len; ++i) {
+        iov[i].iov_base = pal_iov[i].iov_base;
+        iov[i].iov_len = pal_iov[i].iov_len;
+    }
+
     ssize_t ret = ocall_send(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
-                             linux_addrlen, NULL, 0);
+                             linux_addrlen, /*control=*/NULL, /*controllen=*/0);
+    free(iov);
     if (ret < 0) {
         return unix_to_pal_error(ret);
     }
-    *size_out = ret;
+    *out_size = ret;
     return 0;
 }
 
-static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* size_out,
+static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool is_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
     size_t linux_addrlen = addr ? sizeof(sa_storage) : 0;
 
-    struct iovec* iov = (struct iovec*)pal_iov;
-    static_assert(sizeof(*pal_iov) == sizeof(*iov)
-                  && SAME_TYPE(pal_iov->iov_base, iov->iov_base)
-                  && offsetof(struct pal_iovec, iov_base) == offsetof(struct iovec, iov_base)
-                  && SAME_TYPE(pal_iov->iov_len, iov->iov_len)
-                  && offsetof(struct pal_iovec, iov_len) == offsetof(struct iovec, iov_len),
-                  "not compatible");
+    struct iovec* iov = malloc(iov_len * sizeof(*iov));
+    if (!iov) {
+        return -PAL_ERROR_NOMEM;
+    }
+    for (size_t i = 0; i < iov_len; ++i) {
+        iov[i].iov_base = pal_iov[i].iov_base;
+        iov[i].iov_len = pal_iov[i].iov_len;
+    }
+
     ssize_t ret = ocall_recv(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
-                             &linux_addrlen, NULL, NULL, is_nonblocking ? MSG_DONTWAIT : 0);
+                             &linux_addrlen, /*control=*/NULL, /*controllenptr=*/NULL,
+                             is_nonblocking ? MSG_DONTWAIT : 0);
+    free(iov);
     if (ret < 0) {
         return unix_to_pal_error(ret);
     }
@@ -512,7 +521,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
         }
         linux_to_pal_sockaddr(&sa_storage, addr);
     }
-    *size_out = size;
+    *out_size = size;
     return 0;
 }
 
@@ -573,26 +582,14 @@ static struct handle_ops g_udp_handle_ops = {
     .close = close,
 };
 
-/* God have mercy on us all. */
-void serialize_socket_handle(const PAL_HANDLE handle, const void** data_out, size_t* data_len_out) {
-    if (handle->sock.ops == &g_tcp_sock_ops) {
-        *data_out = "a";
-        *data_len_out = 1;
-    } else if (handle->sock.ops == &g_udp_sock_ops) {
-        *data_out = "b";
-        *data_len_out = 1;
-    } else {
-        BUG();
-    }
-}
-
-void deserialize_socket_handle(PAL_HANDLE handle, const char* data) {
-    switch (*data) {
-        case 'a':
+void deserialize_socket_handle(PAL_HANDLE handle) {
+    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    switch (handle->sock.type) {
+        case PAL_SOCKET_TCP:
             handle->sock.ops = &g_tcp_sock_ops;
             handle->hdr.ops = &g_tcp_handle_ops;
             break;
-        case 'b':
+        case PAL_SOCKET_UDP:
             handle->sock.ops = &g_udp_sock_ops;
             handle->hdr.ops = &g_udp_handle_ops;
             break;
@@ -616,34 +613,34 @@ int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog) {
     return handle->sock.ops->listen(handle, backlog);
 }
 
-int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
-                    struct pal_socket_addr* client_addr) {
+int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                    struct pal_socket_addr* out_client_addr) {
     if (!handle->sock.ops->accept) {
         return -PAL_ERROR_INVAL;
     }
-    return handle->sock.ops->accept(handle, options, client_ptr, client_addr);
+    return handle->sock.ops->accept(handle, options, out_client, out_client_addr);
 }
 
 int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                     struct pal_socket_addr* local_addr) {
+                     struct pal_socket_addr* out_local_addr) {
     if (!handle->sock.ops->connect) {
         return -PAL_ERROR_INVAL;
     }
-    return handle->sock.ops->connect(handle, addr, local_addr);
+    return handle->sock.ops->connect(handle, addr, out_local_addr);
 }
 
-int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr) {
     if (!handle->sock.ops->send) {
         return -PAL_ERROR_INVAL;
     }
-    return handle->sock.ops->send(handle, iov, iov_len, size_out, addr);
+    return handle->sock.ops->send(handle, iov, iov_len, out_size, addr);
 }
 
-int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr, bool is_nonblocking) {
     if (!handle->sock.ops->recv) {
         return -PAL_ERROR_INVAL;
     }
-    return handle->sock.ops->recv(handle, iov, iov_len, size_out, addr, is_nonblocking);
+    return handle->sock.ops->recv(handle, iov, iov_len, out_size, addr, is_nonblocking);
 }

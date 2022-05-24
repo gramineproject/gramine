@@ -36,8 +36,13 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* TODO: dependency order is UGHMMMM */
 enum pal_socket_domain {
     PAL_DISCONNECT,
-    IPV4,
-    IPV6,
+    PAL_IPV4,
+    PAL_IPV6,
+};
+
+enum pal_socket_type {
+    PAL_SOCKET_TCP,
+    PAL_SOCKET_UDP,
 };
 
 #ifdef IN_PAL
@@ -459,11 +464,6 @@ int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size);
  */
 int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
 
-enum pal_socket_type {
-    PAL_SOCKET_TCP,
-    PAL_SOCKET_UDP,
-};
-
 struct pal_socket_addr {
     enum pal_socket_domain domain;
     union {
@@ -493,12 +493,12 @@ struct pal_iovec {
  * \param      domain      Domain of the socket.
  * \param      type        Type of the socket.
  * \param      options     Flags to set on the handle.
- * \param[out] handle_ptr  On success contains the socket handle.
+ * \param[out] out_handle  On success contains the socket handle.
  *
  * \returns 0 on success, negative error code on failure.
  */
 int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                   pal_stream_options_t options, PAL_HANDLE* handle_ptr);
+                   pal_stream_options_t options, PAL_HANDLE* out_handle);
 
 /*!
  * \brief Bind a socket to a local address.
@@ -528,34 +528,33 @@ int DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
 /*!
  * \brief Accept a new connection on a socket.
  *
- * \param      handle       Handle to the socket. Must be in listening mode.
- * \param      options      Flags to set on the new handle.
- * \param[out] client_ptr   On success contains a handle for the new connection.
- * \param[out] client_addr  On success contains the remote address of the new connection.
- *                          Can be NULL, to ignore the result.
+ * \param      handle           Handle to the socket. Must be in listening mode.
+ * \param      options          Flags to set on the new handle.
+ * \param[out] out_client       On success contains a handle for the new connection.
+ * \param[out] out_client_addr  On success contains the remote address of the new connection.
+ *                              Can be NULL, to ignore the result.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * This function can be safely called concurrently.
  */
-int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
-                   struct pal_socket_addr* client_addr);
+int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                   struct pal_socket_addr* out_client_addr);
 
 /*!
  * \brief Connect a socket to a remote address.
  *
- * \param      handle      Handle to the socket.
- * \param      addr        Address to connect to.
- * \param[out] local_addr  On success contains the local address of the socket. If the connect
- *                         operation was successful, but the address retrieval failed, it contains
- *                         #PAL_DISCONNECT. Can be NULL, to ignore the result.
+ * \param      handle          Handle to the socket.
+ * \param      addr            Address to connect to.
+ * \param[out] out_local_addr  On success contains the local address of the socket.
+ *                             Can be NULL, to ignore the result.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * Can also be used to disconnect the socket, if #PAL_DISCONNECT is passed in \p addr.
  */
 int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                    struct pal_socket_addr* local_addr);
+                    struct pal_socket_addr* out_local_addr);
 
 /*!
  * \brief Send data.
@@ -563,14 +562,14 @@ int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
  * \param      handle    Handle to the socket.
  * \param      iov       Array of buffers with data to send.
  * \param      iov_len   Length of \p iov array.
- * \param[out] size_out  On success contains the number of bytes sent.
+ * \param[out] out_size  On success contains the number of bytes sent.
  * \param      addr      Destination address. Can be NULL if the socket was connected.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * Data is sent atomically, i.e. data from two `DkSocketSend` calls will not be interleaved.
  */
-int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                  struct pal_socket_addr* addr);
 
 /*!
@@ -579,8 +578,8 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  * \param      handle          Handle to the socket.
  * \param      iov             Array of buffers for received data.
  * \param      iov_len         Length of \p iov array.
- * \param[out] size_out        On success contains the number of bytes received.
- * \param[out] addr            Source address. Can be NULL to ignore the source address..
+ * \param[out] out_size        On success contains the number of bytes received.
+ * \param[out] addr            Source address. Can be NULL to ignore the source address.
  * \param      is_nonblocking  If `true` this request should not block. Otherwise just use whatever
  *                             mode the handle is in.
  *
@@ -588,7 +587,7 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  *
  * Data is received atomically, i.e. data from two `DkSocketRecv` calls will not be interleaved.
  */
-int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                  struct pal_socket_addr* addr, bool is_nonblocking);
 
 /*

@@ -37,56 +37,10 @@ struct linux_dirent64 {
 #define DT_SOCK    12
 #define DT_WHT     14
 
-typedef unsigned short int sa_family_t;
-
 struct sockaddr {
-    sa_family_t sa_family;
+    unsigned short sa_family;
     char sa_data[128 - sizeof(unsigned short)];
 };
-
-#ifndef AF_UNIX
-#define AF_UNIX 1
-#endif
-
-#ifndef AF_INET
-#define AF_INET 2
-#endif
-
-#ifndef AF_INET6
-#define AF_INET6 10
-#endif
-
-#ifndef SOCK_STREAM
-#define SOCK_STREAM 1
-#endif
-
-#ifndef SOCK_DGRAM
-#define SOCK_DGRAM 2
-#endif
-
-#ifndef SOCK_NONBLOCK
-#define SOCK_NONBLOCK 04000
-#endif
-
-#ifndef SOCK_CLOEXEC
-#define SOCK_CLOEXEC 02000000
-#endif
-
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0x4000
-#endif
-
-#ifndef SHUT_RD
-#define SHUT_RD 0
-#endif
-
-#ifndef SHUT_WR
-#define SHUT_WR 1
-#endif
-
-#ifndef SHUT_RDWR
-#define SHUT_RDWR 2
-#endif
 
 struct cmsghdr {
     size_t cmsg_len;

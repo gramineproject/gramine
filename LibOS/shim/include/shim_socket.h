@@ -6,14 +6,13 @@
 #include "linux_socket.h"
 #include "shim_handle.h"
 
-#define SHIM_SOCK_MAX_CONNS 4096
+#define SHIM_SOCK_MAX_PENDING_CONNS 4096
 
-// specify which callback requires which locks
 struct shim_sock_ops {
     /*!
      * \brief Verify the socket handle and initialize type specific fields.
      *
-     * This callback can assume that \p handle is alraedy correctly initialized.
+     * This callback assumes that \p handle is already correctly initialized.
      */
     int (*create)(struct shim_handle* handle);
 
@@ -40,7 +39,7 @@ struct shim_sock_ops {
      *
      * This callback is called without any locks and must support concurrent calls.
      */
-    int (*accept)(struct shim_handle* handle, bool is_nonblocking, struct shim_handle** client_ptr);
+    int (*accept)(struct shim_handle* handle, bool is_nonblocking, struct shim_handle** out_client);
 
     /*!
      * \brief Connect the handle to a remote address.
@@ -78,11 +77,11 @@ struct shim_sock_ops {
      * \param      handle    Handle.
      * \param      iov       Array of buffers to write from.
      * \param      iov_len   Length of \p iov.
-     * \param[out] size_out  On success contains the number of bytes sent.
+     * \param[out] out_size  On success contains the number of bytes sent.
      * \param      addr      Address to send to. May be NULL.
      * \param      addrlen   Length of \p addr.
      */
-    int (*send)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
+    int (*send)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen);
 
     /*!
@@ -91,7 +90,7 @@ struct shim_sock_ops {
      * \param         handle          Handle.
      * \param         iov             Array of buffers to read to.
      * \param         iov_len         Length of \p iov.
-     * \param[out]    size_out        On success contains the number of bytes sent.
+     * \param[out]    out_size        On success contains the number of bytes sent.
      * \param[out]    addr            On success contains the address data was received from. May
      *                                be NULL.
      * \param[in,out] addrlen         Length of \p addr. On success updated to the actual length of
@@ -100,7 +99,7 @@ struct shim_sock_ops {
      * \param         is_nonblocking  If `true` this request should not block. Otherwise just use
      *                                whatever mode the handle is in.
      */
-    int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* size_out,
+    int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t* addrlen, bool is_nonblocking);
 };
 
