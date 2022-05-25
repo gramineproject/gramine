@@ -11,8 +11,10 @@
 ; +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 ; | R| R| R| X|   RC|   PC| R| R|PM|UM|OM|ZM|DM|IM|
 ; +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
-; 5 bits in x87 FPU flags are reserved, so we must ignore them in the test.
-; The reserved bits are marked with the letter 'R.'
+; 5 bits in x87 FPU flags are reserved.
+; The reserved bits are marked with the letter 'R'.
+; Thie check function uses stack above rsp so this test can never use
+; signal handlers.
 
 extern    test_exit
 global    _start
@@ -22,21 +24,22 @@ global    _start
 section   .text
 
 ; bool check_fpu_after_getpid(uint64_t fpuvalue)
+; 1/true - test passed
+; 0/false - something is wrong with FPU word
 check_fpu_after_getpid:
     push  rbp
     mov   rbp, rsp
 
-    mov   [rbp - 8], rdi
-    fldcw [rbp - 8]
+    mov   [rbp - 0x8], rdi
+    fldcw [rbp - 0x8]
 
     mov   rax, __NR_getpid
     syscall
     xor   rax, rax
 
-    fstcw [rbp - 16]
-    mov   rdi, [rbp - 16]
-    and   rdi, 0b00011100111111
-    cmp   rdi, [rbp - 8]
+    fstcw [rbp - 0x10]
+    mov   rdi, [rbp - 0x10]
+    cmp   rdi, [rbp - 0x8]
     sete  al
 
     pop   rbp
