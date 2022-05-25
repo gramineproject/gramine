@@ -223,8 +223,8 @@ int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* 
     return ret;
 }
 
-int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer, char* source,
-                 PAL_NUM size) {
+int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
+                 size_t size) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
@@ -266,7 +266,7 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
     return ret;
 }
 
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer,
+int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
                   const char* dest) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
@@ -377,7 +377,7 @@ int _DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     return ret;
 }
 
-int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size) {
+int DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     if (!handle || !buffer || !size) {
         return -PAL_ERROR_INVAL;
     }
@@ -410,8 +410,8 @@ int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint
     return 0;
 }
 
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_NUM offset,
-                PAL_NUM size) {
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                size_t size) {
     assert(addr_ptr);
     void* map_addr = *addr_ptr;
 
@@ -438,7 +438,7 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_N
     return _DkStreamMap(handle, addr_ptr, prot, offset, size);
 }
 
-int DkStreamUnmap(void* addr, PAL_NUM size) {
+int DkStreamUnmap(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
@@ -464,7 +464,7 @@ int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return ops->setlength(handle, length);
 }
 
-int DkStreamSetLength(PAL_HANDLE handle, PAL_NUM length) {
+int DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
@@ -557,6 +557,6 @@ const char* _DkStreamRealpath(PAL_HANDLE hdl) {
     return ops->getrealpath(hdl);
 }
 
-int DkDebugLog(const void* buffer, PAL_NUM size) {
+int DkDebugLog(const void* buffer, size_t size) {
     return _DkDebugLog(buffer, size);
 }

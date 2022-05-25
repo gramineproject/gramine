@@ -303,7 +303,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
             log_debug("memory entry [%p]: %p-%p", entry, entry->addr, entry->addr + entry->size);
 
             void* addr = ALLOC_ALIGN_DOWN_PTR(entry->addr);
-            PAL_NUM size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
+            size_t size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
             pal_prot_flags_t prot = entry->prot;
 
             int ret = DkVirtualMemoryAlloc(&addr, size, 0, prot | PAL_PROT_WRITE);
@@ -599,7 +599,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
 
     void* base = hdr->addr;
     void* mapaddr = ALLOC_ALIGN_DOWN_PTR(base);
-    PAL_NUM mapsize = (char*)ALLOC_ALIGN_UP_PTR(base + hdr->size) - (char*)mapaddr;
+    size_t mapsize = (char*)ALLOC_ALIGN_UP_PTR(base + hdr->size) - (char*)mapaddr;
 
     /* first try allocating at address used by parent process */
     if (g_pal_public_state->user_address_start <= mapaddr &&
@@ -624,7 +624,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
         }
 
         mapaddr = base;
-        mapsize = (PAL_NUM)ALLOC_ALIGN_UP(hdr->size);
+        mapsize = ALLOC_ALIGN_UP(hdr->size);
     }
 
     ret = DkVirtualMemoryAlloc(&mapaddr, mapsize, 0, PAL_PROT_READ | PAL_PROT_WRITE);

@@ -62,8 +62,6 @@ may be variable-sized.
 Basic types
 """""""""""
 
-.. doxygentypedef:: PAL_NUM
-   :project: pal
 .. doxygentypedef:: PAL_IDX
    :project: pal
 

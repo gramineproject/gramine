@@ -24,7 +24,6 @@
  * declare a dependency on it. */
 typedef struct toml_table_t toml_table_t;
 
-typedef uint64_t    PAL_NUM; /*!< a number */
 typedef uint32_t    PAL_IDX; /*!< an index */
 
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
@@ -120,7 +119,7 @@ struct pal_public_state {
      * looking from the LibOS perspective. The two values can be different on the PAL level though,
      * see e.g. SYSTEM_INFO::dwAllocationGranularity on Windows.
      */
-    PAL_NUM alloc_align;
+    size_t alloc_align;
 
     size_t mem_total;
 
@@ -166,7 +165,7 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
  * differ only in the `NULL` case).
  *
  */
-int DkVirtualMemoryAlloc(void** addr_ptr, PAL_NUM size, pal_alloc_flags_t alloc_type,
+int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
                          pal_prot_flags_t prot);
 
 /*!
@@ -177,7 +176,7 @@ int DkVirtualMemoryAlloc(void** addr_ptr, PAL_NUM size, pal_alloc_flags_t alloc_
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryFree(void* addr, PAL_NUM size);
+int DkVirtualMemoryFree(void* addr, size_t size);
 
 /*!
  * \brief Modify the permissions of a previously allocated memory mapping.
@@ -188,7 +187,7 @@ int DkVirtualMemoryFree(void* addr, PAL_NUM size);
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryProtect(void* addr, PAL_NUM size, pal_prot_flags_t prot);
+int DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 
 /*
  * PROCESS CREATION
@@ -212,7 +211,7 @@ int DkProcessCreate(const char** args, PAL_HANDLE* handle);
  *
  * \param exit_code  The exit value returned to the host.
  */
-noreturn void DkProcessExit(PAL_NUM exit_code);
+noreturn void DkProcessExit(int exit_code);
 
 /*
  * STREAMS
@@ -319,8 +318,8 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opti
  * If \p handle is a directory, DkStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer, char* source,
-                 PAL_NUM size);
+int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
+                 size_t size);
 
 /*!
  * \brief Write data to an open stream.
@@ -335,7 +334,7 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamWrite(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer,
+int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
                   const char* dest);
 
 enum pal_delete_mode {
@@ -362,8 +361,8 @@ int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_NUM offset,
-                PAL_NUM size);
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                size_t size);
 
 /*!
  * \brief Unmap virtual memory that is backed by a file stream.
@@ -372,14 +371,14 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_N
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamUnmap(void* addr, PAL_NUM size);
+int DkStreamUnmap(void* addr, size_t size);
 
 /*!
  * \brief Set the length of the file referenced by handle to `length`.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamSetLength(PAL_HANDLE handle, PAL_NUM length);
+int DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
 
 /*!
  * \brief Flush the buffer of a file stream.
@@ -414,11 +413,11 @@ typedef struct _PAL_STREAM_ATTR {
     PAL_IDX handle_type;
     bool nonblocking;
     pal_share_flags_t share_flags;
-    PAL_NUM pending_size;
+    size_t pending_size;
     union {
         struct {
-            PAL_NUM linger;
-            PAL_NUM receivebuf, sendbuf;
+            uint64_t linger;
+            size_t receivebuf, sendbuf;
             uint64_t receivetimeout_us, sendtimeout_us;
             bool tcp_cork;
             bool tcp_keepalive;
@@ -449,7 +448,7 @@ int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 /*!
  * \brief Query the name of an open stream. On success `buffer` contains a null-terminated string.
  */
-int DkStreamGetName(PAL_HANDLE handle, char* buffer, PAL_NUM size);
+int DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size);
 
 /*!
  * \brief This API changes the name of an open stream.
@@ -500,7 +499,7 @@ int DkThreadResume(PAL_HANDLE thread);
  * All bit positions exceeding the count of host CPUs are ignored. Returns an error if no CPUs were
  * selected.
  */
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
+int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
 /*!
  * \brief Get the CPU affinity of a thread.
@@ -515,7 +514,7 @@ int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned lon
  * must be able to fit all the processors in the host and must be aligned by sizeof(long). For
  * example, if the host supports 4 CPUs, \a cpumask_size should be 8 bytes.
  */
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
+int DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
 /*
  * Exception Handling
@@ -547,7 +546,7 @@ enum pal_event {
  * \param addr       Address of the exception (meaningful only for sync exceptions).
  * \param context    CPU context at the moment of exception.
  */
-typedef void (*pal_event_handler_t)(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context);
+typedef void (*pal_event_handler_t)(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context);
 
 /*!
  * \brief Set the handler for the specific exception event.
@@ -591,7 +590,7 @@ void DkEventSet(PAL_HANDLE handle);
 void DkEventClear(PAL_HANDLE handle);
 
 /*! block until the handle's event is triggered */
-#define NO_TIMEOUT ((PAL_NUM)-1)
+#define NO_TIMEOUT ((uint64_t)-1)
 
 /*!
  * \brief Wait for an event handle.
@@ -651,14 +650,14 @@ void DkObjectClose(PAL_HANDLE object_handle);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkDebugLog(const void* buffer, PAL_NUM size);
+int DkDebugLog(const void* buffer, size_t size);
 
 /*!
  * \brief Get the current time.
  *
  * \param[out] time  On success holds the current time in microseconds.
  */
-int DkSystemTimeQuery(PAL_NUM* time);
+int DkSystemTimeQuery(uint64_t* time);
 
 /*!
  * \brief Cryptographically secure RNG.
@@ -668,7 +667,7 @@ int DkSystemTimeQuery(PAL_NUM* time);
  *
  * \returns 0 on success, negative on failure.
  */
-int DkRandomBitsRead(void* buffer, PAL_NUM size);
+int DkRandomBitsRead(void* buffer, size_t size);
 
 enum pal_segment_reg {
     PAL_SEGMENT_FS,
@@ -698,7 +697,7 @@ int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 /*!
  * \brief Return the amount of currently available memory for LibOS/application usage.
  */
-PAL_NUM DkMemoryAvailableQuota(void);
+size_t DkMemoryAvailableQuota(void);
 
 /*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
@@ -730,9 +729,9 @@ PAL_NUM DkMemoryAvailableQuota(void);
  * The caller may specify `*user_report_data_size`, `*target_info_size`, and `*report_size` as 0
  * and other fields as NULL to get PAL-enforced sizes of these three structs.
  */
-int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
-                        void* target_info, PAL_NUM* target_info_size, void* report,
-                        PAL_NUM* report_size);
+int DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                        void* target_info, size_t* target_info_size, void* report,
+                        size_t* report_size);
 
 /*!
  * \brief Obtain the attestation quote with `user_report_data` embedded into it.
@@ -749,8 +748,8 @@ int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_
  * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B
  * and `quote` is an SGX quote obtained from Quoting Enclave via AESM service.
  */
-int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
-                       PAL_NUM* quote_size);
+int DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                       size_t* quote_size);
 /*!
  * \brief Get special key (specific to PAL host).
  *

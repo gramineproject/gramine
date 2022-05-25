@@ -43,7 +43,7 @@ a |~| few new PAL calls to the existing interface.
 To add a |~| new PAL call, first modify :file:`Pal/include/pal/pal.h`. Define
 the PAL call::
 
-   bool DkThreadSetCPUAffinity(PAL_NUM cpu_num, PAL_IDX* cpu_indexes);
+   bool DkThreadSetCPUAffinity(size_t cpu_num, PAL_IDX* cpu_indexes);
 
 The naming convention of a |~| PAL call is to start functions with the ``Dk``
 prefix, followed by a comprehensive name describing the purpose of the PAL

@@ -191,8 +191,8 @@ void _DkThreadYieldExecution(void);
 int _DkThreadResume(PAL_HANDLE thread_handle);
 int _DkProcessCreate(PAL_HANDLE* handle, const char** args);
 noreturn void _DkProcessExit(int exit_code);
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
 /* DkEvent calls */
 int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);
@@ -227,11 +227,11 @@ double _DkGetBogomips(void);
 int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]);
-int _DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
-                         void* target_info, PAL_NUM* target_info_size, void* report,
-                         PAL_NUM* report_size);
-int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
-                        PAL_NUM* quote_size);
+int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                         void* target_info, size_t* target_info_size, void* report,
+                         size_t* report_size);
+int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                        size_t* quote_size);
 int _DkGetSpecialKey(const char* name, void* key, size_t* key_size);
 
 #define INIT_FAIL(exitcode, reason)                                                              \

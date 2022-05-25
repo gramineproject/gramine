@@ -6,10 +6,10 @@
 int count = 0;
 int i     = 0;
 
-static void handler(bool is_in_pal, PAL_NUM arg, PAL_CONTEXT* context) {
+static void handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
 
-    pal_printf("failure in the handler: 0x%08lx\n", arg);
+    pal_printf("failure in the handler: 0x%08lx\n", addr);
     count++;
 
     if (count == 30)

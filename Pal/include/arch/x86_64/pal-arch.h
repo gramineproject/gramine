@@ -66,9 +66,9 @@ static inline unsigned long count_ulong_bits_set(unsigned long x) {
 struct pal_cpu_info {
     const char* cpu_vendor;
     const char* cpu_brand;
-    PAL_NUM cpu_family;
-    PAL_NUM cpu_model;
-    PAL_NUM cpu_stepping;
+    uint64_t cpu_family;
+    uint64_t cpu_model;
+    uint64_t cpu_stepping;
     double cpu_bogomips;
     const char* cpu_flags;
 };
@@ -240,17 +240,17 @@ typedef int64_t arch_syscall_arg_t;
     (context)->r9
 
 
-static inline void pal_context_set_ip(PAL_CONTEXT* context, PAL_NUM insnptr) {
+static inline void pal_context_set_ip(PAL_CONTEXT* context, uintptr_t insnptr) {
     context->rip = insnptr;
 }
-static inline PAL_NUM pal_context_get_ip(PAL_CONTEXT* context) {
+static inline uintptr_t pal_context_get_ip(PAL_CONTEXT* context) {
     return context->rip;
 }
 
-static inline void pal_context_set_sp(PAL_CONTEXT* context, PAL_NUM sp) {
+static inline void pal_context_set_sp(PAL_CONTEXT* context, uintptr_t sp) {
     context->rsp = sp;
 }
-static inline PAL_NUM pal_context_get_sp(PAL_CONTEXT* context) {
+static inline uintptr_t pal_context_get_sp(PAL_CONTEXT* context) {
     return context->rsp;
 }
 

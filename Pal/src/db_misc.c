@@ -8,11 +8,11 @@
 #include "pal.h"
 #include "pal_internal.h"
 
-int DkSystemTimeQuery(PAL_NUM* time) {
+int DkSystemTimeQuery(uint64_t* time) {
     return _DkSystemTimeQuery(time);
 }
 
-int DkRandomBitsRead(void* buffer, PAL_NUM size) {
+int DkRandomBitsRead(void* buffer, size_t size) {
     return _DkRandomBitsRead(buffer, size);
 }
 
@@ -26,12 +26,8 @@ int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
 }
 #endif
 
-PAL_NUM DkMemoryAvailableQuota(void) {
-    long quota = _DkMemoryAvailableQuota();
-    if (quota < 0)
-        quota = 0;
-
-    return (PAL_NUM)quota;
+size_t DkMemoryAvailableQuota(void) {
+    return _DkMemoryAvailableQuota();
 }
 
 #if defined(__x86_64__)
@@ -40,15 +36,15 @@ int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
 }
 #endif
 
-int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
-                        void* target_info, PAL_NUM* target_info_size, void* report,
-                        PAL_NUM* report_size) {
+int DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                        void* target_info, size_t* target_info_size, void* report,
+                        size_t* report_size) {
     return _DkAttestationReport(user_report_data, user_report_data_size, target_info,
                                 target_info_size, report, report_size);
 }
 
-int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
-                       PAL_NUM* quote_size) {
+int DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                       size_t* quote_size) {
     return _DkAttestationQuote(user_report_data, user_report_data_size, quote, quote_size);
 }
 

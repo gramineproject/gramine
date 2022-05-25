@@ -56,7 +56,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     }
 
     /* set the initial count */
-    PAL_NUM write_size = sizeof(initial_count);
+    size_t write_size = sizeof(initial_count);
     ret = DkStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, /*dest=*/NULL);
     if (ret < 0) {
         log_error("eventfd: failed to set initial count");

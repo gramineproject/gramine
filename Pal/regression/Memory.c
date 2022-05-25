@@ -11,8 +11,9 @@
 
 static volatile int count = 0;
 
-static void handler(bool is_in_pal, PAL_NUM arg, PAL_CONTEXT* context) {
+static void handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
+    __UNUSED(addr);
 
     count++;
     pal_printf("Memory Fault %d\n", count);
@@ -87,7 +88,7 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Total Memory: %lu\n", DkGetPalPublicState()->mem_total);
 
     /* Testing available memory (must be within valid range) */
-    PAL_NUM avail = DkMemoryAvailableQuota();
+    size_t avail = DkMemoryAvailableQuota();
     if (avail > 0 && avail < DkGetPalPublicState()->mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 

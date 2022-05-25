@@ -253,7 +253,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
     ctx.oldmask = 0;
     ctx.cr2     = 0;
 
-    PAL_NUM addr = 0;
+    uintptr_t addr = 0;
     switch (event_num) {
         case PAL_EVENT_ILLEGAL:
             addr = uc->rip;
