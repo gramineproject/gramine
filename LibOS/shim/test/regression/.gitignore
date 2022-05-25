@@ -2,5 +2,7 @@
 /testfile
 /trusted_testfile
 
-/tmp
-/tmp_enc
+/tmp/*
+!/tmp/.dummy
+/tmp_enc/*
+!/tmp_enc/.dummy
