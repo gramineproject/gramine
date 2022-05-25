@@ -33,11 +33,11 @@ int _DkThreadResume(PAL_HANDLE thread_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
+int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
+int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

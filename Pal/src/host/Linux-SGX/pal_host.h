@@ -59,7 +59,7 @@ typedef struct {
         struct {
             PAL_IDX fd;
             const char* realpath;
-            PAL_NUM total;
+            size_t total;
             /* below fields are used only for trusted files */
             sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
             void* umem;                     /* valid only when chunk_hashes != NULL */
@@ -72,7 +72,7 @@ typedef struct {
             bool nonblocking;
             bool is_server;
             PAL_SESSION_KEY session_key;
-            PAL_NUM handshake_done;
+            bool handshake_done;
             void* ssl_ctx;
             void* handshake_helper_thread_hdl;
         } pipe;
@@ -102,9 +102,9 @@ typedef struct {
             struct sockaddr* bind;
             struct sockaddr* conn;
             bool nonblocking;
-            PAL_NUM linger;
-            PAL_NUM receivebuf;
-            PAL_NUM sendbuf;
+            uint64_t linger;
+            size_t receivebuf;
+            size_t sendbuf;
             uint64_t receivetimeout_us;
             uint64_t sendtimeout_us;
             bool tcp_cork;

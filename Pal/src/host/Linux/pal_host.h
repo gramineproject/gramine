@@ -81,9 +81,9 @@ typedef struct {
             struct sockaddr* conn;
             bool nonblocking;
             bool reuseaddr;
-            PAL_NUM linger;
-            PAL_NUM receivebuf;
-            PAL_NUM sendbuf;
+            uint64_t linger;
+            size_t receivebuf;
+            size_t sendbuf;
             uint64_t receivetimeout_us;
             uint64_t sendtimeout_us;
             bool tcp_cork;

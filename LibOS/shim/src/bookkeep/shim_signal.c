@@ -302,9 +302,9 @@ static bool context_is_libos(PAL_CONTEXT* context) {
     return (uintptr_t)&__load_address <= ip && ip < (uintptr_t)&__load_address_end;
 }
 
-static noreturn void internal_fault(const char* errstr, PAL_NUM addr, PAL_CONTEXT* context) {
+static noreturn void internal_fault(const char* errstr, uintptr_t addr, PAL_CONTEXT* context) {
     IDTYPE tid = get_cur_tid();
-    PAL_NUM ip = pal_context_get_ip(context);
+    uintptr_t ip = pal_context_get_ip(context);
 
     char buf[LOCATION_BUF_SIZE];
     shim_describe_location(ip, buf, sizeof(buf));
@@ -316,7 +316,7 @@ static noreturn void internal_fault(const char* errstr, PAL_NUM addr, PAL_CONTEX
     DkProcessExit(1);
 }
 
-static void arithmetic_error_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
+static void arithmetic_error_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
     assert(context);
@@ -335,7 +335,7 @@ static void arithmetic_error_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* c
     }
 }
 
-static void memfault_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
+static void memfault_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
     assert(context);
@@ -451,7 +451,7 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
-static void illegal_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
+static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
     assert(context);
@@ -481,7 +481,7 @@ static void illegal_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     /* else syscall was emulated. */
 }
 
-static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
+static void quit_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(addr);
 
     if (!g_inject_host_signal_enabled) {
@@ -504,7 +504,7 @@ static void quit_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
     handle_signal(context);
 }
 
-static void interrupted_upcall(bool is_in_pal, PAL_NUM addr, PAL_CONTEXT* context) {
+static void interrupted_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(addr);
 
     /* "interrupted" signal may occur during LibOS thread initialization (at which point

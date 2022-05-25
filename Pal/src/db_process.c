@@ -17,7 +17,7 @@ int DkProcessCreate(const char** args, PAL_HANDLE* handle) {
     return _DkProcessCreate(handle, args);
 }
 
-noreturn void DkProcessExit(PAL_NUM exitcode) {
+noreturn void DkProcessExit(int exitcode) {
     _DkProcessExit(exitcode);
     die_or_inf_loop();
 }

@@ -35,10 +35,10 @@ int DkThreadResume(PAL_HANDLE thread_handle) {
     return _DkThreadResume(thread_handle);
 }
 
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
+int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     return _DkThreadSetCpuAffinity(thread, cpumask_size, cpu_mask);
 }
 
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask) {
+int DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     return _DkThreadGetCpuAffinity(thread, cpumask_size, cpu_mask);
 }

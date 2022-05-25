@@ -86,7 +86,7 @@ static noreturn int thread_handshake_func(void* param) {
     LISTP_ADD_TAIL(thread, &g_handshake_helper_thread_list, list);
     spinlock_unlock(&g_handshake_helper_thread_list_lock);
 
-    __atomic_store_n(&handle->pipe.handshake_done, 1, __ATOMIC_RELEASE);
+    __atomic_store_n(&handle->pipe.handshake_done, true, __ATOMIC_RELEASE);
     _DkThreadExit(/*clear_child_tid=*/&thread->clear_on_thread_exit);
     /* UNREACHABLE */
 }
@@ -139,7 +139,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = false;
-    hdl->pipe.handshake_done = 1; /* pipesrv doesn't do any handshake so consider it done */
+    hdl->pipe.handshake_done = true; /* pipesrv doesn't do any handshake so consider it done */
     memset(hdl->pipe.session_key, 0, sizeof(hdl->pipe.session_key));
 
     *handle = hdl;
@@ -189,7 +189,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
      * lazily on first read/write on this pipe */
     clnt->pipe.ssl_ctx        = NULL;
     clnt->pipe.is_server      = false;
-    clnt->pipe.handshake_done = 0;
+    clnt->pipe.handshake_done = false;
 
     ret = pipe_session_key(&clnt->pipe.name, &clnt->pipe.session_key);
     if (ret < 0) {
@@ -205,7 +205,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
         free(clnt);
         return ret;
     }
-    __atomic_store_n(&clnt->pipe.handshake_done, 1, __ATOMIC_RELEASE);
+    __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
 
     *client = clnt;
     return 0;
@@ -266,7 +266,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     hdl->pipe.handshake_helper_thread_hdl = NULL;
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = true;
-    hdl->pipe.handshake_done = 0;
+    hdl->pipe.handshake_done = false;
 
     /* create a helper thread to initialize the SSL context (by performing SSL handshake);
      * we need a separate thread because the underlying handshake implementation is blocking

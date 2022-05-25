@@ -72,7 +72,7 @@ static enum pal_event signal_to_pal_event(int sig) {
  * only for cases when the exception arrived while in Gramine code; if signal arrived while in
  * the user app, this function doesn't need to be reentrant and thread-safe.
  */
-static void perform_signal_handling(enum pal_event event, bool is_in_pal, PAL_NUM addr,
+static void perform_signal_handling(enum pal_event event, bool is_in_pal, uintptr_t addr,
                                     ucontext_t* uc) {
     pal_event_handler_t upcall = _DkGetExceptionHandler(event);
     if (!upcall)
@@ -98,7 +98,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
     uintptr_t rip = ucontext_get_ip(uc);
     if (!ADDR_IN_PAL_OR_VDSO(rip)) {
         /* exception happened in application or LibOS code, normal benign case */
-        perform_signal_handling(event, /*is_in_pal=*/false, (PAL_NUM)info->si_addr, uc);
+        perform_signal_handling(event, /*is_in_pal=*/false, (uintptr_t)info->si_addr, uc);
         return;
     }
 
