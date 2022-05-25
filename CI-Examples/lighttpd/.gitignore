@@ -1,5 +1,5 @@
-!/lighttpd-generic.conf
 /*.conf
+!/lighttpd-generic.conf
 /*.tar.gz
 /install/
 /lighttpd-*/
