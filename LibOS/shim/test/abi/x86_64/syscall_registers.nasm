@@ -3,10 +3,11 @@
 ;                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
 
 ; This test verifies that the system call layer doesn't change the value
-; of R12-R15, RBX, and RBP. It also confirms indirectly confirms that
+; of R12-R15, RBX, and RBP. It also indirectly confirms that
 ; the RSP register has not changed. AMD64 ABI document defines this behavior.
 ; This test uses the getpid(2) syscall, as this syscall is very simple and
 ; shouldn't introduce significant overhead and overcomplication.
+; This function uses stack above rsp so this test can never use signal handlers.
 
 extern    test_exit
 global    _start
@@ -16,6 +17,8 @@ global    _start
 section   .text
 
 ; bool check_registers_after_getpid(uint64_t val)
+; 1/true - test passed
+; 0/false - something is wrong with registers
 check_registers_after_getpid:
     push  rbp
     mov   rbp, rdi
@@ -60,14 +63,14 @@ check_registers_after_getpid:
     ret
 
 _start:
-    mov  rdi, 10
+    mov  rdi, 0x0A
     call check_registers_after_getpid
     mov  rdi, 1
     cmp  rax, 0
     je   test_exit
 
     ; Verify that it's not set to 10 by syscall.
-    mov  rdi, 1337
+    mov  rdi, 0x9987654321ABCDEF
     call check_registers_after_getpid
     mov  rdi, rax
     xor  rdi, 1
