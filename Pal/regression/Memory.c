@@ -89,7 +89,7 @@ int main(int argc, char** argv, char** envp) {
 
     /* Testing available memory (must be within valid range) */
     size_t avail = DkMemoryAvailableQuota();
-    if (avail < DkGetPalPublicState()->mem_total)
+    if (avail > 0 && avail < DkGetPalPublicState()->mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 
     return 0;
