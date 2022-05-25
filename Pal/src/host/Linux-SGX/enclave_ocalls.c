@@ -1343,11 +1343,13 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
     WRITE_ONCE(ms->ms_addrlen, *addrlen);
 
     assert(*addrlen <= sizeof(*addr));
-    void* untrusted_addr = sgx_copy_to_ustack(addr, *addrlen);
+    struct sockaddr_storage* untrusted_addr = sgx_alloc_on_ustack_aligned(sizeof(*untrusted_addr),
+                                                                          alignof(*untrusted_addr));
     if (!untrusted_addr) {
         ret = -EPERM;
         goto out;
     }
+    memcpy(untrusted_addr, addr, *addrlen);
     WRITE_ONCE(ms->ms_addr, untrusted_addr);
 
     do {
