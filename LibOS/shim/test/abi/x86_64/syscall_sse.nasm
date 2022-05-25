@@ -7,8 +7,9 @@
 ; of the syscall layer. This test uses the getpid(2) syscall, as this syscall is
 ; very simple and shouldn't introduce significant overhead and overcomplication.
 ; The test uses the FXSAVE operand to get the current state of XMM registers.
-; The XMM registers are saved on bytes from 160 to 415.
-; It also verifies the MXCSR register.
+; The XMM registers are saved on bytes from 160 to 415. It also verifies
+; the MXCSR register. Thie check function uses stack above rsp so this
+; test can never use signal handlers.
 
 default   rel
 
@@ -20,20 +21,22 @@ global    _start
 section   .text
 
 ; bool check_sse_after_getpid()
+; 1/true - test passed
+; 0/false - something is wrong with SSE
 check_sse_after_getpid:
     push      rbp
     mov       rbp, rsp
 
-    fxsave64  [rbp - 512]
-    stmxcsr   [rbp - 1028]
+    fxsave64  [rbp - 0x200]
+    stmxcsr   [rbp - 0x400]
 
     mov       rax, __NR_getpid
     syscall
     xor       rax, rax
 
-    fxsave64  [rbp - 1024]
-    lea       rsi, [rbp - 512 + 160]
-    lea       rdi, [rbp - 1024 + 160]
+    fxsave64  [rbp - 0x400]
+    lea       rsi, [rbp - 0x100 + 0xA0]
+    lea       rdi, [rbp - 0x200 + 0xA0]
     mov       rcx, 256
     repe      cmpsb
     ; The ZF will be cleared if there is a mismatch.
@@ -56,7 +59,7 @@ _start:
     je   test_exit
 
     ; Verify that it's not initialized to default values.
-    mov  rax,  1337
+    mov  rax, 0x9987654321ABCDEF
     movq xmm0, rax
     movq xmm1, rax
     movq xmm2, rax
@@ -82,6 +85,6 @@ _start:
 
 section   .data
 
-; The mxcsr.nasm test verifies that mxcsr is not 0, so we can use
-; 0 as test data here.
+; The mxcsr it not 0 at the entry of the binary, so we can us 0 as
+; 0 as test data here (the mxcsr.nasm test verifies that).
 mxcsr_test_val      db    0x00
