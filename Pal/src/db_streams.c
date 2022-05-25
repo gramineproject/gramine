@@ -464,7 +464,7 @@ int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return ops->setlength(handle, length);
 }
 
-int DkStreamSetLength(PAL_HANDLE handle, size_t length) {
+int DkStreamSetLength(PAL_HANDLE handle, off_t length) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
@@ -475,7 +475,7 @@ int DkStreamSetLength(PAL_HANDLE handle, size_t length) {
         return ret;
     }
 
-    assert((uint64_t)ret == length);
+    assert(ret == length);
     return 0;
 }
 

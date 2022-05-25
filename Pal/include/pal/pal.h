@@ -9,12 +9,12 @@
 #ifndef PAL_H
 #define PAL_H
 
-#include <sys/types.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
+#include <sys/types.h>
 
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
@@ -120,7 +120,7 @@ struct pal_public_state {
      * looking from the LibOS perspective. The two values can be different on the PAL level though,
      * see e.g. SYSTEM_INFO::dwAllocationGranularity on Windows.
      */
-    uint64_t alloc_align;
+    size_t alloc_align;
 
     size_t mem_total;
 
@@ -379,7 +379,7 @@ int DkStreamUnmap(void* addr, size_t size);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamSetLength(PAL_HANDLE handle, size_t length);
+int DkStreamSetLength(PAL_HANDLE handle, off_t length);
 
 /*!
  * \brief Flush the buffer of a file stream.
