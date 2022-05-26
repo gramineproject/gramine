@@ -242,7 +242,7 @@ currently only supported on the Linux PAL.
 To run these tests::
 
    cd LibOS/shim/test/ltp
-   make -j
+   make
    make regression
    # or
    make SGX=1 regression
@@ -250,8 +250,7 @@ To run these tests::
    python3 -m pytest -v -k chmod01
 
 For more information on how to run the ltp tests, please refer to
-https://github.com/gramineproject/gramine/blob/master/LibOS/shim/test/ltp/README.rst.
-
+:file:`LibOS/shim/test/ltp/README.rst`.
 
 
 Management Team
