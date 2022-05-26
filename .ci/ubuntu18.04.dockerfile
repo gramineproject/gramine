@@ -68,7 +68,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     zlib1g \
     zlib1g-dev
 
-# Install wrk2 benchmark. This benchmark is used in `nginx`, `lighttpd` and `rust` CI-Examples.
+# Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
 RUN git clone https://github.com/giltene/wrk2.git \
     && cd wrk2 \
     && make \
