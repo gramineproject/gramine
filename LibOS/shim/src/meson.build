@@ -25,7 +25,6 @@ libos_sources = files(
     'fs/proc/info.c',
     'fs/proc/ipc-thread.c',
     'fs/proc/thread.c',
-    join_paths('fs/proc/arch', host_machine.cpu_family(), 'info.c'),
     'fs/shim_dcache.c',
     'fs/shim_fs.c',
     'fs/shim_fs_encrypted.c',

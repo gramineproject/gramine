@@ -5,6 +5,7 @@ libos_sources_arch_list = {
     'shim_table.c': {},
     'start.S': {},
     'syscallas.S': {},
+    'fs_proc/info.c': {},
 }
 
 libos_sources_arch = files()

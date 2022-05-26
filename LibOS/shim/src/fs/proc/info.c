@@ -8,7 +8,7 @@
  */
 
 #include "shim_fs_pseudo.h"
-#include "shim_proc.h"
+#include "shim_fs_proc.h"
 
 int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);

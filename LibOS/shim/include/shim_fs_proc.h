@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
- * Copyright (C) 2022 IBM Corporation */
+ * Copyright (C) 2022 IBM Corporation
+ */
 
 #ifndef SHIM_PROC_H_
 #define SHIM_PROC_H_
