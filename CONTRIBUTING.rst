@@ -242,12 +242,16 @@ currently only supported on the Linux PAL.
 To run these tests::
 
    cd LibOS/shim/test/ltp
+   # consider -j$(nproc) or similar to parallelize and improve the build time.
    make
-   make ltp.xml
+   make regression
    # or
-   make SGX=1 ltp-sgx.xml
-   # or manually run the tool with options you need:
-   ./runltp_xml.py -c ltp.cfg -v src/runtest/syscalls
+   make SGX=1 regression
+   # or run an individual test by name:
+   python3 -m pytest -v -k chmod01
+
+For more information on how to run the ltp tests, please refer to
+:file:`LibOS/shim/test/ltp/README.rst`.
 
 
 Management Team
