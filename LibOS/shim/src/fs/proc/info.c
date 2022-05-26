@@ -8,6 +8,7 @@
  */
 
 #include "shim_fs_pseudo.h"
+#include "shim_fs_proc.h"
 
 int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
@@ -93,7 +94,7 @@ static void* realloc_size(void* ptr, size_t old_size, size_t new_size) {
     return tmp;
 }
 
-static int print_to_str(char** str, size_t off, size_t* size, const char* fmt, ...) {
+int print_to_str(char** str, size_t off, size_t* size, const char* fmt, ...) {
     int ret;
     va_list ap;
 
@@ -119,19 +120,10 @@ retry:
     return ret;
 }
 
-#define ADD_INFO(fmt, ...)                                            \
-    do {                                                              \
-        int ret = print_to_str(&str, size, &max, fmt, ##__VA_ARGS__); \
-        if (ret < 0) {                                                \
-            free(str);                                                \
-            return ret;                                               \
-        }                                                             \
-        size += ret;                                                  \
-    } while (0)
-
 int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
+    int ret;
     size_t size = 0;
     size_t max = 128;
     char* str = malloc(max);
@@ -146,38 +138,39 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             /* Offline cores are skipped in cpuinfo, with gaps in numbering. */
             continue;
         }
-        struct pal_cpu_core_info* core = &topo->cores[thread->core_id];
-        /* Below strings must match exactly the strings retrieved from /proc/cpuinfo
-         * (see Linux's arch/x86/kernel/cpu/proc.c) */
-        ADD_INFO("processor\t: %lu\n",   i);
-        ADD_INFO("vendor_id\t: %s\n",    cpu->cpu_vendor);
-        ADD_INFO("cpu family\t: %lu\n",  cpu->cpu_family);
-        ADD_INFO("model\t\t: %lu\n",     cpu->cpu_model);
-        ADD_INFO("model name\t: %s\n",   cpu->cpu_brand);
-        ADD_INFO("stepping\t: %lu\n",    cpu->cpu_stepping);
-        ADD_INFO("physical id\t: %zu\n", core->socket_id);
-
-        /* Linux keeps this numbering socket-local, but we can use a different one, and it's
-         * documented as "hardware platform's identifier (rather than the kernel's)" anyways. */
-        ADD_INFO("core id\t\t: %lu\n",   thread->core_id);
-
-        size_t cores_in_socket = 0;
-        for (size_t j = 0; j < topo->cores_cnt; j++) { // slow, but shouldn't matter
-            if (topo->cores[j].socket_id == core->socket_id)
-                cores_in_socket++;
+        ret = proc_cpuinfo_display_cpu(&str, &size, &max, topo, cpu, i, thread);
+        if (ret < 0) {
+            goto exit;
         }
-        ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
-        double bogomips = cpu->cpu_bogomips;
-        // Apparently Gramine snprintf cannot into floats.
-        ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,
-                 (unsigned long)(bogomips * 100.0 + 0.5) % 100);
-        ADD_INFO("\n");
+    }
+
+    ret = proc_cpuinfo_display_tail(&str, &size, &max, cpu);
+    if (ret < 0) {
+        goto exit;
     }
 
     *out_data = str;
     *out_size = size;
-    return 0;
+
+    ret = 0;
+
+exit:
+    if (ret < 0) {
+        free(str);
+    }
+
+    return ret;
 }
+
+#define ADD_INFO(fmt, ...)                                            \
+    do {                                                              \
+        int ret = print_to_str(&str, size, &max, fmt, ##__VA_ARGS__); \
+        if (ret < 0) {                                                \
+            free(str);                                                \
+            return ret;                                               \
+        }                                                             \
+        size += ret;                                                  \
+    } while (0)
 
 int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
