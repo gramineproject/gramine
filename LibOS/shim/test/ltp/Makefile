@@ -46,7 +46,7 @@ etc/passwd:
 	mkdir -p etc
 	printf "root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n" > $@
 
-ifeq ($(SGX),"1")
+ifeq ($(SGX),1)
 CFG = ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg
 else
 CFG = ltp.cfg
