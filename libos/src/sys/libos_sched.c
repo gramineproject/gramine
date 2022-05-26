@@ -239,22 +239,63 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int user_mask_size,
     return GET_CPU_MASK_LEN() * sizeof(unsigned long);
 }
 
-/* dummy implementation: always return cpu0  */
+/* Approx. implementation that returns a random bit that is set from the cpu affinity mask
+ * associated with the current calling thread */
 long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused) {
     __UNUSED(unused);
 
-    if (cpu) {
-        if (!is_user_memory_writable(cpu, sizeof(*cpu))) {
-            return -EFAULT;
-        }
-        *cpu = 0;
+    int ret;
+    if (cpu && !is_user_memory_writable(cpu, sizeof(*cpu)))
+        return -EFAULT;
+
+    if (node && !is_user_memory_writable(node, sizeof(*node)))
+        return -EFAULT;
+
+    struct libos_thread* thread = get_cur_thread();
+
+    unsigned long rand_num = 0;
+    ret = PalRandomBitsRead(&rand_num, sizeof(rand_num));
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
     }
 
-    if (node) {
-        if (!is_user_memory_writable(node, sizeof(*node))) {
-            return -EFAULT;
+    lock(&thread->lock);
+    /* CPU affinity mask is basically an array of unsigned long(s). Below logic randomly selects a
+     * bit set from the threads's cpu affinity mask and returns it to the user. */
+    size_t num_bits = 0;
+    for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++)
+        num_bits += count_ulong_bits_set(thread->cpu_affinity_mask[i]);
+    assert(num_bits);
+    size_t target_bit = rand_num % num_bits;
+
+    unsigned long cpu_current = ULONG_MAX;
+    for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++) {
+        size_t cnt_bits_set = count_ulong_bits_set(thread->cpu_affinity_mask[i]);
+        if (target_bit >= cnt_bits_set) {
+            target_bit -= cnt_bits_set;
+        } else {
+            unsigned long cpumask = thread->cpu_affinity_mask[i];
+            /* Mask out `target_bit` lowest bits. */
+            while (target_bit--) {
+                cpumask &= cpumask - 1;
+            }
+            assert(cpumask);
+            cpu_current = __builtin_ctzl(cpumask) +
+                          i * BITS_IN_TYPE(__typeof__(*thread->cpu_affinity_mask));
+            break;
         }
-        *node = 0;
+    }
+    unlock(&thread->lock);
+
+    assert(cpu_current < GET_CPU_MASK_LEN() * BITS_IN_TYPE(__typeof__(*thread->cpu_affinity_mask)));
+    assert(g_pal_public_state->topo_info.threads[cpu_current].is_online);
+
+    if (cpu)
+        *cpu = cpu_current;
+
+    if (node) {
+        size_t core_id = g_pal_public_state->topo_info.threads[cpu_current].core_id;
+        *node = g_pal_public_state->topo_info.cores[core_id].node_id;
     }
 
     return 0;

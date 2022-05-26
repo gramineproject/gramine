@@ -126,6 +126,8 @@ UBSAN_SIMPLE_HANDLER_0(nonnull_return_v1,
                        "null pointer returned from function declared to never return null")
 UBSAN_SIMPLE_HANDLER_0(nullability_return_v1,
                        "null pointer returned from function declared to never return null")
+UBSAN_SIMPLE_HANDLER_1(invalid_builtin,
+                       "passing invalid argument to builtin %ld")
 
 /* More complex handlers, displaying additional information. */
 
