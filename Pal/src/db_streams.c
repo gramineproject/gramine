@@ -223,7 +223,7 @@ int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* 
     return ret;
 }
 
-int DkStreamRead(PAL_HANDLE handle, off_t offset, size_t* count, void* buffer, char* source,
+int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
                  size_t size) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
@@ -266,7 +266,7 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
     return ret;
 }
 
-int DkStreamWrite(PAL_HANDLE handle, off_t offset, size_t* count, void* buffer,
+int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
                   const char* dest) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
@@ -410,7 +410,7 @@ int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint
     return 0;
 }
 
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, off_t offset,
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
                 size_t size) {
     assert(addr_ptr);
     void* map_addr = *addr_ptr;
@@ -464,7 +464,7 @@ int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return ops->setlength(handle, length);
 }
 
-int DkStreamSetLength(PAL_HANDLE handle, off_t length) {
+int DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
@@ -475,7 +475,7 @@ int DkStreamSetLength(PAL_HANDLE handle, off_t length) {
         return ret;
     }
 
-    assert(ret == length);
+    assert((uint64_t)ret == length);
     return 0;
 }
 

@@ -14,7 +14,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
-#include <sys/types.h>
 
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
@@ -319,7 +318,7 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opti
  * If \p handle is a directory, DkStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int DkStreamRead(PAL_HANDLE handle, off_t offset, size_t* count, void* buffer, char* source,
+int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
                  size_t size);
 
 /*!
@@ -335,7 +334,7 @@ int DkStreamRead(PAL_HANDLE handle, off_t offset, size_t* count, void* buffer, c
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamWrite(PAL_HANDLE handle, off_t offset, size_t* count, void* buffer,
+int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
                   const char* dest);
 
 enum pal_delete_mode {
@@ -362,7 +361,7 @@ int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, off_t offset,
+int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
                 size_t size);
 
 /*!
@@ -379,7 +378,7 @@ int DkStreamUnmap(void* addr, size_t size);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamSetLength(PAL_HANDLE handle, off_t length);
+int DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
 
 /*!
  * \brief Flush the buffer of a file stream.
