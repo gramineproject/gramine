@@ -139,13 +139,13 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             continue;
         }
         ret = proc_cpuinfo_display_cpu(&str, &size, &max, topo, cpu, i, thread);
-        if (ret) {
+        if (ret < 0) {
             goto exit;
         }
     }
 
     ret = proc_cpuinfo_display_tail(&str, &size, &max, cpu);
-    if (ret) {
+    if (ret < 0) {
         goto exit;
     }
 
@@ -155,7 +155,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     ret = 0;
 
 exit:
-    if (ret) {
+    if (ret < 0) {
         free(str);
     }
 
