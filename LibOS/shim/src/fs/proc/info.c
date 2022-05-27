@@ -139,17 +139,25 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
             continue;
         }
         ret = proc_cpuinfo_display_cpu(&str, &size, &max, topo, cpu, i, thread);
-        if (ret)
-            return ret;
+        if (ret) {
+            goto exit;
+        }
     }
 
     ret = proc_cpuinfo_display_tail(&str, &size, &max, cpu);
-    if (ret)
-        return ret;
+    if (ret) {
+        goto exit;
+    }
 
     *out_data = str;
     *out_size = size;
-    return 0;
+
+    ret = 0;
+
+exit:
+    free(str);
+
+    return ret;
 }
 
 #define ADD_INFO(fmt, ...)                                            \

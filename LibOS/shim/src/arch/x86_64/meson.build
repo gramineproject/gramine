@@ -1,11 +1,11 @@
 libos_sources_arch_list = {
+    'fs_proc/info.c': {},
     'shim_arch_prctl.c': {},
     'shim_elf_entry.nasm': { 'type': 'nasm' },
     'shim_context.c': {},
     'shim_table.c': {},
     'start.S': {},
     'syscallas.S': {},
-    'fs_proc/info.c': {},
 }
 
 libos_sources_arch = files()

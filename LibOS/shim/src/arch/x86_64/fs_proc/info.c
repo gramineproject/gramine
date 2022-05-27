@@ -3,8 +3,7 @@
  * Copyright (C) 2022 IBM Corporation
  */
 
-#include <stddef.h>
-
+#include "api.h"
 #include "pal.h"
 #include "shim_fs_proc.h"
 
@@ -12,7 +11,6 @@
     do {                                                              \
         int ret = print_to_str(str, *size, max, fmt, ##__VA_ARGS__);  \
         if (ret < 0) {                                                \
-            free(str);                                                \
             return ret;                                               \
         }                                                             \
         *size += ret;                                                 \
