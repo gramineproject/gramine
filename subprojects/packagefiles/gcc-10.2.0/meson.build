@@ -1,5 +1,4 @@
-project('glibc', 'c',
-    version: '2.34')
+project('gcc', 'c', version: '10.2.0')
 
 fs = import('fs')
 
