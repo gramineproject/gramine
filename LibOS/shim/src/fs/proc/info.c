@@ -155,7 +155,9 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     ret = 0;
 
 exit:
-    free(str);
+    if (ret) {
+        free(str);
+    }
 
     return ret;
 }
