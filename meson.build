@@ -20,12 +20,12 @@ project(
 subdir('Scripts')
 
 prefix = get_option('prefix')
-pkglibdir = join_paths(get_option('libdir'), meson.project_name())
-pkgdatadir = join_paths(get_option('datadir'), meson.project_name())
+pkglibdir = get_option('libdir') / meson.project_name()
+pkgdatadir = get_option('datadir') / meson.project_name()
 
 syslibdir = get_option('syslibdir')
 if syslibdir == ''
-    syslibdir = join_paths('/', get_option('libdir'))
+    syslibdir = '/' / get_option('libdir')
 endif
 
 direct = get_option('direct').enabled()
@@ -50,8 +50,8 @@ objcopy = find_program('objcopy')
 python3mod = import('python3')
 python3 = python3mod.find_python()
 python3_platlib = run_command(
-    python3, get_python_platlib_prog, get_option('prefix')).stdout()
-python3_pkgdir = join_paths(python3_platlib, 'graminelibos')
+    python3, get_python_platlib_prog, prefix).stdout()
+python3_pkgdir = python3_platlib / 'graminelibos'
 
 pkgconfig = import('pkgconfig')
 
@@ -145,7 +145,7 @@ if sgx
     if sgx_driver_include_path == ''
         foreach path : sgx_driver_include_path_defaults
             sgx_driver_header_abspath = ''
-            if cc.has_header(join_paths(path, sgx_driver_header))
+            if cc.has_header(path / sgx_driver_header)
                 sgx_driver_include_path = path
                 break
             endif
@@ -159,7 +159,7 @@ if sgx
     endif
 
 
-    sgx_driver_header_abspath = join_paths(sgx_driver_include_path, sgx_driver_header)
+    sgx_driver_header_abspath = sgx_driver_include_path / sgx_driver_header
 
     if not cc.has_header(sgx_driver_header_abspath)
         error('Invalid SGX driver configuration (-Dsgx_driver and/or -Dsgx_driver_include_path); ' +
@@ -285,10 +285,10 @@ if sgx
         dl_dep = cc.find_library('dl', required: true)
         vtune_dep = declare_dependency(
             dependencies: [
-                cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
+                cc.find_library('ittnotify', dirs: vtune_sdk_path / 'lib64', required: true),
                 dl_dep,
             ],
-            include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
+            include_directories: include_directories(vtune_sdk_path / 'include'),
         )
     endif
 endif

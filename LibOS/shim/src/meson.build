@@ -106,7 +106,7 @@ libos_sources = files(
 subdir('arch')
 libos_sources += libos_sources_arch
 
-shim_map = join_paths(meson.current_source_dir(), 'shim.map')
+shim_map = meson.current_source_dir() / 'shim.map'
 
 subdir('vdso')
 

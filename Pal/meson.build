@@ -11,6 +11,6 @@ if debug
         'gdb_integration/debug_map_gdb.py',
         'gdb_integration/language_gdb.py',
         'gdb_integration/pagination_gdb.py',
-        install_dir: join_paths(pkglibdir, 'gdb_integration'),
+        install_dir: pkglibdir / 'gdb_integration',
     )
 endif

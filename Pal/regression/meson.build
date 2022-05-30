@@ -52,13 +52,13 @@ if sgx
        'AttestationReport': {
             'include_directories': include_directories(
                 # for `sgx_arch.h`
-                join_paths('../src/host/Linux-SGX'),
+                '../src/host/Linux-SGX',
             ),
         },
    }
 endif
 
-install_dir = join_paths(pkglibdir, 'tests', 'pal')
+install_dir = pkglibdir / 'tests' / 'pal'
 
 test_c_args = [
     cflags_sanitizers,
@@ -74,8 +74,8 @@ test_include_directories = [
     include_directories(
         # for `pal.h`
         '../include/pal',
-        join_paths('../include/arch', host_machine.cpu_family()),
-        join_paths('../include/arch', host_machine.cpu_family(), 'Linux'),
+        '../include/arch' / host_machine.cpu_family(),
+        '../include/arch' / host_machine.cpu_family() / 'Linux',
     ),
     common_inc,
 ]
@@ -94,7 +94,7 @@ common_lib = static_library('test_pal',
 
 # This file is needed to provide an entry point to the executable: GCC expects a symbol named
 # `_start` that prepares the stack layout (argc, argv, env) and jumps into `main`.
-user_start_src = files(join_paths('crt_init', 'arch', host_machine.cpu_family(), 'user_start.S'))
+user_start_src = files('crt_init' / 'arch' / host_machine.cpu_family() / 'user_start.S')
 
 foreach name, params : testparams
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
