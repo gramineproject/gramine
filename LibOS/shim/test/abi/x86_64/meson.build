@@ -1,6 +1,6 @@
 common_lib = static_library('common_lib',
     'common.c',
-    nasm_gen.process('exit.nasm')
+    nasm_gen.process('exit.nasm'),
 )
 
 tests = {
@@ -17,6 +17,9 @@ tests = {
             nasm_gen.process('call_auxiliary.nasm')
         ],
     },
+    'syscall_fpu': {},
+    'syscall_registers': {},
+    'syscall_sse': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')

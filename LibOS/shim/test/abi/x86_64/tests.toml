@@ -9,4 +9,7 @@ manifests = [
   "stack_arg",
   "stack_env",
   "stack_auxiliary",
+  "syscall_fpu",
+  "syscall_registers",
+  "syscall_sse",
 ]

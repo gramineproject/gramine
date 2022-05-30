@@ -26,3 +26,12 @@ class TC_00_Entrypoint(RegressionTestCase):
 
     def test_080_auxv(self):
         self.run_binary(['stack_auxiliary'])
+
+    def test_090_syscall_registers(self):
+        self.run_binary(['syscall_registers'])
+
+    def test_100_syscall_fpu(self):
+        self.run_binary(['syscall_fpu'])
+
+    def test_110_syscall_sse(self):
+        self.run_binary(['syscall_sse'])
