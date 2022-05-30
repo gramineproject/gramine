@@ -17,4 +17,4 @@ foreach src, params : libos_sources_arch_list
     endif
 endforeach
 
-shim_lds = join_paths(meson.current_source_dir(), 'shim.lds')
+shim_lds = meson.current_source_dir() / 'shim.lds'

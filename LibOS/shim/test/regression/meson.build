@@ -87,7 +87,7 @@ tests = {
         'include_directories': include_directories(
             # for `shim_entry_api.h`
             '../../include',
-            join_paths('../../include/arch', host_machine.cpu_family()),
+            '../../include/arch' / host_machine.cpu_family(),
         ),
     },
     'sched': {},
@@ -112,7 +112,7 @@ tests = {
         'include_directories': include_directories(
             # for `spinlock.h`
             '../../../../common/include',
-            join_paths('../../../../common/include/arch', host_machine.cpu_family()),
+            '../../../../common/include/arch' / host_machine.cpu_family(),
         ),
     },
     'stat_invalid_args': {},
@@ -166,7 +166,7 @@ if sgx
     }
 endif
 
-install_dir = join_paths(pkglibdir, 'tests', 'libos', 'regression')
+install_dir = pkglibdir / 'tests' / 'libos' / 'regression'
 
 configurations = []
 if glibc
@@ -282,7 +282,7 @@ endforeach
 if musl
     meson.add_install_script(
         find_program('install_musl_tests.sh'),
-        prefix / join_paths(install_dir, 'musl'),
+        prefix / install_dir / 'musl',
         musl_execs,
     )
 endif

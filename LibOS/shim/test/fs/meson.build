@@ -47,7 +47,7 @@ tests = {
     'truncate': {},
 }
 
-install_dir = join_paths(pkglibdir, 'tests', 'libos', 'fs')
+install_dir = pkglibdir / 'tests' / 'libos' / 'fs'
 
 foreach name, params : tests
     exe = executable(name,
