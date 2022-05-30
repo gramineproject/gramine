@@ -34,9 +34,9 @@ static void* dowork(void* args) {
     unsigned int cpu, node;
     int ret = syscall(SYS_getcpu, &cpu, &node);
     if (ret < 0)
-        err(EXIT_FAILURE, "sched_getcpu failed!");
+        err(EXIT_FAILURE, "getcpu failed!");
 
-    printf("Thread %ld is running on cpu: %d, node: %d\n", syscall(SYS_gettid), cpu, node);
+    printf("Thread %ld is running on cpu: %u, node: %u\n", syscall(SYS_gettid), cpu, node);
 
     ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {

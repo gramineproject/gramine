@@ -227,7 +227,7 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused) {
     __UNUSED(unused);
 
-    int ret = 0;
+    int ret;
     if (cpu && !is_user_memory_writable(cpu, sizeof(*cpu)))
         return -EFAULT;
 
@@ -295,6 +295,7 @@ long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused) 
         *node = g_pal_public_state->topo_info.cores[core_id].node_id;
     }
 
+    ret = 0;
 out:
     free(mask);
     return ret;
