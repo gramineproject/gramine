@@ -242,6 +242,7 @@ currently only supported on the Linux PAL.
 To run these tests::
 
    cd LibOS/shim/test/ltp
+   # consider -j$(nproc) or similar to parallelize and improve the build time.
    make
    make regression
    # or
