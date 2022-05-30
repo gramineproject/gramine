@@ -47,7 +47,7 @@ cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
 
 pythonmod = import('python')
-python = pythonmod.find_python()
+python = pythonmod.find_installation()
 python_platlib = run_command(
     python, get_python_platlib_prog, prefix).stdout()
 python_pkgdir = python_platlib / 'graminelibos'
