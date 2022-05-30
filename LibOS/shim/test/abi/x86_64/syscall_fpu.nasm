@@ -13,7 +13,7 @@
 ; +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
 ; 5 bits in x87 FPU flags are reserved.
 ; The reserved bits are marked with the letter 'R'.
-; Thie check function uses stack above rsp so this test can never use
+; This check function uses stack above rsp so this test can never use
 ; signal handlers.
 
 extern    test_exit
