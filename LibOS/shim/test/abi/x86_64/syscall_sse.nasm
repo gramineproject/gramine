@@ -8,7 +8,7 @@
 ; very simple and shouldn't introduce significant overhead and overcomplication.
 ; The test uses the FXSAVE operand to get the current state of XMM registers.
 ; The XMM registers are saved on bytes from 160 to 415. It also verifies
-; the MXCSR register. Thie check function uses stack above rsp so this
+; the MXCSR register. This check function uses stack above rsp so this
 ; test can never use signal handlers.
 
 default   rel
@@ -28,7 +28,7 @@ check_sse_after_getpid:
     mov       rbp, rsp
 
     fxsave64  [rbp - 0x200]
-    stmxcsr   [rbp - 0x400]
+    stmxcsr   [rbp - 0x404]
 
     mov       rax, __NR_getpid
     syscall
@@ -85,6 +85,6 @@ _start:
 
 section   .data
 
-; The mxcsr it not 0 at the entry of the binary, so we can us 0 as
-; 0 as test data here (the mxcsr.nasm test verifies that).
+; The mxcsr is not set to 0 at the binary entry (the mxcsr.nasm
+; test verifies that), so we can use it as test data.
 mxcsr_test_val      db    0x00
