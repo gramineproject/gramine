@@ -46,12 +46,11 @@ tests = get_option('tests').enabled()
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
 
-# TODO: after deprecating 18.04/bionic, update this to import('python')
-python3mod = import('python3')
-python3 = python3mod.find_python()
-python3_platlib = run_command(
-    python3, get_python_platlib_prog, prefix).stdout()
-python3_pkgdir = python3_platlib / 'graminelibos'
+pythonmod = import('python')
+python = pythonmod.find_python()
+python_platlib = run_command(
+    python, get_python_platlib_prog, prefix).stdout()
+python_pkgdir = python_platlib / 'graminelibos'
 
 pkgconfig = import('pkgconfig')
 

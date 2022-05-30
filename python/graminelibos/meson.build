@@ -34,4 +34,4 @@ if sgx
     ]
 endif
 
-install_data(python_src, install_dir: python3_pkgdir)
+install_data(python_src, install_dir: python_pkgdir)

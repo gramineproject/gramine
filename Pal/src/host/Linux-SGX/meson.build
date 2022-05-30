@@ -40,7 +40,7 @@ pal_sgx_offsets_py = custom_target('_offsets.py',
     output: '_offsets.py',
 
     install: true,
-    install_dir: python3_pkgdir,
+    install_dir: python_pkgdir,
 )
 
 pal_sgx_map = custom_target('pal.map',
