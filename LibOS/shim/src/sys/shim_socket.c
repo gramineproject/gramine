@@ -59,8 +59,8 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
     sock->local_addr.ss_family = AF_UNSPEC;
     sock->local_addrlen = sizeof(sock->local_addr.ss_family);
     sock->was_bound = false;
-    sock->read_shutdown = true;
-    sock->write_shutdown = true;
+    sock->can_be_read = false;
+    sock->can_be_written = false;
     switch (family) {
         case AF_UNIX:
             sock->ops = &sock_unix_ops;
@@ -194,7 +194,7 @@ long shim_do_socketpair(int family, int type, int protocol, int* sv) {
         goto out;
     }
     sock1->state = SOCK_LISTENING;
-    sock1->read_shutdown = false;
+    sock1->can_be_read = true;
     /* Socketpair UNIX sockets have no meaningful addresses, but correct domain. */
     sock1->remote_addr.ss_family = AF_UNIX;
     sock1->remote_addrlen = sizeof(sock1->remote_addr.ss_family);
@@ -209,8 +209,8 @@ long shim_do_socketpair(int family, int type, int protocol, int* sv) {
         goto out;
     }
     sock2->state = SOCK_CONNECTED;
-    sock2->read_shutdown = false;
-    sock2->write_shutdown = false;
+    sock2->can_be_read = true;
+    sock2->can_be_written = true;
     /* Socketpair UNIX sockets have no meaningful addresses, but correct domain. */
     sock2->remote_addr.ss_family = AF_UNIX;
     sock2->remote_addrlen = sizeof(sock2->remote_addr.ss_family);
@@ -348,7 +348,7 @@ long shim_do_listen(int fd, int backlog) {
     }
 
     sock->state = SOCK_LISTENING;
-    sock->read_shutdown = false;
+    sock->can_be_read = true;
     ret = 0;
 
 out:
@@ -395,7 +395,7 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
     lock(&sock->lock);
     if (sock->state != SOCK_LISTENING) {
         ret = -EINVAL;
-    } else if (sock->read_shutdown) {
+    } else if (!sock->can_be_read) {
         ret = -EINVAL;
     } else {
         has_recvtimeout_set = !!sock->receivetimeout_us;
@@ -449,8 +449,6 @@ long shim_do_accept4(int fd, void* addr, int* addrlen, int flags) {
     return do_accept(fd, addr, addrlen, flags);
 }
 
-/* TODO: non blocking connect should set `last_error` after actually connecting (or failing to)
- * is this even possible in Gramine? See also comment in tcp connect implementation in PALs. */
 long shim_do_connect(int fd, void* addr, int _addrlen) {
     int ret;
 
@@ -508,8 +506,8 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
             }
             sock->remote_addr.ss_family = AF_UNSPEC;
             sock->remote_addrlen = sizeof(sock->remote_addr.ss_family);
-            sock->read_shutdown = true;
-            sock->write_shutdown = true;
+            sock->can_be_read = false;
+            sock->can_be_written = false;
             ret = 0;
             goto out;
         }
@@ -525,8 +523,8 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
     }
 
     sock->state = SOCK_CONNECTED;
-    sock->read_shutdown = false;
-    sock->write_shutdown = false;
+    sock->can_be_read = true;
+    sock->can_be_written = true;
     ret = 0;
 
 out:
@@ -598,7 +596,7 @@ ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     ret = -sock->last_error;
     sock->last_error = 0;
 
-    if (!ret && sock->write_shutdown) {
+    if (!ret && !sock->can_be_written) {
         ret = -EPIPE;
     }
 
@@ -758,7 +756,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
         return ret;
     }
 
-    /* We ignore `sock->read_shutdown` here - there might be some pending data in the host OS. */
+    /* We ignore `sock->can_be_read` here - there might be some pending data in the host OS. */
 
     size_t total_size = 0;
     for (size_t i = 0; i < iov_len; ++i) {
@@ -1044,14 +1042,14 @@ long shim_do_shutdown(int fd, int how) {
 
     switch (how) {
         case SHUT_RD:
-            sock->read_shutdown = true;
+            sock->can_be_read = false;
             break;
         case SHUT_WR:
-            sock->write_shutdown = true;
+            sock->can_be_written = false;
             break;
         case SHUT_RDWR:
-            sock->read_shutdown = true;
-            sock->write_shutdown = true;
+            sock->can_be_read = false;
+            sock->can_be_written = false;
             break;
     }
     ret = 0;

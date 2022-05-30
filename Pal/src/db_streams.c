@@ -11,12 +11,11 @@
 #include "pal_internal.h"
 
 /* Stream handler table: this table corresponds to all the handle type supported by PAL. Threads
- * are not streams, so they need no handler. */
+ * are not streams, so they need no handler. Sockets have their own table. */
 extern struct handle_ops g_file_ops;
 extern struct handle_ops g_pipe_ops;
 extern struct handle_ops g_dev_ops;
 extern struct handle_ops g_dir_ops;
-extern struct handle_ops g_socket_ops;
 extern struct handle_ops g_thread_ops;
 extern struct handle_ops g_proc_ops;
 extern struct handle_ops g_event_ops;
@@ -29,7 +28,6 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
     [PAL_TYPE_PIPECLI] = &g_pipe_ops,
     [PAL_TYPE_DEV]     = &g_dev_ops,
     [PAL_TYPE_DIR]     = &g_dir_ops,
-    [PAL_TYPE_SOCKET]  = &g_socket_ops,
     [PAL_TYPE_PROCESS] = &g_proc_ops,
     [PAL_TYPE_THREAD]  = &g_thread_ops,
     [PAL_TYPE_EVENT]   = &g_event_ops,

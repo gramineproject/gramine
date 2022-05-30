@@ -14,7 +14,6 @@
 #include "stat.h"
 
 static int close(struct shim_handle* handle) {
-    assert(handle->type == TYPE_SOCK);
     if (lock_created(&handle->info.sock.lock)) {
         destroy_lock(&handle->info.sock.lock);
     }
@@ -78,8 +77,6 @@ static int hstat(struct shim_handle* handle, struct stat* stat) {
 }
 
 static int setflags(struct shim_handle* handle, int flags) {
-    assert(handle->type == TYPE_SOCK);
-
     if (!WITHIN_MASK(flags, O_NONBLOCK)) {
         return -EINVAL;
     }
@@ -111,14 +108,18 @@ static int setflags(struct shim_handle* handle, int flags) {
 }
 
 static int checkout(struct shim_handle* handle) {
-    assert(handle->type == TYPE_SOCK);
     struct shim_sock_handle* sock = &handle->info.sock;
     sock->ops = NULL;
     clear_lock(&sock->lock);
     clear_lock(&sock->recv_lock);
-    /* XXX: this should actually copy the data, but:
-     * - we cannot take `sock->recv_lock` here, because we already hold `handle->lock`,
-     * - we have no way of allocating memory in the checkpointing blob here. */
+    /*
+     * XXX: this should actually copy the data, but:
+     * - `handle` is a copy of the original handle (let's call it `orig_handle`),
+     * - to copy the `orig_handle->info.sock.peek.buf` data, we need to acquire
+     *   `orig_handle->info.sock.recv_lock`, but we already hold `orig_handle->lock` (and have no
+     *   access to `orig_handle` anyway),
+     * - moreover, we have no way of allocating memory in the checkpointing blob here for this data.
+     */
     sock->peek.buf = NULL;
     sock->peek.buf_size = 0;
     sock->peek.data_size = 0;
@@ -126,7 +127,6 @@ static int checkout(struct shim_handle* handle) {
 }
 
 static int checkin(struct shim_handle* handle) {
-    assert(handle->type == TYPE_SOCK);
     struct shim_sock_handle* sock = &handle->info.sock;
     switch (sock->domain) {
         case AF_UNIX:

@@ -81,8 +81,8 @@ static int create(struct shim_handle* handle) {
                     return -EPROTONOSUPPORT;
             }
             /* UDP sockets are ready for communication instantly. */
-            handle->info.sock.read_shutdown = false;
-            handle->info.sock.write_shutdown = false;
+            handle->info.sock.can_be_read = true;
+            handle->info.sock.can_be_written = true;
             break;
         default:
             BUG();
@@ -160,8 +160,8 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_sock->type = handle->info.sock.type;
     client_sock->protocol = handle->info.sock.protocol;
     client_sock->was_bound = false;
-    client_sock->read_shutdown = false;
-    client_sock->write_shutdown = false;
+    client_sock->can_be_read = true;
+    client_sock->can_be_written = true;
 
     if (!create_lock(&client_sock->lock) || !create_lock(&client_sock->recv_lock)) {
         put_handle(client_handle);
@@ -194,6 +194,8 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     linux_to_pal_sockaddr(addr, &pal_remote_addr);
     struct pal_socket_addr pal_local_addr;
 
+    /* XXX: this connect is always blocking (regardless of actual setting of nonblockingness on
+     * `sock->pal_handle`. See also the comment in tcp connect implementation in Linux PAL. */
     ret = DkSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr);
     if (ret < 0) {
         return ret == -PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
@@ -276,8 +278,6 @@ static int set_sock_ipv6_option(struct shim_handle* handle, int optname, void* o
     return pal_to_unix_errno(ret);
 }
 
-// TODO: maybe inline all functions used here? or at least join them into one - they contain
-// some common boilerplate
 static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
                       size_t len) {
     struct shim_sock_handle* sock = &handle->info.sock;
@@ -357,8 +357,6 @@ static int get_sock_ipv6_option(struct shim_handle* handle, int optname, void* o
     return 0;
 }
 
-// TODO: maybe inline all functions used here? or at least join them into one - they contain
-// some common boilerplate
 static int getsockopt(struct shim_handle* handle, int level, int optname, void* optval,
                       size_t* len) {
     struct shim_sock_handle* sock = &handle->info.sock;

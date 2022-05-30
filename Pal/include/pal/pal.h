@@ -451,6 +451,9 @@ int DkStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Set the attributes of an open stream.
+ *
+ * Calling this function on the same handle concurrently is not allowed (i.e. callers must ensure
+ * mutual exclusion).
  */
 int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 

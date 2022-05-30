@@ -704,6 +704,12 @@ BEGIN_CP_FUNC(handle) {
         ADD_TO_CP_MAP(obj, off);
         new_hdl = (struct shim_handle*)(base + off);
 
+        if (hdl->type == TYPE_SOCK) {
+            /* We need this lock taken before `hdl->lock`. This checkpointing mess needs to be
+             * untangled. */
+            lock(&hdl->info.sock.lock);
+        }
+
         /* TODO: this lock is not released on errors. The main problem here is that `DO_CP` can
          * just return... */
         lock(&hdl->lock);
@@ -752,9 +758,6 @@ BEGIN_CP_FUNC(handle) {
         }
 
         if (hdl->type == TYPE_SOCK) {
-            /* TODO: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-             * content of hdl->info.sock was copied above without holding hdl->info.sock.lock
-             * but we cannot take it, because we already hold hdl->lock. This checkpointing is... */
             PAL_HANDLE pal_handle = __atomic_load_n(&hdl->info.sock.pal_handle, __ATOMIC_ACQUIRE);
             new_hdl->info.sock.pal_handle = NULL;
             if (pal_handle) {
@@ -778,6 +781,10 @@ BEGIN_CP_FUNC(handle) {
         }
 
         unlock(&hdl->lock);
+        if (hdl->type == TYPE_SOCK) {
+            unlock(&hdl->info.sock.lock);
+        }
+
         if (hdl->inode) {
             /* NOTE: Checkpointing `inode` will take `inode->lock`, so we need to do it after
              * `hdl->lock` is released. */

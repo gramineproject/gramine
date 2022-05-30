@@ -44,5 +44,3 @@ int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     return _DkSocketRecv(handle, iov, iov_len, size_out, addr, is_nonblocking);
 }
-
-struct handle_ops g_socket_ops = {};

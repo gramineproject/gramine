@@ -76,7 +76,7 @@ enum shim_sock_state {
 
 /*
  * Access to `state`, `remote_addr`, `remote_addrlen`, `local_addr`, `local_addrlen, `last_error`,
- * `sendtimeout_us`, `receivetimeout_us`, `read_shutdown`, `write_shutdown` and `was_bound` are
+ * `sendtimeout_us`, `receivetimeout_us`, `can_be_read`, `can_be_written` and `was_bound` are
  * protected by `lock`.
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
@@ -107,8 +107,8 @@ struct shim_sock_handle {
     uint64_t receivetimeout_us;
     /* This field denotes whether the socket was ever bound. */
     bool was_bound;
-    bool read_shutdown;
-    bool write_shutdown;
+    bool can_be_read;
+    bool can_be_written;
 };
 
 struct shim_dir_handle {

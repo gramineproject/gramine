@@ -8,8 +8,11 @@
  * Currently only stream-oriented sockets are supported (i.e. `SOCK_STREAM`).
  */
 
-// TODO: Pathname UNIX sockets are not visible on the filesystem. Is that a problem?
-// Possibly unlink might be...
+/*
+ * TODO: Currently pathname UNIX domain sockets are not visible on the Gramine filesystem (they
+ * do not have a corresponding dentry). This shouldn't be hard to implement, but leaving this as
+ * a todo for now - nothing seemed to require it, at least so far.
+ */
 
 #include "crypto.h"
 #include "hex.h"
@@ -91,7 +94,9 @@ static int create(struct shim_handle* handle) {
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
 
     if (handle->info.sock.type == SOCK_DGRAM) {
-        /* We do not support datagram UNIX sockets. */
+        /* We use PAL pipes to emulate UNIX sockets. Pipes are streams by their nature, so we have
+         * no infrastructure to preserve message (datagram) boundaries - hence datagram UNIX sockets
+         * are not supported. */
         return -EPROTONOSUPPORT;
     }
     if (handle->info.sock.protocol != 0) {
@@ -180,8 +185,8 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_sock->type = handle->info.sock.type;
     client_sock->protocol = handle->info.sock.protocol;
     client_sock->was_bound = false;
-    client_sock->read_shutdown = false;
-    client_sock->write_shutdown = false;
+    client_sock->can_be_read = true;
+    client_sock->can_be_written = true;
 
     if (!create_lock(&client_sock->lock) || !create_lock(&client_sock->recv_lock)) {
         put_handle(client_handle);
@@ -218,6 +223,8 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     }
 
     lock(&handle->lock);
+    /* TODO: this is racy. For now `setflags` in "fs/socket/fs.c" explicitly fails, so this will
+     * always be `0`, but we need to fix this at some point. */
     pal_stream_options_t options = handle->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     unlock(&handle->lock);
 
@@ -345,7 +352,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
         unlock(&handle->lock);
         if (!handle_is_nonblocking) {
-            /* `DkStremRead` has no way of making one-time nonblocking read, so we have no other
+            /* `DkStreamRead` has no way of making one-time nonblocking read, so we have no other
              * option but to fail. */
             return -EINVAL;
         }
