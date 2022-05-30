@@ -17,7 +17,7 @@ python_src = [
     'manifest.py',
 ]
 
-if enable_tests
+if tests
     python_src += [
         'ninja_syntax.py',
         'regression.py',
