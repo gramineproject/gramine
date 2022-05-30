@@ -8,7 +8,7 @@ else
     error('need to link tests against a PAL library, but no PAL version is enabled')
 endif
 
-tests = {
+testparams = {
     '..Bootstrap': {},
     'Bootstrap': {},
     'Bootstrap7': {},
@@ -39,7 +39,7 @@ tests = {
 }
 
 if host_machine.cpu_family() == 'x86_64'
-    tests += {
+    testparams += {
         'Exception': {},
         'Exception2': {},
         'Segment': {},
@@ -48,7 +48,7 @@ if host_machine.cpu_family() == 'x86_64'
 endif
 
 if sgx
-   tests += {
+   testparams += {
        'AttestationReport': {
             'include_directories': include_directories(
                 # for `sgx_arch.h`
@@ -96,7 +96,7 @@ common_lib = static_library('test_pal',
 # `_start` that prepares the stack layout (argc, argv, env) and jumps into `main`.
 user_start_src = files(join_paths('crt_init', 'arch', host_machine.cpu_family(), 'user_start.S'))
 
-foreach name, params : tests
+foreach name, params : testparams
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
     # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
     pie = params.get('pie', false)

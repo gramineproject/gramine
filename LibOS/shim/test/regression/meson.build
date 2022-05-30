@@ -1,4 +1,4 @@
-tests = {
+testparams = {
     'abort': {},
     'abort_multithread': {},
     'bootstrap': {},
@@ -129,7 +129,7 @@ tests = {
 }
 
 if host_machine.cpu_family() == 'x86_64'
-    tests += {
+    testparams += {
         'cpuid': {},
         'debug_regs-x86_64': {
             'c_args': '-g3',
@@ -139,12 +139,12 @@ if host_machine.cpu_family() == 'x86_64'
     }
 endif
 
-tests_musl = tests
+testparams_musl = testparams
 
 if host_machine.cpu_family() == 'x86_64'
     # We use musl-gcc wrapper, which does not support building c++, so this test is not enabled
     # with musl.
-    tests += {
+    testparams += {
         'bootstrap_cpp': {
             'source': 'bootstrap_cpp.cpp',
         },
@@ -152,7 +152,7 @@ if host_machine.cpu_family() == 'x86_64'
 endif
 
 if sgx
-    tests += {
+    testparams += {
         'attestation': {
             # for `sgx_arch.h`
             'include_directories': include_directories('../../../../Pal/src/host/Linux-SGX'),
@@ -169,7 +169,7 @@ endif
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'regression')
 
 configurations = []
-if enable_glibc
+if glibc
     common_lib = static_library('test_libos',
         'dump.c',
         'rw_file.c',
@@ -177,10 +177,10 @@ if enable_glibc
     configurations += {
         'use_musl': false,
         'common_lib': common_lib,
-        'tests': tests,
+        'testparams': testparams,
     }
 endif
-if enable_musl
+if musl
     if meson.get_compiler('c').get_id() != 'gcc'
         error('Compiling tests is currently unsupported with Musl and compilers other than GCC. ' +
               'You need to either disable Musl (-Dmusl=disabled) or use GCC (CC=gcc).')
@@ -203,14 +203,14 @@ if enable_musl
     configurations += {
         'use_musl': true,
         'common_lib': common_lib_musl,
-        'tests': tests_musl,
+        'testparams': testparams_musl,
     }
 
     musl_execs = []
 endif
 
 foreach conf: configurations
-    foreach name, params : conf['tests']
+    foreach name, params : conf['testparams']
         pie = params.get('pie', false)
         static = params.get('static', false)
 
@@ -279,7 +279,7 @@ foreach conf: configurations
     endforeach
 endforeach
 
-if enable_musl
+if musl
     meson.add_install_script(
         find_program('install_musl_tests.sh'),
         prefix / join_paths(install_dir, 'musl'),

@@ -28,20 +28,20 @@ if syslibdir == ''
     syslibdir = join_paths('/', get_option('libdir'))
 endif
 
-direct = get_option('direct') == 'enabled'
-sgx = get_option('sgx') == 'enabled'
-vtune = get_option('vtune') == 'enabled'
-skeleton = get_option('skeleton') == 'enabled'
+direct = get_option('direct').enabled()
+sgx = get_option('sgx').enabled()
+skeleton = get_option('skeleton').enabled()
 
-dcap = get_option('dcap') == 'enabled'
-ubsan = get_option('ubsan') == 'enabled'
-asan = get_option('asan') == 'enabled'
+dcap = get_option('dcap').enabled()
+ubsan = get_option('ubsan').enabled()
+asan = get_option('asan').enabled()
+vtune = get_option('vtune').enabled()
 
-enable_libgomp = get_option('libgomp') == 'enabled'
-enable_tests = get_option('tests') == 'enabled'
+glibc = get_option('glibc').enabled()
+musl = get_option('musl').enabled()
+libgomp = get_option('libgomp').enabled()
 
-enable_glibc = get_option('glibc') == 'enabled'
-enable_musl = get_option('musl') == 'enabled'
+tests = get_option('tests').enabled()
 
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
@@ -256,12 +256,12 @@ mbedtls_proj = subproject('mbedtls-mbedtls-2.26.0-2')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
+threads_dep = dependency('threads', required: get_option('sgx'))
+libcurl_dep = dependency('libcurl', version: '>=7.58.0', required: get_option('sgx'))
+protobuf_dep = dependency('libprotobuf-c', required: get_option('sgx'))
+
 if sgx
     protoc_c_prog = find_program('protoc-c')
-
-    threads_dep = dependency('threads')
-
-    libcurl_dep = dependency('libcurl', version: '>=7.58.0')
 
     cjson_dep = dependency('cjson', required: false)
     if not cjson_dep.found()
@@ -274,26 +274,23 @@ if sgx
         cjson_dep = subproject('cJSON-1.7.12').get_variable('cjson_dep')
     endif
 
-    protobuf_dep = dependency('libprotobuf-c')
-
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
     endif
 
-  vtune_dep = []
-  dl_dep = []
+    vtune_dep = []
+    dl_dep = []
 
-  if vtune
-      dl_dep = cc.find_library('dl', required: true)
-      vtune_dep = declare_dependency(
-          dependencies: [
-              cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
-              dl_dep,
-          ],
-          include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
-      )
-  endif
-
+    if vtune
+        dl_dep = cc.find_library('dl', required: true)
+        vtune_dep = declare_dependency(
+            dependencies: [
+                cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
+                dl_dep,
+            ],
+            include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
+        )
+    endif
 endif
 
 #
@@ -306,14 +303,14 @@ subdir('LibOS')
 subdir('python')
 subdir('tools')
 
-if enable_glibc
+if glibc
     subproject('glibc-2.34-1')
 endif
-if enable_musl
+if musl
     subproject('musl-1.2.2')
 endif
 
-if enable_libgomp
+if libgomp
     subproject('gcc-10.2.0')
 endif
 

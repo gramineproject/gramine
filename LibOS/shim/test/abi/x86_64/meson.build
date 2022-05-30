@@ -3,7 +3,7 @@ common_lib = static_library('common_lib',
     nasm_gen.process('exit.nasm')
 )
 
-tests = {
+testparams = {
     'atexit_func': {},
     'fpu_control_word': {},
     'mxcsr': {},
@@ -21,7 +21,7 @@ tests = {
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')
 
-foreach name, params : tests
+foreach name, params : testparams
     filenames = ''
     if (params.has_key('filenames'))
         filenames = params.get('filenames')
