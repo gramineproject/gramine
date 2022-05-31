@@ -250,19 +250,14 @@ long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused) 
         goto out;
      }
 
-    /* CPU affinity mask is basically an array of unsigned long(s). Below logic finds the first
-     * non-empty unsigned long and returns a random bit that is set to the user. */
+    /* CPU affinity mask is basically an array of unsigned long(s). Below logic randomly selects a
+     * bit set from the threads's cpu affinity mask and returns it to the user. */
     unsigned int num_bits = 0;
-    unsigned int idx = 0;
-    while (idx < max_cpu_bitmask) {
-        num_bits = count_ulong_bits_set(mask[idx]);
-        if (num_bits)
-            break;
-        idx++;
-     }
+    for (unsigned int idx = 0; idx < max_cpu_bitmask; idx++)
+        num_bits += count_ulong_bits_set(mask[idx]);
 
     /* There should be at least one bit set as part of the cpu affinity mask otherwise host is
-       malicious. */
+     * doing something malicious. */
     if (num_bits == 0) {
         ret = -EINVAL;
         goto out;
@@ -278,14 +273,19 @@ long shim_do_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused) 
     }
 
     unsigned int nth_setbit = rand_num % num_bits;
-    unsigned long cpumask = mask[idx];
-    for (unsigned int j = 0; j < nth_setbit; j++) {
-        /* At each iteration, find the lowest bit set in cpumask and unset it; this will bring
-         * us to the nth_setbit after nth_setbit iterations. */
-        cpumask = cpumask & ~(1UL << __builtin_ctzl(cpumask));
+
+    /* At each iteration, find the lowest bit set in cpu mask and unset it; this will bring
+     * us to the nth_setbit after nth_setbit iterations. */
+    unsigned int mask_idx = 0;
+    for (unsigned int i = 0; i < nth_setbit; i++) {
+        while (mask[mask_idx] == 0)
+            mask_idx++;
+
+        mask[mask_idx] = mask[mask_idx] & ~(1UL << __builtin_ctzl(mask[mask_idx]));
     }
 
-    unsigned int cpu_current = __builtin_ctzl(cpumask) + BITS_IN_TYPE(unsigned long) * idx;
+    unsigned int cpu_current = __builtin_ctzl(mask[mask_idx]) +
+                               BITS_IN_TYPE(unsigned long) * mask_idx;
 
     if (cpu)
         *cpu = cpu_current;
