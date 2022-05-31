@@ -8,7 +8,7 @@ else
     error('need to link tests against a PAL library, but no PAL version is enabled')
 endif
 
-tests = {
+testparams = {
     '..Bootstrap': {},
     'Bootstrap': {},
     'Bootstrap7': {},
@@ -39,7 +39,7 @@ tests = {
 }
 
 if host_machine.cpu_family() == 'x86_64'
-    tests += {
+    testparams += {
         'Exception': {},
         'Exception2': {},
         'Segment': {},
@@ -48,17 +48,17 @@ if host_machine.cpu_family() == 'x86_64'
 endif
 
 if sgx
-   tests += {
+   testparams += {
        'AttestationReport': {
             'include_directories': include_directories(
                 # for `sgx_arch.h`
-                join_paths('../src/host/Linux-SGX'),
+                '../src/host/Linux-SGX',
             ),
         },
    }
 endif
 
-install_dir = join_paths(pkglibdir, 'tests', 'pal')
+install_dir = pkglibdir / 'tests' / 'pal'
 
 test_c_args = [
     cflags_sanitizers,
@@ -74,8 +74,8 @@ test_include_directories = [
     include_directories(
         # for `pal.h`
         '../include/pal',
-        join_paths('../include/arch', host_machine.cpu_family()),
-        join_paths('../include/arch', host_machine.cpu_family(), 'Linux'),
+        '../include/arch' / host_machine.cpu_family(),
+        '../include/arch' / host_machine.cpu_family() / 'Linux',
     ),
     common_inc,
 ]
@@ -94,9 +94,9 @@ common_lib = static_library('test_pal',
 
 # This file is needed to provide an entry point to the executable: GCC expects a symbol named
 # `_start` that prepares the stack layout (argc, argv, env) and jumps into `main`.
-user_start_src = files(join_paths('crt_init', 'arch', host_machine.cpu_family(), 'user_start.S'))
+user_start_src = files('crt_init' / 'arch' / host_machine.cpu_family() / 'user_start.S')
 
-foreach name, params : tests
+foreach name, params : testparams
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
     # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
     pie = params.get('pie', false)

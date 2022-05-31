@@ -71,7 +71,7 @@ libpal_skeleton = shared_library('pal',
     ],
 
     install: true,
-    install_dir: join_paths(pkglibdir, 'skeleton'),
+    install_dir: pkglibdir / 'skeleton',
 )
 
 libpal_skeleton_dep = declare_dependency(
@@ -86,6 +86,6 @@ if debug
         output: 'libpal.so.map',
 
         install: true,
-        install_dir: join_paths(pkglibdir, 'skeleton'),
+        install_dir: pkglibdir / 'skeleton',
     )
 endif

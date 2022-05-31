@@ -1,7 +1,7 @@
 conf = configuration_data()
 conf.set('VERSION', meson.project_version())
-conf.set('PKGLIBDIR', join_paths(get_option('prefix'), pkglibdir))
-conf.set('LIBDIR', join_paths(get_option('prefix'), get_option('libdir')))
+conf.set('PKGLIBDIR', prefix / pkglibdir)
+conf.set('LIBDIR', prefix / get_option('libdir'))
 conf.set('SYSLIBDIR', syslibdir)
 conf.set('SGX_ENABLED', sgx ? '1' : '0')
 
@@ -17,7 +17,7 @@ python_src = [
     'manifest.py',
 ]
 
-if enable_tests
+if tests
     python_src += [
         'ninja_syntax.py',
         'regression.py',
@@ -34,4 +34,4 @@ if sgx
     ]
 endif
 
-install_data(python_src, install_dir: python3_pkgdir)
+install_data(python_src, install_dir: python_pkgdir)
