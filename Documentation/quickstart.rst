@@ -64,7 +64,7 @@ Gramine installation, we clone the Gramine repo:
 
 .. parsed-literal::
 
-   git clone --depth 1 \https://github.com/gramineproject/gramine.git |stable-checkout|
+   git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
 
 We don't want to build Gramine (it is already installed on the system). Instead,
 we want to build and run the HelloWorld example. To build the HelloWorld

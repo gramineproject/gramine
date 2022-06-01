@@ -83,7 +83,7 @@ if 'READTHEDOCS' in os.environ:
     rtd_current_version = os.environ['READTHEDOCS_VERSION']
 
     if rtd_current_version.startswith('v'):
-        rst_stable_checkout = rtd_current_version
+        rst_stable_checkout = f'--branch {rtd_current_version}'
 
     elif rtd_current_version == 'stable':
         # we don't have a version, we may be able to check from git
@@ -91,7 +91,7 @@ if 'READTHEDOCS' in os.environ:
             tags = [tag for tag in subprocess.check_output(
                     ['git', 'tag', '--points-at']).decode().strip().split()
                 if tag.startswith('v')]
-            rst_stable_checkout = tags.pop()
+            rst_stable_checkout = f'--branch {tags.pop()}'
         except (subprocess.CalledProcessError, IndexError):
             pass
 
