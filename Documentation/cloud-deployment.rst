@@ -60,7 +60,7 @@ from there:
 
 .. parsed-literal::
 
-   git clone --depth 1 \https://github.com/gramineproject/gramine.git --branch |stable-checkout|
+   git clone --depth 1 --branch |stable-checkout| \https://github.com/gramineproject/gramine.git
 
 To build the HelloWorld application, we need the ``gcc`` compiler and the
 ``make`` build system::
