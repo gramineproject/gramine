@@ -78,7 +78,7 @@ pygments_style = None
 highlight_language = 'c'
 primary_domain = 'c'
 
-rst_stable_checkout = '\\'
+rst_stable_checkout = 'master'
 if 'READTHEDOCS' in os.environ:
     rtd_current_version = os.environ['READTHEDOCS_VERSION']
 
