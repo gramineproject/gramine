@@ -110,13 +110,25 @@ bool is_wrfsbase_supported(void) {
     return true;
 }
 
-int create_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct) {
+int create_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
+                   sgx_arch_token_t* token) {
     assert(secs->size && IS_POWER_OF_2(secs->size));
     assert(IS_ALIGNED(secs->base, secs->size));
 
-    secs->ssa_frame_size = SSA_FRAME_SIZE / g_page_size; /* SECS expects SSA frame size in pages */
-    secs->misc_select    = sigstruct->body.misc_select;
+    /* SECS expects SSA frame size in pages */
+    secs->ssa_frame_size = SSA_FRAME_SIZE / g_page_size;
+
+    /* DCAP platforms do not use SGX tokens so we get enclave attributes from SIGSTRUCT instead,
+     * but EPID platforms require SECS to be populated from the SGX token */
+#ifdef SGX_DCAP
+    __UNUSED(token);
+    secs->misc_select = sigstruct->body.misc_select;
     memcpy(&secs->attributes, &sigstruct->body.attributes, sizeof(sgx_attributes_t));
+#else
+    __UNUSED(sigstruct);
+    secs->misc_select = token->masked_misc_select_le;
+    memcpy(&secs->attributes, &token->body.attributes, sizeof(sgx_attributes_t));
+#endif
 
     /* Do not initialize secs->mr_signer and secs->mr_enclave here as they are
      * not used by ECREATE to populate the internal SECS. SECS's mr_enclave is

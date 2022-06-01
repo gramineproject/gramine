@@ -305,7 +305,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
     enclave_secs.size = enclave->size;
-    ret = create_enclave(&enclave_secs, &enclave_sigstruct);
+    ret = create_enclave(&enclave_secs, &enclave_sigstruct, &enclave_token);
     if (ret < 0) {
         log_error("Creating enclave failed: %d", ret);
         goto out;
