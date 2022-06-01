@@ -395,6 +395,11 @@ fine on native Linux but fails under Gramine::
          $ gramine-test pytest -v
          $ gramine-test --sgx pytest -v
 
+         # build and run LibOS ABI tests (currently only for x86_64)
+         $ cd LibOS/shim/test/abi/${arch}
+         $ gramine-test pytest -v
+         $ gramine-test --sgx pytest -v
+
          # build and run LibOS FS tests
          $ cd LibOS/shim/test/fs
          $ gramine-test pytest -v
