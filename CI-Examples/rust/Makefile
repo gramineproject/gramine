@@ -59,7 +59,7 @@ GRAMINE = gramine-sgx
 endif
 
 .PHONY: start-gramine-server
-start-gramine-server: all
+start-gramine-server:
 	$(GRAMINE) rust-hyper-http-server
 
 .PHONY: clean
