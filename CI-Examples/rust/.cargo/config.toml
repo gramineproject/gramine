@@ -1,0 +1,3 @@
+# Emit the .d file with paths relative to the project directory, so that Make
+# understands that they refer to the same target that we wrote in the Makefile.
+build.dep-info-basedir = "."
