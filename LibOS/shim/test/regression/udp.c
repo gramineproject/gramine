@@ -16,6 +16,27 @@
 #define PORT 9930
 #define PACKET_SIZE 0x40
 
+static struct {
+    size_t send_size;
+    size_t recv_size;
+    int recv_flags;
+    ssize_t expected_return_value;
+    int expected_flags;
+} g_test_cases[] = {
+    {
+        .send_size = PACKET_SIZE, .recv_size = PACKET_SIZE / 2, .recv_flags = 0,
+        .expected_return_value = PACKET_SIZE / 2, .expected_flags = MSG_TRUNC,
+    },
+    {
+        .send_size = PACKET_SIZE, .recv_size = PACKET_SIZE / 2, .recv_flags = MSG_TRUNC,
+        .expected_return_value = PACKET_SIZE, .expected_flags = MSG_TRUNC,
+    },
+    {
+        .send_size = PACKET_SIZE / 2, .recv_size = PACKET_SIZE, .recv_flags = MSG_TRUNC,
+        .expected_return_value = PACKET_SIZE / 2, .expected_flags = 0,
+    },
+};
+
 static void server(int pipefd) {
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (s < 0)
@@ -42,36 +63,32 @@ static void server(int pipefd) {
         errx(EXIT_FAILURE, "server write on pipe returned zero");
     }
 
-    char buf[PACKET_SIZE] = { 0 };
-    struct iovec iovec = {
-        .iov_base = buf,
-        .iov_len = sizeof(buf) / 2,
-    };
-    struct msghdr msg = {
-        .msg_iov = &iovec,
-        .msg_iovlen = 1,
-    };
-    ssize_t size = recvmsg(s, &msg, /*flags=*/0);
-    if (size < 0) {
-        err(EXIT_FAILURE, "recvmsg 1");
-    }
-    if ((size_t)size != iovec.iov_len) {
-        errx(EXIT_FAILURE, "short read in udp: %ld", size);
-    }
-    if (msg.msg_flags != MSG_TRUNC) {
-        errx(EXIT_FAILURE, "wrong flags returned 1: %d", msg.msg_flags);
-    }
-
-    msg.msg_flags = 0;
-    size = recvmsg(s, &msg, MSG_TRUNC);
-    if (size < 0) {
-        err(EXIT_FAILURE, "recvmsg 2");
-    }
-    if ((size_t)size != PACKET_SIZE) {
-        errx(EXIT_FAILURE, "wrong size return with MSG_TRUNC: %ld", size);
-    }
-    if (msg.msg_flags != MSG_TRUNC) {
-        errx(EXIT_FAILURE, "wrong flags returned 1: %d", msg.msg_flags);
+    for (size_t i = 0; i < sizeof(g_test_cases) / sizeof(g_test_cases[0]); i++) {
+        char* buf = malloc(g_test_cases[i].recv_size);
+        if (!buf) {
+            err(EXIT_FAILURE, "case %zu: malloc failed", i);
+        }
+        struct iovec iovec = {
+            .iov_base = buf,
+            .iov_len = g_test_cases[i].recv_size,
+        };
+        struct msghdr msg = {
+            .msg_iov = &iovec,
+            .msg_iovlen = 1,
+        };
+        ssize_t size = recvmsg(s, &msg, g_test_cases[i].recv_flags);
+        if (size < 0) {
+            err(EXIT_FAILURE, "case %zu: recvmsg failed", i);
+        }
+        if (size != g_test_cases[i].expected_return_value) {
+            errx(EXIT_FAILURE, "case %zu: recvmsg returned: %ld, expected: %ld", i, size,
+                 g_test_cases[i].expected_return_value);
+        }
+        if (msg.msg_flags != g_test_cases[i].expected_flags) {
+            errx(EXIT_FAILURE, "case %zu: recvmsg output flags: %#x, expected: %#x", i,
+                 msg.msg_flags, g_test_cases[i].expected_flags);
+        }
+        free(buf);
     }
 
     if (close(s) < 0)
@@ -102,22 +119,21 @@ static void client(int pipefd) {
     if (inet_aton(SRV_IP, &sa.sin_addr) != 1)
         errx(EXIT_FAILURE, "client inet_aton");
 
-    char buf[PACKET_SIZE] = { 0 };
-
-    ssize_t size = sendto(s, buf, sizeof(buf), /*flags=*/0, (void*)&sa, sizeof(sa));
-    if (size < 0) {
-        err(EXIT_FAILURE, "sendto 1");
-    }
-    if (size != sizeof(buf)) {
-        errx(EXIT_FAILURE, "short udp send 1");
-    }
-
-    size = sendto(s, buf, sizeof(buf), /*flags=*/0, (void*)&sa, sizeof(sa));
-    if (size < 0) {
-        err(EXIT_FAILURE, "sendto 2");
-    }
-    if (size != sizeof(buf)) {
-        errx(EXIT_FAILURE, "short udp send 2");
+    for (size_t i = 0; i < sizeof(g_test_cases) / sizeof(g_test_cases[0]); i++) {
+        char* buf = calloc(1, g_test_cases[i].send_size);
+        if (!buf) {
+            err(EXIT_FAILURE, "case %zu: malloc failed", i);
+        }
+        ssize_t size = sendto(s, buf, g_test_cases[i].send_size, /*flags=*/0, (void*)&sa,
+                              sizeof(sa));
+        if (size < 0) {
+            err(EXIT_FAILURE, "case %zu: sendto failed", i);
+        }
+        if ((size_t)size != g_test_cases[i].send_size) {
+            errx(EXIT_FAILURE, "case %zu: sendto returned: %ld, expected: %ld", i, size,
+                 g_test_cases[i].send_size);
+        }
+        free(buf);
     }
 
     if (close(s) < 0)

@@ -1449,21 +1449,19 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
         goto out;
     }
 
-    size_t ret_size = retval;
     if (!(flags & MSG_TRUNC)) {
-        if (ret_size > size) {
+        if ((size_t)retval > size) {
             retval = -EPERM;
             goto out;
         }
     } else {
         /* Little sanity check - there are no such big packets. Can help user apps doing some
          * arithmetic on the return value without checking for overflows. */
-        if (ret_size > (1ul << 56)) {
+        if ((size_t)retval > (1ul << 56)) {
             retval = -EPERM;
             goto out;
         }
     }
-    size = MIN(size, ret_size);
 
     if (addr && addrlen) {
         size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
@@ -1487,8 +1485,9 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
 
     char* urts_buf = READ_ONCE(ms->ms_buf);
     size_t urts_buf_idx = 0;
-    for (size_t i = 0; i < iov_len && urts_buf_idx < size; i++) {
-        size_t this_size = MIN(size - urts_buf_idx, iov[i].iov_len);
+    size_t data_size = MIN(size, (size_t)retval);
+    for (size_t i = 0; i < iov_len && urts_buf_idx < data_size; i++) {
+        size_t this_size = MIN(data_size - urts_buf_idx, iov[i].iov_len);
         if (!sgx_copy_to_enclave(iov[i].iov_base, iov[i].iov_len,
                                  urts_buf + urts_buf_idx, this_size)) {
             retval = -EPERM;
@@ -1497,7 +1496,7 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
         urts_buf_idx += this_size;
     }
 
-    retval = ret_size;
+    /* `retval` already set. */
 
 out:
     sgx_reset_ustack(old_ustack);

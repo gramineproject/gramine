@@ -582,7 +582,7 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  * \param      iov             Array of buffers for received data.
  * \param      iov_len         Length of \p iov array.
  * \param[out] out_total_size  On success contains the number of bytes received (TCP) or the size of
- *                             the packed (UDP), which might be greater than the total size of
+ *                             the packet (UDP), which might be greater than the total size of
  *                             buffers in \p iov array.
  * \param[out] addr            Source address. Can be NULL to ignore the source address.
  * \param      is_nonblocking  If `true` this request should not block. Otherwise just use whatever
