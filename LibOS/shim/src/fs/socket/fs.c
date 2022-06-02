@@ -34,7 +34,8 @@ static ssize_t read(struct shim_handle* handle, void* buf, size_t size, file_off
         .iov_base = buf,
         .iov_len = size,
     };
-    return do_recvmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/NULL, /*flags=*/0);
+    unsigned int flags = 0;
+    return do_recvmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/NULL, &flags);
 }
 
 static ssize_t write(struct shim_handle* handle, const void* buf, size_t size, file_off_t* pos) {
@@ -49,7 +50,8 @@ static ssize_t write(struct shim_handle* handle, const void* buf, size_t size, f
 static ssize_t readv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
                      file_off_t* pos) {
     __UNUSED(pos);
-    return do_recvmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/NULL, /*flags=*/0);
+    unsigned int flags = 0;
+    return do_recvmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/NULL, &flags);
 }
 
 static ssize_t writev(struct shim_handle* handle, struct iovec* iov, size_t iov_len,

@@ -575,6 +575,11 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
             }
         }
     }
+    if (is_recv) {
+        if (!is_user_memory_writable(&user_msg->msg_flags, sizeof(user_msg->msg_flags))) {
+            return -EFAULT;
+        }
+    }
     return 0;
 }
 
@@ -732,18 +737,18 @@ out:
 }
 
 ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
-                   size_t* addrlen, unsigned int flags) {
+                   size_t* addrlen, unsigned int* flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
     }
-    if (!WITHIN_MASK(flags, MSG_PEEK | MSG_DONTWAIT)) {
+    if (!WITHIN_MASK(*flags, MSG_PEEK | MSG_DONTWAIT | MSG_TRUNC)) {
         return -EOPNOTSUPP;
     }
 
     /* Note this only indicates whether this operation was requested to be nonblocking. If it's
      * `false`, but the handle is in nonblocking mode, this read won't block. */
-    bool is_nonblocking = flags & MSG_DONTWAIT;
+    bool is_nonblocking = *flags & MSG_DONTWAIT;
     struct shim_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
@@ -779,7 +784,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
      */
     lock(&sock->recv_lock);
 
-    if (flags & MSG_PEEK) {
+    if (*flags & MSG_PEEK) {
         if (sock->type != SOCK_STREAM) {
             log_warning("%s: MSG_PEEK on non stream sockets is not supported", __func__);
             ret = -EOPNOTSUPP;
@@ -839,7 +844,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
             size += this_size;
         }
 
-        if (!(flags & MSG_PEEK)) {
+        if (!(*flags & MSG_PEEK)) {
             sock->peek.data_size -= size;
             memmove(sock->peek.buf, sock->peek.buf + size, sock->peek.data_size);
         }
@@ -850,13 +855,14 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
         goto out;
     }
 
-    assert(!(flags & MSG_PEEK));
+    assert(!(*flags & MSG_PEEK));
 
     size_t size = 0;
     ret = sock->ops->recv(handle, iov, iov_len, &size, addr, addrlen, is_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/true, !ret ? size < total_size : false);
     if (!ret) {
-        ret = size;
+        ret = *flags & MSG_TRUNC ? size : MIN(size, total_size);
+        *flags = size > total_size ? MSG_TRUNC : 0;
     }
 
 out:
@@ -902,7 +908,7 @@ long shim_do_recvfrom(int fd, void* buf, size_t len, unsigned int flags, void* a
         .iov_base = buf,
         .iov_len = len,
     };
-    ssize_t ret = do_recvmsg(handle, &iov, 1, addr, &addrlen, flags);
+    ssize_t ret = do_recvmsg(handle, &iov, 1, addr, &addrlen, &flags);
     if (ret >= 0 && addr) {
         *_addrlen = addrlen;
     }
@@ -922,9 +928,12 @@ long shim_do_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
     }
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
-    ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_name, &addrlen, flags);
-    if (ret >= 0 && msg->msg_name) {
-        msg->msg_namelen = addrlen;
+    ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_name, &addrlen, &flags);
+    if (ret >= 0) {
+        if (msg->msg_name) {
+            msg->msg_namelen = addrlen;
+        }
+        msg->msg_flags = flags;
     }
     put_handle(handle);
     return ret;
@@ -963,7 +972,9 @@ long shim_do_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned i
     for (size_t i = 0; i < vlen; i++) {
         struct msghdr* hdr = &msg[i].msg_hdr;
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
-        ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_name, &addrlen, flags);
+        unsigned int this_flags = flags;
+        ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_name, &addrlen,
+                         &this_flags);
         if (ret < 0) {
             if (i == 0) {
                 /* Return error directly. */
@@ -981,6 +992,7 @@ long shim_do_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned i
         if (hdr->msg_name) {
             hdr->msg_namelen = addrlen;
         }
+        hdr->msg_flags = this_flags;
         msg[i].msg_len = ret;
     }
 
@@ -1331,7 +1343,7 @@ static int get_socket_option(struct shim_handle* handle, int optname, char* optv
 
     switch (optname) {
         case SO_ACCEPTCONN:
-            value.i = sock->state == SOCK_LISTENING ? 1 : 0;
+            value.i = sock->state == SOCK_LISTENING;
             goto out;
         case SO_DOMAIN:
             value.i = sock->domain;
@@ -1383,7 +1395,7 @@ static int get_socket_option(struct shim_handle* handle, int optname, char* optv
             value.i = attr.socket.keepalive;
             break;
         case SO_LINGER:
-            value.linger.l_onoff = attr.socket.linger ? 1 : 0;
+            value.linger.l_onoff = attr.socket.linger;
             value.linger.l_linger = attr.socket.linger;
             value_len = sizeof(value.linger);
             break;

@@ -59,6 +59,7 @@ struct mmsghdr {
 /* Flags. */
 #define MSG_OOB 0x01
 #define MSG_PEEK 0x02
+#define MSG_TRUNC 0x20
 #define MSG_DONTWAIT 0x40
 #define MSG_NOSIGNAL 0x4000
 

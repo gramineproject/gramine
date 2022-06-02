@@ -1387,7 +1387,7 @@ out:
 
 ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, size_t* addrlenptr,
                    void* control, size_t* controllenptr, unsigned int flags) {
-    ssize_t retval = 0;
+    ssize_t retval;
     void* obuf = NULL;
     bool is_obuf_mapped = false;
     size_t addrlen = addrlenptr ? *addrlenptr : 0;
@@ -1440,51 +1440,64 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
 
     retval = sgx_exitless_ocall(OCALL_RECV, ms);
 
-    if (retval < 0 && retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF &&
-            retval != -ECONNREFUSED && retval != -EINTR && retval != -EINVAL && retval != -ENOMEM &&
-            retval != -ENOTCONN && retval != -ENOTSOCK) {
-        retval = -EPERM;
+    if (retval < 0) {
+        if (retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF
+                && retval != -ECONNREFUSED && retval != -EINTR && retval != -EINVAL
+                && retval != -ENOMEM && retval != -ENOTCONN && retval != -ENOTSOCK) {
+            retval = -EPERM;
+        }
+        goto out;
     }
 
-    if (retval >= 0) {
-        if ((size_t)retval > size) {
+    size_t ret_size = retval;
+    if (!(flags & MSG_TRUNC)) {
+        if (ret_size > size) {
             retval = -EPERM;
             goto out;
         }
-        if (addr && addrlen) {
-            size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
-            if (!sgx_copy_to_enclave(addr, addrlen, READ_ONCE(ms->ms_addr), untrusted_addrlen)) {
-                retval = -EPERM;
-                goto out;
-            }
-            *addrlenptr = untrusted_addrlen;
-        }
-
-        if (control && controllen) {
-            size_t untrusted_controllen = READ_ONCE(ms->ms_controllen);
-            bool copied = sgx_copy_to_enclave(control, controllen, READ_ONCE(ms->ms_control),
-                                              untrusted_controllen);
-            if (!copied) {
-                retval = -EPERM;
-                goto out;
-            }
-            *controllenptr = untrusted_controllen;
-        }
-
-        if (retval > 0) {
-            char* urts_buf = READ_ONCE(ms->ms_buf);
-            size_t urts_buf_idx = 0;
-            for (size_t i = 0; i < iov_len && urts_buf_idx < (size_t)retval; i++) {
-                size_t this_size = MIN((size_t)retval - urts_buf_idx, iov[i].iov_len);
-                if (!sgx_copy_to_enclave(iov[i].iov_base, iov[i].iov_len,
-                                         urts_buf + urts_buf_idx, this_size)) {
-                    retval = -EPERM;
-                    goto out;
-                }
-                urts_buf_idx += this_size;
-            }
+    } else {
+        /* Little sanity check - there are no such big packets. Can help user apps doing some
+         * arithmetic on the return value without checking for overflows. */
+        if (ret_size > (1ul << 56)) {
+            retval = -EPERM;
+            goto out;
         }
     }
+    size = MIN(size, ret_size);
+
+    if (addr && addrlen) {
+        size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
+        if (!sgx_copy_to_enclave(addr, addrlen, READ_ONCE(ms->ms_addr), untrusted_addrlen)) {
+            retval = -EPERM;
+            goto out;
+        }
+        *addrlenptr = untrusted_addrlen;
+    }
+
+    if (control && controllen) {
+        size_t untrusted_controllen = READ_ONCE(ms->ms_controllen);
+        bool copied = sgx_copy_to_enclave(control, controllen, READ_ONCE(ms->ms_control),
+                                          untrusted_controllen);
+        if (!copied) {
+            retval = -EPERM;
+            goto out;
+        }
+        *controllenptr = untrusted_controllen;
+    }
+
+    char* urts_buf = READ_ONCE(ms->ms_buf);
+    size_t urts_buf_idx = 0;
+    for (size_t i = 0; i < iov_len && urts_buf_idx < size; i++) {
+        size_t this_size = MIN(size - urts_buf_idx, iov[i].iov_len);
+        if (!sgx_copy_to_enclave(iov[i].iov_base, iov[i].iov_len,
+                                 urts_buf + urts_buf_idx, this_size)) {
+            retval = -EPERM;
+            goto out;
+        }
+        urts_buf_idx += this_size;
+    }
+
+    retval = ret_size;
 
 out:
     sgx_reset_ustack(old_ustack);

@@ -422,7 +422,7 @@ typedef struct _PAL_STREAM_ATTR {
     PAL_NUM pending_size;
     union {
         struct {
-            PAL_NUM linger;
+            uint64_t linger;
             size_t recv_buf_size;
             size_t send_buf_size;
             uint64_t receivetimeout_us, sendtimeout_us;
@@ -581,7 +581,9 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  * \param      handle          Handle to the socket.
  * \param      iov             Array of buffers for received data.
  * \param      iov_len         Length of \p iov array.
- * \param[out] out_size        On success contains the number of bytes received.
+ * \param[out] out_total_size  On success contains the number of bytes received (TCP) or the size of
+ *                             the packed (UDP), which might be greater than the total size of
+ *                             buffers in \p iov array.
  * \param[out] addr            Source address. Can be NULL to ignore the source address.
  * \param      is_nonblocking  If `true` this request should not block. Otherwise just use whatever
  *                             mode the handle is in.
@@ -590,7 +592,7 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  *
  * Data is received atomically, i.e. data from two `DkSocketRecv` calls will not be interleaved.
  */
-int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
                  struct pal_socket_addr* addr, bool is_nonblocking);
 
 /*

@@ -212,7 +212,7 @@ int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                      struct pal_socket_addr* out_local_addr);
 int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr);
-int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
                   struct pal_socket_addr* addr, bool is_nonblocking);
 
 /* DkProcess and DkThread calls */

@@ -28,12 +28,12 @@ int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
                   struct pal_socket_addr* addr, bool is_nonblocking) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

@@ -175,7 +175,7 @@ static void client(void) {
     memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
     address.sin_port   = htons((PORT));
-    if (inet_aton(SRV_IP, &address.sin_addr) == 0) {
+    if (inet_aton(SRV_IP, &address.sin_addr) != 1) {
         perror("inet_aton");
         exit(1);
     }

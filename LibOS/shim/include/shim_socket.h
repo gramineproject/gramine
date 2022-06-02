@@ -90,7 +90,9 @@ struct shim_sock_ops {
      * \param         handle          Handle.
      * \param         iov             Array of buffers to read to.
      * \param         iov_len         Length of \p iov.
-     * \param[out]    out_size        On success contains the number of bytes sent.
+     * \param[out]    out_total_size  On success contains the number of bytes received (STREAM) or
+     *                                the datagram size (DGRAM), which might be bigger than
+     *                                the total size of buffers in \p iov array.
      * \param[out]    addr            On success contains the address data was received from. May
      *                                be NULL.
      * \param[in,out] addrlen         Length of \p addr. On success updated to the actual length of
@@ -99,14 +101,14 @@ struct shim_sock_ops {
      * \param         is_nonblocking  If `true` this request should not block. Otherwise just use
      *                                whatever mode the handle is in.
      */
-    int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t* addrlen, bool is_nonblocking);
+    int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                size_t* out_total_size, void* addr, size_t* addrlen, bool is_nonblocking);
 };
 
 extern struct shim_sock_ops sock_unix_ops;
 extern struct shim_sock_ops sock_ip_ops;
 
 ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
-                   size_t* addrlen, unsigned int flags);
+                   size_t* addrlen, unsigned int* flags);
 ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t addrlen, unsigned int flags);

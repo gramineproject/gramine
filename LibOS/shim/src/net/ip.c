@@ -316,10 +316,10 @@ static int get_sock_tcp_option(struct shim_handle* handle, int optname, void* op
     int val;
     switch (optname) {
         case TCP_CORK:
-            val = attr.socket.tcp_cork ? 1 : 0;
+            val = attr.socket.tcp_cork;
             break;
         case TCP_NODELAY:
-            val = attr.socket.tcp_nodelay ? 1 : 0;
+            val = attr.socket.tcp_nodelay;
             break;
         default:
             return -ENOPROTOOPT;
@@ -344,7 +344,7 @@ static int get_sock_ipv6_option(struct shim_handle* handle, int optname, void* o
     int val;
     switch (optname) {
         case IPV6_V6ONLY:
-            val = attr.socket.ipv6_v6only ? 1 : 0;
+            val = attr.socket.ipv6_v6only;
             break;
         default:
             return -ENOPROTOOPT;
@@ -441,8 +441,8 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     return ret;
 }
 
-static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* _addr, size_t* addrlen, bool is_nonblocking) {
+static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+                size_t* out_total_size, void* _addr, size_t* addrlen, bool is_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     switch (handle->info.sock.type) {
@@ -467,7 +467,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     }
 
     struct pal_socket_addr pal_ip_addr;
-    int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_size,
+    int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_total_size,
                            _addr ? &pal_ip_addr : NULL, is_nonblocking);
     free(pal_iov);
     if (ret < 0) {

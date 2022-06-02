@@ -33,14 +33,14 @@ int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     return _DkSocketConnect(handle, addr, local_addr);
 }
 
-int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                  struct pal_socket_addr* addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
-    return _DkSocketSend(handle, iov, iov_len, size_out, addr);
+    return _DkSocketSend(handle, iov, iov_len, out_size, addr);
 }
 
-int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* size_out,
+int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
                  struct pal_socket_addr* addr, bool is_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
-    return _DkSocketRecv(handle, iov, iov_len, size_out, addr, is_nonblocking);
+    return _DkSocketRecv(handle, iov, iov_len, out_total_size, addr, is_nonblocking);
 }

@@ -1220,17 +1220,8 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('Data: This is packet 9', stdout)
 
     def test_200_socket_udp(self):
-        stdout, _ = self.run_binary(['udp'], timeout=50)
-        self.assertIn('This is packet 0', stdout)
-        self.assertIn('This is packet 1', stdout)
-        self.assertIn('This is packet 2', stdout)
-        self.assertIn('This is packet 3', stdout)
-        self.assertIn('This is packet 4', stdout)
-        self.assertIn('This is packet 5', stdout)
-        self.assertIn('This is packet 6', stdout)
-        self.assertIn('This is packet 7', stdout)
-        self.assertIn('This is packet 8', stdout)
-        self.assertIn('This is packet 9', stdout)
+        stdout, _ = self.run_binary(['udp'])
+        self.assertIn('TEST OK', stdout)
 
     def test_300_socket_tcp_msg_peek(self):
         stdout, _ = self.run_binary(['tcp_msg_peek'], timeout=50)
