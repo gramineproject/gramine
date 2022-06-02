@@ -4,7 +4,7 @@ Confidential Computing Zoo project
 Confidential Computing Zoo (CCZoo) is a collection of code-ready reference
 solutions. The CCZoo project provides developer guides and tutorials, in
 order to facilitate the developers to build their own end-to-end Confidential
-Computing solutions more easily. Some of the solutions are also validated on the
+Computing solutions more easily. Some of the solutions are also verified on the
 public cloud services, such as Alibaba Cloud, Tencent Cloud, AWS, Azure, etc.
 
 The project is an Intel-backed effort. However, please note that CCZoo is
