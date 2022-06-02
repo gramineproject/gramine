@@ -14,6 +14,10 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
+# Note that we're compiling in release mode regardless of the DEBUG setting passed
+# to Make, as compiling in debug mode results in an order of magnitude's difference in
+# performance that makes testing by running a benchmark with ab painful. The primary goal
+# of the DEBUG setting is to control Gramine's loglevel.
 -include $(SELF_EXE).d
 $(SELF_EXE): Cargo.toml
 	cargo build --release
