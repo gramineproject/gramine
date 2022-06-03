@@ -508,6 +508,8 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
 
     unsigned int flags = is_nonblocking ? MSG_DONTWAIT : 0;
     if (handle->sock.type == PAL_SOCKET_UDP) {
+        /* Reads from PAL UDP sockets always return the full packed length. See also the definition
+         * of `DkSocketRecv`. */
         flags |= MSG_TRUNC;
     }
     ssize_t ret = ocall_recv(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
