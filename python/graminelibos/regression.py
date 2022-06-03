@@ -2,9 +2,11 @@ import contextlib
 import logging
 import os
 import pathlib
+import select
 import signal
 import subprocess
 import sys
+import time
 import unittest
 
 import graminelibos
@@ -22,15 +24,62 @@ def expectedFailureIf(predicate):
         return unittest.expectedFailure
     return lambda func: func
 
-
 def run_command(cmd, *, timeout, can_fail=False, **kwds):
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           preexec_fn=os.setsid, **kwds) as proc:
         timed_out = False
-        try:
-            raw_stdout, raw_stderr = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            timed_out = True
+
+        # We implement this manually so that the captured output is also printed on our
+        # stdout/stderr as it is being generated.
+        stdout_closed = False
+        stderr_closed = False
+        raw_stdout = b''
+        raw_stderr = b''
+        time_end = time.time() + timeout
+        while True:
+            time_remaining = time_end - time.time()
+            if time_remaining < 0:
+                # if we've timed out, use a timeout of 0 to copy all leftover data
+                time_remaining = 0
+                timed_out = True
+
+            poll_reads = []
+            if not stdout_closed:
+                poll_reads.append(proc.stdout.raw)
+            if not stderr_closed:
+                poll_reads.append(proc.stderr.raw)
+
+            if not poll_reads:
+                break
+
+            pending_reads, _, _ = select.select(poll_reads, [], [], time_remaining)
+            if not pending_reads:
+                # this can only happen if we've timed out and both pipes are empty
+                break
+
+            if proc.stdout.raw in pending_reads:
+                data = proc.stdout.raw.read(1024)
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+                raw_stdout += data
+
+                if not data:
+                    stdout_closed = True
+
+            if proc.stderr.raw in pending_reads:
+                data = proc.stderr.raw.read(1024)
+                sys.stderr.buffer.write(data)
+                sys.stderr.buffer.flush()
+                raw_stderr += data
+
+                if not data:
+                    stderr_closed = True
+
+        # once we're here, we've either timed out, or both pipes got closed and the process is about
+        # to exit
+        time_remaining = time_end - time.time()
+        if time_remaining > 0:
+            proc.wait(time_remaining)
 
         proc.poll()
         main_returncode = proc.returncode
@@ -53,15 +102,8 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         except ProcessLookupError:
             pass
 
-        if timed_out:
-            raw_stdout, raw_stderr = proc.communicate()
-
         stdout = raw_stdout.decode(errors='surrogateescape')
         stderr = raw_stderr.decode(errors='surrogateescape')
-
-        # Print stdout/stderr so that pytest can capture it
-        sys.stdout.write(stdout)
-        sys.stderr.write(stderr)
 
         if timed_out:
             if main_returncode is not None:

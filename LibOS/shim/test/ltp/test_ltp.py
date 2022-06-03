@@ -183,7 +183,7 @@ def check_must_pass(passed, failed, must_pass):
         pytest.fail('All subtests skipped, replace must-pass with skip')
 
 
-def test_ltp(cmd, section):
+def test_ltp(cmd, section, capsys):
     must_pass = section.getintset('must-pass')
 
     loader = 'gramine-sgx' if HAS_SGX else 'gramine-direct'
@@ -193,7 +193,11 @@ def test_ltp(cmd, section):
     logging.info('command: %s', full_cmd)
     logging.info('must_pass: %s', list(must_pass) if must_pass else 'all')
 
-    returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
+    if section.name in ['fcntl14', 'fdatasync01']:
+        with capsys.disabled():
+            returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
+    else:
+        returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
 
     # Parse output regardless of whether `must_pass` is specified: unfortunately some tests
     # do not exit with non-zero code when failing, because they rely on `MAP_SHARED` (which
