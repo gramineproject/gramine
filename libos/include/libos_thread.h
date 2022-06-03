@@ -128,6 +128,9 @@ struct libos_thread {
     libos_tcb_t* libos_tcb;
     void* frameptr;
 
+    /* Current CPU affinity mask for this thread. */
+    uint64_t* cpumask;
+
     REFTYPE ref_count;
     struct libos_lock lock;
 };

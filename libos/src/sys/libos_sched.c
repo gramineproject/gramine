@@ -14,6 +14,7 @@
 
 #include "api.h"
 #include "libos_internal.h"
+#include "libos_lock.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "pal.h"
@@ -164,19 +165,61 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int cpumask_size,
         return -ESRCH;
     }
 
-    ret = PalThreadSetCpuAffinity(thread->pal_handle, cpumask_size, user_mask_ptr);
-    if (ret < 0) {
+    /* User mask is being manipulated below, so make a local copy of the mask */
+    uint64_t* cpumask = malloc(cpumask_size);
+    if (!cpumask) {
         put_thread(thread);
-        return pal_to_unix_errno(ret);
+        return -ENOMEM;
+    }
+    memcpy(cpumask, user_mask_ptr, cpumask_size);
+
+    /* Verify validity of the CPU affinity (e.g. that it contains at least one online core). */
+    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
+    size_t cores_cnt = 0;
+    for (size_t i = 0; i < MIN(threads_cnt, cpumask_size * BITS_IN_BYTE); i++) {
+        size_t idx = i / BITS_IN_TYPE(unsigned long);
+        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+            if (!g_pal_public_state->topo_info.threads[i].is_online) {
+                /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
+                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
+            } else {
+                cores_cnt++;
+            }
+        }
     }
 
+    /* Intersection of online cores and the user supplied mask is empty. */
+    if (cores_cnt == 0) {
+        free(cpumask);
+        put_thread(thread);
+        return -EINVAL;
+    }
+
+    lock(&thread->lock);
+    ret = PalThreadSetCpuAffinity(thread->pal_handle, cpumask_size, cpumask);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    /* User can pass CPU affinity mask lesser than what Gramine might have allocated. So clear
+     * previous affinity before copying the new affinity. */
+    memset(thread->cpumask, 0, bitmask_size_in_bytes);
+    /* User provided CPU affinity mask can contain offlined cores, so copy only the intersection of
+     * online cores and the user supplied mask. */
+    memcpy(thread->cpumask, cpumask, MIN(bitmask_size_in_bytes, cpumask_size));
+
+    ret = 0;
+out:
+    unlock(&thread->lock);
+    free(cpumask);
     put_thread(thread);
-    return 0;
+    return ret;
 }
 
 long libos_syscall_sched_getaffinity(pid_t pid, unsigned int cpumask_size,
                                      unsigned long* user_mask_ptr) {
-    int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
 
     /* Check if user_mask_ptr is valid */
@@ -213,11 +256,9 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int cpumask_size,
     }
 
     memset(user_mask_ptr, 0, cpumask_size);
-    ret = PalThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, user_mask_ptr);
-    if (ret < 0) {
-        put_thread(thread);
-        return pal_to_unix_errno(ret);
-    }
+    lock(&thread->lock);
+    memcpy(user_mask_ptr, thread->cpumask, MIN(cpumask_size, bitmask_size_in_bytes));
+    unlock(&thread->lock);
 
     put_thread(thread);
     /* on success, imitate Linux kernel implementation: see SYSCALL_DEFINE3(sched_getaffinity) */
