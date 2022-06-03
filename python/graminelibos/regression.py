@@ -2,9 +2,11 @@ import contextlib
 import logging
 import os
 import pathlib
+import select
 import signal
 import subprocess
 import sys
+import time
 import unittest
 
 import graminelibos
@@ -22,15 +24,67 @@ def expectedFailureIf(predicate):
         return unittest.expectedFailure
     return lambda func: func
 
-
 def run_command(cmd, *, timeout, can_fail=False, **kwds):
+    # pylint: disable=too-many-locals
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           preexec_fn=os.setsid, **kwds) as proc:
         timed_out = False
-        try:
-            raw_stdout, raw_stderr = proc.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            timed_out = True
+
+        class LoggingSplice:
+            def __init__(self, input_pipe, output_pipe):
+                self.logged_data = b''
+                self.closed = False
+                self.input_pipe = input_pipe
+                self.output_pipe = output_pipe
+
+            def pump_data(self, pending_reads):
+                if self.input_pipe in pending_reads:
+                    data = self.input_pipe.read(1024)
+                    self.output_pipe.write(data)
+                    self.output_pipe.flush()
+                    self.logged_data += data
+
+                    if not data:
+                        self.closed = True
+
+        stdout_splice = LoggingSplice(proc.stdout.raw, sys.stdout.buffer)
+        stderr_splice = LoggingSplice(proc.stderr.raw, sys.stderr.buffer)
+
+        # returns True if we've used only some of the time and more data can arrive later
+        def try_pump(timeout):
+            splices = [stdout_splice, stderr_splice]
+            poll_reads = [splice.input_pipe for splice in splices if not splice.closed]
+            if not poll_reads:
+                # both pipes are closed. select([]) would block, so exit now
+                return False
+
+            pending_reads, _, _ = select.select(poll_reads, [], [], timeout)
+            if not pending_reads:
+                # this can only happen if we've timed out and both pipes are empty
+                return False
+
+            for splice in splices:
+                splice.pump_data(pending_reads)
+            return True
+
+        # We implement this manually so that the captured output is also printed on our
+        # stdout/stderr as it is being generated.
+        time_end = time.time() + timeout
+        while True:
+            time_remaining = time_end - time.time()
+            if time_remaining < 0:
+                # if we've timed out, use a timeout of 0 to copy all leftover data
+                time_remaining = 0
+                timed_out = True
+
+            if not try_pump(time_remaining):
+                break
+
+        # once we're here, we've either timed out, or both pipes got closed and the process is about
+        # to exit
+        time_remaining = time_end - time.time()
+        if time_remaining > 0:
+            proc.wait(time_remaining)
 
         proc.poll()
         main_returncode = proc.returncode
@@ -53,15 +107,15 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         except ProcessLookupError:
             pass
 
-        if timed_out:
-            raw_stdout, raw_stderr = proc.communicate()
+        # Copy any output generated while we were busy killing the processes
+        while try_pump(0):
+            pass
+
+        raw_stdout = stdout_splice.logged_data
+        raw_stderr = stderr_splice.logged_data
 
         stdout = raw_stdout.decode(errors='surrogateescape')
         stderr = raw_stderr.decode(errors='surrogateescape')
-
-        # Print stdout/stderr so that pytest can capture it
-        sys.stdout.write(stdout)
-        sys.stderr.write(stderr)
 
         if timed_out:
             if main_returncode is not None:
