@@ -169,12 +169,17 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return pal_to_unix_errno(ret);
     }
 
+    ret = update_thread_cpuaffinity_mask(thread, cpumask_size, user_mask_ptr);
+    if (ret < 0) {
+        put_thread(thread);
+        return ret;
+    }
+
     put_thread(thread);
     return 0;
 }
 
 long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned long* user_mask_ptr) {
-    int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
 
     /* Check if user_mask_ptr is valid */
@@ -211,11 +216,7 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
     }
 
     memset(user_mask_ptr, 0, cpumask_size);
-    ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, user_mask_ptr);
-    if (ret < 0) {
-        put_thread(thread);
-        return pal_to_unix_errno(ret);
-    }
+    memcpy(user_mask_ptr, thread->cpumask, cpumask_size);
 
     put_thread(thread);
     /* on success, imitate Linux kernel implementation: see SYSCALL_DEFINE3(sched_getaffinity) */

@@ -84,6 +84,13 @@ static int clone_implementation_wrapper(void* arg_) {
 
     add_thread(my_thread);
 
+    int ret = update_thread_cpuaffinity_mask(my_thread, 0, NULL);
+    if (ret < 0) {
+        log_error("Failed to update thread cpu affinity mask");
+        put_thread(my_thread);
+        return -EINVAL;
+    }
+
     /* Copy regs before we let the parent release them. */
     PAL_CONTEXT regs;
     pal_context_copy(&regs, arg->regs);
