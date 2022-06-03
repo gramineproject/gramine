@@ -130,21 +130,21 @@ unmap:;
     return ret;
 }
 
-int update_thread_cpuaffinity_mask(struct shim_thread* cur_thread, unsigned int cpumask_size,
+int update_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
                                    unsigned long* cpumask) {
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
 
-    memset(cur_thread->cpumask, 0, sizeof(cur_thread->cpumask));
+    memset(thread->cpumask, 0, sizeof(thread->cpumask));
 
     if (!cpumask_size) {
-        /* Allocate memory to hold the thread's cpu affinity mask. */
+        /* Allocate memory to hold the thread's CPU affinity mask. */
         cpumask = malloc(bitmask_size_in_bytes);
         if (!cpumask)
             return -ENOMEM;
 
-        ret = DkThreadGetCpuAffinity(cur_thread->pal_handle, bitmask_size_in_bytes, cpumask);
+        ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, cpumask);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;
@@ -152,7 +152,7 @@ int update_thread_cpuaffinity_mask(struct shim_thread* cur_thread, unsigned int 
     }
 
     /* Verify the cpu affinity from untrusted host */
-    unsigned int mask_size;
+    size_t mask_size;
     size_t cnt = 0;
     if (cpumask_size >= bitmask_size_in_bytes || cpumask_size == 0) {
         cnt  = threads_cnt;
@@ -176,7 +176,7 @@ int update_thread_cpuaffinity_mask(struct shim_thread* cur_thread, unsigned int 
         }
     }
 
-    memcpy(cur_thread->cpumask, cpumask, mask_size);
+    memcpy(thread->cpumask, cpumask, mask_size);
     ret = 0;
 
 out:
@@ -281,7 +281,7 @@ static int init_main_thread(void) {
 
     ret = update_thread_cpuaffinity_mask(cur_thread, 0, NULL);
     if (ret < 0) {
-        log_error("Failed to update thread cpu affinity mask");
+        log_error("Failed to update thread CPU affinity mask");
         put_thread(cur_thread);
         return -EINVAL;
     }

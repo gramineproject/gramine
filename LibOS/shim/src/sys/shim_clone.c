@@ -86,7 +86,7 @@ static int clone_implementation_wrapper(void* arg_) {
 
     int ret = update_thread_cpuaffinity_mask(my_thread, 0, NULL);
     if (ret < 0) {
-        log_error("Failed to update thread cpu affinity mask");
+        log_error("Failed to update thread CPU affinity mask");
         put_thread(my_thread);
         return -EINVAL;
     }
