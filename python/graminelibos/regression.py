@@ -25,6 +25,7 @@ def expectedFailureIf(predicate):
     return lambda func: func
 
 def run_command(cmd, *, timeout, can_fail=False, **kwds):
+    # pylint: disable=too-many-locals
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                           preexec_fn=os.setsid, **kwds) as proc:
         timed_out = False
