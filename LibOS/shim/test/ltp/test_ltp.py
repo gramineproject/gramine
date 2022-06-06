@@ -193,7 +193,8 @@ def test_ltp(cmd, section, capsys):
     logging.info('command: %s', full_cmd)
     logging.info('must_pass: %s', list(must_pass) if must_pass else 'all')
 
-    if section.name in ['fcntl14', 'fdatasync01']:
+    live_output = os.getenv('GRAMINE_LTP_LIVE_OUTPUT') or ''
+    if section.name in live_output.split(','):
         with capsys.disabled():
             returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
     else:
