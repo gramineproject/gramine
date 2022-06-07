@@ -94,6 +94,7 @@ enum {
  * started by PAL (usually our LibOS). */
 struct pal_public_state {
     const char* host_type;
+    const char* attestation_type; /* currently only for Linux-SGX */
 
     /*
      * Handles and executables

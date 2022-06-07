@@ -22,6 +22,10 @@ fs.mounts = [
 
 sgx.debug = true
 
+sgx.remote_attestation = "{{ ra_type }}"
+sgx.ra_client_spid = "{{ ra_client_spid }}"
+sgx.ra_client_linkable = {{ 'true' if ra_client_linkable == '1' else 'false' }}
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:busybox",

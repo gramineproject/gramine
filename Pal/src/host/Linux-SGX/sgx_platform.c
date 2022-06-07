@@ -75,7 +75,7 @@ static int connect_aesm_service(void) {
 
 err:
     DO_SYSCALL(close, sock);
-    log_error("Cannot connect to aesm_service (tried " AESM_SOCKET_NAME_LEGACY " and "
+    log_error("Cannot connect to AESM service (tried " AESM_SOCKET_NAME_LEGACY " and "
               AESM_SOCKET_NAME_NEW " UNIX sockets).\nPlease check its status! (`service aesmd "
               "status` on Ubuntu)");
     return ret;
@@ -124,7 +124,7 @@ out:
     free(res_buf);
     DO_SYSCALL(close, aesm_socket);
     if (ret < 0) {
-        log_error("Cannot communicate with aesm_service (read/write returned error %d).\n"
+        log_error("Cannot communicate with AESM service (read/write returned error %d).\n"
                   "Please check its status! (`service aesmd status` on Ubuntu)", ret);
     }
     return ret;
@@ -146,13 +146,15 @@ int init_quoting_enclave_targetinfo(bool is_epid, sgx_target_info_t* qe_targetin
 
         ret = -EPERM;
         if (!res->initquoteres) {
-            log_error("aesm_service returned wrong message");
+            log_error("AESM service returned wrong message");
             goto failed;
         }
 
         Response__InitQuoteResponse* r = res->initquoteres;
         if (r->errorcode != 0) {
-            log_error("aesm_service returned error: %d", r->errorcode);
+            log_error("AESM service returned error %d; this may indicate that infrastructure for "
+                      "the EPID attestation requested by Gramine is missing on this machine",
+                      r->errorcode);
             goto failed;
         }
 
@@ -183,13 +185,15 @@ int init_quoting_enclave_targetinfo(bool is_epid, sgx_target_info_t* qe_targetin
 
         ret = -EPERM;
         if (!res->initquoteexres) {
-            log_error("aesm_service returned wrong message");
+            log_error("AESM service returned wrong message");
             goto failed;
         }
 
         Response__InitQuoteExResponse* r = res->initquoteexres;
         if (r->errorcode != 0) {
-            log_error("aesm_service returned error: %d", r->errorcode);
+            log_error("AESM service returned error %d; this may indicate that infrastructure for "
+                      "the DCAP attestation requested by Gramine is missing on this machine",
+                      r->errorcode);
             goto failed;
         }
 
@@ -244,18 +248,18 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
 
         ret = -EPERM;
         if (!res->getquoteexres) {
-            log_error("aesm_service returned wrong message");
+            log_error("AESM service returned wrong message");
             goto out;
         }
 
         Response__GetQuoteExResponse* r = res->getquoteexres;
         if (r->errorcode != 0) {
-            log_error("aesm_service returned error: %d", r->errorcode);
+            log_error("AESM service returned error %d", r->errorcode);
             goto out;
         }
 
         if (!r->has_quote || r->quote.len < sizeof(sgx_quote_t)) {
-            log_error("aesm_service returned invalid quote");
+            log_error("AESM service returned invalid quote");
             goto out;
         }
 
@@ -282,18 +286,18 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
 
         ret = -EPERM;
         if (!res->getquoteres) {
-            log_error("aesm_service returned wrong message");
+            log_error("AESM service returned wrong message");
             goto out;
         }
 
         Response__GetQuoteResponse* r = res->getquoteres;
         if (r->errorcode != 0) {
-            log_error("aesm_service returned error: %d", r->errorcode);
+            log_error("AESM service returned error %d", r->errorcode);
             goto out;
         }
 
         if (!r->has_quote || r->quote.len < sizeof(sgx_quote_t)) {
-            log_error("aesm_service returned invalid quote");
+            log_error("AESM service returned invalid quote");
             goto out;
         }
 

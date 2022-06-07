@@ -18,18 +18,25 @@ Run `make` (non-debug) or `make DEBUG=1` (debug) in the directory.
 
 ## Building for SGX
 
-To facilitate the `scripts/sgx-quote.py` example, the enclave is set up for
-remote attestation. By default it will be built for DCAP attestation, which
-means that you need a working DCAP setup to launch the enclave.
+Run `make SGX=1` (non-debug) or `make SGX=1 DEBUG=1` (debug) in the directory.
 
-If you do have DCAP set up, run `make SGX=1` (non-debug) or
-`make SGX=1 DEBUG=1` (debug) in this directory.
+If you want to run the `scripts/sgx-quote.py` script, you must build the example
+with SGX remote attestation enabled. By default, the example is built *without*
+remote attestation.
+
+If you want to build the example for DCAP attestation, first make sure you have
+a working DCAP setup. Then build the example as follows:
+```
+make SGX=1 RA_TYPE=dcap
+```
 
 Otherwise, you will probably want to use EPID attestation. For this, you will
-need to provide an SPID and specify whether it is set up for linkable quotes or not:
+additionally need to provide an SPID and specify whether it is set up for
+linkable quotes or not:
 
 ```
-RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 make SGX=1
+make SGX=1 RA_TYPE=epid RA_CLIENT_SPID=12345678901234567890123456789012 \
+    RA_CLIENT_LINKABLE=0
 ```
 
 The above dummy values will suffice for simple experiments, but if you wish to

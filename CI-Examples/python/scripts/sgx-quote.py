@@ -8,8 +8,11 @@ def tohex(b):
 
 if not os.path.exists("/dev/attestation/user_report_data"):
     print("Cannot find `/dev/attestation/user_report_data`; "
-          "are you running under SGX?")
+          "are you running under SGX, with remote attestation enabled?")
     sys.exit(1)
+
+with open('/dev/attestation/attestation_type') as f:
+    print(f"Detected attestation type: {f.read()}")
 
 with open("/dev/attestation/user_report_data", "wb") as f:
     f.write(b'\0'*64)

@@ -28,9 +28,9 @@ sgx.enclave_size = "512M"
 sys.stack.size = "2M"
 sgx.thread_num = 32
 
-sgx.remote_attestation = true
-sgx.ra_client_spid = "{{ env.get('RA_CLIENT_SPID', '') }}"
-sgx.ra_client_linkable = {{ 'true' if env.get('RA_CLIENT_LINKABLE', '0') == '1' else 'false' }}
+sgx.remote_attestation = "{{ ra_type }}"
+sgx.ra_client_spid = "{{ ra_client_spid }}"
+sgx.ra_client_linkable = {{ 'true' if ra_client_linkable == '1' else 'false' }}
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

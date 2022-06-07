@@ -3,11 +3,6 @@ GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu s
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-# for EPID attestation, specify your SPID and linkable/unlinkable attestation policy;
-# for DCAP/ECDSA attestation, specify SPID as empty string (linkable value is ignored)
-RA_CLIENT_SPID ?=
-RA_CLIENT_LINKABLE ?= 0
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 CFLAGS += -O0 -ggdb3
@@ -18,6 +13,10 @@ endif
 
 CFLAGS += -fPIE
 LDFLAGS += -pie
+
+RA_TYPE ?= none
+RA_CLIENT_SPID ?=
+RA_CLIENT_LINKABLE ?= 0
 
 .PHONY: clients
 clients: secret_prov_min_client secret_prov_client secret_prov_pf_client
@@ -78,6 +77,7 @@ secret_prov_client.manifest: secret_prov_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
@@ -102,6 +102,7 @@ secret_prov_min_client.manifest: secret_prov_min_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
@@ -129,6 +130,7 @@ secret_prov_pf_client.manifest: secret_prov_pf_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@

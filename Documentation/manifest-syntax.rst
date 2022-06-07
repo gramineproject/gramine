@@ -722,22 +722,23 @@ Attestation and quotes
 
 ::
 
-    sgx.remote_attestation = [true|false]
-    (Default: false)
+    sgx.remote_attestation = "[none|epid|dcap]"
+    (Default: "none")
 
     sgx.ra_client_linkable = [true|false]
     sgx.ra_client_spid     = "[HEX]"
+    (Only for EPID based attestation)
 
-This syntax specifies the parameters for remote attestation. To enable it,
-``remote_attestation`` must be set to ``true``.
+This syntax specifies the parameters for remote attestation. By default it is
+not enabled.
 
-For EPID based attestation, ``ra_client_linkable`` and ``ra_client_spid`` must
-be filled with your registered Intel SGX EPID Attestation Service credentials
-(linkable/unlinkable mode and SPID of the client respectively).
+For :term:`EPID` based attestation, ``remote_attestation`` must be set to
+``epid``.  In addition, ``ra_client_linkable`` and ``ra_client_spid`` must be
+filled with your registered Intel SGX EPID Attestation Service credentials
+(linkable/unlinkable mode and :term:`SPID` of the client respectively).
 
-For DCAP/ECDSA based attestation, ``ra_client_spid`` must be an empty string
-(this is a hint to Gramine to use DCAP instead of EPID) and
-``ra_client_linkable`` is ignored.
+For :term:`DCAP` based attestation, ``remote_attestation`` must be set to
+``dcap``. ``ra_client_spid`` and ``ra_client_linkable`` are ignored.
 
 Pre-heating enclave
 ^^^^^^^^^^^^^^^^^^^
@@ -935,3 +936,16 @@ replaced with ``type = "encrypted"`` mounts (see :ref:`encrypted-files`).
 This syntax allowed specifying the default encryption key for protected files.
 It has been replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old
 and new syntax are suitable for debugging purposes only.
+
+Attestation and quotes (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.remote_attestation = [true|false]
+
+This syntax specified whether to enable SGX remote attestation. The boolean
+value has been replaced with the string value. The ``none`` value in the new
+syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
+explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
+``true`` boolean value in the deprecated syntax.

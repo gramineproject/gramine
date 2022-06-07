@@ -495,7 +495,7 @@ re-use the same ``ssl/`` directory and specify ``localhost``. For more info on
 the used environment variables and other manifest options, see `here
 <https://github.com/gramineproject/gramine/tree/master/Pal/src/host/Linux-SGX/tools#secret-provisioning-libraries>`__::
 
-   sgx.remote_attestation = true
+   sgx.remote_attestation = "dcap"  # this tutorial uses DCAP attestation only
 
    loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
    loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"

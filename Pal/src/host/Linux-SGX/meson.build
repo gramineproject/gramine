@@ -52,6 +52,7 @@ pal_sgx_map = custom_target('pal.map',
 pal_sgx_lds = join_paths(meson.current_source_dir(), 'enclave.lds')
 
 libpal_sgx = shared_library('pal',
+    'common_manifest_sgx_parser.c',
     'db_devices.c',
     'db_eventfd.c',
     'db_events.c',
@@ -125,6 +126,7 @@ libpal_sgx = shared_library('pal',
 
 # URTS (untrusted runtime)
 libpal_sgx_urts = executable('loader',
+    'common_manifest_sgx_parser.c',
     'sgx_enclave.c',
     'sgx_entry.S',
     'sgx_exception.c',

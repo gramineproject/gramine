@@ -49,9 +49,7 @@ struct pal_enclave {
     unsigned long rpc_thread_num;
     unsigned long ssa_frame_size;
     bool nonpie_binary;
-    bool remote_attestation_enabled;
-    bool use_epid_attestation; /* Valid only if `remote_attestation_enabled` is true, selects
-                                * EPID/DCAP attestation scheme. */
+    enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 
 #ifdef DEBUG

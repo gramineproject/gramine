@@ -15,8 +15,10 @@
  * be generally single-threaded and therefore do not introduce synchronization here.
  */
 
+#include "api.h"
 #include "shim_fs_encrypted.h"
 #include "shim_fs_pseudo.h"
+#include "toml_utils.h"
 
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently
  * these sizes are overapproximations of SGX requirements (report_data is 64B, target_info is
@@ -236,6 +238,24 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
     return 0;
 }
 
+/*!
+ * \brief Get remote attestation type used.
+ *
+ * In case of SGX, same as `sgx.remote_attestation` manifest option.
+ */
+static int attestation_type_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    assert(g_pal_public_state->attestation_type);
+    char* str = strdup(g_pal_public_state->attestation_type);
+    if (!str)
+        return -ENOMEM;
+
+    *out_data = str;
+    *out_size = strlen(str);
+    return 0;
+}
+
 static int deprecated_pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
@@ -364,32 +384,54 @@ static int key_save(struct shim_dentry* dent, const char* data, size_t size) {
     return 0;
 }
 
+static int init_sgx_attestation(struct pseudo_node* attestation) {
+    if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
+        return 0;
+
+    if (!g_pal_public_state->attestation_type) {
+        log_error("Cannot determine remote attestation type during init of /dev/attestation/");
+        return -EINVAL;
+    }
+
+    /* always add /dev/attestation/attestation_type file, even if it is "none" */
+    pseudo_add_str(attestation, "attestation_type", attestation_type_load);
+
+    if (!strcmp(g_pal_public_state->attestation_type, "none")) {
+        log_debug("host is Linux-SGX but remote attestation type is 'none', adding only "
+                  "/dev/attestation/attestation_type file and skipping others (report, etc.)");
+        return 0;
+    }
+
+    log_debug("host is Linux-SGX and remote attestation type is '%s', adding SGX-specific "
+              "/dev/attestation/ files: report, quote, etc.", g_pal_public_state->attestation_type);
+
+    struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
+    user_report_data->perm = PSEUDO_PERM_FILE_RW;
+    user_report_data->str.save = &user_report_data_save;
+
+    struct pseudo_node* target_info = pseudo_add_str(attestation, "target_info", NULL);
+    target_info->perm = PSEUDO_PERM_FILE_RW;
+    target_info->str.save = &target_info_save;
+
+    pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
+    pseudo_add_str(attestation, "report", &report_load);
+    pseudo_add_str(attestation, "quote", &quote_load);
+
+    /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
+    struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
+                                                          &deprecated_pfkey_load);
+    deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
+    deprecated_pfkey->str.save = &deprecated_pfkey_save;
+
+    return 0;
+}
 
 int init_attestation(struct pseudo_node* dev) {
     struct pseudo_node* attestation = pseudo_add_dir(dev, "attestation");
 
-    if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
-        log_debug("host is Linux-SGX, adding SGX-specific /dev/attestation files: "
-                  "report, quote, etc.");
-
-        struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
-        user_report_data->perm = PSEUDO_PERM_FILE_RW;
-        user_report_data->str.save = &user_report_data_save;
-
-        struct pseudo_node* target_info = pseudo_add_str(attestation, "target_info", NULL);
-        target_info->perm = PSEUDO_PERM_FILE_RW;
-        target_info->str.save = &target_info_save;
-
-        pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
-        pseudo_add_str(attestation, "report", &report_load);
-        pseudo_add_str(attestation, "quote", &quote_load);
-
-        /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
-        struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
-                                                              &deprecated_pfkey_load);
-        deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
-        deprecated_pfkey->str.save = &deprecated_pfkey_save;
-    }
+    int ret = init_sgx_attestation(attestation);
+    if (ret < 0)
+        return ret;
 
     struct pseudo_node* keys = pseudo_add_dir(attestation, "keys");
     struct pseudo_node* key = pseudo_add_str(keys, /*name=*/NULL, &key_load);

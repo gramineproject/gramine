@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +66,25 @@ static void my_debug(void* ctx, int level, const char* file, int line, const cha
     fflush((FILE*)ctx);
 }
 
+static ssize_t file_read(const char* path, char* buf, size_t count) {
+    FILE* f = fopen(path, "r");
+    if (!f)
+        return -errno;
+
+    ssize_t bytes = fread(buf, 1, count, f);
+    if (bytes <= 0) {
+        int errsv = errno;
+        fclose(f);
+        return -errsv;
+    }
+
+    int close_ret = fclose(f);
+    if (close_ret < 0)
+        return -errno;
+
+    return bytes;
+}
+
 int main(int argc, char** argv) {
     int ret;
     size_t len;
@@ -72,9 +92,7 @@ int main(int argc, char** argv) {
     mbedtls_net_context client_fd;
     unsigned char buf[1024];
     const char* pers = "ssl_server";
-
-    void* ra_tls_attest_lib = NULL;
-    ra_tls_create_key_and_crt_der_f = NULL;
+    void* ra_tls_attest_lib;
 
     uint8_t* der_key = NULL;
     uint8_t* der_crt = NULL;
@@ -99,13 +117,19 @@ int main(int argc, char** argv) {
     mbedtls_debug_set_threshold(DEBUG_LEVEL);
 #endif
 
-    if (argc < 2 ||
-            (strcmp(argv[1], "native") && strcmp(argv[1], "epid") && strcmp(argv[1], "dcap"))) {
-        mbedtls_printf("USAGE: %s native|epid|dcap [SGX measurements]\n", argv[0]);
+    char attestation_type_str[32] = {0};
+    ret = file_read("/dev/attestation/attestation_type", attestation_type_str,
+                    sizeof(attestation_type_str) - 1);
+    if (ret < 0 && ret != -ENOENT) {
+        mbedtls_printf("User requested RA-TLS attestation but cannot read SGX-specific file "
+                       "/dev/attestation/attestation_type\n");
         return 1;
     }
 
-    if (!strcmp(argv[1], "epid") || !strcmp(argv[1], "dcap")) {
+    if (ret == -ENOENT || !strcmp(attestation_type_str, "none")) {
+        ra_tls_attest_lib = NULL;
+        ra_tls_create_key_and_crt_der_f = NULL;
+    } else if (!strcmp(attestation_type_str, "epid") || !strcmp(attestation_type_str, "dcap")) {
         ra_tls_attest_lib = dlopen("libra_tls_attest.so", RTLD_LAZY);
         if (!ra_tls_attest_lib) {
             mbedtls_printf("User requested RA-TLS attestation but cannot find lib\n");
@@ -121,10 +145,14 @@ int main(int argc, char** argv) {
             mbedtls_printf("%s\n", error);
             return 1;
         }
+    } else {
+        mbedtls_printf("Unrecognized remote attestation type: %s\n", attestation_type_str);
+        return 1;
     }
 
     if (ra_tls_attest_lib) {
-        mbedtls_printf("\n  . Creating the RA-TLS server cert and key...");
+        mbedtls_printf("\n  . Creating the RA-TLS server cert and key (using \"%s\" as "
+                       "attestation type)...", attestation_type_str);
         fflush(stdout);
 
         size_t der_key_size;
@@ -150,7 +178,7 @@ int main(int argc, char** argv) {
 
         mbedtls_printf(" ok\n");
 
-        if (argc > 2) {
+        if (argc > 1) {
             /* user asks to maliciously modify the embedded SGX quote (for testing purposes) */
             mbedtls_printf("  . Maliciously modifying SGX quote embedded in RA-TLS cert...");
             fflush(stdout);

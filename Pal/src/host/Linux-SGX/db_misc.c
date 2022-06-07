@@ -15,6 +15,7 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "pal_linux_error.h"
 #include "seqlock.h"
 #include "sgx_api.h"
 #include "sgx_attest.h"
@@ -534,71 +535,38 @@ out:
 
 int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size,
                         void* quote, size_t* quote_size) {
+    int ret;
+
     if (user_report_data_size != sizeof(sgx_report_data_t))
         return -PAL_ERROR_INVAL;
 
-    int ret;
-    bool is_epid;
-    sgx_spid_t spid = {0};
+    enum sgx_attestation_type attestation_type;
+    sgx_spid_t spid;
     bool linkable;
 
-    /* read sgx.ra_client_spid from manifest (must be hex string) */
-    char* ra_client_spid_str = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.ra_client_spid",
-                         &ra_client_spid_str);
+    ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_spid'");
-        return -PAL_ERROR_INVAL;
+        /* error was already printed by the called func */
+        return unix_to_pal_error(ret);
     }
 
-    if (!ra_client_spid_str || strlen(ra_client_spid_str) == 0) {
-        /* No Software Provider ID (SPID) specified in the manifest, it is DCAP attestation --
-         * for DCAP, spid and linkable arguments are ignored (we unset them for sanity) */
-        is_epid = false;
-        linkable = false;
-    } else {
-        /* SPID specified in the manifest, it is EPID attestation -- read spid and linkable */
-        is_epid = true;
-
-        if (strlen(ra_client_spid_str) != sizeof(sgx_spid_t) * 2) {
-            log_error("Malformed 'sgx.ra_client_spid' value in the manifest: %s",
-                      ra_client_spid_str);
-            free(ra_client_spid_str);
-            return -PAL_ERROR_INVAL;
-        }
-
-        char* bytes = hex2bytes(ra_client_spid_str, strlen(ra_client_spid_str), spid,
-                                sizeof(spid));
-        if (!bytes) {
-            log_error("Malformed 'sgx.ra_client_spid' value in the manifest: %s",
-                      ra_client_spid_str);
-            free(ra_client_spid_str);
-            return -PAL_ERROR_INVAL;
-        }
-
-        /* read sgx.ra_client_linkable from manifest */
-        ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.ra_client_linkable",
-                           /*defaultval=*/false, &linkable);
+    if (attestation_type == SGX_ATTESTATION_EPID) {
+        ret = parse_attestation_epid_params(g_pal_public_state.manifest_root, &spid, &linkable);
         if (ret < 0) {
-            log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or "
-                      "`false`)");
-            free(ra_client_spid_str);
-            return -PAL_ERROR_INVAL;
+            /* error was already printed by the called func */
+            return unix_to_pal_error(ret);
         }
     }
-
-    free(ra_client_spid_str);
 
     sgx_quote_nonce_t nonce;
     ret = _DkRandomBitsRead(&nonce, sizeof(nonce));
     if (ret < 0)
         return ret;
 
-    char* pal_quote       = NULL;
+    char* pal_quote = NULL;
     size_t pal_quote_size = 0;
-
-    ret = sgx_get_quote(is_epid ? &spid : NULL, &nonce, user_report_data, linkable, &pal_quote,
-                        &pal_quote_size);
+    ret = sgx_get_quote(attestation_type == SGX_ATTESTATION_EPID ? &spid : NULL, &nonce,
+                        user_report_data, linkable, &pal_quote, &pal_quote_size);
     if (ret < 0)
         return ret;
 

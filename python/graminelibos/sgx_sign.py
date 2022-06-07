@@ -488,14 +488,18 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
         print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
         print(f'    misc_select: {attr["misc_select"]:#x}')
 
-        if manifest_sgx['remote_attestation']:
+        print('SGX remote attestation:')
+        attestation_type = manifest_sgx.get('remote_attestation', 'none')
+        if attestation_type == "none":
+            print('    None')
+        elif attestation_type == "dcap":
+            print('    DCAP/ECDSA')
+        elif attestation_type == "epid":
             spid = manifest_sgx.get('ra_client_spid', '')
             linkable = manifest_sgx.get('ra_client_linkable', False)
-            print('SGX remote attestation:')
-            if not spid:
-                print('    DCAP/ECDSA')
-            else:
-                print(f'    EPID (spid = {spid}, linkable = {linkable})')
+            print(f'    EPID (spid = `{spid}`, linkable = {linkable})')
+        else:
+            print('    <unrecognized>')
 
     # Populate memory areas
     memory_areas = get_memory_areas(attr, libpal)

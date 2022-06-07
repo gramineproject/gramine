@@ -9,7 +9,7 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/python
-            RA_CLIENT_SPID=${ra_client_spid} make ${MAKEOPTS}
+            make ${MAKEOPTS} RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid}
             make ${MAKEOPTS} check
         '''
     }
@@ -102,12 +102,10 @@ stage('test-sgx') {
             cd CI-Examples/ra-tls-mbedtls
             if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
             then \
-                make check_epid RA_CLIENT_SPID=${ra_client_spid} \
-                                        RA_TLS_EPID_API_KEY=${ra_client_key} \
-                                        RA_CLIENT_LINKABLE=0; \
-                make check_epid_fail RA_CLIENT_SPID=${ra_client_spid} \
-                                            RA_TLS_EPID_API_KEY=${ra_client_key} \
-                                            RA_CLIENT_LINKABLE=0; \
+                make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                make check_epid_fail RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
             else \
                 echo "Failure: no ra_client_spid and/or ra_client_key!"; \
                 exit 1; \
@@ -119,9 +117,8 @@ stage('test-sgx') {
             cd CI-Examples/ra-tls-secret-prov
             if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
             then \
-                make SGX=1 check_epid RA_CLIENT_SPID=${ra_client_spid} \
-                                        RA_TLS_EPID_API_KEY=${ra_client_key} \
-                                        RA_CLIENT_LINKABLE=0; \
+                make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
             else \
                 echo "Failure: no ra_client_spid and/or ra_client_key!"; \
                 exit 1; \

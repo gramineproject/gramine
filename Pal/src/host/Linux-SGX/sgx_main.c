@@ -618,7 +618,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
-    char* sgx_ra_client_spid_str = NULL;
     char* profile_str = NULL;
 #ifdef DEBUG
     char* profile_mode_str = NULL;
@@ -729,38 +728,11 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    bool sgx_remote_attestation_enabled;
-    ret = toml_bool_in(manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
-                       &sgx_remote_attestation_enabled);
+    ret = parse_attestation_type(manifest_root, &enclave_info->attestation_type);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.remote_attestation' (the value must be `true` or `false`)");
-        ret = -EINVAL;
+        /* error is already printed by the called func */
         goto out;
     }
-    enclave_info->remote_attestation_enabled = sgx_remote_attestation_enabled;
-
-    ret = toml_string_in(manifest_root, "sgx.ra_client_spid", &sgx_ra_client_spid_str);
-    if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_spid'");
-        ret = -EINVAL;
-        goto out;
-    }
-
-    bool sgx_ra_client_linkable_specified =
-        toml_key_exists(manifest_root, "sgx.ra_client_linkable");
-
-    if (!enclave_info->remote_attestation_enabled &&
-            (sgx_ra_client_spid_str || sgx_ra_client_linkable_specified)) {
-        log_error(
-            "Detected EPID remote attestation parameters 'ra_client_spid' and/or "
-            "'ra_client_linkable' in the manifest but no 'remote_attestation' parameter. "
-            "Please add 'sgx.remote_attestation = true' to the manifest.");
-        ret = -EINVAL;
-        goto out;
-    }
-
-    /* EPID is used if SPID is a non-empty string in manifest, otherwise DCAP/ECDSA */
-    enclave_info->use_epid_attestation = sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str);
 
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
     if (ret < 0) {
@@ -913,7 +885,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 
 out:
     free(dummy_sigfile_str);
-    free(sgx_ra_client_spid_str);
     free(profile_str);
 #ifdef DEBUG
     free(profile_mode_str);
@@ -982,10 +953,11 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         return ret;
 
     sgx_target_info_t qe_targetinfo = {0};
-    if (enclave->remote_attestation_enabled) {
+    if (enclave->attestation_type != SGX_ATTESTATION_NONE) {
         /* initialize communication with Quoting Enclave only if app requests attestation */
-        bool is_epid = enclave->use_epid_attestation;
-        log_debug("Using SGX %s attestation", is_epid ? "EPID" : "DCAP/ECDSA");
+        log_debug("Using SGX attestation type \"%s\"",
+                  attestation_type_to_str(enclave->attestation_type));
+        bool is_epid = enclave->attestation_type == SGX_ATTESTATION_EPID;
         ret = init_quoting_enclave_targetinfo(is_epid, &qe_targetinfo);
         if (ret < 0)
             return ret;

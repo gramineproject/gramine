@@ -13,6 +13,9 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
+RA_TYPE ?= none
+RA_CLIENT_SPID ?=
+RA_CLIENT_LINKABLE ?= 0
 
 .PHONY: all
 all: busybox busybox.manifest
@@ -44,6 +47,9 @@ busybox.manifest: busybox.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
+		-Dra_client_spid=$(RA_CLIENT_SPID) \
+		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),

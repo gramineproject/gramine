@@ -4,11 +4,11 @@ This directory contains the Makefile, the template server manifest, and the
 minimal server and client written against the mbedTLS library.
 
 The server and client are based on `ssl_server.c` and `ssl_client1.c` example
-programs shipped with mbedTLS. We modified them to allow using RA-TLS flows if
-the programs are given the command-line argument `epid`/`dcap`.  In particular,
-the server uses a self-signed RA-TLS cert with the SGX quote embedded in it via
-`ra_tls_create_key_and_crt()`. The client uses an RA-TLS verification callback
-to verify the server RA-TLS certificate via `ra_tls_verify_callback()`.
+programs shipped with mbedTLS. We modified them to allow using RA-TLS flows. In
+particular, the server uses a self-signed RA-TLS cert with the SGX quote
+embedded in it via `ra_tls_create_key_and_crt()`. The client uses an RA-TLS
+verification callback to verify the server RA-TLS certificate via
+`ra_tls_verify_callback()`.
 
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
 `ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
@@ -24,14 +24,12 @@ https://gramine.readthedocs.io/en/latest/attestation.html.
 ## RA-TLS server
 
 The server is supposed to run in the SGX enclave with Gramine and RA-TLS
-dlopen-loaded. If RA-TLS library `ra_tls_attest.so` is not requested by user via
-`epid`/`dcap` command-line argument, the server falls back to using normal X.509
-PKI flows (specified as `native` command-line argument).
+dlopen-loaded. If the server is started not in the SGX enclave, then it falls
+back to using normal X.509 PKI flows.
 
-If server is run with more command-line arguments (the only important thing is
-to have at least one additional argument), then the server will maliciously
-modify the SGX quote before sending to the client. This is useful for testing
-purposes.
+If server is run with a command-line argument (the only important thing is to
+have at least one argument), then the server will maliciously modify the SGX
+quote before sending to the client. This is useful for testing purposes.
 
 ## RA-TLS client
 
@@ -78,7 +76,7 @@ an [SPID and the corresponding IAS API keys][spid].
 
 ```sh
 make app
-./server native &
+./server &
 ./client native
 # client will successfully connect to the server via normal x.509 PKI flows
 kill %%
@@ -88,9 +86,10 @@ kill %%
 
 ```sh
 make clean
-RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app epid
+make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
+    RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
 
-gramine-sgx ./server epid &
+gramine-sgx ./server &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
@@ -109,9 +108,9 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+make app dcap RA_TYPE=dcap
 
-gramine-sgx ./server dcap &
+gramine-sgx ./server &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
@@ -129,9 +128,9 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+make app dcap RA_TYPE=dcap
 
-gramine-sgx ./server dcap &
+gramine-sgx ./server &
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
     <MRENCLAVE of the server enclave> \
@@ -147,9 +146,9 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+make app dcap RA_TYPE=dcap
 
-gramine-sgx ./server dcap dummy-option &
+gramine-sgx ./server dummy-option &
 ./client dcap
 
 # client will fail to verify the malicious SGX quote and will *not* connect to the server
@@ -165,11 +164,14 @@ as `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`, `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`,
 
 ```sh
 make clean
-RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app client_epid.manifest.sgx
+make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
+    RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
 
-gramine-sgx ./server epid &
+gramine-sgx ./server &
 
-RA_TLS_EPID_API_KEY=<your EPID API key> gramine-sgx ./client_epid epid
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
+    RA_TLS_EPID_API_KEY=<your EPID API key> \
+    gramine-sgx ./client_epid epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
 kill %%
@@ -179,12 +181,12 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+make app dcap RA_TYPE=dcap
 
-gramine-sgx ./server dcap &
+gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 gramine-sgx \
-    ./client_dcap dcap \
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
+    gramine-sgx ./client_dcap dcap \
     <MRENCLAVE of the server enclave> \
     <MRSIGNER of the server enclave> \
     <ISV_PROD_ID of the server enclave> \

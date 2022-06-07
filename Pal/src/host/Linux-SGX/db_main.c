@@ -20,6 +20,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
+#include "pal_linux_error.h"
 #include "pal_rtld.h"
 #include "pal_topology.h"
 #include "toml.h"
@@ -620,6 +621,14 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Failed to initialize trusted files: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    enum sgx_attestation_type attestation_type;
+    ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
+    if (ret < 0) {
+        log_error("Failed to parse attestation type: %d", unix_to_pal_error(ret));
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    g_pal_public_state.attestation_type = attestation_type_to_str(attestation_type);
 
     /* this should be placed *after all* initialize-from-manifest routines */
     if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {

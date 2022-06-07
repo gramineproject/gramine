@@ -118,6 +118,10 @@ low-level abstractions of *attestation report* and *attestation quote* objects
 (:term:`SGX Report` and :term:`SGX Quote` in SGX parlance), in the form of the
 below pseudo-files:
 
+- ``/dev/attestation/attestation_type`` pseudo-file can be opened for read and
+  contains the name of the attestation scheme used (currently one of ``none``,
+  ``epid`` and ``dcap``).
+
 - ``/dev/attestation/user_report_data`` pseudo-file can be opened for read or
   write access. Typically, it is opened and written into before opening and
   reading from the ``/dev/attestation/report`` and ``/dev/attestation/quote``
@@ -278,15 +282,13 @@ certificate. The library is *not* thread-safe.
 The library expects the following information in the manifest for EPID based
 attestation:
 
-- ``sgx.remote_attestation = true`` -- remote attestation is enabled.
+- ``sgx.remote_attestation = "epid"`` -- EPID remote attestation is enabled.
 - ``sgx.ra_client_spid`` -- client SPID for EPID remote attestation.
 - ``sgx.ra_client_linkable`` -- client linkable/unlinkable attestation mode.
 
 For DCAP/ECDSA based attestation, the library expects instead:
 
-- ``sgx.remote_attestation = true`` -- remote attestation is enabled.
-- ``sgx.ra_client_spid = ""`` -- hints that this is a DCAP attestation, *not*
-  EPID attestation.
+- ``sgx.remote_attestation = "dcap"`` -- DCAP remote attestation is enabled.
 
 The library uses the following environment variables if available:
 

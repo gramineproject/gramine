@@ -43,6 +43,25 @@ extern struct pal_linuxsgx_state {
     void* heap_max;
 } g_pal_linuxsgx_state;
 
+enum sgx_attestation_type {
+    SGX_ATTESTATION_NONE,
+    SGX_ATTESTATION_EPID,
+    SGX_ATTESTATION_DCAP
+};
+
+static inline const char* attestation_type_to_str(enum sgx_attestation_type attestation_type) {
+    switch (attestation_type) {
+        case SGX_ATTESTATION_NONE: return "none";
+        case SGX_ATTESTATION_EPID: return "epid";
+        case SGX_ATTESTATION_DCAP: return "dcap";
+        default: BUG();
+    }
+}
+
+int parse_attestation_type(toml_table_t* manifest_root,
+                           enum sgx_attestation_type* out_attestation_type);
+int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_spid,
+                                  bool* out_linkable);
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
 

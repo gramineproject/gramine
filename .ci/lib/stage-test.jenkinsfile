@@ -15,7 +15,7 @@ stage('test') {
         try {
             sh '''
                 cd LibOS/test/regression
-                RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
+                RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {
@@ -31,7 +31,8 @@ stage('test') {
                     cd LibOS/test/regression
                     # For some unknown reason it fails without this clean on sgx-18.04 pipeline
                     gramine-test clean
-                    RA_CLIENT_SPID=${ra_client_spid} gramine-test -n tests_musl.toml build -v
+                    RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        gramine-test -n tests_musl.toml build -v
                     python3 -m pytest -v --junit-xml libos-regression-musl.xml
                 '''
             } finally {

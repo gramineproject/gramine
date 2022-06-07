@@ -3,11 +3,6 @@ GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu s
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-# for EPID attestation, specify your SPID and linkable/unlinkable attestation policy;
-# for DCAP/ECDSA attestation, specify SPID as empty string (linkable value is ignored)
-RA_CLIENT_SPID ?=
-RA_CLIENT_LINKABLE ?= 0
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 CFLAGS += -O0 -ggdb3
@@ -18,6 +13,10 @@ endif
 
 CFLAGS += -fPIE
 LDFLAGS += -pie
+
+RA_TYPE ?= none
+RA_CLIENT_SPID ?=
+RA_CLIENT_LINKABLE ?= 0
 
 .PHONY: all
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
@@ -93,6 +92,7 @@ server.manifest: server.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
@@ -155,7 +155,7 @@ client_epid.token: client_epid.sig
 
 .PHONY: check_epid
 check_epid: app epid
-	gramine-sgx server epid & SERVER_ID=$$!; \
+	gramine-sgx server & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid > OUTPUT; \
 	./client epid 0 0 0 0 >> OUTPUT; \
@@ -168,14 +168,14 @@ check_epid: app epid
 
 .PHONY: check_epid_fail
 check_epid_fail: app epid
-	gramine-sgx server epid dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 
 .PHONY: check_dcap
 check_dcap: app dcap
-	gramine-sgx server dcap >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap > OUTPUT; \
 	./client dcap 0 0 0 0 >> OUTPUT; \
@@ -188,7 +188,7 @@ check_dcap: app dcap
 
 .PHONY: check_dcap_fail
 check_dcap_fail: app dcap
-	gramine-sgx server dcap dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
