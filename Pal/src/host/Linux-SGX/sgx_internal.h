@@ -37,6 +37,13 @@ uint16_t htons(uint16_t shortval);
 uint32_t ntohl(uint32_t longval);
 uint16_t ntohs(uint16_t shortval);
 
+enum sgx_attestation_type {
+    SGX_ATTESTATION_NONE,
+    SGX_ATTESTATION_EPID,
+    SGX_ATTESTATION_DCAP,
+    SGX_ATTESTATION_UNCLEAR,  /* to support legacy `sgx.remote_attestation = true` (EPID or DCAP) */
+};
+
 struct pal_enclave {
     /* attributes */
     bool is_first_process; // Initial process in Gramine namespace is special.
@@ -49,9 +56,7 @@ struct pal_enclave {
     unsigned long rpc_thread_num;
     unsigned long ssa_frame_size;
     bool nonpie_binary;
-    bool remote_attestation_enabled;
-    bool use_epid_attestation; /* Valid only if `remote_attestation_enabled` is true, selects
-                                * EPID/DCAP attestation scheme. */
+    enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 
 #ifdef DEBUG

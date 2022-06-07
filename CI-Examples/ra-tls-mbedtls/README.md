@@ -88,7 +88,8 @@ kill %%
 
 ```sh
 make clean
-RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app epid
+RA_TYPE=epid RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> \
+    make app epid
 
 gramine-sgx ./server epid &
 
@@ -109,7 +110,7 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+RA_TYPE=dcap make app dcap
 
 gramine-sgx ./server dcap &
 
@@ -129,7 +130,7 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+RA_TYPE=dcap make app dcap
 
 gramine-sgx ./server dcap &
 
@@ -147,7 +148,7 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+RA_TYPE=dcap make app dcap
 
 gramine-sgx ./server dcap dummy-option &
 ./client dcap
@@ -165,7 +166,8 @@ as `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`, `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`,
 
 ```sh
 make clean
-RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> make app client_epid.manifest.sgx
+RA_TYPE=epid RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> \
+    make app client_epid.manifest.sgx
 
 gramine-sgx ./server epid &
 
@@ -179,7 +181,7 @@ kill %%
 
 ```sh
 make clean
-make app dcap
+RA_TYPE=dcap make app dcap
 
 gramine-sgx ./server dcap &
 

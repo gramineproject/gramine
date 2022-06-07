@@ -1,4 +1,4 @@
-# Client manifest file (both for EPID and DCAP)
+# Client manifest file
 
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "client"
@@ -6,8 +6,9 @@ libos.entrypoint = "client"
 loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
-loader.env.RA_TLS_CLIENT_INSIDE_SGX = "1"
 loader.env.LC_ALL = "C"
+
+loader.env.RA_TLS_CLIENT_INSIDE_SGX = "1"
 
 loader.insecure__use_cmdline_argv = true
 loader.insecure__use_host_env = true
@@ -20,9 +21,10 @@ fs.mounts = [
 ]
 
 sgx.debug = true
-sgx.remote_attestation = true
 sgx.enclave_size = "256M"
 sgx.thread_num = 4
+
+sgx.remote_attestation = "{{ env.get('RA_TYPE', 'none') }}"
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

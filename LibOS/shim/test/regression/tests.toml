@@ -123,4 +123,5 @@ manifests = [
 
 manifests = [
   "attestation",
+  "attestation_deprecated_syntax",
 ]

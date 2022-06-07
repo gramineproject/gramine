@@ -7,6 +7,7 @@ env.PYTHONPATH = python_platlib + ':' + env.WORKSPACE + '/Scripts'
 env.XDG_CONFIG_HOME = env.WORKSPACE + '/XDG_CONFIG_HOME'
 env.CARGO_HOME = env.WORKSPACE + '/CARGO_HOME'
 
+env.RA_TYPE = 'epid'
 env.RA_TLS_ALLOW_OUTDATED_TCB_INSECURE = '1'
 env.RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE = '1'
 

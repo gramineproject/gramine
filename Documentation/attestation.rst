@@ -222,6 +222,15 @@ encryption keys (see also :doc:`manifest-syntax`):
    32-character hex value, and the new files
    (``/dev/attestation/keys/<key_name>``) use a 16-byte raw binary value.
 
+Finally, the ``/dev/attestation`` pseudo-filesystem exposes a pseudo-file that
+indicates the type of attestation used:
+
+- ``/dev/attestation/attestation_type`` file contains the name of the
+  attestation scheme used, currently one of ``none``, ``epid``, ``dcap`` and
+  ``unclear`` (the latter is used when attestation type cannot be identified).
+  The contents of the file end with a newline, so applications are advised to
+  strip the newline symbol (``\n``) from the read characters.
+
 Mid-level RA-TLS interface
 --------------------------
 
@@ -278,15 +287,13 @@ certificate. The library is *not* thread-safe.
 The library expects the following information in the manifest for EPID based
 attestation:
 
-- ``sgx.remote_attestation = true`` -- remote attestation is enabled.
+- ``sgx.remote_attestation = "epid"`` -- EPID remote attestation is enabled.
 - ``sgx.ra_client_spid`` -- client SPID for EPID remote attestation.
 - ``sgx.ra_client_linkable`` -- client linkable/unlinkable attestation mode.
 
 For DCAP/ECDSA based attestation, the library expects instead:
 
-- ``sgx.remote_attestation = true`` -- remote attestation is enabled.
-- ``sgx.ra_client_spid = ""`` -- hints that this is a DCAP attestation, *not*
-  EPID attestation.
+- ``sgx.remote_attestation = "dcap"`` -- DCAP remote attestation is enabled.
 
 The library uses the following environment variables if available:
 

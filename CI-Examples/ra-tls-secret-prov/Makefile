@@ -3,11 +3,6 @@ GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu s
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
-# for EPID attestation, specify your SPID and linkable/unlinkable attestation policy;
-# for DCAP/ECDSA attestation, specify SPID as empty string (linkable value is ignored)
-RA_CLIENT_SPID ?=
-RA_CLIENT_LINKABLE ?= 0
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 CFLAGS += -O0 -ggdb3
@@ -78,8 +73,6 @@ secret_prov_client.manifest: secret_prov_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
@@ -102,8 +95,6 @@ secret_prov_min_client.manifest: secret_prov_min_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 secret_prov_min_client.manifest.sgx secret_prov_min_client.sig: sgx_sign_secret_prov_min_client
@@ -129,8 +120,6 @@ secret_prov_pf_client.manifest: secret_prov_pf_client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 secret_prov_pf_client.manifest.sgx secret_prov_pf_client.sig: sgx_sign_secret_prov_pf_client

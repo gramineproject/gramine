@@ -89,7 +89,7 @@ class Manifest:
         sgx.setdefault('thread_num', DEFAULT_THREAD_NUM)
         sgx.setdefault('isvprodid', 0)
         sgx.setdefault('isvsvn', 0)
-        sgx.setdefault('remote_attestation', False)
+        sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
         sgx.setdefault('require_avx', False)
         sgx.setdefault('require_avx512', False)

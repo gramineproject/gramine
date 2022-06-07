@@ -65,6 +65,24 @@ static void my_debug(void* ctx, int level, const char* file, int line, const cha
     fflush((FILE*)ctx);
 }
 
+static ssize_t file_read(const char* path, char* buf, size_t count) {
+    FILE* f = fopen(path, "r");
+    if (!f)
+        return -1;
+
+    ssize_t bytes = fread(buf, 1, count, f);
+    if (bytes <= 0) {
+        fclose(f);
+        return -1;
+    }
+
+    int close_ret = fclose(f);
+    if (close_ret < 0)
+        return -1;
+
+    return bytes;
+}
+
 int main(int argc, char** argv) {
     int ret;
     size_t len;
@@ -106,6 +124,26 @@ int main(int argc, char** argv) {
     }
 
     if (!strcmp(argv[1], "epid") || !strcmp(argv[1], "dcap")) {
+        char attestation_type_str[32] = {0};
+        ret = file_read("/dev/attestation/attestation_type", attestation_type_str,
+                        sizeof(attestation_type_str));
+        if (ret < 0) {
+            mbedtls_printf("User requested RA-TLS attestation but cannot read SGX-specific file "
+                           "/dev/attestation/attestation_type\n");
+            return 1;
+        }
+        attestation_type_str[ret - 1] = '\0';
+
+        char* newline_pos = strchr(attestation_type_str, '\n');
+        if (newline_pos)
+            *newline_pos = '\0';
+
+        if (strcmp(argv[1], attestation_type_str)) {
+            mbedtls_printf("User requested RA-TLS attestation of type '%s' but Gramine has RA-TLS "
+                           "attestation of type '%s'\n", argv[1], attestation_type_str);
+            return 1;
+        }
+
         ra_tls_attest_lib = dlopen("libra_tls_attest.so", RTLD_LAZY);
         if (!ra_tls_attest_lib) {
             mbedtls_printf("User requested RA-TLS attestation but cannot find lib\n");
