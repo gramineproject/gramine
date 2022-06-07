@@ -38,17 +38,6 @@ run `sgx-quote.py` and verify the output, you will need to provide an
 
 [spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
-## Building with a local Python installation
-
-By default, the `make` command creates the manifest for the Python binary from
-the system installation. If you have a local installation, you may create the
-manifest with the `PYTHONPATH` variable set accordingly. You can also specify
-a particular version of Python. For example:
-
-```
-make PYTHONPATH=<python install path> PYTHONVERSION=python3.6 SGX=1
-```
-
 # Run Python with Gramine
 
 Here's an example of running Python scripts under Gramine:
