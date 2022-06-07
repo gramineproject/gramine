@@ -18,7 +18,7 @@ endif
 # to Make, as compiling in debug mode results in an order of magnitude's difference in
 # performance that makes testing by running a benchmark with ab painful. The primary goal
 # of the DEBUG setting is to control Gramine's loglevel.
--include $(SELF_EXE).d
+-include $(SELF_EXE).d # See also: .cargo/config.toml
 $(SELF_EXE): Cargo.toml
 	cargo build --release
 
