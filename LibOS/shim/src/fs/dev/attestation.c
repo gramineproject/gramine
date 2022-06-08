@@ -249,7 +249,7 @@ static int attestation_type_load(struct shim_dentry* dent, char** out_data, size
     __UNUSED(dent);
 
     assert(g_attestation_type_str);
-    char* str = alloc_concat(g_attestation_type_str, /*a_len=*/-1, "\n", /*b_len=*/-1);
+    char* str = strdup(g_attestation_type_str);
     if (!str)
         return -ENOMEM;
 
@@ -397,7 +397,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     }
 
     /* always add /dev/attestation/attestation_type file, even if it is "none" */
-    pseudo_add_str(attestation, "attestation_type", &attestation_type_load);
+    pseudo_add_str(attestation, "attestation_type", attestation_type_load);
 
     if (!strcmp(g_attestation_type_str, "none")) {
         log_debug("host is Linux-SGX but remote attestation type is 'none', adding only "
@@ -430,10 +430,9 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
 }
 
 int init_attestation(struct pseudo_node* dev) {
-    int ret;
     struct pseudo_node* attestation = pseudo_add_dir(dev, "attestation");
 
-    ret = init_sgx_attestation(attestation);
+    int ret = init_sgx_attestation(attestation);
     if (ret < 0)
         return ret;
 

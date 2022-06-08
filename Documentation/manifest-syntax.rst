@@ -732,12 +732,12 @@ Attestation and quotes
 This syntax specifies the parameters for remote attestation. By default it is
 not enabled.
 
-For EPID based attestation, ``remote_attestation`` must be set to ``epid``.
-In addition, ``ra_client_linkable`` and ``ra_client_spid`` must be filled with
-your registered Intel SGX EPID Attestation Service credentials
-(linkable/unlinkable mode and SPID of the client respectively).
+For :term:`EPID` based attestation, ``remote_attestation`` must be set to
+``epid``.  In addition, ``ra_client_linkable`` and ``ra_client_spid`` must be
+filled with your registered Intel SGX EPID Attestation Service credentials
+(linkable/unlinkable mode and :term:`SPID` of the client respectively).
 
-For DCAP/ECDSA based attestation, ``remote_attestation`` must be set to
+For :term:`DCAP` based attestation, ``remote_attestation`` must be set to
 ``dcap``. ``ra_client_spid`` and ``ra_client_linkable`` are ignored.
 
 Pre-heating enclave

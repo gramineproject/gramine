@@ -226,10 +226,7 @@ Finally, the ``/dev/attestation`` pseudo-filesystem exposes a pseudo-file that
 indicates the type of attestation used:
 
 - ``/dev/attestation/attestation_type`` file contains the name of the
-  attestation scheme used, currently one of ``none``, ``epid``, ``dcap`` and
-  ``unclear`` (the latter is used when attestation type cannot be identified).
-  The contents of the file end with a newline, so applications are advised to
-  strip the newline symbol (``\n``) from the read characters.
+  attestation scheme used, currently one of ``none``, ``epid`` and ``dcap``.
 
 Mid-level RA-TLS interface
 --------------------------

@@ -148,7 +148,7 @@ client_epid.token: client_epid.sig
 
 .PHONY: check_epid
 check_epid: app epid
-	gramine-sgx server epid & SERVER_ID=$$!; \
+	gramine-sgx server & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid > OUTPUT; \
 	./client epid 0 0 0 0 >> OUTPUT; \
@@ -161,14 +161,14 @@ check_epid: app epid
 
 .PHONY: check_epid_fail
 check_epid_fail: app epid
-	gramine-sgx server epid dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 
 .PHONY: check_dcap
 check_dcap: app dcap
-	gramine-sgx server dcap >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap > OUTPUT; \
 	./client dcap 0 0 0 0 >> OUTPUT; \
@@ -181,7 +181,7 @@ check_dcap: app dcap
 
 .PHONY: check_dcap_fail
 check_dcap_fail: app dcap
-	gramine-sgx server dcap dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
