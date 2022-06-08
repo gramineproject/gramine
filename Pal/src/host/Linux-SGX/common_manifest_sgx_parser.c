@@ -17,6 +17,29 @@
 #include "toml.h"
 #include "toml_utils.h"
 
+static int get_epid_params(toml_table_t* manifest_root, char** out_spid_str, bool* out_linkable) {
+    int ret;
+
+    char* spid_str;
+    ret = toml_string_in(manifest_root, "sgx.ra_client_spid", &spid_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.ra_client_spid'");
+        return -EINVAL;
+    }
+
+    bool linkable;
+    ret = toml_bool_in(manifest_root, "sgx.ra_client_linkable", /*defaultval=*/false, &linkable);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or `false`)");
+        free(spid_str);
+        return -EINVAL;
+    }
+
+    *out_spid_str = spid_str;
+    *out_linkable = linkable;
+    return 0;
+}
+
 int parse_attestation_type(toml_table_t* manifest_root,
                            enum sgx_attestation_type* out_attestation_type) {
     int ret;
@@ -27,17 +50,8 @@ int parse_attestation_type(toml_table_t* manifest_root,
 
     /* we parse SPID and linkable here even if there is no sgx.remote_attestation (or it is not
      * EPID), simply to error out early on incorrect values */
-    ret = toml_string_in(manifest_root, "sgx.ra_client_spid", &sgx_ra_client_spid_str);
+    ret = get_epid_params(manifest_root, &sgx_ra_client_spid_str, &dummy_linkable);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_spid'");
-        ret = -EINVAL;
-        goto out;
-    }
-
-    ret = toml_bool_in(manifest_root, "sgx.ra_client_linkable", /*defaultval=*/false,
-                       &dummy_linkable);
-    if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or `false`)");
         ret = -EINVAL;
         goto out;
     }
@@ -93,13 +107,11 @@ int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_s
                                   bool* out_linkable) {
     int ret;
     char* sgx_ra_client_spid_str = NULL;
-
     sgx_spid_t spid = {0};
     bool linkable = false;
 
-    ret = toml_string_in(manifest_root, "sgx.ra_client_spid", &sgx_ra_client_spid_str);
+    ret = get_epid_params(manifest_root, &sgx_ra_client_spid_str, &linkable);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_spid'");
         ret = -EINVAL;
         goto out;
     }
@@ -121,13 +133,6 @@ int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_s
             goto out;
         }
         spid[i / 2] = spid[i / 2] * 16 + (uint8_t)val;
-    }
-
-    ret = toml_bool_in(manifest_root, "sgx.ra_client_linkable", /*defaultval=*/false, &linkable);
-    if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or `false`)");
-        ret = -EINVAL;
-        goto out;
     }
 
     memcpy(out_spid, &spid, sizeof(spid));

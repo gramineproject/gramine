@@ -70,7 +70,7 @@ when generating `server.token`.
 Moreover, for EPID-based (IAS) attestation, you will need to provide
 an [SPID and the corresponding IAS API keys][spid].
 
-[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 - Normal non-RA-TLS flows; without SGX and without Gramine:
 

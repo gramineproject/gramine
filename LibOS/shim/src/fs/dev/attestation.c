@@ -35,8 +35,6 @@ static size_t g_target_info_size = 0;
 
 static size_t g_report_size = 0;
 
-const char* g_attestation_type_str = NULL;
-
 static int init_attestation_struct_sizes(void) {
     if (g_user_report_data_size && g_target_info_size && g_report_size) {
         /* already initialized, nothing to do here */
@@ -248,8 +246,8 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
 static int attestation_type_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    assert(g_attestation_type_str);
-    char* str = strdup(g_attestation_type_str);
+    assert(g_pal_public_state->attestation_type);
+    char* str = strdup(g_pal_public_state->attestation_type);
     if (!str)
         return -ENOMEM;
 
@@ -390,8 +388,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
 
-    g_attestation_type_str = g_pal_public_state->attestation_type;
-    if (!g_attestation_type_str) {
+    if (!g_pal_public_state->attestation_type) {
         log_error("Cannot determine remote attestation type during init of /dev/attestation");
         return -EINVAL;
     }
@@ -399,14 +396,14 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     /* always add /dev/attestation/attestation_type file, even if it is "none" */
     pseudo_add_str(attestation, "attestation_type", attestation_type_load);
 
-    if (!strcmp(g_attestation_type_str, "none")) {
+    if (!strcmp(g_pal_public_state->attestation_type, "none")) {
         log_debug("host is Linux-SGX but remote attestation type is 'none', adding only "
                   "/dev/attestation/attestation_type file and skipping others (report, etc.)");
         return 0;
     }
 
     log_debug("host is Linux-SGX and remote attestation type is '%s', adding SGX-specific "
-              "/dev/attestation files: report, quote, etc.", g_attestation_type_str);
+              "/dev/attestation files: report, quote, etc.", g_pal_public_state->attestation_type);
 
     struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
     user_report_data->perm = PSEUDO_PERM_FILE_RW;

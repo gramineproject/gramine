@@ -9,6 +9,8 @@ If you want to try out [`/dev/attestation/` files][attestation], you must build
 the example with SGX remote attestation enabled. By default, the example is
 built *without* remote attestation.
 
+[attestation]: https://gramine.readthedocs.io/en/latest/attestation.html
+
 If you want to build the example for DCAP attestation, first make sure you have
 a working DCAP setup. Then build the example as follows:
 ```
@@ -27,8 +29,7 @@ The above dummy values will suffice for simple experiments, but if you wish to
 run `sgx-quote.py` and verify the output, you will need to provide an
 [SPID recognized by Intel][spid].
 
-[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
-[attestation]: https://gramine.readthedocs.io/en/stable/attestation.html
+[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 # Quick Start
 

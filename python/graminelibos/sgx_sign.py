@@ -494,10 +494,12 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
             print('    None')
         elif attestation_type == "dcap":
             print('    DCAP/ECDSA')
-        else:
+        elif attestation_type == "epid":
             spid = manifest_sgx.get('ra_client_spid', '')
             linkable = manifest_sgx.get('ra_client_linkable', False)
             print(f'    EPID (spid = `{spid}`, linkable = {linkable})')
+        else:
+            print('    <unrecognized>')
 
     # Populate memory areas
     memory_areas = get_memory_areas(attr, libpal)
