@@ -51,17 +51,17 @@ int _DkStreamUnmap(void* addr, uint64_t size) {
 }
 
 int handle_serialize(PAL_HANDLE handle, void** data) {
-    const void* d1;
-    size_t dsz1 = 0;
+    const void* d;
+    size_t dsz = 0;
 
-    /* find a field to serialize (depends on the handle type) and assign it to d1; note that
+    /* find a field to serialize (depends on the handle type) and assign it to d; note that
      * no handle type has more than one such field, and some have none */
     /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
      * work? Probably unused. Or pure luck. */
     switch (PAL_GET_TYPE(handle)) {
         case PAL_TYPE_FILE:
-            d1   = handle->file.realpath;
-            dsz1 = strlen(handle->file.realpath) + 1;
+            d   = handle->file.realpath;
+            dsz = strlen(handle->file.realpath) + 1;
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
@@ -73,8 +73,8 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
             break;
         case PAL_TYPE_DIR:
             if (handle->dir.realpath) {
-                d1   = handle->dir.realpath;
-                dsz1 = strlen(handle->dir.realpath) + 1;
+                d   = handle->dir.realpath;
+                dsz = strlen(handle->dir.realpath) + 1;
             }
             break;
         case PAL_TYPE_SOCKET:
@@ -87,17 +87,17 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
     }
 
     size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz1);
+    void* buffer = malloc(hdlsz + dsz);
     if (!buffer)
         return -PAL_ERROR_NOMEM;
 
     /* copy into buffer all handle fields and then serialized fields */
     memcpy(buffer, handle, hdlsz);
-    if (dsz1)
-        memcpy(buffer + hdlsz, d1, dsz1);
+    if (dsz)
+        memcpy(buffer + hdlsz, d, dsz);
 
     *data = buffer;
-    return hdlsz + dsz1;
+    return hdlsz + dsz;
 }
 
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {

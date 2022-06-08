@@ -49,7 +49,7 @@ void linux_to_pal_sockaddr(const struct sockaddr_storage* linux_addr,
     unsigned short family;
     static_assert(SAME_TYPE(family, linux_addr->ss_family)
                   && offsetof(struct sockaddr_storage, ss_family) == 0, "oops");
-    /* Cannot use `&linux_addr->ss_family` because `linux_addr` might be missaligned. */
+    /* Cannot use `&linux_addr->ss_family` because `linux_addr` might be misaligned. */
     memcpy(&family, linux_addr, sizeof(family));
 
     switch (family) {

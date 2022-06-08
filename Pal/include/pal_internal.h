@@ -136,7 +136,7 @@ struct socket_ops {
     int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr);
     int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                struct pal_socket_addr* addr, bool is_nonblocking);
+                struct pal_socket_addr* addr, bool force_nonblocking);
 };
 
 /*
@@ -213,7 +213,7 @@ int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr);
 int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                  struct pal_socket_addr* addr, bool is_nonblocking);
+                  struct pal_socket_addr* addr, bool force_nonblocking);
 
 /* DkProcess and DkThread calls */
 int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);

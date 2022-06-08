@@ -18,8 +18,9 @@ static struct handle_ops g_udp_handle_ops;
 static struct socket_ops g_tcp_sock_ops;
 static struct socket_ops g_udp_sock_ops;
 
-static size_t g_default_recv_buf_size = 0;
-static size_t g_default_send_buf_size = 0;
+/* Default values on a modern Linux kernel. */
+static size_t g_default_recv_buf_size = 0x20000;
+static size_t g_default_send_buf_size = 0x4000;
 
 static size_t sanitize_size(size_t size) {
     if (size > (1ull << 47)) {
@@ -31,7 +32,7 @@ static size_t sanitize_size(size_t size) {
 
 static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage* addr,
                           size_t addrlen) {
-    if (addrlen < sizeof(addr->ss_family)) {
+    if (addrlen < offsetof(struct sockaddr_storage, ss_family) + sizeof(addr->ss_family)) {
         return -PAL_ERROR_DENIED;
     }
     switch (domain) {
@@ -72,41 +73,8 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.domain = domain;
     handle->sock.type = type;
     handle->sock.ops = ops;
-
-    handle->sock.recv_buf_size = __atomic_load_n(&g_default_recv_buf_size, __ATOMIC_RELAXED);
-    if (!handle->sock.recv_buf_size) {
-        /* TODO: this or just ignore this?
-        int val = 0;
-        int len = sizeof(val);
-        int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_RCVBUF, &val, &len);
-        if (ret < 0) {
-            log_error("%s: getsockopt SO_RCVBUF failed: %d", __func__, ret);
-            free(handle);
-            return NULL;
-        }
-        val = sanitize_size(val);
-        handle->sock.recv_buf_size = val;
-        __atomic_store_n(&g_default_recv_buf_size, val, __ATOMIC_RELAXED);
-        */
-    }
-
-    handle->sock.send_buf_size = __atomic_load_n(&g_default_send_buf_size, __ATOMIC_RELAXED);
-    if (!handle->sock.send_buf_size) {
-        /* TODO: this or just ignore this?
-        int val = 0;
-        int len = sizeof(val);
-        int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_SNDBUF, &val, &len);
-        if (ret < 0) {
-            log_error("%s: getsockopt SO_SNDBUF failed: %d", __func__, ret);
-            free(handle);
-            return NULL;
-        }
-        val = sanitize_size(val);
-        handle->sock.send_buf_size = val;
-        __atomic_store_n(&g_default_send_buf_size, val, __ATOMIC_RELAXED);
-        */
-    }
-
+    handle->sock.recv_buf_size = g_default_recv_buf_size;
+    handle->sock.send_buf_size = g_default_send_buf_size;
     handle->sock.linger = 0;
     handle->sock.recvtimeout_us = 0;
     handle->sock.sendtimeout_us = 0;
@@ -316,9 +284,8 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 };
 
-/* TODO: if this is used to change two fields and the second set fails, caller won't know about it
- * do we care? */
-/* TODO: this would need some locking, but LibOS provides it. Should we add redundant locks here? */
+/* Warning: if this is used to change two fields and the second set fails, the first set is not
+ * undone. */
 static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     if (attr->handle_type != PAL_TYPE_SOCKET) {
@@ -349,10 +316,11 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     if (attr->socket.recv_buf_size != handle->sock.recv_buf_size) {
-        if (attr->socket.recv_buf_size > INT_MAX) {
+        if (attr->socket.recv_buf_size > INT_MAX || attr->socket.recv_buf_size % 2) {
             return -PAL_ERROR_INVAL;
         }
-        int val = attr->socket.recv_buf_size;
+        /* The Linux kernel will double this value. */
+        int val = attr->socket.recv_buf_size / 2;
         int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(val));
         if (ret < 0) {
             return unix_to_pal_error(ret);
@@ -361,10 +329,11 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     if (attr->socket.send_buf_size != handle->sock.send_buf_size) {
-        if (attr->socket.send_buf_size > INT_MAX) {
+        if (attr->socket.send_buf_size > INT_MAX || attr->socket.send_buf_size % 2) {
             return -PAL_ERROR_INVAL;
         }
-        int val = attr->socket.send_buf_size;
+        /* The Linux kernel will double this value. */
+        int val = attr->socket.send_buf_size / 2;
         int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_SNDBUF, &val, sizeof(val));
         if (ret < 0) {
             return unix_to_pal_error(ret);
@@ -427,6 +396,8 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->sock.type == PAL_SOCKET_TCP);
+
     int ret = attrsetbyhdl_common(handle, attr);
     if (ret < 0) {
         return ret;
@@ -454,6 +425,8 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->sock.type == PAL_SOCKET_UDP);
+
     return attrsetbyhdl_common(handle, attr);
 }
 
@@ -490,8 +463,8 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
     return 0;
 }
 
-static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* out_size,
-                struct pal_socket_addr* addr, bool is_nonblocking) {
+static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
+                size_t* out_total_size, struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
@@ -506,7 +479,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
         iov[i].iov_len = pal_iov[i].iov_len;
     }
 
-    unsigned int flags = is_nonblocking ? MSG_DONTWAIT : 0;
+    unsigned int flags = force_nonblocking ? MSG_DONTWAIT : 0;
     if (handle->sock.type == PAL_SOCKET_UDP) {
         /* Reads from PAL UDP sockets always return the full packed length. See also the definition
          * of `DkSocketRecv`. */
@@ -526,7 +499,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
         }
         linux_to_pal_sockaddr(&sa_storage, addr);
     }
-    *out_size = size;
+    *out_total_size = size;
     return 0;
 }
 
@@ -643,9 +616,9 @@ int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size
 }
 
 int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                  struct pal_socket_addr* addr, bool is_nonblocking) {
+                  struct pal_socket_addr* addr, bool force_nonblocking) {
     if (!handle->sock.ops->recv) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, is_nonblocking);
+    return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }

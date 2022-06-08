@@ -80,7 +80,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
 }
 
 int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                    pal_stream_options_t options, PAL_HANDLE* handle_ptr) {
+                    pal_stream_options_t options, PAL_HANDLE* out_handle) {
     int linux_domain;
     int linux_type;
     switch (domain) {
@@ -130,7 +130,7 @@ int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
         return -PAL_ERROR_NOMEM;
     }
 
-    *handle_ptr = handle;
+    *out_handle = handle;
     return 0;
 }
 
@@ -206,7 +206,7 @@ static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
     return unix_to_pal_error(ret);
 }
 
-static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
                       struct pal_socket_addr* client_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
@@ -231,7 +231,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return -PAL_ERROR_NOMEM;
     }
 
-    *client_ptr = client;
+    *out_client = client;
     if (client_addr) {
         linux_to_pal_sockaddr(&sa_storage, client_addr);
         assert(client_addr->domain == client->sock.domain);
@@ -315,7 +315,6 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 };
 
-/* TODO: this would need some locking, but LibOS provides it. Should we add redundant locks here? */
 /* Warning: if this is used to change two fields and the second set fails, the first set is not
  * undone. */
 static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
@@ -442,6 +441,8 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->sock.type == PAL_SOCKET_TCP);
+
     int ret = attrsetbyhdl_common(handle, attr);
     if (ret < 0) {
         return ret;
@@ -469,6 +470,8 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->sock.type == PAL_SOCKET_UDP);
+
     return attrsetbyhdl_common(handle, attr);
 }
 
@@ -511,7 +514,7 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
 }
 
 static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
-                size_t* out_total_size, struct pal_socket_addr* addr, bool is_nonblocking) {
+                size_t* out_total_size, struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
@@ -524,7 +527,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
         iov[i].iov_len = pal_iov[i].iov_len;
     }
 
-    unsigned int flags = is_nonblocking ? MSG_DONTWAIT : 0;
+    unsigned int flags = force_nonblocking ? MSG_DONTWAIT : 0;
     if (handle->sock.type == PAL_SOCKET_UDP) {
         /* Reads from PAL UDP sockets always return the full packed length. See also the definition
          * of `DkSocketRecv`. */
@@ -661,9 +664,9 @@ int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size
 }
 
 int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                  struct pal_socket_addr* addr, bool is_nonblocking) {
+                  struct pal_socket_addr* addr, bool force_nonblocking) {
     if (!handle->sock.ops->recv) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, is_nonblocking);
+    return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }

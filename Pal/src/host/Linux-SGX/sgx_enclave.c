@@ -543,7 +543,7 @@ static long sgx_ocall_connect_simple(void* pms) {
         int val = 0;
         unsigned int len = sizeof(val);
         ret = DO_SYSCALL(getsockopt, ms->ms_fd, SOL_SOCKET, SO_ERROR, &val, &len);
-        if (ret || val < 0) {
+        if (ret < 0 || val < 0) {
             return ret < 0 ? ret : -EINVAL;
         }
         if (val) {

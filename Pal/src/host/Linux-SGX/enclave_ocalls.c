@@ -1109,7 +1109,7 @@ out:
     return ret;
 }
 
-int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* new_port) {
+int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* out_new_port) {
     int ret;
     void* old_ustack = sgx_prepare_ustack();
     ms_ocall_bind_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
@@ -1140,7 +1140,13 @@ int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* 
         goto out;
     }
 
-    *new_port = READ_ONCE(ms->ms_new_port);
+    uint16_t new_port = READ_ONCE(ms->ms_new_port);
+    if (new_port == 0) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    *out_new_port = new_port;
     ret = 0;
 
 out:
@@ -1457,7 +1463,7 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
     } else {
         /* Little sanity check - there are no such big packets. Can help user apps doing some
          * arithmetic on the return value without checking for overflows. */
-        if ((size_t)retval > (1ul << 56)) {
+        if ((size_t)retval >= (1ul << 48)) {
             retval = -EPERM;
             goto out;
         }

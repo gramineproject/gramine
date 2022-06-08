@@ -33,7 +33,7 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* maximum length of URIs */
 #define URI_MAX 4096
 
-/* TODO: dependency order is UGHMMMM */
+/* Common types used by host specific header. */
 enum pal_socket_domain {
     PAL_DISCONNECT,
     PAL_IPV4,
@@ -517,7 +517,7 @@ int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
 int DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
 
 /*!
- * \biref Turn a socket into listening one.
+ * \biref Turn a socket into a listening one.
  *
  * \param handle   Handle to the socket.
  * \param backlog  Size of the pending connections queue.
@@ -578,22 +578,22 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
 /*!
  * \brief Receive data.
  *
- * \param      handle          Handle to the socket.
- * \param      iov             Array of buffers for received data.
- * \param      iov_len         Length of \p iov array.
- * \param[out] out_total_size  On success contains the number of bytes received (TCP) or the size of
- *                             the packet (UDP), which might be greater than the total size of
- *                             buffers in \p iov array.
- * \param[out] addr            Source address. Can be NULL to ignore the source address.
- * \param      is_nonblocking  If `true` this request should not block. Otherwise just use whatever
- *                             mode the handle is in.
+ * \param      handle             Handle to the socket.
+ * \param      iov                Array of buffers for received data.
+ * \param      iov_len            Length of \p iov array.
+ * \param[out] out_total_size     On success contains the number of bytes received (TCP) or the size
+ *                                of the packet (UDP), which might be greater than the total size of
+ *                                buffers in \p iov array.
+ * \param[out] addr               Source address. Can be NULL to ignore the source address.
+ * \param      force_nonblocking  If `true` this request should not block. Otherwise just use
+ *                                whatever mode the handle is in.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * Data is received atomically, i.e. data from two `DkSocketRecv` calls will not be interleaved.
  */
 int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                 struct pal_socket_addr* addr, bool is_nonblocking);
+                 struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*
  * Thread creation

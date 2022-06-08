@@ -34,6 +34,6 @@ int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size
 }
 
 int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                  struct pal_socket_addr* addr, bool is_nonblocking) {
+                  struct pal_socket_addr* addr, bool force_nonblocking) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

@@ -49,7 +49,7 @@ static void read_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                     .iov_len = this_size,
                 };
                 CHECK(DkSocketRecv(handle, &iov, 1, &this_size, /*addr=*/NULL,
-                                   /*is_nonblocking=*/false));
+                                   /*force_nonblocking=*/false));
                 break;
             default:
                 BUG();

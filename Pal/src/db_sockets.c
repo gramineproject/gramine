@@ -40,7 +40,7 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
 }
 
 int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                 struct pal_socket_addr* addr, bool is_nonblocking) {
+                 struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
-    return _DkSocketRecv(handle, iov, iov_len, out_total_size, addr, is_nonblocking);
+    return _DkSocketRecv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }
