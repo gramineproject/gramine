@@ -15,6 +15,7 @@
 #include "api.h"
 #include "pal.h"
 #include "shim_internal.h"
+#include "shim_lock.h"
 #include "shim_table.h"
 #include "shim_thread.h"
 
@@ -169,11 +170,14 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return pal_to_unix_errno(ret);
     }
 
-    ret = update_thread_cpuaffinity_mask(thread, cpumask_size, user_mask_ptr);
+    lock(&thread->lock);
+    ret = set_user_thread_cpuaffinity_mask(thread, cpumask_size, user_mask_ptr);
     if (ret < 0) {
+        unlock(&thread->lock);
         put_thread(thread);
         return ret;
     }
+    unlock(&thread->lock);
 
     put_thread(thread);
     return 0;

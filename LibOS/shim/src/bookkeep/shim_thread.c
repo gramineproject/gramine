@@ -130,61 +130,76 @@ unmap:;
     return ret;
 }
 
-int update_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
-                                   unsigned long* cpumask) {
+int set_host_thread_cpuaffinity_mask(struct shim_thread* thread) {
+    assert(locked(&thread->lock));
+
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
 
-    memset(thread->cpumask, 0, sizeof(thread->cpumask));
+    /* Allocate memory to hold the thread's CPU affinity mask. */
+    unsigned long* cpumask = malloc(bitmask_size_in_bytes);
+    if (!cpumask)
+        return -ENOMEM;
 
-    if (!cpumask_size) {
-        /* Allocate memory to hold the thread's CPU affinity mask. */
-        cpumask = malloc(bitmask_size_in_bytes);
-        if (!cpumask)
-            return -ENOMEM;
-
-        ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, cpumask);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
+    ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, cpumask);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
     }
 
-    /* Verify the cpu affinity from untrusted host */
-    size_t mask_size;
-    size_t cnt = 0;
-    if (cpumask_size >= bitmask_size_in_bytes || cpumask_size == 0) {
-        cnt  = threads_cnt;
-        mask_size = bitmask_size_in_bytes;
-    } else {
-        /* When cpumask size is less than cores present in the system, check only cores that can fit
-         * in the cpumask. */
-        cnt = cpumask_size * BITS_IN_BYTE;
-        mask_size = cpumask_size;
-    }
-
+    /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
     size_t idx = 0;
-    for (size_t i = 0; i < cnt; i++) {
+    for (size_t i = 0; i < threads_cnt; i++) {
         idx = i / BITS_IN_TYPE(unsigned long);
         if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
-                /* cpumask contains a cpu that is currently offline */
+                /* cpumask contains a CPU that is currently offline */
                 ret = -EINVAL;
                 goto out;
             }
         }
     }
 
-    memcpy(thread->cpumask, cpumask, mask_size);
+    memset(thread->cpumask, 0, sizeof(thread->cpumask));
+    memcpy(thread->cpumask, cpumask, bitmask_size_in_bytes);
     ret = 0;
 
 out:
-    if(!cpumask_size) {
-        free(cpumask);
-        cpumask = NULL;
-    }
+    free(cpumask);
     return ret;
+}
+
+/* This function is only invoked from shim_do_sched_setaffinity to update user CPU affinity */
+int set_user_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
+                                     unsigned long* cpumask) {
+    assert(locked(&thread->lock));
+
+    /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
+    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
+
+    size_t idx = 0;
+    size_t cores_cnt = 0;
+    for (size_t i = 0; i < MIN(threads_cnt, cpumask_size * BITS_IN_BYTE); i++) {
+        idx = i / BITS_IN_TYPE(unsigned long);
+        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+            if (!g_pal_public_state->topo_info.threads[i].is_online) {
+                /* cpumask contains a CPU that is currently offline, remove it from the cpumask*/
+                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
+            } else {
+                cores_cnt++;
+            }
+        }
+    }
+
+    /* Intersection of offlined cores and the user supplied mask is empty so return an error. */
+    if (cores_cnt == 0)
+        return -EINVAL;
+
+    memset(thread->cpumask, 0, sizeof(thread->cpumask));
+    memcpy(thread->cpumask, cpumask, MIN(sizeof(thread->cpumask), cpumask_size));
+
+    return 0;
 }
 
 static int init_main_thread(void) {
@@ -279,12 +294,15 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    ret = update_thread_cpuaffinity_mask(cur_thread, 0, NULL);
+    lock(&cur_thread->lock);
+    ret = set_host_thread_cpuaffinity_mask(cur_thread);
     if (ret < 0) {
-        log_error("Failed to update thread CPU affinity mask");
+        log_error("Failed to set thread CPU affinity mask from the host");
+        unlock(&cur_thread->lock);
         put_thread(cur_thread);
-        return -EINVAL;
+        return ret;
     }
+    unlock(&cur_thread->lock);
 
     return 0;
 }

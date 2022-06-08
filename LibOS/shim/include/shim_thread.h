@@ -129,11 +129,11 @@ struct shim_thread {
     shim_tcb_t* shim_tcb;
     void* frameptr;
 
+    /* Current CPU affinity mask for this thread. CPU affinity up to 2048 cores can be supported. */
+    uint64_t cpumask[32];
+
     REFTYPE ref_count;
     struct shim_lock lock;
-
-    /* Current CPU affinity mask for this thread. CPU Affinity up to 2048 cores can be supported. */
-    uint64_t cpumask[32];
 };
 
 struct shim_thread_queue {
@@ -339,18 +339,23 @@ void release_robust_list(struct robust_list_head* head);
 void release_clear_child_tid(int* clear_child_tid);
 
 /*!
- * \brief Validate and update thread CPU affinity.
+ * \brief Get CPU affinity from host and initialize current thread CPU affinity after validation.
+ *
+ * \param thread  Thread whose CPU affinity needs to be initialized.
+ *
+ * \returns `0` on success and negative error code on failure.
+ */
+int set_host_thread_cpuaffinity_mask(struct shim_thread* thread);
+
+/*!
+ * \brief Validate CPU affinity mask from user and update current thread CPU affinity.
  *
  * \param thread        Thread whose CPU affinity needs to be updated.
- *
- * \param cpumask       If NULL, CPU affinity is obtained from the host and then updated to thread
- *                      else the mask that is passed from untrusted host is updated. In both cases
- *                      the cpumask is validated first before the update.
- *
+ * \param cpumask       CPU affinity mask passed from the user.
  * \param cpumask_size  Size (in bytes) of the cpumask.
  *
  * \returns `0` on success and negative error code on failure.
  */
-int update_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
-                                   unsigned long* cpumask);
+int set_user_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
+                                     unsigned long* cpumask);
 #endif /* _SHIM_THREAD_H_ */
