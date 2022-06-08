@@ -387,29 +387,14 @@ static int key_save(struct shim_dentry* dent, const char* data, size_t size) {
 }
 
 static int init_sgx_attestation(struct pseudo_node* attestation) {
-    int ret;
-
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
 
-    ret = toml_string_in(g_manifest_root, "sgx.remote_attestation", &g_attestation_type_str);
-    if (ret < 0) {
-        /* TODO: Bool syntax is deprecated in v1.3, remove 2 versions later. */
-        bool sgx_remote_attestation_enabled;
-        ret = toml_bool_in(g_manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
-                           &sgx_remote_attestation_enabled);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.remote_attestation'");
-            return ret;
-        }
-        if (sgx_remote_attestation_enabled)
-            g_attestation_type_str = strdup("unclear"); /* don't bother, it's deprecated anyway */
-        else
-            g_attestation_type_str = strdup("none");
+    g_attestation_type_str = strdup(g_pal_public_state->attestation_type);
+    if (!g_attestation_type_str) {
+        log_error("Cannot determine remote attestation type during init of /dev/attestation");
+        return -EINVAL;
     }
-
-    if (!g_attestation_type_str)
-        g_attestation_type_str = strdup("none");
 
     /* always add /dev/attestation/attestation_type file, even if it is "none" */
     pseudo_add_str(attestation, "attestation_type", &attestation_type_load);

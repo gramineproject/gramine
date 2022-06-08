@@ -489,13 +489,13 @@ class TC_04_Attestation(RegressionTestCase):
         self.assertIn("Test local attestation... SUCCESS", stdout)
         self.assertIn("Test quote interface... SUCCESS", stdout)
 
-    def test_002_attestation(self):
+    def test_002_attestation_deprecated(self):
         stdout, _ = self.run_binary(['attestation_deprecated_syntax'], timeout=60)
         self.assertIn("Test resource leaks in attestation filesystem... SUCCESS", stdout)
         self.assertIn("Test local attestation... SUCCESS", stdout)
         self.assertIn("Test quote interface... SUCCESS", stdout)
 
-    def test_003_attestation_stdio(self):
+    def test_003_attestation_deprecated_stdio(self):
         stdout, _ = self.run_binary(['attestation_deprecated_syntax', 'test_stdio'], timeout=60)
         self.assertIn("Test resource leaks in attestation filesystem... SUCCESS", stdout)
         self.assertIn("Test local attestation... SUCCESS", stdout)

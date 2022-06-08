@@ -621,6 +621,20 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
+    enum sgx_attestation_type attestation_type;
+    ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
+    if (ret < 0) {
+        log_error("Failed to parse attestation type: %d", ret);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    switch (attestation_type) {
+        case SGX_ATTESTATION_NONE: g_pal_public_state.attestation_type = "none"; break;
+        case SGX_ATTESTATION_EPID: g_pal_public_state.attestation_type = "epid"; break;
+        case SGX_ATTESTATION_DCAP: g_pal_public_state.attestation_type = "dcap"; break;
+        default: BUG();
+    }
+
     /* this should be placed *after all* initialize-from-manifest routines */
     if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");

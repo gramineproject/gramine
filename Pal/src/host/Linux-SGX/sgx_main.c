@@ -619,8 +619,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
-    char* sgx_attestation_type_str = NULL;
-    char* sgx_ra_client_spid_str = NULL;
     char* profile_str = NULL;
 #ifdef DEBUG
     char* profile_mode_str = NULL;
@@ -731,56 +729,11 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    enum sgx_attestation_type attestation_type = SGX_ATTESTATION_NONE;
-    ret = toml_string_in(manifest_root, "sgx.remote_attestation", &sgx_attestation_type_str);
-    if (!ret) {
-        if (sgx_attestation_type_str) {
-            if (!strcmp(sgx_attestation_type_str, "none")) {
-                attestation_type = SGX_ATTESTATION_NONE;
-            } else if (!strcmp(sgx_attestation_type_str, "epid")) {
-                attestation_type = SGX_ATTESTATION_EPID;
-            } else if (!strcmp(sgx_attestation_type_str, "dcap")) {
-                attestation_type = SGX_ATTESTATION_DCAP;
-            } else {
-                log_error("Unknown 'sgx.remote_attestation' type");
-                ret = -EINVAL;
-                goto out;
-            }
-        }
-    } else {
-        /* TODO: Bool syntax is deprecated in v1.3, remove 2 versions later. */
-        bool sgx_remote_attestation_enabled;
-        ret = toml_bool_in(manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
-                &sgx_remote_attestation_enabled);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.remote_attestation' (the value must be \"none\", \"epid\" "
-                      "or \"dcap\", or in case of legacy syntax `true` or `false`)");
-            ret = -EINVAL;
-            goto out;
-        }
-        if (sgx_remote_attestation_enabled)
-            attestation_type = SGX_ATTESTATION_UNCLEAR;
-        log_always("Detected deprecated syntax 'sgx.remote_attestation = true|false'; "
-                    "consider using 'sgx.remote_attestation = \"none\"|\"epid\"|\"dcap\"'.");
-    }
-
-    ret = toml_string_in(manifest_root, "sgx.ra_client_spid", &sgx_ra_client_spid_str);
+    ret = parse_attestation_type(manifest_root, &enclave_info->attestation_type);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.ra_client_spid'");
-        ret = -EINVAL;
+        /* error is already printed by the called func */
         goto out;
     }
-
-    /* legacy syntax: EPID is used if SPID is a non-empty string in manifest, otherwise DCAP */
-    if (attestation_type == SGX_ATTESTATION_UNCLEAR) {
-        if (sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str)) {
-            attestation_type = SGX_ATTESTATION_EPID;
-        } else {
-            attestation_type = SGX_ATTESTATION_DCAP;
-        }
-    }
-
-    enclave_info->attestation_type = attestation_type;
 
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
     if (ret < 0) {
@@ -933,8 +886,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 
 out:
     free(dummy_sigfile_str);
-    free(sgx_attestation_type_str);
-    free(sgx_ra_client_spid_str);
     free(profile_str);
 #ifdef DEBUG
     free(profile_mode_str);
