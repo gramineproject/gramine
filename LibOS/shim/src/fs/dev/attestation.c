@@ -35,7 +35,7 @@ static size_t g_target_info_size = 0;
 
 static size_t g_report_size = 0;
 
-char* g_attestation_type_str = NULL;
+const char* g_attestation_type_str = NULL;
 
 static int init_attestation_struct_sizes(void) {
     if (g_user_report_data_size && g_target_info_size && g_report_size) {
@@ -390,7 +390,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
 
-    g_attestation_type_str = strdup(g_pal_public_state->attestation_type);
+    g_attestation_type_str = g_pal_public_state->attestation_type;
     if (!g_attestation_type_str) {
         log_error("Cannot determine remote attestation type during init of /dev/attestation");
         return -EINVAL;

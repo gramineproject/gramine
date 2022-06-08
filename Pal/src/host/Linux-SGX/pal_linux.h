@@ -46,8 +46,7 @@ extern struct pal_linuxsgx_state {
 enum sgx_attestation_type {
     SGX_ATTESTATION_NONE,
     SGX_ATTESTATION_EPID,
-    SGX_ATTESTATION_DCAP,
-    SGX_ATTESTATION_UNCLEAR,  /* to support legacy `sgx.remote_attestation = true` (EPID or DCAP) */
+    SGX_ATTESTATION_DCAP
 };
 
 int parse_attestation_type(toml_table_t* manifest_root,
