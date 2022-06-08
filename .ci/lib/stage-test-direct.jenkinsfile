@@ -9,7 +9,7 @@ stage('test-direct') {
             // separately
             sh '''
                 cd LibOS/shim/test/ltp
-                export GRAMINE_LTP_LIVE_OUTPUT=fcntl14,fdatasync01
+                export GRAMINE_LTP_LIVE_OUTPUT=fcntl14,fcntl14_64,fdatasync01
                 python3 -m pytest -v -n4 --junit-xml=ltp.xml
             '''
         }
