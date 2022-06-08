@@ -98,7 +98,7 @@ Prerequisites
 
 - Intel SGX Driver and SDK/PSW. You need a machine that supports Intel SGX and
   FLC/DCAP. Please follow `this guide
-  <https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_Installation_Guide_Linux_2.13_Open_Source.pdf>`__
+  <https://download.01.org/intel-sgx/sgx-linux/2.13/docs/Intel_SGX_Installation_Guide_Linux_2.13_Open_Source.pdf>`__
   to install the Intel SGX driver and SDK/PSW. Make sure to install the driver
   with ECDSA/DCAP attestation.
 
@@ -323,7 +323,7 @@ applications: it transparently initializes the environment variable
 during remote attestation. In our PyTorch example, the provisioned secret is the
 confidential (master, or wrap) key to encrypt/decrypt user files. To inform
 Gramine that the obtained secret is indeed the key for file encryption, it is
-enough to set the environment variable ``SECRET_PROVISION_SET_PF_KEY``.
+enough to set the environment variable ``SECRET_PROVISION_SET_KEY``.
 
 Note that RA-TLS and Secret Provisioning work both with the EPID-based and the
 ECDSA/DCAP schemes of SGX remote attestation. Since this tutorial concentrates
@@ -430,7 +430,7 @@ Preparing Secret Provisioning
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The user must prepare the secret provisioning server and start it. For this,
-copy the secret provisioning executable from ```CI-Examples/ra-tls-secret-prov``
+copy the secret provisioning executable from ``CI-Examples/ra-tls-secret-prov``
 to the current directory::
 
    cp <gramine repository>/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
@@ -491,7 +491,7 @@ re-use the same ``ssl/`` directory and specify ``localhost`` ::
 
    loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
    loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
-   loader.env.SECRET_PROVISION_SET_PF_KEY = "1"
+   loader.env.SECRET_PROVISION_SET_KEY = "default"
    loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "ssl/ca.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
