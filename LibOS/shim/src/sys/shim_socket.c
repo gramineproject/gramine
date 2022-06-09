@@ -825,6 +825,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
             if (ret < 0) {
                 goto out;
             }
+            assert(tmp_iov.iov_len <= sock->peek.buf_size - sock->peek.data_size);
             sock->peek.data_size += tmp_iov.iov_len;
         }
 
