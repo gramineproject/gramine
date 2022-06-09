@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 OSCAR lab, Stony Brook University
- * 2017 University of North Carolina at Chapel Hill
+ *               2017 University of North Carolina at Chapel Hill
+ *               2022 Intel Corporation
  */
 
 #ifndef HEX_H
@@ -10,61 +11,46 @@
 #include <stdint.h>
 
 #include "api.h"
-#include "assert.h"
 
-/* This function is a helper for debug printing.
- * It accepts a pointer to a numerical value, and
- * formats it as a hex string, for printing.
- * size is the number of bytes pointed to by hex.
- * str is the caller-provided buffer, len is the length of the buffer.
- * The len must be at least (size * 2)+1.
- */
-static inline char* __bytes2hexstr(const void* hex, size_t size, char* str, size_t len) {
-    static const char* ch = "0123456789abcdef";
-    __UNUSED(len);
-    assert(len >= size * 2 + 1);
+static inline char* bytes2hex(const void* bytes, size_t bytes_size, char* hex, size_t hex_size) {
+    if (hex_size < bytes_size * 2 + 1)
+        return NULL;
 
-    for (size_t i = 0; i < size; i++) {
-        unsigned char h = ((unsigned char*)hex)[i];
-        str[i * 2]     = ch[h / 16];
-        str[i * 2 + 1] = ch[h % 16];
+    static const char* alphabet = "0123456789abcdef";
+    for (size_t i = 0; i < bytes_size; i++) {
+        unsigned char b = ((unsigned char*)bytes)[i];
+        hex[i * 2]     = alphabet[b / 16];
+        hex[i * 2 + 1] = alphabet[b % 16];
     }
 
-    str[size * 2] = 0;
-    return str;
+    hex[bytes_size * 2] = 0;
+    return hex;
 }
 
-#define IS_CHAR_ARRAY(arg) (_Generic((arg), char*: 1, default: 0) && \
-                            _Generic(&(arg), char**: 0, default: 1))
-#define IS_UINT8_ARRAY(arg) (_Generic((arg), uint8_t*: 1, default: 0) && \
-                             _Generic(&(arg), uint8_t**: 0, default: 1))
-
-static inline int8_t hex2dec(char c) {
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-    else if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-    else if (c >= '0' && c <= '9')
-        return c - '0';
-    else
-        return -1;
+static inline int8_t hex2dec(char hex) {
+    if ('A' <= hex && hex <= 'F') {
+        return hex - 'A' + 10;
+    } else if ('a' <= hex && hex <= 'f') {
+        return hex - 'a' + 10;
+    } else if ('0' <= hex && hex <= '9') {
+        return hex - '0';
+    }
+    return -1;
 }
 
-/*
- * BYTES2HEXSTR converts an array into a hexadecimal string and fills into a
- * given buffer. The buffer size is given as an extra argument.
- */
-#define BYTES2HEXSTR(array, str, len) ({                         \
-    static_assert(IS_CHAR_ARRAY(array) || IS_UINT8_ARRAY(array), \
-                  "`array` must be a char or uint8_t array");    \
-    __bytes2hexstr((array), sizeof(array), str, len);})
+static inline void* hex2bytes(const char* hex, size_t hex_len, void* bytes, size_t bytes_size) {
+    if (hex_len % 2 != 0 || bytes_size < hex_len / 2)
+        return NULL;
 
-/*
- * ALLOCA_BYTES2HEXSTR uses __alloca to allocate a buffer on the current frame
- * and then fills the hexadecimal string into the buffer.
- * This buffer can only be used within the caller frame (function).
- */
-#define ALLOCA_BYTES2HEXSTR(array) \
-    (BYTES2HEXSTR(array, __alloca(sizeof(array) * 2 + 1), sizeof(array) * 2 + 1))
+    for (size_t i = 0; i < hex_len; i += 2) {
+        int8_t hi = hex2dec(hex[i]);
+        int8_t lo = hex2dec(hex[i+1]);
+        if (hi < 0 || lo < 0)
+            return NULL;
+        ((unsigned char*)bytes)[i / 2] = hi * 16 + lo;
+    }
+
+    return bytes;
+}
 
 #endif // HEX_H
