@@ -173,16 +173,20 @@ void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t e
 }
 
 static void print_report(sgx_report_t* r) {
-    log_debug("  cpu_svn:     %s",     ALLOCA_BYTES2HEXSTR(r->body.cpu_svn.svn));
-    log_debug("  mr_enclave:  %s",     ALLOCA_BYTES2HEXSTR(r->body.mr_enclave.m));
-    log_debug("  mr_signer:   %s",     ALLOCA_BYTES2HEXSTR(r->body.mr_signer.m));
+    char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
+
+#define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
+    log_debug("  cpu_svn:     %s",     BYTES2HEX(r->body.cpu_svn.svn));
+    log_debug("  mr_enclave:  %s",     BYTES2HEX(r->body.mr_enclave.m));
+    log_debug("  mr_signer:   %s",     BYTES2HEX(r->body.mr_signer.m));
     log_debug("  attr.flags:  %016lx", r->body.attributes.flags);
     log_debug("  attr.xfrm:   %016lx", r->body.attributes.xfrm);
     log_debug("  isv_prod_id: %02x",   r->body.isv_prod_id);
     log_debug("  isv_svn:     %02x",   r->body.isv_svn);
-    log_debug("  report_data: %s",     ALLOCA_BYTES2HEXSTR(r->body.report_data.d));
-    log_debug("  key_id:      %s",     ALLOCA_BYTES2HEXSTR(r->key_id.id));
-    log_debug("  mac:         %s",     ALLOCA_BYTES2HEXSTR(r->mac));
+    log_debug("  report_data: %s",     BYTES2HEX(r->body.report_data.d));
+    log_debug("  key_id:      %s",     BYTES2HEX(r->key_id.id));
+    log_debug("  mac:         %s",     BYTES2HEX(r->mac));
+#undef BYTES2HEX
 }
 
 int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t* data,
@@ -210,8 +214,6 @@ int sgx_verify_report(sgx_report_t* report) {
         return -PAL_ERROR_DENIED;
     }
 
-    log_debug("Get report key for verification: %s", ALLOCA_BYTES2HEXSTR(report_key));
-
     sgx_mac_t check_mac;
     memset(&check_mac, 0, sizeof(check_mac));
 
@@ -227,7 +229,6 @@ int sgx_verify_report(sgx_report_t* report) {
 
     log_debug("Verify report:");
     print_report(report);
-    log_debug("  verify:     %s", ALLOCA_BYTES2HEXSTR(check_mac));
 
     if (memcmp(&check_mac, &report->mac, sizeof(check_mac))) {
         log_error("Report verification failed");
@@ -608,17 +609,13 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 
     if (hash_str) {
         assert(strlen(hash_str) == sizeof(sgx_file_hash_t) * 2);
-        for (size_t i = 0; i < sizeof(sgx_file_hash_t); i++) {
-            int8_t byte1 = hex2dec(hash_str[i * 2]);
-            int8_t byte2 = hex2dec(hash_str[i * 2 + 1]);
 
-            if (byte1 < 0 || byte2 < 0) {
-                log_error("Could not parse hash of file: %s", uri);
-                free(new);
-                return -PAL_ERROR_INVAL;
-            }
-
-            new->file_hash.bytes[i] = byte1 * 16 + byte2;
+        char* bytes = hex2bytes(hash_str, strlen(hash_str), new->file_hash.bytes,
+                                sizeof(new->file_hash.bytes));
+        if (!bytes) {
+            log_error("Could not parse hash of file: %s", uri);
+            free(new);
+            return -PAL_ERROR_INVAL;
         }
     } else {
         memset(&new->file_hash, 0, sizeof(new->file_hash));
@@ -1084,8 +1081,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
         }
     }
 
-    log_debug("Received local report (mr_enclave = %s)",
-              ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
+    log_debug("Received local report");
 
     /* Verify report[B -> A] */
     ret = sgx_verify_report(&report);
@@ -1095,8 +1091,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     }
 
     if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
-        log_error("Not an allowed enclave (mr_enclave = %s)",
-                  ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
+        log_error("Not an allowed enclave");
         ret = -PAL_ERROR_DENIED;
         goto out;
     }
@@ -1195,8 +1190,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
         }
     }
 
-    log_debug("Received local report (mr_enclave = %s)",
-              ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
+    log_debug("Received local report");
 
     /* Verify report[A -> B] */
     ret = sgx_verify_report(&report);
@@ -1206,8 +1200,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     }
 
     if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
-        log_error("Not an allowed enclave (mr_enclave = %s)",
-                  ALLOCA_BYTES2HEXSTR(report.body.mr_enclave.m));
+        log_error("Not an allowed enclave");
         ret = -PAL_ERROR_DENIED;
         goto out;
     }

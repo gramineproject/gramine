@@ -11,7 +11,7 @@ static_assert(sizeof(x) <= sizeof(y), "array x is longer than array y");
 char hex_buf[sizeof(y) * 2 + 1];
 
 int main(void) {
-    pal_printf("Hex test 1 is %s\n", BYTES2HEXSTR(x, hex_buf, sizeof(hex_buf)));
-    pal_printf("Hex test 2 is %s\n", BYTES2HEXSTR(y, hex_buf, sizeof(hex_buf)));
+    pal_printf("Hex test 1 is %s\n", bytes2hex(x, sizeof(x), hex_buf, sizeof(hex_buf)));
+    pal_printf("Hex test 2 is %s\n", bytes2hex(y, sizeof(y), hex_buf, sizeof(hex_buf)));
     return 0;
 }

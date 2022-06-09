@@ -436,7 +436,7 @@ static void hash_dentry_path(struct shim_dentry* dent, char* buf, size_t size) {
     assert(size >= sizeof(hashbytes) * 2 + 1);
     memcpy(hashbytes, &hash, sizeof(hash));
 
-    BYTES2HEXSTR(hashbytes, buf, size);
+    bytes2hex(hashbytes, sizeof(hashbytes), buf, size);
 }
 
 /*
