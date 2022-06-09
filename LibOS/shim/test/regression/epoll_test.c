@@ -7,13 +7,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define CHECK(x) ({                             \
-    __typeof__(x) _x = (x);                     \
-    if (_x == -1) {                             \
-        err(1, "error at line %d", __LINE__);   \
-    }                                           \
-    _x;                                         \
-})
+#include "common.h"
 
 #define ERR(msg, args...) \
     errx(1, "%d: " msg, __LINE__, ##args)

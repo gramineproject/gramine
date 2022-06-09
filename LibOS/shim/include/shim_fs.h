@@ -126,10 +126,6 @@ struct shim_fs_ops {
     /* seek: the content from the file opened as handle */
     file_off_t (*seek)(struct shim_handle* hdl, file_off_t offset, int whence);
 
-    /* move, copy: rename or duplicate the file */
-    int (*move)(const char* trim_old_name, const char* trim_new_name);
-    int (*copy)(const char* trim_old_name, const char* trim_new_name);
-
     /* Returns 0 on success, -errno on error */
     int (*truncate)(struct shim_handle* hdl, file_off_t len);
 
@@ -138,14 +134,6 @@ struct shim_fs_ops {
 
     /* setflags: set flags of the file */
     int (*setflags)(struct shim_handle* hdl, int flags);
-
-    /*
-     * \brief Deallocate handle data.
-     *
-     * Deallocates any filesystem-specific resources associated with the handle. Called just before
-     * destroying the handle.
-     */
-    void (*hdrop)(struct shim_handle* hdl);
 
     /* lock and unlock the file */
     int (*lock)(const char* trim_name);
@@ -898,6 +886,7 @@ extern struct shim_fs socket_builtin_fs;
 extern struct shim_fs epoll_builtin_fs;
 extern struct shim_fs eventfd_builtin_fs;
 extern struct shim_fs synthetic_builtin_fs;
+extern struct shim_fs path_builtin_fs;
 
 struct shim_fs* find_fs(const char* name);
 

@@ -937,6 +937,14 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['proc_path'])
         self.assertIn('proc path test success', stdout)
 
+    def test_011_open_opath(self):
+        try:
+            stdout, _ = self.run_binary(['open_opath'])
+        finally:
+            if os.path.exists("tmp/B"):
+                os.remove("tmp/B")
+        self.assertIn('TEST OK', stdout)
+
     def test_020_cpuinfo(self):
         stdout, _ = self.run_binary(['proc_cpuinfo'])
 

@@ -7,13 +7,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define CHECK(x)        \
-    do {                \
-        if (x) {        \
-            perror(#x); \
-            exit(1);    \
-        }               \
-    } while (0)
+#include "common.h"
 
 static int seen_signal_cnt = 0;
 
@@ -29,14 +23,14 @@ static void ignore_signal(int sig) {
         sigaddset(&newmask, sig);
     }
 
-    CHECK(sigprocmask(SIG_SETMASK, &newmask, NULL) < 0);
+    CHECK(sigprocmask(SIG_SETMASK, &newmask, NULL));
 }
 
 static void set_signal_handler(int sig, void* handler) {
     struct sigaction act = {
         .sa_handler = handler,
     };
-    CHECK(sigaction(sig, &act, NULL) < 0);
+    CHECK(sigaction(sig, &act, NULL));
 }
 
 static void test_sigprocmask(void) {
@@ -47,9 +41,9 @@ static void test_sigprocmask(void) {
     sigaddset(&newmask, SIGKILL);
     sigaddset(&newmask, SIGSTOP);
 
-    CHECK(sigprocmask(SIG_SETMASK, &newmask, NULL) < 0);
+    CHECK(sigprocmask(SIG_SETMASK, &newmask, NULL));
 
-    CHECK(sigprocmask(SIG_SETMASK, NULL, &oldmask) < 0);
+    CHECK(sigprocmask(SIG_SETMASK, NULL, &oldmask));
 
     if (sigismember(&oldmask, SIGKILL) || sigismember(&oldmask, SIGSTOP)) {
         printf("SIGKILL or SIGSTOP should be ignored, but is not.\n");
@@ -70,8 +64,8 @@ static void test_multiple_pending(void) {
 
     set_signal_handler(SIGALRM, signal_handler);
 
-    CHECK(kill(getpid(), SIGALRM) < 0);
-    CHECK(kill(getpid(), SIGALRM) < 0);
+    CHECK(kill(getpid(), SIGALRM));
+    CHECK(kill(getpid(), SIGALRM));
 
     if (__atomic_load_n(&seen_signal_cnt, __ATOMIC_RELAXED) != 0) {
         printf("Handled a blocked standard signal!\n");
@@ -90,8 +84,8 @@ static void test_multiple_pending(void) {
     int sig = SIGRTMIN;
     ignore_signal(sig);
 
-    CHECK(kill(getpid(), sig) < 0);
-    CHECK(kill(getpid(), sig) < 0);
+    CHECK(kill(getpid(), sig));
+    CHECK(kill(getpid(), sig));
 
     set_signal_handler(sig, signal_handler);
 
@@ -113,10 +107,9 @@ static void test_fork(void) {
 
     set_signal_handler(SIGALRM, signal_handler);
 
-    CHECK(kill(getpid(), SIGALRM) < 0);
+    CHECK(kill(getpid(), SIGALRM));
 
-    pid_t p = fork();
-    CHECK(p < 0);
+    pid_t p = CHECK(fork());
     if (p == 0) {
         ignore_signal(0);
 
@@ -139,7 +132,7 @@ static void test_execve_start(char* self) {
 
     set_signal_handler(SIGALRM, SIG_DFL);
 
-    CHECK(kill(getpid(), SIGALRM) < 0);
+    CHECK(kill(getpid(), SIGALRM));
 
     char* argv[] = {self, (char*)"cont", NULL};
     CHECK(execve(self, argv, NULL));

@@ -106,8 +106,13 @@ long shim_do_creat(const char* path, mode_t mode) {
 }
 
 long shim_do_openat(int dfd, const char* filename, int flags, int mode) {
+    /* Clear invalid flags. */
+    flags &= O_ACCMODE | O_APPEND | O_ASYNC | O_CLOEXEC | O_CREAT | O_DIRECT | O_DIRECTORY | O_DSYNC
+             | O_EXCL | O_LARGEFILE | O_NOATIME | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK | O_PATH
+             | O_SYNC | O_TMPFILE | O_TRUNC;
+
     if (flags & O_PATH) {
-        return -EINVAL;
+        flags &= O_PATH | O_CLOEXEC | O_DIRECTORY | O_NOFOLLOW;
     }
 
     if (!is_user_string_readable(filename))

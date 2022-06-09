@@ -243,4 +243,8 @@ struct shim_lock {
 #define EPOLLNVAL ((uint32_t)0x00000020)
 #endif
 
+#ifndef O_ASYNC
+#define O_ASYNC 020000
+#endif
+
 #endif /* _SHIM_TYPES_H_ */
