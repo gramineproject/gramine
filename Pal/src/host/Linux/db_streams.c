@@ -123,7 +123,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             hdl->dir.realpath = (hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL);
             break;
         case PAL_TYPE_SOCKET:
-            deserialize_socket_handle(hdl);
+            fixup_socket_handle_after_deserialize(hdl);
             break;
         case PAL_TYPE_PROCESS:
         case PAL_TYPE_EVENTFD:

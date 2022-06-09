@@ -7,8 +7,8 @@
 #include "pal_internal.h"
 
 int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                   pal_stream_options_t options, PAL_HANDLE* handle_ptr) {
-    return _DkSocketCreate(domain, type, options, handle_ptr);
+                   pal_stream_options_t options, PAL_HANDLE* out_handle) {
+    return _DkSocketCreate(domain, type, options, out_handle);
 }
 
 int DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
@@ -22,9 +22,9 @@ int DkSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
-                   struct pal_socket_addr* client_addr) {
+                   struct pal_socket_addr* out_client_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
-    return _DkSocketAccept(handle, options, client_ptr, client_addr);
+    return _DkSocketAccept(handle, options, client_ptr, out_client_addr);
 }
 
 int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,

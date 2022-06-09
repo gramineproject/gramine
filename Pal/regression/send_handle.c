@@ -3,7 +3,7 @@
 #include "pal_regression.h"
 
 #define MSG "Some message."
-#define MSG_SIZE static_strlen(MSG)
+#define MSG_SIZE (static_strlen(MSG))
 #define PORT 1337
 
 static void write_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
@@ -161,7 +161,7 @@ static void do_child(void) {
 
     /* TCP socket */
     CHECK(DkReceiveHandle(DkGetPalPublicState()->parent_process, &handle));
-    CHECK(DkSocketAccept(handle, /*options=*/0, &client_handle, /*client_addr=*/NULL));
+    CHECK(DkSocketAccept(handle, /*options=*/0, &client_handle, /*out_client_addr=*/NULL));
     DkObjectClose(handle);
     write_msg(client_handle, PAL_TYPE_SOCKET);
     DkObjectClose(client_handle);

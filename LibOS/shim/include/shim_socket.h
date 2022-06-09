@@ -87,22 +87,22 @@ struct shim_sock_ops {
     /*!
      * \brief Receive continuous data into an array of buffers.
      *
-     * \param         handle          Handle.
-     * \param         iov             Array of buffers to read to.
-     * \param         iov_len         Length of \p iov.
-     * \param[out]    out_total_size  On success contains the number of bytes received (STREAM) or
-     *                                the datagram size (DGRAM), which might be bigger than
-     *                                the total size of buffers in \p iov array.
-     * \param[out]    addr            On success contains the address data was received from. May
-     *                                be NULL.
-     * \param[in,out] addrlen         Length of \p addr. On success updated to the actual length of
-     *                                the address. Bigger than original value indicates that
-     *                                truncation has happened.
-     * \param         is_nonblocking  If `true` this request should not block. Otherwise just use
-     *                                whatever mode the handle is in.
+     * \param         handle             Handle.
+     * \param         iov                Array of buffers to read to.
+     * \param         iov_len            Length of \p iov.
+     * \param[out]    out_total_size     On success contains the number of bytes received (STREAM)
+     *                                   or the datagram size (DGRAM), which might be bigger than
+     *                                   the total size of buffers in \p iov array.
+     * \param[out]    addr               On success contains the address data was received from. May
+     *                                   be NULL.
+     * \param[in,out] addrlen            Length of \p addr. On success updated to the actual length
+     *                                   of the address. Bigger than original value indicates that
+     *                                   truncation has happened.
+     * \param         force_nonblocking  If `true` this request should not block. Otherwise just use
+     *                                   whatever mode the handle is in.
      */
     int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
-                size_t* out_total_size, void* addr, size_t* addrlen, bool is_nonblocking);
+                size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking);
 };
 
 extern struct shim_sock_ops sock_unix_ops;

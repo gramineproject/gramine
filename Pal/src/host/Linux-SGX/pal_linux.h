@@ -181,7 +181,7 @@ int _DkStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t le
                          bool is_blocking);
 int _DkStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen);
 
-void deserialize_socket_handle(PAL_HANDLE handle);
+void fixup_socket_handle_after_deserialize(PAL_HANDLE handle);
 
 #endif /* IN_ENCLAVE */
 

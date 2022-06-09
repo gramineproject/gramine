@@ -334,7 +334,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
 }
 
 static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t* addrlen, bool is_nonblocking) {
+                void* addr, size_t* addrlen, bool force_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
 
@@ -348,7 +348,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         return -ENOTCONN;
     }
 
-    if (is_nonblocking) {
+    if (force_nonblocking) {
         lock(&handle->lock);
         bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
         unlock(&handle->lock);

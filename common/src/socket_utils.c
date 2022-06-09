@@ -42,14 +42,10 @@ void pal_to_linux_sockaddr(const struct pal_socket_addr* pal_addr,
     }
 }
 
-void linux_to_pal_sockaddr(const struct sockaddr_storage* linux_addr,
-                           struct pal_socket_addr* pal_addr) {
-    /* `linux_addr` can actually be of a different type than `struct sockaddr_storage`, but it
-     * always has this `unsigned short family` at the begining. */
+void linux_to_pal_sockaddr(const void* linux_addr, struct pal_socket_addr* pal_addr) {
+    /* `linux_addr` can actually be of any socket address type, but it always has this
+     * `unsigned short family` at the begining. */
     unsigned short family;
-    static_assert(SAME_TYPE(family, linux_addr->ss_family)
-                  && offsetof(struct sockaddr_storage, ss_family) == 0, "oops");
-    /* Cannot use `&linux_addr->ss_family` because `linux_addr` might be misaligned. */
     memcpy(&family, linux_addr, sizeof(family));
 
     switch (family) {

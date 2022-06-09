@@ -442,7 +442,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
 }
 
 static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
-                size_t* out_total_size, void* _addr, size_t* addrlen, bool is_nonblocking) {
+                size_t* out_total_size, void* _addr, size_t* addrlen, bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     switch (handle->info.sock.type) {
@@ -468,7 +468,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
 
     struct pal_socket_addr pal_ip_addr;
     int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_total_size,
-                           _addr ? &pal_ip_addr : NULL, is_nonblocking);
+                           _addr ? &pal_ip_addr : NULL, force_nonblocking);
     free(pal_iov);
     if (ret < 0) {
         return pal_to_unix_errno(ret);

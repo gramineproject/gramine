@@ -748,7 +748,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
 
     /* Note this only indicates whether this operation was requested to be nonblocking. If it's
      * `false`, but the handle is in nonblocking mode, this read won't block. */
-    bool is_nonblocking = *flags & MSG_DONTWAIT;
+    bool force_nonblocking = *flags & MSG_DONTWAIT;
     struct shim_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
@@ -812,11 +812,11 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
             };
             if (sock->peek.data_size) {
                 /* We already have some data - should not block regardless of other settings. */
-                is_nonblocking = true;
+                force_nonblocking = true;
             }
 
             ret = sock->ops->recv(handle, &tmp_iov, 1, &tmp_iov.iov_len, /*addr=*/NULL,
-                                  /*addrlen=*/NULL, is_nonblocking);
+                                  /*addrlen=*/NULL, force_nonblocking);
             if (ret == -EAGAIN && sock->peek.data_size) {
                 /* We will just return what we have already. */
                 ret = 0;
@@ -858,7 +858,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     assert(!(*flags & MSG_PEEK));
 
     size_t size = 0;
-    ret = sock->ops->recv(handle, iov, iov_len, &size, addr, addrlen, is_nonblocking);
+    ret = sock->ops->recv(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/true, !ret ? size < total_size : false);
     if (!ret) {
         ret = *flags & MSG_TRUNC ? size : MIN(size, total_size);

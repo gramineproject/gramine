@@ -207,7 +207,7 @@ static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                      struct pal_socket_addr* client_addr) {
+                      struct pal_socket_addr* out_client_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage = { 0 };
@@ -232,9 +232,9 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
     }
 
     *out_client = client;
-    if (client_addr) {
-        linux_to_pal_sockaddr(&sa_storage, client_addr);
-        assert(client_addr->domain == client->sock.domain);
+    if (out_client_addr) {
+        linux_to_pal_sockaddr(&sa_storage, out_client_addr);
+        assert(out_client_addr->domain == client->sock.domain);
     }
     return 0;
 }
@@ -608,7 +608,7 @@ static struct handle_ops g_udp_handle_ops = {
     .close = close,
 };
 
-void deserialize_socket_handle(PAL_HANDLE handle) {
+void fixup_socket_handle_after_deserialize(PAL_HANDLE handle) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     switch (handle->sock.type) {
         case PAL_SOCKET_TCP:
