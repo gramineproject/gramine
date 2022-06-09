@@ -448,7 +448,7 @@ environment variables if available:
 
 .. note::
    Previously, ``SECRET_PROVISION_SET_PF_KEY = 1/true/TRUE`` was used for
-   setting the default encryption key, and Gramine still supports that
+   setting the ``default`` encryption key, and Gramine still supports that
    environment variable for backward compatibility.
 
 - ``SECRET_PROVISION_SERVERS`` (optional) -- a comma, semicolon or space
