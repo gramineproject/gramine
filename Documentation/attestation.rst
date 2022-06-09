@@ -439,17 +439,16 @@ environment variables if available:
 - ``SECRET_PROVISION_SET_KEY`` (optional) -- set it to the name of the key that
   will be provisioned into the Gramine enclave as the secret. For example,
   setting this environment variable to ``default`` will install the provisioned
-  key as the default encryption key for encrypted files. The key must be a
-  32-char null-terminated AES-GCM encryption key in hex format, similar to
-  ``fs.insecure__keys.[KEY_NAME]`` manifest option. This environment variable is
-  checked only if ``SECRET_PROVISION_CONSTRUCTOR`` is set. The library puts the
-  provisioned key into ``/dev/attestation/keys/<key_name>`` so that Gramine
-  recognizes it.
+  key as the default encryption key for encrypted files. This environment
+  variable is checked only if ``SECRET_PROVISION_CONSTRUCTOR`` is set. The
+  library puts the provisioned key into ``/dev/attestation/keys/<key_name>`` so
+  that Gramine recognizes it.
 
 .. note::
    Previously, ``SECRET_PROVISION_SET_PF_KEY = 1/true/TRUE`` was used for
    setting the ``default`` encryption key, and Gramine still supports that
-   environment variable for backward compatibility.
+   environment variable for backward compatibility. It is deprecated and will be
+   removed in the next releases of Gramine.
 
 - ``SECRET_PROVISION_SERVERS`` (optional) -- a comma, semicolon or space
   separated list of server names with ports to connect to for secret
