@@ -63,6 +63,7 @@ tests = {
     'mprotect_file_fork': {},
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},
+    'open_opath': {},
     'openmp': {
         # NOTE: This will use `libgomp` in GCC and `libomp` in Clang.
         'c_args': '-fopenmp',

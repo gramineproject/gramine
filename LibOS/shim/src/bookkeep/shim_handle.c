@@ -498,9 +498,6 @@ void put_handle(struct shim_handle* hdl) {
         if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->close)
             hdl->fs->fs_ops->close(hdl);
 
-        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->hdrop)
-            hdl->fs->fs_ops->hdrop(hdl);
-
         free(hdl->uri);
 
         if (hdl->pal_handle) {

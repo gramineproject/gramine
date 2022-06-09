@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define ARRAY_LEN(x) (sizeof(x) / sizeof(x[0]))
+#include "common.h"
 
 static gid_t test_groups[] = { 0, 1337, 1337, 0 };
 
@@ -46,7 +46,7 @@ int main(void) {
     x = getgroups(ARRAY_LEN(groups), groups);
     if (x < 0) {
         err(1, "getgroups");
-    } else if (x != ARRAY_LEN(groups)) {
+    } else if ((size_t)x != ARRAY_LEN(groups)) {
         errx(1, "getgroups returned invalid length: %d (expected: %zu)", x, ARRAY_LEN(groups));
     }
 

@@ -445,13 +445,31 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
 
     ret = path_lookupat(start, path, lookup_flags, &dent);
     if (ret < 0)
-        goto err;
+        goto out;
+
+    if (flags & O_PATH) {
+        if (!dent->inode) {
+            ret = -ENOENT;
+            goto out;
+        }
+
+        assoc_handle_with_dentry(hdl, dent, flags);
+        if (dent->inode->type == S_IFDIR) {
+            hdl->is_dir = true;
+            hdl->dir_info.dents = NULL;
+        }
+
+        hdl->type = TYPE_PATH;
+        hdl->fs = &path_builtin_fs;
+        ret = 0;
+        goto out;
+    }
 
     if (dent->inode && dent->inode->type == S_IFDIR) {
         if (flags & O_WRONLY || flags & O_RDWR ||
                 ((flags & O_CREAT) && !(flags & O_DIRECTORY) && !(flags & O_EXCL))) {
             ret = -EISDIR;
-            goto err;
+            goto out;
         }
     }
 
@@ -459,18 +477,16 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         /*
          * Can happen if user specified O_NOFOLLOW, or O_TRUNC | O_EXCL. Posix requires us to fail
          * with -ELOOP when trying to open a symlink.
-         *
-         * (Linux allows opening a symlink with O_PATH, but Gramine does not support it yet).
          */
         ret = -ELOOP;
-        goto err;
+        goto out;
     }
 
     bool need_open = true;
     if (!dent->inode) {
         if (!(flags & O_CREAT)) {
             ret = -ENOENT;
-            goto err;
+            goto out;
         }
 
         /* Check the parent permission first */
@@ -478,7 +494,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         if (dir) {
             ret = check_permissions(dir, MAY_WRITE | MAY_EXEC);
             if (ret < 0)
-                goto err;
+                goto out;
         }
 
         struct shim_fs* fs = dent->mount->fs;
@@ -487,19 +503,19 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         if (flags & O_DIRECTORY) {
             if (!fs->d_ops->mkdir) {
                 ret = -EINVAL;
-                goto err;
+                goto out;
             }
             ret = fs->d_ops->mkdir(dent, mode & ~S_IFMT);
             if (ret < 0)
-                goto err;
+                goto out;
         } else {
             if (!fs->d_ops->creat) {
                 ret = -EINVAL;
-                goto err;
+                goto out;
             }
             ret = fs->d_ops->creat(hdl, dent, flags, mode & ~S_IFMT);
             if (ret < 0)
-                goto err;
+                goto out;
             assoc_handle_with_dentry(hdl, dent, flags);
             need_open = false;
         }
@@ -507,36 +523,37 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         /* The file exists. This is not permitted if both O_CREAT and O_EXCL are set. */
         if ((flags & O_CREAT) && (flags & O_EXCL)) {
             ret = -EEXIST;
-            goto err;
+            goto out;
         }
 
         /* Check permissions. Note that we do it only if the file already exists: a newly created
          * file is allowed to have a mode that's incompatible with `acc_mode`. */
         ret = check_permissions(dent, acc_mode);
         if (ret < 0)
-            goto err;
+            goto out;
     }
 
     if (hdl && need_open) {
         ret = dentry_open(hdl, dent, flags);
         if (ret < 0)
-            goto err;
+            goto out;
     }
 
+    ret = 0;
+
+out:
     if (found) {
-        *found = dent;
-    } else {
-        put_dentry(dent);
+        if (ret == 0) {
+            assert(dent);
+            get_dentry(dent);
+            *found = dent;
+        } else {
+            *found = NULL;
+        }
     }
-    unlock(&g_dcache_lock);
-    return 0;
 
-err:
     if (dent)
         put_dentry(dent);
-
-    if (found)
-        *found = NULL;
 
     unlock(&g_dcache_lock);
     return ret;

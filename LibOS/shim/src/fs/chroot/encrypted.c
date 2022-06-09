@@ -384,16 +384,18 @@ static int chroot_encrypted_flush(struct shim_handle* hdl) {
     return ret;
 }
 
-static void chroot_encrypted_hdrop(struct shim_handle* hdl) {
+static int chroot_encrypted_close(struct shim_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
     if (hdl->inode->type != S_IFREG)
-        return;
+        return 0;
 
     struct shim_encrypted_file* enc = hdl->inode->data;
 
     lock(&hdl->inode->lock);
     encrypted_file_put(enc);
     unlock(&hdl->inode->lock);
+
+    return 0;
 }
 
 static ssize_t chroot_encrypted_read(struct shim_handle* hdl, void* buf, size_t count,
@@ -473,7 +475,7 @@ struct shim_fs_ops chroot_encrypted_fs_ops = {
     .hstat      = &generic_inode_hstat,
     .truncate   = &chroot_encrypted_truncate,
     .poll       = &generic_inode_poll,
-    .hdrop      = &chroot_encrypted_hdrop,
+    .close      = &chroot_encrypted_close,
     .checkpoint = &chroot_encrypted_checkpoint,
     .migrate    = &chroot_encrypted_migrate,
     .mmap       = &generic_emulated_mmap,

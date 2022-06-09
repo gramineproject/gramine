@@ -67,6 +67,7 @@ manifests = [
   "mprotect_prot_growsdown",
   "multi_pthread",
   "multi_pthread_exitless",
+  "open_opath",
   "openmp",
   "pipe",
   "pipe_nonblocking",
