@@ -93,7 +93,8 @@ static int report(struct ias_context_t* ias, const char* quote_path, const char*
     }
     quote_size = sizeof(sgx_quote_t) + quote->signature_size;
 
-    ret = ias_verify_quote(ias, quote_data, quote_size, nonce, report_path, sig_path, cert_path);
+    ret = ias_send_quote_get_report(ias, quote_data, quote_size, nonce, report_path, sig_path,
+                                    cert_path);
     if (ret != 0) {
         ERROR("Failed to submit quote to IAS\n");
         goto out;

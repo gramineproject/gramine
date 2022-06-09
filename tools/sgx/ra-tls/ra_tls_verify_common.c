@@ -17,7 +17,7 @@
 #include <mbedtls/sha256.h>
 #include <mbedtls/x509_crt.h>
 
-#include "attestation.h"
+#include "quote.h"
 #include "ra_tls.h"
 #include "util.h"
 

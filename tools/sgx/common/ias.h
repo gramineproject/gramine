@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -56,16 +57,17 @@ int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_s
  * \return 0 on success, -1 otherwise.
  *
  *  This version of the function is convenient for command-line utilities. To get raw IAS contents,
- *  use ias_verify_quote_raw().
+ *  use ias_send_quote_get_report_raw().
  *
  * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
  */
-int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t quote_size,
-                     const char* nonce, const char* report_path, const char* sig_path,
-                     const char* cert_path);
+int ias_send_quote_get_report(struct ias_context_t* context, const void* quote, size_t quote_size,
+                              const char* nonce, const char* report_path, const char* sig_path,
+                              const char* cert_path);
 
 /*!
- * \brief Send quote to IAS for verification (same as ias_verify_quote() but not saving to files).
+ * \brief Send quote to IAS for verification (same as ias_send_quote_get_report() but not saving to
+ *        files).
  *
  * \param[in] context             IAS context returned by ias_init().
  * \param[in] quote               Binary quote data blob.
@@ -82,11 +84,36 @@ int ias_verify_quote(struct ias_context_t* context, const void* quote, size_t qu
  *  This version of the function is convenient for library usage. This function allocates buffers
  *  for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr and
  *  \a cert_data_ptr. The caller is responsible for freeing them.
- *  To save IAS contents to files, use ias_verify_quote().
+ *  To save IAS contents to files, use ias_send_quote_get_report().
  *
  * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
  */
-int ias_verify_quote_raw(struct ias_context_t* context, const void* quote, size_t quote_size,
-                         const char* nonce, char** report_data_ptr, size_t* report_data_size,
-                         char** sig_data_ptr, size_t* sig_data_size, char** cert_data_ptr,
-                         size_t* cert_data_size);
+int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quote,
+                                  size_t quote_size, const char* nonce, char** report_data_ptr,
+                                  size_t* report_data_size, char** sig_data_ptr,
+                                  size_t* sig_data_size, char** cert_data_ptr,
+                                  size_t* cert_data_size);
+
+/*!
+ *  \brief Verify IAS attestation report. Also extract the SGX quote contained in IAS report:
+ *         allocate enough memory to hold the quote and pass it to the user.
+ *
+ *  \param[in] ias_report         IAS attestation verification report.
+ *  \param[in] ias_report_size    Size of \a ias_report in bytes.
+ *  \param[in] ias_sig_b64        IAS report signature (base64-encoded as returned by IAS).
+ *  \param[in] ias_sig_b64_size   Size of \a ias_sig_b64 in bytes.
+ *  \param[in] allow_outdated_tcb Treat IAS status codes: GROUP_OUT_OF_DATE, CONFIGURATION_NEEDED,
+ *                                SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
+ *  \param[in] nonce              (Optional) Nonce that's expected in the report.
+ *  \param[in] ias_pub_key_pem    (Optional) IAS public RSA key (PEM format, NULL-terminated).
+ *                                If not specified, a hardcoded Intel's key is used.
+ *  \param[out] out_quote         Buffer with quote. User is responsible for freeing it.
+ *  \param[out] out_quote_size    Size of \a out_quote in bytes.
+ *
+ *  \return 0 on successful verification, negative value on error.
+ */
+int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
+                                    uint8_t* ias_sig_b64, size_t ias_sig_b64_size,
+                                    bool allow_outdated_tcb, const char* nonce,
+                                    const char* ias_pub_key_pem, uint8_t** out_quote,
+                                    size_t* out_quote_size);

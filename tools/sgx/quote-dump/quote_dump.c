@@ -8,7 +8,7 @@
 #include <getopt.h>
 #include <stdio.h>
 
-#include "attestation.h"
+#include "quote.h"
 #include "util.h"
 
 struct option g_options[] = {

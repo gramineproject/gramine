@@ -22,8 +22,8 @@
 
 #include <mbedtls/x509_crt.h>
 
-#include "attestation.h"
 #include "ias.h"
+#include "quote.h"
 #include "ra_tls.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
@@ -187,8 +187,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (ret < 0)
         goto out;
 
-    ret = ias_verify_quote_raw(ias, quote, quote_size, nonce, &report_data, &report_data_size,
-                               &sig_data, &sig_data_size, &cert_data, &cert_data_size);
+    ret = ias_send_quote_get_report_raw(ias, quote, quote_size, nonce, &report_data,
+                                        &report_data_size, &sig_data, &sig_data_size, &cert_data,
+                                        &cert_data_size);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_FATAL_ERROR;
         goto out;
@@ -200,7 +201,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    /* verify_ias_report_extract_quote() expects report_data and sig_data without the ending '\0' */
+    /* ias_verify_report_extract_quote() expects report_data and sig_data without the ending '\0' */
     assert(report_data[report_data_size - 1] == '\0');
     report_data_size--;
     assert(sig_data[sig_data_size - 1] == '\0');
@@ -218,7 +219,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
      * fails if the SGX quote is invalid or if the EPID group/private key/signature is revoked (see
      * https://www.intel.com/content/dam/develop/public/us/en/documents/sgx-attestation-api-spec.pdf
      * for details) */
-    ret = verify_ias_report_extract_quote((uint8_t*)report_data, report_data_size,
+    ret = ias_verify_report_extract_quote((uint8_t*)report_data, report_data_size,
                                           (uint8_t*)sig_data, sig_data_size,
                                           allow_outdated_tcb, nonce,
                                           ias_pub_key_pem, &quote_from_ias, &quote_from_ias_size);

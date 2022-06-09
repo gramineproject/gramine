@@ -1,10 +1,10 @@
 sgx_util = shared_library('sgx_util',
-    'attestation.c',
-    'attestation.h',
     'ias.c',
     'ias.h',
     'pf_util.c',
     'pf_util.h',
+    'quote.c',
+    'quote.h',
     'util.c',
     'util.h',
 

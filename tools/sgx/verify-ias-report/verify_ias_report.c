@@ -9,7 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "attestation.h"
+#include "ias.h"
+#include "quote.h"
 #include "util.h"
 
 struct option g_options[] = {
@@ -168,7 +169,7 @@ int main(int argc, char* argv[]) {
     size_t quote_body_size = 0;
 
     /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
-    ret = verify_ias_report_extract_quote(report, report_size, sig, sig_size,
+    ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
                                           allow_outdated_tcb, nonce, ias_pubkey,
                                           &report_quote_body, &quote_body_size);
     if (ret < 0)
