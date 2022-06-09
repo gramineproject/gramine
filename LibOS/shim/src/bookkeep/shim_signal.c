@@ -845,6 +845,7 @@ out:
 }
 
 bool is_eintr_like(int ret) {
+    assert(ret <= 0);
     switch (ret) {
         case -EINTR:
         case -ERESTARTSYS:

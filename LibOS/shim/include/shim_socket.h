@@ -24,7 +24,7 @@ struct shim_sock_ops {
     int (*bind)(struct shim_handle* handle, void* addr, size_t addrlen);
 
     /*!
-     * \brief Set handle into listening mode.
+     * \brief Set the handle into listening mode.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
@@ -33,9 +33,9 @@ struct shim_sock_ops {
     /*!
      * \brief Accept a connection on a listening handle.
      *
-     * \param handle           Handle in listening mode.
-     * \param is_nonblocking   `true` if the new handle is to be set in nonblocking mode.
-     * \param[out] client_ptr  On success contains the new handle.
+     * \param      handle          A handle in listening mode.
+     * \param      is_nonblocking  `true` if the new handle is to be set in nonblocking mode.
+     * \param[out] out_client      On success contains the new handle.
      *
      * This callback is called without any locks and must support concurrent calls.
      */
@@ -72,14 +72,14 @@ struct shim_sock_ops {
                       size_t len);
 
     /*!
-     * \brief Send array of buffers as continuous data.
+     * \brief Send an array of buffers as continuous data.
      *
-     * \param      handle    Handle.
-     * \param      iov       Array of buffers to write from.
-     * \param      iov_len   Length of \p iov.
+     * \param      handle    A handle.
+     * \param      iov       An array of buffers to write from.
+     * \param      iov_len   The length of \p iov.
      * \param[out] out_size  On success contains the number of bytes sent.
-     * \param      addr      Address to send to. May be NULL.
-     * \param      addrlen   Length of \p addr.
+     * \param      addr      An address to send to. May be NULL.
+     * \param      addrlen   The length of \p addr.
      */
     int (*send)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen);
@@ -87,17 +87,17 @@ struct shim_sock_ops {
     /*!
      * \brief Receive continuous data into an array of buffers.
      *
-     * \param         handle             Handle.
-     * \param         iov                Array of buffers to read to.
-     * \param         iov_len            Length of \p iov.
+     * \param         handle             A handle.
+     * \param         iov                An array of buffers to read to.
+     * \param         iov_len            The length of \p iov.
      * \param[out]    out_total_size     On success contains the number of bytes received (STREAM)
      *                                   or the datagram size (DGRAM), which might be bigger than
      *                                   the total size of buffers in \p iov array.
      * \param[out]    addr               On success contains the address data was received from. May
      *                                   be NULL.
-     * \param[in,out] addrlen            Length of \p addr. On success updated to the actual length
-     *                                   of the address. Bigger than original value indicates that
-     *                                   truncation has happened.
+     * \param[in,out] addrlen            The length of \p addr. On success updated to the actual
+     *                                   length of the address. Bigger than original value indicates
+     *                                   that truncation has happened.
      * \param         force_nonblocking  If `true` this request should not block. Otherwise just use
      *                                   whatever mode the handle is in.
      */

@@ -146,11 +146,14 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
 static int listen(struct shim_handle* handle, unsigned int backlog) {
     /* PAL pipes don't have changeable wait queue size. */
     __UNUSED(backlog);
-    if (handle->info.sock.type != SOCK_STREAM) {
+    struct shim_sock_handle* sock = &handle->info.sock;
+    assert(locked(&sock->lock));
+
+    if (sock->type != SOCK_STREAM) {
         return -EOPNOTSUPP;
     }
     /* This socket is already listening - it must have been bound before. */
-    assert(handle->info.sock.state == SOCK_BOUND || handle->info.sock.state == SOCK_LISTENING);
+    assert(sock->state == SOCK_BOUND || sock->state == SOCK_LISTENING);
     return 0;
 }
 
@@ -321,7 +324,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
             size += iov[i].iov_len;
         }
         buf = backing_buf;
-        /* `size` already correct. */
+        /* `size` is already correct. */
     }
 
     int ret = DkStreamWrite(pal_handle, /*offset=*/0, &size, buf, NULL);
@@ -376,7 +379,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
             return -ENOMEM;
         }
         buf = backing_buf;
-        /* `size` already correct. */
+        /* `size` is already correct. */
     }
 
     int ret = DkStreamRead(pal_handle, /*offset=*/0, &size, buf, NULL, 0);

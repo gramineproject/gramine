@@ -442,13 +442,13 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
 }
 
 static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
-                size_t* out_total_size, void* _addr, size_t* addrlen, bool force_nonblocking) {
+                size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     switch (handle->info.sock.type) {
         case SOCK_STREAM:
             /* TCP - not interested in remote address (we know it already). */
-            _addr = NULL;
+            addr = NULL;
             addrlen = NULL;
             break;
         case SOCK_DGRAM:
@@ -468,16 +468,18 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
 
     struct pal_socket_addr pal_ip_addr;
     int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_total_size,
-                           _addr ? &pal_ip_addr : NULL, force_nonblocking);
+                           addr ? &pal_ip_addr : NULL, force_nonblocking);
     free(pal_iov);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
-    if (_addr) {
+    if (addr) {
         struct sockaddr_storage linux_addr;
         size_t linux_addr_len = sizeof(linux_addr);
         pal_to_linux_sockaddr(&pal_ip_addr, &linux_addr, &linux_addr_len);
-        memcpy(_addr, &linux_addr, MIN(*addrlen, linux_addr_len));
+        /* If the user provided buffer is smaller, the address is truncated, but we report
+         * the actual address size in `addrlen`. */
+        memcpy(addr, &linux_addr, MIN(*addrlen, linux_addr_len));
         *addrlen = linux_addr_len;
     }
     return 0;

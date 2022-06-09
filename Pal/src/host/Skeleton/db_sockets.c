@@ -18,7 +18,7 @@ int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* client_ptr,
+int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
                     struct pal_socket_addr* out_client_addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

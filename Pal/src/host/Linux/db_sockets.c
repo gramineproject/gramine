@@ -608,7 +608,7 @@ static struct handle_ops g_udp_handle_ops = {
     .close = close,
 };
 
-void fixup_socket_handle_after_deserialize(PAL_HANDLE handle) {
+void fixup_socket_handle_after_deserialization(PAL_HANDLE handle) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     switch (handle->sock.type) {
         case PAL_SOCKET_TCP:
