@@ -515,7 +515,7 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    BYTES2HEXSTR(random, buf, size);
+    bytes2hex(random, sizeof(random), buf, size);
     return 0;
 }
 

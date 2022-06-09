@@ -60,18 +60,21 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
 #ifdef SGX_DCAP
     log_debug("Read dummy DCAP token");
 #else
+    char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
+#define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
     log_debug("Read token:");
     log_debug("    valid:                 0x%08x",   token->body.valid);
     log_debug("    attr.flags:            0x%016lx", token->body.attributes.flags);
     log_debug("    attr.xfrm:             0x%016lx", token->body.attributes.xfrm);
-    log_debug("    mr_enclave:            %s",       ALLOCA_BYTES2HEXSTR(token->body.mr_enclave.m));
-    log_debug("    mr_signer:             %s",       ALLOCA_BYTES2HEXSTR(token->body.mr_signer.m));
-    log_debug("    LE cpu_svn:            %s",       ALLOCA_BYTES2HEXSTR(token->cpu_svn_le.svn));
+    log_debug("    mr_enclave:            %s",       BYTES2HEX(token->body.mr_enclave.m));
+    log_debug("    mr_signer:             %s",       BYTES2HEX(token->body.mr_signer.m));
+    log_debug("    LE cpu_svn:            %s",       BYTES2HEX(token->cpu_svn_le.svn));
     log_debug("    LE isv_prod_id:        %02x",     token->isv_prod_id_le);
     log_debug("    LE isv_svn:            %02x",     token->isv_svn_le);
     log_debug("    LE masked_misc_select: 0x%08x",   token->masked_misc_select_le);
     log_debug("    LE attr.flags:         0x%016lx", token->attributes_le.flags);
     log_debug("    LE attr.xfrm:          0x%016lx", token->attributes_le.xfrm);
+#undef BYTES2HEX
 #endif
 
     return 0;
@@ -383,9 +386,12 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
 #endif
     unsigned long enclave_valid_addr = secs->base + secs->size - g_page_size;
 
+    char hex[sizeof(sigstruct->body.enclave_hash.m) * 2 + 1];
     log_debug("Enclave initializing:");
     log_debug("    enclave id:   0x%016lx", enclave_valid_addr);
-    log_debug("    mr_enclave:   %s", ALLOCA_BYTES2HEXSTR(sigstruct->body.enclave_hash.m));
+    log_debug("    mr_enclave:   %s", bytes2hex(sigstruct->body.enclave_hash.m,
+                                                sizeof(sigstruct->body.enclave_hash.m),
+                                                hex, sizeof(hex)));
 
     struct sgx_enclave_init param = {
 #ifndef SGX_DCAP

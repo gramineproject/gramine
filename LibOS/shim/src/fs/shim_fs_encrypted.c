@@ -205,14 +205,10 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     }
 
     pf_key_t tmp_pf_key;
-    for (size_t i = 0; i < len; i += 2) {
-        int8_t hi = hex2dec(key_str[i]);
-        int8_t lo = hex2dec(key_str[i+1]);
-        if (hi < 0 || lo < 0) {
-            log_warning("%s: unexpected character encountered", __func__);
-            return -EINVAL;
-        }
-        tmp_pf_key[i / 2] = hi * 16 + lo;
+    char* bytes = hex2bytes(key_str, len + 1, tmp_pf_key, sizeof(tmp_pf_key));
+    if (!bytes) {
+        log_warning("%s: unexpected character encountered", __func__);
+        return -EINVAL;
     }
     memcpy(pf_key, &tmp_pf_key, sizeof(tmp_pf_key));
     return 0;
@@ -222,7 +218,7 @@ int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size) {
     if (buf_size < sizeof(*pf_key) * 2 + 1)
         return -EINVAL;
 
-    __bytes2hexstr(pf_key, sizeof(*pf_key), buf, buf_size);
+    bytes2hex(pf_key, sizeof(*pf_key), buf, buf_size);
     return 0;
 }
 

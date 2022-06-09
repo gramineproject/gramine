@@ -567,15 +567,13 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
             return -PAL_ERROR_INVAL;
         }
 
-        for (size_t i = 0; i < strlen(ra_client_spid_str); i++) {
-            int8_t val = hex2dec(ra_client_spid_str[i]);
-            if (val < 0) {
-                log_error("Malformed 'sgx.ra_client_spid' value in the manifest: %s",
-                          ra_client_spid_str);
-                free(ra_client_spid_str);
-                return -PAL_ERROR_INVAL;
-            }
-            spid[i / 2] = spid[i / 2] * 16 + (uint8_t)val;
+        char* bytes = hex2bytes(ra_client_spid_str, strlen(ra_client_spid_str) + 1, spid,
+                                sizeof(spid));
+        if (!bytes) {
+            log_error("Malformed 'sgx.ra_client_spid' value in the manifest: %s",
+                      ra_client_spid_str);
+            free(ra_client_spid_str);
+            return -PAL_ERROR_INVAL;
         }
 
         /* read sgx.ra_client_linkable from manifest */
