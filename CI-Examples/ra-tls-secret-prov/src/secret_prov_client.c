@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
     printf("--- Received secret1 = '%s', secret2 = '%s' ---\n", secret1, secret2);
     ret = 0;
 out:
-    secret_provision_destroy();
     secret_provision_close(&ctx);
+    secret_provision_destroy(&ctx);
     return ret;
 }

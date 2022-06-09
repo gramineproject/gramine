@@ -22,6 +22,7 @@
 
 struct ra_tls_ctx {
     void* ssl;
+    void* attest_resources;
 };
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
@@ -98,7 +99,7 @@ int secret_provision_get(uint8_t** out_secret, size_t* out_secret_size);
  * This function zeroes out the memory where provisioned secret is stored and frees it.
  */
 __attribute__ ((visibility("default")))
-void secret_provision_destroy(void);
+void secret_provision_destroy(struct ra_tls_ctx* ctx);
 
 /*!
  * \brief Establish an RA-TLS session and retrieve first secret (client-side).
