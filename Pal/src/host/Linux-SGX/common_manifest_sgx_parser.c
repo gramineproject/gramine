@@ -51,10 +51,8 @@ int parse_attestation_type(toml_table_t* manifest_root,
     /* we parse SPID and linkable here even if there is no sgx.remote_attestation (or it is not
      * EPID), simply to error out early on incorrect values */
     ret = get_epid_params(manifest_root, &sgx_ra_client_spid_str, &dummy_linkable);
-    if (ret < 0) {
-        ret = -EINVAL;
+    if (ret < 0)
         goto out;
-    }
 
     ret = toml_string_in(manifest_root, "sgx.remote_attestation", &sgx_attestation_type_str);
     if (!ret) {
@@ -111,10 +109,8 @@ int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_s
     bool linkable = false;
 
     ret = get_epid_params(manifest_root, &sgx_ra_client_spid_str, &linkable);
-    if (ret < 0) {
-        ret = -EINVAL;
+    if (ret < 0)
         goto out;
-    }
 
     if (!sgx_ra_client_spid_str || strlen(sgx_ra_client_spid_str) != sizeof(spid) * 2) {
         log_error("Malformed 'sgx.ra_client_spid' value in the manifest: %s",
