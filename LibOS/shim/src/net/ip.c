@@ -5,7 +5,8 @@
 
 /*
  * Implementation of IPv4 and IPv6 sockets.
- * `handle->info.sock.pal_handle` is always set, hence does not need atomicity on accesses.
+ * For such sockets `handle->info.sock.pal_handle` is always set, hence does not need atomicity on
+ * accesses.
  */
 
 #include "pal.h"
