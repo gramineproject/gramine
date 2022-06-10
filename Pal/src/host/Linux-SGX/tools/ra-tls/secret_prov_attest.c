@@ -262,12 +262,12 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     /* destroy a previously provisioned secret, if any */
     secret_provision_destroy();
 
-    g_provisioned_secret_size = received_secret_size;
-    g_provisioned_secret = malloc(g_provisioned_secret_size);
+    g_provisioned_secret = malloc(received_secret_size);
     if (!g_provisioned_secret) {
         ret = -ENOMEM;
         goto out;
     }
+    g_provisioned_secret_size = received_secret_size;
 
     ret = secret_provision_read(&ctx, g_provisioned_secret, g_provisioned_secret_size);
     if (ret < 0) {
