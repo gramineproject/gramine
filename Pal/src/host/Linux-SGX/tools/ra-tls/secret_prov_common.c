@@ -66,12 +66,15 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
 }
 
 int secret_provision_close(struct ra_tls_ctx* ctx) {
-    if (!ctx || !ctx->ssl)
-        return 0;
+    int ret;
+    if (!ctx || !ctx->ssl) {
+        ret = 0;
+        goto out;
+    }
 
     mbedtls_ssl_context* _ssl = (mbedtls_ssl_context*)ctx->ssl;
 
-    int ret = -1;
+    ret = -1;
     while (ret < 0) {
         ret = mbedtls_ssl_close_notify(_ssl);
         if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
@@ -79,8 +82,13 @@ int secret_provision_close(struct ra_tls_ctx* ctx) {
         }
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : ret;
+            if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+                ret = -ECONNRESET;
+            goto out;
         }
     }
-    return 0;
+    ret = 0;
+out:
+    secret_provision_free_resources();
+    return ret;
 }

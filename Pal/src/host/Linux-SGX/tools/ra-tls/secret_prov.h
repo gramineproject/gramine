@@ -29,6 +29,10 @@ typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsig
 
 typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
 
+/* internally used functions, not exported */
+__attribute__ ((visibility("hidden")))
+void secret_provision_free_resources(void);
+
 /*!
  * \brief Write arbitrary data in an established RA-TLS session.
  *

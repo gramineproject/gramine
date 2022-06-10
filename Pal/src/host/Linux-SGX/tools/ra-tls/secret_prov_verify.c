@@ -43,6 +43,10 @@ struct thread_info {
 /* SSL/TLS + RA-TLS handshake is not thread-safe, use coarse-grained lock */
 static pthread_mutex_t g_handshake_lock;
 
+void secret_provision_free_resources(void) {
+    /* nothing to be freed */
+}
+
 static void* client_connection(void* data) {
     int ret;
     struct thread_info* ti = (struct thread_info*)data;

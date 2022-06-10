@@ -44,28 +44,39 @@ static mbedtls_ssl_context g_ssl;
 static mbedtls_pk_context g_my_ratls_key;
 static mbedtls_x509_crt g_my_ratls_cert;
 
-static uint8_t* provisioned_secret = NULL;
-static size_t provisioned_secret_size = 0;
+static uint8_t* g_provisioned_secret = NULL;
+static size_t g_provisioned_secret_size = 0;
+
+void secret_provision_free_resources(void) {
+    mbedtls_x509_crt_free(&g_my_ratls_cert);
+    mbedtls_pk_free(&g_my_ratls_key);
+    mbedtls_net_free(&g_verifier_fd);
+    mbedtls_ssl_free(&g_ssl);
+    mbedtls_ssl_config_free(&g_conf);
+    mbedtls_x509_crt_free(&g_verifier_ca_chain);
+    mbedtls_ctr_drbg_free(&g_ctr_drbg);
+    mbedtls_entropy_free(&g_entropy);
+}
 
 int secret_provision_get(uint8_t** out_secret, size_t* out_secret_size) {
     if (!out_secret || !out_secret_size)
         return -EINVAL;
 
-    *out_secret      = provisioned_secret;
-    *out_secret_size = provisioned_secret_size;
+    *out_secret      = g_provisioned_secret;
+    *out_secret_size = g_provisioned_secret_size;
     return 0;
 }
 
 void secret_provision_destroy(void) {
-    if (provisioned_secret && provisioned_secret_size)
+    if (g_provisioned_secret && g_provisioned_secret_size)
 #ifdef __STDC_LIB_EXT1__
-        memset_s(provisioned_secret, 0, provisioned_secret_size);
+        memset_s(g_provisioned_secret, 0, g_provisioned_secret_size);
 #else
-        memset(provisioned_secret, 0, provisioned_secret_size);
+        memset(g_provisioned_secret, 0, g_provisioned_secret_size);
 #endif
-    free(provisioned_secret);
-    provisioned_secret      = NULL;
-    provisioned_secret_size = 0;
+    free(g_provisioned_secret);
+    g_provisioned_secret      = NULL;
+    g_provisioned_secret_size = 0;
 }
 
 int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
@@ -248,14 +259,17 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         goto out;
     }
 
-    provisioned_secret_size = received_secret_size;
-    provisioned_secret = malloc(provisioned_secret_size);
-    if (!provisioned_secret) {
+    /* destroy a previously provisioned secret, if any */
+    secret_provision_destroy();
+
+    g_provisioned_secret_size = received_secret_size;
+    g_provisioned_secret = malloc(g_provisioned_secret_size);
+    if (!g_provisioned_secret) {
         ret = -ENOMEM;
         goto out;
     }
 
-    ret = secret_provision_read(&ctx, provisioned_secret, provisioned_secret_size);
+    ret = secret_provision_read(&ctx, g_provisioned_secret, g_provisioned_secret_size);
     if (ret < 0) {
         goto out;
     }
@@ -270,17 +284,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 out:
     if (ret < 0) {
         secret_provision_destroy();
-    }
-
-    if (ret < 0 || !out_ctx) {
-        mbedtls_x509_crt_free(&g_my_ratls_cert);
-        mbedtls_pk_free(&g_my_ratls_key);
-        mbedtls_net_free(&g_verifier_fd);
-        mbedtls_ssl_free(&g_ssl);
-        mbedtls_ssl_config_free(&g_conf);
-        mbedtls_x509_crt_free(&g_verifier_ca_chain);
-        mbedtls_ctr_drbg_free(&g_ctr_drbg);
-        mbedtls_entropy_free(&g_entropy);
+        secret_provision_free_resources();
     }
 
     free(servers);
@@ -348,7 +352,8 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
 
             size_t total_written = 0;
             while (total_written < sizeof(keydata)) {
-                ssize_t written = write(fd, keydata + total_written, sizeof(keydata) - total_written);
+                ssize_t written = write(fd, keydata + total_written,
+                                        sizeof(keydata) - total_written);
                 if (written > 0) {
                     total_written += written;
                 } else if (written == 0) {
