@@ -11,6 +11,8 @@ if not os.path.exists("/dev/attestation/user_report_data"):
           "are you running under SGX, with remote attestation enabled?")
     sys.exit(1)
 
+print(f"Detected attestation type: {open('/dev/attestation/attestation_type').read()}")
+
 with open("/dev/attestation/user_report_data", "wb") as f:
     f.write(b'\0'*64)
 

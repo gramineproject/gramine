@@ -69,8 +69,8 @@ build time.
 [spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 ```sh
-RA_TYPE=epid RA_CLIENT_SPID=<your SPID> RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0> \
-    make app epid files/input.txt
+make app epid files/input.txt RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
+    RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
@@ -92,7 +92,7 @@ kill %%
 - Secret Provisioning flows, ECDSA-based (DCAP) attestation:
 
 ```sh
-RA_TYPE=dcap make app dcap files/input.txt
+make app dcap files/input.txt RA_TYPE=dcap
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \

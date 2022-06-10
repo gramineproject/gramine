@@ -14,15 +14,15 @@ built *without* remote attestation.
 If you want to build the example for DCAP attestation, first make sure you have
 a working DCAP setup. Then build the example as follows:
 ```
-RA_TYPE=dcap SGX=1 make
+make SGX=1 RA_TYPE=dcap
 ```
 
 Otherwise, you will probably want to use EPID attestation. For this, you will
 additionally need to provide an SPID and specify whether it is set up for
 linkable quotes or not:
 ```
-RA_TYPE=epid RA_CLIENT_SPID=12345678901234567890123456789012 RA_CLIENT_LINKABLE=0 \
-    SGX=1 make
+make SGX=1 RA_TYPE=epid RA_CLIENT_SPID=12345678901234567890123456789012 \
+    RA_CLIENT_LINKABLE=0
 ```
 
 The above dummy values will suffice for simple experiments, but if you wish to
