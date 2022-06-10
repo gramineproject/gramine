@@ -84,15 +84,12 @@ static int clone_implementation_wrapper(void* arg_) {
 
     add_thread(my_thread);
 
-    lock(&my_thread->lock);
     int ret = set_host_thread_cpuaffinity_mask(my_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
-        unlock(&my_thread->lock);
         put_thread(my_thread);
         return ret;
     }
-    unlock(&my_thread->lock);
 
     /* Copy regs before we let the parent release them. */
     PAL_CONTEXT regs;

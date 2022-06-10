@@ -220,7 +220,9 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
     }
 
     memset(user_mask_ptr, 0, cpumask_size);
+    lock(&thread->lock);
     memcpy(user_mask_ptr, thread->cpumask, cpumask_size);
+    unlock(&thread->lock);
 
     put_thread(thread);
     /* on success, imitate Linux kernel implementation: see SYSCALL_DEFINE3(sched_getaffinity) */

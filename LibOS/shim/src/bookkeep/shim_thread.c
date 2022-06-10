@@ -131,11 +131,16 @@ unmap:;
 }
 
 int set_host_thread_cpuaffinity_mask(struct shim_thread* thread) {
-    assert(locked(&thread->lock));
-
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
+
+    /* Check if the system has more cores than actually supported in Gramine */
+    if (bitmask_size_in_bytes > sizeof(thread->cpumask)) {
+        log_error("Current platform has more cores (%lu) than Gramine can support in cpumask (%lu)",
+              threads_cnt, sizeof(thread->cpumask) * BITS_IN_BYTE);
+        return -EOVERFLOW;
+    }
 
     /* Allocate memory to hold the thread's CPU affinity mask. */
     unsigned long* cpumask = malloc(bitmask_size_in_bytes);
@@ -184,7 +189,7 @@ int set_user_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_
         idx = i / BITS_IN_TYPE(unsigned long);
         if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
-                /* cpumask contains a CPU that is currently offline, remove it from the cpumask*/
+                /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
                 cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
             } else {
                 cores_cnt++;
@@ -192,7 +197,7 @@ int set_user_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_
         }
     }
 
-    /* Intersection of offlined cores and the user supplied mask is empty so return an error. */
+    /* Intersection of online cores and the user supplied mask is empty. */
     if (cores_cnt == 0)
         return -EINVAL;
 
@@ -294,15 +299,12 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    lock(&cur_thread->lock);
     ret = set_host_thread_cpuaffinity_mask(cur_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
-        unlock(&cur_thread->lock);
         put_thread(cur_thread);
         return ret;
     }
-    unlock(&cur_thread->lock);
 
     return 0;
 }
