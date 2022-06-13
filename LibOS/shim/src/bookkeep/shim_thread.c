@@ -130,7 +130,7 @@ unmap:;
     return ret;
 }
 
-int set_host_thread_cpuaffinity_mask(struct shim_thread* thread) {
+int init_thread_cpuaffinit_from_host(struct shim_thread* thread) {
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
@@ -138,7 +138,7 @@ int set_host_thread_cpuaffinity_mask(struct shim_thread* thread) {
     /* Check if the system has more cores than actually supported in Gramine */
     if (bitmask_size_in_bytes > sizeof(thread->cpumask)) {
         log_error("Current platform has more cores (%lu) than Gramine can support in cpumask (%lu)",
-              threads_cnt, sizeof(thread->cpumask) * BITS_IN_BYTE);
+                  threads_cnt, sizeof(thread->cpumask) * BITS_IN_BYTE);
         return -EOVERFLOW;
     }
 
@@ -176,8 +176,8 @@ out:
 }
 
 /* This function is only invoked from shim_do_sched_setaffinity to update user CPU affinity */
-int set_user_thread_cpuaffinity_mask(struct shim_thread* thread, size_t cpumask_size,
-                                     unsigned long* cpumask) {
+int update_thread_cpuaffinity_from_user(struct shim_thread* thread, size_t cpumask_size,
+                                        unsigned long* cpumask) {
     assert(locked(&thread->lock));
 
     /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
@@ -299,7 +299,7 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    ret = set_host_thread_cpuaffinity_mask(cur_thread);
+    ret = init_thread_cpuaffinit_from_host(cur_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);
