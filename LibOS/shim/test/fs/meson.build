@@ -45,6 +45,7 @@ tests = {
     'seek_tell': {},
     'stat': {},
     'truncate': {},
+    'protect_file': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'fs')

@@ -217,3 +217,12 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
             else:
                 print('[!] Fail: successfully decrypted file: ' + name)
                 self.fail()
+
+    def test_000_write_protected_file(self):
+        file_path = "/tmp/sample_protected.txt"
+        stdout, stderr = self.run_binary(['protect_file', file_path])
+
+        self.assertIn("Successfuly wrote in protected file " + file_path +
+                " for 1 iteration", stdout)
+        self.assertIn("Successfuly wrote in protected file " + file_path +
+                " for 2 iteration", stdout)
