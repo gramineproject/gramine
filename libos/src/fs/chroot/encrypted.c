@@ -25,8 +25,8 @@
  *
  * TODO:
  *
- * - truncate (the current `truncate` operation works only for extending the file, support for
- *   truncation needs to be added to the `protected_files` module)
+ * - truncate - The truncate functionality does not support shrinking to arbitrary size.
+ *              It has to be added to the `protected_files` module.
  * - flush all files on process exit
  */
 
