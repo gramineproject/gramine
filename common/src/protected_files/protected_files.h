@@ -255,7 +255,7 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size);
  * \param [in] size Data size to set
  * \return PF status
  * \details If the file is extended, added bytes are zero.
- *          Truncation is not implemented yet (TODO).
+ *          Shrinking to arbitrary size is not implemented yet (TODO).
  */
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 
