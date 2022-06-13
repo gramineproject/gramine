@@ -82,8 +82,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx) {
         }
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
-                ret = -ECONNRESET;
+            ret = ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
             goto out;
         }
     }
