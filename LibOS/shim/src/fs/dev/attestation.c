@@ -252,7 +252,7 @@ static int attestation_type_load(struct shim_dentry* dent, char** out_data, size
         return -ENOMEM;
 
     *out_data = str;
-    *out_size = strlen(str) + 1;
+    *out_size = strlen(str);
     return 0;
 }
 
