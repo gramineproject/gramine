@@ -92,16 +92,6 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         self.assertTrue(os.path.isfile(output_path))
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
-    # doesn't work because encrypted files do not support truncation (and the test opens an
-    # existing, non-empty file with O_TRUNC)
-    @unittest.expectedFailure
-    def test_101_open_flags(self):
-        # the test binary expects a path to file that will get created
-        file_path = os.path.join(self.OUTPUT_DIR, 'test_101') # new file
-        stdout, stderr = self.run_binary(['open_flags', file_path])
-        self.verify_open_flags(stdout, stderr)
-
-    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_115_seek_tell(self):
         # the test binary expects a path to read-only (existing) file and two paths to files that
         # will get created
@@ -133,10 +123,32 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         self.__decrypt_file(file, dec_path)
         self.assertEqual(os.stat(dec_path).st_size, size)
 
-    @unittest.expectedFailure
-    # pylint: disable=fixme
+    def verify_truncate_test(self, path_1, path_2, size_out):
+        stdout, stderr = self.run_binary(['truncate', path_1, path_2, str(size_out)])
+        self.assertNotIn('ERROR: ', stderr)
+        self.assertIn('truncate(' + path_1 + ') to ' + str(size_out) + ' OK', stdout)
+        self.assertIn('open(' + path_2 + ') output OK', stdout)
+        self.assertIn('ftruncate(' + path_2 + ') to ' + str(size_out) + ' OK', stdout)
+        self.assertIn('close(' + path_2 + ') output OK', stdout)
+        self.verify_size(path_1, size_out)
+        self.verify_size(path_2, size_out)
+
+    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted) and
+    # because file truncation from greater to small size is not yet implemented
     def test_140_file_truncate(self):
-        self.fail() # TODO: port these to the new file format
+        enc_path = self.ENCRYPTED_FILES[-1] # existing file
+        path_1 = os.path.join(self.OUTPUT_DIR, 'test_140a') # writable files
+        path_2 = os.path.join(self.OUTPUT_DIR, 'test_140b') # writable files
+        self.copy_input(enc_path, path_1) # encrypt
+        self.copy_input(enc_path, path_2) # encrypt
+
+        self.verify_truncate_test(path_1, path_2, 0)
+        self.verify_truncate_test(path_1, path_2, 200)
+        self.verify_truncate_test(path_1, path_2, 0)
+        self.verify_truncate_test(path_1, path_2, 1000)
+        self.verify_truncate_test(path_1, path_2, 1000)
+        self.verify_truncate_test(path_1, path_2, 0)
+        self.verify_truncate_test(path_1, path_2, 0)
 
     def test_150_file_rename(self):
         path1 = os.path.join(self.OUTPUT_DIR, 'test_150a')
