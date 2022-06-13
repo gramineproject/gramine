@@ -130,7 +130,7 @@ unmap:;
     return ret;
 }
 
-int init_thread_cpuaffinit_from_host(struct shim_thread* thread) {
+int init_thread_cpuaffinity_from_host(struct shim_thread* thread) {
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
@@ -299,7 +299,7 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    ret = init_thread_cpuaffinit_from_host(cur_thread);
+    ret = init_thread_cpuaffinity_from_host(cur_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);
