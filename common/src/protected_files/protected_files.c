@@ -136,6 +136,16 @@ static bool ipf_restore_current_metadata_key(pf_context_t* pf, pf_key_t* output)
     return ipf_import_metadata_key(pf, /*restore=*/true, output);
 }
 
+static void ipf_init_root_mht(file_node_t *mht) {
+    memset(mht, 0, sizeof(*mht));
+
+    mht->type                 = FILE_MHT_NODE_TYPE;
+    mht->physical_node_number = 1;
+    mht->node_number          = 0;
+    mht->new_node             = true;
+    mht->need_writing         = false;
+}
+
 static bool ipf_init_fields(pf_context_t* pf) {
 #ifdef DEBUG
     pf->debug_buffer = malloc(PF_DEBUG_PRINT_SIZE_MAX);
@@ -147,13 +157,8 @@ static bool ipf_init_fields(pf_context_t* pf) {
     memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
     memset(&pf->encrypted_part_plain, 0, sizeof(pf->encrypted_part_plain));
     memset(&g_empty_iv, 0, sizeof(g_empty_iv));
-    memset(&pf->root_mht, 0, sizeof(pf->root_mht));
 
-    pf->root_mht.type                 = FILE_MHT_NODE_TYPE;
-    pf->root_mht.physical_node_number = 1;
-    pf->root_mht.node_number          = 0;
-    pf->root_mht.new_node             = true;
-    pf->root_mht.need_writing         = false;
+    ipf_init_root_mht(&pf->root_mht);
 
     pf->offset         = 0;
     pf->file           = NULL;
@@ -1230,7 +1235,7 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     return PF_STATUS_SUCCESS;
 }
 
-// TODO: file truncation
+// TODO: File truncation to arbitrary size.
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
@@ -1242,13 +1247,50 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
 
     if (size > pf->encrypted_part_plain.size) {
-        // extend the file
+        // Extend the file.
         pf->offset = pf->encrypted_part_plain.size;
         DEBUG_PF("extending the file from %lu to %lu", pf->offset, size);
         if (ipf_write(pf, NULL, size - pf->offset) != size - pf->offset)
             return pf->last_error;
 
         return PF_STATUS_SUCCESS;
+    }
+
+    if (size == 0) {
+       // Shrink the file to zero.
+       void* data;
+       char path[PATH_MAX_SIZE];
+       size_t path_len;
+       pf_status_t status = g_cb_truncate(pf->file, 0);
+       if (PF_FAILURE(status))
+           return status;
+
+       path_len = strlen(pf->encrypted_part_plain.path);
+
+       memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
+
+       memcpy(path, pf->encrypted_part_plain.path, path_len);
+       erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
+       memcpy(pf->encrypted_part_plain.path, path, path_len);
+
+       ipf_init_root_mht(&pf->root_mht);
+
+       pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
+       pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
+       pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
+
+       pf->need_writing = true;
+       pf->end_of_file  = false;
+       pf->real_file_size = 0;
+
+       while ((data = lruc_get_last(pf->cache)) != NULL) {
+               file_node_t* file_node = (file_node_t*)data;
+               erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
+               free(file_node);
+               lruc_remove_last(pf->cache);
+       }
+
+       return PF_STATUS_SUCCESS;
     }
 
     return PF_STATUS_NOT_IMPLEMENTED;
