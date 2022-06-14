@@ -415,6 +415,8 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
         assert(client_handle->type == TYPE_SOCK);
         lock(&client_handle->info.sock.lock);
 
+        /* If the user provided buffer is too small, the address is truncated, but we report
+         * the actual address size in `addrlen_ptr`. */
         memcpy(addr, &client_handle->info.sock.remote_addr,
                MIN(addrlen, client_handle->info.sock.remote_addrlen));
         *addrlen_ptr = client_handle->info.sock.remote_addrlen;
@@ -472,6 +474,9 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
 
     struct shim_sock_handle* sock = &handle->info.sock;
 
+    /* We need to take `recv_lock` just in case we free `peek` buffer in `disconnect` case.
+     * This should hurt though - nothing should be calling `recv` concurrently anyway. */
+    lock(&sock->recv_lock);
     lock(&sock->lock);
 
     switch (sock->state) {
@@ -497,6 +502,7 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
             if (ret < 0) {
                 goto out;
             }
+
             if (sock->was_bound) {
                 sock->state = SOCK_BOUND;
             } else {
@@ -504,10 +510,18 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
                 sock->local_addr.ss_family = AF_UNSPEC;
                 sock->local_addrlen = sizeof(sock->local_addr.ss_family);
             }
+
             sock->remote_addr.ss_family = AF_UNSPEC;
             sock->remote_addrlen = sizeof(sock->remote_addr.ss_family);
+
             sock->can_be_read = false;
             sock->can_be_written = false;
+
+            free(sock->peek.buf);
+            sock->peek.buf = NULL;
+            sock->peek.buf_size = 0;
+            sock->peek.data_size = 0;
+
             ret = 0;
             goto out;
         }
@@ -536,6 +550,7 @@ out:
         }
     }
     unlock(&sock->lock);
+    unlock(&sock->recv_lock);
     put_handle(handle);
     return ret;
 }
@@ -583,6 +598,8 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
     return 0;
 }
 
+/* We return the size directly (contrary to the usual out argument) for simplicity - this function
+ * is called directly from syscall handlers, which return values in such a way. */
 ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t addrlen, unsigned int flags) {
     ssize_t ret = 0;
@@ -736,6 +753,8 @@ out:
     return ret;
 }
 
+/* We return the size directly (contrary to the usual out argument) for simplicity - this function
+ * is called directly from syscall handlers, which return values in such a way. */
 ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t* addrlen, unsigned int* flags) {
     ssize_t ret = 0;
@@ -1103,6 +1122,8 @@ long shim_do_getsockname(int fd, void* addr, int* _addrlen) {
 
     lock(&sock->lock);
 
+    /* If the user provided buffer is too small, the address is truncated, but we report the actual
+     * address size in `_addrlen`. */
     addrlen = MIN(addrlen, sock->local_addrlen);
     memcpy(addr, &sock->local_addr, addrlen);
     *_addrlen = sock->local_addrlen;
@@ -1150,6 +1171,8 @@ long shim_do_getpeername(int fd, void* addr, int* _addrlen) {
         goto out;
     }
 
+    /* If the user provided buffer is too small, the address is truncated, but we report the actual
+     * address size in `_addrlen`. */
     addrlen = MIN(addrlen, sock->remote_addrlen);
     memcpy(addr, &sock->remote_addr, addrlen);
     *_addrlen = sock->remote_addrlen;

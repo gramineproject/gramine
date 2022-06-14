@@ -25,6 +25,8 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             if (family != AF_INET) {
                 return -EAFNOSUPPORT;
             }
+            /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
+             * ignored. */
             *addrlen = sizeof(struct sockaddr_in);
             break;
         case AF_INET6:
@@ -36,6 +38,8 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             if (family != AF_INET6) {
                 return -EAFNOSUPPORT;
             }
+            /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
+             * ignored. */
             *addrlen = sizeof(struct sockaddr_in6);
             break;
         default:
@@ -327,6 +331,7 @@ static int get_sock_tcp_option(struct shim_handle* handle, int optname, void* op
     }
 
     if (*len > sizeof(val)) {
+        /* Cap the buffer size to the option size. */
         *len = sizeof(val);
     }
     memcpy(optval, &val, *len);
@@ -352,6 +357,7 @@ static int get_sock_ipv6_option(struct shim_handle* handle, int optname, void* o
     }
 
     if (*len > sizeof(val)) {
+        /* Cap the buffer size to the option size. */
         *len = sizeof(val);
     }
     memcpy(optval, &val, *len);
@@ -478,7 +484,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
         struct sockaddr_storage linux_addr;
         size_t linux_addr_len = sizeof(linux_addr);
         pal_to_linux_sockaddr(&pal_ip_addr, &linux_addr, &linux_addr_len);
-        /* If the user provided buffer is smaller, the address is truncated, but we report
+        /* If the user provided buffer is too small, the address is truncated, but we report
          * the actual address size in `addrlen`. */
         memcpy(addr, &linux_addr, MIN(*addrlen, linux_addr_len));
         *addrlen = linux_addr_len;

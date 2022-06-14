@@ -21,11 +21,23 @@
 #include "shim_internal.h"
 #include "shim_socket.h"
 
-static int unaddr_to_sockname(void* addr, size_t addrlen, char* sock_name, size_t sock_name_size) {
-    if (addrlen > sizeof(struct sockaddr_un)) {
-        addrlen = sizeof(struct sockaddr_un);
+/*!
+ * \brief Verify UNIX socket address and convert it to an unique socket name
+ *
+ * \param         addr            The socket address to convert.
+ * \param[in,out] addrlen         Pointer to the size of \p addr. Always updated to the actual size
+ *                                of the address (but it's never extended).
+ * \param[out]    sock_name       Buffer for the output socket name. On success contains a null
+ *                                terminated string.
+ * \param         sock_name_size  Size of \p sock_name.
+ */
+static int unaddr_to_sockname(void* addr, size_t* addrlen, char* sock_name, size_t sock_name_size) {
+    if (*addrlen > sizeof(struct sockaddr_un)) {
+        /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
+         * ignored. */
+        *addrlen = sizeof(struct sockaddr_un);
     }
-    if (addrlen < offsetof(struct sockaddr_un, sun_path) + 1) {
+    if (*addrlen < offsetof(struct sockaddr_un, sun_path) + 1) {
         return -EINVAL;
     }
     static_assert(offsetof(struct sockaddr_un, sun_family) < offsetof(struct sockaddr_un, sun_path),
@@ -37,7 +49,7 @@ static int unaddr_to_sockname(void* addr, size_t addrlen, char* sock_name, size_
     }
 
     const char* path = (char*)addr + offsetof(struct sockaddr_un, sun_path);
-    size_t pathlen = addrlen - offsetof(struct sockaddr_un, sun_path);
+    size_t pathlen = *addrlen - offsetof(struct sockaddr_un, sun_path);
     assert(pathlen >= 1);
     if (path[0]) {
         /* Named UNIX socket. */
@@ -112,7 +124,7 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
     assert(locked(&sock->lock));
 
     char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
-    int ret = unaddr_to_sockname(addr, addrlen,
+    int ret = unaddr_to_sockname(addr, &addrlen,
                                  pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
     if (ret < 0) {
@@ -134,7 +146,7 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
 
     static_assert(sizeof(struct sockaddr_un) < sizeof(sock->local_addr),
                   "need additional space for a nullbyte");
-    sock->local_addrlen = MIN(addrlen, sizeof(struct sockaddr_un));
+    sock->local_addrlen = addrlen;
     memcpy(&sock->local_addr, addr, sock->local_addrlen);
     /* The address was verified in `unaddr_to_sockname`, so this is safe to call. */
     fixup_sockaddr_un_path(&sock->local_addr, &sock->local_addrlen);
@@ -218,7 +230,7 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     }
 
     char pipe_name[static_strlen(URI_PREFIX_PIPE) + 64 + 1] = URI_PREFIX_PIPE;
-    int ret = unaddr_to_sockname(addr, addrlen,
+    int ret = unaddr_to_sockname(addr, &addrlen,
                                  pipe_name + static_strlen(URI_PREFIX_PIPE),
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
     if (ret < 0) {
@@ -244,7 +256,7 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
 
     static_assert(sizeof(struct sockaddr_un) < sizeof(sock->remote_addr),
                   "need additional space for a nullbyte");
-    sock->remote_addrlen = MIN(addrlen, sizeof(struct sockaddr_un));
+    sock->remote_addrlen = addrlen;
     memcpy(&sock->remote_addr, addr, sock->remote_addrlen);
     /* The address was verified in `unaddr_to_sockname`, so this is safe to call. */
     fixup_sockaddr_un_path(&sock->remote_addr, &sock->remote_addrlen);
