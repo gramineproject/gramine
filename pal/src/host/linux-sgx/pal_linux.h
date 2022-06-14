@@ -44,7 +44,8 @@ extern struct pal_linuxsgx_state {
 enum sgx_attestation_type {
     SGX_ATTESTATION_NONE,
     SGX_ATTESTATION_EPID,
-    SGX_ATTESTATION_DCAP
+    SGX_ATTESTATION_DCAP,
+    SGX_ATTESTATION_MAA
 };
 
 static inline const char* attestation_type_to_str(enum sgx_attestation_type attestation_type) {
@@ -52,6 +53,7 @@ static inline const char* attestation_type_to_str(enum sgx_attestation_type atte
         case SGX_ATTESTATION_NONE: return "none";
         case SGX_ATTESTATION_EPID: return "epid";
         case SGX_ATTESTATION_DCAP: return "dcap";
+        case SGX_ATTESTATION_MAA: return "maa";
         default: BUG();
     }
 }

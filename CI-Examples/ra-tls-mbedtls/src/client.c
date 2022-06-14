@@ -161,9 +161,9 @@ int main(int argc, char** argv) {
     mbedtls_x509_crt_init(&cacert);
     mbedtls_entropy_init(&entropy);
 
-    if (argc < 2 ||
-            (strcmp(argv[1], "native") && strcmp(argv[1], "epid") && strcmp(argv[1], "dcap"))) {
-        mbedtls_printf("USAGE: %s native|epid|dcap [SGX measurements]\n", argv[0]);
+    if (argc < 2 || (strcmp(argv[1], "native") && strcmp(argv[1], "epid") &&
+                strcmp(argv[1], "dcap") && strcmp(argv[1], "maa"))) {
+        mbedtls_printf("USAGE: %s native|epid|dcap|maa [SGX measurements]\n", argv[0]);
         return 1;
     }
 
@@ -171,7 +171,8 @@ int main(int argc, char** argv) {
         ra_tls_verify_lib = dlopen("libra_tls_verify_epid.so", RTLD_LAZY);
         if (!ra_tls_verify_lib) {
             mbedtls_printf("%s\n", dlerror());
-            mbedtls_printf("User requested RA-TLS verification with EPID but cannot find lib\n");
+            mbedtls_printf("User requested RA-TLS verification with EPID but cannot find lib "
+                           "libra_tls_verify_epid.so\n");
             if (in_sgx) {
                 mbedtls_printf("Please make sure that you are using client_epid.manifest\n");
             }
@@ -186,7 +187,8 @@ int main(int argc, char** argv) {
             ra_tls_verify_lib = dlopen("libra_tls_verify_dcap_gramine.so", RTLD_LAZY);
             if (!ra_tls_verify_lib) {
                 mbedtls_printf("%s\n", dlerror());
-                mbedtls_printf("User requested RA-TLS verification with DCAP inside SGX but cannot find lib\n");
+                mbedtls_printf("User requested RA-TLS verification with DCAP inside SGX but cannot "
+                               "find lib libra_tls_verify_dcap_gramine.so\n");
                 mbedtls_printf("Please make sure that you are using client_dcap.manifest\n");
                 return 1;
             }
@@ -194,17 +196,34 @@ int main(int argc, char** argv) {
             void* helper_sgx_urts_lib = dlopen("libsgx_urts.so", RTLD_NOW | RTLD_GLOBAL);
             if (!helper_sgx_urts_lib) {
                 mbedtls_printf("%s\n", dlerror());
-                mbedtls_printf("User requested RA-TLS verification with DCAP but cannot find helper"
-                               " libsgx_urts.so lib\n");
+                mbedtls_printf("User requested RA-TLS verification with DCAP but cannot find "
+                               "helper libsgx_urts.so lib\n");
                 return 1;
             }
 
             ra_tls_verify_lib = dlopen("libra_tls_verify_dcap.so", RTLD_LAZY);
             if (!ra_tls_verify_lib) {
                 mbedtls_printf("%s\n", dlerror());
-                mbedtls_printf("User requested RA-TLS verification with DCAP but cannot find lib\n");
+                mbedtls_printf("User requested RA-TLS verification with DCAP but cannot find lib "
+                               "libra_tls_verify_dcap.so\n");
                 return 1;
             }
+        }
+    } else if (!strcmp(argv[1], "maa")) {
+        void* helper_sgx_urts_lib = dlopen("libsgx_urts.so", RTLD_NOW | RTLD_GLOBAL);
+        if (!helper_sgx_urts_lib) {
+            mbedtls_printf("%s\n", dlerror());
+            mbedtls_printf("User requested RA-TLS verification with MAA but cannot find helper "
+                           "libsgx_urts.so lib\n");
+            return 1;
+        }
+
+        ra_tls_verify_lib = dlopen("libra_tls_verify_maa.so", RTLD_LAZY);
+        if (!ra_tls_verify_lib) {
+            mbedtls_printf("%s\n", dlerror());
+            mbedtls_printf("User requested RA-TLS verification with MAA but cannot find lib "
+                           "libra_tls_verify_maa.so\n");
+            return 1;
         }
     }
 
@@ -215,7 +234,8 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        ra_tls_set_measurement_callback_f = dlsym(ra_tls_verify_lib, "ra_tls_set_measurement_callback");
+        ra_tls_set_measurement_callback_f = dlsym(ra_tls_verify_lib,
+                                                  "ra_tls_set_measurement_callback");
         if ((error = dlerror()) != NULL) {
             mbedtls_printf("%s\n", error);
             return 1;

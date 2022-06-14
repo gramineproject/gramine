@@ -63,9 +63,11 @@ int parse_attestation_type(toml_table_t* manifest_root,
                 attestation_type = SGX_ATTESTATION_EPID;
             } else if (!strcmp(sgx_attestation_type_str, "dcap")) {
                 attestation_type = SGX_ATTESTATION_DCAP;
+            } else if (!strcmp(sgx_attestation_type_str, "maa")) {
+                attestation_type = SGX_ATTESTATION_MAA;
             } else {
                 log_error("Unknown 'sgx.remote_attestation' type (recognized values are "
-                          "\"none\", \"epid\" and \"dcap\")");
+                          "\"none\", \"epid\", \"dcap\", \"maa\")");
                 ret = -EINVAL;
                 goto out;
             }
@@ -76,8 +78,8 @@ int parse_attestation_type(toml_table_t* manifest_root,
         ret = toml_bool_in(manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
                            &sgx_remote_attestation_enabled);
         if (ret < 0) {
-            log_error("Cannot parse 'sgx.remote_attestation' (the value must be \"none\", \"epid\" "
-                      "or \"dcap\", or in case of legacy syntax `true` or `false`)");
+            log_error("Cannot parse 'sgx.remote_attestation' (value must be \"none\", \"epid\", "
+                      "\"dcap\", \"maa\", or in case of legacy syntax `true` or `false`)");
             ret = -EINVAL;
             goto out;
         }
@@ -86,11 +88,12 @@ int parse_attestation_type(toml_table_t* manifest_root,
             if (sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str)) {
                 attestation_type = SGX_ATTESTATION_EPID;
             } else {
+                /* note that it's impossible to specify MAA in legacy syntax, only DCAP */
                 attestation_type = SGX_ATTESTATION_DCAP;
             }
         }
         log_always("Detected deprecated syntax 'sgx.remote_attestation = true|false'; "
-                   "consider using 'sgx.remote_attestation = \"none\"|\"epid\"|\"dcap\"'.");
+                   "consider using 'sgx.remote_attestation = \"none\"|\"epid\"|\"dcap\"|\"maa\"'.");
     }
 
     *out_attestation_type = attestation_type;

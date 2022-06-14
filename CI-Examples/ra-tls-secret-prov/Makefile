@@ -36,6 +36,10 @@ epid: ssl/server.crt secret_prov_minimal/server_epid secret_prov/server_epid sec
 dcap: ssl/server.crt secret_prov_minimal/server_dcap secret_prov/server_dcap secret_prov_pf/server_dcap \
       secret_prov_pf/wrap_key secret_prov_pf/enc_files/input.txt
 
+.PHONY: maa
+maa: ssl/server.crt secret_prov_minimal/server_maa secret_prov/server_maa secret_prov_pf/server_maa \
+     secret_prov_pf/wrap_key secret_prov_pf/enc_files/input.txt
+
 ############################# SSL DATA DEPENDENCY #############################
 
 # SSL data: key and x.509 self-signed certificate
@@ -64,6 +68,9 @@ LDFLAGS += -Wl,--enable-new-dtags $(shell pkg-config --libs sgx_util)
 # compilers remove the "seemingly unused" libsgx_urts.so
 %/server_dcap: %/server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
+
+%/server_maa: %/server.c
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_maa -pthread -o $@
 
 secret_prov/client: secret_prov/client.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_attest -o $@
@@ -219,6 +226,35 @@ check_dcap: app dcap
 	# secret_prov_pf
 	cd secret_prov_pf; \
 	./server_dcap wrap_key >/dev/null & SERVER_ID=$$!; \
+	../../../scripts/wait_for_server 60 127.0.0.1 4433; \
+	gramine-sgx client > ../OUTPUT; \
+	kill -9 $$SERVER_ID;
+	@grep -E "\[parent\] Read from protected file: 'helloworld'" OUTPUT && echo "[ Success 3/4 ]"
+	@grep -E "\[child\] Read from protected file: 'helloworld'" OUTPUT && echo "[ Success 4/4 ]"
+
+	@rm OUTPUT
+
+.PHONY: check_maa
+check_maa: app maa
+	# secret_prov_minimal
+	cd secret_prov_minimal; \
+	./server_maa >/dev/null & SERVER_ID=$$!; \
+	../../../scripts/wait_for_server 60 127.0.0.1 4433; \
+	gramine-sgx client > ../OUTPUT; \
+	kill -9 $$SERVER_ID;
+	@grep -E "Received secret = 'A_SIMPLE_SECRET'" OUTPUT && echo "[ Success 1/4 ]"
+
+	# secret_prov
+	cd secret_prov; \
+	./server_maa >/dev/null & SERVER_ID=$$!; \
+	../../../scripts/wait_for_server 60 127.0.0.1 4433; \
+	gramine-sgx client > ../OUTPUT; \
+	kill -9 $$SERVER_ID;
+	@grep -E "Received secret1 = 'FIRST_SECRET', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"
+
+	# secret_prov_pf
+	cd secret_prov_pf; \
+	./server_maa wrap_key >/dev/null & SERVER_ID=$$!; \
 	../../../scripts/wait_for_server 60 127.0.0.1 4433; \
 	gramine-sgx client > ../OUTPUT; \
 	kill -9 $$SERVER_ID;

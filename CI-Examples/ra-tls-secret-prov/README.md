@@ -5,13 +5,24 @@ examples of servers and clients written against the Secret Provisioning
 library.
 
 These examples use the Secret Provisioning library `secret_prov_attest.so` for
-the clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-the servers. These libraries are installed together with Gramine (but for DCAP
-version, you need `meson setup ... -Ddcap=enabled`). For DCAP attestation, the
-DCAP software infrastructure must be installed and work correctly on the host.
+the clients and `secret_prov_verify_epid.so` / `secret_prov_verify_dcap.so` /
+`secret_prov_verify_maa.so` for the servers. These libraries are installed
+together with Gramine (but for DCAP and MAA versions, you need `meson setup ...
+-Ddcap=enabled`).
+
+For DCAP attestation, the DCAP software infrastructure must be installed and
+work correctly on the host.
+
+For MAA attestation, the server must run on the Azure cloud, and the client must
+have internet access to the MAA attestation provider service.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
-attestation schemes. For more documentation, refer to
+attestation schemes. The current example supports:
+- the IAS-based attestation scheme for EPID quotes,
+- the DCAP-based attestation scheme for DCAP quotes,
+- the MAA-based attestation scheme for DCAP quotes.
+
+For more documentation, refer to
 https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## Secret Provisioning servers
@@ -33,19 +44,20 @@ verify the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends secrets back to the client (e.g. the master key
 for encrypted files in `secret_prov_pf` example).
 
-There are two versions of each server: the EPID one and the DCAP one. Each of
-them links against the corresponding EPID/DCAP secret-provisioning library at
-build time.
+There are three versions of each server: EPID, DCAP and MAA. Each of them links
+against the corresponding EPID/DCAP/MAA secret-provisioning library at build
+time.
 
-Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
-to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
+Because this example builds and uses debug SGX enclaves (`sgx.debug` is set to
+`true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
 Note that in production environments, you must *not* use this option!
 
 Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
 the tests when some of Intel's security advisories haven't been addressed (for
 example, when the microcode or architectural enclaves aren't fully up-to-date).
 As the name of this setting suggests, this is not secure and likewise should not
-be used in production.
+be used in production. Note that this setting is irrelevant for the MAA
+attestation scheme because MAA always expects enclave TCB to be up-to-date.
 
 ## Secret Provisioning clients
 
@@ -104,6 +116,22 @@ cd secret_prov_pf
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 ./server_dcap wrap_key &
+
+gramine-sgx ./client
+
+kill %%
+```
+
+- Secret Provisioning flows, Microsoft Azure Attestation (MAA) attestation:
+
+```sh
+make app maa RA_TYPE=maa
+
+# test encrypted files client (other examples can be tested similarly)
+cd secret_prov_pf
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
+RA_TLS_MAA_PROVIDER_URL="https://sharedcus.cus.attest.azure.net" \
+./server_maa wrap_key &
 
 gramine-sgx ./client
 

@@ -762,7 +762,7 @@ Attestation and quotes
 
 ::
 
-    sgx.remote_attestation = "[none|epid|dcap]"
+    sgx.remote_attestation = "[none|epid|dcap|maa]"
     (Default: "none")
 
     sgx.ra_client_linkable = [true|false]
@@ -779,6 +779,9 @@ filled with your registered Intel SGX EPID Attestation Service credentials
 
 For :term:`DCAP` based attestation, ``remote_attestation`` must be set to
 ``dcap``. ``ra_client_spid`` and ``ra_client_linkable`` are ignored.
+
+For :term:`MAA` based attestation, ``remote_attestation`` must be set to
+``maa``. ``ra_client_spid`` and ``ra_client_linkable`` are ignored.
 
 Pre-heating enclave
 ^^^^^^^^^^^^^^^^^^^
@@ -987,5 +990,5 @@ Attestation and quotes (deprecated syntax)
 This syntax specified whether to enable SGX remote attestation. The boolean
 value has been replaced with the string value. The ``none`` value in the new
 syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
-explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
-``true`` boolean value in the deprecated syntax.
+explicit ``epid``, ``dcap``, ``maa`` values in the new syntax replace the
+ambiguous ``true`` boolean value in the deprecated syntax.
