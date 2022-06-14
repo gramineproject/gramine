@@ -30,6 +30,12 @@ a working DCAP setup. Then build the example as follows:
 make SGX=1 RA_TYPE=dcap
 ```
 
+If you run in Microsoft Azure cloud with a Confidential Computing offerring and
+want to build the example for MAA attestation, build it as follows:
+```
+make SGX=1 RA_TYPE=maa
+```
+
 Otherwise, you will probably want to use EPID attestation. For this, you will
 additionally need to provide an SPID and specify whether it is set up for
 linkable quotes or not:

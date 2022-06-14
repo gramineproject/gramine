@@ -2,12 +2,15 @@
 /secret_prov/client
 /secret_prov/server_epid
 /secret_prov/server_dcap
+/secret_prov/server_maa
 /secret_prov_minimal/client
 /secret_prov_minimal/server_epid
 /secret_prov_minimal/server_dcap
+/secret_prov_minimal/server_maa
 /secret_prov_pf/client
 /secret_prov_pf/server_epid
 /secret_prov_pf/server_dcap
+/secret_prov_pf/server_maa
 /secret_prov_pf/wrap_key
 /secret_prov_pf/enc_files/input.txt
 

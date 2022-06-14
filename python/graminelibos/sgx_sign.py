@@ -464,6 +464,8 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
             print('    None')
         elif attestation_type == "dcap":
             print('    DCAP/ECDSA')
+        elif attestation_type == "maa":
+            print('    MAA (Microsoft Azure Attestation)')
         elif attestation_type == "epid":
             spid = manifest_sgx.get('ra_client_spid', '')
             linkable = manifest_sgx.get('ra_client_linkable', False)
