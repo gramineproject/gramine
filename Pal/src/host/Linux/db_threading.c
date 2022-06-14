@@ -258,8 +258,24 @@ int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
 
 int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpumask_size, cpu_mask);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
 
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    size_t threads_cnt = g_pal_public_state.topo_info.threads_cnt;
+
+    /* Verify validity of the CPU affinity (e.g., that it contains no offlined cores) */
+    size_t idx = 0;
+    for (size_t i = 0; i < threads_cnt; i++) {
+        idx = i / BITS_IN_TYPE(unsigned long);
+        if (cpu_mask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+            if (!g_pal_public_state.topo_info.threads[i].is_online) {
+                /* cpumask contains a CPU that is currently offline */
+                ret = -EINVAL;
+            }
+        }
+    }
+
+    return ret;
 }
 
 struct handle_ops g_thread_ops = {

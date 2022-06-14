@@ -130,7 +130,7 @@ unmap:;
     return ret;
 }
 
-int init_thread_cpuaffinity_from_host(struct shim_thread* thread) {
+int init_thread_affinity_from_host(struct shim_thread* thread) {
     int ret;
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
@@ -153,19 +153,6 @@ int init_thread_cpuaffinity_from_host(struct shim_thread* thread) {
         goto out;
     }
 
-    /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
-    size_t idx = 0;
-    for (size_t i = 0; i < threads_cnt; i++) {
-        idx = i / BITS_IN_TYPE(unsigned long);
-        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
-            if (!g_pal_public_state->topo_info.threads[i].is_online) {
-                /* cpumask contains a CPU that is currently offline */
-                ret = -EINVAL;
-                goto out;
-            }
-        }
-    }
-
     memset(thread->cpumask, 0, sizeof(thread->cpumask));
     memcpy(thread->cpumask, cpumask, bitmask_size_in_bytes);
     ret = 0;
@@ -176,8 +163,8 @@ out:
 }
 
 /* This function is only invoked from shim_do_sched_setaffinity to update user CPU affinity */
-int update_thread_cpuaffinity_from_user(struct shim_thread* thread, size_t cpumask_size,
-                                        unsigned long* cpumask) {
+int update_thread_affinity_from_user(struct shim_thread* thread, size_t cpumask_size,
+                                     unsigned long* cpumask) {
     assert(locked(&thread->lock));
 
     /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
@@ -299,7 +286,7 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    ret = init_thread_cpuaffinity_from_host(cur_thread);
+    ret = init_thread_affinity_from_host(cur_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);

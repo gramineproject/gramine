@@ -171,7 +171,7 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
     }
 
     lock(&thread->lock);
-    ret = update_thread_cpuaffinity_from_user(thread, cpumask_size, user_mask_ptr);
+    ret = update_thread_affinity_from_user(thread, cpumask_size, user_mask_ptr);
     if (ret < 0) {
         unlock(&thread->lock);
         put_thread(thread);

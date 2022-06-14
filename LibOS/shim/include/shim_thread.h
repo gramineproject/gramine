@@ -345,7 +345,7 @@ void release_clear_child_tid(int* clear_child_tid);
  *
  * \returns `0` on success and negative error code on failure.
  */
-int init_thread_cpuaffinity_from_host(struct shim_thread* thread);
+int init_thread_affinity_from_host(struct shim_thread* thread);
 
 /*!
  * \brief Validate CPU affinity mask from user and update current thread CPU affinity.
@@ -356,6 +356,6 @@ int init_thread_cpuaffinity_from_host(struct shim_thread* thread);
  *
  * \returns `0` on success and negative error code on failure.
  */
-int update_thread_cpuaffinity_from_user(struct shim_thread* thread, size_t cpumask_size,
-                                        unsigned long* cpumask);
+int update_thread_affinity_from_user(struct shim_thread* thread, size_t cpumask_size,
+                                     unsigned long* cpumask);
 #endif /* _SHIM_THREAD_H_ */

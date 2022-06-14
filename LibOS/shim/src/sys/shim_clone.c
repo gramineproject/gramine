@@ -84,7 +84,7 @@ static int clone_implementation_wrapper(void* arg_) {
 
     add_thread(my_thread);
 
-    int ret = init_thread_cpuaffinity_from_host(my_thread);
+    int ret = init_thread_affinity_from_host(my_thread);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(my_thread);
