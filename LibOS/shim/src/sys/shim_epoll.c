@@ -326,14 +326,12 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
     new_item->events = event->events & ~EPOLL_NEEDS_REARM;
     REF_SET(new_item->ref_count, 1);
 
-    lock(&handle->lock);
     if (!(handle->acc_mode & MAY_READ)) {
         new_item->events &= ~(EPOLLIN | EPOLLRDNORM);
     }
     if (!(handle->acc_mode & MAY_WRITE)) {
         new_item->events &= ~(EPOLLOUT | EPOLLWRNORM);
     }
-    unlock(&handle->lock);
 
     struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
 

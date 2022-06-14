@@ -78,7 +78,8 @@ struct shim_sock_ops {
      * \param      iov       An array of buffers to write from.
      * \param      iov_len   The length of \p iov.
      * \param[out] out_size  On success contains the number of bytes sent.
-     * \param      addr      An address to send to. May be NULL.
+     * \param      addr      An address to send to. May be NULL. It's up to the implementation to
+     *                       decide what to do with it (which might mean completely ignoring it).
      * \param      addrlen   The length of \p addr.
      */
     int (*send)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,

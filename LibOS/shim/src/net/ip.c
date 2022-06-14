@@ -430,7 +430,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     if (!pal_iov) {
         return -ENOMEM;
     }
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         pal_iov[i].iov_base = iov[i].iov_base;
         pal_iov[i].iov_len = iov[i].iov_len;
     }
@@ -462,7 +462,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
     if (!pal_iov) {
         return -ENOMEM;
     }
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         pal_iov[i].iov_base = iov[i].iov_base;
         pal_iov[i].iov_len = iov[i].iov_len;
     }

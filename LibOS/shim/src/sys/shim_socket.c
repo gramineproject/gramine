@@ -23,12 +23,12 @@
  *  +--> NEW --------------------> BOUND -------------> LISTEN --------------+
  *  |     |                        |   ^                                     new socket
  *  |     |                        |   |                                     |
- *  |     |                        |   +---------------------+               |
- *  |     |              connect() |                         |               |
- *  |     |                        |          disconnect()   |               |
- *  |     | connect()              |       (if it was bound) |               |
- *  |     |                        |     +-------------------+               |
- *  |     |                        V     |                                   |
+ *  |     |                        |   |                                     |
+ *  |     |              connect() |   |   disconnect()                      |
+ *  |     |                        |   | (if it was bound)                   |
+ *  |     | connect()              |   |                                     |
+ *  |     |                        |   |                                     |
+ *  |     |                        V   |                                     |
  *  |     +---------------------> CONNECTED <--------------------------------+
  *  |                              |
  *  |          disconnect()        |
@@ -313,7 +313,7 @@ long shim_do_listen(int fd, int backlog) {
     int ret;
 
     if ((unsigned int)backlog > SHIM_SOCK_MAX_PENDING_CONNS) {
-        /* Linux kernel verifies `backlog` this way. */
+        /* Linux kernel caps `backlog` this way. */
         backlog = SHIM_SOCK_MAX_PENDING_CONNS;
     }
 
@@ -1396,7 +1396,7 @@ static int get_socket_option(struct shim_handle* handle, int optname, char* optv
             value.i = attr.socket.keepalive;
             break;
         case SO_LINGER:
-            value.linger.l_onoff = attr.socket.linger;
+            value.linger.l_onoff = attr.socket.linger ? 1 : 0;
             value.linger.l_linger = attr.socket.linger;
             value_len = sizeof(value.linger);
             break;

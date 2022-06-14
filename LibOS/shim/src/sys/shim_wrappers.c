@@ -12,6 +12,10 @@
 #include "shim_internal.h"
 #include "shim_table.h"
 
+/* TODO: `readv` and `writev` syscalls below are not correctly atomic if the implementation does not
+ * provide `.readv` and `.writev` callbacks and does not use file position (`hdl->pos`). This most
+ * notably affects pipes. */
+
 long shim_do_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
     if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
         return -EINVAL;
