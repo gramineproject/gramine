@@ -27,7 +27,8 @@ Gramine provides support for all three levels of attestation flows:
    application via ``/dev/attestation`` pseudo-filesystem. SGX local attestation
    in Gramine relies on the ``EREPORT`` hardware instruction. SGX remote
    attestation uses the Intel SGX PSW's AESM service and the Intel IAS service
-   (for EPID flows) or DCAP libraries (for ECDSA/DCAP flows) under the hood.
+   (for EPID flows), DCAP libraries (for ECDSA/DCAP flows) or MAA attestation
+   provier service (for MAA flows) under the hood.
 
 #. :term:`Secure Channel` is constructed using the RA-TLS libraries.
    :term:`RA-TLS` uses raw ``/dev/attestation`` pseudo-files under the hood.
@@ -47,18 +48,20 @@ micro-services in the public cloud. Please refer to :ref:`third_party_solutions`
 for specific examples.
 
 
-Remote Attestation flows for EPID and DCAP
-------------------------------------------
+Remote Attestation flows for EPID, DCAP and MAA
+-----------------------------------------------
 
-Remote attestation in Intel SGX comes in two flavours: :term:`EPID` and
-:term:`DCAP`. The former is used in client machines whereas the latter is used
-in data center environments. The details of these flows will be described in the
-following sections. Here we give a high-level description of both of these
-remote attestation schemes.
+Remote attestation in Intel SGX comes in the form of three attestation schemes:
+:term:`EPID`, :term:`DCAP` and :term:`MAA`.
+
+The EPID scheme is used in client machines. The DCAP scheme is used in data
+center environments. The MAA scheme is used in the Microsoft Azure public cloud.
+The details of these flows will be described in the following sections. Here we
+give a high-level description of these remote attestation schemes.
 
 .. image:: ./img/epid.svg
    :target: ./img/epid.svg
-   :alt: Figure: EPID based remote attestation in Intel SGX
+   :alt: Figure: EPID remote attestation scheme in Intel SGX
 
 The diagram above shows EPID based remote attestation. The user application runs
 in an SGX enclave on a remote untusted machine, whereas the end user waits for
@@ -90,7 +93,7 @@ untrusted machine and start sending inputs/receiving enclave outputs.
 
 .. image:: ./img/dcap.svg
    :target: ./img/dcap.svg
-   :alt: Figure: DCAP based remote attestation in Intel SGX
+   :alt: Figure: DCAP remote attestation scheme in Intel SGX
 
 The diagram above shows DCAP based remote attestation. The DCAP flows are very
 similar to EPID flows, but rather than using the EPID keys and consulting the
@@ -108,6 +111,23 @@ user periodically fetches the DCAP attestation certificates and caches them on a
 local machine (preliminary step 0). When the SGX quote arrives, the user
 compares the certificates embedded in the quote against these cached
 certificates (step 9).
+
+.. image:: ./img/maa.svg
+   :target: ./img/maa.svg
+   :alt: Figure: MAA remote attestation scheme in Intel SGX
+
+The diagram above shows MAA based remote attestation. The MAA flows are very
+similar to EPID flows, but rather than communicating the Intel Attestation
+Service, the MAA flows instead communicate with the MAA attestation provider
+service.
+
+MAA attestation uses DCAP-formatted SGX quotes, so the steps 1-8 retrieve the
+SGX quote similarly to the DCAP attestation. However, then the step 9 forwards
+the SGX quote to the MAA attestation provider (in a so-called Attestation
+request), and the MAA attestation provider replies with the Attestation
+response. The attestation response embeds the JSON Web Token (JWT) that
+contains a set of claims about the SGX quote. The remote user can verify the
+enclave measurements contained in the JWT claims against the expected values.
 
 
 Low-level ``/dev/attestation`` interface
@@ -182,7 +202,7 @@ the remote attestation flow may look like in your application::
 
 The remote user should receive this attestation quote and verify it. In case of
 Intel SGX, this verification flow depends on whether the SGX remote attestation
-is EPID based or DCAP/ECDSA based:
+scheme is EPID, DCAP or MAA:
 
 - :term:`EPID` based quote verification is done with the help of the Intel
   Attestation Service (:term:`IAS`). In particular, the remote user should
@@ -197,12 +217,23 @@ is EPID based or DCAP/ECDSA based:
   :term:`Intel Provisioning Certification Service`, caching these certificates
   in the Provisioning Certificate Caching Service, etc.).
 
+- :term:`MAA` based quote verification is done with the help of the Microsoft
+  Azure Attestation (MAA) provider. In particular, the remote user should
+  forward the received SGX quote to the well-known MAA REST endpoint via a
+  secure internet connection and get the MAA attestation response (that embeds
+  the JSON Web Token, or JWT) back. The user then should verify the signature of
+  the JWT (using a JWK obtained from the MAA provider separately) and examine
+  the contents of the JWT and decide whether to trust the remote SGX enclave or
+  not.
+
 Gramine does *not* provide any pseudo-files under ``/dev/attestation`` for
 verification of the attestation quote. Instead, the remote user is encouraged to
 use the :program:`quote_dump`, :program:`ias_request` and
-:program:`verify_ias_report` tools shipped together with Gramine (for
-EPID based quote verification) or to use the Intel DCAP libraries and tools (for
-DCAP based quote verification).
+:program:`verify_ias_report` tools shipped together with Gramine (for the EPID
+attestation scheme) or to use the Intel DCAP libraries and tools (for the DCAP
+attestation scheme). Gramine provides the RA-TLS and Secret Provisioning
+libraries for the MAA attestation scheme; no separate tools are currently
+provided.
 
 The ``/dev/attestation`` pseudo-filesystem also exposes pseudo-files to set the
 encryption keys (see also :doc:`manifest-syntax`):
@@ -221,6 +252,7 @@ encryption keys (see also :doc:`manifest-syntax`):
    Note that the old file (``/dev/attestation/protected_files_key``) uses a
    32-character hex value, and the new files
    (``/dev/attestation/keys/<key_name>``) use a 16-byte raw binary value.
+
 
 Mid-level RA-TLS interface
 --------------------------
@@ -260,8 +292,13 @@ Also, notice how the SGX report's REPORTDATA field contains the secure hash of
 the ephemeral public key generated by the enclavized application -- this is how
 this RA-TLS certificate is tied to the enclavized application that generated it.
 
-RA-TLS is shipped as three libraries: ``ra_tls_attest.so``, EPID based
-``ra_tls_verify_epid.so`` and DCAP/ECDSA based ``ra_tls_verify_dcap.so``.
+RA-TLS is shipped as four libraries:
+
+- ``ra_tls_attest.so`` for the attesting side,
+- three versions of the verification library for the verifying side: EPID based
+  ``ra_tls_verify_epid.so``, DCAP based ``ra_tls_verify_dcap.so`` and MAA based
+  ``ra_tls_verify_maa.so``.
+
 The interfaces exposed by these libraries can be found in the following header:
 :file:`Pal/src/host/Linux-SGX/tools/ra-tls/ra_tls.h`.
 
@@ -282,7 +319,7 @@ attestation:
 - ``sgx.ra_client_spid`` -- client SPID for EPID remote attestation.
 - ``sgx.ra_client_linkable`` -- client linkable/unlinkable attestation mode.
 
-For DCAP/ECDSA based attestation, the library expects instead:
+For DCAP/MAA based attestation, the library expects instead:
 
 - ``sgx.remote_attestation = true`` -- remote attestation is enabled.
 - ``sgx.ra_client_spid = ""`` -- hints that this is a DCAP attestation, *not*
@@ -375,6 +412,29 @@ SGX measurements may be verified via a user-specified callback registered via
 The library expects all the DCAP infrastructure to be installed and working
 correctly on the host.
 
+``ra_tls_verify_maa.so``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Similarly to ``ra_tls_verify_epid.so``, this library contains the verification
+callback that should be registered with the TLS library during verification of
+the TLS certificate. It verifies the RA-TLS certificate and the SGX quote by
+sending it to the Microsoft Azure Attestation (MAA) provider and retrieving the
+attestation response (the JWT) from it. This library is *not* thread-safe.
+
+The library uses the same SGX-specific environment variables as
+``ra_tls_verify_epid.so`` and ignores the EPID-specific environment variables.
+Similarly to the MAA version, instead of using environment variables, the four
+SGX measurements may be verified via a user-specified callback registered via
+``ra_tls_set_measurement_callback()``.
+
+The library uses the following MAA-specific environment variables if available:
+
+- ``RA_TLS_MAA_PROVIDER_URL`` (mandatory) -- URL for MAA provider's REST API
+  endpoints.
+- ``RA_TLS_MAA_PROVIDER_API_VERSION`` (optional) -- version of the MAA
+  provider's REST API ``attest/`` endpoint. If not specified, the default
+  hard-coded version ``2020-10-01`` is used.
+
 
 High-level Secret Provisioning interface
 ----------------------------------------
@@ -407,13 +467,17 @@ The established TLS channel may be either closed after provisioning these
 initial secrets or may be further used by both parties for continued secure
 communication.
 
-Secret Provisioning is shipped as three libraries: ``secret_prov_attest.so``,
-EPID based ``secret_prov_verify_epid.so`` and DCAP/ECDSA based
-``secret_prov_verify_dcap.so``.
+Secret Provisioning is shipped as four libraries:
 
-The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-secret-prov``.
-The examples include minimalistic provisioning of constant-string secrets as
-well as provisioning of an encryption key and its later use for encrypted files.
+- ``secret_prov_attest.so`` for the attesting side,
+- three versions of the verification library for the verifying side: EPID based
+  ``secret_prov_verify_epid.so``, DCAP based ``secret_prov_verify_dcap.so`` and
+  MAA based ``secret_prov_verify_maa.so``.
+
+The examples of using the Secret Provisioning library can be found under
+``CI-Examples/ra-tls-secret-prov``. The examples include minimalistic
+provisioning of constant-string secrets as well as provisioning of an encryption
+key and its later use for encrypted files.
 
 ``secret_prov_attest.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -490,6 +554,17 @@ The library uses the same SGX-specific environment variables as
 ``secret_prov_verify_epid.so`` and ignores the EPID-specific environment
 variables. The library expects all the DCAP infrastructure to be installed and
 working correctly on the host.
+
+``secret_prov_verify_maa.so``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Similarly to ``secret_prov_verify_epid.so``, this library is used in
+secret-provisioning services. The only difference is that this library uses
+MAA based RA-TLS flows underneath.
+
+The library uses the same SGX-specific environment variables as
+``secret_prov_verify_epid.so``, ignores the EPID-specific environment
+variables and expects instead the MAA-specific environment variables.
 
 
 .. _third_party_solutions:

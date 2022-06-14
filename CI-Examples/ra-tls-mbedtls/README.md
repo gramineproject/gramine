@@ -5,28 +5,39 @@ minimal server and client written against the mbedTLS library.
 
 The server and client are based on `ssl_server.c` and `ssl_client1.c` example
 programs shipped with mbedTLS. We modified them to allow using RA-TLS flows if
-the programs are given the command-line argument `epid`/`dcap`.  In particular,
-the server uses a self-signed RA-TLS cert with the SGX quote embedded in it via
-`ra_tls_create_key_and_crt()`. The client uses an RA-TLS verification callback
-to verify the server RA-TLS certificate via `ra_tls_verify_callback()`.
+the programs are given the command-line argument `epid`/`dcap`/`maa`. In
+particular, the server uses a self-signed RA-TLS cert with the SGX quote
+embedded in it via `ra_tls_create_key_and_crt()`. The client uses an RA-TLS
+verification callback to verify the server RA-TLS certificate via
+`ra_tls_verify_callback()`.
 
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
-`ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
-installed together with Gramine (for DCAP version, you need `meson setup ...
--Ddcap=enabled`). Additionally, mbedTLS libraries are required to correctly run
-RA-TLS, the client, and the server. For ECDSA/DCAP attestation, the DCAP
-software infrastructure must be installed and work correctly on the host.
+`ra_tls_verify_epid.so` / `ra_tls_verify_dcap.so` / `ra_tls_verify_maa.so` for
+client. These libraries are installed together with Gramine (for DCAP and MAA
+versions, you need `meson setup ...  -Ddcap=enabled`). Additionally, mbedTLS
+libraries are required.
 
-The current example works with both EPID (IAS) and ECDSA (DCAP) remote
-attestation schemes. For more documentation, refer to
+For ECDSA/DCAP attestation, the DCAP software infrastructure must be installed
+and work correctly on the host.
+
+For MAA attestation, the server must run on the Azure cloud, and the client must
+have internet access to the MAA attestation provider service.
+
+The current example works with both EPID and ECDSA/DCAP SGX quote formats. The
+current example supports:
+- the IAS-based attestation scheme for EPID quotes,
+- the DCAP-based attestation scheme for DCAP quotes,
+- the MAA-based attestation scheme for DCAP quotes.
+
+For more documentation, refer to
 https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## RA-TLS server
 
 The server is supposed to run in the SGX enclave with Gramine and RA-TLS
 dlopen-loaded. If RA-TLS library `ra_tls_attest.so` is not requested by user via
-`epid`/`dcap` command-line argument, the server falls back to using normal X.509
-PKI flows (specified as `native` command-line argument).
+`epid`/`dcap`/`maa` command-line argument, the server falls back to using normal
+X.509 PKI flows (specified as `native` command-line argument).
 
 If server is run with more command-line arguments (the only important thing is
 to have at least one additional argument), then the server will maliciously
@@ -36,10 +47,10 @@ purposes.
 ## RA-TLS client
 
 The client is supposed to run on a trusted machine (*not* in an SGX enclave). If
-RA-TLS library `ra_tls_verify_epid.so` or `ra_tls_verify_dcap.so` is not
-requested by user via `epid` or `dcap` command-line arguments respectively, the
-client falls back to using normal X.509 PKI flows (specified as `native`
-command-line argument).
+RA-TLS library `ra_tls_verify_epid.so`, `ra_tls_verify_dcap.so` or
+`ra_tls_verify_maa.so` is not requested by user via `epid`, `dcap` or `maa`
+command-line arguments respectively, the client falls back to using normal X.509
+PKI flows (specified as `native` command-line argument).
 
 It is also possible to run the client in an SGX enclave. This will create a
 secure channel between two Gramine SGX processes, possibly running on different
@@ -60,7 +71,8 @@ Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
 the tests when some of Intel's security advisories haven't been addressed (for
 example, when the microcode or architectural enclaves aren't fully up-to-date).
 As the name of this setting suggests, this is not secure and likewise should not
-be used in production.
+be used in production. Note that this setting is irrelevant for the MAA
+attestation scheme because MAA always expects enclave TCB to be up-to-date.
 
 # Quick Start
 
@@ -120,6 +132,27 @@ RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
 RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
 RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
 ./client dcap
+
+# client will successfully connect to the server via RA-TLS/DCAP flows
+kill %%
+```
+
+- RA-TLS flows with SGX and with Gramine, Microsoft Azure Attestation (MAA)
+  attestation:
+
+```sh
+make clean
+make app maa
+
+gramine-sgx ./server maa &
+
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
+RA_TLS_MAA_PROVIDER_URL="https://sharedcus.cus.attest.azure.net" \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the server enclave> \
+./client maa
 
 # client will successfully connect to the server via RA-TLS/DCAP flows
 kill %%

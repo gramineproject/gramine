@@ -31,6 +31,9 @@ epid: client_epid.manifest.sgx client_epid.sig client_epid.token
 .PHONY: dcap
 dcap: client_dcap.manifest.sgx client_dcap.sig client_dcap.token
 
+.PHONY: maa
+maa: client_maa.manifest.sgx client_maa.sig client_maa.token
+
 ############################# SSL DATA DEPENDENCY #############################
 
 # SSL data: key and x.509 self-signed certificate
@@ -131,6 +134,26 @@ sgx_sign_client_dcap: client_dcap.manifest client
 client_dcap.token: client_dcap.sig
 	gramine-sgx-get-token --output $@ --sig $<
 
+########################### CLIENT (MAA) MANIFEST #############################
+
+client_maa.manifest: client.manifest.template
+	gramine-manifest \
+		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
+		-Darch_libdir=$(ARCH_LIBDIR) \
+		$< >$@
+
+client_maa.manifest.sgx client_maa.sig: sgx_sign_client_maa
+	@:
+
+.INTERMEDIATE: sgx_sign_client_maa
+sgx_sign_client_maa: client_maa.manifest client
+	gramine-sgx-sign \
+		--manifest $< \
+		--output $<.sgx
+
+client_maa.token: client_maa.sig
+	gramine-sgx-get-token --output $@ --sig $<
+
 ########################### CLIENT (EPID) MANIFEST ############################
 
 client_epid.manifest: client.manifest.template
@@ -191,6 +214,26 @@ check_dcap_fail: app dcap
 	gramine-sgx server dcap dummy-option >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
+	kill -9 $$SERVER_ID
+
+.PHONY: check_maa
+check_maa: app maa
+	gramine-sgx server maa >/dev/null & SERVER_ID=$$!; \
+	sleep 30; \
+	./client maa > OUTPUT; \
+	./client maa 0 0 0 0 >> OUTPUT; \
+	kill -9 $$SERVER_ID
+	@grep -q "using default SGX-measurement verification callback" OUTPUT && echo "[ Success 1/4 ]"
+	@grep -q "using our own SGX-measurement verification callback" OUTPUT && echo "[ Success 2/4 ]"
+	@grep -q "Verifying peer X.509 certificate... ok" OUTPUT && echo "[ Success 3/4 ]"
+	@(exit `grep -c "failed" "OUTPUT"`) && echo "[ Success 4/4 ]"
+	@rm OUTPUT
+
+.PHONY: check_maa_fail
+check_maa_fail: app maa
+	gramine-sgx server maa dummy-option >/dev/null & SERVER_ID=$$!; \
+	sleep 30; \
+	./client maa && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 
 ################################## CLEANUP ####################################

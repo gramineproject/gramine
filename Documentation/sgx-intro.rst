@@ -265,6 +265,9 @@ SGX terminology
             A |~| way to launch enclaves with Intel's infrastructure, intended
             for client machines.
 
+         :term:`MAA`
+            A |~| way to launch enclaves in the Microsoft Azure public cloud.
+
    Enclave
       .. todo:: TBD
 
@@ -314,8 +317,11 @@ SGX terminology
       .. seealso::
 
          :term:`DCAP`
-            A way to launch enclaves without relying on the Intel's
+            A |~| way to launch enclaves without relying on the Intel's
             infrastructure.
+
+         :term:`MAA`
+            A |~| way to launch enclaves in the Microsoft Azure public cloud.
 
          :term:`SPID`
             An identifier one can obtain from Intel, required to make use of EPID
@@ -379,6 +385,28 @@ SGX terminology
          :term:`PCS`
             Provisioning Certification Service, another Internet service
             provided by Intel.
+
+   Microsoft Azure Attestation
+   MAA
+
+      MAA is the attestation protocol (attestation scheme) developed by
+      Microsoft and available in the Microsoft Azure public cloud. Similarly to
+      :term:`EPID`, the remote verifier making user of the MAA protocol needs to
+      contact the MAA attestation provider each time it wishes to attest an
+      enclave. An enclave sends DCAP-formatted SGX quotes to the client/verifier
+      who will forward them to the MAA attestation provider to check the
+      enclave's validity and receive back the set of claims describing this
+      enclave.
+
+      .. seealso::
+
+         :term:`DCAP`
+            A |~| way to launch enclaves without relying on the Intel's
+            infrastructure.
+
+         :term:`EPID`
+            A |~| way to launch enclaves with Intel's infrastructure, intended
+            for client machines.
 
    Memory Encryption Engine
    MEE

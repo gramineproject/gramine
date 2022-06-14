@@ -1,4 +1,4 @@
-# Client manifest file (both for EPID and DCAP)
+# Client manifest file (same for EPID, DCAP and MAA)
 
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "client"
