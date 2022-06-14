@@ -1,8 +1,13 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ */
 #define _GNU_SOURCE
 #include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "common.h"
@@ -42,13 +47,32 @@ int main(void) {
     check_file_contents("/mnt/tmpfs/A");
     /* File inside built-in tmpfs, no need to remove it. */
 
-    /* Test a file on host fs. */
+    /* Test a file on the host fs. */
     write_expected_to_file(mnt_dir_fd, "../tmp/B");
     check_file_contents("/tmp/B");
 
     CHECK(unlinkat(mnt_dir_fd, "../tmp/B", 0));
 
     CHECK(close(mnt_dir_fd));
+
+    char path[0x100];
+    int fd = CHECK(open("/exec_victim", O_PATH | O_CLOEXEC));
+    int ret = snprintf(path, sizeof(path), "/proc/self/fd/%d", fd);
+    if (ret < 0 || (size_t)ret >= sizeof(path)) {
+        errx(1, "snprintf failed; %d", ret);
+    }
+
+    pid_t p = CHECK(fork());
+    if (p == 0) {
+        execl(path, "exec_victim", NULL);
+        err(1, "execl");
+    }
+
+    int status = 0;
+    CHECK(wait(&status));
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        errx(1, "child died with status: %#x", status);
+    }
 
     puts("TEST OK");
     return 0;

@@ -943,6 +943,7 @@ class TC_40_FileSystem(RegressionTestCase):
         finally:
             if os.path.exists("tmp/B"):
                 os.remove("tmp/B")
+        self.assertIn('Hello World (exec_victim)!', stdout)
         self.assertIn('TEST OK', stdout)
 
     def test_020_cpuinfo(self):

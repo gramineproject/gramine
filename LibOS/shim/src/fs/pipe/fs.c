@@ -131,7 +131,7 @@ static ssize_t pipe_write(struct shim_handle* hdl, const void* buf, size_t count
 }
 
 static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
-    /* XXX: DOES THIS WORK LOL
+    /* XXX: Is any of this right?
      * Shouldn't we be using hdl to figure something out?
      * if stat is NULL, should we not return -EFAULT?
      */

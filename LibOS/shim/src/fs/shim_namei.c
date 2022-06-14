@@ -744,7 +744,7 @@ int get_dirfd_dentry(int dirfd, struct shim_dentry** dir) {
         return -EBADF;
     }
 
-    if (!hdl->is_dir && hdl->type != TYPE_PATH) {
+    if (!hdl->is_dir) {
         put_handle(hdl);
         return -ENOTDIR;
     }

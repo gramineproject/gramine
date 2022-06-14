@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
 #ifndef COMMON_H_
 #define COMMON_H_
 
-#include "err.h"
+#include <assert.h>
+#include <err.h>
 
 #define OVERFLOWS(type, val)                        \
     ({                                              \
@@ -20,6 +22,14 @@
         err(1, "error at %s (line %d)", #x, __LINE__);  \
     }                                                   \
     _x;                                                 \
+})
+
+#define SAME_TYPE(a, b) __builtin_types_compatible_p(__typeof__(a), __typeof__(b))
+#define IS_STATIC_ARRAY(a) (!SAME_TYPE(a, &*(a)))
+
+#define ARRAY_LEN(arr) ({                                       \
+    static_assert(IS_STATIC_ARRAY(arr), "not a static array");  \
+    sizeof(arr) / sizeof(arr[0]);                               \
 })
 
 #endif /* COMMON_H_ */

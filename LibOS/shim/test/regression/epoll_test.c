@@ -12,8 +12,6 @@
 #define ERR(msg, args...) \
     errx(1, "%d: " msg, __LINE__, ##args)
 
-#define ARRAY_LEN(arr) (sizeof(arr) / sizeof(arr[0]))
-
 static uint64_t wait_event(int epfd, struct epoll_event* possible_events,
                            size_t possible_events_len) {
     struct epoll_event event = { 0 };
