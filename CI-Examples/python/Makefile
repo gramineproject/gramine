@@ -12,11 +12,18 @@ ifeq ($(SGX),1)
 all: python.manifest.sgx python.sig python.token
 endif
 
+RA_TYPE ?= none
+RA_CLIENT_SPID ?=
+RA_CLIENT_LINKABLE ?= 0
+
 python.manifest: python.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dentrypoint=$(realpath $(shell sh -c "command -v python3")) \
+		-Dra_type=$(RA_TYPE) \
+		-Dra_client_spid=$(RA_CLIENT_SPID) \
+		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< >$@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),

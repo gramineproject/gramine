@@ -14,6 +14,10 @@ endif
 CFLAGS += -fPIE
 LDFLAGS += -pie
 
+RA_TYPE ?= none
+RA_CLIENT_SPID ?=
+RA_CLIENT_LINKABLE ?= 0
+
 .PHONY: all
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
 
@@ -88,6 +92,9 @@ server.manifest: server.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dra_type=$(RA_TYPE) \
+		-Dra_client_spid=$(RA_CLIENT_SPID) \
+		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
