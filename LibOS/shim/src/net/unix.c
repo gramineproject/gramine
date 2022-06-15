@@ -202,6 +202,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_sock->was_bound = false;
     client_sock->can_be_read = true;
     client_sock->can_be_written = true;
+    client_sock->reuseaddr = false;
 
     if (!create_lock(&client_sock->lock) || !create_lock(&client_sock->recv_lock)) {
         put_handle(client_handle);
@@ -277,15 +278,32 @@ static int disconnect(struct shim_handle* handle) {
     return -EINVAL;
 }
 
+static int set_socket_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+    switch (optname) {
+        case SO_REUSEADDR:;
+            int val;
+            if (len < sizeof(val)) {
+                return -EINVAL;
+            }
+            memcpy(&val, optval, sizeof(val));
+            /* This option has no effect on UNIX sockets (we just save the value). */
+            handle->info.sock.reuseaddr = !!val;
+            return 0;
+        default:
+            return -ENOPROTOOPT;
+    }
+}
+
 static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
                       size_t len) {
-    /* Nothing to do here. */
-    __UNUSED(handle);
-    __UNUSED(level);
-    __UNUSED(optname);
-    __UNUSED(optval);
-    __UNUSED(len);
-    return -ENOPROTOOPT;
+    assert(locked(&handle->info.sock.lock));
+
+    switch (level) {
+        case SOL_SOCKET:
+            return set_socket_option(handle, optname, optval, len);
+        default:
+            return -ENOPROTOOPT;
+    }
 }
 
 static int getsockopt(struct shim_handle* handle, int level, int optname, void* optval,

@@ -108,8 +108,12 @@ struct shim_sock_handle {
     uint64_t receivetimeout_us;
     /* This field denotes whether the socket was ever bound. */
     bool was_bound;
+    /* This field indicates if the socket is ready for read-like operations (`recv`/`read` or
+     * `accept`, depending on the socket type and state). */
     bool can_be_read;
+    /* Same as above but for `send`/`write`. */
     bool can_be_written;
+    bool reuseaddr;
 };
 
 struct shim_dir_handle {

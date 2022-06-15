@@ -61,6 +61,7 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
     sock->was_bound = false;
     sock->can_be_read = false;
     sock->can_be_written = false;
+    sock->reuseaddr = false;
     switch (family) {
         case AF_UNIX:
             sock->ops = &sock_unix_ops;
@@ -1215,8 +1216,7 @@ static int set_socket_option(struct shim_handle* handle, int optname, char* optv
             required_len = sizeof(struct timeval);
             break;
         case SO_REUSEADDR:
-            required_len = sizeof(int);
-            break;
+            /* This option is handled by socket type specific code. */
         default:
             return -ENOPROTOOPT;
     }
@@ -1290,9 +1290,6 @@ static int set_socket_option(struct shim_handle* handle, int optname, char* optv
             }
             attr.socket.sendtimeout_us = value.tv.tv_sec * TIME_US_IN_S + value.tv.tv_usec;
             break;
-        case SO_REUSEADDR:
-            attr.socket.reuseaddr = value.i;
-            break;
     }
 
     ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
@@ -1338,7 +1335,11 @@ long shim_do_setsockopt(int fd, int level, int optname, char* optval, int optlen
     switch (level) {
         case SOL_SOCKET:
             ret = set_socket_option(handle, optname, optval, len);
-            break;
+            if (ret != -ENOPROTOOPT) {
+                break;
+            }
+            /* Maybe the callback can handle this option. */
+            /* Fallthrough. */
         default:
             if (!sock->ops->setsockopt) {
                 ret = -EOPNOTSUPP;
@@ -1391,11 +1392,13 @@ static int get_socket_option(struct shim_handle* handle, int optname, char* optv
             value.timeval.tv_usec = sock->sendtimeout_us % TIME_US_IN_S;
             value_len = sizeof(value.timeval);
             goto out;
+        case SO_REUSEADDR:
+            value.i = sock->reuseaddr;
+            goto out;
         case SO_KEEPALIVE:
         case SO_LINGER:
         case SO_RCVBUF:
         case SO_SNDBUF:
-        case SO_REUSEADDR:
             /* Set below. */
             break;
         default:
@@ -1428,9 +1431,6 @@ static int get_socket_option(struct shim_handle* handle, int optname, char* optv
             break;
         case SO_SNDBUF:
             value.i = attr.socket.send_buf_size;
-            break;
-        case SO_REUSEADDR:
-            value.i = attr.socket.reuseaddr;
             break;
     }
 
@@ -1473,7 +1473,11 @@ long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optle
     switch (level) {
         case SOL_SOCKET:
             ret = get_socket_option(handle, optname, optval, &len);
-            break;
+            if (ret != -ENOPROTOOPT) {
+                break;
+            }
+            /* Maybe the callback can handle this option. */
+            /* Fallthrough. */
         default:
             if (!sock->ops->getsockopt) {
                 ret = -EOPNOTSUPP;

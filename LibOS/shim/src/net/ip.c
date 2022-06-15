@@ -167,6 +167,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_sock->was_bound = false;
     client_sock->can_be_read = true;
     client_sock->can_be_written = true;
+    client_sock->reuseaddr = false;
 
     if (!create_lock(&client_sock->lock) || !create_lock(&client_sock->recv_lock)) {
         put_handle(client_handle);
@@ -227,7 +228,7 @@ static int disconnect(struct shim_handle* handle) {
     return pal_to_unix_errno(ret);
 }
 
-static int set_sock_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -255,7 +256,7 @@ static int set_sock_tcp_option(struct shim_handle* handle, int optname, void* op
     return pal_to_unix_errno(ret);
 }
 
-static int set_sock_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -283,12 +284,45 @@ static int set_sock_ipv6_option(struct shim_handle* handle, int optname, void* o
     return pal_to_unix_errno(ret);
 }
 
+static int set_socket_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+    PAL_STREAM_ATTR attr;
+    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    assert(attr.handle_type == PAL_TYPE_SOCKET);
+
+    /* All currently supported options use `int`. */
+    int val;
+    if (len < sizeof(val)) {
+        return -EINVAL;
+    }
+    memcpy(&val, optval, sizeof(val));
+
+    switch (optname) {
+        case SO_REUSEADDR:
+            attr.socket.reuseaddr = !!val;
+            break;
+        default:
+            return -ENOPROTOOPT;
+    }
+
+    ret = DkStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    handle->info.sock.reuseaddr = !!val;
+    return 0;
+}
+
 static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
                       size_t len) {
     struct shim_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     switch (level) {
+        case SOL_SOCKET:
+            return set_socket_option(handle, optname, optval, len);
         case IPPROTO_IP:
             if (sock->domain != AF_INET) {
                 return -EOPNOTSUPP;
@@ -299,18 +333,18 @@ static int setsockopt(struct shim_handle* handle, int level, int optname, void* 
             if (sock->domain != AF_INET6) {
                 return -EOPNOTSUPP;
             }
-            return set_sock_ipv6_option(handle, optname, optval, len);
+            return set_ipv6_option(handle, optname, optval, len);
         case SOL_TCP:
             if (sock->type != SOCK_STREAM) {
                 return -EOPNOTSUPP;
             }
-            return set_sock_tcp_option(handle, optname, optval, len);
+            return set_tcp_option(handle, optname, optval, len);
         default:
             return -ENOPROTOOPT;
     }
 }
 
-static int get_sock_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t* len) {
+static int get_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -338,8 +372,7 @@ static int get_sock_tcp_option(struct shim_handle* handle, int optname, void* op
     return 0;
 }
 
-static int get_sock_ipv6_option(struct shim_handle* handle, int optname, void* optval,
-                                size_t* len) {
+static int get_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -380,12 +413,12 @@ static int getsockopt(struct shim_handle* handle, int level, int optname, void* 
             if (sock->domain != AF_INET6) {
                 return -EOPNOTSUPP;
             }
-            return get_sock_ipv6_option(handle, optname, optval, len);
+            return get_ipv6_option(handle, optname, optval, len);
         case SOL_TCP:
             if (sock->type != SOCK_STREAM) {
                 return -EOPNOTSUPP;
             }
-            return get_sock_tcp_option(handle, optname, optval, len);
+            return get_tcp_option(handle, optname, optval, len);
         default:
             return -EOPNOTSUPP;
     }
