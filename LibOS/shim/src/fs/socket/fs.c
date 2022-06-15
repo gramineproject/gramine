@@ -98,15 +98,14 @@ static int setflags(struct shim_handle* handle, int flags) {
         return pal_to_unix_errno(ret);
     }
 
+    assert(ret == 0);
+
     if (attr.nonblocking != nonblocking) {
         attr.nonblocking = nonblocking;
         ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
-        ret = pal_to_unix_errno(ret);
-    } else {
-        ret = 0;
     }
 
-    return ret;
+    return pal_to_unix_errno(ret);
 }
 
 static int checkout(struct shim_handle* handle) {
