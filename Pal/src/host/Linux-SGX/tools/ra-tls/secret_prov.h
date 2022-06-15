@@ -20,18 +20,17 @@
 
 #define DEFAULT_SERVERS "localhost:4433"
 
+/* must be treated as an opaque object by users */
 struct ra_tls_ctx {
     void* ssl;
+    void* net;
+    void* conf;
 };
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
 
 typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
-
-/* internally used functions, not exported */
-__attribute__ ((visibility("hidden")))
-void secret_provision_free_resources(void);
 
 /*!
  * \brief Write arbitrary data in an established RA-TLS session.
