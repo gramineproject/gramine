@@ -22,7 +22,7 @@
 #include "shim_socket.h"
 
 /*!
- * \brief Verify UNIX socket address and convert it to an unique socket name
+ * \brief Verify UNIX socket address and convert it to a unique socket name.
  *
  * \param         addr            The socket address to convert.
  * \param[in,out] addrlen         Pointer to the size of \p addr. Always updated to the actual size

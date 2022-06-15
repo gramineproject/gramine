@@ -475,7 +475,7 @@ long shim_do_connect(int fd, void* addr, int _addrlen) {
     struct shim_sock_handle* sock = &handle->info.sock;
 
     /* We need to take `recv_lock` just in case we free `peek` buffer in `disconnect` case.
-     * This should hurt though - nothing should be calling `recv` concurrently anyway. */
+     * This should not hurt though - nothing should be calling `recv` concurrently anyway. */
     lock(&sock->recv_lock);
     lock(&sock->lock);
 

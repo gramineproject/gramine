@@ -83,6 +83,7 @@ enum shim_sock_state {
  * stream reads (see the comment in `do_recvmsg` in "LibOS/shim/src/sys/shim_socket.c").
  * `pal_handle` should be accessed using atomic operations. It can be NULL. Once it's set, it cannot
  * change anymore.
+ * If you need to take both `recv_lock` and `lock`, take the former first.
  */
 struct shim_sock_handle {
     struct shim_lock lock;
