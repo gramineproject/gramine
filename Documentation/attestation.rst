@@ -439,7 +439,7 @@ environment variables if available:
 - ``SECRET_PROVISION_SET_KEY`` (optional) -- set it to the name of the key that
   will be provisioned into the Gramine enclave as the secret. For example,
   setting this environment variable to ``default`` will install the provisioned
-  key as the default encryption key for encrypted files. The key will be sent
+  key as the default encryption key for encrypted files. The key must be sent
   (by the secret provisioning service) as a 32-char null-terminated AES-GCM
   encryption key in hex format, similar to ``fs.insecure__keys.[KEY_NAME]``
   manifest option. This environment variable is checked only if
