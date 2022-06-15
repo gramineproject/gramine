@@ -81,6 +81,7 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
             self.__decrypt_file(self.OUTPUT_FILES[i], dec_path)
             self.assertTrue(filecmp.cmp(self.INPUT_FILES[i], dec_path, shallow=False))
 
+    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_100_open_close(self):
         input_path = self.ENCRYPTED_FILES[-1] # existing file
         output_path = os.path.join(self.OUTPUT_DIR, 'test_100') # new file
@@ -89,13 +90,6 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         stdout, stderr = self.run_binary(['open_close', 'W', output_path])
         self.verify_open_close(stdout, stderr, output_path, 'output')
         self.assertTrue(os.path.isfile(output_path))
-
-    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
-    def test_101_open_flags(self):
-        # the test binary expects a path to file that will get created
-        file_path = os.path.join(self.OUTPUT_DIR, 'test_101') # new file
-        stdout, stderr = self.run_binary(['open_flags', file_path])
-        self.verify_open_flags(stdout, stderr)
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_115_seek_tell(self):
@@ -131,15 +125,15 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
 
     def verify_truncate_test(self, path_1, path_2, size_out):
         stdout, stderr = self.run_binary(['truncate', path_1, path_2, str(size_out)])
-
-        stdout, stderr = self.run_binary(['truncate', path_1, path_2, str(size_out)])
         self.assertNotIn('ERROR: ', stderr)
         self.assertIn('truncate(' + path_1 + ') to ' + str(size_out) + ' OK', stdout)
         self.assertIn('open(' + path_2 + ') output OK', stdout)
         self.assertIn('ftruncate(' + path_2 + ') to ' + str(size_out) + ' OK', stdout)
         self.assertIn('close(' + path_2 + ') output OK', stdout)
+        self.verify_size(path_1, path_2)
 
-    # TODO: File truncation to arbitrary size.
+    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted) and
+    # because file truncation from greater to small size is not yet implemented
     def test_140_file_truncate(self):
         enc_path = self.ENCRYPTED_FILES[-1] # existing file
         path_1 = os.path.join(self.OUTPUT_DIR, 'test_140a') # writable files

@@ -1266,18 +1266,16 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
            return status;
 
        path_len = strlen(pf->encrypted_part_plain.path);
-
-       memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
-
        memcpy(path, pf->encrypted_part_plain.path, path_len);
        erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
        memcpy(pf->encrypted_part_plain.path, path, path_len);
 
-       ipf_init_root_mht(&pf->root_mht);
-
+       erase_memory(&pf->file_metadata, sizeof(pf->file_metadata));
        pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
        pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
        pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
+
+       ipf_init_root_mht(&pf->root_mht);
 
        pf->need_writing = true;
        pf->end_of_file  = false;

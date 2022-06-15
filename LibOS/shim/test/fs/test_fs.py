@@ -59,7 +59,6 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('fclose(' + path + ') ' + mode + ' 1 OK', stdout)
         self.assertIn('fclose(' + path + ') ' + mode + ' 2 OK', stdout)
 
-    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_100_open_close(self):
         input_path = self.INPUT_FILES[-1] # existing file
         output_path = os.path.join(self.OUTPUT_DIR, 'test_100') # new file to be created
