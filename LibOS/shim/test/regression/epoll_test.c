@@ -28,7 +28,7 @@ static uint64_t wait_event(int epfd, struct epoll_event* possible_events,
         ERR("epoll_wait returned: %d", x);
     }
 
-    for (size_t i = 0; i < possible_events_len; ++i) {
+    for (size_t i = 0; i < possible_events_len; i++) {
         if (possible_events[i].data.u64 == event.data.u64) {
             if (possible_events[i].events != event.events) {
                 ERR("wrong events returned: %#x", event.events);

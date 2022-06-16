@@ -279,19 +279,22 @@ static int disconnect(struct shim_handle* handle) {
 }
 
 static int set_socket_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+    /* All currently supported options use `int`. */
+    int val;
+    if (len < sizeof(val)) {
+        return -EINVAL;
+    }
+    memcpy(&val, optval, sizeof(val));
+
     switch (optname) {
-        case SO_REUSEADDR:;
-            int val;
-            if (len < sizeof(val)) {
-                return -EINVAL;
-            }
-            memcpy(&val, optval, sizeof(val));
+        case SO_REUSEADDR:
             /* This option has no effect on UNIX sockets (we just save the value). */
             handle->info.sock.reuseaddr = !!val;
-            return 0;
+            break;
         default:
             return -ENOPROTOOPT;
     }
+    return 0;
 }
 
 static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
@@ -341,7 +344,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         size = iov[0].iov_len;
     } else {
         size = 0;
-        for (size_t i = 0; i < iov_len; ++i) {
+        for (size_t i = 0; i < iov_len; i++) {
             size += iov[i].iov_len;
         }
         backing_buf = malloc(size);
@@ -349,7 +352,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
             return -ENOMEM;
         }
         size = 0;
-        for (size_t i = 0; i < iov_len; ++i) {
+        for (size_t i = 0; i < iov_len; i++) {
             memcpy(backing_buf + size, iov[i].iov_base, iov[i].iov_len);
             size += iov[i].iov_len;
         }
@@ -401,7 +404,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         size = iov[0].iov_len;
     } else {
         size = 0;
-        for (size_t i = 0; i < iov_len; ++i) {
+        for (size_t i = 0; i < iov_len; i++) {
             size += iov[i].iov_len;
         }
         backing_buf = malloc(size);
@@ -420,7 +423,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
         if (backing_buf) {
             /* Need to copy back to user buffers. */
             size_t copied = 0;
-            for (size_t i = 0; i < iov_len && copied < size; ++i) {
+            for (size_t i = 0; i < iov_len && copied < size; i++) {
                 size_t this_size = MIN(size - copied, iov[i].iov_len);
                 memcpy(iov[i].iov_base, buf + copied, this_size);
                 copied += this_size;

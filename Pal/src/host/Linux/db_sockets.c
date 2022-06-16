@@ -493,7 +493,7 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
     if (!iov) {
         return -PAL_ERROR_NOMEM;
     }
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         iov[i].iov_base = pal_iov[i].iov_base;
         iov[i].iov_len = pal_iov[i].iov_len;
     }
@@ -522,7 +522,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
     if (!iov) {
         return -PAL_ERROR_NOMEM;
     }
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         iov[i].iov_base = pal_iov[i].iov_base;
         iov[i].iov_len = pal_iov[i].iov_len;
     }

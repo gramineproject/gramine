@@ -569,7 +569,7 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
     }
     bool (*check_access_func)(const void*, size_t) = is_recv ? is_user_memory_writable
                                                              : is_user_memory_readable;
-    for (size_t i = 0; i < user_msg->msg_iovlen; ++i) {
+    for (size_t i = 0; i < user_msg->msg_iovlen; i++) {
         if (!check_access_func(user_msg->msg_iov[i].iov_base, user_msg->msg_iov[i].iov_len)) {
             return -EFAULT;
         }
@@ -630,7 +630,7 @@ ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     }
 
     size_t total_size = 0;
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         total_size += iov[i].iov_len;
     }
 
@@ -784,7 +784,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     /* We ignore `sock->can_be_read` here - there might be some pending data in the host OS. */
 
     size_t total_size = 0;
-    for (size_t i = 0; i < iov_len; ++i) {
+    for (size_t i = 0; i < iov_len; i++) {
         /* This cannot overflow - we have already checked that all of this memory is present so it
          * must fit in `size_t`. */
         total_size += iov[i].iov_len;
@@ -859,7 +859,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     if (sock->peek.data_size) {
         /* Copy what we have to the user app. */
         size_t size = 0;
-        for (size_t i = 0; i < iov_len && size < sock->peek.data_size; ++i) {
+        for (size_t i = 0; i < iov_len && size < sock->peek.data_size; i++) {
             size_t this_size = MIN(sock->peek.data_size - size, iov[i].iov_len);
             memcpy(iov[i].iov_base, sock->peek.buf + size, this_size);
             size += this_size;
