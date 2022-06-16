@@ -16,11 +16,11 @@
 
 #include "secret_prov.h"
 
-int common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
-int common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
-int common_close(mbedtls_ssl_context* ssl);
+int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
+int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
+int secret_provision_common_close(mbedtls_ssl_context* ssl);
 
-int common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size) {
+int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size) {
     int ret;
 
     if (!ssl || size > INT_MAX)
@@ -41,7 +41,7 @@ int common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size) {
     return (int)written;
 }
 
-int common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size) {
+int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size) {
     int ret;
 
     if (!ssl || size > INT_MAX)
@@ -65,7 +65,7 @@ int common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size) {
     return (int)read;
 }
 
-int common_close(mbedtls_ssl_context* ssl) {
+int secret_provision_common_close(mbedtls_ssl_context* ssl) {
     if (!ssl)
         return 0;
 

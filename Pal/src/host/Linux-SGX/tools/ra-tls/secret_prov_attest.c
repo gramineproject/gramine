@@ -57,33 +57,41 @@ void secret_provision_destroy(void) {
     g_provisioned_secret_size = 0;
 }
 
-extern int common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
-extern int common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
-extern int common_close(mbedtls_ssl_context* ssl);
+extern int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
+extern int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
+extern int secret_provision_common_close(mbedtls_ssl_context* ssl);
 
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
     mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
-    return common_write(ssl, buf, size);
+    return secret_provision_common_write(ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
     mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
-    return common_read(ssl, buf, size);
+    return secret_provision_common_read(ssl, buf, size);
 }
 
 int secret_provision_close(struct ra_tls_ctx* ctx) {
-    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
-    mbedtls_ssl_config* conf = (mbedtls_ssl_config*)ctx->conf;
-    mbedtls_net_context* net = (mbedtls_net_context*)ctx->net;
-
-    int ret = common_close(ssl);
-
-    mbedtls_ssl_free(ssl);
-    mbedtls_ssl_config_free(conf);
-    mbedtls_net_free(net);
-    free(ssl);
-    free(conf);
-    free(net);
+    int ret = 0;
+    if (ctx->ssl) {
+        mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
+        ret = secret_provision_common_close(ssl);
+        mbedtls_ssl_free(ssl);
+        free(ssl);
+        ctx->ssl = NULL;
+    }
+    if (ctx->conf) {
+        mbedtls_ssl_config* conf = (mbedtls_ssl_config*)ctx->conf;
+        mbedtls_ssl_config_free(conf);
+        free(conf);
+        ctx->conf = NULL;
+    }
+    if (ctx->net) {
+        mbedtls_net_context* net = (mbedtls_net_context*)ctx->net;
+        mbedtls_net_free(net);
+        free(net);
+        ctx->net = NULL;
+    }
     return ret;
 }
 
@@ -107,6 +115,9 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     mbedtls_ssl_config*  conf        = malloc(sizeof(*conf));
     mbedtls_ssl_context* ssl         = malloc(sizeof(*ssl));
     if (!verifier_fd || !conf || !ssl) {
+        free(verifier_fd);
+        free(conf);
+        free(ssl);
         return -ENOMEM;
     }
 
@@ -247,7 +258,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     size = sprintf((char*)buf, SECRET_PROVISION_REQUEST);
     size += 1; /* include null byte */
 
-    ret = common_write(ssl, buf, size);
+    ret = secret_provision_common_write(ssl, buf, size);
     if (ret < 0) {
         goto out;
     }
@@ -258,7 +269,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
                   "buffer must be sufficiently large to hold SECRET_PROVISION_RESPONSE + int32");
 
     memset(buf, 0, sizeof(buf));
-    ret = common_read(ssl, buf, sizeof(SECRET_PROVISION_RESPONSE) + sizeof(received_secret_size));
+    ret = secret_provision_common_read(ssl, buf, sizeof(SECRET_PROVISION_RESPONSE) +
+                                                 sizeof(received_secret_size));
     if (ret < 0) {
         goto out;
     }
@@ -287,7 +299,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     }
     g_provisioned_secret_size = received_secret_size;
 
-    ret = common_read(ssl, g_provisioned_secret, g_provisioned_secret_size);
+    ret = secret_provision_common_read(ssl, g_provisioned_secret, g_provisioned_secret_size);
     if (ret < 0) {
         goto out;
     }
@@ -299,7 +311,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         out_ctx->conf = conf;
         out_ctx->net  = verifier_fd;
     } else {
-        common_close(ssl);
+        secret_provision_common_close(ssl);
     }
 
     ret = 0;
