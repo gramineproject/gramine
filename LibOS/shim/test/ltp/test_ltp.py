@@ -188,13 +188,14 @@ def test_ltp(cmd, section, capsys):
 
     loader = 'gramine-sgx' if HAS_SGX else 'gramine-direct'
     timeout = int(section.getfloat('timeout') * LTP_TIMEOUT_FACTOR)
+    assert len(cmd) > 0, "Empty command?"
     full_cmd = [loader, *cmd]
 
     logging.info('command: %s', full_cmd)
     logging.info('must_pass: %s', list(must_pass) if must_pass else 'all')
 
     live_output = os.getenv('GRAMINE_LTP_LIVE_OUTPUT') or ''
-    if section.name in live_output.split(','):
+    if cmd[0] in live_output.split(','):
         with capsys.disabled():
             returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
     else:
