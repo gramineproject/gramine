@@ -188,7 +188,7 @@ def test_ltp(cmd, section, capsys):
 
     loader = 'gramine-sgx' if HAS_SGX else 'gramine-direct'
     timeout = int(section.getfloat('timeout') * LTP_TIMEOUT_FACTOR)
-    assert len(cmd) > 0, "Empty command?"
+    assert cmd, "Empty command?"
     full_cmd = [loader, *cmd]
 
     logging.info('command: %s', full_cmd)
