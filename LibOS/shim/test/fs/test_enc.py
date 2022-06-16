@@ -130,7 +130,8 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         self.assertIn('open(' + path_2 + ') output OK', stdout)
         self.assertIn('ftruncate(' + path_2 + ') to ' + str(size_out) + ' OK', stdout)
         self.assertIn('close(' + path_2 + ') output OK', stdout)
-        self.verify_size(path_1, path_2)
+        self.verify_size(path_1, size_out)
+        self.verify_size(path_2, size_out)
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted) and
     # because file truncation from greater to small size is not yet implemented
