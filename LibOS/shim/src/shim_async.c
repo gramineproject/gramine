@@ -263,12 +263,13 @@ static int shim_async_worker(void* arg) {
             }
         }
 
+        bool inf_sleep = false;
         uint64_t sleep_time;
         if (next_expire_time) {
             sleep_time  = next_expire_time - now;
             idle_cycles = 0;
         } else if (pals_cnt || other_event) {
-            sleep_time = NO_TIMEOUT;
+            inf_sleep = true;
             idle_cycles = 0;
         } else {
             /* no async IO events and no timers/alarms: thread is idling */
@@ -286,7 +287,8 @@ static int shim_async_worker(void* arg) {
         unlock(&async_worker_lock);
 
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
-        ret = DkStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events, &sleep_time);
+        ret = DkStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
+                                  inf_sleep ? NULL : &sleep_time);
         if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
             ret = pal_to_unix_errno(ret);
             log_error("DkStreamsWaitEvents failed with: %d", ret);

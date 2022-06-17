@@ -589,9 +589,6 @@ void DkEventSet(PAL_HANDLE handle);
  */
 void DkEventClear(PAL_HANDLE handle);
 
-/*! block until the handle's event is triggered */
-#define NO_TIMEOUT ((uint64_t)-1)
-
 /*!
  * \brief Wait for an event handle.
  *

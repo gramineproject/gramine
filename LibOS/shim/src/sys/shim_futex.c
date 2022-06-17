@@ -309,7 +309,7 @@ static struct shim_futex* find_futex(uint32_t* uaddr) {
     return futex;
 }
 
-static int futex_wait(uint32_t* uaddr, uint32_t val, uint64_t timeout, uint32_t bitset) {
+static int futex_wait(uint32_t* uaddr, uint32_t val, uint64_t* timeout, uint32_t bitset) {
     int ret = 0;
     struct shim_futex* futex = NULL;
     struct shim_thread* thread = NULL;
@@ -351,7 +351,7 @@ static int futex_wait(uint32_t* uaddr, uint32_t val, uint64_t timeout, uint32_t 
     put_futex(futex);
     futex = NULL;
 
-    ret = thread_wait(timeout != NO_TIMEOUT ? &timeout : NULL, /*ignore_pending_signals=*/false);
+    ret = thread_wait(timeout, /*ignore_pending_signals=*/false);
 
     spinlock_lock(&g_futex_tree_lock);
     /* We might have been requeued. Grab the (possibly new) futex reference. */
@@ -712,7 +712,8 @@ static int is_valid_futex_ptr(uint32_t* ptr, bool check_write) {
 static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, uint32_t* uaddr2,
                           uint32_t val3) {
     int cmd = op & FUTEX_CMD_MASK;
-    uint64_t timeout = NO_TIMEOUT;
+    bool no_timeout = true;
+    uint64_t timeout = 0;
     uint32_t val2 = 0;
 
     if (utime && (cmd == FUTEX_WAIT || cmd == FUTEX_WAIT_BITSET || cmd == FUTEX_LOCK_PI ||
@@ -736,6 +737,7 @@ static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, ui
             }
             timeout -= current_time;
         }
+        no_timeout = false;
     }
 
     if (cmd == FUTEX_CMP_REQUEUE || cmd == FUTEX_REQUEUE || cmd == FUTEX_WAKE_OP ||
@@ -768,7 +770,7 @@ static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, ui
             val3 = FUTEX_BITSET_MATCH_ANY;
             /* fallthrough */
         case FUTEX_WAIT_BITSET:
-            return futex_wait(uaddr, val, timeout, val3);
+            return futex_wait(uaddr, val, no_timeout ? NULL : &timeout, val3);
         case FUTEX_WAKE:
             val3 = FUTEX_BITSET_MATCH_ANY;
             /* fallthrough */
