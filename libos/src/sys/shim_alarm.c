@@ -13,6 +13,7 @@
 #include "shim_signal.h"
 #include "shim_table.h"
 #include "shim_utils.h"
+#include "spinlock.h"
 
 static void signal_alarm(IDTYPE caller, void* arg) {
     __UNUSED(caller);
@@ -44,22 +45,24 @@ long shim_do_alarm(unsigned int seconds) {
 static struct {
     unsigned long timeout;
     unsigned long reset;
-} real_itimer;
+} g_real_itimer;
+
+static spinlock_t g_real_itimer_lock = INIT_SPINLOCK_UNLOCKED;
 
 static void signal_itimer(IDTYPE target, void* arg) {
     // XXX: Can we simplify this code or streamline with the other callback?
     __UNUSED(target);
 
-    MASTER_LOCK();
+    spinlock_lock(&g_real_itimer_lock);
 
-    if (real_itimer.timeout != (unsigned long)arg) {
-        MASTER_UNLOCK();
+    if (g_real_itimer.timeout != (unsigned long)arg) {
+        spinlock_unlock(&g_real_itimer_lock);
         return;
     }
 
-    real_itimer.timeout += real_itimer.reset;
-    real_itimer.reset = 0;
-    MASTER_UNLOCK();
+    g_real_itimer.timeout += g_real_itimer.reset;
+    g_real_itimer.reset = 0;
+    spinlock_unlock(&g_real_itimer_lock);
 }
 
 #ifndef ITIMER_REAL
@@ -88,25 +91,25 @@ long shim_do_setitimer(int which, struct __kernel_itimerval* value,
     uint64_t next_reset = value->it_interval.tv_sec * (uint64_t)1000000
                           + value->it_interval.tv_usec;
 
-    MASTER_LOCK();
+    spinlock_lock(&g_real_itimer_lock);
 
-    uint64_t current_timeout = real_itimer.timeout > setup_time
-                               ? real_itimer.timeout - setup_time
+    uint64_t current_timeout = g_real_itimer.timeout > setup_time
+                               ? g_real_itimer.timeout - setup_time
                                : 0;
-    uint64_t current_reset = real_itimer.reset;
+    uint64_t current_reset = g_real_itimer.reset;
 
     int64_t install_ret = install_async_event(NULL, next_value, &signal_itimer,
                                               (void*)(setup_time + next_value));
 
     if (install_ret < 0) {
-        MASTER_UNLOCK();
+        spinlock_unlock(&g_real_itimer_lock);
         return install_ret;
     }
 
-    real_itimer.timeout = setup_time + next_value;
-    real_itimer.reset   = next_reset;
+    g_real_itimer.timeout = setup_time + next_value;
+    g_real_itimer.reset   = next_reset;
 
-    MASTER_UNLOCK();
+    spinlock_unlock(&g_real_itimer_lock);
 
     if (ovalue) {
         ovalue->it_interval.tv_sec  = current_reset / 1000000;
@@ -133,12 +136,12 @@ long shim_do_getitimer(int which, struct __kernel_itimerval* value) {
         return pal_to_unix_errno(ret);
     }
 
-    MASTER_LOCK();
-    uint64_t current_timeout = real_itimer.timeout > setup_time
-                               ? real_itimer.timeout - setup_time
+    spinlock_lock(&g_real_itimer_lock);
+    uint64_t current_timeout = g_real_itimer.timeout > setup_time
+                               ? g_real_itimer.timeout - setup_time
                                : 0;
-    uint64_t current_reset = real_itimer.reset;
-    MASTER_UNLOCK();
+    uint64_t current_reset = g_real_itimer.reset;
+    spinlock_unlock(&g_real_itimer_lock);
 
     value->it_interval.tv_sec  = current_reset / 1000000;
     value->it_interval.tv_usec = current_reset % 1000000;

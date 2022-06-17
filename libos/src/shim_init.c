@@ -93,7 +93,6 @@ const char** migrated_envp __attribute_migratable;
  * allocated, its memory is never freed or updated. */
 char** g_library_paths = NULL;
 
-struct shim_lock __master_lock;
 bool lock_enabled;
 
 void* allocate_stack(size_t size, size_t protect_size, bool user) {
@@ -395,11 +394,6 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     g_manifest_root = g_pal_public_state->manifest_root;
 
     shim_xstate_init();
-
-    if (!create_lock(&__master_lock)) {
-        log_error("Error during shim_init(): failed to allocate __master_lock");
-        DkProcessExit(ENOMEM);
-    }
 
     RUN_INIT(init_vma);
     RUN_INIT(init_slab);
