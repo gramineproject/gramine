@@ -116,7 +116,7 @@ static void _interrupt_epoll_waiters(struct shim_epoll_handle* epoll) {
     struct shim_epoll_waiter* waiter;
     struct shim_epoll_waiter* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(waiter, tmp, &epoll->waiters, list) {
-        set_pollable_event(waiter->event, 1);
+        set_pollable_event(waiter->event);
         LISTP_DEL_INIT(waiter, &epoll->waiters, list);
     }
     assert(LISTP_EMPTY(&epoll->waiters));

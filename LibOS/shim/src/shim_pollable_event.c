@@ -23,7 +23,7 @@ int create_pollable_event(struct shim_pollable_event* event) {
     PAL_HANDLE write_handle;
     do {
         ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                           PAL_OPTION_CLOEXEC, &write_handle);
+                           PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC, &write_handle);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("%s: DkStreamOpen failed: %d", __func__, ret);
@@ -66,52 +66,26 @@ void destroy_pollable_event(struct shim_pollable_event* event) {
     DkObjectClose(event->write_handle);
 }
 
-int set_pollable_event(struct shim_pollable_event* event, size_t n) {
-    int ret = 0;
+int set_pollable_event(struct shim_pollable_event* event) {
+    int ret;
 
     spinlock_lock(&event->write_lock);
 
-    while (n > 0) {
-        char buf[0x20] = { 0 };
-        size_t size = MIN(sizeof(buf), n);
-        int ret = DkStreamWrite(event->write_handle, /*offset=*/0, &size, buf, /*dest=*/NULL);
-        if (ret < 0) {
-            if (ret == -PAL_ERROR_INTERRUPTED) {
-                continue;
-            }
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
-        if (size == 0) {
-            ret = -EINVAL;
-            goto out;
-        }
-        n -= size;
-    }
-    ret = 0;
-
-out:
-    spinlock_unlock(&event->write_lock);
-    return ret;
-}
-
-int wait_pollable_event(struct shim_pollable_event* event) {
-    int ret = 0;
-
-    spinlock_lock(&event->read_lock);
-
     do {
-        char c;
+        char c = 0;
         size_t size = sizeof(c);
-        ret = DkStreamRead(event->read_handle, /*offset=*/0, &size, &c, NULL, 0);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-        } else if (size == 0) {
+        ret = DkStreamWrite(event->write_handle, /*offset=*/0, &size, &c, /*dest=*/NULL);
+        ret = pal_to_unix_errno(ret);
+        if (ret == 0 && size == 0) {
             ret = -EINVAL;
         }
-    } while (ret == -EINTR || ret == -EAGAIN);
+        if (ret == -EAGAIN) {
+            /* Pipe full - event already set. */
+            ret = 0;
+        }
+    } while (ret == -EINTR);
 
-    spinlock_unlock(&event->read_lock);
+    spinlock_unlock(&event->write_lock);
     return ret;
 }
 
@@ -120,28 +94,20 @@ int clear_pollable_event(struct shim_pollable_event* event) {
 
     spinlock_lock(&event->read_lock);
 
-    while (1) {
+    do {
         char buf[0x100];
         size_t size = sizeof(buf);
         int ret = DkStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL, 0);
-        if (ret < 0) {
-            if (ret == -PAL_ERROR_INTERRUPTED) {
-                continue;
-            } else if (ret == -PAL_ERROR_TRYAGAIN) {
-                /* Event not set. */
-                break;
-            }
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
-        if (size == 0) {
+        ret = pal_to_unix_errno(ret);
+        if (ret == 0 && size == 0) {
             ret = -EINVAL;
-            goto out;
         }
-    }
-    ret = 0;
+        if (ret == -EAGAIN) {
+            /* Event not set. */
+            ret = 0;
+        }
+    } while (ret == -EINTR);
 
-out:
     spinlock_unlock(&event->read_lock);
     return ret;
 }
