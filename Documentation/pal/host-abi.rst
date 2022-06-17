@@ -311,9 +311,6 @@ Exception handling
 Synchronization
 ^^^^^^^^^^^^^^^
 
-.. doxygendefine:: NO_TIMEOUT
-   :project: pal
-
 .. doxygenfunction:: DkEventCreate
    :project: pal
 

@@ -238,12 +238,12 @@ long shim_do_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* info,
     set_sig_mask(current, &new);
     unlock(&current->lock);
 
-    uint64_t timeout_us = timeout ? timespec_to_us(timeout) : NO_TIMEOUT;
+    uint64_t timeout_us = timeout ? timespec_to_us(timeout) : 0;
     int thread_wait_res = -EINTR;
 
     thread_prepare_wait();
     while (!have_pending_signals()) {
-        thread_wait_res = thread_wait(timeout_us != NO_TIMEOUT ? &timeout_us : NULL,
+        thread_wait_res = thread_wait(timeout ? &timeout_us : NULL,
                                       /*ignore_pending_signals=*/false);
         if (thread_wait_res == -ETIMEDOUT) {
             break;
