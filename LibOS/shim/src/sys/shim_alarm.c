@@ -41,6 +41,8 @@ long shim_do_alarm(unsigned int seconds) {
     return secs;
 }
 
+/* TODO: we use `g_process.fs_lock` for concurrent accesses to `real_itimer`. Maybe introduce
+ * a custom lock and init function here? */
 static struct {
     unsigned long timeout;
     unsigned long reset;
@@ -50,16 +52,16 @@ static void signal_itimer(IDTYPE target, void* arg) {
     // XXX: Can we simplify this code or streamline with the other callback?
     __UNUSED(target);
 
-    MASTER_LOCK();
+    lock(&g_process.fs_lock);
 
     if (real_itimer.timeout != (unsigned long)arg) {
-        MASTER_UNLOCK();
+        unlock(&g_process.fs_lock);
         return;
     }
 
     real_itimer.timeout += real_itimer.reset;
     real_itimer.reset = 0;
-    MASTER_UNLOCK();
+    unlock(&g_process.fs_lock);
 }
 
 #ifndef ITIMER_REAL
@@ -88,7 +90,7 @@ long shim_do_setitimer(int which, struct __kernel_itimerval* value,
     uint64_t next_reset = value->it_interval.tv_sec * (uint64_t)1000000
                           + value->it_interval.tv_usec;
 
-    MASTER_LOCK();
+    lock(&g_process.fs_lock);
 
     uint64_t current_timeout = real_itimer.timeout > setup_time
                                ? real_itimer.timeout - setup_time
@@ -99,14 +101,14 @@ long shim_do_setitimer(int which, struct __kernel_itimerval* value,
                                               (void*)(setup_time + next_value));
 
     if (install_ret < 0) {
-        MASTER_UNLOCK();
+        unlock(&g_process.fs_lock);
         return install_ret;
     }
 
     real_itimer.timeout = setup_time + next_value;
     real_itimer.reset   = next_reset;
 
-    MASTER_UNLOCK();
+    unlock(&g_process.fs_lock);
 
     if (ovalue) {
         ovalue->it_interval.tv_sec  = current_reset / 1000000;
@@ -133,12 +135,12 @@ long shim_do_getitimer(int which, struct __kernel_itimerval* value) {
         return pal_to_unix_errno(ret);
     }
 
-    MASTER_LOCK();
+    lock(&g_process.fs_lock);
     uint64_t current_timeout = real_itimer.timeout > setup_time
                                ? real_itimer.timeout - setup_time
                                : 0;
     uint64_t current_reset = real_itimer.reset;
-    MASTER_UNLOCK();
+    unlock(&g_process.fs_lock);
 
     value->it_interval.tv_sec  = current_reset / 1000000;
     value->it_interval.tv_usec = current_reset % 1000000;
