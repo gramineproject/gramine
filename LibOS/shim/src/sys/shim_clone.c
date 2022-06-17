@@ -58,8 +58,10 @@ static int clone_implementation_wrapper(void* arg_) {
 
     /* only now we can call LibOS/PAL functions because they require a set-up TCB;
      * do not move the below functions before shim_tcb_init/set_cur_thread()! */
-    object_wait_with_retry(arg->create_event);
-    DkObjectClose(arg->create_event);
+    int ret = event_wait_with_retry(arg->create_event);
+    if (ret < 0) {
+        return ret;
+    }
 
     shim_tcb_t* tcb = my_thread->shim_tcb;
 
@@ -458,8 +460,15 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
         *set_parent_tid = thread->tid;
 
     DkEventSet(new_args.create_event);
-    object_wait_with_retry(new_args.initialize_event);
-    DkObjectClose(new_args.initialize_event); // TODO: handle errors
+    ret = event_wait_with_retry(new_args.initialize_event);
+    if (ret < 0) {
+        /* XXX: Currently it doesn't seem possible to cleanly handle this error - the child thread
+         * might be running correctly. */
+        log_error("event_wait_with_retry failed with: %ld", ret);
+        DkProcessExit(1);
+    }
+    DkObjectClose(new_args.initialize_event);
+    DkObjectClose(new_args.create_event);
 
     put_thread(thread);
     return tid;

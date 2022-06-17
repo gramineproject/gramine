@@ -7,5 +7,5 @@ LibOS documentation
 
 There is a |~| random function:
 
-.. doxygenfunction:: object_wait_with_retry
+.. doxygenfunction:: event_wait_with_retry
    :project: libos

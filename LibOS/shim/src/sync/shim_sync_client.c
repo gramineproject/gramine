@@ -77,7 +77,7 @@ static void sync_wait_without_lock(struct sync_handle* handle) {
 
     handle->n_waiters++;
     unlock(&handle->prop_lock);
-    if (object_wait_with_retry(handle->event) < 0)
+    if (event_wait_with_retry(handle->event) < 0)
         FATAL("waiting for event");
     lock(&handle->prop_lock);
     if (--handle->n_waiters == 0)
