@@ -483,7 +483,7 @@ int posix_lock_set(struct shim_dentry* dent, struct posix_lock* pl, bool wait) {
         req->notify.result = &result;
 
         unlock(&g_fs_lock_lock);
-        ret = object_wait_with_retry(event);
+        ret = event_wait_with_retry(event);
         lock(&g_fs_lock_lock);
         if (ret < 0)
             goto out;
