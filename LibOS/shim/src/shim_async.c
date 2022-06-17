@@ -120,7 +120,7 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
     unlock(&async_worker_lock);
 
     log_debug("Installed async event at %lu", now);
-    set_pollable_event(&install_new_event, 1);
+    set_pollable_event(&install_new_event);
     return max_prev_expire_time - now;
 }
 
@@ -422,6 +422,6 @@ struct shim_thread* terminate_async_worker(void) {
     unlock(&async_worker_lock);
 
     /* force wake up of async worker thread so that it exits */
-    set_pollable_event(&install_new_event, 1);
+    set_pollable_event(&install_new_event);
     return ret;
 }
