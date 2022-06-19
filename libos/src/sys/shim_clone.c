@@ -413,8 +413,6 @@ long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* pare
      * implies CLONE_SIGHAND). */
     assert(flags & CLONE_SIGHAND);
 
-    enable_locking();
-
     struct shim_clone_args new_args;
     memset(&new_args, 0, sizeof(new_args));
 

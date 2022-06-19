@@ -404,7 +404,6 @@ static int create_ipc_worker(void) {
 }
 
 int init_ipc_worker(void) {
-    enable_locking();
     return create_ipc_worker();
 }
 
