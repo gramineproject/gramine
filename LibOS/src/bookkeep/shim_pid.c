@@ -173,7 +173,7 @@ void release_id(IDTYPE id) {
             if (ret < 0) {
                 /* TODO: this is a fatal error, unfortunately it can happen if the IPC leader exits
                  * without fully waiting for this process to end. For more information check
-                 * "LibOS/shim/src/sys/shim_exit.c". Change to `log_error` + `die` after fixing. */
+                 * "LibOS/src/sys/shim_exit.c". Change to `log_error` + `die` after fixing. */
                 log_warning("IPC pid release failed");
                 DkProcessExit(1);
             }

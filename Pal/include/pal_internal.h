@@ -143,7 +143,7 @@ struct socket_ops {
  * failure notify. The rountine is called whenever a PAL call return error code. As the current
  * design of PAL does not return error code directly, we rely on DkAsynchronousEventUpcall to handle
  * PAL call error. If the user does not set up a upcall, the error code will be ignored. Ignoring
- * PAL error code can be a possible optimization for SHIM.
+ * PAL error code can be a possible optimization for LibOS.
  */
 void notify_failure(unsigned long error);
 

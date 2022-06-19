@@ -18,7 +18,7 @@ find Pal LibOS tools \
     -path Pal/src/host/Linux-SGX/tools/common/cJSON.h -prune -o \
     -path Pal/src/host/Linux-SGX/tools/common/cJSON-\*/cJSON.c -prune -o \
     -path Pal/src/host/Linux-SGX/tools/common/cJSON-\*/cJSON.h -prune -o \
-    -path LibOS/shim/test/ltp -prune -o \
+    -path LibOS/test/ltp -prune -o \
     -path LibOS/glibc\* -prune -o \
     \( -name \*.c -o -name \*.h \) \
     $FINDACTION

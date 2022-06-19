@@ -23,5 +23,5 @@ in `test_enc.py`).
 
 ```
 cd $gramine/Pal/src/host/Linux-SGX/tools
-make install PREFIX=$gramine/LibOS/shim/test/fs
+make install PREFIX=$gramine/LibOS/test/fs
 ```

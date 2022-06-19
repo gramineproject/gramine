@@ -22,9 +22,9 @@ Now you need to add an appropriate entry in the syscalls table in
 ------------------------
 
 You can add the function body of ``shim_do_sched_setaffinity`` in a new source
-file or any existing source file in :file:`LibOS/shim/src/sys`.
+file or any existing source file in :file:`LibOS/src/sys`.
 
-For example, in :file:`LibOS/shim/src/sys/shim_sched.c`::
+For example, in :file:`LibOS/src/sys/shim_sched.c`::
 
    long shim_do_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr) {
       /* code for implementing the semantics of sched_setaffinity */

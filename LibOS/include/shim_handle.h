@@ -81,7 +81,7 @@ enum shim_sock_state {
  * protected by `lock`.
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
- * stream reads (see the comment in `do_recvmsg` in "LibOS/shim/src/sys/shim_socket.c").
+ * stream reads (see the comment in `do_recvmsg` in "LibOS/src/sys/shim_socket.c").
  * `pal_handle` should be accessed using atomic operations. It can be NULL. Once it's set, it cannot
  * change anymore.
  * If you need to take both `recv_lock` and `lock`, take the former first.

@@ -26,7 +26,7 @@ thread/process exit. Here is an example:
 
 ::
 
-   LibOS/shim/test/regression$ perf stat gramine-sgx helloworld
+   LibOS/test/regression$ perf stat gramine-sgx helloworld
    Hello world (helloworld)!
    ----- SGX stats for thread 87219 -----
    # of EENTERs:        224
