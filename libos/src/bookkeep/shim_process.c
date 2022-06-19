@@ -43,19 +43,15 @@ int init_process(int argc, const char** argv) {
     /* default Linux umask */
     g_process.umask = 0022;
 
-    struct shim_dentry* dent = NULL;
     lock(&g_dcache_lock);
-    int ret = path_lookupat(/*start=*/NULL, "/", LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
-    unlock(&g_dcache_lock);
-    if (ret < 0) {
-        log_error("Could not set up dentry for \"/\", something is seriously broken.");
-        return ret;
-    }
-    g_process.root = dent;
-
-    /* Temporarily set `cwd` to `root`. It will be updated if necessary in `init_mount`. */
+    /* Temporarily set `root` to `g_dentry_root`. It will be updated if necessary in
+     * `init_mount_root`. */
+    g_process.root = g_dentry_root;
     get_dentry(g_process.root);
-    g_process.cwd = g_process.root;
+    /* Temporarily set `cwd` to `g_dentry_root`. It will be updated if necessary in `init_mount`. */
+    g_process.cwd = g_dentry_root;
+    get_dentry(g_process.cwd);
+    unlock(&g_dcache_lock);
 
     /* `g_process.exec` will be initialized later on (in `init_important_handles`). */
     g_process.exec = NULL;

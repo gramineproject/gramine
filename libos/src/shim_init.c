@@ -422,9 +422,9 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
         g_process_ipc_ids.self_vmid = STARTING_VMID;
     }
 
-    RUN_INIT(init_mount_root);
     RUN_INIT(init_ipc);
     RUN_INIT(init_process, argc, argv);
+    RUN_INIT(init_mount_root);
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
     RUN_INIT(init_important_handles);
