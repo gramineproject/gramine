@@ -130,15 +130,7 @@ int init_async_worker(void) {
     if (!create_lock(&async_worker_lock)) {
         return -ENOMEM;
     }
-    int ret = create_pollable_event(&install_new_event);
-    if (ret < 0) {
-        return ret;
-    }
-
-    /* enable locking mechanisms since we are going in multi-threaded mode */
-    enable_locking();
-
-    return 0;
+    return create_pollable_event(&install_new_event);
 }
 
 static int shim_async_worker(void* arg) {
