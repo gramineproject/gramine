@@ -190,8 +190,8 @@ Meson
 #. No changing (overwriting) variables in different :file:`meson.build` than it
    was defined in. If you really need to do this, create a temporary variable
    in subdir and use it in the parent :file:`meson.build`. You can check
-   ``libos_sources_arch`` in :file:`LibOS/shim/src/meson.build` for example
-   usage of this pattern (appending arch-specific source files to a list).
+   ``libos_sources_arch`` in :file:`LibOS/src/meson.build` for example usage of
+   this pattern (appending arch-specific source files to a list).
 
 #. Variables named ``_prog`` refer to things obtained from ``find_program()``.
    Auxiliary commands should reside in ``Scripts/``, and the variable name is

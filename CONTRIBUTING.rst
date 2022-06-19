@@ -187,7 +187,7 @@ directory), and this is the ultimate documentation for application-level
 regression tests, although most tests can be run with :command:`gramine-test`,
 or, in the worst case, should have a simple script called by Jenkins.
 
-We also have (and are actively growing) PAL and shim unit tests.
+We also have (and are actively growing) PAL and LibOS unit tests.
 
 In order to run tests, Gramine must be installed. The test binaries, which are
 also built by Meson, must be installed as well. To do that, configure your build
@@ -230,8 +230,8 @@ or build a manifest and then run the binary directly::
 For more information, run :command:`gramine-test --help` and
 :command:`gramine-test <command> --help`.
 
-The shim unit tests work similarly, and are under
-:file:`LibOS/shim/test/regression`.
+The LibOS unit tests work similarly, and are under
+:file:`LibOS/test/regression`.
 
 LTP
 ^^^
@@ -241,7 +241,7 @@ currently only supported on the Linux PAL.
 
 To run these tests::
 
-   cd LibOS/shim/test/ltp
+   cd LibOS/test/ltp
    # consider -j$(nproc) or similar to parallelize and improve the build time.
    make
    make regression
@@ -251,7 +251,7 @@ To run these tests::
    python3 -m pytest -v -k chmod01
 
 For more information on how to run the ltp tests, please refer to
-:file:`LibOS/shim/test/ltp/README.rst`.
+:file:`LibOS/test/ltp/README.rst`.
 
 
 Management Team

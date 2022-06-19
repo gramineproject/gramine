@@ -20,13 +20,13 @@ stage('clean-check') {
         # root, and keeps cache there
         rm -rf .pytest_cache
 
-        make -C LibOS/shim/test/regression clean
-        make -C LibOS/shim/test/fs clean
+        make -C LibOS/test/regression clean
+        make -C LibOS/test/fs clean
 
-        gramine-test -C LibOS/shim/test/abi/x86_64 clean
-        rm -rf LibOS/shim/test/abi/x86_64/.pytest_cache \
-               LibOS/shim/test/abi/x86_64/__pycache__ \
-               LibOS/shim/test/abi/x86_64/*.xml
+        gramine-test -C LibOS/test/abi/x86_64 clean
+        rm -rf LibOS/test/abi/x86_64/.pytest_cache \
+               LibOS/test/abi/x86_64/__pycache__ \
+               LibOS/test/abi/x86_64/*.xml
 
         make -C Pal/regression clean
 
@@ -45,10 +45,10 @@ stage('clean-check') {
         make -C CI-Examples/ra-tls-mbedtls distclean
         make -C CI-Examples/ra-tls-secret-prov distclean
 
-        make -C LibOS/shim/test/ltp clean
+        make -C LibOS/test/ltp clean
         # LTP's make clean is broken, see https://github.com/linux-test-project/ltp/issues/559
-        rm -rf /tmp/*.clean-check.clean/LibOS/shim/test/ltp/src
-        rm -rf LibOS/shim/test/ltp/src
+        rm -rf /tmp/*.clean-check.clean/LibOS/test/ltp/src
+        rm -rf LibOS/test/ltp/src
 
         # python/ subdir does not have makefiles, so no clean
         rm -rf /tmp/*.clean-check.clean/python/graminelibos/__pycache__

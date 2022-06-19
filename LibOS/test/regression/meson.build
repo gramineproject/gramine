@@ -111,8 +111,8 @@ tests = {
     'spinlock': {
         'include_directories': include_directories(
             # for `spinlock.h`
-            '../../../../common/include',
-            join_paths('../../../../common/include/arch', host_machine.cpu_family()),
+            '../../../common/include',
+            join_paths('../../../common/include/arch', host_machine.cpu_family()),
         ),
     },
     'stat_invalid_args': {},
@@ -155,10 +155,10 @@ if sgx
     tests += {
         'attestation': {
             # for `sgx_arch.h`
-            'include_directories': include_directories('../../../../Pal/src/host/Linux-SGX'),
+            'include_directories': include_directories('../../../Pal/src/host/Linux-SGX'),
             'source': [
                 'attestation.c',
-                '../../../../Pal/src/host/Linux-SGX/enclave_api.S',
+                '../../../Pal/src/host/Linux-SGX/enclave_api.S',
             ],
 
             'dependencies': mbedtls_static_dep,

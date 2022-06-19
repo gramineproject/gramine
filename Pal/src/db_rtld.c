@@ -70,7 +70,7 @@ struct loadcmd {
      *
      *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
-     *   The same struct is used also in LibOS/shim/src/shim_rtld.c code.
+     *   The same struct is used also in LibOS/src/shim_rtld.c code.
      */
 
     /* Start of memory area */
@@ -661,7 +661,7 @@ noreturn void start_execution(const char** arguments, const char** environs) {
      *   RSP + 8+8*argc + 8+8*n      envp[n] = NULL
      *   RSP + 8+8*argc + 8+8*n + 8  auxv[0] = AT_NULL
      *
-     * See also the corresponding LibOS entrypoint: LibOS/shim/src/arch/x86_64/start.S
+     * See also the corresponding LibOS entrypoint: LibOS/src/arch/x86_64/start.S
      */
     size_t arguments_num = 0;
     for (size_t i = 0; arguments[i]; i++)

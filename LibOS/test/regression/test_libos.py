@@ -369,7 +369,7 @@ class TC_01_Bootstrap(RegressionTestCase):
 
     def _verify_debug_log(self, log: str):
         self.assertIn('Host:', log)
-        self.assertIn('Shim process initialized', log)
+        self.assertIn('LibOS initialized', log)
         self.assertIn('--- shim_exit_group', log)
 
 

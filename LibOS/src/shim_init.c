@@ -488,7 +488,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
      * communicates with server over a "loopback" IPC connection. */
     RUN_INIT(init_sync_client);
 
-    log_debug("Shim process initialized");
+    log_debug("LibOS initialized");
 
     shim_tcb_t* cur_tcb = shim_get_tcb();
 

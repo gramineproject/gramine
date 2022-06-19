@@ -60,8 +60,8 @@ Internal protected file format in this version was ported from the `SGX SDK
 Tests
 =====
 
-Tests in ``LibOS/shim/test/fs`` contain encrypted file tests (``test_enc.py``).
-Some tests in ``LibOS/shim/test/regression`` also work with encrypted files.
+Tests in ``LibOS/test/fs`` contain encrypted file tests (``test_enc.py``).
+Some tests in ``LibOS/test/regression`` also work with encrypted files.
 
 TODO
 ====

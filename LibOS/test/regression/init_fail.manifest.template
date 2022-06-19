@@ -7,7 +7,7 @@ loader.env.LD_LIBRARY_PATH = "/lib"
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  # purposefully force mount failure to cause early shim abort
+  # purposefully force mount failure to cause early LibOS abort
   { path = "/test", uri = "file:I_DONT_EXIST" },
 ]
 

@@ -165,8 +165,8 @@ locking between processes when setting the user report data/target info or
 reading the report/quote.
 
 An example of this low-level interface can be found under
-``LibOS/shim/test/regression/attestation.c``. Here is a C code snippet of how
-the remote attestation flow may look like in your application::
+``LibOS/test/regression/attestation.c``. Here is a C code snippet of how the
+remote attestation flow may look like in your application::
 
     sgx_report_data_t user_report_data = {0};
     memcpy(&user_report_data, "some-dummy-data", sizeof("some-dummy-data"));
