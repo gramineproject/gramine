@@ -562,6 +562,21 @@ int init_mount_root(void) {
     if (ret < 0)
         return ret;
 
+    struct shim_dentry* dent = NULL;
+    lock(&g_dcache_lock);
+    ret = path_lookupat(/*start=*/NULL, "/", LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
+    unlock(&g_dcache_lock);
+    if (ret < 0) {
+        log_error("Could not set up dentry for \"/\", something is seriously broken.");
+        return ret;
+    }
+
+    lock(&g_process.fs_lock);
+    put_dentry(g_process.root);
+    /* Pass ownership of `dent`. */
+    g_process.root = dent;
+    unlock(&g_process.fs_lock);
+
     ret = mount_sys();
     if (ret < 0)
         return ret;
