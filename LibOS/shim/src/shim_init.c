@@ -93,8 +93,6 @@ const char** migrated_envp __attribute_migratable;
  * allocated, its memory is never freed or updated. */
 char** g_library_paths = NULL;
 
-bool lock_enabled;
-
 void* allocate_stack(size_t size, size_t protect_size, bool user) {
     void* stack = NULL;
 
@@ -376,8 +374,6 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     /* create the initial TCB, shim can not be run without a tcb */
     shim_tcb_init();
-
-    log_setprefix(shim_get_tcb());
 
     call_init_array();
 
