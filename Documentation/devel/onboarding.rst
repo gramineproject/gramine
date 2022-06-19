@@ -352,10 +352,10 @@ fine on native Linux but fails under Gramine::
    - The first option is to find an already existing Pal/LibOS regression test
      that works with the buggy Gramine subsystem. For example, if you found a
      bug in the UDP stack, look at the ``LibOS/test/regression/udp.c`` test.
-     Find a place in this test where you can add the code that triggers the
-     bug. Also add the corresponding check (if needed) in the Python test
-     script (``LibOS/test/regression/test_libos.py`` in case of LibOS
-     regression tests).
+     Find a place in this test where you can add the code that triggers the bug.
+     Also add the corresponding check (if needed) in the Python test script
+     (``LibOS/test/regression/test_libos.py`` in case of LibOS regression
+     tests).
 
    - The second option is to add a completely new test. Sometimes the bug
      reproduction code is too big or too specific to go into one of the already
