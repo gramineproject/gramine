@@ -75,6 +75,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
 RUN git clone https://github.com/giltene/wrk2.git \
     && cd wrk2 \
+    && git reset --hard 44a94c17d8e6a0bac8559b53da76848e430cb7a7 \
     && make \
     && cp wrk /usr/local/bin \
     && cd .. \

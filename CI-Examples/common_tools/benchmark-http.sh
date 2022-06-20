@@ -80,13 +80,13 @@ do
         THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
         THROUGHPUT=$(throughput_in_bytes $THROUGHPUT_STR)
         if [ "$THROUGHPUT" = "0" ]; then
-            echo "Throughput is empty!"; exit 1;
+            echo "Throughput is zero!"; exit 1;
         fi
 
         LATENCY_STR=$(grep -m1 "Latency" OUTPUT | awk '{ print $2 }')
         LATENCY=$(latency_in_milliseconds $LATENCY_STR)
         if [ "$LATENCY" = "0" ]; then
-            echo "Latency is empty!"; exit 1;
+            echo "Latency is zero!"; exit 1;
         fi
 
         if [ ${#THROUGHPUTS[$CONCURRENCY]} -eq 0 ] || [ ${#LATENCIES[$CONCURRENCY]} -eq 0 ]; then
@@ -96,7 +96,7 @@ do
             THROUGHPUTS[$CONCURRENCY]="${THROUGHPUTS[$CONCURRENCY]} $THROUGHPUT"
             LATENCIES[$CONCURRENCY]="${LATENCIES[$CONCURRENCY]} $LATENCY"
         fi
-        echo "Run:$(($RUN+1)) Concurrency:$CONCURRENCY Per thread Throughput(bytes) = $THROUGHPUT, Latency(ms) = $LATENCY"
+        echo "Run = $(($RUN+1)) Concurrency = $CONCURRENCY Per thread Throughput (bytes) = $THROUGHPUT, Latency (ms) = $LATENCY"
 
     done
     (( RUN++ ))
@@ -106,7 +106,7 @@ for CONCURRENCY in $CONCURRENCY_LIST
 do
     THROUGHPUT=$(echo "${THROUGHPUTS[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
     LATENCY=$(echo "${LATENCIES[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
-    printf "Concurrency = %3d: Per Thread Median Througput(bytes) = %9.3f, Latency(ms) = %9.3f\n" \
+    printf "Concurrency = %3d: Per Thread Median Througput (bytes) = %9.3f, Latency (ms) = %9.3f\n" \
         "$CONCURRENCY" "$THROUGHPUT" "$LATENCY" | tee -a $RESULT
 done
 
