@@ -258,17 +258,17 @@ static void configure_logging(void) {
     char* debug_type = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.debug_type", &debug_type);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.debug_type'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.debug_type'");
     if (debug_type) {
         free(debug_type);
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED,
-            "'loader.debug_type' has been replaced by 'loader.log_level' and 'loader.log_file'");
+        INIT_FAIL_MANIFEST("'loader.debug_type' has been replaced by 'loader.log_level' and "
+                           "'loader.log_file'");
     }
 
     char* log_level_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.log_level'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.log_level'");
 
     if (log_level_str) {
         if (!strcmp(log_level_str, "none")) {
@@ -284,7 +284,7 @@ static void configure_logging(void) {
         } else if (!strcmp(log_level_str, "all")) {
             log_level = LOG_LEVEL_ALL;
         } else {
-            INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Unknown 'loader.log_level'");
+            INIT_FAIL_MANIFEST("Unknown 'loader.log_level'");
         }
     }
     free(log_level_str);
@@ -292,13 +292,13 @@ static void configure_logging(void) {
     char* log_file = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_file", &log_file);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.log_file'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.log_file'");
 
     if (log_file && log_level > LOG_LEVEL_NONE) {
         ret = _DkInitDebugStream(log_file);
 
         if (ret < 0)
-            INIT_FAIL(-ret, "Cannot open log file");
+            INIT_FAIL("Cannot open log file: %d", ret);
     }
     free(log_file);
 
@@ -375,7 +375,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (!instance_id) {
         assert(!parent_process);
         if (_DkRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {
-            INIT_FAIL(PAL_ERROR_DENIED, "Could not generate random instance_id");
+            INIT_FAIL("Could not generate random instance_id");
         }
     }
     g_pal_common_state.instance_id = instance_id;
@@ -391,16 +391,16 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     char* dummy_exec_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.exec", &dummy_exec_str);
     if (ret < 0 || dummy_exec_str)
-        INIT_FAIL(PAL_ERROR_INVAL, "loader.exec is not supported anymore. Please update your "
-                                   "manifest according to the current documentation.");
+        INIT_FAIL("loader.exec is not supported anymore. Please update your manifest according to "
+                  "the current documentation.");
     free(dummy_exec_str);
 
     bool disable_aslr;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
                        /*defaultval=*/false, &disable_aslr);
     if (ret < 0) {
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__disable_aslr' "
-                                             "(the value must be `true` or `false`)");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__disable_aslr' (the value must be "
+                           "`true` or `false`)");
     }
 
     /* Load argv */
@@ -412,14 +412,14 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv0_override",
                          &argv0_override);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.argv0_override'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.argv0_override'");
 
     if (argv0_override) {
         argv0_overridden = true;
         if (!arguments[0]) {
             arguments = malloc(sizeof(const char*) * 2);
             if (!arguments)
-                INIT_FAIL(PAL_ERROR_NOMEM, "malloc() failed");
+                INIT_FAIL("malloc() failed");
             arguments[1] = NULL;
         }
         arguments[0] = argv0_override;
@@ -429,8 +429,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
                        /*defaultval=*/false, &use_cmdline_argv);
     if (ret < 0) {
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__use_cmdline_argv' "
-                                             "(the value must be `true` or `false`)");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_cmdline_argv' (the value must be "
+                           "`true` or `false`)");
     }
 
     if (!use_cmdline_argv) {
@@ -439,7 +439,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv_src_file",
                              &argv_src_file);
         if (ret < 0)
-            INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.argv_src_file'");
+            INIT_FAIL_MANIFEST("Cannot parse 'loader.argv_src_file'");
 
         if (argv_src_file) {
             /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
@@ -450,12 +450,12 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
             ret = load_cstring_array(argv_src_file, &arguments);
             if (ret < 0)
-                INIT_FAIL(-ret, "Cannot load arguments from 'loader.argv_src_file'");
+                INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
 
             free(argv_src_file);
         } else if (!argv0_overridden || (arguments[0] && arguments[1])) {
-            INIT_FAIL(PAL_ERROR_INVAL, "argv handling wasn't configured in the manifest, but "
-                      "cmdline arguments were specified.");
+            INIT_FAIL("argv handling wasn't configured in the manifest, but cmdline arguments were "
+                      "specified.");
         }
     }
 
@@ -466,25 +466,25 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_host_env",
                        /*defaultval=*/false, &use_host_env);
     if (ret < 0) {
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.insecure__use_host_env' "
-                                             "(the value must be `true` or `false`)");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_host_env' (the value must be `true` "
+                           "or `false`)");
     }
 
     char* env_src_file = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.env_src_file", &env_src_file);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, "Cannot parse 'loader.env_src_file'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.env_src_file'");
 
     if (use_host_env && env_src_file)
-        INIT_FAIL(PAL_ERROR_INVAL, "Wrong manifest configuration - cannot use "
-                  "loader.insecure__use_host_env and loader.env_src_file at the same time.");
+        INIT_FAIL("Wrong manifest configuration - cannot use loader.insecure__use_host_env and "
+                  "loader.env_src_file at the same time.");
 
     if (env_src_file) {
         /* Insert environment variables from a file. We trust the file contents (this can be
          * achieved using trusted files). */
         ret = load_cstring_array(env_src_file, &orig_environments);
         if (ret < 0)
-            INIT_FAIL(-ret, "Cannot load environment variables from 'loader.env_src_file'");
+            INIT_FAIL("Cannot load environment variables from 'loader.env_src_file': %ld", ret);
     } else {
         /* Environment variables are taken from the host. */
         orig_environments = environments;
@@ -495,8 +495,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     ret = build_envs(orig_environments, /*propagate=*/use_host_env || env_src_file,
                      &final_environments);
     if (ret < 0)
-        INIT_FAIL(-ret, "Building the final environment based on the original environment and the"
-                        " manifest failed");
+        INIT_FAIL("Building the final environment based on the original environment and the "
+                  "manifest failed: %ld", ret);
 
     if (orig_environments != environments) {
         free((char*)orig_environments[0]);
@@ -507,13 +507,13 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     char* entrypoint_name = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint", &entrypoint_name);
     if (ret < 0)
-        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'loader.entrypoint'");
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
 
     if (!entrypoint_name)
-        INIT_FAIL(PAL_ERROR_INVAL, "No 'loader.entrypoint' is specified in the manifest");
+        INIT_FAIL("No 'loader.entrypoint' is specified in the manifest");
 
     if (!strstartswith(entrypoint_name, URI_PREFIX_FILE))
-        INIT_FAIL(PAL_ERROR_INVAL, "'loader.entrypoint' is missing the 'file:' prefix");
+        INIT_FAIL("'loader.entrypoint' is missing the 'file:' prefix");
 
     g_pal_public_state.host_type       = XSTRINGIFY(HOST_TYPE);
     g_pal_public_state.parent_process  = parent_process;
@@ -537,7 +537,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)
-        INIT_FAIL(-ret, "Unable to load loader.entrypoint");
+        INIT_FAIL("Unable to load loader.entrypoint: %ld", ret);
     free(entrypoint_name);
 
     /* Now we will start the execution */
@@ -545,5 +545,5 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
 out_fail:
     /* We wish we will never reached here */
-    INIT_FAIL(PAL_ERROR_DENIED, "unexpected termination");
+    INIT_FAIL("unexpected termination");
 }

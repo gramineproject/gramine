@@ -264,17 +264,16 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
                         size_t* quote_size);
 int _DkGetSpecialKey(const char* name, void* key, size_t* key_size);
 
-#define INIT_FAIL(exitcode, reason)                                                              \
-    do {                                                                                         \
-        log_error("PAL failed at " __FILE__ ":%s:%u (exitcode = %u, reason=%s)", __FUNCTION__,   \
-                  (unsigned int)__LINE__, (unsigned int)(exitcode), reason);                     \
-        _DkProcessExit(exitcode);                                                                \
+#define INIT_FAIL(msg, ...)                                                         \
+    do {                                                                            \
+        log_error("PAL failed at %s:%d: " msg, __FILE__, __LINE__, ##__VA_ARGS__);  \
+        _DkProcessExit(1);                                                          \
     } while (0)
 
-#define INIT_FAIL_MANIFEST(exitcode, reason)                           \
-    do {                                                               \
-        log_error("PAL failed at parsing the manifest: %s", reason);   \
-        _DkProcessExit(exitcode);                                      \
+#define INIT_FAIL_MANIFEST(reason)                                      \
+    do {                                                                \
+        log_error("PAL failed at parsing the manifest: %s", reason);    \
+        _DkProcessExit(1);                                              \
     } while (0)
 
 void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
@@ -307,7 +306,7 @@ const char* pal_event_name(enum pal_event event);
 #define uthash_fatal(msg)                      \
     do {                                       \
         log_error("uthash error: %s", msg);    \
-        _DkProcessExit(PAL_ERROR_NOMEM);       \
+        _DkProcessExit(1);                     \
     } while (0)
 #include "uthash.h"
 

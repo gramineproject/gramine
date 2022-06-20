@@ -227,11 +227,11 @@ void signal_setup(bool is_first_process, uintptr_t vdso_start, uintptr_t vdso_en
     if (is_first_process) {
         ret = setup_seccomp(vdso_start, vdso_end);
         if (ret < 0) {
-            INIT_FAIL(PAL_ERROR_DENIED, "Setting up seccomp for inline syscall handling failed");
+            INIT_FAIL("Setting up seccomp for inline syscall handling failed");
         }
     }
 
     return;
 err:
-    INIT_FAIL(-ret, "Cannot setup signal handlers!");
+    INIT_FAIL("Cannot setup signal handlers!: %d", ret);
 }

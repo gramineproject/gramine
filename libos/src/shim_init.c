@@ -365,7 +365,7 @@ static int read_environs(const char** envp) {
         int _err = CALL_INIT(func, ##__VA_ARGS__);                           \
         if (_err < 0) {                                                      \
             log_error("Error during shim_init() in " #func " (%d)", _err);   \
-            DkProcessExit(-_err);                                            \
+            DkProcessExit(1);                                                \
         }                                                                    \
     } while (0)
 
@@ -389,7 +389,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     if (!IS_POWER_OF_2(ALLOC_ALIGNMENT)) {
         log_error("Error during shim_init(): PAL allocation alignment not a power of 2");
-        DkProcessExit(EINVAL);
+        DkProcessExit(1);
     }
 
     g_manifest_root = g_pal_public_state->manifest_root;
@@ -398,7 +398,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     if (!create_lock(&__master_lock)) {
         log_error("Error during shim_init(): failed to allocate __master_lock");
-        DkProcessExit(ENOMEM);
+        DkProcessExit(1);
     }
 
     RUN_INIT(init_vma);

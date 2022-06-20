@@ -1,10 +1,10 @@
 #include "api.h"
 #include "pal_regression.h"
 
-#define FAIL(code, fmt...) ({   \
-    pal_printf(fmt);            \
-    pal_printf("\n");           \
-    DkProcessExit(code);        \
+#define FAIL(fmt...) ({ \
+    pal_printf(fmt);    \
+    pal_printf("\n");   \
+    DkProcessExit(1);   \
 })
 
 #define TEST(output_str, fmt...) ({                                                                \
@@ -13,11 +13,10 @@
     int x = snprintf(buf, sizeof(buf) - 1,  fmt);                                                  \
     buf[sizeof(buf) - 1] = 0;                                                                      \
     if (x < 0 || (size_t)x != output_len) {                                                        \
-        FAIL(1, "wrong return val at %d, expected %zu, got %d", __LINE__, output_len, x);          \
+        FAIL("wrong return val at %d, expected %zu, got %d", __LINE__, output_len, x);             \
     }                                                                                              \
     if (strcmp(buf, output_str)) {                                                                 \
-        FAIL(1, "wrong output string at %d, expected \"%s\", got \"%s\"", __LINE__, output_str,    \
-                buf);                                                                              \
+        FAIL("wrong output string at %d, expected \"%s\", got \"%s\"", __LINE__, output_str, buf); \
     }                                                                                              \
 })
 
@@ -95,17 +94,17 @@ int main(void) {
     int ret = DkVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
                                    PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
-        FAIL(1, "DkVirtualMemoryAlloc failed: %d", ret);
+        FAIL("DkVirtualMemoryAlloc failed: %d", ret);
     }
     ret = DkVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
     if (ret < 0) {
-        FAIL(1, "DkVirtualMemoryProtect failed: %d", ret);
+        FAIL("DkVirtualMemoryProtect failed: %d", ret);
     }
     memset(ptr + PAGE_SIZE - 7, 'a', 7);
 
     ret = snprintf(ptr, PAGE_SIZE - 8, "%.7s", ptr + PAGE_SIZE - 7);
     if (ret != 7) {
-        FAIL(1, "snprintf at %d returned %d, expected %d", __LINE__, ret, 7);
+        FAIL("snprintf at %d returned %d, expected %d", __LINE__, ret, 7);
     }
 
     pal_printf("TEST OK\n");

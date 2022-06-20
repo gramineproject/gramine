@@ -50,7 +50,7 @@ void init_untrusted_slab_mgr(void) {
 
     untrusted_slabmgr = create_slab_mgr();
     if (!untrusted_slabmgr)
-        INIT_FAIL(PAL_ERROR_NOMEM, "cannot initialize slab manager");
+        INIT_FAIL("cannot initialize slab manager");
 }
 
 void* malloc_untrusted(size_t size) {

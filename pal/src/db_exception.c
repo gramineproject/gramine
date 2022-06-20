@@ -27,7 +27,7 @@ void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
  * any PAL thread. */
 noreturn void pal_abort(void) {
-    _DkProcessExit(ENOTRECOVERABLE);
+    _DkProcessExit(1);
 }
 
 const char* pal_event_name(enum pal_event event) {

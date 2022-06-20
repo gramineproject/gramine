@@ -67,7 +67,7 @@ static inline void* __malloc(size_t size) {
                                     PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         log_error("*** Out-of-memory in PAL (try increasing `loader.pal_internal_mem_size`) ***");
-        _DkProcessExit(ENOMEM);
+        _DkProcessExit(1);
     }
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size), ASAN_POISON_HEAP_LEFT_REDZONE);
@@ -129,7 +129,7 @@ void init_slab_mgr(char* mem_pool, size_t mem_pool_size) {
 
     g_slab_mgr = create_slab_mgr();
     if (!g_slab_mgr)
-        INIT_FAIL(PAL_ERROR_NOMEM, "cannot initialize slab manager");
+        INIT_FAIL("cannot initialize slab manager");
 }
 
 void* malloc(size_t size) {
@@ -149,7 +149,7 @@ void* malloc(size_t size) {
          * condition and must terminate the current process.
          */
         log_error("******** Out-of-memory in PAL ********");
-        _DkProcessExit(ENOMEM);
+        _DkProcessExit(1);
     }
     return ptr;
 }

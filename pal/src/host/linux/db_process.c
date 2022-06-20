@@ -220,22 +220,22 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     ret = read_all(parent_stream_fd, &proc_args, sizeof(proc_args));
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
-        INIT_FAIL(-ret, "communication with parent failed");
+        INIT_FAIL("communication with parent failed: %d", ret);
     }
 
     /* a child must have parent handle and an executable */
     if (!proc_args.parent_data_size)
-        INIT_FAIL(PAL_ERROR_INVAL, "invalid process created");
+        INIT_FAIL("invalid process created");
 
     size_t data_size = proc_args.parent_data_size + proc_args.manifest_data_size;
     char* data = malloc(data_size);
     if (!data)
-        INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
+        INIT_FAIL("Out of memory");
 
     ret = read_all(parent_stream_fd, data, data_size);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
-        INIT_FAIL(-ret, "communication with parent failed");
+        INIT_FAIL("communication with parent failed: %d", ret);
     }
 
     /* now deserialize the parent_handle */
@@ -243,13 +243,13 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     char* data_iter = data;
     ret = handle_deserialize(&parent, data_iter, proc_args.parent_data_size);
     if (ret < 0)
-        INIT_FAIL(-ret, "cannot deserialize parent process handle");
+        INIT_FAIL("cannot deserialize parent process handle: %d", ret);
     data_iter += proc_args.parent_data_size;
     *parent_handle = parent;
 
     char* manifest = malloc(proc_args.manifest_data_size + 1);
     if (!manifest)
-        INIT_FAIL(PAL_ERROR_NOMEM, "Out of memory");
+        INIT_FAIL("Out of memory");
     memcpy(manifest, data_iter, proc_args.manifest_data_size);
     manifest[proc_args.manifest_data_size] = '\0';
     data_iter += proc_args.manifest_data_size;
