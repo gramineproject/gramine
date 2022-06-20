@@ -19,7 +19,7 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-struct shim_fs* builtin_fs[] = {
+static struct shim_fs* g_builtin_fs[] = {
     &chroot_builtin_fs,
     &chroot_encrypted_builtin_fs,
     &tmp_builtin_fs,
@@ -33,35 +33,37 @@ struct shim_fs* builtin_fs[] = {
     &path_builtin_fs,
 };
 
-static struct shim_lock mount_mgr_lock;
+static struct shim_lock g_mount_mgr_lock;
 
-#define SYSTEM_LOCK()   lock(&mount_mgr_lock)
-#define SYSTEM_UNLOCK() unlock(&mount_mgr_lock)
-#define SYSTEM_LOCKED() locked(&mount_mgr_lock)
+#define SYSTEM_LOCK()   lock(&g_mount_mgr_lock)
+#define SYSTEM_UNLOCK() unlock(&g_mount_mgr_lock)
+#define SYSTEM_LOCKED() locked(&g_mount_mgr_lock)
 
 #define MOUNT_MGR_ALLOC 64
 
 #define OBJ_TYPE struct shim_mount
 #include "memmgr.h"
 
-static MEM_MGR mount_mgr = NULL;
+static MEM_MGR g_mount_mgr = NULL;
 DEFINE_LISTP(shim_mount);
 /* Links to mount->list */
-static LISTP_TYPE(shim_mount) mount_list;
-static struct shim_lock mount_list_lock;
+static LISTP_TYPE(shim_mount) g_mount_list;
+static struct shim_lock g_mount_list_lock;
 
 int init_fs(void) {
     int ret;
-    if (!create_lock(&mount_mgr_lock) || !create_lock(&mount_list_lock)) {
+    if (!create_lock(&g_mount_mgr_lock) || !create_lock(&g_mount_list_lock)) {
         ret = -ENOMEM;
         goto err;
     }
 
-    mount_mgr = create_mem_mgr(init_align_up(MOUNT_MGR_ALLOC));
-    if (!mount_mgr) {
+    g_mount_mgr = create_mem_mgr(init_align_up(MOUNT_MGR_ALLOC));
+    if (!g_mount_mgr) {
         ret = -ENOMEM;
         goto err;
     }
+
+    INIT_LISTP(&g_mount_list);
 
     if ((ret = init_encrypted_files()) < 0)
         goto err;
@@ -76,22 +78,22 @@ int init_fs(void) {
     return 0;
 
 err:
-    if (mount_mgr) {
-        destroy_mem_mgr(mount_mgr);
+    if (g_mount_mgr) {
+        destroy_mem_mgr(g_mount_mgr);
     }
-    if (lock_created(&mount_mgr_lock))
-        destroy_lock(&mount_mgr_lock);
-    if (lock_created(&mount_list_lock))
-        destroy_lock(&mount_list_lock);
+    if (lock_created(&g_mount_mgr_lock))
+        destroy_lock(&g_mount_mgr_lock);
+    if (lock_created(&g_mount_list_lock))
+        destroy_lock(&g_mount_list_lock);
     return ret;
 }
 
 static struct shim_mount* alloc_mount(void) {
-    return get_mem_obj_from_mgr_enlarge(mount_mgr, size_align_up(MOUNT_MGR_ALLOC));
+    return get_mem_obj_from_mgr_enlarge(g_mount_mgr, size_align_up(MOUNT_MGR_ALLOC));
 }
 
 static void free_mount(struct shim_mount* mount) {
-    free_mem_obj_to_mgr(mount_mgr, mount);
+    free_mem_obj_to_mgr(g_mount_mgr, mount);
 }
 
 static bool mount_migrated = false;
@@ -442,8 +444,8 @@ static int find_host_file_mount_path(const char* uri, char** out_file_path) {
 
     /* Traverse the mount list in reverse: we want to find the latest mount that applies. */
     struct shim_mount* mount;
-    lock(&mount_list_lock);
-    LISTP_FOR_EACH_ENTRY_REVERSE(mount, &mount_list, list) {
+    lock(&g_mount_list_lock);
+    LISTP_FOR_EACH_ENTRY_REVERSE(mount, &g_mount_list, list) {
         if (strcmp(mount->fs->name, "chroot") != 0 || !strstartswith(mount->uri, URI_PREFIX_FILE))
             continue;
 
@@ -467,7 +469,7 @@ static int find_host_file_mount_path(const char* uri, char** out_file_path) {
             break;
         }
     }
-    unlock(&mount_list_lock);
+    unlock(&g_mount_list_lock);
 
     if (!found)
         return -ENOENT;
@@ -652,8 +654,8 @@ int init_mount(void) {
 }
 
 struct shim_fs* find_fs(const char* name) {
-    for (size_t i = 0; i < ARRAY_SIZE(builtin_fs); i++) {
-        struct shim_fs* fs = builtin_fs[i];
+    for (size_t i = 0; i < ARRAY_SIZE(g_builtin_fs); i++) {
+        struct shim_fs* fs = g_builtin_fs[i];
         if (!strncmp(fs->name, name, sizeof(fs->name)))
             return fs;
     }
@@ -739,10 +741,10 @@ static int mount_fs_at_dentry(struct shim_mount_params* params, struct shim_dent
 
     /* Add `mount` to the global list */
 
-    lock(&mount_list_lock);
-    LISTP_ADD_TAIL(mount, &mount_list, list);
+    lock(&g_mount_list_lock);
+    LISTP_ADD_TAIL(mount, &g_mount_list, list);
     get_mount(mount);
-    unlock(&mount_list_lock);
+    unlock(&g_mount_list_lock);
 
     return 0;
 
@@ -829,9 +831,9 @@ int walk_mounts(int (*walk)(struct shim_mount* mount, void* arg), void* arg) {
     int ret = 0;
     int nsrched = 0;
 
-    lock(&mount_list_lock);
+    lock(&g_mount_list_lock);
 
-    LISTP_FOR_EACH_ENTRY_SAFE(mount, n, &mount_list, list) {
+    LISTP_FOR_EACH_ENTRY_SAFE(mount, n, &g_mount_list, list) {
         if ((ret = (*walk)(mount, arg)) < 0)
             break;
 
@@ -839,7 +841,7 @@ int walk_mounts(int (*walk)(struct shim_mount* mount, void* arg), void* arg) {
             nsrched++;
     }
 
-    unlock(&mount_list_lock);
+    unlock(&g_mount_list_lock);
     return ret < 0 ? ret : (nsrched ? 0 : -ESRCH);
 }
 
@@ -848,8 +850,8 @@ struct shim_mount* find_mount_from_uri(const char* uri) {
     struct shim_mount* found = NULL;
     size_t longest_path = 0;
 
-    lock(&mount_list_lock);
-    LISTP_FOR_EACH_ENTRY(mount, &mount_list, list) {
+    lock(&g_mount_list_lock);
+    LISTP_FOR_EACH_ENTRY(mount, &g_mount_list, list) {
         if (!mount->uri)
             continue;
 
@@ -865,7 +867,7 @@ struct shim_mount* find_mount_from_uri(const char* uri) {
     if (found)
         get_mount(found);
 
-    unlock(&mount_list_lock);
+    unlock(&g_mount_list_lock);
     return found;
 }
 
@@ -1006,7 +1008,7 @@ BEGIN_RS_FUNC(mount) {
         mount->cpdata = NULL;
     }
 
-    LISTP_ADD_TAIL(mount, &mount_list, list);
+    LISTP_ADD_TAIL(mount, &g_mount_list, list);
 
     if (mount->path) {
         DEBUG_RS("type=%s,uri=%s,path=%s", mount->type, mount->uri, mount->path);
@@ -1021,11 +1023,11 @@ BEGIN_CP_FUNC(all_mounts) {
     __UNUSED(size);
     __UNUSED(objp);
     struct shim_mount* mount;
-    lock(&mount_list_lock);
-    LISTP_FOR_EACH_ENTRY(mount, &mount_list, list) {
+    lock(&g_mount_list_lock);
+    LISTP_FOR_EACH_ENTRY(mount, &g_mount_list, list) {
         DO_CP(mount, mount, NULL);
     }
-    unlock(&mount_list_lock);
+    unlock(&g_mount_list_lock);
 
     /* add an empty entry to mark as migrated */
     ADD_CP_FUNC_ENTRY(0UL);
