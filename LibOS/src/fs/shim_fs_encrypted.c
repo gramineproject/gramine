@@ -739,9 +739,11 @@ BEGIN_CP_FUNC(encrypted_file) {
     struct shim_encrypted_file* enc = obj;
     struct shim_encrypted_file* new_enc = NULL;
 
-    int ret = encrypted_file_flush(enc);
-    if (ret < 0)
-        return ret;
+    if (enc->pf) {
+        int ret = encrypted_file_flush(enc);
+        if (ret < 0)
+            return ret;
+    }
 
     size_t off = ADD_CP_OFFSET(sizeof(struct shim_encrypted_file));
     new_enc = (struct shim_encrypted_file*)(base + off);
