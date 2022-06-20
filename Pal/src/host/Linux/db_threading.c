@@ -270,7 +270,7 @@ int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
         if (cpu_mask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state.topo_info.threads[i].is_online) {
                 /* cpumask contains a CPU that is currently offline */
-                ret = -EINVAL;
+                ret = -PAL_ERROR_INVAL;
             }
         }
     }

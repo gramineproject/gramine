@@ -162,9 +162,8 @@ out:
     return ret;
 }
 
-/* This function is only invoked from shim_do_sched_setaffinity to update user CPU affinity */
-int update_thread_affinity_from_user(struct shim_thread* thread, size_t cpumask_size,
-                                     unsigned long* cpumask) {
+int update_thread_affinity(struct shim_thread* thread, size_t cpumask_size,
+                           uint8_t* cpumask) {
     assert(locked(&thread->lock));
 
     /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
@@ -173,11 +172,11 @@ int update_thread_affinity_from_user(struct shim_thread* thread, size_t cpumask_
     size_t idx = 0;
     size_t cores_cnt = 0;
     for (size_t i = 0; i < MIN(threads_cnt, cpumask_size * BITS_IN_BYTE); i++) {
-        idx = i / BITS_IN_TYPE(unsigned long);
-        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+        idx = i / BITS_IN_TYPE(uint8_t);
+        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(uint8_t))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
                 /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
-                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
+                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(uint8_t)));
             } else {
                 cores_cnt++;
             }
