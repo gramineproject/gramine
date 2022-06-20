@@ -468,7 +468,7 @@ Also add ``result.txt`` to the encrypted FS mount so that PyTorch writes the
 
    fs.mounts = [
    ...
-   { path = "result.txt", uri = "file:result.txt", type = "encrypted" },
+   { path = "/result.txt", uri = "file:result.txt", type = "encrypted" },
    ]
 
 Add the following lines to enable remote secret provisioning and allow encrypted
