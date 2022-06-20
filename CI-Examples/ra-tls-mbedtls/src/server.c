@@ -151,8 +151,8 @@ int main(int argc, char** argv) {
     }
 
     if (ra_tls_attest_lib) {
-        mbedtls_printf("\n  . Creating the RA-TLS server cert and key (using %s)...",
-                       attestation_type_str);
+        mbedtls_printf("\n  . Creating the RA-TLS server cert and key (using \"%s\" as "
+                       "attestation type)...", attestation_type_str);
         fflush(stdout);
 
         size_t der_key_size;

@@ -35,7 +35,7 @@ run `sgx-quote.py` and verify the output, you will need to provide an
 
 ```sh
 # build Busybox and the final manifest
-SGX=1 make
+make SGX=1
 
 # run Busybox shell in non-SGX Gramine
 gramine-direct busybox sh

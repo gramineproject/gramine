@@ -118,6 +118,10 @@ low-level abstractions of *attestation report* and *attestation quote* objects
 (:term:`SGX Report` and :term:`SGX Quote` in SGX parlance), in the form of the
 below pseudo-files:
 
+- ``/dev/attestation/attestation_type`` pseudo-file can be opened for read and
+  contains the name of the attestation scheme used (currently one of ``none``,
+  ``epid`` and ``dcap``).
+
 - ``/dev/attestation/user_report_data`` pseudo-file can be opened for read or
   write access. Typically, it is opened and written into before opening and
   reading from the ``/dev/attestation/report`` and ``/dev/attestation/quote``
@@ -221,12 +225,6 @@ encryption keys (see also :doc:`manifest-syntax`):
    Note that the old file (``/dev/attestation/protected_files_key``) uses a
    32-character hex value, and the new files
    (``/dev/attestation/keys/<key_name>``) use a 16-byte raw binary value.
-
-Finally, the ``/dev/attestation`` pseudo-filesystem exposes a pseudo-file that
-indicates the type of attestation used:
-
-- ``/dev/attestation/attestation_type`` file contains the name of the
-  attestation scheme used, currently one of ``none``, ``epid`` and ``dcap``.
 
 Mid-level RA-TLS interface
 --------------------------

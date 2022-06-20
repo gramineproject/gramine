@@ -389,7 +389,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
         return 0;
 
     if (!g_pal_public_state->attestation_type) {
-        log_error("Cannot determine remote attestation type during init of /dev/attestation");
+        log_error("Cannot determine remote attestation type during init of /dev/attestation/");
         return -EINVAL;
     }
 
@@ -403,7 +403,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     }
 
     log_debug("host is Linux-SGX and remote attestation type is '%s', adding SGX-specific "
-              "/dev/attestation files: report, quote, etc.", g_pal_public_state->attestation_type);
+              "/dev/attestation/ files: report, quote, etc.", g_pal_public_state->attestation_type);
 
     struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
     user_report_data->perm = PSEUDO_PERM_FILE_RW;
@@ -419,7 +419,7 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
 
     /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
     struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
-            &deprecated_pfkey_load);
+                                                          &deprecated_pfkey_load);
     deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
     deprecated_pfkey->str.save = &deprecated_pfkey_save;
 

@@ -546,14 +546,14 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
 
     ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
     if (ret < 0) {
-        /* error is already printed by the called func */
+        /* error was already printed by the called func */
         return unix_to_pal_error(ret);
     }
 
     if (attestation_type == SGX_ATTESTATION_EPID) {
         ret = parse_attestation_epid_params(g_pal_public_state.manifest_root, &spid, &linkable);
         if (ret < 0) {
-            /* error is already printed by the called func */
+            /* error was already printed by the called func */
             return unix_to_pal_error(ret);
         }
     }

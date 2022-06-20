@@ -956,8 +956,9 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     sgx_target_info_t qe_targetinfo = {0};
     if (enclave->attestation_type != SGX_ATTESTATION_NONE) {
         /* initialize communication with Quoting Enclave only if app requests attestation */
+        log_debug("Using SGX attestation type \"%s\"",
+                  attestation_type_to_str(enclave->attestation_type));
         bool is_epid = enclave->attestation_type == SGX_ATTESTATION_EPID;
-        log_debug("Using SGX %s quotes for remote attestation", is_epid ? "EPID" : "DCAP/ECDSA");
         ret = init_quoting_enclave_targetinfo(is_epid, &qe_targetinfo);
         if (ret < 0)
             return ret;

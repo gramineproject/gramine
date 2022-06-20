@@ -628,13 +628,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         log_error("Failed to parse attestation type: %d", unix_to_pal_error(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-
-    switch (attestation_type) {
-        case SGX_ATTESTATION_NONE: g_pal_public_state.attestation_type = "none"; break;
-        case SGX_ATTESTATION_EPID: g_pal_public_state.attestation_type = "epid"; break;
-        case SGX_ATTESTATION_DCAP: g_pal_public_state.attestation_type = "dcap"; break;
-        default: BUG();
-    }
+    g_pal_public_state.attestation_type = attestation_type_to_str(attestation_type);
 
     /* this should be placed *after all* initialize-from-manifest routines */
     if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
