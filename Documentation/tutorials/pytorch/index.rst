@@ -458,9 +458,9 @@ FS mount:
 
    fs.mounts = [
    ...
-   { path = "classes.txt", uri = "file:classes.txt", type = "encrypted" },
-   { path = "input.jpg", uri = "file:input.jpg", type = "encrypted" },
-   { path = "alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
+   { path = "/classes.txt", uri = "file:classes.txt", type = "encrypted" },
+   { path = "/input.jpg", uri = "file:input.jpg", type = "encrypted" },
+   { path = "/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
    ]
 
 Also add ``result.txt`` to the encrypted FS mount so that PyTorch writes the
