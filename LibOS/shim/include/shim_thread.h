@@ -352,10 +352,9 @@ int init_thread_affinity_from_host(struct shim_thread* thread);
  *
  * \param thread        Thread whose CPU affinity needs to be updated.
  * \param cpumask       CPU affinity mask to be updated.
- * \param cpumask_size  Size (in bytes) of the cpumask.
+ * \param cpumask_cnt   Count of cpumask bytes to be updated.
  *
  * \returns `0` on success and negative error code on failure.
  */
-int update_thread_affinity(struct shim_thread* thread, size_t cpumask_size,
-                           uint8_t* cpumask);
+int update_thread_affinity(struct shim_thread* thread, uint8_t* cpumask, size_t cpumask_cnt);
 #endif /* _SHIM_THREAD_H_ */

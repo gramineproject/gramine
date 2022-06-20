@@ -162,8 +162,7 @@ out:
     return ret;
 }
 
-int update_thread_affinity(struct shim_thread* thread, size_t cpumask_size,
-                           uint8_t* cpumask) {
+int update_thread_affinity(struct shim_thread* thread, uint8_t* cpumask, size_t cpumask_cnt) {
     assert(locked(&thread->lock));
 
     /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
@@ -171,7 +170,7 @@ int update_thread_affinity(struct shim_thread* thread, size_t cpumask_size,
 
     size_t idx = 0;
     size_t cores_cnt = 0;
-    for (size_t i = 0; i < MIN(threads_cnt, cpumask_size * BITS_IN_BYTE); i++) {
+    for (size_t i = 0; i < MIN(threads_cnt, cpumask_cnt * BITS_IN_BYTE); i++) {
         idx = i / BITS_IN_TYPE(uint8_t);
         if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(uint8_t))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
@@ -188,7 +187,7 @@ int update_thread_affinity(struct shim_thread* thread, size_t cpumask_size,
         return -EINVAL;
 
     memset(thread->cpumask, 0, sizeof(thread->cpumask));
-    memcpy(thread->cpumask, cpumask, MIN(sizeof(thread->cpumask), cpumask_size));
+    memcpy(thread->cpumask, cpumask, MIN(sizeof(thread->cpumask), cpumask_cnt));
 
     return 0;
 }

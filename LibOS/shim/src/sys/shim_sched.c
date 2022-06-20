@@ -170,37 +170,12 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return pal_to_unix_errno(ret);
     }
 
+    lock(&thread->lock);
     /* Linux passes array of unsigned longs as cpumask but provides cpumask_size in bytes. This is
      * misleading as the general expectation is to pass the count of array elements as size instead
-     * of bytes. To fix this, in Gramine, cpumask is converted to uint8_t and cpumask_size in bytes
-     * is passed as number of elements. */
-    uint8_t* mask = malloc(cpumask_size);
-    if (!mask)
-        return -ENOMEM;
-
-    size_t cnt = 0;
-    if (cpumask_size % sizeof(unsigned long)) {
-        cnt = cpumask_size / sizeof(unsigned long) + 1;
-    } else {
-        cnt = cpumask_size / sizeof(unsigned long);
-    }
-
-    size_t offset = 0;
-    size_t remaining_size = cpumask_size;
-    size_t bytes_to_copy = 0;
-    for (size_t idx = 0; idx < cnt; idx++) {
-        if (remaining_size >= sizeof(unsigned long)) {
-            remaining_size -= sizeof(unsigned long);
-            bytes_to_copy = sizeof(unsigned long);
-        } else {
-            bytes_to_copy = remaining_size;
-        }
-        memcpy(mask + offset, &user_mask_ptr[idx], bytes_to_copy);
-        offset += bytes_to_copy;
-    }
-
-    lock(&thread->lock);
-    ret = update_thread_affinity(thread, cpumask_size, mask);
+     * of bytes. To fix this, we simply typecast unsigned long pointer to uint8_t in Gramine, and
+     * cpumask_size in bytes represents count of elements. */
+    ret = update_thread_affinity(thread, (uint8_t*)user_mask_ptr, cpumask_size);
     if (ret < 0) {
         goto out;
     }
@@ -209,7 +184,6 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 out:
     unlock(&thread->lock);
     put_thread(thread);
-    free(mask);
     return ret;
 }
 
