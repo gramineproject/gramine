@@ -99,13 +99,13 @@ int main(int argc, char** argv) {
     mbedtls_debug_set_threshold(DEBUG_LEVEL);
 #endif
 
-    if (argc < 2 ||
-            (strcmp(argv[1], "native") && strcmp(argv[1], "epid") && strcmp(argv[1], "dcap"))) {
-        mbedtls_printf("USAGE: %s native|epid|dcap [SGX measurements]\n", argv[0]);
+    if (argc < 2 || (strcmp(argv[1], "native") && strcmp(argv[1], "epid") &&
+                strcmp(argv[1], "dcap") && strcmp(argv[1], "maa"))) {
+        mbedtls_printf("USAGE: %s native|epid|dcap|maa [SGX measurements]\n", argv[0]);
         return 1;
     }
 
-    if (!strcmp(argv[1], "epid") || !strcmp(argv[1], "dcap")) {
+    if (!strcmp(argv[1], "epid") || !strcmp(argv[1], "dcap") || !strcmp(argv[1], "maa")) {
         ra_tls_attest_lib = dlopen("libra_tls_attest.so", RTLD_LAZY);
         if (!ra_tls_attest_lib) {
             mbedtls_printf("User requested RA-TLS attestation but cannot find lib\n");

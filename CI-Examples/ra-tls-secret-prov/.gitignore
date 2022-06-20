@@ -6,5 +6,6 @@
 /secret_prov_pf_client
 /secret_prov_server_dcap
 /secret_prov_server_epid
+/secret_prov_server_maa
 /ssl/ca.*
 /ssl/server.*

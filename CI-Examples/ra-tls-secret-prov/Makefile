@@ -38,6 +38,9 @@ epid: secret_prov_server_epid
 .PHONY: dcap
 dcap: secret_prov_server_dcap
 
+.PHONY: maa
+maa: secret_prov_server_maa
+
 ############################# SSL DATA DEPENDENCY #############################
 
 # SSL data: key and x.509 self-signed certificate
@@ -62,6 +65,9 @@ secret_prov_server_epid: src/secret_prov_server.c
 # compilers remove the "seemingly unused" libsgx_urts.so
 secret_prov_server_dcap: src/secret_prov_server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
+
+secret_prov_server_maa: src/secret_prov_server.c
+	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_maa -pthread -o $@
 
 secret_prov_client: src/secret_prov_client.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_attest -o $@
@@ -175,13 +181,27 @@ check_dcap: app dcap files/input.txt
 	@grep "\[child\] Read from protected file: 'helloworld'" OUTPUT && echo "[ Success 4/4 ]"
 	@rm OUTPUT
 
+.PHONY: check_maa
+check_maa: app maa files/input.txt
+	./secret_prov_server_maa >/dev/null & SERVER_ID=$$!; \
+	sleep 3; \
+	gramine-sgx ./secret_prov_min_client > OUTPUT; \
+	gramine-sgx ./secret_prov_client >> OUTPUT; \
+	gramine-sgx ./secret_prov_pf_client >> OUTPUT; \
+	kill -9 $$SERVER_ID;
+	@grep "Received secret = 'ffeeddccbbaa99887766554433221100'" OUTPUT && echo "[ Success 1/4 ]"
+	@grep "Received secret1 = 'ffeeddccbbaa99887766554433221100', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"
+	@grep "\[parent\] Read from protected file: 'helloworld'" OUTPUT && echo "[ Success 3/4 ]"
+	@grep "\[child\] Read from protected file: 'helloworld'" OUTPUT && echo "[ Success 4/4 ]"
+	@rm OUTPUT
+
 ################################## CLEANUP ####################################
 
 .PHONY: clean
 clean:
 	$(RM) -r \
 		*.token *.sig *.manifest.sgx *.manifest *.so *.so.* OUTPUT \
-		secret_prov_server_epid secret_prov_server_dcap \
+		secret_prov_server_epid secret_prov_server_dcap secret_prov_server_maa \
 		secret_prov_client secret_prov_min_client secret_prov_pf_client
 
 .PHONY: distclean

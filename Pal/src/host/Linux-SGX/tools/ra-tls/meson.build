@@ -151,4 +151,52 @@ if dcap
         'ln -sf ../../../libsecret_prov_verify_dcap.so ' +
         '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
             get_option('libdir')))
+
+    # Microsoft Azure Attestation (MAA) scheme uses DCAP SGX quotes, so it is
+    # located under the `dcap` Meson config
+    libra_tls_verify_maa = shared_library('ra_tls_verify_maa',
+        'ra_tls_verify_maa.c',
+        'ra_tls_verify_common.c',
+        'ra_tls.h',
+
+        c_args: ra_tls_args,
+        include_directories: sgx_inc,
+        dependencies: [
+            cjson_dep,
+            libcurl_dep,
+            sgx_util_dep,
+            mbedtls_static_dep,
+        ],
+        install: true,
+        install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    )
+    meson.add_install_script('/bin/sh', '-c',
+        'ln -sf ../../../libra_tls_verify_maa.so ' +
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
+            get_option('libdir')))
+
+    libsecret_prov_verify_maa = shared_library('secret_prov_verify_maa',
+        'ra_tls_verify_maa.c',
+        'ra_tls_verify_common.c',
+        'secret_prov_verify.c',
+        'secret_prov_common.c',
+        'ra_tls.h',
+        'secret_prov.h',
+
+        c_args: ra_tls_args,
+        include_directories: sgx_inc,
+        dependencies: [
+            threads_dep,
+            cjson_dep,
+            libcurl_dep,
+            sgx_util_dep,
+            mbedtls_static_dep,
+        ],
+        install: true,
+        install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    )
+    meson.add_install_script('/bin/sh', '-c',
+        'ln -sf ../../../libsecret_prov_verify_maa.so ' +
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
+            get_option('libdir')))
 endif
