@@ -1,3 +1,3 @@
 [submodule "LibOS/test/ltp/src"]
-	path = LibOS/test/ltp/src
+	path = libos/test/ltp/src
 	url = https://github.com/linux-test-project/ltp.git
