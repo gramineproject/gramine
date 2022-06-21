@@ -78,34 +78,51 @@ static int hstat(struct shim_handle* handle, struct stat* stat) {
     return 0;
 }
 
-static int setflags(struct shim_handle* handle, int flags) {
-    if (!WITHIN_MASK(flags, O_NONBLOCK)) {
+static int setflags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+    assert(mask != 0);
+    assert((flags & ~mask) == 0);
+
+    if (!WITHIN_MASK(mask, O_NONBLOCK)) {
         return -EINVAL;
     }
 
+    int ret;
     bool nonblocking = flags & O_NONBLOCK;
+    struct shim_sock_handle* sock = &handle->info.sock;
 
-    PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+    lock(&sock->lock);
+    lock(&handle->lock);
+
+    PAL_HANDLE pal_handle = __atomic_load_n(&sock->pal_handle, __ATOMIC_ACQUIRE);
     if (!pal_handle) {
-        log_warning("Trying to set flags on not bound / not connected UNIX socket. This is not "
-                    "supported in Gramine.");
-        return -EINVAL;
+        /* Just save the flags for later. */
+        goto out_set_flags;
     }
 
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
+    ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
-        return pal_to_unix_errno(ret);
+        ret = pal_to_unix_errno(ret);
+        goto out;
     }
-
-    assert(ret == 0);
 
     if (attr.nonblocking != nonblocking) {
         attr.nonblocking = nonblocking;
         ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
+        if (ret < 0) {
+            ret =  pal_to_unix_errno(ret);
+            goto out;
+        }
     }
 
-    return pal_to_unix_errno(ret);
+out_set_flags:
+    handle->flags = (handle->flags & ~mask) | flags;
+    ret = 0;
+
+out:
+    unlock(&handle->lock);
+    unlock(&sock->lock);
+    return ret;
 }
 
 static int checkout(struct shim_handle* handle) {

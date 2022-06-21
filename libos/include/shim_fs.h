@@ -157,8 +157,15 @@ struct shim_fs_ops {
     /* hstat: get status of the file; `st_ino` will be taken from dentry, if there's one */
     int (*hstat)(struct shim_handle* hdl, struct stat* buf);
 
-    /* setflags: set flags of the file */
-    int (*setflags)(struct shim_handle* hdl, int flags);
+    /*!
+     * \brief Set flags on the handle.
+     *
+     * \param handle  The handle to set flags on.
+     * \param flags   Flags to set.
+     * \param mask    Indicates which flags to change. Only bits set in \p mask will be changed
+     *                (to values taken from \p flags). Must be non zero.
+     */
+    int (*setflags)(struct shim_handle* handle, unsigned int flags, unsigned int mask);
 
     /* lock and unlock the file */
     int (*lock)(const char* trim_name);
