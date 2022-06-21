@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef API_H
-#define API_H
+#pragma once
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -444,5 +443,3 @@ static inline bool access_ok(const volatile void* addr, size_t size) {
 #if !defined(USE_STDLIB) && __USE_FORTIFY_LEVEL > 0
 # include "api_fortified.h"
 #endif
-
-#endif /* API_H */

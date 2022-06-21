@@ -115,6 +115,8 @@ Code formatting
       file->full_path = "/asdf/ghjkl";
       file->perms     = PERM_rw_r__r__;
 
+#. Use ``#pragma once`` for include guards.
+
 Conventions and high-level style
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #. Variable and function names should be sane and easy to understand (example:

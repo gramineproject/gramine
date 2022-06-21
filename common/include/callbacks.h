@@ -17,8 +17,7 @@
  * `describe_location`.
  */
 
-#ifndef COMMON_CALLBACKS_H
-#define COMMON_CALLBACKS_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -68,5 +67,3 @@ void describe_location(uintptr_t addr, char* buf, size_t buf_size);
 /* This is the default implementation of `describe_location`, and returns only the raw value
  * ("0x1234"). Your implementation might call it when it fails to determine more information. */
 void default_describe_location(uintptr_t addr, char* buf, size_t buf_size);
-
-#endif /* COMMON_CALLBACKS_H */

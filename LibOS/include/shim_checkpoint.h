@@ -5,8 +5,7 @@
  * This file contains definitions and macros for checkpointing.
  */
 
-#ifndef _SHIM_CHECKPOINT_H_
-#define _SHIM_CHECKPOINT_H_
+#pragma once
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -373,5 +372,3 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
  * \returns 0 on success, negative POSIX error code on failure.
  */
 int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr);
-
-#endif /* _SHIM_CHECKPOINT_H_ */

@@ -1,5 +1,4 @@
-#ifndef PAL_LINUX_ERROR_H
-#define PAL_LINUX_ERROR_H
+#pragma once
 
 #ifdef IN_PAL
 
@@ -68,5 +67,3 @@ static __attribute__((unused)) int unix_to_pal_error(int unix_errno) {
 }
 
 #endif /* IN_PAL */
-
-#endif /* PAL_LINUX_ERROR_H */

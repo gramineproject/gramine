@@ -3,8 +3,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef _SHIM_THREAD_H_
-#define _SHIM_THREAD_H_
+#pragma once
 
 #include <linux/futex.h>
 #include <linux/signal.h>
@@ -334,5 +333,3 @@ noreturn void process_exit(int error_code, int term_signal);
 
 void release_robust_list(struct robust_list_head* head);
 void release_clear_child_tid(int* clear_child_tid);
-
-#endif /* _SHIM_THREAD_H_ */

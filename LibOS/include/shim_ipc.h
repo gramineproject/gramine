@@ -4,8 +4,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef SHIM_IPC_H_
-#define SHIM_IPC_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -307,5 +306,3 @@ int ipc_posix_lock_clear_pid(IDTYPE pid);
 int ipc_posix_lock_set_callback(IDTYPE src, void* data, unsigned long seq);
 int ipc_posix_lock_get_callback(IDTYPE src, void* data, unsigned long seq);
 int ipc_posix_lock_clear_pid_callback(IDTYPE src, void* data, unsigned long seq);
-
-#endif /* SHIM_IPC_H_ */

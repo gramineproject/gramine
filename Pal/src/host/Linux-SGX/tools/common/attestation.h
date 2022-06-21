@@ -3,8 +3,7 @@
  *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
  */
 
-#ifndef ATTESTATION_H
-#define ATTESTATION_H
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -76,5 +75,3 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
  *  \return 0 on successful verification, negative value on error.
  */
 int verify_quote_body_enclave_attributes(sgx_quote_body_t* quote_body, bool allow_debug_enclave);
-
-#endif /* ATTESTATION_H */

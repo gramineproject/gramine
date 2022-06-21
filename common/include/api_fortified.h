@@ -28,8 +28,7 @@
  *     #include "api.h"
  */
 
-#ifndef _API_FORTIFIED_H_
-#define _API_FORTIFIED_H_
+#pragma once
 
 #ifndef API_H
 # error This file should only be included inside api.h.
@@ -52,6 +51,3 @@
 
 #define snprintf(buf, buf_size, fmt...) \
     __builtin___snprintf_chk(buf, buf_size, __USE_FORTIFY_LEVEL - 1, __api_bos(buf), fmt)
-
-
-#endif /* _API_FORTIFIED_H_ */

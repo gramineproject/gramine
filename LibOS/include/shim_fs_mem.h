@@ -8,8 +8,7 @@
  * pseudo-FSes and the `tmpfs` filesystem.
  */
 
-#ifndef SHIM_FS_MEM_
-#define SHIM_FS_MEM_
+#pragma once
 
 #include "shim_types.h"
 
@@ -32,5 +31,3 @@ ssize_t mem_file_write(struct shim_mem_file* mem, file_off_t pos_start, const vo
                        size_t size);
 int mem_file_truncate(struct shim_mem_file* mem, file_off_t size);
 int mem_file_poll(struct shim_mem_file* mem, file_off_t pos, int poll_type);
-
-#endif /* SHIM_FS_MEM_ */

@@ -2,8 +2,7 @@
 /* Copyright (C) 2020 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
-#ifndef _SHIM_PROCESS_H
-#define _SHIM_PROCESS_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -95,5 +94,3 @@ bool mark_child_exited_by_pid(IDTYPE pid, IDTYPE child_uid, int exit_code, int s
  * Returns `true` if the process \p pid is found in the zombie list of `g_process`.
  */
 bool is_zombie_process(IDTYPE pid);
-
-#endif // _SHIM_PROCESS_H

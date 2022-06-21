@@ -3,8 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#ifndef INIT_H_
-#define INIT_H_
+#pragma once
 
 /*
  * Call the constructors specified in `.init_array`. Should be called during initialization.
@@ -13,5 +12,3 @@
  * Linux-SGX untrusted runtime) should not call this.
  */
 void call_init_array(void);
-
-#endif /* INIT_H_ */

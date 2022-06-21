@@ -11,8 +11,7 @@
  * For Linux-based PALs there is pal_flag_conv.h in Linux-common, mirroring those conversions.
  */
 
-#ifndef SHIM_FLAGS_CONV_H
-#define SHIM_FLAGS_CONV_H
+#pragma once
 
 #include <asm/fcntl.h>
 #include <linux/fcntl.h>
@@ -57,5 +56,3 @@ static inline pal_stream_options_t LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(int flags) {
     return (flags & O_CLOEXEC  ? PAL_OPTION_CLOEXEC  : 0) |
            (flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0);
 }
-
-#endif /* SHIM_FLAGS_CONV_H */

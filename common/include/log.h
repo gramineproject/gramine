@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
-#ifndef COMMON_LOG_H
-#define COMMON_LOG_H
+#pragma once
 
 #include "callbacks.h"
 
@@ -21,5 +20,3 @@ enum {
 #define log_warning(fmt...)  _log(LOG_LEVEL_WARNING, fmt)
 #define log_debug(fmt...)    _log(LOG_LEVEL_DEBUG, fmt)
 #define log_trace(fmt...)    _log(LOG_LEVEL_TRACE, fmt)
-
-#endif /* COMMON_LOG_H */

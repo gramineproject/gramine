@@ -3,8 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#ifndef DUMP_H_
-#define DUMP_H_
+#pragma once
 
 /*
  * Dumps the whole directory tree, displaying link targets and file contents. In addition to
@@ -26,5 +25,3 @@
  *     dir/dir2/link: link: /link/target
  */
 int dump_path(const char* path);
-
-#endif /* DUMP_H_ */

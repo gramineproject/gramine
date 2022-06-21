@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef PAL_LINUX_H
-#define PAL_LINUX_H
+#pragma once
 
 #include <asm/mman.h>
 #include <linux/mman.h>
@@ -203,5 +202,3 @@ int _DkStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
 
 #endif /* IN_ENCLAVE */
-
-#endif /* PAL_LINUX_H */

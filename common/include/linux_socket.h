@@ -3,8 +3,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef GRAMINE_LINUX_SOCKET_H
-#define GRAMINE_LINUX_SOCKET_H
+#pragma once
 
 #include <asm/fcntl.h>
 #include <linux/in.h>
@@ -93,5 +92,3 @@ struct linger {
 #define SHUT_RD 0
 #define SHUT_WR 1
 #define SHUT_RDWR 2
-
-#endif /* GRAMINE_LINUX_SOCKET_H */

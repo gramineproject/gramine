@@ -37,8 +37,7 @@
  *
  * Prototype code was written by Meni Orenbach and adapted to Gramine by Dmitrii Kuvaiskii.
  */
-#ifndef QUEUE_H_
-#define QUEUE_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -148,5 +147,3 @@ out:
     spinlock_unlock(&q->lock);
     return ret;
 }
-
-#endif /* QUEUE_H_ */

@@ -4,8 +4,7 @@
  *               2022 Intel Corporation
  */
 
-#ifndef HEX_H
-#define HEX_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -52,5 +51,3 @@ static inline void* hex2bytes(const char* hex, size_t hex_len, void* bytes, size
 
     return bytes;
 }
-
-#endif // HEX_H

@@ -1,5 +1,4 @@
-#ifndef _SHIM_TCB_ARCH_H_
-#define _SHIM_TCB_ARCH_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -156,5 +155,3 @@ static inline uintptr_t get_tls(void) {
     (void)DkSegmentBaseGet(PAL_SEGMENT_FS, &addr);
     return addr;
 }
-
-#endif /* _SHIM_TCB_ARCH_H_ */

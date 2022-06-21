@@ -17,8 +17,7 @@
  *     } while (read_seqretry(&foo, seq));
  */
 
-#ifndef _SEQLOCK_H
-#define _SEQLOCK_H
+#pragma once
 
 #include "api.h"
 #include "cpu.h"
@@ -85,5 +84,3 @@ static inline void write_seqend(seqlock_t* sl) {
     __atomic_add_fetch(&sl->sequence, 1, __ATOMIC_RELAXED);
     spinlock_unlock(&sl->lock);
 }
-
-#endif // _SEQLOCK_H

@@ -9,8 +9,7 @@
  * The userspace wrappers for these functions are defined in `gramine_entry_api.h`.
  */
 
-#ifndef SHIM_ENTRY_H_
-#define SHIM_ENTRY_H_
+#pragma once
 
 /*!
  * \brief LibOS syscall emulation entrypoint
@@ -27,5 +26,3 @@ void syscalldb(void);
  * in `gramine_entry_api.h`.
  */
 long handle_libos_call(int number, unsigned long arg1, unsigned long arg2);
-
-#endif /* SHIM_ENTRY_H_ */

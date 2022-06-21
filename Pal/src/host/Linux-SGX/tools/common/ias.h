@@ -3,8 +3,7 @@
  *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
  */
 
-#ifndef _IAS_H
-#define _IAS_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -91,4 +90,3 @@ int ias_verify_quote_raw(struct ias_context_t* context, const void* quote, size_
                          const char* nonce, char** report_data_ptr, size_t* report_data_size,
                          char** sig_data_ptr, size_t* sig_data_size, char** cert_data_ptr,
                          size_t* cert_data_size);
-#endif /* _IAS_H */

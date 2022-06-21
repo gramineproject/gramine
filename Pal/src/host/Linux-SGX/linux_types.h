@@ -1,5 +1,4 @@
-#ifndef LINUX_TYPES_H
-#define LINUX_TYPES_H
+#pragma once
 
 #include <asm/fcntl.h>
 #include <asm/posix_types.h>
@@ -61,5 +60,3 @@ struct cmsghdr {
 #define CMSG_ALIGN(len) ALIGN_UP(len, sizeof(size_t))
 #define CMSG_SPACE(len) (CMSG_ALIGN(len) + CMSG_ALIGN(sizeof(struct cmsghdr)))
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
-
-#endif /* LINUX_TYPES_H */

@@ -18,8 +18,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-#ifndef _ELF_H
-#define _ELF_H 1
+#pragma once
 
 #include <features.h>
 #include <stdint.h>
@@ -2664,5 +2663,3 @@ typedef ElfW(Word)   elf_word_t;
 typedef ElfW(Xword)  elf_xword_t;
 
 __END_DECLS
-
-#endif /* elf.h */

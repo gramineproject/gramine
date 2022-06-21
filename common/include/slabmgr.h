@@ -5,8 +5,7 @@
  * This file contains implementation of SLAB (variable-size) memory allocator.
  */
 
-#ifndef SLABMGR_H
-#define SLABMGR_H
+#pragma once
 
 #include <errno.h>
 #include <sys/mman.h>
@@ -444,5 +443,3 @@ static inline void slab_free(SLAB_MGR mgr, void* obj) {
     LISTP_ADD_TAIL(mobj, &mgr->free_list[level], __list);
     SYSTEM_UNLOCK();
 }
-
-#endif /* SLABMGR_H */

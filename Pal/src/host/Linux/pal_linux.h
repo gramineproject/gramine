@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef PAL_LINUX_H
-#define PAL_LINUX_H
+#pragma once
 
 #include <asm/fcntl.h>
 #include <asm/stat.h>
@@ -127,5 +126,3 @@ struct linux_dirent64 {
 #define DT_WHT     14
 
 #define DIRBUF_SIZE 1024
-
-#endif /* PAL_LINUX_H */

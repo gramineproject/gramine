@@ -4,8 +4,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef SHIM_LOCK_H_
-#define SHIM_LOCK_H_
+#pragma once
 
 #include <stdbool.h>
 
@@ -111,5 +110,3 @@ static inline bool create_lock_runtime(struct shim_lock* l) {
 
     return ret;
 }
-
-#endif // SHIM_LOCK_H_

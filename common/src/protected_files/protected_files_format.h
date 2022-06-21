@@ -4,8 +4,7 @@
  * Copyright (C) 2020 Intel Corporation
  */
 
-#ifndef PROTECTED_FILES_FORMAT_H_
-#define PROTECTED_FILES_FORMAT_H_
+#pragma once
 
 #ifdef USE_STDLIB
 #include <assert.h>
@@ -139,6 +138,3 @@ typedef struct {
 } kdf_input_t;
 
 #pragma pack(pop)
-
-#endif /* PROTECTED_FILES_FORMAT_H_ */
-

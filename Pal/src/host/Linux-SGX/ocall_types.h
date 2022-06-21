@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2020 Intel Corporation */
 
-#ifndef OCALL_TYPES_H
-#define OCALL_TYPES_H
+#pragma once
 
 /*
  * These structures are used in trusted -> untrusted world calls (OCALLS).
@@ -331,5 +330,3 @@ typedef struct {
 } ms_ocall_get_quote_t;
 
 #pragma pack(pop)
-
-#endif /* OCALL_TYPES_H */

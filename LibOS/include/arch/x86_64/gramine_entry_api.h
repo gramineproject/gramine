@@ -11,8 +11,7 @@
  * GRAMINE_SYSCALL assembly macro.
  */
 
-#ifndef GRAMINE_ENTRY_API_H_
-#define GRAMINE_ENTRY_API_H_
+#pragma once
 
 /* Offsets for GS register at which entry vectors can be found */
 #define GRAMINE_SYSCALL_OFFSET 24
@@ -69,5 +68,3 @@ static inline int gramine_run_test(const char* test_name) {
 }
 
 #endif /* __ASSEMBLER__ */
-
-#endif /* GRAMINE_ENTRY_API_H_ */

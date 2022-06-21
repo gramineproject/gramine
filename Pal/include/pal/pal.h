@@ -6,14 +6,16 @@
  * \brief This file contains definition of PAL host ABI.
  */
 
-#ifndef PAL_H
-#define PAL_H
+#pragma once
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
+
+// TODO: fix this (but see x86_64/pal.h)
+#define INSIDE_PAL_H
 
 #if defined(__i386__) || defined(__x86_64__)
 #include "cpu.h"
@@ -926,4 +928,4 @@ void DkDebugMapRemove(void* start_addr);
  * DEBUG, falls back to raw value ("0x1234"). */
 void DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
-#endif /* PAL_H */
+#undef INSIDE_PAL_H

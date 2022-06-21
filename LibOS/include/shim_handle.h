@@ -5,8 +5,7 @@
  * Definitions of types and functions for file/handle bookkeeping.
  */
 
-#ifndef _SHIM_HANDLE_H_
-#define _SHIM_HANDLE_H_
+#pragma once
 
 #include <asm/fcntl.h>
 #include <asm/resource.h>
@@ -283,5 +282,3 @@ int get_file_size(struct shim_handle* file, uint64_t* size);
 
 ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count);
 ssize_t do_handle_write(struct shim_handle* hdl, const void* buf, size_t count);
-
-#endif /* _SHIM_HANDLE_H_ */

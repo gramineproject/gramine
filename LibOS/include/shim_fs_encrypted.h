@@ -10,8 +10,7 @@
  * NOTE: There is currently no notion of file permissions, all files are open in read-write mode.
  */
 
-#ifndef SHIM_FS_ENCRYPTED_
-#define SHIM_FS_ENCRYPTED_
+#pragma once
 
 #include <stddef.h>
 
@@ -175,5 +174,3 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key);
 
 /* TODO: This function is used only by a feature deprecated in v1.2, remove two versions later. */
 int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size);
-
-#endif /* SHIM_FS_ENCRYPTED_ */

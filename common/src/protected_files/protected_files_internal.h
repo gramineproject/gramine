@@ -4,8 +4,7 @@
  * Copyright (C) 2019 Intel Corporation
  */
 
-#ifndef PROTECTED_FILES_INTERNAL_H_
-#define PROTECTED_FILES_INTERNAL_H_
+#pragma once
 
 #include <limits.h>
 
@@ -67,5 +66,3 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size);
 static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size);
 static bool ipf_seek(pf_context_t* pf, uint64_t new_offset);
 static void ipf_try_clear_error(pf_context_t* pf);
-
-#endif /* PROTECTED_FILES_INTERNAL_H_ */

@@ -5,8 +5,7 @@
  * This file contains definitions of functions, variables and data structures for internal uses.
  */
 
-#ifndef PAL_INTERNAL_H
-#define PAL_INTERNAL_H
+#pragma once
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -315,5 +314,3 @@ const char* pal_event_name(enum pal_event event);
 /* Size of PAL memory available before parsing the manifest; `loader.pal_internal_mem_size` does not
  * include this memory */
 #define PAL_INITIAL_MEM_SIZE (64 * 1024 * 1024)
-
-#endif

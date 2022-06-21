@@ -2,8 +2,7 @@
 /* Copyright (C) 2021 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
-#ifndef SHIM_POLLABLE_EVENT_H
-#define SHIM_POLLABLE_EVENT_H
+#pragma once
 
 #include "pal.h"
 #include "spinlock.h"
@@ -27,5 +26,3 @@ int create_pollable_event(struct shim_pollable_event* event);
 void destroy_pollable_event(struct shim_pollable_event* event);
 int set_pollable_event(struct shim_pollable_event* event);
 int clear_pollable_event(struct shim_pollable_event* event);
-
-#endif // SHIM_POLLABLE_EVENT_H

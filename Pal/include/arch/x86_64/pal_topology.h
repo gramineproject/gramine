@@ -4,8 +4,7 @@
  *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
  */
 
-#ifndef PAL_TOPOLOGY_H
-#define PAL_TOPOLOGY_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -115,5 +114,3 @@ struct pal_topo_info {
      * numa_distance_matrix[i*numa_nodes_cnt + j] is NUMA distance from node i to node j. */
     size_t* numa_distance_matrix;
 };
-
-#endif /* PAL_TOPOLOGY_H */

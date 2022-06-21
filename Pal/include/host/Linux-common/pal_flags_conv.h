@@ -11,8 +11,7 @@
  * The counterpart of this file is shim_flag_conv.h in LibOS.
  */
 
-#ifndef PAL_FLAGS_CONV_H
-#define PAL_FLAGS_CONV_H
+#pragma once
 
 #include <asm/fcntl.h>
 #include <linux/mman.h>
@@ -68,5 +67,3 @@ static inline int PAL_OPTION_TO_LINUX_OPEN(pal_stream_options_t options) {
     return (options & PAL_OPTION_CLOEXEC  ? O_CLOEXEC  : 0) |
            (options & PAL_OPTION_NONBLOCK ? O_NONBLOCK : 0);
 }
-
-#endif /* PAL_FLAGS_CONV_H */

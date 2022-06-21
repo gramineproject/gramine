@@ -3,8 +3,7 @@
  * Copyright (C) 2022 IBM Corporation
  */
 
-#ifndef SHIM_PROC_H_
-#define SHIM_PROC_H_
+#pragma once
 
 int print_to_str(char** str, size_t off, size_t* size, const char* fmt, ...);
 
@@ -16,5 +15,3 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
 
 int proc_cpuinfo_display_tail(char** str, size_t* size, size_t* max,
                               const struct pal_cpu_info* cpu);
-
-#endif /* SHIM_PROC_H_ */

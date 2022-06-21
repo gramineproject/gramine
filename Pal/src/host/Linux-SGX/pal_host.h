@@ -5,8 +5,7 @@
  * This file contains definition of PAL host ABI.
  */
 
-#ifndef PAL_HOST_H
-#define PAL_HOST_H
+#pragma once
 
 #ifndef IN_PAL
 #error "cannot be included outside PAL"
@@ -152,5 +151,3 @@ typedef struct {
 #define PAL_HANDLE_FD_WRITABLE  2
 /* Set if an error was seen on this handle. Currently only set by `_DkStreamsWaitEvents`. */
 #define PAL_HANDLE_FD_ERROR     4
-
-#endif /* PAL_HOST_H */

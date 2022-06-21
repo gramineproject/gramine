@@ -1,5 +1,4 @@
-#ifndef AVL_TREE_H
-#define AVL_TREE_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -96,5 +95,3 @@ struct avl_tree_node* avl_tree_lower_bound_fn(struct avl_tree* tree, void* cmp_a
 struct avl_tree_node* avl_tree_lower_bound(struct avl_tree* tree, struct avl_tree_node* cmp_arg);
 
 bool debug_avl_tree_is_balanced(struct avl_tree* tree);
-
-#endif // AVL_TREE_H

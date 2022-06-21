@@ -87,8 +87,7 @@
  * Note that we rely on the fact that no Gramine code runs on the user stack.
  */
 
-#ifndef ASAN_H_
-#define ASAN_H_
+#pragma once
 
 /* All ASan code should be guarded by `#ifdef ASAN`. */
 #ifdef ASAN
@@ -273,5 +272,3 @@ void* __asan_memset(void *s, int c, size_t n);
 void* __asan_memmove(void* dest, const void* src, size_t n);
 
 #endif /* ASAN */
-
-#endif /* ASAN_H */

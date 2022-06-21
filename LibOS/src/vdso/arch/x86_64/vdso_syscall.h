@@ -2,8 +2,7 @@
 /* Copyright (C) 2020 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
-#ifndef VDSO_SYSCALL_H_
-#define VDSO_SYSCALL_H_
+#pragma once
 
 #include "gramine_entry_api.h"
 
@@ -23,5 +22,3 @@ static inline long vdso_arch_syscall(long nr, long arg1, long arg2) {
     );
     return ret;
 }
-
-#endif // VDSO_SYSCALL_H_

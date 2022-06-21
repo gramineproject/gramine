@@ -5,8 +5,7 @@
  * This file contains definition of PAL host ABI.
  */
 
-#ifndef PAL_HOST_H
-#define PAL_HOST_H
+#pragma once
 
 #ifndef IN_PAL
 #error "cannot be included outside PAL"
@@ -124,5 +123,3 @@ typedef struct {
 int arch_do_rt_sigprocmask(int sig, int how);
 int arch_do_rt_sigaction(int sig, void* handler,
                          const int* async_signals, size_t async_signals_cnt);
-
-#endif /* PAL_HOST_H */

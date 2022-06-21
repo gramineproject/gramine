@@ -4,8 +4,7 @@
  *       must ensure that returning prematurely from such a spinlock leads only to DoS and not to
  *       data corruptions. */
 
-#ifndef _SPINLOCK_H
-#define _SPINLOCK_H
+#pragma once
 
 #include "api.h"
 #include "cpu.h"
@@ -186,5 +185,3 @@ static inline bool spinlock_is_locked(spinlock_t* lock) {
 #endif // DEBUG_SPINLOCKS_SHIM
 
 #endif // DEBUG_SPINLOCKS
-
-#endif // _SPINLOCK_H

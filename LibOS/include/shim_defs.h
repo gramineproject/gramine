@@ -1,5 +1,4 @@
-#ifndef _SHIM_DEFS_H_
-#define _SHIM_DEFS_H_
+#pragma once
 
 #include "shim_syscalls.h"
 
@@ -25,5 +24,3 @@
 #define REQUIRED_ELF_AUXV       9  /* number of LibOS-supported vectors */
 #define REQUIRED_ELF_AUXV_SPACE 16 /* extra memory space (in bytes) */
 #define LIBOS_SYSCALL_BOUND __NR_syscalls
-
-#endif /* _SHIM_DEFS_H_ */

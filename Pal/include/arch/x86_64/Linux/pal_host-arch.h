@@ -4,8 +4,7 @@
  * This file contains Linux on x86_64 specific functions related to the PAL.
  */
 
-#ifndef __LINUX_X86_64_PAL_HOST_ARCH_H__
-#define __LINUX_X86_64_PAL_HOST_ARCH_H__
+#pragma once
 
 #ifdef IN_PAL
 
@@ -34,5 +33,3 @@ static inline int pal_set_tcb(PAL_TCB* tcb) {
 }
 
 #endif /* IN_PAL */
-
-#endif /* __LINUX_X86_64_PAL_HOST_ARCH_H__ */
