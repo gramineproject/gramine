@@ -30,6 +30,10 @@ size_t DkMemoryAvailableQuota(void) {
     return _DkMemoryAvailableQuota();
 }
 
+int DkDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret) {
+    return _DkDeviceIoControl(handle, cmd, arg, out_ret);
+}
+
 #if defined(__x86_64__)
 int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return _DkCpuIdRetrieve(leaf, subleaf, values);

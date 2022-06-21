@@ -45,6 +45,7 @@ DkSegmentBaseSet
 DkStreamChangeName
 DkStreamAttributesSetByHandle
 DkMemoryAvailableQuota
+DkDeviceIoControl
 DkDebugMapAdd
 DkDebugMapRemove
 DkDebugDescribeLocation

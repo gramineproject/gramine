@@ -837,6 +837,25 @@ int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 size_t DkMemoryAvailableQuota(void);
 
 /*!
+ * \brief Perform a device-specific operation `cmd`.
+ *
+ * \param         handle   Handle of the device.
+ * \param         cmd      Device-dependent request/control code.
+ * \param[in,out] arg      Arbitrary argument to `cmd`. May be unused or used as a 64-bit integer
+ *                         or used as a pointer to a buffer that contains the data required to
+ *                         perform the operation as well as the data returned by the operation. For
+ *                         some PALs (e.g., Linux-SGX PAL), the manifest must describe the layout of
+ *                         this buffer in order to correctly copy the data to/from the host.
+ * \param[out]    out_ret  Typically zero, but some device-specific operations return a
+ *                         device-specific nonnegative value (in addition to or instead of \p arg).
+ *
+ * \returns 0 on success, negative error value on failure.
+ *
+ * This function corresponds to ioctl() in UNIX systems and DeviceIoControl() in Windows.
+ */
+int DkDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret);
+
+/*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely

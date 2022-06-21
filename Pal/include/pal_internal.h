@@ -177,7 +177,7 @@ void _DkGetAvailableUserAddressRange(void** out_start, void** out_end);
 bool _DkCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _DkMemoryQuota(void);
 unsigned long _DkMemoryAvailableQuota(void);
-// Returns 0 on success, negative PAL code on failure
+int _DkDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret);
 int _DkGetCPUInfo(struct pal_cpu_info* info);
 
 /* Internal DK calls, in case any of the internal routines needs to use them */

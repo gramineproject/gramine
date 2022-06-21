@@ -55,3 +55,7 @@ struct handle_ops g_dev_ops = {
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
 };
+
+int _DkDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret) {
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
