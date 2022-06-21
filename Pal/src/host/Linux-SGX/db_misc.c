@@ -29,9 +29,10 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
-#define CPU_VENDOR_LEAF     0x0
-#define AMX_TILE_INFO_LEAF  0x1D
-#define AMX_TMUL_INFO_LEAF  0x1E
+#define CPU_VENDOR_LEAF             0x0
+#define EXTENDED_FEATURE_FLAGS_LEAF 0x7
+#define AMX_TILE_INFO_LEAF          0x1D
+#define AMX_TMUL_INFO_LEAF          0x1E
 
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
@@ -191,6 +192,10 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
         values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */
         values[CPUID_WORD_EDX] = 0x49656e69; /* 'ineI' */
         values[CPUID_WORD_ECX] = 0x6c65746e; /* 'ntel' */
+    } else if (leaf == EXTENDED_FEATURE_FLAGS_LEAF) {
+        if (subleaf == 0x0) {
+            values[CPUID_WORD_EAX] = 1; /* report max input value for supported sub-leaves */
+        }
     } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
             case X87:
@@ -409,10 +414,20 @@ int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
      *       all-zeros on them (as if these leaves are reserved). It is unclear why this discrepancy
      *       exists, but we decided to emulate how actual CPUs behave. */
     if (leaf == 0x08 || leaf == 0x0C || leaf == 0x0E || leaf == 0x11 || leaf == 0x13) {
-        values[0] = 0;
-        values[1] = 0;
-        values[2] = 0;
-        values[3] = 0;
+        values[CPUID_WORD_EAX] = 0;
+        values[CPUID_WORD_EBX] = 0;
+        values[CPUID_WORD_ECX] = 0;
+        values[CPUID_WORD_EDX] = 0;
+        return 0;
+    }
+
+    /* leaf 0x7 (Structured Extended Feature Flags) currently supports only subleafs 0 and 1, and
+     * must return all-zeros if the subleaf contains an invalid index (>1) */
+    if (leaf == EXTENDED_FEATURE_FLAGS_LEAF && subleaf > 1) {
+        values[CPUID_WORD_EAX] = 0;
+        values[CPUID_WORD_EBX] = 0;
+        values[CPUID_WORD_ECX] = 0;
+        values[CPUID_WORD_EDX] = 0;
         return 0;
     }
 
@@ -448,8 +463,7 @@ int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
 
     /* FIXME: these leaves may have more subleaves in the future, we need a better way of
      *        restricting subleaves (e.g., decide based on CPUID leaf 0x01) */
-    if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
-        (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
+    if ((leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2 && subleaf != 3) ||
         (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
