@@ -22,8 +22,11 @@
 
 #define DEFAULT_SERVERS "localhost:4433"
 
+/* must be treated as an opaque object by users */
 struct ra_tls_ctx {
     void* ssl;
+    void* net;
+    void* conf;
 };
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,

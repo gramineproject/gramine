@@ -43,6 +43,26 @@ struct thread_info {
 /* SSL/TLS + RA-TLS handshake is not thread-safe, use coarse-grained lock */
 static pthread_mutex_t g_handshake_lock;
 
+extern int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
+extern int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
+extern int secret_provision_common_close(mbedtls_ssl_context* ssl);
+
+int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
+    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
+    return secret_provision_common_write(ssl, buf, size);
+}
+
+int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
+    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
+    return secret_provision_common_read(ssl, buf, size);
+}
+
+int secret_provision_close(struct ra_tls_ctx* ctx) {
+    /* no need to free the ctx resources, this will be done in client_connection() */
+    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
+    return secret_provision_common_close(ssl);
+}
+
 static void* client_connection(void* data) {
     int ret;
     struct thread_info* ti = (struct thread_info*)data;
@@ -78,12 +98,11 @@ static void* client_connection(void* data) {
         goto out;
     }
 
-    struct ra_tls_ctx ctx = {.ssl = &ssl};
     uint8_t buf[128] = {0};
     static_assert(sizeof(buf) >= sizeof(SECRET_PROVISION_REQUEST),
                   "buffer must be sufficiently large to hold SECRET_PROVISION_REQUEST");
 
-    ret = secret_provision_read(&ctx, buf, sizeof(SECRET_PROVISION_REQUEST));
+    ret = secret_provision_common_read(&ssl, buf, sizeof(SECRET_PROVISION_REQUEST));
     if (ret < 0) {
         goto out;
     }
@@ -106,13 +125,13 @@ static void* client_connection(void* data) {
     memcpy(buf, SECRET_PROVISION_RESPONSE, sizeof(SECRET_PROVISION_RESPONSE));
     memcpy(buf + sizeof(SECRET_PROVISION_RESPONSE), &send_secret_size, sizeof(send_secret_size));
 
-    ret = secret_provision_write(&ctx, buf,
-                                 sizeof(SECRET_PROVISION_RESPONSE) + sizeof(send_secret_size));
+    ret = secret_provision_common_write(&ssl, buf, sizeof(SECRET_PROVISION_RESPONSE) +
+                                                   sizeof(send_secret_size));
     if (ret < 0) {
         goto out;
     }
 
-    ret = secret_provision_write(&ctx, ti->secret, ti->secret_size);
+    ret = secret_provision_common_write(&ssl, ti->secret, ti->secret_size);
     if (ret < 0) {
         goto out;
     }
@@ -120,9 +139,10 @@ static void* client_connection(void* data) {
     if (ti->f_cb) {
         /* pass ownership of SSL session with client to the caller; it is caller's responsibility
          * to gracefuly terminate the session using secret_provision_close() */
+        struct ra_tls_ctx ctx = {.ssl = &ssl, .net = /*unused*/NULL, .conf = /*unused*/NULL};
         ti->f_cb(&ctx);
     } else {
-        secret_provision_close(&ctx);
+        secret_provision_common_close(&ssl);
     }
 
 out:
