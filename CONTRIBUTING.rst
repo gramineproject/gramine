@@ -141,7 +141,7 @@ Reviewing Guidelines
    formatting fixes mixed with features, no moving files and changing them at
    the same time).
 #. Meaningful commit messages (it's much easier to get them right if commits are
-   really atomic). Should include which component was changed (Pal-{Linux,SGX}
+   really atomic). Should include which component was changed (PAL-{Linux,SGX}
    / LibOS / Docs / CI) in the format "[component] change description".
 #. Every PR description should include: what's the purpose of the changes, what
    is changed (and how, in case of redesigning a component), and how to test the
