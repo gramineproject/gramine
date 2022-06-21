@@ -29,9 +29,10 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
-#define CPU_VENDOR_LEAF     0x0
-#define AMX_TILE_INFO_LEAF  0x1D
-#define AMX_TMUL_INFO_LEAF  0x1E
+#define CPU_VENDOR_LEAF             0x0
+#define EXTENDED_FEATURE_FLAGS_LEAF 0x7
+#define AMX_TILE_INFO_LEAF          0x1D
+#define AMX_TMUL_INFO_LEAF          0x1E
 
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
@@ -114,6 +115,8 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
     return 0;
 }
 
+static uint32_t g_extended_feature_flags_max_supported_sub_leaves = 0;
+
 #define CPUID_CACHE_SIZE 64 /* cache only 64 distinct CPUID entries; sufficient for most apps */
 static struct pal_cpuid {
     unsigned int leaf, subleaf;
@@ -191,6 +194,12 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
         values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */
         values[CPUID_WORD_EDX] = 0x49656e69; /* 'ineI' */
         values[CPUID_WORD_ECX] = 0x6c65746e; /* 'ntel' */
+    } else if (leaf == EXTENDED_FEATURE_FLAGS_LEAF) {
+        if (subleaf == 0x0) {
+            values[CPUID_WORD_EAX] = g_extended_feature_flags_max_supported_sub_leaves;
+            values[CPUID_WORD_EBX] |= 1U << 0; /* SGX-enabled CPUs always support FSGSBASE */
+            values[CPUID_WORD_EBX] |= 1U << 2; /* SGX-enabled CPUs always report the SGX bit */
+        }
     } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
             case X87:
@@ -409,10 +418,21 @@ int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
      *       all-zeros on them (as if these leaves are reserved). It is unclear why this discrepancy
      *       exists, but we decided to emulate how actual CPUs behave. */
     if (leaf == 0x08 || leaf == 0x0C || leaf == 0x0E || leaf == 0x11 || leaf == 0x13) {
-        values[0] = 0;
-        values[1] = 0;
-        values[2] = 0;
-        values[3] = 0;
+        values[CPUID_WORD_EAX] = 0;
+        values[CPUID_WORD_EBX] = 0;
+        values[CPUID_WORD_ECX] = 0;
+        values[CPUID_WORD_EDX] = 0;
+        return 0;
+    }
+
+    /* leaf 0x7 (Structured Extended Feature Flags) must return all-zeros if the subleaf contains an
+     * invalid index (larger than max supported) */
+    if (leaf == EXTENDED_FEATURE_FLAGS_LEAF &&
+            subleaf > g_extended_feature_flags_max_supported_sub_leaves) {
+        values[CPUID_WORD_EAX] = 0;
+        values[CPUID_WORD_EBX] = 0;
+        values[CPUID_WORD_ECX] = 0;
+        values[CPUID_WORD_EDX] = 0;
         return 0;
     }
 
@@ -448,8 +468,7 @@ int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
 
     /* FIXME: these leaves may have more subleaves in the future, we need a better way of
      *        restricting subleaves (e.g., decide based on CPUID leaf 0x01) */
-    if ((leaf == 0x07 && subleaf != 0 && subleaf != 1) ||
-        (leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
+    if ((leaf == 0x0F && subleaf != 0 && subleaf != 1) ||
         (leaf == 0x10 && subleaf != 0 && subleaf != 1 && subleaf != 2 && subleaf != 3) ||
         (leaf == 0x14 && subleaf != 0 && subleaf != 1)) {
         /* leaf-specific checks: some leaves have only specific subleaves */
@@ -474,6 +493,20 @@ int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
 fail:
     log_error("Unrecognized leaf/subleaf in CPUID (EAX=0x%x, ECX=0x%x). Exiting...", leaf, subleaf);
     _PalProcessExit(1);
+}
+
+int init_cpuid(void) {
+    uint32_t values[4];
+    if (ocall_cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0x0, values) < 0)
+        return -PAL_ERROR_DENIED;
+
+    if (values[CPUID_WORD_EAX] > 1) {
+        /* max value for supported sub-leaves of "Extended Feature Flags" leaf is currently 1 */
+        return -PAL_ERROR_DENIED;
+    }
+
+    g_extended_feature_flags_max_supported_sub_leaves = values[CPUID_WORD_EAX];
+    return 0;
 }
 
 int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,

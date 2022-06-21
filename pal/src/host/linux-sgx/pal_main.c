@@ -511,6 +511,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     init_tsc();
     (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
+    ret = init_cpuid();
+    if (ret < 0) {
+        log_error("init_cpuid failed: %d", ret);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */

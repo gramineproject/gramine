@@ -107,6 +107,8 @@ bool is_tsc_usable(void);
 uint64_t get_tsc_hz(void);
 void init_tsc(void);
 
+int init_cpuid(void);
+
 int init_enclave(void);
 void init_untrusted_slab_mgr(void);
 
