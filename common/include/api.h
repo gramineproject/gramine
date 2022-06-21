@@ -8,13 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define INSIDE_API_H
+
 #ifdef USE_STDLIB
 #include <assert.h>
 #else
 #include "assert.h"
 #endif
-
-#define INSIDE_API_H
 
 #include "cpu.h"
 #include "list.h"
