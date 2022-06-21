@@ -454,7 +454,7 @@ Finally, let's modify the manifest file.  Open ``pytorch.manifest.template``
 with your favorite text editor.
 
 Replace the input files from ``sgx.trusted_files`` and move them to the encrypted
-FS mount:
+FS mount::
 
    fs.mounts = [
    ...
