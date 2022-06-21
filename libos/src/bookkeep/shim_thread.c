@@ -209,7 +209,7 @@ static int init_main_thread(void) {
         return pal_to_unix_errno(ret);;
     }
 
-    /* TODO: I believe there is some Pal allocated initial stack which could be reused by the first
+    /* TODO: I believe there is some PAL allocated initial stack which could be reused by the first
      * thread. Tracked in https://github.com/gramineproject/gramine/issues/84. */
     ret = alloc_thread_libos_stack(cur_thread);
     if (ret < 0) {

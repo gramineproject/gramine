@@ -70,7 +70,7 @@ struct loadcmd {
      *
      *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
-     *   The same struct is used also in LibOS/src/shim_rtld.c code.
+     *   The same struct is used also in libos/src/shim_rtld.c code.
      */
 
     /* Start of memory area */
@@ -384,7 +384,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
          * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
          *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed). Note
          *        that `PAL_PROT_WRITECOPY` is specified to prevent allocating memory in untrusted
-         *        memory in case of Linux-SGX PAL (see Linux-SGX/db_files.c:file_map).
+         *        memory in case of Linux-SGX PAL (see linux-sgx/db_files.c:file_map).
          */
         void* map_addr = NULL;
         ret = _DkStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,
@@ -661,7 +661,7 @@ noreturn void start_execution(const char** arguments, const char** environs) {
      *   RSP + 8+8*argc + 8+8*n      envp[n] = NULL
      *   RSP + 8+8*argc + 8+8*n + 8  auxv[0] = AT_NULL
      *
-     * See also the corresponding LibOS entrypoint: LibOS/src/arch/x86_64/start.S
+     * See also the corresponding LibOS entrypoint: libos/src/arch/x86_64/start.S
      */
     size_t arguments_num = 0;
     for (size_t i = 0; arguments[i]; i++)

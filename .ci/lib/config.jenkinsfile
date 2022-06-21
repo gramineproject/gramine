@@ -1,7 +1,7 @@
 env.MAKEOPTS = '-j8'
 
-python_platlib = sh(returnStdout: true, script: 'python3 Scripts/get-python-platlib.py "$PREFIX"')
-env.PYTHONPATH = python_platlib + ':' + env.WORKSPACE + '/Scripts'
+python_platlib = sh(returnStdout: true, script: 'python3 scripts/get-python-platlib.py "$PREFIX"')
+env.PYTHONPATH = python_platlib + ':' + env.WORKSPACE + '/scripts'
 
 // in Jenkins we can't write anything to $HOME, we must contain ourselves in $WORKSPACE
 env.XDG_CONFIG_HOME = env.WORKSPACE + '/XDG_CONFIG_HOME'

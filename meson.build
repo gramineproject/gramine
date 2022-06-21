@@ -17,7 +17,7 @@ project(
 )
 
 # we need this subdir() early, because we need scripts defined there for setting up global vars
-subdir('Scripts')
+subdir('scripts')
 
 prefix = get_option('prefix')
 pkglibdir = join_paths(get_option('libdir'), meson.project_name())
@@ -301,8 +301,8 @@ endif
 #
 
 subdir('common')
-subdir('Pal')
-subdir('LibOS')
+subdir('pal')
+subdir('libos')
 subdir('python')
 subdir('tools')
 

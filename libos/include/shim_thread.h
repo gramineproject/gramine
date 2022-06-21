@@ -96,7 +96,7 @@ struct shim_thread {
     /* If you need both locks, take `thread->signal_dispositions->lock` before `thread->lock`. */
     struct shim_signal_dispositions* signal_dispositions;
     struct shim_signal_queue signal_queue;
-    /* For the field below, see the explanation in "LibOS/src/bookkeep/shim_signal.c" near
+    /* For the field below, see the explanation in "libos/src/bookkeep/shim_signal.c" near
      * `g_process_pending_signals_cnt`. */
     uint64_t pending_signals;
 

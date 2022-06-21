@@ -5,7 +5,7 @@ set -eu -o pipefail
 top_dir="$(readlink -m "${BASH_SOURCE[0]}/../..")"
 
 # Also allow operation on a copy named ${orig_top_dir}.clean-check.${something}
-# I.e., .../gramine.clean-check.test/Scripts/clean-check will check:
+# I.e., .../gramine.clean-check.test/scripts/clean-check will check:
 # .../gramine.clean-check.test against .../gramine.clean-check.clean
 clean_dir="${top_dir%.clean-check.*}.clean-check.clean"
 

@@ -12,13 +12,13 @@ else
     FINDACTION="-exec clang-format -i {} +"
 fi
 
-find Pal LibOS tools \
+find pal libos tools \
     -path common/src/crypto/mbedtls -prune -o \
-    -path Pal/src/host/Linux-SGX/tools/common/cJSON.c -prune -o \
-    -path Pal/src/host/Linux-SGX/tools/common/cJSON.h -prune -o \
-    -path Pal/src/host/Linux-SGX/tools/common/cJSON-\*/cJSON.c -prune -o \
-    -path Pal/src/host/Linux-SGX/tools/common/cJSON-\*/cJSON.h -prune -o \
-    -path LibOS/test/ltp -prune -o \
-    -path LibOS/glibc\* -prune -o \
+    -path pal/src/host/linux-sgx/tools/common/cJSON.c -prune -o \
+    -path pal/src/host/linux-sgx/tools/common/cJSON.h -prune -o \
+    -path pal/src/host/linux-sgx/tools/common/cJSON-\*/cJSON.c -prune -o \
+    -path pal/src/host/linux-sgx/tools/common/cJSON-\*/cJSON.h -prune -o \
+    -path libos/test/ltp -prune -o \
+    -path libos/glibc\* -prune -o \
     \( -name \*.c -o -name \*.h \) \
     $FINDACTION

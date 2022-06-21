@@ -169,7 +169,7 @@ locking between processes when setting the user report data/target info or
 reading the report/quote.
 
 An example of this low-level interface can be found under
-``LibOS/test/regression/attestation.c``. Here is a C code snippet of how the
+``libos/test/regression/attestation.c``. Here is a C code snippet of how the
 remote attestation flow may look like in your application::
 
     sgx_report_data_t user_report_data = {0};
@@ -267,7 +267,7 @@ this RA-TLS certificate is tied to the enclavized application that generated it.
 RA-TLS is shipped as three libraries: ``ra_tls_attest.so``, EPID based
 ``ra_tls_verify_epid.so`` and DCAP/ECDSA based ``ra_tls_verify_dcap.so``.
 The interfaces exposed by these libraries can be found in the following header:
-:file:`Pal/src/host/Linux-SGX/tools/ra-tls/ra_tls.h`.
+:file:`pal/src/host/linux-sgx/tools/ra-tls/ra_tls.h`.
 
 The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-mbedtls``.
 

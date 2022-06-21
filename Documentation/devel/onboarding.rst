@@ -349,12 +349,12 @@ fine on native Linux but fails under Gramine::
 
 #. Add tests for this bug fix:
 
-   - The first option is to find an already existing Pal/LibOS regression test
+   - The first option is to find an already existing PAL/LibOS regression test
      that works with the buggy Gramine subsystem. For example, if you found a
-     bug in the UDP stack, look at the ``LibOS/test/regression/udp.c`` test.
+     bug in the UDP stack, look at the ``libos/test/regression/udp.c`` test.
      Find a place in this test where you can add the code that triggers the bug.
      Also add the corresponding check (if needed) in the Python test script
-     (``LibOS/test/regression/test_libos.py`` in case of LibOS regression
+     (``libos/test/regression/test_libos.py`` in case of LibOS regression
      tests).
 
    - The second option is to add a completely new test. Sometimes the bug
@@ -367,7 +367,7 @@ fine on native Linux but fails under Gramine::
      some LTP tests are currently disabled because they are known to trigger
      some bugs or unimplemented functionality. When you fix a bug, try to find
      LTP tests that were affected by this bug and re-enable them (see
-     ``gramine/LibOS/test/ltp/ltp.cfg`` file for the list of LTP tests).
+     ``gramine/libos/test/ltp/ltp.cfg`` file for the list of LTP tests).
 
    - The last option is to *not* add any new tests. This option is quite rare,
      but can be used in case of hard-to-reproduce bugs. For example, some bugs
@@ -386,27 +386,27 @@ fine on native Linux but fails under Gramine::
      publishing your bug fix::
 
          # build and run PAL regression tests
-         $ cd Pal/regression
+         $ cd pal/regression
          $ gramine-test pytest -v
          $ gramine-test --sgx pytest -v
 
          # build and run LibOS regression tests
-         $ cd LibOS/test/regression
+         $ cd libos/test/regression
          $ gramine-test pytest -v
          $ gramine-test --sgx pytest -v
 
          # build and run LibOS ABI tests (currently only for x86_64)
-         $ cd LibOS/test/abi/${arch}
+         $ cd libos/test/abi/${arch}
          $ gramine-test pytest -v
          $ gramine-test --sgx pytest -v
 
          # build and run LibOS FS tests
-         $ cd LibOS/test/fs
+         $ cd libos/test/fs
          $ gramine-test pytest -v
          $ gramine-test --sgx pytest -v
 
          # build and run LTP tests (only in non-SGX mode)
-         $ cd LibOS/test/ltp
+         $ cd libos/test/ltp
          $ make -j
          $ make regression
 
@@ -614,12 +614,12 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
    - Implement the main emulation function ``shim_do_some_syscall()``. If the
      system call belongs to some family of already-implemented system calls, add
      this function to the already-existing Gramine C file. Otherwise, create a
-     new C file under ``LibOS/src/sys/``.
+     new C file under ``libos/src/sys/``.
 
    - Implement the required sub-systems or components in general code of
      Gramine. For example, if you need to add new fields to the thread object,
-     modify ``LibOS/include/shim_thread.h`` and
-     ``LibOS/src/bookkeep/shim_thread.c``.
+     modify ``libos/include/shim_thread.h`` and
+     ``libos/src/bookkeep/shim_thread.c``.
 
    - If the system call cannot be resolved entirely inside the LibOS component
      of Gramine, and the current set of PAL API functions (``Dk..()`` functions)

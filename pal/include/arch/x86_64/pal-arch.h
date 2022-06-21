@@ -83,7 +83,7 @@ union pal_csgsfs {
 };
 
 /* Adopt Linux style fp layout, _libc_fpstate of glibc:
- * Because self-contained definition is needed for Pal definition,
+ * Because self-contained definition is needed for PAL definition,
  * same layout is defined with PAL prefix.
  */
 #define PAL_FP_XSTATE_MAGIC1      0x46505853U

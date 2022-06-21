@@ -22,6 +22,6 @@ Encrypted file tests assume that Gramine was built with SGX enabled (see comment
 in `test_enc.py`).
 
 ```
-cd $gramine/Pal/src/host/Linux-SGX/tools
-make install PREFIX=$gramine/LibOS/test/fs
+cd $gramine/pal/src/host/linux-sgx/tools
+make install PREFIX=$gramine/libos/test/fs
 ```

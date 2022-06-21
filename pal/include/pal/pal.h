@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-// TODO: fix this (but see Pal/include/arch/x86_64/pal-arch.h)
+// TODO: fix this (but see pal/include/arch/x86_64/pal-arch.h)
 #define INSIDE_PAL_H
 
 #if defined(__i386__) || defined(__x86_64__)

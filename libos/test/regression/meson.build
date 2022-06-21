@@ -156,10 +156,10 @@ if sgx
     tests += {
         'attestation': {
             # for `sgx_arch.h`
-            'include_directories': include_directories('../../../Pal/src/host/Linux-SGX'),
+            'include_directories': include_directories('../../../pal/src/host/linux-sgx'),
             'source': [
                 'attestation.c',
-                '../../../Pal/src/host/Linux-SGX/enclave_api.S',
+                '../../../pal/src/host/linux-sgx/enclave_api.S',
             ],
 
             'dependencies': mbedtls_static_dep,

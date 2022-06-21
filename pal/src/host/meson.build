@@ -1,10 +1,10 @@
-subdir('Linux-common')
+subdir('linux-common')
 if skeleton
-    subdir('Skeleton')
+    subdir('skeleton')
 endif
 if direct
-    subdir('Linux')
+    subdir('linux')
 endif
 if sgx
-    subdir('Linux-SGX')
+    subdir('linux-sgx')
 endif

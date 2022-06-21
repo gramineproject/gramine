@@ -49,7 +49,7 @@ if sgx
        'AttestationReport': {
             'include_directories': include_directories(
                 # for `sgx_arch.h`
-                join_paths('../src/host/Linux-SGX'),
+                join_paths('../src/host/linux-sgx'),
             ),
         },
    }
@@ -72,7 +72,7 @@ test_include_directories = [
         # for `pal.h`
         '../include/pal',
         join_paths('../include/arch', host_machine.cpu_family()),
-        join_paths('../include/arch', host_machine.cpu_family(), 'Linux'),
+        join_paths('../include/arch', host_machine.cpu_family(), 'linux'),
     ),
     common_inc,
 ]

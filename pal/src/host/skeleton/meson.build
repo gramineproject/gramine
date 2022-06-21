@@ -29,7 +29,7 @@ libpal_skeleton = shared_library('pal',
     include_directories: [
         includes_pal_common,
         include_directories(
-            '../../../include/arch/@0@/Skeleton'.format(host_machine.cpu_family()),
+            '../../../include/arch/@0@/skeleton'.format(host_machine.cpu_family()),
         ),
     ],
 

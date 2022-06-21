@@ -46,7 +46,7 @@ static inline void __shim_tcb_init(shim_tcb_t* shim_tcb) {
 static inline void shim_tcb_init(void) {
     PAL_TCB* tcb = pal_get_tcb();
     static_assert(sizeof(shim_tcb_t) <= sizeof(((PAL_TCB*)0)->libos_tcb),
-                  "Not enough space for LibOS TCB inside Pal TCB");
+                  "Not enough space for LibOS TCB inside PAL TCB");
     shim_tcb_t* shim_tcb = (shim_tcb_t*)tcb->libos_tcb;
     memset(shim_tcb, 0, sizeof(*shim_tcb));
     __shim_tcb_init(shim_tcb);

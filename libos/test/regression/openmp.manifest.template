@@ -4,7 +4,7 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.argv0_override = "{{ entrypoint }}"
 
 # Gramine optionally provides patched OpenMP runtime library that runs faster inside SGX enclaves
-# (execute `make -C LibOS gcc` to generate it). This library will replace the native one because
+# (execute `make -C libos gcc` to generate it). This library will replace the native one because
 # Gramine's Runtime path has priority in LD_LIBRARY_PATH.
 
 loader.env.LD_LIBRARY_PATH = "/lib:/usr/{{ arch_libdir }}"

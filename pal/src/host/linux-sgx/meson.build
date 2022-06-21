@@ -8,8 +8,8 @@ sgx_inc = [
     includes_pal_common,
     include_directories(
         '.',
-        '../../../include/arch/@0@/Linux'.format(host_machine.cpu_family()),
-        '../../../include/host/Linux-common',
+        '../../../include/arch/@0@/linux'.format(host_machine.cpu_family()),
+        '../../../include/host/linux-common',
     ),
 ]
 
@@ -149,7 +149,7 @@ libpal_sgx_urts = executable('loader',
         cflags_pal_sgx,
         cflags_sanitizers,
 
-        # URTS uses stack protector with standard parameters (not the ones defined for Pal/LibOS)
+        # URTS uses stack protector with standard parameters (not the ones defined for PAL/LibOS)
         '-fstack-protector-strong',
     ],
     link_args: [

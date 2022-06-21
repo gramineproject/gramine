@@ -153,7 +153,7 @@ syscalldb:
 
 #ifdef DEBUG
     # Pretend that this function (`syscalldb`) is called from somewhere inside a function called
-    # `__morestack`. This is the only way to have a backtrace in GDB spanning from LibOS/Pal,
+    # `__morestack`. This is the only way to have a backtrace in GDB spanning from LibOS/PAL,
     # through `syscalldb` to the user application code/libc, because GDB does not handle switching
     # stacks in the middle of backtrace, unless the function doing it is called `__morestack`.
     # Thanks GDB!

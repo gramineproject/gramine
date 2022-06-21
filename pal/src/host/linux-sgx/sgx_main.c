@@ -417,7 +417,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     ret = scan_enclave_binary(enclave_image, &pal_area->addr, &pal_area->size, &enclave_entry_addr);
     if (ret < 0) {
-        log_error("Scanning Pal binary (%s) failed: %d", enclave->libpal_uri, ret);
+        log_error("Scanning PAL binary (%s) failed: %d", enclave->libpal_uri, ret);
         goto out;
     }
 

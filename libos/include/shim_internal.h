@@ -124,7 +124,7 @@ void restore_sigreturn_context(PAL_CONTEXT* context, __sigset_t* new_mask);
  * Returns `true` if it was a syscall instruction (hence a syscall will be emulated).
  * Note that this function merely changes context, so the actual emulation is done upon returning
  * to that context.
- * Used e.g. in Linux-SGX Pal to handle `syscall` instruction.
+ * Used e.g. in Linux-SGX PAL to handle `syscall` instruction.
  */
 bool maybe_emulate_syscall(PAL_CONTEXT* context);
 

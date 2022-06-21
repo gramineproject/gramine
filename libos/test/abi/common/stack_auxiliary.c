@@ -14,7 +14,7 @@
 int verify_auxiliary(Elf64_auxv_t* auxv);
 
 /*
- * Set up in: LibOS/src/shim_rtld.c: execute_elf_object()
+ * Set up in: libos/src/shim_rtld.c: execute_elf_object()
  */
 static struct {
     uint64_t type;

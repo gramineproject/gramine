@@ -1,5 +1,5 @@
 /* Our PAL loader invokes this entrypoint with all registers unspecified, except %rsp.
- * For detailed description of the stack layout see Pal/src/db_rtld.c:start_execution().
+ * For detailed description of the stack layout see pal/src/db_rtld.c:start_execution().
  */
 
     .text
