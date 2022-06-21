@@ -9,14 +9,17 @@ stage('build') {
         cd initramfs_builder
         {
            echo '#!/bin/sh'
-           echo 'if test -n $SGX; then GRAMINE=gramine-sgx; else GRAMINE=gramine-direct; fi'
+           echo 'set -e'
            echo 'cd $PWD_FOR_VM'
            echo '( cd device-testing-tools/gramine-device-testing-module; insmod gramine-testing-dev.ko )'
 
            # only couple tests -- executing in a VM with virtio-9p-pci FS passthrough is very slow
            echo 'cd libos/test/regression'
-           echo 'gramine-test build helloworld; $GRAMINE helloworld'
-           echo 'gramine-test build device_ioctl; $GRAMINE device_ioctl'
+           echo 'gramine-test build'
+           echo 'gramine-test pytest -v -k test_001_helloworld'
+           echo 'gramine-test pytest -v -k test_003_device_ioctl'
+           echo 'gramine-test pytest -v -k test_004_device_ioctl_fail'
+           echo 'gramine-test pytest -v -k test_005_device_ioctl_parse_fail'
            echo 'echo "TESTS OK"'
            echo 'poweroff -n -f'
         } > new_init

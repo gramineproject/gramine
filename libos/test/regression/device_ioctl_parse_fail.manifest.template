@@ -1,0 +1,63 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/dev/gramine_test_dev", uri = "dev:/dev/gramine_test_dev" },
+]
+
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
+
+# Below IOCTL structs are intentionally modified to test IOCTL parsing (i.e. they don't really make
+# sense). Each IOCTL struct has a single error/limitation that should fail Gramine's IOCTL parser.
+
+# Sub-regions must be TOML tables and not e.g. strings
+sgx.ioctl_structs.subregion_is_not_a_table = [
+    "some dummy string",
+]
+
+# Negative size makes no sense
+sgx.ioctl_structs.negative_size = [
+    { size = -16 },
+]
+
+# Buffer is defined before its size is defined (parser doesn't "know" where buffer ends and fails)
+sgx.ioctl_structs.size_after_buffer_fail = [
+    { size = "buf_size", direction = "out" },
+    { size = 8, direction = "out", name = "buf_size" },
+]
+
+# Pointers can only be of size 8 (pointer size on x86-64 machines)
+sgx.ioctl_structs.pointer_of_wrong_size = [
+    { ptr = [ {size = 256 } ], size = 5 },
+]
+
+# Alignment can be specified only on the first sub-region
+sgx.ioctl_structs.alignment_specified_in_second_subregion = [
+    { size = 1, direction = "none" },
+    { size = 1, alignment = 16 },
+]
+
+# Direction field can only be one of "out", "in", "inout" and "none"
+sgx.ioctl_structs.wrong_direction_string = [
+    { size = 1, direction = "dummy" },
+]
+
+sgx.allowed_ioctls = [
+  { request_code = 0x8100,     struct = "not_real_struct" },                          # REWIND
+  { request_code = 0x8103,     struct = "subregion_is_not_a_table" },                 # GETSIZE
+  { request_code = 0x8104,     struct = "negative_size" },                            # CLEAR
+  { request_code = 0xc0208101, struct = "size_after_buffer_fail" },                   # WRITE
+  { request_code = 0xc0208102, struct = "pointer_of_wrong_size" },                    # READ
+  { request_code = 0x40108105, struct = "alignment_specified_in_second_subregion" },  # REPLACE_ARR
+  { request_code = 0x40108106, struct = "wrong_direction_string" },                   # REPLACE_LIST
+]

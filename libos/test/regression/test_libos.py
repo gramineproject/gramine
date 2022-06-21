@@ -1048,6 +1048,29 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_ioctl'])
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skipUnless(IS_VM and HAS_SGX, 'Requires /dev/gramine_test_dev and SGX')
+    def test_004_device_ioctl_fail(self):
+        try:
+            self.run_binary(['device_ioctl_fail'])
+            self.fail('device_ioctl_fail unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stdout = e.stdout.decode()
+            self.assertRegex(stdout, r'ioctl\(devfd, GRAMINE_TEST_DEV_IOCTL_REWIND\).*'
+                                     r'Function not implemented')
+
+    @unittest.skipUnless(IS_VM and HAS_SGX, 'Requires /dev/gramine_test_dev and SGX')
+    def test_005_device_ioctl_parse_fail(self):
+        stdout, stderr = self.run_binary(['device_ioctl_parse_fail'])
+        self.assertRegex(stderr, r'error: Invalid struct value of allowed IOCTL .* in manifest')
+        self.assertIn('error: IOCTL: each memory sub-region must be a TOML table', stderr)
+        self.assertIn('error: IOCTL: parsing of \'size\' field failed', stderr)
+        self.assertIn('error: IOCTL: cannot find \'buf_size\'', stderr)
+        self.assertIn('error: IOCTL: \'ptr\' cannot specify \'size\'', stderr)
+        self.assertIn('error: IOCTL: \'alignment\' may be specified only at beginning of mem '
+                      'region', stderr)
+        self.assertIn('error: IOCTL: parsing of \'direction\' field failed', stderr)
+        self.assertIn('TEST OK', stdout)
+
     def test_010_path(self):
         stdout, _ = self.run_binary(['proc_path'])
         self.assertIn('proc path test success', stdout)
