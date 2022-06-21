@@ -14,6 +14,8 @@
 #include "assert.h"
 #endif
 
+#define INSIDE_API_H
+
 #include "cpu.h"
 #include "list.h"
 #include "log.h"
@@ -443,3 +445,5 @@ static inline bool access_ok(const volatile void* addr, size_t size) {
 #if !defined(USE_STDLIB) && __USE_FORTIFY_LEVEL > 0
 # include "api_fortified.h"
 #endif
+
+#undef INSIDE_API_H

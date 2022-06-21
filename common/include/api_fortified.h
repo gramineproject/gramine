@@ -30,7 +30,7 @@
 
 #pragma once
 
-#ifndef API_H
+#ifndef INSIDE_API_H
 # error This file should only be included inside api.h.
 #endif
 

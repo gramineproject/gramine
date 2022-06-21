@@ -11,7 +11,10 @@
  * GRAMINE_SYSCALL assembly macro.
  */
 
-#pragma once
+/* We don't use `#pragma once` here because this header is used by our custom glibc build, and
+ * glibc's codebase and buildsystem is a mess. */
+#ifndef GRAMINE_ENTRY_API_H_
+#define GRAMINE_ENTRY_API_H_
 
 /* Offsets for GS register at which entry vectors can be found */
 #define GRAMINE_SYSCALL_OFFSET 24
@@ -68,3 +71,5 @@ static inline int gramine_run_test(const char* test_name) {
 }
 
 #endif /* __ASSEMBLER__ */
+
+#endif /* GRAMINE_ENTRY_API_H_ */
