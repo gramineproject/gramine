@@ -2,6 +2,8 @@
  * This is for enclave to make ocalls to untrusted runtime.
  */
 
+#pragma once
+
 #include <asm/stat.h>
 #include <linux/poll.h>
 #include <linux/socket.h>

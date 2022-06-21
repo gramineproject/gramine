@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stddef.h>
 
 #include "sgx_arch.h"

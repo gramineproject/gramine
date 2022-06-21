@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2020 Intel Labs */
 
+#pragma once
+
 #include <mbedtls/x509_crt.h>
 #include <stdint.h>
 

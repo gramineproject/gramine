@@ -3,8 +3,7 @@
  *                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
  */
 
-#ifndef __ARCH_GSGX_H__
-#define __ARCH_GSGX_H__
+#pragma once
 
 #ifndef __packed
 #define __packed __attribute__((packed))
@@ -60,5 +59,3 @@
 #ifndef SGX_INVALID_LICENSE
 #define SGX_INVALID_LICENSE     SGX_INVALID_EINITTOKEN
 #endif
-
-#endif /* __ARCH_GSGX_H__ */

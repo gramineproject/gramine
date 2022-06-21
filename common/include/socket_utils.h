@@ -3,6 +3,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#pragma once
+
 #include "linux_socket.h"
 
 void pal_to_linux_sockaddr(const struct pal_socket_addr* pal_addr,
