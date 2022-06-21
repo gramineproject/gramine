@@ -44,6 +44,7 @@ PalSegmentBaseGet
 PalSegmentBaseSet
 PalStreamChangeName
 PalStreamAttributesSetByHandle
+PalDeviceIoControl
 PalDebugMapAdd
 PalDebugMapRemove
 PalDebugDescribeLocation

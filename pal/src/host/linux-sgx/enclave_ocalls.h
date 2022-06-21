@@ -106,6 +106,8 @@ int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size);
 
 int ocall_eventfd(int flags);
 
+int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
+
 /*!
  * \brief Execute untrusted code in PAL to obtain a quote from the Quoting Enclave.
  *

@@ -16,3 +16,43 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_write = [
+    { size = 8, direction = "out", name = "buf_size" },    # buf_size
+    { ptr = [ {size = "buf_size", direction = "out"} ] },  # buf
+    { size = 8, direction = "inout" },                     # off
+    { size = 8, direction = "in" },                        # copied
+]
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_read = [
+    { size = 8, direction = "out", name = "buf_size" },   # buf_size
+    { ptr = [ {size = "buf_size", direction = "in"} ] },  # buf
+    { size = 8, direction = "inout" },                    # off
+    { size = 8, direction = "in" },                       # copied
+]
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
+    { size = 8, direction = "out", name = "replacements_cnt" },            # replacements_cnt
+    { array_len = "replacements_cnt", ptr = [                              # replacements_arr
+                                        { size = 2, direction = "out" },   # src, dst
+                                        { size = 6, direction = "none" },  # pad
+                                      ] },
+]
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
+    { size = 1, unit = 2, direction = "out" },       # src, dst; `unit` is just for testing
+    { size = 3, adjust = 3, direction = "none" },    # 6-byte pad; `adjust` is just for testing
+    { ptr = "gramine_test_dev_ioctl_replace_list" }, # next
+]
+
+sgx.allowed_ioctls = [
+  # three IOCTLs below test different "no struct needed" syntaxes of the `struct` key
+  { request_code = 0x8100, struct = "" },  # REWIND
+  { request_code = 0x8103 },               # GETSIZE
+  { request_code = 0x8104 },               # CLEAR
+
+  { request_code = 0xc0208101, struct = "gramine_test_dev_ioctl_write" },        # WRITE
+  { request_code = 0xc0208102, struct = "gramine_test_dev_ioctl_read" },         # READ
+  { request_code = 0x40108105, struct = "gramine_test_dev_ioctl_replace_arr" },  # REPLACE_ARR
+  { request_code = 0x40108106, struct = "gramine_test_dev_ioctl_replace_list" }, # REPLACE_LIST
+]
