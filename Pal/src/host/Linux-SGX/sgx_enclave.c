@@ -762,6 +762,13 @@ static long sgx_ocall_debug_describe_location(void* pms) {
 #endif
 }
 
+static long sgx_ocall_ioctl(void* pms) {
+    ms_ocall_ioctl_t* ms = (ms_ocall_ioctl_t*)pms;
+    ODEBUG(OCALL_IOCTL, ms);
+    long ret = DO_SYSCALL(ioctl, ms->ms_fd, ms->ms_cmd, ms->ms_arg);
+    return ret;
+}
+
 static long sgx_ocall_get_quote(void* pms) {
     ms_ocall_get_quote_t* ms = (ms_ocall_get_quote_t*)pms;
     ODEBUG(OCALL_GET_QUOTE, ms);
@@ -814,6 +821,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_DEBUG_MAP_REMOVE]         = sgx_ocall_debug_map_remove,
     [OCALL_DEBUG_DESCRIBE_LOCATION]  = sgx_ocall_debug_describe_location,
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
+    [OCALL_IOCTL]                    = sgx_ocall_ioctl,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
 };
 

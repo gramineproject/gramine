@@ -1959,6 +1959,34 @@ int ocall_eventfd(int flags) {
     return retval;
 }
 
+int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
+    int retval;
+    ms_ocall_ioctl_t* ms;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    WRITE_ONCE(ms->ms_fd, fd);
+    WRITE_ONCE(ms->ms_cmd, cmd);
+    WRITE_ONCE(ms->ms_arg, arg);
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_IOCTL, ms);
+    } while (retval == -EINTR);
+
+    if (retval < 0 && retval != -EBADF && retval != -EFAULT && retval != -EINVAL &&
+            retval != -ENOTTY) {
+        retval = -EPERM;
+    }
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}
+
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                     const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
     int retval;

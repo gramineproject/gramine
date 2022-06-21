@@ -13,6 +13,7 @@
 #include "shim_process.h"
 #include "shim_signal.h"
 #include "shim_table.h"
+#include "stat.h"
 
 static void signal_io(IDTYPE caller, void* arg) {
     __UNUSED(caller);
@@ -109,9 +110,28 @@ long shim_do_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             ret = 0;
             break;
         }
-        default:
-            ret = -ENOSYS;
+        default: {
+            lock(&g_dcache_lock);
+            bool is_host_dev = hdl->type == TYPE_CHROOT && hdl->dentry->inode &&
+                                   hdl->dentry->inode->type == S_IFCHR;
+            unlock(&g_dcache_lock);
+
+            if (!is_host_dev) {
+                ret = -ENOSYS;
+                break;
+            }
+
+            int cmd_ret;
+            ret = DkDeviceIoControl(hdl->pal_handle, cmd, arg, &cmd_ret);
+            if (ret < 0) {
+                ret = pal_to_unix_errno(ret);
+                break;
+            }
+
+            assert(ret == 0);
+            ret = cmd_ret;
             break;
+        }
     }
 
     put_handle(hdl);
