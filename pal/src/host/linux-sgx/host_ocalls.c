@@ -729,6 +729,11 @@ static long sgx_ocall_debug_describe_location(void* args) {
 #endif
 }
 
+static long sgx_ocall_ioctl(void* args) {
+    struct ocall_ioctl* ocall_ioctl_args = args;
+    return DO_SYSCALL(ioctl, ocall_ioctl_args->fd, ocall_ioctl_args->cmd, ocall_ioctl_args->arg);
+}
+
 static long sgx_ocall_get_quote(void* args) {
     struct ocall_get_quote* ocall_quote_args = args;
     return retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
@@ -797,6 +802,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_DEBUG_MAP_REMOVE]         = sgx_ocall_debug_map_remove,
     [OCALL_DEBUG_DESCRIBE_LOCATION]  = sgx_ocall_debug_describe_location,
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
+    [OCALL_IOCTL]                    = sgx_ocall_ioctl,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
     [OCALL_EDMM_MODIFY_PAGES_TYPE]   = sgx_ocall_edmm_modify_pages_type,
     [OCALL_EDMM_REMOVE_PAGES]        = sgx_ocall_edmm_remove_pages,

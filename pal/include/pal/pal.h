@@ -884,6 +884,29 @@ int PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
+ * \brief Perform a device-specific operation `cmd`.
+ *
+ * \param         handle   Handle of the device.
+ * \param         cmd      Device-dependent request/control code.
+ * \param[in,out] arg      Arbitrary argument to `cmd`. May be unused or used as a 64-bit integer
+ *                         or used as a pointer to a buffer that contains the data required to
+ *                         perform the operation as well as the data returned by the operation. For
+ *                         some PALs (e.g. Linux-SGX), the manifest must describe the layout of
+ *                         this buffer in order to correctly copy the data to/from the host.
+ * \param[out]    out_ret  Typically zero, but some device-specific operations return a
+ *                         device-specific value (in addition to or instead of \p arg).
+ *
+ * \returns 0 on success, negative error value on failure.
+ *
+ * Note that this function returns a negative error value only for PAL-internal errors (like errors
+ * during finding/parsing of the corresponding IOCTL data struct in the manifest). The host's error
+ * value, if any, is always passed in `out_ret`.
+ *
+ * This function corresponds to ioctl() in UNIX systems and DeviceIoControl() in Windows.
+ */
+int PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret);
+
+/*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
  * \param         user_report_data       Report data with arbitrary contents (typically uniquely
