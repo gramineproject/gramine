@@ -1,6 +1,10 @@
 /build
 /install
 
+# Rust build cache (for manual Cargo invokations and rust-analyzer,
+# resides in the builddir when ran through meson)
+/target
+
 # No editor backup files.
 *.sw*
 *.backup

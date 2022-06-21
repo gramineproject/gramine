@@ -28,7 +28,6 @@ endif
 if sgx
     python_src += [
         '_aesm_pb2.py',
-        'sgx_get_token.py',
         'sgx_sign.py',
         'sigstruct.py',
     ]

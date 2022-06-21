@@ -1,0 +1,6 @@
+# Meson-Cargo integration: create a separate profile to be customized by Scripts/run-cargo.sh
+# is used by Meson. We could instead always use the 'release' profile and then tune that, but
+# the fact that build outputs are in build/target/release might be confusing when the user wants
+# a debug build.
+[profile.meson]
+inherits = "release"
