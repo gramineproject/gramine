@@ -3,8 +3,7 @@
  *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#pragma once
 
 #define _GNU_SOURCE
 
@@ -102,5 +101,3 @@ void hexdump_mem(const void* data, size_t size);
  *  \details Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
  */
 int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask);
-
-#endif /* UTIL_H */

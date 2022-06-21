@@ -5,8 +5,7 @@
  * Definitions of types and functions for file system bookkeeping.
  */
 
-#ifndef _SHIM_FS_H_
-#define _SHIM_FS_H_
+#pragma once
 
 #include <asm/stat.h>
 #include <stdbool.h>
@@ -958,5 +957,3 @@ int chroot_dentry_uri(struct shim_dentry* dent, mode_t type, char** out_uri);
 
 int chroot_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
 int chroot_unlink(struct shim_dentry* dent);
-
-#endif /* _SHIM_FS_H_ */

@@ -1,5 +1,4 @@
-#ifndef PAL_LINUX_DEFS_H
-#define PAL_LINUX_DEFS_H
+#pragma once
 
 #define SSA_FRAME_NUM  2 /* one frame for normal context, one frame for signal preparation */
 
@@ -29,5 +28,3 @@
 
 #define MAX_ARGS_SIZE 10000000
 #define MAX_ENV_SIZE  10000000
-
-#endif /* PAL_LINUX_DEFS_H */

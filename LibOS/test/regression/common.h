@@ -4,8 +4,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef COMMON_H_
-#define COMMON_H_
+#pragma once
 
 #include <assert.h>
 #include <err.h>
@@ -31,5 +30,3 @@
     static_assert(IS_STATIC_ARRAY(arr), "not a static array");  \
     sizeof(arr) / sizeof(arr[0]);                               \
 })
-
-#endif /* COMMON_H_ */

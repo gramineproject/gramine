@@ -15,8 +15,7 @@
  * as sizes or masks). Consider changing it.
  */
 
-#ifndef GENERATED_OFFSETS_BUILD_H
-#define GENERATED_OFFSETS_BUILD_H
+#pragma once
 
 #include <stdint.h>
 
@@ -34,5 +33,3 @@ extern const char* generated_offsets_name;
 #define OFFSET_T(name, str_t, member) DEFINE(name, offsetof(str_t, member))
 
 #define OFFSET_END { NULL, 0 }
-
-#endif /* GENERATED_OFFSETS_BUILD_H */

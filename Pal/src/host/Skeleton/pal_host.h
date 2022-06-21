@@ -5,8 +5,7 @@
  * This file contains definition of PAL host ABI.
  */
 
-#ifndef PAL_HOST_H
-#define PAL_HOST_H
+#pragma once
 
 #ifndef IN_PAL
 #error "cannot be included outside PAL"
@@ -36,5 +35,3 @@ typedef struct {
      * implementation.
      */
 }* PAL_HANDLE;
-
-#endif /* PAL_HOST_H */

@@ -3,8 +3,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef PAL_INTERNAL_ARCH_H_
-#define PAL_INTERNAL_ARCH_H_
+#pragma once
 
 #include "assert.h"
 
@@ -21,5 +20,3 @@
         : "ri"(page_size), "c"(size / page_size)    \
         : "memory", "cc", "rdx"                     \
     )
-
-#endif // PAL_INTERNAL_ARCH_H_

@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef SGX_API_H
-#define SGX_API_H
+#pragma once
 
 #include "sgx_arch.h"
 
@@ -38,5 +37,3 @@ int sgx_report(const sgx_target_info_t* targetinfo, const void* reportdata, sgx_
  * Caller is responsible for parameter alignment: 512B for `keyrequest` and 16B for `key`.
  */
 int64_t sgx_getkey(sgx_key_request_t* keyrequest, sgx_key_128bit_t* key);
-
-#endif /* SGX_API_H */

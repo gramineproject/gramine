@@ -1,5 +1,4 @@
-#ifndef SYSCALL_H_
-#define SYSCALL_H_
+#pragma once
 
 #include <asm/unistd.h>
 #include <stdint.h>
@@ -35,5 +34,3 @@ noreturn void _DkThreadExit_asm_stub(uint32_t* thread_stack_spinlock, int* clear
 #define IS_PTR_ERR(val) ((unsigned long)(val) >= -4095UL)
 #define PTR_TO_ERR(val) ((long)(val))
 #define IS_UNIX_ERR(val) ((val) >= -133 /* EHWPOISON */ && (val) <= -1 /* EPERM */)
-
-#endif // SYSCALL_H_

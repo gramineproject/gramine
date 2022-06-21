@@ -95,6 +95,8 @@ Code formatting
 #. ``if``, ``else``, ``do``, ``for``, ``while``, ``switch`` and ``union`` should
    be followed by a space.
 
+#. Use ``#pragma once`` for include guards.
+
 #. Includes should be grouped and then sorted lexicographically. Groups should
    be separated using a |~| single empty line.
 

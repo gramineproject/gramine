@@ -3,6 +3,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#pragma once
+
 #include "linux_socket.h"
 #include "shim_handle.h"
 

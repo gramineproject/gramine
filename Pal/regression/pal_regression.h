@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
-#ifndef PAL_REGRESSION_H
-#define PAL_REGRESSION_H
+#pragma once
 
 #include "pal.h"
 
@@ -17,5 +16,3 @@ void __attribute__((format(printf, 2, 3))) _log(int level, const char* fmt, ...)
     }                                                                   \
     _x;                                                                 \
 })
-
-#endif /* PAL_REGRESSION_H */

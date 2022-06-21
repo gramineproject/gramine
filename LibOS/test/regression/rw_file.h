@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
-#ifndef RW_FILE_H_
-#define RW_FILE_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -29,5 +28,3 @@ ssize_t posix_fd_write(int fd, const char* buf, size_t count);
 /* Reads/writes at most `count` bytes into/from buffer `buf`. Uses stdio functions: fread/fwrite. */
 ssize_t stdio_fd_read(FILE* f, char* buf, size_t count);
 ssize_t stdio_fd_write(FILE* f, const char* buf, size_t count);
-
-#endif /* RW_FILE_H_ */

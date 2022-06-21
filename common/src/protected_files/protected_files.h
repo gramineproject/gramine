@@ -6,8 +6,7 @@
 
 /* See README.rst for protected files overview */
 
-#ifndef PROTECTED_FILES_H_
-#define PROTECTED_FILES_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -287,5 +286,3 @@ pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle);
  * \return PF status
  */
 pf_status_t pf_flush(pf_context_t* pf);
-
-#endif /* PROTECTED_FILES_H_ */

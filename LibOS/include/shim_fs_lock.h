@@ -7,9 +7,7 @@
  * File locks. Currently only POSIX locks are implemented.
  */
 
-#ifndef SHIM_FS_LOCK_H_
-#define SHIM_FS_LOCK_H_
-
+#pragma once
 
 #include <stdbool.h>
 
@@ -124,5 +122,3 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
  * send the returned value and `out_pl` in an IPC response.
  */
 int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posix_lock* out_pl);
-
-#endif /* SHIM_FS_LOCK_H_ */

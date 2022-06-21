@@ -4,9 +4,6 @@
  * Linux-SGX PAL uses Linux's ucontext.h
  */
 
-#ifndef _LINUX_SGX_UCONTEXT_H
-#define _LINUX_SGX_UCONTEXT_H
+#pragma once
 
 #include "Linux/ucontext.h"
-
-#endif /* _LINUX_SGX_UCONTEXT_H */

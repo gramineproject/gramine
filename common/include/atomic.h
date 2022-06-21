@@ -1,5 +1,4 @@
-#ifndef _ATOMIC_H_
-#define _ATOMIC_H_
+#pragma once
 
 /* Copyright (C) 2014 Stony Brook University
  * Copyright (C) 2017 Fortanix Inc, and University of North Carolina at Chapel Hill.
@@ -48,5 +47,3 @@ struct atomic_int {
 };
 
 #define ATOMIC_INIT(i)      { (i) }
-
-#endif /* _ATOMIC_H_ */

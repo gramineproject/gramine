@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2020 Intel Corporation */
 
-#ifndef ECALL_TYPES_H
-#define ECALL_TYPES_H
+#pragma once
 
 #include <stddef.h>
 
@@ -31,5 +30,3 @@ typedef struct {
 
     struct rpc_queue*  rpc_queue; /* pointer to RPC queue in untrusted mem */
 } ms_ecall_enclave_start_t;
-
-#endif /* ECALL_TYPES_H */

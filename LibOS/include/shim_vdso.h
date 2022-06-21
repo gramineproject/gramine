@@ -5,10 +5,7 @@
  *                               <isaku.yamahata at gmail.com>
  */
 
-#ifndef _SHIM_VDSO_H_
-#define _SHIM_VDSO_H_
+#pragma once
 
 extern const uint8_t vdso_so[];
 extern const size_t vdso_so_size;
-
-#endif /* _SHIM_VDSO_H_ */

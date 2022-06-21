@@ -2,8 +2,7 @@
 /* Copyright (C) 2021 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
-#ifndef LINUX_X86_64_UCONTEXT_H_
-#define LINUX_X86_64_UCONTEXT_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -113,5 +112,3 @@ static inline void ucontext_revert_syscall(ucontext_t* uc, unsigned int arch, in
     assert(rip[0] == 0x0f && rip[1] == 0x05);
     __UNUSED(rip);
 }
-
-#endif /* LINUX_X86_64_UCONTEXT_H_ */

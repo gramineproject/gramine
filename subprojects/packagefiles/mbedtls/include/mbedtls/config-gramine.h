@@ -8,13 +8,10 @@
  * `mbedtls/config.h`.
  */
 
-#ifndef MBEDTLS_CONFIG_GRAMINE_H_
-#define MBEDTLS_CONFIG_GRAMINE_H_
+#pragma once
 
 #include "mbedtls/config.h"
 
 #define MBEDTLS_CMAC_C
 
 #include "mbedtls/check_config.h"
-
-#endif /* MBEDTLS_CONFIG_GRAMINE_H_ */

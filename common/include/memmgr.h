@@ -5,8 +5,7 @@
  * This file contains implementation of fixed-size memory allocator.
  */
 
-#ifndef MEMMGR_H
-#define MEMMGR_H
+#pragma once
 
 #include <sys/mman.h>
 
@@ -267,5 +266,3 @@ static inline void free_mem_obj_to_mgr(MEM_MGR mgr, OBJ_TYPE* obj) {
     CHECK_LIST_HEAD(MEM_OBJ, &mgr->free_list, __list);
     SYSTEM_UNLOCK();
 }
-
-#endif /* MEMMGR_H */

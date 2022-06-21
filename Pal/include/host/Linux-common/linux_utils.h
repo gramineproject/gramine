@@ -1,5 +1,4 @@
-#ifndef _LINUX_UTILS_H
-#define _LINUX_UTILS_H
+#pragma once
 
 #include <linux/time.h>
 #include <linux/un.h>
@@ -45,5 +44,3 @@ int64_t time_ns_diff_from_now(struct timespec* ts);
 
 int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
                                  struct sockaddr_un* out_addr);
-
-#endif // _LINUX_UTILS_H

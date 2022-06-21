@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef _SHIM_INTERNAL_H_
-#define _SHIM_INTERNAL_H_
+#pragma once
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -297,5 +296,3 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp, elf
  * The implementation of this function depends on the used architecture.
  */
 noreturn void call_elf_entry(elf_addr_t entry, void* argp);
-
-#endif /* _SHIM_INTERNAL_H_ */

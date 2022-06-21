@@ -16,8 +16,7 @@
 
 /* TODO: Move trusted/allowed files implementation into a separate file (`enclave_tf.c`?) */
 
-#ifndef ENCLAVE_TF_H_
-#define ENCLAVE_TF_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -79,5 +78,3 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
 int init_trusted_files(void);
 int init_allowed_files(void);
-
-#endif /* ENCLAVE_TF_H_ */

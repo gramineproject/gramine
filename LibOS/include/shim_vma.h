@@ -7,8 +7,7 @@
  * Definitions of types and functions for VMA bookkeeping.
  */
 
-#ifndef _SHIM_VMA_H_
-#define _SHIM_VMA_H_
+#pragma once
 
 #include <linux/mman.h>
 #include <stdbool.h>
@@ -131,5 +130,3 @@ int msync_range(uintptr_t begin, uintptr_t end);
 int msync_handle(struct shim_handle* hdl);
 
 void debug_print_all_vmas(void);
-
-#endif /* _SHIM_VMA_H_ */

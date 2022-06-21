@@ -3,8 +3,7 @@
  *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
  */
 
-#ifndef TOPO_INFO_H_
-#define TOPO_INFO_H_
+#pragma once
 
 #include "pal.h"
 
@@ -15,5 +14,3 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count);
 
 /* Fills topo_info with CPU and NUMA topology from the host */
 int get_topology_info(struct pal_topo_info* topo_info);
-
-#endif // TOPO_INFO_H_

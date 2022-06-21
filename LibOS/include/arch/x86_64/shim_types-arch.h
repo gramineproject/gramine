@@ -1,5 +1,4 @@
-#ifndef _SHIM_TYPES_ARCH_H_
-#define _SHIM_TYPES_ARCH_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -14,5 +13,3 @@ typedef struct {
 } __sigset_t;
 
 #define RED_ZONE_SIZE 128
-
-#endif /* _SHIM_TYPES_ARCH_H_ */

@@ -3,8 +3,7 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#ifndef TOML_UTILS_H_
-#define TOML_UTILS_H_
+#pragma once
 
 #include "toml.h"
 
@@ -67,5 +66,3 @@ int toml_string_in(const toml_table_t* root, const char* key, char** retval);
  */
 int toml_sizestring_in(const toml_table_t* root, const char* key, uint64_t defaultval,
                        uint64_t* retval);
-
-#endif /* TOML_UTILS_H_ */

@@ -1,5 +1,4 @@
-#ifndef __LINUX_X86_64_SIGSET_H__
-#define __LINUX_X86_64_SIGSET_H__
+#pragma once
 
 /* __sig_atomic_t, __sigset_t, and related definitions.  Linux version.
    Copyright (C) 1991, 1992, 1994, 1996, 1997, 2007
@@ -86,5 +85,3 @@ __SIGSETFN(__sigaddset, ((__set->__val[__word] |= __mask), 0), )
 __SIGSETFN(__sigdelset, ((__set->__val[__word] &= ~__mask), 0), )
 
 #undef __SIGSETFN
-
-#endif /* __LINUX_X86_64_SIGSET_H__  */

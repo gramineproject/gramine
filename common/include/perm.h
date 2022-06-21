@@ -8,8 +8,7 @@
  * Inspired by Linux patch by Ingo Molnar (https://lwn.net/Articles/696231/).
  */
 
-#ifndef PERM_H
-#define PERM_H
+#pragma once
 
 #define PERM_r________  0400
 #define PERM_r__r_____  0440
@@ -30,5 +29,3 @@
 #define PERM_rwxr_xr_x  0755
 #define PERM_rwxrwxr_x  0775
 #define PERM_rwxrwxrwx  0777
-
-#endif /* PERM_H */

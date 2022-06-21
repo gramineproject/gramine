@@ -1,5 +1,4 @@
-#ifndef _SHIM_TCB_H_
-#define _SHIM_TCB_H_
+#pragma once
 
 #include "api.h"
 #include "assert.h"
@@ -56,5 +55,3 @@ static inline void shim_tcb_init(void) {
 static inline shim_tcb_t* shim_get_tcb(void) {
     return SHIM_TCB_GET(self);
 }
-
-#endif /* _SHIM_H_ */

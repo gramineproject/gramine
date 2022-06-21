@@ -3,8 +3,7 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
-#ifndef SHIM_SYSCALLS_H_
-#define SHIM_SYSCALLS_H_
+#pragma once
 
 /* TODO: This is required when building Gramine on systems with older headers. We should actually
  * have our own copy of headers of the kernel we emulate, not from the one which is used on the
@@ -52,5 +51,3 @@
 #ifndef __NR_syscalls
 #define __NR_syscalls 428
 #endif
-
-#endif /* SHIM_SYSCALLS_H_ */

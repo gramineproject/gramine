@@ -1,5 +1,4 @@
-#ifndef _SHIM_SIGNAL_H_
-#define _SHIM_SIGNAL_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -181,5 +180,3 @@ void fill_siginfo_code_and_status(siginfo_t* info, int signal, int exit_code);
 bool is_eintr_like(int ret);
 
 int do_nanosleep(uint64_t timeout_us, struct __kernel_timespec* rem);
-
-#endif /* _SHIM_SIGNAL_H_ */

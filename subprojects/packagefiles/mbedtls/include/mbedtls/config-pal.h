@@ -5,8 +5,7 @@
 
 /* This mbedTLS config is for v2.26.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
-#ifndef MBEDTLS_CONFIG_H
-#define MBEDTLS_CONFIG_H
+#pragma once
 
 #define MBEDTLS_AESNI_C
 #define MBEDTLS_AES_C
@@ -56,5 +55,3 @@ void free(void*);
 #define MBEDTLS_PLATFORM_STD_CALLOC   calloc
 #define MBEDTLS_PLATFORM_STD_FREE     free
 #define MBEDTLS_PLATFORM_STD_SNPRINTF snprintf
-
-#endif

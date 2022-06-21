@@ -5,8 +5,7 @@
  * Define a common interface for assertions that builds for both the PAL and libOS.
  */
 
-#ifndef ASSERT_H
-#define ASSERT_H
+#pragma once
 
 #include "callbacks.h"
 #include "log.h"
@@ -30,5 +29,3 @@
 #else
 #define assert(expr) ((void)0)
 #endif
-
-#endif /* ASSERT_H */

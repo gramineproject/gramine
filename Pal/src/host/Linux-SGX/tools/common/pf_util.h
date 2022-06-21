@@ -3,8 +3,7 @@
  *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
  */
 
-#ifndef PF_UTIL_H
-#define PF_UTIL_H
+#pragma once
 
 #include "protected_files.h"
 
@@ -46,5 +45,3 @@ pf_status_t mbedtls_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, cons
 
 /*! Load PF wrap key from file */
 int load_wrap_key(const char* wrap_key_path, pf_key_t* wrap_key);
-
-#endif

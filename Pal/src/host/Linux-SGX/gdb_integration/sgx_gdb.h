@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdint.h>
 
 #define MAX_DBG_THREADS 1024

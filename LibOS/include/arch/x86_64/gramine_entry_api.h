@@ -11,6 +11,8 @@
  * GRAMINE_SYSCALL assembly macro.
  */
 
+/* We don't use `#pragma once` here because this header is used by our custom glibc build, and
+ * glibc's codebase and buildsystem is a mess. */
 #ifndef GRAMINE_ENTRY_API_H_
 #define GRAMINE_ENTRY_API_H_
 

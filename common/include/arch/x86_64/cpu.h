@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 
-#ifndef CPU_H
-#define CPU_H
+#pragma once
 
 #include <stdint.h>
 #include <stdnoreturn.h>
@@ -102,5 +101,3 @@ static inline noreturn void die_or_inf_loop(void) {
 #define MB()  __asm__ __volatile__("mfence" ::: "memory")
 #define RMB() __asm__ __volatile__("lfence" ::: "memory")
 #define WMB() __asm__ __volatile__("sfence" ::: "memory")
-
-#endif /* CPU_H */

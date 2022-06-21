@@ -5,8 +5,7 @@
  * This file defines the list API for the PAL and Library OS.
  */
 
-#ifndef LIST_H
-#define LIST_H
+#pragma once
 
 // Use a new list implementation
 
@@ -345,5 +344,3 @@
         LISTP_DEL_INIT(NODE, OLD, FIELD);      \
         LISTP_ADD_TAIL(NODE, NEW, FIELD);      \
     } while (0)
-
-#endif  // LIST_H

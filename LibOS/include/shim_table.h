@@ -5,8 +5,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#ifndef _SHIM_TABLE_H_
-#define _SHIM_TABLE_H_
+#pragma once
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <asm/ldt.h>
@@ -217,5 +216,3 @@ long shim_do_sysinfo(struct sysinfo* info);
 #else /* __x86_64__ */
 #error "Unsupported platform"
 #endif
-
-#endif /* _SHIM_TABLE_H_ */

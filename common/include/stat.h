@@ -7,8 +7,7 @@
  * Linux file type permission macros.
  */
 
-#ifndef STAT_H
-#define STAT_H
+#pragma once
 
 #ifdef S_IFREG
 #error "Do not include <linux/stat.h> or <sys/stat.h> together with this file."
@@ -48,5 +47,3 @@
 #define S_IROTH 00004
 #define S_IWOTH 00002
 #define S_IXOTH 00001
-
-#endif /* STAT_H */

@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2017, Texas A&M University */
 
-#ifndef SGX_ATTEST_H
-#define SGX_ATTEST_H
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -94,5 +93,3 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   size_t* quote_len);
 
 #pragma pack(pop)
-
-#endif /* SGX_ATTEST_H */

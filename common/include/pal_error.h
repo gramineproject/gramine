@@ -5,8 +5,7 @@
  * This file contains definitions of PAL error codes.
  */
 
-#ifndef PAL_ERROR_H
-#define PAL_ERROR_H
+#pragma once
 
 #include <stddef.h>
 
@@ -62,5 +61,3 @@ typedef enum _pal_error_t {
 
 /* err - value of error code, either positive or negative */
 const char* pal_strerror(int err);
-
-#endif

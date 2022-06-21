@@ -8,13 +8,12 @@
  * This file contains definition of x86_64-specific aspects of PAL.
  */
 
-#ifndef PAL_H
+#ifndef INSIDE_PAL_H
 // TODO: fix this
 #error This header is usable only inside pal.h (due to a cyclic dependency).
 #endif
 
-#ifndef PAL_ARCH_H
-#define PAL_ARCH_H
+#pragma once
 
 #include <assert.h>
 #include <stdint.h>
@@ -275,5 +274,3 @@ static inline void pal_context_copy(PAL_CONTEXT* dst, PAL_CONTEXT* src) {
         dst->fpcw = src->fpregs->fpstate.cwd;
     }
 }
-
-#endif /* PAL_ARCH_H */

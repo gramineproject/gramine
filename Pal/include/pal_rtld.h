@@ -3,8 +3,7 @@
  * Copyright (C) 2021 Intel Labs
  */
 
-#ifndef PAL_RTLD_H
-#define PAL_RTLD_H
+#pragma once
 
 #include <endian.h>
 
@@ -60,5 +59,3 @@ int find_string_and_symbol_tables(elf_addr_t ehdr_addr, elf_addr_t base_addr,
                                   uint32_t* out_symbol_table_cnt);
 
 noreturn void start_execution(const char** arguments, const char** environs);
-
-#endif /* PAL_RTLD_H */

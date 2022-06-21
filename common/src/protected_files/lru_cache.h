@@ -7,8 +7,7 @@
 /* Least-recently used cache, used by the protected file implementation for optimizing
    data and MHT node access */
 
-#ifndef LRU_CACHE_H_
-#define LRU_CACHE_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -30,5 +29,3 @@ void* lruc_get_last(lruc_context_t* context);
 void lruc_remove_last(lruc_context_t* context);
 
 void lruc_test(void);
-
-#endif /* LRU_CACHE_H_ */

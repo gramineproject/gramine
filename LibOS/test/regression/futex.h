@@ -3,8 +3,7 @@
  * out and sparse annotations removed. Unfortunately we cannot use the host header, because we build
  * tests both against glibc and musl - on glibc based systems (like Ubuntu) musl cannot use it, due
  * to its location together with glibc headers. */
-#ifndef _UAPI_LINUX_FUTEX_H
-#define _UAPI_LINUX_FUTEX_H
+#pragma once
 
 /* Not seem to be needed. */
 //#include <linux/compiler.h>
@@ -154,5 +153,3 @@ struct robust_list_head {
 #define FUTEX_OP(op, oparg, cmp, cmparg) \
   (((op & 0xf) << 28) | ((cmp & 0xf) << 24)		\
    | ((oparg & 0xfff) << 12) | (cmparg & 0xfff))
-
-#endif /* _UAPI_LINUX_FUTEX_H */

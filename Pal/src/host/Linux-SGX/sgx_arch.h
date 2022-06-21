@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
-#ifndef SGX_ARCH_H
-#define SGX_ARCH_H
+#pragma once
 
 #define RED_ZONE_SIZE 128
 
@@ -435,4 +434,3 @@ typedef uint8_t sgx_key_128bit_t[16];
 #define RFLAGS_AC (1 << 18)
 
 #pragma pack(pop)
-#endif /* SGX_ARCH_H */

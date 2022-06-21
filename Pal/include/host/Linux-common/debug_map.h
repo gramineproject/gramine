@@ -10,8 +10,7 @@
  * maintained in an "outer" binary instead of the main PAL binary.
  */
 
-#ifndef DEBUG_MAP_H
-#define DEBUG_MAP_H
+#pragma once
 
 #include <stddef.h>
 #include <stdint.h>
@@ -41,5 +40,3 @@ int debug_map_init_from_proc_maps(void);
 /* Try to describe code location. Looks up the right debug map, and runs `addr2line` in a
  * subprocess. */
 int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size);
-
-#endif /* DEBUG_MAP_H */

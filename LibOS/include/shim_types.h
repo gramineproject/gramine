@@ -1,5 +1,4 @@
-#ifndef _SHIM_TYPES_H_
-#define _SHIM_TYPES_H_
+#pragma once
 
 #include <limits.h>
 #include <stdbool.h>
@@ -179,5 +178,3 @@ struct shim_lock {
 /* This is not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
 #define EPOLLNVAL ((uint32_t)0x00000020)
 #endif
-
-#endif /* _SHIM_TYPES_H_ */

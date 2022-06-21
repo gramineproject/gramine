@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
-#ifndef ENCLAVE_TF_STRUCTS_H_
-#define ENCLAVE_TF_STRUCTS_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -38,5 +37,3 @@ struct trusted_file {
     size_t uri_len;
     char uri[]; /* must be NULL-terminated */
 };
-
-#endif /* ENCLAVE_TF_STRUCTS_H_ */
