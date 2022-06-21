@@ -13,6 +13,7 @@ tests = {
     },
     'devfs': {},
     'device_passthrough': {},
+    'device_ioctl': {},
     'double_fork': {},
     'epoll_epollet': {},
     'epoll_test': {},

@@ -15,6 +15,7 @@ manifests = [
   "debug_log_inline",
   "devfs",
   "device_passthrough",
+  "device_ioctl",
   "double_fork",
   "env_from_file",
   "env_from_host",

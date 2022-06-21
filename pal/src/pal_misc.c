@@ -30,6 +30,10 @@ size_t PalMemoryAvailableQuota(void) {
     return _PalMemoryAvailableQuota();
 }
 
+int PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret) {
+    return _PalDeviceIoControl(handle, cmd, arg, out_ret);
+}
+
 #if defined(__x86_64__)
 int PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return _PalCpuIdRetrieve(leaf, subleaf, values);
