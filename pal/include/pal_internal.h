@@ -176,6 +176,7 @@ void _PalGetAvailableUserAddressRange(void** out_start, void** out_end);
 bool _PalCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _PalMemoryQuota(void);
 unsigned long _PalMemoryAvailableQuota(void);
+int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret);
 // Returns 0 on success, negative PAL code on failure
 int _PalGetCPUInfo(struct pal_cpu_info* info);
 

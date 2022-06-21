@@ -1,0 +1,72 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.argv0_override = "{{ entrypoint }}"
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/dev/gramine_test_dev", uri = "dev:/dev/gramine_test_dev" },
+]
+
+sgx.nonpie_binary = true
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
+
+# for IOCTLs without an argument (or with integer argument)
+sgx.ioctl_structs.gramine_test_dev_ioctl_dummy = [ ]
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REWIND.request = 0x3300
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REWIND.struct  = "gramine_test_dev_ioctl_dummy"
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.request = 0x3303
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.struct  = "gramine_test_dev_ioctl_dummy"
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_CLEAR.request = 0x3304
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_CLEAR.struct  = "gramine_test_dev_ioctl_dummy"
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_write = [
+    { size=8, type="out", name="buf_size" },     # buf_size
+    { ptr=[ {size="buf_size", type="out"} ] },   # buf
+    { size=8, type="inout" },                    # off
+    { adjust=-4, size=12, type="in" },           # copied; adjust is just for testing
+]
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_WRITE.request = 0xc0203301
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_WRITE.struct  = "gramine_test_dev_ioctl_write"
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_read = [
+    { size=8, type="out", name="buf_size" },     # buf_size
+    { ptr=[ {size="buf_size", type="in"} ] },    # buf
+    { size=8, type="inout" },                    # off
+    { adjust=-4, size=12, type="in" },           # copied; adjust is just for testing
+]
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_READ.request = 0xc0203302
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_READ.struct  = "gramine_test_dev_ioctl_read"
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
+    { size=8, type="out", name="replacements_cnt" },  # replacements_cnt
+    { size="replacements_cnt", ptr=[                  # replacements_arr
+                                     { size=2, units=1, type="out" },  # src, dst
+                                     { size=6, units=1, type="none" }, # pad
+                               ] },
+]
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_ARR.request = 0x40103305
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_ARR.struct  = "gramine_test_dev_ioctl_replace_arr"
+
+sgx.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
+    { size=2, units=1, type="out" },  # src, dst
+    { size=6, units=1, type="none" }, # pad
+    { ptr="this" },                   # next
+]
+
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_LIST.request = 0x40103306
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_LIST.struct  = "gramine_test_dev_ioctl_replace_list"

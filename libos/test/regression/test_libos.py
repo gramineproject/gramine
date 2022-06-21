@@ -947,6 +947,10 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_passthrough'])
         self.assertIn('TEST OK', stdout)
 
+    def test_003_device_ioctl(self):
+        stdout, _ = self.run_binary(['device_ioctl'])
+        self.assertIn('TEST OK', stdout)
+
     def test_010_path(self):
         stdout, _ = self.run_binary(['proc_path'])
         self.assertIn('proc path test success', stdout)
