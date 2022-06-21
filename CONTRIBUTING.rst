@@ -141,7 +141,7 @@ Reviewing Guidelines
    formatting fixes mixed with features, no moving files and changing them at
    the same time).
 #. Meaningful commit messages (it's much easier to get them right if commits are
-   really atomic). Should include which component was changed (Pal-{Linux,SGX}
+   really atomic). Should include which component was changed (PAL-{Linux,SGX}
    / LibOS / Docs / CI) in the format "[component] change description".
 #. Every PR description should include: what's the purpose of the changes, what
    is changed (and how, in case of redesigning a component), and how to test the
@@ -201,12 +201,12 @@ directory with ``-Dtests=enabled`` and install Gramine::
 
 To run the PAL tests::
 
-   cd Pal/regression
+   cd pal/regression
    gramine-test pytest -v
 
 For SGX, one needs to do the following::
 
-   cd Pal/regression
+   cd pal/regression
    gramine-test --sgx pytest -v
 
 It is also possible to run a subset of tests::
@@ -231,7 +231,7 @@ For more information, run :command:`gramine-test --help` and
 :command:`gramine-test <command> --help`.
 
 The LibOS unit tests work similarly, and are under
-:file:`LibOS/test/regression`.
+:file:`libos/test/regression`.
 
 LTP
 ^^^
@@ -241,7 +241,7 @@ currently only supported on the Linux PAL.
 
 To run these tests::
 
-   cd LibOS/test/ltp
+   cd libos/test/ltp
    # consider -j$(nproc) or similar to parallelize and improve the build time.
    make
    make regression
@@ -251,7 +251,7 @@ To run these tests::
    python3 -m pytest -v -k chmod01
 
 For more information on how to run the ltp tests, please refer to
-:file:`LibOS/test/ltp/README.rst`.
+:file:`libos/test/ltp/README.rst`.
 
 
 Management Team

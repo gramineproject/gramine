@@ -2,24 +2,24 @@ stage('test') {
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
-                cd Pal/regression
+                cd pal/regression
                 gramine-test build -v
                 python3 -m pytest -v --junit-xml pal-regression.xml
             '''
         } finally {
-            junit 'Pal/regression/pal-regression.xml'
+            junit 'pal/regression/pal-regression.xml'
         }
     }
 
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
-                cd LibOS/test/regression
+                cd libos/test/regression
                 RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {
-            junit 'LibOS/test/regression/libos-regression.xml'
+            junit 'libos/test/regression/libos-regression.xml'
         }
     }
 
@@ -28,7 +28,7 @@ stage('test') {
             try {
                 sh '''
                     export GRAMINE_MUSL=1
-                    cd LibOS/test/regression
+                    cd libos/test/regression
                     # For some unknown reason it fails without this clean on sgx-18.04 pipeline
                     gramine-test clean
                     RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
@@ -36,7 +36,7 @@ stage('test') {
                     python3 -m pytest -v --junit-xml libos-regression-musl.xml
                 '''
             } finally {
-                junit 'LibOS/test/regression/libos-regression-musl.xml'
+                junit 'libos/test/regression/libos-regression-musl.xml'
             }
         }
     }
@@ -44,24 +44,24 @@ stage('test') {
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
-                cd LibOS/test/abi/x86_64
+                cd libos/test/abi/x86_64
                 gramine-test build -v
                 python3 -m pytest -v --junit-xml abi.xml
             '''
         } finally {
-            junit 'LibOS/test/abi/x86_64/*.xml'
+            junit 'libos/test/abi/x86_64/*.xml'
         }
     }
 
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
-                cd LibOS/test/fs
+                cd libos/test/fs
                 gramine-test build -v
                 python3 -m pytest -v --junit-xml fs.xml
             '''
         } finally {
-            junit 'LibOS/test/fs/*.xml'
+            junit 'libos/test/fs/*.xml'
         }
     }
 }

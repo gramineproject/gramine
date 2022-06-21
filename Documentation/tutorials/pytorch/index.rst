@@ -375,7 +375,7 @@ We will also use the reference implementation of Secret Provisioning found under
 so build and copy all the relevant files from there::
 
    cd <gramine repository>/CI-Examples/ra-tls-secret-prov
-   make -C ../../Pal/src/host/Linux-SGX/tools/ra-tls dcap
+   make -C ../../pal/src/host/linux-sgx/tools/ra-tls dcap
    make dcap pf_crypt
 
 The second line in the above snippet creates Gramine-specific DCAP libraries
@@ -493,7 +493,7 @@ files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
 re-use the same ``ssl/`` directory and specify ``localhost``. For more info on
 the used environment variables and other manifest options, see `here
-<https://github.com/gramineproject/gramine/tree/master/Pal/src/host/Linux-SGX/tools#secret-provisioning-libraries>`__::
+<https://github.com/gramineproject/gramine/tree/master/pal/src/host/linux-sgx/tools#secret-provisioning-libraries>`__::
 
    sgx.remote_attestation = "dcap"  # this tutorial uses DCAP attestation only
 

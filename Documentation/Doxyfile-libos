@@ -2,5 +2,5 @@
 PROJECT_NAME = "LibOS"
 OUTPUT_DIRECTORY = _build/doxygen-libos
 INPUT = \
-    ../LibOS/include \
-    ../LibOS/src
+    ../libos/include \
+    ../libos/src

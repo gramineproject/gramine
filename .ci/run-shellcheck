@@ -9,10 +9,10 @@ LC_ALL=C.UTF-8 shellcheck "$@" \
     CI-Examples/common_tools/benchmark-http.sh \
     CI-Examples/python/run-tests.sh \
     tools/gramine.in \
-    Scripts/clean-check \
-    Scripts/clean-check-prepare \
-    Scripts/clean-check-test-copy \
-    Scripts/download \
-    Scripts/gitignore-test \
+    scripts/clean-check \
+    scripts/clean-check-prepare \
+    scripts/clean-check-test-copy \
+    scripts/download \
+    scripts/gitignore-test \
     .ci/run-pylint \
     .ci/run-shellcheck

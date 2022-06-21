@@ -22,9 +22,9 @@ Now you need to add an appropriate entry in the syscalls table in
 ------------------------
 
 You can add the function body of ``shim_do_sched_setaffinity`` in a new source
-file or any existing source file in :file:`LibOS/src/sys`.
+file or any existing source file in :file:`libos/src/sys`.
 
-For example, in :file:`LibOS/src/sys/shim_sched.c`::
+For example, in :file:`libos/src/sys/shim_sched.c`::
 
    long shim_do_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr) {
       /* code for implementing the semantics of sched_setaffinity */
@@ -40,7 +40,7 @@ sometimes the OS features needed involve low-level operations inside the host OS
 and cannot be emulated inside the library OS. Therefore, you may have to add
 a |~| few new PAL calls to the existing interface.
 
-To add a |~| new PAL call, first modify :file:`Pal/include/pal/pal.h`. Define
+To add a |~| new PAL call, first modify :file:`pal/include/pal/pal.h`. Define
 the PAL call::
 
    bool DkThreadSetCPUAffinity(size_t cpu_num, PAL_IDX* cpu_indexes);

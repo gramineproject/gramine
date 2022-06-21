@@ -16,8 +16,8 @@ DEBUG="$7"
 shift 7
 
 CFLAGS="\
-    -I$(realpath "$CURRENT_SOURCE_DIR")/../../LibOS/include \
-    -I$(realpath "$CURRENT_SOURCE_DIR")/../../LibOS/include/arch/$CPU_FAMILY \
+    -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include \
+    -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include/arch/$CPU_FAMILY \
 "
 export CFLAGS
 

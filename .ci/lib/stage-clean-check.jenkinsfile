@@ -11,7 +11,7 @@ stage('clean-check') {
 
         REL_PREFIX=$(realpath "$PREFIX" --relative-to=.)
 
-        cd "$(./Scripts/clean-check-test-copy)"
+        cd "$(./scripts/clean-check-test-copy)"
 
         # Remove our copy of $PREFIX (inside the copied source tree)
         rm -rf "$REL_PREFIX"
@@ -20,15 +20,15 @@ stage('clean-check') {
         # root, and keeps cache there
         rm -rf .pytest_cache
 
-        make -C LibOS/test/regression clean
-        make -C LibOS/test/fs clean
+        make -C libos/test/regression clean
+        make -C libos/test/fs clean
 
-        gramine-test -C LibOS/test/abi/x86_64 clean
-        rm -rf LibOS/test/abi/x86_64/.pytest_cache \
-               LibOS/test/abi/x86_64/__pycache__ \
-               LibOS/test/abi/x86_64/*.xml
+        gramine-test -C libos/test/abi/x86_64 clean
+        rm -rf libos/test/abi/x86_64/.pytest_cache \
+               libos/test/abi/x86_64/__pycache__ \
+               libos/test/abi/x86_64/*.xml
 
-        make -C Pal/regression clean
+        make -C pal/regression clean
 
         make -C CI-Examples/helloworld clean
         make -C CI-Examples/python clean
@@ -45,10 +45,10 @@ stage('clean-check') {
         make -C CI-Examples/ra-tls-mbedtls distclean
         make -C CI-Examples/ra-tls-secret-prov distclean
 
-        make -C LibOS/test/ltp clean
+        make -C libos/test/ltp clean
         # LTP's make clean is broken, see https://github.com/linux-test-project/ltp/issues/559
-        rm -rf /tmp/*.clean-check.clean/LibOS/test/ltp/src
-        rm -rf LibOS/test/ltp/src
+        rm -rf /tmp/*.clean-check.clean/libos/test/ltp/src
+        rm -rf libos/test/ltp/src
 
         # python/ subdir does not have makefiles, so no clean
         rm -rf /tmp/*.clean-check.clean/python/graminelibos/__pycache__
@@ -61,7 +61,7 @@ stage('clean-check') {
             subprojects/*-* \
             subprojects/packagecache
 
-        ./Scripts/clean-check
+        ./scripts/clean-check
     '''
 
     /*
@@ -70,6 +70,6 @@ stage('clean-check') {
      */
     sh 'rm -rf "$PREFIX"'
     sh '''
-        ./Scripts/gitignore-test
+        ./scripts/gitignore-test
     '''
 }

@@ -11,9 +11,9 @@ if [ -z "$PYLINT" ]; then
 fi
 
 find . -name \*.py \
-    -and -not -path ./LibOS/test/ltp/src/\* \
-    -and -not -path ./LibOS/test/ltp/build/\* \
-    -and -not -path ./LibOS/test/ltp/install/\* \
+    -and -not -path ./libos/test/ltp/src/\* \
+    -and -not -path ./libos/test/ltp/build/\* \
+    -and -not -path ./libos/test/ltp/install/\* \
     -and -not -name ninja_syntax.py \
 | sed 's/./\\&/g' \
 | xargs "${PYLINT}" "$@" \

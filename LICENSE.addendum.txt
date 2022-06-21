@@ -13,9 +13,9 @@ Ninja (python/graminelibos/ninja_syntax.py) - Apache 2.0
 
 A number of files taken from other C libraries:
 * glibc - LGPL
- ** Pal/include/elf/elf.h
+ ** pal/include/elf/elf.h
  ** common/src/network/hton.c
- ** Pal/include/arch/x86_64/Linux/ - whole directory - for signal API definitions
+ ** pal/include/arch/x86_64/linux/ - whole directory - for signal API definitions
  ** We also build a patched glibc
 
 * musl - MIT

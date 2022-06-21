@@ -21,8 +21,8 @@ CXX=g++
 AS=gcc
 CFLAGS="-O2 -Wno-unused-values $EXTRA_CFLAGS"
 CPPFLAGS="\
-    -I$(realpath "$CURRENT_SOURCE_DIR")/../../LibOS/include \
-    -I$(realpath "$CURRENT_SOURCE_DIR")/../../LibOS/include/arch/$CPU_FAMILY \
+    -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include \
+    -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include/arch/$CPU_FAMILY \
 "
 export CC CXX AS CFLAGS CPPFLAGS
 
