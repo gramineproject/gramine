@@ -26,24 +26,29 @@
 #include "shim_table.h"
 #include "shim_thread.h"
 
-#define FCNTL_SETFL_MASK (O_APPEND | O_NONBLOCK)
+#define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 
-static int _set_handle_flags(struct shim_handle* hdl, unsigned long arg) {
-    if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->setflags) {
-        int ret = hdl->fs->fs_ops->setflags(hdl, arg & FCNTL_SETFL_MASK);
-        if (ret < 0) {
-            return ret;
-        }
-    }
-    hdl->flags = (hdl->flags & ~FCNTL_SETFL_MASK) | (arg & FCNTL_SETFL_MASK);
+static int generic_set_flags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+    /* TODO: DOES THIS WORK LOL
+     * The old version of this code did this, but this seem to be incorrect. If a handle type allows
+     * for setting some flags without actually doing anything with them immediately, it should have
+     * a `setflags` callback implementation. */
+    lock(&handle->lock);
+    handle->flags = (handle->flags & ~mask) | flags;
+    unlock(&handle->lock);
     return 0;
 }
 
-int set_handle_nonblocking(struct shim_handle* hdl, bool on) {
-    lock(&hdl->lock);
-    int ret = _set_handle_flags(hdl, on ? hdl->flags | O_NONBLOCK : hdl->flags & ~O_NONBLOCK);
-    unlock(&hdl->lock);
-    return ret;
+static int set_handle_flags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+    flags &= mask;
+    if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->setflags) {
+        return handle->fs->fs_ops->setflags(handle, flags, mask);
+    }
+    return generic_set_flags(handle, flags, mask);
+}
+
+int set_handle_nonblocking(struct shim_handle* handle, bool on) {
+    return set_handle_flags(handle, on ? O_NONBLOCK : 0, O_NONBLOCK);
 }
 
 /*
@@ -177,9 +182,7 @@ long shim_do_fcntl(int fd, int cmd, unsigned long arg) {
 
         /* F_SETFL (int) */
         case F_SETFL:
-            lock(&hdl->lock);
-            ret = _set_handle_flags(hdl, arg);
-            unlock(&hdl->lock);
+            ret = set_handle_flags(hdl, arg, FCNTL_SETFL_MASK);
             break;
 
         /* F_SETLK, F_SETLKW (struct flock*): see `shim_fs_lock.h` for caveats */

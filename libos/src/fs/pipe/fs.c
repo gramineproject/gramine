@@ -158,35 +158,43 @@ static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
     return 0;
 }
 
-static int pipe_setflags(struct shim_handle* hdl, int flags) {
-    if (!hdl->pal_handle)
+static int pipe_setflags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+    assert(mask != 0);
+    assert((flags & ~mask) == 0);
+
+    /* TODO: what is this check? Why it has no locking? */
+    if (!handle->pal_handle)
         return 0;
 
+    if (!WITHIN_MASK(flags, O_NONBLOCK)) {
+        return -EINVAL;
+    }
+
+    lock(&handle->lock);
+
     PAL_STREAM_ATTR attr;
-
-    int ret = DkStreamAttributesQueryByHandle(hdl->pal_handle, &attr);
+    int ret = DkStreamAttributesQueryByHandle(handle->pal_handle, &attr);
     if (ret < 0) {
-        return pal_to_unix_errno(ret);
+        ret = pal_to_unix_errno(ret);
+        goto out;
     }
 
-    if (attr.nonblocking) {
-        if (flags & O_NONBLOCK)
-            return 0;
-
-        attr.nonblocking = false;
-    } else {
-        if (!(flags & O_NONBLOCK))
-            return 0;
-
-        attr.nonblocking = true;
+    bool nonblocking = flags & O_NONBLOCK;
+    if (attr.nonblocking != nonblocking) {
+        attr.nonblocking = nonblocking;
+        ret = DkStreamAttributesSetByHandle(handle->pal_handle, &attr);
+        if (ret < 0) {
+            ret = pal_to_unix_errno(ret);
+            goto out;
+        }
     }
 
-    ret = DkStreamAttributesSetByHandle(hdl->pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
+    handle->flags = (handle->flags & ~mask) | flags;
+    ret = 0;
 
-    return 0;
+out:
+    unlock(&handle->lock);
+    return ret;
 }
 
 static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
@@ -199,13 +207,13 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
      *        unless the other end has already been opened". We cannot enforce this failure since
      *        Gramine doesn't know whether the other process already opened this FIFO. */
 
-    if (flags & O_RDWR) {
+    if ((flags & O_ACCMODE) == O_RDWR) {
         /* POSIX disallows FIFOs opened for read-write, but Linux allows it. We must choose only
          * one end (read or write) in our emulation, so we treat such FIFOs as read-only. This
          * covers most apps seen in the wild (in particular, LTP apps). */
         log_warning("FIFO (named pipe) '%s' cannot be opened in read-write mode in Gramine. "
                     "Treating it as read-only.", dent->mount->path);
-        flags = O_RDONLY;
+        flags = (flags & ~O_ACCMODE) | O_RDONLY;
     }
 
     int fd;
@@ -234,7 +242,7 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
 
     if (flags & O_NONBLOCK) {
         /* FIFOs were created in blocking mode (see shim_do_mknodat), change their attributes */
-        int ret = pipe_setflags(fifo_hdl, flags);
+        int ret = pipe_setflags(fifo_hdl, flags & O_NONBLOCK, O_NONBLOCK);
         if (ret < 0) {
             put_handle(fifo_hdl);
             return ret;

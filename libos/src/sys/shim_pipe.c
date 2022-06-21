@@ -52,8 +52,10 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
         goto out;
     }
 
-    PAL_HANDLE tmp = srv->pal_handle;
+    assert(!srv->pal_handle);
+    assert(!cli->pal_handle);
     srv->pal_handle = hdl1;
+    cli->pal_handle = hdl2;
 
     assert(!srv->uri);
     assert(!cli->uri);
@@ -71,13 +73,10 @@ static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int fl
 
         ret = set_handle_nonblocking(srv, /*on=*/true);
         if (ret < 0) {
-            /* Restore original handle, if any. */
-            srv->pal_handle = tmp;
             goto out;
         }
     }
 
-    cli->pal_handle = hdl2;
     ret = 0;
 
 out:;
