@@ -29,11 +29,11 @@ throughput_in_bytes() {
     if [ -z "$THROUGHPUT_UNIT" ]; then
         THROUGHPUT=$THROUGHPUT_VAL
     elif [ "$THROUGHPUT_UNIT" = "k" ]; then
-        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000"`
+        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000")
     elif [ "$THROUGHPUT_UNIT" = "M" ]; then
-        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000000"`
+        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000000")
     elif [ "$THROUGHPUT_UNIT" = "G" ]; then
-        THROUGHPUT=`bc <<< "$THROUGHPUT_VAL*1000000000"`
+        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000000000")
     else
         THROUGHPUT=0
     fi
@@ -52,13 +52,13 @@ latency_in_milliseconds() {
     if [ -z "$LATENCY_UNIT" ] || [ "$LATENCY_UNIT" = "ms" ]; then
         LATENCY=$LATENCY_VAL
     elif [ "$LATENCY_UNIT" = "us" ]; then
-        LATENCY=`bc <<< "scale=3; $LATENCY_VAL/1000"`
+        LATENCY=$(bc <<< "scale=3; $LATENCY_VAL/1000")
     elif [ "$LATENCY_UNIT" = "s" ]; then
-        LATENCY=`bc <<< "$LATENCY_VAL*1000"`
+        LATENCY=$(bc <<< "$LATENCY_VAL*1000")
     elif [ "$LATENCY_UNIT" = "m" ]; then
-        LATENCY=`bc <<< "$LATENCY_VAL*1000*60"`
+        LATENCY=$(bc <<< "$LATENCY_VAL*1000*60")
     elif [ "$LATENCY_UNIT" = "h" ]; then
-        LATENCY=`bc <<< "$LATENCY_VAL*1000*3600"`
+        LATENCY=$(bc <<< "$LATENCY_VAL*1000*3600")
     else
         LATENCY=0
     fi
@@ -78,13 +78,13 @@ do
         sleep 5
 
         THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
-        THROUGHPUT=$(throughput_in_bytes $THROUGHPUT_STR)
+        THROUGHPUT=$(throughput_in_bytes "$THROUGHPUT_STR")
         if [ "$THROUGHPUT" = "0" ]; then
             echo "Throughput is zero!"; exit 1;
         fi
 
         LATENCY_STR=$(grep -m1 "Latency" OUTPUT | awk '{ print $2 }')
-        LATENCY=$(latency_in_milliseconds $LATENCY_STR)
+        LATENCY=$(latency_in_milliseconds "$LATENCY_STR")
         if [ "$LATENCY" = "0" ]; then
             echo "Latency is zero!"; exit 1;
         fi
@@ -96,7 +96,7 @@ do
             THROUGHPUTS[$CONCURRENCY]="${THROUGHPUTS[$CONCURRENCY]} $THROUGHPUT"
             LATENCIES[$CONCURRENCY]="${LATENCIES[$CONCURRENCY]} $LATENCY"
         fi
-        echo "Run = $(($RUN+1)) Concurrency = $CONCURRENCY Per thread Throughput (bytes) = $THROUGHPUT, Latency (ms) = $LATENCY"
+        echo "Run = $((RUN+1)) Concurrency = $CONCURRENCY Per thread Throughput (bytes) = $THROUGHPUT, Latency (ms) = $LATENCY"
 
     done
     (( RUN++ ))
@@ -107,7 +107,7 @@ do
     THROUGHPUT=$(echo "${THROUGHPUTS[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
     LATENCY=$(echo "${LATENCIES[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
     printf "Concurrency = %3d: Per Thread Median Througput (bytes) = %9.3f, Latency (ms) = %9.3f\n" \
-        "$CONCURRENCY" "$THROUGHPUT" "$LATENCY" | tee -a $RESULT
+        "$CONCURRENCY" "$THROUGHPUT" "$LATENCY" | tee -a "$RESULT"
 done
 
 echo "Result file: $RESULT"
