@@ -95,7 +95,7 @@ stage('test-direct') {
             make ${MAKEOPTS}
             make ${MAKEOPTS} start-gramine-server &
             ../../Scripts/wait_for_server 5 127.0.0.1 3000
-            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh 127.0.0.1:3000
+            LOOP=1 CONCURRENCY_LIST="1 32" ../common_tools/benchmark-http.sh http://127.0.0.1:3000
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
