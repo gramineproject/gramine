@@ -101,7 +101,7 @@ Prerequisites
 - Intel SGX Driver. This tutorial assumes a modern Linux kernel (at least 5.11).
   If the Linux kernel is older than this, then the user must install the
   out-of-tree SGX driver manually, following e.g. our documentation:
-  https://gramine.readthedocs.io/en/latest/devel/building.html#install-the-intel-sgx-driver
+  https://gramine.readthedocs.io/en/stable/devel/building.html#install-the-intel-sgx-driver
 
 - SDK/PSW. You need a machine that supports Intel SGX and
   FLC/DCAP. Please follow `this guide
@@ -214,7 +214,7 @@ Finally, we mount the path containing the Python packages installed via pip::
 
    fs.mounts = [
      ...
-     { path = "{{ env.HOME }}/.local/lib", uri = "file:{{ env.HOME }}/.local/lib" },
+     { type = "chroot", uri = "file:{{ pillow_path }}", path = "{{ pillow_path }}" },
    ]
 
 Now we can run ``make`` to build/copy all required Gramine files::
@@ -472,22 +472,22 @@ Preparing Manifest File
 Finally, let's modify the manifest file.  Open ``pytorch.manifest.template``
 with your favorite text editor.
 
-Replace the input files from ``sgx.trusted_files`` and move them to the encrypted
+Remove the input files from ``sgx.trusted_files`` and move them to the encrypted
 FS mount::
 
    fs.mounts = [
-   ...
-   { path = "/classes.txt", uri = "file:classes.txt", type = "encrypted" },
-   { path = "/input.jpg", uri = "file:input.jpg", type = "encrypted" },
-   { path = "/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
+     ...
+     { path = "/classes.txt", uri = "file:classes.txt", type = "encrypted" },
+     { path = "/input.jpg", uri = "file:input.jpg", type = "encrypted" },
+     { path = "/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
    ]
 
 Also add ``result.txt`` to the encrypted FS mount so that PyTorch writes the
 *encrypted* result into it::
 
    fs.mounts = [
-   ...
-   { path = "/result.txt", uri = "file:result.txt", type = "encrypted" },
+     ...
+     { path = "/result.txt", uri = "file:result.txt", type = "encrypted" },
    ]
 
 Add the following lines to enable remote secret provisioning and allow encrypted
