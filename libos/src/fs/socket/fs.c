@@ -82,7 +82,7 @@ static int setflags(struct shim_handle* handle, unsigned int flags, unsigned int
     assert(mask != 0);
     assert((flags & ~mask) == 0);
 
-    if (!WITHIN_MASK(mask, O_NONBLOCK)) {
+    if (!WITHIN_MASK(flags, O_NONBLOCK)) {
         return -EINVAL;
     }
 

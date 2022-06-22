@@ -166,7 +166,7 @@ static int pipe_setflags(struct shim_handle* handle, unsigned int flags, unsigne
     if (!handle->pal_handle)
         return 0;
 
-    if (!WITHIN_MASK(mask, O_NONBLOCK)) {
+    if (!WITHIN_MASK(flags, O_NONBLOCK)) {
         return -EINVAL;
     }
 
