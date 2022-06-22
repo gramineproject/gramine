@@ -256,6 +256,25 @@ static int set_tcp_option(struct shim_handle* handle, int optname, void* optval,
     return pal_to_unix_errno(ret);
 }
 
+static int set_ipv4_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+    __UNUSED(handle);
+    __UNUSED(optval);
+    if (optname == IP_RECVERR) {
+        if (len < sizeof(int)) {
+            return -EINVAL;
+        }
+        /* We ignore this option. Full support would require handling `MSG_ERRQUEUE` in `recvmsg`
+         * syscall (which now fails with `-EOPNOTSUPP` if this flag is passed), which would be hard
+         * to implement. This basically defers the moment the app notices this error reporting
+         * mechanism is not supported from `setsockopt` call to when actual error condition on
+         * the socket happens (which might be never). */
+        return 0;
+    }
+
+    /* No other option supported at the moment. */
+    return -ENOPROTOOPT;
+}
+
 static int set_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
@@ -276,6 +295,9 @@ static int set_ipv6_option(struct shim_handle* handle, int optname, void* optval
             }
             attr.socket.ipv6_v6only = !!*(int*)optval;
             break;
+        case IPV6_RECVERR:
+            /* See the comment in `set_ipv4_option` for why we handle it this way. */
+            return 0;
         default:
             return -ENOPROTOOPT;
     }
@@ -327,8 +349,7 @@ static int setsockopt(struct shim_handle* handle, int level, int optname, void* 
             if (sock->domain != AF_INET) {
                 return -EOPNOTSUPP;
             }
-            /* No option supported at the moment. */
-            return -ENOPROTOOPT;
+            return set_ipv4_option(handle, optname, optval, len);
         case IPPROTO_IPV6:
             if (sock->domain != AF_INET6) {
                 return -EOPNOTSUPP;
