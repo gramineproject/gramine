@@ -278,10 +278,12 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
     if (ret < 0)
         return ret;
+
     size_t nodes_cnt = 0;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if (ret < 0)
-        return ret;
+    /* Get the CPU node number. By default, the number is 0.
+     * Some system does not have the file, for example, Windows WSL.
+     * So, do not need to check the return value of the function. */
+    iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -312,10 +314,13 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
     if (ret < 0)
         goto fail;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
+
+    if (nodes_cnt > 0) {
+        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
                                    numa_nodes);
-    if (ret < 0)
-        goto fail;
+        if (ret < 0)
+            goto fail;
+    }
 
     char path[128];
     for (size_t i = 0; i < threads_cnt; i++) {
