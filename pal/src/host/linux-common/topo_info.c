@@ -278,10 +278,22 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
     if (ret < 0)
         return ret;
-    size_t nodes_cnt = 0;
+
+    bool is_cpu_nodes_existing = false;
+    size_t nodes_cnt = 1;
+    /* Get the CPU node number. By default, the number is 1.
+     * Some systems do not have the file, for example, Windows Subsystem for Linux.
+     * So, ignor the -ENOENT error.*/
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
     if (ret < 0)
-        return ret;
+    {
+        if (ret != -ENOENT)
+            return ret;
+        else
+            is_cpu_nodes_existing = false;
+    } else {
+        is_cpu_nodes_existing = true;
+    }
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -312,10 +324,15 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
     if (ret < 0)
         goto fail;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
-                                   numa_nodes);
-    if (ret < 0)
-        goto fail;
+
+    if (is_cpu_nodes_existing == true) {
+        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online, numa_nodes);
+        if (ret < 0)
+            goto fail;
+    } else {
+        /* If there is no node information, the only node must be online. */
+        numa_nodes[0].is_online = true;
+    }
 
     char path[128];
     for (size_t i = 0; i < threads_cnt; i++) {
@@ -357,27 +374,34 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
-        ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
-            .threads = threads,
-            .cores = cores,
-            .id_to_set = i,
-        });
-        if (ret < 0)
-            goto fail;
+    if (is_cpu_nodes_existing == true) {
+        for (size_t i = 0; i < nodes_cnt; i++) {
+            snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+            ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
+                .threads = threads,
+                .cores = cores,
+                .id_to_set = i,
+            });
+            if (ret < 0)
+                goto fail;
 
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
-        if (ret < 0)
-            goto fail;
-        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
-        if (ret < 0)
-            goto fail;
+            ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+            if (ret < 0)
+                goto fail;
+            ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
+            if (ret < 0)
+                goto fail;
 
-        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+            /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+            * of zero */
+            numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+            numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+        }
+    } else {
+        /*Set the distance with default value in Ubuntu 20.04*/
+        distances[0] = 10;
+        numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
