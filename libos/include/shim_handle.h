@@ -81,13 +81,15 @@ enum shim_sock_state {
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
  * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/shim_socket.c").
- * `pal_handle` should be accessed using atomic operations. It can be NULL. Once it's set, it cannot
- * change anymore.
+ * `pal_handle` should be accessed using atomic operations.
  * If you need to take both `recv_lock` and `lock`, take the former first.
  */
 struct shim_sock_handle {
     struct shim_lock lock;
     struct shim_sock_ops* ops;
+    /* `pal_handle` can be NULL. Once it's set, it cannot change anymore. All implementations must
+     * take into account all necessary settings when instantiating this field, e.g. `handle->flags`,
+     * of handle wrapping this struct. */
     PAL_HANDLE pal_handle;
     int domain;
     int type;
