@@ -133,7 +133,7 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
 
     lock(&handle->lock);
     /* `setflags` in "fs/socket/fs.c" is the only way to change this flag and it takes `sock->lock`,
-     * so this is race-free. */
+     * so using `options` after releasing the lock below is race-free. */
     pal_stream_options_t options = handle->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     unlock(&handle->lock);
 
@@ -242,7 +242,7 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
 
     lock(&handle->lock);
     /* `setflags` in "fs/socket/fs.c" is the only way to change this flag and it takes `sock->lock`,
-     * so this is race-free. */
+     * so using `options` after releasing the lock below is race-free. */
     pal_stream_options_t options = handle->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     unlock(&handle->lock);
 
