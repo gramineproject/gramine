@@ -18,10 +18,10 @@
 #include "shim_types.h"
 #include "shim_vma.h"
 
-struct shim_clone_args {
+struct libos_clone_args {
     PAL_HANDLE create_event;
     PAL_HANDLE initialize_event;
-    struct shim_thread* thread;
+    struct libos_thread* thread;
     void* stack;
     unsigned long tls;
     PAL_CONTEXT* regs;
@@ -33,7 +33,7 @@ struct shim_clone_args {
  * 1) User application allocates stack for child process and
  *    calls clone. The clone code sets up the user function
  *    address and the argument address on the child stack.
- * 2)we Hijack the clone call and control flows to shim_clone
+ * 2)we Hijack the clone call and control flows to libos_clone
  * 3)In Shim Clone we just call the DK Api to create a thread by providing a
  *   wrapper function around the user provided function
  * 4)PAL layer allocates a stack and then invokes the clone syscall
@@ -49,21 +49,21 @@ static int clone_implementation_wrapper(void* arg_) {
 
     /* We acquired ownership of arg->thread from the caller, hence there is
      * no need to call get_thread. */
-    struct shim_clone_args* arg = (struct shim_clone_args*)arg_;
-    struct shim_thread* my_thread = arg->thread;
+    struct libos_clone_args* arg = (struct libos_clone_args*)arg_;
+    struct libos_thread* my_thread = arg->thread;
     assert(my_thread);
 
-    shim_tcb_init();
+    libos_tcb_init();
     set_cur_thread(my_thread);
 
     /* only now we can call LibOS/PAL functions because they require a set-up TCB;
-     * do not move the below functions before shim_tcb_init/set_cur_thread()! */
+     * do not move the below functions before libos_tcb_init/set_cur_thread()! */
     int ret = event_wait_with_retry(arg->create_event);
     if (ret < 0) {
         return ret;
     }
 
-    shim_tcb_t* tcb = my_thread->shim_tcb;
+    libos_tcb_t* tcb = my_thread->libos_tcb;
 
     log_setprefix(tcb);
 
@@ -74,7 +74,7 @@ static int clone_implementation_wrapper(void* arg_) {
 
     void* stack = arg->stack;
 
-    struct shim_vma_info vma_info;
+    struct libos_vma_info vma_info;
     if (lookup_vma(ALLOC_ALIGN_DOWN_PTR(stack), &vma_info) < 0) {
         return -EFAULT;
     }
@@ -101,9 +101,9 @@ static int clone_implementation_wrapper(void* arg_) {
     restore_child_context_after_clone(&tcb->context);
 }
 
-static BEGIN_MIGRATION_DEF(fork, struct shim_process* process_description,
-                           struct shim_thread* thread_description,
-                           struct shim_ipc_ids* process_ipc_ids) {
+static BEGIN_MIGRATION_DEF(fork, struct libos_process* process_description,
+                           struct libos_thread* thread_description,
+                           struct libos_ipc_ids* process_ipc_ids) {
     DEFINE_MIGRATE(process_ipc_ids, process_ipc_ids, sizeof(*process_ipc_ids));
     DEFINE_MIGRATE(all_encrypted_files_keys, NULL, 0);
     DEFINE_MIGRATE(dentry_root, NULL, 0);
@@ -121,9 +121,9 @@ static BEGIN_MIGRATION_DEF(fork, struct shim_process* process_description,
 }
 END_MIGRATION_DEF(fork)
 
-static int migrate_fork(struct shim_cp_store* store, struct shim_process* process_description,
-                        struct shim_thread* thread_description,
-                        struct shim_ipc_ids* process_ipc_ids, va_list ap) {
+static int migrate_fork(struct libos_cp_store* store, struct libos_process* process_description,
+                        struct libos_thread* thread_description,
+                        struct libos_ipc_ids* process_ipc_ids, va_list ap) {
     __UNUSED(ap);
     /* Take `g_dcache_lock` for the whole checkpointing operation, so that we can access data from
      * dentries. We recursively checkpoint various connected structures, so it's not practical to
@@ -134,39 +134,39 @@ static int migrate_fork(struct shim_cp_store* store, struct shim_process* proces
     return ret;
 }
 
-static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_thread* thread,
+static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct libos_thread* thread,
                             unsigned long tls, unsigned long user_stack_addr, int* set_parent_tid) {
     assert(!(flags & CLONE_VM));
 
-    struct shim_child_process* child_process = create_child_process();
+    struct libos_child_process* child_process = create_child_process();
     if (!child_process) {
         return -ENOMEM;
     }
 
-    struct shim_thread* self = get_cur_thread();
+    struct libos_thread* self = get_cur_thread();
 
     /* Associate new cpu context to the new process (its main and only thread) for migration
      * since we might need to modify some registers. */
-    shim_tcb_t shim_tcb = { 0 };
-    __shim_tcb_init(&shim_tcb);
+    libos_tcb_t libos_tcb = { 0 };
+    __libos_tcb_init(&libos_tcb);
     /* We are copying our own tcb, which should be ok to do, even without any locks. Note this is
-     * a shallow copy, so `shim_tcb.context.regs` will be shared with the parent. */
-    shim_tcb.context.regs = self->shim_tcb->context.regs;
-    shim_tcb.context.tls = tls;
+     * a shallow copy, so `libos_tcb.context.regs` will be shared with the parent. */
+    libos_tcb.context.regs = self->libos_tcb->context.regs;
+    libos_tcb.context.tls = tls;
 
-    thread->shim_tcb = &shim_tcb;
+    thread->libos_tcb = &libos_tcb;
 
     unsigned long parent_stack = 0;
     if (user_stack_addr) {
-        struct shim_vma_info vma_info;
+        struct libos_vma_info vma_info;
         if (lookup_vma((void*)ALLOC_ALIGN_DOWN(user_stack_addr), &vma_info) < 0) {
             destroy_child_process(child_process);
             return -EFAULT;
         }
         thread->stack_top = (char*)vma_info.addr + vma_info.length;
         thread->stack_red = thread->stack = vma_info.addr;
-        parent_stack = pal_context_get_sp(self->shim_tcb->context.regs);
-        pal_context_set_sp(thread->shim_tcb->context.regs, user_stack_addr);
+        parent_stack = pal_context_get_sp(self->libos_tcb->context.regs);
+        pal_context_set_sp(thread->libos_tcb->context.regs, user_stack_addr);
 
         if (vma_info.file) {
             put_handle(vma_info.file);
@@ -174,7 +174,7 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
     }
 
     lock(&g_process.fs_lock);
-    struct shim_process process_description = {
+    struct libos_process process_description = {
         .pid = thread->tid,
         .ppid = g_process.pid,
         .pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE),
@@ -205,10 +205,10 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
                                                   &process_description, thread);
 
     if (parent_stack) {
-        pal_context_set_sp(self->shim_tcb->context.regs, parent_stack);
+        pal_context_set_sp(self->libos_tcb->context.regs, parent_stack);
     }
 
-    thread->shim_tcb = NULL;
+    thread->libos_tcb = NULL;
 
     put_handle(process_description.exec);
     put_dentry(process_description.cwd);
@@ -319,7 +319,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
 
     long ret = 0;
 
-    struct shim_thread* thread = get_new_thread();
+    struct libos_thread* thread = get_new_thread();
     if (!thread) {
         ret = -ENOMEM;
         goto failed;
@@ -402,7 +402,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     if (!(flags & CLONE_FILES)) {
         /* If CLONE_FILES is not given, the new thread should receive its own copy of the
          * descriptors table. */
-        struct shim_handle_map* new_map = NULL;
+        struct libos_handle_map* new_map = NULL;
 
         dup_handle_map(&new_map, thread->handle_map);
         set_handle_map(thread, new_map);
@@ -413,7 +413,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
      * implies CLONE_SIGHAND). */
     assert(flags & CLONE_SIGHAND);
 
-    struct shim_clone_args new_args;
+    struct libos_clone_args new_args;
     memset(&new_args, 0, sizeof(new_args));
 
     ret = DkEventCreate(&new_args.create_event, /*init_signaled=*/false, /*auto_clear=*/false);
@@ -428,15 +428,15 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
         goto clone_thread_failed;
     }
 
-    struct shim_thread* self = get_cur_thread();
+    struct libos_thread* self = get_cur_thread();
 
     /* Increasing refcount due to copy below. Passing ownership of the new copy
      * of this pointer to the new thread (receiver of new_args). */
     get_thread(thread);
     new_args.thread = thread;
-    new_args.stack  = (void*)(user_stack_addr ?: pal_context_get_sp(self->shim_tcb->context.regs));
+    new_args.stack  = (void*)(user_stack_addr ?: pal_context_get_sp(self->libos_tcb->context.regs));
     new_args.tls    = tls;
-    new_args.regs   = self->shim_tcb->context.regs;
+    new_args.regs   = self->libos_tcb->context.regs;
 
     // Invoke DkThreadCreate to spawn off a child process using the actual
     // "clone" system call. DkThreadCreate allocates a stack for the child

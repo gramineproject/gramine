@@ -25,7 +25,7 @@ static bool return_true(size_t ind, const void* arg) {
     return true;
 }
 
-int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_node_general_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const char* name = dent->name;
@@ -54,7 +54,7 @@ static bool is_in_same_node(size_t idx, const void* _arg) {
     return node_id == arg_node_id;
 }
 
-int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     unsigned int node_id;
     ret = sys_resource_find(dent, "node", &node_id);

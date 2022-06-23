@@ -36,7 +36,7 @@ static struct pseudo_node* pseudo_find_root(const char* name) {
 }
 
 /* Find a `pseudo_node` for given dentry. */
-static struct pseudo_node* pseudo_find(struct shim_dentry* dent) {
+static struct pseudo_node* pseudo_find(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
     if (!dent->parent) {
@@ -69,7 +69,7 @@ static struct pseudo_node* pseudo_find(struct shim_dentry* dent) {
     return NULL;
 }
 
-static int pseudo_icheckpoint(struct shim_inode* inode, void** out_data, size_t* out_size) {
+static int pseudo_icheckpoint(struct libos_inode* inode, void** out_data, size_t* out_size) {
     unsigned int* id = malloc(sizeof(*id));
     if (!id)
         return -ENOMEM;
@@ -81,7 +81,7 @@ static int pseudo_icheckpoint(struct shim_inode* inode, void** out_data, size_t*
     return 0;
 }
 
-static int pseudo_irestore(struct shim_inode* inode, void* data) {
+static int pseudo_irestore(struct libos_inode* inode, void* data) {
     unsigned int* id = data;
     if (*id >= g_pseudo_node_count) {
         log_error("Invalid pseudo_node id: %u", *id);
@@ -94,7 +94,7 @@ static int pseudo_irestore(struct shim_inode* inode, void* data) {
     return 0;
 }
 
-static int pseudo_mount(struct shim_mount_params* params, void** mount_data) {
+static int pseudo_mount(struct libos_mount_params* params, void** mount_data) {
     if (!params->uri)
         return -EINVAL;
 
@@ -102,7 +102,7 @@ static int pseudo_mount(struct shim_mount_params* params, void** mount_data) {
     return 0;
 }
 
-static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -154,7 +154,7 @@ static int pseudo_open(struct shim_handle* hdl, struct shim_dentry* dent, int fl
     return 0;
 }
 
-static int pseudo_lookup(struct shim_dentry* dent) {
+static int pseudo_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -180,7 +180,7 @@ static int pseudo_lookup(struct shim_dentry* dent) {
             BUG();
     }
 
-    struct shim_inode* inode = get_new_inode(dent->mount, type, node->perm);
+    struct libos_inode* inode = get_new_inode(dent->mount, type, node->perm);
     if (!inode)
         return -ENOMEM;
 
@@ -206,7 +206,7 @@ static dev_t makedev(unsigned int major, unsigned int minor) {
     return dev;
 }
 
-static int pseudo_istat(struct shim_dentry* dent, struct shim_inode* inode, struct stat* buf) {
+static int pseudo_istat(struct libos_dentry* dent, struct libos_inode* inode, struct stat* buf) {
     memset(buf, 0, sizeof(*buf));
     buf->st_dev = 1;
     buf->st_mode = inode->type | inode->perm;
@@ -248,18 +248,18 @@ static int pseudo_istat(struct shim_dentry* dent, struct shim_inode* inode, stru
     return 0;
 }
 
-static int pseudo_stat(struct shim_dentry* dent, struct stat* buf) {
+static int pseudo_stat(struct libos_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
     return pseudo_istat(dent, dent->inode, buf);
 }
 
-static int pseudo_hstat(struct shim_handle* handle, struct stat* buf) {
+static int pseudo_hstat(struct libos_handle* handle, struct stat* buf) {
     return pseudo_istat(handle->dentry, handle->inode, buf);
 }
 
-static int pseudo_follow_link(struct shim_dentry* dent, char** out_target) {
+static int pseudo_follow_link(struct libos_dentry* dent, char** out_target) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -286,7 +286,7 @@ static int pseudo_follow_link(struct shim_dentry* dent, char** out_target) {
     return 0;
 }
 
-static int pseudo_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
+static int pseudo_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -315,7 +315,7 @@ static int pseudo_readdir(struct shim_dentry* dent, readdir_callback_t callback,
     return 0;
 }
 
-static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size, file_off_t* pos) {
+static ssize_t pseudo_read(struct libos_handle* hdl, void* buf, size_t size, file_off_t* pos) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
@@ -338,7 +338,7 @@ static ssize_t pseudo_read(struct shim_handle* hdl, void* buf, size_t size, file
     }
 }
 
-static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t size,
+static ssize_t pseudo_write(struct libos_handle* hdl, const void* buf, size_t size,
                             file_off_t* pos) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
@@ -349,7 +349,7 @@ static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t siz
 
             lock(&hdl->lock);
 
-            struct shim_mem_file* mem = &hdl->info.str.mem;
+            struct libos_mem_file* mem = &hdl->info.str.mem;
 
             if (node->str.save) {
                 /* If there's a `save` method, we want to invoke it, and the write should replace
@@ -385,7 +385,7 @@ static ssize_t pseudo_write(struct shim_handle* hdl, const void* buf, size_t siz
     }
 }
 
-static file_off_t pseudo_seek(struct shim_handle* hdl, file_off_t offset, int whence) {
+static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int whence) {
     file_off_t ret;
 
     struct pseudo_node* node = hdl->inode->data;
@@ -412,7 +412,7 @@ static file_off_t pseudo_seek(struct shim_handle* hdl, file_off_t offset, int wh
     }
 }
 
-static int pseudo_truncate(struct shim_handle* hdl, file_off_t size) {
+static int pseudo_truncate(struct libos_handle* hdl, file_off_t size) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR:
@@ -432,7 +432,7 @@ static int pseudo_truncate(struct shim_handle* hdl, file_off_t size) {
     }
 }
 
-static int pseudo_flush(struct shim_handle* hdl) {
+static int pseudo_flush(struct libos_handle* hdl) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_DEV:
@@ -445,7 +445,7 @@ static int pseudo_flush(struct shim_handle* hdl) {
     }
 }
 
-static int pseudo_close(struct shim_handle* hdl) {
+static int pseudo_close(struct libos_handle* hdl) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
@@ -465,7 +465,7 @@ static int pseudo_close(struct shim_handle* hdl) {
     }
 }
 
-static int pseudo_poll(struct shim_handle* hdl, int poll_type) {
+static int pseudo_poll(struct libos_handle* hdl, int poll_type) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
@@ -547,7 +547,7 @@ struct pseudo_node* pseudo_add_dir(struct pseudo_node* parent_node, const char* 
 }
 
 struct pseudo_node* pseudo_add_link(struct pseudo_node* parent_node, const char* name,
-                                    int (*follow_link)(struct shim_dentry*, char**)) {
+                                    int (*follow_link)(struct libos_dentry*, char**)) {
     struct pseudo_node* node = pseudo_add_ent(parent_node, name, PSEUDO_LINK);
     node->link.follow_link = follow_link;
     node->perm = PSEUDO_PERM_LINK;
@@ -555,7 +555,7 @@ struct pseudo_node* pseudo_add_link(struct pseudo_node* parent_node, const char*
 }
 
 struct pseudo_node* pseudo_add_str(struct pseudo_node* parent_node, const char* name,
-                                   int (*load)(struct shim_dentry*, char**, size_t*)) {
+                                   int (*load)(struct libos_dentry*, char**, size_t*)) {
     struct pseudo_node* node = pseudo_add_ent(parent_node, name, PSEUDO_STR);
     node->str.load = load;
     node->perm = PSEUDO_PERM_FILE_R;
@@ -568,7 +568,7 @@ struct pseudo_node* pseudo_add_dev(struct pseudo_node* parent_node, const char* 
     return node;
 }
 
-struct shim_fs_ops pseudo_fs_ops = {
+struct libos_fs_ops pseudo_fs_ops = {
     .mount    = &pseudo_mount,
     .hstat    = &pseudo_hstat,
     .read     = &pseudo_read,
@@ -580,7 +580,7 @@ struct shim_fs_ops pseudo_fs_ops = {
     .poll     = &pseudo_poll,
 };
 
-struct shim_d_ops pseudo_d_ops = {
+struct libos_d_ops pseudo_d_ops = {
     .open        = &pseudo_open,
     .lookup      = &pseudo_lookup,
     .readdir     = &pseudo_readdir,
@@ -590,7 +590,7 @@ struct shim_d_ops pseudo_d_ops = {
     .irestore    = &pseudo_irestore,
 };
 
-struct shim_fs pseudo_builtin_fs = {
+struct libos_fs pseudo_builtin_fs = {
     .name   = "pseudo",
     .fs_ops = &pseudo_fs_ops,
     .d_ops  = &pseudo_d_ops,

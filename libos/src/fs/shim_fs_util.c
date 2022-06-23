@@ -40,12 +40,12 @@ int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
     return 0;
 }
 
-int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
+int generic_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
     assert(dent->inode->type == S_IFDIR);
 
-    struct shim_dentry* child;
+    struct libos_dentry* child;
     LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
         if (child->inode) {
             int ret = callback(child->name, arg);
@@ -56,7 +56,7 @@ int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void*
     return 0;
 }
 
-static int generic_istat(struct shim_inode* inode, struct stat* buf) {
+static int generic_istat(struct libos_inode* inode, struct stat* buf) {
     memset(buf, 0, sizeof(*buf));
 
     lock(&inode->lock);
@@ -82,20 +82,20 @@ static int generic_istat(struct shim_inode* inode, struct stat* buf) {
     return 0;
 }
 
-int generic_inode_stat(struct shim_dentry* dent, struct stat* buf) {
+int generic_inode_stat(struct libos_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
     return generic_istat(dent->inode, buf);
 }
 
-int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf) {
+int generic_inode_hstat(struct libos_handle* hdl, struct stat* buf) {
     assert(hdl->inode);
 
     return generic_istat(hdl->inode, buf);
 }
 
-file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin) {
+file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int origin) {
     file_off_t ret;
 
     lock(&hdl->pos_lock);
@@ -113,7 +113,7 @@ file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int or
     return ret;
 }
 
-int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
+int generic_inode_poll(struct libos_handle* hdl, int poll_type) {
     int ret;
 
     lock(&hdl->pos_lock);
@@ -137,7 +137,7 @@ int generic_inode_poll(struct shim_handle* hdl, int poll_type) {
     return ret;
 }
 
-int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset) {
     assert(addr);
 
@@ -192,7 +192,7 @@ err:;
     return ret;
 }
 
-int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset) {
     assert(!(flags & MAP_PRIVATE));
 

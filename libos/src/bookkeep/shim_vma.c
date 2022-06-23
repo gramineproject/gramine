@@ -25,7 +25,7 @@
 #include "shim_vma.h"
 #include "spinlock.h"
 
-/* Filter flags that will be saved in `struct shim_vma`. For example there is no need for saving
+/* Filter flags that will be saved in `struct libos_vma`. For example there is no need for saving
  * MAP_FIXED or unsupported flags. */
 static int filter_saved_flags(int flags) {
     return flags & (MAP_SHARED | MAP_SHARED_VALIDATE | MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN
@@ -35,30 +35,30 @@ static int filter_saved_flags(int flags) {
 
 /* TODO: split flags into internal (Gramine) and Linux; also to consider: completely remove Linux
  * flags - we only need MAP_SHARED/MAP_PRIVATE and possibly MAP_STACK/MAP_GROWSDOWN */
-struct shim_vma {
+struct libos_vma {
     uintptr_t begin;
     uintptr_t end;
     int prot;
     int flags;
-    struct shim_handle* file;
+    struct libos_handle* file;
     uint64_t offset; // offset inside `file`, where `begin` starts
     union {
         /* If this `vma` is used, it is included in `vma_tree` using this node. */
         struct avl_tree_node tree_node;
         /* Otherwise it might be cached in per thread vma cache, or might be on a temporary list
          * of to-be-freed vmas (used by _vma_bkeep_remove). Such lists use the field below. */
-        struct shim_vma* next_free;
+        struct libos_vma* next_free;
     };
     char comment[VMA_COMMENT_LEN];
 };
 
-static void copy_comment(struct shim_vma* vma, const char* comment) {
+static void copy_comment(struct libos_vma* vma, const char* comment) {
     size_t size = MIN(sizeof(vma->comment), strlen(comment) + 1);
     memcpy(vma->comment, comment, size);
     vma->comment[sizeof(vma->comment) - 1] = '\0';
 }
 
-static void copy_vma(struct shim_vma* old_vma, struct shim_vma* new_vma) {
+static void copy_vma(struct libos_vma* old_vma, struct libos_vma* new_vma) {
     new_vma->begin = old_vma->begin;
     new_vma->end   = old_vma->end;
     new_vma->prot  = old_vma->prot;
@@ -72,19 +72,19 @@ static void copy_vma(struct shim_vma* old_vma, struct shim_vma* new_vma) {
 }
 
 static bool vma_tree_cmp(struct avl_tree_node* node_a, struct avl_tree_node* node_b) {
-    struct shim_vma* a = container_of(node_a, struct shim_vma, tree_node);
-    struct shim_vma* b = container_of(node_b, struct shim_vma, tree_node);
+    struct libos_vma* a = container_of(node_a, struct libos_vma, tree_node);
+    struct libos_vma* b = container_of(node_b, struct libos_vma, tree_node);
 
     return a->end <= b->end;
 }
 
-static bool is_addr_in_vma(uintptr_t addr, struct shim_vma* vma) {
+static bool is_addr_in_vma(uintptr_t addr, struct libos_vma* vma) {
     return vma->begin <= addr && addr < vma->end;
 }
 
 /* Returns whether `addr` is smaller or inside a vma (`node`). */
 static bool cmp_addr_to_vma(void* addr, struct avl_tree_node* node) {
-    struct shim_vma* vma = container_of(node, struct shim_vma, tree_node);
+    struct libos_vma* vma = container_of(node, struct libos_vma, tree_node);
 
     return (uintptr_t)addr < vma->end;
 }
@@ -97,46 +97,46 @@ static bool cmp_addr_to_vma(void* addr, struct avl_tree_node* node) {
 static struct avl_tree vma_tree = {.cmp = vma_tree_cmp};
 static spinlock_t vma_tree_lock = INIT_SPINLOCK_UNLOCKED;
 
-static struct shim_vma* node2vma(struct avl_tree_node* node) {
+static struct libos_vma* node2vma(struct avl_tree_node* node) {
     if (!node) {
         return NULL;
     }
-    return container_of(node, struct shim_vma, tree_node);
+    return container_of(node, struct libos_vma, tree_node);
 }
 
-static struct shim_vma* _get_next_vma(struct shim_vma* vma) {
+static struct libos_vma* _get_next_vma(struct libos_vma* vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
     return node2vma(avl_tree_next(&vma->tree_node));
 }
 
-static struct shim_vma* _get_prev_vma(struct shim_vma* vma) {
+static struct libos_vma* _get_prev_vma(struct libos_vma* vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
     return node2vma(avl_tree_prev(&vma->tree_node));
 }
 
-static struct shim_vma* _get_last_vma(void) {
+static struct libos_vma* _get_last_vma(void) {
     assert(spinlock_is_locked(&vma_tree_lock));
     return node2vma(avl_tree_last(&vma_tree));
 }
 
-static struct shim_vma* _get_first_vma(void) {
+static struct libos_vma* _get_first_vma(void) {
     assert(spinlock_is_locked(&vma_tree_lock));
     return node2vma(avl_tree_first(&vma_tree));
 }
 
 /* Returns the vma that contains `addr`. If there is no such vma, returns the closest vma with
  * higher address. */
-static struct shim_vma* _lookup_vma(uintptr_t addr) {
+static struct libos_vma* _lookup_vma(uintptr_t addr) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
     struct avl_tree_node* node = avl_tree_lower_bound_fn(&vma_tree, (void*)addr, cmp_addr_to_vma);
     if (!node) {
         return NULL;
     }
-    return container_of(node, struct shim_vma, tree_node);
+    return container_of(node, struct libos_vma, tree_node);
 }
 
-typedef bool (*traverse_visitor)(struct shim_vma* vma, void* visitor_arg);
+typedef bool (*traverse_visitor)(struct libos_vma* vma, void* visitor_arg);
 
 /*
  * Walks through all VMAs which contain at least one byte from the [begin, end) range.
@@ -156,11 +156,11 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
     if (begin == end)
         return true;
 
-    struct shim_vma* vma = _lookup_vma(begin);
+    struct libos_vma* vma = _lookup_vma(begin);
     if (!vma || end <= vma->begin)
         return false;
 
-    struct shim_vma* prev = NULL;
+    struct libos_vma* prev = NULL;
     bool is_continuous = vma->begin <= begin;
 
     while (1) {
@@ -180,7 +180,7 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
     return is_continuous;
 }
 
-static void split_vma(struct shim_vma* old_vma, struct shim_vma* new_vma, uintptr_t addr) {
+static void split_vma(struct libos_vma* old_vma, struct libos_vma* new_vma, uintptr_t addr) {
     assert(old_vma->begin < addr && addr < old_vma->end);
 
     copy_vma(old_vma, new_vma);
@@ -201,17 +201,17 @@ static void split_vma(struct shim_vma* old_vma, struct shim_vma* new_vma, uintpt
  * either internal or non-internal.
  */
 static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
-                             struct shim_vma** new_vma_ptr, struct shim_vma** vmas_to_free) {
+                             struct libos_vma** new_vma_ptr, struct libos_vma** vmas_to_free) {
     assert(spinlock_is_locked(&vma_tree_lock));
     assert(!new_vma_ptr || *new_vma_ptr);
     assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
 
-    struct shim_vma* vma = _lookup_vma(begin);
+    struct libos_vma* vma = _lookup_vma(begin);
     if (!vma) {
         return 0;
     }
 
-    struct shim_vma* first_vma = vma;
+    struct libos_vma* first_vma = vma;
 
     while (vma && vma->begin < end) {
         if (!!(vma->flags & VMA_INTERNAL) != is_internal) {
@@ -234,7 +234,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
                 log_warning("need an additional vma to free this range!");
                 return -ENOMEM;
             }
-            struct shim_vma* new_vma = *new_vma_ptr;
+            struct libos_vma* new_vma = *new_vma_ptr;
             *new_vma_ptr = NULL;
 
             split_vma(vma, new_vma, end);
@@ -254,7 +254,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
 
     while (vma->end <= end) {
         /* We need to search for the next node before deletion. */
-        struct shim_vma* next = _get_next_vma(vma);
+        struct libos_vma* next = _get_next_vma(vma);
 
         avl_tree_delete(&vma_tree, &vma->tree_node);
 
@@ -278,7 +278,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
     return 0;
 }
 
-static void free_vmas_freelist(struct shim_vma* vma);
+static void free_vmas_freelist(struct libos_vma* vma);
 
 /* This function uses at most 1 vma (in `bkeep_mmap_any`). `alloc_vma` depends on this behavior. */
 static void* _vma_malloc(size_t size) {
@@ -292,7 +292,7 @@ static void* _vma_malloc(size_t size) {
 
     int ret = DkVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
     if (ret < 0) {
-        struct shim_vma* vmas_to_free = NULL;
+        struct libos_vma* vmas_to_free = NULL;
 
         spinlock_lock(&vma_tree_lock);
         /* Since we are freeing a range we just created, additional vma is not needed. */
@@ -322,10 +322,10 @@ static void _vma_free(void* ptr, size_t size) {
 #undef system_free
 #define system_malloc _vma_malloc
 #define system_free   _vma_free
-#define OBJ_TYPE      struct shim_vma
+#define OBJ_TYPE      struct libos_vma
 #include "memmgr.h"
 
-static struct shim_lock vma_mgr_lock;
+static struct libos_lock vma_mgr_lock;
 static MEM_MGR vma_mgr = NULL;
 
 /*
@@ -333,7 +333,7 @@ static MEM_MGR vma_mgr = NULL;
  * Each thread has a singly linked list of free VMAs, with maximal length of 3.
  * Allocation first checks if there is a cached VMA, deallocation adds it to cache, unless it is
  * full (3 entries already present).
- * Note that 3 is configurable number as long as it is a power of 2 minus 1 and `struct shim_vma`
+ * Note that 3 is configurable number as long as it is a power of 2 minus 1 and `struct libos_vma`
  * alignment is not less that it. This is needed for storing the list length in lower bits of
  * the pointer (small optimization not to add more fields to TCB - can be removed if the max list
  * size needs to be increased or any supported architecture does not allow for it).
@@ -348,14 +348,14 @@ static MEM_MGR vma_mgr = NULL;
 static_assert((VMA_CACHE_SIZE & (VMA_CACHE_SIZE + 1)) == 0,
               "VMA_CACHE_SIZE must be a power of 2 minus 1!");
 
-static struct shim_vma* cache2ptr(void* vma) {
+static struct libos_vma* cache2ptr(void* vma) {
     static_assert(
-        alignof(struct shim_vma) >= VMA_CACHE_SIZE + 1,
-        "We need some lower bits of pointers to `struct shim_vma` for this optimization!");
-    return (struct shim_vma*)((uintptr_t)vma & ~VMA_CACHE_SIZE);
+        alignof(struct libos_vma) >= VMA_CACHE_SIZE + 1,
+        "We need some lower bits of pointers to `struct libos_vma` for this optimization!");
+    return (struct libos_vma*)((uintptr_t)vma & ~VMA_CACHE_SIZE);
 }
 
-static void* create_cache_ptr(struct shim_vma* vma, size_t size) {
+static void* create_cache_ptr(struct libos_vma* vma, size_t size) {
     assert(size <= VMA_CACHE_SIZE);
     return (void*)((uintptr_t)vma | size);
 }
@@ -364,18 +364,18 @@ static size_t cache2size(void* vma) {
     return (size_t)((uintptr_t)vma & VMA_CACHE_SIZE);
 }
 
-static struct shim_vma* get_from_thread_vma_cache(void) {
-    struct shim_vma* vma = cache2ptr(SHIM_TCB_GET(vma_cache));
+static struct libos_vma* get_from_thread_vma_cache(void) {
+    struct libos_vma* vma = cache2ptr(LIBOS_TCB_GET(vma_cache));
     if (!vma) {
         return NULL;
     }
-    SHIM_TCB_SET(vma_cache, vma->next_free);
+    LIBOS_TCB_SET(vma_cache, vma->next_free);
     return vma;
 }
 
-static bool add_to_thread_vma_cache(struct shim_vma* vma) {
+static bool add_to_thread_vma_cache(struct libos_vma* vma) {
     assert(cache2size(vma) == 0);
-    void* ptr = SHIM_TCB_GET(vma_cache);
+    void* ptr = LIBOS_TCB_GET(vma_cache);
     size_t size = cache2size(ptr);
 
     if (size >= VMA_CACHE_SIZE) {
@@ -383,24 +383,24 @@ static bool add_to_thread_vma_cache(struct shim_vma* vma) {
     }
 
     vma->next_free = ptr;
-    SHIM_TCB_SET(vma_cache, create_cache_ptr(vma, size + 1));
+    LIBOS_TCB_SET(vma_cache, create_cache_ptr(vma, size + 1));
     return true;
 }
 
-static void remove_from_thread_vma_cache(struct shim_vma* to_remove) {
+static void remove_from_thread_vma_cache(struct libos_vma* to_remove) {
     assert(to_remove);
 
-    struct shim_vma* first_vma = cache2ptr(SHIM_TCB_GET(vma_cache));
+    struct libos_vma* first_vma = cache2ptr(LIBOS_TCB_GET(vma_cache));
 
     if (first_vma == to_remove) {
-        SHIM_TCB_SET(vma_cache, first_vma->next_free);
+        LIBOS_TCB_SET(vma_cache, first_vma->next_free);
         return;
     }
 
-    struct shim_vma* vma = first_vma;
+    struct libos_vma* vma = first_vma;
     bool found = false;
     while (vma) {
-        struct shim_vma* next = cache2ptr(vma->next_free);
+        struct libos_vma* next = cache2ptr(vma->next_free);
         if (next == to_remove) {
             found = true;
             break;
@@ -411,10 +411,10 @@ static void remove_from_thread_vma_cache(struct shim_vma* to_remove) {
         return;
     }
 
-    SHIM_TCB_SET(vma_cache, create_cache_ptr(first_vma, cache2size(first_vma) - 1));
+    LIBOS_TCB_SET(vma_cache, create_cache_ptr(first_vma, cache2size(first_vma) - 1));
     vma = first_vma;
     while (vma) {
-        struct shim_vma* next = cache2ptr(vma->next_free);
+        struct libos_vma* next = cache2ptr(vma->next_free);
         if (next == to_remove) {
             vma->next_free = next->next_free;
             return;
@@ -424,8 +424,8 @@ static void remove_from_thread_vma_cache(struct shim_vma* to_remove) {
     }
 }
 
-static struct shim_vma* alloc_vma(void) {
-    struct shim_vma* vma = get_from_thread_vma_cache();
+static struct libos_vma* alloc_vma(void) {
+    struct libos_vma* vma = get_from_thread_vma_cache();
     if (vma) {
         goto out;
     }
@@ -435,7 +435,7 @@ static struct shim_vma* alloc_vma(void) {
     if (!vma) {
         /* `enlarge_mem_mgr` below will call _vma_malloc, which uses at most 1 vma - so we
          * temporarily provide it. */
-        struct shim_vma tmp_vma = {0};
+        struct libos_vma tmp_vma = {0};
         /* vma cache is empty, as we checked it before. */
         if (!add_to_thread_vma_cache(&tmp_vma)) {
             log_error("Failed to add tmp vma to cache!");
@@ -446,7 +446,7 @@ static struct shim_vma* alloc_vma(void) {
             goto out_unlock;
         }
 
-        struct shim_vma* vma_migrate = get_mem_obj_from_mgr(vma_mgr);
+        struct libos_vma* vma_migrate = get_mem_obj_from_mgr(vma_mgr);
         if (!vma_migrate) {
             log_error("Failed to allocate a vma right after enlarge_mem_mgr!");
             BUG();
@@ -481,7 +481,7 @@ out:
     return vma;
 }
 
-static void free_vma(struct shim_vma* vma) {
+static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
         put_handle(vma->file);
     }
@@ -495,18 +495,18 @@ static void free_vma(struct shim_vma* vma) {
     unlock(&vma_mgr_lock);
 }
 
-static void free_vmas_freelist(struct shim_vma* vma) {
+static void free_vmas_freelist(struct libos_vma* vma) {
     while (vma) {
-        struct shim_vma* next = vma->next_free;
+        struct libos_vma* next = vma->next_free;
         free_vma(vma);
         vma = next;
     }
 }
 
-static int _bkeep_initial_vma(struct shim_vma* new_vma) {
+static int _bkeep_initial_vma(struct libos_vma* new_vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
-    struct shim_vma* tmp_vma = _lookup_vma(new_vma->begin);
+    struct libos_vma* tmp_vma = _lookup_vma(new_vma->begin);
     if (tmp_vma && tmp_vma->begin < new_vma->end) {
         return -EEXIST;
     } else {
@@ -521,7 +521,7 @@ static int _bkeep_initial_vma(struct shim_vma* new_vma) {
 static void* g_aslr_addr_top = NULL;
 
 int init_vma(void) {
-    struct shim_vma init_vmas[2 + g_pal_public_state->preloaded_ranges_cnt];
+    struct libos_vma init_vmas[2 + g_pal_public_state->preloaded_ranges_cnt];
 
     init_vmas[0].begin = 0; // vma for creation of memory manager
 
@@ -619,7 +619,7 @@ int init_vma(void) {
     }
 
     /* Now we need to migrate temporary initial vmas. */
-    struct shim_vma* vmas_to_migrate_to[ARRAY_SIZE(init_vmas)];
+    struct libos_vma* vmas_to_migrate_to[ARRAY_SIZE(init_vmas)];
     for (size_t i = 0; i < ARRAY_SIZE(vmas_to_migrate_to); i++) {
         vmas_to_migrate_to[i] = alloc_vma();
         if (!vmas_to_migrate_to[i]) {
@@ -648,7 +648,7 @@ int init_vma(void) {
     return 0;
 }
 
-static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct shim_vma* vma) {
+static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
     vma->begin  = begin;
@@ -670,14 +670,14 @@ int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr
         return -EINVAL;
     }
 
-    struct shim_vma* vma1 = alloc_vma();
+    struct libos_vma* vma1 = alloc_vma();
     if (!vma1) {
         return -ENOMEM;
     }
     /* Unmapping may succeed even without this vma, so if this allocation fails we move on. */
-    struct shim_vma* vma2 = alloc_vma();
+    struct libos_vma* vma2 = alloc_vma();
 
-    struct shim_vma* vmas_to_free = NULL;
+    struct libos_vma* vmas_to_free = NULL;
 
     spinlock_lock(&vma_tree_lock);
     int ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + length, is_internal,
@@ -707,7 +707,7 @@ int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr
 }
 
 void bkeep_remove_tmp_vma(void* _vma) {
-    struct shim_vma* vma = (struct shim_vma*)_vma;
+    struct libos_vma* vma = (struct libos_vma*)_vma;
 
     assert(vma->flags == (VMA_INTERNAL | VMA_UNMAPPED));
 
@@ -718,11 +718,11 @@ void bkeep_remove_tmp_vma(void* _vma) {
     free_vma(vma);
 }
 
-static bool is_file_prot_matching(struct shim_handle* file_hdl, int prot) {
+static bool is_file_prot_matching(struct libos_handle* file_hdl, int prot) {
     return !(prot & PROT_WRITE) || (file_hdl->flags & O_RDWR);
 }
 
-int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim_handle* file,
+int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libos_handle* file,
                      uint64_t offset, const char* comment) {
     assert(flags & (MAP_FIXED | MAP_FIXED_NOREPLACE));
 
@@ -730,12 +730,12 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim
         return -EINVAL;
     }
 
-    struct shim_vma* new_vma = alloc_vma();
+    struct libos_vma* new_vma = alloc_vma();
     if (!new_vma) {
         return -ENOMEM;
     }
     /* Unmapping may succeed even without this vma, so if this allocation fails we move on. */
-    struct shim_vma* vma1 = alloc_vma();
+    struct libos_vma* vma1 = alloc_vma();
 
     new_vma->begin = (uintptr_t)addr;
     new_vma->end   = new_vma->begin + length;
@@ -748,12 +748,12 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
 
-    struct shim_vma* vmas_to_free = NULL;
+    struct libos_vma* vmas_to_free = NULL;
 
     spinlock_lock(&vma_tree_lock);
     int ret = 0;
     if (flags & MAP_FIXED_NOREPLACE) {
-        struct shim_vma* tmp_vma = _lookup_vma(new_vma->begin);
+        struct libos_vma* tmp_vma = _lookup_vma(new_vma->begin);
         if (tmp_vma && tmp_vma->begin < new_vma->end) {
             ret = -EEXIST;
         }
@@ -777,7 +777,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim
     return ret;
 }
 
-static void vma_update_prot(struct shim_vma* vma, int prot) {
+static void vma_update_prot(struct libos_vma* vma, int prot) {
     vma->prot = prot & (PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC);
     if (vma->file && (prot & PROT_WRITE)) {
         vma->flags |= VMA_TAINTED;
@@ -785,18 +785,18 @@ static void vma_update_prot(struct shim_vma* vma, int prot) {
 }
 
 static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_internal,
-                             struct shim_vma** new_vma_ptr1, struct shim_vma** new_vma_ptr2) {
+                             struct libos_vma** new_vma_ptr1, struct libos_vma** new_vma_ptr2) {
     assert(spinlock_is_locked(&vma_tree_lock));
     assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
     assert(begin < end);
 
-    struct shim_vma* vma = _lookup_vma(begin);
+    struct libos_vma* vma = _lookup_vma(begin);
     if (!vma) {
         return -ENOMEM;
     }
 
-    struct shim_vma* prev = NULL;
-    struct shim_vma* first_vma = vma;
+    struct libos_vma* prev = NULL;
+    struct libos_vma* first_vma = vma;
 
     if (begin < vma->begin) {
         return -ENOMEM;
@@ -844,18 +844,18 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
 
     /* For PROT_GROWSDOWN we just pretend that `vma->begin == begin`. */
     if (vma->begin < begin && !(prot & PROT_GROWSDOWN)) {
-        struct shim_vma* new_vma1 = *new_vma_ptr1;
+        struct libos_vma* new_vma1 = *new_vma_ptr1;
         *new_vma_ptr1 = NULL;
 
         split_vma(vma, new_vma1, begin);
         vma_update_prot(new_vma1, prot);
 
-        struct shim_vma* next = _get_next_vma(vma);
+        struct libos_vma* next = _get_next_vma(vma);
 
         avl_tree_insert(&vma_tree, &new_vma1->tree_node);
 
         if (end < new_vma1->end) {
-            struct shim_vma* new_vma2 = *new_vma_ptr2;
+            struct libos_vma* new_vma2 = *new_vma_ptr2;
             *new_vma_ptr2 = NULL;
 
             split_vma(new_vma1, new_vma2, end);
@@ -874,7 +874,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
         vma_update_prot(vma, prot);
 
 #ifdef DEBUG
-        struct shim_vma* prev = vma;
+        struct libos_vma* prev = vma;
 #endif
         vma = _get_next_vma(vma);
         if (!vma) {
@@ -888,7 +888,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
         return 0;
     }
 
-    struct shim_vma* new_vma2 = *new_vma_ptr2;
+    struct libos_vma* new_vma2 = *new_vma_ptr2;
     *new_vma_ptr2 = NULL;
 
     split_vma(vma, new_vma2, end);
@@ -904,11 +904,11 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal) {
         return -EINVAL;
     }
 
-    struct shim_vma* vma1 = alloc_vma();
+    struct libos_vma* vma1 = alloc_vma();
     if (!vma1) {
         return -ENOMEM;
     }
-    struct shim_vma* vma2 = alloc_vma();
+    struct libos_vma* vma2 = alloc_vma();
     if (!vma2) {
         free_vma(vma1);
         return -ENOMEM;
@@ -938,7 +938,7 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal) {
 /* This function allocates at most 1 vma. If in the future it uses more, `_vma_malloc` should be
  * updated as well. */
 int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, int prot, int flags,
-                            struct shim_handle* file, uint64_t offset, const char* comment,
+                            struct libos_handle* file, uint64_t offset, const char* comment,
                             void** ret_val_ptr) {
     assert(_bottom_addr < _top_addr);
 
@@ -964,7 +964,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     }
 #endif
 
-    struct shim_vma* new_vma = alloc_vma();
+    struct libos_vma* new_vma = alloc_vma();
     if (!new_vma) {
         return -ENOMEM;
     }
@@ -979,7 +979,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
 
     spinlock_lock(&vma_tree_lock);
 
-    struct shim_vma* vma = _lookup_vma(top_addr);
+    struct libos_vma* vma = _lookup_vma(top_addr);
     uintptr_t max_addr;
     if (!vma) {
         vma = _get_last_vma();
@@ -1025,14 +1025,14 @@ out:
     return ret;
 }
 
-int bkeep_mmap_any(size_t length, int prot, int flags, struct shim_handle* file, uint64_t offset,
+int bkeep_mmap_any(size_t length, int prot, int flags, struct libos_handle* file, uint64_t offset,
                    const char* comment, void** ret_val_ptr) {
     return bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
                                    g_pal_public_state->user_address_end,
                                    length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
-int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct shim_handle* file,
+int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr) {
     int ret;
     ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start, g_aslr_addr_top, length,
@@ -1044,7 +1044,7 @@ int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct shim_handle* 
     return bkeep_mmap_any(length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
-static void dump_vma(struct shim_vma_info* vma_info, struct shim_vma* vma) {
+static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     vma_info->addr        = (void*)vma->begin;
     vma_info->length      = vma->end - vma->begin;
     vma_info->prot        = vma->prot;
@@ -1058,12 +1058,12 @@ static void dump_vma(struct shim_vma_info* vma_info, struct shim_vma* vma) {
     memcpy(vma_info->comment, vma->comment, sizeof(vma_info->comment));
 }
 
-int lookup_vma(void* addr, struct shim_vma_info* vma_info) {
+int lookup_vma(void* addr, struct libos_vma_info* vma_info) {
     assert(vma_info);
     int ret = 0;
 
     spinlock_lock(&vma_tree_lock);
-    struct shim_vma* vma = _lookup_vma((uintptr_t)addr);
+    struct libos_vma* vma = _lookup_vma((uintptr_t)addr);
     if (!vma || !is_addr_in_vma((uintptr_t)addr, vma)) {
         ret = -ENOENT;
         goto out;
@@ -1081,7 +1081,7 @@ struct adj_visitor_ctx {
     bool is_ok;
 };
 
-static bool adj_visitor(struct shim_vma* vma, void* visitor_arg) {
+static bool adj_visitor(struct libos_vma* vma, void* visitor_arg) {
     struct adj_visitor_ctx* ctx = visitor_arg;
     bool is_ok = !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
     is_ok &= (vma->prot & ctx->prot) == ctx->prot;
@@ -1106,14 +1106,14 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot) {
     return is_continuous && ctx.is_ok;
 }
 
-static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
+static size_t dump_vmas_with_buf(struct libos_vma_info* infos, size_t max_count,
                                  uintptr_t begin, uintptr_t end,
-                                 bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
+                                 bool (*vma_filter)(struct libos_vma* vma, void* arg), void* arg) {
     size_t size = 0;
-    struct shim_vma_info* vma_info = infos;
+    struct libos_vma_info* vma_info = infos;
 
     spinlock_lock(&vma_tree_lock);
-    struct shim_vma* vma;
+    struct libos_vma* vma;
 
     for (vma = _lookup_vma(begin); vma && vma->begin < end; vma = _get_next_vma(vma)) {
         if (!vma_filter(vma, arg))
@@ -1130,13 +1130,13 @@ static size_t dump_vmas_with_buf(struct shim_vma_info* infos, size_t max_count,
     return size;
 }
 
-static int dump_vmas(struct shim_vma_info** ret_infos, size_t* ret_count,
+static int dump_vmas(struct libos_vma_info** ret_infos, size_t* ret_count,
                      uintptr_t begin, uintptr_t end,
-                     bool (*vma_filter)(struct shim_vma* vma, void* arg), void* arg) {
+                     bool (*vma_filter)(struct libos_vma* vma, void* arg), void* arg) {
     size_t count = DEFAULT_VMA_COUNT;
 
     while (true) {
-        struct shim_vma_info* vmas = calloc(count, sizeof(*vmas));
+        struct libos_vma_info* vmas = calloc(count, sizeof(*vmas));
         if (!vmas) {
             return -ENOMEM;
         }
@@ -1153,27 +1153,27 @@ static int dump_vmas(struct shim_vma_info** ret_infos, size_t* ret_count,
     }
 }
 
-static bool vma_filter_all(struct shim_vma* vma, void* arg) {
+static bool vma_filter_all(struct libos_vma* vma, void* arg) {
     assert(spinlock_is_locked(&vma_tree_lock));
     __UNUSED(arg);
 
     return !(vma->flags & VMA_INTERNAL);
 }
 
-static bool vma_filter_exclude_unmapped(struct shim_vma* vma, void* arg) {
+static bool vma_filter_exclude_unmapped(struct libos_vma* vma, void* arg) {
     assert(spinlock_is_locked(&vma_tree_lock));
     __UNUSED(arg);
 
     return !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
 }
 
-int dump_all_vmas(struct shim_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
+int dump_all_vmas(struct libos_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
     return dump_vmas(ret_infos, ret_count, /*begin=*/0, /*end=*/UINTPTR_MAX,
                      include_unmapped ? vma_filter_all : vma_filter_exclude_unmapped,
                      /*arg=*/NULL);
 }
 
-void free_vma_info_array(struct shim_vma_info* vma_infos, size_t count) {
+void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
     for (size_t i = 0; i < count; i++) {
         if (vma_infos[i].file) {
             put_handle(vma_infos[i].file);
@@ -1189,7 +1189,7 @@ struct madvise_dontneed_ctx {
     int error;
 };
 
-static bool madvise_dontneed_visitor(struct shim_vma* vma, void* visitor_arg) {
+static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
     struct madvise_dontneed_ctx* ctx = (struct madvise_dontneed_ctx*)visitor_arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL)) {
@@ -1235,8 +1235,8 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     return ctx.error;
 }
 
-static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
-    struct shim_handle* hdl = arg;
+static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
+    struct libos_handle* hdl = arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
@@ -1255,11 +1255,11 @@ static bool vma_filter_needs_msync(struct shim_vma* vma, void* arg) {
     return true;
 }
 
-static int msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
+static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
     assert(IS_ALLOC_ALIGNED(begin));
     assert(end == UINTPTR_MAX || IS_ALLOC_ALIGNED(end));
 
-    struct shim_vma_info* vma_infos;
+    struct libos_vma_info* vma_infos;
     size_t count;
 
     int ret = dump_vmas(&vma_infos, &count, begin, end, vma_filter_needs_msync, hdl);
@@ -1267,9 +1267,9 @@ static int msync_all(uintptr_t begin, uintptr_t end, struct shim_handle* hdl) {
         return ret;
 
     for (size_t i = 0; i < count; i++) {
-        struct shim_vma_info* vma_info = &vma_infos[i];
+        struct libos_vma_info* vma_info = &vma_infos[i];
 
-        struct shim_handle* file = vma_info->file;
+        struct libos_handle* file = vma_info->file;
         assert(file && file->fs && file->fs->fs_ops && file->fs->fs_ops->msync);
 
         /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
@@ -1295,16 +1295,16 @@ int msync_range(uintptr_t begin, uintptr_t end) {
     return msync_all(begin, end, /*hdl=*/NULL);
 }
 
-int msync_handle(struct shim_handle* hdl) {
+int msync_handle(struct libos_handle* hdl) {
     return msync_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
 }
 
 BEGIN_CP_FUNC(vma) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_vma_info));
+    assert(size == sizeof(struct libos_vma_info));
 
-    struct shim_vma_info* vma = (struct shim_vma_info*)obj;
-    struct shim_vma_info* new_vma = NULL;
+    struct libos_vma_info* vma = (struct libos_vma_info*)obj;
+    struct libos_vma_info* new_vma = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
@@ -1312,7 +1312,7 @@ BEGIN_CP_FUNC(vma) {
         off = ADD_CP_OFFSET(sizeof(*vma));
         ADD_TO_CP_MAP(obj, off);
 
-        new_vma = (struct shim_vma_info*)(base + off);
+        new_vma = (struct libos_vma_info*)(base + off);
         *new_vma = *vma;
 
         if (vma->file)
@@ -1335,7 +1335,7 @@ BEGIN_CP_FUNC(vma) {
 
             if (!vma->file) {
                 /* Send anonymous memory region. */
-                struct shim_mem_entry* mem;
+                struct libos_mem_entry* mem;
                 DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
                 mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
             } else {
@@ -1359,7 +1359,7 @@ BEGIN_CP_FUNC(vma) {
                  * the file was truncated after the memory was allocated). In this case we consider
                  * the whole memory region to be inaccessible. */
                 if (send_size > 0) {
-                    struct shim_mem_entry* mem;
+                    struct libos_mem_entry* mem;
                     DO_CP_SIZE(memory, vma->addr, send_size, &mem);
                     mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                 }
@@ -1369,7 +1369,7 @@ BEGIN_CP_FUNC(vma) {
         ADD_CP_FUNC_ENTRY(off);
         ADD_CP_ENTRY(ADDR, (uintptr_t)remap_from_file);
     } else {
-        new_vma = (struct shim_vma_info*)(base + off);
+        new_vma = (struct libos_vma_info*)(base + off);
     }
 
     if (objp)
@@ -1378,7 +1378,7 @@ BEGIN_CP_FUNC(vma) {
 END_CP_FUNC(vma)
 
 BEGIN_RS_FUNC(vma) {
-    struct shim_vma_info* vma = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_vma_info* vma = (void*)(base + GET_CP_FUNC_ENTRY());
     bool remap_from_file = (bool)GET_CP_ENTRY(ADDR);
     CP_REBASE(vma->file);
 
@@ -1388,7 +1388,7 @@ BEGIN_RS_FUNC(vma) {
         return ret;
 
     if (!(vma->flags & VMA_UNMAPPED) && vma->file) {
-        struct shim_fs* fs = vma->file->fs;
+        struct libos_fs* fs = vma->file->fs;
         get_handle(vma->file);
 
         if (remap_from_file) {
@@ -1410,13 +1410,13 @@ BEGIN_CP_FUNC(all_vmas) {
     __UNUSED(size);
     __UNUSED(objp);
     size_t count;
-    struct shim_vma_info* vmas;
+    struct libos_vma_info* vmas;
     int ret = dump_all_vmas(&vmas, &count, /*include_unmapped=*/true);
     if (ret < 0) {
         return ret;
     }
 
-    for (struct shim_vma_info* vma = &vmas[count - 1];; vma--) {
+    for (struct libos_vma_info* vma = &vmas[count - 1];; vma--) {
         DO_CP(vma, vma, NULL);
         if (vma == vmas)
             break;
@@ -1427,7 +1427,7 @@ BEGIN_CP_FUNC(all_vmas) {
 END_CP_FUNC_NO_RS(all_vmas)
 
 
-static void debug_print_vma(struct shim_vma* vma) {
+static void debug_print_vma(struct libos_vma* vma) {
     log_always("[0x%lx-0x%lx] prot=0x%x flags=0x%x%s%s file=%p (offset=%ld)%s%s",
                vma->begin, vma->end,
                vma->prot,
@@ -1443,7 +1443,7 @@ static void debug_print_vma(struct shim_vma* vma) {
 void debug_print_all_vmas(void) {
     spinlock_lock(&vma_tree_lock);
 
-    struct shim_vma* vma = _get_first_vma();
+    struct libos_vma* vma = _get_first_vma();
     while (vma) {
         debug_print_vma(vma);
         vma = _get_next_vma(vma);

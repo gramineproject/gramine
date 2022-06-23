@@ -21,11 +21,11 @@
 #include "shim_table.h"
 #include "stat.h"
 
-ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count) {
+ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count) {
     if (!(hdl->acc_mode & MAY_READ))
         return -EBADF;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
 
     if (!fs->fs_ops->read)
@@ -44,7 +44,7 @@ long libos_syscall_read(int fd, void* buf, size_t count) {
     if (!is_user_memory_writable(buf, count))
         return -EFAULT;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -56,11 +56,11 @@ long libos_syscall_read(int fd, void* buf, size_t count) {
     return ret;
 }
 
-ssize_t do_handle_write(struct shim_handle* hdl, const void* buf, size_t count) {
+ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count) {
     if (!(hdl->acc_mode & MAY_WRITE))
         return -EBADF;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
 
     if (!fs->fs_ops->write)
@@ -79,7 +79,7 @@ long libos_syscall_write(int fd, const void* buf, size_t count) {
     if (!is_user_memory_readable((void*)buf, count))
         return -EFAULT;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -128,13 +128,13 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
         mode &= ~umask;
     }
 
-    struct shim_dentry* dir = NULL;
+    struct libos_dentry* dir = NULL;
     int ret = 0;
 
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
 
-    struct shim_handle* hdl = get_new_handle();
+    struct libos_handle* hdl = get_new_handle();
     if (!hdl) {
         ret = -ENOMEM;
         goto out;
@@ -160,7 +160,7 @@ out:
 }
 
 long libos_syscall_close(int fd) {
-    struct shim_handle* handle = detach_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = detach_fd_handle(fd, NULL, NULL);
     if (!handle)
         return -EBADF;
 
@@ -169,7 +169,7 @@ long libos_syscall_close(int fd) {
 }
 
 /* See also `do_getdents`. */
-static file_off_t do_lseek_dir(struct shim_handle* hdl, off_t offset, int origin) {
+static file_off_t do_lseek_dir(struct libos_handle* hdl, off_t offset, int origin) {
     assert(hdl->is_dir);
 
     lock(&g_dcache_lock);
@@ -183,7 +183,7 @@ static file_off_t do_lseek_dir(struct shim_handle* hdl, off_t offset, int origin
     if ((ret = populate_directory_handle(hdl)) < 0)
         goto out;
 
-    struct shim_dir_handle* dirhdl = &hdl->dir_info;
+    struct libos_dir_handle* dirhdl = &hdl->dir_info;
 
     file_off_t pos;
     ret = generic_seek(hdl->pos, dirhdl->count, offset, origin, &pos);
@@ -204,7 +204,7 @@ long libos_syscall_lseek(int fd, off_t offset, int origin) {
     if (origin != SEEK_SET && origin != SEEK_CUR && origin != SEEK_END)
         return -EINVAL;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -214,7 +214,7 @@ long libos_syscall_lseek(int fd, off_t offset, int origin) {
         goto out;
     }
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
 
     if (!fs->fs_ops->seek) {
@@ -235,11 +235,11 @@ long libos_syscall_pread64(int fd, char* buf, size_t count, loff_t offset) {
     if (offset < 0)
         return -EINVAL;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     ssize_t ret = -EACCES;
 
     if (!(hdl->acc_mode & MAY_READ)) {
@@ -277,11 +277,11 @@ long libos_syscall_pwrite64(int fd, char* buf, size_t count, loff_t offset) {
     if (offset < 0)
         return -EINVAL;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     ssize_t ret = -EACCES;
 
     if (!(hdl->acc_mode & MAY_WRITE)) {
@@ -337,7 +337,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     if (!is_user_memory_writable(buf, buf_size))
         return -EFAULT;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -357,13 +357,13 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     lock(&hdl->pos_lock);
     lock(&hdl->lock);
 
-    struct shim_dir_handle* dirhdl = &hdl->dir_info;
+    struct libos_dir_handle* dirhdl = &hdl->dir_info;
     if ((ret = populate_directory_handle(hdl)) < 0)
         goto out;
 
     size_t buf_pos = 0;
     while ((size_t)hdl->pos < dirhdl->count) {
-        struct shim_dentry* dent = dirhdl->dents[hdl->pos];
+        struct libos_dentry* dent = dirhdl->dents[hdl->pos];
         assert(dent->inode);
 
         const char* name;
@@ -460,12 +460,12 @@ long libos_syscall_getdents64(int fd, struct linux_dirent64* buf, size_t count) 
 }
 
 long libos_syscall_fsync(int fd) {
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
     int ret;
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
 
     if (!fs || !fs->fs_ops) {
         ret = -EACCES;
@@ -503,7 +503,7 @@ long libos_syscall_truncate(const char* path, loff_t length) {
     if (!is_user_string_readable(path))
         return -EFAULT;
 
-    struct shim_handle* hdl = get_new_handle();
+    struct libos_handle* hdl = get_new_handle();
     if (!hdl)
         return -ENOMEM;
 
@@ -511,7 +511,7 @@ long libos_syscall_truncate(const char* path, loff_t length) {
     if (ret < 0)
         goto out;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
 
     if (!fs->fs_ops->truncate) {
         ret = -EROFS;
@@ -528,11 +528,11 @@ long libos_syscall_ftruncate(int fd, loff_t length) {
     if (length < 0)
         return -EINVAL;
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     int ret;
 
     if (!(hdl->acc_mode & MAY_WRITE)) {
@@ -571,7 +571,7 @@ long libos_syscall_fallocate(int fd, int mode, loff_t offset, loff_t len) {
         return -ENOSYS;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -589,7 +589,7 @@ long libos_syscall_fallocate(int fd, int mode, loff_t offset, loff_t len) {
         goto out;
     }
 
-    struct shim_fs* fs = handle->fs;
+    struct libos_fs* fs = handle->fs;
     if (!fs || !fs->fs_ops) {
         ret = -EINVAL;
         goto out;

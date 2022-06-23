@@ -21,7 +21,7 @@ int ipc_get_new_vmid(IDTYPE* vmid) {
     }
 
     size_t msg_size = get_ipc_msg_size(0);
-    struct shim_ipc_msg* msg = malloc(msg_size);
+    struct libos_ipc_msg* msg = malloc(msg_size);
     if (!msg) {
         return -ENOMEM;
     }
@@ -52,7 +52,7 @@ int ipc_get_new_vmid_callback(IDTYPE src, void* data, uint64_t seq) {
     log_debug("%s: %u", __func__, vmid);
 
     size_t msg_size = get_ipc_msg_size(sizeof(vmid));
-    struct shim_ipc_msg* msg = __alloca(msg_size);
+    struct libos_ipc_msg* msg = __alloca(msg_size);
     init_ipc_response(msg, seq, msg_size);
     memcpy(&msg->data, &vmid, sizeof(vmid));
 

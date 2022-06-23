@@ -190,13 +190,13 @@ struct sync_handle {
     UT_hash_handle hh;
 
     /* Used by sync_lock .. sync_unlock. */
-    struct shim_lock use_lock;
+    struct libos_lock use_lock;
 
     /*
      * Internal properties lock. Protects all the following fields. If used together with use_lock,
      * then use_lock needs to be taken first.
      */
-    struct shim_lock prop_lock;
+    struct libos_lock prop_lock;
 
     /* Size of synchronized data (0 if no data yet). */
     size_t data_size;
@@ -262,7 +262,7 @@ void sync_unlock(struct sync_handle* handle, void* data, size_t data_size);
 
 /*** Message handlers (called from IPC, see ipc/shim_ipc_sync.c) ***/
 
-struct shim_ipc_port;
+struct libos_ipc_port;
 
 void sync_client_message_callback(int code, uint64_t id, int state, size_t data_size, void* data);
 void sync_server_message_callback(IDTYPE src, int code, uint64_t id, int state,

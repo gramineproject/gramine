@@ -15,9 +15,9 @@
 
 #define CMDLINE_SIZE 4096
 
-DEFINE_LIST(shim_child_process);
-DEFINE_LISTP(shim_child_process);
-struct shim_child_process {
+DEFINE_LIST(libos_child_process);
+DEFINE_LISTP(libos_child_process);
+struct libos_child_process {
     IDTYPE pid;
     IDTYPE vmid;
 
@@ -29,10 +29,10 @@ struct shim_child_process {
     int term_signal;
     IDTYPE uid;
 
-    LIST_TYPE(shim_child_process) list;
+    LIST_TYPE(libos_child_process) list;
 };
 
-struct shim_process {
+struct libos_process {
     /* These 2 fields are constant and can safely be read without any locks held. */
     IDTYPE pid;
     IDTYPE ppid;
@@ -42,23 +42,23 @@ struct shim_process {
 
     /* Currently all threads share filesystem information. For more info check `CLONE_FS` flag in
      * `clone.c`. Protected by `fs_lock`. */
-    struct shim_dentry* root;
-    struct shim_dentry* cwd;
+    struct libos_dentry* root;
+    struct libos_dentry* cwd;
     mode_t umask;
 
     /* Handle to the executable file. Protected by `fs_lock`. */
-    struct shim_handle* exec;
+    struct libos_handle* exec;
 
     /* Threads waiting for some child to exit. Protected by `children_lock`. */
-    struct shim_thread_queue* wait_queue;
+    struct libos_thread_queue* wait_queue;
 
     /* List of child processes that are still running. Protected by `children_lock`. */
-    LISTP_TYPE(shim_child_process) children;
+    LISTP_TYPE(libos_child_process) children;
     /* List of already exited children. Protected by `children_lock`. */
-    LISTP_TYPE(shim_child_process) zombies;
+    LISTP_TYPE(libos_child_process) zombies;
 
-    struct shim_lock children_lock;
-    struct shim_lock fs_lock;
+    struct libos_lock children_lock;
+    struct libos_lock fs_lock;
 
     /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
      * once during initialization, using static buffer and restricted to CMDLINE_SIZE. This is
@@ -67,16 +67,16 @@ struct shim_process {
     size_t cmdline_size;
 };
 
-extern struct shim_process g_process;
+extern struct libos_process g_process;
 
 int init_process(int argc, const char** argv);
 
 /* Allocates a new child process structure, initializing all fields. */
-struct shim_child_process* create_child_process(void);
+struct libos_child_process* create_child_process(void);
 /* Frees `child` with all accompanying resources. */
-void destroy_child_process(struct shim_child_process* child);
+void destroy_child_process(struct libos_child_process* child);
 /* Adds `child` to `g_process` children list. */
-void add_child_process(struct shim_child_process* child);
+void add_child_process(struct libos_child_process* child);
 
 /*
  * These 2 functions mark a child as exited, moving it from `children` list to `zombies` list

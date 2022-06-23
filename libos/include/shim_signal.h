@@ -93,17 +93,17 @@ void thread_sigaction_reset_on_execve(void);
         return BODY;                                             \
     }
 
-__SIGSETFN(shim_sigismember, (__set->__val[__word] & __mask) ? 1 : 0, __const)
-__SIGSETFN(shim_sigaddset, ((__set->__val[__word] |= __mask), 0), )
-__SIGSETFN(shim_sigdelset, ((__set->__val[__word] &= ~__mask), 0), )
+__SIGSETFN(libos_sigismember, (__set->__val[__word] & __mask) ? 1 : 0, __const)
+__SIGSETFN(libos_sigaddset, ((__set->__val[__word] |= __mask), 0), )
+__SIGSETFN(libos_sigdelset, ((__set->__val[__word] &= ~__mask), 0), )
 
-#define __sigismember shim_sigismember
-#define __sigaddset   shim_sigaddset
-#define __sigdelset   shim_sigdelset
+#define __sigismember libos_sigismember
+#define __sigaddset   libos_sigaddset
+#define __sigdelset   libos_sigdelset
 
 void clear_illegal_signals(__sigset_t* set);
 
-struct shim_signal {
+struct libos_signal {
     siginfo_t siginfo;
 };
 
@@ -130,11 +130,11 @@ uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack);
  */
 bool is_on_altstack(uintptr_t sp, stack_t* alt_stack);
 
-struct shim_thread;
+struct libos_thread;
 
 int init_signal_handling(void);
 
-int append_signal(struct shim_thread* thread, siginfo_t* info);
+int append_signal(struct libos_thread* thread, siginfo_t* info);
 
 /*!
  * \brief Pop any of the pending signals allowed in \p mask.
@@ -147,10 +147,10 @@ int append_signal(struct shim_thread* thread, siginfo_t* info);
  * and host-injected signals. Returns the first such signal in \p signal, or sets
  * `signal.siginfo.si_signo = 0` if no signal is found.
  */
-void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal);
+void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal);
 
-void get_sig_mask(struct shim_thread* thread, __sigset_t* mask);
-void set_sig_mask(struct shim_thread* thread, const __sigset_t* new_set);
+void get_sig_mask(struct libos_thread* thread, __sigset_t* mask);
+void set_sig_mask(struct libos_thread* thread, const __sigset_t* new_set);
 
 /*!
  * \brief Set signal mask requested by user.
@@ -160,8 +160,8 @@ void set_sig_mask(struct shim_thread* thread, const __sigset_t* new_set);
  *
  * \returns `0` on success, negative error code on failure.
  *
- * This function saves the current signal mask (in `struct shim_thread`) and sets it to \p mask_ptr.
- * If \p mask_ptr is NULL, this does nothing.
+ * This function saves the current signal mask (in `struct libos_thread`) and sets it to
+ * \p mask_ptr. If \p mask_ptr is NULL, this does nothing.
  */
 int set_user_sigmask(const __sigset_t* mask_ptr, size_t setsize);
 

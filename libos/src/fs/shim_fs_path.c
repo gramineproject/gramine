@@ -5,20 +5,20 @@
 
 #include "shim_fs.h"
 
-static int hstat(struct shim_handle* handle, struct stat* buf) {
+static int hstat(struct libos_handle* handle, struct stat* buf) {
     if (!handle->inode) {
         return -EINVAL;
     }
     return generic_inode_hstat(handle, buf);
 }
 
-static struct shim_fs_ops path_fs_ops = {
+static struct libos_fs_ops path_fs_ops = {
     .hstat = hstat,
 };
 
-static struct shim_d_ops path_d_ops = {};
+static struct libos_d_ops path_d_ops = {};
 
-struct shim_fs path_builtin_fs = {
+struct libos_fs path_builtin_fs = {
     .name = "path",
     .fs_ops = &path_fs_ops,
     .d_ops = &path_d_ops,

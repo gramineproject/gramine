@@ -18,15 +18,15 @@
 #include "shim_types.h"
 #include "shim_utils.h"
 
-struct shim_handle;
+struct libos_handle;
 
 #define FS_POLL_RD 0x01
 #define FS_POLL_WR 0x02
 #define FS_POLL_ER 0x04
 
 /* Describes mount parameters. Passed to `mount_fs`, and to the `mount` callback. */
-struct shim_mount_params {
-    /* Filesystem type (corresponds to `name` field of `shim_fs` */
+struct libos_mount_params {
+    /* Filesystem type (corresponds to `name` field of `libos_fs` */
     const char* type;
 
     /* Path to the mountpoint */
@@ -39,13 +39,13 @@ struct shim_mount_params {
     const char* key_name;
 };
 
-struct shim_fs_ops {
+struct libos_fs_ops {
     /* mount: mount an uri to the certain location */
-    int (*mount)(struct shim_mount_params* params, void** mount_data);
+    int (*mount)(struct libos_mount_params* params, void** mount_data);
     int (*unmount)(void* mount_data);
 
     /* close: clean up the file state inside the handle */
-    int (*close)(struct shim_handle* hdl);
+    int (*close)(struct libos_handle* hdl);
 
     /*
      * \brief Read from file.
@@ -62,7 +62,7 @@ struct shim_fs_ops {
      * TODO: Callers should make sure that `count` doesn't overflow `ssize_t`, and `*pos + count`
      * doesn't overflow `file_off_t`.
      */
-    ssize_t (*read)(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos);
+    ssize_t (*read)(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos);
 
     /*
      * \brief Write to file.
@@ -79,7 +79,7 @@ struct shim_fs_ops {
      * TODO: Callers should make sure that `count` doesn't overflow `ssize_t`, and `*pos + count`
      * doesn't overflow `file_off_t`.
      */
-    ssize_t (*write)(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos);
+    ssize_t (*write)(struct libos_handle* hdl, const void* buf, size_t count, file_off_t* pos);
 
     /*!
      * \brief Read a continuous data chunk into multiple buffers.
@@ -91,7 +91,7 @@ struct shim_fs_ops {
      *
      * \returns Number of bytes read on success, negative error code on failure.
      */
-    ssize_t (*readv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+    ssize_t (*readv)(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                      file_off_t* pos);
 
     /*!
@@ -104,7 +104,7 @@ struct shim_fs_ops {
      *
      * \returns Number of bytes written on success, negative error code on failure.
      */
-    ssize_t (*writev)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+    ssize_t (*writev)(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                       file_off_t* pos);
 
     /*
@@ -123,7 +123,7 @@ struct shim_fs_ops {
      * `addr`, `offset` and `size` must be alloc-aligned (see `IS_ALLOC_ALIGNED*` macros in
      * `shim_internal.h`).
      */
-    int (*mmap)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+    int (*mmap)(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                 uint64_t offset);
 
     /*
@@ -142,20 +142,20 @@ struct shim_fs_ops {
      * part of that region. This function should only be called for a shared mapping, i.e. `flags`
      * must contain `MAP_SHARED`.
      */
-    int (*msync)(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+    int (*msync)(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                  uint64_t offset);
 
     /* flush: flush out user buffer */
-    int (*flush)(struct shim_handle* hdl);
+    int (*flush)(struct libos_handle* hdl);
 
     /* seek: the content from the file opened as handle */
-    file_off_t (*seek)(struct shim_handle* hdl, file_off_t offset, int whence);
+    file_off_t (*seek)(struct libos_handle* hdl, file_off_t offset, int whence);
 
     /* Returns 0 on success, -errno on error */
-    int (*truncate)(struct shim_handle* hdl, file_off_t len);
+    int (*truncate)(struct libos_handle* hdl, file_off_t len);
 
     /* hstat: get status of the file; `st_ino` will be taken from dentry, if there's one */
-    int (*hstat)(struct shim_handle* hdl, struct stat* buf);
+    int (*hstat)(struct libos_handle* hdl, struct stat* buf);
 
     /*!
      * \brief Set flags on the handle.
@@ -165,7 +165,7 @@ struct shim_fs_ops {
      * \param mask    Indicates which flags to change. Only bits set in \p mask will be changed
      *                (to values taken from \p flags). Must be non zero.
      */
-    int (*setflags)(struct shim_handle* handle, unsigned int flags, unsigned int mask);
+    int (*setflags)(struct libos_handle* handle, unsigned int flags, unsigned int mask);
 
     /* lock and unlock the file */
     int (*lock)(const char* trim_name);
@@ -176,11 +176,11 @@ struct shim_fs_ops {
     int (*unlockfs)(void);
 
     /* checkout/reowned/checkin a single handle for migration */
-    int (*checkout)(struct shim_handle* hdl);
-    int (*checkin)(struct shim_handle* hdl);
+    int (*checkout)(struct libos_handle* hdl);
+    int (*checkin)(struct libos_handle* hdl);
 
     /* poll a single handle */
-    int (*poll)(struct shim_handle* hdl, int poll_type);
+    int (*poll)(struct libos_handle* hdl, int poll_type);
 
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
@@ -199,11 +199,11 @@ struct fs_lock_info;
  *
  * A dentry is called *positive* if `inode` is set, *negative* otherwise.
  */
-DEFINE_LIST(shim_dentry);
-DEFINE_LISTP(shim_dentry);
-struct shim_dentry {
+DEFINE_LIST(libos_dentry);
+DEFINE_LISTP(libos_dentry);
+struct libos_dentry {
     /* Inode associated with this dentry, or NULL. Protected by `g_dcache_lock`. */
-    struct shim_inode* inode;
+    struct libos_inode* inode;
 
     /* File name, maximum of NAME_MAX characters. By convention, the root has an empty name. Does
      * not change. Length is kept for performance reasons. */
@@ -211,21 +211,21 @@ struct shim_dentry {
     size_t name_len;
 
     /* Mounted filesystem this dentry belongs to. Does not change. */
-    struct shim_mount* mount;
+    struct libos_mount* mount;
 
     /* Parent of this dentry, but only within the same mount. If you need the dentry one level up,
      * regardless of mounts (i.e. `..`), you should use `dentry_up()` instead. Does not change. */
-    struct shim_dentry* parent;
+    struct libos_dentry* parent;
 
     /* The following fields are protected by `g_dcache_lock`. */
     size_t nchildren;
-    LISTP_TYPE(shim_dentry) children; /* These children and siblings link */
-    LIST_TYPE(shim_dentry) siblings;
+    LISTP_TYPE(libos_dentry) children; /* These children and siblings link */
+    LIST_TYPE(libos_dentry) siblings;
 
     /* Filesystem mounted under this dentry. If set, this dentry is a mountpoint: filesystem
      * operations should use `attached_mount->root` instead of this dentry. Protected by
      * `g_dcache_lock`. */
-    struct shim_mount* attached_mount;
+    struct libos_mount* attached_mount;
 
     /* File lock information, stored only in the main process. Managed by `shim_fs_lock.c`. */
     struct fs_lock* fs_lock;
@@ -244,7 +244,7 @@ struct shim_dentry {
  * The fields in this structure are protected by `lock`, with the exception of fields that do not
  * change (`type`, `mount`, `fs`).
  */
-struct shim_inode {
+struct libos_inode {
     /* File type: S_IFREG, S_IFDIR, S_IFLNK etc. Does not change. */
     mode_t type;
 
@@ -260,23 +260,23 @@ struct shim_inode {
     time_t atime;
 
     /* Mounted filesystem this inode belongs to. Does not change. */
-    struct shim_mount* mount;
+    struct libos_mount* mount;
 
     /* Filesystem to use for operations on this file: this is usually `mount->fs`, but can be
      * different in case of special files (such as named pipes or sockets). */
-    struct shim_fs* fs;
+    struct libos_fs* fs;
 
     /* Filesystem-specific data */
     void* data;
 
-    struct shim_lock lock;
+    struct libos_lock lock;
     REFTYPE ref_count;
 };
 
 typedef int (*readdir_callback_t)(const char* name, void* arg);
 
 /* TODO: Some of these operations could be simplified if they take an `inode` parameter. */
-struct shim_d_ops {
+struct libos_d_ops {
     /*
      * \brief Look up a file.
      *
@@ -287,7 +287,7 @@ struct shim_d_ops {
      *
      * The caller should hold `g_dcache_lock`.
      */
-    int (*lookup)(struct shim_dentry* dent);
+    int (*lookup)(struct libos_dentry* dent);
 
     /*
      * \brief Open an existing file.
@@ -302,7 +302,7 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should initialize the
      * following handle fields: `fs`, `dentry`, `flags`, `acc_mode`.
      */
-    int (*open)(struct shim_handle* hdl, struct shim_dentry* dent, int flags);
+    int (*open)(struct libos_handle* hdl, struct libos_dentry* dent, int flags);
 
     /*
      * \brief Create and open a new regular file.
@@ -319,7 +319,7 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should finish preparing the
      * handle (as in `open`).
      */
-    int (*creat)(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm);
+    int (*creat)(struct libos_handle* hdl, struct libos_dentry* dent, int flags, mode_t perm);
 
     /*
      * \brief Create a directory.
@@ -332,7 +332,7 @@ struct shim_d_ops {
      *
      * The caller should hold `g_dcache_lock`.
      */
-    int (*mkdir)(struct shim_dentry* dent, mode_t perm);
+    int (*mkdir)(struct libos_dentry* dent, mode_t perm);
 
     /*
      * \brief Unlink a file.
@@ -345,7 +345,7 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should detach the inode from
      * the dentry.
      */
-    int (*unlink)(struct shim_dentry* dent);
+    int (*unlink)(struct libos_dentry* dent);
 
     /*
      * \brief Get file status.
@@ -358,7 +358,7 @@ struct shim_d_ops {
      *
      * The caller should hold `g_dcache_lock`.
      */
-    int (*stat)(struct shim_dentry* dent, struct stat* buf);
+    int (*stat)(struct libos_dentry* dent, struct stat* buf);
 
     /*
      * \brief Extract the target of a symbolic link.
@@ -370,7 +370,7 @@ struct shim_d_ops {
      *
      * The caller should hold `g_dcache_lock`. On success, the caller should free `*out_target`.
      */
-    int (*follow_link)(struct shim_dentry* dent, char** out_target);
+    int (*follow_link)(struct libos_dentry* dent, char** out_target);
 
     /*
      * \brief Change file permissions.
@@ -383,7 +383,7 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should update
      * `dent->inode->perm`.
      */
-    int (*chmod)(struct shim_dentry* dent, mode_t perm);
+    int (*chmod)(struct libos_dentry* dent, mode_t perm);
 
     /*
      * \brief Rename a file.
@@ -400,7 +400,7 @@ struct shim_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should mark the old dentry as
      * negative, and the new dentry as non-negative.
      */
-    int (*rename)(struct shim_dentry* old, struct shim_dentry* new);
+    int (*rename)(struct libos_dentry* old, struct libos_dentry* new);
 
     /*!
      * \brief List all files in the directory.
@@ -419,7 +419,7 @@ struct shim_d_ops {
      *
      * The caller should hold `g_dcache_lock`.
      */
-    int (*readdir)(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
+    int (*readdir)(struct libos_dentry* dent, readdir_callback_t callback, void* arg);
 
     /*!
      * \brief Deallocate inode data.
@@ -431,7 +431,7 @@ struct shim_d_ops {
      *
      * The caller should hold `inode->lock`.
      */
-    void (*idrop)(struct shim_inode* inode);
+    void (*idrop)(struct libos_inode* inode);
 
     /*!
      * \brief Checkpoint inode data.
@@ -444,7 +444,7 @@ struct shim_d_ops {
      *
      * The caller should hold `inode->lock`. On success, the caller should free `*out_data`.
      */
-    int (*icheckpoint)(struct shim_inode* inode, void** out_data, size_t* out_size);
+    int (*icheckpoint)(struct libos_inode* inode, void** out_data, size_t* out_size);
 
     /*!
      * \brief Restore inode data from checkpoint.
@@ -455,7 +455,7 @@ struct shim_d_ops {
      * Restores custom state of the inode. Called when restoring the inode from checkpoint, after
      * all other fields are set.
      */
-    int (*irestore)(struct shim_inode* inode, void* data);
+    int (*irestore)(struct libos_inode* inode, void* data);
 };
 
 /*
@@ -466,23 +466,23 @@ struct shim_d_ops {
 #define NAME_MAX 255   /* filename length, NOT including null terminator */
 #define PATH_MAX 4096  /* path size, including null terminator */
 
-struct shim_fs {
+struct libos_fs {
     /* Null-terminated, used in manifest and for uniquely identifying a filesystem. */
     char name[16];
-    struct shim_fs_ops* fs_ops;
-    struct shim_d_ops* d_ops;
+    struct libos_fs_ops* fs_ops;
+    struct libos_d_ops* d_ops;
 };
 
-DEFINE_LIST(shim_mount);
-struct shim_mount {
-    struct shim_fs* fs;
+DEFINE_LIST(libos_mount);
+struct libos_mount {
+    struct libos_fs* fs;
 
-    struct shim_dentry* mount_point;
+    struct libos_dentry* mount_point;
 
     char* path;
     char* uri;
 
-    struct shim_dentry* root;
+    struct libos_dentry* root;
 
     void* data;
 
@@ -490,11 +490,11 @@ struct shim_mount {
     size_t cpsize;
 
     REFTYPE ref_count;
-    LIST_TYPE(shim_mount) hlist;
-    LIST_TYPE(shim_mount) list;
+    LIST_TYPE(libos_mount) hlist;
+    LIST_TYPE(libos_mount) list;
 };
 
-extern struct shim_dentry* g_dentry_root;
+extern struct libos_dentry* g_dentry_root;
 
 #define F_OK 0
 #define R_OK        001
@@ -521,7 +521,7 @@ int init_mount(void);
 /*!
  * \brief Mount a new filesystem.
  *
- * Creates a new `shim_mount` structure (mounted filesystem) and attaches to the dentry under
+ * Creates a new `libos_mount` structure (mounted filesystem) and attaches to the dentry under
  * `params->path`. That means (assuming the dentry is called `mount_point`):
  *
  * - `mount_point->attached_mount` is the new filesystem,
@@ -539,19 +539,19 @@ int init_mount(void);
  *
  * TODO: On failure, this function does not clean the synthetic nodes it just created.
  */
-int mount_fs(struct shim_mount_params* params);
+int mount_fs(struct libos_mount_params* params);
 
-void get_mount(struct shim_mount* mount);
-void put_mount(struct shim_mount* mount);
+void get_mount(struct libos_mount* mount);
+void put_mount(struct libos_mount* mount);
 
-struct shim_mount* find_mount_from_uri(const char* uri);
+struct libos_mount* find_mount_from_uri(const char* uri);
 
-int walk_mounts(int (*walk)(struct shim_mount* mount, void* arg), void* arg);
+int walk_mounts(int (*walk)(struct libos_mount* mount, void* arg), void* arg);
 
 /* functions for dcache supports */
 int init_dcache(void);
 
-extern struct shim_lock g_dcache_lock;
+extern struct libos_lock g_dcache_lock;
 
 /*!
  * \brief Dump dentry cache.
@@ -561,7 +561,7 @@ extern struct shim_lock g_dcache_lock;
  * Dumps the dentry cache using `log_always`, starting from the provided dentry. Intended for
  * debugging the filesystem - just add it manually to the code.
  */
-void dump_dcache(struct shim_dentry* dent);
+void dump_dcache(struct libos_dentry* dent);
 
 /*!
  * \brief Check file permissions, similar to Unix access.
@@ -576,7 +576,7 @@ void dump_dcache(struct shim_dentry* dent);
  *
  * `dentry` can be negative (in which case the function will return -ENOENT).
  */
-int check_permissions(struct shim_dentry* dent, mode_t mask);
+int check_permissions(struct libos_dentry* dent, mode_t mask);
 
 /*
  * Flags for `path_lookupat`.
@@ -642,8 +642,8 @@ int check_permissions(struct shim_dentry* dent, mode_t mask);
  * TODO: This function doesn't check any permissions. It should return -EACCES on inaccessible
  * directories.
  */
-int path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                  struct shim_dentry** found);
+int path_lookupat(struct libos_dentry* start, const char* path, int flags,
+                  struct libos_dentry** found);
 
 /*!
  * This function returns a dentry (in *dir) from a handle corresponding to dirfd.
@@ -653,7 +653,7 @@ int path_lookupat(struct shim_dentry* start, const char* path, int flags,
  *
  * Increments dentry ref count by one.
  */
-int get_dirfd_dentry(int dirfd, struct shim_dentry** dir);
+int get_dirfd_dentry(int dirfd, struct libos_dentry** dir);
 
 /*!
  * \brief Open a file under a given path, similar to Unix open.
@@ -694,8 +694,8 @@ int get_dirfd_dentry(int dirfd, struct shim_dentry** dir);
  *
  * TODO: The set of allowed flags should be checked in syscalls that use this function.
  */
-int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* path, int flags,
-               int mode, struct shim_dentry** found);
+int open_namei(struct libos_handle* hdl, struct libos_dentry* start, const char* path, int flags,
+               int mode, struct libos_dentry** found);
 
 /*!
  * \brief Open an already retrieved dentry, and associates a handle with it.
@@ -709,7 +709,7 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
  * The `flags` parameter will be passed to the underlying filesystem's `open` function. If O_TRUNC
  * flag is specified, the filesystem's `truncate` function will also be called.
  */
-int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags);
+int dentry_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags);
 
 /*!
  * \brief Populate a directory handle with current dentries.
@@ -724,7 +724,7 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags);
  * If the handle is currently populated (i.e. `hdl->dir_info.dents` is not null), this function is a
  * no-op. If you want to refresh the handle with new contents, call `clear_directory_handle` first.
  */
-int populate_directory_handle(struct shim_handle* hdl);
+int populate_directory_handle(struct libos_handle* hdl);
 
 /*!
  * \brief Clear dentries from a directory handle.
@@ -736,12 +736,12 @@ int populate_directory_handle(struct shim_handle* hdl);
  * If the handle is currently not populated (i.e. `hdl->dir_info.dents` is null), this function is a
  * no-op.
  */
-void clear_directory_handle(struct shim_handle* hdl);
+void clear_directory_handle(struct libos_handle* hdl);
 
 /* Increment the reference count on dent */
-void get_dentry(struct shim_dentry* dent);
+void get_dentry(struct libos_dentry* dent);
 /* Decrement the reference count on dent */
-void put_dentry(struct shim_dentry* dent);
+void put_dentry(struct libos_dentry* dent);
 
 /*!
  * \brief Get the dentry one level up.
@@ -754,7 +754,7 @@ void put_dentry(struct shim_dentry* dent);
  * global root. Unlike the `parent` field, this traverses mounted filesystems (i.e. works also for a
  * root dentry of a mount).
  */
-struct shim_dentry* dentry_up(struct shim_dentry* dent);
+struct libos_dentry* dentry_up(struct libos_dentry* dent);
 
 /*!
  * \brief Garbage-collect a dentry, if possible.
@@ -772,8 +772,8 @@ struct shim_dentry* dentry_up(struct shim_dentry* dent);
  * will be only encountered once.
  *
  * \code
- * struct shim_dentry* child;
- * struct shim_dentry* tmp;
+ * struct libos_dentry* child;
+ * struct libos_dentry* tmp;
  *
  * LISTP_FOR_EACH_ENTRY_SAFE(child, tmp, &dent->children, siblings) {
  *     // do something with `child`, increase ref count if used
@@ -782,7 +782,7 @@ struct shim_dentry* dentry_up(struct shim_dentry* dent);
  * }
  * \endcode
  */
-void dentry_gc(struct shim_dentry* dent);
+void dentry_gc(struct libos_dentry* dent);
 
 /*!
  * \brief Compute an absolute path for dentry, allocating memory for it.
@@ -802,7 +802,7 @@ void dentry_gc(struct shim_dentry* dent);
  * TODO: It would be more natural to use a `len` parameter instead (for length without null
  * terminator).
  */
-int dentry_abs_path(struct shim_dentry* dent, char** path, size_t* size);
+int dentry_abs_path(struct libos_dentry* dent, char** path, size_t* size);
 
 /*!
  * \brief Compute a relative path for dentry, allocating memory for it.
@@ -822,9 +822,9 @@ int dentry_abs_path(struct shim_dentry* dent, char** path, size_t* size);
  * TODO: It would be more natural to use a `len` parameter instead (for length without null
  * terminator).
  */
-int dentry_rel_path(struct shim_dentry* dent, char** path, size_t* size);
+int dentry_rel_path(struct libos_dentry* dent, char** path, size_t* size);
 
-ino_t dentry_ino(struct shim_dentry* dent);
+ino_t dentry_ino(struct libos_dentry* dent);
 
 /*!
  * \brief Allocate and initializes a new dentry.
@@ -847,8 +847,8 @@ ino_t dentry_ino(struct shim_dentry* dent);
  * initializing the root dentry of a newly mounted filesystem. The `fs` field will be initialized to
  * `mount->fs`, but you can later change it to support special files.
  */
-struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry* parent,
-                                   const char* name, size_t name_len);
+struct libos_dentry* get_new_dentry(struct libos_mount* mount, struct libos_dentry* parent,
+                                    const char* name, size_t name_len);
 
 /*!
  * \brief Search for a child of a dentry with a given name.
@@ -863,13 +863,13 @@ struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry*
  *
  * If found, the reference count on the returned dentry is incremented.
  */
-struct shim_dentry* lookup_dcache(struct shim_dentry* parent, const char* name, size_t name_len);
+struct libos_dentry* lookup_dcache(struct libos_dentry* parent, const char* name, size_t name_len);
 
 /*
  * Returns true if `anc` is an ancestor of `dent`. Both dentries need to be within the same mounted
  * filesystem.
  */
-bool dentry_is_ancestor(struct shim_dentry* anc, struct shim_dentry* dent);
+bool dentry_is_ancestor(struct libos_dentry* anc, struct libos_dentry* dent);
 
 /* XXX: Future work: current dcache never shrinks. Would be nice to be able to do something like LRU
  * under space pressure, although for a single app, this may be over-kill. */
@@ -881,10 +881,10 @@ bool dentry_is_ancestor(struct shim_dentry* anc, struct shim_dentry* dent);
  * \param type   Inode type (S_IFREG, S_IFDIR, etc.).
  * \param perm   Inode permissions (PERM_rwxrwxrwx, etc.).
  */
-struct shim_inode* get_new_inode(struct shim_mount* mount, mode_t type, mode_t perm);
+struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t perm);
 
-void get_inode(struct shim_inode* inode);
-void put_inode(struct shim_inode* inode);
+void get_inode(struct libos_inode* inode);
+void put_inode(struct libos_inode* inode);
 
 /*
  * Hashing utilities for paths.
@@ -896,32 +896,32 @@ void put_inode(struct shim_inode* inode);
 
 HASHTYPE hash_str(const char* str);
 HASHTYPE hash_name(HASHTYPE parent_hbuf, const char* name);
-HASHTYPE hash_abs_path(struct shim_dentry* dent);
+HASHTYPE hash_abs_path(struct libos_dentry* dent);
 
 #define READDIR_BUF_SIZE 4096
 
-extern struct shim_fs_ops chroot_fs_ops;
-extern struct shim_d_ops chroot_d_ops;
+extern struct libos_fs_ops chroot_fs_ops;
+extern struct libos_d_ops chroot_d_ops;
 
-extern struct shim_fs_ops str_fs_ops;
-extern struct shim_d_ops str_d_ops;
+extern struct libos_fs_ops str_fs_ops;
+extern struct libos_d_ops str_d_ops;
 
-extern struct shim_fs_ops tmp_fs_ops;
-extern struct shim_d_ops tmp_d_ops;
+extern struct libos_fs_ops tmp_fs_ops;
+extern struct libos_d_ops tmp_d_ops;
 
 /* XXX: why these are called "builtin"? */
-extern struct shim_fs chroot_builtin_fs;
-extern struct shim_fs chroot_encrypted_builtin_fs;
-extern struct shim_fs tmp_builtin_fs;
-extern struct shim_fs pipe_builtin_fs;
-extern struct shim_fs fifo_builtin_fs;
-extern struct shim_fs socket_builtin_fs;
-extern struct shim_fs epoll_builtin_fs;
-extern struct shim_fs eventfd_builtin_fs;
-extern struct shim_fs synthetic_builtin_fs;
-extern struct shim_fs path_builtin_fs;
+extern struct libos_fs chroot_builtin_fs;
+extern struct libos_fs chroot_encrypted_builtin_fs;
+extern struct libos_fs tmp_builtin_fs;
+extern struct libos_fs pipe_builtin_fs;
+extern struct libos_fs fifo_builtin_fs;
+extern struct libos_fs socket_builtin_fs;
+extern struct libos_fs epoll_builtin_fs;
+extern struct libos_fs eventfd_builtin_fs;
+extern struct libos_fs synthetic_builtin_fs;
+extern struct libos_fs path_builtin_fs;
 
-struct shim_fs* find_fs(const char* name);
+struct libos_fs* find_fs(const char* name);
 
 /*!
  * \brief Compute file position for `seek`.
@@ -938,21 +938,21 @@ struct shim_fs* find_fs(const char* name);
 int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
                  file_off_t* out_pos);
 
-int generic_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
+int generic_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg);
 
-int generic_inode_stat(struct shim_dentry* dent, struct stat* buf);
-int generic_inode_hstat(struct shim_handle* hdl, struct stat* buf);
-file_off_t generic_inode_seek(struct shim_handle* hdl, file_off_t offset, int origin);
-int generic_inode_poll(struct shim_handle* hdl, int poll_type);
+int generic_inode_stat(struct libos_dentry* dent, struct stat* buf);
+int generic_inode_hstat(struct libos_handle* hdl, struct stat* buf);
+file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int origin);
+int generic_inode_poll(struct libos_handle* hdl, int poll_type);
 
-int generic_emulated_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset);
-int generic_emulated_msync(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset);
 
-int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm);
+int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm);
 
-int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write);
+int fifo_setup_dentry(struct libos_dentry* dent, mode_t perm, int fd_read, int fd_write);
 
 /*
  * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It
@@ -960,7 +960,7 @@ int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd
  * have inode associated yet: we might be creating a new file, or looking up a file we don't know
  * yet.
  */
-int chroot_dentry_uri(struct shim_dentry* dent, mode_t type, char** out_uri);
+int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri);
 
-int chroot_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg);
-int chroot_unlink(struct shim_dentry* dent);
+int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg);
+int chroot_unlink(struct libos_dentry* dent);

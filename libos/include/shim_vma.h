@@ -21,14 +21,14 @@
 
 #define VMA_COMMENT_LEN 16
 
-/* Public version of shim_vma, used when we want to copy out the VMA and use it without holding
+/* Public version of libos_vma, used when we want to copy out the VMA and use it without holding
  * the VMA list lock. */
-struct shim_vma_info {
+struct libos_vma_info {
     void* addr;
     size_t length;
     int prot;  // memory protection flags: PROT_*
     int flags; // MAP_* and VMA_*
-    struct shim_handle* file;
+    struct libos_handle* file;
     uint64_t file_offset;
     char comment[VMA_COMMENT_LEN];
 };
@@ -79,7 +79,7 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal);
  * MAP_FIXED_NOREPLACE - the former forces bookkeeping and removes any overlapping VMAs, the latter
  * atomically checks for overlaps and fails if one is found.
  */
-int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim_handle* file,
+int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libos_handle* file,
                      uint64_t offset, const char* comment);
 
 /*
@@ -89,23 +89,23 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct shim
  * Start of bookkept range is returned in `*ret_val_ptr`.
  */
 int bkeep_mmap_any_in_range(void* bottom_addr, void* top_addr, size_t length, int prot, int flags,
-                            struct shim_handle* file, uint64_t offset, const char* comment,
+                            struct libos_handle* file, uint64_t offset, const char* comment,
                             void** ret_val_ptr);
 
 /* Shorthand for `bkeep_mmap_any_in_range` with the range
  * [`g_pal_public_state->user_address_start`, `g_pal_public_state->user_address_end`). */
-int bkeep_mmap_any(size_t length, int prot, int flags, struct shim_handle* file, uint64_t offset,
+int bkeep_mmap_any(size_t length, int prot, int flags, struct libos_handle* file, uint64_t offset,
                    const char* comment, void** ret_val_ptr);
 
 /* First tries to bookkeep in the range [`g_pal_public_state->user_address_start`, `aslr_addr_top`)
  * and if it fails calls `bkeep_mmap_any`. `aslr_addr_top` is a value randomized on each program
  * run. */
-int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct shim_handle* file,
+int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr);
 
 /* Looking up VMA that contains `addr`. If one is found, returns its description in `vma_info`.
  * This function increases ref-count of `vma_info->file` by one (if it is not NULL). */
-int lookup_vma(void* addr, struct shim_vma_info* vma_info);
+int lookup_vma(void* addr, struct libos_vma_info* vma_info);
 
 /* Returns true if the whole range [`addr`, `addr` + `length`) is mapped as user memory and allows
  * for `prot` type of access. */
@@ -117,8 +117,8 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot);
  * `*count`. On error returns negated error code.
  * The returned array can be subsequently freed by `free_vma_info_array`.
  */
-int dump_all_vmas(struct shim_vma_info** vma_infos, size_t* count, bool include_unmapped);
-void free_vma_info_array(struct shim_vma_info* vma_infos, size_t count);
+int dump_all_vmas(struct libos_vma_info** vma_infos, size_t* count, bool include_unmapped);
+void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count);
 
 /* Implementation of madvise(MADV_DONTNEED) syscall */
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end);
@@ -127,6 +127,6 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end);
 int msync_range(uintptr_t begin, uintptr_t end);
 
 /* Call `msync` for file mappings of `hdl` */
-int msync_handle(struct shim_handle* hdl);
+int msync_handle(struct libos_handle* hdl);
 
 void debug_print_all_vmas(void);

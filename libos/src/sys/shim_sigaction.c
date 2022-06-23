@@ -45,7 +45,7 @@ long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act
     }
 #endif
 
-    struct shim_thread* cur = get_cur_thread();
+    struct libos_thread* cur = get_cur_thread();
 
     lock(&cur->signal_dispositions->lock);
 
@@ -64,19 +64,19 @@ long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act
 }
 
 long libos_syscall_rt_sigreturn(void) {
-    PAL_CONTEXT* context = SHIM_TCB_GET(context.regs);
+    PAL_CONTEXT* context = LIBOS_TCB_GET(context.regs);
 
     __sigset_t new_mask;
     restore_sigreturn_context(context, &new_mask);
     clear_illegal_signals(&new_mask);
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     set_sig_mask(current, &new_mask);
     unlock(&current->lock);
 
     /* We restored user context, it's not a syscall. */
-    SHIM_TCB_SET(context.syscall_nr, -1);
+    LIBOS_TCB_SET(context.syscall_nr, -1);
 
     return pal_context_get_retval(context);
 }
@@ -97,7 +97,7 @@ long libos_syscall_rt_sigprocmask(int how, const __sigset_t* set, __sigset_t* ol
     if (oldset && !is_user_memory_readable(oldset, sizeof(*oldset)))
         return -EFAULT;
 
-    struct shim_thread* cur = get_cur_thread();
+    struct libos_thread* cur = get_cur_thread();
 
     lock(&cur->lock);
 
@@ -145,7 +145,7 @@ long libos_syscall_sigaltstack(const stack_t* ss, stack_t* oss) {
     if (ss && (ss->ss_flags & ~SS_DISABLE))
         return -EINVAL;
 
-    struct shim_thread* cur = get_cur_thread();
+    struct libos_thread* cur = get_cur_thread();
 
     stack_t* cur_ss = &cur->signal_altstack;
 
@@ -157,7 +157,7 @@ long libos_syscall_sigaltstack(const stack_t* ss, stack_t* oss) {
     }
 
     if (!(cur_ss->ss_flags & SS_DISABLE)
-            && is_on_altstack(pal_context_get_sp(shim_get_tcb()->context.regs), cur_ss)) {
+            && is_on_altstack(pal_context_get_sp(libos_get_tcb()->context.regs), cur_ss)) {
         /* We are currently using the alternative stack. */
         if (oss)
             oss->ss_flags |= SS_ONSTACK;
@@ -232,7 +232,7 @@ long libos_syscall_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* i
     __sigset_t new;
     __sigset_t old;
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     get_sig_mask(current, &old);
     __signotset(&new, &old, &unblocked);
@@ -260,7 +260,7 @@ long libos_syscall_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* i
     __sigset_t mask;
     __signotset(&mask, &all_blocked, &unblocked);
 
-    struct shim_signal signal = { 0 };
+    struct libos_signal signal = { 0 };
     pop_unblocked_signal(&mask, &signal);
 
     if (signal.siginfo.si_signo) {
@@ -288,7 +288,7 @@ long libos_syscall_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
 
     get_all_pending_signals(set);
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     /* We are interested only in blocked signals... */
     lock(&current->lock);
     __sigandset(set, set, &current->signal_mask);
@@ -306,7 +306,7 @@ long libos_syscall_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
     return 0;
 }
 
-static int _wakeup_one_thread(struct shim_thread* thread, void* arg) {
+static int _wakeup_one_thread(struct libos_thread* thread, void* arg) {
     int sig = (int)(long)arg;
     int ret = 0;
 
@@ -341,7 +341,7 @@ int kill_current_proc(siginfo_t* info) {
     }
 
     int sig = info->si_signo;
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     if (!is_internal(current)) {
         /* Can we handle this signal? */
         lock(&current->lock);
@@ -440,7 +440,7 @@ int do_kill_thread(IDTYPE sender, IDTYPE tgid, IDTYPE tid, int sig) {
         return ipc_kill_thread(sender, tgid, tid, sig);
     }
 
-    struct shim_thread* thread = lookup_thread(tid);
+    struct libos_thread* thread = lookup_thread(tid);
     if (!thread) {
         return -ESRCH;
     }

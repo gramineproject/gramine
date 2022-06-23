@@ -14,10 +14,10 @@
 #include "shim_utils.h"
 #include "toml_utils.h"
 
-static LISTP_TYPE(shim_encrypted_files_key) g_keys = LISTP_INIT;
+static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 
 /* Protects the `g_keys` list, but also individual keys, since they can be updated */
-static struct shim_lock g_keys_lock;
+static struct libos_lock g_keys_lock;
 
 static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, size_t size) {
     PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
@@ -147,7 +147,7 @@ static void cb_debug(const char* msg) {
  * handle from the parent process. Note that in this case, it would not be safe to attempt opening
  * the file again in the child process, as it might actually be deleted on host.
  */
-static int encrypted_file_internal_open(struct shim_encrypted_file* enc, PAL_HANDLE pal_handle,
+static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HANDLE pal_handle,
                                         bool create, pal_share_flags_t share_flags) {
     assert(!enc->pf);
 
@@ -222,7 +222,7 @@ int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size) {
     return 0;
 }
 
-static void encrypted_file_internal_close(struct shim_encrypted_file* enc) {
+static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
     assert(enc->pf);
 
     pf_status_t pfs = pf_close(enc->pf);
@@ -244,7 +244,7 @@ static int parse_and_update_key(const char* key_name, const char* key_str) {
         return ret;
     }
 
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     ret = get_or_create_encrypted_files_key(key_name, &key);
     if (ret < 0)
         return ret;
@@ -324,10 +324,10 @@ int init_encrypted_files(void) {
     return 0;
 }
 
-static struct shim_encrypted_files_key* get_key(const char* name) {
+static struct libos_encrypted_files_key* get_key(const char* name) {
     assert(locked(&g_keys_lock));
 
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     LISTP_FOR_EACH_ENTRY(key, &g_keys, list) {
         if (!strcmp(key->name, name)) {
             return key;
@@ -337,10 +337,10 @@ static struct shim_encrypted_files_key* get_key(const char* name) {
     return NULL;
 }
 
-static struct shim_encrypted_files_key* get_or_create_key(const char* name, bool* out_created) {
+static struct libos_encrypted_files_key* get_or_create_key(const char* name, bool* out_created) {
     assert(locked(&g_keys_lock));
 
-    struct shim_encrypted_files_key* key = get_key(name);
+    struct libos_encrypted_files_key* key = get_key(name);
     if (key) {
         *out_created = false;
         return key;
@@ -360,20 +360,20 @@ static struct shim_encrypted_files_key* get_or_create_key(const char* name, bool
     return key;
 }
 
-struct shim_encrypted_files_key* get_encrypted_files_key(const char* name) {
+struct libos_encrypted_files_key* get_encrypted_files_key(const char* name) {
     lock(&g_keys_lock);
-    struct shim_encrypted_files_key* key = get_key(name);
+    struct libos_encrypted_files_key* key = get_key(name);
     unlock(&g_keys_lock);
     return key;
 }
 
-int list_encrypted_files_keys(int (*callback)(struct shim_encrypted_files_key* key, void* arg),
+int list_encrypted_files_keys(int (*callback)(struct libos_encrypted_files_key* key, void* arg),
                               void* arg) {
     lock(&g_keys_lock);
 
     int ret;
 
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     LISTP_FOR_EACH_ENTRY(key, &g_keys, list) {
         ret = callback(key, arg);
         if (ret < 0)
@@ -385,13 +385,14 @@ out:
     return ret;
 }
 
-int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key) {
+int get_or_create_encrypted_files_key(const char* name,
+                                      struct libos_encrypted_files_key** out_key) {
     lock(&g_keys_lock);
 
     int ret;
 
     bool created;
-    struct shim_encrypted_files_key* key = get_or_create_key(name, &created);
+    struct libos_encrypted_files_key* key = get_or_create_key(name, &created);
     if (!key) {
         ret = -ENOMEM;
         goto out;
@@ -429,7 +430,7 @@ out:
     return ret;
 }
 
-bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf_key) {
+bool read_encrypted_files_key(struct libos_encrypted_files_key* key, pf_key_t* pf_key) {
     lock(&g_keys_lock);
     bool is_set = key->is_set;
     if (is_set) {
@@ -439,15 +440,15 @@ bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf
     return is_set;
 }
 
-void update_encrypted_files_key(struct shim_encrypted_files_key* key, const pf_key_t* pf_key) {
+void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_key_t* pf_key) {
     lock(&g_keys_lock);
     memcpy(&key->pf_key, pf_key, sizeof(*pf_key));
     key->is_set = true;
     unlock(&g_keys_lock);
 }
 
-static int encrypted_file_alloc(const char* uri, struct shim_encrypted_files_key* key,
-                                struct shim_encrypted_file** out_enc) {
+static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_key* key,
+                                struct libos_encrypted_file** out_enc) {
     assert(strstartswith(uri, URI_PREFIX_FILE));
 
     if (!key) {
@@ -455,7 +456,7 @@ static int encrypted_file_alloc(const char* uri, struct shim_encrypted_files_key
         return -EACCES;
     }
 
-    struct shim_encrypted_file* enc = malloc(sizeof(*enc));
+    struct libos_encrypted_file* enc = malloc(sizeof(*enc));
     if (!enc)
         return -ENOMEM;
 
@@ -472,9 +473,9 @@ static int encrypted_file_alloc(const char* uri, struct shim_encrypted_files_key
     return 0;
 }
 
-int encrypted_file_open(const char* uri, struct shim_encrypted_files_key* key,
-                        struct shim_encrypted_file** out_enc) {
-    struct shim_encrypted_file* enc;
+int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
+                        struct libos_encrypted_file** out_enc) {
+    struct libos_encrypted_file* enc;
     int ret = encrypted_file_alloc(uri, key, &enc);
     if (ret < 0)
         return ret;
@@ -490,9 +491,9 @@ int encrypted_file_open(const char* uri, struct shim_encrypted_files_key* key,
     return 0;
 }
 
-int encrypted_file_create(const char* uri, mode_t perm, struct shim_encrypted_files_key* key,
-                          struct shim_encrypted_file** out_enc) {
-    struct shim_encrypted_file* enc;
+int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
+                          struct libos_encrypted_file** out_enc) {
+    struct libos_encrypted_file* enc;
     int ret = encrypted_file_alloc(uri, key, &enc);
     if (ret < 0)
         return ret;
@@ -507,7 +508,7 @@ int encrypted_file_create(const char* uri, mode_t perm, struct shim_encrypted_fi
     return 0;
 }
 
-void encrypted_file_destroy(struct shim_encrypted_file* enc) {
+void encrypted_file_destroy(struct libos_encrypted_file* enc) {
     assert(enc->use_count == 0);
     assert(!enc->pf);
     assert(!enc->pal_handle);
@@ -515,7 +516,7 @@ void encrypted_file_destroy(struct shim_encrypted_file* enc) {
     free(enc);
 }
 
-int encrypted_file_get(struct shim_encrypted_file* enc) {
+int encrypted_file_get(struct libos_encrypted_file* enc) {
     if (enc->use_count > 0) {
         assert(enc->pf);
         enc->use_count++;
@@ -530,7 +531,7 @@ int encrypted_file_get(struct shim_encrypted_file* enc) {
     return 0;
 }
 
-void encrypted_file_put(struct shim_encrypted_file* enc) {
+void encrypted_file_put(struct libos_encrypted_file* enc) {
     assert(enc->use_count > 0);
     assert(enc->pf);
     enc->use_count--;
@@ -539,7 +540,7 @@ void encrypted_file_put(struct shim_encrypted_file* enc) {
     }
 }
 
-int encrypted_file_flush(struct shim_encrypted_file* enc) {
+int encrypted_file_flush(struct libos_encrypted_file* enc) {
     assert(enc->pf);
 
     pf_status_t pfs = pf_flush(enc->pf);
@@ -550,7 +551,7 @@ int encrypted_file_flush(struct shim_encrypted_file* enc) {
     return 0;
 }
 
-int encrypted_file_read(struct shim_encrypted_file* enc, void* buf, size_t buf_size,
+int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_size,
                         file_off_t offset, size_t* out_count) {
     assert(enc->pf);
 
@@ -569,7 +570,7 @@ int encrypted_file_read(struct shim_encrypted_file* enc, void* buf, size_t buf_s
     return 0;
 }
 
-int encrypted_file_write(struct shim_encrypted_file* enc, const void* buf, size_t buf_size,
+int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
                          file_off_t offset, size_t* out_count) {
     assert(enc->pf);
 
@@ -588,7 +589,7 @@ int encrypted_file_write(struct shim_encrypted_file* enc, const void* buf, size_
     return 0;
 }
 
-int encrypted_file_get_size(struct shim_encrypted_file* enc, file_off_t* out_size) {
+int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size) {
     assert(enc->pf);
 
     uint64_t size;
@@ -603,7 +604,7 @@ int encrypted_file_get_size(struct shim_encrypted_file* enc, file_off_t* out_siz
     return 0;
 }
 
-int encrypted_file_set_size(struct shim_encrypted_file* enc, file_off_t size) {
+int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
     assert(enc->pf);
 
     if (size < 0)
@@ -619,7 +620,7 @@ int encrypted_file_set_size(struct shim_encrypted_file* enc, file_off_t size) {
     return 0;
 }
 
-int encrypted_file_rename(struct shim_encrypted_file* enc, const char* new_uri) {
+int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri) {
     assert(enc->pf);
 
     char* new_uri_copy = strdup(new_uri);
@@ -673,7 +674,7 @@ BEGIN_CP_FUNC(all_encrypted_files_keys) {
     __UNUSED(objp);
 
     lock(&g_keys_lock);
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     LISTP_FOR_EACH_ENTRY(key, &g_keys, list) {
         DO_CP(encrypted_files_key, key, /*objp=*/NULL);
     }
@@ -686,14 +687,14 @@ BEGIN_CP_FUNC(encrypted_files_key) {
 
     assert(locked(&g_keys_lock));
 
-    struct shim_encrypted_files_key* key     = obj;
-    struct shim_encrypted_files_key* new_key = NULL;
+    struct libos_encrypted_files_key* key     = obj;
+    struct libos_encrypted_files_key* new_key = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_encrypted_files_key));
+        off = ADD_CP_OFFSET(sizeof(struct libos_encrypted_files_key));
         ADD_TO_CP_MAP(obj, off);
-        new_key = (struct shim_encrypted_files_key*)(base + off);
+        new_key = (struct libos_encrypted_files_key*)(base + off);
 
         DO_CP_MEMBER(str, key, new_key, name);
         new_key->is_set = key->is_set;
@@ -702,7 +703,7 @@ BEGIN_CP_FUNC(encrypted_files_key) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_key = (struct shim_encrypted_files_key*)(base + off);
+        new_key = (struct libos_encrypted_files_key*)(base + off);
     }
 
     if (objp)
@@ -712,7 +713,7 @@ END_CP_FUNC(encrypted_files_key)
 
 BEGIN_RS_FUNC(encrypted_files_key) {
     __UNUSED(offset);
-    struct shim_encrypted_files_key* migrated_key = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_encrypted_files_key* migrated_key = (void*)(base + GET_CP_FUNC_ENTRY());
 
     CP_REBASE(migrated_key->name);
 
@@ -721,7 +722,7 @@ BEGIN_RS_FUNC(encrypted_files_key) {
      * already have been created (e.g. during `init_encrypted_files`). Instead, we retrieve (or
      * create) a key in the usual way, and update its value.
      */
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     int ret = get_or_create_encrypted_files_key(migrated_key->name, &key);
     if (ret < 0)
         return ret;
@@ -736,8 +737,8 @@ END_RS_FUNC(encrypted_files_key)
 BEGIN_CP_FUNC(encrypted_file) {
     __UNUSED(size);
 
-    struct shim_encrypted_file* enc = obj;
-    struct shim_encrypted_file* new_enc = NULL;
+    struct libos_encrypted_file* enc = obj;
+    struct libos_encrypted_file* new_enc = NULL;
 
     if (enc->pf) {
         int ret = encrypted_file_flush(enc);
@@ -745,8 +746,8 @@ BEGIN_CP_FUNC(encrypted_file) {
             return ret;
     }
 
-    size_t off = ADD_CP_OFFSET(sizeof(struct shim_encrypted_file));
-    new_enc = (struct shim_encrypted_file*)(base + off);
+    size_t off = ADD_CP_OFFSET(sizeof(struct libos_encrypted_file));
+    new_enc = (struct libos_encrypted_file*)(base + off);
 
     new_enc->use_count = enc->use_count;
     DO_CP_MEMBER(str, enc, new_enc, uri);
@@ -759,7 +760,7 @@ BEGIN_CP_FUNC(encrypted_file) {
     new_enc->pf = NULL;
 
     if (enc->pal_handle) {
-        struct shim_palhdl_entry* entry;
+        struct libos_palhdl_entry* entry;
         DO_CP(palhdl_ptr, &enc->pal_handle, &entry);
         entry->phandle = &new_enc->pal_handle;
     }
@@ -771,7 +772,7 @@ BEGIN_CP_FUNC(encrypted_file) {
 END_CP_FUNC(encrypted_file)
 
 BEGIN_RS_FUNC(encrypted_file) {
-    struct shim_encrypted_file* enc = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_encrypted_file* enc = (void*)(base + GET_CP_FUNC_ENTRY());
     __UNUSED(offset);
 
     CP_REBASE(enc->uri);

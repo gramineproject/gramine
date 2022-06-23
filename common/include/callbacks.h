@@ -3,10 +3,10 @@
 
 /*
  * Defines a set of callbacks that the common library expects from environment it is linked into.
- * Currently, the common library expects `shim_`-prefixed callbacks from LibOS, `pal_`-prefixed
+ * Currently, the common library expects `libos_`-prefixed callbacks from LibOS, `pal_`-prefixed
  * callbacks from PAL, and not-prefixed callbacks from all other environments (e.g., PAL regression
  * tests and non-Gramine programs). This header aliases the actual callback implementations, i.e.,
- * `shim_abort()` is aliased as `abort()` for use by the common library.
+ * `libos_abort()` is aliased as `abort()` for use by the common library.
  *
  * Strictly speaking, current Gramine doesn't need different callback names for LibOS, PAL and
  * other environments. We introduce this notation for the future change where LibOS and PAL will be
@@ -23,11 +23,11 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-#ifdef IN_SHIM
+#ifdef IN_LIBOS
 
-#define _log shim_log
-#define abort shim_abort
-#define describe_location shim_describe_location
+#define _log libos_log
+#define abort libos_abort
+#define describe_location libos_describe_location
 
 #elif IN_PAL
 

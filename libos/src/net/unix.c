@@ -101,7 +101,7 @@ static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* add
     assert(*addrlen <= sizeof(*ss_addr));
 }
 
-static int create(struct shim_handle* handle) {
+static int create(struct libos_handle* handle) {
     assert(handle->info.sock.domain == AF_UNIX);
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
 
@@ -119,8 +119,8 @@ static int create(struct shim_handle* handle) {
     return 0;
 }
 
-static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
@@ -157,10 +157,10 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
     return 0;
 }
 
-static int listen(struct shim_handle* handle, unsigned int backlog) {
+static int listen(struct libos_handle* handle, unsigned int backlog) {
     /* PAL pipes don't have changeable wait queue size. */
     __UNUSED(backlog);
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     if (sock->type != SOCK_STREAM) {
@@ -171,8 +171,8 @@ static int listen(struct shim_handle* handle, unsigned int backlog) {
     return 0;
 }
 
-static int accept(struct shim_handle* handle, bool is_nonblocking,
-                  struct shim_handle** out_client) {
+static int accept(struct libos_handle* handle, bool is_nonblocking,
+                  struct libos_handle** out_client) {
     pal_stream_options_t options = is_nonblocking ? PAL_OPTION_NONBLOCK : 0;
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
     /* Since this socket is listening, it must have a PAL handle. */
@@ -183,7 +183,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
         return pal_to_unix_errno(ret);
     }
 
-    struct shim_handle* client_handle = get_new_handle();
+    struct libos_handle* client_handle = get_new_handle();
     if (!client_handle) {
         DkObjectClose(client_pal_handle);
         return -ENOMEM;
@@ -194,7 +194,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_handle->flags = is_nonblocking ? O_NONBLOCK : 0;
     client_handle->acc_mode = MAY_READ | MAY_WRITE;
 
-    struct shim_sock_handle* client_sock = &client_handle->info.sock;
+    struct libos_sock_handle* client_sock = &client_handle->info.sock;
     client_sock->pal_handle = client_pal_handle;
     client_sock->state = SOCK_CONNECTED;
     client_sock->ops = handle->info.sock.ops;
@@ -223,8 +223,8 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     return 0;
 }
 
-static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     if (sock->state != SOCK_NEW) {
@@ -273,13 +273,13 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     return 0;
 }
 
-static int disconnect(struct shim_handle* handle) {
+static int disconnect(struct libos_handle* handle) {
     __UNUSED(handle);
     /* We do not support disconnecting UNIX sockets. */
     return -EINVAL;
 }
 
-static int set_socket_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_socket_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     /* All currently supported options use `int`. */
     int val;
     if (len < sizeof(val)) {
@@ -298,7 +298,7 @@ static int set_socket_option(struct shim_handle* handle, int optname, void* optv
     return 0;
 }
 
-static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
+static int setsockopt(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t len) {
     assert(locked(&handle->info.sock.lock));
 
@@ -310,7 +310,7 @@ static int setsockopt(struct shim_handle* handle, int level, int optname, void* 
     }
 }
 
-static int getsockopt(struct shim_handle* handle, int level, int optname, void* optval,
+static int getsockopt(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t* len) {
     /* Nothing to do here. */
     __UNUSED(handle);
@@ -321,7 +321,7 @@ static int getsockopt(struct shim_handle* handle, int level, int optname, void* 
     return -ENOPROTOOPT;
 }
 
-static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen) {
     __UNUSED(addr);
     __UNUSED(addrlen);
@@ -370,7 +370,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     return 0;
 }
 
-static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t* addrlen, bool force_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
@@ -437,7 +437,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     return ret;
 }
 
-struct shim_sock_ops sock_unix_ops = {
+struct libos_sock_ops sock_unix_ops = {
     .create = create,
     .bind = bind,
     .listen = listen,

@@ -15,9 +15,9 @@
  * \brief LibOS syscall emulation entrypoint
  *
  * Actual implementation and ABI are architecture-specific, but generally should dump the CPU
- * context and call `shim_emulate_syscall`.
+ * context and call `libos_emulate_syscall`.
  */
-void syscalldb(void);
+void libos_syscall_entry(void);
 
 /*!
  * \brief LibOS custom call entrypoint

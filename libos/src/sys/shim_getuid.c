@@ -12,7 +12,7 @@
 #include "shim_types.h"
 
 long libos_syscall_getuid(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     uid_t uid = current->uid;
     unlock(&current->lock);
@@ -20,7 +20,7 @@ long libos_syscall_getuid(void) {
 }
 
 long libos_syscall_getgid(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     gid_t gid = current->gid;
     unlock(&current->lock);
@@ -28,7 +28,7 @@ long libos_syscall_getgid(void) {
 }
 
 long libos_syscall_geteuid(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     uid_t euid = current->euid;
     unlock(&current->lock);
@@ -36,7 +36,7 @@ long libos_syscall_geteuid(void) {
 }
 
 long libos_syscall_getegid(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     gid_t egid = current->egid;
     unlock(&current->lock);
@@ -44,7 +44,7 @@ long libos_syscall_getegid(void) {
 }
 
 long libos_syscall_setuid(uid_t uid) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     current->euid = uid;
     unlock(&current->lock);
@@ -52,7 +52,7 @@ long libos_syscall_setuid(uid_t uid) {
 }
 
 long libos_syscall_setgid(gid_t gid) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     current->egid = gid;
     unlock(&current->lock);
@@ -65,7 +65,7 @@ long libos_syscall_setgroups(int gidsetsize, gid_t* grouplist) {
     if (gidsetsize < 0 || (unsigned int)gidsetsize > NGROUPS_MAX)
         return -EINVAL;
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     if (gidsetsize == 0) {
         free(current->groups_info.groups);
         current->groups_info.groups = NULL;
@@ -102,7 +102,7 @@ long libos_syscall_getgroups(int gidsetsize, gid_t* grouplist) {
     if (!is_user_memory_writable(grouplist, gidsetsize * sizeof(gid_t)))
         return -EFAULT;
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     size_t ret_size = current->groups_info.count;
 
     if (gidsetsize) {

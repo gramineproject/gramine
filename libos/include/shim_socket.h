@@ -8,29 +8,29 @@
 #include "linux_socket.h"
 #include "shim_handle.h"
 
-#define SHIM_SOCK_MAX_PENDING_CONNS 4096
+#define LIBOS_SOCK_MAX_PENDING_CONNS 4096
 
-struct shim_sock_ops {
+struct libos_sock_ops {
     /*!
      * \brief Verify the socket handle and initialize type specific fields.
      *
      * This callback assumes that \p handle is already correctly initialized.
      */
-    int (*create)(struct shim_handle* handle);
+    int (*create)(struct libos_handle* handle);
 
     /*!
      * \brief Bind the handle to an address.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*bind)(struct shim_handle* handle, void* addr, size_t addrlen);
+    int (*bind)(struct libos_handle* handle, void* addr, size_t addrlen);
 
     /*!
      * \brief Set the handle into listening mode.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*listen)(struct shim_handle* handle, unsigned int backlog);
+    int (*listen)(struct libos_handle* handle, unsigned int backlog);
 
     /*!
      * \brief Accept a connection on a listening handle.
@@ -41,28 +41,29 @@ struct shim_sock_ops {
      *
      * This callback is called without any locks and must support concurrent calls.
      */
-    int (*accept)(struct shim_handle* handle, bool is_nonblocking, struct shim_handle** out_client);
+    int (*accept)(struct libos_handle* handle, bool is_nonblocking,
+                  struct libos_handle** out_client);
 
     /*!
      * \brief Connect the handle to a remote address.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*connect)(struct shim_handle* handle, void* addr, size_t addrlen);
+    int (*connect)(struct libos_handle* handle, void* addr, size_t addrlen);
 
     /*!
      * \brief Disconnect a previously connected handle.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*disconnect)(struct shim_handle* handle);
+    int (*disconnect)(struct libos_handle* handle);
 
     /*!
      * \brief Get a socket option.
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*getsockopt)(struct shim_handle* handle, int level, int optname, void* optval,
+    int (*getsockopt)(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t* len);
 
     /*!
@@ -70,7 +71,7 @@ struct shim_sock_ops {
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*setsockopt)(struct shim_handle* handle, int level, int optname, void* optval,
+    int (*setsockopt)(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t len);
 
     /*!
@@ -84,7 +85,7 @@ struct shim_sock_ops {
      *                       decide what to do with it (which might mean completely ignoring it).
      * \param      addrlen   The length of \p addr.
      */
-    int (*send)(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
+    int (*send)(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen);
 
     /*!
@@ -104,14 +105,14 @@ struct shim_sock_ops {
      * \param         force_nonblocking  If `true` this request should not block. Otherwise just use
      *                                   whatever mode the handle is in.
      */
-    int (*recv)(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+    int (*recv)(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                 size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking);
 };
 
-extern struct shim_sock_ops sock_unix_ops;
-extern struct shim_sock_ops sock_ip_ops;
+extern struct libos_sock_ops sock_unix_ops;
+extern struct libos_sock_ops sock_ip_ops;
 
-ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
+ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t* addrlen, unsigned int* flags);
-ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
+ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t addrlen, unsigned int flags);

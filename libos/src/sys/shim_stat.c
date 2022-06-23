@@ -15,11 +15,11 @@
 #include "shim_table.h"
 #include "stat.h"
 
-static int do_stat(struct shim_dentry* dent, struct stat* stat) {
+static int do_stat(struct libos_dentry* dent, struct stat* stat) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
 
     if (!fs || !fs->d_ops || !fs->d_ops->stat)
         return -EACCES;
@@ -33,8 +33,8 @@ static int do_stat(struct shim_dentry* dent, struct stat* stat) {
     return 0;
 }
 
-static int do_hstat(struct shim_handle* hdl, struct stat* stat) {
-    struct shim_fs* fs = hdl->fs;
+static int do_hstat(struct libos_handle* hdl, struct stat* stat) {
+    struct libos_fs* fs = hdl->fs;
 
     if (!fs || !fs->fs_ops || !fs->fs_ops->hstat)
         return -EACCES;
@@ -58,7 +58,7 @@ long libos_syscall_stat(const char* file, struct stat* stat) {
         return -EFAULT;
 
     int ret;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
 
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, file, LOOKUP_FOLLOW, &dent);
@@ -81,7 +81,7 @@ long libos_syscall_lstat(const char* file, struct stat* stat) {
         return -EFAULT;
 
     int ret;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
 
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, file, LOOKUP_NO_FOLLOW, &dent);
@@ -97,7 +97,7 @@ out:
 }
 
 long libos_syscall_fstat(int fd, struct stat* stat) {
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -122,8 +122,8 @@ long libos_syscall_readlinkat(int dirfd, const char* file, char* buf, int bufsiz
     if (!is_user_memory_writable(buf, bufsize))
         return -EFAULT;
 
-    struct shim_dentry* dent = NULL;
-    struct shim_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
+    struct libos_dentry* dir = NULL;
 
     if (*file != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
         goto out;
@@ -139,7 +139,7 @@ long libos_syscall_readlinkat(int dirfd, const char* file, char* buf, int bufsiz
     if (dent->inode->type != S_IFLNK)
         goto out;
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (!fs->d_ops || !fs->d_ops->follow_link)
         goto out;
 
@@ -170,7 +170,7 @@ long libos_syscall_readlink(const char* file, char* buf, int bufsize) {
     return libos_syscall_readlinkat(AT_FDCWD, file, buf, bufsize);
 }
 
-static int __do_statfs(struct shim_mount* mount, struct statfs* buf) {
+static int __do_statfs(struct libos_mount* mount, struct statfs* buf) {
     __UNUSED(mount);
     if (!is_user_memory_writable(buf, sizeof(*buf)))
         return -EFAULT;
@@ -192,7 +192,7 @@ long libos_syscall_statfs(const char* path, struct statfs* buf) {
         return -EFAULT;
 
     int ret;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
 
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, path, LOOKUP_FOLLOW, &dent);
@@ -200,17 +200,17 @@ long libos_syscall_statfs(const char* path, struct statfs* buf) {
     if (ret < 0)
         return ret;
 
-    struct shim_mount* mount = dent->mount;
+    struct libos_mount* mount = dent->mount;
     put_dentry(dent);
     return __do_statfs(mount, buf);
 }
 
 long libos_syscall_fstatfs(int fd, struct statfs* buf) {
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
-    struct shim_mount* mount = hdl->dentry ? hdl->dentry->mount : NULL;
+    struct libos_mount* mount = hdl->dentry ? hdl->dentry->mount : NULL;
     put_handle(hdl);
     return __do_statfs(mount, buf);
 }
@@ -224,7 +224,7 @@ static int do_fstatat_empty_path(int dirfd, struct stat* statbuf) {
         return libos_syscall_fstat(dirfd, statbuf);
 
     lock(&g_process.fs_lock);
-    struct shim_dentry* dent = g_process.cwd;
+    struct libos_dentry* dent = g_process.cwd;
     get_dentry(dent);
     unlock(&g_process.fs_lock);
 
@@ -269,7 +269,7 @@ long libos_syscall_newfstatat(int dirfd, const char* pathname, struct stat* stat
 
     int ret;
 
-    struct shim_dentry* dir = NULL;
+    struct libos_dentry* dir = NULL;
     if (*pathname != '/') {
         ret = get_dirfd_dentry(dirfd, &dir);
         if (ret < 0)
@@ -278,7 +278,7 @@ long libos_syscall_newfstatat(int dirfd, const char* pathname, struct stat* stat
 
     lock(&g_dcache_lock);
 
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     ret = path_lookupat(dir, pathname, lookup_flags, &dent);
     if (ret < 0)
         goto out;

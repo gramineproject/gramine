@@ -16,7 +16,7 @@
 
 #define FS_LOCK_EOF ((uint64_t)-1)
 
-struct shim_dentry;
+struct libos_dentry;
 
 /* Initialize the file locking subsystem. */
 int init_fs_lock(void);
@@ -72,7 +72,7 @@ struct posix_lock {
  * conflicting locks, the function either waits (if `wait` is true), or fails with `-EAGAIN` (if
  * `wait` is false).
  */
-int posix_lock_set(struct shim_dentry* dent, struct posix_lock* pl, bool wait);
+int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait);
 
 /*!
  * \brief Check for conflicting locks on a file.
@@ -87,7 +87,7 @@ int posix_lock_set(struct shim_dentry* dent, struct posix_lock* pl, bool wait);
  * placed. If the lock could be placed, `out_pl->type` is set to `F_UNLCK`. Otherwise, `out_pl`
  * fields (`type`, `start, `end`, `pid`) are set to details of a conflicting lock.
  */
-int posix_lock_get(struct shim_dentry* dent, struct posix_lock* pl, struct posix_lock* out_pl);
+int posix_lock_get(struct libos_dentry* dent, struct posix_lock* pl, struct posix_lock* out_pl);
 
 /* Removes all locks for a given PID. Should be called before process exit. */
 int posix_lock_clear_pid(IDTYPE pid);

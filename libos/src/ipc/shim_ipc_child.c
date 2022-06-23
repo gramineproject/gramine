@@ -30,12 +30,12 @@ int ipc_cld_exit_send(unsigned int exitcode, unsigned int term_signal) {
         return 0;
     }
 
-    struct shim_thread* self = get_cur_thread();
+    struct libos_thread* self = get_cur_thread();
     lock(&self->lock);
     IDTYPE uid = self->uid;
     unlock(&self->lock);
 
-    struct shim_ipc_cld_exit msgin = {
+    struct libos_ipc_cld_exit msgin = {
         .ppid        = g_process.ppid,
         .pid         = g_process.pid,
         .exitcode    = exitcode,
@@ -44,7 +44,7 @@ int ipc_cld_exit_send(unsigned int exitcode, unsigned int term_signal) {
     };
 
     size_t total_msg_size = get_ipc_msg_size(sizeof(msgin));
-    struct shim_ipc_msg* msg = __alloca(total_msg_size);
+    struct libos_ipc_msg* msg = __alloca(total_msg_size);
     init_ipc_msg(msg, IPC_MSG_CHILDEXIT, total_msg_size);
 
     memcpy(msg->data, &msgin, sizeof(msgin));
@@ -54,7 +54,7 @@ int ipc_cld_exit_send(unsigned int exitcode, unsigned int term_signal) {
 
 int ipc_cld_exit_callback(IDTYPE src, void* data, uint64_t seq) {
     __UNUSED(seq);
-    struct shim_ipc_cld_exit* msgin = (struct shim_ipc_cld_exit*)data;
+    struct libos_ipc_cld_exit* msgin = (struct libos_ipc_cld_exit*)data;
 
     log_debug("IPC callback from %u: IPC_MSG_CHILDEXIT(%u, %u, %d, %u)", src, msgin->ppid,
               msgin->pid, msgin->exitcode, msgin->term_signal);

@@ -13,7 +13,7 @@
 #include "shim_socket.h"
 #include "stat.h"
 
-static int close(struct shim_handle* handle) {
+static int close(struct libos_handle* handle) {
     if (lock_created(&handle->info.sock.lock)) {
         destroy_lock(&handle->info.sock.lock);
     }
@@ -28,7 +28,7 @@ static int close(struct shim_handle* handle) {
     return 0;
 }
 
-static ssize_t read(struct shim_handle* handle, void* buf, size_t size, file_off_t* pos) {
+static ssize_t read(struct libos_handle* handle, void* buf, size_t size, file_off_t* pos) {
     __UNUSED(pos);
     struct iovec iov = {
         .iov_base = buf,
@@ -38,7 +38,7 @@ static ssize_t read(struct shim_handle* handle, void* buf, size_t size, file_off
     return do_recvmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/NULL, &flags);
 }
 
-static ssize_t write(struct shim_handle* handle, const void* buf, size_t size, file_off_t* pos) {
+static ssize_t write(struct libos_handle* handle, const void* buf, size_t size, file_off_t* pos) {
     __UNUSED(pos);
     struct iovec iov = {
         .iov_base = (void*)buf,
@@ -47,20 +47,20 @@ static ssize_t write(struct shim_handle* handle, const void* buf, size_t size, f
     return do_sendmsg(handle, &iov, /*iov_len=*/1, /*addr=*/NULL, /*addrlen=*/0, /*flags=*/0);
 }
 
-static ssize_t readv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+static ssize_t readv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                      file_off_t* pos) {
     __UNUSED(pos);
     unsigned int flags = 0;
     return do_recvmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/NULL, &flags);
 }
 
-static ssize_t writev(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+static ssize_t writev(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                       file_off_t* pos) {
     __UNUSED(pos);
     return do_sendmsg(handle, iov, iov_len, /*addr=*/NULL, /*addrlen=*/0, /*flags=*/0);
 }
 
-static int hstat(struct shim_handle* handle, struct stat* stat) {
+static int hstat(struct libos_handle* handle, struct stat* stat) {
     __UNUSED(handle);
     assert(stat);
 
@@ -78,7 +78,7 @@ static int hstat(struct shim_handle* handle, struct stat* stat) {
     return 0;
 }
 
-static int setflags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+static int setflags(struct libos_handle* handle, unsigned int flags, unsigned int mask) {
     assert(mask != 0);
     assert((flags & ~mask) == 0);
 
@@ -88,7 +88,7 @@ static int setflags(struct shim_handle* handle, unsigned int flags, unsigned int
 
     int ret;
     bool nonblocking = flags & O_NONBLOCK;
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     lock(&handle->lock);
@@ -125,8 +125,8 @@ out:
     return ret;
 }
 
-static int checkout(struct shim_handle* handle) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int checkout(struct libos_handle* handle) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     sock->ops = NULL;
     clear_lock(&sock->lock);
     clear_lock(&sock->recv_lock);
@@ -144,8 +144,8 @@ static int checkout(struct shim_handle* handle) {
     return 0;
 }
 
-static int checkin(struct shim_handle* handle) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int checkin(struct libos_handle* handle) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     switch (sock->domain) {
         case AF_UNIX:
             sock->ops = &sock_unix_ops;
@@ -163,7 +163,7 @@ static int checkin(struct shim_handle* handle) {
     return 0;
 }
 
-static struct shim_fs_ops socket_fs_ops = {
+static struct libos_fs_ops socket_fs_ops = {
     .close    = close,
     .read     = read,
     .write    = write,
@@ -175,7 +175,7 @@ static struct shim_fs_ops socket_fs_ops = {
     .checkin  = checkin,
 };
 
-struct shim_fs socket_builtin_fs = {
+struct libos_fs socket_builtin_fs = {
     .name   = "socket",
     .fs_ops = &socket_fs_ops,
 };

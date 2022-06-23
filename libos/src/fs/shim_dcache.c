@@ -16,7 +16,7 @@
 #include "shim_types.h"
 #include "stat.h"
 
-static struct shim_lock dcache_mgr_lock;
+static struct libos_lock dcache_mgr_lock;
 
 #define SYSTEM_LOCK()   lock(&dcache_mgr_lock)
 #define SYSTEM_UNLOCK() unlock(&dcache_mgr_lock)
@@ -24,22 +24,22 @@ static struct shim_lock dcache_mgr_lock;
 
 #define DCACHE_MGR_ALLOC 64
 
-#define OBJ_TYPE struct shim_dentry
+#define OBJ_TYPE struct libos_dentry
 #include "memmgr.h"
 
-struct shim_lock g_dcache_lock;
+struct libos_lock g_dcache_lock;
 
 static MEM_MGR dentry_mgr = NULL;
 
-struct shim_dentry* g_dentry_root = NULL;
+struct libos_dentry* g_dentry_root = NULL;
 
-static struct shim_dentry* alloc_dentry(void) {
-    struct shim_dentry* dent =
+static struct libos_dentry* alloc_dentry(void) {
+    struct libos_dentry* dent =
         get_mem_obj_from_mgr_enlarge(dentry_mgr, size_align_up(DCACHE_MGR_ALLOC));
     if (!dent)
         return NULL;
 
-    memset(dent, 0, sizeof(struct shim_dentry));
+    memset(dent, 0, sizeof(struct libos_dentry));
 
     REF_SET(dent->ref_count, 1);
 
@@ -49,7 +49,7 @@ static struct shim_dentry* alloc_dentry(void) {
     return dent;
 }
 
-static void free_dentry(struct shim_dentry* dentry);
+static void free_dentry(struct libos_dentry* dentry);
 
 int init_dcache(void) {
     if (!create_lock(&dcache_mgr_lock) || !create_lock(&g_dcache_lock)) {
@@ -94,7 +94,7 @@ int init_dcache(void) {
 }
 
 /* Increment the reference count for a dentry */
-void get_dentry(struct shim_dentry* dent) {
+void get_dentry(struct libos_dentry* dent) {
 #ifdef DEBUG_REF
     int64_t count = REF_INC(dent->ref_count);
 
@@ -107,7 +107,7 @@ void get_dentry(struct shim_dentry* dent) {
 #endif
 }
 
-static void free_dentry(struct shim_dentry* dent) {
+static void free_dentry(struct libos_dentry* dent) {
     if (dent->mount) {
         put_mount(dent->mount);
     }
@@ -129,7 +129,7 @@ static void free_dentry(struct shim_dentry* dent) {
     free_mem_obj_to_mgr(dentry_mgr, dent);
 }
 
-void put_dentry(struct shim_dentry* dent) {
+void put_dentry(struct libos_dentry* dent) {
     int64_t count = REF_DEC(dent->ref_count);
 #ifdef DEBUG_REF
     const char* path = NULL;
@@ -146,7 +146,7 @@ void put_dentry(struct shim_dentry* dent) {
     }
 }
 
-void dentry_gc(struct shim_dentry* dent) {
+void dentry_gc(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->parent);
 
@@ -162,12 +162,12 @@ void dentry_gc(struct shim_dentry* dent) {
     put_dentry(dent);
 }
 
-struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry* parent,
-                                   const char* name, size_t name_len) {
+struct libos_dentry* get_new_dentry(struct libos_mount* mount, struct libos_dentry* parent,
+                                    const char* name, size_t name_len) {
     assert(locked(&g_dcache_lock));
     assert(mount);
 
-    struct shim_dentry* dent = alloc_dentry();
+    struct libos_dentry* dent = alloc_dentry();
 
     if (!dent)
         return NULL;
@@ -202,21 +202,21 @@ struct shim_dentry* get_new_dentry(struct shim_mount* mount, struct shim_dentry*
     return dent;
 }
 
-struct shim_dentry* dentry_up(struct shim_dentry* dent) {
+struct libos_dentry* dentry_up(struct libos_dentry* dent) {
     while (!dent->parent && dent->mount) {
         dent = dent->mount->mount_point;
     }
     return dent->parent;
 }
 
-struct shim_dentry* lookup_dcache(struct shim_dentry* parent, const char* name, size_t name_len) {
+struct libos_dentry* lookup_dcache(struct libos_dentry* parent, const char* name, size_t name_len) {
     assert(locked(&g_dcache_lock));
 
     assert(parent);
     assert(name_len > 0);
 
-    struct shim_dentry* tmp;
-    struct shim_dentry* dent;
+    struct libos_dentry* tmp;
+    struct libos_dentry* dent;
     LISTP_FOR_EACH_ENTRY_SAFE(dent, tmp, &parent->children, siblings) {
         if (dent->name_len == name_len && memcmp(dent->name, name, dent->name_len) == 0) {
             get_dentry(dent);
@@ -228,7 +228,7 @@ struct shim_dentry* lookup_dcache(struct shim_dentry* parent, const char* name, 
     return NULL;
 }
 
-bool dentry_is_ancestor(struct shim_dentry* anc, struct shim_dentry* dent) {
+bool dentry_is_ancestor(struct libos_dentry* anc, struct libos_dentry* dent) {
     assert(anc->mount == dent->mount);
 
     while (dent) {
@@ -240,11 +240,11 @@ bool dentry_is_ancestor(struct shim_dentry* anc, struct shim_dentry* dent) {
     return false;
 }
 
-ino_t dentry_ino(struct shim_dentry* dent) {
+ino_t dentry_ino(struct libos_dentry* dent) {
     return hash_abs_path(dent);
 }
 
-static size_t dentry_path_size(struct shim_dentry* dent, bool relative) {
+static size_t dentry_path_size(struct libos_dentry* dent, bool relative) {
     /* The following code should mirror `dentry_path_into_buf`. */
 
     bool first = true;
@@ -252,7 +252,7 @@ static size_t dentry_path_size(struct shim_dentry* dent, bool relative) {
     size_t size = 1;
 
     while (true) {
-        struct shim_dentry* up = relative ? dent->parent : dentry_up(dent);
+        struct libos_dentry* up = relative ? dent->parent : dentry_up(dent);
         if (!up)
             break;
 
@@ -276,7 +276,8 @@ static size_t dentry_path_size(struct shim_dentry* dent, bool relative) {
 
 /* Compute dentry path, filling an existing buffer. Returns a pointer inside `buf`, possibly after
  * the beginning, because it constructs the path from the end. */
-static char* dentry_path_into_buf(struct shim_dentry* dent, bool relative, char* buf, size_t size) {
+static char* dentry_path_into_buf(struct libos_dentry* dent, bool relative, char* buf,
+                                  size_t size) {
     if (size == 0)
         return NULL;
 
@@ -287,7 +288,7 @@ static char* dentry_path_into_buf(struct shim_dentry* dent, bool relative, char*
 
     /* Add names, starting from the last one, until we encounter root */
     while (true) {
-        struct shim_dentry* up = relative ? dent->parent : dentry_up(dent);
+        struct libos_dentry* up = relative ? dent->parent : dentry_up(dent);
         if (!up)
             break;
 
@@ -320,7 +321,7 @@ static char* dentry_path_into_buf(struct shim_dentry* dent, bool relative, char*
     return &buf[pos];
 }
 
-static int dentry_path(struct shim_dentry* dent, bool relative, char** path, size_t* size) {
+static int dentry_path(struct libos_dentry* dent, bool relative, char** path, size_t* size) {
     size_t _size = dentry_path_size(dent, relative);
     char* buf = malloc(_size);
     if (!buf)
@@ -335,18 +336,18 @@ static int dentry_path(struct shim_dentry* dent, bool relative, char** path, siz
     return 0;
 }
 
-int dentry_abs_path(struct shim_dentry* dent, char** path, size_t* size) {
+int dentry_abs_path(struct libos_dentry* dent, char** path, size_t* size) {
     return dentry_path(dent, /*relative=*/false, path, size);
 }
 
-int dentry_rel_path(struct shim_dentry* dent, char** path, size_t* size) {
+int dentry_rel_path(struct libos_dentry* dent, char** path, size_t* size) {
     return dentry_path(dent, /*relative=*/true, path, size);
 }
 
-struct shim_inode* get_new_inode(struct shim_mount* mount, mode_t type, mode_t perm) {
+struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t perm) {
     assert(mount);
 
-    struct shim_inode* inode = calloc(1, sizeof(*inode));
+    struct libos_inode* inode = calloc(1, sizeof(*inode));
     if (!inode)
         return NULL;
 
@@ -372,11 +373,11 @@ struct shim_inode* get_new_inode(struct shim_mount* mount, mode_t type, mode_t p
     return inode;
 }
 
-void get_inode(struct shim_inode* inode) {
+void get_inode(struct libos_inode* inode) {
     REF_INC(inode->ref_count);
 }
 
-void put_inode(struct shim_inode* inode) {
+void put_inode(struct libos_inode* inode) {
     if (REF_DEC(inode->ref_count) == 0) {
         if (inode->fs->d_ops && inode->fs->d_ops->idrop) {
             lock(&inode->lock);
@@ -420,7 +421,7 @@ static void dump_dentry_mode(struct print_buf* buf, mode_t type, mode_t perm) {
     buf_putc(buf, ' ');
 }
 
-static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
+static void dump_dentry(struct libos_dentry* dent, unsigned int level) {
     assert(locked(&g_dcache_lock));
 
     struct print_buf buf = INIT_PRINT_BUF(dump_dentry_write_all);
@@ -457,10 +458,10 @@ static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
     buf_flush(&buf);
 
     if (dent->attached_mount) {
-        struct shim_dentry* root = dent->attached_mount->root;
+        struct libos_dentry* root = dent->attached_mount->root;
         dump_dentry(root, level + 1);
     } else {
-        struct shim_dentry* child;
+        struct libos_dentry* child;
         LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
             dump_dentry(child, level + 1);
         }
@@ -469,7 +470,7 @@ static void dump_dentry(struct shim_dentry* dent, unsigned int level) {
 
 #undef DUMP_FLAG
 
-void dump_dcache(struct shim_dentry* dent) {
+void dump_dcache(struct libos_dentry* dent) {
     lock(&g_dcache_lock);
 
     if (!dent)
@@ -485,12 +486,12 @@ BEGIN_CP_FUNC(dentry_root) {
     __UNUSED(objp);
 
     /* Checkpoint the root dentry */
-    struct shim_dentry* new_dent;
+    struct libos_dentry* new_dent;
     DO_CP(dentry, g_dentry_root, &new_dent);
 
     /* Add an entry for it, so that RS_FUNC(dentry_root) is triggered on restore */
-    size_t off = ADD_CP_OFFSET(sizeof(struct shim_dentry*));
-    struct shim_dentry** new_dentry_root = (void*)(base + off);
+    size_t off = ADD_CP_OFFSET(sizeof(struct libos_dentry*));
+    struct libos_dentry** new_dentry_root = (void*)(base + off);
     *new_dentry_root = new_dent;
     ADD_CP_FUNC_ENTRY(off);
 }
@@ -501,7 +502,7 @@ BEGIN_RS_FUNC(dentry_root) {
 
     assert(!g_dentry_root);
 
-    struct shim_dentry** dentry_root = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_dentry** dentry_root = (void*)(base + GET_CP_FUNC_ENTRY());
     CP_REBASE(*dentry_root);
     g_dentry_root = *dentry_root;
 }
@@ -509,20 +510,20 @@ END_RS_FUNC(dentry_root)
 
 BEGIN_CP_FUNC(dentry) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_dentry));
+    assert(size == sizeof(struct libos_dentry));
 
     /* We should be holding `g_dcache_lock` for the whole checkpointing process. */
     assert(locked(&g_dcache_lock));
 
-    struct shim_dentry* dent     = (struct shim_dentry*)obj;
-    struct shim_dentry* new_dent = NULL;
+    struct libos_dentry* dent     = (struct libos_dentry*)obj;
+    struct libos_dentry* new_dent = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_dentry));
+        off = ADD_CP_OFFSET(sizeof(struct libos_dentry));
         ADD_TO_CP_MAP(obj, off);
-        new_dent = (struct shim_dentry*)(base + off);
+        new_dent = (struct libos_dentry*)(base + off);
 
         *new_dent = *dent;
         INIT_LISTP(&new_dent->children);
@@ -548,7 +549,7 @@ BEGIN_CP_FUNC(dentry) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_dent = (struct shim_dentry*)(base + off);
+        new_dent = (struct libos_dentry*)(base + off);
     }
 
     if (objp)
@@ -558,7 +559,7 @@ END_CP_FUNC(dentry)
 
 BEGIN_RS_FUNC(dentry) {
     __UNUSED(offset);
-    struct shim_dentry* dent = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_dentry* dent = (void*)(base + GET_CP_FUNC_ENTRY());
 
     CP_REBASE(dent->name);
     CP_REBASE(dent->children);
@@ -593,17 +594,17 @@ END_RS_FUNC(dentry)
 
 BEGIN_CP_FUNC(inode) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_inode));
+    assert(size == sizeof(struct libos_inode));
 
-    struct shim_inode* inode = obj;
-    struct shim_inode* new_inode = NULL;
+    struct libos_inode* inode = obj;
+    struct libos_inode* new_inode = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_inode));
+        off = ADD_CP_OFFSET(sizeof(struct libos_inode));
         ADD_TO_CP_MAP(obj, off);
-        new_inode = (struct shim_inode*)(base + off);
+        new_inode = (struct libos_inode*)(base + off);
         memset(new_inode, 0, sizeof(*new_inode));
 
         lock(&inode->lock);
@@ -650,7 +651,7 @@ BEGIN_CP_FUNC(inode) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_inode = (struct shim_inode*)(base + off);
+        new_inode = (struct libos_inode*)(base + off);
     }
 
     if (objp)
@@ -659,7 +660,7 @@ BEGIN_CP_FUNC(inode) {
 END_CP_FUNC(inode)
 
 BEGIN_RS_FUNC(inode) {
-    struct shim_inode* inode = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_inode* inode = (void*)(base + GET_CP_FUNC_ENTRY());
     __UNUSED(offset);
 
     CP_REBASE(inode->mount);

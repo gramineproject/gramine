@@ -28,7 +28,7 @@ long libos_syscall_getcwd(char* buf, size_t buf_size) {
         return -EFAULT;
 
     lock(&g_process.fs_lock);
-    struct shim_dentry* cwd = g_process.cwd;
+    struct libos_dentry* cwd = g_process.cwd;
     get_dentry(cwd);
     unlock(&g_process.fs_lock);
 
@@ -55,7 +55,7 @@ out:
 }
 
 long libos_syscall_chdir(const char* filename) {
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     int ret;
 
     if (!is_user_string_readable(filename))
@@ -81,12 +81,12 @@ long libos_syscall_chdir(const char* filename) {
 }
 
 long libos_syscall_fchdir(int fd) {
-    struct shim_thread* thread = get_cur_thread();
-    struct shim_handle* hdl    = get_fd_handle(fd, NULL, thread->handle_map);
+    struct libos_thread* thread = get_cur_thread();
+    struct libos_handle* hdl    = get_fd_handle(fd, NULL, thread->handle_map);
     if (!hdl)
         return -EBADF;
 
-    struct shim_dentry* dent = hdl->dentry;
+    struct libos_dentry* dent = hdl->dentry;
 
     if (!dent->inode || dent->inode->type != S_IFDIR) {
         char* path = NULL;

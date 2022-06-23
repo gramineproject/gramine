@@ -33,8 +33,8 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
     if (flag & ~AT_REMOVEDIR)
         return -EINVAL;
 
-    struct shim_dentry* dir = NULL;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
     int ret;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
@@ -62,7 +62,7 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
         }
     }
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (fs->d_ops && fs->d_ops->unlink) {
         ret = fs->d_ops->unlink(dent);
         if (ret < 0) {
@@ -99,7 +99,7 @@ long libos_syscall_mkdirat(int dfd, const char* pathname, int mode) {
 
     mode &= ~umask;
 
-    struct shim_dentry* dir = NULL;
+    struct libos_dentry* dir = NULL;
     int ret = 0;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
@@ -114,7 +114,7 @@ long libos_syscall_mkdirat(int dfd, const char* pathname, int mode) {
 
 long libos_syscall_rmdir(const char* pathname) {
     int ret = 0;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
 
     if (!is_user_string_readable(pathname))
         return -EFAULT;
@@ -135,7 +135,7 @@ long libos_syscall_rmdir(const char* pathname) {
         goto out;
     }
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (!fs || !fs->d_ops || !fs->d_ops->unlink) {
         ret = -EACCES;
         goto out;
@@ -174,8 +174,8 @@ long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode) {
     /* This isn't documented, but that's what Linux does. */
     mode_t perm = mode & 07777;
 
-    struct shim_dentry* dir = NULL;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
     int ret = 0;
 
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
@@ -186,7 +186,7 @@ long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode) {
     if (ret < 0)
         goto out;
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (fs && fs->d_ops && fs->d_ops->chmod) {
         if ((ret = fs->d_ops->chmod(dent, perm)) < 0)
             goto out_dent;
@@ -206,14 +206,14 @@ out:
 }
 
 long libos_syscall_fchmod(int fd, mode_t mode) {
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
     /* This isn't documented, but that's what Linux does. */
     mode_t perm = mode & 07777;
 
-    struct shim_dentry* dent = hdl->dentry;
+    struct libos_dentry* dent = hdl->dentry;
     int ret = 0;
 
     lock(&g_dcache_lock);
@@ -229,7 +229,7 @@ long libos_syscall_fchmod(int fd, mode_t mode) {
         goto out;
     }
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (fs && fs->d_ops && fs->d_ops->chmod) {
         ret = fs->d_ops->chmod(dent, perm);
         if (ret < 0)
@@ -258,8 +258,8 @@ long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid,
     if (!is_user_string_readable(filename))
         return -EFAULT;
 
-    struct shim_dentry* dir = NULL;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
     int ret = 0;
 
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
@@ -283,7 +283,7 @@ long libos_syscall_fchown(int fd, uid_t uid, gid_t gid) {
     __UNUSED(uid);
     __UNUSED(gid);
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -291,7 +291,7 @@ long libos_syscall_fchown(int fd, uid_t uid, gid_t gid) {
     return 0;
 }
 
-static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent) {
+static int do_rename(struct libos_dentry* old_dent, struct libos_dentry* new_dent) {
     assert(locked(&g_dcache_lock));
     assert(old_dent->inode);
 
@@ -306,7 +306,7 @@ static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent)
         return -EXDEV;
     }
 
-    struct shim_fs* fs = old_dent->inode->fs;
+    struct libos_fs* fs = old_dent->inode->fs;
     if (!fs || !fs->d_ops || !fs->d_ops->rename) {
         return -EPERM;
     }
@@ -346,10 +346,10 @@ long libos_syscall_rename(const char* oldpath, const char* newpath) {
 }
 
 long libos_syscall_renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
-    struct shim_dentry* old_dir_dent = NULL;
-    struct shim_dentry* old_dent     = NULL;
-    struct shim_dentry* new_dir_dent = NULL;
-    struct shim_dentry* new_dent     = NULL;
+    struct libos_dentry* old_dir_dent = NULL;
+    struct libos_dentry* old_dent     = NULL;
+    struct libos_dentry* new_dir_dent = NULL;
+    struct libos_dentry* new_dent     = NULL;
     int ret = 0;
 
     if (!is_user_string_readable(oldpath) || !is_user_string_readable(newpath)) {
@@ -409,11 +409,11 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
     if (offset && !is_user_memory_writable(offset, sizeof(*offset)))
         return -EFAULT;
 
-    struct shim_handle* in_hdl = get_fd_handle(in_fd, NULL, NULL);
+    struct libos_handle* in_hdl = get_fd_handle(in_fd, NULL, NULL);
     if (!in_hdl)
         return -EBADF;
 
-    struct shim_handle* out_hdl = get_fd_handle(out_fd, NULL, NULL);
+    struct libos_handle* out_hdl = get_fd_handle(out_fd, NULL, NULL);
     if (!out_hdl) {
         put_handle(in_hdl);
         return -EBADF;
@@ -535,7 +535,7 @@ long libos_syscall_chroot(const char* filename) {
         return -EFAULT;
 
     int ret = 0;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, filename, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
     unlock(&g_dcache_lock);

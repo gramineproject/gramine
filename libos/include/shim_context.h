@@ -6,6 +6,6 @@
 
 #pragma once
 
-void shim_xstate_init(void);
-uint64_t shim_xstate_size(void);
-void shim_xstate_restore(const void* xstate_extended);
+void libos_xstate_init(void);
+uint64_t libos_xstate_size(void);
+void libos_xstate_restore(const void* xstate_extended);

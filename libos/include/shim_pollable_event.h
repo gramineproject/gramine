@@ -15,14 +15,14 @@
  * purpose these events exist for).
  */
 
-struct shim_pollable_event {
+struct libos_pollable_event {
     PAL_HANDLE read_handle;
     PAL_HANDLE write_handle;
     spinlock_t read_lock;
     spinlock_t write_lock;
 };
 
-int create_pollable_event(struct shim_pollable_event* event);
-void destroy_pollable_event(struct shim_pollable_event* event);
-int set_pollable_event(struct shim_pollable_event* event);
-int clear_pollable_event(struct shim_pollable_event* event);
+int create_pollable_event(struct libos_pollable_event* event);
+void destroy_pollable_event(struct libos_pollable_event* event);
+int set_pollable_event(struct libos_pollable_event* event);
+int clear_pollable_event(struct libos_pollable_event* event);

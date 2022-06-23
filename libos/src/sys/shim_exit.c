@@ -25,7 +25,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     shutdown_sync_client();
 
-    struct shim_thread* async_thread = terminate_async_worker();
+    struct libos_thread* async_thread = terminate_async_worker();
     if (async_thread) {
         /* TODO: wait for the thread to finish its tasks and exit in the host OS.
          * This is tracked by the following issue:
@@ -64,7 +64,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 noreturn void thread_exit(int error_code, int term_signal) {
     /* Remove current thread from the threads list. */
     if (!check_last_thread(/*mark_self_dead=*/true)) {
-        struct shim_thread* cur_thread = get_cur_thread();
+        struct libos_thread* cur_thread = get_cur_thread();
 
         /* ask async worker thread to cleanup this thread */
         cur_thread->clear_child_tid_pal = 1; /* any non-zero value suffices */
@@ -74,8 +74,8 @@ noreturn void thread_exit(int error_code, int term_signal) {
 
         /* Take the reference to the current thread from the tcb. */
         lock(&cur_thread->lock);
-        assert(cur_thread->shim_tcb->tp == cur_thread);
-        cur_thread->shim_tcb->tp = NULL;
+        assert(cur_thread->libos_tcb->tp == cur_thread);
+        cur_thread->libos_tcb->tp = NULL;
         unlock(&cur_thread->lock);
         put_thread(cur_thread);
 
@@ -110,8 +110,8 @@ noreturn void thread_exit(int error_code, int term_signal) {
     libos_clean_and_exit(term_signal ? 128 + (term_signal & ~__WCOREDUMP_BIT) : error_code);
 }
 
-static int mark_thread_to_die(struct shim_thread* thread, void* arg) {
-    if (thread == (struct shim_thread*)arg) {
+static int mark_thread_to_die(struct libos_thread* thread, void* arg) {
+    if (thread == (struct libos_thread*)arg) {
         return 0;
     }
 

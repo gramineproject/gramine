@@ -11,7 +11,7 @@
 #include "shim_fs_pseudo.h"
 #include "shim_process.h"
 
-int proc_self_follow_link(struct shim_dentry* dent, char** out_target) {
+int proc_self_follow_link(struct libos_dentry* dent, char** out_target) {
     __UNUSED(dent);
     IDTYPE pid = g_process.pid;
     char name[11];

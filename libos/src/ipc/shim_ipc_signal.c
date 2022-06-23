@@ -38,7 +38,7 @@ static int ipc_pid_kill_send(enum kill_type type, IDTYPE sender, IDTYPE dest_pid
         }
     }
 
-    struct shim_ipc_pid_kill msgin = {
+    struct libos_ipc_pid_kill msgin = {
         .sender = sender,
         .type = type,
         .pid = dest_pid,
@@ -47,7 +47,7 @@ static int ipc_pid_kill_send(enum kill_type type, IDTYPE sender, IDTYPE dest_pid
     };
 
     size_t total_msg_size    = get_ipc_msg_size(sizeof(msgin));
-    struct shim_ipc_msg* msg = __alloca(total_msg_size);
+    struct libos_ipc_msg* msg = __alloca(total_msg_size);
     init_ipc_msg(msg, IPC_MSG_PID_KILL, total_msg_size);
     memcpy(&msg->data, &msgin, sizeof(msgin));
 
@@ -106,7 +106,7 @@ int ipc_kill_all(IDTYPE sender, int sig) {
 }
 
 int ipc_pid_kill_callback(IDTYPE src, void* data, uint64_t seq) {
-    struct shim_ipc_pid_kill* msgin = (struct shim_ipc_pid_kill*)data;
+    struct libos_ipc_pid_kill* msgin = (struct libos_ipc_pid_kill*)data;
 
     log_debug("IPC callback from %u: IPC_MSG_PID_KILL(%u, %d, %u, %d)", src, msgin->sender,
               msgin->type, msgin->id, msgin->signum);
@@ -133,7 +133,7 @@ int ipc_pid_kill_callback(IDTYPE src, void* data, uint64_t seq) {
         case KILL_ALL:
             if (!g_process_ipc_ids.leader_vmid) {
                 size_t total_msg_size = get_ipc_msg_size(sizeof(*msgin));
-                struct shim_ipc_msg* msg = __alloca(total_msg_size);
+                struct libos_ipc_msg* msg = __alloca(total_msg_size);
                 init_ipc_msg(msg, IPC_MSG_PID_KILL, total_msg_size);
                 memcpy(&msg->data, msgin, sizeof(*msgin));
                 ret = ipc_broadcast(msg, /*exclude_id=*/src);
@@ -153,7 +153,7 @@ int ipc_pid_kill_callback(IDTYPE src, void* data, uint64_t seq) {
     if (response_expected) {
         static_assert(SAME_TYPE(ret, int), "receiver assumes int");
         size_t total_msg_size = get_ipc_msg_size(sizeof(ret));
-        struct shim_ipc_msg* msg = __alloca(total_msg_size);
+        struct libos_ipc_msg* msg = __alloca(total_msg_size);
         init_ipc_response(msg, seq, total_msg_size);
         memcpy(&msg->data, &ret, sizeof(ret));
 

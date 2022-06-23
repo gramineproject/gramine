@@ -73,7 +73,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
 
 long libos_syscall_eventfd2(unsigned int count, int flags) {
     int ret = 0;
-    struct shim_handle* hdl = get_new_handle();
+    struct libos_handle* hdl = get_new_handle();
 
     if (!hdl) {
         ret = -ENOMEM;

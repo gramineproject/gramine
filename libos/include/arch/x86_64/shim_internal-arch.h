@@ -2,4 +2,4 @@
 
 #pragma once
 
-#define SHIM_ELF_HOST_MACHINE EM_X86_64
+#define LIBOS_ELF_HOST_MACHINE EM_X86_64

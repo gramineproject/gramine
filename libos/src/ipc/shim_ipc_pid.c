@@ -46,7 +46,7 @@ static bool id_range_cmp(struct avl_tree_node* _a, struct avl_tree_node* _b) {
 /* These are ranges of all used IDs. This tree is only meaningful in IPC leader.
  * No two ranges in this tree shall overlap. */
 static struct avl_tree g_id_owners_tree = { .cmp = id_range_cmp };
-static struct shim_lock g_id_owners_tree_lock;
+static struct libos_lock g_id_owners_tree_lock;
 static IDTYPE g_last_id = 0;
 
 int init_ipc_ids(void) {
@@ -240,7 +240,7 @@ int ipc_alloc_id_range(IDTYPE* out_start, IDTYPE* out_end) {
     }
 
     size_t msg_size = get_ipc_msg_size(0);
-    struct shim_ipc_msg* msg = malloc(msg_size);
+    struct libos_ipc_msg* msg = malloc(msg_size);
     if (!msg) {
         return -ENOMEM;
     }
@@ -288,7 +288,7 @@ int ipc_alloc_id_range_callback(IDTYPE src, void* data, uint64_t seq) {
         .end = end,
     };
     size_t msg_size = get_ipc_msg_size(sizeof(range));
-    struct shim_ipc_msg* msg = __alloca(msg_size);
+    struct libos_ipc_msg* msg = __alloca(msg_size);
     init_ipc_response(msg, seq, msg_size);
     memcpy(&msg->data, &range, sizeof(range));
 
@@ -306,7 +306,7 @@ int ipc_release_id_range(IDTYPE start, IDTYPE end) {
         .end = end,
     };
     size_t msg_size = get_ipc_msg_size(sizeof(range));
-    struct shim_ipc_msg* msg = malloc(msg_size);
+    struct libos_ipc_msg* msg = malloc(msg_size);
     if (!msg) {
         return -ENOMEM;
     }
@@ -340,7 +340,7 @@ int ipc_change_id_owner(IDTYPE id, IDTYPE new_owner) {
         .owner = new_owner,
     };
     size_t msg_size = get_ipc_msg_size(sizeof(owner_msg));
-    struct shim_ipc_msg* msg = malloc(msg_size);
+    struct libos_ipc_msg* msg = malloc(msg_size);
     if (!msg) {
         return -ENOMEM;
     }
@@ -365,7 +365,7 @@ int ipc_change_id_owner_callback(IDTYPE src, void* data, uint64_t seq) {
 
     /* Respond with a dummy empty message. */
     size_t msg_size = get_ipc_msg_size(0);
-    struct shim_ipc_msg* msg = __alloca(msg_size);
+    struct libos_ipc_msg* msg = __alloca(msg_size);
     init_ipc_response(msg, seq, msg_size);
     return ipc_send_message(src, msg);
 }
@@ -377,7 +377,7 @@ int ipc_get_id_owner(IDTYPE id, IDTYPE* out_owner) {
     }
 
     size_t msg_size = get_ipc_msg_size(sizeof(id));
-    struct shim_ipc_msg* msg = malloc(msg_size);
+    struct libos_ipc_msg* msg = malloc(msg_size);
     if (!msg) {
         return -ENOMEM;
     }
@@ -409,7 +409,7 @@ int ipc_get_id_owner_callback(IDTYPE src, void* data, uint64_t seq) {
     log_debug("%s: find_id_owner(%u): %u", __func__, *id, owner);
 
     size_t msg_size = get_ipc_msg_size(sizeof(owner));
-    struct shim_ipc_msg* msg = __alloca(msg_size);
+    struct libos_ipc_msg* msg = __alloca(msg_size);
     init_ipc_response(msg, seq, msg_size);
     memcpy(&msg->data, &owner, sizeof(owner));
 

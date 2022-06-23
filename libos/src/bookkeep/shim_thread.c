@@ -27,8 +27,8 @@
 #include "toml_utils.h"
 
 /* TODO: consider changing this list to a tree. */
-static LISTP_TYPE(shim_thread) g_thread_list = LISTP_INIT;
-struct shim_lock g_thread_list_lock;
+static LISTP_TYPE(libos_thread) g_thread_list = LISTP_INIT;
+struct libos_lock g_thread_list_lock;
 
 //#define DEBUG_REF
 
@@ -38,8 +38,8 @@ struct shim_lock g_thread_list_lock;
 #define DEBUG_PRINT_REF_COUNT(rc) __UNUSED(rc)
 #endif
 
-static struct shim_signal_dispositions* alloc_default_signal_dispositions(void) {
-    struct shim_signal_dispositions* dispositions = malloc(sizeof(*dispositions));
+static struct libos_signal_dispositions* alloc_default_signal_dispositions(void) {
+    struct libos_signal_dispositions* dispositions = malloc(sizeof(*dispositions));
     if (!dispositions) {
         return NULL;
     }
@@ -56,8 +56,8 @@ static struct shim_signal_dispositions* alloc_default_signal_dispositions(void) 
     return dispositions;
 }
 
-static struct shim_thread* alloc_new_thread(void) {
-    struct shim_thread* thread = calloc(1, sizeof(struct shim_thread));
+static struct libos_thread* alloc_new_thread(void) {
+    struct libos_thread* thread = calloc(1, sizeof(struct libos_thread));
     if (!thread) {
         return NULL;
     }
@@ -81,20 +81,20 @@ static struct shim_thread* alloc_new_thread(void) {
     return thread;
 }
 
-int alloc_thread_libos_stack(struct shim_thread* thread) {
+int alloc_thread_libos_stack(struct libos_thread* thread) {
     assert(thread->libos_stack_bottom == NULL);
 
     void* addr = NULL;
     int prot = PROT_READ | PROT_WRITE;
     int flags = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
-    int ret = bkeep_mmap_any(SHIM_THREAD_LIBOS_STACK_SIZE, prot, flags, /*file=*/NULL, /*offset=*/0,
-                             "libos_stack", &addr);
+    int ret = bkeep_mmap_any(LIBOS_THREAD_LIBOS_STACK_SIZE, prot, flags, /*file=*/NULL,
+                             /*offset=*/0, "libos_stack", &addr);
     if (ret < 0) {
         return ret;
     }
 
     bool need_mem_free = false;
-    ret = DkVirtualMemoryAlloc(&addr, SHIM_THREAD_LIBOS_STACK_SIZE, 0,
+    ret = DkVirtualMemoryAlloc(&addr, LIBOS_THREAD_LIBOS_STACK_SIZE, 0,
                                LINUX_PROT_TO_PAL(prot, flags));
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
@@ -109,20 +109,20 @@ int alloc_thread_libos_stack(struct shim_thread* thread) {
         goto unmap;
     }
 
-    thread->libos_stack_bottom = (char*)addr + SHIM_THREAD_LIBOS_STACK_SIZE;
+    thread->libos_stack_bottom = (char*)addr + LIBOS_THREAD_LIBOS_STACK_SIZE;
 
     return 0;
 
 unmap:;
     void* tmp_vma = NULL;
-    if (bkeep_munmap(addr, SHIM_THREAD_LIBOS_STACK_SIZE, /*is_internal=*/true, &tmp_vma) < 0) {
+    if (bkeep_munmap(addr, LIBOS_THREAD_LIBOS_STACK_SIZE, /*is_internal=*/true, &tmp_vma) < 0) {
         log_error("[alloc_thread_libos_stack]"
                   " Failed to remove bookkeeped memory that was not allocated at %p-%p!",
-                  addr, (char*)addr + SHIM_THREAD_LIBOS_STACK_SIZE);
+                  addr, (char*)addr + LIBOS_THREAD_LIBOS_STACK_SIZE);
         BUG();
     }
     if (need_mem_free) {
-        if (DkVirtualMemoryFree(addr, SHIM_THREAD_LIBOS_STACK_SIZE) < 0) {
+        if (DkVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
             BUG();
         }
     }
@@ -131,7 +131,7 @@ unmap:;
 }
 
 static int init_main_thread(void) {
-    struct shim_thread* cur_thread = get_cur_thread();
+    struct libos_thread* cur_thread = get_cur_thread();
     if (cur_thread) {
         /* Thread already initialized (e.g. received via checkpoint). */
         add_thread(cur_thread);
@@ -233,10 +233,10 @@ int init_threading(void) {
     return init_main_thread();
 }
 
-static struct shim_thread* __lookup_thread(IDTYPE tid) {
+static struct libos_thread* __lookup_thread(IDTYPE tid) {
     assert(locked(&g_thread_list_lock));
 
-    struct shim_thread* tmp;
+    struct libos_thread* tmp;
 
     LISTP_FOR_EACH_ENTRY(tmp, &g_thread_list, list) {
         if (tmp->tid == tid) {
@@ -248,20 +248,20 @@ static struct shim_thread* __lookup_thread(IDTYPE tid) {
     return NULL;
 }
 
-struct shim_thread* lookup_thread(IDTYPE tid) {
+struct libos_thread* lookup_thread(IDTYPE tid) {
     lock(&g_thread_list_lock);
-    struct shim_thread* thread = __lookup_thread(tid);
+    struct libos_thread* thread = __lookup_thread(tid);
     unlock(&g_thread_list_lock);
     return thread;
 }
 
-struct shim_thread* get_new_thread(void) {
-    struct shim_thread* thread = alloc_new_thread();
+struct libos_thread* get_new_thread(void) {
+    struct libos_thread* thread = alloc_new_thread();
     if (!thread) {
         return NULL;
     }
 
-    struct shim_thread* cur_thread = get_cur_thread();
+    struct libos_thread* cur_thread = get_cur_thread();
     size_t groups_size = cur_thread->groups_info.count * sizeof(cur_thread->groups_info.groups[0]);
     if (groups_size > 0) {
         thread->groups_info.groups = malloc(groups_size);
@@ -294,7 +294,7 @@ struct shim_thread* get_new_thread(void) {
     unlock(&thread->lock);
     thread->has_saved_sigmask = false;
 
-    struct shim_handle_map* map = get_thread_handle_map(cur_thread);
+    struct libos_handle_map* map = get_thread_handle_map(cur_thread);
     assert(map);
     set_handle_map(thread, map);
 
@@ -310,16 +310,16 @@ struct shim_thread* get_new_thread(void) {
     return thread;
 }
 
-struct shim_thread* get_new_internal_thread(void) {
+struct libos_thread* get_new_internal_thread(void) {
     return alloc_new_thread();
 }
 
-void get_signal_dispositions(struct shim_signal_dispositions* dispositions) {
+void get_signal_dispositions(struct libos_signal_dispositions* dispositions) {
     int ref_count = REF_INC(dispositions->ref_count);
     DEBUG_PRINT_REF_COUNT(ref_count);
 }
 
-void put_signal_dispositions(struct shim_signal_dispositions* dispositions) {
+void put_signal_dispositions(struct libos_signal_dispositions* dispositions) {
     int ref_count = REF_DEC(dispositions->ref_count);
 
     DEBUG_PRINT_REF_COUNT(ref_count);
@@ -330,12 +330,12 @@ void put_signal_dispositions(struct shim_signal_dispositions* dispositions) {
     }
 }
 
-void get_thread(struct shim_thread* thread) {
+void get_thread(struct libos_thread* thread) {
     int ref_count = REF_INC(thread->ref_count);
     DEBUG_PRINT_REF_COUNT(ref_count);
 }
 
-void put_thread(struct shim_thread* thread) {
+void put_thread(struct libos_thread* thread) {
     int ref_count = REF_DEC(thread->ref_count);
 
     DEBUG_PRINT_REF_COUNT(ref_count);
@@ -344,17 +344,18 @@ void put_thread(struct shim_thread* thread) {
         assert(LIST_EMPTY(thread, list));
 
         if (thread->libos_stack_bottom) {
-            char* addr = (char*)thread->libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE;
+            char* addr = (char*)thread->libos_stack_bottom - LIBOS_THREAD_LIBOS_STACK_SIZE;
 #ifdef ASAN
-            asan_unpoison_region((uintptr_t)addr, SHIM_THREAD_LIBOS_STACK_SIZE);
+            asan_unpoison_region((uintptr_t)addr, LIBOS_THREAD_LIBOS_STACK_SIZE);
 #endif
             void* tmp_vma = NULL;
-            if (bkeep_munmap(addr, SHIM_THREAD_LIBOS_STACK_SIZE, /*is_internal=*/true, &tmp_vma) < 0) {
+            if (bkeep_munmap(addr, LIBOS_THREAD_LIBOS_STACK_SIZE, /*is_internal=*/true,
+                             &tmp_vma) < 0) {
                 log_error("[put_thread] Failed to remove bookkeeped memory at %p-%p!",
-                          addr, (char*)addr + SHIM_THREAD_LIBOS_STACK_SIZE);
+                          addr, (char*)addr + LIBOS_THREAD_LIBOS_STACK_SIZE);
                 BUG();
             }
-            if (DkVirtualMemoryFree(addr, SHIM_THREAD_LIBOS_STACK_SIZE) < 0) {
+            if (DkVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
                 BUG();
             }
             bkeep_remove_tmp_vma(tmp_vma);
@@ -400,11 +401,11 @@ void put_thread(struct shim_thread* thread) {
     }
 }
 
-void add_thread(struct shim_thread* thread) {
+void add_thread(struct libos_thread* thread) {
     assert(!is_internal(thread) && LIST_EMPTY(thread, list));
 
-    struct shim_thread* tmp;
-    struct shim_thread* prev = NULL;
+    struct libos_thread* tmp;
+    struct libos_thread* prev = NULL;
     lock(&g_thread_list_lock);
 
     /* keep it sorted */
@@ -426,12 +427,12 @@ void add_thread(struct shim_thread* thread) {
  * If `mark_self_dead` is true additionally takes us off the `g_thread_list`.
  */
 bool check_last_thread(bool mark_self_dead) {
-    struct shim_thread* self = get_cur_thread();
+    struct libos_thread* self = get_cur_thread();
     bool ret = true;
 
     lock(&g_thread_list_lock);
 
-    struct shim_thread* thread;
+    struct libos_thread* thread;
     LISTP_FOR_EACH_ENTRY(thread, &g_thread_list, list) {
         if (thread != self) {
             ret = false;
@@ -458,7 +459,7 @@ bool check_last_thread(bool mark_self_dead) {
 void cleanup_thread(IDTYPE caller, void* arg) {
     __UNUSED(caller);
 
-    struct shim_thread* thread = (struct shim_thread*)arg;
+    struct libos_thread* thread = (struct libos_thread*)arg;
     assert(thread);
 
     /* wait on clear_child_tid_pal; this signals that PAL layer exited child thread */
@@ -478,9 +479,9 @@ void cleanup_thread(IDTYPE caller, void* arg) {
     put_thread(thread);
 }
 
-int walk_thread_list(int (*callback)(struct shim_thread*, void*), void* arg, bool one_shot) {
-    struct shim_thread* tmp;
-    struct shim_thread* n;
+int walk_thread_list(int (*callback)(struct libos_thread*, void*), void* arg, bool one_shot) {
+    struct libos_thread* tmp;
+    struct libos_thread* n;
     bool success = false;
     int ret = -ESRCH;
 
@@ -508,17 +509,17 @@ out:
 
 BEGIN_CP_FUNC(signal_dispositions) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_signal_dispositions));
+    assert(size == sizeof(struct libos_signal_dispositions));
 
-    struct shim_signal_dispositions* dispositions = (struct shim_signal_dispositions*)obj;
-    struct shim_signal_dispositions* new_dispositions = NULL;
+    struct libos_signal_dispositions* dispositions = (struct libos_signal_dispositions*)obj;
+    struct libos_signal_dispositions* new_dispositions = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_signal_dispositions));
+        off = ADD_CP_OFFSET(sizeof(struct libos_signal_dispositions));
         ADD_TO_CP_MAP(obj, off);
-        new_dispositions = (struct shim_signal_dispositions*)(base + off);
+        new_dispositions = (struct libos_signal_dispositions*)(base + off);
 
         lock(&dispositions->lock);
 
@@ -530,7 +531,7 @@ BEGIN_CP_FUNC(signal_dispositions) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_dispositions = (struct shim_signal_dispositions*)(base + off);
+        new_dispositions = (struct libos_signal_dispositions*)(base + off);
     }
 
     if (objp) {
@@ -542,7 +543,7 @@ END_CP_FUNC(signal_dispositions)
 BEGIN_RS_FUNC(signal_dispositions) {
     __UNUSED(offset);
     __UNUSED(rebase);
-    struct shim_signal_dispositions* dispositions = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_signal_dispositions* dispositions = (void*)(base + GET_CP_FUNC_ENTRY());
 
     if (!create_lock(&dispositions->lock)) {
         return -ENOMEM;
@@ -552,17 +553,17 @@ END_RS_FUNC(signal_dispositions)
 
 BEGIN_CP_FUNC(thread) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_thread));
+    assert(size == sizeof(struct libos_thread));
 
-    struct shim_thread* thread = (struct shim_thread*)obj;
-    struct shim_thread* new_thread = NULL;
+    struct libos_thread* thread = (struct libos_thread*)obj;
+    struct libos_thread* new_thread = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_thread));
+        off = ADD_CP_OFFSET(sizeof(struct libos_thread));
         ADD_TO_CP_MAP(obj, off);
-        new_thread = (struct shim_thread*)(base + off);
+        new_thread = (struct libos_thread*)(base + off);
         *new_thread = *thread;
 
         INIT_LIST_HEAD(new_thread, list);
@@ -591,11 +592,11 @@ BEGIN_CP_FUNC(thread) {
 
         ADD_CP_FUNC_ENTRY(off);
 
-        if (thread->shim_tcb) {
-            size_t toff = ADD_CP_OFFSET(sizeof(shim_tcb_t));
-            new_thread->shim_tcb = (void*)(base + toff);
-            struct shim_tcb* new_tcb = new_thread->shim_tcb;
-            *new_tcb = *thread->shim_tcb;
+        if (thread->libos_tcb) {
+            size_t toff = ADD_CP_OFFSET(sizeof(libos_tcb_t));
+            new_thread->libos_tcb = (void*)(base + toff);
+            struct libos_tcb* new_tcb = new_thread->libos_tcb;
+            *new_tcb = *thread->libos_tcb;
             /* don't export stale pointers */
             new_tcb->self      = NULL;
             new_tcb->tp        = NULL;
@@ -603,12 +604,12 @@ BEGIN_CP_FUNC(thread) {
 
             new_tcb->log_prefix[0] = '\0';
 
-            size_t roff = ADD_CP_OFFSET(sizeof(*thread->shim_tcb->context.regs));
-            new_thread->shim_tcb->context.regs = (void*)(base + roff);
-            pal_context_copy(new_thread->shim_tcb->context.regs, thread->shim_tcb->context.regs);
+            size_t roff = ADD_CP_OFFSET(sizeof(*thread->libos_tcb->context.regs));
+            new_thread->libos_tcb->context.regs = (void*)(base + roff);
+            pal_context_copy(new_thread->libos_tcb->context.regs, thread->libos_tcb->context.regs);
         }
     } else {
-        new_thread = (struct shim_thread*)(base + off);
+        new_thread = (struct libos_thread*)(base + off);
     }
 
     if (objp)
@@ -617,7 +618,7 @@ BEGIN_CP_FUNC(thread) {
 END_CP_FUNC(thread)
 
 BEGIN_RS_FUNC(thread) {
-    struct shim_thread* thread = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_thread* thread = (void*)(base + GET_CP_FUNC_ENTRY());
     __UNUSED(offset);
 
     CP_REBASE(thread->list);
@@ -663,12 +664,12 @@ BEGIN_RS_FUNC(thread) {
         return ret;
     }
 
-    CP_REBASE(thread->shim_tcb);
-    CP_REBASE(thread->shim_tcb->context.regs);
+    CP_REBASE(thread->libos_tcb);
+    CP_REBASE(thread->libos_tcb->context.regs);
 
-    shim_tcb_t* tcb = shim_get_tcb();
-    *tcb = *thread->shim_tcb;
-    __shim_tcb_init(tcb);
+    libos_tcb_t* tcb = libos_get_tcb();
+    *tcb = *thread->libos_tcb;
+    __libos_tcb_init(tcb);
 
     assert(tcb->context.regs);
     set_tls(tcb->context.tls);
@@ -676,6 +677,6 @@ BEGIN_RS_FUNC(thread) {
     thread->pal_handle = g_pal_public_state->first_thread;
 
     set_cur_thread(thread);
-    log_setprefix(thread->shim_tcb);
+    log_setprefix(thread->libos_tcb);
 }
 END_RS_FUNC(thread)

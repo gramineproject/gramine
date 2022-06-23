@@ -9,7 +9,7 @@
 #include "shim_types.h"
 #include "toml.h"
 
-struct shim_handle;
+struct libos_handle;
 
 /* quick hash function based on Robert Jenkins' hash algorithm */
 static inline uint64_t hash64(uint64_t key) {
@@ -33,10 +33,10 @@ void* malloc_copy(const void* mem, size_t size);
 /* ELF binary loading */
 struct link_map;
 int init_elf_objects(void);
-int check_elf_object(struct shim_handle* file);
-int load_elf_object(struct shim_handle* file, struct link_map** out_map);
+int check_elf_object(struct libos_handle* file);
+int load_elf_object(struct libos_handle* file, struct link_map** out_map);
 int load_elf_interp(struct link_map* exec_map);
-int load_and_check_exec(const char* path, const char** argv, struct shim_handle** out_exec,
+int load_and_check_exec(const char* path, const char** argv, struct libos_handle** out_exec,
                         char*** out_new_argv);
 noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv_t* auxp);
 void remove_loaded_elf_objects(void);
@@ -59,7 +59,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 int init_async_worker(void);
 int64_t install_async_event(PAL_HANDLE object, unsigned long time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg);
-struct shim_thread* terminate_async_worker(void);
+struct libos_thread* terminate_async_worker(void);
 
 extern const toml_table_t* g_manifest_root;
 

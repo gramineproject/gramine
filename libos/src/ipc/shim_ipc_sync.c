@@ -32,18 +32,18 @@ static inline void sync_log(const char* prefix, int code, uint64_t id, int state
 
 static int sync_msg_send(IDTYPE dest, int code, uint64_t id, int state, size_t data_size,
                          void* data) {
-    struct shim_ipc_sync msgin = {
+    struct libos_ipc_sync msgin = {
         .id = id,
         .state = state,
         .data_size = data_size,
     };
 
-    size_t total_msg_size = get_ipc_msg_size(sizeof(struct shim_ipc_sync) + data_size);
-    struct shim_ipc_msg* msg = __alloca(total_msg_size);
+    size_t total_msg_size = get_ipc_msg_size(sizeof(struct libos_ipc_sync) + data_size);
+    struct libos_ipc_msg* msg = __alloca(total_msg_size);
     init_ipc_msg(msg, code, total_msg_size);
 
     memcpy(&msg->data, &msgin, sizeof(msgin));
-    memcpy(&((struct shim_ipc_sync*)&msg->data)->data, data, data_size);
+    memcpy(&((struct libos_ipc_sync*)&msg->data)->data, data, data_size);
 
     return ipc_send_message(dest, msg);
 }
@@ -61,7 +61,7 @@ int ipc_sync_server_send(IDTYPE dest, int code, uint64_t id, int state,
 }
 
 static int ipc_sync_client_callback(int code, IDTYPE src, void* data, unsigned long seq) {
-    struct shim_ipc_sync* msgin = data;
+    struct libos_ipc_sync* msgin = data;
     __UNUSED(src);
     __UNUSED(seq);
 
@@ -71,7 +71,7 @@ static int ipc_sync_client_callback(int code, IDTYPE src, void* data, unsigned l
 }
 
 static int ipc_sync_server_callback(int code, IDTYPE src, void* data, unsigned long seq) {
-    struct shim_ipc_sync* msgin = data;
+    struct libos_ipc_sync* msgin = data;
     __UNUSED(seq);
 
     sync_log("sync server callback", code, msgin->id, msgin->state);

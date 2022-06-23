@@ -106,7 +106,7 @@ Table of Contents
 .. toctree::
    :caption: LibOS
 
-   libos/shim-init
+   libos/libos-init
 
 .. toctree::
    :caption: PAL

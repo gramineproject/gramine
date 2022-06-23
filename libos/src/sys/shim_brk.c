@@ -25,7 +25,7 @@ static struct {
     char* brk_end;
 } brk_region;
 
-static struct shim_lock brk_lock;
+static struct libos_lock brk_lock;
 
 int init_brk_region(void* brk_start, size_t data_segment_size) {
     int ret;
@@ -35,7 +35,7 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         return -ENOMEM;
     }
 
-    /* TODO: this needs a better fix. Currently after fork, in the new child process, `shim_init`
+    /* TODO: this needs a better fix. Currently after fork, in the new child process, `libos_init`
      * is run, hence this function too - but forked process will get its brk from checkpoints. */
     if (brk_region.brk_start) {
         return 0;

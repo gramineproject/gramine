@@ -16,7 +16,7 @@
 #include "shim_process.h"
 #include "stat.h"
 
-int check_permissions(struct shim_dentry* dent, mode_t mask) {
+int check_permissions(struct libos_dentry* dent, mode_t mask) {
     assert(locked(&g_dcache_lock));
 
     if (!dent->inode)
@@ -35,12 +35,12 @@ int check_permissions(struct shim_dentry* dent, mode_t mask) {
 
 /* This function works like `lookup_dcache`, but if the dentry is not in cache, it creates a new,
  * negative one. */
-static struct shim_dentry* lookup_dcache_or_create(struct shim_dentry* parent, const char* name,
-                                                   size_t name_len) {
+static struct libos_dentry* lookup_dcache_or_create(struct libos_dentry* parent, const char* name,
+                                                    size_t name_len) {
     assert(locked(&g_dcache_lock));
     assert(parent);
 
-    struct shim_dentry* dent = lookup_dcache(parent, name, name_len);
+    struct libos_dentry* dent = lookup_dcache(parent, name, name_len);
     if (!dent)
         dent = get_new_dentry(parent->mount, parent, name, name_len);
     return dent;
@@ -48,7 +48,7 @@ static struct shim_dentry* lookup_dcache_or_create(struct shim_dentry* parent, c
 
 /* Performs lookup operation in the underlying filesystem. Treats -ENOENT from lookup operation as
  * success (but leaves the dentry negative). */
-static int lookup_dentry(struct shim_dentry* dent) {
+static int lookup_dentry(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
     if (dent->inode)
@@ -67,11 +67,11 @@ static int lookup_dentry(struct shim_dentry* dent) {
     return 0;
 }
 
-static int do_path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                            struct shim_dentry** found, unsigned int link_depth);
+static int do_path_lookupat(struct libos_dentry* start, const char* path, int flags,
+                            struct libos_dentry** found, unsigned int link_depth);
 
 /* Helper function that follows a symbolic link, performing a nested call to `do_path_lookupat`  */
-static int path_lookupat_follow(struct shim_dentry* link, int flags, struct shim_dentry** found,
+static int path_lookupat_follow(struct libos_dentry* link, int flags, struct libos_dentry** found,
                                 unsigned int link_depth) {
     int ret;
     char* target = NULL;
@@ -79,14 +79,14 @@ static int path_lookupat_follow(struct shim_dentry* link, int flags, struct shim
     assert(locked(&g_dcache_lock));
 
     assert(link->inode);
-    struct shim_fs* fs = link->inode->fs;
+    struct libos_fs* fs = link->inode->fs;
     assert(fs->d_ops);
     assert(fs->d_ops->follow_link);
     ret = fs->d_ops->follow_link(link, &target);
     if (ret < 0)
         goto out;
 
-    struct shim_dentry* up = dentry_up(link);
+    struct libos_dentry* up = dentry_up(link);
     if (!up)
         up = g_dentry_root;
     ret = do_path_lookupat(up, target, flags, found, link_depth);
@@ -113,10 +113,10 @@ out:
  *
  * The caller should hold `g_dcache_lock`.
  */
-static int traverse_mount_and_lookup(struct shim_dentry** dent) {
+static int traverse_mount_and_lookup(struct libos_dentry** dent) {
     assert(locked(&g_dcache_lock));
 
-    struct shim_dentry* cur_dent = *dent;
+    struct libos_dentry* cur_dent = *dent;
     while (cur_dent->attached_mount) {
         cur_dent = cur_dent->attached_mount->root;
     }
@@ -136,7 +136,7 @@ static int traverse_mount_and_lookup(struct shim_dentry** dent) {
 /* State of the lookup algorithm */
 struct lookup {
     /* Current dentry */
-    struct shim_dentry* dent;
+    struct libos_dentry* dent;
 
     /* Beginning of the next name to look up (can be empty if we're finished) */
     const char* name;
@@ -177,7 +177,7 @@ static int lookup_enter_dentry(struct lookup* lookup) {
                 sub_flags &= ~LOOKUP_CREATE;
             }
 
-            struct shim_dentry* target_dent;
+            struct libos_dentry* target_dent;
             ret = path_lookupat_follow(lookup->dent, sub_flags, &target_dent,
                                        lookup->link_depth + 1);
             if (ret < 0)
@@ -235,7 +235,7 @@ static int lookup_advance(struct lookup* lookup) {
     if (name_len > NAME_MAX)
         return -ENAMETOOLONG;
 
-    struct shim_dentry* next_dent;
+    struct libos_dentry* next_dent;
     if (name_len == 1 && name[0] == '.') {
         next_dent = lookup->dent;
         get_dentry(next_dent);
@@ -263,11 +263,11 @@ static int lookup_advance(struct lookup* lookup) {
  * This implementation is mostly iterative, but uses recursion to follow symlinks (which is why the
  * link depth is limited to MAX_LINK_DEPTH).
  */
-static int do_path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                            struct shim_dentry** found, unsigned int link_depth) {
+static int do_path_lookupat(struct libos_dentry* start, const char* path, int flags,
+                            struct libos_dentry** found, unsigned int link_depth) {
     assert(locked(&g_dcache_lock));
 
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     int ret = 0;
 
     /* Empty path is invalid in POSIX */
@@ -334,8 +334,8 @@ err:
     return ret;
 }
 
-int path_lookupat(struct shim_dentry* start, const char* path, int flags,
-                   struct shim_dentry** found) {
+int path_lookupat(struct libos_dentry* start, const char* path, int flags,
+                   struct libos_dentry** found) {
     return do_path_lookupat(start, path, flags, found, /*link_depth=*/0);
 }
 
@@ -363,7 +363,8 @@ static inline int open_flags_to_lookup_flags(int flags) {
     return retval;
 }
 
-static void assoc_handle_with_dentry(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static void assoc_handle_with_dentry(struct libos_handle* hdl, struct libos_dentry* dent,
+                                     int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -378,13 +379,13 @@ static void assoc_handle_with_dentry(struct shim_handle* hdl, struct shim_dentry
     hdl->acc_mode = ACC_MODE(flags & O_ACCMODE);
 }
 
-int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+int dentry_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
     assert(!hdl->dentry);
 
     int ret;
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
 
     if (!(fs->d_ops && fs->d_ops->open))
         return -EINVAL;
@@ -421,12 +422,12 @@ int dentry_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
     return 0;
 }
 
-int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* path, int flags,
-               int mode, struct shim_dentry** found) {
+int open_namei(struct libos_handle* hdl, struct libos_dentry* start, const char* path, int flags,
+               int mode, struct libos_dentry** found) {
     int lookup_flags = open_flags_to_lookup_flags(flags);
     mode_t acc_mode = ACC_MODE(flags & O_ACCMODE);
     int ret = 0;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
 
     /* O_CREAT on a normal file triggers creat(), which needs a handle */
     if ((flags & O_CREAT) && !(flags & O_DIRECTORY))
@@ -484,14 +485,14 @@ int open_namei(struct shim_handle* hdl, struct shim_dentry* start, const char* p
         }
 
         /* Check the parent permission first */
-        struct shim_dentry* dir = dentry_up(dent);
+        struct libos_dentry* dir = dentry_up(dent);
         if (dir) {
             ret = check_permissions(dir, MAY_WRITE | MAY_EXEC);
             if (ret < 0)
                 goto out;
         }
 
-        struct shim_fs* fs = dent->mount->fs;
+        struct libos_fs* fs = dent->mount->fs;
         /* Create directory or file, depending on O_DIRECTORY. Return -EINVAL if the operation is
          * not supported for this filesystem. */
         if (flags & O_DIRECTORY) {
@@ -585,13 +586,13 @@ static int add_name(const char* name, void* arg) {
  * finish `readdir`. Otherwise, the two filesystem operations (`readdir` and `lookup`) might
  * deadlock.
  */
-static int populate_directory(struct shim_dentry* dent) {
+static int populate_directory(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
     if (!dent->inode)
         return -ENOENT;
 
-    struct shim_fs* fs = dent->inode->fs;
+    struct libos_fs* fs = dent->inode->fs;
     if (!fs->d_ops || !fs->d_ops->readdir)
         return -EINVAL;
 
@@ -600,9 +601,9 @@ static int populate_directory(struct shim_dentry* dent) {
     if (ret < 0)
         log_error("readdir error: %d", ret);
 
-    struct shim_dentry* child;
+    struct libos_dentry* child;
     LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
-        struct shim_inode* inode = child->inode;
+        struct libos_inode* inode = child->inode;
         /* Check `inode->fs` so that we don't remove files added by Gramine (named pipes, sockets,
          * synthetic mountpoints) */
         if (inode && inode->fs == inode->mount->fs) {
@@ -626,7 +627,7 @@ static int populate_directory(struct shim_dentry* dent) {
     struct temp_dirent* tmp;
 
     LISTP_FOR_EACH_ENTRY(ent, &ents, list) {
-        struct shim_dentry* child = lookup_dcache_or_create(dent, ent->name, ent->name_len);
+        struct libos_dentry* child = lookup_dcache_or_create(dent, ent->name, ent->name_len);
         if (!child) {
             ret = -ENOMEM;
             goto out;
@@ -652,8 +653,8 @@ out:
     return ret;
 }
 
-int populate_directory_handle(struct shim_handle* hdl) {
-    struct shim_dir_handle* dirhdl = &hdl->dir_info;
+int populate_directory_handle(struct libos_handle* hdl) {
+    struct libos_dir_handle* dirhdl = &hdl->dir_info;
 
     assert(locked(&hdl->lock));
     assert(locked(&g_dcache_lock));
@@ -669,26 +670,26 @@ int populate_directory_handle(struct shim_handle* hdl) {
 
     size_t capacity = hdl->dentry->nchildren + 2; // +2 for ".", ".."
 
-    dirhdl->dents = malloc(sizeof(struct shim_dentry) * capacity);
+    dirhdl->dents = malloc(sizeof(struct libos_dentry) * capacity);
     if (!dirhdl->dents) {
         ret = -ENOMEM;
         goto err;
     }
     dirhdl->count = 0;
 
-    struct shim_dentry* dot = hdl->dentry;
+    struct libos_dentry* dot = hdl->dentry;
     get_dentry(dot);
     dirhdl->dents[dirhdl->count++] = dot;
 
-    struct shim_dentry* dotdot = hdl->dentry->parent ?: hdl->dentry;
+    struct libos_dentry* dotdot = hdl->dentry->parent ?: hdl->dentry;
     get_dentry(dotdot);
     dirhdl->dents[dirhdl->count++] = dotdot;
 
-    struct shim_dentry* tmp;
-    struct shim_dentry* dent;
+    struct libos_dentry* tmp;
+    struct libos_dentry* dent;
     LISTP_FOR_EACH_ENTRY_SAFE(dent, tmp, &hdl->dentry->children, siblings) {
         /* Traverse mount */
-        struct shim_dentry* cur_dent = dent;
+        struct libos_dentry* cur_dent = dent;
         while (cur_dent->attached_mount) {
             cur_dent = cur_dent->attached_mount->root;
         }
@@ -708,8 +709,8 @@ err:
     return ret;
 }
 
-void clear_directory_handle(struct shim_handle* hdl) {
-    struct shim_dir_handle* dirhdl = &hdl->dir_info;
+void clear_directory_handle(struct libos_handle* hdl) {
+    struct libos_dir_handle* dirhdl = &hdl->dir_info;
     if (!dirhdl->dents)
         return;
 
@@ -720,7 +721,7 @@ void clear_directory_handle(struct shim_handle* hdl) {
     dirhdl->count = 0;
 }
 
-int get_dirfd_dentry(int dirfd, struct shim_dentry** dir) {
+int get_dirfd_dentry(int dirfd, struct libos_dentry** dir) {
     if (dirfd == AT_FDCWD) {
         lock(&g_process.fs_lock);
         *dir = g_process.cwd;
@@ -733,7 +734,7 @@ int get_dirfd_dentry(int dirfd, struct shim_dentry** dir) {
         return -EBADF;
     }
 
-    struct shim_handle* hdl = get_fd_handle(dirfd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(dirfd, NULL, NULL);
     if (!hdl) {
         return -EBADF;
     }

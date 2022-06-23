@@ -22,20 +22,20 @@
 
 #define LOG_PREFIX "IPC worker: "
 
-DEFINE_LIST(shim_ipc_connection);
-DEFINE_LISTP(shim_ipc_connection);
-struct shim_ipc_connection {
-    LIST_TYPE(shim_ipc_connection) list;
+DEFINE_LIST(libos_ipc_connection);
+DEFINE_LISTP(libos_ipc_connection);
+struct libos_ipc_connection {
+    LIST_TYPE(libos_ipc_connection) list;
     PAL_HANDLE handle;
     IDTYPE vmid;
 };
 
 /* List of incoming IPC connections, fully managed by this IPC worker thread (hence no locking
  * needed). */
-static LISTP_TYPE(shim_ipc_connection) g_ipc_connections;
+static LISTP_TYPE(libos_ipc_connection) g_ipc_connections;
 static size_t g_ipc_connections_cnt = 0;
 
-static struct shim_thread* g_worker_thread = NULL;
+static struct libos_thread* g_worker_thread = NULL;
 /* Used by `DkThreadExit` to indicate that the thread really exited and is not using any resources
  * (e.g. stack) anymore. Awaited to be `0` (thread exited) in `terminate_ipc_worker()`. */
 static int g_clear_on_worker_exit = 1;
@@ -72,7 +72,7 @@ static void ipc_leader_died_callback(void) {
     log_debug("IPC leader disconnected");
 }
 
-static void disconnect_callbacks(struct shim_ipc_connection* conn) {
+static void disconnect_callbacks(struct libos_ipc_connection* conn) {
     if (g_process_ipc_ids.leader_vmid == conn->vmid) {
         ipc_leader_died_callback();
     }
@@ -93,7 +93,7 @@ static void disconnect_callbacks(struct shim_ipc_connection* conn) {
 }
 
 static int add_ipc_connection(PAL_HANDLE handle, IDTYPE id) {
-    struct shim_ipc_connection* conn = malloc(sizeof(*conn));
+    struct libos_ipc_connection* conn = malloc(sizeof(*conn));
     if (!conn) {
         return -ENOMEM;
     }
@@ -106,7 +106,7 @@ static int add_ipc_connection(PAL_HANDLE handle, IDTYPE id) {
     return 0;
 }
 
-static void del_ipc_connection(struct shim_ipc_connection* conn) {
+static void del_ipc_connection(struct libos_ipc_connection* conn) {
     LISTP_DEL(conn, &g_ipc_connections, list);
     g_ipc_connections_cnt--;
 
@@ -120,7 +120,7 @@ static void del_ipc_connection(struct shim_ipc_connection* conn) {
  * Returns `0` on success, `1` on EOF (connection closed on a message boundary), negative error
  * code on failures.
  */
-static int receive_ipc_messages(struct shim_ipc_connection* conn) {
+static int receive_ipc_messages(struct libos_ipc_connection* conn) {
     size_t size = 0;
     /* Try to get more bytes that strictly required in case there are more messages waiting.
      * `0x40` as a random estimation of "couple of ints" + message header size to get the next
@@ -216,7 +216,7 @@ static noreturn void ipc_worker_main(void) {
     /* TODO: If we had a global array of connections (instead of a list) we wouldn't have to gather
      * them all here in every loop iteration, but then deletion would be slower (but deletion should
      * be rare). */
-    struct shim_ipc_connection** connections = NULL;
+    struct libos_ipc_connection** connections = NULL;
     PAL_HANDLE* handles = NULL;
     pal_wait_flags_t* events = NULL;
     pal_wait_flags_t* ret_events = NULL;
@@ -253,7 +253,7 @@ static noreturn void ipc_worker_main(void) {
         handles[1] = g_self_ipc_handle;
         events[1] = PAL_WAIT_READ;
 
-        struct shim_ipc_connection* conn;
+        struct libos_ipc_connection* conn;
         size_t i = reserved_slots;
         LISTP_FOR_EACH_ENTRY(conn, &g_ipc_connections, list) {
             connections[i] = conn;
@@ -288,10 +288,10 @@ static noreturn void ipc_worker_main(void) {
             free(events);
             free(ret_events);
 
-            struct shim_thread* cur_thread = get_cur_thread();
+            struct libos_thread* cur_thread = get_cur_thread();
             assert(g_worker_thread == cur_thread);
-            assert(cur_thread->shim_tcb->tp == cur_thread);
-            cur_thread->shim_tcb->tp = NULL;
+            assert(cur_thread->libos_tcb->tp == cur_thread);
+            cur_thread->libos_tcb->tp = NULL;
             put_thread(cur_thread);
 
             DkThreadExit(&g_clear_on_worker_exit);
@@ -363,10 +363,10 @@ static int ipc_worker_wrapper(void* arg) {
     __UNUSED(arg);
     assert(g_worker_thread);
 
-    shim_tcb_init();
+    libos_tcb_init();
     set_cur_thread(g_worker_thread);
 
-    log_setprefix(shim_get_tcb());
+    log_setprefix(libos_get_tcb());
 
     log_debug("IPC worker started");
     ipc_worker_main();

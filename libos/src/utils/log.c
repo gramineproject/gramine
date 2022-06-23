@@ -26,7 +26,7 @@ static const char* log_level_to_prefix[] = {
     [LOG_LEVEL_ALL]     = "", // not a valid entry actually (no public wrapper uses this log level)
 };
 
-void log_setprefix(shim_tcb_t* tcb) {
+void log_setprefix(libos_tcb_t* tcb) {
     if (g_log_level <= LOG_LEVEL_NONE)
         return;
 
@@ -54,7 +54,8 @@ void log_setprefix(shim_tcb_t* tcb) {
                                  vmid, tcb->tp->tid, exec_name);
         } else {
             /* internal LibOS thread: show Process ID and Internal-thread marker */
-            total_len = snprintf(tcb->log_prefix, ARRAY_SIZE(tcb->log_prefix), "[P%u:shim] ", vmid);
+            total_len = snprintf(tcb->log_prefix, ARRAY_SIZE(tcb->log_prefix), "[P%u:libos] ",
+                                 vmid);
         }
     } else if (vmid) {
         /* unknown thread (happens on process init): show just Process ID and exec name */
@@ -80,11 +81,11 @@ static int buf_write_all(const char* str, size_t size, void* arg) {
     return 0;
 }
 
-void shim_log(int level, const char* fmt, ...) {
+void libos_log(int level, const char* fmt, ...) {
     if (level <= g_log_level) {
         struct print_buf buf = INIT_PRINT_BUF(buf_write_all);
 
-        buf_puts(&buf, shim_get_tcb()->log_prefix);
+        buf_puts(&buf, libos_get_tcb()->log_prefix);
         buf_puts(&buf, log_level_to_prefix[level]);
 
         va_list ap;

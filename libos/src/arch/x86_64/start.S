@@ -3,16 +3,16 @@
  */
 
     .text
-    .globl shim_start
-    .type shim_start,@function
-shim_start:
+    .globl libos_start
+    .type libos_start,@function
+libos_start:
     .cfi_startproc
 
     # Clear the frame pointer. The ABI suggests this be done, to mark
     # the outermost frame obviously.
     xorq %rbp, %rbp
 
-    # Arguments for shim_init:
+    # Arguments for libos_init:
     movq 0(%rsp), %rdi         # argc
     leaq 8(%rsp), %rsi         # argv
     leaq 8(%rsi,%rdi,8), %rdx  # envp, after all args (including argv[argc] = NULL)
@@ -20,6 +20,6 @@ shim_start:
     # Required by System V AMD64 ABI.
     andq  $~0xF, %rsp
 
-    callq *shim_init@GOTPCREL(%rip)
+    callq *libos_init@GOTPCREL(%rip)
 
     .cfi_endproc

@@ -36,11 +36,11 @@ HASHTYPE hash_name(HASHTYPE parent_hbuf, const char* name) {
     return (parent_hbuf + hash_str(name)) * 9;
 }
 
-HASHTYPE hash_abs_path(struct shim_dentry* dent) {
+HASHTYPE hash_abs_path(struct libos_dentry* dent) {
     HASHTYPE digest = 0;
 
     while (true) {
-        struct shim_dentry* up = dentry_up(dent);
+        struct libos_dentry* up = dentry_up(dent);
         if (!up)
             break;
 

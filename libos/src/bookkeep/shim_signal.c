@@ -36,7 +36,7 @@ void sigaction_make_defaults(struct __kernel_sigaction* sig_action) {
 }
 
 void thread_sigaction_reset_on_execve(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
 
     lock(&current->signal_dispositions->lock);
     for (size_t i = 0; i < ARRAY_SIZE(current->signal_dispositions->actions); i++) {
@@ -108,9 +108,9 @@ static const SIGHANDLER_T default_sighandler[SIGS_CNT] = {
 };
 
 
-static struct shim_signal_queue g_process_signal_queue = {0};
+static struct libos_signal_queue g_process_signal_queue = {0};
 /* This lock should always be taken after thread lock (if both are needed). */
-static struct shim_lock g_process_signal_queue_lock;
+static struct libos_lock g_process_signal_queue_lock;
 /*
  * This is just an optimization, not to have to check the queue for pending signals. This field can
  * be read atomically without any locks, to get approximate value, but to get exact you need to take
@@ -127,15 +127,15 @@ static uint64_t g_process_pending_signals_cnt = 0;
 static int g_host_injected_signal = 0;
 static bool g_inject_host_signal_enabled = false;
 
-static bool is_rt_sq_empty(struct shim_rt_signal_queue* queue) {
+static bool is_rt_sq_empty(struct libos_rt_signal_queue* queue) {
     return queue->get_idx == queue->put_idx;
 }
 
-static bool has_standard_signal(struct shim_signal* signal_slot) {
+static bool has_standard_signal(struct libos_signal* signal_slot) {
     return signal_slot->siginfo.si_signo != 0;
 }
 
-static void recalc_pending_mask(struct shim_signal_queue* queue, int sig) {
+static void recalc_pending_mask(struct libos_signal_queue* queue, int sig) {
     if (sig < SIGRTMIN) {
         if (!has_standard_signal(&queue->standard_signals[sig - 1])) {
             __sigdelset(&queue->pending_mask, sig);
@@ -148,7 +148,7 @@ static void recalc_pending_mask(struct shim_signal_queue* queue, int sig) {
 }
 
 void get_all_pending_signals(__sigset_t* set) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
 
     __sigemptyset(set);
 
@@ -167,7 +167,7 @@ void get_all_pending_signals(__sigset_t* set) {
 }
 
 bool have_pending_signals(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     __sigset_t set;
     get_all_pending_signals(&set);
 
@@ -178,7 +178,7 @@ bool have_pending_signals(void) {
     return !__sigisemptyset(&set) || __atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE);
 }
 
-static bool append_standard_signal(struct shim_signal* queue_slot, struct shim_signal* signal) {
+static bool append_standard_signal(struct libos_signal* queue_slot, struct libos_signal* signal) {
     if (has_standard_signal(queue_slot)) {
         return false;
     }
@@ -187,7 +187,7 @@ static bool append_standard_signal(struct shim_signal* queue_slot, struct shim_s
     return true;
 }
 
-static bool append_rt_signal(struct shim_rt_signal_queue* queue, struct shim_signal** signal) {
+static bool append_rt_signal(struct libos_rt_signal_queue* queue, struct libos_signal** signal) {
     assert(queue->get_idx <= queue->put_idx);
     if (queue->get_idx >= ARRAY_SIZE(queue->queue)) {
         queue->get_idx -= ARRAY_SIZE(queue->queue);
@@ -204,7 +204,7 @@ static bool append_rt_signal(struct shim_rt_signal_queue* queue, struct shim_sig
     return true;
 }
 
-static bool queue_append_signal(struct shim_signal_queue* queue, struct shim_signal** signal) {
+static bool queue_append_signal(struct libos_signal_queue* queue, struct libos_signal** signal) {
     int sig = (*signal)->siginfo.si_signo;
 
     bool ret = false;
@@ -223,7 +223,7 @@ static bool queue_append_signal(struct shim_signal_queue* queue, struct shim_sig
     return ret;
 }
 
-static bool append_thread_signal(struct shim_thread* thread, struct shim_signal** signal) {
+static bool append_thread_signal(struct libos_thread* thread, struct libos_signal** signal) {
     lock(&thread->lock);
     bool ret = queue_append_signal(&thread->signal_queue, signal);
     if (ret) {
@@ -233,7 +233,7 @@ static bool append_thread_signal(struct shim_thread* thread, struct shim_signal*
     return ret;
 }
 
-static bool append_process_signal(struct shim_signal** signal) {
+static bool append_process_signal(struct libos_signal** signal) {
     lock(&g_process_signal_queue_lock);
     bool ret = queue_append_signal(&g_process_signal_queue, signal);
     if (ret) {
@@ -243,7 +243,7 @@ static bool append_process_signal(struct shim_signal** signal) {
     return ret;
 }
 
-static bool pop_standard_signal(struct shim_signal* queue_slot, struct shim_signal* signal) {
+static bool pop_standard_signal(struct libos_signal* queue_slot, struct libos_signal* signal) {
     if (!has_standard_signal(queue_slot)) {
         return false;
     }
@@ -257,7 +257,7 @@ static bool pop_standard_signal(struct shim_signal* queue_slot, struct shim_sign
     return true;
 }
 
-static bool pop_rt_signal(struct shim_rt_signal_queue* queue, struct shim_signal** signal) {
+static bool pop_rt_signal(struct libos_rt_signal_queue* queue, struct libos_signal** signal) {
     assert(queue->get_idx <= queue->put_idx);
 
     if (queue->get_idx < queue->put_idx) {
@@ -268,11 +268,11 @@ static bool pop_rt_signal(struct shim_rt_signal_queue* queue, struct shim_signal
     return false;
 }
 
-void free_signal_queue(struct shim_signal_queue* queue) {
+void free_signal_queue(struct libos_signal_queue* queue) {
     /* We ignore standard signals - they are stored by value. */
 
     for (int sig = SIGRTMIN; sig <= SIGS_CNT; sig++) {
-        struct shim_signal* signal;
+        struct libos_signal* signal;
         while (pop_rt_signal(&queue->rt_signal_queues[sig - SIGRTMIN], &signal)) {
             free(signal);
         }
@@ -280,18 +280,18 @@ void free_signal_queue(struct shim_signal_queue* queue) {
 }
 
 static void force_signal(siginfo_t* info) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
 
     current->forced_signal.siginfo = *info;
 }
 
 static bool have_forced_signal(void) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     return current->forced_signal.siginfo.si_signo != 0;
 }
 
-static void get_forced_signal(struct shim_signal* signal) {
-    struct shim_thread* current = get_cur_thread();
+static void get_forced_signal(struct libos_signal* signal) {
+    struct libos_thread* current = get_cur_thread();
     *signal = current->forced_signal;
     current->forced_signal.siginfo.si_signo = 0;
 }
@@ -307,7 +307,7 @@ static noreturn void internal_fault(const char* errstr, uintptr_t addr, PAL_CONT
     uintptr_t ip = pal_context_get_ip(context);
 
     char buf[LOCATION_BUF_SIZE];
-    shim_describe_location(ip, buf, sizeof(buf));
+    libos_describe_location(ip, buf, sizeof(buf));
 
     log_error("%s at 0x%08lx (%s, VMID = %u, TID = %u)", errstr, addr, buf,
               g_process_ipc_ids.self_vmid, tid);
@@ -349,12 +349,12 @@ static void memfault_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context
     siginfo_t info = {
         .si_addr = (void*)addr,
     };
-    struct shim_vma_info vma_info;
+    struct libos_vma_info vma_info;
     if (!lookup_vma((void*)addr, &vma_info)) {
         if (vma_info.flags & VMA_INTERNAL) {
             internal_fault("Internal memory fault with VMA", addr, context);
         }
-        struct shim_handle* file = vma_info.file;
+        struct libos_handle* file = vma_info.file;
         if (file && file->type == TYPE_CHROOT) {
             /* If the mapping exceeds end of a file then return a SIGBUS. */
             lock(&file->inode->lock);
@@ -456,7 +456,7 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
     assert(!is_in_pal);
     assert(context);
 
-    struct shim_vma_info vma_info = {.file = NULL};
+    struct libos_vma_info vma_info = {.file = NULL};
     if (is_internal(get_cur_thread()) || context_is_libos(context)
             || lookup_vma((void*)addr, &vma_info) || (vma_info.flags & VMA_INTERNAL)) {
         internal_fault("Illegal instruction during Gramine internal execution", addr, context);
@@ -497,7 +497,7 @@ static void quit_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     }
 
     /* "quit" signal may occur during LibOS thread initialization (at which point `cur == NULL`) */
-    struct shim_thread* cur = get_cur_thread();
+    struct libos_thread* cur = get_cur_thread();
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
     }
@@ -509,7 +509,7 @@ static void interrupted_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* cont
 
     /* "interrupted" signal may occur during LibOS thread initialization (at which point
      * `cur == NULL`) */
-    struct shim_thread* cur = get_cur_thread();
+    struct libos_thread* cur = get_cur_thread();
     if (!cur || is_internal(cur) || context_is_libos(context) || is_in_pal) {
         return;
     }
@@ -550,13 +550,13 @@ void clear_illegal_signals(__sigset_t* set) {
     __sigdelset(set, SIGSTOP);
 }
 
-void get_sig_mask(struct shim_thread* thread, __sigset_t* mask) {
+void get_sig_mask(struct libos_thread* thread, __sigset_t* mask) {
     assert(thread);
 
     *mask = thread->signal_mask;
 }
 
-void set_sig_mask(struct shim_thread* thread, const __sigset_t* set) {
+void set_sig_mask(struct libos_thread* thread, const __sigset_t* set) {
     assert(thread);
     assert(set);
     assert(locked(&thread->lock));
@@ -579,7 +579,7 @@ int set_user_sigmask(const __sigset_t* mask_ptr, size_t setsize) {
     __sigset_t mask = *mask_ptr;
     clear_illegal_signals(&mask);
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
     assert(!current->has_saved_sigmask);
     current->saved_sigmask = current->signal_mask;
@@ -608,7 +608,7 @@ bool is_on_altstack(uintptr_t sp, stack_t* alt_stack) {
 
 /* XXX: This function assumes that the stack is growing towards lower addresses. */
 uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     stack_t* alt_stack = &current->signal_altstack;
 
     if (!use_altstack || alt_stack->ss_flags & SS_DISABLE || alt_stack->ss_size == 0) {
@@ -624,11 +624,11 @@ uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack) {
     return (uintptr_t)alt_stack->ss_sp + alt_stack->ss_size;
 }
 
-void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
+void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
     assert(signal);
     signal->siginfo.si_signo = 0;
 
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     assert(current);
 
     if (__atomic_load_n(&current->pending_signals, __ATOMIC_ACQUIRE)
@@ -649,7 +649,7 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
                         was_process = true;
                     }
                 } else {
-                    struct shim_signal* signal_ptr = NULL;
+                    struct libos_signal* signal_ptr = NULL;
                     got = pop_rt_signal(&current->signal_queue.rt_signal_queues[sig - SIGRTMIN],
                                         &signal_ptr);
                     if (!got) {
@@ -706,16 +706,17 @@ void pop_unblocked_signal(__sigset_t* mask, struct shim_signal* signal) {
  * signal might be delayed until the next issued syscall.
  */
 bool handle_signal(PAL_CONTEXT* context) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
     assert(current);
     assert(!is_internal(current));
-    assert(!context_is_libos(context) || pal_context_get_ip(context) == (uint64_t)&syscalldb);
+    assert(!context_is_libos(context)
+           || pal_context_get_ip(context) == (uint64_t)&libos_syscall_entry);
 
     if (__atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE)) {
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
 
-    struct shim_signal signal = { 0 };
+    struct libos_signal signal = { 0 };
     if (have_forced_signal()) {
         get_forced_signal(&signal);
     } else {
@@ -747,7 +748,7 @@ bool handle_signal(PAL_CONTEXT* context) {
     }
     if (handler != SIG_IGN) {
         /* User provided handler. */
-        long sysnr = shim_get_tcb()->context.syscall_nr;
+        long sysnr = libos_get_tcb()->context.syscall_nr;
         if (sysnr >= 0) {
             switch (pal_context_get_retval(context)) {
                 case -ERESTARTNOHAND:
@@ -806,14 +807,14 @@ bool handle_signal(PAL_CONTEXT* context) {
     return true;
 }
 
-int append_signal(struct shim_thread* thread, siginfo_t* info) {
+int append_signal(struct libos_thread* thread, siginfo_t* info) {
     assert(info);
 
     // TODO: ignore SIGCHLD even if it's masked, when handler is set to SIG_IGN (probably not here)
 
     /* For real-time signal we save a pointer to a signal object, so we need to allocate it here.
      * If this is a standard signal, this will be freed at return from this function. */
-    struct shim_signal* signal = malloc(sizeof(*signal));
+    struct libos_signal* signal = malloc(sizeof(*signal));
     if (!signal) {
         return -ENOMEM;
     }

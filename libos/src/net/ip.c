@@ -48,7 +48,7 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
     return 0;
 }
 
-static int create(struct shim_handle* handle) {
+static int create(struct libos_handle* handle) {
     assert(handle->info.sock.domain == AF_INET || handle->info.sock.domain == AF_INET6);
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
 
@@ -104,8 +104,8 @@ static int create(struct shim_handle* handle) {
     return 0;
 }
 
-static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     int ret = verify_sockaddr(sock->domain, addr, &addrlen);
@@ -125,8 +125,8 @@ static int bind(struct shim_handle* handle, void* addr, size_t addrlen) {
     return 0;
 }
 
-static int listen(struct shim_handle* handle, unsigned int backlog) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int listen(struct libos_handle* handle, unsigned int backlog) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     if (sock->type != SOCK_STREAM) {
@@ -136,8 +136,8 @@ static int listen(struct shim_handle* handle, unsigned int backlog) {
     return pal_to_unix_errno(DkSocketListen(sock->pal_handle, backlog));
 }
 
-static int accept(struct shim_handle* handle, bool is_nonblocking,
-                  struct shim_handle** out_client) {
+static int accept(struct libos_handle* handle, bool is_nonblocking,
+                  struct libos_handle** out_client) {
     PAL_HANDLE client_pal_handle;
     struct pal_socket_addr pal_ip_addr = { 0 };
     int ret = DkSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
@@ -146,7 +146,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
         return pal_to_unix_errno(ret);
     }
 
-    struct shim_handle* client_handle = get_new_handle();
+    struct libos_handle* client_handle = get_new_handle();
     if (!client_handle) {
         DkObjectClose(client_pal_handle);
         return -ENOMEM;
@@ -157,7 +157,7 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     client_handle->flags = is_nonblocking ? O_NONBLOCK : 0;
     client_handle->acc_mode = MAY_READ | MAY_WRITE;
 
-    struct shim_sock_handle* client_sock = &client_handle->info.sock;
+    struct libos_sock_handle* client_sock = &client_handle->info.sock;
     client_sock->pal_handle = client_pal_handle;
     client_sock->state = SOCK_CONNECTED;
     client_sock->ops = handle->info.sock.ops;
@@ -187,8 +187,8 @@ static int accept(struct shim_handle* handle, bool is_nonblocking,
     return 0;
 }
 
-static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     int ret = verify_sockaddr(sock->domain, addr, &addrlen);
@@ -217,8 +217,8 @@ static int connect(struct shim_handle* handle, void* addr, size_t addrlen) {
     return 0;
 }
 
-static int disconnect(struct shim_handle* handle) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int disconnect(struct libos_handle* handle) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     struct pal_socket_addr pal_ip_addr = {
@@ -228,7 +228,7 @@ static int disconnect(struct shim_handle* handle) {
     return pal_to_unix_errno(ret);
 }
 
-static int set_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_tcp_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -256,7 +256,7 @@ static int set_tcp_option(struct shim_handle* handle, int optname, void* optval,
     return pal_to_unix_errno(ret);
 }
 
-static int set_ipv4_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_ipv4_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     __UNUSED(handle);
     __UNUSED(optval);
     if (optname == IP_RECVERR) {
@@ -275,7 +275,7 @@ static int set_ipv4_option(struct shim_handle* handle, int optname, void* optval
     return -ENOPROTOOPT;
 }
 
-static int set_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_ipv6_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -306,7 +306,7 @@ static int set_ipv6_option(struct shim_handle* handle, int optname, void* optval
     return pal_to_unix_errno(ret);
 }
 
-static int set_socket_option(struct shim_handle* handle, int optname, void* optval, size_t len) {
+static int set_socket_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -337,9 +337,9 @@ static int set_socket_option(struct shim_handle* handle, int optname, void* optv
     return 0;
 }
 
-static int setsockopt(struct shim_handle* handle, int level, int optname, void* optval,
+static int setsockopt(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t len) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     switch (level) {
@@ -365,7 +365,7 @@ static int setsockopt(struct shim_handle* handle, int level, int optname, void* 
     }
 }
 
-static int get_tcp_option(struct shim_handle* handle, int optname, void* optval, size_t* len) {
+static int get_tcp_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -393,7 +393,7 @@ static int get_tcp_option(struct shim_handle* handle, int optname, void* optval,
     return 0;
 }
 
-static int get_ipv6_option(struct shim_handle* handle, int optname, void* optval, size_t* len) {
+static int get_ipv6_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
     int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
@@ -418,9 +418,9 @@ static int get_ipv6_option(struct shim_handle* handle, int optname, void* optval
     return 0;
 }
 
-static int getsockopt(struct shim_handle* handle, int level, int optname, void* optval,
+static int getsockopt(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t* len) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     switch (level) {
@@ -445,11 +445,11 @@ static int getsockopt(struct shim_handle* handle, int level, int optname, void* 
     }
 }
 
-static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen) {
     assert(handle->type == TYPE_SOCK);
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
     struct sockaddr_storage sock_addr;
 
     switch (sock->type) {
@@ -502,7 +502,7 @@ static int send(struct shim_handle* handle, struct iovec* iov, size_t iov_len, s
     return ret;
 }
 
-static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                 size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
@@ -546,7 +546,7 @@ static int recv(struct shim_handle* handle, struct iovec* iov, size_t iov_len,
     return 0;
 }
 
-struct shim_sock_ops sock_ip_ops = {
+struct libos_sock_ops sock_ip_ops = {
     .create = create,
     .bind = bind,
     .listen = listen,

@@ -24,8 +24,8 @@ long libos_syscall_faccessat(int dfd, const char* filename, mode_t mode) {
     if (!is_user_string_readable(filename))
         return -EFAULT;
 
-    struct shim_dentry* dir = NULL;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
     int ret = 0;
 
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)

@@ -22,7 +22,7 @@
 /* For wait4() return value */
 #define WCOREFLAG 0x80
 
-static bool child_matches_flags(struct shim_child_process* child, int flags) {
+static bool child_matches_flags(struct libos_child_process* child, int flags) {
     if (flags & __WALL) {
         return true;
     }
@@ -30,7 +30,7 @@ static bool child_matches_flags(struct shim_child_process* child, int flags) {
     return (!!(flags & __WCLONE)) ^ (child->child_termination_signal == SIGCHLD);
 }
 
-static bool child_matches(struct shim_child_process* child, int which, IDTYPE id, int flags) {
+static bool child_matches(struct libos_child_process* child, int which, IDTYPE id, int flags) {
     if (!child_matches_flags(child, flags)) {
         return false;
     }
@@ -57,7 +57,7 @@ static bool child_matches(struct shim_child_process* child, int which, IDTYPE id
     return ret;
 }
 
-static void remove_qnode_from_wait_queue(struct shim_thread_queue* qnode) {
+static void remove_qnode_from_wait_queue(struct libos_thread_queue* qnode) {
     lock(&g_process.children_lock);
 
     bool seen = false;
@@ -65,7 +65,7 @@ static void remove_qnode_from_wait_queue(struct shim_thread_queue* qnode) {
         g_process.wait_queue = qnode->next;
         seen = true;
     } else if (g_process.wait_queue) {
-        struct shim_thread_queue* tmp = g_process.wait_queue;
+        struct libos_thread_queue* tmp = g_process.wait_queue;
         while (tmp->next) {
             if (tmp->next == qnode) {
                 tmp->next = qnode->next;
@@ -126,7 +126,7 @@ static long do_waitid(int which, pid_t id, siginfo_t* infop, int options) {
     do {
         lock(&g_process.children_lock);
 
-        struct shim_child_process* child;
+        struct libos_child_process* child;
         /* First search already exited children. */
         LISTP_FOR_EACH_ENTRY(child, &g_process.zombies, list) {
             if (child_matches(child, which, id, options)) {
@@ -173,8 +173,8 @@ static long do_waitid(int which, pid_t id, siginfo_t* infop, int options) {
         }
 
         /* Ok, let's wait. */
-        struct shim_thread* self = get_cur_thread();
-        struct shim_thread_queue qnode = {
+        struct libos_thread* self = get_cur_thread();
+        struct libos_thread_queue qnode = {
             .thread = self,
             .next = g_process.wait_queue,
         };
