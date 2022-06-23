@@ -195,6 +195,9 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
     } else if (leaf == EXTENDED_FEATURE_FLAGS_LEAF) {
         if (subleaf == 0x0) {
             values[CPUID_WORD_EAX] = 1; /* report max input value for supported sub-leaves */
+
+            values[CPUID_WORD_EBX] |= 1U << 0; /* SGX-enabled CPUs always support FSGSBASE */
+            values[CPUID_WORD_EBX] |= 1U << 2; /* SGX-enabled CPUs always report the SGX bit */
         }
     } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
