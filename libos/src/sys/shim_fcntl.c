@@ -30,7 +30,9 @@
 
 static int generic_set_flags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
     /* TODO: DOES THIS WORK LOL
-     * The old version of this code did this, but this seem to be incorrect. */
+     * The old version of this code did this, but this seem to be incorrect. If a handle type allows
+     * for setting some flags without actually doing anything with them immediately, it should have
+     * a `setflags` callback implementation. */
     lock(&handle->lock);
     handle->flags = (handle->flags & ~mask) | flags;
     unlock(&handle->lock);
