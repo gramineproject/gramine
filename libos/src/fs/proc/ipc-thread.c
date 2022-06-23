@@ -14,7 +14,7 @@
 #include "shim_ipc.h"
 #include "shim_process.h"
 
-bool proc_ipc_thread_pid_name_exists(struct shim_dentry* parent, const char* name) {
+bool proc_ipc_thread_pid_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);
 
     unsigned long pid;
@@ -27,7 +27,7 @@ bool proc_ipc_thread_pid_name_exists(struct shim_dentry* parent, const char* nam
     }
 
     /* Send a dummy request to check whether `pid` exists. */
-    struct shim_ipc_pid_retmeta* retmeta = NULL;
+    struct libos_ipc_pid_retmeta* retmeta = NULL;
     int ret = ipc_pid_getmeta(pid, PID_META_CRED, &retmeta);
     if (ret < 0) {
         /* FIXME: this silences all errors. */
@@ -37,7 +37,7 @@ bool proc_ipc_thread_pid_name_exists(struct shim_dentry* parent, const char* nam
     return true;
 }
 
-int proc_ipc_thread_follow_link(struct shim_dentry* dent, char** out_target) {
+int proc_ipc_thread_follow_link(struct libos_dentry* dent, char** out_target) {
     assert(dent->parent);
     const char* parent_name = dent->parent->name;
     const char* name = dent->name;
@@ -57,7 +57,7 @@ int proc_ipc_thread_follow_link(struct shim_dentry* dent, char** out_target) {
         return -ENOENT;
     }
 
-    struct shim_ipc_pid_retmeta* ipc_data;
+    struct libos_ipc_pid_retmeta* ipc_data;
     int ret = ipc_pid_getmeta(pid, ipc_code, &ipc_data);
     if (ret < 0)
         return ret;

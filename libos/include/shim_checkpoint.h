@@ -46,28 +46,28 @@ extern char __migratable_end;
    High Bytes ------------------------------------------------
 */
 
-struct shim_cp_entry {
+struct libos_cp_entry {
     uintptr_t cp_type;
     uintptr_t cp_val;
 };
 
-struct shim_mem_entry {
-    struct shim_mem_entry* next;
+struct libos_mem_entry {
+    struct libos_mem_entry* next;
     void* addr;
     size_t size;
     pal_prot_flags_t prot; /* combination of PAL_PROT_* flags */
 };
 
-struct shim_palhdl_entry {
-    struct shim_palhdl_entry* prev;
+struct libos_palhdl_entry {
+    struct libos_palhdl_entry* prev;
     PAL_HANDLE handle;
     PAL_HANDLE* phandle;
 };
 
-struct shim_cp_store {
+struct libos_cp_store {
     /* checkpoint data mapping */
     void* cp_map;
-    struct shim_handle* cp_file;
+    struct libos_handle* cp_file;
 
     /* allocation method for checkpoint area */
     void* (*alloc)(void*, size_t);
@@ -78,19 +78,19 @@ struct shim_cp_store {
     size_t bound;
 
     /* VMA entries */
-    struct shim_mem_entry* first_mem_entry;
+    struct libos_mem_entry* first_mem_entry;
     size_t mem_entries_cnt;
 
     /* PAL-handle entries */
-    struct shim_palhdl_entry* last_palhdl_entry;
+    struct libos_palhdl_entry* last_palhdl_entry;
     size_t palhdl_entries_cnt;
 };
 
 #define CP_INIT_VMA_SIZE (64 * 1024 * 1024) /* 64MB */
 
-#define CP_FUNC_ARGS struct shim_cp_store* store, void* obj, size_t size, void** objp
+#define CP_FUNC_ARGS struct libos_cp_store* store, void* obj, size_t size, void** objp
 
-#define RS_FUNC_ARGS struct shim_cp_entry* entry, uintptr_t base, size_t* offset, size_t rebase
+#define RS_FUNC_ARGS struct libos_cp_entry* entry, uintptr_t base, size_t* offset, size_t rebase
 
 #define DEFINE_CP_FUNC(name) int cp_##name(CP_FUNC_ARGS)
 #define DEFINE_RS_FUNC(name) int rs_##name(RS_FUNC_ARGS)
@@ -139,60 +139,60 @@ enum {
         _off;                                                                                     \
     })
 
-#define ADD_CP_ENTRY(type, value)                                                                \
-    ({                                                                                           \
-        struct shim_cp_entry* tmp = (void*)base + __ADD_CP_OFFSET(sizeof(struct shim_cp_entry)); \
-        tmp->cp_type              = CP_##type;                                                   \
-        tmp->cp_val               = (uintptr_t)(value);                                          \
-        tmp;                                                                                     \
+#define ADD_CP_ENTRY(type, value)                                                                  \
+    ({                                                                                             \
+        struct libos_cp_entry* tmp = (void*)base + __ADD_CP_OFFSET(sizeof(struct libos_cp_entry)); \
+        tmp->cp_type               = CP_##type;                                                    \
+        tmp->cp_val                = (uintptr_t)(value);                                           \
+        tmp;                                                                                       \
     })
 
-#define ADD_CP_OFFSET(size)                                                                      \
-    ({                                                                                           \
-        size_t _size              = ALIGN_UP(size, sizeof(void*));                               \
-        struct shim_cp_entry* oob = (void*)base + __ADD_CP_OFFSET(sizeof(struct shim_cp_entry)); \
-        oob->cp_type              = CP_OOB;                                                      \
-        oob->cp_val               = (uintptr_t)_size;                                            \
-        size_t _off               = __ADD_CP_OFFSET(_size);                                      \
-        _off;                                                                                    \
+#define ADD_CP_OFFSET(size)                                                                        \
+    ({                                                                                             \
+        size_t _size               = ALIGN_UP(size, sizeof(void*));                                \
+        struct libos_cp_entry* oob = (void*)base + __ADD_CP_OFFSET(sizeof(struct libos_cp_entry)); \
+        oob->cp_type               = CP_OOB;                                                       \
+        oob->cp_val                = (uintptr_t)_size;                                             \
+        size_t _off                = __ADD_CP_OFFSET(_size);                                       \
+        _off;                                                                                      \
     })
 
-#define ADD_CP_FUNC_ENTRY(value)                                                                 \
-    ({                                                                                           \
-        struct shim_cp_entry* tmp = (void*)base + __ADD_CP_OFFSET(sizeof(struct shim_cp_entry)); \
-        tmp->cp_type              = CP_FUNC_TYPE;                                                \
-        tmp->cp_val               = (uintptr_t)(value);                                          \
-        tmp;                                                                                     \
+#define ADD_CP_FUNC_ENTRY(value)                                                                   \
+    ({                                                                                             \
+        struct libos_cp_entry* tmp = (void*)base + __ADD_CP_OFFSET(sizeof(struct libos_cp_entry)); \
+        tmp->cp_type               = CP_FUNC_TYPE;                                                 \
+        tmp->cp_val                = (uintptr_t)(value);                                           \
+        tmp;                                                                                       \
     })
 
-#define NEXT_CP_ENTRY()                              \
-    ({                                               \
-        struct shim_cp_entry* tmp;                   \
-        while (1) {                                  \
-            tmp = (void*)base + *offset;             \
-            if (tmp->cp_type == CP_NULL) {           \
-                tmp = NULL;                          \
-                break;                               \
-            }                                        \
-            *offset += sizeof(struct shim_cp_entry); \
-            if (tmp->cp_type == CP_OOB)              \
-                *offset += tmp->cp_val;              \
-            else                                     \
-                break;                               \
-        }                                            \
-        tmp;                                         \
+#define NEXT_CP_ENTRY()                                 \
+    ({                                                  \
+        struct libos_cp_entry* tmp;                     \
+        while (1) {                                     \
+            tmp = (void*)base + *offset;                \
+            if (tmp->cp_type == CP_NULL) {              \
+                tmp = NULL;                             \
+                break;                                  \
+            }                                           \
+            *offset += sizeof(struct libos_cp_entry);   \
+            if (tmp->cp_type == CP_OOB)                 \
+                *offset += tmp->cp_val;                 \
+            else                                        \
+                break;                                  \
+        }                                               \
+        tmp;                                            \
     })
 
-#define GET_CP_ENTRY(type)                             \
-    ({                                                 \
-        struct shim_cp_entry* tmp = NEXT_CP_ENTRY();   \
-        while (tmp && tmp->cp_type != CP_##type)       \
-            tmp = NEXT_CP_ENTRY();                     \
-        if (!tmp) {                                    \
-            log_error("cannot find checkpoint entry"); \
-            DkProcessExit(1);                          \
-        }                                              \
-        tmp->cp_val;                                   \
+#define GET_CP_ENTRY(type)                              \
+    ({                                                  \
+        struct libos_cp_entry* tmp = NEXT_CP_ENTRY();   \
+        while (tmp && tmp->cp_type != CP_##type)        \
+            tmp = NEXT_CP_ENTRY();                      \
+        if (!tmp) {                                     \
+            log_error("cannot find checkpoint entry");  \
+            DkProcessExit(1);                           \
+        }                                               \
+        tmp->cp_val;                                    \
     })
 
 #define GET_CP_FUNC_ENTRY()  \
@@ -257,34 +257,34 @@ enum {
 #define DO_CP_MEMBER(name, obj, newobj, member) DO_CP(name, (obj)->member, &((newobj)->member));
 #define DO_CP_IN_MEMBER(name, obj, member)      DO_CP(name, &((obj)->member), NULL)
 
-struct shim_cp_map_entry {
+struct libos_cp_map_entry {
     void* addr;
     size_t off;
 };
 
 void* create_cp_map(void);
 void destroy_cp_map(void* map);
-struct shim_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
+struct libos_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
 
-#define GET_FROM_CP_MAP(obj)                                                       \
-    ({                                                                             \
-        struct shim_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, false); \
-        e ? e->off : 0;                                                            \
+#define GET_FROM_CP_MAP(obj)                                                        \
+    ({                                                                              \
+        struct libos_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, false); \
+        e ? e->off : 0;                                                             \
     })
 
-#define ADD_TO_CP_MAP(obj, off)                                                   \
-    do {                                                                          \
-        struct shim_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, true); \
-        if (!e) {                                                                 \
-            log_error("cannot extend checkpoint map buffer");                     \
-            DkProcessExit(1);                                                     \
-        }                                                                         \
-        e->off = (off);                                                           \
+#define ADD_TO_CP_MAP(obj, off)                                                     \
+    do {                                                                            \
+        struct libos_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, true);  \
+        if (!e) {                                                                   \
+            log_error("cannot extend checkpoint map buffer");                       \
+            DkProcessExit(1);                                                       \
+        }                                                                           \
+        e->off = (off);                                                             \
     } while (0)
 
-#define BEGIN_MIGRATION_DEF(name, ...)                                  \
-    int migrate_cp_##name(struct shim_cp_store* store, ##__VA_ARGS__) { \
-        int ret = 0;                                                    \
+#define BEGIN_MIGRATION_DEF(name, ...)                                      \
+    int migrate_cp_##name(struct libos_cp_store* store, ##__VA_ARGS__) {    \
+        int ret = 0;                                                        \
         size_t base = store->base;
 
 #define END_MIGRATION_DEF(name)     \
@@ -340,8 +340,8 @@ struct checkpoint_hdr {
     size_t palhdl_entries_cnt;
 };
 
-typedef int (*migrate_func_t)(struct shim_cp_store*, struct shim_process*, struct shim_thread*,
-                              struct shim_ipc_ids*, va_list);
+typedef int (*migrate_func_t)(struct libos_cp_store*, struct libos_process*, struct libos_thread*,
+                              struct libos_ipc_ids*, va_list);
 
 /*!
  * \brief Create child process and migrate state to it.
@@ -358,9 +358,9 @@ typedef int (*migrate_func_t)(struct shim_cp_store*, struct shim_process*, struc
  * \returns 0 on success, negative POSIX error code on failure.
  */
 int create_process_and_send_checkpoint(migrate_func_t migrate_func,
-                                       struct shim_child_process* child_process,
-                                       struct shim_process* process_description,
-                                       struct shim_thread* thread_description, ...);
+                                       struct libos_child_process* child_process,
+                                       struct libos_process* process_description,
+                                       struct libos_thread* thread_description, ...);
 
 /*!
  * \brief Receive a checkpoint from parent process and restore state based on it.

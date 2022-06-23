@@ -24,27 +24,27 @@
  * specified in the manifest, or set using `update_encrypted_files_key`. Before the key is set,
  * operations that use it will fail.
  */
-DEFINE_LIST(shim_encrypted_files_key);
-DEFINE_LISTP(shim_encrypted_files_key);
-struct shim_encrypted_files_key {
+DEFINE_LIST(libos_encrypted_files_key);
+DEFINE_LISTP(libos_encrypted_files_key);
+struct libos_encrypted_files_key {
     char* name;
     bool is_set;
     pf_key_t pf_key;
 
-    LIST_TYPE(shim_encrypted_files_key) list;
+    LIST_TYPE(libos_encrypted_files_key) list;
 };
 
 /*
  * Represents a specific encrypted file. The file is open as long as `use_count` is greater than 0.
  * Note that the file can be open and closed multiple times before it's destroyed.
  *
- * Operations on a single `shim_encrypted_file` are NOT thread-safe, it is intended to be protected
+ * Operations on a single `libos_encrypted_file` are NOT thread-safe, it is intended to be protected
  * by a lock.
  */
-struct shim_encrypted_file {
+struct libos_encrypted_file {
     size_t use_count;
     char* uri;
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
 
     /* `pf` and `pal_handle` are non-null as long as `use_count` is greater than 0 */
     pf_context_t* pf;
@@ -62,18 +62,18 @@ int init_encrypted_files(void);
  * \brief Retrieve a key.
  *
  * Returns a key with a given name, or NULL if it has not been created yet. Note that even if the
- * key exists, it might not be set yet (see `struct shim_encrypted_files_key`).
+ * key exists, it might not be set yet (see `struct libos_encrypted_files_key`).
  *
  * This does not pass ownership of the key: the key objects are still managed by this module.
  */
-struct shim_encrypted_files_key* get_encrypted_files_key(const char* name);
+struct libos_encrypted_files_key* get_encrypted_files_key(const char* name);
 
 /*
  * \brief List existing keys.
  *
  * Calls `callback` on each currently existing key.
  */
-int list_encrypted_files_keys(int (*callback)(struct shim_encrypted_files_key* key, void* arg),
+int list_encrypted_files_keys(int (*callback)(struct libos_encrypted_files_key* key, void* arg),
                               void* arg);
 
 /*
@@ -83,7 +83,7 @@ int list_encrypted_files_keys(int (*callback)(struct shim_encrypted_files_key* k
  *
  * Similar to `get_encrypted_files_key`, this does not pass ownership of `*out_key`.
  */
-int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_files_key** out_key);
+int get_or_create_encrypted_files_key(const char* name, struct libos_encrypted_files_key** out_key);
 
 /*
  * \brief Read value of given key.
@@ -96,7 +96,7 @@ int get_or_create_encrypted_files_key(const char* name, struct shim_encrypted_fi
  * If the key has already been set, writes its value to `*pf_key` and returns `true`. Otherwise,
  * returns `false`.
  */
-bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf_key);
+bool read_encrypted_files_key(struct libos_encrypted_files_key* key, pf_key_t* pf_key);
 
 /*
  * \brief Update value of given key.
@@ -104,21 +104,21 @@ bool read_encrypted_files_key(struct shim_encrypted_files_key* key, pf_key_t* pf
  * \param key     The key to update.
  * \param pf_key  New value for the key.
  */
-void update_encrypted_files_key(struct shim_encrypted_files_key* key, const pf_key_t* pf_key);
+void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_key_t* pf_key);
 
 /*
  * \brief Open an existing encrypted file.
  *
  * \param      uri      PAL URI to open, has to begin with "file:".
  * \param      key      Key, has to be already set.
- * \param[out] out_enc  On success, set to a newly created `shim_encrypted_file` object.
+ * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` has to correspond to an existing file that can be decrypted with `key`.
  *
- * The newly created `shim_encrypted_file` object will have `use_count` set to 1.
+ * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
-int encrypted_file_open(const char* uri, struct shim_encrypted_files_key* key,
-                        struct shim_encrypted_file** out_enc);
+int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
+                        struct libos_encrypted_file** out_enc);
 
 /*
  * \brief Create a new encrypted file.
@@ -126,49 +126,49 @@ int encrypted_file_open(const char* uri, struct shim_encrypted_files_key* key,
  * \param      uri      PAL URI to open, has to begin with "file:".
  * \param      perm     Permissions for the new file.
  * \param      key      Key, has to be already set.
- * \param[out] out_enc  On success, set to a newly created `shim_encrypted_file` object.
+ * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` must not correspond to an existing file.
  *
- * The newly created `shim_encrypted_file` object will have `use_count` set to 1.
+ * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
-int encrypted_file_create(const char* uri, mode_t perm, struct shim_encrypted_files_key* key,
-                          struct shim_encrypted_file** out_enc);
+int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
+                          struct libos_encrypted_file** out_enc);
 
 /*
  * \brief Deallocate an encrypted file.
  *
  * `enc` needs to have `use_count` set to 0.
  */
-void encrypted_file_destroy(struct shim_encrypted_file* enc);
+void encrypted_file_destroy(struct libos_encrypted_file* enc);
 
 /*
  * \brief Increase the use count of an encrypted file.
  *
  * This increases `use_count`, and opens the file if `use_count` was 0.
  */
-int encrypted_file_get(struct shim_encrypted_file* enc);
+int encrypted_file_get(struct libos_encrypted_file* enc);
 
 /*
  * \brief Decrease the use count of an encrypted file.
  *
  * This decreases `use_count`, and closes the file if it reaches 0.
  */
-void encrypted_file_put(struct shim_encrypted_file* enc);
+void encrypted_file_put(struct libos_encrypted_file* enc);
 
 /*
  * \brief Flush pending writes to an encrypted file.
  */
-int encrypted_file_flush(struct shim_encrypted_file* enc);
+int encrypted_file_flush(struct libos_encrypted_file* enc);
 
-int encrypted_file_read(struct shim_encrypted_file* enc, void* buf, size_t buf_size,
+int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_size,
                         file_off_t offset, size_t* out_count);
-int encrypted_file_write(struct shim_encrypted_file* enc, const void* buf, size_t buf_size,
+int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
                          file_off_t offset, size_t* out_count);
-int encrypted_file_rename(struct shim_encrypted_file* enc, const char* new_uri);
+int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri);
 
-int encrypted_file_get_size(struct shim_encrypted_file* enc, file_off_t* out_size);
-int encrypted_file_set_size(struct shim_encrypted_file* enc, file_off_t size);
+int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size);
+int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);
 
 int parse_pf_key(const char* key_str, pf_key_t* pf_key);
 

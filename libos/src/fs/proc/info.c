@@ -10,7 +10,7 @@
 #include "shim_fs_pseudo.h"
 #include "shim_fs_proc.h"
 
-int proc_meminfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     size_t size, max = 128;
@@ -120,7 +120,7 @@ retry:
     return ret;
 }
 
-int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int proc_cpuinfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret;
@@ -172,7 +172,7 @@ exit:
         size += ret;                                                  \
     } while (0)
 
-int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int proc_stat_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     size_t size = 0;

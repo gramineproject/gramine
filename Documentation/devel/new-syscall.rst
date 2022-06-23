@@ -16,7 +16,7 @@ an actual syscall name. Additionally this function should return ``long``.
 Now you need to add an appropriate entry in the syscalls table in
 :file:`shim_table-$(ARCH).c`::
 
-    [__NR_sched_setaffinity] = (shim_fp)libos_syscall_sched_setaffinity
+    [__NR_sched_setaffinity] = (libos_syscall_t)libos_syscall_sched_setaffinity
 
 2. Implement system call
 ------------------------

@@ -10,7 +10,7 @@
 #include "shim_pollable_event.h"
 #include "shim_utils.h"
 
-int create_pollable_event(struct shim_pollable_event* event) {
+int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];
     PAL_HANDLE srv_handle;
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
@@ -61,12 +61,12 @@ out:;
     return ret ?: tmp_ret;
 }
 
-void destroy_pollable_event(struct shim_pollable_event* event) {
+void destroy_pollable_event(struct libos_pollable_event* event) {
     DkObjectClose(event->read_handle);
     DkObjectClose(event->write_handle);
 }
 
-int set_pollable_event(struct shim_pollable_event* event) {
+int set_pollable_event(struct libos_pollable_event* event) {
     int ret;
 
     spinlock_lock(&event->write_lock);
@@ -89,7 +89,7 @@ int set_pollable_event(struct shim_pollable_event* event) {
     return ret;
 }
 
-int clear_pollable_event(struct shim_pollable_event* event) {
+int clear_pollable_event(struct libos_pollable_event* event) {
     int ret = 0;
 
     spinlock_lock(&event->read_lock);

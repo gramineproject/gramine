@@ -156,7 +156,7 @@ struct linux_file_handle {
 
 typedef Elf64_auxv_t elf_auxv_t;
 
-/* typedef for shim internal types */
+/* typedef for LibOS internal types */
 typedef uint32_t IDTYPE;
 #define IDTYPE_MAX UINT32_MAX
 typedef uint64_t HASHTYPE;
@@ -166,7 +166,7 @@ typedef int64_t file_off_t;
 
 typedef struct atomic_int REFTYPE;
 
-struct shim_lock {
+struct libos_lock {
     PAL_HANDLE lock;
     IDTYPE owner;
 };

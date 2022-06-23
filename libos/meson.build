@@ -3,7 +3,7 @@ cflags_libos = [
     # this
     '-fno-builtin',
 
-    '-DIN_SHIM',
+    '-DIN_LIBOS',
 ]
 
 cflags_libos += cc.get_supported_arguments(

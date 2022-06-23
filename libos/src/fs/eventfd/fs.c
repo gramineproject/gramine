@@ -13,7 +13,7 @@
 #include "shim_internal.h"
 #include "shim_lock.h"
 
-static ssize_t eventfd_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
+static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     __UNUSED(pos);
 
     if (count < sizeof(uint64_t))
@@ -30,7 +30,7 @@ static ssize_t eventfd_read(struct shim_handle* hdl, void* buf, size_t count, fi
     return (ssize_t)count;
 }
 
-static ssize_t eventfd_write(struct shim_handle* hdl, const void* buf, size_t count,
+static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t count,
                              file_off_t* pos) {
     __UNUSED(pos);
 
@@ -48,12 +48,12 @@ static ssize_t eventfd_write(struct shim_handle* hdl, const void* buf, size_t co
     return (ssize_t)count;
 }
 
-struct shim_fs_ops eventfd_fs_ops = {
+struct libos_fs_ops eventfd_fs_ops = {
     .read  = &eventfd_read,
     .write = &eventfd_write,
 };
 
-struct shim_fs eventfd_builtin_fs = {
+struct libos_fs eventfd_builtin_fs = {
     .name   = "eventfd",
     .fs_ops = &eventfd_fs_ops,
 };

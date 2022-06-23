@@ -18,7 +18,7 @@
 #include "shim_utils.h"
 #include "shim_vma.h"
 
-static struct shim_lock slab_mgr_lock;
+static struct libos_lock slab_mgr_lock;
 
 #define SYSTEM_LOCK()   lock(&slab_mgr_lock)
 #define SYSTEM_UNLOCK() unlock(&slab_mgr_lock)

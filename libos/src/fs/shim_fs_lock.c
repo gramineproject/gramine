@@ -14,7 +14,7 @@
  * Global lock for the whole subsystem. Protects access to `g_fs_lock_list`, and also to dentry
  * fields (`fs_lock` and `maybe_has_fs_locks`).
  */
-static struct shim_lock g_fs_lock_lock;
+static struct libos_lock g_fs_lock_lock;
 
 /*
  * Describes a pending request for a POSIX lock. After processing the request, the object is
@@ -49,7 +49,7 @@ struct posix_lock_request {
 DEFINE_LISTP(fs_lock);
 DEFINE_LIST(fs_lock);
 struct fs_lock {
-    struct shim_dentry* dent;
+    struct libos_dentry* dent;
 
     /* POSIX locks, sorted by PID and then by start position (so that we are able to merge and split
      * locks). The ranges do not overlap within a given PID. */
@@ -72,7 +72,7 @@ int init_fs_lock(void) {
     return create_lock(&g_fs_lock_lock);
 }
 
-static int find_fs_lock(struct shim_dentry* dent, bool create, struct fs_lock** out_fs_lock) {
+static int find_fs_lock(struct libos_dentry* dent, bool create, struct fs_lock** out_fs_lock) {
     assert(locked(&g_fs_lock_lock));
     if (!dent->fs_lock && create) {
         struct fs_lock* fs_lock = malloc(sizeof(*fs_lock));
@@ -135,7 +135,7 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
     if (g_log_level >= LOG_LEVEL_TRACE)
         posix_lock_dump(fs_lock);
     if (LISTP_EMPTY(&fs_lock->posix_locks) && LISTP_EMPTY(&fs_lock->posix_lock_requests)) {
-        struct shim_dentry* dent = fs_lock->dent;
+        struct libos_dentry* dent = fs_lock->dent;
         dent->fs_lock = NULL;
 
         LISTP_DEL(fs_lock, &g_fs_lock_list, list);
@@ -394,8 +394,8 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
 
 /* Add/remove a lock if possible. On conflict, returns -EAGAIN (if `wait` is false) or adds a new
  * request (if `wait` is true). */
-static int posix_lock_set_or_add_request(struct shim_dentry* dent, struct posix_lock* pl, bool wait,
-                                         struct posix_lock_request** out_req) {
+static int posix_lock_set_or_add_request(struct libos_dentry* dent, struct posix_lock* pl,
+                                         bool wait, struct posix_lock_request** out_req) {
     assert(locked(&g_fs_lock_lock));
 
     struct fs_lock* fs_lock = NULL;
@@ -437,7 +437,7 @@ out:
     return ret;
 }
 
-int posix_lock_set(struct shim_dentry* dent, struct posix_lock* pl, bool wait) {
+int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) {
     int ret;
     if (g_process_ipc_ids.leader_vmid) {
         /* In the IPC version, we use `dent->maybe_has_fs_locks` to short-circuit unlocking files
@@ -503,7 +503,7 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
                             unsigned long seq) {
     assert(!g_process_ipc_ids.leader_vmid);
 
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     struct posix_lock_request* req = NULL;
 
     lock(&g_dcache_lock);
@@ -540,7 +540,7 @@ out:
     return ipc_posix_lock_set_send_response(vmid, seq, ret);
 }
 
-int posix_lock_get(struct shim_dentry* dent, struct posix_lock* pl, struct posix_lock* out_pl) {
+int posix_lock_get(struct libos_dentry* dent, struct posix_lock* pl, struct posix_lock* out_pl) {
     assert(pl->type != F_UNLCK);
 
     int ret;
@@ -586,7 +586,7 @@ out:
 int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posix_lock* out_pl) {
     assert(!g_process_ipc_ids.leader_vmid);
 
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     lock(&g_dcache_lock);
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
     unlock(&g_dcache_lock);
@@ -601,7 +601,7 @@ int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posi
 }
 
 /* Removes all locks and lock requests for a given PID and dentry. */
-static int posix_lock_clear_pid_from_dentry(struct shim_dentry* dent, IDTYPE pid) {
+static int posix_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid) {
     assert(locked(&g_fs_lock_lock));
 
     struct fs_lock* fs_lock;

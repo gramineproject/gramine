@@ -30,7 +30,7 @@ static void signal_io(IDTYPE caller, void* arg) {
 }
 
 long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -74,7 +74,7 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
                 break;
             }
 
-            struct shim_fs* fs = hdl->fs;
+            struct libos_fs* fs = hdl->fs;
             if (!fs || !fs->fs_ops) {
                 ret = -EACCES;
                 break;

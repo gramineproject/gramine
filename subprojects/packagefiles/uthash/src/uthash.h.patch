@@ -6,7 +6,7 @@ index 76bdca64199f11dbb6387633e2a651dcaee1bb4f..cbdb261b0078480597a573cc5384f9ab
  
  #define UTHASH_VERSION 2.1.0
  
-+#if defined(IN_PAL) || defined(IN_SHIM)
++#if defined(IN_PAL) || defined(IN_LIBOS)
 +#include "api.h"      /* ptrdiff_t, memcmp, memset, strlen */
 +#else
  #include <string.h>   /* memcmp, memset, strlen */

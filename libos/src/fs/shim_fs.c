@@ -19,7 +19,7 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-static struct shim_fs* g_builtin_fs[] = {
+static struct libos_fs* g_builtin_fs[] = {
     &chroot_builtin_fs,
     &chroot_encrypted_builtin_fs,
     &tmp_builtin_fs,
@@ -33,7 +33,7 @@ static struct shim_fs* g_builtin_fs[] = {
     &path_builtin_fs,
 };
 
-static struct shim_lock g_mount_mgr_lock;
+static struct libos_lock g_mount_mgr_lock;
 
 #define SYSTEM_LOCK()   lock(&g_mount_mgr_lock)
 #define SYSTEM_UNLOCK() unlock(&g_mount_mgr_lock)
@@ -41,14 +41,14 @@ static struct shim_lock g_mount_mgr_lock;
 
 #define MOUNT_MGR_ALLOC 64
 
-#define OBJ_TYPE struct shim_mount
+#define OBJ_TYPE struct libos_mount
 #include "memmgr.h"
 
 static MEM_MGR g_mount_mgr = NULL;
-DEFINE_LISTP(shim_mount);
+DEFINE_LISTP(libos_mount);
 /* Links to mount->list */
-static LISTP_TYPE(shim_mount) g_mount_list;
-static struct shim_lock g_mount_list_lock;
+static LISTP_TYPE(libos_mount) g_mount_list;
+static struct libos_lock g_mount_list_lock;
 
 int init_fs(void) {
     int ret;
@@ -88,11 +88,11 @@ err:
     return ret;
 }
 
-static struct shim_mount* alloc_mount(void) {
+static struct libos_mount* alloc_mount(void) {
     return get_mem_obj_from_mgr_enlarge(g_mount_mgr, size_align_up(MOUNT_MGR_ALLOC));
 }
 
-static void free_mount(struct shim_mount* mount) {
+static void free_mount(struct libos_mount* mount) {
     free_mem_obj_to_mgr(g_mount_mgr, mount);
 }
 
@@ -127,7 +127,7 @@ static int mount_root(void) {
         goto out;
     }
 
-    struct shim_mount_params params = {
+    struct libos_mount_params params = {
         .path = "/",
         .key_name = fs_root_key_name,
     };
@@ -158,7 +158,7 @@ out:
 static int mount_sys(void) {
     int ret;
 
-    ret = mount_fs(&(struct shim_mount_params){
+    ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/proc",
         .uri = "proc",
@@ -166,7 +166,7 @@ static int mount_sys(void) {
     if (ret < 0)
         return ret;
 
-    ret = mount_fs(&(struct shim_mount_params){
+    ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/dev",
         .uri = "dev",
@@ -174,7 +174,7 @@ static int mount_sys(void) {
     if (ret < 0)
         return ret;
 
-    ret = mount_fs(&(struct shim_mount_params){
+    ret = mount_fs(&(struct libos_mount_params){
         .type = "chroot",
         .path = "/dev/tty",
         .uri = URI_PREFIX_DEV "tty",
@@ -182,7 +182,7 @@ static int mount_sys(void) {
     if (ret < 0)
         return ret;
 
-    ret = mount_fs(&(struct shim_mount_params){
+    ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/sys",
         .uri = "sys",
@@ -276,7 +276,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         }
     }
 
-    struct shim_mount_params params = {
+    struct libos_mount_params params = {
         .type = mount_type ?: "chroot",
         .path = mount_path,
         .uri = mount_uri,
@@ -443,7 +443,7 @@ static int find_host_file_mount_path(const char* uri, char** out_file_path) {
     char* file_path = NULL;
 
     /* Traverse the mount list in reverse: we want to find the latest mount that applies. */
-    struct shim_mount* mount;
+    struct libos_mount* mount;
     lock(&g_mount_list_lock);
     LISTP_FOR_EACH_ENTRY_REVERSE(mount, &g_mount_list, list) {
         if (strcmp(mount->fs->name, "chroot") != 0 || !strstartswith(mount->uri, URI_PREFIX_FILE))
@@ -535,7 +535,7 @@ static int mount_protected_files(const char* array_name, const char* key_name) {
             goto out;
         }
 
-        struct shim_mount_params params = {
+        struct libos_mount_params params = {
             .type = "encrypted",
             .path = mount_path,
             .uri = uri,
@@ -569,7 +569,7 @@ int init_mount_root(void) {
     if (ret < 0)
         return ret;
 
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dent = NULL;
     lock(&g_dcache_lock);
     ret = path_lookupat(/*start=*/NULL, "/", LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
     unlock(&g_dcache_lock);
@@ -632,7 +632,7 @@ int init_mount(void) {
     }
 
     if (fs_start_dir) {
-        struct shim_dentry* dent = NULL;
+        struct libos_dentry* dent = NULL;
 
         lock(&g_dcache_lock);
         ret = path_lookupat(/*start=*/NULL, fs_start_dir, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &dent);
@@ -653,9 +653,9 @@ int init_mount(void) {
     return 0;
 }
 
-struct shim_fs* find_fs(const char* name) {
+struct libos_fs* find_fs(const char* name) {
     for (size_t i = 0; i < ARRAY_SIZE(g_builtin_fs); i++) {
-        struct shim_fs* fs = g_builtin_fs[i];
+        struct libos_fs* fs = g_builtin_fs[i];
         if (!strncmp(fs->name, name, sizeof(fs->name)))
             return fs;
     }
@@ -663,12 +663,12 @@ struct shim_fs* find_fs(const char* name) {
     return NULL;
 }
 
-static int mount_fs_at_dentry(struct shim_mount_params* params, struct shim_dentry* mount_point) {
+static int mount_fs_at_dentry(struct libos_mount_params* params, struct libos_dentry* mount_point) {
     assert(locked(&g_dcache_lock));
     assert(!mount_point->attached_mount);
 
     int ret;
-    struct shim_fs* fs = find_fs(params->type);
+    struct libos_fs* fs = find_fs(params->type);
     if (!fs || !fs->fs_ops || !fs->fs_ops->mount)
         return -ENODEV;
 
@@ -681,9 +681,9 @@ static int mount_fs_at_dentry(struct shim_mount_params* params, struct shim_dent
     if ((ret = fs->fs_ops->mount(params, &mount_data)) < 0)
         return ret;
 
-    /* Allocate and set up `shim_mount` object */
+    /* Allocate and set up `libos_mount` object */
 
-    struct shim_mount* mount = alloc_mount();
+    struct libos_mount* mount = alloc_mount();
     if (!mount) {
         ret = -ENOMEM;
         goto err;
@@ -730,7 +730,7 @@ static int mount_fs_at_dentry(struct shim_mount_params* params, struct shim_dent
      * not be set yet.
      */
     if (strcmp(params->type, "encrypted") != 0) {
-        struct shim_dentry* root;
+        struct libos_dentry* root;
         if ((ret = path_lookupat(g_dentry_root, params->path, LOOKUP_NO_FOLLOW, &root))) {
             log_warning("error looking up mount root %s: %d", params->path, ret);
             goto err;
@@ -772,9 +772,9 @@ err:
     return ret;
 }
 
-int mount_fs(struct shim_mount_params* params) {
+int mount_fs(struct libos_mount_params* params) {
     int ret;
-    struct shim_dentry* mount_point = NULL;
+    struct libos_dentry* mount_point = NULL;
 
     log_debug("mounting \"%s\" (%s) under %s", params->uri, params->type, params->path);
 
@@ -815,19 +815,19 @@ out:
  * the object. Fixing this would require revising whole filesystem implementation - but this code
  * is, uhm, not the best achievement of humankind and probably requires a complete rewrite.
  */
-void get_mount(struct shim_mount* mount) {
+void get_mount(struct libos_mount* mount) {
     __UNUSED(mount);
     // REF_INC(mount->ref_count);
 }
 
-void put_mount(struct shim_mount* mount) {
+void put_mount(struct libos_mount* mount) {
     __UNUSED(mount);
     // REF_DEC(mount->ref_count);
 }
 
-int walk_mounts(int (*walk)(struct shim_mount* mount, void* arg), void* arg) {
-    struct shim_mount* mount;
-    struct shim_mount* n;
+int walk_mounts(int (*walk)(struct libos_mount* mount, void* arg), void* arg) {
+    struct libos_mount* mount;
+    struct libos_mount* n;
     int ret = 0;
     int nsrched = 0;
 
@@ -845,9 +845,9 @@ int walk_mounts(int (*walk)(struct shim_mount* mount, void* arg), void* arg) {
     return ret < 0 ? ret : (nsrched ? 0 : -ESRCH);
 }
 
-struct shim_mount* find_mount_from_uri(const char* uri) {
-    struct shim_mount* mount;
-    struct shim_mount* found = NULL;
+struct libos_mount* find_mount_from_uri(const char* uri) {
+    struct libos_mount* mount;
+    struct libos_mount* found = NULL;
     size_t longest_path = 0;
 
     lock(&g_mount_list_lock);
@@ -872,25 +872,25 @@ struct shim_mount* find_mount_from_uri(const char* uri) {
 }
 
 /*
- * Note that checkpointing the `shim_fs` structure copies it, instead of using a pointer to
+ * Note that checkpointing the `libos_fs` structure copies it, instead of using a pointer to
  * corresponding global object on the remote side. This does not waste too much memory (because each
- * global object is only copied once), but it means that `shim_fs` objects cannot be compared by
+ * global object is only copied once), but it means that `libos_fs` objects cannot be compared by
  * pointer.
  */
 BEGIN_CP_FUNC(fs) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_fs));
+    assert(size == sizeof(struct libos_fs));
 
-    struct shim_fs* fs = (struct shim_fs*)obj;
-    struct shim_fs* new_fs = NULL;
+    struct libos_fs* fs = (struct libos_fs*)obj;
+    struct libos_fs* new_fs = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_fs));
+        off = ADD_CP_OFFSET(sizeof(struct libos_fs));
         ADD_TO_CP_MAP(obj, off);
 
-        new_fs = (struct shim_fs*)(base + off);
+        new_fs = (struct libos_fs*)(base + off);
 
         memcpy(new_fs->name, fs->name, sizeof(new_fs->name));
         new_fs->fs_ops = NULL;
@@ -898,7 +898,7 @@ BEGIN_CP_FUNC(fs) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_fs = (struct shim_fs*)(base + off);
+        new_fs = (struct libos_fs*)(base + off);
     }
 
     if (objp)
@@ -909,9 +909,9 @@ END_CP_FUNC(fs)
 BEGIN_RS_FUNC(fs) {
     __UNUSED(offset);
     __UNUSED(rebase);
-    struct shim_fs* fs = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_fs* fs = (void*)(base + GET_CP_FUNC_ENTRY());
 
-    struct shim_fs* builtin_fs = find_fs(fs->name);
+    struct libos_fs* builtin_fs = find_fs(fs->name);
     if (!builtin_fs)
         return -EINVAL;
 
@@ -922,15 +922,15 @@ END_RS_FUNC(fs)
 
 BEGIN_CP_FUNC(mount) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_mount));
+    assert(size == sizeof(struct libos_mount));
 
-    struct shim_mount* mount     = (struct shim_mount*)obj;
-    struct shim_mount* new_mount = NULL;
+    struct libos_mount* mount     = (struct libos_mount*)obj;
+    struct libos_mount* new_mount = NULL;
 
     size_t off = GET_FROM_CP_MAP(obj);
 
     if (!off) {
-        off = ADD_CP_OFFSET(sizeof(struct shim_mount));
+        off = ADD_CP_OFFSET(sizeof(struct libos_mount));
         ADD_TO_CP_MAP(obj, off);
 
         mount->cpdata = NULL;
@@ -943,7 +943,7 @@ BEGIN_CP_FUNC(mount) {
             }
         }
 
-        new_mount  = (struct shim_mount*)(base + off);
+        new_mount  = (struct libos_mount*)(base + off);
         *new_mount = *mount;
 
         DO_CP(fs, mount->fs, &new_mount->fs);
@@ -973,7 +973,7 @@ BEGIN_CP_FUNC(mount) {
 
         ADD_CP_FUNC_ENTRY(off);
     } else {
-        new_mount = (struct shim_mount*)(base + off);
+        new_mount = (struct libos_mount*)(base + off);
     }
 
     if (objp)
@@ -983,7 +983,7 @@ END_CP_FUNC(mount)
 
 BEGIN_RS_FUNC(mount) {
     __UNUSED(offset);
-    struct shim_mount* mount = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_mount* mount = (void*)(base + GET_CP_FUNC_ENTRY());
 
     CP_REBASE(mount->cpdata);
     CP_REBASE(mount->list);
@@ -1022,7 +1022,7 @@ BEGIN_CP_FUNC(all_mounts) {
     __UNUSED(obj);
     __UNUSED(size);
     __UNUSED(objp);
-    struct shim_mount* mount;
+    struct libos_mount* mount;
     lock(&g_mount_list_lock);
     LISTP_FOR_EACH_ENTRY(mount, &g_mount_list, list) {
         DO_CP(mount, mount, NULL);

@@ -44,13 +44,13 @@ enum pid_meta_code { PID_META_CRED, PID_META_EXEC, PID_META_CWD, PID_META_ROOT }
 
 #define STARTING_VMID 1
 
-struct shim_ipc_ids {
+struct libos_ipc_ids {
     IDTYPE self_vmid;
     IDTYPE parent_vmid;
     IDTYPE leader_vmid;
 };
 
-extern struct shim_ipc_ids g_process_ipc_ids;
+extern struct libos_ipc_ids g_process_ipc_ids;
 
 int init_ipc(void);
 int init_ipc_ids(void);
@@ -88,17 +88,17 @@ struct ipc_msg_header {
     unsigned char code;
 } __attribute__((packed));
 
-struct shim_ipc_msg {
+struct libos_ipc_msg {
     struct ipc_msg_header header;
     char data[];
 } __attribute__((packed));
 
 static inline size_t get_ipc_msg_size(size_t payload) {
-    return sizeof(struct shim_ipc_msg) + payload;
+    return sizeof(struct libos_ipc_msg) + payload;
 }
 
-void init_ipc_msg(struct shim_ipc_msg* msg, unsigned char code, size_t size);
-void init_ipc_response(struct shim_ipc_msg* msg, uint64_t seq, size_t size);
+void init_ipc_msg(struct libos_ipc_msg* msg, unsigned char code, size_t size);
+void init_ipc_response(struct libos_ipc_msg* msg, uint64_t seq, size_t size);
 
 /*!
  * \brief Send an IPC message.
@@ -106,7 +106,7 @@ void init_ipc_response(struct shim_ipc_msg* msg, uint64_t seq, size_t size);
  * \param dest  VMID of the destination process.
  * \param msg   Message to send.
  */
-int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
+int ipc_send_message(IDTYPE dest, struct libos_ipc_msg* msg);
 
 /*!
  * \brief Send an IPC message and wait for a response.
@@ -121,7 +121,7 @@ int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
  * data, which should be freed using `free` function. If \p resp is NULL, the response will be
  * discarded, but still awaited for.
  */
-int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** resp);
+int ipc_send_msg_and_get_response(IDTYPE dest, struct libos_ipc_msg* msg, void** resp);
 
 /*!
  * \brief Broadcast an IPC message.
@@ -131,7 +131,7 @@ int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** 
  *
  * Send an IPC message \p msg to all known (connected) processes except for \p exclude_vmid.
  */
-int ipc_broadcast(struct shim_ipc_msg* msg, IDTYPE exclude_vmid);
+int ipc_broadcast(struct libos_ipc_msg* msg, IDTYPE exclude_vmid);
 
 /*!
  * \brief Handle a response to a previously sent message.
@@ -156,7 +156,7 @@ int ipc_response_callback(IDTYPE src, void* data, uint64_t seq);
 int ipc_get_new_vmid(IDTYPE* vmid);
 int ipc_get_new_vmid_callback(IDTYPE src, void* data, uint64_t seq);
 
-struct shim_ipc_cld_exit {
+struct libos_ipc_cld_exit {
     IDTYPE ppid, pid;
     IDTYPE uid;
     unsigned int exitcode;
@@ -222,7 +222,7 @@ int ipc_change_id_owner_callback(IDTYPE src, void* data, uint64_t seq);
 int ipc_get_id_owner(IDTYPE id, IDTYPE* out_owner);
 int ipc_get_id_owner_callback(IDTYPE src, void* data, uint64_t seq);
 
-struct shim_ipc_pid_kill {
+struct libos_ipc_pid_kill {
     IDTYPE sender;
     IDTYPE pid;
     IDTYPE id;
@@ -237,23 +237,23 @@ int ipc_kill_all(IDTYPE sender, int sig);
 int ipc_pid_kill_callback(IDTYPE src, void* data, uint64_t seq);
 
 /* PID_GETMETA: get metadata of certain pid */
-struct shim_ipc_pid_getmeta {
+struct libos_ipc_pid_getmeta {
     IDTYPE pid;
     enum pid_meta_code code;
 } __attribute__((packed));
 
 /* PID_RETMETA: return metadata of certain pid */
-struct shim_ipc_pid_retmeta {
+struct libos_ipc_pid_retmeta {
     size_t datasize;
     int ret_val;
     char data[];
 } __attribute__((packed));
 
-int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct shim_ipc_pid_retmeta** data);
+int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct libos_ipc_pid_retmeta** data);
 int ipc_pid_getmeta_callback(IDTYPE src, void* data, uint64_t seq);
 
 /* SYNC_REQUEST_*, SYNC_CONFIRM_ */
-struct shim_ipc_sync {
+struct libos_ipc_sync {
     uint64_t id;
     size_t data_size;
     int state;
@@ -271,12 +271,12 @@ int ipc_sync_confirm_downgrade_callback(IDTYPE src, void* data, unsigned long se
 int ipc_sync_confirm_close_callback(IDTYPE src, void* data, unsigned long seq);
 
 /*
- * POSIX_LOCK_SET: `struct shim_ipc_posix_lock` -> `int`
- * POSIX_LOCK_GET: `struct shim_ipc_posix_lock` -> `struct shim_ipc_posix_lock_resp`
+ * POSIX_LOCK_SET: `struct libos_ipc_posix_lock` -> `int`
+ * POSIX_LOCK_GET: `struct libos_ipc_posix_lock` -> `struct libos_ipc_posix_lock_resp`
  * POSIX_LOCK_CLEAR_PID: `IDTYPE` -> `int`
  */
 
-struct shim_ipc_posix_lock {
+struct libos_ipc_posix_lock {
     /* see `struct posix_lock` in `shim_fs_lock.h` */
     int type;
     uint64_t start;
@@ -287,7 +287,7 @@ struct shim_ipc_posix_lock {
     char path[]; /* null-terminated */
 };
 
-struct shim_ipc_posix_lock_resp {
+struct libos_ipc_posix_lock_resp {
     int result;
 
     /* see `struct posix_lock` in `shim_fs_lock.h` */

@@ -60,7 +60,7 @@ struct server_lease {
 
 static struct server_handle* g_server_handles = NULL;
 static struct server_client* g_server_clients = NULL;
-static struct shim_lock g_server_lock;
+static struct libos_lock g_server_lock;
 
 int init_sync_server(void) {
     if (!create_lock(&g_server_lock))

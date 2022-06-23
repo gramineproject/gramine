@@ -14,21 +14,21 @@
 #define DEBUG_SPINLOCKS
 #endif // DEBUG
 
-#ifdef IN_SHIM
+#ifdef IN_LIBOS
 /* Forward declare, so this header stays standalone. */
 static inline unsigned int get_cur_tid(void);
 
 #ifdef DEBUG_SPINLOCKS
-#define DEBUG_SPINLOCKS_SHIM
+#define DEBUG_SPINLOCKS_LIBOS
 #endif // DEBUG_SPINLOCKS
 
-#endif // IN_SHIM
+#endif // IN_LIBOS
 
 typedef struct {
     uint32_t lock;
-#ifdef DEBUG_SPINLOCKS_SHIM
+#ifdef DEBUG_SPINLOCKS_LIBOS
     unsigned int owner;
-#endif // DEBUG_SPINLOCKS_SHIM
+#endif // DEBUG_SPINLOCKS_LIBOS
 } spinlock_t;
 
 /* The below macros are only needed for our own futex implementation (based on Futexes are Tricky)
@@ -51,7 +51,7 @@ typedef struct {
  */
 #define INIT_SPINLOCK_UNLOCKED { .lock = SPINLOCK_UNLOCKED }
 
-#ifdef DEBUG_SPINLOCKS_SHIM
+#ifdef DEBUG_SPINLOCKS_LIBOS
 static inline void debug_spinlock_take_ownership(spinlock_t* lock) {
     __atomic_store_n(&lock->owner, get_cur_tid(), __ATOMIC_RELAXED);
 }
@@ -67,7 +67,7 @@ static inline void debug_spinlock_take_ownership(spinlock_t* lock) {
 static inline void debug_spinlock_giveup_ownership(spinlock_t* lock) {
     __UNUSED(lock);
 }
-#endif // DEBUG_SPINLOCKS_SHIM
+#endif // DEBUG_SPINLOCKS_LIBOS
 
 
 /*!
@@ -166,7 +166,7 @@ static inline bool _spinlock_is_locked(spinlock_t* lock) {
     return __atomic_load_n(&lock->lock, __ATOMIC_SEQ_CST) != SPINLOCK_UNLOCKED;
 }
 
-#ifdef DEBUG_SPINLOCKS_SHIM
+#ifdef DEBUG_SPINLOCKS_LIBOS
 static inline bool spinlock_is_locked(spinlock_t* lock) {
     if (!_spinlock_is_locked(lock)) {
         return false;
@@ -182,6 +182,6 @@ static inline bool spinlock_is_locked(spinlock_t* lock) {
 static inline bool spinlock_is_locked(spinlock_t* lock) {
     return _spinlock_is_locked(lock);
 }
-#endif // DEBUG_SPINLOCKS_SHIM
+#endif // DEBUG_SPINLOCKS_LIBOS
 
 #endif // DEBUG_SPINLOCKS

@@ -60,7 +60,7 @@ VERSION {
                 time;
                 __vdso_time;
 
-                __vdso_syscalldb;
+                __vdso_libos_syscall_entry;
         local: *;
         };
 }

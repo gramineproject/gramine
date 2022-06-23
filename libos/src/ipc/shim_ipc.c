@@ -22,7 +22,7 @@
 #include "shim_types.h"
 #include "shim_utils.h"
 
-struct shim_ipc_connection {
+struct libos_ipc_connection {
     struct avl_tree_node node;
     IDTYPE vmid;
     int seen_error;
@@ -30,18 +30,18 @@ struct shim_ipc_connection {
     PAL_HANDLE handle;
     /* This lock guards concurrent accesses to `handle` and `seen_error`. If you need both this lock
      * and `g_ipc_connections_lock`, take the latter first. */
-    struct shim_lock lock;
+    struct libos_lock lock;
 };
 
 static bool ipc_connection_cmp(struct avl_tree_node* _a, struct avl_tree_node* _b) {
-    struct shim_ipc_connection* a = container_of(_a, struct shim_ipc_connection, node);
-    struct shim_ipc_connection* b = container_of(_b, struct shim_ipc_connection, node);
+    struct libos_ipc_connection* a = container_of(_a, struct libos_ipc_connection, node);
+    struct libos_ipc_connection* b = container_of(_b, struct libos_ipc_connection, node);
     return a->vmid <= b->vmid;
 }
 
 /* Tree of outgoing IPC connections, to be accessed only with `g_ipc_connections_lock` taken. */
 static struct avl_tree g_ipc_connections = { .cmp = ipc_connection_cmp };
-static struct shim_lock g_ipc_connections_lock;
+static struct libos_lock g_ipc_connections_lock;
 
 struct ipc_msg_waiter {
     struct avl_tree_node node;
@@ -58,9 +58,9 @@ static bool ipc_msg_waiter_cmp(struct avl_tree_node* _a, struct avl_tree_node* _
 }
 
 static struct avl_tree g_msg_waiters_tree = { .cmp = ipc_msg_waiter_cmp };
-static struct shim_lock g_msg_waiters_tree_lock;
+static struct libos_lock g_msg_waiters_tree_lock;
 
-struct shim_ipc_ids g_process_ipc_ids;
+struct libos_ipc_ids g_process_ipc_ids;
 
 int init_ipc(void) {
     if (!create_lock(&g_ipc_connections_lock)) {
@@ -73,11 +73,11 @@ int init_ipc(void) {
     return init_ipc_ids();
 }
 
-static void get_ipc_connection(struct shim_ipc_connection* conn) {
+static void get_ipc_connection(struct libos_ipc_connection* conn) {
     REF_INC(conn->ref_count);
 }
 
-static void put_ipc_connection(struct shim_ipc_connection* conn) {
+static void put_ipc_connection(struct libos_ipc_connection* conn) {
     int64_t ref_count = REF_DEC(conn->ref_count);
 
     if (!ref_count) {
@@ -87,19 +87,19 @@ static void put_ipc_connection(struct shim_ipc_connection* conn) {
     }
 }
 
-static struct shim_ipc_connection* node2conn(struct avl_tree_node* node) {
+static struct libos_ipc_connection* node2conn(struct avl_tree_node* node) {
     if (!node) {
         return NULL;
     }
-    return container_of(node, struct shim_ipc_connection, node);
+    return container_of(node, struct libos_ipc_connection, node);
 }
 
-static int ipc_connect(IDTYPE dest, struct shim_ipc_connection** conn_ptr) {
-    struct shim_ipc_connection dummy = { .vmid = dest };
+static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
+    struct libos_ipc_connection dummy = { .vmid = dest };
     int ret = 0;
 
     lock(&g_ipc_connections_lock);
-    struct shim_ipc_connection* conn = node2conn(avl_tree_find(&g_ipc_connections, &dummy.node));
+    struct libos_ipc_connection* conn = node2conn(avl_tree_find(&g_ipc_connections, &dummy.node));
     if (!conn) {
         conn = calloc(1, sizeof(*conn));
         if (!conn) {
@@ -154,14 +154,14 @@ out:
     return ret;
 }
 
-static void _remove_ipc_connection(struct shim_ipc_connection* conn) {
+static void _remove_ipc_connection(struct libos_ipc_connection* conn) {
     assert(locked(&g_ipc_connections_lock));
     avl_tree_delete(&g_ipc_connections, &conn->node);
     put_ipc_connection(conn);
 }
 
 int connect_to_process(IDTYPE dest) {
-    struct shim_ipc_connection* conn = NULL;
+    struct libos_ipc_connection* conn = NULL;
     int ret = ipc_connect(dest, &conn);
     if (ret < 0) {
         return ret;
@@ -171,9 +171,9 @@ int connect_to_process(IDTYPE dest) {
 }
 
 void remove_outgoing_ipc_connection(IDTYPE dest) {
-    struct shim_ipc_connection dummy = { .vmid = dest };
+    struct libos_ipc_connection dummy = { .vmid = dest };
     lock(&g_ipc_connections_lock);
-    struct shim_ipc_connection* conn = node2conn(avl_tree_find(&g_ipc_connections, &dummy.node));
+    struct libos_ipc_connection* conn = node2conn(avl_tree_find(&g_ipc_connections, &dummy.node));
     if (conn) {
         _remove_ipc_connection(conn);
     }
@@ -196,18 +196,18 @@ void remove_outgoing_ipc_connection(IDTYPE dest) {
     unlock(&g_msg_waiters_tree_lock);
 }
 
-void init_ipc_msg(struct shim_ipc_msg* msg, unsigned char code, size_t size) {
+void init_ipc_msg(struct libos_ipc_msg* msg, unsigned char code, size_t size) {
     SET_UNALIGNED(msg->header.size, size);
     SET_UNALIGNED(msg->header.seq, 0ul);
     SET_UNALIGNED(msg->header.code, code);
 }
 
-void init_ipc_response(struct shim_ipc_msg* msg, uint64_t seq, size_t size) {
+void init_ipc_response(struct libos_ipc_msg* msg, uint64_t seq, size_t size) {
     init_ipc_msg(msg, IPC_MSG_RESP, size);
     SET_UNALIGNED(msg->header.seq, seq);
 }
 
-static int ipc_send_message_to_conn(struct shim_ipc_connection* conn, struct shim_ipc_msg* msg) {
+static int ipc_send_message_to_conn(struct libos_ipc_connection* conn, struct libos_ipc_msg* msg) {
     log_debug("Sending ipc message to %u", conn->vmid);
 
     int ret = 0;
@@ -230,8 +230,8 @@ out:
     return ret;
 }
 
-int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg) {
-    struct shim_ipc_connection* conn = NULL;
+int ipc_send_message(IDTYPE dest, struct libos_ipc_msg* msg) {
+    struct libos_ipc_connection* conn = NULL;
     int ret = ipc_connect(dest, &conn);
     if (ret < 0) {
         return ret;
@@ -254,7 +254,7 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
     return ret;
 }
 
-int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** resp) {
+int ipc_send_msg_and_get_response(IDTYPE dest, struct libos_ipc_msg* msg, void** resp) {
     static uint64_t ipc_seq_counter = 1;
     uint64_t seq = __atomic_fetch_add(&ipc_seq_counter, 1, __ATOMIC_RELAXED);
     SET_UNALIGNED(msg->header.seq, seq);
@@ -338,9 +338,9 @@ out:
     return ret;
 }
 
-int ipc_broadcast(struct shim_ipc_msg* msg, IDTYPE exclude_id) {
+int ipc_broadcast(struct libos_ipc_msg* msg, IDTYPE exclude_id) {
     lock(&g_ipc_connections_lock);
-    struct shim_ipc_connection* conn = node2conn(avl_tree_first(&g_ipc_connections));
+    struct libos_ipc_connection* conn = node2conn(avl_tree_first(&g_ipc_connections));
 
     int main_ret = 0;
     while (conn) {
@@ -360,21 +360,21 @@ int ipc_broadcast(struct shim_ipc_msg* msg, IDTYPE exclude_id) {
 BEGIN_CP_FUNC(process_ipc_ids) {
     __UNUSED(size);
     __UNUSED(objp);
-    assert(size == sizeof(struct shim_ipc_ids));
+    assert(size == sizeof(struct libos_ipc_ids));
 
-    struct shim_ipc_ids* ipc_ids = (struct shim_ipc_ids*)obj;
+    struct libos_ipc_ids* ipc_ids = (struct libos_ipc_ids*)obj;
 
     size_t off = ADD_CP_OFFSET(sizeof(*ipc_ids));
     ADD_CP_FUNC_ENTRY(off);
 
-    *(struct shim_ipc_ids*)(base + off) = *ipc_ids;
+    *(struct libos_ipc_ids*)(base + off) = *ipc_ids;
 }
 END_CP_FUNC(process_ipc_ids)
 
 BEGIN_RS_FUNC(process_ipc_ids) {
     __UNUSED(offset);
     __UNUSED(rebase);
-    struct shim_ipc_ids* ipc_ids = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_ipc_ids* ipc_ids = (void*)(base + GET_CP_FUNC_ENTRY());
 
     g_process_ipc_ids = *ipc_ids;
 }

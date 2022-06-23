@@ -38,7 +38,7 @@ struct fifo_data {
     int fd_write;
 };
 
-static int fifo_icheckpoint(struct shim_inode* inode, void** out_data, size_t* out_size) {
+static int fifo_icheckpoint(struct libos_inode* inode, void** out_data, size_t* out_size) {
     assert(locked(&inode->lock));
 
     struct fifo_data* fifo_data = inode->data;
@@ -54,17 +54,17 @@ static int fifo_icheckpoint(struct shim_inode* inode, void** out_data, size_t* o
     return 0;
 }
 
-static int fifo_irestore(struct shim_inode* inode, void* data) {
+static int fifo_irestore(struct libos_inode* inode, void* data) {
     /* Use the data from checkpoint blob directly */
     inode->data = data;
     return 0;
 }
 
-int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd_write) {
+int fifo_setup_dentry(struct libos_dentry* dent, mode_t perm, int fd_read, int fd_write) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    struct shim_inode* inode = get_new_inode(dent->mount, S_IFIFO, perm);
+    struct libos_inode* inode = get_new_inode(dent->mount, S_IFIFO, perm);
     if (!inode)
         return -ENOMEM;
 
@@ -84,7 +84,7 @@ int fifo_setup_dentry(struct shim_dentry* dent, mode_t perm, int fd_read, int fd
     return 0;
 }
 
-static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
+static ssize_t pipe_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_PIPE);
     __UNUSED(pos);
 
@@ -102,7 +102,8 @@ static ssize_t pipe_read(struct shim_handle* hdl, void* buf, size_t count, file_
     return (ssize_t)count;
 }
 
-static ssize_t pipe_write(struct shim_handle* hdl, const void* buf, size_t count, file_off_t* pos) {
+static ssize_t pipe_write(struct libos_handle* hdl, const void* buf, size_t count,
+                          file_off_t* pos) {
     assert(hdl->type == TYPE_PIPE);
     __UNUSED(pos);
 
@@ -130,7 +131,7 @@ static ssize_t pipe_write(struct shim_handle* hdl, const void* buf, size_t count
     return (ssize_t)count;
 }
 
-static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
+static int pipe_hstat(struct libos_handle* hdl, struct stat* stat) {
     /* XXX: Is any of this right?
      * Shouldn't we be using hdl to figure something out?
      * if stat is NULL, should we not return -EFAULT?
@@ -139,7 +140,7 @@ static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
     if (!stat)
         return 0;
 
-    struct shim_thread* thread = get_cur_thread();
+    struct libos_thread* thread = get_cur_thread();
 
     stat->st_dev     = (dev_t)0;           /* ID of device containing file */
     stat->st_ino     = (ino_t)0;           /* inode number */
@@ -158,7 +159,7 @@ static int pipe_hstat(struct shim_handle* hdl, struct stat* stat) {
     return 0;
 }
 
-static int pipe_setflags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+static int pipe_setflags(struct libos_handle* handle, unsigned int flags, unsigned int mask) {
     assert(mask != 0);
     assert((flags & ~mask) == 0);
 
@@ -197,7 +198,7 @@ out:
     return ret;
 }
 
-static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static int fifo_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -235,7 +236,7 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
         return -EOPNOTSUPP;
     }
 
-    struct shim_handle* fifo_hdl = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
+    struct libos_handle* fifo_hdl = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!fifo_hdl) {
         return -ENOENT;
     }
@@ -268,7 +269,7 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
     fifo_hdl->pal_handle = NULL; /* ownership of PAL handle is transferred to hdl */
 
     /* can remove intermediate FIFO hdl and its fd now */
-    struct shim_handle* tmp = detach_fd_handle(fd, NULL, NULL);
+    struct libos_handle* tmp = detach_fd_handle(fd, NULL, NULL);
     assert(tmp == fifo_hdl);
     put_handle(tmp);      /* matches detach_fd_handle() */
     put_handle(fifo_hdl); /* matches get_fd_handle() */
@@ -276,31 +277,31 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
     return 0;
 }
 
-static struct shim_fs_ops pipe_fs_ops = {
+static struct libos_fs_ops pipe_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
     .hstat    = &pipe_hstat,
     .setflags = &pipe_setflags,
 };
 
-static struct shim_fs_ops fifo_fs_ops = {
+static struct libos_fs_ops fifo_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
     .setflags = &pipe_setflags,
 };
 
-static struct shim_d_ops fifo_d_ops = {
+static struct libos_d_ops fifo_d_ops = {
     .open        = &fifo_open,
     .icheckpoint = &fifo_icheckpoint,
     .irestore    = &fifo_irestore,
 };
 
-struct shim_fs pipe_builtin_fs = {
+struct libos_fs pipe_builtin_fs = {
     .name   = "pipe",
     .fs_ops = &pipe_fs_ops,
 };
 
-struct shim_fs fifo_builtin_fs = {
+struct libos_fs fifo_builtin_fs = {
     .name   = "fifo",
     .fs_ops = &fifo_fs_ops,
     .d_ops  = &fifo_d_ops,

@@ -26,7 +26,7 @@ static bool g_sync_enabled = false;
 
 static struct sync_handle* g_client_handles = NULL;
 static uint32_t g_client_counter = 1;
-static struct shim_lock g_client_lock;
+static struct libos_lock g_client_lock;
 
 static void lock_client(void) {
     /* Allow creating/using handles in a single-thread scenario before sync client is initialized

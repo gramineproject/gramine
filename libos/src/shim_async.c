@@ -32,11 +32,11 @@ static LISTP_TYPE(async_event) async_list;
 /* Should be accessed with async_worker_lock held. */
 static enum { WORKER_NOTALIVE, WORKER_ALIVE } async_worker_state;
 
-static struct shim_thread* async_worker_thread;
-static struct shim_lock async_worker_lock;
+static struct libos_thread* async_worker_thread;
+static struct libos_lock async_worker_lock;
 
 /* TODO: use async_worker_thread->pollable_event instead */
-static struct shim_pollable_event install_new_event;
+static struct libos_pollable_event install_new_event;
 
 static int create_async_worker(void);
 
@@ -133,15 +133,15 @@ int init_async_worker(void) {
     return create_pollable_event(&install_new_event);
 }
 
-static int shim_async_worker(void* arg) {
-    struct shim_thread* self = (struct shim_thread*)arg;
+static int libos_async_worker(void* arg) {
+    struct libos_thread* self = (struct libos_thread*)arg;
     if (!arg)
         return -1;
 
-    shim_tcb_init();
+    libos_tcb_init();
     set_cur_thread(self);
 
-    log_setprefix(shim_get_tcb());
+    log_setprefix(libos_get_tcb());
 
     lock(&async_worker_lock);
     bool notme = (self != async_worker_thread);
@@ -373,7 +373,7 @@ static int create_async_worker(void) {
     if (async_worker_state == WORKER_ALIVE)
         return 0;
 
-    struct shim_thread* new = get_new_internal_thread();
+    struct libos_thread* new = get_new_internal_thread();
     if (!new)
         return -ENOMEM;
 
@@ -381,7 +381,7 @@ static int create_async_worker(void) {
     async_worker_state  = WORKER_ALIVE;
 
     PAL_HANDLE handle = NULL;
-    int ret = DkThreadCreate(shim_async_worker, new, &handle);
+    int ret = DkThreadCreate(libos_async_worker, new, &handle);
 
     if (ret < 0) {
         async_worker_thread = NULL;
@@ -399,7 +399,7 @@ static int create_async_worker(void) {
  * exit and then release the final reference to free related resources (it is
  * problematic for the thread itself to release its own resources e.g. stack).
  */
-struct shim_thread* terminate_async_worker(void) {
+struct libos_thread* terminate_async_worker(void) {
     lock(&async_worker_lock);
 
     if (async_worker_state != WORKER_ALIVE) {
@@ -407,7 +407,7 @@ struct shim_thread* terminate_async_worker(void) {
         return NULL;
     }
 
-    struct shim_thread* ret = async_worker_thread;
+    struct libos_thread* ret = async_worker_thread;
     if (ret)
         get_thread(ret);
     async_worker_state = WORKER_NOTALIVE;

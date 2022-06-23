@@ -26,7 +26,7 @@ static bool is_same_cache(size_t idx, const void* _arg) {
            && thread->ids_of_caches[arg->cache_class] == arg->cache_id_to_match;
 }
 
-int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_cache_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
 
     unsigned int cache_class;

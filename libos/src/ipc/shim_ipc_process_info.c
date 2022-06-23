@@ -21,7 +21,7 @@ static const char* pid_meta_code_str[4] = {
     "ROOT",
 };
 
-int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct shim_ipc_pid_retmeta** data) {
+int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct libos_ipc_pid_retmeta** data) {
     IDTYPE dest;
     int ret;
 
@@ -33,19 +33,19 @@ int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct shim_ipc_pid_ret
         return -ESRCH;
     }
 
-    struct shim_ipc_pid_getmeta msgin = {
+    struct libos_ipc_pid_getmeta msgin = {
         .pid = pid,
         .code = code,
     };
     size_t total_msg_size = get_ipc_msg_size(sizeof(msgin));
-    struct shim_ipc_msg* msg = __alloca(total_msg_size);
+    struct libos_ipc_msg* msg = __alloca(total_msg_size);
     init_ipc_msg(msg, IPC_MSG_PID_GETMETA, total_msg_size);
 
     memcpy(&msg->data, &msgin, sizeof(msgin));
 
     log_debug("ipc send to %u: IPC_MSG_PID_GETMETA(%u, %s)", dest, pid, pid_meta_code_str[code]);
 
-    struct shim_ipc_pid_retmeta* resp = NULL;
+    struct libos_ipc_pid_retmeta* resp = NULL;
     ret = ipc_send_msg_and_get_response(dest, msg, (void**)&resp);
     if (ret < 0) {
         return ret;
@@ -61,13 +61,13 @@ int ipc_pid_getmeta(IDTYPE pid, enum pid_meta_code code, struct shim_ipc_pid_ret
 }
 
 int ipc_pid_getmeta_callback(IDTYPE src, void* msg_data, uint64_t seq) {
-    struct shim_ipc_pid_getmeta* msgin = (struct shim_ipc_pid_getmeta*)msg_data;
+    struct libos_ipc_pid_getmeta* msgin = (struct libos_ipc_pid_getmeta*)msg_data;
     int ret = 0;
 
     log_debug("ipc callback from %u: IPC_MSG_PID_GETMETA(%u, %s)", src, msgin->pid,
               pid_meta_code_str[msgin->code]);
 
-    struct shim_thread* thread = lookup_thread(msgin->pid);
+    struct libos_thread* thread = lookup_thread(msgin->pid);
     void* data = NULL;
     size_t datasize = 0;
     size_t bufsize = 0;
@@ -98,7 +98,7 @@ int ipc_pid_getmeta_callback(IDTYPE src, void* msg_data, uint64_t seq) {
         case PID_META_ROOT: {
             lock(&g_process.fs_lock);
 
-            struct shim_dentry* dent = NULL;
+            struct libos_dentry* dent = NULL;
             switch (msgin->code) {
                case PID_META_EXEC:
                    if (g_process.exec)
@@ -131,18 +131,18 @@ int ipc_pid_getmeta_callback(IDTYPE src, void* msg_data, uint64_t seq) {
     }
 
 out_send:;
-    struct shim_ipc_pid_retmeta retmeta = {
+    struct libos_ipc_pid_retmeta retmeta = {
         .datasize = datasize,
         .ret_val = resp_ret_val,
     };
     size_t total_msg_size = get_ipc_msg_size(sizeof(retmeta) + datasize);
-    struct shim_ipc_msg* msg = __alloca(total_msg_size);
+    struct libos_ipc_msg* msg = __alloca(total_msg_size);
     init_ipc_response(msg, seq, total_msg_size);
 
     memcpy(&msg->data, &retmeta, sizeof(retmeta));
-    memcpy(&((struct shim_ipc_pid_retmeta*)&msg->data)->data, data, datasize);
+    memcpy(&((struct libos_ipc_pid_retmeta*)&msg->data)->data, data, datasize);
 
-    log_debug("IPC send to %u: shim_ipc_pid_retmeta{%lu, ...}", src, datasize);
+    log_debug("IPC send to %u: libos_ipc_pid_retmeta{%lu, ...}", src, datasize);
 
     ret = ipc_send_message(src, msg);
 
