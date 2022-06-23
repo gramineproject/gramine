@@ -38,8 +38,8 @@
  */
 
 static int create_sock_handle(int family, int type, int protocol, bool is_nonblocking,
-                              struct shim_handle** out_handle) {
-    struct shim_handle* handle = get_new_handle();
+                              struct libos_handle** out_handle) {
+    struct libos_handle* handle = get_new_handle();
     if (!handle) {
         return -ENOMEM;
     }
@@ -49,7 +49,7 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
     handle->flags = is_nonblocking ? O_NONBLOCK : 0;
     handle->acc_mode = MAY_READ | MAY_WRITE;
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
     sock->state = SOCK_NEW;
     sock->domain = family;
     sock->type = type;
@@ -119,7 +119,7 @@ long libos_syscall_socket(int family, int type, int protocol) {
             return -EPROTONOSUPPORT;
     }
 
-    struct shim_handle* handle = NULL;
+    struct libos_handle* handle = NULL;
     int ret = create_sock_handle(family, type, protocol, is_nonblocking, &handle);
     if (ret < 0) {
         return ret;
@@ -156,9 +156,9 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         return -EFAULT;
     }
 
-    struct shim_handle* handle1 = NULL;
-    struct shim_handle* handle2 = NULL;
-    struct shim_handle* handle3 = NULL;
+    struct libos_handle* handle1 = NULL;
+    struct libos_handle* handle2 = NULL;
+    struct libos_handle* handle3 = NULL;
     int ret = create_sock_handle(family, type, protocol, /*is_nonblocking=*/false, &handle1);
     if (ret < 0) {
         goto out;
@@ -179,8 +179,8 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         goto out;
     }
 
-    struct shim_sock_handle* sock1 = &handle1->info.sock;
-    struct shim_sock_handle* sock2 = &handle2->info.sock;
+    struct libos_sock_handle* sock1 = &handle1->info.sock;
+    struct libos_sock_handle* sock2 = &handle2->info.sock;
 
     lock(&sock1->lock);
     ret = sock1->ops->bind(handle1, &addr, sizeof(addr));
@@ -238,7 +238,7 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
     }
     int fd2 = set_new_fd_handle(handle3, is_cloexec ? FD_CLOEXEC : 0, NULL);
     if (fd2 < 0) {
-        struct shim_handle* tmp = detach_fd_handle(fd1, NULL, NULL);
+        struct libos_handle* tmp = detach_fd_handle(fd1, NULL, NULL);
         assert(tmp == handle2);
         put_handle(tmp);
         ret = fd2;
@@ -276,7 +276,7 @@ long libos_syscall_bind(int fd, void* addr, int _addrlen) {
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -286,7 +286,7 @@ long libos_syscall_bind(int fd, void* addr, int _addrlen) {
         return -ENOTSOCK;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
 
@@ -313,12 +313,12 @@ out:
 long libos_syscall_listen(int fd, int backlog) {
     int ret;
 
-    if ((unsigned int)backlog > SHIM_SOCK_MAX_PENDING_CONNS) {
+    if ((unsigned int)backlog > LIBOS_SOCK_MAX_PENDING_CONNS) {
         /* Linux kernel caps `backlog` this way. */
-        backlog = SHIM_SOCK_MAX_PENDING_CONNS;
+        backlog = LIBOS_SOCK_MAX_PENDING_CONNS;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -328,7 +328,7 @@ long libos_syscall_listen(int fd, int backlog) {
         return -ENOTSOCK;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
 
@@ -378,7 +378,7 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
         }
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -389,9 +389,9 @@ static int do_accept(int fd, void* addr, int* addrlen_ptr, int flags) {
         return -ENOTSOCK;
     }
 
-    struct shim_handle* client_handle = NULL;
+    struct libos_handle* client_handle = NULL;
     bool has_recvtimeout_set = false;
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     if (sock->state != SOCK_LISTENING) {
@@ -463,7 +463,7 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -473,7 +473,7 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
         return -ENOTSOCK;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     /* We need to take `recv_lock` just in case we free `peek` buffer in `disconnect` case.
      * This should not hurt though - nothing should be calling `recv` concurrently anyway. */
@@ -601,7 +601,7 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
 
 /* We return the size directly (contrary to the usual out argument) for simplicity - this function
  * is called directly from syscall handlers, which return values in such a way. */
-ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
+ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t addrlen, unsigned int flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
@@ -611,7 +611,7 @@ ssize_t do_sendmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
         return -EOPNOTSUPP;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     bool has_sendtimeout_set = !!sock->sendtimeout_us;
@@ -679,7 +679,7 @@ long libos_syscall_sendto(int fd, void* buf, size_t len, unsigned int flags, voi
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -699,7 +699,7 @@ long libos_syscall_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
         return ret;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -721,7 +721,7 @@ long libos_syscall_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         }
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -757,7 +757,7 @@ out:
 
 /* We return the size directly (contrary to the usual out argument) for simplicity - this function
  * is called directly from syscall handlers, which return values in such a way. */
-ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
+ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t* addrlen, unsigned int* flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
@@ -770,7 +770,7 @@ ssize_t do_recvmsg(struct shim_handle* handle, struct iovec* iov, size_t iov_len
     /* Note this only indicates whether this operation was requested to be nonblocking. If it's
      * `false`, but the handle is in nonblocking mode, this read won't block. */
     bool force_nonblocking = *flags & MSG_DONTWAIT;
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     bool has_recvtimeout_set = !!sock->receivetimeout_us;
@@ -921,7 +921,7 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -944,7 +944,7 @@ long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
         return ret;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -985,7 +985,7 @@ long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         }
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1026,7 +1026,7 @@ out:
 }
 
 long libos_syscall_shutdown(int fd, int how) {
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1037,7 +1037,7 @@ long libos_syscall_shutdown(int fd, int how) {
     }
 
     int ret;
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
 
@@ -1109,7 +1109,7 @@ long libos_syscall_getsockname(int fd, void* addr, int* _addrlen) {
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1120,7 +1120,7 @@ long libos_syscall_getsockname(int fd, void* addr, int* _addrlen) {
         goto out;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
 
@@ -1153,7 +1153,7 @@ long libos_syscall_getpeername(int fd, void* addr, int* _addrlen) {
         return -EFAULT;
     }
 
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1164,7 +1164,7 @@ long libos_syscall_getpeername(int fd, void* addr, int* _addrlen) {
     }
 
     int ret;
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
 
@@ -1187,7 +1187,7 @@ out:
     return ret;
 }
 
-static int set_socket_option(struct shim_handle* handle, int optname, char* optval, size_t len) {
+static int set_socket_option(struct libos_handle* handle, int optname, char* optval, size_t len) {
     assert(locked(&handle->info.sock.lock));
 
     size_t required_len;
@@ -1312,7 +1312,7 @@ static int set_socket_option(struct shim_handle* handle, int optname, char* optv
 
 long libos_syscall_setsockopt(int fd, int level, int optname, char* optval, int optlen) {
     int ret;
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1330,7 +1330,7 @@ long libos_syscall_setsockopt(int fd, int level, int optname, char* optval, int 
         goto out;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     switch (level) {
@@ -1356,8 +1356,8 @@ out:
     return ret;
 }
 
-static int get_socket_option(struct shim_handle* handle, int optname, char* optval, size_t* len) {
-    struct shim_sock_handle* sock = &handle->info.sock;
+static int get_socket_option(struct libos_handle* handle, int optname, char* optval, size_t* len) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     union {
@@ -1445,7 +1445,7 @@ out:
 
 long libos_syscall_getsockopt(int fd, int level, int optname, char* optval, int* optlen) {
     int ret;
-    struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
@@ -1468,7 +1468,7 @@ long libos_syscall_getsockopt(int fd, int level, int optname, char* optval, int*
         goto out;
     }
 
-    struct shim_sock_handle* sock = &handle->info.sock;
+    struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
     switch (level) {

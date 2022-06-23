@@ -39,7 +39,7 @@ static bool id_range_cmp(struct avl_tree_node* _a, struct avl_tree_node* _b) {
 static struct id_range* g_last_range = NULL;
 static struct avl_tree g_used_ranges_tree = { .cmp = id_range_cmp };
 static IDTYPE g_last_used_id = 0;
-static struct shim_lock g_ranges_lock;
+static struct libos_lock g_ranges_lock;
 
 int init_id_ranges(IDTYPE preload_tid) {
     if (!create_lock(&g_ranges_lock)) {

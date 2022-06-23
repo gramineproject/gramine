@@ -4,7 +4,7 @@
  */
 
 /*
- * This file contains the entry point of system call table in library OS (the function syscalldb()).
+ * This file contains the entry point of system call emulation in LibOS (`libos_syscall_entry`).
  *
  * The below entry point implementation first saves the CPU context of the current application
  * thread on the thread's LibOS stack, then calls the LibOS syscall-emulation function, which, upon
@@ -21,13 +21,13 @@
 
 #include "asm-offsets.h"
 
-.extern shim_emulate_syscall
-.extern shim_xstate_size
-.extern shim_xstate_restore
+.extern libos_emulate_syscall
+.extern libos_xstate_size
+.extern libos_xstate_restore
 
-.global syscalldb
-.type syscalldb, @function
-syscalldb:
+.global libos_syscall_entry
+.type libos_syscall_entry, @function
+libos_syscall_entry:
     # On entry to this function rcx contains the return value (next instruction after syscall),
     # all other registers can have arbitrary values.
     # We have to be very careful with executed instructions not to change any flags until they
@@ -41,7 +41,7 @@ syscalldb:
     .cfi_undefined %r11
     .cfi_register %rsp, %r11
     .cfi_def_cfa_register %r11
-    mov %gs:(SHIM_TCB_OFF + SHIM_TCB_LIBOS_STACK_OFF), %rsp
+    mov %gs:(LIBOS_TCB_OFF + LIBOS_TCB_LIBOS_STACK_OFF), %rsp
 
     # Create PAL_CONTEXT struct on the stack.
 
@@ -64,8 +64,9 @@ syscalldb:
 
     # after this we can use instructions changing flags
     pushfq
-    # Debuggers use Trap Flag (TF) of EFLAGS to do single-stepping - otherwise it is unused by normal
-    # applications. If the previous instruction was single-stepped, it stored TF, so reset it here.
+    # Debuggers use Trap Flag (TF) of EFLAGS to do single-stepping - otherwise it is unused by
+    # normal applications. If the previous instruction was single-stepped, it stored TF, so reset it
+    # here.
     andq $~0x100, (%rsp)
 
     # Set default rflags value (just IF set).
@@ -143,40 +144,40 @@ syscalldb:
     # fpregs is not populated, so is_fpregs_used should be 0.
     movb $0, PAL_CONTEXT_FPREGS_USED_OFF(%r15)
 
-    call shim_xstate_size
+    call libos_xstate_size
     sub %rax, %rsp                          # allocate space for xstate
-    and $~(SHIM_XSTATE_ALIGN - 1), %rsp
+    and $~(LIBOS_XSTATE_ALIGN - 1), %rsp
     mov %rsp, PAL_CONTEXT_FPREGS_OFF(%r15)
 
     and $~0xF, %rsp # Required by System V AMD64 ABI.
     xor %ebp, %ebp
 
 #ifdef DEBUG
-    # Pretend that this function (`syscalldb`) is called from somewhere inside a function called
-    # `__morestack`. This is the only way to have a backtrace in GDB spanning from LibOS/PAL,
-    # through `syscalldb` to the user application code/libc, because GDB does not handle switching
-    # stacks in the middle of backtrace, unless the function doing it is called `__morestack`.
-    # Thanks GDB!
+    # Pretend that this function (`libos_syscall_entry`) is called from somewhere inside a function
+    # called `__morestack`. This is the only way to have a backtrace in GDB spanning from LibOS/PAL,
+    # through `libos_syscall_entry` to the user application code/libc, because GDB does not handle
+    # switching stacks in the middle of backtrace, unless the function doing it is called
+    # `__morestack`. Thanks GDB!
     # Technical details: we load an address somewhere inside `__morestack` (this cannot be the first
     # instruction in there) into r14 (a callee-saved register) and mark it as holding old rip. This
-    # way GDB thinks `syscalldb` was called by `__morestack`. Inside `__morestack` we mark all
-    # registers as having the same value as in the previous frame (basically a no-op frame). Now GDB
-    # sees a backtrace: `user_function` -> `__morestack` -> `syscalldb`, with `__morestack` having
-    # the same stack value as `user_function` and `syscalldb` having the new stack value. This makes
-    # GDB happy and it prints correct backtrace across all these functions, which is what we are
-    # after with all this madness.
+    # way GDB thinks `libos_syscall_entry` was called by `__morestack`. Inside `__morestack` we mark
+    # all registers as having the same value as in the previous frame (basically a no-op frame). Now
+    # GDB sees a backtrace: `user_function` -> `__morestack` -> `libos_syscall_entry`, with
+    # `__morestack` having the same stack value as `user_function` and `libos_syscall_entry` having
+    # the new stack value. This makes GDB happy and it prints correct backtrace across all these
+    # functions, which is what we are after with all this madness.
     lea Lmorestack_for_gdb_bt(%rip), %r14
     .cfi_register %rip, %r14
 #endif
 
     mov %r15, %rdi
-    call shim_emulate_syscall # this does not return
+    call libos_emulate_syscall # this does not return
 
     # Just to make return address point inside this function.
     ud2
 
     .cfi_endproc
-.size syscalldb, .-syscalldb
+.size libos_syscall_entry, .-libos_syscall_entry
 
 #ifdef DEBUG
 .global __morestack
@@ -260,14 +261,14 @@ _return_from_syscall:
     pop %rax
     pop %rcx # rip
     popfq
-    mov %rcx, %gs:(SHIM_TCB_OFF + SHIM_TCB_SCRATCH_PC_OFF)
+    mov %rcx, %gs:(LIBOS_TCB_OFF + LIBOS_TCB_SCRATCH_PC_OFF)
     pop %rcx
     pop %rsp
-    jmp *%gs:(SHIM_TCB_OFF + SHIM_TCB_SCRATCH_PC_OFF)
+    jmp *%gs:(LIBOS_TCB_OFF + LIBOS_TCB_SCRATCH_PC_OFF)
 
 .Lrestore_xstate:
     mov PAL_CONTEXT_FPREGS_OFF(%rbx), %rdi
-    call shim_xstate_restore
+    call libos_xstate_restore
     jmp .Lrestore_context
 
     .cfi_endproc

@@ -148,7 +148,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int cpumask_size,
     if (!is_user_memory_readable(user_mask_ptr, cpumask_size))
         return -EFAULT;
 
-    struct shim_thread* thread = pid ? lookup_thread(pid) : get_cur_thread();
+    struct libos_thread* thread = pid ? lookup_thread(pid) : get_cur_thread();
     if (!thread)
         return -ESRCH;
 
@@ -196,7 +196,7 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int cpumask_size,
     if (cpumask_size & (sizeof(long) - 1))
         return -EINVAL;
 
-    struct shim_thread* thread = pid ? lookup_thread(pid) : get_cur_thread();
+    struct libos_thread* thread = pid ? lookup_thread(pid) : get_cur_thread();
     if (!thread)
         return -ESRCH;
 

@@ -18,7 +18,7 @@
 #include "shim_tcb.h"
 #include "shim_types.h"
 
-noreturn void* shim_init(int argc, const char** argv, const char** envp);
+noreturn void* libos_init(int argc, const char** argv, const char** envp);
 
 /* important macros and static inline functions */
 
@@ -28,7 +28,7 @@ extern struct pal_public_state* g_pal_public_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
-void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+void libos_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
 #define DEBUG_HERE()                                             \
     do {                                                         \
@@ -42,7 +42,7 @@ void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 
  *
  * Emulates the syscall given the entry \p context.
  */
-noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
+noreturn void libos_emulate_syscall(PAL_CONTEXT* context);
 
 /*!
  * \brief Restore the CPU context.
@@ -70,7 +70,7 @@ noreturn void _return_from_syscall(PAL_CONTEXT* context);
  *
  * Restores LibOS \p context after a successful clone or fork.
  */
-noreturn void restore_child_context_after_clone(struct shim_context* context);
+noreturn void restore_child_context_after_clone(struct libos_context* context);
 
 /*!
  * \brief Create a signal frame.
@@ -233,7 +233,7 @@ void set_rlimit_cur(int resource, uint64_t rlim);
 
 int event_wait_with_retry(PAL_HANDLE handle);
 
-struct shim_handle;
+struct libos_handle;
 
 /*!
  * \brief Interrupt all threads waiting on epolls which \p handle is associated with.
@@ -243,7 +243,7 @@ struct shim_handle;
  * Currently the only usage of this function is on socket handles that were just connected (in
  * which case their PAL handle changed from NULL to a newly created handle).
  */
-void interrupt_epolls(struct shim_handle* handle);
+void interrupt_epolls(struct libos_handle* handle);
 
 /*!
  * \brief Delete all epoll items associated with the pair \p fd and \p handle
@@ -254,7 +254,7 @@ void interrupt_epolls(struct shim_handle* handle);
  * This should be called once there is no possibility of adding new epoll items with this \p fd and
  * \p handle, i.e. after \p fd was detached from fds map.
  */
-void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
+void delete_epoll_items_for_fd(int fd, struct libos_handle* handle);
 
 /*!
  * \brief Check if next `epoll_wait` with `EPOLLET` should trigger for this handle.
@@ -280,7 +280,7 @@ void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
  * cannot assume that all data was processed (hence expect next `EPOLLET` wait not to hang), until
  * it sees one of the above happening.
  */
-void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool was_partial);
+void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool was_partial);
 
 void* allocate_stack(size_t size, size_t protect_size, bool user);
 int init_stack(const char** argv, const char** envp, const char*** out_argp, elf_auxv_t** out_auxv);

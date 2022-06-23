@@ -13,9 +13,9 @@
 
 #include "shim_types.h"
 
-typedef void (*shim_fp)(void);
+typedef void (*libos_syscall_t)(void);
 
-extern shim_fp shim_table[];
+extern libos_syscall_t libos_table[];
 
 /* syscall implementation */
 long libos_syscall_read(int fd, void* buf, size_t count);

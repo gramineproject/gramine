@@ -14,10 +14,10 @@ static inline long vdso_arch_syscall(long nr, long arg1, long arg2) {
     long ret;
     __asm__ volatile(
         "lea .Lret%=(%%rip), %%rcx\n"
-        "jmp *%%gs:%c[syscalldb]\n"
+        "jmp *%%gs:%c[libos_syscall_entry]\n"
         ".Lret%=:\n"
         : "=a" (ret)
-        : "0" (nr), "D"(arg1), "S"(arg2), [syscalldb] "i"(GRAMINE_SYSCALL_OFFSET)
+        : "0" (nr), "D"(arg1), "S"(arg2), [libos_syscall_entry] "i"(GRAMINE_SYSCALL_OFFSET)
         : "memory", "rcx", "r11"
     );
     return ret;

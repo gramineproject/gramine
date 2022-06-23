@@ -61,7 +61,7 @@ static int run_test_asan_global(void) {
 
 #endif /* ASAN */
 
-static const struct shim_test {
+static const struct libos_test {
     const char* name;
     int (*func)(void);
 } tests[] = {
@@ -82,7 +82,7 @@ static int run_test(const char* test_name) {
 
     log_always("run_test(\"%s\") ...", test_name);
 
-    const struct shim_test* test;
+    const struct libos_test* test;
     for (test = &tests[0]; test->name; test++) {
         if (strcmp(test_name, test->name) == 0)
             break;

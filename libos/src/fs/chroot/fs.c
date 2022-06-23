@@ -36,7 +36,7 @@
  */
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
-static int chroot_mount(struct shim_mount_params* params, void** mount_data) {
+static int chroot_mount(struct libos_mount_params* params, void** mount_data) {
     __UNUSED(mount_data);
     if (!params->uri || (!strstartswith(params->uri, URI_PREFIX_FILE) &&
                          !strstartswith(params->uri, URI_PREFIX_DEV)))
@@ -50,7 +50,7 @@ static const char* strip_prefix(const char* uri) {
     return s + 1;
 }
 
-int chroot_dentry_uri(struct shim_dentry* dent, mode_t type, char** out_uri) {
+int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri) {
     assert(dent->mount);
     assert(dent->mount->uri);
 
@@ -114,12 +114,12 @@ out:
     return ret;
 }
 
-static int chroot_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm,
+static int chroot_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
                                file_off_t size) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
+    struct libos_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
     inode->size = size;
@@ -127,7 +127,7 @@ static int chroot_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t per
     return 0;
 }
 
-static int chroot_lookup(struct shim_dentry* dent) {
+static int chroot_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
     int ret;
@@ -190,7 +190,7 @@ out:
 }
 
 /* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
-static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl) {
+static int chroot_temp_open(struct libos_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl) {
     char* uri;
     int ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
@@ -203,7 +203,7 @@ static int chroot_temp_open(struct shim_dentry* dent, mode_t type, PAL_HANDLE* o
 }
 
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
-static int chroot_do_open(struct shim_handle* hdl, struct shim_dentry* dent, mode_t type,
+static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode_t type,
                           int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
@@ -242,14 +242,14 @@ out:
     return ret;
 }
 
-static int chroot_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static int chroot_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
     return chroot_do_open(hdl, dent, dent->inode->type, flags, /*perm=*/0);
 }
 
-static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
+static int chroot_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -264,7 +264,7 @@ static int chroot_creat(struct shim_handle* hdl, struct shim_dentry* dent, int f
     return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
-static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
+static int chroot_mkdir(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -279,14 +279,14 @@ static int chroot_mkdir(struct shim_dentry* dent, mode_t perm) {
     return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
-static int chroot_flush(struct shim_handle* hdl) {
+static int chroot_flush(struct libos_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT);
 
     int ret = DkStreamFlush(hdl->pal_handle);
     return pal_to_unix_errno(ret);
 }
 
-static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count, file_off_t* pos) {
+static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
     size_t actual_count = count;
@@ -301,7 +301,7 @@ static ssize_t chroot_read(struct shim_handle* hdl, void* buf, size_t count, fil
     return actual_count;
 }
 
-static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t count,
+static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t count,
                             file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
@@ -322,7 +322,7 @@ static ssize_t chroot_write(struct shim_handle* hdl, const void* buf, size_t cou
     return actual_count;
 }
 
-static int chroot_mmap(struct shim_handle* hdl, void* addr, size_t size, int prot, int flags,
+static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                        uint64_t offset) {
     assert(hdl->type == TYPE_CHROOT);
     assert(addr);
@@ -341,7 +341,7 @@ static int chroot_mmap(struct shim_handle* hdl, void* addr, size_t size, int pro
     return 0;
 }
 
-static int chroot_truncate(struct shim_handle* hdl, file_off_t size) {
+static int chroot_truncate(struct libos_handle* hdl, file_off_t size) {
     assert(hdl->type == TYPE_CHROOT);
 
     int ret;
@@ -357,7 +357,7 @@ static int chroot_truncate(struct shim_handle* hdl, file_off_t size) {
     return ret;
 }
 
-int chroot_readdir(struct shim_dentry* dent, readdir_callback_t callback, void* arg) {
+int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     int ret;
     PAL_HANDLE palhdl;
     char* buf = NULL;
@@ -417,7 +417,7 @@ out:
     return ret;
 }
 
-int chroot_unlink(struct shim_dentry* dent) {
+int chroot_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -436,7 +436,7 @@ int chroot_unlink(struct shim_dentry* dent) {
     return 0;
 }
 
-static int chroot_rename(struct shim_dentry* old, struct shim_dentry* new) {
+static int chroot_rename(struct libos_dentry* old, struct libos_dentry* new) {
     assert(locked(&g_dcache_lock));
     assert(old->inode);
 
@@ -465,7 +465,7 @@ out:
     return ret;
 }
 
-static int chroot_chmod(struct shim_dentry* dent, mode_t perm) {
+static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -495,7 +495,7 @@ out:
     return ret;
 }
 
-struct shim_fs_ops chroot_fs_ops = {
+struct libos_fs_ops chroot_fs_ops = {
     .mount      = &chroot_mount,
     .flush      = &chroot_flush,
     .read       = &chroot_read,
@@ -510,7 +510,7 @@ struct shim_fs_ops chroot_fs_ops = {
     .poll       = &generic_inode_poll,
 };
 
-struct shim_d_ops chroot_d_ops = {
+struct libos_d_ops chroot_d_ops = {
     .open    = &chroot_open,
     .lookup  = &chroot_lookup,
     .creat   = &chroot_creat,
@@ -522,7 +522,7 @@ struct shim_d_ops chroot_d_ops = {
     .chmod   = &chroot_chmod,
 };
 
-struct shim_fs chroot_builtin_fs = {
+struct libos_fs chroot_builtin_fs = {
     .name   = "chroot",
     .fs_ops = &chroot_fs_ops,
     .d_ops  = &chroot_d_ops,

@@ -27,7 +27,7 @@
 DEFINE_LIST(cp_map_entry);
 struct cp_map_entry {
     LIST_TYPE(cp_map_entry) hlist;
-    struct shim_cp_map_entry entry;
+    struct libos_cp_map_entry entry;
 };
 
 DEFINE_LISTP(cp_map_entry);
@@ -83,10 +83,10 @@ void destroy_cp_map(void* _map) {
     free(map);
 }
 
-struct shim_cp_map_entry* get_cp_map_entry(void* _map, void* addr, bool create) {
+struct libos_cp_map_entry* get_cp_map_entry(void* _map, void* addr, bool create) {
     struct cp_map* map = (struct cp_map*)_map;
 
-    struct shim_cp_map_entry* e = NULL;
+    struct libos_cp_map_entry* e = NULL;
 
     /* check if object at this addr was already added to the checkpoint */
     uint64_t hash = hash64((uint64_t)addr) % CP_HASH_SIZE;
@@ -122,7 +122,7 @@ struct shim_cp_map_entry* get_cp_map_entry(void* _map, void* addr, bool create) 
 }
 
 BEGIN_CP_FUNC(memory) {
-    struct shim_mem_entry* entry = (void*)(base + ADD_CP_OFFSET(sizeof(*entry)));
+    struct libos_mem_entry* entry = (void*)(base + ADD_CP_OFFSET(sizeof(*entry)));
 
     entry->addr = obj;
     entry->size = size;
@@ -141,8 +141,8 @@ END_CP_FUNC_NO_RS(memory)
  * know the size of, hence we pass a pointer to it and just dereference it here. */
 BEGIN_CP_FUNC(palhdl_ptr) {
     __UNUSED(size);
-    size_t off = ADD_CP_OFFSET(sizeof(struct shim_palhdl_entry));
-    struct shim_palhdl_entry* entry = (void*)(base + off);
+    size_t off = ADD_CP_OFFSET(sizeof(struct libos_palhdl_entry));
+    struct libos_palhdl_entry* entry = (void*)(base + off);
 
     entry->handle  = *(PAL_HANDLE*)obj;
     entry->phandle = NULL;
@@ -208,10 +208,10 @@ BEGIN_CP_FUNC(str) {
 }
 END_CP_FUNC_NO_RS(str)
 
-static int send_memory_on_stream(PAL_HANDLE stream, struct shim_cp_store* store) {
+static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store) {
     int ret = 0;
 
-    struct shim_mem_entry* entry = store->first_mem_entry;
+    struct libos_mem_entry* entry = store->first_mem_entry;
     while (entry) {
         size_t           mem_size = entry->size;
         void*            mem_addr = entry->addr;
@@ -245,7 +245,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct shim_cp_store* store)
     return 0;
 }
 
-static int send_checkpoint_on_stream(PAL_HANDLE stream, struct shim_cp_store* store) {
+static int send_checkpoint_on_stream(PAL_HANDLE stream, struct libos_cp_store* store) {
     /* first send non-memory entries found at [store->base, store->base + store->offset) */
     int ret = write_exact(stream, (void*)store->base, store->offset);
     if (ret < 0) {
@@ -255,19 +255,19 @@ static int send_checkpoint_on_stream(PAL_HANDLE stream, struct shim_cp_store* st
     return send_memory_on_stream(stream, store);
 }
 
-static int send_handles_on_stream(PAL_HANDLE stream, struct shim_cp_store* store) {
+static int send_handles_on_stream(PAL_HANDLE stream, struct libos_cp_store* store) {
     int ret;
 
     size_t entries_cnt = store->palhdl_entries_cnt;
     if (!entries_cnt)
         return 0;
 
-    struct shim_palhdl_entry** entries = malloc(sizeof(*entries) * entries_cnt);
+    struct libos_palhdl_entry** entries = malloc(sizeof(*entries) * entries_cnt);
     if (!entries)
         return -ENOMEM;
 
     /* PAL-handle entries were added in reverse order, let's first populate them */
-    struct shim_palhdl_entry* entry = store->last_palhdl_entry;
+    struct libos_palhdl_entry* entry = store->last_palhdl_entry;
     for (size_t i = entries_cnt; i > 0; i--) {
         assert(entry);
         entries[i - 1] = entry;
@@ -295,7 +295,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
     ssize_t rebase = base - (uintptr_t)hdr->addr;
 
     if (hdr->mem_entries_cnt) {
-        struct shim_mem_entry* entry = (struct shim_mem_entry*)(base + hdr->mem_offset);
+        struct libos_mem_entry* entry = (struct libos_mem_entry*)(base + hdr->mem_offset);
 
         for (; entry; entry = entry->next) {
             CP_REBASE(entry->next);
@@ -336,7 +336,7 @@ static int restore_checkpoint(struct checkpoint_hdr* hdr, uintptr_t base) {
 
     log_debug("restoring checkpoint at 0x%08lx rebased from %p", base, hdr->addr);
 
-    struct shim_cp_entry* cpent = NEXT_CP_ENTRY();
+    struct libos_cp_entry* cpent = NEXT_CP_ENTRY();
     ssize_t rebase = base - (uintptr_t)hdr->addr;
 
     while (cpent) {
@@ -362,7 +362,7 @@ static int restore_checkpoint(struct checkpoint_hdr* hdr, uintptr_t base) {
 static int receive_handles_on_stream(struct checkpoint_hdr* hdr, void* base, ssize_t rebase) {
     int ret;
 
-    struct shim_palhdl_entry* palhdl_entries = (struct shim_palhdl_entry*)(base +
+    struct libos_palhdl_entry* palhdl_entries = (struct libos_palhdl_entry*)(base +
                                                                            hdr->palhdl_offset);
 
     size_t entries_cnt = hdr->palhdl_entries_cnt;
@@ -371,12 +371,12 @@ static int receive_handles_on_stream(struct checkpoint_hdr* hdr, void* base, ssi
 
     log_debug("receiving %lu PAL handles", entries_cnt);
 
-    struct shim_palhdl_entry** entries = malloc(sizeof(*entries) * entries_cnt);
+    struct libos_palhdl_entry** entries = malloc(sizeof(*entries) * entries_cnt);
     if (!entries)
         return -ENOMEM;
 
     /* entries are extracted from checkpoint in reverse order, let's first populate them */
-    struct shim_palhdl_entry* entry = palhdl_entries;
+    struct libos_palhdl_entry* entry = palhdl_entries;
     for (size_t i = entries_cnt; i > 0; i--) {
         assert(entry);
         CP_REBASE(entry->prev);
@@ -456,9 +456,9 @@ static void* cp_alloc(void* addr, size_t size) {
 }
 
 int create_process_and_send_checkpoint(migrate_func_t migrate_func,
-                                       struct shim_child_process* child_process,
-                                       struct shim_process* process_description,
-                                       struct shim_thread* thread_description, ...) {
+                                       struct libos_child_process* child_process,
+                                       struct libos_process* process_description,
+                                       struct libos_thread* thread_description, ...) {
     assert(child_process);
 
     int ret = 0;
@@ -473,7 +473,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     }
 
     /* allocate a space for dumping the checkpoint data */
-    struct shim_cp_store cpstore;
+    struct libos_cp_store cpstore;
     memset(&cpstore, 0, sizeof(cpstore));
     cpstore.alloc = cp_alloc;
     cpstore.bound = CP_INIT_VMA_SIZE;
@@ -495,7 +495,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         goto out;
     }
 
-    struct shim_ipc_ids process_ipc_ids = {
+    struct libos_ipc_ids process_ipc_ids = {
         .self_vmid = child_process->vmid,
         .parent_vmid = g_process_ipc_ids.self_vmid,
         .leader_vmid = g_process_ipc_ids.leader_vmid ?: g_process_ipc_ids.self_vmid,

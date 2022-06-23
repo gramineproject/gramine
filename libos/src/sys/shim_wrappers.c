@@ -29,7 +29,7 @@ long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen
         }
     }
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
@@ -94,7 +94,7 @@ long libos_syscall_writev(unsigned long fd, struct iovec* vec, unsigned long vle
         }
     }
 
-    struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 

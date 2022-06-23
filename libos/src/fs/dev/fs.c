@@ -12,21 +12,21 @@
 #include "pal.h"
 #include "shim_fs_pseudo.h"
 
-static ssize_t dev_null_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t dev_null_read(struct libos_handle* hdl, void* buf, size_t count) {
     __UNUSED(hdl);
     __UNUSED(buf);
     __UNUSED(count);
     return 0;
 }
 
-static ssize_t dev_null_write(struct shim_handle* hdl, const void* buf, size_t count) {
+static ssize_t dev_null_write(struct libos_handle* hdl, const void* buf, size_t count) {
     __UNUSED(hdl);
     __UNUSED(buf);
     __UNUSED(count);
     return count;
 }
 
-static int64_t dev_null_seek(struct shim_handle* hdl, int64_t offset, int whence) {
+static int64_t dev_null_seek(struct libos_handle* hdl, int64_t offset, int whence) {
     __UNUSED(hdl);
     __UNUSED(offset);
     __UNUSED(whence);
@@ -34,19 +34,19 @@ static int64_t dev_null_seek(struct shim_handle* hdl, int64_t offset, int whence
 }
 
 /* TODO: ftruncate() on /dev/null should fail, but open() with O_TRUNC should succeed */
-static int dev_null_truncate(struct shim_handle* hdl, uint64_t size) {
+static int dev_null_truncate(struct libos_handle* hdl, uint64_t size) {
     __UNUSED(hdl);
     __UNUSED(size);
     return 0;
 }
 
-static ssize_t dev_zero_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t dev_zero_read(struct libos_handle* hdl, void* buf, size_t count) {
     __UNUSED(hdl);
     memset(buf, 0, count);
     return count;
 }
 
-static ssize_t dev_random_read(struct shim_handle* hdl, void* buf, size_t count) {
+static ssize_t dev_random_read(struct libos_handle* hdl, void* buf, size_t count) {
     __UNUSED(hdl);
     int ret = DkRandomBitsRead(buf, count);
 

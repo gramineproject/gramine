@@ -13,9 +13,9 @@
 #include "shim_signal.h"
 #include "shim_thread.h"
 
-typedef bool (*child_cmp_t)(const struct shim_child_process*, unsigned long);
+typedef bool (*child_cmp_t)(const struct libos_child_process*, unsigned long);
 
-struct shim_process g_process = { .pid = 0 };
+struct libos_process g_process = { .pid = 0 };
 
 int init_process(int argc, const char** argv) {
     if (g_process.pid) {
@@ -77,8 +77,8 @@ int init_process(int argc, const char** argv) {
     return 0;
 }
 
-struct shim_child_process* create_child_process(void) {
-    struct shim_child_process* child = calloc(1, sizeof(*child));
+struct libos_child_process* create_child_process(void) {
+    struct libos_child_process* child = calloc(1, sizeof(*child));
     if (!child) {
         return NULL;
     }
@@ -88,25 +88,25 @@ struct shim_child_process* create_child_process(void) {
     return child;
 }
 
-void destroy_child_process(struct shim_child_process* child) {
+void destroy_child_process(struct libos_child_process* child) {
     assert(LIST_EMPTY(child, list));
 
     free(child);
 }
 
-void add_child_process(struct shim_child_process* child) {
+void add_child_process(struct libos_child_process* child) {
     assert(LIST_EMPTY(child, list));
     lock(&g_process.children_lock);
     LISTP_ADD(child, &g_process.children, list);
     unlock(&g_process.children_lock);
 }
 
-static bool cmp_child_by_vmid(const struct shim_child_process* child, unsigned long arg) {
+static bool cmp_child_by_vmid(const struct libos_child_process* child, unsigned long arg) {
     IDTYPE vmid = (IDTYPE)arg;
     return child->vmid == vmid;
 }
 
-static bool cmp_child_by_pid(const struct shim_child_process* child, unsigned long arg) {
+static bool cmp_child_by_pid(const struct libos_child_process* child, unsigned long arg) {
     IDTYPE pid = (IDTYPE)arg;
     return child->pid == pid;
 }
@@ -116,12 +116,12 @@ static bool mark_child_exited(child_cmp_t child_cmp, unsigned long arg, IDTYPE c
     bool ret = false;
     int parent_signal = 0;
     IDTYPE child_pid = 0;
-    struct shim_thread_queue* wait_queue = NULL;
+    struct libos_thread_queue* wait_queue = NULL;
 
     lock(&g_process.children_lock);
 
-    struct shim_child_process* child = NULL;
-    struct shim_child_process* tmp = NULL;
+    struct libos_child_process* child = NULL;
+    struct libos_child_process* tmp = NULL;
     LISTP_FOR_EACH_ENTRY_SAFE(child, tmp, &g_process.children, list) {
         if (child_cmp(child, arg)) {
             child->exit_code = exit_code;
@@ -161,8 +161,8 @@ static bool mark_child_exited(child_cmp_t child_cmp, unsigned long arg, IDTYPE c
     unlock(&g_process.children_lock);
 
     while (wait_queue) {
-        struct shim_thread_queue* next = wait_queue->next;
-        struct shim_thread* thread = wait_queue->thread;
+        struct libos_thread_queue* next = wait_queue->next;
+        struct libos_thread* thread = wait_queue->thread;
         __atomic_store_n(&wait_queue->in_use, false, __ATOMIC_RELEASE);
         /* In theory the atomic release store above does not prevent hoisting of code to before it.
          * Here we rely on the order: first store to `in_use`, then wake the thread. Let's add
@@ -189,7 +189,7 @@ bool is_zombie_process(IDTYPE pid) {
     bool found = false;
     lock(&g_process.children_lock);
 
-    struct shim_child_process* zombie;
+    struct libos_child_process* zombie;
     LISTP_FOR_EACH_ENTRY(zombie, &g_process.zombies, list) {
         if (zombie->pid == pid) {
             found = true;
@@ -205,27 +205,27 @@ out:
 BEGIN_CP_FUNC(process_description) {
     __UNUSED(size);
     __UNUSED(objp);
-    assert(size == sizeof(struct shim_process));
+    assert(size == sizeof(struct libos_process));
 
-    struct shim_process* process = (struct shim_process*)obj;
+    struct libos_process* process = (struct libos_process*)obj;
 
     size_t children_count = 0;
     size_t zombies_count = 0;
-    struct shim_child_process* child = NULL;
+    struct libos_child_process* child = NULL;
     LISTP_FOR_EACH_ENTRY(child, &process->children, list) {
         ++children_count;
     }
-    struct shim_child_process* zombie = NULL;
+    struct libos_child_process* zombie = NULL;
     LISTP_FOR_EACH_ENTRY(zombie, &process->zombies, list) {
         ++zombies_count;
     }
 
-    size_t off = ADD_CP_OFFSET(sizeof(struct shim_process) + sizeof(children_count)
+    size_t off = ADD_CP_OFFSET(sizeof(struct libos_process) + sizeof(children_count)
                                + children_count * sizeof(*child)
                                + sizeof(zombies_count)
                                + zombies_count * sizeof(*zombie));
     char* data_ptr = (char*)(base + off);
-    struct shim_process* new_process = (struct shim_process*)data_ptr;
+    struct libos_process* new_process = (struct libos_process*)data_ptr;
     data_ptr += sizeof(*new_process);
 
     memset(new_process, '\0', sizeof(*new_process));
@@ -252,7 +252,7 @@ BEGIN_CP_FUNC(process_description) {
 
     *(size_t*)data_ptr = children_count;
     data_ptr += sizeof(size_t);
-    struct shim_child_process* children = (struct shim_child_process*)data_ptr;
+    struct libos_child_process* children = (struct libos_child_process*)data_ptr;
     data_ptr += children_count * sizeof(*children);
     size_t i = 0;
     LISTP_FOR_EACH_ENTRY(child, &process->children, list) {
@@ -265,7 +265,7 @@ BEGIN_CP_FUNC(process_description) {
 
     *(size_t*)data_ptr = zombies_count;
     data_ptr += sizeof(size_t);
-    struct shim_child_process* zombies = (struct shim_child_process*)data_ptr;
+    struct libos_child_process* zombies = (struct libos_child_process*)data_ptr;
     data_ptr += zombies_count * sizeof(*zombies);
     i = 0;
     LISTP_FOR_EACH_ENTRY(zombie, &process->zombies, list) {
@@ -281,7 +281,7 @@ BEGIN_CP_FUNC(process_description) {
 END_CP_FUNC(process_description)
 
 BEGIN_RS_FUNC(process_description) {
-    struct shim_process* process = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_process* process = (void*)(base + GET_CP_FUNC_ENTRY());
     __UNUSED(offset);
 
     CP_REBASE(process->root);
@@ -316,7 +316,7 @@ BEGIN_RS_FUNC(process_description) {
     char* data_ptr = (char*)process + sizeof(*process);
     size_t children_count = *(size_t*)data_ptr;
     data_ptr += sizeof(children_count);
-    struct shim_child_process* children = (struct shim_child_process*)data_ptr;
+    struct libos_child_process* children = (struct libos_child_process*)data_ptr;
     data_ptr += children_count * sizeof(*children);
     for (size_t i = 0; i < children_count; i++) {
         LISTP_ADD_TAIL(&children[i], &process->children, list);
@@ -324,7 +324,7 @@ BEGIN_RS_FUNC(process_description) {
 
     size_t zombies_count = *(size_t*)data_ptr;
     data_ptr += sizeof(zombies_count);
-    struct shim_child_process* zombies = (struct shim_child_process*)data_ptr;
+    struct libos_child_process* zombies = (struct libos_child_process*)data_ptr;
     data_ptr += zombies_count * sizeof(*zombies);
     for (size_t i = 0; i < zombies_count; i++) {
         LISTP_ADD_TAIL(&zombies[i], &process->zombies, list);

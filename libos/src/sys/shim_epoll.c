@@ -39,42 +39,42 @@
  * The following diagram could help you understand relationships between different structs used in
  * this code.
 
-                                     +-----------------------+
-                                     |                       |
-                                     |  shim_epoll_item      |         item in the interest
-                                     |                       |        list of epoll instance
-          item in the list           |    epoll_list   <-------------------------------------------+
-         of epoll instances          |                       |     guarded by handle::epoll::lock  |
-+---------------------------------------> handle_list        |                                     |
-|     guarded by handle::lock        |                       |                                     |
-|                                    |    epoll_handle +-------+                                   |
-|                                    |                       | |                                   |
-|                                  +----+ handle             | +->+----------------------------+   |
-|                                  | |                       |    |                            |   |
-|  +----------------------------+<-+ |    fd                 |    |  shim_handle (epoll)       |   |
-|  |                            |    |                       |    |                            |   |
-|  | shim_handle (pipe,sock,..) |    +-----------------------+    |    epoll_items list        |   |
-|  |                            |                                 |                            |   |
-+-----+ epoll_items list        |       +--------------------+    |    shim_epoll_handle epoll |   |
-   |                            |       |                    |    |                            |   |
-   |    lock                    |       |  shim_epoll_waiter | +--------+ waiters list         |   |
-   |                            |       |                    | |  |                            |   |
-   |                            |       |    list <------------+  |       items   list +-----------+
-   |                            |       |                    |    |                            |
-   +----------------------------+       |    event           |    |       lock                 |
-                                        |                    |    |                            |
-                                        +--------------------+    +----------------------------+
+                                      +-----------------------+
+                                      |                       |
+                                      |  libos_epoll_item     |        item in the interest
+                                      |                       |       list of epoll instance
+          item in the list            |    epoll_list   <------------------------------------------+
+         of epoll instances           |                       |    guarded by handle::epoll::lock  |
++----------------------------------------> handle_list        |                                    |
+|     guarded by handle::lock         |                       |                                    |
+|                                     |    epoll_handle +-------+                                  |
+|                                     |                       | |                                  |
+|                                   +----+ handle             | +->+----------------------------+  |
+|                                   | |                       |    |                            |  |
+|  +-----------------------------+<-+ |    fd                 |    | libos_handle (epoll)       |  |
+|  |                             |    |                       |    |                            |  |
+|  | libos_handle (pipe,sock,..) |    +-----------------------+    |   epoll_items list         |  |
+|  |                             |                                 |                            |  |
++-----+ epoll_items list         |       +--------------------+    |   libos_epoll_handle epoll |  |
+   |                             |       |                    |    |                            |  |
+   |    lock                     |       | libos_epoll_waiter | +--------+ waiters list         |  |
+   |                             |       |                    | |  |                            |  |
+   |                             |       |    list <------------+  |       items   list +----------+
+   |                             |       |                    |    |                            |
+   +-----------------------------+       |    event           |    |       lock                 |
+                                         |                    |    |                            |
+                                         +--------------------+    +----------------------------+
 */
 
-DEFINE_LIST(shim_epoll_item);
-struct shim_epoll_item {
+DEFINE_LIST(libos_epoll_item);
+struct libos_epoll_item {
     /* Guarded by `epoll_handle->info.epoll.lock`. */
-    LIST_TYPE(shim_epoll_item) epoll_list; // epoll_handle->items
+    LIST_TYPE(libos_epoll_item) epoll_list; // epoll_handle->items
     /* Guarded by `handle->lock`. */
-    LIST_TYPE(shim_epoll_item) handle_list; // handle->epoll_items
+    LIST_TYPE(libos_epoll_item) handle_list; // handle->epoll_items
     /* `epoll_handle`, `handle` and `fd` are constant and thus require no locking. */
-    struct shim_handle* epoll_handle;
-    struct shim_handle* handle;
+    struct libos_handle* epoll_handle;
+    struct libos_handle* handle;
     int fd;
     /* `events` and `data` are guarded by `epoll_handle->info.epoll.lock`. */
     uint32_t events;
@@ -82,19 +82,19 @@ struct shim_epoll_item {
     REFTYPE ref_count;
 };
 
-DEFINE_LIST(shim_epoll_waiter);
-struct shim_epoll_waiter {
+DEFINE_LIST(libos_epoll_waiter);
+struct libos_epoll_waiter {
     /* Guarded by `epoll_handle->info.epoll.lock`, where `epoll_handle` is handle this waiter called
      * `epoll_wait` on. */
-    LIST_TYPE(shim_epoll_waiter) list; // shim_epoll_handle::waiters
-    struct shim_pollable_event* event;
+    LIST_TYPE(libos_epoll_waiter) list; // libos_epoll_handle::waiters
+    struct libos_pollable_event* event;
 };
 
-static void get_epoll_item(struct shim_epoll_item* item) {
+static void get_epoll_item(struct libos_epoll_item* item) {
     REF_INC(item->ref_count);
 }
 
-static void put_epoll_item(struct shim_epoll_item* item) {
+static void put_epoll_item(struct libos_epoll_item* item) {
     int64_t ref_count = REF_DEC(item->ref_count);
 
     if (!ref_count) {
@@ -104,17 +104,17 @@ static void put_epoll_item(struct shim_epoll_item* item) {
     }
 }
 
-static void put_epoll_items_array(struct shim_epoll_item** items, size_t items_count) {
+static void put_epoll_items_array(struct libos_epoll_item** items, size_t items_count) {
     for (size_t i = 0; i < items_count; i++) {
         put_epoll_item(items[i]);
     }
 }
 
-static void _interrupt_epoll_waiters(struct shim_epoll_handle* epoll) {
+static void _interrupt_epoll_waiters(struct libos_epoll_handle* epoll) {
     assert(locked(&epoll->lock));
 
-    struct shim_epoll_waiter* waiter;
-    struct shim_epoll_waiter* tmp;
+    struct libos_epoll_waiter* waiter;
+    struct libos_epoll_waiter* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(waiter, tmp, &epoll->waiters, list) {
         set_pollable_event(waiter->event);
         LISTP_DEL_INIT(waiter, &epoll->waiters, list);
@@ -122,11 +122,11 @@ static void _interrupt_epoll_waiters(struct shim_epoll_handle* epoll) {
     assert(LISTP_EMPTY(&epoll->waiters));
 }
 
-void interrupt_epolls(struct shim_handle* handle) {
+void interrupt_epolls(struct libos_handle* handle) {
     lock(&handle->lock);
-    struct shim_epoll_item** items = NULL;
+    struct libos_epoll_item** items = NULL;
     /* 4 is an arbitrary number. We don't expect more than 1-2 epoll items per handle. */
-    struct shim_epoll_item* items_inline[4] = { 0 };
+    struct libos_epoll_item* items_inline[4] = { 0 };
     size_t items_count = handle->epoll_items_count;
 
     if (items_count <= ARRAY_SIZE(items_inline)) {
@@ -142,7 +142,7 @@ void interrupt_epolls(struct shim_handle* handle) {
         }
     }
 
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     size_t i = 0;
     LISTP_FOR_EACH_ENTRY(item, &handle->epoll_items, handle_list) {
         items[i++] = item;
@@ -152,7 +152,7 @@ void interrupt_epolls(struct shim_handle* handle) {
     unlock(&handle->lock);
 
     for (size_t i = 0; i < items_count; i++) {
-        struct shim_epoll_handle* epoll = &items[i]->epoll_handle->info.epoll;
+        struct libos_epoll_handle* epoll = &items[i]->epoll_handle->info.epoll;
         lock(&epoll->lock);
         _interrupt_epoll_waiters(epoll);
         unlock(&epoll->lock);
@@ -164,7 +164,7 @@ void interrupt_epolls(struct shim_handle* handle) {
     }
 }
 
-void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool was_partial) {
+void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool was_partial) {
     bool needs_et = false;
     switch (handle->type) {
         case TYPE_SOCK:
@@ -205,9 +205,9 @@ void maybe_epoll_et_trigger(struct shim_handle* handle, int ret, bool in, bool w
 /* Make sure we have an owned reference to `item` when calling this function, as it unlinks `item`
  * from all lists (hence dropping these references). This means we cannot rely on borrowing
  * a reference when traversing one of item's lists. */
-static void _unlink_epoll_item(struct shim_epoll_item* item) {
-    struct shim_handle* handle = item->handle;
-    struct shim_epoll_handle* epoll = &item->epoll_handle->info.epoll;
+static void _unlink_epoll_item(struct libos_epoll_item* item) {
+    struct libos_handle* handle = item->handle;
+    struct libos_epoll_handle* epoll = &item->epoll_handle->info.epoll;
     assert(locked(&epoll->lock));
 
     lock(&handle->lock);
@@ -225,13 +225,13 @@ static void _unlink_epoll_item(struct shim_epoll_item* item) {
     }
 }
 
-void delete_epoll_items_for_fd(int fd, struct shim_handle* handle) {
+void delete_epoll_items_for_fd(int fd, struct libos_handle* handle) {
     /* This looks scarry, but in practice shouldn't be that bad - `fd` is rarely registered on
      * multiple epolls and even if it is, there shouldn't be many of them. */
     while (1) {
-        struct shim_epoll_item* to_unlink = NULL;
+        struct libos_epoll_item* to_unlink = NULL;
         lock(&handle->lock);
-        struct shim_epoll_item* item;
+        struct libos_epoll_item* item;
         LISTP_FOR_EACH_ENTRY(item, &handle->epoll_items, handle_list) {
             assert(item->handle == handle);
             if (item->fd == fd) {
@@ -243,7 +243,7 @@ void delete_epoll_items_for_fd(int fd, struct shim_handle* handle) {
         unlock(&handle->lock);
 
         if (to_unlink) {
-            struct shim_epoll_handle* epoll = &to_unlink->epoll_handle->info.epoll;
+            struct libos_epoll_handle* epoll = &to_unlink->epoll_handle->info.epoll;
             lock(&epoll->lock);
             _unlink_epoll_item(to_unlink);
             _interrupt_epoll_waiters(epoll);
@@ -260,7 +260,7 @@ long libos_syscall_epoll_create1(int flags) {
         return -EINVAL;
     }
 
-    struct shim_handle* handle = get_new_handle();
+    struct libos_handle* handle = get_new_handle();
     if (!handle) {
         return -ENOMEM;
     }
@@ -268,7 +268,7 @@ long libos_syscall_epoll_create1(int flags) {
     handle->type = TYPE_EPOLL;
     handle->fs = &epoll_builtin_fs;
 
-    struct shim_epoll_handle* epoll = &handle->info.epoll;
+    struct libos_epoll_handle* epoll = &handle->info.epoll;
     INIT_LISTP(&epoll->waiters);
     INIT_LISTP(&epoll->items);
     epoll->items_count = 0;
@@ -293,7 +293,7 @@ long libos_syscall_epoll_create(int size) {
     return libos_syscall_epoll_create1(/*flags=*/0);
 }
 
-static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* handle, int fd,
+static int do_epoll_add(struct libos_handle* epoll_handle, struct libos_handle* handle, int fd,
                         struct epoll_event* event) {
     if (event->events & EPOLLEXCLUSIVE) {
         if (!WITHIN_MASK(event->events, EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLERR | EPOLLWAKEUP
@@ -312,7 +312,7 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
                   "EPOLL_NEEDS_REARM bit occupied by another epoll event");
 
     int ret;
-    struct shim_epoll_item* new_item = malloc(sizeof(*new_item));
+    struct libos_epoll_item* new_item = malloc(sizeof(*new_item));
     if (!new_item) {
         return -ENOMEM;
     }
@@ -333,11 +333,11 @@ static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* ha
         new_item->events &= ~(EPOLLOUT | EPOLLWRNORM);
     }
 
-    struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
+    struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
 
     lock(&epoll->lock);
 
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     LISTP_FOR_EACH_ENTRY(item, &epoll->items, epoll_list) {
         if (item->fd == fd && item->handle == handle) {
             ret = -EEXIST;
@@ -371,18 +371,18 @@ out_unlock:
     return ret;
 }
 
-static int do_epoll_mod(struct shim_handle* epoll_handle, struct shim_handle* handle, int fd,
+static int do_epoll_mod(struct libos_handle* epoll_handle, struct libos_handle* handle, int fd,
                         struct epoll_event* event) {
     if (event->events & EPOLLEXCLUSIVE) {
         return -EINVAL;
     }
 
-    struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
+    struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
     int ret = -ENOENT;
 
     lock(&epoll->lock);
 
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     LISTP_FOR_EACH_ENTRY(item, &epoll->items, epoll_list) {
         if (item->fd == fd && item->handle == handle) {
             if (item->events & EPOLLEXCLUSIVE) {
@@ -411,13 +411,13 @@ out_unlock:
     return ret;
 }
 
-static int do_epoll_del(struct shim_handle* epoll_handle, struct shim_handle* handle, int fd) {
-    struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
+static int do_epoll_del(struct libos_handle* epoll_handle, struct libos_handle* handle, int fd) {
+    struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
     int ret = -ENOENT;
 
     lock(&epoll->lock);
 
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     LISTP_FOR_EACH_ENTRY(item, &epoll->items, epoll_list) {
         if (item->fd == fd && item->handle == handle) {
             get_epoll_item(item);
@@ -439,11 +439,11 @@ static int do_epoll_del(struct shim_handle* epoll_handle, struct shim_handle* ha
 
 long libos_syscall_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
     int ret;
-    struct shim_handle* epoll_handle = get_fd_handle(epfd, /*fd_flags=*/NULL, /*map=*/NULL);
+    struct libos_handle* epoll_handle = get_fd_handle(epfd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!epoll_handle) {
         return -EBADF;
     }
-    struct shim_handle* handle = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
+    struct libos_handle* handle = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!handle) {
         put_handle(epoll_handle);
         return -EBADF;
@@ -502,7 +502,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         return -EFAULT;
     }
 
-    struct shim_handle* epoll_handle = get_fd_handle(epfd, /*fd_flags=*/NULL, /*map=*/NULL);
+    struct libos_handle* epoll_handle = get_fd_handle(epfd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!epoll_handle) {
         return -EBADF;
     }
@@ -512,13 +512,13 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
     }
 
     uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
-    struct shim_epoll_waiter waiter = {
+    struct libos_epoll_waiter waiter = {
         .event = &get_cur_thread()->pollable_event,
     };
 
     int ret;
-    struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
-    struct shim_epoll_item** items = NULL;
+    struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
+    struct libos_epoll_item** items = NULL;
     PAL_HANDLE* pal_handles = NULL;
     pal_wait_flags_t* pal_events = NULL;
     size_t arrays_len = 0;
@@ -545,7 +545,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
 
         pal_wait_flags_t* pal_ret_events = pal_events + epoll->items_count + 1;
 
-        struct shim_epoll_item* item;
+        struct libos_epoll_item* item;
         size_t items_count = 0;
         LISTP_FOR_EACH_ENTRY(item, &epoll->items, epoll_list) {
             PAL_HANDLE pal_handle = item->handle->pal_handle;
@@ -725,9 +725,9 @@ long libos_syscall_epoll_pwait(int epfd, struct epoll_event* events, int maxeven
     return do_epoll_wait(epfd, events, maxevents, timeout_ms);
 }
 
-static int epoll_close(struct shim_handle* epoll_handle) {
+static int epoll_close(struct libos_handle* epoll_handle) {
     assert(epoll_handle->type == TYPE_EPOLL);
-    struct shim_epoll_handle* epoll = &epoll_handle->info.epoll;
+    struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
 
     /*
      * This function is called only once the last reference to this epoll handle was put. This means
@@ -745,30 +745,30 @@ static int epoll_close(struct shim_handle* epoll_handle) {
     return 0;
 }
 
-struct shim_fs_ops epoll_fs_ops = {
+struct libos_fs_ops epoll_fs_ops = {
     .close = &epoll_close,
 };
 
-struct shim_fs epoll_builtin_fs = {
+struct libos_fs epoll_builtin_fs = {
     .name   = "epoll",
     .fs_ops = &epoll_fs_ops,
 };
 
-/* Checkpoint list of `struct shim_epoll_item` from an epoll handle. Each checkpointed item is also
+/* Checkpoint list of `struct libos_epoll_item` from an epoll handle. Each checkpointed item is also
  * linked into an appropriate handle (which it refers to). */
 BEGIN_CP_FUNC(epoll_items_list) {
     __UNUSED(size);
-    assert(size == sizeof(struct shim_handle));
+    assert(size == sizeof(struct libos_handle));
 
-    struct shim_handle* old_handle = (struct shim_handle*)obj;
-    struct shim_handle* new_handle = (struct shim_handle*)objp;
+    struct libos_handle* old_handle = (struct libos_handle*)obj;
+    struct libos_handle* new_handle = (struct libos_handle*)objp;
     assert(old_handle->type == TYPE_EPOLL && new_handle->type == TYPE_EPOLL);
 
     lock(&old_handle->info.epoll.lock);
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     LISTP_FOR_EACH_ENTRY(item, &old_handle->info.epoll.items, epoll_list) {
-        size_t off = ADD_CP_OFFSET(sizeof(struct shim_epoll_item));
-        struct shim_epoll_item* new_item = (struct shim_epoll_item*)(base + off);
+        size_t off = ADD_CP_OFFSET(sizeof(struct libos_epoll_item));
+        struct libos_epoll_item* new_item = (struct libos_epoll_item*)(base + off);
 
         new_item->epoll_handle = new_handle;
         new_item->fd = item->fd;
@@ -792,12 +792,12 @@ END_CP_FUNC(epoll_items_list)
 
 BEGIN_RS_FUNC(epoll_items_list) {
     __UNUSED(offset);
-    struct shim_handle* new_handle = (void*)(base + GET_CP_FUNC_ENTRY());
+    struct libos_handle* new_handle = (void*)(base + GET_CP_FUNC_ENTRY());
     assert(new_handle->type == TYPE_EPOLL);
 
     CP_REBASE(new_handle->info.epoll.items);
 
-    struct shim_epoll_item* item;
+    struct libos_epoll_item* item;
     LISTP_FOR_EACH_ENTRY(item, &new_handle->info.epoll.items, epoll_list) {
         CP_REBASE(item->epoll_handle);
         get_handle(item->epoll_handle);

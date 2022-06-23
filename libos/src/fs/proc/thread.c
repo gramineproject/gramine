@@ -15,7 +15,7 @@
 #include "shim_types.h"
 #include "shim_vma.h"
 
-int proc_thread_follow_link(struct shim_dentry* dent, char** out_target) {
+int proc_thread_follow_link(struct libos_dentry* dent, char** out_target) {
     __UNUSED(dent);
 
     lock(&g_process.fs_lock);
@@ -48,12 +48,12 @@ out:
     return ret;
 }
 
-int proc_thread_maps_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int proc_thread_maps_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret;
     size_t vma_count;
-    struct shim_vma_info* vmas = NULL;
+    struct libos_vma_info* vmas = NULL;
     ret = dump_all_vmas(&vmas, &vma_count, /*include_unmapped=*/false);
     if (ret < 0) {
         return ret;
@@ -69,7 +69,7 @@ int proc_thread_maps_load(struct shim_dentry* dent, char** out_data, size_t* out
         goto err;
     }
 
-    for (struct shim_vma_info* vma = vmas; vma < vmas + vma_count; vma++) {
+    for (struct libos_vma_info* vma = vmas; vma < vmas + vma_count; vma++) {
         size_t old_offset = offset;
         uintptr_t start   = (uintptr_t)vma->addr;
         uintptr_t end     = (uintptr_t)vma->addr + vma->length;
@@ -143,7 +143,7 @@ err:
     return ret;
 }
 
-int proc_thread_cmdline_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int proc_thread_cmdline_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     size_t buffer_size = g_process.cmdline_size;
@@ -158,7 +158,7 @@ int proc_thread_cmdline_load(struct shim_dentry* dent, char** out_data, size_t* 
     return 0;
 }
 
-bool proc_thread_pid_name_exists(struct shim_dentry* parent, const char* name) {
+bool proc_thread_pid_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);
 
     unsigned long pid;
@@ -168,7 +168,8 @@ bool proc_thread_pid_name_exists(struct shim_dentry* parent, const char* name) {
     return pid == g_process.pid;
 }
 
-int proc_thread_pid_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+int proc_thread_pid_list_names(struct libos_dentry* parent, readdir_callback_t callback,
+                               void* arg) {
     __UNUSED(parent);
     IDTYPE pid = g_process.pid;
     char name[11];
@@ -180,14 +181,14 @@ int proc_thread_pid_list_names(struct shim_dentry* parent, readdir_callback_t ca
     return 0;
 }
 
-bool proc_thread_tid_name_exists(struct shim_dentry* parent, const char* name) {
+bool proc_thread_tid_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);
 
     unsigned long tid;
     if (pseudo_parse_ulong(name, IDTYPE_MAX, &tid) < 0)
         return false;
 
-    struct shim_thread* thread = lookup_thread(tid);
+    struct libos_thread* thread = lookup_thread(tid);
     if (!thread)
         return false;
 
@@ -200,7 +201,7 @@ struct walk_thread_arg {
     void* arg;
 };
 
-static int walk_cb(struct shim_thread* thread, void* arg) {
+static int walk_cb(struct libos_thread* thread, void* arg) {
     struct walk_thread_arg* args = arg;
 
     IDTYPE pid = thread->tid;
@@ -212,7 +213,8 @@ static int walk_cb(struct shim_thread* thread, void* arg) {
     return 1;
 }
 
-int proc_thread_tid_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+int proc_thread_tid_list_names(struct libos_dentry* parent, readdir_callback_t callback,
+                               void* arg) {
     __UNUSED(parent);
     struct walk_thread_arg args = {
         .callback = callback,
@@ -226,13 +228,13 @@ int proc_thread_tid_list_names(struct shim_dentry* parent, readdir_callback_t ca
     return 0;
 }
 
-bool proc_thread_fd_name_exists(struct shim_dentry* parent, const char* name) {
+bool proc_thread_fd_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);
     unsigned long fd;
     if (pseudo_parse_ulong(name, UINT32_MAX, &fd) < 0)
         return false;
 
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
     lock(&handle_map->lock);
 
@@ -246,10 +248,10 @@ bool proc_thread_fd_name_exists(struct shim_dentry* parent, const char* name) {
     return true;
 }
 
-int proc_thread_fd_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+int proc_thread_fd_list_names(struct libos_dentry* parent, readdir_callback_t callback, void* arg) {
     __UNUSED(parent);
 
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
     lock(&handle_map->lock);
 
@@ -272,7 +274,7 @@ int proc_thread_fd_list_names(struct shim_dentry* parent, readdir_callback_t cal
  * TODO: Linux uses names like `pipe:[INODE]`, we could at least include more information whenever
  * we can (e.g. socket address).
  */
-static char* describe_handle(struct shim_handle* hdl) {
+static char* describe_handle(struct libos_handle* hdl) {
     const char* str;
     switch (hdl->type) {
         case TYPE_CHROOT:  str = "chroot:[?]";  break;
@@ -288,12 +290,12 @@ static char* describe_handle(struct shim_handle* hdl) {
     return strdup(str);
 }
 
-int proc_thread_fd_follow_link(struct shim_dentry* dent, char** out_target) {
+int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
     unsigned long fd;
     if (pseudo_parse_ulong(dent->name, UINT32_MAX, &fd) < 0)
         return -ENOENT;
 
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
     lock(&handle_map->lock);
 
@@ -304,7 +306,7 @@ int proc_thread_fd_follow_link(struct shim_dentry* dent, char** out_target) {
     }
 
     int ret;
-    struct shim_handle* hdl = handle_map->map[fd]->handle;
+    struct libos_handle* hdl = handle_map->map[fd]->handle;
 
     if (hdl->dentry) {
         ret = dentry_abs_path(hdl->dentry, out_target, /*size=*/NULL);

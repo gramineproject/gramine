@@ -30,8 +30,8 @@
 #include "toml.h"
 #include "toml_utils.h"
 
-static_assert(sizeof(shim_tcb_t) <= PAL_LIBOS_TCB_SIZE,
-              "shim_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
+static_assert(sizeof(libos_tcb_t) <= PAL_LIBOS_TCB_SIZE,
+              "libos_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
 
 const toml_table_t* g_manifest_root = NULL;
 struct pal_public_state* g_pal_public_state = NULL;
@@ -39,7 +39,7 @@ struct pal_public_state* g_pal_public_state = NULL;
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
  * any thread, even internal. */
-noreturn void shim_abort(void) {
+noreturn void libos_abort(void) {
     DEBUG_BREAK_ON_FAILURE();
     DkProcessExit(1);
 }
@@ -294,7 +294,7 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp,
     stack_size = ALLOC_ALIGN_UP(stack_size);
     set_rlimit_cur(RLIMIT_STACK, stack_size);
 
-    struct shim_thread* cur_thread = get_cur_thread();
+    struct libos_thread* cur_thread = get_cur_thread();
     if (!cur_thread || cur_thread->stack)
         return 0;
 
@@ -357,23 +357,23 @@ static int read_environs(const char** envp) {
 
 #define CALL_INIT(func, args...) func(args)
 
-#define RUN_INIT(func, ...)                                                  \
-    do {                                                                     \
-        int _err = CALL_INIT(func, ##__VA_ARGS__);                           \
-        if (_err < 0) {                                                      \
-            log_error("Error during shim_init() in " #func " (%d)", _err);   \
-            DkProcessExit(1);                                                \
-        }                                                                    \
+#define RUN_INIT(func, ...)                                                 \
+    do {                                                                    \
+        int _err = CALL_INIT(func, ##__VA_ARGS__);                          \
+        if (_err < 0) {                                                     \
+            log_error("Error during libos_init() in " #func " (%d)", _err); \
+            DkProcessExit(1);                                               \
+        }                                                                   \
     } while (0)
 
-noreturn void* shim_init(int argc, const char** argv, const char** envp) {
+noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     g_pal_public_state = DkGetPalPublicState();
     assert(g_pal_public_state);
 
     g_log_level = g_pal_public_state->log_level;
 
-    /* create the initial TCB, shim can not be run without a tcb */
-    shim_tcb_init();
+    /* create the initial TCB, libos can not be run without a tcb */
+    libos_tcb_init();
 
     call_init_array();
 
@@ -383,13 +383,13 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     log_debug("Host: %s", g_pal_public_state->host_type);
 
     if (!IS_POWER_OF_2(ALLOC_ALIGNMENT)) {
-        log_error("Error during shim_init(): PAL allocation alignment not a power of 2");
+        log_error("Error during libos_init(): PAL allocation alignment not a power of 2");
         DkProcessExit(1);
     }
 
     g_manifest_root = g_pal_public_state->manifest_root;
 
-    shim_xstate_init();
+    libos_xstate_init();
 
     RUN_INIT(init_vma);
     RUN_INIT(init_slab);
@@ -408,7 +408,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
         int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
-            log_error("shim_init: failed to read the whole checkpoint header: %d", ret);
+            log_error("libos_init: failed to read the whole checkpoint header: %d", ret);
             DkProcessExit(1);
         }
 
@@ -426,7 +426,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_important_handles);
 
     /* Update log prefix after we initialized `g_process.exec` */
-    log_setprefix(shim_get_tcb());
+    log_setprefix(libos_get_tcb());
 
     RUN_INIT(init_async_worker);
 
@@ -442,7 +442,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
     if (g_pal_public_state->parent_process) {
         int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
-            log_error("shim_init: failed to establish IPC connection to parent: %d", ret);
+            log_error("libos_init: failed to establish IPC connection to parent: %d", ret);
             DkProcessExit(1);
         }
 
@@ -451,7 +451,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
         IDTYPE dummy = 0;
         ret = ipc_get_id_owner(/*id=*/0, /*out_owner=*/&dummy);
         if (ret < 0) {
-            log_debug("shim_init: failed to get a connection from IPC leader to us: %d", ret);
+            log_debug("libos_init: failed to get a connection from IPC leader to us: %d", ret);
             DkProcessExit(1);
         }
         assert(dummy == 0); // Nobody should own ID `0`.
@@ -460,14 +460,14 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
         char dummy_c = 0;
         ret = write_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
-            log_error("shim_init: failed to write ready notification: %d", ret);
+            log_error("libos_init: failed to write ready notification: %d", ret);
             DkProcessExit(1);
         }
 
         /* Wait for parent to settle its adult things. */
         ret = read_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
-            log_error("shim_init: failed to read parent's confirmation: %d", ret);
+            log_error("libos_init: failed to read parent's confirmation: %d", ret);
             DkProcessExit(1);
         }
     } else { /* !g_pal_public_state->parent_process */
@@ -480,7 +480,7 @@ noreturn void* shim_init(int argc, const char** argv, const char** envp) {
 
     log_debug("LibOS initialized");
 
-    shim_tcb_t* cur_tcb = shim_get_tcb();
+    libos_tcb_t* cur_tcb = libos_get_tcb();
 
     if (cur_tcb->context.regs) {
         restore_child_context_after_clone(&cur_tcb->context);

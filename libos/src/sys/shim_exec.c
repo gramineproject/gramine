@@ -15,15 +15,15 @@
 #include "shim_thread.h"
 #include "shim_vma.h"
 
-static int close_on_exec(struct shim_fd_handle* fd_hdl, struct shim_handle_map* map) {
+static int close_on_exec(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {
-        struct shim_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+        struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
         put_handle(hdl);
     }
     return 0;
 }
 
-static int close_cloexec_handle(struct shim_handle_map* map) {
+static int close_cloexec_handle(struct libos_handle_map* map) {
     return walk_handle_map(&close_on_exec, map);
 }
 
@@ -42,14 +42,14 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
     reset_brk();
 
     size_t count;
-    struct shim_vma_info* vmas;
+    struct libos_vma_info* vmas;
     ret = dump_all_vmas(&vmas, &count, /*include_unmapped=*/true);
     if (ret < 0) {
         goto error;
     }
 
-    struct shim_thread* cur_thread = get_cur_thread();
-    for (struct shim_vma_info* vma = vmas; vma < vmas + count; vma++) {
+    struct libos_thread* cur_thread = get_cur_thread();
+    for (struct libos_vma_info* vma = vmas; vma < vmas + count; vma++) {
         /* Don't free the current stack */
         if (vma->addr == cur_thread->stack || vma->addr == cur_thread->stack_red)
             continue;
@@ -67,7 +67,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
     free_vma_info_array(vmas, count);
 
     lock(&g_process.fs_lock);
-    struct shim_handle* exec = g_process.exec;
+    struct libos_handle* exec = g_process.exec;
     get_handle(exec);
     unlock(&g_process.fs_lock);
 
@@ -95,8 +95,8 @@ error:
     process_exit(/*error_code=*/0, /*term_signal=*/SIGKILL);
 }
 
-static int libos_syscall_execve_rtld(struct shim_handle* hdl, char** argv, const char** envp) {
-    struct shim_thread* cur_thread = get_cur_thread();
+static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, const char** envp) {
+    struct libos_thread* cur_thread = get_cur_thread();
     int ret;
 
     if ((ret = close_cloexec_handle(cur_thread->handle_map)) < 0)
@@ -109,7 +109,7 @@ static int libos_syscall_execve_rtld(struct shim_handle* hdl, char** argv, const
     unlock(&g_process.fs_lock);
 
     /* Update log prefix to include new executable name from `g_process.exec` */
-    log_setprefix(shim_get_tcb());
+    log_setprefix(libos_get_tcb());
 
     cur_thread->stack_top = NULL;
     cur_thread->stack     = NULL;
@@ -166,7 +166,7 @@ long libos_syscall_execve(const char* file, const char** argv, const char** envp
             return -EFAULT;
     }
 
-    struct shim_handle* exec = NULL;
+    struct libos_handle* exec = NULL;
     char** new_argv = NULL;
     ret = load_and_check_exec(file, argv, &exec, &new_argv);
     if (ret < 0) {

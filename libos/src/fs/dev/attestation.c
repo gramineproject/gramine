@@ -72,7 +72,7 @@ static void update_buffer(char* buffer, size_t max_size, const char* data, size_
  *
  * In case of SGX, user report data can be an arbitrary string of size 64B.
  */
-static int user_report_data_save(struct shim_dentry* dent, const char* data, size_t size) {
+static int user_report_data_save(struct libos_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
     int ret = init_attestation_struct_sizes();
@@ -92,7 +92,7 @@ static int user_report_data_save(struct shim_dentry* dent, const char* data, siz
  *
  * In case of SGX, target info is an opaque blob of size 512B.
  */
-static int target_info_save(struct shim_dentry* dent, const char* data, size_t size) {
+static int target_info_save(struct libos_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
     int ret = init_attestation_struct_sizes();
@@ -112,7 +112,7 @@ static int target_info_save(struct shim_dentry* dent, const char* data, size_t s
  *
  * In case of SGX, target info is an opaque blob of size 512B.
  */
-static int my_target_info_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int my_target_info_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret = init_attestation_struct_sizes();
@@ -177,7 +177,7 @@ out:
  *
  * In case of SGX, report is a locally obtained EREPORT struct of size 432B.
  */
-static int report_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int report_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret = init_attestation_struct_sizes();
@@ -215,7 +215,7 @@ static int report_load(struct shim_dentry* dent, char** out_data, size_t* out_si
  *
  * In case of SGX, the obtained quote is the SGX quote created by the Quoting Enclave.
  */
-static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int quote_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret = init_attestation_struct_sizes();
@@ -243,7 +243,7 @@ static int quote_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
  *
  * In case of SGX, same as `sgx.remote_attestation` manifest option.
  */
-static int attestation_type_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int attestation_type_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     assert(g_pal_public_state->attestation_type);
@@ -256,12 +256,12 @@ static int attestation_type_load(struct shim_dentry* dent, char** out_data, size
     return 0;
 }
 
-static int deprecated_pfkey_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+static int deprecated_pfkey_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
     int ret;
 
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     ret = get_or_create_encrypted_files_key("default", &key);
     if (ret < 0)
         return ret;
@@ -290,12 +290,12 @@ static int deprecated_pfkey_load(struct shim_dentry* dent, char** out_data, size
     return 0;
 }
 
-static int deprecated_pfkey_save(struct shim_dentry* dent, const char* data, size_t size) {
+static int deprecated_pfkey_save(struct libos_dentry* dent, const char* data, size_t size) {
     __UNUSED(dent);
 
     int ret;
 
-    struct shim_encrypted_files_key* key;
+    struct libos_encrypted_files_key* key;
     ret = get_or_create_encrypted_files_key("default", &key);
     if (ret < 0)
         return ret;
@@ -318,10 +318,10 @@ static int deprecated_pfkey_save(struct shim_dentry* dent, const char* data, siz
     return 0;
 }
 
-static bool key_name_exists(struct shim_dentry* parent, const char* name) {
+static bool key_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);
 
-    struct shim_encrypted_files_key* key = get_encrypted_files_key(name);
+    struct libos_encrypted_files_key* key = get_encrypted_files_key(name);
     return key != NULL;
 }
 
@@ -330,12 +330,12 @@ struct key_list_names_data {
     void* arg;
 };
 
-static int key_list_names_callback(struct shim_encrypted_files_key* key, void* arg) {
+static int key_list_names_callback(struct libos_encrypted_files_key* key, void* arg) {
     struct key_list_names_data* data = arg;
     return data->callback(key->name, data->arg);
 }
 
-static int key_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+static int key_list_names(struct libos_dentry* parent, readdir_callback_t callback, void* arg) {
     __UNUSED(parent);
 
     struct key_list_names_data data = {
@@ -345,8 +345,8 @@ static int key_list_names(struct shim_dentry* parent, readdir_callback_t callbac
     return list_encrypted_files_keys(&key_list_names_callback, &data);
 }
 
-static int key_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
-    struct shim_encrypted_files_key* key = get_encrypted_files_key(dent->name);
+static int key_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    struct libos_encrypted_files_key* key = get_encrypted_files_key(dent->name);
     if (!key)
         return -ENOENT;
 
@@ -368,8 +368,8 @@ static int key_load(struct shim_dentry* dent, char** out_data, size_t* out_size)
     return 0;
 }
 
-static int key_save(struct shim_dentry* dent, const char* data, size_t size) {
-    struct shim_encrypted_files_key* key = get_encrypted_files_key(dent->name);
+static int key_save(struct libos_dentry* dent, const char* data, size_t size) {
+    struct libos_encrypted_files_key* key = get_encrypted_files_key(dent->name);
     if (!key)
         return -ENOENT;
 

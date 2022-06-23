@@ -17,15 +17,15 @@
 #include "shim_thread.h"
 #include "ucontext.h"
 
-#define XSTATE_RESET_SIZE (sizeof(struct shim_fpstate))
+#define XSTATE_RESET_SIZE (sizeof(struct libos_fpstate))
 
 /* By default fall back to old-style FXSAVE. */
-static bool     g_shim_xsave_enabled  = false;
-static uint64_t g_shim_xsave_features = SHIM_XFEATURE_MASK_FPSSE;
-static uint32_t g_shim_xsave_size     = XSTATE_RESET_SIZE;
+static bool     g_libos_xsave_enabled  = false;
+static uint64_t g_libos_xsave_features = LIBOS_XFEATURE_MASK_FPSSE;
+static uint32_t g_libos_xsave_size     = XSTATE_RESET_SIZE;
 
-static const uint32_t g_shim_xstate_reset_state[XSTATE_RESET_SIZE / sizeof(uint32_t)]
-__attribute__((aligned(SHIM_XSTATE_ALIGN))) = {
+static const uint32_t g_libos_xstate_reset_state[XSTATE_RESET_SIZE / sizeof(uint32_t)]
+__attribute__((aligned(LIBOS_XSTATE_ALIGN))) = {
     0x037F, 0, 0, 0, 0, 0, 0x1F80, 0xFFFF,
 };
 
@@ -35,11 +35,11 @@ __attribute__((aligned(SHIM_XSTATE_ALIGN))) = {
 #define CPUID_LEAF_PROCINFO 0x00000001
 #define CPUID_LEAF_XSAVE 0x0000000d
 
-uint64_t shim_xstate_size(void) {
-    return g_shim_xsave_size + (g_shim_xsave_enabled ? SHIM_FP_XSTATE_MAGIC2_SIZE : 0);
+uint64_t libos_xstate_size(void) {
+    return g_libos_xsave_size + (g_libos_xsave_enabled ? LIBOS_FP_XSTATE_MAGIC2_SIZE : 0);
 }
 
-void shim_xstate_init(void) {
+void libos_xstate_init(void) {
     unsigned int value[4];
     if (DkCpuIdRetrieve(CPUID_LEAF_PROCINFO, 0, value) < 0)
         goto out;
@@ -58,28 +58,29 @@ void shim_xstate_init(void) {
         goto out;
     }
 
-    if (xfeatures & ~SHIM_XFEATURE_MASK_FPSSE) {
+    if (xfeatures & ~LIBOS_XFEATURE_MASK_FPSSE) {
         /* support more than just FP and SSE, can use XSAVE (it was introduced with AVX) */
-        g_shim_xsave_enabled = true;
+        g_libos_xsave_enabled = true;
     }
 
-    g_shim_xsave_features  = xfeatures;
-    g_shim_xsave_size      = xsavesize;
+    g_libos_xsave_features  = xfeatures;
+    g_libos_xsave_size      = xsavesize;
 
 out:
     log_debug("LibOS xsave_enabled %d, xsave_size 0x%x(%u), xsave_features 0x%lx",
-              g_shim_xsave_enabled, g_shim_xsave_size, g_shim_xsave_size, g_shim_xsave_features);
+              g_libos_xsave_enabled, g_libos_xsave_size, g_libos_xsave_size,
+              g_libos_xsave_features);
 }
 
 #if 0
 /* Currently not used. */
-void shim_xstate_save(void* xstate_extended) {
-    assert(IS_ALIGNED_PTR(xstate_extended, SHIM_XSTATE_ALIGN));
+void libos_xstate_save(void* xstate_extended) {
+    assert(IS_ALIGNED_PTR(xstate_extended, LIBOS_XSTATE_ALIGN));
 
-    struct shim_xstate* xstate = (struct shim_xstate*)xstate_extended;
-    char* bytes_after_xstate   = (char*)xstate_extended + g_shim_xsave_size;
+    struct libos_xstate* xstate = (struct libos_xstate*)xstate_extended;
+    char* bytes_after_xstate   = (char*)xstate_extended + g_libos_xsave_size;
 
-    if (g_shim_xsave_enabled) {
+    if (g_libos_xsave_enabled) {
         memset(&xstate->xstate_hdr, 0, sizeof(xstate->xstate_hdr));
         __builtin_ia32_xsave64(xstate, /*mask=*/-1LL);
     } else {
@@ -94,48 +95,48 @@ void shim_xstate_save(void* xstate_extended) {
      * This format is assumed by Glibc; this will also be useful if we implement checks in LibOS
      * similar to Linux's check_for_xstate(). Note that we don't care about CPUs older than
      * FXSAVE-enabled (so-called "legacy frames"), therefore we always use MAGIC1 and MAGIC2. */
-    struct shim_fpx_sw_bytes* fpx_sw = &xstate->fpstate.sw_reserved;
-    fpx_sw->magic1        = SHIM_FP_XSTATE_MAGIC1;
-    fpx_sw->extended_size = g_shim_xsave_size + SHIM_FP_XSTATE_MAGIC2_SIZE;
-    fpx_sw->xfeatures     = g_shim_xsave_features;
-    fpx_sw->xstate_size   = g_shim_xsave_size;
+    struct libos_fpx_sw_bytes* fpx_sw = &xstate->fpstate.sw_reserved;
+    fpx_sw->magic1        = LIBOS_FP_XSTATE_MAGIC1;
+    fpx_sw->extended_size = g_libos_xsave_size + LIBOS_FP_XSTATE_MAGIC2_SIZE;
+    fpx_sw->xfeatures     = g_libos_xsave_features;
+    fpx_sw->xstate_size   = g_libos_xsave_size;
     memset(&fpx_sw->padding, 0, sizeof(fpx_sw->padding));
 
     /* the last 32-bit word of the extended FXSAVE/XSAVE area (at the xstate + extended_size
      * - FP_XSTATE_MAGIC2_SIZE address) is set to FP_XSTATE_MAGIC2 so that app/Gramine can sanity
      * check FXSAVE/XSAVE size calculations */
-    *((__typeof__(SHIM_FP_XSTATE_MAGIC2)*)bytes_after_xstate) = SHIM_FP_XSTATE_MAGIC2;
+    *((__typeof__(LIBOS_FP_XSTATE_MAGIC2)*)bytes_after_xstate) = LIBOS_FP_XSTATE_MAGIC2;
 }
 #endif
 
-__attribute__((used)) static int is_xstate_extended(const struct shim_xstate* xstate) {
-    assert(IS_ALIGNED_PTR(xstate, SHIM_XSTATE_ALIGN));
+__attribute__((used)) static int is_xstate_extended(const struct libos_xstate* xstate) {
+    assert(IS_ALIGNED_PTR(xstate, LIBOS_XSTATE_ALIGN));
 
-    if (!g_shim_xsave_enabled) {
+    if (!g_libos_xsave_enabled) {
         return 0;
     }
 
-    const struct shim_fpx_sw_bytes* fpx_sw = &xstate->fpstate.sw_reserved;
-    if (fpx_sw->magic1 != SHIM_FP_XSTATE_MAGIC1) {
+    const struct libos_fpx_sw_bytes* fpx_sw = &xstate->fpstate.sw_reserved;
+    if (fpx_sw->magic1 != LIBOS_FP_XSTATE_MAGIC1) {
         return 0;
     }
-    if (fpx_sw->extended_size > shim_xstate_size()) {
+    if (fpx_sw->extended_size > libos_xstate_size()) {
         return 0;
     }
-    if (fpx_sw->xfeatures & ~g_shim_xsave_features) {
+    if (fpx_sw->xfeatures & ~g_libos_xsave_features) {
         return 0;
     }
-    if (fpx_sw->xstate_size < sizeof(struct shim_xstate)) {
+    if (fpx_sw->xstate_size < sizeof(struct libos_xstate)) {
         return 0;
     }
-    if (fpx_sw->xstate_size > g_shim_xsave_size) {
+    if (fpx_sw->xstate_size > g_libos_xsave_size) {
         return 0;
     }
     if (fpx_sw->xstate_size > fpx_sw->extended_size) {
         return 0;
     }
     const void* bytes_after_xstate = (const char*)xstate + fpx_sw->xstate_size;
-    if (*(const uint32_t*)bytes_after_xstate != SHIM_FP_XSTATE_MAGIC2) {
+    if (*(const uint32_t*)bytes_after_xstate != LIBOS_FP_XSTATE_MAGIC2) {
         return 0;
     }
     return 1;
@@ -145,9 +146,9 @@ __attribute__((used)) static int is_xstate_extended(const struct shim_xstate* xs
  * state. Older gcc versions do not support `naked` attribute on x86, hence: */
 __asm__(
 ".pushsection .text\n"
-".global shim_xstate_restore\n"
-".type shim_xstate_restore, @function\n"
-"shim_xstate_restore:\n"
+".global libos_xstate_restore\n"
+".type libos_xstate_restore, @function\n"
+"libos_xstate_restore:\n"
     "push %rdi\n"
     "call is_xstate_extended\n"
     "test %eax, %eax\n"
@@ -166,15 +167,15 @@ __asm__(
 );
 
 /* Copies FPU state. Returns whether the copied state was xsave-made. */
-static bool shim_xstate_copy(struct shim_xstate* dst, const struct shim_xstate* src) {
+static bool libos_xstate_copy(struct libos_xstate* dst, const struct libos_xstate* src) {
     if (src == NULL) {
-        src = (const struct shim_xstate*)g_shim_xstate_reset_state;
+        src = (const struct libos_xstate*)g_libos_xstate_reset_state;
     }
 
-    size_t copy_size = sizeof(struct shim_fpstate);
+    size_t copy_size = sizeof(struct libos_fpstate);
     int src_is_xstate = is_xstate_extended(src);
     if (src_is_xstate) {
-        copy_size = src->fpstate.sw_reserved.xstate_size + SHIM_FP_XSTATE_MAGIC2_SIZE;
+        copy_size = src->fpstate.sw_reserved.xstate_size + LIBOS_FP_XSTATE_MAGIC2_SIZE;
     }
 
     memcpy(dst, src, copy_size);
@@ -186,7 +187,7 @@ static bool shim_xstate_copy(struct shim_xstate* dst, const struct shim_xstate* 
     return src_is_xstate;
 }
 
-noreturn void restore_child_context_after_clone(struct shim_context* context) {
+noreturn void restore_child_context_after_clone(struct libos_context* context) {
     assert(context->regs);
 
     /* Set 0 as child return value. */
@@ -209,13 +210,13 @@ struct sigframe {
 
 void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, void* restorer,
                       bool should_use_altstack, __sigset_t* old_mask) {
-    struct shim_thread* current = get_cur_thread();
+    struct libos_thread* current = get_cur_thread();
 
     uint64_t stack = get_stack_for_sighandler(context->rsp, should_use_altstack);
 
-    struct shim_xstate* xstate = NULL;
-    stack = ALIGN_DOWN(stack - shim_xstate_size(), alignof(*xstate));
-    xstate = (struct shim_xstate*)stack;
+    struct libos_xstate* xstate = NULL;
+    stack = ALIGN_DOWN(stack - libos_xstate_size(), alignof(*xstate));
+    xstate = (struct libos_xstate*)stack;
 
     struct sigframe* sigframe = NULL;
     stack = ALIGN_DOWN(stack - sizeof(*sigframe), alignof(*sigframe));
@@ -243,13 +244,13 @@ void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, v
 
     pal_context_to_ucontext(&sigframe->uc, context);
 
-    /* XXX: Currently we assume that `struct shim_xstate`, `PAL_XREGS_STATE` and `struct _fpstate`
+    /* XXX: Currently we assume that `struct libos_xstate`, `PAL_XREGS_STATE` and `struct _fpstate`
      * (just the header) are the very same structure. This mess needs to be fixed. */
-    static_assert(sizeof(struct shim_xstate) == sizeof(PAL_XREGS_STATE),
+    static_assert(sizeof(struct libos_xstate) == sizeof(PAL_XREGS_STATE),
                   "SSE state structs differ");
-    static_assert(sizeof(struct shim_fpstate) == sizeof(struct _fpstate),
+    static_assert(sizeof(struct libos_fpstate) == sizeof(struct _fpstate),
                   "SSE state structs differ");
-    if (shim_xstate_copy(xstate, (struct shim_xstate*)sigframe->uc.uc_mcontext.fpstate)) {
+    if (libos_xstate_copy(xstate, (struct libos_xstate*)sigframe->uc.uc_mcontext.fpstate)) {
         /* This is a xsave-made xstate - it has the extended state info. */
         sigframe->uc.uc_flags |= UC_FP_XSTATE;
     }
@@ -281,19 +282,19 @@ void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, v
 
 void restart_syscall(PAL_CONTEXT* context, uint64_t syscall_nr) {
     context->rax = syscall_nr;
-    context->rip = (uint64_t)&syscalldb;
+    context->rip = (uint64_t)&libos_syscall_entry;
 }
 
 void restore_sigreturn_context(PAL_CONTEXT* context, __sigset_t* new_mask) {
     struct sigframe* sigframe = (struct sigframe*)context->rsp;
     *new_mask = sigframe->uc.uc_sigmask;
 
-    struct shim_xstate* syscall_fpregs_buf = (struct shim_xstate*)context->fpregs;
+    struct libos_xstate* syscall_fpregs_buf = (struct libos_xstate*)context->fpregs;
     assert(syscall_fpregs_buf);
 
     ucontext_to_pal_context(context, &sigframe->uc);
 
-    shim_xstate_copy(syscall_fpregs_buf, (struct shim_xstate*)sigframe->uc.uc_mcontext.fpstate);
+    libos_xstate_copy(syscall_fpregs_buf, (struct libos_xstate*)sigframe->uc.uc_mcontext.fpstate);
     context->fpregs = (PAL_XREGS_STATE*)syscall_fpregs_buf;
     context->is_fpregs_used = 1;
 }
@@ -303,7 +304,7 @@ bool maybe_emulate_syscall(PAL_CONTEXT* context) {
     if (rip[0] == 0x0f && rip[1] == 0x05) {
         /* This is syscall instruction, let's emulate it. */
         context->rcx = (uint64_t)rip + 2;
-        context->rip = (uint64_t)&syscalldb;
+        context->rip = (uint64_t)&libos_syscall_entry;
         return true;
     }
     return false;

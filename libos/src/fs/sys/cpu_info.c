@@ -23,7 +23,7 @@ static bool return_true(size_t ind, const void* arg) {
     return true;
 }
 
-int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const char* name = dent->name;
@@ -57,7 +57,7 @@ static bool is_in_same_socket(size_t thread_id, const void* _arg) {
         && g_pal_public_state->topo_info.cores[thread->core_id].socket_id == arg_id;
 }
 
-int sys_cpu_load_online(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_cpu_load_online(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     unsigned int thread_id;
 
@@ -75,7 +75,7 @@ int sys_cpu_load_online(struct shim_dentry* dent, char** out_data, size_t* out_s
     return sys_load(thread->is_online ? "1\n" : "0\n", out_data, out_size);
 }
 
-int sys_cpu_load_topology(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+int sys_cpu_load_topology(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     unsigned int thread_id;
     ret = sys_resource_find(dent, "cpu", &thread_id);
@@ -109,7 +109,7 @@ int sys_cpu_load_topology(struct shim_dentry* dent, char** out_data, size_t* out
     return sys_load(str, out_data, out_size);
 }
 
-bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name) {
+bool sys_cpu_online_name_exists(struct libos_dentry* parent, const char* name) {
     if (strcmp(name, "online") != 0)
         return false;
 
@@ -122,7 +122,7 @@ bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name) {
     return thread_id != 0;
 }
 
-bool sys_cpu_exists_only_if_online(struct shim_dentry* parent, const char* name) {
+bool sys_cpu_exists_only_if_online(struct libos_dentry* parent, const char* name) {
     __UNUSED(name);
     int ret;
     unsigned int thread_id;

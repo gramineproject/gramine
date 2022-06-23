@@ -115,7 +115,7 @@ static int sys_resource_info(const char* parent_name, size_t* out_total, const c
     }
 }
 
-int sys_resource_find(struct shim_dentry* dent, const char* parent_name, unsigned int* out_num) {
+int sys_resource_find(struct libos_dentry* dent, const char* parent_name, unsigned int* out_num) {
     size_t total;
     const char* prefix;
     int ret = sys_resource_info(parent_name, &total, &prefix);
@@ -127,7 +127,7 @@ int sys_resource_find(struct shim_dentry* dent, const char* parent_name, unsigne
 
     /* Search for "{parent_name}/{prefix}N", parse N (must be less than total) */
 
-    struct shim_dentry* parent = dent->parent;
+    struct libos_dentry* parent = dent->parent;
     while (parent) {
         if (strcmp(parent->name, parent_name) == 0) {
             if (!strstartswith(dent->name, prefix))
@@ -148,7 +148,7 @@ int sys_resource_find(struct shim_dentry* dent, const char* parent_name, unsigne
     return -ENOENT;
 }
 
-bool sys_resource_name_exists(struct shim_dentry* parent, const char* name) {
+bool sys_resource_name_exists(struct libos_dentry* parent, const char* name) {
     size_t total;
     const char* prefix;
     int ret = sys_resource_info(parent->name, &total, &prefix);
@@ -171,7 +171,7 @@ bool sys_resource_name_exists(struct shim_dentry* parent, const char* name) {
     return true;
 }
 
-int sys_resource_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
+int sys_resource_list_names(struct libos_dentry* parent, readdir_callback_t callback, void* arg) {
     size_t total;
     const char* prefix;
     int ret = sys_resource_info(parent->name, &total, &prefix);

@@ -11,7 +11,7 @@
  *
  * The tmpfs files are directly represented by their dentries and inodes (i.e. a file exists
  * whenever corresponding dentry exists, and is associated with inode). The file data is stored in
- * the `data` field of the inode (as a pointer to `struct shim_mem_file`).
+ * the `data` field of the inode (as a pointer to `struct libos_mem_file`).
  */
 
 #include <errno.h>
@@ -25,15 +25,15 @@
 
 #define USEC_IN_SEC 1000000
 
-static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
+static int tmpfs_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
+    struct libos_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
 
-    struct shim_mem_file* mem = malloc(sizeof(*mem));
+    struct libos_mem_file* mem = malloc(sizeof(*mem));
     if (!mem) {
         put_inode(inode);
         return -ENOMEM;
@@ -55,7 +55,7 @@ static int tmpfs_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm
     return 0;
 }
 
-static void tmpfs_idrop(struct shim_inode* inode) {
+static void tmpfs_idrop(struct libos_inode* inode) {
     assert(locked(&inode->lock));
 
     if (inode->data) {
@@ -69,10 +69,10 @@ struct tmpfs_checkpoint {
     char data[];
 };
 
-static int tmpfs_icheckpoint(struct shim_inode* inode, void** out_data, size_t* out_size) {
+static int tmpfs_icheckpoint(struct libos_inode* inode, void** out_data, size_t* out_size) {
     assert(locked(&inode->lock));
 
-    struct shim_mem_file* mem = inode->data;
+    struct libos_mem_file* mem = inode->data;
     assert(mem->size >= 0);
 
     struct tmpfs_checkpoint* cp;
@@ -88,10 +88,10 @@ static int tmpfs_icheckpoint(struct shim_inode* inode, void** out_data, size_t* 
     return 0;
 }
 
-static int tmpfs_irestore(struct shim_inode* inode, void* data) {
+static int tmpfs_irestore(struct libos_inode* inode, void* data) {
     struct tmpfs_checkpoint* cp = data;
 
-    struct shim_mem_file* mem = malloc(sizeof(*mem));
+    struct libos_mem_file* mem = malloc(sizeof(*mem));
     if (!mem)
         return -ENOMEM;
     mem->buf = malloc(cp->size);
@@ -107,17 +107,17 @@ static int tmpfs_irestore(struct shim_inode* inode, void* data) {
     return 0;
 }
 
-static int tmpfs_mount(struct shim_mount_params* params, void** mount_data) {
+static int tmpfs_mount(struct libos_mount_params* params, void** mount_data) {
     __UNUSED(params);
     __UNUSED(mount_data);
     return 0;
 }
 
-static int tmpfs_flush(struct shim_handle* hdl) {
+static int tmpfs_flush(struct libos_handle* hdl) {
     return msync_handle(hdl);
 }
 
-static int tmpfs_lookup(struct shim_dentry* dent) {
+static int tmpfs_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -130,7 +130,7 @@ static int tmpfs_lookup(struct shim_dentry* dent) {
     return -ENOENT;
 }
 
-static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static void tmpfs_do_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
     __UNUSED(dent);
@@ -140,7 +140,7 @@ static void tmpfs_do_open(struct shim_handle* hdl, struct shim_dentry* dent, int
     hdl->pos = 0;
 }
 
-static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static int tmpfs_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
@@ -148,7 +148,8 @@ static int tmpfs_open(struct shim_handle* hdl, struct shim_dentry* dent, int fla
     return 0;
 }
 
-static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int flags, mode_t perm) {
+static int tmpfs_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags,
+                       mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -160,19 +161,19 @@ static int tmpfs_creat(struct shim_handle* hdl, struct shim_dentry* dent, int fl
     return 0;
 }
 
-static int tmpfs_mkdir(struct shim_dentry* dent, mode_t perm) {
+static int tmpfs_mkdir(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
     return tmpfs_setup_dentry(dent, S_IFDIR, perm);
 }
 
-static int tmpfs_unlink(struct shim_dentry* dent) {
+static int tmpfs_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
     if (dent->inode->type == S_IFDIR) {
-        struct shim_dentry* child;
+        struct libos_dentry* child;
         bool found = false;
         LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {
             if (child->inode) {
@@ -186,7 +187,7 @@ static int tmpfs_unlink(struct shim_dentry* dent) {
     return 0;
 }
 
-static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
+static int tmpfs_rename(struct libos_dentry* old, struct libos_dentry* new) {
     assert(locked(&g_dcache_lock));
     assert(old->inode);
     __UNUSED(new);
@@ -204,22 +205,22 @@ static int tmpfs_rename(struct shim_dentry* old, struct shim_dentry* new) {
     return 0;
 }
 
-static int tmpfs_chmod(struct shim_dentry* dent, mode_t perm) {
+static int tmpfs_chmod(struct libos_dentry* dent, mode_t perm) {
     __UNUSED(dent);
     __UNUSED(perm);
     return 0;
 }
 
-static ssize_t tmpfs_read(struct shim_handle* hdl, void* buf, size_t size, file_off_t* pos) {
+static ssize_t tmpfs_read(struct libos_handle* hdl, void* buf, size_t size, file_off_t* pos) {
     ssize_t ret;
 
     assert(hdl->type == TYPE_TMPFS);
 
-    struct shim_inode* inode = hdl->inode;
+    struct libos_inode* inode = hdl->inode;
 
     lock(&inode->lock);
 
-    struct shim_mem_file* mem = inode->data;
+    struct libos_mem_file* mem = inode->data;
 
     ret = mem_file_read(mem, *pos, buf, size);
     if (ret < 0)
@@ -237,7 +238,8 @@ out:
     return ret;
 }
 
-static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size, file_off_t* pos) {
+static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t size,
+                           file_off_t* pos) {
     ssize_t ret;
 
     assert(hdl->type == TYPE_TMPFS);
@@ -246,10 +248,10 @@ static ssize_t tmpfs_write(struct shim_handle* hdl, const void* buf, size_t size
     if (DkSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
-    struct shim_inode* inode = hdl->inode;
+    struct libos_inode* inode = hdl->inode;
 
     lock(&inode->lock);
-    struct shim_mem_file* mem = inode->data;
+    struct libos_mem_file* mem = inode->data;
 
     ret = mem_file_write(mem, *pos, buf, size);
     if (ret < 0)
@@ -266,7 +268,7 @@ out:
     return ret;
 }
 
-static int tmpfs_truncate(struct shim_handle* hdl, file_off_t size) {
+static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
     int ret;
 
     uint64_t time_us;
@@ -274,7 +276,7 @@ static int tmpfs_truncate(struct shim_handle* hdl, file_off_t size) {
         return -EPERM;
 
     lock(&hdl->inode->lock);
-    struct shim_mem_file* mem = hdl->inode->data;
+    struct libos_mem_file* mem = hdl->inode->data;
 
     ret = mem_file_truncate(mem, size);
     if (ret < 0)
@@ -289,7 +291,7 @@ out:
     return ret;
 }
 
-struct shim_fs_ops tmp_fs_ops = {
+struct libos_fs_ops tmp_fs_ops = {
     .mount    = &tmpfs_mount,
     .flush    = &tmpfs_flush,
     .read     = &tmpfs_read,
@@ -302,7 +304,7 @@ struct shim_fs_ops tmp_fs_ops = {
     .msync    = &generic_emulated_msync,
 };
 
-struct shim_d_ops tmp_d_ops = {
+struct libos_d_ops tmp_d_ops = {
     .open        = &tmpfs_open,
     .lookup      = &tmpfs_lookup,
     .creat       = &tmpfs_creat,
@@ -317,7 +319,7 @@ struct shim_d_ops tmp_d_ops = {
     .irestore    = &tmpfs_irestore,
 };
 
-struct shim_fs tmp_builtin_fs = {
+struct libos_fs tmp_builtin_fs = {
     .name   = "tmpfs",
     .fs_ops = &tmp_fs_ops,
     .d_ops  = &tmp_d_ops,

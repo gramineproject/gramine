@@ -45,16 +45,16 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
 
-    struct shim_handle_map* map = get_cur_thread()->handle_map;
+    struct libos_handle_map* map = get_cur_thread()->handle_map;
 
     /* nfds is the upper limit for actual number of handles */
     PAL_HANDLE* pals = malloc(nfds * sizeof(PAL_HANDLE));
     if (!pals)
         return -ENOMEM;
 
-    /* for bookkeeping, need to have a mapping FD -> {shim handle, index-in-pals} */
+    /* for bookkeeping, need to have a mapping FD -> {libos handle, index-in-pals} */
     struct fds_mapping_t {
-        struct shim_handle* hdl; /* NULL if no mapping (handle is not used in polling) */
+        struct libos_handle* hdl; /* NULL if no mapping (handle is not used in polling) */
         nfds_t idx;              /* index from fds array to pals array */
     };
     struct fds_mapping_t* fds_mapping = malloc(nfds * sizeof(struct fds_mapping_t));
@@ -87,7 +87,7 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
             continue;
         }
 
-        struct shim_handle* hdl = __get_fd_handle(fds[i].fd, NULL, map);
+        struct libos_handle* hdl = __get_fd_handle(fds[i].fd, NULL, map);
         if (!hdl || !hdl->fs || !hdl->fs->fs_ops) {
             /* The corresponding handle doesn't exist or doesn't provide FS-like semantics; do not
              * include it in handles-to-poll array but notify user about invalid request. */
@@ -103,18 +103,18 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
              * callback.
              *
              * TODO: we probably should use the poll() callback in all cases. */
-            int shim_events = 0;
+            int libos_events = 0;
             if ((fds[i].events & (POLLIN | POLLRDNORM)) && (hdl->acc_mode & MAY_READ))
-                shim_events |= FS_POLL_RD;
+                libos_events |= FS_POLL_RD;
             if ((fds[i].events & (POLLOUT | POLLWRNORM)) && (hdl->acc_mode & MAY_WRITE))
-                shim_events |= FS_POLL_WR;
+                libos_events |= FS_POLL_WR;
 
-            int shim_revents = hdl->fs->fs_ops->poll(hdl, shim_events);
+            int libos_revents = hdl->fs->fs_ops->poll(hdl, libos_events);
 
             fds[i].revents = 0;
-            if (shim_revents & FS_POLL_RD)
+            if (libos_revents & FS_POLL_RD)
                 fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
-            if (shim_revents & FS_POLL_WR)
+            if (libos_revents & FS_POLL_WR)
                 fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
 
             if (fds[i].revents)
@@ -272,10 +272,10 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
 
     /* select()/pselect() return -EBADF if invalid FD was given by user in readfds/writefds;
      * note that poll()/ppoll() don't have this error code, so we return this code only here */
-    struct shim_handle_map* map = get_cur_thread()->handle_map;
+    struct libos_handle_map* map = get_cur_thread()->handle_map;
     lock(&map->lock);
     for (nfds_t i = 0; i < nfds_poll; i++) {
-        struct shim_handle* hdl = __get_fd_handle(fds_poll[i].fd, NULL, map);
+        struct libos_handle* hdl = __get_fd_handle(fds_poll[i].fd, NULL, map);
         if (!hdl || !hdl->fs || !hdl->fs->fs_ops) {
             /* the corresponding handle doesn't exist or doesn't provide FS-like semantics */
             free(fds_poll);

@@ -77,7 +77,7 @@ struct link_map {
     const char* l_interp_libname;
 
     /* Pointer to related file. */
-    struct shim_handle* l_file;
+    struct libos_handle* l_file;
 
     /* Size of all the data segments (including BSS), for setting up the brk region */
     size_t l_data_segment_size;
@@ -117,7 +117,7 @@ struct loadcmd {
 static struct link_map* g_exec_map = NULL;
 static struct link_map* g_interp_map = NULL;
 
-static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset);
+static int read_file_fragment(struct libos_handle* file, void* buf, size_t size, file_off_t offset);
 
 static struct link_map* new_elf_object(const char* realname) {
     struct link_map* new;
@@ -247,7 +247,7 @@ static int reserve_dyn(size_t total_size, void** addr) {
  * already allocated.
  */
 static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
-                           struct shim_handle* file) {
+                           struct libos_handle* file) {
     int ret;
     int map_flags = MAP_FIXED | MAP_PRIVATE;
     pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(c->prot, map_flags);
@@ -318,7 +318,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
     return 0;
 }
 
-static struct link_map* map_elf_object(struct shim_handle* file, elf_ehdr_t* ehdr) {
+static struct link_map* map_elf_object(struct libos_handle* file, elf_ehdr_t* ehdr) {
     elf_phdr_t* phdr = NULL;
     elf_addr_t interp_libname_vaddr = 0;
     struct loadcmd* loadcmds = NULL;
@@ -521,7 +521,7 @@ static int check_elf_header(elf_ehdr_t* ehdr) {
     }
 
     /* Now we check if the host match the elf machine profile */
-    if (ehdr->e_machine != SHIM_ELF_HOST_MACHINE) {
+    if (ehdr->e_machine != LIBOS_ELF_HOST_MACHINE) {
         errstring = "ELF file does not match with the host";
         goto verify_failed;
     }
@@ -545,7 +545,7 @@ verify_failed:
     return -EINVAL;
 }
 
-static int read_partial_fragment(struct shim_handle* file, void* buf, size_t size,
+static int read_partial_fragment(struct libos_handle* file, void* buf, size_t size,
                                  file_off_t offset, size_t* out_bytes_read) {
     if (!file)
         return -EINVAL;
@@ -563,7 +563,8 @@ static int read_partial_fragment(struct shim_handle* file, void* buf, size_t siz
     return 0;
 }
 
-static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, file_off_t offset) {
+static int read_file_fragment(struct libos_handle* file, void* buf, size_t size,
+                              file_off_t offset) {
     size_t read_size = 0;
     int ret = read_partial_fragment(file, buf, size, offset, &read_size);
     if (ret < 0) {
@@ -578,7 +579,7 @@ static int read_file_fragment(struct shim_handle* file, void* buf, size_t size, 
 
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
-static int load_and_check_shebang(struct shim_handle* file, char** argv,
+static int load_and_check_shebang(struct libos_handle* file, char** argv,
                                   char*** out_new_argv) {
     int ret;
 
@@ -683,11 +684,11 @@ err:
 
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
-int load_and_check_exec(const char* path, const char** argv, struct shim_handle** out_exec,
+int load_and_check_exec(const char* path, const char** argv, struct libos_handle** out_exec,
                         char*** out_new_argv) {
     int ret;
 
-    struct shim_handle* file = NULL;
+    struct libos_handle* file = NULL;
 
     /* immediately copy `argv` into `curr_argv`; this simplifies ownership tracking because this way
      * `*out_new_argv` must be always freed by caller */
@@ -779,7 +780,7 @@ err:
     return ret;
 }
 
-static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
+static int load_elf_header(struct libos_handle* file, elf_ehdr_t* ehdr) {
     int ret = read_file_fragment(file, ehdr, sizeof(*ehdr), /*offset=*/0);
     if (ret < 0) {
         return -ENOEXEC;
@@ -793,12 +794,12 @@ static int load_elf_header(struct shim_handle* file, elf_ehdr_t* ehdr) {
     return 0;
 }
 
-int check_elf_object(struct shim_handle* file) {
+int check_elf_object(struct libos_handle* file) {
     elf_ehdr_t ehdr;
     return load_elf_header(file, &ehdr);
 }
 
-int load_elf_object(struct shim_handle* file, struct link_map** out_map) {
+int load_elf_object(struct libos_handle* file, struct link_map** out_map) {
     int ret;
     assert(file);
 
@@ -835,7 +836,7 @@ static bool need_interp(struct link_map* exec_map) {
 
 extern const char** g_library_paths;
 
-static int find_interp(const char* interp_name, struct shim_dentry** out_dent) {
+static int find_interp(const char* interp_name, struct libos_dentry** out_dent) {
     assert(locked(&g_dcache_lock));
 
     size_t interp_name_len = strlen(interp_name);
@@ -861,7 +862,7 @@ static int find_interp(const char* interp_name, struct shim_dentry** out_dent) {
         }
 
         log_debug("%s: searching for interpreter: %s", __func__, interp_path);
-        struct shim_dentry* dent;
+        struct libos_dentry* dent;
         int ret = path_lookupat(/*start=*/NULL, interp_path, LOOKUP_FOLLOW, &dent);
         if (ret == 0) {
             *out_dent = dent;
@@ -872,10 +873,10 @@ static int find_interp(const char* interp_name, struct shim_dentry** out_dent) {
     return -ENOENT;
 }
 
-static int find_and_open_interp(const char* interp_name, struct shim_handle* hdl) {
+static int find_and_open_interp(const char* interp_name, struct libos_handle* hdl) {
     assert(locked(&g_dcache_lock));
 
-    struct shim_dentry* dent;
+    struct libos_dentry* dent;
     int ret = find_interp(interp_name, &dent);
     if (ret < 0)
         return ret;
@@ -888,7 +889,7 @@ static int find_and_open_interp(const char* interp_name, struct shim_handle* hdl
 static int load_interp_object(struct link_map* exec_map) {
     assert(!g_interp_map);
 
-    struct shim_handle* hdl = get_new_handle();
+    struct libos_handle* hdl = get_new_handle();
     if (!hdl)
         return -ENOMEM;
 
@@ -969,7 +970,7 @@ int init_elf_objects(void) {
     int ret = 0;
 
     lock(&g_process.fs_lock);
-    struct shim_handle* exec = g_process.exec;
+    struct libos_handle* exec = g_process.exec;
     if (exec)
         get_handle(exec);
     unlock(&g_process.fs_lock);
@@ -1007,7 +1008,7 @@ int init_brk_from_executable(struct link_map* exec_map) {
 int register_library(const char* name, unsigned long load_address) {
     log_debug("glibc register library %s loaded at 0x%08lx", name, load_address);
 
-    struct shim_handle* hdl = get_new_handle();
+    struct libos_handle* hdl = get_new_handle();
 
     if (!hdl)
         return -ENOMEM;
@@ -1033,9 +1034,9 @@ int register_library(const char* name, unsigned long load_address) {
 __attribute_no_sanitize_address
 noreturn static void cleanup_and_call_elf_entry(elf_addr_t entry, void* argp) {
 #ifdef ASAN
-    uintptr_t libos_stack_bottom = (uintptr_t)SHIM_TCB_GET(libos_stack_bottom);
-    asan_unpoison_region(libos_stack_bottom - SHIM_THREAD_LIBOS_STACK_SIZE,
-                         SHIM_THREAD_LIBOS_STACK_SIZE);
+    uintptr_t libos_stack_bottom = (uintptr_t)LIBOS_TCB_GET(libos_stack_bottom);
+    asan_unpoison_region(libos_stack_bottom - LIBOS_THREAD_LIBOS_STACK_SIZE,
+                         LIBOS_THREAD_LIBOS_STACK_SIZE);
 
 #endif
     call_elf_entry(entry, argp);

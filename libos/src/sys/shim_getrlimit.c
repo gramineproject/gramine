@@ -52,7 +52,7 @@ static struct __kernel_rlimit64 __rlim[RLIM_NLIMITS] __attribute_migratable = {
     [RLIMIT_RTTIME]     = {RLIM_INFINITY, RLIM_INFINITY},
 };
 
-static struct shim_lock rlimit_lock;
+static struct libos_lock rlimit_lock;
 
 int init_rlimit(void) {
     if (!create_lock(&rlimit_lock)) {
@@ -90,7 +90,7 @@ long libos_syscall_getrlimit(int resource, struct __kernel_rlimit* rlim) {
 }
 
 long libos_syscall_setrlimit(int resource, struct __kernel_rlimit* rlim) {
-    struct shim_thread* cur_thread = get_cur_thread();
+    struct libos_thread* cur_thread = get_cur_thread();
     assert(cur_thread);
 
     if (resource < 0 || RLIM_NLIMITS <= resource)
@@ -114,7 +114,7 @@ long libos_syscall_setrlimit(int resource, struct __kernel_rlimit* rlim) {
 
 long libos_syscall_prlimit64(pid_t pid, int resource, const struct __kernel_rlimit64* new_rlim,
                              struct __kernel_rlimit64* old_rlim) {
-    struct shim_thread* cur_thread = get_cur_thread();
+    struct libos_thread* cur_thread = get_cur_thread();
     assert(cur_thread);
     int ret = 0;
 

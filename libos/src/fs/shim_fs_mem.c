@@ -10,7 +10,7 @@
 /* Minimum allocation size in `slabmgr.h` */
 #define MIN_RESIZE ((size_t)16)
 
-static int mem_file_resize(struct shim_mem_file* mem, size_t buf_size) {
+static int mem_file_resize(struct libos_mem_file* mem, size_t buf_size) {
     assert(buf_size > 0);
 
     char* buf = malloc(buf_size);
@@ -25,7 +25,7 @@ static int mem_file_resize(struct shim_mem_file* mem, size_t buf_size) {
     return 0;
 }
 
-void mem_file_init(struct shim_mem_file* mem, char* data, size_t size) {
+void mem_file_init(struct libos_mem_file* mem, char* data, size_t size) {
     assert(!OVERFLOWS(file_off_t, size));
 
     mem->buf = data;
@@ -33,11 +33,11 @@ void mem_file_init(struct shim_mem_file* mem, char* data, size_t size) {
     mem->size = size;
 }
 
-void mem_file_destroy(struct shim_mem_file* mem) {
+void mem_file_destroy(struct libos_mem_file* mem) {
     free(mem->buf);
 }
 
-ssize_t mem_file_read(struct shim_mem_file* mem, file_off_t pos_start, void* buf, size_t size) {
+ssize_t mem_file_read(struct libos_mem_file* mem, file_off_t pos_start, void* buf, size_t size) {
     assert(pos_start >= 0);
 
     file_off_t pos_end;
@@ -50,7 +50,7 @@ ssize_t mem_file_read(struct shim_mem_file* mem, file_off_t pos_start, void* buf
     return size;
 }
 
-ssize_t mem_file_write(struct shim_mem_file* mem, file_off_t pos_start, const void* buf,
+ssize_t mem_file_write(struct libos_mem_file* mem, file_off_t pos_start, const void* buf,
                        size_t size) {
     assert(pos_start >= 0);
 
@@ -81,7 +81,7 @@ ssize_t mem_file_write(struct shim_mem_file* mem, file_off_t pos_start, const vo
     return size;
 }
 
-int mem_file_truncate(struct shim_mem_file* mem, file_off_t size) {
+int mem_file_truncate(struct libos_mem_file* mem, file_off_t size) {
     assert(size >= 0);
 
     if (OVERFLOWS(size_t, size))
@@ -112,7 +112,7 @@ int mem_file_truncate(struct shim_mem_file* mem, file_off_t size) {
     return 0;
 }
 
-int mem_file_poll(struct shim_mem_file* mem, file_off_t pos, int poll_type) {
+int mem_file_poll(struct libos_mem_file* mem, file_off_t pos, int poll_type) {
     int ret = 0;
     if ((poll_type & FS_POLL_RD) && (pos < mem->size))
         ret |= FS_POLL_RD;

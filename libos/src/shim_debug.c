@@ -16,7 +16,7 @@
 #include "shim_types.h"
 #include "shim_utils.h"
 
-void shim_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
+void libos_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     DkDebugDescribeLocation(addr, buf, buf_size);
 }
 
@@ -53,7 +53,7 @@ struct gdb_link_map {
 };
 
 static LISTP_TYPE(gdb_link_map) g_link_map_list = LISTP_INIT;
-static struct shim_lock g_link_map_list_lock;
+static struct libos_lock g_link_map_list_lock;
 
 int init_r_debug(void) {
     return create_lock(&g_link_map_list_lock);

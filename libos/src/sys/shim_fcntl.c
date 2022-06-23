@@ -28,7 +28,7 @@
 
 #define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 
-static int generic_set_flags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+static int generic_set_flags(struct libos_handle* handle, unsigned int flags, unsigned int mask) {
     /* TODO: DOES THIS WORK LOL
      * The old version of this code did this, but this seem to be incorrect. If a handle type allows
      * for setting some flags without actually doing anything with them immediately, it should have
@@ -39,7 +39,7 @@ static int generic_set_flags(struct shim_handle* handle, unsigned int flags, uns
     return 0;
 }
 
-static int set_handle_flags(struct shim_handle* handle, unsigned int flags, unsigned int mask) {
+static int set_handle_flags(struct libos_handle* handle, unsigned int flags, unsigned int mask) {
     flags &= mask;
     if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->setflags) {
         return handle->fs->fs_ops->setflags(handle, flags, mask);
@@ -47,7 +47,7 @@ static int set_handle_flags(struct shim_handle* handle, unsigned int flags, unsi
     return generic_set_flags(handle, flags, mask);
 }
 
-int set_handle_nonblocking(struct shim_handle* handle, bool on) {
+int set_handle_nonblocking(struct libos_handle* handle, bool on) {
     return set_handle_flags(handle, on ? O_NONBLOCK : 0, O_NONBLOCK);
 }
 
@@ -59,13 +59,13 @@ int set_handle_nonblocking(struct shim_handle* handle, bool on) {
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
  */
-static int flock_to_posix_lock(struct flock* fl, struct shim_handle* hdl, struct posix_lock* pl) {
+static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struct posix_lock* pl) {
     if (!(fl->l_type == F_RDLCK || fl->l_type == F_WRLCK || fl->l_type == F_UNLCK))
         return -EINVAL;
 
     int ret;
 
-    struct shim_fs* fs = hdl->fs;
+    struct libos_fs* fs = hdl->fs;
     assert(fs && fs->fs_ops);
 
     /* Compute the origin based on `l_start` and `l_whence`. Note that we cannot directly call
@@ -135,10 +135,10 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     int ret;
     int flags;
 
-    struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
 
-    struct shim_handle* hdl = get_fd_handle(fd, &flags, handle_map);
+    struct libos_handle* hdl = get_fd_handle(fd, &flags, handle_map);
     if (!hdl)
         return -EBADF;
 

@@ -18,11 +18,11 @@
 
 #include "shim_fs.h"
 
-int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
+int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    struct shim_inode* inode = get_new_inode(dent->mount, type, perm);
+    struct libos_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
     dent->inode = inode;
@@ -32,7 +32,7 @@ int synthetic_setup_dentry(struct shim_dentry* dent, mode_t type, mode_t perm) {
     return 0;
 }
 
-static int synthetic_open(struct shim_handle* hdl, struct shim_dentry* dent, int flags) {
+static int synthetic_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
     __UNUSED(dent);
@@ -42,17 +42,17 @@ static int synthetic_open(struct shim_handle* hdl, struct shim_dentry* dent, int
     return 0;
 }
 
-static struct shim_fs_ops synthetic_fs_ops = {
+static struct libos_fs_ops synthetic_fs_ops = {
     .hstat = &generic_inode_hstat,
 };
 
-static struct shim_d_ops synthetic_d_ops = {
+static struct libos_d_ops synthetic_d_ops = {
     .open = &synthetic_open,
     .readdir = &generic_readdir,
     .stat = &generic_inode_stat,
 };
 
-struct shim_fs synthetic_builtin_fs = {
+struct libos_fs synthetic_builtin_fs = {
     .name = "synth",
     .fs_ops = &synthetic_fs_ops,
     .d_ops = &synthetic_d_ops,

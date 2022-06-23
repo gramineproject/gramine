@@ -21,7 +21,7 @@
 #include "shim_utils.h"
 #include "stat.h"
 
-static int create_pipes(struct shim_handle* srv, struct shim_handle* cli, int flags, char* name) {
+static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int flags, char* name) {
     int ret = 0;
     char uri[PIPE_URI_SIZE];
 
@@ -98,7 +98,7 @@ out:;
 
 static void undo_set_fd_handle(int fd) {
     if (fd >= 0) {
-        struct shim_handle* hdl = detach_fd_handle(fd, NULL, NULL);
+        struct libos_handle* hdl = detach_fd_handle(fd, NULL, NULL);
         if (hdl)
             put_handle(hdl);
     }
@@ -122,8 +122,8 @@ long libos_syscall_pipe2(int* filedes, int flags) {
     int vfd1 = -1;
     int vfd2 = -1;
 
-    struct shim_handle* hdl1 = get_new_handle();
-    struct shim_handle* hdl2 = get_new_handle();
+    struct libos_handle* hdl1 = get_new_handle();
+    struct libos_handle* hdl2 = get_new_handle();
 
     if (!hdl1 || !hdl2) {
         ret = -ENOMEM;
@@ -200,8 +200,8 @@ long libos_syscall_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t d
     int vfd1 = -1;
     int vfd2 = -1;
 
-    struct shim_handle* hdl1 = NULL;
-    struct shim_handle* hdl2 = NULL;
+    struct libos_handle* hdl1 = NULL;
+    struct libos_handle* hdl2 = NULL;
 
     if (!S_ISFIFO(mode))
         return -EINVAL;
@@ -213,8 +213,8 @@ long libos_syscall_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t d
         return -ENOENT;
 
     /* add named pipe as a pseudo entry to file system (relative to dfd) */
-    struct shim_dentry* dir  = NULL;
-    struct shim_dentry* dent = NULL;
+    struct libos_dentry* dir  = NULL;
+    struct libos_dentry* dent = NULL;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
         return ret;
