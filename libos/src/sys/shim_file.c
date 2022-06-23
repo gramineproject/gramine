@@ -22,11 +22,11 @@
 
 /* The kernel would look up the parent directory, and remove the child from the inode. But we are
  * working with the PAL, so we open the file, truncate and close it. */
-long shim_do_unlink(const char* file) {
-    return shim_do_unlinkat(AT_FDCWD, file, 0);
+long libos_syscall_unlink(const char* file) {
+    return libos_syscall_unlinkat(AT_FDCWD, file, 0);
 }
 
-long shim_do_unlinkat(int dfd, const char* pathname, int flag) {
+long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
     if (!is_user_string_readable(pathname))
         return -EFAULT;
 
@@ -82,11 +82,11 @@ out:
     return ret;
 }
 
-long shim_do_mkdir(const char* pathname, int mode) {
-    return shim_do_mkdirat(AT_FDCWD, pathname, mode);
+long libos_syscall_mkdir(const char* pathname, int mode) {
+    return libos_syscall_mkdirat(AT_FDCWD, pathname, mode);
 }
 
-long shim_do_mkdirat(int dfd, const char* pathname, int mode) {
+long libos_syscall_mkdirat(int dfd, const char* pathname, int mode) {
     if (!is_user_string_readable(pathname))
         return -EFAULT;
 
@@ -112,7 +112,7 @@ long shim_do_mkdirat(int dfd, const char* pathname, int mode) {
     return ret;
 }
 
-long shim_do_rmdir(const char* pathname) {
+long libos_syscall_rmdir(const char* pathname) {
     int ret = 0;
     struct shim_dentry* dent = NULL;
 
@@ -155,7 +155,7 @@ out:
     return ret;
 }
 
-long shim_do_umask(mode_t mask) {
+long libos_syscall_umask(mode_t mask) {
     lock(&g_process.fs_lock);
     mode_t old = g_process.umask;
     g_process.umask = mask & 0777;
@@ -163,11 +163,11 @@ long shim_do_umask(mode_t mask) {
     return old;
 }
 
-long shim_do_chmod(const char* path, mode_t mode) {
-    return shim_do_fchmodat(AT_FDCWD, path, mode);
+long libos_syscall_chmod(const char* path, mode_t mode) {
+    return libos_syscall_fchmodat(AT_FDCWD, path, mode);
 }
 
-long shim_do_fchmodat(int dfd, const char* filename, mode_t mode) {
+long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode) {
     if (!is_user_string_readable(filename))
         return -EFAULT;
 
@@ -205,7 +205,7 @@ out:
     return ret;
 }
 
-long shim_do_fchmod(int fd, mode_t mode) {
+long libos_syscall_fchmod(int fd, mode_t mode) {
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
@@ -246,11 +246,11 @@ out:
     return ret;
 }
 
-long shim_do_chown(const char* path, uid_t uid, gid_t gid) {
-    return shim_do_fchownat(AT_FDCWD, path, uid, gid, 0);
+long libos_syscall_chown(const char* path, uid_t uid, gid_t gid) {
+    return libos_syscall_fchownat(AT_FDCWD, path, uid, gid, 0);
 }
 
-long shim_do_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid, int flags) {
+long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid, int flags) {
     __UNUSED(flags);
     __UNUSED(uid);
     __UNUSED(gid);
@@ -279,7 +279,7 @@ out:
     return ret;
 }
 
-long shim_do_fchown(int fd, uid_t uid, gid_t gid) {
+long libos_syscall_fchown(int fd, uid_t uid, gid_t gid) {
     __UNUSED(uid);
     __UNUSED(gid);
 
@@ -341,11 +341,11 @@ static int do_rename(struct shim_dentry* old_dent, struct shim_dentry* new_dent)
     return 0;
 }
 
-long shim_do_rename(const char* oldpath, const char* newpath) {
-    return shim_do_renameat(AT_FDCWD, oldpath, AT_FDCWD, newpath);
+long libos_syscall_rename(const char* oldpath, const char* newpath) {
+    return libos_syscall_renameat(AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }
 
-long shim_do_renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
+long libos_syscall_renameat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath) {
     struct shim_dentry* old_dir_dent = NULL;
     struct shim_dentry* old_dent     = NULL;
     struct shim_dentry* new_dir_dent = NULL;
@@ -399,7 +399,7 @@ out:
     return ret;
 }
 
-long shim_do_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
+long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     long ret;
     char* buf = NULL;
 
@@ -530,7 +530,7 @@ out:
     return copied_to_out ? (long)copied_to_out : ret;
 }
 
-long shim_do_chroot(const char* filename) {
+long libos_syscall_chroot(const char* filename) {
     if (!is_user_string_readable(filename))
         return -EFAULT;
 

@@ -40,7 +40,7 @@ ssize_t do_handle_read(struct shim_handle* hdl, void* buf, size_t count) {
     return ret;
 }
 
-long shim_do_read(int fd, void* buf, size_t count) {
+long libos_syscall_read(int fd, void* buf, size_t count) {
     if (!is_user_memory_writable(buf, count))
         return -EFAULT;
 
@@ -75,7 +75,7 @@ ssize_t do_handle_write(struct shim_handle* hdl, const void* buf, size_t count) 
     return ret;
 }
 
-long shim_do_write(int fd, const void* buf, size_t count) {
+long libos_syscall_write(int fd, const void* buf, size_t count) {
     if (!is_user_memory_readable((void*)buf, count))
         return -EFAULT;
 
@@ -91,15 +91,15 @@ long shim_do_write(int fd, const void* buf, size_t count) {
     return ret;
 }
 
-long shim_do_open(const char* file, int flags, mode_t mode) {
-    return shim_do_openat(AT_FDCWD, file, flags, mode);
+long libos_syscall_open(const char* file, int flags, mode_t mode) {
+    return libos_syscall_openat(AT_FDCWD, file, flags, mode);
 }
 
-long shim_do_creat(const char* path, mode_t mode) {
-    return shim_do_open(path, O_CREAT | O_TRUNC | O_WRONLY, mode);
+long libos_syscall_creat(const char* path, mode_t mode) {
+    return libos_syscall_open(path, O_CREAT | O_TRUNC | O_WRONLY, mode);
 }
 
-long shim_do_openat(int dfd, const char* filename, int flags, int mode) {
+long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
     /* Clear invalid flags. */
     flags &= O_ACCMODE | O_APPEND |  O_CLOEXEC | O_CREAT | O_DIRECT | O_DIRECTORY | O_DSYNC | O_EXCL
              | O_LARGEFILE | O_NOATIME | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK | O_PATH | O_SYNC
@@ -159,7 +159,7 @@ out:
     return ret;
 }
 
-long shim_do_close(int fd) {
+long libos_syscall_close(int fd) {
     struct shim_handle* handle = detach_fd_handle(fd, NULL, NULL);
     if (!handle)
         return -EBADF;
@@ -200,7 +200,7 @@ out:
 }
 
 /* lseek is simply doing arithmetic on the offset, no PAL call here */
-long shim_do_lseek(int fd, off_t offset, int origin) {
+long libos_syscall_lseek(int fd, off_t offset, int origin) {
     if (origin != SEEK_SET && origin != SEEK_CUR && origin != SEEK_END)
         return -EINVAL;
 
@@ -228,7 +228,7 @@ out:
     return ret;
 }
 
-long shim_do_pread64(int fd, char* buf, size_t count, loff_t offset) {
+long libos_syscall_pread64(int fd, char* buf, size_t count, loff_t offset) {
     if (!is_user_memory_writable(buf, count))
         return -EFAULT;
 
@@ -270,7 +270,7 @@ out:
     return ret;
 }
 
-long shim_do_pwrite64(int fd, char* buf, size_t count, loff_t offset) {
+long libos_syscall_pwrite64(int fd, char* buf, size_t count, loff_t offset) {
     if (!is_user_memory_readable(buf, count))
         return -EFAULT;
 
@@ -451,15 +451,15 @@ out_no_unlock:
 static_assert(sizeof(long) <= sizeof(ssize_t),
               "return type of do_getdents() is too small for getdents32");
 
-long shim_do_getdents(int fd, struct linux_dirent* buf, unsigned int count) {
+long libos_syscall_getdents(int fd, struct linux_dirent* buf, unsigned int count) {
     return do_getdents(fd, (uint8_t*)buf, count, /*is_getdents64=*/false);
 }
 
-long shim_do_getdents64(int fd, struct linux_dirent64* buf, size_t count) {
+long libos_syscall_getdents64(int fd, struct linux_dirent64* buf, size_t count) {
     return do_getdents(fd, (uint8_t*)buf, count, /*is_getdents64=*/true);
 }
 
-long shim_do_fsync(int fd) {
+long libos_syscall_fsync(int fd) {
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
@@ -489,12 +489,12 @@ out:
     return ret;
 }
 
-long shim_do_fdatasync(int fd) {
+long libos_syscall_fdatasync(int fd) {
     /* assume fsync() >> fdatasync(); no app should depend on only syncing data for correctness */
-    return shim_do_fsync(fd);
+    return libos_syscall_fsync(fd);
 }
 
-long shim_do_truncate(const char* path, loff_t length) {
+long libos_syscall_truncate(const char* path, loff_t length) {
     if (length < 0)
         return -EINVAL;
 
@@ -524,7 +524,7 @@ out:
     return ret;
 }
 
-long shim_do_ftruncate(int fd, loff_t length) {
+long libos_syscall_ftruncate(int fd, loff_t length) {
     if (length < 0)
         return -EINVAL;
 
@@ -558,7 +558,7 @@ out:
     return ret;
 }
 
-long shim_do_fallocate(int fd, int mode, loff_t offset, loff_t len) {
+long libos_syscall_fallocate(int fd, int mode, loff_t offset, loff_t len) {
     int ret;
     if (offset < 0) {
         return -EINVAL;

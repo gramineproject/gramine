@@ -45,7 +45,8 @@
                        | MAP_HUGE_2MB           \
                        | MAP_HUGE_1GB)
 
-void* shim_do_mmap(void* addr, size_t length, int prot, int flags, int fd, unsigned long offset) {
+void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
+                         unsigned long offset) {
     struct shim_handle* hdl = NULL;
     long ret = 0;
 
@@ -205,7 +206,7 @@ out_handle:
     return addr;
 }
 
-long shim_do_mprotect(void* addr, size_t length, int prot) {
+long libos_syscall_mprotect(void* addr, size_t length, int prot) {
     if (prot & ~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC | PROT_GROWSDOWN | PROT_GROWSUP |
                  PROT_SEM)) {
         return -EINVAL;
@@ -268,7 +269,7 @@ long shim_do_mprotect(void* addr, size_t length, int prot) {
     return 0;
 }
 
-long shim_do_munmap(void* addr, size_t length) {
+long libos_syscall_munmap(void* addr, size_t length) {
     /*
      * According to the manpage, addr has to be page-aligned, but not the
      * length. munmap() will automatically round up the length.
@@ -309,7 +310,7 @@ long shim_do_munmap(void* addr, size_t length) {
  * pessimistically due to lack of a good way to know it.
  * Possibly it may cause performance(or other) issue due to this lying.
  */
-long shim_do_mincore(void* addr, size_t len, unsigned char* vec) {
+long libos_syscall_mincore(void* addr, size_t len, unsigned char* vec) {
     if (!IS_ALLOC_ALIGNED_PTR(addr))
         return -EINVAL;
 
@@ -339,8 +340,8 @@ long shim_do_mincore(void* addr, size_t len, unsigned char* vec) {
     return 0;
 }
 
-long shim_do_mbind(void* start, unsigned long len, int mode, unsigned long* nmask,
-                   unsigned long maxnode, int flags) {
+long libos_syscall_mbind(void* start, unsigned long len, int mode, unsigned long* nmask,
+                         unsigned long maxnode, int flags) {
     /* dummy implementation, always return success */
     __UNUSED(start);
     __UNUSED(len);
@@ -377,7 +378,7 @@ static bool madvise_behavior_valid(int behavior) {
     return false;
 }
 
-long shim_do_madvise(unsigned long start, size_t len_in, int behavior) {
+long libos_syscall_madvise(unsigned long start, size_t len_in, int behavior) {
     if (!madvise_behavior_valid(behavior))
         return -EINVAL;
 
@@ -424,7 +425,7 @@ long shim_do_madvise(unsigned long start, size_t len_in, int behavior) {
     return -EINVAL;
 }
 
-long shim_do_msync(unsigned long start, size_t len_orig, int flags) {
+long libos_syscall_msync(unsigned long start, size_t len_orig, int flags) {
     if (flags & ~(MS_ASYNC | MS_SYNC | MS_INVALIDATE)) {
         return -EINVAL;
     }

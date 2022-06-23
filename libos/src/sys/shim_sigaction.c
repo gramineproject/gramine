@@ -25,8 +25,8 @@
 #include "shim_thread.h"
 #include "shim_utils.h"
 
-long shim_do_rt_sigaction(int signum, const struct __kernel_sigaction* act,
-                          struct __kernel_sigaction* oldact, size_t sigsetsize) {
+long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act,
+                                struct __kernel_sigaction* oldact, size_t sigsetsize) {
     /* SIGKILL and SIGSTOP cannot be caught or ignored */
     if (signum == SIGKILL || signum == SIGSTOP || signum <= 0 || signum > SIGS_CNT ||
             sigsetsize != sizeof(__sigset_t))
@@ -63,7 +63,7 @@ long shim_do_rt_sigaction(int signum, const struct __kernel_sigaction* act,
     return 0;
 }
 
-long shim_do_rt_sigreturn(void) {
+long libos_syscall_rt_sigreturn(void) {
     PAL_CONTEXT* context = SHIM_TCB_GET(context.regs);
 
     __sigset_t new_mask;
@@ -81,7 +81,8 @@ long shim_do_rt_sigreturn(void) {
     return pal_context_get_retval(context);
 }
 
-long shim_do_rt_sigprocmask(int how, const __sigset_t* set, __sigset_t* oldset, size_t sigsetsize) {
+long libos_syscall_rt_sigprocmask(int how, const __sigset_t* set, __sigset_t* oldset,
+                                  size_t sigsetsize) {
     __sigset_t old;
 
     if (sigsetsize != sizeof(*set))
@@ -133,7 +134,7 @@ out:
     return 0;
 }
 
-long shim_do_sigaltstack(const stack_t* ss, stack_t* oss) {
+long libos_syscall_sigaltstack(const stack_t* ss, stack_t* oss) {
     if (ss && !is_user_memory_readable(ss, sizeof(*ss))) {
         return -EFAULT;
     }
@@ -181,7 +182,7 @@ long shim_do_sigaltstack(const stack_t* ss, stack_t* oss) {
     return 0;
 }
 
-long shim_do_rt_sigsuspend(const __sigset_t* mask_ptr, size_t setsize) {
+long libos_syscall_rt_sigsuspend(const __sigset_t* mask_ptr, size_t setsize) {
     int ret = set_user_sigmask(mask_ptr, setsize);
     if (ret < 0) {
         return ret;
@@ -198,8 +199,8 @@ long shim_do_rt_sigsuspend(const __sigset_t* mask_ptr, size_t setsize) {
     return -EINTR;
 }
 
-long shim_do_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* info,
-                             struct __kernel_timespec* timeout, size_t setsize) {
+long libos_syscall_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* info,
+                                   struct __kernel_timespec* timeout, size_t setsize) {
     int ret;
 
     if (setsize != sizeof(sigset_t)) {
@@ -278,7 +279,7 @@ long shim_do_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* info,
     return ret;
 }
 
-long shim_do_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
+long libos_syscall_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
     if (sigsetsize != sizeof(*set))
         return -EINVAL;
 
@@ -402,7 +403,7 @@ int do_kill_pgroup(IDTYPE sender, IDTYPE pgid, int sig) {
     return kill_current_proc(&info);
 }
 
-long shim_do_kill(pid_t pid, int sig) {
+long libos_syscall_kill(pid_t pid, int sig) {
     if (sig < 0 || sig > SIGS_CNT) {
         return -EINVAL;
     }
@@ -468,7 +469,7 @@ int do_kill_thread(IDTYPE sender, IDTYPE tgid, IDTYPE tid, int sig) {
     return ret;
 }
 
-long shim_do_tkill(pid_t tid, int sig) {
+long libos_syscall_tkill(pid_t tid, int sig) {
     if (tid <= 0)
         return -EINVAL;
 
@@ -476,7 +477,7 @@ long shim_do_tkill(pid_t tid, int sig) {
     return do_kill_thread(g_process.pid, g_process.pid, tid, sig);
 }
 
-long shim_do_tgkill(pid_t tgid, pid_t tid, int sig) {
+long libos_syscall_tgkill(pid_t tgid, pid_t tid, int sig) {
     if (tgid <= 0 || tid <= 0)
         return -EINVAL;
 

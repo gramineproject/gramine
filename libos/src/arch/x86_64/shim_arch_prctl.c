@@ -26,7 +26,7 @@
 #define ARCH_REQ_XCOMP_PERM 0x1023
 #endif
 
-long shim_do_arch_prctl(int code, unsigned long addr) {
+long libos_syscall_arch_prctl(int code, unsigned long addr) {
     unsigned int values[CPUID_WORD_NUM];
     int ret;
 

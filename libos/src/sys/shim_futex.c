@@ -709,8 +709,8 @@ static int is_valid_futex_ptr(uint32_t* ptr, bool check_write) {
     return 0;
 }
 
-static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, uint32_t* uaddr2,
-                          uint32_t val3) {
+static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, uint32_t* uaddr2,
+                                uint32_t val3) {
     int cmd = op & FUTEX_CMD_MASK;
     bool no_timeout = true;
     uint64_t timeout = 0;
@@ -807,13 +807,13 @@ static int _shim_do_futex(uint32_t* uaddr, int op, uint32_t val, void* utime, ui
     }
 }
 
-long shim_do_futex(int* uaddr, int op, int val, void* utime, int* uaddr2, int val3) {
+long libos_syscall_futex(int* uaddr, int op, int val, void* utime, int* uaddr2, int val3) {
     static_assert(sizeof(int) == 4, "futexes are defined to be 32-bit");
-    return _shim_do_futex((uint32_t*)uaddr, op, (uint32_t)val, utime, (uint32_t*)uaddr2,
-                          (uint32_t)val3);
+    return _libos_syscall_futex((uint32_t*)uaddr, op, (uint32_t)val, utime, (uint32_t*)uaddr2,
+                                (uint32_t)val3);
 }
 
-long shim_do_set_robust_list(struct robust_list_head* head, size_t len) {
+long libos_syscall_set_robust_list(struct robust_list_head* head, size_t len) {
     if (len != sizeof(struct robust_list_head)) {
         return -EINVAL;
     }
@@ -822,7 +822,7 @@ long shim_do_set_robust_list(struct robust_list_head* head, size_t len) {
     return 0;
 }
 
-long shim_do_get_robust_list(pid_t pid, struct robust_list_head** head, size_t* len) {
+long libos_syscall_get_robust_list(pid_t pid, struct robust_list_head** head, size_t* len) {
     struct shim_thread* thread;
     int ret = 0;
 

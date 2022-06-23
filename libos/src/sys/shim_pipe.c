@@ -104,11 +104,11 @@ static void undo_set_fd_handle(int fd) {
     }
 }
 
-long shim_do_pipe2(int* filedes, int flags) {
+long libos_syscall_pipe2(int* filedes, int flags) {
     int ret = 0;
 
     if (flags & O_DIRECT) {
-        log_warning("shim_do_pipe2(): ignoring not supported O_DIRECT flag");
+        log_warning("libos_syscall_pipe2(): ignoring not supported O_DIRECT flag");
         flags &= ~O_DIRECT;
     }
 
@@ -177,11 +177,11 @@ out:
     return ret;
 }
 
-long shim_do_pipe(int* filedes) {
-    return shim_do_pipe2(filedes, 0);
+long libos_syscall_pipe(int* filedes) {
+    return libos_syscall_pipe2(filedes, 0);
 }
 
-long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
+long libos_syscall_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
     int ret = 0;
     __UNUSED(dev);
 
@@ -191,10 +191,10 @@ long shim_do_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t dev) {
         /* FIXME: Gramine assumes that file is at least readable by owner, in particular, see
          *        unlink() emulation that uses DkStreamOpen(). We change empty mode to readable
          *        by user here to allow a consequent unlink. Was detected on LTP mknod tests. */
-        int fd = shim_do_openat(dirfd, pathname, O_CREAT | O_EXCL, mode ?: PERM_r________);
+        int fd = libos_syscall_openat(dirfd, pathname, O_CREAT | O_EXCL, mode ?: PERM_r________);
         if (fd < 0)
             return fd;
-        return shim_do_close(fd);
+        return libos_syscall_close(fd);
     }
 
     int vfd1 = -1;
@@ -306,6 +306,6 @@ out:
     return ret;
 }
 
-long shim_do_mknod(const char* pathname, mode_t mode, dev_t dev) {
-    return shim_do_mknodat(AT_FDCWD, pathname, mode, dev);
+long libos_syscall_mknod(const char* pathname, mode_t mode, dev_t dev) {
+    return libos_syscall_mknodat(AT_FDCWD, pathname, mode, dev);
 }

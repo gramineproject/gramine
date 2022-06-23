@@ -141,7 +141,7 @@ void reset_brk(void) {
     destroy_lock(&brk_lock);
 }
 
-void* shim_do_brk(void* _brk) {
+void* libos_syscall_brk(void* _brk) {
     char* brk = _brk;
     size_t size = 0;
     char* brk_aligned = ALLOC_ALIGN_UP_PTR(brk);

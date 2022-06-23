@@ -13,11 +13,11 @@
 #include "shim_lock.h"
 #include "shim_table.h"
 
-long shim_do_access(const char* file, mode_t mode) {
-    return shim_do_faccessat(AT_FDCWD, file, mode);
+long libos_syscall_access(const char* file, mode_t mode) {
+    return libos_syscall_faccessat(AT_FDCWD, file, mode);
 }
 
-long shim_do_faccessat(int dfd, const char* filename, mode_t mode) {
+long libos_syscall_faccessat(int dfd, const char* filename, mode_t mode) {
     if (!filename)
         return -EINVAL;
 

@@ -50,7 +50,7 @@ static int do_hstat(struct shim_handle* hdl, struct stat* stat) {
     return 0;
 }
 
-long shim_do_stat(const char* file, struct stat* stat) {
+long libos_syscall_stat(const char* file, struct stat* stat) {
     if (!is_user_string_readable(file))
         return -EFAULT;
 
@@ -73,7 +73,7 @@ out:
     return ret;
 }
 
-long shim_do_lstat(const char* file, struct stat* stat) {
+long libos_syscall_lstat(const char* file, struct stat* stat) {
     if (!is_user_string_readable(file))
         return -EFAULT;
 
@@ -96,7 +96,7 @@ out:
     return ret;
 }
 
-long shim_do_fstat(int fd, struct stat* stat) {
+long libos_syscall_fstat(int fd, struct stat* stat) {
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
@@ -109,7 +109,7 @@ long shim_do_fstat(int fd, struct stat* stat) {
     return ret;
 }
 
-long shim_do_readlinkat(int dirfd, const char* file, char* buf, int bufsize) {
+long libos_syscall_readlinkat(int dirfd, const char* file, char* buf, int bufsize) {
     int ret;
     char* target = NULL;
 
@@ -166,8 +166,8 @@ out:
     return ret;
 }
 
-long shim_do_readlink(const char* file, char* buf, int bufsize) {
-    return shim_do_readlinkat(AT_FDCWD, file, buf, bufsize);
+long libos_syscall_readlink(const char* file, char* buf, int bufsize) {
+    return libos_syscall_readlinkat(AT_FDCWD, file, buf, bufsize);
 }
 
 static int __do_statfs(struct shim_mount* mount, struct statfs* buf) {
@@ -187,7 +187,7 @@ static int __do_statfs(struct shim_mount* mount, struct statfs* buf) {
     return 0;
 }
 
-long shim_do_statfs(const char* path, struct statfs* buf) {
+long libos_syscall_statfs(const char* path, struct statfs* buf) {
     if (!is_user_string_readable(path))
         return -EFAULT;
 
@@ -205,7 +205,7 @@ long shim_do_statfs(const char* path, struct statfs* buf) {
     return __do_statfs(mount, buf);
 }
 
-long shim_do_fstatfs(int fd, struct statfs* buf) {
+long libos_syscall_fstatfs(int fd, struct statfs* buf) {
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
@@ -221,7 +221,7 @@ long shim_do_fstatfs(int fd, struct statfs* buf) {
  */
 static int do_fstatat_empty_path(int dirfd, struct stat* statbuf) {
     if (dirfd != AT_FDCWD)
-        return shim_do_fstat(dirfd, statbuf);
+        return libos_syscall_fstat(dirfd, statbuf);
 
     lock(&g_process.fs_lock);
     struct shim_dentry* dent = g_process.cwd;
@@ -244,7 +244,7 @@ out:
     return ret;
 }
 
-long shim_do_newfstatat(int dirfd, const char* pathname, struct stat* statbuf, int flags) {
+long libos_syscall_newfstatat(int dirfd, const char* pathname, struct stat* statbuf, int flags) {
     if (flags & ~(AT_EMPTY_PATH | AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW))
         return -EINVAL;
     if (!is_user_string_readable(pathname))

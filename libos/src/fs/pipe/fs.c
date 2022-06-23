@@ -241,7 +241,8 @@ static int fifo_open(struct shim_handle* hdl, struct shim_dentry* dent, int flag
     }
 
     if (flags & O_NONBLOCK) {
-        /* FIFOs were created in blocking mode (see shim_do_mknodat), change their attributes */
+        /* FIFOs were created in blocking mode (see libos_syscall_mknodat), change their
+         * attributes. */
         int ret = pipe_setflags(fifo_hdl, flags & O_NONBLOCK, O_NONBLOCK);
         if (ret < 0) {
             put_handle(fifo_hdl);

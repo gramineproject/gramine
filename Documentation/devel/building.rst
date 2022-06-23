@@ -5,8 +5,7 @@ Building
 
 Gramine consists of several components:
 
-- The Library OS itself (a shared library named ``libsysdb.so``, called the
-  "shim" in our source code)
+- The Library OS itself (a shared library named ``libsysdb.so``)
 - The Platform Adaptation Layer, or PAL (a shared library named ``libpal.so``)
 - A patched C Library (shared library ``libc.so`` and possibly others).
   Currently there are two options: musl and GNU C Library (glibc).

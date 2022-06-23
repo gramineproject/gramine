@@ -292,7 +292,7 @@ fine on native Linux but fails under Gramine::
      example, if Gramine's ``read`` emulation fails, then do::
 
          $ GDB=1 gramine-sgx ./myapp
-         (gdb) break shim_do_read
+         (gdb) break libos_syscall_read
          (gdb) run
          ... breakpoint hit, now look at regs, look at the backtrace, etc. ...
 
@@ -611,10 +611,10 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
    calls, try to implement all of them (but PRs with only partial support may be
    also fine).
 
-   - Implement the main emulation function ``shim_do_some_syscall()``. If the
-     system call belongs to some family of already-implemented system calls, add
-     this function to the already-existing Gramine C file. Otherwise, create a
-     new C file under ``libos/src/sys/``.
+   - Implement the main emulation function ``libos_syscall_some_syscall()``. If
+     the system call belongs to some family of already-implemented system calls,
+     add this function to the already-existing Gramine C file. Otherwise, create
+     a new C file under ``libos/src/sys/``.
 
    - Implement the required sub-systems or components in general code of
      Gramine. For example, if you need to add new fields to the thread object,

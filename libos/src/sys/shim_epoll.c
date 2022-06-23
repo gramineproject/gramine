@@ -255,7 +255,7 @@ void delete_epoll_items_for_fd(int fd, struct shim_handle* handle) {
     }
 }
 
-long shim_do_epoll_create1(int flags) {
+long libos_syscall_epoll_create1(int flags) {
     if (!WITHIN_MASK(flags, EPOLL_CLOEXEC)) {
         return -EINVAL;
     }
@@ -284,13 +284,13 @@ long shim_do_epoll_create1(int flags) {
     return ret;
 }
 
-long shim_do_epoll_create(int size) {
+long libos_syscall_epoll_create(int size) {
     if (size <= 0) {
         return -EINVAL;
     }
 
     /* `size` argument is obsolete and unused. */
-    return shim_do_epoll_create1(/*flags=*/0);
+    return libos_syscall_epoll_create1(/*flags=*/0);
 }
 
 static int do_epoll_add(struct shim_handle* epoll_handle, struct shim_handle* handle, int fd,
@@ -437,7 +437,7 @@ static int do_epoll_del(struct shim_handle* epoll_handle, struct shim_handle* ha
     return ret;
 }
 
-long shim_do_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
+long libos_syscall_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
     int ret;
     struct shim_handle* epoll_handle = get_fd_handle(epfd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!epoll_handle) {
@@ -711,12 +711,12 @@ out_unlock:
     return ret;
 }
 
-long shim_do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms) {
+long libos_syscall_epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms) {
     return do_epoll_wait(epfd, events, maxevents, timeout_ms);
 }
 
-long shim_do_epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms,
-                         const __sigset_t* sigmask, size_t sigsetsize) {
+long libos_syscall_epoll_pwait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms,
+                               const __sigset_t* sigmask, size_t sigsetsize) {
     int ret = set_user_sigmask(sigmask, sigsetsize);
     if (ret < 0) {
         return ret;

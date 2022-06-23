@@ -267,7 +267,7 @@ static int populate_stack(void* stack, size_t stack_size, const char** argv, con
     /* clear working area at the bottom */
     memset(stack, 0, shift);
 
-    /* TODO: remove this, but see the comment in `shim_do_execve`. */
+    /* TODO: remove this, but see the comment in `libos_syscall_execve`. */
     /* set global envp pointer for future checkpoint/migration: this is required for fork/clone
      * case (so that migrated envp points to envvars on the migrated stack) and redundant for
      * execve case (because execve passes an explicit list of envvars to child process) */

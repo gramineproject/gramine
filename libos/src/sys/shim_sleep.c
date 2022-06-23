@@ -12,7 +12,7 @@
 #include "shim_thread.h"
 #include "shim_utils.h"
 
-long shim_do_pause(void) {
+long libos_syscall_pause(void) {
     thread_prepare_wait();
     while (!have_pending_signals()) {
         int ret = thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/false);
@@ -63,7 +63,7 @@ static int check_params(struct __kernel_timespec* req, struct __kernel_timespec*
     return 0;
 }
 
-long shim_do_nanosleep(struct __kernel_timespec* req, struct __kernel_timespec* rem) {
+long libos_syscall_nanosleep(struct __kernel_timespec* req, struct __kernel_timespec* rem) {
     int ret = check_params(req, rem);
     if (ret < 0) {
         return ret;
@@ -71,8 +71,8 @@ long shim_do_nanosleep(struct __kernel_timespec* req, struct __kernel_timespec* 
     return do_nanosleep(timespec_to_us(req), rem);;
 }
 
-long shim_do_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_timespec* req,
-                             struct __kernel_timespec* rem) {
+long libos_syscall_clock_nanosleep(clockid_t clock_id, int flags, struct __kernel_timespec* req,
+                                   struct __kernel_timespec* rem) {
     /* In Gramine all clocks are the same. */
     if (clock_id < 0 || clock_id >= MAX_CLOCKS) {
         return -EINVAL;

@@ -11,7 +11,7 @@
 #include "shim_internal.h"
 #include "shim_table.h"
 
-long shim_do_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone* tz) {
+long libos_syscall_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone* tz) {
     if (!tv)
         return -EINVAL;
 
@@ -32,7 +32,7 @@ long shim_do_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone*
     return 0;
 }
 
-long shim_do_time(time_t* tloc) {
+long libos_syscall_time(time_t* tloc) {
     if (tloc && !is_user_memory_writable(tloc, sizeof(*tloc)))
         return -EFAULT;
 
@@ -50,7 +50,7 @@ long shim_do_time(time_t* tloc) {
     return t;
 }
 
-long shim_do_clock_gettime(clockid_t which_clock, struct timespec* tp) {
+long libos_syscall_clock_gettime(clockid_t which_clock, struct timespec* tp) {
     /* all clocks are the same */
     if (!(0 <= which_clock && which_clock < MAX_CLOCKS))
         return -EINVAL;
@@ -79,7 +79,7 @@ long shim_do_clock_gettime(clockid_t which_clock, struct timespec* tp) {
     return 0;
 }
 
-long shim_do_clock_getres(clockid_t which_clock, struct timespec* tp) {
+long libos_syscall_clock_getres(clockid_t which_clock, struct timespec* tp) {
     /* all clocks are the same */
     if (!(0 <= which_clock && which_clock < MAX_CLOCKS))
         return -EINVAL;

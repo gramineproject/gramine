@@ -20,7 +20,7 @@
 #define ERANGE 34
 #endif
 
-long shim_do_getcwd(char* buf, size_t buf_size) {
+long libos_syscall_getcwd(char* buf, size_t buf_size) {
     if (!buf || !buf_size)
         return -EINVAL;
 
@@ -54,7 +54,7 @@ out:
     return ret;
 }
 
-long shim_do_chdir(const char* filename) {
+long libos_syscall_chdir(const char* filename) {
     struct shim_dentry* dent = NULL;
     int ret;
 
@@ -80,7 +80,7 @@ long shim_do_chdir(const char* filename) {
     return 0;
 }
 
-long shim_do_fchdir(int fd) {
+long libos_syscall_fchdir(int fd) {
     struct shim_thread* thread = get_cur_thread();
     struct shim_handle* hdl    = get_fd_handle(fd, NULL, thread->handle_map);
     if (!hdl)

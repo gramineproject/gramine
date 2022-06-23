@@ -32,7 +32,7 @@ static struct new_utsname g_current_uname = {
     .domainname = "(none)", /* this seems to be the default on Linux */
 };
 
-long shim_do_uname(struct new_utsname* buf) {
+long libos_syscall_uname(struct new_utsname* buf) {
     if (!is_user_memory_writable(buf, sizeof(*buf)))
         return -EFAULT;
 
@@ -40,7 +40,7 @@ long shim_do_uname(struct new_utsname* buf) {
     return 0;
 }
 
-long shim_do_sethostname(char* name, int len) {
+long libos_syscall_sethostname(char* name, int len) {
     if (len < 0 || (size_t)len >= sizeof(g_current_uname.nodename))
         return -EINVAL;
 
@@ -52,7 +52,7 @@ long shim_do_sethostname(char* name, int len) {
     return 0;
 }
 
-long shim_do_setdomainname(char* name, int len) {
+long libos_syscall_setdomainname(char* name, int len) {
     if (len < 0 || (size_t)len >= sizeof(g_current_uname.domainname))
         return -EINVAL;
 

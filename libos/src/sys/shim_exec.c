@@ -29,7 +29,7 @@ static int close_cloexec_handle(struct shim_handle_map* map) {
 
 /* new_argp: pointer to beginning of first stack frame (argc, argv[0], ...)
  * new_auxv: pointer inside first stack frame (auxv[0], auxv[1], ...) */
-noreturn static void __shim_do_execve_rtld(void* new_argp, elf_auxv_t* new_auxv) {
+noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new_auxv) {
     int ret = 0;
 
     set_default_tls();
@@ -95,7 +95,7 @@ error:
     process_exit(/*error_code=*/0, /*term_signal=*/SIGKILL);
 }
 
-static int shim_do_execve_rtld(struct shim_handle* hdl, char** argv, const char** envp) {
+static int libos_syscall_execve_rtld(struct shim_handle* hdl, char** argv, const char** envp) {
     struct shim_thread* cur_thread = get_cur_thread();
     int ret;
 
@@ -134,11 +134,11 @@ static int shim_do_execve_rtld(struct shim_handle* hdl, char** argv, const char*
     free(*argv);
     free(argv);
 
-    __shim_do_execve_rtld(new_argp, new_auxv);
+    __libos_syscall_execve_rtld(new_argp, new_auxv);
     /* UNREACHABLE */
 }
 
-long shim_do_execve(const char* file, const char** argv, const char** envp) {
+long libos_syscall_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
 
     if (!is_user_string_readable(file))
@@ -187,7 +187,7 @@ long shim_do_execve(const char* file, const char** argv, const char** envp) {
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec` and `new_argv`. */
-    ret = shim_do_execve_rtld(exec, new_argv, envp);
+    ret = libos_syscall_execve_rtld(exec, new_argv, envp);
     assert(ret < 0);
 
     put_handle(exec);

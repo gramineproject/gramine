@@ -91,7 +91,7 @@ out:
     return ret;
 }
 
-long shim_do_socket(int family, int type, int protocol) {
+long libos_syscall_socket(int family, int type, int protocol) {
     switch (family) {
         case AF_UNIX:
         case AF_INET:
@@ -130,7 +130,7 @@ long shim_do_socket(int family, int type, int protocol) {
     return ret;
 }
 
-long shim_do_socketpair(int family, int type, int protocol, int* sv) {
+long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
     if (family != AF_UNIX) {
         return -EAFNOSUPPORT;
     }
@@ -265,7 +265,7 @@ out:
     return ret;
 }
 
-long shim_do_bind(int fd, void* addr, int _addrlen) {
+long libos_syscall_bind(int fd, void* addr, int _addrlen) {
     int ret;
 
     if (_addrlen < 0) {
@@ -310,7 +310,7 @@ out:
     return ret;
 }
 
-long shim_do_listen(int fd, int backlog) {
+long libos_syscall_listen(int fd, int backlog) {
     int ret;
 
     if ((unsigned int)backlog > SHIM_SOCK_MAX_PENDING_CONNS) {
@@ -444,15 +444,15 @@ out:
     return ret;
 }
 
-long shim_do_accept(int fd, void* addr, int* addrlen) {
+long libos_syscall_accept(int fd, void* addr, int* addrlen) {
     return do_accept(fd, addr, addrlen, 0);
 }
 
-long shim_do_accept4(int fd, void* addr, int* addrlen, int flags) {
+long libos_syscall_accept4(int fd, void* addr, int* addrlen, int flags) {
     return do_accept(fd, addr, addrlen, flags);
 }
 
-long shim_do_connect(int fd, void* addr, int _addrlen) {
+long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     int ret;
 
     if (_addrlen < 0) {
@@ -664,7 +664,8 @@ out:
     return ret;
 }
 
-long shim_do_sendto(int fd, void* buf, size_t len, unsigned int flags, void* addr, int addrlen) {
+long libos_syscall_sendto(int fd, void* buf, size_t len, unsigned int flags, void* addr,
+                          int addrlen) {
     if (addr) {
         if (addrlen < 0) {
             return -EINVAL;
@@ -692,7 +693,7 @@ long shim_do_sendto(int fd, void* buf, size_t len, unsigned int flags, void* add
     return ret;
 }
 
-long shim_do_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
+long libos_syscall_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
     ssize_t ret = check_msghdr(msg, /*is_recv=*/false);
     if (ret < 0) {
         return ret;
@@ -709,7 +710,7 @@ long shim_do_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
     return ret;
 }
 
-long shim_do_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags) {
+long libos_syscall_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags) {
     for (size_t i = 0; i < vlen; i++) {
         int ret = check_msghdr(&msg[i].msg_hdr, /*is_recv=*/false);
         if (ret < 0) {
@@ -900,8 +901,8 @@ out:
     return ret;
 }
 
-long shim_do_recvfrom(int fd, void* buf, size_t len, unsigned int flags, void* addr,
-                      int* _addrlen) {
+long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, void* addr,
+                            int* _addrlen) {
     size_t addrlen = 0;
     if (addr) {
         if (!is_user_memory_readable(_addrlen, sizeof(*_addrlen))) {
@@ -937,7 +938,7 @@ long shim_do_recvfrom(int fd, void* buf, size_t len, unsigned int flags, void* a
     return ret;
 }
 
-long shim_do_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
+long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
     ssize_t ret = check_msghdr(msg, /*is_recv=*/true);
     if (ret < 0) {
         return ret;
@@ -960,8 +961,8 @@ long shim_do_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
     return ret;
 }
 
-long shim_do_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags,
-                      struct __kernel_timespec* timeout) {
+long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags,
+                            struct __kernel_timespec* timeout) {
     if (timeout) {
         if (!is_user_memory_readable(timeout, sizeof(*timeout))) {
             return -EFAULT;
@@ -1024,7 +1025,7 @@ out:
     return ret;
 }
 
-long shim_do_shutdown(int fd, int how) {
+long libos_syscall_shutdown(int fd, int how) {
     struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
@@ -1093,7 +1094,7 @@ out:
     return ret;
 }
 
-long shim_do_getsockname(int fd, void* addr, int* _addrlen) {
+long libos_syscall_getsockname(int fd, void* addr, int* _addrlen) {
     if (!is_user_memory_readable(_addrlen, sizeof(*_addrlen))) {
         return -EFAULT;
     }
@@ -1137,7 +1138,7 @@ out:
     return ret;
 }
 
-long shim_do_getpeername(int fd, void* addr, int* _addrlen) {
+long libos_syscall_getpeername(int fd, void* addr, int* _addrlen) {
     if (!is_user_memory_readable(_addrlen, sizeof(*_addrlen))) {
         return -EFAULT;
     }
@@ -1309,7 +1310,7 @@ static int set_socket_option(struct shim_handle* handle, int optname, char* optv
     return 0;
 }
 
-long shim_do_setsockopt(int fd, int level, int optname, char* optval, int optlen) {
+long libos_syscall_setsockopt(int fd, int level, int optname, char* optval, int optlen) {
     int ret;
     struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
@@ -1442,7 +1443,7 @@ out:
     return 0;
 }
 
-long shim_do_getsockopt(int fd, int level, int optname, char* optval, int* optlen) {
+long libos_syscall_getsockopt(int fd, int level, int optname, char* optval, int* optlen) {
     int ret;
     struct shim_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {

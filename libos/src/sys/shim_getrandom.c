@@ -8,7 +8,7 @@
 #include "shim_internal.h"
 #include "shim_table.h"
 
-long shim_do_getrandom(char* buf, size_t count, unsigned int flags) {
+long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags) {
     if (flags & ~(GRND_NONBLOCK | GRND_RANDOM | GRND_INSECURE))
         return -EINVAL;
 

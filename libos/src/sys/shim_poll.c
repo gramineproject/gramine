@@ -41,7 +41,7 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
-static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
+static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
 
@@ -203,16 +203,16 @@ static long _shim_do_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us)
     return nrevents ? (long)nrevents : error;
 }
 
-long shim_do_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
+long libos_syscall_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
     if (!is_user_memory_writable(fds, nfds * sizeof(*fds)))
         return -EFAULT;
 
     uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
-    return _shim_do_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
+    return _libos_syscall_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
 }
 
-long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
-                   const __sigset_t* sigmask_ptr, size_t sigsetsize) {
+long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
+                         const __sigset_t* sigmask_ptr, size_t sigsetsize) {
     if (!is_user_memory_writable(fds, nfds * sizeof(*fds))) {
         return -EFAULT;
     }
@@ -223,11 +223,11 @@ long shim_do_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
     }
 
     uint64_t timeout_us = tsp ? tsp->tv_sec * TIME_US_IN_S + tsp->tv_nsec / TIME_NS_IN_US : 0;
-    return _shim_do_poll(fds, nfds, tsp ? &timeout_us : NULL);
+    return _libos_syscall_poll(fds, nfds, tsp ? &timeout_us : NULL);
 }
 
-long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
-                    struct __kernel_timeval* tsv) {
+long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
+                          struct __kernel_timeval* tsv) {
     if (tsv && (tsv->tv_sec < 0 || tsv->tv_usec < 0))
         return -EINVAL;
 
@@ -236,7 +236,7 @@ long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfd
 
     if (!nfds) {
         if (!tsv)
-            return shim_do_pause();
+            return libos_syscall_pause();
 
         /* special case of select(0, ..., tsv) used for sleep */
         return do_nanosleep(tsv->tv_sec * TIME_US_IN_S + tsv->tv_usec, NULL);
@@ -286,7 +286,7 @@ long shim_do_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfd
     unlock(&map->lock);
 
     uint64_t timeout_us = tsv ? tsv->tv_sec * TIME_US_IN_S + tsv->tv_usec : 0;
-    long ret = _shim_do_poll(fds_poll, nfds_poll, tsv ? &timeout_us : NULL);
+    long ret = _libos_syscall_poll(fds_poll, nfds_poll, tsv ? &timeout_us : NULL);
 
     if (ret < 0) {
         free(fds_poll);
@@ -326,8 +326,8 @@ struct sigset_argpack {
     size_t size;
 };
 
-long shim_do_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
-                      const struct __kernel_timespec* tsp, void* _sigmask_argpack) {
+long libos_syscall_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
+                            const struct __kernel_timespec* tsp, void* _sigmask_argpack) {
     struct sigset_argpack* sigmask_argpack = _sigmask_argpack;
     if (sigmask_argpack) {
         if (!is_user_memory_readable(sigmask_argpack, sizeof(*sigmask_argpack))) {
@@ -343,8 +343,8 @@ long shim_do_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* error
         struct __kernel_timeval tsv;
         tsv.tv_sec  = tsp->tv_sec;
         tsv.tv_usec = tsp->tv_nsec / 1000;
-        return shim_do_select(nfds, readfds, writefds, errorfds, &tsv);
+        return libos_syscall_select(nfds, readfds, writefds, errorfds, &tsv);
     }
 
-    return shim_do_select(nfds, readfds, writefds, errorfds, NULL);
+    return libos_syscall_select(nfds, readfds, writefds, errorfds, NULL);
 }

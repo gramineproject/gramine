@@ -12,7 +12,7 @@
 #include "shim_table.h"
 #include "shim_thread.h"
 
-long shim_do_dup(unsigned int fd) {
+long libos_syscall_dup(unsigned int fd) {
     struct shim_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
 
@@ -26,7 +26,7 @@ long shim_do_dup(unsigned int fd) {
     return vfd == -ENOMEM ? -EMFILE : vfd;
 }
 
-long shim_do_dup2(unsigned int oldfd, unsigned int newfd) {
+long libos_syscall_dup2(unsigned int oldfd, unsigned int newfd) {
     if (newfd >= get_rlimit_cur(RLIMIT_NOFILE))
         return -EBADF;
 
@@ -53,7 +53,7 @@ long shim_do_dup2(unsigned int oldfd, unsigned int newfd) {
     return vfd == -ENOMEM ? -EMFILE : vfd;
 }
 
-long shim_do_dup3(unsigned int oldfd, unsigned int newfd, int flags) {
+long libos_syscall_dup3(unsigned int oldfd, unsigned int newfd, int flags) {
     if ((flags & ~O_CLOEXEC) || oldfd == newfd)
         return -EINVAL;
 

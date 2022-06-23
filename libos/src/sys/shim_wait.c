@@ -211,7 +211,8 @@ out:
     return ret;
 }
 
-long shim_do_waitid(int which, pid_t id, siginfo_t* infop, int options, struct __kernel_rusage* ru) {
+long libos_syscall_waitid(int which, pid_t id, siginfo_t* infop, int options,
+                          struct __kernel_rusage* ru) {
     __UNUSED(ru);
 
     if (options & ~(WNOHANG | WNOWAIT | WEXITED | WSTOPPED | WCONTINUED |
@@ -227,7 +228,7 @@ long shim_do_waitid(int which, pid_t id, siginfo_t* infop, int options, struct _
     return do_waitid(which, id, infop, options);
 }
 
-long shim_do_wait4(pid_t pid, int* status, int options, struct __kernel_rusage* ru) {
+long libos_syscall_wait4(pid_t pid, int* status, int options, struct __kernel_rusage* ru) {
     __UNUSED(ru);
 
     int which;

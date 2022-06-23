@@ -10,20 +10,20 @@
 #include "shim_thread.h"
 #include "shim_types.h"
 
-long shim_do_getpid(void) {
+long libos_syscall_getpid(void) {
     return g_process.pid;
 }
 
-long shim_do_gettid(void) {
+long libos_syscall_gettid(void) {
     /* `tid` is constant, no need to take a lock. */
     return get_cur_thread()->tid;
 }
 
-long shim_do_getppid(void) {
+long libos_syscall_getppid(void) {
     return g_process.ppid;
 }
 
-long shim_do_set_tid_address(int* tidptr) {
+long libos_syscall_set_tid_address(int* tidptr) {
     struct shim_thread* cur = get_cur_thread();
     lock(&cur->lock);
     cur->clear_child_tid = tidptr;
@@ -31,7 +31,7 @@ long shim_do_set_tid_address(int* tidptr) {
     return cur->tid;
 }
 
-long shim_do_setpgid(pid_t pid, pid_t pgid) {
+long libos_syscall_setpgid(pid_t pid, pid_t pgid) {
     if (pgid < 0) {
         return -EINVAL;
     }
@@ -46,26 +46,26 @@ long shim_do_setpgid(pid_t pid, pid_t pgid) {
     return -EINVAL;
 }
 
-long shim_do_getpgid(pid_t pid) {
+long libos_syscall_getpgid(pid_t pid) {
     if (!pid || g_process.pid == (IDTYPE)pid) {
         return __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
     }
 
     /* TODO: Currently we do not support getting pgid of other processes.
-     * Implement child lookup once `shim_do_setpgid` sends info to the parent. */
+     * Implement child lookup once `libos_syscall_setpgid` sends info to the parent. */
     return -EINVAL;
 }
 
-long shim_do_getpgrp(void) {
-    return shim_do_getpgid(0);
+long libos_syscall_getpgrp(void) {
+    return libos_syscall_getpgid(0);
 }
 
-long shim_do_setsid(void) {
+long libos_syscall_setsid(void) {
     /* TODO: currently we do not support session management. */
     return -ENOSYS;
 }
 
-long shim_do_getsid(pid_t pid) {
+long libos_syscall_getsid(pid_t pid) {
     /* TODO: currently we do not support session management. */
     __UNUSED(pid);
     return -ENOSYS;

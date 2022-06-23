@@ -228,8 +228,8 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
     return ret;
 }
 
-long shim_do_clone(unsigned long flags, unsigned long user_stack_addr, int* parent_tidptr,
-                  int* child_tidptr, unsigned long tls) {
+long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int* parent_tidptr,
+                         int* child_tidptr, unsigned long tls) {
     /*
      * Currently not supported:
      * CLONE_PARENT

@@ -71,7 +71,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     return 0;
 }
 
-long shim_do_eventfd2(unsigned int count, int flags) {
+long libos_syscall_eventfd2(unsigned int count, int flags) {
     int ret = 0;
     struct shim_handle* hdl = get_new_handle();
 
@@ -105,6 +105,6 @@ out:
     return ret;
 }
 
-long shim_do_eventfd(unsigned int count) {
-    return shim_do_eventfd2(count, 0);
+long libos_syscall_eventfd(unsigned int count) {
+    return libos_syscall_eventfd2(count, 0);
 }

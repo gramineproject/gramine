@@ -75,7 +75,7 @@ static int init_exec_handle(void) {
     lock(&g_process.fs_lock);
     if (g_process.exec) {
         /* `g_process.exec` handle is already initialized if we did execve. See
-         * `shim_do_execve_rtld`. */
+         * `libos_syscall_execve_rtld`. */
         unlock(&g_process.fs_lock);
         return 0;
     }

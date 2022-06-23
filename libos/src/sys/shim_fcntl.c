@@ -131,7 +131,7 @@ static int flock_to_posix_lock(struct flock* fl, struct shim_handle* hdl, struct
     return 0;
 }
 
-long shim_do_fcntl(int fd, int cmd, unsigned long arg) {
+long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     int ret;
     int flags;
 

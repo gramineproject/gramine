@@ -29,7 +29,7 @@ static void signal_io(IDTYPE caller, void* arg) {
     }
 }
 
-long shim_do_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
+long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     struct shim_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;

@@ -9,10 +9,10 @@
 
 #include "shim_table.h"
 
-long shim_do_fork(void) {
-    return shim_do_clone(SIGCHLD, 0, NULL, NULL, 0);
+long libos_syscall_fork(void) {
+    return libos_syscall_clone(SIGCHLD, 0, NULL, NULL, 0);
 }
 
-long shim_do_vfork(void) {
-    return shim_do_clone(CLONE_VFORK | CLONE_VM | SIGCHLD, 0, NULL, NULL, 0);
+long libos_syscall_vfork(void) {
+    return libos_syscall_clone(CLONE_VFORK | CLONE_VM | SIGCHLD, 0, NULL, NULL, 0);
 }

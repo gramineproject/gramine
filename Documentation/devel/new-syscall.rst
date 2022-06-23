@@ -9,24 +9,24 @@ Implementing new system call
 For example, assume we are implementing :manpage:`sched_setaffinity(2)`. You
 must add the prototype of the function implementing it to :file:`shim_table.h`::
 
-   long shim_do_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr);
+   long libos_syscall_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr);
 
-Note that we use the following naming convetion: ``shim_do_`` followed by
+Note that we use the following naming convetion: ``libos_syscall_`` followed by
 an actual syscall name. Additionally this function should return ``long``.
 Now you need to add an appropriate entry in the syscalls table in
 :file:`shim_table-$(ARCH).c`::
 
-    [__NR_sched_setaffinity] = (shim_fp)shim_do_sched_setaffinity
+    [__NR_sched_setaffinity] = (shim_fp)libos_syscall_sched_setaffinity
 
 2. Implement system call
 ------------------------
 
-You can add the function body of ``shim_do_sched_setaffinity`` in a new source
-file or any existing source file in :file:`libos/src/sys`.
+You can add the function body of ``libos_syscall_sched_setaffinity`` in a new
+source file or any existing source file in :file:`libos/src/sys`.
 
 For example, in :file:`libos/src/sys/shim_sched.c`::
 
-   long shim_do_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr) {
+   long libos_syscall_sched_setaffinity(pid_t pid, unsigned int len, unsigned long* user_mask_ptr) {
       /* code for implementing the semantics of sched_setaffinity */
    }
 
