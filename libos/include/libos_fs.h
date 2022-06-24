@@ -167,6 +167,8 @@ struct libos_fs_ops {
      */
     int (*setflags)(struct libos_handle* handle, unsigned int flags, unsigned int mask);
 
+    int (*ioctl)(struct libos_handle* handle, unsigned int cmd, unsigned long arg);
+
     /* lock and unlock the file */
     int (*lock)(const char* trim_name);
     int (*unlock)(const char* trim_name);

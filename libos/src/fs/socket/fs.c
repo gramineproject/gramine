@@ -4,6 +4,7 @@
  */
 
 #include <asm/fcntl.h>
+#include <asm/ioctls.h>
 
 #include "api.h"
 #include "libos_fs.h"
@@ -73,8 +74,6 @@ static int hstat(struct libos_handle* handle, struct stat* stat) {
     stat->st_nlink = 1;
     stat->st_blksize = PAGE_SIZE;
 
-    /* XXX: maybe set `st_size` - query PAL for pending size? Otoh nothing seems to be using it. */
-
     return 0;
 }
 
@@ -125,6 +124,43 @@ out:
     return ret;
 }
 
+static int get_socket_pending_size(struct libos_handle* handle, size_t* out_size) {
+    PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+    if (!pal_handle) {
+        /* No handle yet, so there is no pending data. */
+        *out_size = 0;
+        return 0;
+    }
+
+    PAL_STREAM_ATTR attr;
+    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+
+    *out_size = attr.pending_size;
+    return 0;
+}
+
+static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long arg) {
+    switch (cmd) {
+        case FIONREAD:;
+            size_t size = 0;
+            int ret = get_socket_pending_size(handle, &size);
+            if (ret < 0) {
+                return ret;
+            }
+            if (size > INT_MAX) {
+                /* Linux does not do this, but whatever. */
+                return -EOVERFLOW;
+            }
+            *(int*)arg = size;
+            return 0;
+        default:
+            return -ENOTTY;
+    }
+}
+
 static int checkout(struct libos_handle* handle) {
     struct libos_sock_handle* sock = &handle->info.sock;
     sock->ops = NULL;
@@ -171,6 +207,7 @@ static struct libos_fs_ops socket_fs_ops = {
     .writev   = writev,
     .hstat    = hstat,
     .setflags = setflags,
+    .ioctl    = ioctl,
     .checkout = checkout,
     .checkin  = checkin,
 };
