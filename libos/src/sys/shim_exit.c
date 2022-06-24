@@ -169,7 +169,7 @@ long libos_syscall_exit_group(int error_code) {
 
     error_code &= 0xFF;
 
-    log_debug("---- shim_exit_group (returning %d)", error_code);
+    log_debug("---- exit_group (returning %d)", error_code);
 
     process_exit(error_code, 0);
 }
@@ -179,7 +179,7 @@ long libos_syscall_exit(int error_code) {
 
     error_code &= 0xFF;
 
-    log_debug("---- shim_exit (returning %d)", error_code);
+    log_debug("---- exit (returning %d)", error_code);
 
     thread_exit(error_code, 0);
 }

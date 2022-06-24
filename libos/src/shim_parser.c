@@ -1573,7 +1573,6 @@ static void parse_pointer_ret(struct print_buf* buf, va_list* ap) {
 }
 
 static void print_syscall_name(struct print_buf* buf, const char* name, unsigned long sysno) {
-    buf_puts(buf, "shim_");
     if (name) {
         buf_printf(buf, "%s", name);
     } else {

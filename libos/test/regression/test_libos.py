@@ -370,7 +370,7 @@ class TC_01_Bootstrap(RegressionTestCase):
     def _verify_debug_log(self, log: str):
         self.assertIn('Host:', log)
         self.assertIn('LibOS initialized', log)
-        self.assertIn('--- shim_exit_group', log)
+        self.assertIn('--- exit_group', log)
 
 
 class TC_02_OpenMP(RegressionTestCase):

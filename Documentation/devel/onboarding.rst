@@ -560,7 +560,7 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
 ``-ENOSYS`` error code, which means "syscall not implemented")::
 
     $ gramine-sgx ./myapp
-    .. [P1:T1:app] trace: ---- shim_some_syscall(...) = -38 ..
+    .. [P1:T1:app] trace: ---- some_syscall(...) = -38 ..
     <unexpected output, terminates abnormally>
 
 #. Make sure this system call is required:
@@ -569,7 +569,7 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
      In this case, the application detects ``-ENOSYS`` and either falls back to
      another implementation (e.g., app first tries ``flock()`` and then falls
      back to ``fcntl()``) or simply ignores the result of this syscall (e.g.,
-     ``shim_ioctl(1, TCGETS, ..)`` can be safely ignored).
+     ``ioctl(1, TCGETS, ..)`` can be safely ignored).
 
      Make sure that ``some_syscall`` returning ``-ENOSYS`` in the log is
      actually the root cause of the application failure. Sometimes such syscalls
