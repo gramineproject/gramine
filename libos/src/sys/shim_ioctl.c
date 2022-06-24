@@ -76,10 +76,17 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
 
             struct libos_fs* fs = hdl->fs;
             if (!fs || !fs->fs_ops) {
-                ret = -EACCES;
+                ret = -ENOTTY;
                 break;
             }
 
+            if (fs->fs_ops->ioctl) {
+                ret = fs->fs_ops->ioctl(hdl, cmd, arg);
+                break;
+            }
+
+            /* TODO: the code below should be deleted and each handle type should have custom ioctl
+             * handling. */
             int size = 0;
             if (fs->fs_ops->hstat) {
                 struct stat stat;
