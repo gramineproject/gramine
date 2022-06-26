@@ -95,8 +95,9 @@ Prerequisites
 
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
-  before you proceed (don't forget to choose Linux as the target OS). We will
-  use Python3 in this tutorial.
+  before you proceed (don't forget to choose Linux as the target OS). PyTorch
+  must be installed under root user, e.g., using sudo -E -H pip3 install ...".
+  We will use Python3 in this tutorial.
 
 - Intel SGX Driver. This tutorial assumes a modern Linux kernel (at least 5.11).
   If the Linux kernel is older than this, then the user must install the
@@ -210,7 +211,8 @@ We also mount other directories such as ``/usr``,  ``/etc``, and ``/tmp``
 required by Python and PyTorch (they search for libraries and utility files in
 these system directories).
 
-Finally, we mount the path containing the Python packages installed via pip::
+Finally, we mount the path containing the Python and Pytorch packages installed
+via pip::
 
    fs.mounts = [
      ...
@@ -221,11 +223,9 @@ Now we can run ``make`` to build/copy all required Gramine files::
 
    make
 
-This command will autogenerate a couple new files:
-
-#. Generate the actual non-SGX Gramine manifest (``pytorch.manifest``) from the
-   template manifest file. This file will be used by Gramine to decide on
-   different manifest options how to execute PyTorch inside Gramine.
+This command will autogenerate the non-SGX Gramine manifest (``pytorch.manifest``)
+from the template manifest file. This file will be used by Gramine to decide on
+different manifest options how to execute PyTorch inside Gramine.
 
 Now, launch Gramine via :command:`gramine-direct`. You can simply append the
 arguments after the application path.  Our example takes
@@ -312,7 +312,8 @@ Intel SGX provides a way for the SGX enclave to attest itself to the remote
 user. This way the user gains trust in the SGX enclave running in an untrusted
 environment, ships the application code and data, and is sure that the *correct*
 application was executed inside a *genuine* SGX enclave. This process of gaining
-trust in a remote SGX machine is called Remote Attestation (RA).
+trust in a remote SGX machine is called
+`Remote Attestation (RA) <https://gramine.readthedocs.io/en/stable/attestation.html>`__.
 
 Gramine has two features that transparently add SGX RA to the application: (1)
 RA-TLS augments normal SSL/TLS sessions with an SGX-specific handshake callback,
@@ -425,13 +426,13 @@ The user must prepare the secret provisioning server and start it. For this,
 copy the secret provisioning executable from ``CI-Examples/ra-tls-secret-prov``
 to the current directory::
 
-   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
+   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
 
 Also, copy the server-identifying certificates so that in-Gramine secret
 provisioning library can verify the provisioning server (via classical X.509
 PKI)::
 
-   cp -R <gramine repository>/CI-Examples/ra-tls-secret-prov/ssl ./
+   cp -R gramine/CI-Examples/ra-tls-secret-prov/ssl ./
 
 These certificates are dummy auto-generated localhost certificates; in production,
 you would want to generate real certificates for your secret-provisioning server
@@ -463,8 +464,8 @@ FS mount::
      { path = "/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
    ]
 
-Also add ``result.txt`` to the encrypted FS mount so that PyTorch writes the
-*encrypted* result into it::
+Also remove ``result.txt`` from ``sgx.allowed_files`` and add it to the encrypted
+FS mount so that PyTorch writes the *encrypted* result into it::
 
    fs.mounts = [
      ...
@@ -476,7 +477,7 @@ files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
 re-use the same ``ssl/`` directory and specify ``localhost``::
 
-   sgx.remote_attestation = "dcap"  # this tutorial uses DCAP attestation only
+   sgx.remote_attestation = true
 
    loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
    loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
@@ -484,6 +485,7 @@ re-use the same ``ssl/`` directory and specify ``localhost``::
    loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "ssl/ca.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
+#. You must append the `ssl/ca.crt` to the already-existing `sgx.trusted_files` array
    sgx.trusted_files = [
      "file:ssl/ca.crt",
    ]
