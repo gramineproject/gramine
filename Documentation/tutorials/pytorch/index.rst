@@ -371,33 +371,14 @@ We will also use the reference implementation of Secret Provisioning found under
 ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine repository),
 so build and copy all the relevant files from there::
 
-<<<<<<< HEAD
-   cd <gramine repository>/CI-Examples/ra-tls-secret-prov
-<<<<<<< HEAD
-   make -C ../../pal/src/host/linux-sgx/tools/ra-tls dcap
-   make dcap pf_crypt
-
-The second line in the above snippet creates Gramine-specific DCAP libraries
-for preparation and verification of SGX quotes (needed for SGX remote
-attestation). The last line builds the required DCAP binaries and copies
-relevant Gramine utilities such as ``pf_crypt`` to encrypt input files.
-
-The last line also builds the secret provisioning server
-``secret_prov_server_dcap``.  We will use this server to provision the master
-wrap key (used to encrypt/decrypt protected input and output files) to the
-PyTorch enclave.  See `Secret Provisioning Minimal Examples
-=======
-=======
    git clone --depth 1 --branch v1.2 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
->>>>>>> fixup! fixup! [Docs] Update pytorch tutorial
    make app dcap
 
 The above line builds the secret provisioning server ``secret_prov_server_dcap``.
 We will use this server to provision the master wrap key (used to encrypt/decrypt
 security sensitive input and output files) to the PyTorch enclave.
 See `Secret Provisioning Minimal Examples
->>>>>>> [Docs] Update pytorch tutorial
 <https://github.com/gramineproject/gramine/tree/master/CI-Examples/ra-tls-secret-prov>`__
 for more information.
 
@@ -493,17 +474,7 @@ Also add ``result.txt`` to the encrypted FS mount so that PyTorch writes the
 Add the following lines to enable remote secret provisioning and allow encrypted
 files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
-<<<<<<< HEAD
-<<<<<<< HEAD
-re-use the same ``ssl/`` directory and specify ``localhost``. For more info on
-the used environment variables and other manifest options, see `here
-<https://github.com/gramineproject/gramine/tree/master/pal/src/host/linux-sgx/tools#secret-provisioning-libraries>`__::
-=======
-re-use the same ``ssl/`` directory and specify ``localhost`` ::
->>>>>>> [Docs] Update pytorch tutorial
-=======
 re-use the same ``ssl/`` directory and specify ``localhost``::
->>>>>>> fixup! fixup! [Docs] Update pytorch tutorial
 
    sgx.remote_attestation = "dcap"  # this tutorial uses DCAP attestation only
 
