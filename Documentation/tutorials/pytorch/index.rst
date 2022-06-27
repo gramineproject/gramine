@@ -486,7 +486,7 @@ re-use the same ``ssl/`` directory and specify ``localhost``::
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
 You must append the `ssl/ca.crt` to the already-existing `sgx.trusted_files` array::
-   
+
    sgx.trusted_files = [
      "file:ssl/ca.crt",
    ]
