@@ -37,11 +37,11 @@
  *
  */
 
-static int create_sock_handle(int family, int type, int protocol, bool is_nonblocking,
-                              struct libos_handle** out_handle) {
+struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
+                                           bool is_nonblocking) {
     struct libos_handle* handle = get_new_handle();
     if (!handle) {
-        return -ENOMEM;
+        return NULL;
     }
 
     handle->type = TYPE_SOCK;
@@ -62,6 +62,7 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
     sock->can_be_read = false;
     sock->can_be_written = false;
     sock->reuseaddr = false;
+    sock->broadcast = false;
     switch (family) {
         case AF_UNIX:
             sock->ops = &sock_unix_ops;
@@ -71,13 +72,24 @@ static int create_sock_handle(int family, int type, int protocol, bool is_nonblo
             sock->ops = &sock_ip_ops;
             break;
     }
-    int ret;
+
     if (!create_lock(&sock->lock) || !create_lock(&sock->recv_lock)) {
-        ret = -ENOMEM;
-        goto out;
+        put_handle(handle);
+        return NULL;
     }
 
-    ret = sock->ops->create(handle);
+    return handle;
+}
+
+static int create_sock_handle(int family, int type, int protocol, bool is_nonblocking,
+                              struct libos_handle** out_handle) {
+    struct libos_handle* handle = get_new_socket_handle(family, type, protocol, is_nonblocking);
+    if (!handle) {
+        return -ENOMEM;
+    }
+
+    struct libos_sock_handle* sock = &handle->info.sock;
+    int ret = sock->ops->create(handle);
     if (ret < 0) {
         goto out;
     }
@@ -1216,8 +1228,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, char* opt
         case SO_SNDTIMEO:
             required_len = sizeof(struct timeval);
             break;
+        /* These options are handled by socket type specific code. */
         case SO_REUSEADDR:
-            /* This option is handled by socket type specific code. */
+        case SO_BROADCAST:
         default:
             return -ENOPROTOOPT;
     }
@@ -1395,6 +1408,9 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
             goto out;
         case SO_REUSEADDR:
             value.i = sock->reuseaddr;
+            goto out;
+        case SO_BROADCAST:
+            value.i = sock->broadcast;
             goto out;
         case SO_KEEPALIVE:
         case SO_LINGER:

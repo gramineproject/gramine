@@ -109,6 +109,7 @@ typedef struct {
             bool is_nonblocking;
             bool reuseaddr;
             bool keepalive;
+            bool broadcast;
             bool tcp_cork;
             bool tcp_nodelay;
             bool ipv6_v6only;

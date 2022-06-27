@@ -81,6 +81,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.is_nonblocking = is_nonblocking;
     handle->sock.reuseaddr = false;
     handle->sock.keepalive = false;
+    handle->sock.broadcast = false;
     handle->sock.tcp_cork = false;
     handle->sock.tcp_nodelay = false;
     handle->sock.ipv6_v6only = false;
@@ -277,6 +278,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->socket.sendtimeout_us = handle->sock.sendtimeout_us;
     attr->socket.reuseaddr = handle->sock.reuseaddr;
     attr->socket.keepalive = handle->sock.keepalive;
+    attr->socket.broadcast = handle->sock.broadcast;
     attr->socket.tcp_cork = handle->sock.tcp_cork;
     attr->socket.tcp_nodelay = handle->sock.tcp_nodelay;
     attr->socket.ipv6_v6only = handle->sock.ipv6_v6only;
@@ -381,6 +383,15 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
             return unix_to_pal_error(ret);
         }
         handle->sock.reuseaddr = attr->socket.reuseaddr;
+    }
+
+    if (attr->socket.broadcast != handle->sock.broadcast) {
+        int val = attr->socket.broadcast;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_BROADCAST, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.broadcast = attr->socket.broadcast;
     }
 
     if (attr->socket.ipv6_v6only != handle->sock.ipv6_v6only) {

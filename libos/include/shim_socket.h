@@ -109,6 +109,9 @@ struct libos_sock_ops {
                 size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking);
 };
 
+struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
+                                           bool is_nonblocking);
+
 extern struct libos_sock_ops sock_unix_ops;
 extern struct libos_sock_ops sock_ip_ops;
 
