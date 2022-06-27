@@ -172,10 +172,10 @@ int update_thread_affinity(struct shim_thread* thread, uint8_t* cpumask, size_t 
     size_t cores_cnt = 0;
     for (size_t i = 0; i < MIN(threads_cnt, cpumask_cnt * BITS_IN_BYTE); i++) {
         idx = i / BITS_IN_TYPE(uint8_t);
-        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(uint8_t))) {
+        if (cpumask[idx] & 1U << (i % BITS_IN_TYPE(uint8_t))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
                 /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
-                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(uint8_t)));
+                cpumask[idx] &= ~(1U << (i % BITS_IN_TYPE(uint8_t)));
             } else {
                 cores_cnt++;
             }

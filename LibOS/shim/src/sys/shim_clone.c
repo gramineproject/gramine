@@ -161,6 +161,13 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
 
     thread->shim_tcb = &shim_tcb;
 
+    /* Linux sets the same cpu affinity mask for the forked child as the parent. Following the same
+     * convention here by copying the parent's cpu affinity mask to the child. */
+    memset(thread->cpumask, 0, sizeof(thread->cpumask));
+    lock(&self->lock);
+    memcpy(thread->cpumask, self->cpumask, sizeof(thread->cpumask));
+    unlock(&self->lock);
+
     unsigned long parent_stack = 0;
     if (user_stack_addr) {
         struct shim_vma_info vma_info;
