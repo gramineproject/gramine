@@ -11,52 +11,52 @@
 #define PRINT_SYMBOL(sym) pal_printf("symbol: %s = %p\n", #sym, SYMBOL_ADDR(sym))
 
 int main(int argc, char** argv, char** envp) {
-    PRINT_SYMBOL(DkVirtualMemoryAlloc);
-    PRINT_SYMBOL(DkVirtualMemoryFree);
-    PRINT_SYMBOL(DkVirtualMemoryProtect);
+    PRINT_SYMBOL(PalVirtualMemoryAlloc);
+    PRINT_SYMBOL(PalVirtualMemoryFree);
+    PRINT_SYMBOL(PalVirtualMemoryProtect);
 
-    PRINT_SYMBOL(DkProcessCreate);
-    PRINT_SYMBOL(DkProcessExit);
+    PRINT_SYMBOL(PalProcessCreate);
+    PRINT_SYMBOL(PalProcessExit);
 
-    PRINT_SYMBOL(DkStreamOpen);
-    PRINT_SYMBOL(DkStreamWaitForClient);
-    PRINT_SYMBOL(DkStreamRead);
-    PRINT_SYMBOL(DkStreamWrite);
-    PRINT_SYMBOL(DkStreamDelete);
-    PRINT_SYMBOL(DkStreamMap);
-    PRINT_SYMBOL(DkStreamUnmap);
-    PRINT_SYMBOL(DkStreamSetLength);
-    PRINT_SYMBOL(DkStreamFlush);
-    PRINT_SYMBOL(DkSendHandle);
-    PRINT_SYMBOL(DkReceiveHandle);
-    PRINT_SYMBOL(DkStreamAttributesQuery);
-    PRINT_SYMBOL(DkStreamAttributesQueryByHandle);
-    PRINT_SYMBOL(DkStreamAttributesSetByHandle);
-    PRINT_SYMBOL(DkStreamGetName);
-    PRINT_SYMBOL(DkStreamChangeName);
-    PRINT_SYMBOL(DkStreamsWaitEvents);
+    PRINT_SYMBOL(PalStreamOpen);
+    PRINT_SYMBOL(PalStreamWaitForClient);
+    PRINT_SYMBOL(PalStreamRead);
+    PRINT_SYMBOL(PalStreamWrite);
+    PRINT_SYMBOL(PalStreamDelete);
+    PRINT_SYMBOL(PalStreamMap);
+    PRINT_SYMBOL(PalStreamUnmap);
+    PRINT_SYMBOL(PalStreamSetLength);
+    PRINT_SYMBOL(PalStreamFlush);
+    PRINT_SYMBOL(PalSendHandle);
+    PRINT_SYMBOL(PalReceiveHandle);
+    PRINT_SYMBOL(PalStreamAttributesQuery);
+    PRINT_SYMBOL(PalStreamAttributesQueryByHandle);
+    PRINT_SYMBOL(PalStreamAttributesSetByHandle);
+    PRINT_SYMBOL(PalStreamGetName);
+    PRINT_SYMBOL(PalStreamChangeName);
+    PRINT_SYMBOL(PalStreamsWaitEvents);
 
-    PRINT_SYMBOL(DkThreadCreate);
-    PRINT_SYMBOL(DkThreadYieldExecution);
-    PRINT_SYMBOL(DkThreadExit);
-    PRINT_SYMBOL(DkThreadResume);
+    PRINT_SYMBOL(PalThreadCreate);
+    PRINT_SYMBOL(PalThreadYieldExecution);
+    PRINT_SYMBOL(PalThreadExit);
+    PRINT_SYMBOL(PalThreadResume);
 
-    PRINT_SYMBOL(DkSetExceptionHandler);
+    PRINT_SYMBOL(PalSetExceptionHandler);
 
-    PRINT_SYMBOL(DkEventCreate);
-    PRINT_SYMBOL(DkEventSet);
-    PRINT_SYMBOL(DkEventClear);
-    PRINT_SYMBOL(DkEventWait);
+    PRINT_SYMBOL(PalEventCreate);
+    PRINT_SYMBOL(PalEventSet);
+    PRINT_SYMBOL(PalEventClear);
+    PRINT_SYMBOL(PalEventWait);
 
-    PRINT_SYMBOL(DkObjectClose);
+    PRINT_SYMBOL(PalObjectClose);
 
-    PRINT_SYMBOL(DkSystemTimeQuery);
-    PRINT_SYMBOL(DkRandomBitsRead);
+    PRINT_SYMBOL(PalSystemTimeQuery);
+    PRINT_SYMBOL(PalRandomBitsRead);
 #if defined(__x86_64__)
-    PRINT_SYMBOL(DkSegmentBaseGet);
-    PRINT_SYMBOL(DkSegmentBaseSet);
+    PRINT_SYMBOL(PalSegmentBaseGet);
+    PRINT_SYMBOL(PalSegmentBaseSet);
 #endif
-    PRINT_SYMBOL(DkMemoryAvailableQuota);
+    PRINT_SYMBOL(PalMemoryAvailableQuota);
 
     return 0;
 }

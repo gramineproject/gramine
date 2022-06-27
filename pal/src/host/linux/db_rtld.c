@@ -9,7 +9,7 @@
  * Overview of ELF files used in this host:
  * - libpal.so - used as main executable, so it doesn't need to be reported separately
  * - vDSO - virtual library loaded by host Linux, doesn't need to be reported
- * - LibOS, application, libc... - reported through DkDebugMap*
+ * - LibOS, application, libc... - reported through PalDebugMap*
  */
 
 #include "api.h"
@@ -26,13 +26,13 @@ bool is_in_vdso(uintptr_t addr) {
     return (g_vdso_start || g_vdso_end) && g_vdso_start <= addr && addr < g_vdso_end;
 }
 
-void _DkDebugMapAdd(const char* name, void* addr) {
+void _PalDebugMapAdd(const char* name, void* addr) {
     int ret = debug_map_add(name, addr);
     if (ret < 0)
         log_error("debug_map_add(%s, %p) failed: %d", name, addr, ret);
 }
 
-void _DkDebugMapRemove(void* addr) {
+void _PalDebugMapRemove(void* addr) {
     int ret = debug_map_remove(addr);
     if (ret < 0)
         log_error("debug_map_remove(%p) failed: %d", addr, ret);
@@ -65,6 +65,6 @@ int setup_vdso(elf_addr_t base_addr) {
     return 0;
 }
 
-int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+int _PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
     return debug_describe_location(addr, buf, buf_size);
 }

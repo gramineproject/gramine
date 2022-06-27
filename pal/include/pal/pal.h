@@ -142,7 +142,7 @@ struct pal_public_state {
 
 /* We cannot mark this as returning a pointer to `const` object, because LibOS can
  * change `pal_public_state.topo_info` during checkpoint restore in the child */
-struct pal_public_state* DkGetPalPublicState(void);
+struct pal_public_state* PalGetPalPublicState(void);
 
 /*
  * MEMORY ALLOCATION
@@ -178,8 +178,8 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
  * differ only in the `NULL` case).
  *
  */
-int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                         pal_prot_flags_t prot);
+int PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
+                          pal_prot_flags_t prot);
 
 /*!
  * \brief Deallocate a previously allocated memory mapping.
@@ -189,18 +189,18 @@ int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_t
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryFree(void* addr, size_t size);
+int PalVirtualMemoryFree(void* addr, size_t size);
 
 /*!
  * \brief Modify the permissions of a previously allocated memory mapping.
  *
  * \param addr  The address.
  * \param size  The size.
- * \param prot  See #DkVirtualMemoryAlloc.
+ * \param prot  See #PalVirtualMemoryAlloc.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
+int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 
 /*
  * PROCESS CREATION
@@ -217,14 +217,14 @@ int DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
  *
  * TODO: `args` is only used by PAL regression tests, and should be removed at some point.
  */
-int DkProcessCreate(const char** args, PAL_HANDLE* handle);
+int PalProcessCreate(const char** args, PAL_HANDLE* handle);
 
 /*!
  * \brief Terminate all threads in the process immediately.
  *
  * \param exit_code  The exit value returned to the host.
  */
-noreturn void DkProcessExit(int exit_code);
+noreturn void PalProcessExit(int exit_code);
 
 /*
  * STREAMS
@@ -293,8 +293,8 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
  */
-int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share_flags,
-                 enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
+int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share_flags,
+                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
 
 /*!
  * \brief Block until a new connection is accepted and return the PAL handle for the connection.
@@ -305,7 +305,7 @@ int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t shar
  *
  * This API is only available for handles that are opened with `pipe.srv:...`.
  */
-int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options);
+int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options);
 
 /*!
  * \brief Read data from an open stream.
@@ -322,11 +322,11 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opti
  *
  * \returns 0 on success, negative error code on failure.
  *
- * If \p handle is a directory, DkStreamRead fills the buffer with the null-terminated names of the
+ * If \p handle is a directory, PalStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
-                 size_t size);
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
+                  size_t size);
 
 /*!
  * \brief Write data to an open stream.
@@ -341,8 +341,8 @@ int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
-                  const char* dest);
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                   const char* dest);
 
 enum pal_delete_mode {
     PAL_DELETE_ALL,  /*!< delete the whole resource / shut down both directions */
@@ -355,21 +355,21 @@ enum pal_delete_mode {
  *
  * \param access  Which side to shut down (see #pal_delete_mode values).
  */
-int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
+int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 
 /*!
  * \brief Map a file to a virtual memory address in the current process.
  *
  * \param         handle    Handle to the stream to be mapped.
- * \param[in,out] addr_ptr  See #DkVirtualMemoryAlloc.
- * \param         prot      See #DkVirtualMemoryAlloc.
+ * \param[in,out] addr_ptr  See #PalVirtualMemoryAlloc.
+ * \param         prot      See #PalVirtualMemoryAlloc.
  * \param         offset    Offset in the stream to be mapped. Must be properly aligned.
  * \param         size      Size of the requested mapping. Must be non-zero and properly aligned.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
-                size_t size);
+int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                 size_t size);
 
 /*!
  * \brief Unmap virtual memory that is backed by a file stream.
@@ -378,21 +378,21 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint6
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamUnmap(void* addr, size_t size);
+int PalStreamUnmap(void* addr, size_t size);
 
 /*!
  * \brief Set the length of the file referenced by handle to `length`.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
+int PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 
 /*!
  * \brief Flush the buffer of a file stream.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkStreamFlush(PAL_HANDLE handle);
+int PalStreamFlush(PAL_HANDLE handle);
 
 /*!
  * \brief Send a PAL handle to a process.
@@ -402,7 +402,7 @@ int DkStreamFlush(PAL_HANDLE handle);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
+int PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 
 /*!
  * \brief Receive a handle from another process.
@@ -413,7 +413,7 @@ int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
+int PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 // TODO: this needs to be redesigned, most of these fields are type specific
 /* stream attribute structure */
@@ -442,14 +442,14 @@ typedef struct _PAL_STREAM_ATTR {
  *
  * This API only applies for URIs such as `%file:...`, `dir:...`, and `dev:...`.
  */
-int DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
+int PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Query the attributes of an open stream.
  *
  * This API applies to any stream handle.
  */
-int DkStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
+int PalStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Set the attributes of an open stream.
@@ -457,17 +457,17 @@ int DkStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
  * Calling this function on the same handle concurrently is not allowed (i.e. callers must ensure
  * mutual exclusion).
  */
-int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
+int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Query the name of an open stream. On success `buffer` contains a null-terminated string.
  */
-int DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size);
+int PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size);
 
 /*!
  * \brief This API changes the name of an open stream.
  */
-int DkStreamChangeName(PAL_HANDLE handle, const char* uri);
+int PalStreamChangeName(PAL_HANDLE handle, const char* uri);
 
 struct pal_socket_addr {
     enum pal_socket_domain domain;
@@ -502,8 +502,8 @@ struct pal_iovec {
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                   pal_stream_options_t options, PAL_HANDLE* out_handle);
+int PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
+                    pal_stream_options_t options, PAL_HANDLE* out_handle);
 
 /*!
  * \brief Bind a socket to a local address.
@@ -516,7 +516,7 @@ int DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
  *
  * Can be called only once per socket.
  */
-int DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
+int PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
 
 /*!
  * \biref Turn a socket into a listening one.
@@ -528,7 +528,7 @@ int DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
  *
  * Can be called multiple times, to change \p backlog.
  */
-int DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
+int PalSocketListen(PAL_HANDLE handle, unsigned int backlog);
 
 /*!
  * \brief Accept a new connection on a socket.
@@ -543,8 +543,8 @@ int DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
  *
  * This function can be safely called concurrently.
  */
-int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                   struct pal_socket_addr* out_client_addr);
+int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                    struct pal_socket_addr* out_client_addr);
 
 /*!
  * \brief Connect a socket to a remote address.
@@ -558,8 +558,8 @@ int DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* 
  *
  * Can also be used to disconnect the socket, if #PAL_DISCONNECT is passed in \p addr.
  */
-int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                    struct pal_socket_addr* out_local_addr);
+int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                     struct pal_socket_addr* out_local_addr);
 
 /*!
  * \brief Send data.
@@ -572,10 +572,10 @@ int DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
  *
  * \returns 0 on success, negative error code on failure.
  *
- * Data is sent atomically, i.e. data from two `DkSocketSend` calls will not be interleaved.
+ * Data is sent atomically, i.e. data from two `PalSocketSend` calls will not be interleaved.
  */
-int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                 struct pal_socket_addr* addr);
+int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+                  struct pal_socket_addr* addr);
 
 /*!
  * \brief Receive data.
@@ -592,10 +592,10 @@ int DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  *
  * \returns 0 on success, negative error code on failure.
  *
- * Data is received atomically, i.e. data from two `DkSocketRecv` calls will not be interleaved.
+ * Data is received atomically, i.e. data from two `PalSocketRecv` calls will not be interleaved.
  */
-int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                 struct pal_socket_addr* addr, bool force_nonblocking);
+int PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+                  struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*
  * Thread creation
@@ -608,12 +608,12 @@ int DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_
  * \param      param   Pointer argument that is passed to the new thread.
  * \param[out] handle  On success contains the thread handle.
  */
-int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle);
+int PalThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle);
 
 /*!
  * \brief Yield the current thread such that the host scheduler can reschedule it.
  */
-void DkThreadYieldExecution(void);
+void PalThreadYieldExecution(void);
 
 /*!
  * \brief Terminate the current thread.
@@ -622,12 +622,12 @@ void DkThreadYieldExecution(void);
  *                         turn notifies the parent thread if any); if `clear_child_tid` is NULL,
  *                         then PAL doesn't do the clearing.
  */
-noreturn void DkThreadExit(int* clear_child_tid);
+noreturn void PalThreadExit(int* clear_child_tid);
 
 /*!
  * \brief Resume a thread.
  */
-int DkThreadResume(PAL_HANDLE thread);
+int PalThreadResume(PAL_HANDLE thread);
 
 /*!
  * \brief Set the CPU affinity of a thread.
@@ -641,7 +641,7 @@ int DkThreadResume(PAL_HANDLE thread);
  * All bit positions exceeding the count of host CPUs are ignored. Returns an error if no CPUs were
  * selected.
  */
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+int PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
 /*!
  * \brief Get the CPU affinity of a thread.
@@ -656,7 +656,7 @@ int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long
  * must be able to fit all the processors in the host and must be aligned by sizeof(long). For
  * example, if the host supports 4 CPUs, \a cpumask_size should be 8 bytes.
  */
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+int PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
 /*
  * Exception Handling
@@ -695,7 +695,7 @@ typedef void (*pal_event_handler_t)(bool is_in_pal, uintptr_t addr, PAL_CONTEXT*
  *
  * \param event  One of #pal_event values.
  */
-void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event);
+void PalSetExceptionHandler(pal_event_handler_t handler, enum pal_event event);
 
 /*
  * Synchronization
@@ -710,26 +710,26 @@ void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event);
  *                            it.
  *
  * Creates a handle to an event that resembles WinAPI synchronization events. A thread can set
- * (signal) the event using #DkEventSet, clear (unset) it using #DkEventClear or wait until
- * the event becomes set (signaled) using #DkEventWait.
+ * (signal) the event using #PalEventSet, clear (unset) it using #PalEventClear or wait until
+ * the event becomes set (signaled) using #PalEventWait.
  */
-int DkEventCreate(PAL_HANDLE* handle, bool init_signaled, bool auto_clear);
+int PalEventCreate(PAL_HANDLE* handle, bool init_signaled, bool auto_clear);
 
 /*!
  * \brief Set (signal) an event.
  *
  * If the event is already set, does nothing.
  *
- * This function has release semantics and synchronizes with #DkEventWait.
+ * This function has release semantics and synchronizes with #PalEventWait.
  */
-void DkEventSet(PAL_HANDLE handle);
+void PalEventSet(PAL_HANDLE handle);
 
 /*!
  * \brief Clear (unset) an event.
  *
  * If the event is not set, does nothing.
  */
-void DkEventClear(PAL_HANDLE handle);
+void PalEventClear(PAL_HANDLE handle);
 
 /*!
  * \brief Wait for an event handle.
@@ -747,9 +747,9 @@ void DkEventClear(PAL_HANDLE handle);
  * After returning (both successful and not), \p timeout_us will contain the remaining time (time
  * that need to pass before we hit original \p timeout_us).
  *
- * This function has acquire semantics and synchronizes with #DkEventSet.
+ * This function has acquire semantics and synchronizes with #PalEventSet.
  */
-int DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
+int PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 typedef uint32_t pal_wait_flags_t; /* bitfield */
 #define PAL_WAIT_READ   1
@@ -769,13 +769,13 @@ typedef uint32_t pal_wait_flags_t; /* bitfield */
  *
  * \p timeout_us contains remaining timeout both on successful and failed calls.
  */
-int DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                        pal_wait_flags_t* ret_events, uint64_t* timeout_us);
+int PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                         pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 
 /*!
  * \brief Close (deallocate) a PAL handle.
  */
-void DkObjectClose(PAL_HANDLE object_handle);
+void PalObjectClose(PAL_HANDLE object_handle);
 
 /*
  * MISC
@@ -789,14 +789,14 @@ void DkObjectClose(PAL_HANDLE object_handle);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int DkDebugLog(const void* buffer, size_t size);
+int PalDebugLog(const void* buffer, size_t size);
 
 /*!
  * \brief Get the current time.
  *
  * \param[out] time  On success holds the current time in microseconds.
  */
-int DkSystemTimeQuery(uint64_t* time);
+int PalSystemTimeQuery(uint64_t* time);
 
 /*!
  * \brief Cryptographically secure RNG.
@@ -806,7 +806,7 @@ int DkSystemTimeQuery(uint64_t* time);
  *
  * \returns 0 on success, negative on failure.
  */
-int DkRandomBitsRead(void* buffer, size_t size);
+int PalRandomBitsRead(void* buffer, size_t size);
 
 enum pal_segment_reg {
     PAL_SEGMENT_FS,
@@ -821,7 +821,7 @@ enum pal_segment_reg {
  *
  * \returns 0 on success, negative error value on failure.
  */
-int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
+int PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 
 /*!
  * \brief Set segment register.
@@ -831,12 +831,12 @@ int DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
  *
  * \returns 0 on success, negative error value on failure.
  */
-int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
+int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
  * \brief Return the amount of currently available memory for LibOS/application usage.
  */
-size_t DkMemoryAvailableQuota(void);
+size_t PalMemoryAvailableQuota(void);
 
 /*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
@@ -868,9 +868,9 @@ size_t DkMemoryAvailableQuota(void);
  * The caller may specify `*user_report_data_size`, `*target_info_size`, and `*report_size` as 0
  * and other fields as NULL to get PAL-enforced sizes of these three structs.
  */
-int DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
-                        void* target_info, size_t* target_info_size, void* report,
-                        size_t* report_size);
+int PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                         void* target_info, size_t* target_info_size, void* report,
+                         size_t* report_size);
 
 /*!
  * \brief Obtain the attestation quote with `user_report_data` embedded into it.
@@ -887,8 +887,8 @@ int DkAttestationReport(const void* user_report_data, size_t* user_report_data_s
  * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B
  * and `quote` is an SGX quote obtained from Quoting Enclave via AESM service.
  */
-int DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
-                       size_t* quote_size);
+int PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                        size_t* quote_size);
 /*!
  * \brief Get special key (specific to PAL host).
  *
@@ -903,7 +903,7 @@ int DkAttestationQuote(const void* user_report_data, size_t user_report_data_siz
  * If a given key is not supported by the current PAL host, the function will return
  * -PAL_ERROR_NOTIMPLEMENTED.
  */
-int DkGetSpecialKey(const char* name, void* key, size_t* key_size);
+int PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 
 #ifdef __GNUC__
 #define symbol_version_default(real, name, version) \
@@ -918,14 +918,14 @@ int DkGetSpecialKey(const char* name, void* key, size_t* key_size);
  *
  * \param[out] values  The array of the results.
  */
-int DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[CPUID_WORD_NUM]);
+int PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[CPUID_WORD_NUM]);
 #endif
 
-void DkDebugMapAdd(const char* uri, void* start_addr);
-void DkDebugMapRemove(void* start_addr);
+void PalDebugMapAdd(const char* uri, void* start_addr);
+void PalDebugMapRemove(void* start_addr);
 
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without
  * DEBUG, falls back to raw value ("0x1234"). */
-void DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 #undef INSIDE_PAL_H

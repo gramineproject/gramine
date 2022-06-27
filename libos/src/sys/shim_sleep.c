@@ -100,10 +100,10 @@ long libos_syscall_clock_nanosleep(clockid_t clock_id, int flags, struct __kerne
     uint64_t timeout_us = timespec_to_us(req);
     if (flags & TIMER_ABSTIME) {
         uint64_t current_time = 0;
-        ret = DkSystemTimeQuery(&current_time);
+        ret = PalSystemTimeQuery(&current_time);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
-            log_error("clock_nanosleep: DkSystemTimeQuery failed with: %d", ret);
+            log_error("clock_nanosleep: PalSystemTimeQuery failed with: %d", ret);
             die_or_inf_loop();
         }
         if (timeout_us <= current_time) {

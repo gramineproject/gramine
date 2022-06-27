@@ -38,9 +38,9 @@ int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
     return 0;
 }
 
-/* _DkStreamUnmap for internal use. Unmap stream at certain memory address.
-   The memory is unmapped as a whole.*/
-int _DkStreamUnmap(void* addr, uint64_t size) {
+/* _PalStreamUnmap for internal use. Unmap stream at certain memory address. The memory is unmapped
+ *  as a whole.*/
+int _PalStreamUnmap(void* addr, uint64_t size) {
     /* Just let the kernel tell us if the mapping isn't good. */
     int ret = DO_SYSCALL(munmap, addr, size);
 
@@ -137,7 +137,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     return 0;
 }
 
-int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
+int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (HANDLE_HDR(target_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
@@ -202,7 +202,7 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (HANDLE_HDR(source_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
@@ -224,7 +224,7 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return unix_to_pal_error(ret);
 
     if ((size_t)ret != sizeof(hdl_hdr)) {
-        /* This check is to shield from a Iago attack. We know that sendmsg() in _DkSendHandle()
+        /* This check is to shield from a Iago attack. We know that sendmsg() in _PalSendHandle()
          * transfers the message atomically, and that our recvmsg() receives it atomically. So
          * the only valid values for ret must be zero or the size of the header. */
         if (!ret)
@@ -270,7 +270,7 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     return 0;
 }
 
-int _DkInitDebugStream(const char* path) {
+int _PalInitDebugStream(const char* path) {
     int ret;
 
     if (g_log_fd != PAL_LOG_DEFAULT_FD) {
@@ -287,7 +287,7 @@ int _DkInitDebugStream(const char* path) {
     return 0;
 }
 
-int _DkDebugLog(const void* buf, size_t size) {
+int _PalDebugLog(const void* buf, size_t size) {
     if (g_log_fd < 0)
         return -PAL_ERROR_BADHANDLE;
 

@@ -41,7 +41,7 @@ struct pal_public_state* g_pal_public_state = NULL;
  * any thread, even internal. */
 noreturn void libos_abort(void) {
     DEBUG_BREAK_ON_FAILURE();
-    DkProcessExit(1);
+    PalProcessExit(1);
 }
 
 static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT + 1] = {
@@ -120,7 +120,7 @@ void* allocate_stack(size_t size, size_t protect_size, bool user) {
     }
 
     bool need_mem_free = false;
-    ret = DkVirtualMemoryAlloc(&stack, size + protect_size, 0, /*prot=*/0);
+    ret = PalVirtualMemoryAlloc(&stack, size + protect_size, 0, /*prot=*/0);
     if (ret < 0) {
         goto out_fail;
     }
@@ -134,7 +134,7 @@ void* allocate_stack(size_t size, size_t protect_size, bool user) {
         goto out_fail;
     }
 
-    if (DkVirtualMemoryProtect(stack + protect_size, size, PAL_PROT_READ | PAL_PROT_WRITE) < 0) {
+    if (PalVirtualMemoryProtect(stack + protect_size, size, PAL_PROT_READ | PAL_PROT_WRITE) < 0) {
         goto out_fail;
     }
 
@@ -146,7 +146,7 @@ out_fail:;
         BUG();
     }
     if (need_mem_free) {
-        if (DkVirtualMemoryFree(stack, size + protect_size) < 0) {
+        if (PalVirtualMemoryFree(stack, size + protect_size) < 0) {
             BUG();
         }
     }
@@ -362,12 +362,12 @@ static int read_environs(const char** envp) {
         int _err = CALL_INIT(func, ##__VA_ARGS__);                          \
         if (_err < 0) {                                                     \
             log_error("Error during libos_init() in " #func " (%d)", _err); \
-            DkProcessExit(1);                                               \
+            PalProcessExit(1);                                              \
         }                                                                   \
     } while (0)
 
 noreturn void* libos_init(int argc, const char** argv, const char** envp) {
-    g_pal_public_state = DkGetPalPublicState();
+    g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
     g_log_level = g_pal_public_state->log_level;
@@ -384,7 +384,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     if (!IS_POWER_OF_2(ALLOC_ALIGNMENT)) {
         log_error("Error during libos_init(): PAL allocation alignment not a power of 2");
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     g_manifest_root = g_pal_public_state->manifest_root;
@@ -409,7 +409,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
         int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
             log_error("libos_init: failed to read the whole checkpoint header: %d", ret);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
 
         assert(hdr.size);
@@ -443,7 +443,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
         int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
             log_error("libos_init: failed to establish IPC connection to parent: %d", ret);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
 
         /* Send a dummy request causing the IPC leader to connect to this process, so that it is
@@ -452,7 +452,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
         ret = ipc_get_id_owner(/*id=*/0, /*out_owner=*/&dummy);
         if (ret < 0) {
             log_debug("libos_init: failed to get a connection from IPC leader to us: %d", ret);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
         assert(dummy == 0); // Nobody should own ID `0`.
 
@@ -461,14 +461,14 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
         ret = write_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
             log_error("libos_init: failed to write ready notification: %d", ret);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
 
         /* Wait for parent to settle its adult things. */
         ret = read_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
             log_error("libos_init: failed to read parent's confirmation: %d", ret);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
     } else { /* !g_pal_public_state->parent_process */
         RUN_INIT(init_sync_server);
@@ -501,7 +501,7 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
     if (size < sizeof(random) * 2 + 1)
         return -ENOMEM;
 
-    int ret = DkRandomBitsRead(&random, sizeof(random));
+    int ret = PalRandomBitsRead(&random, sizeof(random));
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -543,8 +543,8 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
         if (len >= size)
             return -ERANGE;
 
-        ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                           /*options=*/0, &pipe);
+        ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                            /*options=*/0, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */

@@ -18,7 +18,7 @@
 #define FATAL(fmt...)                                   \
     do {                                                \
         log_error("Fatal error in sync server: " fmt);  \
-        DkProcessExit(1);                               \
+        PalProcessExit(1);                              \
     } while(0)
 
 DEFINE_LIST(server_lease);

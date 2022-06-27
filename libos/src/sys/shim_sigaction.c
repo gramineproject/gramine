@@ -318,7 +318,7 @@ static int _wakeup_one_thread(struct libos_thread* thread, void* arg) {
 
     if (!__sigismember(&thread->signal_mask, sig)) {
         thread_wakeup(thread);
-        ret = DkThreadResume(thread->pal_handle);
+        ret = PalThreadResume(thread->pal_handle);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
         } else {
@@ -462,7 +462,7 @@ int do_kill_thread(IDTYPE sender, IDTYPE tgid, IDTYPE tid, int sig) {
     }
     if (thread != get_cur_thread()) {
         thread_wakeup(thread);
-        ret = pal_to_unix_errno(DkThreadResume(thread->pal_handle));
+        ret = pal_to_unix_errno(PalThreadResume(thread->pal_handle));
     }
 
     put_thread(thread);

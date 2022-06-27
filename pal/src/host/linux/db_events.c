@@ -16,7 +16,7 @@
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 
-int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
+int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
     PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
     if (!handle) {
         return -PAL_ERROR_NOMEM;
@@ -32,14 +32,14 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
     return 0;
 }
 
-void _DkEventSet(PAL_HANDLE handle) {
+void _PalEventSet(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     __atomic_store_n(&handle->event.signaled, 1, __ATOMIC_RELEASE);
     bool need_wake = handle->event.waiters_cnt > 0;
     spinlock_unlock(&handle->event.lock);
     if (need_wake) {
         /* We could just use `FUTEX_WAKE`, but using `FUTEX_WAKE_BITSET` is more consistent with
-         * `FUTEX_WAIT_BITSET` in `_DkEventWait`. */
+         * `FUTEX_WAIT_BITSET` in `_PalEventWait`. */
         int ret = DO_SYSCALL(futex, &handle->event.signaled, FUTEX_WAKE_BITSET,
                              handle->event.auto_clear ? 1 : INT_MAX, NULL, NULL,
                              FUTEX_BITSET_MATCH_ANY);
@@ -49,13 +49,13 @@ void _DkEventSet(PAL_HANDLE handle) {
     }
 }
 
-void _DkEventClear(PAL_HANDLE handle) {
+void _PalEventClear(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     __atomic_store_n(&handle->event.signaled, 0, __ATOMIC_RELEASE);
     spinlock_unlock(&handle->event.lock);
 }
 
-int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
+int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     int ret;
     struct timespec timeout = { 0 };
     if (timeout_us) {

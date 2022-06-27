@@ -10,7 +10,7 @@
 #include "cpu.h"
 #include "pal_linux.h"
 
-int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
+int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_GET_FS, (unsigned long*)addr));
@@ -22,7 +22,7 @@ int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     }
 }
 
-int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
+int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_SET_FS, (unsigned long)addr));
@@ -34,7 +34,7 @@ int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     }
 }
 
-int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     cpuid(leaf, subleaf, values);
     return 0;
 }

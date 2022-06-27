@@ -278,8 +278,8 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         void* last_page_start = ALLOC_ALIGN_DOWN_PTR(zero_start);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = DkVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
-                                              pal_prot | PAL_PROT_WRITE) < 0)) {
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
+                                               pal_prot | PAL_PROT_WRITE) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
             }
@@ -288,7 +288,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         memset(zero_start, 0, zero_size);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = DkVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot) < 0)) {
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
             }
@@ -308,8 +308,8 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
             return ret;
         }
 
-        if ((ret = DkVirtualMemoryAlloc(&zero_page_start, zero_page_size, /*alloc_type=*/0,
-                                        zero_pal_prot)) < 0) {
+        if ((ret = PalVirtualMemoryAlloc(&zero_page_start, zero_page_size, /*alloc_type=*/0,
+                                         zero_pal_prot)) < 0) {
             log_debug("%s: cannot map zero-fill pages", __func__);
             return pal_to_unix_errno(ret);
         }
@@ -947,8 +947,8 @@ static int vdso_map_init(void) {
         return ret;
     }
 
-    ret = DkVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(vdso_so_size), /*alloc_type=*/0,
-                               PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(vdso_so_size), /*alloc_type=*/0,
+                                PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -956,7 +956,8 @@ static int vdso_map_init(void) {
     memcpy(addr, &vdso_so, vdso_so_size);
     memset(addr + vdso_so_size, 0, ALLOC_ALIGN_UP(vdso_so_size) - vdso_so_size);
 
-    ret = DkVirtualMemoryProtect(addr, ALLOC_ALIGN_UP(vdso_so_size), PAL_PROT_READ | PAL_PROT_EXEC);
+    ret = PalVirtualMemoryProtect(addr, ALLOC_ALIGN_UP(vdso_so_size),
+                                  PAL_PROT_READ | PAL_PROT_EXEC);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -1101,10 +1102,10 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv
     elf_addr_t auxp_extra = (elf_addr_t)&auxp[9];
 
     elf_addr_t random = auxp_extra; /* random 16B for AT_RANDOM */
-    ret = DkRandomBitsRead((void*)random, 16);
+    ret = PalRandomBitsRead((void*)random, 16);
     if (ret < 0) {
-        log_error("execute_elf_object: DkRandomBitsRead failed: %d", ret);
-        DkProcessExit(1);
+        log_error("execute_elf_object: PalRandomBitsRead failed: %d", ret);
+        PalProcessExit(1);
         /* UNREACHABLE */
     }
     auxp[5].a_un.a_val = random;

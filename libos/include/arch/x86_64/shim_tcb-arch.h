@@ -143,7 +143,7 @@ struct libos_xstate {
     } while (0)
 
 static inline void set_tls(uintptr_t tls) {
-    DkSegmentBaseSet(PAL_SEGMENT_FS, tls);
+    PalSegmentBaseSet(PAL_SEGMENT_FS, tls);
 }
 
 static inline void set_default_tls(void) {
@@ -152,6 +152,6 @@ static inline void set_default_tls(void) {
 
 static inline uintptr_t get_tls(void) {
     uintptr_t addr = 0;
-    (void)DkSegmentBaseGet(PAL_SEGMENT_FS, &addr);
+    (void)PalSegmentBaseGet(PAL_SEGMENT_FS, &addr);
     return addr;
 }

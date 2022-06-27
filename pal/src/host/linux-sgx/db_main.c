@@ -30,12 +30,12 @@ struct pal_linuxsgx_state g_pal_linuxsgx_state;
 
 PAL_SESSION_KEY g_master_key = {0};
 
-/* Limit of PAL memory available for _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL) */
+/* Limit of PAL memory available for _PalVirtualMemoryAlloc(PAL_ALLOC_INTERNAL) */
 size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
-void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
+void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
     *out_start = g_pal_linuxsgx_state.heap_min;
     *out_end   = g_pal_linuxsgx_state.heap_max;
 
@@ -428,9 +428,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     uint64_t start_time;
-    ret = _DkSystemTimeQuery(&start_time);
+    ret = _PalSystemTimeQuery(&start_time);
     if (ret < 0) {
-        log_error("_DkSystemTimeQuery() failed: %d", ret);
+        log_error("_PalSystemTimeQuery() failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -475,7 +475,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
-     * because the slab manager can use normal allocations (`_DkVirtualMemoryAlloc`) right away. */
+     * because the slab manager can use normal allocations (`_PalVirtualMemoryAlloc`) right away. */
     init_slab_mgr(/*mem_pool=*/NULL, /*mem_pool_size=*/0);
     init_untrusted_slab_mgr();
 
@@ -514,9 +514,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */
-    ret = _DkRandomBitsRead(&g_master_key, sizeof(g_master_key));
+    ret = _PalRandomBitsRead(&g_master_key, sizeof(g_master_key));
     if (ret < 0) {
-        log_error("_DkRandomBitsRead failed: %d", ret);
+        log_error("_PalRandomBitsRead failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -651,9 +651,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     SET_ENCLAVE_TLS(thread, &first_thread->thread);
 
     uint64_t stack_protector_canary;
-    ret = _DkRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
+    ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
     if (ret < 0) {
-        log_error("_DkRandomBitsRead failed: %d", ret);
+        log_error("_PalRandomBitsRead failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
     pal_set_tcb_stack_canary(stack_protector_canary);

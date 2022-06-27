@@ -290,7 +290,7 @@ static void* _vma_malloc(size_t size) {
         return NULL;
     }
 
-    int ret = DkVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
+    int ret = PalVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
     if (ret < 0) {
         struct libos_vma* vmas_to_free = NULL;
 
@@ -588,7 +588,7 @@ int init_vma(void) {
         if (gap_max_size / ALLOC_ALIGNMENT >= (1ul << ASLR_BITS)) {
             size_t gap = 0;
 
-            int ret = DkRandomBitsRead(&gap, sizeof(gap));
+            int ret = PalRandomBitsRead(&gap, sizeof(gap));
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }

@@ -23,6 +23,6 @@ _start:
     callq *main@GOTPCREL(%rip)
 
     mov %rax, %rdi
-    callq *DkProcessExit@GOTPCREL(%rip)
+    callq *PalProcessExit@GOTPCREL(%rip)
 
     .cfi_endproc

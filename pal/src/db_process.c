@@ -12,12 +12,12 @@
 #include "pal.h"
 #include "pal_internal.h"
 
-int DkProcessCreate(const char** args, PAL_HANDLE* handle) {
+int PalProcessCreate(const char** args, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _DkProcessCreate(handle, args);
+    return _PalProcessCreate(handle, args);
 }
 
-noreturn void DkProcessExit(int exitcode) {
-    _DkProcessExit(exitcode);
+noreturn void PalProcessExit(int exitcode) {
+    _PalProcessExit(exitcode);
     die_or_inf_loop();
 }

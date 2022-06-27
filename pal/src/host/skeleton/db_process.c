@@ -14,11 +14,11 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-noreturn void _DkProcessExit(int exitcode) {
+noreturn void _PalProcessExit(int exitcode) {
     die_or_inf_loop();
 }
 

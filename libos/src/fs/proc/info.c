@@ -16,7 +16,7 @@ int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
     size_t size, max = 128;
     char* str = NULL;
 
-    assert(g_pal_public_state->mem_total >= DkMemoryAvailableQuota());
+    assert(g_pal_public_state->mem_total >= PalMemoryAvailableQuota());
 
     /*
      * Enumerate minimal set of meminfo stats; as reference workloads that use these stats, we use:
@@ -33,8 +33,8 @@ int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
         unsigned long val;
     } meminfo[] = {
         { "MemTotal:      %8lu kB\n", g_pal_public_state->mem_total / 1024 },
-        { "MemFree:       %8lu kB\n", DkMemoryAvailableQuota() / 1024 },
-        { "MemAvailable:  %8lu kB\n", DkMemoryAvailableQuota() / 1024 },
+        { "MemFree:       %8lu kB\n", PalMemoryAvailableQuota() / 1024 },
+        { "MemAvailable:  %8lu kB\n", PalMemoryAvailableQuota() / 1024 },
         { "Buffers:       %8lu kB\n", /*dummy value=*/0 },
         { "Cached:        %8lu kB\n", /*dummy value=*/0 },
         { "SwapCached:    %8lu kB\n", /*dummy value=*/0 },
@@ -47,7 +47,7 @@ int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
         { "Mapped:        %8lu kB\n", /*dummy value=*/0 },
         { "Shmem:         %8lu kB\n", /*dummy value=*/0 },
         { "Slab:          %8lu kB\n", /*dummy value=*/0 },
-        { "Committed_AS:  %8lu kB\n", (g_pal_public_state->mem_total - DkMemoryAvailableQuota())
+        { "Committed_AS:  %8lu kB\n", (g_pal_public_state->mem_total - PalMemoryAvailableQuota())
                                           / 1024 },
         { "VmallocTotal:  %8lu kB\n", g_pal_public_state->mem_total / 1024 },
         { "VmallocUsed:   %8lu kB\n", /*dummy value=*/0 },

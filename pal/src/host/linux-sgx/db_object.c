@@ -13,8 +13,8 @@
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 
-int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                         pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
+int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                          pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     if (count == 0)
         return 0;
 

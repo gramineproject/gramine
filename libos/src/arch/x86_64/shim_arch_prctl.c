@@ -36,7 +36,7 @@ long libos_syscall_arch_prctl(int code, unsigned long addr) {
             return 0;
 
         case ARCH_GET_FS:
-            return pal_to_unix_errno(DkSegmentBaseGet(PAL_SEGMENT_FS, (unsigned long*)addr));
+            return pal_to_unix_errno(PalSegmentBaseGet(PAL_SEGMENT_FS, (unsigned long*)addr));
 
         /* Emulate ARCH_GET_XCOMP_SUPP, ARCH_GET_XCOMP_PERM, ARCH_REQ_XCOMP_PERM by querying CPUID,
          * it's safe because the PAL already requested AMX permission at startup. Note that
@@ -44,7 +44,7 @@ long libos_syscall_arch_prctl(int code, unsigned long addr) {
          * enables all it can at startup). */
         case ARCH_GET_XCOMP_SUPP:
         case ARCH_GET_XCOMP_PERM:
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
+            ret = PalCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
@@ -64,7 +64,7 @@ long libos_syscall_arch_prctl(int code, unsigned long addr) {
                 return -EOPNOTSUPP;
             }
 
-            ret = DkCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
+            ret = PalCpuIdRetrieve(EXTENDED_STATE_LEAF, EXTENDED_STATE_SUBLEAF_FEATURES, values);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }

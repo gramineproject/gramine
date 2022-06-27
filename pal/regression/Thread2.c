@@ -25,11 +25,11 @@ static int thread3_run(void* args) {
 
     thread3_started = true;
 
-    pal_printf("Exiting thread 3 by DkThreadExit.\n");
+    pal_printf("Exiting thread 3 by PalThreadExit.\n");
 
     // Ensure that the compiler can't know that this should never return.
     if (dummy_true) {
-        DkThreadExit(/*clear_child_tid=*/NULL);
+        PalThreadExit(/*clear_child_tid=*/NULL);
         /* UNREACHABLE */
     }
 
@@ -54,24 +54,24 @@ int main(void) {
     pal_printf("Thread 1 (main) started.\n");
 
     PAL_HANDLE sleep_handle = NULL;
-    if (DkEventCreate(&sleep_handle, /*init_signaled=*/false, /*auto_clear=*/false) < 0) {
-        pal_printf("DkEventCreate failed\n");
+    if (PalEventCreate(&sleep_handle, /*init_signaled=*/false, /*auto_clear=*/false) < 0) {
+        pal_printf("PalEventCreate failed\n");
         return 1;
     }
 
     PAL_HANDLE thread2 = NULL;
-    int ret = DkThreadCreate(thread2_run, NULL, &thread2);
+    int ret = PalThreadCreate(thread2_run, NULL, &thread2);
     if (ret < 0) {
-        pal_printf("DkThreadCreate failed for thread 2.\n");
+        pal_printf("PalThreadCreate failed for thread 2.\n");
         return 1;
     }
 
     // 1 s should be enough even on a very busy system to start a thread and
     // then exit it again including all cleanup.
     uint64_t timeout = 1000000;
-    ret = DkEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {
-        pal_printf("DkEventWait failed\n");
+        pal_printf("PalEventWait failed\n");
         return 1;
     }
 
@@ -80,16 +80,16 @@ int main(void) {
     }
 
     PAL_HANDLE thread3 = NULL;
-    ret = DkThreadCreate(thread3_run, NULL, &thread3);
+    ret = PalThreadCreate(thread3_run, NULL, &thread3);
     if (ret < 0) {
-        pal_printf("DkThreadCreate failed for thread 3.\n");
+        pal_printf("PalThreadCreate failed for thread 3.\n");
         return 1;
     }
 
     timeout = 1000000;
-    ret = DkEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {
-        pal_printf("DkEventWait failed\n");
+        pal_printf("PalEventWait failed\n");
         return 1;
     }
 
@@ -98,16 +98,16 @@ int main(void) {
     }
 
     PAL_HANDLE thread4 = NULL;
-    ret = DkThreadCreate(thread4_run, NULL, &thread4);
+    ret = PalThreadCreate(thread4_run, NULL, &thread4);
     if (ret < 0) {
-        pal_printf("DkThreadCreate failed for thread 4.\n");
+        pal_printf("PalThreadCreate failed for thread 4.\n");
         return 1;
     }
 
     timeout = 1000000;
-    ret = DkEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {
-        pal_printf("DkEventWait failed\n");
+        pal_printf("PalEventWait failed\n");
         return 1;
     }
 

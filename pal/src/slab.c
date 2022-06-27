@@ -63,11 +63,11 @@ static inline void* __malloc(size_t size) {
     /* We could not use `g_mem_pool`, let's fall back to PAL-internal allocations. PAL allocator
      * must be careful though because LibOS doesn't know about PAL-internal memory, limited via
      * manifest option `loader.pal_internal_mem_size` and thus this malloc may return -ENOMEM. */
-    int ret = _DkVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(size), PAL_ALLOC_INTERNAL,
-                                    PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = _PalVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(size), PAL_ALLOC_INTERNAL,
+                                     PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         log_error("*** Out-of-memory in PAL (try increasing `loader.pal_internal_mem_size`) ***");
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size), ASAN_POISON_HEAP_LEFT_REDZONE);
@@ -106,7 +106,7 @@ static inline void __free(void* addr, size_t size) {
     asan_unpoison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size));
 #endif
 
-    _DkVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size));
+    _PalVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size));
 }
 
 static SLAB_MGR g_slab_mgr = NULL;
@@ -149,7 +149,7 @@ void* malloc(size_t size) {
          * condition and must terminate the current process.
          */
         log_error("******** Out-of-memory in PAL ********");
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
     return ptr;
 }

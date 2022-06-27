@@ -9,11 +9,11 @@
 
 #include "pal_rtld.h"
 
-void _DkDebugMapAdd(const char* name, void* addr) {}
+void _PalDebugMapAdd(const char* name, void* addr) {}
 
-void _DkDebugMapRemove(void* addr) {}
+void _PalDebugMapRemove(void* addr) {}
 
-int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+int _PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
     __UNUSED(addr);
     __UNUSED(buf);
     __UNUSED(buf_size);

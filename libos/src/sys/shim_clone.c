@@ -94,7 +94,7 @@ static int clone_implementation_wrapper(void* arg_) {
     tcb->context.tls = arg->tls;
 
     /* Inform the parent thread that we finished initialization. */
-    DkEventSet(arg->initialize_event);
+    PalEventSet(arg->initialize_event);
 
     put_thread(my_thread);
 
@@ -376,14 +376,14 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
             if (tmp_ret < 0) {
                 log_debug("Failed to change back ID %u owner: %d", tid, tmp_ret);
                 /* No way to recover gracefully. */
-                DkProcessExit(1);
+                PalProcessExit(1);
             }
             /* ... and release it. */
             tmp_ret = ipc_release_id_range(tid, tid);
             if (tmp_ret < 0) {
                 log_debug("Failed to release ID %u: %d", tid, tmp_ret);
                 /* No way to recover gracefully. */
-                DkProcessExit(1);
+                PalProcessExit(1);
             }
         }
         return ret;
@@ -416,13 +416,13 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     struct libos_clone_args new_args;
     memset(&new_args, 0, sizeof(new_args));
 
-    ret = DkEventCreate(&new_args.create_event, /*init_signaled=*/false, /*auto_clear=*/false);
+    ret = PalEventCreate(&new_args.create_event, /*init_signaled=*/false, /*auto_clear=*/false);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto clone_thread_failed;
     }
 
-    ret = DkEventCreate(&new_args.initialize_event, /*init_signaled=*/false, /*auto_clear=*/false);
+    ret = PalEventCreate(&new_args.initialize_event, /*init_signaled=*/false, /*auto_clear=*/false);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto clone_thread_failed;
@@ -438,14 +438,8 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     new_args.tls    = tls;
     new_args.regs   = self->libos_tcb->context.regs;
 
-    // Invoke DkThreadCreate to spawn off a child process using the actual
-    // "clone" system call. DkThreadCreate allocates a stack for the child
-    // and then runs the given function on that stack However, we want our
-    // child to run on the Parent allocated stack , so once the DkThreadCreate
-    // returns .The parent comes back here - however, the child is Happily
-    // running the function we gave to DkThreadCreate.
     PAL_HANDLE pal_handle = NULL;
-    ret = DkThreadCreate(clone_implementation_wrapper, &new_args, &pal_handle);
+    ret = PalThreadCreate(clone_implementation_wrapper, &new_args, &pal_handle);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         put_thread(new_args.thread);
@@ -457,25 +451,25 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     if (set_parent_tid)
         *set_parent_tid = thread->tid;
 
-    DkEventSet(new_args.create_event);
+    PalEventSet(new_args.create_event);
     ret = event_wait_with_retry(new_args.initialize_event);
     if (ret < 0) {
         /* XXX: Currently it doesn't seem possible to cleanly handle this error - the child thread
          * might be running correctly. */
         log_error("event_wait_with_retry failed with: %ld", ret);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
-    DkObjectClose(new_args.initialize_event);
-    DkObjectClose(new_args.create_event);
+    PalObjectClose(new_args.initialize_event);
+    PalObjectClose(new_args.create_event);
 
     put_thread(thread);
     return tid;
 
 clone_thread_failed:
     if (new_args.create_event)
-        DkObjectClose(new_args.create_event);
+        PalObjectClose(new_args.create_event);
     if (new_args.initialize_event)
-        DkObjectClose(new_args.initialize_event);
+        PalObjectClose(new_args.initialize_event);
 failed:
     if (thread)
         put_thread(thread);

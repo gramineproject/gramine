@@ -11,7 +11,7 @@ long vfork(void) __attribute__((returns_twice));
 void gramine_raw_syscalls_code_begin(void);
 void gramine_raw_syscalls_code_end(void);
 
-noreturn void _DkThreadExit_asm_stub(uint32_t* thread_stack_spinlock, int* clear_child_tid);
+noreturn void _PalThreadExit_asm_stub(uint32_t* thread_stack_spinlock, int* clear_child_tid);
 
 #define _extend(x) ((unsigned long)(x))
 

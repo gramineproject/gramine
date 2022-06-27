@@ -622,11 +622,11 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
      ``libos/src/bookkeep/shim_thread.c``.
 
    - If the system call cannot be resolved entirely inside the LibOS component
-     of Gramine, and the current set of PAL API functions (``Dk..()`` functions)
-     is not enough to service this system call, you must add a new PAL API
-     function (e.g., ``DkSomeNewFunction``). You will need to implement the
-     entry-point function (``DkSomeNewFunction``) in the common PAL code, as
-     well as each host-specific function (``_DkSomeNewFunction``) in each
+     of Gramine, and the current set of PAL API functions (``Pal..()``
+     functions) is not enough to service this system call, you must add a new
+     PAL API function (e.g., ``PalSomeNewFunction``). You will need to implement
+     the entry-point function (``PalSomeNewFunction``) in the common PAL code,
+     as well as each host-specific function (``_PalSomeNewFunction``) in each
      supported host in PAL.
 
      Note that Gramine strives to keep the PAL API as small as possible. It is

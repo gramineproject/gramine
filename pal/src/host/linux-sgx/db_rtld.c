@@ -10,7 +10,7 @@
  * - pal-sgx and libraries it uses (outside enclave) - handled by ld.so and reported by it (through
  *   _r_debug mechanism)
  * - libpal.so (in enclave) - reported in sgx_main.c before enclave start
- * - LibOS, application, libc... (in enclave) - reported through DkDebugMap*
+ * - LibOS, application, libc... (in enclave) - reported through PalDebugMap*
  *
  * In addition, we report executable memory mappings to the profiling subsystem.
  */
@@ -18,14 +18,14 @@
 #include "pal_linux.h"
 #include "pal_rtld.h"
 
-void _DkDebugMapAdd(const char* name, void* addr) {
+void _PalDebugMapAdd(const char* name, void* addr) {
     ocall_debug_map_add(name, addr);
 }
 
-void _DkDebugMapRemove(void* addr) {
+void _PalDebugMapRemove(void* addr) {
     ocall_debug_map_remove(addr);
 }
 
-int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+int _PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
     return ocall_debug_describe_location(addr, buf, buf_size);
 }

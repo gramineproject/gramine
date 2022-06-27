@@ -77,7 +77,7 @@ void log_setprefix(libos_tcb_t* tcb) {
 
 static int buf_write_all(const char* str, size_t size, void* arg) {
     __UNUSED(arg);
-    DkDebugLog(str, size);
+    PalDebugLog(str, size);
     return 0;
 }
 

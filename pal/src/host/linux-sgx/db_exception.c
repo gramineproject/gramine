@@ -120,10 +120,10 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
     }
 
     uint64_t usec;
-    int res = _DkSystemTimeQuery(&usec);
+    int res = _PalSystemTimeQuery(&usec);
     if (res < 0) {
-        log_error("_DkSystemTimeQuery() failed in unrecoverable context, exiting.");
-        _DkProcessExit(1);
+        log_error("_PalSystemTimeQuery() failed in unrecoverable context, exiting.");
+        _PalProcessExit(1);
     }
     /* FIXME: Ideally, we would like to scale microseconds back to RDTSC clock cycles */
     uc->rdx = (uint32_t)(usec >> 32);
@@ -137,7 +137,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
     if (instr[0] == 0x0f && instr[1] == 0xa2) {
         /* cpuid */
         unsigned int values[4];
-        if (!_DkCpuIdRetrieve(uc->rax & 0xffffffff, uc->rcx & 0xffffffff, values)) {
+        if (!_PalCpuIdRetrieve(uc->rax & 0xffffffff, uc->rcx & 0xffffffff, values)) {
             uc->rip += 2;
             uc->rax = values[0];
             uc->rbx = values[1];
@@ -179,8 +179,8 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
 }
 
 /* perform exception handling inside the enclave */
-void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
-                         PAL_XREGS_STATE* xregs_state) {
+void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
+                          PAL_XREGS_STATE* xregs_state) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
 
     union {
@@ -194,13 +194,13 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         event_num = exit_info;
         if (event_num <= 0 || event_num >= PAL_EVENT_NUM_BOUND) {
             log_error("Illegal exception reported by untrusted PAL: %d", event_num);
-            _DkProcessExit(1);
+            _PalProcessExit(1);
         }
     } else {
         switch (ei.info.vector) {
             case SGX_EXCEPTION_VECTOR_BR:
                 log_error("Handling #BR exceptions is currently unsupported by Gramine");
-                _DkProcessExit(1);
+                _PalProcessExit(1);
                 break;
             case SGX_EXCEPTION_VECTOR_UD:
                 if (handle_ud(uc)) {
@@ -241,7 +241,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             log_debug("(untrusted PAL sent PAL event 0x%x)", ei.intval);
         }
 
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 
     PAL_CONTEXT ctx;
@@ -265,7 +265,7 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             break;
     }
 
-    pal_event_handler_t upcall = _DkGetExceptionHandler(event_num);
+    pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);
     }
@@ -276,20 +276,20 @@ void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 /* TODO: remove this function (SGX signal handling needs to be revisited)
  * actually what is the point of this function?
  * Tracked in https://github.com/gramineproject/gramine/issues/84. */
-noreturn void _DkHandleExternalEvent(long event_, sgx_cpu_context_t* uc,
-                                     PAL_XREGS_STATE* xregs_state) {
+noreturn void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc,
+                                      PAL_XREGS_STATE* xregs_state) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
     enum pal_event event = event_;
 
     if (event != PAL_EVENT_QUIT && event != PAL_EVENT_INTERRUPTED) {
         log_error("Illegal exception reported by untrusted PAL: %d", event);
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 
     PAL_CONTEXT ctx;
     save_pal_context(&ctx, uc, xregs_state);
 
-    pal_event_handler_t upcall = _DkGetExceptionHandler(event);
+    pal_event_handler_t upcall = _PalGetExceptionHandler(event);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), /*addr=*/0, &ctx);
     }

@@ -12,7 +12,7 @@ void __attribute__((format(printf, 2, 3))) _log(int level, const char* fmt, ...)
     __typeof__(x) _x = (x);                                             \
     if (_x < 0) {                                                       \
         pal_printf("Error at %s (line %d): %d\n", #x, __LINE__, _x);    \
-        DkProcessExit(1);                                               \
+        PalProcessExit(1);                                              \
     }                                                                   \
     _x;                                                                 \
 })

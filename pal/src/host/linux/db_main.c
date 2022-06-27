@@ -34,8 +34,8 @@ char* g_libpal_path = NULL;
 struct pal_linux_state g_pal_linux_state;
 
 /* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
- * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is limited
- * by the variable below */
+ * _PalVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is
+ * limited by the variable below */
 size_t g_pal_internal_mem_size = 0;
 char* g_pal_internal_mem_addr = NULL;
 
@@ -85,7 +85,7 @@ static void read_info_from_stack(void* initial_rsp, int* out_argc, const char***
     *out_envp = envp;
 }
 
-void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
+void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
     void* end_addr = (void*)ALLOC_ALIGN_DOWN_PTR(TEXT_START);
     void* start_addr = (void*)MMAP_MIN_ADDR;
 
@@ -117,7 +117,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
                "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
     log_always("This is an internal interface. Use pal_loader to launch applications in Gramine.");
-    _DkProcessExit(1);
+    _PalProcessExit(1);
 }
 
 #ifdef ASAN
@@ -168,9 +168,9 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("Relocation of the PAL binary failed: %d", ret);
 
     uint64_t start_time;
-    ret = _DkSystemTimeQuery(&start_time);
+    ret = _PalSystemTimeQuery(&start_time);
     if (ret < 0)
-        INIT_FAIL("_DkSystemTimeQuery() failed: %d", ret);
+        INIT_FAIL("_PalSystemTimeQuery() failed: %d", ret);
 
     call_init_array();
 

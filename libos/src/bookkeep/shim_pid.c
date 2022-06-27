@@ -129,7 +129,7 @@ IDTYPE get_new_id(IDTYPE move_ownership_to) {
         if (ipc_change_id_owner(ret_id, move_ownership_to) < 0) {
             /* Good luck unwinding all of above operations. Better just kill everything. */
             log_error("Unrecoverable error in %s:%d", __FILE__, __LINE__);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
     } else {
         if (g_last_used_id == g_last_range->end) {
@@ -175,7 +175,7 @@ void release_id(IDTYPE id) {
                  * without fully waiting for this process to end. For more information check
                  * "libos/src/sys/shim_exit.c". Change to `log_error` + `die` after fixing. */
                 log_warning("IPC pid release failed");
-                DkProcessExit(1);
+                PalProcessExit(1);
             }
             free(range);
             return;

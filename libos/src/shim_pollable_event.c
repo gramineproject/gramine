@@ -22,22 +22,22 @@ int create_pollable_event(struct libos_pollable_event* event) {
 
     PAL_HANDLE write_handle;
     do {
-        ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                           PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC, &write_handle);
+        ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                            PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC, &write_handle);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
-        log_error("%s: DkStreamOpen failed: %d", __func__, ret);
+        log_error("%s: PalStreamOpen failed: %d", __func__, ret);
         ret = pal_to_unix_errno(ret);
         goto out;
     }
 
     PAL_HANDLE read_handle;
     do {
-        ret = DkStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
+        ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
-        log_error("%s: DkStreamWaitForClient failed: %d", __func__, ret);
-        DkObjectClose(write_handle);
+        log_error("%s: PalStreamWaitForClient failed: %d", __func__, ret);
+        PalObjectClose(write_handle);
         ret = pal_to_unix_errno(ret);
         goto out;
     }
@@ -49,11 +49,11 @@ int create_pollable_event(struct libos_pollable_event* event) {
     ret = 0;
 
 out:;
-    int tmp_ret = pal_to_unix_errno(DkStreamDelete(srv_handle, PAL_DELETE_ALL));
-    DkObjectClose(srv_handle);
+    int tmp_ret = pal_to_unix_errno(PalStreamDelete(srv_handle, PAL_DELETE_ALL));
+    PalObjectClose(srv_handle);
     if (!ret && tmp_ret) {
-        DkObjectClose(read_handle);
-        DkObjectClose(write_handle);
+        PalObjectClose(read_handle);
+        PalObjectClose(write_handle);
         /* Clearing just for sanity. */
         event->read_handle = NULL;
         event->write_handle = NULL;
@@ -62,8 +62,8 @@ out:;
 }
 
 void destroy_pollable_event(struct libos_pollable_event* event) {
-    DkObjectClose(event->read_handle);
-    DkObjectClose(event->write_handle);
+    PalObjectClose(event->read_handle);
+    PalObjectClose(event->write_handle);
 }
 
 int set_pollable_event(struct libos_pollable_event* event) {
@@ -74,7 +74,7 @@ int set_pollable_event(struct libos_pollable_event* event) {
     do {
         char c = 0;
         size_t size = sizeof(c);
-        ret = DkStreamWrite(event->write_handle, /*offset=*/0, &size, &c, /*dest=*/NULL);
+        ret = PalStreamWrite(event->write_handle, /*offset=*/0, &size, &c, /*dest=*/NULL);
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;
@@ -97,7 +97,7 @@ int clear_pollable_event(struct libos_pollable_event* event) {
     do {
         char buf[0x100];
         size_t size = sizeof(buf);
-        int ret = DkStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL, 0);
+        int ret = PalStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL, 0);
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;

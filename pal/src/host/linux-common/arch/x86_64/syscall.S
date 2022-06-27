@@ -98,9 +98,9 @@ syscall_rt_sigreturn:
     syscall
     .cfi_endproc
 
-.global _DkThreadExit_asm_stub
-.type _DkThreadExit_asm_stub, @function
-_DkThreadExit_asm_stub:
+.global _PalThreadExit_asm_stub
+.type _PalThreadExit_asm_stub, @function
+_PalThreadExit_asm_stub:
     .cfi_startproc
     movl $0, (%rdi)             /* spinlock_unlock(&g_thread_stack_lock) */
     cmp $0, %rsi                /* check if clear_child_tid != NULL */

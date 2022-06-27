@@ -4,7 +4,7 @@
 uintptr_t dummy = (uintptr_t)&dummy;
 
 int main(int argc, char** argv, char** envp) {
-    if (DkSegmentBaseSet(PAL_SEGMENT_FS, dummy) < 0) {
+    if (PalSegmentBaseSet(PAL_SEGMENT_FS, dummy) < 0) {
         pal_printf("Error setting FS\n");
         return 1;
     }

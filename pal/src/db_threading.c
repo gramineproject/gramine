@@ -9,36 +9,36 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-/* PAL call DkThreadCreate: create a thread inside the current process */
-int DkThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle) {
+/* PAL call PalThreadCreate: create a thread inside the current process */
+int PalThreadCreate(int (*callback)(void*), void* param, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _DkThreadCreate(handle, callback, param);
+    return _PalThreadCreate(handle, callback, param);
 }
 
-/* PAL call DkThreadYieldExecution. Yield the execution of the current thread. */
-void DkThreadYieldExecution(void) {
-    _DkThreadYieldExecution();
+/* PAL call PalThreadYieldExecution. Yield the execution of the current thread. */
+void PalThreadYieldExecution(void) {
+    _PalThreadYieldExecution();
 }
 
-/* PAL call DkThreadExit: simply exit the current thread no matter what */
-noreturn void DkThreadExit(int* clear_child_tid) {
-    _DkThreadExit(clear_child_tid);
+/* PAL call PalThreadExit: simply exit the current thread no matter what */
+noreturn void PalThreadExit(int* clear_child_tid) {
+    _PalThreadExit(clear_child_tid);
     /* UNREACHABLE */
 }
 
-/* PAL call DkThreadResume: resume the execution of a thread which is delayed before */
-int DkThreadResume(PAL_HANDLE thread_handle) {
+/* PAL call PalThreadResume: resume the execution of a thread which is delayed before */
+int PalThreadResume(PAL_HANDLE thread_handle) {
     if (!thread_handle || HANDLE_HDR(thread_handle)->type != PAL_TYPE_THREAD) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkThreadResume(thread_handle);
+    return _PalThreadResume(thread_handle);
 }
 
-int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    return _DkThreadSetCpuAffinity(thread, cpumask_size, cpu_mask);
+int PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+    return _PalThreadSetCpuAffinity(thread, cpumask_size, cpu_mask);
 }
 
-int DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    return _DkThreadGetCpuAffinity(thread, cpumask_size, cpu_mask);
+int PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+    return _PalThreadGetCpuAffinity(thread, cpumask_size, cpu_mask);
 }

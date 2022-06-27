@@ -94,8 +94,8 @@ int alloc_thread_libos_stack(struct libos_thread* thread) {
     }
 
     bool need_mem_free = false;
-    ret = DkVirtualMemoryAlloc(&addr, LIBOS_THREAD_LIBOS_STACK_SIZE, 0,
-                               LINUX_PROT_TO_PAL(prot, flags));
+    ret = PalVirtualMemoryAlloc(&addr, LIBOS_THREAD_LIBOS_STACK_SIZE, 0,
+                                LINUX_PROT_TO_PAL(prot, flags));
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto unmap;
@@ -103,7 +103,7 @@ int alloc_thread_libos_stack(struct libos_thread* thread) {
     need_mem_free = true;
 
     /* Create a stack guard page. */
-    ret = DkVirtualMemoryProtect(addr, PAGE_SIZE, /*prot=*/0);
+    ret = PalVirtualMemoryProtect(addr, PAGE_SIZE, /*prot=*/0);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto unmap;
@@ -122,7 +122,7 @@ unmap:;
         BUG();
     }
     if (need_mem_free) {
-        if (DkVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
+        if (PalVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
             BUG();
         }
     }
@@ -203,7 +203,8 @@ static int init_main_thread(void) {
     set_sig_mask(cur_thread, &set);
     unlock(&cur_thread->lock);
 
-    ret = DkEventCreate(&cur_thread->scheduler_event, /*init_signaled=*/false, /*auto_clear=*/true);
+    ret = PalEventCreate(&cur_thread->scheduler_event, /*init_signaled=*/false,
+                         /*auto_clear=*/true);
     if (ret < 0) {
         put_thread(cur_thread);
         return pal_to_unix_errno(ret);;
@@ -300,8 +301,8 @@ struct libos_thread* get_new_thread(void) {
 
     unlock(&cur_thread->lock);
 
-    int ret = DkEventCreate(&thread->scheduler_event, /*init_signaled=*/false,
-                            /*auto_clear=*/true);
+    int ret = PalEventCreate(&thread->scheduler_event, /*init_signaled=*/false,
+                             /*auto_clear=*/true);
     if (ret < 0) {
         put_thread(thread);
         return NULL;
@@ -355,7 +356,7 @@ void put_thread(struct libos_thread* thread) {
                           addr, (char*)addr + LIBOS_THREAD_LIBOS_STACK_SIZE);
                 BUG();
             }
-            if (DkVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
+            if (PalVirtualMemoryFree(addr, LIBOS_THREAD_LIBOS_STACK_SIZE) < 0) {
                 BUG();
             }
             bkeep_remove_tmp_vma(tmp_vma);
@@ -364,7 +365,7 @@ void put_thread(struct libos_thread* thread) {
         free(thread->groups_info.groups);
 
         if (thread->pal_handle && thread->pal_handle != g_pal_public_state->first_thread)
-            DkObjectClose(thread->pal_handle);
+            PalObjectClose(thread->pal_handle);
 
         if (thread->handle_map) {
             put_handle_map(thread->handle_map);
@@ -383,7 +384,7 @@ void put_thread(struct libos_thread* thread) {
         }
 
         if (thread->scheduler_event) {
-            DkObjectClose(thread->scheduler_event);
+            PalObjectClose(thread->scheduler_event);
         }
 
         /* `wake_queue` is only meaningful when `thread` is part of some wake up queue (is just
@@ -639,7 +640,7 @@ BEGIN_RS_FUNC(thread) {
         return ret;
     }
 
-    ret = DkEventCreate(&thread->scheduler_event, /*init_signaled=*/false, /*auto_clear=*/true);
+    ret = PalEventCreate(&thread->scheduler_event, /*init_signaled=*/false, /*auto_clear=*/true);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

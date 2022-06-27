@@ -10,27 +10,27 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-bool _DkCheckMemoryMappable(const void* addr, size_t size) {
+bool _PalCheckMemoryMappable(const void* addr, size_t size) {
     return true;
 }
 
-int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot) {
+int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
+                           pal_prot_flags_t prot) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkVirtualMemoryFree(void* addr, uint64_t size) {
+int _PalVirtualMemoryFree(void* addr, uint64_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-unsigned long _DkMemoryQuota(void) {
+unsigned long _PalMemoryQuota(void) {
     return 0;
 }
 
-unsigned long _DkMemoryAvailableQuota(void) {
+unsigned long _PalMemoryAvailableQuota(void) {
     return 0;
 }

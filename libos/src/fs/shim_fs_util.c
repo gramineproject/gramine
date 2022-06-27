@@ -147,7 +147,7 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
 
     void* actual_addr = addr;
-    ret = DkVirtualMemoryAlloc(&actual_addr, size, /*alloc_type=*/0, pal_prot_writable);
+    ret = PalVirtualMemoryAlloc(&actual_addr, size, /*alloc_type=*/0, pal_prot_writable);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -174,7 +174,7 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     }
 
     if (pal_prot != pal_prot_writable) {
-        ret = DkVirtualMemoryProtect(addr, size, pal_prot);
+        ret = PalVirtualMemoryProtect(addr, size, pal_prot);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto err;
@@ -184,9 +184,9 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     return 0;
 
 err:;
-    int free_ret = DkVirtualMemoryFree(addr, size);
+    int free_ret = PalVirtualMemoryFree(addr, size);
     if (free_ret < 0) {
-        log_debug("%s: DkVirtualMemoryFree failed on cleanup: %d", __func__, free_ret);
+        log_debug("%s: PalVirtualMemoryFree failed on cleanup: %d", __func__, free_ret);
         BUG();
     }
     return ret;
@@ -205,7 +205,7 @@ int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, in
 
     int ret;
     if (pal_prot != pal_prot_readable) {
-        ret = DkVirtualMemoryProtect(addr, size, pal_prot_readable);
+        ret = PalVirtualMemoryProtect(addr, size, pal_prot_readable);
         if (ret < 0)
             return pal_to_unix_errno(ret);
     }
@@ -237,9 +237,9 @@ int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, in
 
 out:
     if (pal_prot != pal_prot_readable) {
-        int protect_ret = DkVirtualMemoryProtect(addr, size, pal_prot);
+        int protect_ret = PalVirtualMemoryProtect(addr, size, pal_prot);
         if (protect_ret < 0) {
-            log_debug("%s: DkVirtualMemoryProtect failed on cleanup: %d", __func__, protect_ret);
+            log_debug("%s: PalVirtualMemoryProtect failed on cleanup: %d", __func__, protect_ret);
             BUG();
         }
     }

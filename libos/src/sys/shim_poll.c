@@ -162,7 +162,7 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
     bool polled = false;
     long error = 0;
     if (pal_cnt) {
-        error = DkStreamsWaitEvents(pal_cnt, pals, pal_events, ret_events, timeout_us);
+        error = PalStreamsWaitEvents(pal_cnt, pals, pal_events, ret_events, timeout_us);
         polled = error == 0;
         error = pal_to_unix_errno(error);
     }

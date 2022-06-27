@@ -55,7 +55,7 @@ static const char* const g_cpu_flags[] = {
     "pbe",    // "pending break event"
 };
 
-int _DkGetCPUInfo(struct pal_cpu_info* ci) {
+int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
     char* flags = NULL;
@@ -67,7 +67,7 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     if (!vendor_id)
         return -PAL_ERROR_NOMEM;
 
-    _DkCpuIdRetrieve(0, 0, words);
+    _PalCpuIdRetrieve(0, 0, words);
     FOUR_CHARS_VALUE(&vendor_id[0], words[CPUID_WORD_EBX]);
     FOUR_CHARS_VALUE(&vendor_id[4], words[CPUID_WORD_EDX]);
     FOUR_CHARS_VALUE(&vendor_id[8], words[CPUID_WORD_ECX]);
@@ -80,16 +80,16 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
         rv = -PAL_ERROR_NOMEM;
         goto out_err;
     }
-    _DkCpuIdRetrieve(0x80000002, 0, words);
+    _PalCpuIdRetrieve(0x80000002, 0, words);
     memcpy(&brand[ 0], words, sizeof(unsigned int) * CPUID_WORD_NUM);
-    _DkCpuIdRetrieve(0x80000003, 0, words);
+    _PalCpuIdRetrieve(0x80000003, 0, words);
     memcpy(&brand[16], words, sizeof(unsigned int) * CPUID_WORD_NUM);
-    _DkCpuIdRetrieve(0x80000004, 0, words);
+    _PalCpuIdRetrieve(0x80000004, 0, words);
     memcpy(&brand[32], words, sizeof(unsigned int) * CPUID_WORD_NUM);
     brand[BRAND_SIZE - 1] = '\0';
     ci->cpu_brand = brand;
 
-    _DkCpuIdRetrieve(1, 0, words);
+    _PalCpuIdRetrieve(1, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 8, 12);
     ci->cpu_model    = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 4, 8);
     ci->cpu_stepping = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 0, 4);
@@ -133,7 +133,7 @@ int _DkGetCPUInfo(struct pal_cpu_info* ci) {
     flags[flen ? flen - 1 : 0] = 0;
     ci->cpu_flags = flags;
 
-    ci->cpu_bogomips = _DkGetBogomips();
+    ci->cpu_bogomips = _PalGetBogomips();
     if (ci->cpu_bogomips == 0.0) {
         log_warning("bogomips could not be retrieved, passing 0.0 to the application");
     }

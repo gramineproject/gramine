@@ -374,7 +374,7 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
                     assert(req->notify.event);
                     assert(req->notify.result);
                     *req->notify.result = result;
-                    DkEventSet(req->notify.event);
+                    PalEventSet(req->notify.event);
                 } else {
                     assert(!req->notify.event);
                     assert(!req->notify.result);
@@ -474,7 +474,7 @@ int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) 
         assert(wait);
 
         int result;
-        ret = DkEventCreate(&event, /*init_signaled=*/false, /*auto_clear=*/false);
+        ret = PalEventCreate(&event, /*init_signaled=*/false, /*auto_clear=*/false);
         if (ret < 0)
             goto out;
         req->notify.vmid = 0;
@@ -495,7 +495,7 @@ int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) 
 out:
     unlock(&g_fs_lock_lock);
     if (event)
-        DkObjectClose(event);
+        PalObjectClose(event);
     return ret;
 }
 

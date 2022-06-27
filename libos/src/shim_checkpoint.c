@@ -219,7 +219,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store
 
         if (!(mem_prot & PAL_PROT_READ) && mem_size > 0) {
             /* make the area readable */
-            ret = DkVirtualMemoryProtect(mem_addr, mem_size, mem_prot | PAL_PROT_READ);
+            ret = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot | PAL_PROT_READ);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
@@ -229,7 +229,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store
 
         if (!(mem_prot & PAL_PROT_READ) && mem_size > 0) {
             /* the area was made readable above; revert to original permissions */
-            int ret2 = DkVirtualMemoryProtect(mem_addr, mem_size, mem_prot);
+            int ret2 = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot);
             if (ret2 < 0 && !ret) {
                 ret = pal_to_unix_errno(ret2);
             }
@@ -277,8 +277,8 @@ static int send_handles_on_stream(PAL_HANDLE stream, struct libos_cp_store* stor
 
     /* now we can traverse PAL-handle entries in correct order and send them one by one */
     for (size_t i = 0; i < entries_cnt; i++) {
-        /* we need to abort migration if DkSendHandle() returned error, otherwise app may fail */
-        ret = DkSendHandle(stream, entries[i]->handle);
+        /* we need to abort migration if PalSendHandle() returned error, otherwise app may fail */
+        ret = PalSendHandle(stream, entries[i]->handle);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;
@@ -306,7 +306,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
             size_t size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
             pal_prot_flags_t prot = entry->prot;
 
-            int ret = DkVirtualMemoryAlloc(&addr, size, 0, prot | PAL_PROT_WRITE);
+            int ret = PalVirtualMemoryAlloc(&addr, size, 0, prot | PAL_PROT_WRITE);
             if (ret < 0) {
                 log_error("failed allocating %p-%p", addr, addr + size);
                 return pal_to_unix_errno(ret);
@@ -318,7 +318,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
             }
 
             if (!(prot & PAL_PROT_WRITE)) {
-                ret = DkVirtualMemoryProtect(addr, size, prot);
+                ret = PalVirtualMemoryProtect(addr, size, prot);
                 if (ret < 0) {
                     log_error("failed protecting %p-%p", addr, addr + size);
                     return pal_to_unix_errno(ret);
@@ -392,8 +392,8 @@ static int receive_handles_on_stream(struct checkpoint_hdr* hdr, void* base, ssi
             continue;
 
         PAL_HANDLE hdl = NULL;
-        ret = DkReceiveHandle(g_pal_public_state->parent_process, &hdl);
-        /* need to abort migration if DkReceiveHandle() returned error, otherwise app may fail */
+        ret = PalReceiveHandle(g_pal_public_state->parent_process, &hdl);
+        /* need to abort migration if PalReceiveHandle() returned error, otherwise app may fail */
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;
@@ -441,7 +441,7 @@ static void* cp_alloc(void* addr, size_t size) {
         bkeep_remove_tmp_vma(tmp_vma);
     }
 
-    int ret = DkVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         void* tmp_vma = NULL;
         if (bkeep_munmap(addr, size, /*is_internal=*/true, &tmp_vma) < 0) {
@@ -465,7 +465,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     /* FIXME: Child process requires some time to initialize before starting to receive checkpoint
      * data. Parallelizing process creation and checkpointing could improve latency of forking. */
     PAL_HANDLE pal_process = NULL;
-    ret = DkProcessCreate(/*args=*/NULL, &pal_process);
+    ret = PalProcessCreate(/*args=*/NULL, &pal_process);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -551,7 +551,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         log_error("failed unmaping checkpoint (ret = %d)", ret);
         goto out;
     }
-    if (DkVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {
+    if (PalVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {
         BUG();
     }
     bkeep_remove_tmp_vma(tmp_vma);
@@ -584,7 +584,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     ret = 0;
 out:
     if (pal_process)
-        DkObjectClose(pal_process);
+        PalObjectClose(pal_process);
 
     if (ret < 0) {
         log_error("process creation failed");
@@ -626,7 +626,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
         mapsize = ALLOC_ALIGN_UP(hdr->size);
     }
 
-    ret = DkVirtualMemoryAlloc(&mapaddr, mapsize, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(&mapaddr, mapsize, 0, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         void* tmp_vma = NULL;
         if (bkeep_munmap(mapaddr, mapsize, /*is_internal=*/true, &tmp_vma) < 0)
@@ -673,7 +673,7 @@ out_fail:;
     if (bkeep_munmap(mapaddr, mapsize, /*is_internal=*/true, &tmp_vma) < 0) {
         BUG();
     }
-    if (DkVirtualMemoryFree(mapaddr, mapsize) < 0) {
+    if (PalVirtualMemoryFree(mapaddr, mapsize) < 0) {
         BUG();
     }
     bkeep_remove_tmp_vma(tmp_vma);

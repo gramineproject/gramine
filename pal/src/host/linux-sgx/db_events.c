@@ -15,7 +15,7 @@
 #include "pal_linux_error.h"
 #include "spinlock.h"
 
-int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
+int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
     PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
     if (!handle) {
         return -PAL_ERROR_NOMEM;
@@ -37,7 +37,7 @@ int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) 
     return 0;
 }
 
-void _DkEventSet(PAL_HANDLE handle) {
+void _PalEventSet(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     handle->event.signaled = true;
     __atomic_store_n(handle->event.signaled_untrusted, 1, __ATOMIC_RELEASE);
@@ -57,7 +57,7 @@ void _DkEventSet(PAL_HANDLE handle) {
     }
 }
 
-void _DkEventClear(PAL_HANDLE handle) {
+void _PalEventClear(PAL_HANDLE handle) {
     spinlock_lock(&handle->event.lock);
     handle->event.signaled = false;
     __atomic_store_n(handle->event.signaled_untrusted, 0, __ATOMIC_RELEASE);
@@ -66,7 +66,7 @@ void _DkEventClear(PAL_HANDLE handle) {
 
 /* We use `handle->event.signaled` as the source of truth whether the event was signaled.
  * `handle->event.signaled_untrusted` acts only as a futex sleeping word. */
-int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
+int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     bool added_to_count = false;
     while (1) {
         spinlock_lock(&handle->event.lock);

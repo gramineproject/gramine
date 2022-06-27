@@ -313,7 +313,7 @@ static noreturn void internal_fault(const char* errstr, uintptr_t addr, PAL_CONT
               g_process_ipc_ids.self_vmid, tid);
 
     DEBUG_BREAK_ON_FAILURE();
-    DkProcessExit(1);
+    PalProcessExit(1);
 }
 
 static void arithmetic_error_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
@@ -537,11 +537,11 @@ int init_signal_handling(void) {
         return -EINVAL;
     }
 
-    DkSetExceptionHandler(&arithmetic_error_upcall, PAL_EVENT_ARITHMETIC_ERROR);
-    DkSetExceptionHandler(&memfault_upcall,         PAL_EVENT_MEMFAULT);
-    DkSetExceptionHandler(&illegal_upcall,          PAL_EVENT_ILLEGAL);
-    DkSetExceptionHandler(&quit_upcall,             PAL_EVENT_QUIT);
-    DkSetExceptionHandler(&interrupted_upcall,      PAL_EVENT_INTERRUPTED);
+    PalSetExceptionHandler(&arithmetic_error_upcall, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(&memfault_upcall,         PAL_EVENT_MEMFAULT);
+    PalSetExceptionHandler(&illegal_upcall,          PAL_EVENT_ILLEGAL);
+    PalSetExceptionHandler(&quit_upcall,             PAL_EVENT_QUIT);
+    PalSetExceptionHandler(&interrupted_upcall,      PAL_EVENT_INTERRUPTED);
     return 0;
 }
 

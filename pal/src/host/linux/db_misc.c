@@ -25,7 +25,7 @@ int init_random(void) {
     return 0;
 }
 
-int _DkSystemTimeQuery(uint64_t* out_usec) {
+int _PalSystemTimeQuery(uint64_t* out_usec) {
     struct timespec time;
     int ret;
 
@@ -43,7 +43,7 @@ int _DkSystemTimeQuery(uint64_t* out_usec) {
     return 0;
 }
 
-int _DkRandomBitsRead(void* buffer, size_t size) {
+int _PalRandomBitsRead(void* buffer, size_t size) {
     assert(g_rand_fd != -1);
     int ret = read_all(g_rand_fd, buffer, size);
     if (ret < 0)
@@ -52,9 +52,9 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return 0;
 }
 
-int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
-                         void* target_info, size_t* target_info_size, void* report,
-                         size_t* report_size) {
+int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                          void* target_info, size_t* target_info_size, void* report,
+                          size_t* report_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
     __UNUSED(target_info);
@@ -64,8 +64,8 @@ int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
-                        size_t* quote_size) {
+int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                         size_t* quote_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
     __UNUSED(quote);
@@ -73,7 +73,7 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {
+int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(name);
     __UNUSED(key);
     __UNUSED(key_size);

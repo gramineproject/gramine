@@ -9,58 +9,58 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Enter Main Thread\n");
 
     PAL_HANDLE out = NULL;
-    int ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDWR, PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_R,
-                           PAL_CREATE_TRY, /*options=*/0, &out);
+    int ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_R,
+                            PAL_CREATE_TRY, /*options=*/0, &out);
 
     if (ret < 0) {
-        pal_printf("first DkStreamOpen failed\n");
+        pal_printf("first PalStreamOpen failed\n");
         return 1;
     }
 
     size_t bytes = sizeof(str) - 1;
-    ret = DkStreamWrite(out, 0, &bytes, str, NULL);
+    ret = PalStreamWrite(out, 0, &bytes, str, NULL);
     if (ret < 0 || bytes != sizeof(str) - 1) {
-        pal_printf("second DkStreamWrite failed\n");
+        pal_printf("second PalStreamWrite failed\n");
         return 1;
     }
 
-    DkObjectClose(out);
+    PalObjectClose(out);
 
     PAL_HANDLE in = NULL;
-    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                       /*options=*/0, &in);
+    ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0, &in);
     if (ret < 0) {
-        pal_printf("third DkStreamOpen failed\n");
+        pal_printf("third PalStreamOpen failed\n");
         return 1;
     }
 
     bytes = sizeof(str);
     memset(str, 0, bytes);
-    ret = DkStreamRead(in, 0, &bytes, str, NULL, 0);
+    ret = PalStreamRead(in, 0, &bytes, str, NULL, 0);
     if (ret < 0) {
-        pal_printf("DkStreamRead failed\n");
+        pal_printf("PalStreamRead failed\n");
         return 1;
     }
     if (bytes > sizeof(str) - 1) {
-        pal_printf("DkStreamRead read more than expected\n");
+        pal_printf("PalStreamRead read more than expected\n");
         return 1;
     }
     str[bytes] = '\0';
 
     pal_printf("%s\n", str);
 
-    ret = DkStreamDelete(in, PAL_DELETE_ALL);
+    ret = PalStreamDelete(in, PAL_DELETE_ALL);
     if (ret < 0) {
-        pal_printf("DkStreamDelete failed\n");
+        pal_printf("PalStreamDelete failed\n");
         return 1;
     }
 
     PAL_HANDLE del = NULL;
-    ret = DkStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_NEVER,
-                       /*options=*/0, &del);
+    ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0, &del);
 
     if (ret >= 0) {
-        pal_printf("DkStreamDelete did not actually delete\n");
+        pal_printf("PalStreamDelete did not actually delete\n");
         return 1;
     }
 

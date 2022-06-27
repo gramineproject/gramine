@@ -58,7 +58,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     /* TODO: We exit whole libos, but there are some objects that might need cleanup - we should do
      * a proper cleanup of everything. */
-    DkProcessExit(exit_code);
+    PalProcessExit(exit_code);
 }
 
 noreturn void thread_exit(int error_code, int term_signal) {
@@ -85,11 +85,11 @@ noreturn void thread_exit(int error_code, int term_signal) {
             /* `cleanup_thread` did not get this reference, clean it. We have to be careful, as
              * this is most likely the last reference and will free this `cur_thread`. */
             put_thread(cur_thread);
-            DkThreadExit(NULL);
+            PalThreadExit(NULL);
             /* UNREACHABLE */
         }
 
-        DkThreadExit(&cur_thread->clear_child_tid_pal);
+        PalThreadExit(&cur_thread->clear_child_tid_pal);
         /* UNREACHABLE */
     }
 
@@ -121,7 +121,7 @@ static int mark_thread_to_die(struct libos_thread* thread, void* arg) {
      * set above (but only if we really set that flag). */
     if (need_wakeup) {
         thread_wakeup(thread);
-        (void)DkThreadResume(thread->pal_handle); // There is nothing we can do on errors.
+        (void)PalThreadResume(thread->pal_handle); // There is nothing we can do on errors.
     }
     return 1;
 }
@@ -133,7 +133,7 @@ bool kill_other_threads(void) {
     if (walk_thread_list(mark_thread_to_die, get_cur_thread(), /*one_shot=*/false) != -ESRCH) {
         killed = true;
     }
-    DkThreadYieldExecution();
+    PalThreadYieldExecution();
 
     /* Wait for all other threads to exit. */
     while (!check_last_thread(/*mark_self_dead=*/false)) {
@@ -142,7 +142,7 @@ bool kill_other_threads(void) {
         if (walk_thread_list(mark_thread_to_die, get_cur_thread(), /*one_shot=*/false) != -ESRCH) {
             killed = true;
         }
-        DkThreadYieldExecution();
+        PalThreadYieldExecution();
     }
 
     return killed;

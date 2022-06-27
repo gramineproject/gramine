@@ -13,12 +13,12 @@ int main(int argc, char** argv, char** envp) {
     }
 
     /* parent process */
-    const struct pal_public_state* pal_public_state = DkGetPalPublicState();
+    const struct pal_public_state* pal_public_state = PalGetPalPublicState();
     pal_printf("Parent Process: %p\n", pal_public_state->parent_process);
 
     /* test debug stream */
     const char* msg = "Written to Debug Stream\n";
-    int ret = DkDebugLog((char*)msg, strlen(msg));
+    int ret = PalDebugLog((char*)msg, strlen(msg));
     if (ret < 0) {
         pal_printf("Failed to write the debug message.\n");
         return 1;

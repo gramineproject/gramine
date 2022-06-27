@@ -102,7 +102,7 @@ static int child_process(struct proc_param* proc_param) {
     die_or_inf_loop();
 }
 
-int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
     PAL_HANDLE parent_handle = NULL;
     PAL_HANDLE child_handle = NULL;
     struct proc_args* proc_args = NULL;
@@ -203,10 +203,10 @@ out:
     free(exec_data);
     free(proc_args);
     if (parent_handle)
-        _DkObjectClose(parent_handle);
+        _PalObjectClose(parent_handle);
     if (ret < 0) {
         if (child_handle)
-            _DkObjectClose(child_handle);
+            _PalObjectClose(child_handle);
     }
     return ret;
 }
@@ -261,7 +261,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     free(data);
 }
 
-noreturn void _DkProcessExit(int exitcode) {
+noreturn void _PalProcessExit(int exitcode) {
     DO_SYSCALL(exit_group, exitcode);
     die_or_inf_loop();
 }

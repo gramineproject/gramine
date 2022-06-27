@@ -138,8 +138,8 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     unlock(&handle->lock);
 
     PAL_HANDLE pal_handle = NULL;
-    ret = DkStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                       &pal_handle);
+    ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
+                        &pal_handle);
     if (ret < 0) {
         return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
@@ -178,14 +178,14 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     /* Since this socket is listening, it must have a PAL handle. */
     assert(pal_handle);
     PAL_HANDLE client_pal_handle;
-    int ret = DkStreamWaitForClient(pal_handle, &client_pal_handle, options);
+    int ret = PalStreamWaitForClient(pal_handle, &client_pal_handle, options);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
     struct libos_handle* client_handle = get_new_handle();
     if (!client_handle) {
-        DkObjectClose(client_pal_handle);
+        PalObjectClose(client_pal_handle);
         return -ENOMEM;
     }
 
@@ -247,8 +247,8 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
     unlock(&handle->lock);
 
     PAL_HANDLE pal_handle = NULL;
-    ret = DkStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                       &pal_handle);
+    ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
+                        &pal_handle);
     if (ret < 0) {
         return (ret == -PAL_ERROR_CONNFAILED) ? -ENOENT : pal_to_unix_errno(ret);
     }
@@ -361,7 +361,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = DkStreamWrite(pal_handle, /*offset=*/0, &size, buf, NULL);
+    int ret = PalStreamWrite(pal_handle, /*offset=*/0, &size, buf, NULL);
     free(backing_buf);
     if (ret < 0) {
         return (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
@@ -390,7 +390,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
         unlock(&handle->lock);
         if (!handle_is_nonblocking) {
-            /* `DkStreamRead` has no way of making one-time nonblocking read, so we have no other
+            /* `PalStreamRead` has no way of making one-time nonblocking read, so we have no other
              * option but to fail. */
             return -EINVAL;
         }
@@ -416,7 +416,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = DkStreamRead(pal_handle, /*offset=*/0, &size, buf, NULL, 0);
+    int ret = PalStreamRead(pal_handle, /*offset=*/0, &size, buf, NULL, 0);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
     } else {

@@ -173,7 +173,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
 
     if (!hdl) {
-        ret = DkVirtualMemoryAlloc(&addr, length, 0, LINUX_PROT_TO_PAL(prot, flags));
+        ret = PalVirtualMemoryAlloc(&addr, length, 0, LINUX_PROT_TO_PAL(prot, flags));
         if (ret < 0) {
             if (ret == -PAL_ERROR_DENIED) {
                 ret = -EPERM;
@@ -239,7 +239,7 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         return -EINVAL;
     }
 
-    /* `bkeep_mprotect` and then `DkVirtualMemoryProtect` is racy, but it's hard to do it properly.
+    /* `bkeep_mprotect` and then `PalVirtualMemoryProtect` is racy, but it's hard to do it properly.
      * On the other hand if this race happens, it means user app is buggy, so not a huge problem. */
 
     int ret = bkeep_mprotect(addr, length, prot, /*is_internal=*/false);
@@ -261,7 +261,7 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         }
     }
 
-    ret = DkVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
+    ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -297,7 +297,7 @@ long libos_syscall_munmap(void* addr, size_t length) {
         return ret;
     }
 
-    if (DkVirtualMemoryFree(addr, length) < 0) {
+    if (PalVirtualMemoryFree(addr, length) < 0) {
         BUG();
     }
 

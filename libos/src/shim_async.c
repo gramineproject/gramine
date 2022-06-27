@@ -61,7 +61,7 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
     assert(!object || (object && !time));
 
     uint64_t now = 0;
-    int ret = DkSystemTimeQuery(&now);
+    int ret = PalSystemTimeQuery(&now);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -149,7 +149,7 @@ static int libos_async_worker(void* arg) {
 
     if (notme) {
         put_thread(self);
-        DkThreadExit(/*clear_child_tid=*/NULL);
+        PalThreadExit(/*clear_child_tid=*/NULL);
         /* UNREACHABLE */
     }
 
@@ -186,10 +186,10 @@ static int libos_async_worker(void* arg) {
 
     while (true) {
         uint64_t now = 0;
-        int ret = DkSystemTimeQuery(&now);
+        int ret = PalSystemTimeQuery(&now);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
-            log_error("DkSystemTimeQuery failed with: %d", ret);
+            log_error("PalSystemTimeQuery failed with: %d", ret);
             goto out_err;
         }
 
@@ -279,19 +279,19 @@ static int libos_async_worker(void* arg) {
         unlock(&async_worker_lock);
 
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
-        ret = DkStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
-                                  inf_sleep ? NULL : &sleep_time);
+        ret = PalStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
+                                   inf_sleep ? NULL : &sleep_time);
         if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
             ret = pal_to_unix_errno(ret);
-            log_error("DkStreamsWaitEvents failed with: %d", ret);
+            log_error("PalStreamsWaitEvents failed with: %d", ret);
             goto out_err;
         }
         bool polled = ret == 0;
 
-        ret = DkSystemTimeQuery(&now);
+        ret = PalSystemTimeQuery(&now);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
-            log_error("DkSystemTimeQuery failed with: %d", ret);
+            log_error("PalSystemTimeQuery failed with: %d", ret);
             goto out_err;
         }
 
@@ -355,7 +355,7 @@ static int libos_async_worker(void* arg) {
     free(pals);
     free(pal_events);
 
-    DkThreadExit(/*clear_child_tid=*/NULL);
+    PalThreadExit(/*clear_child_tid=*/NULL);
     /* UNREACHABLE */
 
 out_err_unlock:
@@ -363,7 +363,7 @@ out_err_unlock:
 out_err:
     log_error("Terminating the process due to a fatal error in async worker");
     put_thread(self);
-    DkProcessExit(1);
+    PalProcessExit(1);
 }
 
 /* this should be called with the async_worker_lock held */
@@ -381,7 +381,7 @@ static int create_async_worker(void) {
     async_worker_state  = WORKER_ALIVE;
 
     PAL_HANDLE handle = NULL;
-    int ret = DkThreadCreate(libos_async_worker, new, &handle);
+    int ret = PalThreadCreate(libos_async_worker, new, &handle);
 
     if (ret < 0) {
         async_worker_thread = NULL;

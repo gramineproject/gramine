@@ -213,7 +213,7 @@ static inline void set_cur_thread(struct libos_thread* thread) {
 static inline void thread_prepare_wait(void) {
     struct libos_thread* cur_thread = get_cur_thread();
     assert(!is_internal(cur_thread));
-    DkEventClear(cur_thread->scheduler_event);
+    PalEventClear(cur_thread->scheduler_event);
 }
 
 static inline int thread_wait(uint64_t* timeout_us, bool ignore_pending_signals) {
@@ -224,12 +224,12 @@ static inline int thread_wait(uint64_t* timeout_us, bool ignore_pending_signals)
         return -EINTR;
     }
 
-    int ret = DkEventWait(cur_thread->scheduler_event, timeout_us);
+    int ret = PalEventWait(cur_thread->scheduler_event, timeout_us);
     return ret == -PAL_ERROR_TRYAGAIN ? -ETIMEDOUT : pal_to_unix_errno(ret);
 }
 
 static inline void thread_wakeup(struct libos_thread* thread) {
-    DkEventSet(thread->scheduler_event);
+    PalEventSet(thread->scheduler_event);
 }
 
 /* Adds the thread to the wake-up queue.

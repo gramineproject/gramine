@@ -138,7 +138,7 @@ void interrupt_epolls(struct libos_handle* handle) {
             unlock(&handle->lock);
             log_error("%s: failed to allocate memory for the epoll items array", __func__);
             /* No way to handle this cleanly. */
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
     }
 
@@ -599,8 +599,8 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
         unlock(&epoll->lock);
 
         if (!have_pending_signals()) {
-            ret = DkStreamsWaitEvents(items_count + 1, pal_handles, pal_events, pal_ret_events,
-                                      timeout_ms == -1 ? NULL : &timeout_us);
+            ret = PalStreamsWaitEvents(items_count + 1, pal_handles, pal_events, pal_ret_events,
+                                       timeout_ms == -1 ? NULL : &timeout_us);
             ret = pal_to_unix_errno(ret);
         } else {
             ret = -EINTR;

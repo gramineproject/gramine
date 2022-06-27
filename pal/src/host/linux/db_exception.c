@@ -74,7 +74,7 @@ static enum pal_event signal_to_pal_event(int sig) {
  */
 static void perform_signal_handling(enum pal_event event, bool is_in_pal, uintptr_t addr,
                                     ucontext_t* uc) {
-    pal_event_handler_t upcall = _DkGetExceptionHandler(event);
+    pal_event_handler_t upcall = _PalGetExceptionHandler(event);
     if (!upcall)
         return;
 
@@ -112,7 +112,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
     log_error("Unexpected %s occurred inside %s (%s, PID = %u, TID = %ld)", event_name,
               in_vdso ? "VDSO" : "PAL", buf, g_pal_linux_state.host_pid, DO_SYSCALL(gettid));
 
-    _DkProcessExit(1);
+    _PalProcessExit(1);
 }
 
 static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc) {

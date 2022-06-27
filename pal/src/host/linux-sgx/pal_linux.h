@@ -98,11 +98,11 @@ void save_xregs(PAL_XREGS_STATE* xsave_area);
 void restore_xregs(const PAL_XREGS_STATE* xsave_area);
 noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave_area);
 
-void _DkExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
-                         PAL_XREGS_STATE* xregs_state);
+void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
+                          PAL_XREGS_STATE* xregs_state);
 /* `event_` is actually of `enum pal_event` type, but we call it from assembly, so we need to know
  * its underlying type. */
-void _DkHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
+void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
 
 bool is_tsc_usable(void);
 uint64_t get_tsc_hz(void);
@@ -164,9 +164,9 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
 /* perform Diffie-Hellman to establish a session key and also produce a hash over (K_e || tag1) for
  * parent enclave A and a hash over (K_e || tag2) for child enclave B; see also top-level comment in
  * db_process.c */
-int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
-                         sgx_report_data_t* out_parent_report_data,
-                         sgx_report_data_t* out_child_report_data);
+int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
+                          sgx_report_data_t* out_parent_report_data,
+                          sgx_report_data_t* out_child_report_data);
 
 /*!
  * \brief Request a local report on an RPC stream (typically called by parent enclave).
@@ -176,8 +176,8 @@ int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
  * \param  peer_report_data User-defined data expected in the incoming SGX report.
  * \return 0 on success, negative error code otherwise.
  */
-int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
-                           sgx_report_data_t* peer_report_data);
+int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
+                            sgx_report_data_t* peer_report_data);
 
 /*!
  * \brief Respond with a local report on an RPC stream (typically called by child enclave).
@@ -187,17 +187,17 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
  * \param  peer_report_data User-defined data expected in the incoming SGX report.
  * \return 0 on success, negative error code otherwise.
  */
-int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
-                           sgx_report_data_t* peer_report_data);
+int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
+                            sgx_report_data_t* peer_report_data);
 
-int _DkStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* session_key,
-                        LIB_SSL_CONTEXT** out_ssl_ctx, const uint8_t* buf_load_ssl_ctx,
-                        size_t buf_size);
-int _DkStreamSecureFree(LIB_SSL_CONTEXT* ssl_ctx);
-int _DkStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool is_blocking);
-int _DkStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t len,
-                         bool is_blocking);
-int _DkStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen);
+int _PalStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* session_key,
+                         LIB_SSL_CONTEXT** out_ssl_ctx, const uint8_t* buf_load_ssl_ctx,
+                         size_t buf_size);
+int _PalStreamSecureFree(LIB_SSL_CONTEXT* ssl_ctx);
+int _PalStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool is_blocking);
+int _PalStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t len,
+                          bool is_blocking);
+int _PalStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen);
 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
 

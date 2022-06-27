@@ -22,7 +22,7 @@ long libos_syscall_gettimeofday(struct __kernel_timeval* tv, struct __kernel_tim
         return -EFAULT;
 
     uint64_t time = 0;
-    int ret = DkSystemTimeQuery(&time);
+    int ret = PalSystemTimeQuery(&time);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -37,7 +37,7 @@ long libos_syscall_time(time_t* tloc) {
         return -EFAULT;
 
     uint64_t time = 0;
-    int ret = DkSystemTimeQuery(&time);
+    int ret = PalSystemTimeQuery(&time);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -69,7 +69,7 @@ long libos_syscall_clock_gettime(clockid_t which_clock, struct timespec* tp) {
     }
 
     uint64_t time = 0;
-    int ret = DkSystemTimeQuery(&time);
+    int ret = PalSystemTimeQuery(&time);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

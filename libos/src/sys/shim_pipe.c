@@ -35,8 +35,8 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
         return ret;
     }
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                       LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                        LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         log_error("pipe connection failure");
@@ -44,7 +44,7 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
     }
 
     do {
-        ret = DkStreamWaitForClient(hdl0, &hdl1, /*options=*/0);
+        ret = PalStreamWaitForClient(hdl0, &hdl1, /*options=*/0);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
@@ -80,13 +80,13 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
     ret = 0;
 
 out:;
-    int tmp_ret = DkStreamDelete(hdl0, PAL_DELETE_ALL);
-    DkObjectClose(hdl0);
+    int tmp_ret = PalStreamDelete(hdl0, PAL_DELETE_ALL);
+    PalObjectClose(hdl0);
     if (ret || tmp_ret) {
         if (hdl1)
-            DkObjectClose(hdl1);
+            PalObjectClose(hdl1);
         if (hdl2)
-            DkObjectClose(hdl2);
+            PalObjectClose(hdl2);
 
         free(srv->uri);
         srv->uri = NULL;
@@ -189,7 +189,7 @@ long libos_syscall_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t d
     if (!(mode & S_IFMT) || S_ISREG(mode)) {
         mode &= ~S_IFREG;
         /* FIXME: Gramine assumes that file is at least readable by owner, in particular, see
-         *        unlink() emulation that uses DkStreamOpen(). We change empty mode to readable
+         *        unlink() emulation that uses PalStreamOpen(). We change empty mode to readable
          *        by user here to allow a consequent unlink. Was detected on LTP mknod tests. */
         int fd = libos_syscall_openat(dirfd, pathname, O_CREAT | O_EXCL, mode ?: PERM_r________);
         if (fd < 0)

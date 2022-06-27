@@ -173,7 +173,7 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         .sun_family = AF_UNIX,
     };
     /* We leave first byte as 0 - abstract UNIX socket. */
-    ret = DkRandomBitsRead(&addr.sun_path[1], sizeof(addr.sun_path) - 1);
+    ret = PalRandomBitsRead(&addr.sun_path[1], sizeof(addr.sun_path) - 1);
     if (ret < 0) {
         ret = -EAGAIN;
         goto out;
@@ -1068,7 +1068,7 @@ long libos_syscall_shutdown(int fd, int how) {
             goto out;
     }
 
-    ret = DkStreamDelete(sock->pal_handle, mode);
+    ret = PalStreamDelete(sock->pal_handle, mode);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -1239,7 +1239,7 @@ static int set_socket_option(struct libos_handle* handle, int optname, char* opt
     }
 
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -1293,7 +1293,7 @@ static int set_socket_option(struct libos_handle* handle, int optname, char* opt
             break;
     }
 
-    ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
+    ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -1412,7 +1412,7 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
     }
 
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

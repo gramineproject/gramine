@@ -11,7 +11,7 @@
  * These events have binary semaphore semantics:
  * - `set_pollable_event(e)` sets the semaphore to 1 (regardless of its current state),
  * - `clear_pollable_event(e)` sets the semaphore to 0 (regardless of its current state).
- * Additionally `e->read_handle` can be passed to `DkStreamsWaitEvents` (which is actually the only
+ * Additionally `e->read_handle` can be passed to `PalStreamsWaitEvents` (which is actually the only
  * purpose these events exist for).
  */
 

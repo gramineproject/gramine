@@ -48,8 +48,8 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     pal_flags |= flags & EFD_CLOEXEC ? PAL_OPTION_CLOEXEC : 0;
     pal_flags |= flags & EFD_SEMAPHORE ? PAL_OPTION_EFD_SEMAPHORE : 0;
 
-    ret = DkStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
-                       PAL_CREATE_IGNORED, pal_flags, &hdl);
+    ret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                        PAL_CREATE_IGNORED, pal_flags, &hdl);
     if (ret < 0) {
         log_error("eventfd: creation failure");
         return pal_to_unix_errno(ret);
@@ -57,7 +57,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
 
     /* set the initial count */
     size_t write_size = sizeof(initial_count);
-    ret = DkStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, /*dest=*/NULL);
+    ret = PalStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, /*dest=*/NULL);
     if (ret < 0) {
         log_error("eventfd: failed to set initial count");
         return pal_to_unix_errno(ret);

@@ -22,10 +22,10 @@ long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags) {
     if (!is_user_memory_writable(buf, count))
         return -EFAULT;
 
-    /* In theory, DkRandomBitsRead may block on some PALs (which conflicts with GRND_NONBLOCK flag),
-     * but this shouldn't be possible in practice, so we don't care.
+    /* In theory, PalRandomBitsRead may block on some PALs (which conflicts with GRND_NONBLOCK
+     * flag), but this shouldn't be possible in practice, so we don't care.
      */
-    int ret = DkRandomBitsRead(buf, count);
+    int ret = PalRandomBitsRead(buf, count);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         if (ret == -EINTR) {

@@ -72,7 +72,7 @@ PAL public state
 
 All PALs in Gramine expose a structure that provides static immutable
 information about the current process and its host. The address of the
-structure can be retrieved via :func:`DkGetPalPublicState()` and can be
+structure can be retrieved via :func:`PalGetPalPublicState()` and can be
 memorized in a global variable for ease of use.
 
 .. doxygenstruct:: pal_public_state
@@ -105,10 +105,10 @@ on page-base virtual memory. Permissions include read, write, execute, and
 guard. Memory regions can be unallocated, reserved, or backed by committed
 memory.
 
-.. doxygenfunction:: DkVirtualMemoryAlloc
+.. doxygenfunction:: PalVirtualMemoryAlloc
    :project: pal
 
-.. doxygenfunction:: DkVirtualMemoryFree
+.. doxygenfunction:: PalVirtualMemoryFree
    :project: pal
 
 .. doxygentypedef:: pal_alloc_flags_t
@@ -116,7 +116,7 @@ memory.
 .. doxygentypedef:: pal_prot_flags_t
    :project: pal
 
-.. doxygenfunction:: DkVirtualMemoryProtect
+.. doxygenfunction:: PalVirtualMemoryProtect
    :project: pal
 
 
@@ -130,9 +130,9 @@ children. A parent can wait for a child to exit using its handle. Parent and
 child may communicate through I/O streams provided by the parent to the child at
 creation.
 
-.. doxygenfunction:: DkProcessCreate
+.. doxygenfunction:: PalProcessCreate
    :project: pal
-.. doxygenfunction:: DkProcessExit
+.. doxygenfunction:: PalProcessExit
    :project: pal
 
 
@@ -156,40 +156,40 @@ provide an ioctl call. Supported URI schemes include:
 The latter four schemes are used to open inbound I/O streams for server
 applications.
 
-.. doxygenfunction:: DkStreamOpen
+.. doxygenfunction:: PalStreamOpen
    :project: pal
 
-.. doxygenfunction:: DkStreamWaitForClient
+.. doxygenfunction:: PalStreamWaitForClient
    :project: pal
 
-.. doxygenfunction:: DkStreamRead
+.. doxygenfunction:: PalStreamRead
    :project: pal
 
-.. doxygenfunction:: DkStreamWrite
+.. doxygenfunction:: PalStreamWrite
    :project: pal
 
-.. doxygenfunction:: DkStreamDelete
+.. doxygenfunction:: PalStreamDelete
    :project: pal
 
-.. doxygenfunction:: DkStreamMap
+.. doxygenfunction:: PalStreamMap
    :project: pal
 
-.. doxygenfunction:: DkStreamUnmap
+.. doxygenfunction:: PalStreamUnmap
    :project: pal
 
-.. doxygenfunction:: DkStreamSetLength
+.. doxygenfunction:: PalStreamSetLength
    :project: pal
 
-.. doxygenfunction:: DkStreamFlush
+.. doxygenfunction:: PalStreamFlush
    :project: pal
 
-.. doxygenfunction:: DkSendHandle
+.. doxygenfunction:: PalSendHandle
    :project: pal
 
-.. doxygenfunction:: DkReceiveHandle
+.. doxygenfunction:: PalReceiveHandle
    :project: pal
 
-.. doxygenfunction:: DkStreamAttributesQuery
+.. doxygenfunction:: PalStreamAttributesQuery
    :project: pal
 
 .. doxygentypedef:: PAL_STREAM_ATTR
@@ -197,16 +197,16 @@ applications.
 .. doxygenstruct:: _PAL_STREAM_ATTR
    :project: pal
 
-.. doxygenfunction:: DkStreamAttributesQueryByHandle
+.. doxygenfunction:: PalStreamAttributesQueryByHandle
    :project: pal
 
-.. doxygenfunction:: DkStreamAttributesSetByHandle
+.. doxygenfunction:: PalStreamAttributesSetByHandle
    :project: pal
 
-.. doxygenfunction:: DkStreamGetName
+.. doxygenfunction:: PalStreamGetName
    :project: pal
 
-.. doxygenfunction:: DkStreamChangeName
+.. doxygenfunction:: PalStreamChangeName
    :project: pal
 
 
@@ -247,25 +247,25 @@ Socket handling
 .. doxygenstruct:: pal_iovec
    :project: pal
 
-.. doxygenfunction:: DkSocketCreate
+.. doxygenfunction:: PalSocketCreate
    :project: pal
 
-.. doxygenfunction:: DkSocketBind
+.. doxygenfunction:: PalSocketBind
    :project: pal
 
-.. doxygenfunction:: DkSocketListen
+.. doxygenfunction:: PalSocketListen
    :project: pal
 
-.. doxygenfunction:: DkSocketAccept
+.. doxygenfunction:: PalSocketAccept
    :project: pal
 
-.. doxygenfunction:: DkSocketConnect
+.. doxygenfunction:: PalSocketConnect
    :project: pal
 
-.. doxygenfunction:: DkSocketSend
+.. doxygenfunction:: PalSocketSend
    :project: pal
 
-.. doxygenfunction:: DkSocketRecv
+.. doxygenfunction:: PalSocketRecv
    :project: pal
 
 
@@ -276,16 +276,16 @@ The ABI supports multithreading through five calls to create, sleep, yield the
 scheduler quantum for, resume execution of, and terminate threads, as well as
 seven calls to create, signal, and block on synchronization objects.
 
-.. doxygenfunction:: DkThreadCreate
+.. doxygenfunction:: PalThreadCreate
    :project: pal
 
-.. doxygenfunction:: DkThreadYieldExecution
+.. doxygenfunction:: PalThreadYieldExecution
    :project: pal
 
-.. doxygenfunction:: DkThreadExit
+.. doxygenfunction:: PalThreadExit
    :project: pal
 
-.. doxygenfunction:: DkThreadResume
+.. doxygenfunction:: PalThreadResume
    :project: pal
 
 
@@ -304,32 +304,32 @@ Exception handling
 .. doxygentypedef:: pal_event_handler_t
    :project: pal
 
-.. doxygenfunction:: DkSetExceptionHandler
+.. doxygenfunction:: PalSetExceptionHandler
    :project: pal
 
 
 Synchronization
 ^^^^^^^^^^^^^^^
 
-.. doxygenfunction:: DkEventCreate
+.. doxygenfunction:: PalEventCreate
    :project: pal
 
-.. doxygenfunction:: DkEventSet
+.. doxygenfunction:: PalEventSet
    :project: pal
 
-.. doxygenfunction:: DkEventClear
+.. doxygenfunction:: PalEventClear
    :project: pal
 
-.. doxygenfunction:: DkEventWait
+.. doxygenfunction:: PalEventWait
    :project: pal
 
 Objects
 ^^^^^^^
 
-.. doxygenfunction:: DkStreamsWaitEvents
+.. doxygenfunction:: PalStreamsWaitEvents
    :project: pal
 
-.. doxygenfunction:: DkObjectClose
+.. doxygenfunction:: PalObjectClose
    :project: pal
 
 Miscellaneous
@@ -340,38 +340,38 @@ cryptographically-strong random bits, flush portions of instruction caches,
 increment and decrement the reference counts on objects shared between threads,
 and to obtain an attestation report and quote.
 
-.. doxygenfunction:: DkDebugLog
+.. doxygenfunction:: PalDebugLog
    :project: pal
 
-.. doxygenfunction:: DkGetPalPublicState
+.. doxygenfunction:: PalGetPalPublicState
    :project: pal
 
-.. doxygenfunction:: DkSystemTimeQuery
+.. doxygenfunction:: PalSystemTimeQuery
    :project: pal
 
-.. doxygenfunction:: DkRandomBitsRead
+.. doxygenfunction:: PalRandomBitsRead
    :project: pal
 
-.. doxygenfunction:: DkSegmentBaseGet
+.. doxygenfunction:: PalSegmentBaseGet
    :project: pal
 
-.. doxygenfunction:: DkSegmentBaseSet
+.. doxygenfunction:: PalSegmentBaseSet
    :project: pal
 
 .. doxygenenum:: pal_segment_reg
    :project: pal
 
-.. doxygenfunction:: DkMemoryAvailableQuota
+.. doxygenfunction:: PalMemoryAvailableQuota
    :project: pal
 
-.. doxygenfunction:: DkCpuIdRetrieve
+.. doxygenfunction:: PalCpuIdRetrieve
    :project: pal
 
-.. doxygenfunction:: DkAttestationReport
+.. doxygenfunction:: PalAttestationReport
    :project: pal
 
-.. doxygenfunction:: DkAttestationQuote
+.. doxygenfunction:: PalAttestationQuote
    :project: pal
 
-.. doxygenfunction:: DkGetSpecialKey
+.. doxygenfunction:: PalGetSpecialKey
    :project: pal

@@ -11,7 +11,7 @@ struct atomic_int g_allocated_pages;
 
 /* list of VMAs of used memory areas kept in DESCENDING order; note that preallocated PAL internal
  * memory relies on this descending order of allocations (from high addresses to low), see
- * _DkGetAvailableUserAddressRange() for more details */
+ * _PalGetAvailableUserAddressRange() for more details */
 DEFINE_LIST(heap_vma);
 struct heap_vma {
     LIST_TYPE(heap_vma) list;

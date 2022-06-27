@@ -3,5 +3,5 @@
 #include "pal_regression.h"
 
 int main(int argc, char** argv, char** envp) {
-    DkProcessExit(112);
+    PalProcessExit(112);
 }

@@ -168,8 +168,8 @@ long libos_syscall_sysinfo(struct sysinfo* info) {
     memset(info, 0, sizeof(*info));
     info->totalram  = g_pal_public_state->mem_total;
     info->totalhigh = g_pal_public_state->mem_total;
-    info->freeram   = DkMemoryAvailableQuota();
-    info->freehigh  = DkMemoryAvailableQuota();
+    info->freeram   = PalMemoryAvailableQuota();
+    info->freehigh  = PalMemoryAvailableQuota();
     info->mem_unit  = 1;
     info->procs     = 1; /* report only this Gramine process */
     return 0;

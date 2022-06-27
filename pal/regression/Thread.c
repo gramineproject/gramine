@@ -14,16 +14,16 @@ static noreturn int callback(void* args) {
 
     while (count < 10) {
         while (!(count % 2)) {
-            DkThreadYieldExecution();
+            PalThreadYieldExecution();
         }
         count++;
     }
 
     pal_printf("Threads Run in Parallel OK\n");
 
-    if (DkSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private2) < 0) {
+    if (PalSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private2) < 0) {
         pal_printf("Failed to set FS\n");
-        DkThreadExit(/*clear_child_tid=*/NULL);
+        PalThreadExit(/*clear_child_tid=*/NULL);
     }
 
     const char* ptr2;
@@ -31,12 +31,12 @@ static noreturn int callback(void* args) {
     pal_printf("Private Message (FS Segment) 2: %s\n", ptr2);
 
     count = 100;
-    DkThreadExit(/*clear_child_tid=*/NULL);
+    PalThreadExit(/*clear_child_tid=*/NULL);
     /* UNREACHABLE */
 }
 
 int main(void) {
-    if (DkSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private1) < 0) {
+    if (PalSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private1) < 0) {
         pal_printf("Failed to set FS\n");
         return 1;
     }
@@ -46,7 +46,7 @@ int main(void) {
 
     PAL_HANDLE thread1 = NULL;
     char arg[] = "Hello World";
-    int ret = DkThreadCreate(callback, arg, &thread1);
+    int ret = PalThreadCreate(callback, arg, &thread1);
     if (ret < 0)
         return 1;
 
@@ -54,13 +54,13 @@ int main(void) {
 
     while (count < 9) {
         while (!!(count % 2)) {
-            DkThreadYieldExecution();
+            PalThreadYieldExecution();
         }
         count++;
     }
 
     while (count != 100) {
-        DkThreadYieldExecution();
+        PalThreadYieldExecution();
     }
     pal_printf("Child Thread Exited\n");
     return 0;

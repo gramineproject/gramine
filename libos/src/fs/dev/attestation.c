@@ -7,7 +7,7 @@
  * This file contains the implementation of local- and remote-attestation logic implemented via
  * `/dev/attestation/{user_report_data, target_info, my_target_info, report, quote}` pseudo-files.
  *
- * The attestation logic uses DkAttestationReport() and DkAttestationQuote() and is generic enough
+ * The attestation logic uses PalAttestationReport() and PalAttestationQuote() and is generic enough
  * to support attestation flows similar to Intel SGX. Currently only SGX attestation is used.
  *
  * This pseudo-FS interface is not thread-safe. It is the responsibility of the application to
@@ -41,9 +41,9 @@ static int init_attestation_struct_sizes(void) {
         return 0;
     }
 
-    int ret = DkAttestationReport(/*user_report_data=*/NULL, &g_user_report_data_size,
-                                  /*target_info=*/NULL, &g_target_info_size,
-                                  /*report=*/NULL, &g_report_size);
+    int ret = PalAttestationReport(/*user_report_data=*/NULL, &g_user_report_data_size,
+                                   /*target_info=*/NULL, &g_target_info_size,
+                                   /*report=*/NULL, &g_report_size);
     if (ret < 0)
         return -EACCES;
 
@@ -104,7 +104,7 @@ static int target_info_save(struct libos_dentry* dent, const char* data, size_t 
 }
 
 /*!
- * \brief Obtain this enclave's target info via DkAttestationReport().
+ * \brief Obtain this enclave's target info via PalAttestationReport().
  *
  * This file `/dev/attestation/my_target_info` can be opened for read and will contain the
  * target info of this enclave. The resulting target info blob can be passed to another enclave
@@ -140,8 +140,8 @@ static int my_target_info_load(struct libos_dentry* dent, char** out_data, size_
 
     /* below invocation returns this enclave's target info because we zeroed out (via calloc)
      * target_info: it's a hint to function to update target_info with this enclave's info */
-    ret = DkAttestationReport(user_report_data, &user_report_data_size, target_info,
-                              &target_info_size, /*report=*/NULL, &report_size);
+    ret = PalAttestationReport(user_report_data, &user_report_data_size, target_info,
+                               &target_info_size, /*report=*/NULL, &report_size);
     if (ret < 0) {
         ret = -EACCES;
         goto out;
@@ -167,7 +167,7 @@ out:
 
 
 /*!
- * \brief Obtain report via DkAttestationReport() with previously populated user_report_data
+ * \brief Obtain report via PalAttestationReport() with previously populated user_report_data
  *        and target_info.
  *
  * Before opening `/dev/attestation/report` for read, user_report_data must be written into
@@ -188,8 +188,8 @@ static int report_load(struct libos_dentry* dent, char** out_data, size_t* out_s
     if (!report)
         return -ENOMEM;
 
-    ret = DkAttestationReport(&g_user_report_data, &g_user_report_data_size, &g_target_info,
-                              &g_target_info_size, report, &g_report_size);
+    ret = PalAttestationReport(&g_user_report_data, &g_user_report_data_size, &g_target_info,
+                               &g_target_info_size, report, &g_report_size);
     if (ret < 0) {
         free(report);
         return -EACCES;
@@ -227,7 +227,7 @@ static int quote_load(struct libos_dentry* dent, char** out_data, size_t* out_si
     if (!quote)
         return -ENOMEM;
 
-    ret = DkAttestationQuote(&g_user_report_data, g_user_report_data_size, quote, &quote_size);
+    ret = PalAttestationQuote(&g_user_report_data, g_user_report_data_size, quote, &quote_size);
     if (ret < 0) {
         free(quote);
         return -EACCES;

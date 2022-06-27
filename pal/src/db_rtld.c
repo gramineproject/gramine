@@ -286,7 +286,7 @@ static int perform_relocations(struct link_map* map) {
 }
 
 /* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
- * we don't bother undoing _DkStreamMap() and _DkVirtualMemoryAlloc() in case of failure. */
+ * we don't bother undoing _PalStreamMap() and _PalVirtualMemoryAlloc() in case of failure. */
 static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_file_buf) {
     int ret;
     struct loadcmd* loadcmds = NULL;
@@ -294,7 +294,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
     elf_addr_t l_relro_addr = 0x0;
     size_t l_relro_size = 0;
 
-    const char* name = _DkStreamRealpath(handle);
+    const char* name = _PalStreamRealpath(handle);
     if (!name)
         return -PAL_ERROR_INVAL;
 
@@ -381,14 +381,14 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
          * Note that we allocate memory to cover LOAD segments starting from offset 0, not from the
          * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
          *
-         * FIXME: We (ab)use _DkStreamMap() because _DkVirtualMemoryAlloc() cannot be used to
+         * FIXME: We (ab)use _PalStreamMap() because _PalVirtualMemoryAlloc() cannot be used to
          *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed). Note
          *        that `PAL_PROT_WRITECOPY` is specified to prevent allocating memory in untrusted
          *        memory in case of Linux-SGX PAL (see linux-sgx/db_files.c:file_map).
          */
         void* map_addr = NULL;
-        ret = _DkStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,
-                           loadcmds[loadcmds_cnt - 1].alloc_end);
+        ret = _PalStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,
+                            loadcmds[loadcmds_cnt - 1].alloc_end);
         if (ret < 0) {
             log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
             goto out;
@@ -408,7 +408,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
         size_t map_size = c->map_end - c->start;
 
-        ret = _DkStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
+        ret = _PalStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
         if (ret < 0) {
             log_error("Failed to map segment from ELF file");
             goto out;
@@ -424,7 +424,8 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
             continue;
 
         void* map_rest = (void*)c->map_end;
-        ret = _DkVirtualMemoryAlloc(&map_rest, c->alloc_end - c->map_end, /*alloc_type=*/0, c->prot);
+        ret = _PalVirtualMemoryAlloc(&map_rest, c->alloc_end - c->map_end, /*alloc_type=*/0,
+                                     c->prot);
         if (ret < 0) {
             log_error("Failed to zero-fill the rest of segment from ELF file");
             goto out;
@@ -447,15 +448,15 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
      * (need to first change memory permissions to writable and then revert permissions back) */
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
-        ret = _DkVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start,
-                                      c->prot | PAL_PROT_WRITE);
+        ret = _PalVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start,
+                                       c->prot | PAL_PROT_WRITE);
         if (ret < 0) {
             log_error("Failed to add write memory protection on the segment from ELF file");
             goto out;
         }
 
         /* zero out uninitialized but allocated part of the loaded segment (note that part of
-         * segment allocated via _DkVirtualMemoryAlloc() is already zeroed out) */
+         * segment allocated via _PalVirtualMemoryAlloc() is already zeroed out) */
         if (ALLOC_ALIGN_UP(c->data_end) > c->data_end)
             memset((void*)c->data_end, 0, ALLOC_ALIGN_UP(c->data_end) - c->data_end);
     }
@@ -468,7 +469,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
 
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
-        ret = _DkVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start, c->prot);
+        ret = _PalVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start, c->prot);
         if (ret < 0) {
             log_error("Failed to revert write memory protection on the segment from ELF file");
             goto out;
@@ -479,7 +480,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
         l_relro_addr += g_entrypoint_map.l_base_diff;
         elf_addr_t start = ALLOC_ALIGN_DOWN(l_relro_addr);
         elf_addr_t end   = ALLOC_ALIGN_UP(l_relro_addr + l_relro_size);
-        ret = _DkVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
+        ret = _PalVirtualMemoryProtect((void*)start, end - start, PAL_PROT_READ);
         if (ret < 0) {
             log_error("Failed to apply read-only memory protection on the RELRO memory area");
             goto out;
@@ -501,12 +502,12 @@ int load_entrypoint(const char* uri) {
     PAL_HANDLE handle;
 
     char buf[1024]; /* must be enough to hold ELF header and all its program headers */
-    ret = _DkStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0);
+    ret = _PalStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         /*options=*/0);
     if (ret < 0)
         return ret;
 
-    ret = _DkStreamRead(handle, 0, sizeof(buf), buf, NULL, 0);
+    ret = _PalStreamRead(handle, 0, sizeof(buf), buf, NULL, 0);
     if (ret < 0) {
         log_error("Reading ELF file failed");
         goto out;
@@ -555,11 +556,11 @@ int load_entrypoint(const char* uri) {
 
 #ifdef DEBUG
     assert(g_entrypoint_map.l_name);
-    _DkDebugMapAdd(g_entrypoint_map.l_name, (void*)g_entrypoint_map.l_base_diff);
+    _PalDebugMapAdd(g_entrypoint_map.l_name, (void*)g_entrypoint_map.l_base_diff);
 #endif
 
 out:
-    _DkObjectClose(handle);
+    _PalObjectClose(handle);
     return ret;
 }
 
@@ -610,7 +611,7 @@ void set_pal_binary_name(const char* name) {
  * a result, if we load a binary that is an encrypted file, it will be reported here, but GDB (and
  * other tools) will fail to load it.
  */
-void DkDebugMapAdd(const char* uri, void* start_addr) {
+void PalDebugMapAdd(const char* uri, void* start_addr) {
 #ifndef DEBUG
     __UNUSED(uri);
     __UNUSED(start_addr);
@@ -620,25 +621,25 @@ void DkDebugMapAdd(const char* uri, void* start_addr) {
 
     const char* realname = uri + URI_PREFIX_FILE_LEN;
 
-    _DkDebugMapAdd(realname, start_addr);
+    _PalDebugMapAdd(realname, start_addr);
 #endif
 }
 
-void DkDebugMapRemove(void* start_addr) {
+void PalDebugMapRemove(void* start_addr) {
 #ifndef DEBUG
     __UNUSED(start_addr);
 #else
-    _DkDebugMapRemove(start_addr);
+    _PalDebugMapRemove(start_addr);
 #endif
 }
 
-void DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
+void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
     pal_describe_location(addr, buf, buf_size);
 }
 
 void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 #ifdef DEBUG
-    if (_DkDebugDescribeLocation(addr, buf, buf_size) == 0)
+    if (_PalDebugDescribeLocation(addr, buf, buf_size) == 0)
         return;
 #endif
     default_describe_location(addr, buf, buf_size);

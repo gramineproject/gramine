@@ -21,41 +21,41 @@ static int g_ready = 0;
 
 static noreturn int thread_func(void* arg) {
     PAL_HANDLE sleep_handle = NULL;
-    CHECK(DkEventCreate(&sleep_handle, /*init_signaled=*/false, /*auto_clear=*/false));
+    CHECK(PalEventCreate(&sleep_handle, /*init_signaled=*/false, /*auto_clear=*/false));
 
     PAL_HANDLE event = (PAL_HANDLE)arg;
     set(&g_ready, 1);
     wait_for(&g_ready, 2);
 
     uint64_t timeout = TIME_US_IN_S;
-    int ret = DkEventWait(sleep_handle, &timeout);
+    int ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN || timeout != 0) {
         pal_printf("Error: unexpected short sleep, remaining time: %lu\n", timeout);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
-    DkEventSet(event);
+    PalEventSet(event);
 
-    DkThreadExit(&g_clear_thread_exit);
+    PalThreadExit(&g_clear_thread_exit);
 }
 
 int main(void) {
     PAL_HANDLE event = NULL;
-    CHECK(DkEventCreate(&event, /*init_signaled=*/true, /*auto_clear=*/true));
+    CHECK(PalEventCreate(&event, /*init_signaled=*/true, /*auto_clear=*/true));
 
     /* Event is already set, should not sleep. */
-    CHECK(DkEventWait(event, /*timeout=*/NULL));
+    CHECK(PalEventWait(event, /*timeout=*/NULL));
 
     uint64_t start = 0;
-    CHECK(DkSystemTimeQuery(&start));
+    CHECK(PalSystemTimeQuery(&start));
     /* Sleep for one second. */
     uint64_t timeout = TIME_US_IN_S;
-    int ret = DkEventWait(event, &timeout);
+    int ret = PalEventWait(event, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         CHECK(-1);
     }
     uint64_t end = 0;
-    CHECK(DkSystemTimeQuery(&end));
+    CHECK(PalSystemTimeQuery(&end));
 
     if (end < start) {
         CHECK(-1);
@@ -68,14 +68,14 @@ int main(void) {
     }
 
     PAL_HANDLE thread = NULL;
-    CHECK(DkThreadCreate(thread_func, event, &thread));
+    CHECK(PalThreadCreate(thread_func, event, &thread));
 
     wait_for(&g_ready, 1);
     set(&g_ready, 2);
 
-    CHECK(DkSystemTimeQuery(&start));
-    CHECK(DkEventWait(event, /*timeout=*/NULL));
-    CHECK(DkSystemTimeQuery(&end));
+    CHECK(PalSystemTimeQuery(&start));
+    CHECK(PalEventWait(event, /*timeout=*/NULL));
+    CHECK(PalSystemTimeQuery(&end));
 
     if (end < start) {
         CHECK(-1);

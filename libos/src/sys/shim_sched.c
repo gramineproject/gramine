@@ -19,7 +19,7 @@
 #include "shim_thread.h"
 
 long libos_syscall_sched_yield(void) {
-    DkThreadYieldExecution();
+    PalThreadYieldExecution();
     return 0;
 }
 
@@ -164,7 +164,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int cpumask_size,
         return -ESRCH;
     }
 
-    ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, user_mask_ptr);
+    ret = PalThreadSetCpuAffinity(thread->pal_handle, cpumask_size, user_mask_ptr);
     if (ret < 0) {
         put_thread(thread);
         return pal_to_unix_errno(ret);
@@ -213,7 +213,7 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int cpumask_size,
     }
 
     memset(user_mask_ptr, 0, cpumask_size);
-    ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, user_mask_ptr);
+    ret = PalThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, user_mask_ptr);
     if (ret < 0) {
         put_thread(thread);
         return pal_to_unix_errno(ret);

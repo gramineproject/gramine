@@ -42,7 +42,7 @@ void* __system_malloc(size_t size) {
         return NULL;
     }
 
-    ret = DkVirtualMemoryAlloc(&addr, alloc_size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
+    ret = PalVirtualMemoryAlloc(&addr, alloc_size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
     if (ret < 0) {
         log_error("failed to allocate memory (%ld)", pal_to_unix_errno(ret));
         void* tmp_vma = NULL;
@@ -64,7 +64,7 @@ void __system_free(void* addr, size_t size) {
     if (bkeep_munmap(addr, ALLOC_ALIGN_UP(size), /*is_internal=*/true, &tmp_vma) < 0) {
         BUG();
     }
-    if (DkVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size)) < 0) {
+    if (PalVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size)) < 0) {
         BUG();
     }
 #ifdef ASAN
@@ -94,7 +94,7 @@ void* malloc(size_t size) {
          * condition and must terminate the current process.
          */
         log_error("Out-of-memory in library OS");
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     return mem;

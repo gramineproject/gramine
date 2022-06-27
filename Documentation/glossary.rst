@@ -9,7 +9,7 @@ Glossary
       Platform Adaptation Layer
 
       PAL is the layer of Gramine that implements a narrow Drawbridge-like ABI
-      interface (with function names starting with the `Dk` prefix)
+      interface (with function names starting with the `Pal` prefix)
 
       .. seealso::
 

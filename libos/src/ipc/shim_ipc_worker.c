@@ -36,7 +36,7 @@ static LISTP_TYPE(libos_ipc_connection) g_ipc_connections;
 static size_t g_ipc_connections_cnt = 0;
 
 static struct libos_thread* g_worker_thread = NULL;
-/* Used by `DkThreadExit` to indicate that the thread really exited and is not using any resources
+/* Used by `PalThreadExit` to indicate that the thread really exited and is not using any resources
  * (e.g. stack) anymore. Awaited to be `0` (thread exited) in `terminate_ipc_worker()`. */
 static int g_clear_on_worker_exit = 1;
 static PAL_HANDLE g_self_ipc_handle = NULL;
@@ -110,7 +110,7 @@ static void del_ipc_connection(struct libos_ipc_connection* conn) {
     LISTP_DEL(conn, &g_ipc_connections, list);
     g_ipc_connections_cnt--;
 
-    DkObjectClose(conn->handle);
+    PalObjectClose(conn->handle);
 
     free(conn);
 }
@@ -136,7 +136,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
         /* Receive at least the message header. */
         while (size < sizeof(buf.msg_header)) {
             size_t tmp_size = sizeof(buf) - size;
-            int ret = DkStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size, NULL, 0);
+            int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size, NULL, 0);
             if (ret < 0) {
                 if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                     continue;
@@ -198,7 +198,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
             ret = ipc_callbacks[msg_code](conn->vmid, msg_data, msg_seq);
             if (ret < 0) {
                 log_error(LOG_PREFIX "error running IPC callback %u: %d", msg_code, ret);
-                DkProcessExit(1);
+                PalProcessExit(1);
             }
         } else {
             log_error(LOG_PREFIX "received unknown IPC msg type: %u", msg_code);
@@ -263,7 +263,7 @@ static noreturn void ipc_worker_main(void) {
             i++;
         }
 
-        int ret = DkStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
+        int ret = PalStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED) {
                 /* Generally speaking IPC worker should not be interrupted, but this happens with
@@ -271,7 +271,7 @@ static noreturn void ipc_worker_main(void) {
                 continue;
             }
             ret = pal_to_unix_errno(ret);
-            log_error(LOG_PREFIX "DkStreamsWaitEvents failed: %d", ret);
+            log_error(LOG_PREFIX "PalStreamsWaitEvents failed: %d", ret);
             goto out_die;
         }
 
@@ -294,7 +294,7 @@ static noreturn void ipc_worker_main(void) {
             cur_thread->libos_tcb->tp = NULL;
             put_thread(cur_thread);
 
-            DkThreadExit(&g_clear_on_worker_exit);
+            PalThreadExit(&g_clear_on_worker_exit);
             /* Unreachable. */
         }
 
@@ -308,18 +308,18 @@ static noreturn void ipc_worker_main(void) {
             do {
                 /* Although IPC worker thread does not handle any signals (hence it should never be
                  * interrupted), lets handle it for uniformity with the rest of the code. */
-                ret = DkStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
+                ret = PalStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
             } while (ret == -PAL_ERROR_INTERRUPTED);
             if (ret < 0) {
                 ret = pal_to_unix_errno(ret);
-                log_error(LOG_PREFIX "DkStreamWaitForClient failed: %d", ret);
+                log_error(LOG_PREFIX "PalStreamWaitForClient failed: %d", ret);
                 goto out_die;
             }
             IDTYPE new_id = 0;
             ret = read_exact(new_handle, &new_id, sizeof(new_id));
             if (ret < 0) {
                 log_error(LOG_PREFIX "receiving id failed: %d", ret);
-                DkObjectClose(new_handle);
+                PalObjectClose(new_handle);
             } else {
                 ret = add_ipc_connection(new_handle, new_id);
                 if (ret < 0) {
@@ -356,7 +356,7 @@ static noreturn void ipc_worker_main(void) {
     }
 
 out_die:
-    DkProcessExit(1);
+    PalProcessExit(1);
 }
 
 static int ipc_worker_wrapper(void* arg) {
@@ -391,7 +391,7 @@ static int create_ipc_worker(void) {
     }
 
     PAL_HANDLE handle = NULL;
-    ret = DkThreadCreate(ipc_worker_wrapper, NULL, &handle);
+    ret = PalThreadCreate(ipc_worker_wrapper, NULL, &handle);
     if (ret < 0) {
         put_thread(g_worker_thread);
         g_worker_thread = NULL;
@@ -416,6 +416,6 @@ void terminate_ipc_worker(void) {
 
     put_thread(g_worker_thread);
     g_worker_thread = NULL;
-    DkObjectClose(g_self_ipc_handle);
+    PalObjectClose(g_self_ipc_handle);
     g_self_ipc_handle = NULL;
 }

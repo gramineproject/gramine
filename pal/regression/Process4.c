@@ -13,16 +13,16 @@ int main(int argc, char** argv) {
 
     if (argc == 1) {
         PAL_HANDLE pipe_srv = NULL;
-        int ret = DkStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                               PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
+        int ret = PalStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
         if (ret < 0) {
-            pal_printf("DkStreamOpen(\"pipe.srv\", ...) failed: %d\n", ret);
+            pal_printf("PalStreamOpen(\"pipe.srv\", ...) failed: %d\n", ret);
             return 1;
         }
 
         uint64_t time = 0;
-        if (DkSystemTimeQuery(&time) < 0) {
-            pal_printf("DkSystemTimeQuery failed\n");
+        if (PalSystemTimeQuery(&time) < 0) {
+            pal_printf("PalSystemTimeQuery failed\n");
             return 1;
         }
         char time_arg[24];
@@ -31,20 +31,20 @@ int main(int argc, char** argv) {
         const char* newargs[4] = {"Process4", "0", time_arg, NULL};
 
         PAL_HANDLE proc = NULL;
-        ret = DkProcessCreate(newargs, &proc);
+        ret = PalProcessCreate(newargs, &proc);
 
         if (ret < 0)
             pal_printf("Can't create process\n");
 
-        DkObjectClose(proc);
+        PalObjectClose(proc);
 
         PAL_HANDLE pipe = NULL;
-        ret = DkStreamWaitForClient(pipe_srv, &pipe, /*options=*/0);
+        ret = PalStreamWaitForClient(pipe_srv, &pipe, /*options=*/0);
         if (ret < 0) {
-            pal_printf("DkStreamWaitForClient failed: %d\n", ret);
+            pal_printf("PalStreamWaitForClient failed: %d\n", ret);
         }
-        DkObjectClose(pipe);
-        DkObjectClose(pipe_srv);
+        PalObjectClose(pipe);
+        PalObjectClose(pipe_srv);
     } else {
         count = atoi(argv[1]);
 
@@ -56,31 +56,31 @@ int main(int argc, char** argv) {
             const char* newargs[4] = {"Process4", count_arg, argv[2], NULL};
 
             PAL_HANDLE proc = NULL;
-            int ret = DkProcessCreate(newargs, &proc);
+            int ret = PalProcessCreate(newargs, &proc);
 
             if (ret < 0)
                 pal_printf("Can't create process\n");
 
-            DkObjectClose(proc);
+            PalObjectClose(proc);
         } else {
             uint64_t end = 0;
-            if (DkSystemTimeQuery(&end) < 0) {
-                pal_printf("DkSystemTimeQuery failed\n");
+            if (PalSystemTimeQuery(&end) < 0) {
+                pal_printf("PalSystemTimeQuery failed\n");
                 return 1;
             }
             uint64_t start = atol(argv[2]);
             pal_printf("wall time = %ld\n", end - start);
 
             PAL_HANDLE pipe = NULL;
-            int ret = DkStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                   PAL_CREATE_IGNORED, /*options=*/0, &pipe);
+            int ret = PalStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                    PAL_CREATE_IGNORED, /*options=*/0, &pipe);
             if (ret < 0) {
                 pal_printf("Failed to open pipe: %d\n", ret);
                 return 1;
             }
-            DkObjectClose(pipe);
+            PalObjectClose(pipe);
         }
     }
 
-    DkProcessExit(0);
+    PalProcessExit(0);
 }

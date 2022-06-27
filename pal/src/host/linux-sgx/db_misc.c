@@ -48,7 +48,7 @@ void init_tsc(void) {
 }
 
 /* TODO: result comes from the untrusted host, introduce some schielding */
-int _DkSystemTimeQuery(uint64_t* out_usec) {
+int _PalSystemTimeQuery(uint64_t* out_usec) {
     int ret;
 
     if (!g_tsc_hz) {
@@ -273,14 +273,14 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
 
                 if (values[CPUID_WORD_EDX] != 0) {
                     log_error("Non-null EDX value in Processor Extended State Enum CPUID leaf");
-                    _DkProcessExit(1);
+                    _PalProcessExit(1);
                 }
 
                 if (extension_enabled(xfrm, subleaf)) {
                     if (values[CPUID_WORD_EAX] != g_cpu_extension_sizes[subleaf] ||
                             values[CPUID_WORD_EBX] != g_cpu_extension_offsets[subleaf]) {
                         log_error("Unexpected values in Processor Extended State Enum CPUID leaf");
-                        _DkProcessExit(1);
+                        _PalProcessExit(1);
                     }
                 } else {
                     /* SGX enclave doesn't use this CPU extension, pretend it doesn't exist by
@@ -298,7 +298,7 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
             if (!IS_IN_RANGE_INCL(values[CPUID_WORD_EAX], 1, 16) || values[CPUID_WORD_EBX] != 0
                     || values[CPUID_WORD_ECX] != 0 || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=0x0)");
-                _DkProcessExit(1);
+                _PalProcessExit(1);
             }
         } else {
             /* EAX = 1DH, ECX > 0: subleaf for each supported palette, returns palette limits */
@@ -315,7 +315,7 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
                     || (values[CPUID_WORD_ECX] >> 16) != 0 || values[CPUID_WORD_EDX] != 0) {
                 log_error("Unexpected values in Tile Information CPUID Leaf (subleaf=%#x)",
                           subleaf);
-                _DkProcessExit(1);
+                _PalProcessExit(1);
             }
         }
     } else if (leaf == AMX_TMUL_INFO_LEAF) {
@@ -329,7 +329,7 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
                 || values[CPUID_WORD_ECX] != 0
                 || values[CPUID_WORD_EDX] != 0) {
             log_error("Unexpected values in TMUL Information CPUID Leaf");
-            _DkProcessExit(1);
+            _PalProcessExit(1);
         }
     }
 }
@@ -337,10 +337,10 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
 struct cpuid_leaf {
     unsigned int leaf;
     bool zero_subleaf; /* if subleaf is not used by this leaf, then CPUID instruction expects it to
-                          be explicitly zeroed out (see _DkCpuIdRetrieve() implementation below) */
+                        * be explicitly zeroed out (see _PalCpuIdRetrieve() implementation below) */
     bool cache;        /* if leaf + subleaf pair is constant across all cores and sockets, then we
-                          can add the returned CPUID values of this pair to the local cache (see
-                          _DkCpuIdRetrieve() implementation below) */
+                        * can add the returned CPUID values of this pair to the local cache (see
+                        * _PalCpuIdRetrieve() implementation below) */
 };
 
 /* NOTE: some CPUID leaves/subleaves may theoretically return different values when accessed from
@@ -399,7 +399,7 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
     /* extended CPUID leaf functions end here */
 };
 
-int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
@@ -473,12 +473,12 @@ int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return 0;
 fail:
     log_error("Unrecognized leaf/subleaf in CPUID (EAX=0x%x, ECX=0x%x). Exiting...", leaf, subleaf);
-    _DkProcessExit(1);
+    _PalProcessExit(1);
 }
 
-int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
-                         void* target_info, size_t* target_info_size, void* report,
-                         size_t* report_size) {
+int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                          void* target_info, size_t* target_info_size, void* report,
+                          size_t* report_size) {
     __sgx_mem_aligned sgx_report_data_t stack_report_data = {0};
     __sgx_mem_aligned sgx_target_info_t stack_target_info = {0};
     __sgx_mem_aligned sgx_report_t stack_report = {0};
@@ -533,8 +533,8 @@ out:
     return 0;
 }
 
-int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size,
-                        void* quote, size_t* quote_size) {
+int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size,
+                         void* quote, size_t* quote_size) {
     int ret;
 
     if (user_report_data_size != sizeof(sgx_report_data_t))
@@ -559,7 +559,7 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
     }
 
     sgx_quote_nonce_t nonce;
-    ret = _DkRandomBitsRead(&nonce, sizeof(nonce));
+    ret = _PalRandomBitsRead(&nonce, sizeof(nonce));
     if (ret < 0)
         return ret;
 
@@ -587,7 +587,7 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
     return 0;
 }
 
-int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {
+int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     sgx_key_128bit_t sgx_key;
 
     if (*key_size < sizeof(sgx_key))
@@ -630,7 +630,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
 
 bool is_tsc_usable(void) {
     uint32_t words[CPUID_WORD_NUM];
-    _DkCpuIdRetrieve(CPUID_LEAF_INVARIANT_TSC, 0, words);
+    _PalCpuIdRetrieve(CPUID_LEAF_INVARIANT_TSC, 0, words);
     return words[CPUID_WORD_EDX] & 1 << 8;
 }
 
@@ -638,7 +638,7 @@ bool is_tsc_usable(void) {
 uint64_t get_tsc_hz(void) {
     uint32_t words[CPUID_WORD_NUM];
 
-    _DkCpuIdRetrieve(CPUID_LEAF_TSC_FREQ, 0, words);
+    _PalCpuIdRetrieve(CPUID_LEAF_TSC_FREQ, 0, words);
     if (!words[CPUID_WORD_EAX] || !words[CPUID_WORD_EBX]) {
         /* TSC/core crystal clock ratio is not enumerated, can't use RDTSC for accurate time */
         return 0;
@@ -654,7 +654,7 @@ uint64_t get_tsc_hz(void) {
     /* some Intel CPUs do not report nominal frequency of crystal clock, let's calculate it
      * based on Processor Frequency Information Leaf (CPUID 16H); this leaf always exists if
      * TSC Frequency Leaf exists; logic is taken from Linux 5.11's arch/x86/kernel/tsc.c */
-    _DkCpuIdRetrieve(CPUID_LEAF_PROC_FREQ, 0, words);
+    _PalCpuIdRetrieve(CPUID_LEAF_PROC_FREQ, 0, words);
     if (!words[CPUID_WORD_EAX]) {
         /* processor base frequency (in MHz) is not enumerated, can't calculate frequency */
         return 0;
@@ -666,7 +666,7 @@ uint64_t get_tsc_hz(void) {
     return base_frequency_mhz * 1000000;
 }
 
-int _DkRandomBitsRead(void* buffer, size_t size) {
+int _PalRandomBitsRead(void* buffer, size_t size) {
     uint32_t rand;
     for (size_t i = 0; i < size; i += sizeof(rand)) {
         rand = rdrand();
@@ -675,7 +675,7 @@ int _DkRandomBitsRead(void* buffer, size_t size) {
     return 0;
 }
 
-int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
+int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             *addr = GET_ENCLAVE_TLS(fsbase);
@@ -688,7 +688,7 @@ int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     }
 }
 
-int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
+int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
             SET_ENCLAVE_TLS(fsbase, addr);

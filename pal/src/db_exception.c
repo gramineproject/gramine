@@ -13,11 +13,11 @@
 
 static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};
 
-pal_event_handler_t _DkGetExceptionHandler(enum pal_event event) {
+pal_event_handler_t _PalGetExceptionHandler(enum pal_event event) {
     return __atomic_load_n(&g_handlers[event], __ATOMIC_ACQUIRE);
 }
 
-void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
+void PalSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
     assert(handler && event != PAL_EVENT_NO_EVENT && event < ARRAY_SIZE(g_handlers));
 
     __atomic_store_n(&g_handlers[event], handler, __ATOMIC_RELEASE);
@@ -27,7 +27,7 @@ void DkSetExceptionHandler(pal_event_handler_t handler, enum pal_event event) {
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
  * any PAL thread. */
 noreturn void pal_abort(void) {
-    _DkProcessExit(1);
+    _PalProcessExit(1);
 }
 
 const char* pal_event_name(enum pal_event event) {

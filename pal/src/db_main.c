@@ -23,7 +23,7 @@ struct pal_public_state g_pal_public_state = {
     .log_level = PAL_LOG_DEFAULT_LEVEL,
 };
 
-struct pal_public_state* DkGetPalPublicState(void) {
+struct pal_public_state* PalGetPalPublicState(void) {
     return &g_pal_public_state;
 }
 
@@ -295,7 +295,7 @@ static void configure_logging(void) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.log_file'");
 
     if (log_file && log_level > LOG_LEVEL_NONE) {
-        ret = _DkInitDebugStream(log_file);
+        ret = _PalInitDebugStream(log_file);
 
         if (ret < 0)
             INIT_FAIL("Cannot open log file: %d", ret);
@@ -315,11 +315,11 @@ static int load_cstring_array(const char* uri, const char*** res) {
     const char** array = NULL;
     int ret;
 
-    ret = _DkStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0);
+    ret = _PalStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         /*options=*/0);
     if (ret < 0)
         return ret;
-    ret = _DkStreamAttributesQueryByHandle(hdl, &attr);
+    ret = _PalStreamAttributesQueryByHandle(hdl, &attr);
     if (ret < 0)
         goto out_fail;
     size_t file_size = attr.pending_size;
@@ -328,7 +328,7 @@ static int load_cstring_array(const char* uri, const char*** res) {
         ret = -PAL_ERROR_NOMEM;
         goto out_fail;
     }
-    ret = _DkStreamRead(hdl, 0, file_size, buf, NULL, 0);
+    ret = _PalStreamRead(hdl, 0, file_size, buf, NULL, 0);
     if (ret < 0)
         goto out_fail;
     if (file_size > 0 && buf[file_size - 1] != '\0') {
@@ -354,10 +354,10 @@ static int load_cstring_array(const char* uri, const char*** res) {
                 *(argv_it++) = buf + i + 1;
     }
     *res = array;
-    return _DkObjectClose(hdl);
+    return _PalObjectClose(hdl);
 
 out_fail:
-    (void)_DkObjectClose(hdl);
+    (void)_PalObjectClose(hdl);
     free(buf);
     free(array);
     return ret;
@@ -374,7 +374,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                        const char** environments   /* environment variables */) {
     if (!instance_id) {
         assert(!parent_process);
-        if (_DkRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {
+        if (_PalRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {
             INIT_FAIL("Could not generate random instance_id");
         }
     }
@@ -520,13 +520,13 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     g_pal_public_state.first_thread    = first_thread;
     g_pal_public_state.disable_aslr    = disable_aslr;
 
-    _DkGetAvailableUserAddressRange(&g_pal_public_state.user_address_start,
-                                    &g_pal_public_state.user_address_end);
+    _PalGetAvailableUserAddressRange(&g_pal_public_state.user_address_start,
+                                     &g_pal_public_state.user_address_end);
 
-    if (_DkGetCPUInfo(&g_pal_public_state.cpu_info) < 0) {
+    if (_PalGetCPUInfo(&g_pal_public_state.cpu_info) < 0) {
         goto out_fail;
     }
-    g_pal_public_state.mem_total = _DkMemoryQuota();
+    g_pal_public_state.mem_total = _PalMemoryQuota();
 
     if (toml_key_exists(g_pal_public_state.manifest_root,
                         "fs.experimental__enable_sysfs_topology")) {

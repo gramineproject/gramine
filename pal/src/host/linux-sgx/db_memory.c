@@ -15,20 +15,20 @@
 
 extern struct atomic_int g_allocated_pages;
 
-bool _DkCheckMemoryMappable(const void* addr, size_t size) {
+bool _PalCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {
         log_error("Address %p-%p is not mappable", addr, addr + size);
         return true;
     }
 
-    /* FIXME: this function is almost useless now; note that _DkVirtualMemoryAlloc() checks whether
+    /* FIXME: this function is almost useless now; note that _PalVirtualMemoryAlloc() checks whether
      * [addr, addr + size) overlaps with VMAs and errors out */
 
     return false;
 }
 
-int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot) {
+int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
+                           pal_prot_flags_t prot) {
     __UNUSED(prot);
 
     assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
@@ -50,7 +50,7 @@ int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t allo
     return 0;
 }
 
-int _DkVirtualMemoryFree(void* addr, uint64_t size) {
+int _PalVirtualMemoryFree(void* addr, uint64_t size) {
     if (sgx_is_completely_within_enclave(addr, size)) {
         int ret = free_enclave_pages(addr, size);
         if (ret < 0) {
@@ -63,7 +63,7 @@ int _DkVirtualMemoryFree(void* addr, uint64_t size) {
     return 0;
 }
 
-int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     __UNUSED(addr);
     __UNUSED(size);
     __UNUSED(prot);
@@ -84,15 +84,15 @@ int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     int64_t t = 0;
     if (__atomic_compare_exchange_n(&at_cnt.counter, &t, 1, /*weak=*/false, __ATOMIC_SEQ_CST,
                                     __ATOMIC_RELAXED))
-        log_warning("DkVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
+        log_warning("PalVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
     return 0;
 }
 
-uint64_t _DkMemoryQuota(void) {
+uint64_t _PalMemoryQuota(void) {
     return g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min;
 }
 
-uint64_t _DkMemoryAvailableQuota(void) {
+uint64_t _PalMemoryAvailableQuota(void) {
     return (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
            __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
 }

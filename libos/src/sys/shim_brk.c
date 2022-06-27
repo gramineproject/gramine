@@ -68,7 +68,7 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         size_t offset = 0;
 
         if (!g_pal_public_state->disable_aslr) {
-            ret = DkRandomBitsRead(&offset, sizeof(offset));
+            ret = PalRandomBitsRead(&offset, sizeof(offset));
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
@@ -126,7 +126,7 @@ void reset_brk(void) {
     }
 
     if (allocated_size > 0) {
-        if (DkVirtualMemoryFree(brk_region.brk_start, allocated_size) < 0) {
+        if (PalVirtualMemoryFree(brk_region.brk_start, allocated_size) < 0) {
             BUG();
         }
     }
@@ -161,7 +161,7 @@ void* libos_syscall_brk(void* _brk) {
                 goto out;
             }
 
-            if (DkVirtualMemoryFree(brk_aligned, size) < 0) {
+            if (PalVirtualMemoryFree(brk_aligned, size) < 0) {
                 BUG();
             }
         }
@@ -189,7 +189,7 @@ void* libos_syscall_brk(void* _brk) {
         goto out;
     }
 
-    int ret = DkVirtualMemoryAlloc((void**)&brk_current, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc((void**)&brk_current, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         if (bkeep_mmap_fixed(brk_current, brk_region.brk_end - brk_current, PROT_NONE,
                              MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap") < 0) {

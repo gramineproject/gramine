@@ -10,8 +10,8 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                         pal_prot_flags_t prot) {
+int PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
+                          pal_prot_flags_t prot) {
     assert(addr_ptr);
     void* map_addr = *addr_ptr;
 
@@ -19,7 +19,7 @@ int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_t
         return -PAL_ERROR_INVAL;
     }
 
-    if (map_addr && _DkCheckMemoryMappable(map_addr, size)) {
+    if (map_addr && _PalCheckMemoryMappable(map_addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
@@ -31,10 +31,10 @@ int DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_t
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkVirtualMemoryAlloc(addr_ptr, size, alloc_type, prot);
+    return _PalVirtualMemoryAlloc(addr_ptr, size, alloc_type, prot);
 }
 
-int DkVirtualMemoryFree(void* addr, size_t size) {
+int PalVirtualMemoryFree(void* addr, size_t size) {
     if (!addr || !size) {
         return -PAL_ERROR_INVAL;
     }
@@ -43,14 +43,14 @@ int DkVirtualMemoryFree(void* addr, size_t size) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable(addr, size)) {
+    if (_PalCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkVirtualMemoryFree(addr, size);
+    return _PalVirtualMemoryFree(addr, size);
 }
 
-int DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
+int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     if (!addr || !size) {
         return -PAL_ERROR_INVAL;
     }
@@ -59,11 +59,11 @@ int DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable(addr, size)) {
+    if (_PalCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkVirtualMemoryProtect(addr, size, prot);
+    return _PalVirtualMemoryProtect(addr, size, prot);
 }
 
 int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment) {

@@ -22,7 +22,7 @@
 
 /* Linux PAL cannot use mmap/unmap to manage thread stacks because this may overlap with
  * g_pal_public_state.user_address_{start,end}. Linux PAL also cannot just use malloc/free because
- * DkThreadExit needs to use raw system calls and inline asm. Thus, we resort to recycling thread
+ * PalThreadExit needs to use raw system calls and inline asm. Thus, we resort to recycling thread
  * stacks allocated by previous threads and not used anymore. This still leaks memory but at least
  * it is bounded by the maximum number of simultaneously executing threads. Note that main thread
  * is not a part of this mechanism (it only allocates a tiny altstack). */
@@ -83,7 +83,7 @@ int pal_thread_init(void* tcbptr) {
 
     /* we inherited the parent's GS register which we shouldn't use in the child thread, but GCC's
      * stack protector will look for a canary at gs:[0x8] in functions called below (e.g.,
-     * _DkRandomBitsRead), so let's install a default canary in the child's TCB */
+     * _PalRandomBitsRead), so let's install a default canary in the child's TCB */
     pal_tcb_set_stack_canary(&tcb->common, STACK_PROTECTOR_CANARY_DEFAULT);
     ret = pal_set_tcb(&tcb->common);
     if (ret < 0)
@@ -91,7 +91,7 @@ int pal_thread_init(void* tcbptr) {
 
     /* each newly-created thread (including the first thread) has its own random stack canary */
     uint64_t stack_protector_canary;
-    ret = _DkRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
+    ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
     if (ret < 0)
         return -EPERM;
 
@@ -117,10 +117,10 @@ int pal_thread_init(void* tcbptr) {
 
 static noreturn void pal_thread_exit_wrapper(int ret_val) {
     __UNUSED(ret_val);
-    _DkThreadExit(/*clear_child_tid=*/NULL);
+    _PalThreadExit(/*clear_child_tid=*/NULL);
 }
 
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
+int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret = 0;
     PAL_HANDLE hdl = NULL;
     void* stack = get_thread_stack();
@@ -183,15 +183,14 @@ err:
     return ret;
 }
 
-/* PAL call DkThreadYieldExecution. Yield the execution
-   of the current thread. */
-void _DkThreadYieldExecution(void) {
+/* Yield the execution of the current thread. */
+void _PalThreadYieldExecution(void) {
     DO_SYSCALL(sched_yield);
 }
 
-/* _DkThreadExit for internal use: Thread exiting */
+/* _PalThreadExit for internal use: Thread exiting */
 __attribute_no_sanitize_address
-noreturn void _DkThreadExit(int* clear_child_tid) {
+noreturn void _PalThreadExit(int* clear_child_tid) {
     PAL_TCB_LINUX* tcb = get_tcb_linux();
     PAL_HANDLE handle = tcb->handle;
     assert(handle);
@@ -230,7 +229,7 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
      *   2. Set *clear_child_tid = 0 if clear_child_tid != NULL
      *      (we thus inform LibOS, where async worker thread is waiting on this to wake up parent)
      *   3. Exit thread
-     * All of these happen in `_DkThreadExit_asm_stub`.
+     * All of these happen in `_PalThreadExit_asm_stub`.
      */
     static_assert(sizeof(g_thread_stack_lock.lock) == 4,
                   "unexpected g_thread_stack_lock.lock size");
@@ -238,10 +237,10 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
                   "lock is not naturally aligned in g_thread_stack_lock");
     static_assert(sizeof(*clear_child_tid) == 4, "unexpected clear_child_tid size");
 
-    _DkThreadExit_asm_stub(&g_thread_stack_lock.lock, clear_child_tid);
+    _PalThreadExit_asm_stub(&g_thread_stack_lock.lock, clear_child_tid);
 }
 
-int _DkThreadResume(PAL_HANDLE thread_handle) {
+int _PalThreadResume(PAL_HANDLE thread_handle) {
     int ret = DO_SYSCALL(tgkill, g_pal_linux_state.host_pid, thread_handle->thread.tid, SIGCONT);
 
     if (ret < 0)
@@ -250,13 +249,13 @@ int _DkThreadResume(PAL_HANDLE thread_handle) {
     return 0;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_setaffinity, thread->thread.tid, cpumask_size, cpu_mask);
 
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpumask_size, cpu_mask);
 
     return ret < 0 ? unix_to_pal_error(ret) : ret;

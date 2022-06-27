@@ -727,7 +727,7 @@ static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* uti
             /* For FUTEX_WAIT, timeout is interpreted as a relative value, which differs from other
              * futex operations, where timeout is interpreted as an absolute value. */
             uint64_t current_time = 0;
-            int ret = DkSystemTimeQuery(&current_time);
+            int ret = PalSystemTimeQuery(&current_time);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }

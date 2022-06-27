@@ -27,13 +27,13 @@ static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, si
 
     while (remaining > 0) {
         size_t count = remaining;
-        int ret = DkStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset,
-                               /*source=*/NULL, /*size=*/0);
+        int ret = PalStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset,
+                                /*source=*/NULL, /*size=*/0);
         if (ret == -PAL_ERROR_INTERRUPTED)
             continue;
 
         if (ret < 0) {
-            log_warning("%s: DkStreamRead failed: %d", __func__, ret);
+            log_warning("%s: PalStreamRead failed: %d", __func__, ret);
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -57,13 +57,13 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
 
     while (remaining > 0) {
         size_t count = remaining;
-        int ret = DkStreamWrite(pal_handle, offset + buffer_offset, &count,
-                                (void*)(buffer + buffer_offset), /*dest=*/NULL);
+        int ret = PalStreamWrite(pal_handle, offset + buffer_offset, &count,
+                                 (void*)(buffer + buffer_offset), /*dest=*/NULL);
         if (ret == -PAL_ERROR_INTERRUPTED)
             continue;
 
         if (ret < 0) {
-            log_warning("%s: DkStreamWrite failed: %d", __func__, ret);
+            log_warning("%s: PalStreamWrite failed: %d", __func__, ret);
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -82,9 +82,9 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
 static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size) {
     PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
 
-    int ret = DkStreamSetLength(pal_handle, size);
+    int ret = PalStreamSetLength(pal_handle, size);
     if (ret < 0) {
-        log_warning("%s: DkStreamSetLength failed: %d", __func__, ret);
+        log_warning("%s: PalStreamSetLength failed: %d", __func__, ret);
         return PF_STATUS_CALLBACK_FAILED;
     }
 
@@ -128,9 +128,9 @@ static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, co
 }
 
 static pf_status_t cb_random(uint8_t* buffer, size_t size) {
-    int ret = DkRandomBitsRead(buffer, size);
+    int ret = PalRandomBitsRead(buffer, size);
     if (ret < 0) {
-        log_warning("%s: DkRandomBitsRead failed: %d", __func__, ret);
+        log_warning("%s: PalRandomBitsRead failed: %d", __func__, ret);
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -157,19 +157,19 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
-        ret = DkStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
-                           PAL_OPTION_PASSTHROUGH, &pal_handle);
+        ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
+                            PAL_OPTION_PASSTHROUGH, &pal_handle);
         if (ret < 0) {
-            log_warning("%s: DkStreamOpen failed: %d", __func__, ret);
+            log_warning("%s: PalStreamOpen failed: %d", __func__, ret);
             return pal_to_unix_errno(ret);
         }
     }
 
     PAL_STREAM_ATTR pal_attr;
-    ret = DkStreamAttributesQueryByHandle(pal_handle, &pal_attr);
+    ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
     if (ret < 0) {
-        log_warning("%s: DkStreamAttributesQueryByHandle failed: %d", __func__, ret);
-        DkObjectClose(pal_handle);
+        log_warning("%s: PalStreamAttributesQueryByHandle failed: %d", __func__, ret);
+        PalObjectClose(pal_handle);
         return pal_to_unix_errno(ret);
     }
     size_t size = pal_attr.pending_size;
@@ -179,7 +179,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     if (!enc->key->is_set) {
         log_warning("%s: key '%s' is not set", __func__, enc->key->name);
         unlock(&g_keys_lock);
-        DkObjectClose(pal_handle);
+        PalObjectClose(pal_handle);
         return -EACCES;
     }
     pf_status_t pfs = pf_open(pal_handle, path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
@@ -187,7 +187,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("%s: pf_open failed: %s", __func__, pf_strerror(pfs));
-        DkObjectClose(pal_handle);
+        PalObjectClose(pal_handle);
         return -EACCES;
     }
 
@@ -231,7 +231,7 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
     }
 
     enc->pf = NULL;
-    DkObjectClose(enc->pal_handle);
+    PalObjectClose(enc->pal_handle);
     enc->pal_handle = NULL;
     return;
 }
@@ -401,11 +401,11 @@ int get_or_create_encrypted_files_key(const char* name,
     if (created && name[0] == '_') {
         pf_key_t pf_key;
         size_t size = sizeof(pf_key);
-        ret = DkGetSpecialKey(name, &pf_key, &size);
+        ret = PalGetSpecialKey(name, &pf_key, &size);
 
         if (ret == 0) {
             if (size != sizeof(pf_key)) {
-                log_debug("DkGetSpecialKey(\"%s\") returned wrong size: %zu", name, size);
+                log_debug("PalGetSpecialKey(\"%s\") returned wrong size: %zu", name, size);
                 ret = -EINVAL;
                 goto out;
             }
@@ -417,7 +417,7 @@ int get_or_create_encrypted_files_key(const char* name,
                       "will not work.", name);
             /* proceed without setting value */
         } else {
-            log_debug("DkGetSpecialKey(\"%s\") failed: %d", name, ret);
+            log_debug("PalGetSpecialKey(\"%s\") failed: %d", name, ret);
             ret = pal_to_unix_errno(ret);
             goto out;
         }
@@ -642,9 +642,9 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         goto out;
     }
 
-    ret = DkStreamChangeName(enc->pal_handle, new_uri);
+    ret = PalStreamChangeName(enc->pal_handle, new_uri);
     if (ret < 0) {
-        log_warning("%s: DkStreamChangeName failed: %d", __func__, ret);
+        log_warning("%s: PalStreamChangeName failed: %d", __func__, ret);
 
         /* We failed to rename the file. Try to restore the name in header. */
         pfs = pf_rename(enc->pf, old_path);

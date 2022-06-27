@@ -46,9 +46,9 @@ struct link_map {
 };
 
 /* for GDB debugging */
-void _DkDebugMapAdd(const char* name, void* addr);
-void _DkDebugMapRemove(void* addr);
-int _DkDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+void _PalDebugMapAdd(const char* name, void* addr);
+void _PalDebugMapRemove(void* addr);
+int _PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 /* loading ELF binaries */
 int setup_pal_binary(void);

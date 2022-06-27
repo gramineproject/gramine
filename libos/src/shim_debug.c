@@ -3,7 +3,7 @@
 
 /*
  * This file contains code for registering libraries for debugger integration. We report the
- * libraries to PAL using `DkDebugMapAdd`/`DkDebugMapRemove`.
+ * libraries to PAL using `PalDebugMapAdd`/`PalDebugMapRemove`.
  *
  * We also keep our own list of reported libraries, so that we can copy them to the child process,
  * or remove them all (in case of `exec`).
@@ -17,7 +17,7 @@
 #include "shim_utils.h"
 
 void libos_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
-    DkDebugDescribeLocation(addr, buf, buf_size);
+    PalDebugDescribeLocation(addr, buf, buf_size);
 }
 
 #ifndef DEBUG
@@ -66,7 +66,7 @@ void clean_link_map_list(void) {
     struct gdb_link_map* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(m, tmp, &g_link_map_list, list) {
         LISTP_DEL(m, &g_link_map_list, list);
-        DkDebugMapRemove(m->l_addr);
+        PalDebugMapRemove(m->l_addr);
         free(m);
     }
 
@@ -93,7 +93,7 @@ void remove_r_debug(void* addr) {
 
     log_debug("%s: removing %s at %p", __func__, m->l_name, addr);
     LISTP_DEL(m, &g_link_map_list, list);
-    DkDebugMapRemove(addr);
+    PalDebugMapRemove(addr);
     free(m);
 
 out:
@@ -120,7 +120,7 @@ void append_r_debug(const char* uri, void* addr) {
 
     log_debug("%s: adding %s at %p", __func__, uri, addr);
     LISTP_ADD_TAIL(new, &g_link_map_list, list);
-    DkDebugMapAdd(uri, addr);
+    PalDebugMapAdd(uri, addr);
 
 out:
     unlock(&g_link_map_list_lock);
@@ -160,7 +160,7 @@ BEGIN_RS_FUNC(gdb_map) {
     CP_REBASE(m->l_name);
 
     LISTP_ADD_TAIL(m, &g_link_map_list, list);
-    DkDebugMapAdd(m->l_name, m->l_addr);
+    PalDebugMapAdd(m->l_name, m->l_addr);
 }
 END_RS_FUNC(gdb_map)
 

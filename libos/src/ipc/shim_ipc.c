@@ -81,7 +81,7 @@ static void put_ipc_connection(struct libos_ipc_connection* conn) {
     int64_t ref_count = REF_DEC(conn->ref_count);
 
     if (!ref_count) {
-        DkObjectClose(conn->handle);
+        PalObjectClose(conn->handle);
         destroy_lock(&conn->lock);
         free(conn);
     }
@@ -117,8 +117,8 @@ static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
             BUG();
         }
         do {
-            ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                               /*options=*/0, &conn->handle);
+            ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                                /*options=*/0, &conn->handle);
         } while (ret == -PAL_ERROR_INTERRUPTED);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
@@ -146,7 +146,7 @@ out:
             destroy_lock(&conn->lock);
         }
         if (conn->handle) {
-            DkObjectClose(conn->handle);
+            PalObjectClose(conn->handle);
         }
         free(conn);
     }
@@ -188,7 +188,7 @@ void remove_outgoing_ipc_connection(IDTYPE dest) {
         struct ipc_msg_waiter* waiter = container_of(node, struct ipc_msg_waiter, node);
         if (waiter->dest == dest) {
             waiter->response_data = NULL;
-            DkEventSet(waiter->event);
+            PalEventSet(waiter->event);
             log_debug("Woke up a thread waiting for a message from a disconnected process");
         }
         node = avl_tree_next(node);
@@ -247,7 +247,7 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
 
     int ret = 0;
     do {
-        ret = pal_to_unix_errno(DkEventWait(waiter->event, /*timeout=*/NULL));
+        ret = pal_to_unix_errno(PalEventWait(waiter->event, /*timeout=*/NULL));
     } while (ret == -EINTR);
 
     log_debug("Waiting finished: %d", ret);
@@ -264,7 +264,7 @@ int ipc_send_msg_and_get_response(IDTYPE dest, struct libos_ipc_msg* msg, void**
         .dest = dest,
         .response_data = NULL,
     };
-    int ret = DkEventCreate(&waiter.event, /*init_signaled=*/false, /*auto_clear=*/false);
+    int ret = PalEventCreate(&waiter.event, /*init_signaled=*/false, /*auto_clear=*/false);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -300,7 +300,7 @@ out:
     avl_tree_delete(&g_msg_waiters_tree, &waiter.node);
     unlock(&g_msg_waiters_tree_lock);
     free(waiter.response_data);
-    DkObjectClose(waiter.event);
+    PalObjectClose(waiter.event);
     return ret;
 }
 
@@ -325,7 +325,7 @@ int ipc_response_callback(IDTYPE src, void* data, uint64_t seq) {
 
     struct ipc_msg_waiter* waiter = container_of(node, struct ipc_msg_waiter, node);
     waiter->response_data = data;
-    DkEventSet(waiter->event);
+    PalEventSet(waiter->event);
     ret = 0;
     log_debug("Got an IPC response from %u, seq: %lu", src, seq);
 

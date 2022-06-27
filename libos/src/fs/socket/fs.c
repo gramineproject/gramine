@@ -23,7 +23,7 @@ static int close(struct libos_handle* handle) {
     free(handle->info.sock.peek.buf);
     /* No need for atomics - we are releasing the last reference, nothing can access it anymore. */
     if (handle->info.sock.pal_handle) {
-        DkObjectClose(handle->info.sock.pal_handle);
+        PalObjectClose(handle->info.sock.pal_handle);
     }
     return 0;
 }
@@ -100,7 +100,7 @@ static int setflags(struct libos_handle* handle, unsigned int flags, unsigned in
     }
 
     PAL_STREAM_ATTR attr;
-    ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
+    ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -108,7 +108,7 @@ static int setflags(struct libos_handle* handle, unsigned int flags, unsigned in
 
     if (attr.nonblocking != nonblocking) {
         attr.nonblocking = nonblocking;
-        ret = DkStreamAttributesSetByHandle(pal_handle, &attr);
+        ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
         if (ret < 0) {
             ret =  pal_to_unix_errno(ret);
             goto out;

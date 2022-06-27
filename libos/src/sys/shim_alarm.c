@@ -82,7 +82,7 @@ long libos_syscall_setitimer(int which, struct __kernel_itimerval* value,
         return -EFAULT;
 
     uint64_t setup_time = 0;
-    int ret = DkSystemTimeQuery(&setup_time);
+    int ret = PalSystemTimeQuery(&setup_time);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -131,7 +131,7 @@ long libos_syscall_getitimer(int which, struct __kernel_itimerval* value) {
         return -EFAULT;
 
     uint64_t setup_time = 0;
-    int ret = DkSystemTimeQuery(&setup_time);
+    int ret = PalSystemTimeQuery(&setup_time);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

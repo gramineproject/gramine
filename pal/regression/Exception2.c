@@ -13,13 +13,13 @@ static void handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     count++;
 
     if (count == 30)
-        DkProcessExit(0);
+        PalProcessExit(0);
 }
 
 int main(void) {
     pal_printf("Enter Main Thread\n");
 
-    DkSetExceptionHandler(handler, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(handler, PAL_EVENT_ARITHMETIC_ERROR);
 
     __asm__ volatile (
             "movq $1, %%rax\n"

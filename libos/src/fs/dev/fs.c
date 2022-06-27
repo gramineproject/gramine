@@ -48,7 +48,7 @@ static ssize_t dev_zero_read(struct libos_handle* hdl, void* buf, size_t count) 
 
 static ssize_t dev_random_read(struct libos_handle* hdl, void* buf, size_t count) {
     __UNUSED(hdl);
-    int ret = DkRandomBitsRead(buf, count);
+    int ret = PalRandomBitsRead(buf, count);
 
     if (ret < 0)
         return pal_to_unix_errno(ret);

@@ -68,7 +68,7 @@
  *
  * (1) A session key needs to be shared only between the parent and child enclaves.
  *
- *       See the implementation in _DkStreamKeyExchange(). When initializing a secure stream, both
+ *       See the implementation in _PalStreamKeyExchange(). When initializing a secure stream, both
  *       ends of the stream needs to use Diffie-Hellman to establish a session key. The hashes over
  *       the established DH session key are used to identify the connection (via SHA256(K_e || tag1)
  *       for parent enclave A and via SHA256(K_e || tag2) for child enclave B to prevent
@@ -77,7 +77,7 @@
  *
  * (2) Both the parent and child enclaves need to be proven by the Intel CPU.
  *
- *       See the implementation in _DkStreamReportRequest() and _DkStreamReportRespond(). The two
+ *       See the implementation in _PalStreamReportRequest() and _PalStreamReportRespond(). The two
  *       ends of the stream need to exchange SGX local attestation reports signed by the Intel CPUs
  *       to prove themselves to be running inside enclaves on the same platform. The local
  *       attestation reports contain no secret information and can be verified cryptographically,
@@ -126,7 +126,7 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
     return true;
 }
 
-int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
     int stream_fd;
     int nargs = 0, ret;
 
@@ -151,30 +151,30 @@ int _DkProcessCreate(PAL_HANDLE* handle, const char** args) {
 
     __sgx_mem_aligned sgx_report_data_t parent_report_data = {0};
     __sgx_mem_aligned sgx_report_data_t child_report_data  = {0};
-    ret = _DkStreamKeyExchange(child, &child->process.session_key, &parent_report_data,
-                               &child_report_data);
+    ret = _PalStreamKeyExchange(child, &child->process.session_key, &parent_report_data,
+                                &child_report_data);
     if (ret < 0)
         goto failed;
 
-    ret = _DkStreamReportRequest(child, &parent_report_data, &child_report_data);
+    ret = _PalStreamReportRequest(child, &parent_report_data, &child_report_data);
     if (ret < 0)
         goto failed;
 
-    ret = _DkStreamSecureInit(child, child->process.is_server, &child->process.session_key,
-                              (LIB_SSL_CONTEXT**)&child->process.ssl_ctx, NULL, 0);
+    ret = _PalStreamSecureInit(child, child->process.is_server, &child->process.session_key,
+                               (LIB_SSL_CONTEXT**)&child->process.ssl_ctx, NULL, 0);
     if (ret < 0)
         goto failed;
 
     /* securely send the master key to child in the newly established SSL session */
-    ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&g_master_key,
-                               sizeof(g_master_key), /*is_blocking=*/!child->process.nonblocking);
+    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&g_master_key,
+                                sizeof(g_master_key), /*is_blocking=*/!child->process.nonblocking);
     if (ret != sizeof(g_master_key))
         goto failed;
 
     /* Send this Gramine instance ID. */
     uint64_t instance_id = g_pal_common_state.instance_id;
-    ret = _DkStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
-                               /*is_blocking=*/!child->process.nonblocking);
+    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+                                /*is_blocking=*/!child->process.nonblocking);
     if (ret != sizeof(instance_id)) {
         goto failed;
     }
@@ -206,29 +206,29 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
 
     __sgx_mem_aligned sgx_report_data_t child_report_data  = {0};
     __sgx_mem_aligned sgx_report_data_t parent_report_data = {0};
-    int ret = _DkStreamKeyExchange(parent, &parent->process.session_key,
-                                   &parent_report_data, &child_report_data);
+    int ret = _PalStreamKeyExchange(parent, &parent->process.session_key,
+                                    &parent_report_data, &child_report_data);
     if (ret < 0)
         goto out_error;
 
-    ret = _DkStreamReportRespond(parent, &child_report_data, &parent_report_data);
+    ret = _PalStreamReportRespond(parent, &child_report_data, &parent_report_data);
     if (ret < 0)
         goto out_error;
 
-    ret = _DkStreamSecureInit(parent, parent->process.is_server, &parent->process.session_key,
-                              (LIB_SSL_CONTEXT**)&parent->process.ssl_ctx, NULL, 0);
+    ret = _PalStreamSecureInit(parent, parent->process.is_server, &parent->process.session_key,
+                               (LIB_SSL_CONTEXT**)&parent->process.ssl_ctx, NULL, 0);
     if (ret < 0)
         goto out_error;
 
     /* securely receive the master key from parent in the newly established SSL session */
-    ret = _DkStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&g_master_key,
-                              sizeof(g_master_key), /*is_blocking=*/!parent->process.nonblocking);
+    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&g_master_key,
+                               sizeof(g_master_key), /*is_blocking=*/!parent->process.nonblocking);
     if (ret != sizeof(g_master_key))
         goto out_error;
 
     uint64_t instance_id;
-    ret = _DkStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
-                              /*is_blocking=*/!parent->process.nonblocking);
+    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+                               /*is_blocking=*/!parent->process.nonblocking);
     if (ret != sizeof(instance_id)) {
         goto out_error;
     }
@@ -242,9 +242,9 @@ out_error:
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
-noreturn void _DkProcessExit(int exitcode) {
+noreturn void _PalProcessExit(int exitcode) {
     if (exitcode)
-        log_debug("DkProcessExit: Returning exit code %d", exitcode);
+        log_debug("PalProcessExit: Returning exit code %d", exitcode);
     ocall_exit(exitcode, /*is_exitgroup=*/true);
     /* Unreachable. */
 }
@@ -255,8 +255,8 @@ static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
 
     ssize_t bytes;
     if (handle->process.ssl_ctx) {
-        bytes = _DkStreamSecureRead(handle->process.ssl_ctx, buffer, count,
-                                    /*is_blocking=*/!handle->process.nonblocking);
+        bytes = _PalStreamSecureRead(handle->process.ssl_ctx, buffer, count,
+                                     /*is_blocking=*/!handle->process.nonblocking);
     } else {
         bytes = ocall_read(handle->process.stream, buffer, count);
         bytes = bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -271,8 +271,8 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 
     ssize_t bytes;
     if (handle->process.ssl_ctx) {
-        bytes = _DkStreamSecureWrite(handle->process.ssl_ctx, buffer, count,
-                                     /*is_blocking=*/!handle->process.nonblocking);
+        bytes = _PalStreamSecureWrite(handle->process.ssl_ctx, buffer, count,
+                                      /*is_blocking=*/!handle->process.nonblocking);
     } else {
         bytes = ocall_write(handle->process.stream, buffer, count);
         bytes = bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -288,7 +288,7 @@ static int proc_close(PAL_HANDLE handle) {
     }
 
     if (handle->process.ssl_ctx) {
-        _DkStreamSecureFree((LIB_SSL_CONTEXT*)handle->process.ssl_ctx);
+        _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->process.ssl_ctx);
         handle->process.ssl_ctx = NULL;
     }
 

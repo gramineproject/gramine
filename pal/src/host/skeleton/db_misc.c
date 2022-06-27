@@ -11,29 +11,29 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _DkSystemTimeQuery(uint64_t* out_usec) {
+int _PalSystemTimeQuery(uint64_t* out_usec) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkRandomBitsRead(void* buffer, size_t size) {
+int _PalRandomBitsRead(void* buffer, size_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
+int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
+int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
-                         void* target_info, size_t* target_info_size, void* report,
-                         size_t* report_size) {
+int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                          void* target_info, size_t* target_info_size, void* report,
+                          size_t* report_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
     __UNUSED(target_info);
@@ -43,8 +43,8 @@ int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
-                        size_t* quote_size) {
+int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                         size_t* quote_size) {
     __UNUSED(user_report_data);
     __UNUSED(user_report_data_size);
     __UNUSED(quote);
@@ -52,14 +52,14 @@ int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_si
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkGetSpecialKey(const char* name, void* key, size_t* key_size) {
+int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(name);
     __UNUSED(key);
     __UNUSED(key_size);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-double _DkGetBogomips(void) {
+double _PalGetBogomips(void) {
     /* this has to be implemented */
     return 0.0;
 }

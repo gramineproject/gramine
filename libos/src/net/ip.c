@@ -96,7 +96,7 @@ static int create(struct libos_handle* handle) {
     /* We don't need to take the lock - handle was just created. */
     pal_stream_options_t options = handle->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     PAL_HANDLE pal_handle = NULL;
-    int ret = DkSocketCreate(pal_domain, pal_type, options, &pal_handle);
+    int ret = PalSocketCreate(pal_domain, pal_type, options, &pal_handle);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -116,7 +116,7 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     struct pal_socket_addr pal_ip_addr;
     linux_to_pal_sockaddr(addr, &pal_ip_addr);
 
-    ret = DkSocketBind(sock->pal_handle, &pal_ip_addr);
+    ret = PalSocketBind(sock->pal_handle, &pal_ip_addr);
     if (ret < 0) {
         return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
@@ -133,22 +133,22 @@ static int listen(struct libos_handle* handle, unsigned int backlog) {
         return -EOPNOTSUPP;
     }
 
-    return pal_to_unix_errno(DkSocketListen(sock->pal_handle, backlog));
+    return pal_to_unix_errno(PalSocketListen(sock->pal_handle, backlog));
 }
 
 static int accept(struct libos_handle* handle, bool is_nonblocking,
                   struct libos_handle** out_client) {
     PAL_HANDLE client_pal_handle;
     struct pal_socket_addr pal_ip_addr = { 0 };
-    int ret = DkSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
-                             &client_pal_handle, &pal_ip_addr);
+    int ret = PalSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
+                              &client_pal_handle, &pal_ip_addr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
     struct libos_handle* client_handle = get_new_handle();
     if (!client_handle) {
-        DkObjectClose(client_pal_handle);
+        PalObjectClose(client_pal_handle);
         return -ENOMEM;
     }
 
@@ -202,7 +202,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
 
     /* XXX: this connect is always blocking (regardless of actual setting of nonblockingness on
      * `sock->pal_handle`. See also the comment in tcp connect implementation in Linux PAL. */
-    ret = DkSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr);
+    ret = PalSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr);
     if (ret < 0) {
         return ret == -PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
     }
@@ -224,13 +224,13 @@ static int disconnect(struct libos_handle* handle) {
     struct pal_socket_addr pal_ip_addr = {
         .domain = PAL_DISCONNECT,
     };
-    int ret = DkSocketConnect(sock->pal_handle, &pal_ip_addr, /*local_addr=*/NULL);
+    int ret = PalSocketConnect(sock->pal_handle, &pal_ip_addr, /*local_addr=*/NULL);
     return pal_to_unix_errno(ret);
 }
 
 static int set_tcp_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -252,7 +252,7 @@ static int set_tcp_option(struct libos_handle* handle, int optname, void* optval
             return -ENOPROTOOPT;
     }
 
-    ret = DkStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
+    ret = PalStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
     return pal_to_unix_errno(ret);
 }
 
@@ -277,7 +277,7 @@ static int set_ipv4_option(struct libos_handle* handle, int optname, void* optva
 
 static int set_ipv6_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -302,13 +302,13 @@ static int set_ipv6_option(struct libos_handle* handle, int optname, void* optva
             return -ENOPROTOOPT;
     }
 
-    ret = DkStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
+    ret = PalStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
     return pal_to_unix_errno(ret);
 }
 
 static int set_socket_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -329,7 +329,7 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
             return -ENOPROTOOPT;
     }
 
-    ret = DkStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
+    ret = PalStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -367,7 +367,7 @@ static int setsockopt(struct libos_handle* handle, int level, int optname, void*
 
 static int get_tcp_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -395,7 +395,7 @@ static int get_tcp_option(struct libos_handle* handle, int optname, void* optval
 
 static int get_ipv6_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -495,8 +495,8 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         pal_iov[i].iov_len = iov[i].iov_len;
     }
 
-    int ret = DkSocketSend(sock->pal_handle, pal_iov, iov_len, out_size,
-                           addr ? &pal_ip_addr : NULL);
+    int ret = PalSocketSend(sock->pal_handle, pal_iov, iov_len, out_size,
+                            addr ? &pal_ip_addr : NULL);
     ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     free(pal_iov);
     return ret;
@@ -528,8 +528,8 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
     }
 
     struct pal_socket_addr pal_ip_addr;
-    int ret = DkSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_total_size,
-                           addr ? &pal_ip_addr : NULL, force_nonblocking);
+    int ret = PalSocketRecv(handle->info.sock.pal_handle, pal_iov, iov_len, out_total_size,
+                            addr ? &pal_ip_addr : NULL, force_nonblocking);
     free(pal_iov);
     if (ret < 0) {
         return pal_to_unix_errno(ret);

@@ -7,7 +7,7 @@
 #include "pal.h"
 #include "pal_regression.h"
 
-#define UNIT (DkGetPalPublicState()->alloc_align)
+#define UNIT (PalGetPalPublicState()->alloc_align)
 
 static volatile int count = 0;
 
@@ -32,18 +32,18 @@ static void handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
 __attribute_no_sanitize_address
 int main(int argc, char** argv, char** envp) {
     volatile int c;
-    DkSetExceptionHandler(handler, PAL_EVENT_MEMFAULT);
+    PalSetExceptionHandler(handler, PAL_EVENT_MEMFAULT);
 
     void* mem1 = NULL;
-    int ret = DkVirtualMemoryAlloc(&mem1, UNIT * 4, PAL_ALLOC_INTERNAL,
-                                   PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc(&mem1, UNIT * 4, PAL_ALLOC_INTERNAL,
+                                    PAL_PROT_READ | PAL_PROT_WRITE);
 
     if (!ret && mem1)
         pal_printf("Memory Allocation OK\n");
 
     void* mem2 = NULL;
-    ret = DkVirtualMemoryAlloc(&mem2, UNIT, PAL_ALLOC_INTERNAL,
-                               PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(&mem2, UNIT, PAL_ALLOC_INTERNAL,
+                                PAL_PROT_READ | PAL_PROT_WRITE);
 
     if (!ret && mem2) {
         c                    = count;
@@ -52,8 +52,8 @@ int main(int argc, char** argv, char** envp) {
         if (c == count)
             pal_printf("Memory Allocation Protection (RW) OK\n");
 
-        if (DkVirtualMemoryProtect(mem2, UNIT, PAL_PROT_READ) < 0) {
-            pal_printf("DkVirtualMemoryProtect on `mem2` failed\n");
+        if (PalVirtualMemoryProtect(mem2, UNIT, PAL_PROT_READ) < 0) {
+            pal_printf("PalVirtualMemoryProtect on `mem2` failed\n");
             return 1;
         }
         c                    = count;
@@ -62,8 +62,8 @@ int main(int argc, char** argv, char** envp) {
         if (c == count - 1)
             pal_printf("Memory Protection (R) OK\n");
 
-        if (DkVirtualMemoryFree(mem2, UNIT) < 0) {
-            pal_printf("DkVirtualMemoryFree on `mem2` failed\n");
+        if (PalVirtualMemoryFree(mem2, UNIT) < 0) {
+            pal_printf("PalVirtualMemoryFree on `mem2` failed\n");
             return 1;
         }
         c                    = count;
@@ -73,23 +73,23 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("Memory Deallocation OK\n");
     }
 
-    /* TODO: This does not take into account `DkGetPalPublicState()->preloaded_ranges`; we are not allowed
-     * to ask for memory overlapping with these ranges */
-    void* mem3 = (void*)DkGetPalPublicState()->user_address_start;
-    void* mem4 = (void*)DkGetPalPublicState()->user_address_start + UNIT;
+    /* TODO: This does not take into account `PalGetPalPublicState()->preloaded_ranges`; we are
+     * not allowed to ask for memory overlapping with these ranges */
+    void* mem3 = (void*)PalGetPalPublicState()->user_address_start;
+    void* mem4 = (void*)PalGetPalPublicState()->user_address_start + UNIT;
 
-    int ret2 = DkVirtualMemoryAlloc(&mem3, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
-    ret = DkVirtualMemoryAlloc(&mem4, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret2 = PalVirtualMemoryAlloc(&mem3, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(&mem4, UNIT, 0, PAL_PROT_READ | PAL_PROT_WRITE);
 
     if (!ret && !ret2 && mem3 && mem4)
         pal_printf("Memory Allocation with Address OK\n");
 
     /* Testing total memory */
-    pal_printf("Total Memory: %lu\n", DkGetPalPublicState()->mem_total);
+    pal_printf("Total Memory: %lu\n", PalGetPalPublicState()->mem_total);
 
     /* Testing available memory (must be within valid range) */
-    size_t avail = DkMemoryAvailableQuota();
-    if (avail > 0 && avail < DkGetPalPublicState()->mem_total)
+    size_t avail = PalMemoryAvailableQuota();
+    if (avail > 0 && avail < PalGetPalPublicState()->mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 
     return 0;

@@ -346,7 +346,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
         if (!uri)
             return -PAL_ERROR_NOMEM;
 
-        ret = _DkStreamGetName(file, uri, URI_MAX);
+        ret = _PalStreamGetName(file, uri, URI_MAX);
         if (ret < 0) {
             free(uri);
             return ret;
@@ -941,9 +941,9 @@ static int hash_over_session_key(const PAL_SESSION_KEY* session_key, const char*
     return lib_SHA256Final(&sha, (uint8_t*)out_hash);
 }
 
-int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
-                         sgx_report_data_t* out_parent_report_data,
-                         sgx_report_data_t* out_child_report_data) {
+int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
+                          sgx_report_data_t* out_parent_report_data,
+                          sgx_report_data_t* out_child_report_data) {
     int ret;
     LIB_DH_CONTEXT context;
 
@@ -966,7 +966,7 @@ int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
         goto out;
 
     for (int64_t bytes = 0, total = 0; total < (int64_t)sizeof(my_public); total += bytes) {
-        bytes = _DkStreamWrite(stream, 0, sizeof(my_public) - total, my_public + total, NULL, 0);
+        bytes = _PalStreamWrite(stream, 0, sizeof(my_public) - total, my_public + total, NULL, 0);
         if (bytes < 0) {
             if (bytes == -PAL_ERROR_INTERRUPTED || bytes == -PAL_ERROR_TRYAGAIN) {
                 bytes = 0;
@@ -978,7 +978,8 @@ int _DkStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
     }
 
     for (int64_t bytes = 0, total = 0; total < (int64_t)sizeof(peer_public); total += bytes) {
-        bytes = _DkStreamRead(stream, 0, sizeof(peer_public) - total, peer_public + total, NULL, 0);
+        bytes = _PalStreamRead(stream, 0, sizeof(peer_public) - total, peer_public + total, NULL,
+                               0);
         if (bytes < 0) {
             if (bytes == -PAL_ERROR_INTERRUPTED || bytes == -PAL_ERROR_TRYAGAIN) {
                 bytes = 0;
@@ -1039,8 +1040,8 @@ out:
  * We refer to this enclave as A and to the other enclave as B, e.g., A is this parent enclave and B
  * is the child enclave in the fork case (for more info, see comments in db_process.c).
  */
-int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
-                           sgx_report_data_t* peer_report_data) {
+int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
+                            sgx_report_data_t* peer_report_data) {
     __sgx_mem_aligned sgx_target_info_t target_info;
     __sgx_mem_aligned sgx_report_t report;
     uint64_t bytes;
@@ -1056,8 +1057,8 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
            sizeof(sgx_attributes_t));
 
     for (bytes = 0, ret = 0; bytes < SGX_TARGETINFO_FILLED_SIZE; bytes += ret) {
-        ret = _DkStreamWrite(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,
-                             ((void*)&target_info) + bytes, NULL, 0);
+        ret = _PalStreamWrite(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,
+                              ((void*)&target_info) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1070,7 +1071,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
 
     /* B -> A: report[B -> A] */
     for (bytes = 0, ret = 0; bytes < sizeof(report); bytes += ret) {
-        ret = _DkStreamRead(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
+        ret = _PalStreamRead(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1109,7 +1110,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     }
 
     for (bytes = 0, ret = 0; bytes < sizeof(report); bytes += ret) {
-        ret = _DkStreamWrite(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
+        ret = _PalStreamWrite(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1123,7 +1124,7 @@ int _DkStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     return 0;
 
 out:
-    _DkStreamDelete(stream, PAL_DELETE_ALL);
+    _PalStreamDelete(stream, PAL_DELETE_ALL);
     return ret;
 }
 
@@ -1133,8 +1134,8 @@ out:
  * We refer to this enclave as B and to the other enclave as A, e.g., B is this child enclave and A
  * is the parent enclave in the fork case (for more info, see comments in db_process.c).
  */
-int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
-                           sgx_report_data_t* peer_report_data) {
+int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
+                            sgx_report_data_t* peer_report_data) {
     __sgx_mem_aligned sgx_target_info_t target_info;
     __sgx_mem_aligned sgx_report_t report;
     uint64_t bytes;
@@ -1146,8 +1147,8 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
 
     /* A -> B: targetinfo[A] */
     for (bytes = 0, ret = 0; bytes < SGX_TARGETINFO_FILLED_SIZE; bytes += ret) {
-        ret = _DkStreamRead(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,
-                            ((void*)&target_info) + bytes, NULL, 0);
+        ret = _PalStreamRead(stream, 0, SGX_TARGETINFO_FILLED_SIZE - bytes,
+                             ((void*)&target_info) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1166,7 +1167,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     }
 
     for (bytes = 0, ret = 0; bytes < sizeof(report); bytes += ret) {
-        ret = _DkStreamWrite(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
+        ret = _PalStreamWrite(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1179,7 +1180,7 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
 
     /* A -> B: report[A -> B] */
     for (bytes = 0, ret = 0; bytes < sizeof(report); bytes += ret) {
-        ret = _DkStreamRead(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
+        ret = _PalStreamRead(stream, 0, sizeof(report) - bytes, ((void*)&report) + bytes, NULL, 0);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 ret = 0;
@@ -1209,13 +1210,13 @@ int _DkStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
     return 0;
 
 out:
-    _DkStreamDelete(stream, PAL_DELETE_ALL);
+    _PalStreamDelete(stream, PAL_DELETE_ALL);
     return ret;
 }
 
-int _DkStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* session_key,
-                        LIB_SSL_CONTEXT** out_ssl_ctx, const uint8_t* buf_load_ssl_ctx,
-                        size_t buf_size) {
+int _PalStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* session_key,
+                         LIB_SSL_CONTEXT** out_ssl_ctx, const uint8_t* buf_load_ssl_ctx,
+                         size_t buf_size) {
     int stream_fd;
 
     if (HANDLE_HDR(stream)->type == PAL_TYPE_PROCESS)
@@ -1256,13 +1257,13 @@ int _DkStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* sess
     return 0;
 }
 
-int _DkStreamSecureFree(LIB_SSL_CONTEXT* ssl_ctx) {
+int _PalStreamSecureFree(LIB_SSL_CONTEXT* ssl_ctx) {
     lib_SSLFree(ssl_ctx);
     free(ssl_ctx);
     return 0;
 }
 
-int _DkStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool is_blocking) {
+int _PalStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool is_blocking) {
     int ret = lib_SSLRead(ssl_ctx, buf, len);
     if (is_blocking && ret == -PAL_ERROR_TRYAGAIN) {
         /* mbedTLS wrappers collapse host errors `EAGAIN` and `EINTR` into one error PAL
@@ -1273,17 +1274,17 @@ int _DkStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool
     return ret;
 }
 
-int _DkStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t len,
-                         bool is_blocking) {
+int _PalStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t len,
+                          bool is_blocking) {
     int ret = lib_SSLWrite(ssl_ctx, buf, len);
     if (is_blocking && ret == -PAL_ERROR_TRYAGAIN) {
-        /* See the explanation in `_DkStreamSecureRead`. */
+        /* See the explanation in `_PalStreamSecureRead`. */
         return -PAL_ERROR_INTERRUPTED;
     }
     return ret;
 }
 
-int _DkStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen) {
+int _PalStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen) {
     assert(obuf);
     assert(olen);
 

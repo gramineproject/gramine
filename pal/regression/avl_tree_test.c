@@ -12,7 +12,7 @@
 #define EXIT_UNBALANCED()                                 \
     do {                                                  \
         pal_printf("Unbalanced tree at: %u\n", __LINE__); \
-        DkProcessExit(1);                                 \
+        PalProcessExit(1);                                \
     } while (0)
 
 static uint32_t _seed;
@@ -96,7 +96,7 @@ static void try_node_swap(struct avl_tree_node* node, struct avl_tree_node* swap
     size_t size = get_tree_size(tree.root);
     if (size != ELEMENTS_COUNT) {
         pal_printf("Tree has %lu elements instead of %u!", size, ELEMENTS_COUNT);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     avl_tree_swap_node(&tree, swap_node, node);
@@ -109,7 +109,7 @@ static void try_node_swap(struct avl_tree_node* node, struct avl_tree_node* swap
     size = get_tree_size(tree.root);
     if (size != ELEMENTS_COUNT) {
         pal_printf("Tree has %lu elements instead of %u!", size, ELEMENTS_COUNT);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 }
 
@@ -128,7 +128,7 @@ static void do_test(int32_t (*get_num)(void)) {
     size_t size = get_tree_size(tree.root);
     if (size != ELEMENTS_COUNT) {
         pal_printf("Tree has %lu elements instead of %u!", size, ELEMENTS_COUNT);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     struct avl_tree_node* node = avl_tree_first(&tree);
@@ -137,7 +137,7 @@ static void do_test(int32_t (*get_num)(void)) {
     while (node) {
         if (prev && node2struct(prev)->key > node2struct(node)->key) {
             pal_printf("Found two elements in wrong order!\n");
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
         prev = node;
         node = avl_tree_next(node);
@@ -146,7 +146,7 @@ static void do_test(int32_t (*get_num)(void)) {
     if (size != ELEMENTS_COUNT) {
         pal_printf("Tree iteration from the beginning walked through %lu elements instead of %u!",
                    size, ELEMENTS_COUNT);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     node = avl_tree_last(&tree);
@@ -155,7 +155,7 @@ static void do_test(int32_t (*get_num)(void)) {
     while (node) {
         if (next && node2struct(node)->key > node2struct(next)->key) {
             pal_printf("Found two elements in wrong order while iterating backwards!\n");
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
         next = node;
         node = avl_tree_prev(node);
@@ -164,7 +164,7 @@ static void do_test(int32_t (*get_num)(void)) {
     if (size != ELEMENTS_COUNT) {
         pal_printf("Tree iteration from the end walked through %lu elements instead of %u!", size,
                    ELEMENTS_COUNT);
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     static_assert(ELEMENTS_COUNT >= 3, "This code needs at least 3 elements in the tree!");
@@ -192,7 +192,7 @@ static void do_test(int32_t (*get_num)(void)) {
             pal_printf("NULL");
         }
         pal_printf("\n");
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     /* get_num returns int32_t, but tmp.key is a int64_t, so this cannot overflow. */
@@ -219,7 +219,7 @@ static void do_test(int32_t (*get_num)(void)) {
     /* These two are equivalent, it's just an assert. */
     if (!found || !node) {
         pal_printf("avl_tree_lower_bound has not found the next element!\n");
-        DkProcessExit(1);
+        PalProcessExit(1);
     }
 
     avl_tree_delete(&tree, &tmp.node);
@@ -273,7 +273,7 @@ static void test_ordering(void) {
         /* These nodes are all a part of array `t`. */
         if ((uintptr_t)prev >= (uintptr_t)node) {
             pal_printf("Wrong ordering of nodes: %p %p\n", prev, node);
-            DkProcessExit(1);
+            PalProcessExit(1);
         }
         prev = node;
         node = avl_tree_next(prev);
@@ -300,7 +300,7 @@ int main(void) {
     pal_printf("Done!\n");
 
     uint32_t seed = 0;
-    if (DkRandomBitsRead(&seed, sizeof(seed)) < 0) {
+    if (PalRandomBitsRead(&seed, sizeof(seed)) < 0) {
         pal_printf("Getting a seed failed\n");
         return 1;
     }

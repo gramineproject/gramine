@@ -42,16 +42,16 @@ struct handle_ops {
     /* 'getrealpath' return the real path that represent the handle */
     const char* (*getrealpath)(PAL_HANDLE handle);
 
-    /* 'getname' is used by DkStreamGetName. It's different from 'getrealpath' */
+    /* 'getname' is used by PalStreamGetName. It's different from 'getrealpath' */
     int (*getname)(PAL_HANDLE handle, char* buffer, size_t count);
 
-    /* 'open' is used by DkStreamOpen. 'handle' is a preallocated handle, 'type' will be a
+    /* 'open' is used by PalStreamOpen. 'handle' is a preallocated handle, 'type' will be a
      * normalized prefix, 'uri' is the remaining string of uri. access, share, create, and options
-     * follow the same flags defined for DkStreamOpen in pal.h. */
+     * follow the same flags defined for PalStreamOpen in pal.h. */
     int (*open)(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                 pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options);
 
-    /* 'read' and 'write' is used by DkStreamRead and DkStreamWrite, so they have exactly same
+    /* 'read' and 'write' is used by PalStreamRead and PalStreamWrite, so they have exactly same
      * prototype as them. */
     int64_t (*read)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer);
     int64_t (*write)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer);
@@ -63,7 +63,7 @@ struct handle_ops {
     int64_t (*writebyaddr)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer,
                            const char* addr, size_t addrlen);
 
-    /* 'close' and 'delete' is used by DkObjectClose and DkStreamDelete, 'close' will close the
+    /* 'close' and 'delete' is used by PalObjectClose and PalStreamDelete, 'close' will close the
      * stream, while 'delete' actually destroy the stream, such as deleting a file or shutting
      * down a socket */
     int (*close)(PAL_HANDLE handle);
@@ -79,23 +79,23 @@ struct handle_ops {
     int (*map)(PAL_HANDLE handle, void** address, pal_prot_flags_t prot, uint64_t offset,
                uint64_t size);
 
-    /* 'setlength' is used by DkStreamFlush. It truncate the stream to certain size. */
+    /* 'setlength' is used by PalStreamFlush. It truncate the stream to certain size. */
     int64_t (*setlength)(PAL_HANDLE handle, uint64_t length);
 
-    /* 'flush' is used by DkStreamFlush. It syncs the stream to the device */
+    /* 'flush' is used by PalStreamFlush. It syncs the stream to the device */
     int (*flush)(PAL_HANDLE handle);
 
-    /* 'waitforclient' is used by DkStreamWaitforClient. It accepts an connection */
+    /* 'waitforclient' is used by PalStreamWaitforClient. It accepts an connection */
     int (*waitforclient)(PAL_HANDLE server, PAL_HANDLE* client, pal_stream_options_t options);
 
-    /* 'attrquery' is used by DkStreamAttributesQuery. It queries the attributes of a stream */
+    /* 'attrquery' is used by PalStreamAttributesQuery. It queries the attributes of a stream */
     int (*attrquery)(const char* type, const char* uri, PAL_STREAM_ATTR* attr);
 
-    /* 'attrquerybyhdl' is used by DkStreamAttributesQueryByHandle. It queries the attributes of
+    /* 'attrquerybyhdl' is used by PalStreamAttributesQueryByHandle. It queries the attributes of
      * a stream handle */
     int (*attrquerybyhdl)(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 
-    /* 'attrsetbyhdl' is used by DkStreamAttributesSetByHandle. It queries the attributes of
+    /* 'attrsetbyhdl' is used by PalStreamAttributesSetByHandle. It queries the attributes of
      * a stream handle */
     int (*attrsetbyhdl)(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 
@@ -140,9 +140,9 @@ struct socket_ops {
 
 /*
  * failure notify. The rountine is called whenever a PAL call return error code. As the current
- * design of PAL does not return error code directly, we rely on DkAsynchronousEventUpcall to handle
- * PAL call error. If the user does not set up a upcall, the error code will be ignored. Ignoring
- * PAL error code can be a possible optimization for LibOS.
+ * design of PAL does not return error code directly, we rely on PalAsynchronousEventUpcall to
+ * handle PAL call error. If the user does not set up a upcall, the error code will be ignored.
+ * Ignoring PAL error code can be a possible optimization for LibOS.
  */
 void notify_failure(unsigned long error);
 
@@ -172,108 +172,108 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 
 /* For initialization */
 
-void _DkGetAvailableUserAddressRange(void** out_start, void** out_end);
-bool _DkCheckMemoryMappable(const void* addr, size_t size);
-unsigned long _DkMemoryQuota(void);
-unsigned long _DkMemoryAvailableQuota(void);
+void _PalGetAvailableUserAddressRange(void** out_start, void** out_end);
+bool _PalCheckMemoryMappable(const void* addr, size_t size);
+unsigned long _PalMemoryQuota(void);
+unsigned long _PalMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
-int _DkGetCPUInfo(struct pal_cpu_info* info);
+int _PalGetCPUInfo(struct pal_cpu_info* info);
 
 /* Internal DK calls, in case any of the internal routines needs to use them */
-/* DkStream calls */
-int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
-                  pal_share_flags_t share, enum pal_create_mode create,
-                  pal_stream_options_t options);
-int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
-int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
-                      int addrlen);
-int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
-                       const char* addr, int addrlen);
-int _DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
-int _DkStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
-                 uint64_t size);
-int _DkStreamUnmap(void* addr, uint64_t size);
-int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length);
-int _DkStreamFlush(PAL_HANDLE handle);
-int _DkStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
-const char* _DkStreamRealpath(PAL_HANDLE hdl);
-int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
-int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
+/* PalStream calls */
+int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
+                   pal_share_flags_t share, enum pal_create_mode create,
+                   pal_stream_options_t options);
+int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
+                       int addrlen);
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
+                        const char* addr, int addrlen);
+int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
+int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
+int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                  uint64_t size);
+int _PalStreamUnmap(void* addr, uint64_t size);
+int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
+int _PalStreamFlush(PAL_HANDLE handle);
+int _PalStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
+const char* _PalStreamRealpath(PAL_HANDLE hdl);
+int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
+int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
-int _DkSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                    pal_stream_options_t options, PAL_HANDLE* out_handle);
-int _DkSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
-int _DkSocketListen(PAL_HANDLE handle, unsigned int backlog);
-int _DkSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                    struct pal_socket_addr* out_client_addr);
-int _DkSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                     struct pal_socket_addr* out_local_addr);
-int _DkSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                  struct pal_socket_addr* addr);
-int _DkSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
-                  struct pal_socket_addr* addr, bool force_nonblocking);
+int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
+                     pal_stream_options_t options, PAL_HANDLE* out_handle);
+int _PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
+int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog);
+int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
+                     struct pal_socket_addr* out_client_addr);
+int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
+                      struct pal_socket_addr* out_local_addr);
+int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+                   struct pal_socket_addr* addr);
+int _PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+                   struct pal_socket_addr* addr, bool force_nonblocking);
 
-/* DkProcess and DkThread calls */
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
-noreturn void _DkThreadExit(int* clear_child_tid);
-void _DkThreadYieldExecution(void);
-int _DkThreadResume(PAL_HANDLE thread_handle);
-int _DkProcessCreate(PAL_HANDLE* handle, const char** args);
-noreturn void _DkProcessExit(int exit_code);
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+/* PalProcess and PalThread calls */
+int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
+noreturn void _PalThreadExit(int* clear_child_tid);
+void _PalThreadYieldExecution(void);
+int _PalThreadResume(PAL_HANDLE thread_handle);
+int _PalProcessCreate(PAL_HANDLE* handle, const char** args);
+noreturn void _PalProcessExit(int exit_code);
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 
-/* DkEvent calls */
-int _DkEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);
-void _DkEventSet(PAL_HANDLE handle);
-void _DkEventClear(PAL_HANDLE handle);
-int _DkEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
+/* PalEvent calls */
+int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);
+void _PalEventSet(PAL_HANDLE handle);
+void _PalEventClear(PAL_HANDLE handle);
+int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
-/* DkVirtualMemory calls */
-int _DkVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot);
-int _DkVirtualMemoryFree(void* addr, uint64_t size);
-int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
+/* PalVirtualMemory calls */
+int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
+                           pal_prot_flags_t prot);
+int _PalVirtualMemoryFree(void* addr, uint64_t size);
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
-/* DkObject calls */
-int _DkObjectClose(PAL_HANDLE object_handle);
-int _DkStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
-                         pal_wait_flags_t* ret_events, uint64_t* timeout_us);
+/* PalObject calls */
+int _PalObjectClose(PAL_HANDLE object_handle);
+int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
+                          pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 
-/* DkException calls & structures */
-pal_event_handler_t _DkGetExceptionHandler(enum pal_event event);
+/* PalException calls & structures */
+pal_event_handler_t _PalGetExceptionHandler(enum pal_event event);
 
 /* other DK calls */
-int _DkSystemTimeQuery(uint64_t* out_usec);
+int _PalSystemTimeQuery(uint64_t* out_usec);
 
 /*
  * Cryptographically secure random.
  * 0 on success, negative on failure.
  */
-int _DkRandomBitsRead(void* buffer, size_t size);
+int _PalRandomBitsRead(void* buffer, size_t size);
 
-double _DkGetBogomips(void);
-int _DkSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
-int _DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
-int _DkCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]);
-int _DkAttestationReport(const void* user_report_data, size_t* user_report_data_size,
-                         void* target_info, size_t* target_info_size, void* report,
-                         size_t* report_size);
-int _DkAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
-                        size_t* quote_size);
-int _DkGetSpecialKey(const char* name, void* key, size_t* key_size);
+double _PalGetBogomips(void);
+int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
+int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
+int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]);
+int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
+                          void* target_info, size_t* target_info_size, void* report,
+                          size_t* report_size);
+int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
+                         size_t* quote_size);
+int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 
 #define INIT_FAIL(msg, ...)                                                         \
     do {                                                                            \
         log_error("PAL failed at %s:%d: " msg, __FILE__, __LINE__, ##__VA_ARGS__);  \
-        _DkProcessExit(1);                                                          \
+        _PalProcessExit(1);                                                         \
     } while (0)
 
 #define INIT_FAIL_MANIFEST(reason)                                      \
     do {                                                                \
         log_error("PAL failed at parsing the manifest: %s", reason);    \
-        _DkProcessExit(1);                                              \
+        _PalProcessExit(1);                                             \
     } while (0)
 
 void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
@@ -291,8 +291,8 @@ void free(void* mem);
 #error Unsupported compiler
 #endif
 
-int _DkInitDebugStream(const char* path);
-int _DkDebugLog(const void* buf, size_t size);
+int _PalInitDebugStream(const char* path);
+int _PalDebugLog(const void* buf, size_t size);
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
@@ -306,7 +306,7 @@ const char* pal_event_name(enum pal_event event);
 #define uthash_fatal(msg)                      \
     do {                                       \
         log_error("uthash error: %s", msg);    \
-        _DkProcessExit(1);                     \
+        _PalProcessExit(1);                    \
     } while (0)
 #include "uthash.h"
 

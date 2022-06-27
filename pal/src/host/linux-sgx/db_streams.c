@@ -33,9 +33,9 @@ struct hdl_header {
     size_t  data_size; /* total size of serialized PAL handle */
 };
 
-/* _DkStreamUnmap for internal use. Unmap stream at certain memory address.
-   The memory is unmapped as a whole.*/
-int _DkStreamUnmap(void* addr, uint64_t size) {
+/* _PalStreamUnmap for internal use. Unmap stream at certain memory address. The memory is unmapped
+ *  as a whole.*/
+int _PalStreamUnmap(void* addr, uint64_t size) {
     return free_enclave_pages(addr, size);
 }
 
@@ -59,7 +59,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             /* session key is part of handle but need to serialize SSL context */
             if (handle->pipe.ssl_ctx) {
                 free_d = true;
-                ret = _DkStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&d, &dsz);
+                ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&d, &dsz);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
@@ -81,7 +81,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             /* session key is part of handle but need to serialize SSL context */
             if (handle->process.ssl_ctx) {
                 free_d = true;
-                ret = _DkStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&d, &dsz);
+                ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&d, &dsz);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
@@ -135,9 +135,9 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to deserialize SSL context */
             hdl->pipe.fd = host_fd; /* correct host FD must be passed to SSL context */
-            ret = _DkStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
-                                      (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
-                                      (const uint8_t*)hdl + hdlsz, size - hdlsz);
+            ret = _PalStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
+                                       (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
+                                       (const uint8_t*)hdl + hdlsz, size - hdlsz);
             if (ret < 0) {
                 free(hdl);
                 return -PAL_ERROR_DENIED;
@@ -156,9 +156,9 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to deserialize SSL context */
             hdl->process.stream = host_fd; /* correct host FD must be passed to SSL context */
-            ret = _DkStreamSecureInit(hdl, hdl->process.is_server, &hdl->process.session_key,
-                                      (LIB_SSL_CONTEXT**)&hdl->process.ssl_ctx,
-                                      (const uint8_t*)hdl + hdlsz, size - hdlsz);
+            ret = _PalStreamSecureInit(hdl, hdl->process.is_server, &hdl->process.session_key,
+                                       (LIB_SSL_CONTEXT**)&hdl->process.ssl_ctx,
+                                       (const uint8_t*)hdl + hdlsz, size - hdlsz);
             if (ret < 0) {
                 free(hdl);
                 return -PAL_ERROR_DENIED;
@@ -175,7 +175,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     return 0;
 }
 
-int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
+int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (HANDLE_HDR(target_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
@@ -229,9 +229,9 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
 
     /* finally send the serialized cargo as payload (possibly encrypted) */
     if (target_process->process.ssl_ctx) {
-        ret = _DkStreamSecureWrite(target_process->process.ssl_ctx, (uint8_t*)hdl_data,
-                                   hdl_hdr.data_size,
-                                   /*is_blocking=*/!target_process->process.nonblocking);
+        ret = _PalStreamSecureWrite(target_process->process.ssl_ctx, (uint8_t*)hdl_data,
+                                    hdl_hdr.data_size,
+                                    /*is_blocking=*/!target_process->process.nonblocking);
     } else {
         ret = ocall_write(fd, hdl_data, hdl_hdr.data_size);
         ret = ret < 0 ? unix_to_pal_error(ret) : ret;
@@ -241,7 +241,7 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     return ret < 0 ? ret : 0;
 }
 
-int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (HANDLE_HDR(source_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
@@ -259,7 +259,7 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return unix_to_pal_error(ret);
 
     if ((size_t)ret != sizeof(hdl_hdr)) {
-        /* This check is to shield from a Iago attack. We know that ocall_send() in _DkSendHandle()
+        /* This check is to shield from a Iago attack. We know that ocall_send() in _PalSendHandle()
          * transfers the message atomically, and that our ocall_recv() receives it atomically. So
          * the only valid values for ret must be zero or the size of the header. */
         if (!ret)
@@ -285,9 +285,9 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     char hdl_data[hdl_hdr.data_size];
 
     if (source_process->process.ssl_ctx) {
-        ret = _DkStreamSecureRead(source_process->process.ssl_ctx,
-                                  (uint8_t*)hdl_data, hdl_hdr.data_size,
-                                  /*is_blocking=*/!source_process->process.nonblocking);
+        ret = _PalStreamSecureRead(source_process->process.ssl_ctx,
+                                   (uint8_t*)hdl_data, hdl_hdr.data_size,
+                                   /*is_blocking=*/!source_process->process.nonblocking);
     } else {
         ret = ocall_read(fd, hdl_data, hdl_hdr.data_size);
         ret = ret < 0 ? unix_to_pal_error(ret) : ret;
@@ -324,7 +324,7 @@ int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     return 0;
 }
 
-int _DkInitDebugStream(const char* path) {
+int _PalInitDebugStream(const char* path) {
     int ret;
 
     if (g_log_fd != PAL_LOG_DEFAULT_FD) {
@@ -341,7 +341,7 @@ int _DkInitDebugStream(const char* path) {
     return 0;
 }
 
-int _DkDebugLog(const void* buf, size_t size) {
+int _PalDebugLog(const void* buf, size_t size) {
     if (g_log_fd < 0)
         return -PAL_ERROR_BADHANDLE;
 

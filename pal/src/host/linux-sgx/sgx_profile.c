@@ -345,8 +345,8 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
         goto out_close;
     }
 
-    // Perform a simple sanity check to verify if this looks like ELF (see TODO for DkDebugMapAdd in
-    // pal/src/db_rtld.c).
+    // Perform a simple sanity check to verify if this looks like ELF (see TODO for PalDebugMapAdd
+    // in pal/src/db_rtld.c).
 
     const elf_ehdr_t* ehdr = elf_addr;
 

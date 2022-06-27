@@ -579,7 +579,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
 #ifdef DEBUG
     /*
-     * Report libpal map. All subsequent files will be reported via DkDebugMapAdd(), but this
+     * Report libpal map. All subsequent files will be reported via PalDebugMapAdd(), but this
      * one has to be handled separately.
      *
      * We report it here, before enclave start (as opposed to setup_pal_binary()), because we want

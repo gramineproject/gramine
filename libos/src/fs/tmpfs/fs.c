@@ -42,7 +42,7 @@ static int tmpfs_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t per
     inode->data = mem;
 
     uint64_t time_us;
-    if (DkSystemTimeQuery(&time_us) < 0) {
+    if (PalSystemTimeQuery(&time_us) < 0) {
         put_inode(inode);
         return -EPERM;
     }
@@ -193,7 +193,7 @@ static int tmpfs_rename(struct libos_dentry* old, struct libos_dentry* new) {
     __UNUSED(new);
 
     uint64_t time_us;
-    if (DkSystemTimeQuery(&time_us) < 0)
+    if (PalSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
     /* TODO: this should be done in the syscall handler, not here */
@@ -245,7 +245,7 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     assert(hdl->type == TYPE_TMPFS);
 
     uint64_t time_us;
-    if (DkSystemTimeQuery(&time_us) < 0)
+    if (PalSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
     struct libos_inode* inode = hdl->inode;
@@ -272,7 +272,7 @@ static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
     int ret;
 
     uint64_t time_us;
-    if (DkSystemTimeQuery(&time_us) < 0)
+    if (PalSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
     lock(&hdl->inode->lock);

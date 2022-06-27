@@ -41,14 +41,14 @@ uint64_t libos_xstate_size(void) {
 
 void libos_xstate_init(void) {
     unsigned int value[4];
-    if (DkCpuIdRetrieve(CPUID_LEAF_PROCINFO, 0, value) < 0)
+    if (PalCpuIdRetrieve(CPUID_LEAF_PROCINFO, 0, value) < 0)
         goto out;
 
     if (!(value[CPUID_WORD_ECX] & CPUID_FEATURE_XSAVE) ||
         !(value[CPUID_WORD_ECX] & CPUID_FEATURE_OSXSAVE))
         goto out;
 
-    if (DkCpuIdRetrieve(CPUID_LEAF_XSAVE, 0, value) < 0)
+    if (PalCpuIdRetrieve(CPUID_LEAF_XSAVE, 0, value) < 0)
         goto out;
 
     uint32_t xsavesize = value[CPUID_WORD_ECX];

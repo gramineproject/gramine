@@ -32,7 +32,7 @@
 static size_t g_pal_internal_mem_used = 0;
 static spinlock_t g_pal_internal_mem_lock = INIT_SPINLOCK_UNLOCKED;
 
-bool _DkCheckMemoryMappable(const void* addr, size_t size) {
+bool _PalCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {
         log_error("Address %p-%p is not mappable", addr, addr + size);
         return true;
@@ -40,8 +40,8 @@ bool _DkCheckMemoryMappable(const void* addr, size_t size) {
     return false;
 }
 
-int _DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot) {
+int _PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
+                           pal_prot_flags_t prot) {
     assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
     assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
 
@@ -79,12 +79,12 @@ int _DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_
     return 0;
 }
 
-int _DkVirtualMemoryFree(void* addr, size_t size) {
+int _PalVirtualMemoryFree(void* addr, size_t size) {
     int ret = DO_SYSCALL(munmap, addr, size);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-int _DkVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
+int _PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     int ret = DO_SYSCALL(mprotect, addr, size, PAL_PROT_TO_LINUX(prot));
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
@@ -137,7 +137,7 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
     return ret;
 }
 
-unsigned long _DkMemoryQuota(void) {
+unsigned long _PalMemoryQuota(void) {
     if (g_pal_linux_state.memory_quota == (unsigned long)-1)
         return 0;
 
@@ -153,7 +153,7 @@ unsigned long _DkMemoryQuota(void) {
     return (g_pal_linux_state.memory_quota = quota * 1024);
 }
 
-unsigned long _DkMemoryAvailableQuota(void) {
+unsigned long _PalMemoryAvailableQuota(void) {
     unsigned long quota = 0;
     if (read_proc_meminfo("MemFree", &quota) < 0)
         return 0;

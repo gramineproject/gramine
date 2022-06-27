@@ -24,18 +24,18 @@ static inline void clear_lock(struct libos_lock* l) {
 
 static inline bool create_lock(struct libos_lock* l) {
     l->owner = 0;
-    return DkEventCreate(&l->lock, /*init_signaled=*/true, /*auto_clear=*/true) == 0;
+    return PalEventCreate(&l->lock, /*init_signaled=*/true, /*auto_clear=*/true) == 0;
 }
 
 static inline void destroy_lock(struct libos_lock* l) {
-    DkObjectClose(l->lock); // TODO: handle errors
+    PalObjectClose(l->lock); // TODO: handle errors
     clear_lock(l);
 }
 
 static inline void lock(struct libos_lock* l) {
     assert(l->lock);
 
-    while (DkEventWait(l->lock, /*timeout=*/NULL) < 0)
+    while (PalEventWait(l->lock, /*timeout=*/NULL) < 0)
         /* nop */;
 
     l->owner = get_cur_tid();
@@ -44,7 +44,7 @@ static inline void lock(struct libos_lock* l) {
 static inline void unlock(struct libos_lock* l) {
     assert(l->lock);
     l->owner = 0;
-    DkEventSet(l->lock);
+    PalEventSet(l->lock);
 }
 
 static inline bool locked(struct libos_lock* l) {

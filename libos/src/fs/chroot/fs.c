@@ -134,7 +134,7 @@ static int chroot_lookup(struct libos_dentry* dent) {
 
     /*
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix. In
-     * most cases, a "file:" prefix is good enough: `DkStreamAttributesQuery` will access the file
+     * most cases, a "file:" prefix is good enough: `PalStreamAttributesQuery` will access the file
      * and report the right file type.
      *
      * The only exception is when this is the root dentry of a "dev:" mount, i.e. a directly mounted
@@ -151,7 +151,7 @@ static int chroot_lookup(struct libos_dentry* dent) {
         goto out;
 
     PAL_STREAM_ATTR pal_attr;
-    ret = DkStreamAttributesQuery(uri, &pal_attr);
+    ret = PalStreamAttributesQuery(uri, &pal_attr);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -196,8 +196,8 @@ static int chroot_temp_open(struct libos_dentry* dent, mode_t type, PAL_HANDLE* 
     if (ret < 0)
         return ret;
 
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                       /*options=*/0, out_palhdl);
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0, out_palhdl);
     free(uri);
     return pal_to_unix_errno(ret);
 }
@@ -219,7 +219,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = DkStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -233,7 +233,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
         hdl->pos = 0;
         hdl->pal_handle = palhdl;
     } else {
-        DkObjectClose(palhdl);
+        PalObjectClose(palhdl);
     }
     ret = 0;
 
@@ -282,7 +282,7 @@ static int chroot_mkdir(struct libos_dentry* dent, mode_t perm) {
 static int chroot_flush(struct libos_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT);
 
-    int ret = DkStreamFlush(hdl->pal_handle);
+    int ret = PalStreamFlush(hdl->pal_handle);
     return pal_to_unix_errno(ret);
 }
 
@@ -290,7 +290,7 @@ static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, fi
     assert(hdl->type == TYPE_CHROOT);
 
     size_t actual_count = count;
-    int ret = DkStreamRead(hdl->pal_handle, *pos, &actual_count, buf, /*source=*/NULL, /*size=*/0);
+    int ret = PalStreamRead(hdl->pal_handle, *pos, &actual_count, buf, /*source=*/NULL, /*size=*/0);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -306,7 +306,7 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     assert(hdl->type == TYPE_CHROOT);
 
     size_t actual_count = count;
-    int ret = DkStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf, /*dest=*/NULL);
+    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf, /*dest=*/NULL);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -333,7 +333,7 @@ static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int pr
         return -EINVAL;
 
     void* actual_addr = addr;
-    int ret = DkStreamMap(hdl->pal_handle, &actual_addr, pal_prot, offset, size);
+    int ret = PalStreamMap(hdl->pal_handle, &actual_addr, pal_prot, offset, size);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -347,7 +347,7 @@ static int chroot_truncate(struct libos_handle* hdl, file_off_t size) {
     int ret;
 
     lock(&hdl->inode->lock);
-    ret = DkStreamSetLength(hdl->pal_handle, size);
+    ret = PalStreamSetLength(hdl->pal_handle, size);
     if (ret == 0) {
         hdl->inode->size = size;
     } else {
@@ -375,7 +375,7 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
 
     while (true) {
         size_t read_size = buf_size;
-        ret = DkStreamRead(palhdl, /*offset=*/0, &read_size, buf, /*source=*/NULL, /*size=*/0);
+        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf, /*source=*/NULL, /*size=*/0);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;
@@ -413,7 +413,7 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
 
 out:
     free(buf);
-    DkObjectClose(palhdl);
+    PalObjectClose(palhdl);
     return ret;
 }
 
@@ -428,8 +428,8 @@ int chroot_unlink(struct libos_dentry* dent) {
     if (ret < 0)
         return ret;
 
-    ret = DkStreamDelete(palhdl, PAL_DELETE_ALL);
-    DkObjectClose(palhdl);
+    ret = PalStreamDelete(palhdl, PAL_DELETE_ALL);
+    PalObjectClose(palhdl);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -452,8 +452,8 @@ static int chroot_rename(struct libos_dentry* old, struct libos_dentry* new) {
     if (ret < 0)
         goto out;
 
-    ret = DkStreamChangeName(palhdl, new_uri);
-    DkObjectClose(palhdl);
+    ret = PalStreamChangeName(palhdl, new_uri);
+    PalObjectClose(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -480,8 +480,8 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
 
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
-    ret = DkStreamAttributesSetByHandle(palhdl, &attr);
-    DkObjectClose(palhdl);
+    ret = PalStreamAttributesSetByHandle(palhdl, &attr);
+    PalObjectClose(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

@@ -4,7 +4,7 @@
 #define FAIL(fmt...) ({ \
     pal_printf(fmt);    \
     pal_printf("\n");   \
-    DkProcessExit(1);   \
+    PalProcessExit(1);  \
 })
 
 #define TEST(output_str, fmt...) ({                                                                \
@@ -91,14 +91,14 @@ int main(void) {
      * terminated at two pages boundary, where the second page has no read permission. If
      * the precision limit is not respected, `snprintf` will access data at the second page and
      * crash the process. */
-    int ret = DkVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
-                                   PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
+                                    PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
-        FAIL("DkVirtualMemoryAlloc failed: %d", ret);
+        FAIL("PalVirtualMemoryAlloc failed: %d", ret);
     }
-    ret = DkVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
+    ret = PalVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
     if (ret < 0) {
-        FAIL("DkVirtualMemoryProtect failed: %d", ret);
+        FAIL("PalVirtualMemoryProtect failed: %d", ret);
     }
     memset(ptr + PAGE_SIZE - 7, 'a', 7);
 

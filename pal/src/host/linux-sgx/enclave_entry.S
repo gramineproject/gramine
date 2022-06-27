@@ -40,7 +40,7 @@
 # Note that stage-1 exception handler has only minimal asm code and doesn't call any C functions.
 # Its sole purpose is to prepare the stage-2 handler by:
 #   - copying the interrupted SSA[0] context on the stack ("CPU context")
-#   - rewiring the SSA[0] context to point to _DkExceptionHandler()
+#   - rewiring the SSA[0] context to point to _PalExceptionHandler()
 #   - invoking EEXIT (so that untrusted runtime can perform ERESUME)
 
 #include "sgx_arch.h"
@@ -273,12 +273,12 @@ enclave_entry:
     # Calling the stage-2 exception handler (CSSA=0) while SGX_PRE_OCALL_STACK != 0 would be
     # problematic because stage-2 handler could issue nested OCALLs. This would mean the
     # SGX_PRE_OCALL_STACK logic would need to handle nesting. So we don't set up the stage-2 handler
-    # (i.e, the _DkExceptionHandler() function).
+    # (i.e, the _PalExceptionHandler() function).
     #
     # Instead if we're in such situation, we emulate it as if RIP reached to the safe point,
     # .Lcssa0_ocall_return_after_stack_restore. In other words, the stage-1 handler jumps to the
     # regular returning-from-OCALL flow (CSSA=0) with RSI=<external event> which forces that flow
-    # to call _DkHandleExternalEvent() before proceeding with normal enclave code.
+    # to call _PalHandleExternalEvent() before proceeding with normal enclave code.
     #
     # Ocall sequence:
     #  1. call sgx_ocall()
@@ -289,7 +289,7 @@ enclave_entry:
     #  6. .Lcssa0_ocall_return:
     #  7. (RSP, SGX_STACK) = (SGX_STACK, 0): restore trusted stack
     #  8. .Lcssa0_ocall_return_after_stack_restore:
-    #  9. call _DkHandleExternalEvent() if interrupted
+    #  9. call _PalHandleExternalEvent() if interrupted
     # 10. return from sgx_ocall() to the caller
     #
     # It is also required that sgx_ocall() be atomic wrt async exception. When host async signal
@@ -332,7 +332,7 @@ enclave_entry:
     # CASE A. We are right-before EEXIT for ocall in between [.Lcssa0_ocall_eexit_prepare,
     #         .Lcssa0_ocall_eexit_done) -- skip EEXIT as if ocall returned EINTR.
     #
-    # If there is a registered signal handler for the current exception, _DkHandleExternalEvent()
+    # If there is a registered signal handler for the current exception, _PalHandleExternalEvent()
     # will be called (and thus we need to save RDI = <external event>) before returning from ocall.
 
     movq $-EINTR, SGX_GPR_RDI(%rbx)    # return value for .Lcssa0_ocall_return
@@ -351,7 +351,7 @@ enclave_entry:
     #
     # Set RSI = <external event> and move RIP to .Lcssa0_ocall_return_after_stack_restore, such
     # that regular returning-from-OCALL flow (CSSA=0) will notice the external event and will call
-    # _DkHandleExternalEvent() to handle the exception.
+    # _PalHandleExternalEvent() to handle the exception.
     #
     # Note that either we fell-through from Case A and RDI was already set to the -EINTR return
     # value, or we are indeed in Case C and RDI already contains the successful OCALL result.
@@ -369,7 +369,7 @@ enclave_entry:
 
 .Lcssa1_exception_during_enclave_run:
     # The thread got interrupted outside of ocall handling (see above for that special case). We
-    # inject a call to _DkExceptionHandler() into the interrupted thread to handle exception in
+    # inject a call to _PalExceptionHandler() into the interrupted thread to handle exception in
     # stage-2 handler (on ERESUME).
 
     # The last instructions of _restore_sgx_context() need to be atomic for the code below (see
@@ -417,7 +417,7 @@ enclave_entry:
     # the stack pointer up here to undo the move down below.
     addq $RED_ZONE_SIZE, %rsi
 
-    # Setup stack for stage-2 handler _DkExceptionHandler().
+    # Setup stack for stage-2 handler _PalExceptionHandler().
     #
     # Stack layout:
     #     8-bytes padding:    (8 mod 16) bytes aligned for x86 ABI
@@ -426,7 +426,7 @@ enclave_entry:
     #     padding:            (if necessary)
     #     RED_ZONE:           (unless newly switching to signal stack)
     #
-    # NOTE: there is no saved RIP on the stack (to return) because _DkExceptionHandler() calls
+    # NOTE: there is no saved RIP on the stack (to return) because _PalExceptionHandler() calls
     #       _restore_sgx_context().
 
 #define STACK_PADDING_SIZE (PAL_FP_XSTATE_MAGIC2_SIZE + 8)
@@ -452,7 +452,7 @@ enclave_entry:
     andq $~(PAL_XSTATE_ALIGN - 1), %rsi
     subq $SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, %rsi
 
-    # Rewire SSA0: pass 1st arg to _DkExceptionHandler():
+    # Rewire SSA0: pass 1st arg to _PalExceptionHandler():
     #    - exit info (in RDI, either trusted SSA[0].GPRSGX.EXITINFO or possibly-malicious
     #                 "external event")
     #
@@ -497,7 +497,7 @@ enclave_entry:
     movq SGX_GPR_RIP(%rbx), %rdi
     movq %rdi, SGX_CPU_CONTEXT_RIP(%rsi)
 
-    # Rewire SSA0: pass more args to _DkExceptionHandler():
+    # Rewire SSA0: pass more args to _PalExceptionHandler():
     #    - pointer to sgx_cpu_context_t (SSA[0].GPRSGX.RSI, 2nd arg)
     #    - pointer to PAL_XREGS_STATE   (SSA[0].GPRSGX.RDX, 3rd arg)
     movq %rsi, SGX_GPR_RSI(%rbx)
@@ -524,8 +524,8 @@ enclave_entry:
     #   - clear RFLAGS.AC to prevent the #AC-fault side channel
     andq $(~(RFLAGS_DF | RFLAGS_AC)), SGX_GPR_RFLAGS(%rbx)
 
-    # Rewire SSA0: SSA[0].GPRSGX.RIP points to _DkExceptionHandler()
-    leaq _DkExceptionHandler(%rip), %rdi
+    # Rewire SSA0: SSA[0].GPRSGX.RIP points to _PalExceptionHandler()
+    leaq _PalExceptionHandler(%rip), %rdi
     movq %rdi, SGX_GPR_RIP(%rbx)
 
     # copy the whole SSA[0].XSAVE region to the CPU context's XSAVE on stack;
@@ -753,7 +753,7 @@ sgx_ocall:
     jmp _restore_sgx_context
 
 2:
-    # there was some event, call _DkHandleExternalEvent(event, uc, xregs_state)
+    # there was some event, call _PalHandleExternalEvent(event, uc, xregs_state)
 
     # clear the Alignment Check flag to prevent #AC-fault side channel
     pushfq
@@ -767,7 +767,7 @@ sgx_ocall:
     movq %rsi, %rdi                         # external event (1st arg)
     movq %rsp, %rsi                         # SGX context    (2nd arg)
     leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rdx   # xregs_state    (3rd arg)
-    callq _DkHandleExternalEvent
+    callq _PalHandleExternalEvent
     FAIL_LOOP                               # cannot be reached
 
 

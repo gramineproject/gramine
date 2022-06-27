@@ -99,7 +99,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
 
     /*
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix.
-     * However, "file:" prefix is good enough here: `DkStreamAttributesQuery` will access the file
+     * However, "file:" prefix is good enough here: `PalStreamAttributesQuery` will access the file
      * and report the right file type.
      *
      * See also the comment in `fs.c:chroot_lookup` (but note that this case is simpler, because we
@@ -110,7 +110,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         goto out;
 
     PAL_STREAM_ATTR pal_attr;
-    ret = DkStreamAttributesQuery(uri, &pal_attr);
+    ret = PalStreamAttributesQuery(uri, &pal_attr);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -251,13 +251,13 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
 
     /* This opens a "dir:..." URI */
     PAL_HANDLE palhdl;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
-                       PAL_OPTION_PASSTHROUGH, &palhdl);
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
+                        PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
-    DkObjectClose(palhdl);
+    PalObjectClose(palhdl);
 
     inode->type = S_IFDIR;
     inode->perm = perm;
@@ -283,15 +283,15 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
         return ret;
 
     PAL_HANDLE palhdl;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                       PAL_OPTION_PASSTHROUGH, &palhdl);
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
 
-    ret = DkStreamDelete(palhdl, PAL_DELETE_ALL);
-    DkObjectClose(palhdl);
+    ret = PalStreamDelete(palhdl, PAL_DELETE_ALL);
+    PalObjectClose(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -342,16 +342,16 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = DkStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                       PAL_OPTION_PASSTHROUGH, &palhdl);
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
-    ret = DkStreamAttributesSetByHandle(palhdl, &attr);
-    DkObjectClose(palhdl);
+    ret = PalStreamAttributesSetByHandle(palhdl, &attr);
+    PalObjectClose(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

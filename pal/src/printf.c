@@ -8,7 +8,7 @@
 
 static int buf_write_all(const char* str, size_t size, void* arg) {
     __UNUSED(arg);
-    _DkDebugLog(str, size);
+    _PalDebugLog(str, size);
     return 0;
 }
 

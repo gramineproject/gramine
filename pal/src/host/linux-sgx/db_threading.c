@@ -73,20 +73,20 @@ void pal_start_thread(void) {
 
     /* each newly-created thread (including the first thread) has its own random stack canary */
     uint64_t stack_protector_canary;
-    int ret = _DkRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
+    int ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
     if (ret < 0) {
-        log_error("_DkRandomBitsRead() failed (%d)", ret);
-        _DkProcessExit(1);
+        log_error("_PalRandomBitsRead() failed (%d)", ret);
+        _PalProcessExit(1);
     }
     pal_set_tcb_stack_canary(stack_protector_canary);
     PAL_TCB* pal_tcb = pal_get_tcb();
     memset(&pal_tcb->libos_tcb, 0, sizeof(pal_tcb->libos_tcb));
     callback((void*)param);
-    _DkThreadExit(/*clear_child_tid=*/NULL);
+    _PalThreadExit(/*clear_child_tid=*/NULL);
     /* UNREACHABLE */
 }
 
-int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
+int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret;
     PAL_HANDLE new_thread = calloc(1, HANDLE_SIZE(thread));
     if (!new_thread)
@@ -136,14 +136,13 @@ out_err:
     return ret;
 }
 
-/* PAL call DkThreadYieldExecution. Yield the execution
-   of the current thread. */
-void _DkThreadYieldExecution(void) {
+/* PAL call PalThreadYieldExecution. Yield the execution of the current thread. */
+void _PalThreadYieldExecution(void) {
     ocall_sched_yield();
 }
 
-/* _DkThreadExit for internal use: Thread exiting */
-noreturn void _DkThreadExit(int* clear_child_tid) {
+/* _PalThreadExit for internal use: Thread exiting */
+noreturn void _PalThreadExit(int* clear_child_tid) {
     struct pal_handle_thread* exiting_thread = GET_ENCLAVE_TLS(thread);
 
     /* thread is ready to exit, must inform LibOS by erasing clear_child_tid;
@@ -162,17 +161,17 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
     ocall_exit(0, /*is_exitgroup=*/false);
 }
 
-int _DkThreadResume(PAL_HANDLE thread_handle) {
+int _PalThreadResume(PAL_HANDLE thread_handle) {
     int ret = ocall_resume_thread(thread_handle->thread.tcs);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = ocall_sched_setaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = ocall_sched_getaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }

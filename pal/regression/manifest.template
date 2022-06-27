@@ -4,7 +4,7 @@ loader.insecure__use_cmdline_argv = true
 
 sgx.debug = true
 
-# PAL tests use `DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL)` which must allocate in the PAL-internal
+# PAL tests use `PalVirtualMemoryAlloc(PAL_ALLOC_INTERNAL)` which must allocate in the PAL-internal
 # part of the Gramine memory
 loader.pal_internal_mem_size = "64M"
 
@@ -12,7 +12,7 @@ sgx.nonpie_binary = true # all tests are currently non-PIE unless overridden
 
 sgx.allowed_files = [
   "file:test.txt", # for File2 test
-  "file:to_send.tmp", # for DkSendHandle test
+  "file:to_send.tmp", # for PalSendHandle test
 ]
 
 sgx.trusted_files = [

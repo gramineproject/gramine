@@ -19,7 +19,7 @@
 #define FATAL(fmt...)                                   \
     do {                                                \
         log_error("Fatal error in sync client: " fmt);  \
-        DkProcessExit(1);                               \
+        PalProcessExit(1);                              \
     } while (0)
 
 static bool g_sync_enabled = false;
@@ -52,7 +52,7 @@ static void put_sync_handle(struct sync_handle* handle) {
         free(handle->data);
         destroy_lock(&handle->use_lock);
         destroy_lock(&handle->prop_lock);
-        DkObjectClose(handle->event);
+        PalObjectClose(handle->event);
         free(handle);
     }
 }
@@ -81,13 +81,13 @@ static void sync_wait_without_lock(struct sync_handle* handle) {
         FATAL("waiting for event");
     lock(&handle->prop_lock);
     if (--handle->n_waiters == 0)
-        DkEventClear(handle->event);
+        PalEventClear(handle->event);
 }
 
 static void sync_notify(struct sync_handle* handle) {
     assert(locked(&handle->prop_lock));
     if (handle->n_waiters > 0)
-        DkEventSet(handle->event);
+        PalEventSet(handle->event);
 }
 
 static void sync_downgrade(struct sync_handle* handle) {
@@ -160,7 +160,7 @@ static int sync_init(struct sync_handle* handle, uint64_t id) {
         ret = -ENOMEM;
         goto err;
     }
-    if ((ret = DkEventCreate(&handle->event, /*init_signaled=*/false, /*auto_clear=*/false)) < 0) {
+    if ((ret = PalEventCreate(&handle->event, /*init_signaled=*/false, /*auto_clear=*/false)) < 0) {
         ret = pal_to_unix_errno(ret);
         goto err;
     }
@@ -199,7 +199,7 @@ err:
     if (lock_created(&handle->prop_lock))
         destroy_lock(&handle->prop_lock);
     if (handle->event)
-        DkObjectClose(handle->event);
+        PalObjectClose(handle->event);
     return ret;
 }
 

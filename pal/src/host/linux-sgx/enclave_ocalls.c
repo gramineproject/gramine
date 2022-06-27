@@ -359,7 +359,7 @@ int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[4])
 
     if (retval < 0) {
         log_error("OCALL_CPUID returned an error (impossible on benign host)");
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 
     if (!retval) {
@@ -1682,7 +1682,7 @@ int ocall_gettime(uint64_t* microsec_ptr) {
         if (microsec < last_microsec_before_ocall) {
             /* Probably a malicious host. */
             log_error("OCALL_GETTIME returned time value smaller than in the previous call");
-            _DkProcessExit(1);
+            _PalProcessExit(1);
         }
         /* Update `last_microsec`. */
         uint64_t expected_microsec = last_microsec_before_ocall;

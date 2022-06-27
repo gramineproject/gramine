@@ -144,45 +144,45 @@ class TC_01_Bootstrap(RegressionTestCase):
 
 class TC_02_Symbols(RegressionTestCase):
     ALL_SYMBOLS = [
-        'DkVirtualMemoryAlloc',
-        'DkVirtualMemoryFree',
-        'DkVirtualMemoryProtect',
-        'DkProcessCreate',
-        'DkProcessExit',
-        'DkStreamOpen',
-        'DkStreamWaitForClient',
-        'DkStreamRead',
-        'DkStreamWrite',
-        'DkStreamDelete',
-        'DkStreamMap',
-        'DkStreamUnmap',
-        'DkStreamSetLength',
-        'DkStreamFlush',
-        'DkSendHandle',
-        'DkReceiveHandle',
-        'DkStreamAttributesQuery',
-        'DkStreamAttributesQueryByHandle',
-        'DkStreamAttributesSetByHandle',
-        'DkStreamGetName',
-        'DkStreamChangeName',
-        'DkThreadCreate',
-        'DkThreadYieldExecution',
-        'DkThreadExit',
-        'DkThreadResume',
-        'DkSetExceptionHandler',
-        'DkEventCreate',
-        'DkEventSet',
-        'DkEventClear',
-        'DkEventWait',
-        'DkStreamsWaitEvents',
-        'DkObjectClose',
-        'DkSystemTimeQuery',
-        'DkRandomBitsRead',
-        'DkMemoryAvailableQuota',
+        'PalVirtualMemoryAlloc',
+        'PalVirtualMemoryFree',
+        'PalVirtualMemoryProtect',
+        'PalProcessCreate',
+        'PalProcessExit',
+        'PalStreamOpen',
+        'PalStreamWaitForClient',
+        'PalStreamRead',
+        'PalStreamWrite',
+        'PalStreamDelete',
+        'PalStreamMap',
+        'PalStreamUnmap',
+        'PalStreamSetLength',
+        'PalStreamFlush',
+        'PalSendHandle',
+        'PalReceiveHandle',
+        'PalStreamAttributesQuery',
+        'PalStreamAttributesQueryByHandle',
+        'PalStreamAttributesSetByHandle',
+        'PalStreamGetName',
+        'PalStreamChangeName',
+        'PalThreadCreate',
+        'PalThreadYieldExecution',
+        'PalThreadExit',
+        'PalThreadResume',
+        'PalSetExceptionHandler',
+        'PalEventCreate',
+        'PalEventSet',
+        'PalEventClear',
+        'PalEventWait',
+        'PalStreamsWaitEvents',
+        'PalObjectClose',
+        'PalSystemTimeQuery',
+        'PalRandomBitsRead',
+        'PalMemoryAvailableQuota',
     ]
     if ON_X86:
-        ALL_SYMBOLS.append('DkSegmentBaseGet')
-        ALL_SYMBOLS.append('DkSegmentBaseSet')
+        ALL_SYMBOLS.append('PalSegmentBaseGet')
+        ALL_SYMBOLS.append('PalSegmentBaseSet')
 
     def test_000_symbols(self):
         _, stderr = self.run_binary(['Symbols'])
@@ -417,7 +417,7 @@ class TC_20_SingleProcess(RegressionTestCase):
         # Thread Cleanup: Exit by return.
         self.assertIn('Thread 2 ok.', stderr)
 
-        # Thread Cleanup: Exit by DkThreadExit.
+        # Thread Cleanup: Exit by PalThreadExit.
         self.assertIn('Thread 3 ok.', stderr)
         self.assertNotIn('Exiting thread 3 failed.', stderr)
 
@@ -431,7 +431,7 @@ class TC_20_SingleProcess(RegressionTestCase):
         # Thread Cleanup: Exit by return.
         self.assertIn('Thread 2 ok.', stderr)
 
-        # Thread Cleanup: Exit by DkThreadExit.
+        # Thread Cleanup: Exit by PalThreadExit.
         self.assertIn('Thread 3 ok.', stderr)
         self.assertNotIn('Exiting thread 3 failed.', stderr)
 

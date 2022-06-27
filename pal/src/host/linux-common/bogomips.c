@@ -57,7 +57,7 @@ static double sanitize_bogomips_value(double v) {
     return v;
 }
 
-double _DkGetBogomips(void) {
+double _PalGetBogomips(void) {
     /* Although the whole file might not fit in this size, the first cpu description should. */
     char buf[2048];
     ssize_t len;

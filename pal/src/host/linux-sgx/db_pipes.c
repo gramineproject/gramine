@@ -53,23 +53,23 @@ static noreturn int thread_handshake_func(void* param) {
     LISTP_FOR_EACH_ENTRY_SAFE(thread_to_gc, tmp, &g_handshake_helper_thread_list, list) {
         if (__atomic_load_n(&thread_to_gc->clear_on_thread_exit, __ATOMIC_ACQUIRE) == 0) {
             LISTP_DEL(thread_to_gc, &g_handshake_helper_thread_list, list);
-            _DkObjectClose(thread_to_gc->thread_hdl);
+            _PalObjectClose(thread_to_gc->thread_hdl);
             free(thread_to_gc);
         }
     }
     spinlock_unlock(&g_handshake_helper_thread_list_lock);
 
-    int ret = _DkStreamSecureInit(handle, handle->pipe.is_server, &handle->pipe.session_key,
-                                  (LIB_SSL_CONTEXT**)&handle->pipe.ssl_ctx, NULL, 0);
+    int ret = _PalStreamSecureInit(handle, handle->pipe.is_server, &handle->pipe.session_key,
+                                   (LIB_SSL_CONTEXT**)&handle->pipe.ssl_ctx, NULL, 0);
     if (ret < 0) {
         log_error("Failed to initialize secure pipe %s: %d", handle->pipe.name.str, ret);
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 
     struct handshake_helper_thread* thread = malloc(sizeof(*thread));
     if (!thread) {
         log_error("Failed to allocate helper handshake thread list item");
-        _DkProcessExit(1);
+        _PalProcessExit(1);
     }
 
     /* parent thread associates this child thread with the pipe handle during `pipe_connect()` */
@@ -87,7 +87,7 @@ static noreturn int thread_handshake_func(void* param) {
     spinlock_unlock(&g_handshake_helper_thread_list_lock);
 
     __atomic_store_n(&handle->pipe.handshake_done, true, __ATOMIC_RELEASE);
-    _DkThreadExit(/*clear_child_tid=*/&thread->clear_on_thread_exit);
+    _PalThreadExit(/*clear_child_tid=*/&thread->clear_on_thread_exit);
     /* UNREACHABLE */
 }
 
@@ -198,8 +198,8 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
         return -PAL_ERROR_DENIED;
     }
 
-    ret = _DkStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
-                              (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
+    ret = _PalStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
+                               (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
     if (ret < 0) {
         ocall_close(clnt->pipe.fd);
         free(clnt);
@@ -273,7 +273,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
      * and assumes that client and server are two parallel entities (e.g., two threads) */
     PAL_HANDLE thread_hdl;
 
-    ret = _DkThreadCreate(&thread_hdl, thread_handshake_func, /*param=*/hdl);
+    ret = _PalThreadCreate(&thread_hdl, thread_handshake_func, /*param=*/hdl);
     if (ret < 0) {
         ocall_close(hdl->pipe.fd);
         free(hdl);
@@ -354,8 +354,8 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
     if (!handle->pipe.ssl_ctx)
         return -PAL_ERROR_NOTCONNECTION;
 
-    bytes = _DkStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
-                                /*is_blocking=*/!handle->pipe.nonblocking);
+    bytes = _PalStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
+                                 /*is_blocking=*/!handle->pipe.nonblocking);
 
     return bytes;
 }
@@ -384,8 +384,8 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
     if (!handle->pipe.ssl_ctx)
         return -PAL_ERROR_NOTCONNECTION;
 
-    bytes = _DkStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
-                                 /*is_blocking=*/!handle->pipe.nonblocking);
+    bytes = _PalStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
+                                  /*is_blocking=*/!handle->pipe.nonblocking);
 
     return bytes;
 }
@@ -402,7 +402,7 @@ static int pipe_close(PAL_HANDLE handle) {
             CPU_RELAX();
 
         if (handle->pipe.ssl_ctx) {
-            _DkStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
+            _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
             handle->pipe.ssl_ctx = NULL;
         }
         ocall_close(handle->pipe.fd);

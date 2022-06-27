@@ -110,7 +110,7 @@ static void red_zone_test(void) {
 int main(void) {
     pal_printf("Stack in main: %p\n", get_stack());
 
-    DkSetExceptionHandler(handler1, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(handler1, PAL_EVENT_ARITHMETIC_ERROR);
     __asm__ volatile (
             "movq $1, %%rax\n"
             "cqo\n"
@@ -119,7 +119,7 @@ int main(void) {
             "nop\n"
             ::: "rax", "rbx", "rdx", "cc");
 
-    DkSetExceptionHandler(handler2, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(handler2, PAL_EVENT_ARITHMETIC_ERROR);
     __asm__ volatile (
             "movq $1, %%rax\n"
             "cqo\n"
@@ -128,11 +128,11 @@ int main(void) {
             "nop\n"
             ::: "rax", "rbx", "rdx", "cc");
 
-    DkSetExceptionHandler(handler3, PAL_EVENT_MEMFAULT);
+    PalSetExceptionHandler(handler3, PAL_EVENT_MEMFAULT);
     *(volatile long*)0x1000 = 0;
     __asm__ volatile("nop");
 
-    DkSetExceptionHandler(handler4, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(handler4, PAL_EVENT_ARITHMETIC_ERROR);
     red_zone_test();
 
     return 0;

@@ -190,7 +190,7 @@ enum {
             tmp = NEXT_CP_ENTRY();                      \
         if (!tmp) {                                     \
             log_error("cannot find checkpoint entry");  \
-            DkProcessExit(1);                           \
+            PalProcessExit(1);                          \
         }                                               \
         tmp->cp_val;                                    \
     })
@@ -277,7 +277,7 @@ struct libos_cp_map_entry* get_cp_map_entry(void* map, void* addr, bool create);
         struct libos_cp_map_entry* e = get_cp_map_entry(store->cp_map, obj, true);  \
         if (!e) {                                                                   \
             log_error("cannot extend checkpoint map buffer");                       \
-            DkProcessExit(1);                                                       \
+            PalProcessExit(1);                                                      \
         }                                                                           \
         e->off = (off);                                                             \
     } while (0)

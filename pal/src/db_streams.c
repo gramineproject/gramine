@@ -108,9 +108,9 @@ static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops**
     return 0;
 }
 
-int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
-                  pal_share_flags_t share, enum pal_create_mode create,
-                  pal_stream_options_t options) {
+int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
+                   pal_share_flags_t share, enum pal_create_mode create,
+                   pal_stream_options_t options) {
     struct handle_ops* ops = NULL;
     char* type = NULL;
 
@@ -127,21 +127,21 @@ int _DkStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
     return ret;
 }
 
-/* PAL call DkStreamOpen: Open stream based on uri, as given access/share/
- * create/options flags. DkStreamOpen return a PAL_HANDLE to access the
+/* PAL call PalStreamOpen: Open stream based on uri, as given access/share/
+ * create/options flags. PalStreamOpen return a PAL_HANDLE to access the
  * stream in `handle` argument.
  *
  * FIXME: Currently `share` must match 1-1 to Linux open() `mode` argument. This isn't really
  * portable and will cause problems when implementing other PALs.
  */
-int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share,
-                 enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
+int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share,
+                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _DkStreamOpen(handle, uri, access, share, create, options);
+    return _PalStreamOpen(handle, uri, access, share, create, options);
 }
 
-static int _DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
-                                  pal_stream_options_t options) {
+static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
+                                   pal_stream_options_t options) {
     if (UNKNOWN_HANDLE(handle))
         return -PAL_ERROR_BADHANDLE;
 
@@ -155,12 +155,12 @@ static int _DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
     return ops->waitforclient(handle, client, options);
 }
 
-int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
+int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     *client = NULL;
-    return _DkStreamWaitForClient(handle, client, options);
+    return _PalStreamWaitForClient(handle, client, options);
 }
 
-int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -172,16 +172,16 @@ int _DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return ops->delete(handle, delete_mode);
 }
 
-int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     assert(handle);
 
-    return _DkStreamDelete(handle, delete_mode);
+    return _PalStreamDelete(handle, delete_mode);
 }
 
-/* _DkStreamRead for internal use. Read from stream as absolute offset.
-   The actual behavior of stream read is defined by handler */
-int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
-                      int addrlen) {
+/* _PalStreamRead for internal use. Read from stream as absolute offset.
+ * The actual behavior of stream read is defined by handler */
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
+                       int addrlen) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -204,14 +204,14 @@ int64_t _DkStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* 
     return ret;
 }
 
-int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
-                 size_t size) {
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
+                  size_t size) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _DkStreamRead(handle, offset, *count, buffer, size ? source : NULL,
-                                source ? size : 0);
+    int64_t ret = _PalStreamRead(handle, offset, *count, buffer, size ? source : NULL,
+                                 source ? size : 0);
 
     if (ret < 0) {
         return ret;
@@ -221,10 +221,10 @@ int DkStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer
     return 0;
 }
 
-/* _DkStreamWrite for internal use, write to stream at absolute offset.
+/* _PalStreamWrite for internal use, write to stream at absolute offset.
  * The actual behavior of stream write is defined by handler. */
-int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
-                       const char* addr, int addrlen) {
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
+                        const char* addr, int addrlen) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -247,13 +247,13 @@ int64_t _DkStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const
     return ret;
 }
 
-int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
-                  const char* dest) {
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                   const char* dest) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _DkStreamWrite(handle, offset, *count, buffer, dest, dest ? strlen(dest) : 0);
+    int64_t ret = _PalStreamWrite(handle, offset, *count, buffer, dest, dest ? strlen(dest) : 0);
 
     if (ret < 0) {
         return ret;
@@ -263,9 +263,9 @@ int DkStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffe
     return 0;
 }
 
-/* _DkStreamAttributesQuery of internal use. The function query attribute
-   of streams by their URI */
-int _DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
+/* _PalStreamAttributesQuery of internal use. The function query attribute of streams by their
+ *  URI */
+int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
     struct handle_ops* ops = NULL;
     char* type = NULL;
 
@@ -284,14 +284,14 @@ out:
     return ret;
 }
 
-int DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
+int PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
     if (!uri || !attr) {
         return -PAL_ERROR_INVAL;
     }
 
     PAL_STREAM_ATTR attr_buf;
 
-    int ret = _DkStreamAttributesQuery(uri, &attr_buf);
+    int ret = _PalStreamAttributesQuery(uri, &attr_buf);
 
     if (ret < 0) {
         return ret;
@@ -301,9 +301,9 @@ int DkStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
-/* _DkStreamAttributesQueryByHandle for internal use. Query attribute
-   of streams by their handle */
-int _DkStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr) {
+/* _PalStreamAttributesQueryByHandle for internal use. Query attribute of streams by their
+ *  handle */
+int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr) {
     const struct handle_ops* ops = HANDLE_OPS(hdl);
 
     if (!ops)
@@ -315,15 +315,15 @@ int _DkStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr) {
     return ops->attrquerybyhdl(hdl, attr);
 }
 
-int DkStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+int PalStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (!handle || !attr) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkStreamAttributesQueryByHandle(handle, attr);
+    return _PalStreamAttributesQueryByHandle(handle, attr);
 }
 
-int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (!handle || !attr) {
         return -PAL_ERROR_INVAL;
     }
@@ -340,7 +340,7 @@ int DkStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return ops->attrsetbyhdl(handle, attr);
 }
 
-int _DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
+int _PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -358,18 +358,18 @@ int _DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     return ret;
 }
 
-int DkStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
+int PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
     if (!handle || !buffer || !size) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkStreamGetName(handle, buffer, size);
+    return _PalStreamGetName(handle, buffer, size);
 }
 
-/* _DkStreamMap for internal use. Map specific handle to certain memory,
-   with given protection, offset and size */
-int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
-                 uint64_t size) {
+/* _PalStreamMap for internal use. Map specific handle to certain memory, with given protection,
+ *  offset and size */
+int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                  uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset));
     void* addr = *addr_ptr;
     int ret;
@@ -391,8 +391,8 @@ int _DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint
     return 0;
 }
 
-int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
-                size_t size) {
+int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+                 size_t size) {
     assert(addr_ptr);
     void* map_addr = *addr_ptr;
 
@@ -412,28 +412,28 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint6
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable(map_addr, size)) {
+    if (_PalCheckMemoryMappable(map_addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkStreamMap(handle, addr_ptr, prot, offset, size);
+    return _PalStreamMap(handle, addr_ptr, prot, offset, size);
 }
 
-int DkStreamUnmap(void* addr, size_t size) {
+int PalStreamUnmap(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (_DkCheckMemoryMappable(addr, size)) {
+    if (_PalCheckMemoryMappable(addr, size)) {
         return -PAL_ERROR_DENIED;
     }
 
-    return _DkStreamUnmap(addr, size);
+    return _PalStreamUnmap(addr, size);
 }
 
-/* _DkStreamSetLength for internal use. This function truncate the stream
-   to certain length. This call might not be support for certain streams */
-int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
+/* _PalStreamSetLength for internal use. This function truncate the stream to certain length. This
+ *  call might not be support for certain streams */
+int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -445,12 +445,12 @@ int64_t _DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return ops->setlength(handle, length);
 }
 
-int DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
+int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _DkStreamSetLength(handle, length);
+    int64_t ret = _PalStreamSetLength(handle, length);
 
     if (ret < 0) {
         return ret;
@@ -460,9 +460,9 @@ int DkStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return 0;
 }
 
-/* _DkStreamFlush for internal use. This function sync up the handle with
-   devices. Some streams may not support this operations. */
-int _DkStreamFlush(PAL_HANDLE handle) {
+/* _PalStreamFlush for internal use. This function sync up the handle with devices. Some streams may
+ *  not support this operations. */
+int _PalStreamFlush(PAL_HANDLE handle) {
     if (UNKNOWN_HANDLE(handle))
         return -PAL_ERROR_BADHANDLE;
 
@@ -477,32 +477,32 @@ int _DkStreamFlush(PAL_HANDLE handle) {
     return ops->flush(handle);
 }
 
-int DkStreamFlush(PAL_HANDLE handle) {
+int PalStreamFlush(PAL_HANDLE handle) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkStreamFlush(handle);
+    return _PalStreamFlush(handle);
 }
 
-int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
+int PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (!target_process || !cargo) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _DkSendHandle(target_process, cargo);
+    return _PalSendHandle(target_process, cargo);
 }
 
-int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+int PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (!source_process) {
         return -PAL_ERROR_INVAL;
     }
 
     *out_cargo = NULL;
-    return _DkReceiveHandle(source_process, out_cargo);
+    return _PalReceiveHandle(source_process, out_cargo);
 }
 
-int DkStreamChangeName(PAL_HANDLE hdl, const char* uri) {
+int PalStreamChangeName(PAL_HANDLE hdl, const char* uri) {
     struct handle_ops* ops = NULL;
     char* type = NULL;
     int ret;
@@ -527,9 +527,9 @@ out:
     return ret;
 }
 
-/* _DkStreamRealpath is used to obtain the real path of a stream. Some
-   streams may not have a real path. */
-const char* _DkStreamRealpath(PAL_HANDLE hdl) {
+/* _PalStreamRealpath is used to obtain the real path of a stream. Some streams may not have a real
+ *  path. */
+const char* _PalStreamRealpath(PAL_HANDLE hdl) {
     const struct handle_ops* ops = HANDLE_OPS(hdl);
 
     if (!ops || !ops->getrealpath)
@@ -538,6 +538,6 @@ const char* _DkStreamRealpath(PAL_HANDLE hdl) {
     return ops->getrealpath(hdl);
 }
 
-int DkDebugLog(const void* buffer, size_t size) {
-    return _DkDebugLog(buffer, size);
+int PalDebugLog(const void* buffer, size_t size) {
+    return _PalDebugLog(buffer, size);
 }
