@@ -80,6 +80,7 @@ typedef struct {
             uint64_t sendtimeout_us;
             bool is_nonblocking;
             bool reuseaddr;
+            bool broadcast;
             bool keepalive;
             bool tcp_cork;
             bool tcp_nodelay;

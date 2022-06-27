@@ -430,6 +430,7 @@ typedef struct _PAL_STREAM_ATTR {
             uint64_t receivetimeout_us, sendtimeout_us;
             bool reuseaddr;
             bool keepalive;
+            bool broadcast;
             bool tcp_cork;
             bool tcp_nodelay;
             bool ipv6_v6only;

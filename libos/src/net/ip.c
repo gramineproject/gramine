@@ -146,33 +146,21 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
         return pal_to_unix_errno(ret);
     }
 
-    struct libos_handle* client_handle = get_new_handle();
+    struct libos_handle* client_handle = get_new_socket_handle(handle->info.sock.domain,
+                                                               handle->info.sock.type,
+                                                               handle->info.sock.protocol,
+                                                               is_nonblocking);
     if (!client_handle) {
         PalObjectClose(client_pal_handle);
         return -ENOMEM;
     }
 
-    client_handle->type = TYPE_SOCK;
-    client_handle->fs = &socket_builtin_fs;
-    client_handle->flags = is_nonblocking ? O_NONBLOCK : 0;
-    client_handle->acc_mode = MAY_READ | MAY_WRITE;
-
     struct libos_sock_handle* client_sock = &client_handle->info.sock;
-    client_sock->pal_handle = client_pal_handle;
     client_sock->state = SOCK_CONNECTED;
-    client_sock->ops = handle->info.sock.ops;
-    client_sock->domain = handle->info.sock.domain;
-    client_sock->type = handle->info.sock.type;
-    client_sock->protocol = handle->info.sock.protocol;
-    client_sock->was_bound = false;
+    client_sock->pal_handle = client_pal_handle;
     client_sock->can_be_read = true;
     client_sock->can_be_written = true;
-    client_sock->reuseaddr = false;
-
-    if (!create_lock(&client_sock->lock) || !create_lock(&client_sock->recv_lock)) {
-        put_handle(client_handle);
-        return -ENOMEM;
-    }
+    assert(client_sock->ops == &sock_ip_ops);
 
     size_t len = 0;
     pal_to_linux_sockaddr(&pal_ip_addr, &client_sock->remote_addr, &len);
@@ -307,8 +295,9 @@ static int set_ipv6_option(struct libos_handle* handle, int optname, void* optva
 }
 
 static int set_socket_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     PAL_STREAM_ATTR attr;
-    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(sock->pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -321,19 +310,37 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
     }
     memcpy(&val, optval, sizeof(val));
 
+    bool need_pal_set = true;
     switch (optname) {
         case SO_REUSEADDR:
             attr.socket.reuseaddr = !!val;
+            break;
+        case SO_BROADCAST:
+            if (sock->type == SOCK_STREAM) {
+                /* This option has no effect on stream-oriented sockets. */
+                need_pal_set = false;
+            }
+            attr.socket.broadcast = !!val;
             break;
         default:
             return -ENOPROTOOPT;
     }
 
-    ret = PalStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
+    if (need_pal_set) {
+        ret = PalStreamAttributesSetByHandle(sock->pal_handle, &attr);
+        if (ret < 0) {
+            return pal_to_unix_errno(ret);
+        }
     }
-    handle->info.sock.reuseaddr = !!val;
+
+    switch (optname) {
+        case SO_REUSEADDR:
+            sock->reuseaddr = !!val;
+            break;
+        case SO_BROADCAST:
+            sock->broadcast = !!val;
+            break;
+    }
     return 0;
 }
 
