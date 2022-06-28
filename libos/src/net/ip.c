@@ -295,8 +295,9 @@ static int set_ipv6_option(struct libos_handle* handle, int optname, void* optva
 }
 
 static int set_socket_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
+    struct libos_sock_handle* sock = &handle->info.sock;
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    int ret = DkStreamAttributesQueryByHandle(sock->pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -309,28 +310,35 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
     }
     memcpy(&val, optval, sizeof(val));
 
+    bool need_pal_set = true;
     switch (optname) {
         case SO_REUSEADDR:
             attr.socket.reuseaddr = !!val;
             break;
         case SO_BROADCAST:
+            if (sock->type == SOCK_STREAM) {
+                /* This option has no effect on stream oriented sockets. */
+                need_pal_set = false;
+            }
             attr.socket.broadcast = !!val;
             break;
         default:
             return -ENOPROTOOPT;
     }
 
-    ret = DkStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
+    if (need_pal_set) {
+        ret = DkStreamAttributesSetByHandle(sock->pal_handle, &attr);
+        if (ret < 0) {
+            return pal_to_unix_errno(ret);
+        }
     }
 
     switch (optname) {
         case SO_REUSEADDR:
-            handle->info.sock.reuseaddr = !!val;
+            sock->reuseaddr = !!val;
             break;
         case SO_BROADCAST:
-            handle->info.sock.broadcast = !!val;
+            sock->broadcast = !!val;
             break;
     }
     return 0;
