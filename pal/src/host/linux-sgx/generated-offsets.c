@@ -1,7 +1,7 @@
 #include <asm/errno.h>
 
 #include "ecall_types.h"
-#include "generated-offsets-build.h"
+#include "generated_offsets_build.h"
 #include "gsgx.h"
 #include "ocall_types.h"
 #include "pal.h"

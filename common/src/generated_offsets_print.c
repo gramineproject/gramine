@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "generated-offsets-build.h"
+#include "generated_offsets_build.h"
 
 static void print_usage(const char* prog) {
     fprintf(stderr, "usage: %s [--h|--py]\n", prog);

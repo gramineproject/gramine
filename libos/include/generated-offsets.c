@@ -1,4 +1,4 @@
-#include "generated-offsets-build.h"
+#include "generated_offsets_build.h"
 #include "shim_internal.h"
 #include "shim_tcb.h"
 

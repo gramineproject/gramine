@@ -8,7 +8,7 @@
  * Python.
  *
  * To use, create a C file with `generated_offsets` array (ending with `OFFSET_END`) and
- * `generated_offsets_name` string. Then, build an executable from `generated-offsets-print.c` and
+ * `generated_offsets_name` string. Then, build an executable from `generated_offsets_print.c` and
  * your C file.
  *
  * TODO: The name "offsets" is not accurate anymore, we also use this setup for other values (such

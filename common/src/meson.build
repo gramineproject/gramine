@@ -39,7 +39,7 @@ common_dep = declare_dependency(
     ],
 )
 
-generated_offsets_print_src = files('generated-offsets-print.c')
+generated_offsets_print_src = files('generated_offsets_print.c')
 
 cryptoadapter_dep = declare_dependency(
     dependencies: mbedtls_pal_dep,
