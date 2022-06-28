@@ -7,8 +7,8 @@
  * IPC glue code for filesystem locks.
  */
 
-#include "shim_fs_lock.h"
-#include "shim_ipc.h"
+#include "libos_fs_lock.h"
+#include "libos_ipc.h"
 
 int ipc_posix_lock_set(const char* path, struct posix_lock* pl, bool wait) {
     assert(g_process_ipc_ids.leader_vmid);

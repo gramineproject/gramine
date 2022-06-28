@@ -6,12 +6,12 @@
 
 #include <stdbool.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_lock.h"
+#include "libos_types.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_lock.h"
-#include "shim_types.h"
 
 #define CMDLINE_SIZE 4096
 

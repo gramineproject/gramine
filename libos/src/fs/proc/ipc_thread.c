@@ -9,10 +9,10 @@
  * caching.
  */
 
-#include "shim_fs.h"
-#include "shim_fs_pseudo.h"
-#include "shim_ipc.h"
-#include "shim_process.h"
+#include "libos_fs.h"
+#include "libos_fs_pseudo.h"
+#include "libos_ipc.h"
+#include "libos_process.h"
 
 bool proc_ipc_thread_pid_name_exists(struct libos_dentry* parent, const char* name) {
     __UNUSED(parent);

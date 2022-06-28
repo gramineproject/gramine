@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "pal.h"
+
 int print_to_str(char** str, size_t off, size_t* size, const char* fmt, ...);
 
 /* every architecture must implement the following 2 functions */

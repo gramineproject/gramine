@@ -6,8 +6,8 @@
  */
 
 #include "api.h"
-#include "shim_ipc.h"
-#include "shim_process.h"
+#include "libos_ipc.h"
+#include "libos_process.h"
 
 void ipc_child_disconnect_callback(IDTYPE vmid) {
     /*

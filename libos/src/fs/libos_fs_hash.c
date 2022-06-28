@@ -5,7 +5,7 @@
  * This file contains functions to generate hash values for FS paths.
  */
 
-#include "shim_fs.h"
+#include "libos_fs.h"
 
 HASHTYPE hash_str(const char* p) {
     HASHTYPE hash = 0;

@@ -10,13 +10,13 @@
 #include "api.h"
 #include "assert.h"
 #include "atomic.h"
+#include "libos_defs.h"
+#include "libos_internal_arch.h"
+#include "libos_tcb.h"
+#include "libos_types.h"
 #include "log.h"
 #include "pal.h"
 #include "pal_error.h"
-#include "shim_defs.h"
-#include "shim_internal-arch.h"
-#include "shim_tcb.h"
-#include "shim_types.h"
 
 noreturn void* libos_init(int argc, const char** argv, const char** envp);
 

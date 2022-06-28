@@ -14,7 +14,7 @@
 #include <asm/mman.h>
 
 #include "api.h"
-#include "shim_table.h"
+#include "libos_table.h"
 
 long libos_syscall_mlock(unsigned long start, size_t len) {
     if (!access_ok((void*)start, len)) {

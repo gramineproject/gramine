@@ -140,9 +140,9 @@
 
 #include <stdint.h>
 
+#include "libos_types.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_types.h"
 
 #define uthash_fatal(msg)                      \
     do {                                       \
@@ -260,7 +260,7 @@ bool sync_lock(struct sync_handle* handle, int state, void* data, size_t data_si
 /* Release a handle, updating data associated with it. */
 void sync_unlock(struct sync_handle* handle, void* data, size_t data_size);
 
-/*** Message handlers (called from IPC, see ipc/shim_ipc_sync.c) ***/
+/*** Message handlers (called from IPC, see ipc/libos_ipc_sync.c) ***/
 
 struct libos_ipc_port;
 

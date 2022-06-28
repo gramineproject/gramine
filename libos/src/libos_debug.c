@@ -9,12 +9,12 @@
  * or remove them all (in case of `exec`).
  */
 
+#include "libos_checkpoint.h"
+#include "libos_lock.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_lock.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 
 void libos_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     PalDebugDescribeLocation(addr, buf, buf_size);

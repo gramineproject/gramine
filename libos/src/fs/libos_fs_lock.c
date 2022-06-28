@@ -5,10 +5,10 @@
 
 #include <linux/fcntl.h>
 
-#include "shim_fs.h"
-#include "shim_fs_lock.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
+#include "libos_fs.h"
+#include "libos_fs_lock.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
 
 /*
  * Global lock for the whole subsystem. Protects access to `g_fs_lock_list`, and also to dentry

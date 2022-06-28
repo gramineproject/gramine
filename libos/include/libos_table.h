@@ -11,7 +11,7 @@
 #include <asm/ldt.h>
 #endif
 
-#include "shim_types.h"
+#include "libos_types.h"
 
 typedef void (*libos_syscall_t)(void);
 

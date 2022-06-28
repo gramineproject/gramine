@@ -13,12 +13,12 @@
 #include <linux/fcntl.h>
 #include <stdalign.h>
 
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
 #include "stat.h"
 
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count) {

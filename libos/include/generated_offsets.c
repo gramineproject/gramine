@@ -1,6 +1,6 @@
 #include "generated-offsets-build.h"
-#include "shim_internal.h"
-#include "shim_tcb.h"
+#include "libos_internal.h"
+#include "libos_tcb.h"
 
 const char* generated_offsets_name = "LIBOS";
 

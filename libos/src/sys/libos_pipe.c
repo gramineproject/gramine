@@ -8,17 +8,17 @@
 #include <asm/fcntl.h>
 #include <errno.h>
 
+#include "libos_flags_conv.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_table.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "perm.h"
-#include "shim_flags_conv.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_table.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int flags, char* name) {

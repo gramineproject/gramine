@@ -21,16 +21,16 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "libos_checkpoint.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_pollable_event.h"
+#include "libos_signal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_types.h"
 #include "list.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_pollable_event.h"
-#include "shim_signal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_types.h"
 
 /* This bit is currently unoccupied in epoll events mask. */
 #define EPOLL_NEEDS_REARM ((uint32_t)(1u << 24))

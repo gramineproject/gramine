@@ -31,9 +31,9 @@
 
 #pragma once
 
+#include "libos_fs.h"
 #include "list.h"
 #include "perm.h"
-#include "shim_fs.h"
 
 /* Node types */
 enum pseudo_type {

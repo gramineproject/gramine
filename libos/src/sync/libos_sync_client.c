@@ -8,12 +8,12 @@
  */
 
 #include "assert.h"
-#include "shim_checkpoint.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_sync.h"
+#include "libos_checkpoint.h"
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_sync.h"
 #include "toml_utils.h"
 
 #define FATAL(fmt...)                                   \

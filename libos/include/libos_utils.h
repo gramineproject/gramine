@@ -4,9 +4,9 @@
 #pragma once
 
 #include "api.h"
+#include "libos_handle.h"
+#include "libos_types.h"
 #include "pal.h"
-#include "shim_handle.h"
-#include "shim_types.h"
 #include "toml.h"
 
 struct libos_handle;

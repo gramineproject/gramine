@@ -4,9 +4,9 @@
  */
 
 #include "cpu.h"
-#include "shim_flags_conv.h"
-#include "shim_fs.h"
-#include "shim_lock.h"
+#include "libos_flags_conv.h"
+#include "libos_fs.h"
+#include "libos_lock.h"
 #include "stat.h"
 
 int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,

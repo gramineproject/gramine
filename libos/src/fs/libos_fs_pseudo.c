@@ -10,8 +10,8 @@
  * never changes, we do NOT take `inode->lock` when reading it.
  */
 
-#include "shim_fs_pseudo.h"
-#include "shim_lock.h"
+#include "libos_fs_pseudo.h"
+#include "libos_lock.h"
 #include "stat.h"
 
 LISTP_TYPE(pseudo_node) g_pseudo_roots = LISTP_INIT;

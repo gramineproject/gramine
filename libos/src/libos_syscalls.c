@@ -4,13 +4,13 @@
  */
 
 #include "asan.h"
-#include "shim_defs.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_signal.h"
-#include "shim_table.h"
-#include "shim_tcb.h"
-#include "shim_thread.h"
+#include "libos_defs.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_signal.h"
+#include "libos_table.h"
+#include "libos_tcb.h"
+#include "libos_thread.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
                                                  arch_syscall_arg_t, arch_syscall_arg_t,

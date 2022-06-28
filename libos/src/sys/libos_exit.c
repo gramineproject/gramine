@@ -6,15 +6,15 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include "libos_fs_lock.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_fs_lock.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
 
 static noreturn void libos_clean_and_exit(int exit_code) {
     /*

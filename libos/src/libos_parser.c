@@ -18,12 +18,12 @@
 #include <linux/wait.h>
 
 #include "api.h"
-#include "shim_fs.h"
-#include "shim_internal.h"
-#include "shim_syscalls.h"
-#include "shim_table.h"
-#include "shim_types.h"
-#include "shim_vma.h"
+#include "libos_fs.h"
+#include "libos_internal.h"
+#include "libos_syscalls.h"
+#include "libos_table.h"
+#include "libos_types.h"
+#include "libos_vma.h"
 
 static void parse_open_flags(struct print_buf*, va_list*);
 static void parse_open_mode(struct print_buf*, va_list*);

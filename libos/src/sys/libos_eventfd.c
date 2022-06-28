@@ -10,12 +10,12 @@
 #include <asm/fcntl.h>
 #include <sys/eventfd.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_utils.h"
 #include "toml_utils.h"
 
 static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {

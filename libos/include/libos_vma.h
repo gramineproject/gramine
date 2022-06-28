@@ -14,10 +14,10 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "libos_defs.h"
+#include "libos_handle.h"
+#include "libos_types.h"
 #include "pal.h"
-#include "shim_defs.h"
-#include "shim_handle.h"
-#include "shim_types.h"
 
 #define VMA_COMMENT_LEN 16
 

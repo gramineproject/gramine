@@ -14,10 +14,10 @@
 
 #include <stddef.h>
 
+#include "libos_types.h"
 #include "list.h"
 #include "pal.h"
 #include "protected_files.h"
-#include "shim_types.h"
 
 /*
  * Represents a named key for opening files. The key might not be set yet: value of a key can be

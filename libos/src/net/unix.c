@@ -16,10 +16,10 @@
 
 #include "crypto.h"
 #include "hex.h"
+#include "libos_fs.h"
+#include "libos_internal.h"
+#include "libos_socket.h"
 #include "pal.h"
-#include "shim_fs.h"
-#include "shim_internal.h"
-#include "shim_socket.h"
 
 /*!
  * \brief Verify UNIX socket address and convert it to a unique socket name.

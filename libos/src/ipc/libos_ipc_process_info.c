@@ -8,11 +8,11 @@
  * This file contains functions and callbacks to handle IPC of general process information.
  */
 
-#include "shim_fs.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_thread.h"
+#include "libos_fs.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_thread.h"
 
 static const char* pid_meta_code_str[4] = {
     "CRED",

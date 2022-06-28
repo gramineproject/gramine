@@ -9,12 +9,12 @@
 #include <stdint.h>
 
 #include "avl_tree.h"
+#include "libos_defs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_thread.h"
+#include "libos_types.h"
 #include "pal.h"
-#include "shim_defs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_thread.h"
-#include "shim_types.h"
 
 enum {
     IPC_MSG_RESP = 0,
@@ -277,7 +277,7 @@ int ipc_sync_confirm_close_callback(IDTYPE src, void* data, unsigned long seq);
  */
 
 struct libos_ipc_posix_lock {
-    /* see `struct posix_lock` in `shim_fs_lock.h` */
+    /* see `struct posix_lock` in `libos_fs_lock.h` */
     int type;
     uint64_t start;
     uint64_t end;
@@ -290,7 +290,7 @@ struct libos_ipc_posix_lock {
 struct libos_ipc_posix_lock_resp {
     int result;
 
-    /* see `struct posix_lock` in `shim_fs_lock.h` */
+    /* see `struct posix_lock` in `libos_fs_lock.h` */
     int type;
     uint64_t start;
     uint64_t end;

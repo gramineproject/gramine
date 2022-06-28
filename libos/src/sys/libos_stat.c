@@ -8,11 +8,11 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_process.h"
-#include "shim_table.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_process.h"
+#include "libos_table.h"
 #include "stat.h"
 
 static int do_stat(struct libos_dentry* dent, struct stat* stat) {

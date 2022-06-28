@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include "shim_tcb-arch.h"
+#include "libos_tcb_arch.h"
 
 /* asm/signal.h */
 #define SIGS_CNT 64

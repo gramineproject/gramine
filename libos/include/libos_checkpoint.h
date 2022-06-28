@@ -10,10 +10,10 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "libos_ipc.h"
+#include "libos_process.h"
+#include "libos_thread.h"
 #include "pal.h"
-#include "shim_ipc.h"
-#include "shim_process.h"
-#include "shim_thread.h"
 
 #define __attribute_migratable __attribute__((section(".migratable")))
 

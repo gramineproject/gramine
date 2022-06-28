@@ -23,17 +23,17 @@
 
 #include "asan.h"
 #include "elf.h"
-#include "shim_checkpoint.h"
-#include "shim_flags_conv.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_utils.h"
-#include "shim_vdso.h"
-#include "shim_vdso-arch.h"
-#include "shim_vma.h"
+#include "libos_checkpoint.h"
+#include "libos_flags_conv.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_utils.h"
+#include "libos_vdso.h"
+#include "libos_vdso_arch.h"
+#include "libos_vma.h"
 
 #define INTERP_PATH_SIZE 256 /* Default shebang size */
 

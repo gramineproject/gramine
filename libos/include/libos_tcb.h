@@ -4,9 +4,9 @@
 #include "assert.h"
 #include "atomic.h"
 #include "gramine_entry_api.h"
+#include "libos_entry.h"
+#include "libos_tcb_arch.h"
 #include "pal.h"
-#include "shim_entry.h"
-#include "shim_tcb-arch.h"
 
 struct libos_context {
     PAL_CONTEXT* regs;

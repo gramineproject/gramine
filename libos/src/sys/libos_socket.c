@@ -5,13 +5,13 @@
 
 
 #include "api.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_socket.h"
-#include "shim_table.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_socket.h"
+#include "libos_table.h"
 
 /*
  * Sockets can be in 4 states: NEW, BOUND, LISTENING and CONNECTED.

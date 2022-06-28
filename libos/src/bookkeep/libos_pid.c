@@ -7,11 +7,11 @@
 
 #include "assert.h"
 #include "avl_tree.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "log.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 
 /* Represents a range of ids `[start; end]` (i.e. `end` is included). There is no representation of
  * an empty range, but it's not needed. */
@@ -173,7 +173,7 @@ void release_id(IDTYPE id) {
             if (ret < 0) {
                 /* TODO: this is a fatal error, unfortunately it can happen if the IPC leader exits
                  * without fully waiting for this process to end. For more information check
-                 * "libos/src/sys/shim_exit.c". Change to `log_error` + `die` after fixing. */
+                 * "libos/src/sys/libos_exit.c". Change to `log_error` + `die` after fixing. */
                 log_warning("IPC pid release failed");
                 PalProcessExit(1);
             }

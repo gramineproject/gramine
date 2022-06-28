@@ -16,14 +16,14 @@
 #include <limits.h>
 #include <linux/signal.h>
 
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
 
 long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act,
                                 struct __kernel_sigaction* oldact, size_t sigsetsize) {
@@ -252,7 +252,7 @@ long libos_syscall_rt_sigtimedwait(const __sigset_t* unblocked_ptr, siginfo_t* i
     }
 
     /* If `have_pending_signals()` spotted a signal, we just pray it was targeted directly at this
-     * thread or no other thread handles it first; see also `do_nanosleep()` in shim_sleep.c */
+     * thread or no other thread handles it first; see also `do_nanosleep()` in libos_sleep.c */
 
     /* invert the set of unblocked signals to get the mask for popping one of requested signals */
     __sigset_t all_blocked;

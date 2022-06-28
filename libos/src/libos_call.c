@@ -3,15 +3,15 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-/* This file implements Gramine custom calls from userspace. See `shim_entry.h` for details. */
+/* This file implements Gramine custom calls from userspace. See `libos_entry.h` for details. */
 
 #include <limits.h>
 
 #include "api.h"
 #include "asan.h"
 #include "gramine_entry_api.h"
-#include "shim_entry.h"
-#include "shim_utils.h"
+#include "libos_entry.h"
+#include "libos_utils.h"
 
 /* Test: do nothing, return success */
 static int run_test_pass(void) {

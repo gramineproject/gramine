@@ -7,10 +7,10 @@
  * Inter process signal handling using IPC.
  */
 
-#include "shim_ipc.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_thread.h"
+#include "libos_ipc.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_thread.h"
 
 static int ipc_pid_kill_send(enum kill_type type, IDTYPE sender, IDTYPE dest_pid, IDTYPE target,
                              int sig) {

@@ -22,13 +22,13 @@
 #include "api.h"
 #include "assert.h"
 #include "avl_tree.h"
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 #include "spinlock.h"
 
 struct libos_futex;

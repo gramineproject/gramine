@@ -3,9 +3,9 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include "libos_internal.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_utils.h"
 
 int read_exact(PAL_HANDLE handle, void* buf, size_t size) {
     size_t read = 0;

@@ -7,9 +7,9 @@
 
 #include <errno.h>
 
+#include "libos_internal.h"
+#include "libos_table.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_table.h"
 
 long libos_syscall_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone* tz) {
     if (!tv)

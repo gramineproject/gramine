@@ -7,12 +7,12 @@
 
 #include <asm/ioctls.h>
 
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_table.h"
 #include "pal.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_table.h"
 
 static void signal_io(IDTYPE caller, void* arg) {
     __UNUSED(caller);

@@ -1,5 +1,5 @@
+#include "libos_internal.h"
 #include "pal.h"
-#include "shim_internal.h"
 
 int event_wait_with_retry(PAL_HANDLE handle) {
     int ret;

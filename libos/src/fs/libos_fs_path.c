@@ -3,7 +3,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include "shim_fs.h"
+#include "libos_fs.h"
 
 static int hstat(struct libos_handle* handle, struct stat* buf) {
     if (!handle->inode) {

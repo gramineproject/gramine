@@ -11,8 +11,8 @@
 
 #include <asm/unistd.h>
 
-#include "shim_internal.h"
-#include "shim_table.h"
+#include "libos_internal.h"
+#include "libos_table.h"
 
 libos_syscall_t libos_syscall_table[LIBOS_SYSCALL_BOUND] = {
     [__NR_read]                   = (libos_syscall_t)libos_syscall_read,

@@ -5,12 +5,12 @@
 
 #include "api.h"
 #include "cpu.h"
+#include "libos_internal.h"
+#include "libos_signal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_signal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
 
 long libos_syscall_pause(void) {
     thread_prepare_wait();

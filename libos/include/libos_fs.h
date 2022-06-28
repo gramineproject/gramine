@@ -11,12 +11,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "libos_defs.h"
+#include "libos_handle.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_defs.h"
-#include "shim_handle.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 
 struct libos_handle;
 
@@ -121,7 +121,7 @@ struct libos_fs_ops {
      * mapping anonymous memory (`PalVirtualMemoryAlloc`) and writing data.
      *
      * `addr`, `offset` and `size` must be alloc-aligned (see `IS_ALLOC_ALIGNED*` macros in
-     * `shim_internal.h`).
+     * `libos_internal.h`).
      */
     int (*mmap)(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                 uint64_t offset);
@@ -227,12 +227,12 @@ struct libos_dentry {
      * `g_dcache_lock`. */
     struct libos_mount* attached_mount;
 
-    /* File lock information, stored only in the main process. Managed by `shim_fs_lock.c`. */
+    /* File lock information, stored only in the main process. Managed by `libos_fs_lock.c`. */
     struct fs_lock* fs_lock;
 
     /* True if the file might have locks placed by current process. Used in processes other than
      * main process, to prevent unnecessary IPC calls on handle close. Managed by
-     * `shim_fs_lock.c`. */
+     * `libos_fs_lock.c`. */
     bool maybe_has_fs_locks;
 
     REFTYPE ref_count;

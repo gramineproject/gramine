@@ -8,10 +8,10 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
-#include "shim_fs.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_table.h"
+#include "libos_fs.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_table.h"
 
 long libos_syscall_access(const char* file, mode_t mode) {
     return libos_syscall_faccessat(AT_FDCWD, file, mode);

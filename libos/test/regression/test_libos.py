@@ -39,7 +39,7 @@ class TC_00_Unittests(RegressionTestCase):
     def _test_asan(self, case, desc):
         expected_list = [f'asan: {desc}']
         if self.has_debug():
-            expected_list.append(f'asan: location: run_test_asan_{case} at shim_call.c')
+            expected_list.append(f'asan: location: run_test_asan_{case} at libos_call.c')
         self._test_abort(f'asan_{case}', expected_list)
 
     def _test_abort(self, test_name, expected_list):
@@ -1132,9 +1132,9 @@ class TC_50_GDB(RegressionTestCase):
     @unittest.skipUnless(ON_X86, 'x86-specific')
     def test_010_regs_x86_64(self):
         # To run this test manually, use:
-        # GDB=1 GDB_SCRIPT=debug_regs-x86_64.gdb gramine-{direct|sgx} debug_regs-x86_64
+        # GDB=1 GDB_SCRIPT=debug_regs_x86_64.gdb gramine-{direct|sgx} debug_regs_x86_64
 
-        stdout, _ = self.run_gdb(['debug_regs-x86_64'], 'debug_regs-x86_64.gdb')
+        stdout, _ = self.run_gdb(['debug_regs_x86_64'], 'debug_regs_x86_64.gdb')
 
         rdx = self.find('RDX', stdout)
         self.assertEqual(rdx, '$1 = 0x1000100010001000')

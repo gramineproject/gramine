@@ -4,9 +4,9 @@
  */
 
 #include "api.h"
+#include "libos_ipc.h"
+#include "libos_types.h"
 #include "log.h"
-#include "shim_ipc.h"
-#include "shim_types.h"
 
 static IDTYPE g_last_vmid = STARTING_VMID;
 

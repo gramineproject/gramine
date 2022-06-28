@@ -4,11 +4,11 @@
  */
 
 #include "api.h"
+#include "libos_internal.h"
+#include "libos_pollable_event.h"
+#include "libos_utils.h"
 #include "log.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_pollable_event.h"
-#include "shim_utils.h"
 
 int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];

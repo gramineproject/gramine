@@ -12,14 +12,14 @@
 #include <errno.h>
 #include <sys/mman.h>
 
+#include "libos_flags_conv.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_vma.h"
 #include "pal.h"
 #include "pal_error.h"
-#include "shim_flags_conv.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_vma.h"
 
 #ifdef MAP_32BIT /* x86_64-specific */
 #define MAP_32BIT_IF_SUPPORTED MAP_32BIT

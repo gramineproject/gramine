@@ -14,13 +14,13 @@
 #include "api.h"
 #include "assert.h"
 #include "avl_tree.h"
+#include "libos_checkpoint.h"
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 
 struct libos_ipc_connection {
     struct avl_tree_node node;

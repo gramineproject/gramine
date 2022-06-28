@@ -17,14 +17,14 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
-#include "shim_fs.h"
-#include "shim_fs_lock.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
-#include "shim_thread.h"
+#include "libos_fs.h"
+#include "libos_fs_lock.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
+#include "libos_thread.h"
 
 #define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 
@@ -185,7 +185,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             ret = set_handle_flags(hdl, arg, FCNTL_SETFL_MASK);
             break;
 
-        /* F_SETLK, F_SETLKW (struct flock*): see `shim_fs_lock.h` for caveats */
+        /* F_SETLK, F_SETLKW (struct flock*): see `libos_fs_lock.h` for caveats */
         case F_SETLK:
         case F_SETLKW: {
             struct flock *fl = (struct flock*)arg;
@@ -220,7 +220,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             break;
         }
 
-        /* F_GETLK (struct flock*): see `shim_fs_lock.h` for caveats */
+        /* F_GETLK (struct flock*): see `libos_fs_lock.h` for caveats */
         case F_GETLK: {
             struct flock *fl = (struct flock*)arg;
             if (!is_user_memory_readable(fl, sizeof(*fl))

@@ -16,7 +16,7 @@
  * way.
  */
 
-#include "shim_fs.h"
+#include "libos_fs.h"
 
 int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm) {
     assert(locked(&g_dcache_lock));

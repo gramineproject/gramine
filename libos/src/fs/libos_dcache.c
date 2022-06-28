@@ -7,13 +7,13 @@
  * This file contains code for maintaining directory cache in library OS.
  */
 
+#include "libos_checkpoint.h"
+#include "libos_fs.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_types.h"
 #include "list.h"
 #include "perm.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_types.h"
 #include "stat.h"
 
 static struct libos_lock dcache_mgr_lock;

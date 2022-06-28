@@ -5,8 +5,8 @@
 
 #pragma once
 
+#include "libos_handle.h"
 #include "linux_socket.h"
-#include "shim_handle.h"
 
 #define LIBOS_SOCK_MAX_PENDING_CONNS 4096
 

@@ -10,10 +10,10 @@
  * (IPC helper). With high volume of requests, this might be a performance bottleneck.
  */
 
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_sync.h"
 #include "pal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_sync.h"
 
 #define FATAL(fmt...)                                   \
     do {                                                \

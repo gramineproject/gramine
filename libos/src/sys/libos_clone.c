@@ -7,16 +7,16 @@
 #include <errno.h>
 #include <linux/sched.h>
 
+#include "libos_checkpoint.h"
+#include "libos_fs.h"
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_types.h"
+#include "libos_vma.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_types.h"
-#include "shim_vma.h"
 
 struct libos_clone_args {
     PAL_HANDLE create_event;

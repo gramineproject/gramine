@@ -114,7 +114,7 @@ manifests = [
 
 manifests = [
   "cpuid",
-  "debug_regs-x86_64",
+  "debug_regs_x86_64",
   "rdtsc",
   "bootstrap_cpp",
   "sighandler_divbyzero",

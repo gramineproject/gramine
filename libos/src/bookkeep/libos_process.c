@@ -4,14 +4,14 @@
  */
 
 #include "api.h"
+#include "libos_checkpoint.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_thread.h"
 #include "list.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_thread.h"
 
 typedef bool (*child_cmp_t)(const struct libos_child_process*, unsigned long);
 

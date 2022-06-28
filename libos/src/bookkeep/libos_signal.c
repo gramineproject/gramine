@@ -14,16 +14,16 @@
 #include <stdnoreturn.h>
 
 #include "cpu.h"
+#include "libos_checkpoint.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_signal.h"
+#include "libos_thread.h"
+#include "libos_types.h"
+#include "libos_utils.h"
+#include "libos_vma.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_signal.h"
-#include "shim_thread.h"
-#include "shim_types.h"
-#include "shim_utils.h"
-#include "shim_vma.h"
 #include "toml_utils.h"
 
 static bool g_check_invalid_ptrs = true;

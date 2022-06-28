@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "shim_types.h"
+#include "libos_types.h"
 
 struct libos_mem_file {
     char* buf;
@@ -23,7 +23,7 @@ void mem_file_destroy(struct libos_mem_file* mem);
 
 /*
  * The following operations can be used to implement corresponding filesystem callbacks (see
- * `shim_fs.h`). Note that the caller has to pass the file position, and (in case of `read` and
+ * `libos_fs.h`). Note that the caller has to pass the file position, and (in case of `read` and
  * `write`) update it themselves after a successful operation.
  */
 ssize_t mem_file_read(struct libos_mem_file* mem, file_off_t pos_start, void* buf, size_t size);

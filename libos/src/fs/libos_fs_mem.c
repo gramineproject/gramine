@@ -4,8 +4,8 @@
  */
 
 #include "api.h"
-#include "shim_fs.h"
-#include "shim_fs_mem.h"
+#include "libos_fs.h"
+#include "libos_fs_mem.h"
 
 /* Minimum allocation size in `slabmgr.h` */
 #define MIN_RESIZE ((size_t)16)

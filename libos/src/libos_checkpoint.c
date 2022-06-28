@@ -5,20 +5,20 @@
  * This file contains implementation of checkpoint and restore.
  */
 
-#include "shim_checkpoint.h"
+#include "libos_checkpoint.h"
 
 #include <asm/mman.h>
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_process.h"
+#include "libos_thread.h"
+#include "libos_utils.h"
+#include "libos_vma.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_process.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
-#include "shim_vma.h"
 
 #define CP_MMAP_FLAGS    (MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL)
 #define CP_MAP_ENTRY_NUM 64

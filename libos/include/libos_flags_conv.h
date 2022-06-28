@@ -18,8 +18,8 @@
 #include <linux/mman.h>
 
 #include "assert.h"
+#include "libos_internal.h"
 #include "pal.h"
-#include "shim_internal.h"
 
 static inline pal_prot_flags_t LINUX_PROT_TO_PAL(int prot, int map_flags) {
     assert(WITHIN_MASK(prot, PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC

@@ -9,9 +9,9 @@
 #include <stdbool.h>
 
 #include "assert.h"
+#include "libos_thread.h"
+#include "libos_types.h"
 #include "pal.h"
-#include "shim_thread.h"
-#include "shim_types.h"
 
 static inline bool lock_created(struct libos_lock* l) {
     return l->lock != NULL;

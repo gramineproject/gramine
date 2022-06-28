@@ -7,10 +7,10 @@
 
 #include <errno.h>
 
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
 
 long libos_syscall_dup(unsigned int fd) {
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);

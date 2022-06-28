@@ -11,8 +11,8 @@
 
 #include <stdbool.h>
 
+#include "libos_types.h"
 #include "list.h"
-#include "shim_types.h"
 
 #define FS_LOCK_EOF ((uint64_t)-1)
 

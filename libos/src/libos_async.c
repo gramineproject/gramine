@@ -7,11 +7,11 @@
 
 #include "list.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_pollable_event.h"
-#include "shim_thread.h"
-#include "shim_utils.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_pollable_event.h"
+#include "libos_thread.h"
+#include "libos_utils.h"
 
 #define IDLE_SLEEP_TIME 1000000
 #define MAX_IDLE_CYCLES 10000

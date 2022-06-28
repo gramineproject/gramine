@@ -6,12 +6,12 @@
 #include "assert.h"
 #include "crypto.h"
 #include "hex.h"
+#include "libos_checkpoint.h"
+#include "libos_fs_encrypted.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_utils.h"
 #include "protected_files.h"
-#include "shim_checkpoint.h"
-#include "shim_fs_encrypted.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_utils.h"
 #include "toml_utils.h"
 
 static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;

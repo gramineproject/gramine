@@ -9,15 +9,15 @@
 #include <linux/wait.h>
 #include <stdbool.h>
 
-#include "assert.h"
 #include "api.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_types.h"
+#include "assert.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_types.h"
 
 /* For wait4() return value */
 #define WCOREFLAG 0x80

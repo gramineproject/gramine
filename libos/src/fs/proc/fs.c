@@ -8,8 +8,8 @@
  */
 
 #include "api.h"
-#include "shim_fs_pseudo.h"
-#include "shim_process.h"
+#include "libos_fs_pseudo.h"
+#include "libos_process.h"
 
 int proc_self_follow_link(struct libos_dentry* dent, char** out_target) {
     __UNUSED(dent);

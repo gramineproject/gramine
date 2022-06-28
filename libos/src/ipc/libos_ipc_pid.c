@@ -8,9 +8,9 @@
 #include "api.h"
 #include "assert.h"
 #include "avl_tree.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_types.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_types.h"
 
 /* Represents a range of ids `[start; end]` (i.e. `end` is included). There is no representation of
  * an empty range, but it's not needed. */

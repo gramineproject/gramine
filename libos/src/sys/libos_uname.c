@@ -12,8 +12,8 @@
 #include <sys/utsname.h>
 
 #include "api.h"
-#include "shim_internal.h"
-#include "shim_table.h"
+#include "libos_internal.h"
+#include "libos_table.h"
 
 /* This structure is *not* shared between Gramine processes, despite it should. As a result,
  * effects of set{host,domain}name in process A will not be visible in process B.

@@ -9,9 +9,9 @@
  * accesses.
  */
 
+#include "libos_fs.h"
+#include "libos_socket.h"
 #include "pal.h"
-#include "shim_fs.h"
-#include "shim_socket.h"
 #include "socket_utils.h"
 
 static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {

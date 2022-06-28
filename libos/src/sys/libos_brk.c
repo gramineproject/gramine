@@ -9,13 +9,13 @@
 
 #include <sys/mman.h>
 
+#include "libos_checkpoint.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_table.h"
+#include "libos_utils.h"
+#include "libos_vma.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_table.h"
-#include "shim_utils.h"
-#include "shim_vma.h"
 #include "toml_utils.h"
 
 static struct {

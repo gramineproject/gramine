@@ -9,13 +9,13 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
 #include "stat.h"
 
 #define BUF_SIZE (64 * 1024) /* read/write in 64KB chunks for sendfile() */

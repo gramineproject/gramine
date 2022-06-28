@@ -4,11 +4,11 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_types.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_types.h"
 
 long libos_syscall_getpid(void) {
     return g_process.pid;

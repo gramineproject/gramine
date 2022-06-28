@@ -5,8 +5,8 @@
 
 #include <limits.h>
 
-#include "shim_internal.h"
-#include "shim_table.h"
+#include "libos_internal.h"
+#include "libos_table.h"
 
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags) {
     if (flags & ~(GRND_NONBLOCK | GRND_RANDOM | GRND_INSECURE))

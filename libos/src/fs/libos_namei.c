@@ -9,11 +9,11 @@
 #include <linux/fcntl.h>
 #include <stdbool.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_lock.h"
+#include "libos_process.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_lock.h"
-#include "shim_process.h"
 #include "stat.h"
 
 int check_permissions(struct libos_dentry* dent, mode_t mask) {

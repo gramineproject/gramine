@@ -7,13 +7,13 @@
 
 #include <errno.h>
 
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_table.h"
+#include "libos_thread.h"
+#include "libos_vma.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_table.h"
-#include "shim_thread.h"
-#include "shim_vma.h"
 
 static int close_on_exec(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {

@@ -14,15 +14,15 @@
 #include <stdint.h>
 
 #include "atomic.h"  // TODO: migrate to stdatomic.h
+#include "libos_defs.h"
+#include "libos_fs_mem.h"
+#include "libos_lock.h"
+#include "libos_pollable_event.h"
+#include "libos_sync.h"
+#include "libos_types.h"
 #include "linux_socket.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_defs.h"
-#include "shim_fs_mem.h"
-#include "shim_lock.h"
-#include "shim_pollable_event.h"
-#include "shim_sync.h"
-#include "shim_types.h"
 
 /* Handle types. Many of these are used by a single filesystem. */
 enum libos_handle_type {
@@ -43,7 +43,7 @@ enum libos_handle_type {
     TYPE_SOCK,       /* sockets, used by `socket` filesystem */
 
     /* Special handles: */
-    TYPE_EPOLL,      /* epoll handles, see `shim_epoll.c` */
+    TYPE_EPOLL,      /* epoll handles, see `libos_epoll.c` */
     TYPE_EVENTFD,    /* eventfd handles, used by `eventfd` filesystem */
 };
 
@@ -80,7 +80,7 @@ enum libos_sock_state {
  * protected by `lock`.
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
- * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/shim_socket.c").
+ * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/libos_socket.c").
  * `pal_handle` should be accessed using atomic operations.
  * If you need to take both `recv_lock` and `lock`, take the former first.
  */
@@ -131,7 +131,7 @@ struct libos_str_handle {
 DEFINE_LISTP(libos_epoll_item);
 DEFINE_LISTP(libos_epoll_waiter);
 struct libos_epoll_handle {
-    /* For details about these fields see `shim_epoll.c`. */
+    /* For details about these fields see `libos_epoll.c`. */
     struct libos_lock lock;
     LISTP_TYPE(libos_epoll_waiter) waiters;
     LISTP_TYPE(libos_epoll_item) items;
@@ -153,7 +153,7 @@ struct libos_handle {
 
     /*
      * Inode associated with this handle. Currently optional, and only for the use of underlying
-     * filesystem (see `libos_inode` in `shim_fs.h`). Eventually, should replace `dentry` fields.
+     * filesystem (see `libos_inode` in `libos_fs.h`). Eventually, should replace `dentry` fields.
      *
      * This field does not change, so reading it does not require holding `lock`.
      *

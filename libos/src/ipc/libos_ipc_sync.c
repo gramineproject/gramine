@@ -8,8 +8,8 @@
  * the actual logic to sync_server_* and sync_client_* functions.
  */
 
-#include "shim_ipc.h"
-#include "shim_sync.h"
+#include "libos_ipc.h"
+#include "libos_sync.h"
 
 static const char* sync_state_names[SYNC_STATE_NUM] = {
     [SYNC_STATE_INVALID]   = "invalid",

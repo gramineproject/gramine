@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "shim_defs.h"
-#include "shim_types.h"
+#include "libos_defs.h"
+#include "libos_types.h"
 
 #define __WCOREDUMP_BIT 0x80
 

@@ -12,11 +12,11 @@
 #include <asm/mman.h>
 
 #include "asan.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_utils.h"
+#include "libos_vma.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_utils.h"
-#include "shim_vma.h"
 
 static struct libos_lock slab_mgr_lock;
 

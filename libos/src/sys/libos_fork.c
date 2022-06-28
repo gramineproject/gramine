@@ -7,7 +7,7 @@
 #include <linux/sched.h>
 #include <linux/signal.h>
 
-#include "shim_table.h"
+#include "libos_table.h"
 
 long libos_syscall_fork(void) {
     return libos_syscall_clone(SIGCHLD, 0, NULL, NULL, 0);

@@ -5,14 +5,14 @@
  * This file contains code to maintain bookkeeping for handles in library OS.
  */
 
+#include "libos_checkpoint.h"
+#include "libos_fs.h"
+#include "libos_fs_lock.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_thread.h"
 #include "pal.h"
-#include "shim_checkpoint.h"
-#include "shim_fs.h"
-#include "shim_fs_lock.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_thread.h"
 #include "stat.h"
 #include "toml_utils.h"
 
@@ -739,7 +739,7 @@ BEGIN_CP_FUNC(handle) {
 
         /* This list is created empty and all necessary references are added when checkpointing
          * items lists from specific epoll handles. See `epoll_items_list` checkpointing in
-         * `shim_epoll.c` for more details. */
+         * `libos_epoll.c` for more details. */
         INIT_LISTP(&new_hdl->epoll_items);
         new_hdl->epoll_items_count = 0;
 

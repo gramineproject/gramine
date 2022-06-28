@@ -27,9 +27,9 @@
 #include <linux/version.h>
 
 #include "elf.h"
+#include "libos_types_arch.h"
 #include "linux_socket.h"
 #include "pal.h"
-#include "shim_types-arch.h"
 
 typedef unsigned long int nfds_t;
 typedef unsigned long int nlink_t;

@@ -10,15 +10,15 @@
 #include "api.h"
 #include "assert.h"
 #include "cpu.h"
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_pollable_event.h"
+#include "libos_thread.h"
+#include "libos_types.h"
+#include "libos_utils.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_pollable_event.h"
-#include "shim_thread.h"
-#include "shim_types.h"
-#include "shim_utils.h"
 
 #define LOG_PREFIX "IPC worker: "
 
@@ -83,7 +83,7 @@ static void disconnect_callbacks(struct libos_ipc_connection* conn) {
     }
 
     /*
-     * Currently outgoing IPC connections (handled in `shim_ipc.c`) are not cleaned up - there is
+     * Currently outgoing IPC connections (handled in `libos_ipc.c`) are not cleaned up - there is
      * no place that can notice disconnection of an outgoing connection other than a failure to send
      * data via such connection. We try to remove an outgoing IPC connection to a process that just
      * disconnected here - usually we have connections set up in both ways.

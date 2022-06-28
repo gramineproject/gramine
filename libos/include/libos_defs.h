@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shim_syscalls.h"
+#include "libos_syscalls.h"
 
 /* Names and values are taken from the Linux kernel. */
 #define ERESTARTSYS     512 /* Usual case - restart if SA_RESTART is set. */

@@ -7,10 +7,10 @@
 
 #include <errno.h>
 
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_table.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_table.h"
 
 /* TODO: `readv` and `writev` syscalls below are not correctly atomic if the implementation does not
  * provide `.readv` and `.writev` callbacks and does not use file position (`hdl->pos`). This most

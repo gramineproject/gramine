@@ -11,13 +11,13 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "libos_internal.h"
+#include "libos_pollable_event.h"
+#include "libos_signal.h"
+#include "libos_tcb.h"
+#include "libos_types.h"
 #include "list.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_pollable_event.h"
-#include "shim_signal.h"
-#include "shim_tcb.h"
-#include "shim_types.h"
 
 #define WAKE_QUEUE_TAIL ((void*)1)
 /* If next is NULL, then this node is not on any queue.
@@ -96,7 +96,7 @@ struct libos_thread {
     /* If you need both locks, take `thread->signal_dispositions->lock` before `thread->lock`. */
     struct libos_signal_dispositions* signal_dispositions;
     struct libos_signal_queue signal_queue;
-    /* For the field below, see the explanation in "libos/src/bookkeep/shim_signal.c" near
+    /* For the field below, see the explanation in "libos/src/bookkeep/libos_signal.c" near
      * `g_process_pending_signals_cnt`. */
     uint64_t pending_signals;
 

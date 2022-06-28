@@ -10,11 +10,11 @@
 #include <stdalign.h>
 #include <stdnoreturn.h>
 
+#include "libos_context.h"
+#include "libos_entry.h"
+#include "libos_internal.h"
+#include "libos_thread.h"
 #include "pal.h"
-#include "shim_context.h"
-#include "shim_entry.h"
-#include "shim_internal.h"
-#include "shim_thread.h"
 #include "ucontext.h"
 
 #define XSTATE_RESET_SIZE (sizeof(struct libos_fpstate))

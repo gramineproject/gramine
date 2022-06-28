@@ -13,10 +13,10 @@
 #include <linux/sched.h>
 
 #include "api.h"
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_thread.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_thread.h"
 
 long libos_syscall_sched_yield(void) {
     PalThreadYieldExecution();

@@ -7,10 +7,10 @@
 
 #include <asm/prctl.h>
 
+#include "libos_internal.h"
+#include "libos_table.h"
+#include "libos_tcb.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_table.h"
-#include "shim_tcb.h"
 
 /* Linux v5.16 supports Intel AMX. To enable this feature, Linux added several XSTATE-related
  * arch_prctl() commands. To support Gramine on older Linux kernels, we explicitly define these
