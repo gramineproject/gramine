@@ -12,9 +12,9 @@
 #include <asm/errno.h>
 #include <asm/fcntl.h>
 
+#include "host_internal.h"
+#include "host_process.h"
 #include "linux_utils.h"
-#include "sgx_internal.h"
-#include "sgx_process.h"
 
 extern char* g_pal_loader_path;
 extern char* g_libpal_path;

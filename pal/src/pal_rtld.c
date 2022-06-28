@@ -384,7 +384,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_fil
          * FIXME: We (ab)use _PalStreamMap() because _PalVirtualMemoryAlloc() cannot be used to
          *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed). Note
          *        that `PAL_PROT_WRITECOPY` is specified to prevent allocating memory in untrusted
-         *        memory in case of Linux-SGX PAL (see linux-sgx/db_files.c:file_map).
+         *        memory in case of Linux-SGX PAL (see linux-sgx/pal_files.c:file_map).
          */
         void* map_addr = NULL;
         ret = _PalStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,

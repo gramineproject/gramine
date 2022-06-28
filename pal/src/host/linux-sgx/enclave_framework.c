@@ -1038,7 +1038,7 @@ out:
  * Initalize the request of local report exchange.
  *
  * We refer to this enclave as A and to the other enclave as B, e.g., A is this parent enclave and B
- * is the child enclave in the fork case (for more info, see comments in db_process.c).
+ * is the child enclave in the fork case (for more info, see comments in pal_process.c).
  */
 int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
                             sgx_report_data_t* peer_report_data) {
@@ -1132,7 +1132,7 @@ out:
  * Respond to the request of local report exchange.
  *
  * We refer to this enclave as B and to the other enclave as A, e.g., B is this child enclave and A
- * is the parent enclave in the fork case (for more info, see comments in db_process.c).
+ * is the parent enclave in the fork case (for more info, see comments in pal_process.c).
  */
 int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data,
                             sgx_report_data_t* peer_report_data) {

@@ -308,7 +308,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * space address is much greater, leaving space for VDSO and making the randomization trigger.
      * Relevant code: https://elixir.bootlin.com/linux/v5.14/source/arch/x86/entry/vdso/vma.c#L312
      * If VDSO location was randomized, we wouldn't be able to use it due to seccomp filter, which
-     * allows us to catch "syscall" instructions. See "db_exception.c" for more details.
+     * allows us to catch "syscall" instructions. See "pal_exception.c" for more details.
      */
     uint32_t cpuid_7_0_values[4] = { 0 };
     cpuid(7, 0, cpuid_7_0_values);

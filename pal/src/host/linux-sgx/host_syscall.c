@@ -7,8 +7,8 @@
 
 #include "api.h"
 #include "assert.h"
-#include "sgx_syscall.h"
-#include "sgx_tls.h"
+#include "host_syscall.h"
+#include "pal_tls.h"
 
 /* `offsetof` is evaluated at compile time, which happens only after the preprocessor is run, so it
  * cannot be used in `XSTRINGIFY()`, hence we have to use an immediate value. */

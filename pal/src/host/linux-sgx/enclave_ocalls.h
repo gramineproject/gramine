@@ -8,8 +8,8 @@
 #include <linux/poll.h>
 #include <linux/socket.h>
 
-#include "linux_types.h"
 #include "pal_linux.h"
+#include "pal_linux_types.h"
 #include "sgx_attest.h"
 
 noreturn void ocall_exit(int exitcode, int is_exitgroup);

@@ -10,8 +10,8 @@
 #include <sys/syscall.h>
 
 #include "api.h"
+#include "host_syscall.h"
 #include "pal_linux.h"
-#include "sgx_syscall.h"
 #include "toml.h"
 
 extern const size_t g_page_size;

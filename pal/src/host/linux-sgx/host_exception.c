@@ -22,8 +22,8 @@
 #include "api.h"
 #include "cpu.h"
 #include "debug_map.h"
-#include "rpc_queue.h"
-#include "sgx_internal.h"
+#include "host_internal.h"
+#include "pal_rpc_queue.h"
 #include "sigreturn.h"
 #include "ucontext.h"
 

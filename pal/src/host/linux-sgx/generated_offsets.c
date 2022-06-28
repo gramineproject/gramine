@@ -1,13 +1,13 @@
 #include <asm/errno.h>
 
-#include "ecall_types.h"
 #include "generated-offsets-build.h"
-#include "gsgx.h"
-#include "ocall_types.h"
+#include "host_gsgx.h"
 #include "pal.h"
+#include "pal_ecall_types.h"
 #include "pal_linux_defs.h"
+#include "pal_ocall_types.h"
+#include "pal_tls.h"
 #include "sgx_arch.h"
-#include "sgx_tls.h"
 
 const char* generated_offsets_name = "PAL_SGX";
 

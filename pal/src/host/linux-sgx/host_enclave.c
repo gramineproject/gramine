@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  */
-#include "sgx_enclave.h"
+#include "host_enclave.h"
 
 #include <asm/errno.h>
 #include <asm/ioctls.h>
@@ -15,13 +15,13 @@
 
 #include "cpu.h"
 #include "debug_map.h"
-#include "ecall_types.h"
+#include "host_internal.h"
+#include "host_process.h"
 #include "linux_utils.h"
-#include "ocall_types.h"
-#include "rpc_queue.h"
-#include "sgx_internal.h"
-#include "sgx_process.h"
-#include "sgx_tls.h"
+#include "pal_ecall_types.h"
+#include "pal_ocall_types.h"
+#include "pal_rpc_queue.h"
+#include "pal_tls.h"
 #include "sigset.h"
 
 #define DEFAULT_BACKLOG 2048

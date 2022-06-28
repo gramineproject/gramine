@@ -3,9 +3,9 @@
 #include <stdalign.h>
 
 #include "api.h"
-#include "ecall_types.h"
+#include "pal_ecall_types.h"
 #include "pal_linux.h"
-#include "rpc_queue.h"
+#include "pal_rpc_queue.h"
 #include "sgx_arch.h"
 
 #define SGX_CAST(type, item) ((type)(item))

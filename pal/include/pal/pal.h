@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-// TODO: fix this (but see pal/include/arch/x86_64/pal-arch.h)
+// TODO: fix this (but see pal/include/arch/x86_64/pal_arch.h)
 #define INSIDE_PAL_H
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -69,7 +69,7 @@ typedef struct _pal_handle_undefined_type* PAL_HANDLE;
 
 #endif /* IN_PAL */
 
-#include "pal-arch.h"
+#include "pal_arch.h"
 #include "pal_topology.h"
 
 /********** PAL TYPE DEFINITIONS **********/
