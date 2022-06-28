@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "libos_internal.h"
+#include "libos_ipc.h"
+#include "libos_lock.h"
+#include "libos_process.h"
 #include "pal.h"
-#include "shim_internal.h"
-#include "shim_ipc.h"
-#include "shim_lock.h"
-#include "shim_process.h"
 
 int g_log_level = LOG_LEVEL_NONE;
 

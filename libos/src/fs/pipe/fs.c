@@ -8,7 +8,7 @@
  * fields overriden to `fifo_builtin_fs`.
  *
  * - We create two temporary handles for read and write end of pipe, with corresponding PAL handles,
- *   and put them in process FD table (see `shim_pipe.c`)
+ *   and put them in process FD table (see `libos_pipe.c`)
  * - We create an inode for the named pipe, and store both FDs with it (`struct fifo_data`)
  * - When opening a file for reading or writing, we retrieve one of the temporary handles and
  *   transfer the PAL handle to a newly initialized handle.
@@ -22,15 +22,15 @@
 #include <asm/fcntl.h>
 #include <errno.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_signal.h"
+#include "libos_thread.h"
 #include "pal.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_signal.h"
-#include "shim_thread.h"
 #include "stat.h"
 
 struct fifo_data {

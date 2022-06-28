@@ -70,7 +70,7 @@ struct loadcmd {
      *
      *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
-     *   The same struct is used also in libos/src/shim_rtld.c code.
+     *   The same struct is used also in libos/src/libos_rtld.c code.
      */
 
     /* Start of memory area */

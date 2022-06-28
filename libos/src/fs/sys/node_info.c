@@ -11,8 +11,8 @@
 #include <stdbool.h>
 
 #include "api.h"
-#include "shim_fs.h"
-#include "shim_fs_pseudo.h"
+#include "libos_fs.h"
+#include "libos_fs_pseudo.h"
 
 static bool is_online(size_t ind, const void* arg) {
     __UNUSED(arg);

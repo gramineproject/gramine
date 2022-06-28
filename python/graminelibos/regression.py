@@ -122,7 +122,7 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
                 # XXX: Don't fail the test as long the main process exited (i.e. if it left dangling
                 # child processes). This can happen due to a known issue with Gramine failing to
                 # deliver a signal for an arbitrary amount of time. See the comment in
-                # `shim_internal.h:handle_signal` for details.
+                # `libos_internal.h:handle_signal` for details.
                 #
                 # This happens occasionally when running LTP tests (e.g. `sendfile04`,
                 # `fdatasync01`, `recvfrom01`, `sendto01`) that send SIGKILL to child processes.

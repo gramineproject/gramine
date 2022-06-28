@@ -8,7 +8,7 @@
 /*
  * This file defines conversions between various PAL API flags and the flags used by Linux syscalls.
  *
- * The counterpart of this file is shim_flag_conv.h in LibOS.
+ * The counterpart of this file is libos_flag_conv.h in LibOS.
  */
 
 #pragma once

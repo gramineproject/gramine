@@ -6,11 +6,11 @@
 #include <asm/fcntl.h>
 
 #include "api.h"
+#include "libos_fs.h"
+#include "libos_lock.h"
+#include "libos_socket.h"
 #include "pal.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_lock.h"
-#include "shim_socket.h"
 #include "stat.h"
 
 static int close(struct libos_handle* handle) {

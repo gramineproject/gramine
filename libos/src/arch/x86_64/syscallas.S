@@ -19,7 +19,7 @@
  * (https://uclibc.org/docs/psABI-x86_64.pdf), "Register Usage" for more information.
  */
 
-#include "asm-offsets.h"
+#include "asm_offsets.h"
 
 .extern libos_emulate_syscall
 .extern libos_xstate_size

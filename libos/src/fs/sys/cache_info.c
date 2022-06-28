@@ -11,8 +11,8 @@
 #include <stdbool.h>
 
 #include "api.h"
-#include "shim_fs.h"
-#include "shim_fs_pseudo.h"
+#include "libos_fs.h"
+#include "libos_fs_pseudo.h"
 
 struct callback_arg {
     size_t cache_id_to_match; // index in global caches list (topo_info->caches[])

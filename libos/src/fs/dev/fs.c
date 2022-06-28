@@ -9,8 +9,8 @@
  * This file contains the implementation of `/dev` pseudo-filesystem.
  */
 
+#include "libos_fs_pseudo.h"
 #include "pal.h"
-#include "shim_fs_pseudo.h"
 
 static ssize_t dev_null_read(struct libos_handle* hdl, void* buf, size_t count) {
     __UNUSED(hdl);

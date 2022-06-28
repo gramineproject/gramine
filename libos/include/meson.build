@@ -8,14 +8,14 @@ includes_libos = [
 ]
 
 libos_generated_offsets_print = executable('libos-generated-offsets-print',
-    'generated-offsets.c',
+    'generated_offsets.c',
     generated_offsets_print_src,
     include_directories: includes_libos,
     c_args: cflags_libos,
 )
 
-libos_asm_offsets_h = custom_target('asm-offsets.h[libos]',
+libos_asm_offsets_h = custom_target('asm_offsets.h[libos]',
     command: [libos_generated_offsets_print, '--h'],
     capture: true,
-    output: 'asm-offsets.h',
+    output: 'asm_offsets.h',
 )

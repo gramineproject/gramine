@@ -16,11 +16,11 @@
 
 #include <errno.h>
 
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_lock.h"
+#include "libos_vma.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_lock.h"
-#include "shim_vma.h"
 #include "stat.h"
 
 #define USEC_IN_SEC 1000000

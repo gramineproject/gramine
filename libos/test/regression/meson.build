@@ -86,7 +86,7 @@ tests = {
     'rename_unlink': {},
     'run_test': {
         'include_directories': include_directories(
-            # for `shim_entry_api.h`
+            # for `libos_entry_api.h`
             '../../include',
             join_paths('../../include/arch', host_machine.cpu_family()),
         ),
@@ -132,7 +132,7 @@ tests = {
 if host_machine.cpu_family() == 'x86_64'
     tests += {
         'cpuid': {},
-        'debug_regs-x86_64': {
+        'debug_regs_x86_64': {
             'c_args': '-g3',
         },
         'rdtsc': {},
