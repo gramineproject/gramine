@@ -609,8 +609,6 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return 0;
 }
 
-/* Rest is moved from old `pal_main-x86_64.c`. */
-
 #define CPUID_LEAF_INVARIANT_TSC 0x80000007
 #define CPUID_LEAF_TSC_FREQ 0x15
 #define CPUID_LEAF_PROC_FREQ 0x16

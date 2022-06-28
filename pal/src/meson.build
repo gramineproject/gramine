@@ -4,6 +4,7 @@ cflags_pal_common = [
 ]
 
 pal_common_sources = files(
+    'pal_error.c',
     'pal_events.c',
     'pal_exception.c',
     'pal_main.c',
@@ -15,7 +16,6 @@ pal_common_sources = files(
     'pal_sockets.c',
     'pal_streams.c',
     'pal_threading.c',
-    'pal_error.c',
     'printf.c',
     'slab.c',
 )
