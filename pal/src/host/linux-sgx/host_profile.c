@@ -20,10 +20,10 @@
 
 #include "cpu.h"
 #include "elf/elf.h"
+#include "host_internal.h"
+#include "host_log.h"
 #include "linux_utils.h"
-#include "sgx_internal.h"
-#include "sgx_log.h"
-#include "sgx_tls.h"
+#include "pal_tls.h"
 #include "spinlock.h"
 
 #ifdef SGX_VTUNE_PROFILE
@@ -346,7 +346,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     }
 
     // Perform a simple sanity check to verify if this looks like ELF (see TODO for PalDebugMapAdd
-    // in pal/src/db_rtld.c).
+    // in pal/src/pal_rtld.c).
 
     const elf_ehdr_t* ehdr = elf_addr;
 

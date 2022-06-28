@@ -10,6 +10,7 @@
 
 #include "api.h"
 #include "cpu.h"
+#include "enclave_api.h"
 #include "hex.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -17,7 +18,6 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "seqlock.h"
-#include "sgx_api.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
 #include "toml_utils.h"
@@ -608,8 +608,6 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     *key_size = sizeof(sgx_key);
     return 0;
 }
-
-/* Rest is moved from old `db_main-x86_64.c`. */
 
 #define CPUID_LEAF_INVARIANT_TSC 0x80000007
 #define CPUID_LEAF_TSC_FREQ 0x15

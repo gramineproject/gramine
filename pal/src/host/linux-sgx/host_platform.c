@@ -8,11 +8,11 @@
 #include <stdbool.h>
 
 #include "aesm.pb-c.h"
-#include "gsgx.h"
+#include "host_gsgx.h"
+#include "host_internal.h"
+#include "host_log.h"
 #include "linux_utils.h"
 #include "sgx_attest.h"
-#include "sgx_internal.h"
-#include "sgx_log.h"
 
 #define AESM_SOCKET_NAME_LEGACY "sgx_aesm_socket_base"
 #define AESM_SOCKET_NAME_NEW    "/var/run/aesmd/aesm.socket"

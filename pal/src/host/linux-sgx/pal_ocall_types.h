@@ -10,8 +10,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "linux_types.h"
 #include "pal.h"
+#include "pal_linux_types.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
 

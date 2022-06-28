@@ -1,10 +1,10 @@
 #include <asm/errno.h>
 
-#include "gsgx.h"
 #include "hex.h"
+#include "host_gsgx.h"
+#include "host_internal.h"
 #include "linux_utils.h"
 #include "sgx_arch.h"
-#include "sgx_internal.h"
 
 static int g_gsgx_device = -1;
 static int g_isgx_device = -1;

@@ -9,8 +9,8 @@
 #include "asan.h"
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
-#include "sgx_enclave.h"
-#include "sgx_internal.h"
+#include "host_enclave.h"
+#include "host_internal.h"
 #include "spinlock.h"
 
 struct thread_map {

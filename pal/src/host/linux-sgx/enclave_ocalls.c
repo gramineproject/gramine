@@ -29,9 +29,9 @@
 #include "api.h"
 #include "asan.h"
 #include "cpu.h"
-#include "ocall_types.h"
 #include "pal_internal.h"
-#include "rpc_queue.h"
+#include "pal_ocall_types.h"
+#include "pal_rpc_queue.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
 

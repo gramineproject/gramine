@@ -5,11 +5,11 @@
  */
 
 #include "assert.h"
+#include "host_log.h"
 #include "linux_utils.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "perm.h"
-#include "sgx_log.h"
 
 int g_urts_log_level = PAL_LOG_DEFAULT_LEVEL;
 int g_urts_log_fd = PAL_LOG_DEFAULT_FD;

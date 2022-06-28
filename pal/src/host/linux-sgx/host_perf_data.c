@@ -33,9 +33,9 @@
 #include <linux/perf_event.h>
 #include <linux/fs.h>
 
+#include "host_internal.h"
+#include "host_log.h"
 #include "perm.h"
-#include "sgx_internal.h"
-#include "sgx_log.h"
 
 #ifndef __x86_64__
 #error "Unsupported architecture"
