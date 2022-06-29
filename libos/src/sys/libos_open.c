@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <linux/fadvise.h>
 #include <linux/fcntl.h>
 #include <stdalign.h>
 
@@ -618,6 +619,41 @@ long libos_syscall_fallocate(int fd, int mode, loff_t offset, loff_t len) {
     } else {
         ret = 0;
     }
+
+out:
+    put_handle(handle);
+    return ret;
+}
+
+long libos_syscall_fadvise64(int fd, loff_t offset, size_t len, int advice) {
+    __UNUSED(offset);
+    __UNUSED(len);
+    int ret;
+
+    switch (advice) {
+        case POSIX_FADV_NORMAL:
+        case POSIX_FADV_RANDOM:
+        case POSIX_FADV_SEQUENTIAL:
+        case POSIX_FADV_WILLNEED:
+        case POSIX_FADV_NOREUSE:
+        case POSIX_FADV_DONTNEED:
+            break;
+        default:
+            return -EINVAL;
+    }
+
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
+    if (!handle) {
+        return -EBADF;
+    }
+
+    if (handle->type == TYPE_PIPE) {
+        ret = -ESPIPE;
+        goto out;
+    }
+
+    /* currently just a no-op */
+    ret = 0;
 
 out:
     put_handle(handle);

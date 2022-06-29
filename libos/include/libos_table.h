@@ -159,6 +159,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int cpumask_size,
 long libos_syscall_sched_getaffinity(pid_t pid, unsigned int cpumask_size,
                                      unsigned long* user_mask_ptr);
 long libos_syscall_set_tid_address(int* tidptr);
+long libos_syscall_fadvise64(int fd, loff_t offset, size_t len, int advice);
 long libos_syscall_epoll_create(int size);
 long libos_syscall_getdents64(int fd, struct linux_dirent64* buf, size_t count);
 long libos_syscall_epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout_ms);
