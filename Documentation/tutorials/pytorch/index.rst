@@ -102,7 +102,7 @@ Prerequisites
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
   before you proceed (don't forget to choose Linux as the target OS). PyTorch
-  must be installed under root user, e.g., using sudo -E -H pip3 install ...".
+  must be installed under root user, e.g., using ``sudo -E -H pip3 install ...``.
   We will use Python3 in this tutorial.
 
 - Intel SGX Driver. This tutorial assumes a modern Linux kernel (at least 5.11).
