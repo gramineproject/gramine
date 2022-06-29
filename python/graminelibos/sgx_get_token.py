@@ -6,7 +6,7 @@ import hashlib
 import socket
 import struct
 
-from . import aesm_pb2
+from . import aesm_pb2 # pylint: disable=import-error,no-name-in-module
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 
 def get_optional_sgx_features(sig):
