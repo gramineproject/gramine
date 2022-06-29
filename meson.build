@@ -258,6 +258,7 @@ mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
 if sgx
     protoc_c_prog = find_program('protoc-c')
+    protoc_prog = find_program('protoc')
 
     threads_dep = dependency('threads')
 

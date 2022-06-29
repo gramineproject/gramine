@@ -26,8 +26,15 @@ if enable_tests
 endif
 
 if sgx
+    aesm_pb2 = custom_target('aesm_pb2.py',
+        input: 'aesm.proto',
+        output: 'aesm_pb2.py',
+        command: [protoc_prog, '@INPUT@', '--python_out=@OUTDIR@', '--proto_path=@CURRENT_SOURCE_DIR@'],
+        install: true,
+        install_dir: python3_pkgdir,
+    )
+
     python_src += [
-        '_aesm_pb2.py',
         'sgx_get_token.py',
         'sgx_sign.py',
         'sigstruct.py',
