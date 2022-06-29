@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <linux/fadvise.h>
 #include <linux/fcntl.h>
 #include <stdalign.h>
 
@@ -622,4 +623,39 @@ long libos_syscall_fallocate(int fd, int mode, loff_t offset, loff_t len) {
 out:
     put_handle(handle);
     return ret;
+}
+
+static bool fadvise_advice_valid(int advice) {
+    switch (advice) {
+        case POSIX_FADV_NORMAL:
+        case POSIX_FADV_RANDOM:
+        case POSIX_FADV_SEQUENTIAL:
+        case POSIX_FADV_WILLNEED:
+        case POSIX_FADV_NOREUSE:
+        case POSIX_FADV_DONTNEED:
+            return true;
+    }
+    return false;
+}
+
+long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
+    if (offset < 0) {
+        return -EINVAL;
+    }
+    if (len < 0) {
+        return -EINVAL;
+    }
+    if (!fadvise_advice_valid(advice)) {
+        return -EINVAL;
+    }
+
+    struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
+    if (!handle) {
+        return -EBADF;
+    }
+
+    // In Gramine's threat model, it is not required to do anything meaningful with fadvise,
+    // so just make it a no-op here.
+    put_handle(handle);
+    return 0;
 }
