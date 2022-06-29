@@ -323,11 +323,11 @@ enclave and provision secrets to it. Secret Provisioning builds on top of RA-TLS
 and typically runs before the application. Both features are provided as opt-in
 libraries.
 
-The Secret Provisioning library provides a simple non-programmatic API to
-applications: it transparently initializes the environment variable
-``SECRET_PROVISION_SECRET_STRING`` with a secret obtained from the remote user
-during remote attestation (note that ``SECRET_PROVISION_CONSTRUCTOR`` must also
-be set). In our PyTorch example, the provisioned secret is the encryption key
+The `Secret Provisioning library <https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
+provides a simple non-programmatic API to applications: it transparently initializes
+the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a secret obtained
+from the remote user during remote attestation (note that ``SECRET_PROVISION_CONSTRUCTOR``
+must also be set). In our PyTorch example, the provisioned secret is the encryption key
 to encrypt/decrypt user files. To inform Gramine that the obtained secret is
 indeed the key for file encryption, it is enough to set the environment
 variable ``SECRET_PROVISION_SET_KEY``.
@@ -370,7 +370,8 @@ so copy the entire PyTorch directory::
 
 We will also use the reference implementation of Secret Provisioning found under
 ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine repository),
-so build and copy all the relevant files from there::
+so build the secret provisioning server and copy all the relevant files from there,
+as detailed ahead::
 
    git clone --depth 1 --branch v1.2 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
@@ -387,9 +388,8 @@ Preparing Input Files
 ^^^^^^^^^^^^^^^^^^^^^
 
 The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
-``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing stuff
-from the ``CI-Examples/ra-tls-secret-prov`` directory.  In particular, we re-use
-the encryption key::
+``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing wrap-key
+from the ``CI-Examples/ra-tls-secret-prov`` directory::
 
    cd examples/pytorch-confidential
    mkdir files
