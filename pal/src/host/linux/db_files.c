@@ -47,7 +47,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     init_handle_hdr(hdl, PAL_TYPE_FILE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->file.fd = ret;
-    hdl->file.map_start = NULL;
     char* path = (void*)hdl + HANDLE_SIZE(file);
     ret = get_norm_path(uri, path, &uri_size);
     if (ret < 0) {
@@ -134,16 +133,6 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
                     uint64_t size) {
     int fd = handle->file.fd;
     void* mem = *addr;
-    /*
-     * work around for fork emulation
-     * the first exec image to be loaded has to be at same address
-     * as parent.
-     */
-    if (mem == NULL && handle->file.map_start != NULL) {
-        mem = handle->file.map_start;
-        /* this address is used. don't over-map it later */
-        handle->file.map_start = NULL;
-    }
     int flags = PAL_MEM_FLAGS_TO_LINUX(0, prot) | (mem ? MAP_FIXED : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
