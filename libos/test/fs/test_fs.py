@@ -240,6 +240,36 @@ class TC_00_FileSystem(RegressionTestCase):
         self.do_truncate_test(65537, 65535)
         self.do_truncate_test(65537, 65536)
 
+    def verify_seek_teel_truncate(self, file_out, file_size, file_pos, file_truncate):
+        chunk_size = 512
+        next_file_pos = file_pos + chunk_size
+
+        stdout, stderr = self.run_binary([
+            'seek_tell_truncate',
+            file_out,
+            str(file_size),
+            str(file_pos),
+            str(file_truncate)
+        ])
+
+        self.assertIn(f"open({file_out}) output OK", stdout)
+        self.assertIn(f"seek({file_out}) output OK: {file_pos}", stdout)
+        self.assertIn(f"tell({file_out}) output position OK: {file_pos}", stdout)
+        self.assertIn(f"truncate({file_out}) to {file_truncate} OK", stdout)
+        self.assertIn(f"tell({file_out}) output position OK: {file_pos}", stdout)
+        self.assertIn(f"tell({file_out}) output position OK: {next_file_pos}", stdout)
+        self.assertIn(f"close({file_out}) OK", stdout)
+
+    def test_141_file_seek_tell_truncate(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_141')
+
+        self.verify_seek_teel_truncate(f"{file_path}a", 0, 0, 100)
+        self.verify_seek_teel_truncate(f"{file_path}b", 512, 512, 0)
+        self.verify_seek_teel_truncate(f"{file_path}c", 512, 256, 0)
+        self.verify_seek_teel_truncate(f"{file_path}d", 512, 512, 65536)
+        self.verify_seek_teel_truncate(f"{file_path}e", 512, 64, 65536)
+        # XXX: we do not support shrinking files to arbitrary sizes in protected files
+
     def verify_copy_content(self, input_path, output_path):
         self.assertTrue(filecmp.cmp(input_path, output_path, shallow=False))
 

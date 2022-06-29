@@ -43,6 +43,7 @@ tests = {
     'open_flags': {},
     'read_write': {},
     'seek_tell': {},
+    'seek_tell_truncate': {},
     'stat': {},
     'truncate': {},
 }
