@@ -44,6 +44,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ninja-build \
     pkg-config \
     protobuf-c-compiler \
+    protobuf-compiler \
     pylint3 \
     python \
     python3-apport \
