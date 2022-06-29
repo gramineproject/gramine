@@ -33,9 +33,9 @@ Copyright: 1996,1999 Internet Software Consortium
 License: ISC
 
 Files:
- Pal/include/arch/x86_64/Linux/sigcontext.h
- Pal/include/arch/x86_64/Linux/sigset.h
- Pal/include/elf/elf.h
+ pal/include/arch/x86_64/linux/sigcontext.h
+ pal/include/arch/x86_64/linux/sigset.h
+ pal/include/elf/elf.h
 Copyright: 1991-2010 Free Software Foundation, Inc.
 License: LGPL-2.1+
 
@@ -47,7 +47,7 @@ Copyright:
  2020 Intel Labs
 License: Apache-2.0
 
-Files: Pal/src/host/Linux-SGX/enclave_xstate.c
+Files: pal/src/host/linux-sgx/enclave_xstate.c
 Copyright: 2011-2019 Intel Corporation
 License: BSD
 

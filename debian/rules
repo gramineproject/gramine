@@ -55,7 +55,6 @@ override_dh_auto_build:
 #		$(MESONARGS) \
 #		-Dsgx_driver=dcap1.10 \
 #		-Dsgx_driver_include_path=$(DEBIANDIR)/../SGXDataCenterAttestationPrimitives/driver/linux/include \
-#		-Ddcap=enabled \
 #		debian/build-dcap
 #	meson setup \
 #		$(MESONARGS) \
@@ -86,13 +85,8 @@ override_dh_auto_install:
 	mv \
 		$(DEBIANDIR)/gramine/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
 		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu
-#	mv \
-#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_dcap* \
-#		$(DEBIANDIR)/gramine-dcap-ratls-dcap/usr/lib/x86_64-linux-gnu
-#	mv \
-#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
-#		$(DEBIANDIR)/gramine-dcap-ratls-epid/usr/lib/x86_64-linux-gnu
-
+#	rm -f \
+#		$(DEBIANDIR)/gramine-{dcap,oot}/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid*
 
 #	chmod +x debian/gramine*/usr/lib/x86_64-linux-gnu/gramine/direct/libpal.so
 

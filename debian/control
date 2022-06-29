@@ -46,7 +46,7 @@ Conflicts:
 
 Package: gramine-ratls-dcap
 Architecture: amd64
-Description: A lightweight guest OS designed to run a single application
+Description: DCAP-based Remote Attestation TLS (RA-TLS) library for Gramine
 Depends:
  gramine,
  libsgx-dcap-quote-verify,
@@ -54,14 +54,14 @@ Depends:
 
 Package: gramine-ratls-epid
 Architecture: amd64
-Description: A lightweight guest OS designed to run a single application
+Description: EPID-based Remote Attestation TLS (RA-TLS) library for Gramine
 Depends:
  gramine,
 #libc6 (>= 2.28),
 
 #Package: gramine-dcap
 #Architecture: amd64
-#Description: A lightweight guest OS designed to run a single application
+#Description: A lightweight guest OS designed to run a single application (using out-of-tree DCAP kernel driver)
 #Depends:
 # python3,
 # python3-click,
@@ -71,30 +71,15 @@ Depends:
 # python3-toml (>= 0.10),
 # libprotobuf-c1,
 #Recommends:
-# gramine-dcap-ratls-dcap,
-# gramine-dcap-ratls-epid,
+# gramine-ratls-dcap,
+# gramine-ratls-epid,
 #Conflicts:
 # gramine,
 # gramine-oot
 #
-#Package: gramine-dcap-ratls-dcap
-#Architecture: amd64
-#Description: A lightweight guest OS designed to run a single application
-#Depends:
-# gramine-dcap,
-# libsgx-dcap-quote-verify,
-##libc6 (>= 2.28),
-#
-#Package: gramine-dcap-ratls-epid
-#Architecture: amd64
-#Description: A lightweight guest OS designed to run a single application
-#Depends:
-# gramine-dcap,
-##libc6 (>= 2.28),
-#
 #Package: gramine-oot
 #Architecture: amd64
-#Description: A lightweight guest OS designed to run a single application
+#Description: A lightweight guest OS designed to run a single application (using SGX SDK kernel driver)
 #Depends:
 # python3,
 # python3-click,
@@ -103,6 +88,8 @@ Depends:
 # python3-protobuf,
 # python3-toml (>= 0.10),
 # libprotobuf-c1,
+#Recommends:
+# gramine-ratls-epid,
 #Conflicts:
 # gramine,
 # gramine-dcap
