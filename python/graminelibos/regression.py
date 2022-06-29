@@ -34,18 +34,31 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
             def __init__(self, input_pipe, output_pipe):
                 self.logged_data = b''
                 self.closed = False
+                self.at_newline = True
                 self.input_pipe = input_pipe
                 self.output_pipe = output_pipe
 
             def pump_data(self, pending_reads):
                 if self.input_pipe in pending_reads:
                     data = self.input_pipe.read(1024)
-                    self.output_pipe.write(data)
-                    self.output_pipe.flush()
                     self.logged_data += data
 
                     if not data:
                         self.closed = True
+
+                    timestamped = bytearray()
+                    for ch in data:
+                        if self.at_newline:
+                            timestamped += b'[%.3f] ' % time.time()
+                            self.at_newline = False
+
+                        timestamped.append(ch)
+
+                        if ch == 10:
+                            self.at_newline = True
+
+                    self.output_pipe.write(timestamped)
+                    self.output_pipe.flush()
 
         stdout_splice = LoggingSplice(proc.stdout.raw, sys.stdout.buffer)
         stderr_splice = LoggingSplice(proc.stderr.raw, sys.stderr.buffer)
