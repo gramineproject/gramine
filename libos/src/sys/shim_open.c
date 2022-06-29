@@ -639,6 +639,8 @@ static bool fadvise_advice_valid(int advice) {
 }
 
 long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
+    int ret;
+
     if (offset < 0) {
         return -EINVAL;
     }
@@ -653,9 +655,15 @@ long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
     if (!handle) {
         return -EBADF;
     }
-
+    if (handle->type == TYPE_PIPE) {
+        ret = -ESPIPE;
+        goto out;
+    }
     // In Gramine's threat model, it is not required to do anything meaningful with fadvise,
     // so just make it a no-op here.
+    ret = 0;
+
+out:
     put_handle(handle);
-    return 0;
+    return ret;
 }
