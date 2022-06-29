@@ -16,7 +16,15 @@ pipeline {
     }
     post {
         always {
-            archiveArtifacts 'gramine_*.orig.tar.gz, *.build, *.buildinfo, *.changes, *.deb, *.dsc, gramine-*.tar.xz'
+            archiveArtifacts '''
+                gramine*.deb,
+                gramine*.tar.xz,
+                gramine_*.orig.tar.gz,
+                gramine_*.build,
+                gramine_*.buildinfo,
+                gramine_*.changes,
+                gramine_*.dsc,
+            '''
         }
     }
 }
