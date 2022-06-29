@@ -3,6 +3,12 @@ PyTorch PPML Framework Tutorial
 
 .. highlight:: sh
 
+.. note::
+
+   This tutorial was tested on Gramine v1.2 (the latest stable release as of
+   the date of this writing). It is possible that some steps and configurations
+   may be outdated on newer Gramine.
+
 This tutorial presents a framework for developing PPML (Privacy-Preserving
 Machine Learning) applications with Intel SGX and Gramine. We use `PyTorch
 <https://pytorch.org>`__ as an example ML framework. However, this tutorial can
@@ -388,8 +394,8 @@ Preparing Input Files
 ^^^^^^^^^^^^^^^^^^^^^
 
 The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
-``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing wrap-key
-from the ``CI-Examples/ra-tls-secret-prov`` directory::
+``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing encryption key
+``wrap-key`` from the ``CI-Examples/ra-tls-secret-prov`` directory::
 
    cd examples/pytorch-confidential
    mkdir files
