@@ -39,12 +39,6 @@ typedef struct {
         struct {
             PAL_IDX fd;
             const char* realpath;
-            /*
-             * map_start is to request this file should be mapped to this
-             * address. When fork is emulated, the address is already
-             * determined by parent process.
-             */
-            void* map_start;
             bool seekable; /* regular files are seekable, FIFO pipes are not */
         } file;
 
