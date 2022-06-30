@@ -10,6 +10,7 @@ common_src = files(
     'stack_protector.c',
     'string/atoi.c',
     'string/ctype.c',
+    'string/ct_memcmp.c',
     'string/memcmp.c',
     'string/memcpy.c',
     'string/memset.c',

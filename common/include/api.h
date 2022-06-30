@@ -248,6 +248,23 @@ void* memmove(void* dest, const void* src, size_t count);
 void* memset(void* dest, int ch, size_t count);
 int memcmp(const void* lhs, const void* rhs, size_t count);
 
+/** Constant-time buffer comparison without branches.
+ *
+ * This is equivalent to the standard memcmp function, but is likely to be
+ * compiled to code using bitwise operation rather than a branch.
+ *
+ * This function can be used to write constant-time code by replacing branches
+ * with bit operations using masks.
+ *
+ * \param lhs     Pointer to the first buffer.
+ * \param rhs     Pointer to the second buffer.
+ * \param count   The number of bytes to compare in the buffer.
+ *
+ * \return        Zero if the content of the two buffer is the same,
+ *                otherwise non-zero.
+ */
+int ct_memcmp(const void* lhs, const void* rhs, size_t count);
+
 /* Used by _FORTIFY_SOURCE */
 void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, size_t dest_count);
 void* __memmove_chk(void* dest, const void* src, size_t count, size_t dest_count);
