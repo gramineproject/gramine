@@ -99,8 +99,6 @@ void* allocate_stack(size_t size, size_t protect_size, bool user) {
     size = ALLOC_ALIGN_UP(size);
     protect_size = ALLOC_ALIGN_UP(protect_size);
 
-    log_debug("Allocating stack at %p (size = %ld)", stack, size);
-
     if (!user) {
         stack = system_malloc(size + protect_size);
         if (!stack) {
@@ -299,6 +297,9 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp,
         return 0;
 
     void* stack = allocate_stack(stack_size, ALLOC_ALIGNMENT, /*user=*/true);
+
+    log_debug("Allocating stack at %p (size = %ld)", stack, size);
+    
     if (!stack)
         return -ENOMEM;
 
