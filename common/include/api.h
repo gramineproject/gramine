@@ -248,20 +248,18 @@ void* memmove(void* dest, const void* src, size_t count);
 void* memset(void* dest, int ch, size_t count);
 int memcmp(const void* lhs, const void* rhs, size_t count);
 
-/** Constant-time buffer comparison without branches.
+/*!
+ * \brief Constant-time buffer comparison without branches.
  *
- * This is equivalent to the standard memcmp function, but is likely to be
- * compiled to code using bitwise operation rather than a branch.
+ * \param lhs    Pointer to the first buffer.
+ * \param rhs    Pointer to the second buffer.
+ * \param count  The number of bytes to compare in the buffer.
  *
- * This function can be used to write constant-time code by replacing branches
- * with bit operations using masks.
+ * \returns      Zero if the content of the two buffer is the same, otherwise non-zero.
  *
- * \param lhs     Pointer to the first buffer.
- * \param rhs     Pointer to the second buffer.
- * \param count   The number of bytes to compare in the buffer.
- *
- * \return        Zero if the content of the two buffer is the same,
- *                otherwise non-zero.
+ * This is equivalent to the standard memcmp function, but using bitwise operation rather than a
+ * branch. It can be used to write constant-time code by replacing branches with bit operations
+ * using masks.
  */
 int ct_memcmp(const void* lhs, const void* rhs, size_t count);
 

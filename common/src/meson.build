@@ -10,7 +10,6 @@ common_src = files(
     'stack_protector.c',
     'string/atoi.c',
     'string/ctype.c',
-    'string/ct_memcmp.c',
     'string/memcmp.c',
     'string/memcpy.c',
     'string/memset.c',
@@ -21,6 +20,7 @@ common_src = files(
     'string/strstr.c',
     'string/toml_utils.c',
     'string/utils.c',
+    'string/ct_memcmp.S',
 )
 if asan
     common_src += files('asan.c')
