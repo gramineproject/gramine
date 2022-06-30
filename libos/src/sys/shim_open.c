@@ -625,7 +625,13 @@ out:
     return ret;
 }
 
-static bool fadvise_advice_valid(int advice) {
+long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
+    __UNUSED(offset);
+    int ret;
+
+    if (len < 0) {
+        return -EINVAL;
+    }
     switch (advice) {
         case POSIX_FADV_NORMAL:
         case POSIX_FADV_RANDOM:
@@ -633,22 +639,9 @@ static bool fadvise_advice_valid(int advice) {
         case POSIX_FADV_WILLNEED:
         case POSIX_FADV_NOREUSE:
         case POSIX_FADV_DONTNEED:
-            return true;
-    }
-    return false;
-}
-
-long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
-    int ret;
-
-    if (offset < 0) {
-        return -EINVAL;
-    }
-    if (len < 0) {
-        return -EINVAL;
-    }
-    if (!fadvise_advice_valid(advice)) {
-        return -EINVAL;
+            break;
+        default:
+            return -EINVAL;
     }
 
     struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
@@ -659,8 +652,7 @@ long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
         ret = -ESPIPE;
         goto out;
     }
-    // In Gramine's threat model, it is not required to do anything meaningful with fadvise,
-    // so just make it a no-op here.
+    // It is not required to do anything meaningful with fadvise, so just make it a no-op here.
     ret = 0;
 
 out:
