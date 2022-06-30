@@ -21,6 +21,12 @@ common_src = files(
     'string/toml_utils.c',
     'string/utils.c',
 )
+
+# Arch-specific meson.build must define the following Meson variables:
+#   - `common_src_arch` - a list of arch-specific sources.
+subdir('arch')
+common_src += common_src_arch
+
 if asan
     common_src += files('asan.c')
 endif
