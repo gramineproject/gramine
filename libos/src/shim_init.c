@@ -297,7 +297,6 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp,
         return 0;
 
     void* stack = allocate_stack(stack_size, ALLOC_ALIGNMENT, /*user=*/true);
-    
     if (!stack)
         return -ENOMEM;
 
