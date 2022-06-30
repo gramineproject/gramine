@@ -27,7 +27,6 @@ override_dh_clean:
 		debian/gramine \
 		debian/gramine-ratls-* \
 		debian/gramine-dcap \
-		debian/gramine-dcap-ratls-* \
 		debian/gramine-oot \
 		python/graminelibos/__pycache__
 
@@ -75,9 +74,7 @@ override_dh_auto_install:
 	
 	install -d \
 		$(DEBIANDIR)/gramine-ratls-dcap/usr/lib/x86_64-linux-gnu \
-		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu \
-		$(DEBIANDIR)/gramine-dcap-ratls-dcap/usr/lib/x86_64-linux-gnu \
-		$(DEBIANDIR)/gramine-dcap-ratls-epid/usr/lib/x86_64-linux-gnu
+		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu
 	
 	mv \
 		$(DEBIANDIR)/gramine/usr/lib/x86_64-linux-gnu/libra_tls_verify_dcap* \
