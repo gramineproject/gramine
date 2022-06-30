@@ -625,13 +625,11 @@ out:
     return ret;
 }
 
-long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
+long libos_syscall_fadvise64(int fd, loff_t offset, size_t len, int advice) {
     __UNUSED(offset);
+    __UNUSED(len);
     int ret;
 
-    if (len < 0) {
-        return -EINVAL;
-    }
     switch (advice) {
         case POSIX_FADV_NORMAL:
         case POSIX_FADV_RANDOM:
@@ -648,11 +646,13 @@ long libos_syscall_fadvise64(int fd, loff_t offset, loff_t len, int advice) {
     if (!handle) {
         return -EBADF;
     }
+
     if (handle->type == TYPE_PIPE) {
         ret = -ESPIPE;
         goto out;
     }
-    // It is not required to do anything meaningful with fadvise, so just make it a no-op here.
+
+    /* currently just a no-op */
     ret = 0;
 
 out:
