@@ -317,7 +317,7 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
             break;
         case SO_BROADCAST:
             if (sock->type == SOCK_STREAM) {
-                /* This option has no effect on stream oriented sockets. */
+                /* This option has no effect on stream-oriented sockets. */
                 need_pal_set = false;
             }
             attr.socket.broadcast = !!val;

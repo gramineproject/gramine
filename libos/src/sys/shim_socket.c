@@ -37,6 +37,7 @@
  *
  */
 
+/* Creates a socket handle with default settings. */
 struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
                                            bool is_nonblocking) {
     struct libos_handle* handle = get_new_handle();
@@ -81,28 +82,6 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     return handle;
 }
 
-static int create_sock_handle(int family, int type, int protocol, bool is_nonblocking,
-                              struct libos_handle** out_handle) {
-    struct libos_handle* handle = get_new_socket_handle(family, type, protocol, is_nonblocking);
-    if (!handle) {
-        return -ENOMEM;
-    }
-
-    struct libos_sock_handle* sock = &handle->info.sock;
-    int ret = sock->ops->create(handle);
-    if (ret < 0) {
-        goto out;
-    }
-
-    get_handle(handle);
-    *out_handle = handle;
-    ret = 0;
-
-out:
-    put_handle(handle);
-    return ret;
-}
-
 long libos_syscall_socket(int family, int type, int protocol) {
     switch (family) {
         case AF_UNIX:
@@ -131,13 +110,15 @@ long libos_syscall_socket(int family, int type, int protocol) {
             return -EPROTONOSUPPORT;
     }
 
-    struct libos_handle* handle = NULL;
-    int ret = create_sock_handle(family, type, protocol, is_nonblocking, &handle);
-    if (ret < 0) {
-        return ret;
+    struct libos_handle* handle = get_new_socket_handle(family, type, protocol, is_nonblocking);
+    if (!handle) {
+        return -ENOMEM;
     }
 
-    ret = set_new_fd_handle(handle, is_cloexec ? FD_CLOEXEC : 0, NULL);
+    int ret = handle->info.sock.ops->create(handle);
+    if (ret == 0) {
+        ret = set_new_fd_handle(handle, is_cloexec ? FD_CLOEXEC : 0, NULL);
+    }
     put_handle(handle);
     return ret;
 }
@@ -168,15 +149,18 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         return -EFAULT;
     }
 
+    int ret;
     struct libos_handle* handle1 = NULL;
     struct libos_handle* handle2 = NULL;
     struct libos_handle* handle3 = NULL;
-    int ret = create_sock_handle(family, type, protocol, /*is_nonblocking=*/false, &handle1);
-    if (ret < 0) {
+    handle1 = get_new_socket_handle(family, type, protocol, /*is_nonblocking=*/false);
+    if (!handle1) {
+        ret = -ENOMEM;
         goto out;
     }
-    ret = create_sock_handle(family, type, protocol, /*is_nonblocking=*/false, &handle2);
-    if (ret < 0) {
+    handle2 = get_new_socket_handle(family, type, protocol, /*is_nonblocking=*/false);
+    if (!handle2) {
+        ret = -ENOMEM;
         goto out;
     }
 
@@ -195,6 +179,11 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
     struct libos_sock_handle* sock2 = &handle2->info.sock;
 
     lock(&sock1->lock);
+    ret = sock1->ops->create(handle1);
+    if (ret < 0) {
+        unlock(&sock1->lock);
+        goto out;
+    }
     ret = sock1->ops->bind(handle1, &addr, sizeof(addr));
     if (ret < 0) {
         unlock(&sock1->lock);
@@ -216,6 +205,11 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
     unlock(&sock1->lock);
 
     lock(&sock2->lock);
+    ret = sock2->ops->create(handle2);
+    if (ret < 0) {
+        unlock(&sock2->lock);
+        goto out;
+    }
     ret = sock2->ops->connect(handle2, &addr, sizeof(addr));
     if (ret < 0) {
         unlock(&sock2->lock);
