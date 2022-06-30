@@ -1,12 +1,27 @@
 pipeline {
-    agent {
-        dockerfile { filename '.ci/debian11.dockerfile' }
-    }
+    agent any
     stages {
+        stage('makedist') {
+            agent {
+                dockerfile {
+                    filename '.ci/debian11.dockerfile'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh './scripts/makedist.sh'
+            }
+        }
         stage('build') {
+            agent {
+                dockerfile {
+                    filename '.ci/debian11.dockerfile'
+                    args '--network=none'
+                    reuseNode true
+                }
+            }
             steps {
                 sh '''
-                    ./scripts/makedist.sh
                     tar -xzf gramine_*.orig.tar.gz
                     cd gramine-*
                     debuild
