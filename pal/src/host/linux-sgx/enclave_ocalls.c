@@ -1448,8 +1448,9 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
 
     if (retval < 0) {
         if (retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF
-                && retval != -ECONNREFUSED && retval != -EINTR && retval != -EINVAL
-                && retval != -ENOMEM && retval != -ENOTCONN && retval != -ENOTSOCK) {
+                && retval != -ECONNREFUSED && retval != -ECONNRESET && retval != -EINTR
+                && retval != -EINVAL && retval != -ENOMEM && retval != -ENOTCONN
+                && retval != -ENOTSOCK) {
             retval = -EPERM;
         }
         goto out;
