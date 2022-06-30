@@ -66,6 +66,14 @@ static noreturn int thread_handshake_func(void* param) {
         _PalProcessExit(1);
     }
 
+    if (handle->pipe.nonblocking) {
+        ret = ocall_fsetnonblock(handle->pipe.fd, /*nonblocking=*/1);
+        if (ret < 0) {
+            log_error("Failed to set handle as non-blocking: %d", ret);
+            _PalProcessExit(1);
+        }
+    }
+
     struct handshake_helper_thread* thread = malloc(sizeof(*thread));
     if (!thread) {
         log_error("Failed to allocate helper handshake thread list item");
@@ -233,10 +241,11 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
         return -PAL_ERROR_DENIED;
 
     unsigned int addrlen = sizeof(struct sockaddr_un);
-    int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
-    ret = ocall_connect(AF_UNIX, SOCK_STREAM | nonblock, 0, /*ipv6_v6only=*/0,
-                        (const struct sockaddr*)&addr, addrlen, NULL, NULL);
+    /* We do not take `options & PAL_OPTION_NONBLOCK` into account here - it will be set by
+     * `thread_handshake_func` later if needed. */
+    ret = ocall_connect(AF_UNIX, SOCK_STREAM, 0, /*ipv6_v6only=*/0, (const struct sockaddr*)&addr,
+                        addrlen, NULL, NULL);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
