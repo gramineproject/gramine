@@ -203,29 +203,33 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
 
     ret = pipe_session_key(&clnt->pipe.name, &clnt->pipe.session_key);
     if (ret < 0) {
-        ocall_close(clnt->pipe.fd);
-        free(clnt);
-        return -PAL_ERROR_DENIED;
+        goto out_err;
     }
 
     ret = _PalStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
                                (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
     if (ret < 0) {
-        ocall_close(clnt->pipe.fd);
-        free(clnt);
-        return ret;
+        goto out_err;
     }
     if (clnt->pipe.nonblocking) {
         ret = ocall_fsetnonblock(clnt->pipe.fd, /*nonblocking=*/1);
         if (ret < 0) {
-            log_error("Failed to set handle as non-blocking: %d", ret);
-            _PalProcessExit(1);
+            ret = unix_to_pal_error(ret);
+            goto out_err;
         }
     }
     __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
 
     *client = clnt;
     return 0;
+
+out_err:
+    ocall_close(clnt->pipe.fd);
+    if (clnt->pipe.ssl_ctx) {
+        _PalStreamSecureFree(clnt->pipe.ssl_ctx);
+    }
+    free(clnt);
+    return ret;
 }
 
 /*!
