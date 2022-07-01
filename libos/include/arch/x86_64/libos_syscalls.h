@@ -48,6 +48,30 @@
 #ifndef __NR_io_uring_register
 #define __NR_io_uring_register 427
 #endif
+#ifndef __NR_open_tree
+#define __NR_open_tree 428
+#endif
+#ifndef __NR_move_mount
+#define __NR_move_mount 429
+#endif
+#ifndef __NR_fsopen
+#define __NR_fsopen 430
+#endif
+#ifndef __NR_fsconfig
+#define __NR_fsconfig 431
+#endif
+#ifndef __NR_fsmount
+#define __NR_fsmount 432
+#endif
+#ifndef __NR_fspick
+#define __NR_fspick 433
+#endif
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 434
+#endif
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 435
+#endif
 #ifndef __NR_syscalls
-#define __NR_syscalls 428
+#define __NR_syscalls 436
 #endif
