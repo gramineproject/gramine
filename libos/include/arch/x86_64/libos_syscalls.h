@@ -69,8 +69,8 @@
 #ifndef __NR_pidfd_open
 #define __NR_pidfd_open 434
 #endif
-#ifndef __NR_pidfd_open
-#define __NR_pidfd_open 435
+#ifndef __NR_clone3
+#define __NR_clone3 435
 #endif
 #ifndef __NR_syscalls
 #define __NR_syscalls 436
