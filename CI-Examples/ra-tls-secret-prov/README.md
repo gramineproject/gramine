@@ -20,8 +20,10 @@ The server is supposed to run on a trusted machine (not in the SGX enclave). The
 server listens for client connections. For each connected client, the server
 verifies the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends the first secret back to the client (the master key
-for encrypted files, read from `files/wrap-key`). If the client requests a
-second secret, the server sends the dummy string `42` as the second secret.
+for encrypted files, read from `files/wrap-key` that is passed as a command-line
+argument while running the server, or a 16B random key if no command-line argument
+is provided). If the client requests a second secret, the server sends the dummy
+string `42` as the second secret.
 
 There are two versions of the server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
@@ -75,7 +77,7 @@ make app epid files/input.txt RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
-./secret_prov_server_epid &
+./secret_prov_server_epid files/wrap-key &
 
 # test minimal client
 gramine-sgx ./secret_prov_min_client
@@ -96,7 +98,7 @@ make app dcap files/input.txt RA_TYPE=dcap
 
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-./secret_prov_server_dcap &
+./secret_prov_server_dcap files/wrap-key &
 
 # test minimal client
 gramine-sgx ./secret_prov_min_client
