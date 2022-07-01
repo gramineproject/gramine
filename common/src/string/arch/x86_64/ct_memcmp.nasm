@@ -23,5 +23,5 @@ ct_memcmp:
         or      ecx, eax
         cmp     rdi, rdx
         jnz     .L1
-.L2:    movzx   eax, cl
+.L2:    mov     eax, ecx
         ret
