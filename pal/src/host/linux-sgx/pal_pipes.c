@@ -461,6 +461,8 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
+    memset(attr, 0, sizeof(*attr));
+
     attr->handle_type  = HANDLE_HDR(handle)->type;
     attr->nonblocking  = handle->pipe.nonblocking;
 
