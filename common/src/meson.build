@@ -8,10 +8,24 @@ common_src = files(
     'printf.c',
     'socket_utils.c',
     'stack_protector.c',
+    'string/atoi.c',
+    'string/ctype.c',
+    'string/memcmp.c',
+    'string/memcpy.c',
+    'string/memset.c',
+    'string/strchr.c',
+    'string/strcmp.c',
+    'string/strlen.c',
+    'string/strspn.c',
+    'string/strstr.c',
+    'string/toml_utils.c',
+    'string/utils.c',
 )
 
-subdir('string')
-common_src += string_src
+# Arch-specific meson.build must define the following Meson variables:
+#   - `string_src_arch` - a list of arch-specific sources.
+subdir('arch')
+common_src += common_src_arch
 
 if asan
     common_src += files('asan.c')

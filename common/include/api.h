@@ -255,7 +255,7 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
  * \param rhs    Pointer to the second buffer.
  * \param count  The number of bytes to compare in the buffer.
  *
- * \returns      Zero if the content of the two buffer is the same, otherwise non-zero.
+ * \returns 0 if the content of the two buffers is the same, otherwise non-zero.
  *
  * This is equivalent to the standard memcmp function, but using bitwise operation rather than a
  * branch. It can be used to write constant-time code by replacing branches with bit operations
