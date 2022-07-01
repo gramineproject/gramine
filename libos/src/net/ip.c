@@ -303,27 +303,104 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
     }
     assert(attr.handle_type == PAL_TYPE_SOCKET);
 
-    /* All currently supported options use `int`. */
-    int val;
-    if (len < sizeof(val)) {
+    size_t required_len;
+    switch (optname) {
+        case SO_KEEPALIVE:
+            required_len = sizeof(int);
+            break;
+        case SO_LINGER:
+            required_len = sizeof(struct linger);
+            break;
+        case SO_RCVBUF:
+            required_len = sizeof(int);
+            break;
+        case SO_SNDBUF:
+            required_len = sizeof(int);
+            break;
+        case SO_RCVTIMEO:
+            required_len = sizeof(struct timeval);
+            break;
+        case SO_SNDTIMEO:
+            required_len = sizeof(struct timeval);
+            break;
+        case SO_REUSEADDR:
+            required_len = sizeof(int);
+            break;
+        case SO_BROADCAST:
+            required_len = sizeof(int);
+            break;
+        default:
+            return -ENOPROTOOPT;
+    }
+
+    if (len < required_len) {
         return -EINVAL;
     }
-    memcpy(&val, optval, sizeof(val));
+
+    union {
+        int i;
+        struct linger linger;
+        struct timeval tv;
+    } value = { 0 };
+    memcpy(&value, optval, required_len);
 
     bool need_pal_set = true;
     switch (optname) {
+        case SO_KEEPALIVE:
+            attr.socket.keepalive = value.i;
+            break;
+        case SO_LINGER:
+            if (value.linger.l_onoff) {
+                if (value.linger.l_linger < 0) {
+                    return -EINVAL;
+                }
+                attr.socket.linger = value.linger.l_linger;
+            } else {
+                attr.socket.linger = 0;
+            }
+            break;
+        case SO_RCVBUF:
+            if (value.i < 0) {
+                return -EINVAL;
+            }
+            /* The Linux kernel doubles this value. */
+            value.i = MIN(value.i, INT_MAX / 2);
+            value.i *= 2;
+            attr.socket.recv_buf_size = value.i;
+            break;
+        case SO_SNDBUF:
+            if (value.i < 0) {
+                return -EINVAL;
+            }
+            /* The Linux kernel doubles this value. */
+            value.i = MIN(value.i, INT_MAX / 2);
+            value.i *= 2;
+            attr.socket.send_buf_size = value.i;
+            break;
+        case SO_RCVTIMEO:
+            if (value.tv.tv_sec < 0 || value.tv.tv_usec < 0
+                    || (unsigned long)value.tv.tv_usec >= TIME_US_IN_S) {
+                return -EINVAL;
+            }
+            attr.socket.receivetimeout_us = value.tv.tv_sec * TIME_US_IN_S + value.tv.tv_usec;
+            break;
+        case SO_SNDTIMEO:
+            if (value.tv.tv_sec < 0 || value.tv.tv_usec < 0
+                    || (unsigned long)value.tv.tv_usec >= TIME_US_IN_S) {
+                return -EINVAL;
+            }
+            attr.socket.sendtimeout_us = value.tv.tv_sec * TIME_US_IN_S + value.tv.tv_usec;
+            break;
         case SO_REUSEADDR:
-            attr.socket.reuseaddr = !!val;
+            attr.socket.reuseaddr = value.i;
             break;
         case SO_BROADCAST:
             if (sock->type == SOCK_STREAM) {
                 /* This option has no effect on stream-oriented sockets. */
                 need_pal_set = false;
             }
-            attr.socket.broadcast = !!val;
+            attr.socket.broadcast = value.i;
             break;
-        default:
-            return -ENOPROTOOPT;
     }
 
     if (need_pal_set) {
@@ -333,12 +410,19 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
         }
     }
 
+    /* Cache values in LibOS. */
     switch (optname) {
         case SO_REUSEADDR:
-            sock->reuseaddr = !!val;
+            sock->reuseaddr = attr.socket.reuseaddr;
             break;
         case SO_BROADCAST:
-            sock->broadcast = !!val;
+            sock->broadcast = attr.socket.broadcast;
+            break;
+        case SO_RCVTIMEO:
+            sock->receivetimeout_us = attr.socket.receivetimeout_us;
+            break;
+        case SO_SNDTIMEO:
+            sock->sendtimeout_us = attr.socket.sendtimeout_us;
             break;
     }
     return 0;
@@ -425,12 +509,55 @@ static int get_ipv6_option(struct libos_handle* handle, int optname, void* optva
     return 0;
 }
 
+static int get_socket_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
+    struct libos_sock_handle* sock = &handle->info.sock;
+    PAL_STREAM_ATTR attr;
+    int ret = PalStreamAttributesQueryByHandle(sock->pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    assert(attr.handle_type == PAL_TYPE_SOCKET);
+
+    union {
+        int i;
+        struct linger linger;
+    } value = { 0 };
+    size_t value_len = sizeof(int);
+
+    switch (optname) {
+        case SO_KEEPALIVE:
+            value.i = attr.socket.keepalive;
+            break;
+        case SO_LINGER:
+            value.linger.l_onoff = attr.socket.linger ? 1 : 0;
+            value.linger.l_linger = attr.socket.linger;
+            value_len = sizeof(value.linger);
+            break;
+        case SO_RCVBUF:
+            value.i = attr.socket.recv_buf_size;
+            break;
+        case SO_SNDBUF:
+            value.i = attr.socket.send_buf_size;
+            break;
+        default:
+            return -ENOPROTOOPT;
+    }
+
+    if (*len > value_len) {
+        *len = value_len;
+    }
+    memcpy(optval, &value, *len);
+    return 0;
+}
+
 static int getsockopt(struct libos_handle* handle, int level, int optname, void* optval,
                       size_t* len) {
     struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
     switch (level) {
+        case SOL_SOCKET:
+            return get_socket_option(handle, optname, optval, len);
         case IPPROTO_IP:
             if (sock->domain != AF_INET) {
                 return -EOPNOTSUPP;
