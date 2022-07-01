@@ -20,8 +20,3 @@ How to execute
 
 Encrypted file tests assume that Gramine was built with SGX enabled (see comment
 in `test_enc.py`).
-
-```
-cd $gramine/pal/src/host/linux-sgx/tools
-make install PREFIX=$gramine/libos/test/fs
-```

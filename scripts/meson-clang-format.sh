@@ -14,10 +14,10 @@ fi
 
 find pal libos tools \
     -path common/src/crypto/mbedtls -prune -o \
-    -path pal/src/host/linux-sgx/tools/common/cJSON.c -prune -o \
-    -path pal/src/host/linux-sgx/tools/common/cJSON.h -prune -o \
-    -path pal/src/host/linux-sgx/tools/common/cJSON-\*/cJSON.c -prune -o \
-    -path pal/src/host/linux-sgx/tools/common/cJSON-\*/cJSON.h -prune -o \
+    -path tools/sgx/common/cJSON.c -prune -o \
+    -path tools/sgx/common/cJSON.h -prune -o \
+    -path tools/sgx/common/cJSON-\*/cJSON.c -prune -o \
+    -path tools/sgx/common/cJSON-\*/cJSON.h -prune -o \
     -path libos/test/ltp -prune -o \
     -path libos/glibc\* -prune -o \
     \( -name \*.c -o -name \*.h \) \
