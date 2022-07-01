@@ -235,7 +235,7 @@ static bool update_time(void) {
     uint64_t sample_time = ts.tv_sec * NSEC_IN_SEC + ts.tv_nsec;
 
     // Compare and update last recorded time per thread
-    PAL_TCB_URTS* tcb = get_tcb_urts();
+    PAL_TCB_HOST* tcb = get_tcb_host();
     if (tcb->profile_sample_time == 0) {
         tcb->profile_sample_time = sample_time;
         return false;

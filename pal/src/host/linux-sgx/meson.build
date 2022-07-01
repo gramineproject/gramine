@@ -124,8 +124,8 @@ libpal_sgx = shared_library('pal',
     install_dir: join_paths(pkglibdir, 'sgx'),
 )
 
-# URTS (untrusted runtime)
-libpal_sgx_urts = executable('loader',
+# host (untrusted runtime)
+libpal_sgx_host = executable('loader',
     'common_manifest_sgx_parser.c',
     'host_enclave.c',
     'host_entry.S',
@@ -139,7 +139,7 @@ libpal_sgx_urts = executable('loader',
     'host_profile.c',
     'host_syscall.c',
     'host_thread.c',
-    pal_linux_common_sources_urts,
+    pal_linux_common_sources_host,
     pal_sgx_asm_offsets_h,
     aesm_proto_ch,
     gsgx_h,
@@ -149,7 +149,8 @@ libpal_sgx_urts = executable('loader',
         cflags_pal_sgx,
         cflags_sanitizers,
 
-        # URTS uses stack protector with standard parameters (not the ones defined for PAL/LibOS)
+        # host part of PAL uses stack protector with standard parameters (not the ones defined for
+        # PAL/LibOS)
         '-fstack-protector-strong',
     ],
     link_args: [
@@ -186,7 +187,7 @@ if debug
     )
 
     custom_target('loader.map',
-        input: libpal_sgx_urts,
+        input: libpal_sgx_host,
         command: gen_symbol_map_cmd,
         capture: true,
         output: 'loader.map',

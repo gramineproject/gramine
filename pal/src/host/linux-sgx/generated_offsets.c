@@ -104,13 +104,13 @@ const struct generated_offset generated_offsets[] = {
     OFFSET(SGX_HEAP_MAX, enclave_tls, heap_max),
     OFFSET(SGX_CLEAR_CHILD_TID, enclave_tls, clear_child_tid),
 
-    /* struct pal_tcb_urts aka PAL_TCB_URTS */
-    OFFSET(PAL_TCB_URTS_TCS, pal_tcb_urts, tcs),
-    OFFSET(PAL_TCB_URTS_IN_AEX_PROF, pal_tcb_urts, is_in_aex_profiling),
-    OFFSET(PAL_TCB_URTS_EENTER_CNT, pal_tcb_urts, eenter_cnt),
-    OFFSET(PAL_TCB_URTS_EEXIT_CNT, pal_tcb_urts, eexit_cnt),
-    OFFSET(PAL_TCB_URTS_AEX_CNT, pal_tcb_urts, aex_cnt),
-    OFFSET(PAL_TCB_URTS_LAST_ASYNC_EVENT, pal_tcb_urts, last_async_event),
+    /* struct pal_tcb_host aka PAL_TCB_HOST */
+    OFFSET(PAL_TCB_HOST_TCS, pal_tcb_host, tcs),
+    OFFSET(PAL_TCB_HOST_IN_AEX_PROF, pal_tcb_host, is_in_aex_profiling),
+    OFFSET(PAL_TCB_HOST_EENTER_CNT, pal_tcb_host, eenter_cnt),
+    OFFSET(PAL_TCB_HOST_EEXIT_CNT, pal_tcb_host, eexit_cnt),
+    OFFSET(PAL_TCB_HOST_AEX_CNT, pal_tcb_host, aex_cnt),
+    OFFSET(PAL_TCB_HOST_LAST_ASYNC_EVENT, pal_tcb_host, last_async_event),
 
     /* sgx_arch_tcs_t */
     OFFSET_T(TCS_FLAGS, sgx_arch_tcs_t, flags),

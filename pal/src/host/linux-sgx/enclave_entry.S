@@ -48,7 +48,7 @@
 
 # In some cases, like bogus parameters passed to enclave_entry, it's tricky to return cleanly
 # (passing the correct return address to EEXIT, OCALL_EXIT can be interrupted, etc.). Since those
-# cases should only ever happen with a malicious urts, just go into an endless loop.
+# cases should only ever happen with a malicious host, just go into an endless loop.
 .macro FAIL_LOOP
 .Lfail_loop\@:
     jmp .Lfail_loop\@

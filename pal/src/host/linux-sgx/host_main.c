@@ -278,7 +278,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         if (ret < 0)
             goto out;
 
-        /* Report all ELFs that are already loaded (URTS and dynamic libraries used by it) */
+        /* Report all ELFs already loaded (host part of PAL and dynamic libraries used by it) */
         struct debug_map* map = g_debug_map;
         while (map) {
             sgx_profile_report_elf(map->name, map->addr);
@@ -872,14 +872,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
     if (log_level > LOG_LEVEL_NONE && log_file) {
-        ret = urts_log_init(log_file);
+        ret = host_log_init(log_file);
 
         if (ret < 0) {
             log_error("Cannot open log file: %d", ret);
             goto out;
         }
     }
-    g_urts_log_level = log_level;
+    g_host_log_level = log_level;
 
     ret = 0;
 
@@ -969,8 +969,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         return -ENOMEM;
 
     /* initialize TCB at the top of the alternative stack */
-    PAL_TCB_URTS* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_TCB_URTS);
-    pal_tcb_urts_init(tcb, /*stack=*/NULL,
+    PAL_TCB_HOST* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_TCB_HOST);
+    pal_tcb_host_init(tcb, /*stack=*/NULL,
                       alt_stack); /* main thread uses the stack provided by Linux */
     ret = pal_thread_init(tcb);
     if (ret < 0)

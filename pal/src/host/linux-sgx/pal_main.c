@@ -417,7 +417,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
                              size_t args_size, char* uptr_env, size_t env_size,
                              int parent_stream_fd, sgx_target_info_t* uptr_qe_targetinfo,
                              struct pal_topo_info* uptr_topo_info) {
-    /* All our arguments are coming directly from the urts. We are responsible to check them. */
+    /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
     /* Relocate PAL */
@@ -464,7 +464,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Now that we have `libpal_path`, set name for PAL map */
     set_pal_binary_name(libpal_path);
 
-    /* We can't verify the following arguments from the urts. So we copy them directly but need to
+    /* We can't verify the following arguments from the host. So we copy them directly but need to
      * be careful when we use them. */
     if (!sgx_copy_to_enclave(&g_pal_linuxsgx_state.qe_targetinfo,
                              sizeof(g_pal_linuxsgx_state.qe_targetinfo),

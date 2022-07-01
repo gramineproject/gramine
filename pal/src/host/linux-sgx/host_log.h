@@ -4,16 +4,16 @@
  */
 
 /*
- * Outer PAL logging interface. This is initialized separately to inner PAL, but (once it's
- * initialized) should output at the level and to the file specified in manifest.
+ * Outer (host) PAL logging interface. This is initialized separately to inner (enclave) PAL, but
+ * (once it's initialized) should output at the level and to the file specified in manifest.
  */
 
 #pragma once
 
-extern int g_urts_log_level;
-extern int g_urts_log_fd;
+extern int g_host_log_level;
+extern int g_host_log_fd;
 
-int urts_log_init(const char* path);
+int host_log_init(const char* path);
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.

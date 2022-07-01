@@ -38,7 +38,7 @@ static int verify_and_init_rpc_queue(rpc_queue_t* untrusted_rpc_queue) {
  *
  * During normal operation handle_ecall will not return. The exception is that
  * it will return if invalid parameters are passed. In this case
- * enclave_entry.S will go into an endless loop since a clean return to urts is
+ * enclave_entry.S will go into an endless loop since a clean return to host is
  * not easy in all cases.
  *
  * Parameters:

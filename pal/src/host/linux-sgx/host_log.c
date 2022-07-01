@@ -11,15 +11,15 @@
 #include "pal_linux.h"
 #include "perm.h"
 
-int g_urts_log_level = PAL_LOG_DEFAULT_LEVEL;
-int g_urts_log_fd = PAL_LOG_DEFAULT_FD;
+int g_host_log_level = PAL_LOG_DEFAULT_LEVEL;
+int g_host_log_fd = PAL_LOG_DEFAULT_FD;
 
-int urts_log_init(const char* path) {
+int host_log_init(const char* path) {
     int ret;
 
-    if (g_urts_log_fd != PAL_LOG_DEFAULT_FD) {
-        ret = DO_SYSCALL(close, g_urts_log_fd);
-        g_urts_log_fd = PAL_LOG_DEFAULT_FD;
+    if (g_host_log_fd != PAL_LOG_DEFAULT_FD) {
+        ret = DO_SYSCALL(close, g_host_log_fd);
+        g_host_log_fd = PAL_LOG_DEFAULT_FD;
         if (ret < 0)
             return ret;
     }
@@ -27,7 +27,7 @@ int urts_log_init(const char* path) {
     ret = DO_SYSCALL(open, path, O_WRONLY | O_APPEND | O_CREAT, PERM_rw_______);
     if (ret < 0)
         return ret;
-    g_urts_log_fd = ret;
+    g_host_log_fd = ret;
     return 0;
 }
 
@@ -48,7 +48,7 @@ static void print_to_fd(int fd, const char* prefix, const char* fmt, va_list ap)
 }
 
 void pal_log(int level, const char* fmt, ...) {
-    if (level <= g_urts_log_level) {
+    if (level <= g_host_log_level) {
         va_list ap;
         va_start(ap, fmt);
         assert(0 <= level && (size_t)level < LOG_LEVEL_ALL);
@@ -64,7 +64,7 @@ void pal_log(int level, const char* fmt, ...) {
             case LOG_LEVEL_TRACE:   prefix = "trace: "; break;
         }
 
-        print_to_fd(g_urts_log_fd, prefix, fmt, ap);
+        print_to_fd(g_host_log_fd, prefix, fmt, ap);
         va_end(ap);
     }
 }

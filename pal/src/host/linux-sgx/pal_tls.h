@@ -92,8 +92,8 @@ static inline void pal_set_tcb_stack_canary(uint64_t canary) {
 #else /* IN_ENCLAVE */
 
 /* private to untrusted Linux PAL, unique to each untrusted thread */
-typedef struct pal_tcb_urts {
-    struct pal_tcb_urts* self;
+typedef struct pal_tcb_host {
+    struct pal_tcb_host* self;
     sgx_arch_tcs_t* tcs;           /* TCS page of SGX corresponding to thread, for EENTER */
     void* stack;                   /* bottom of stack, for later freeing when thread exits */
     void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
@@ -105,15 +105,15 @@ typedef struct pal_tcb_urts {
     atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
-} PAL_TCB_URTS;
+} PAL_TCB_HOST;
 
-extern void pal_tcb_urts_init(PAL_TCB_URTS* tcb, void* stack, void* alt_stack);
+extern void pal_tcb_host_init(PAL_TCB_HOST* tcb, void* stack, void* alt_stack);
 
-static inline PAL_TCB_URTS* get_tcb_urts(void) {
-    PAL_TCB_URTS* tcb;
+static inline PAL_TCB_HOST* get_tcb_host(void) {
+    PAL_TCB_HOST* tcb;
     __asm__("movq %%gs:%c1, %0\n"
             : "=r"(tcb)
-            : "i"(offsetof(PAL_TCB_URTS, self))
+            : "i"(offsetof(PAL_TCB_HOST, self))
             : "memory");
     return tcb;
 }
