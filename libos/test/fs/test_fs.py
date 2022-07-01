@@ -252,6 +252,7 @@ class TC_00_FileSystem(RegressionTestCase):
             str(file_truncate)
         ])
 
+        self.assertNotIn('ERROR: ', stderr)
         self.assertIn(f"open({file_out}) output OK", stdout)
         self.assertIn(f"seek({file_out}) output OK: {file_pos}", stdout)
         self.assertIn(f"tell({file_out}) output position OK: {file_pos}", stdout)
