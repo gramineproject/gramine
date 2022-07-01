@@ -1,15 +1,27 @@
 pipeline {
     agent {
-        dockerfile { filename '.ci/debian11.dockerfile' }
+        dockerfile {
+            filename '.ci/debian11.dockerfile'
+            args '--privileged'
+        }
     }
     stages {
         stage('build') {
             steps {
                 sh '''
+                    # this needs to be early, and uses in-repo dependencies,
+                    # because makedist.sh does `meson setup` and it checks
+                    # dependencies
+                    sudo apt-get -y build-dep \
+                        -t bullseye-backports \
+                        --no-install-recommends \
+                        --no-install-suggests \
+                        ./
+
                     ./scripts/makedist.sh
                     tar -xzf gramine_*.orig.tar.gz
                     cd gramine-*
-                    debuild
+                    sudo unshare -n -- su - user -c "cd $PWD && debuild"
                 '''
             }
         }
