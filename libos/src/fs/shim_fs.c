@@ -247,7 +247,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     if (mount_path[0] != '/') {
         /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow them
          * completely two versions after it. */
-        if (!strcmp(mount_path, ".") || !strcmp(mount_path, "..")) {
+        if (is_dot_or_dotdot(mount_path)) {
             log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
             ret = -EINVAL;
             goto out;
