@@ -23,7 +23,7 @@ common_src = files(
 )
 
 # Arch-specific meson.build must define the following Meson variables:
-#   - `string_src_arch` - a list of arch-specific sources.
+#   - `common_src_arch` - a list of arch-specific sources.
 subdir('arch')
 common_src += common_src_arch
 
