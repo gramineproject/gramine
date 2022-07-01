@@ -354,4 +354,12 @@ libos_syscall_t libos_syscall_table[LIBOS_SYSCALL_BOUND] = {
     [__NR_io_uring_setup]         = (libos_syscall_t)0, // libos_syscall_io_uring_setup
     [__NR_io_uring_enter]         = (libos_syscall_t)0, // libos_syscall_io_uring_enter
     [__NR_io_uring_register]      = (libos_syscall_t)0, // libos_syscall_io_uring_register
+    [__NR_open_tree]              = (libos_syscall_t)0, // libos_syscall_open_tree
+    [__NR_move_mount]             = (libos_syscall_t)0, // libos_syscall_move_mount
+    [__NR_fsopen]                 = (libos_syscall_t)0, // libos_syscall_fsopen
+    [__NR_fsconfig]               = (libos_syscall_t)0, // libos_syscall_fsconfig
+    [__NR_fsmount]                = (libos_syscall_t)0, // libos_syscall_fsmount
+    [__NR_fspick]                 = (libos_syscall_t)0, // libos_syscall_fspick
+    [__NR_pidfd_open]             = (libos_syscall_t)0, // libos_syscall_pidfd_open
+    [__NR_clone3]                 = (libos_syscall_t)0, // libos_syscall_clone3
 };

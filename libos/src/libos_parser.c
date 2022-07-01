@@ -578,6 +578,14 @@ struct parser_table {
     [__NR_io_uring_setup] = {.slow = false, .name = "io_uring_setup", .parser = {NULL}},
     [__NR_io_uring_enter] = {.slow = false, .name = "io_uring_enter", .parser = {NULL}},
     [__NR_io_uring_register] = {.slow = false, .name = "io_uring_register", .parser = {NULL}},
+    [__NR_open_tree] = {.slow = false, .name = "open_tree", .parser = {NULL}},
+    [__NR_move_mount] = {.slow = false, .name = "move_mount", .parser = {NULL}},
+    [__NR_fsopen] = {.slow = false, .name = "fsopen", .parser = {NULL}},
+    [__NR_fsconfig] = {.slow = false, .name = "fsconfig", .parser = {NULL}},
+    [__NR_fsmount] = {.slow = false, .name = "fsmount", .parser = {NULL}},
+    [__NR_fspick] = {.slow = false, .name = "fspick", .parser = {NULL}},
+    [__NR_pidfd_open] = {.slow = false, .name = "pidfd_open", .parser = {NULL}},
+    [__NR_clone3] = {.slow = false, .name = "clone3", .parser = {NULL}},
 };
 
 const char* const siglist[SIGRTMIN] = {
