@@ -17,6 +17,7 @@
 
 #define EXPECTED_STRING "MORE"
 #define SECRET_STRING "42" /* answer to ultimate question of life, universe, and everything */
+#define ATTESTATION_SUCCESS_STRING "REMOTE_ATTESTATION_SUCCESSFUL"
 
 #define WRAP_KEY_FILENAME "files/wrap-key"
 #define WRAP_KEY_SIZE     16
@@ -25,7 +26,7 @@
 #define SRV_KEY_PATH "ssl/server.key"
 
 static pthread_mutex_t g_print_lock;
-char g_secret_pf_key_hex[WRAP_KEY_SIZE * 2 + 1];
+char g_secret_string[WRAP_KEY_SIZE * 2 + 1];
 
 static void hexdump_mem(const void* data, size_t size) {
     uint8_t* ptr = (uint8_t*)data;
@@ -57,7 +58,7 @@ static int communicate_with_client_callback(struct ra_tls_ctx* ctx) {
     int ret;
 
     /* if we reached this callback, the first secret was sent successfully */
-    printf("--- Sent secret1 = '%s' ---\n", g_secret_pf_key_hex);
+    printf("--- Sent secret1 = '%s' ---\n", g_secret_string);
 
     /* let's send another secret (just to show communication with secret-awaiting client) */
     int bytes;
@@ -106,46 +107,46 @@ int main(int argc, char** argv) {
 
     puts("--- Reading the master key for protected files from '" WRAP_KEY_FILENAME "' ---");
     int fd = open(WRAP_KEY_FILENAME, O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "[error] cannot open '" WRAP_KEY_FILENAME "'\n");
-        return 1;
-    }
+    if (fd >= 0) {
+        char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
+        ssize_t bytes_read = 0;
+        while (1) {
+            ssize_t ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read);
+            if (ret > 0) {
+                bytes_read += ret;
+            } else if (ret == 0) {
+                /* end of file */
+                break;
+            } else if (errno == EAGAIN || errno == EINTR) {
+                continue;
+            } else {
+                fprintf(stderr, "[error] cannot read '" WRAP_KEY_FILENAME "'\n");
+                close(fd);
+                return 1;
+            }
+        }
 
-    char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
-    ssize_t bytes_read = 0;
-    while (1) {
-        ssize_t ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read);
-        if (ret > 0) {
-            bytes_read += ret;
-        } else if (ret == 0) {
-            /* end of file */
-            break;
-        } else if (errno == EAGAIN || errno == EINTR) {
-            continue;
-        } else {
-            fprintf(stderr, "[error] cannot read '" WRAP_KEY_FILENAME "'\n");
-            close(fd);
+        ret = close(fd);
+        if (ret < 0) {
+            fprintf(stderr, "[error] cannot close '" WRAP_KEY_FILENAME "'\n");
             return 1;
         }
-    }
 
-    ret = close(fd);
-    if (ret < 0) {
-        fprintf(stderr, "[error] cannot close '" WRAP_KEY_FILENAME "'\n");
-        return 1;
-    }
+        if (bytes_read != WRAP_KEY_SIZE) {
+            fprintf(stderr, "[error] encryption key from '" WRAP_KEY_FILENAME "' is not 16B in size\n");
+            return 1;
+        }
 
-    if (bytes_read != WRAP_KEY_SIZE) {
-        fprintf(stderr, "[error] encryption key from '" WRAP_KEY_FILENAME "' is not 16B in size\n");
-        return 1;
+        uint8_t* ptr = (uint8_t*)buf;
+        for (size_t i = 0; i < bytes_read; i++)
+            sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
     }
-
-    uint8_t* ptr = (uint8_t*)buf;
-    for (size_t i = 0; i < bytes_read; i++)
-        sprintf(&g_secret_pf_key_hex[i * 2], "%02x", ptr[i]);
+    else {
+        strcpy(g_secret_string, "ATTESTATION_SUCCESS_STRING");
+    }
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
-    ret = secret_provision_start_server((uint8_t*)g_secret_pf_key_hex, sizeof(g_secret_pf_key_hex),
+    ret = secret_provision_start_server((uint8_t*)g_secret_string, sizeof(g_secret_string),
                                         "4433", SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         communicate_with_client_callback);
