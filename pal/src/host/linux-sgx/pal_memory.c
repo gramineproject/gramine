@@ -14,6 +14,7 @@
 #include "pal_linux.h"
 
 extern struct atomic_int g_allocated_pages;
+extern struct atomic_int g_peak_allocated_pages;
 
 bool _PalCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {
@@ -95,4 +96,12 @@ uint64_t _PalMemoryQuota(void) {
 uint64_t _PalMemoryAvailableQuota(void) {
     return (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
            __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
+}
+
+uint64_t _PalPeakMemoryUsage(void) {
+    uint64_t min_quota = (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
+        __atomic_load_n(&g_peak_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
+
+    return (g_pal_public_state.mem_total - min_quota) / 1024;
+
 }

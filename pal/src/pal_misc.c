@@ -30,6 +30,10 @@ size_t PalMemoryAvailableQuota(void) {
     return _PalMemoryAvailableQuota();
 }
 
+size_t PalPeakMemoryUsage(void) {
+    return _PalPeakMemoryUsage();
+}
+
 #if defined(__x86_64__)
 int PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     return _PalCpuIdRetrieve(leaf, subleaf, values);

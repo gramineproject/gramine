@@ -18,6 +18,9 @@
 #include "pal_linux_error.h"
 #include "spinlock.h"
 
+#define PROC_MEMINFO_PATH "/proc/meminfo"
+#define PROC_STATUS_PATH "/proc/self/status"
+
 /* Internal-PAL memory is allocated in range [g_pal_internal_mem_addr, g_pal_internal_mem_size).
  * This range is "preloaded" (LibOS is notified that it cannot use this range), so there can be no
  * overlap between LibOS and internal-PAL allocations.
@@ -89,8 +92,12 @@ int _PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-static int read_proc_meminfo(const char* key, unsigned long* val) {
-    int fd = DO_SYSCALL(open, "/proc/meminfo", O_RDONLY, 0);
+static int read_proc_structured_info(const char* path, const char* key, unsigned long* val) {
+    if (strcmp(path, PROC_MEMINFO_PATH) != 0 && strcmp(path, PROC_STATUS_PATH) != 0) {
+        return -PAL_ERROR_NOTIMPLEMENTED;
+    }
+
+    int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
 
     if (fd < 0)
         return -PAL_ERROR_DENIED;
@@ -109,7 +116,7 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
             break;
         }
 
-        for (n = r; n < r + ret; n++)
+        for (n = 0; n < r + ret; n++)
             if (buffer[n] == '\n')
                 break;
 
@@ -137,6 +144,14 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
     return ret;
 }
 
+static int read_proc_meminfo(const char* key, unsigned long* val) {
+    return read_proc_structured_info(PROC_MEMINFO_PATH, key, val);
+}
+
+static int read_proc_status(const char* key, unsigned long* val) {
+    return read_proc_structured_info(PROC_STATUS_PATH, key, val);
+}
+
 unsigned long _PalMemoryQuota(void) {
     if (g_pal_linux_state.memory_quota == (unsigned long)-1)
         return 0;
@@ -158,6 +173,13 @@ unsigned long _PalMemoryAvailableQuota(void) {
     if (read_proc_meminfo("MemFree", &quota) < 0)
         return 0;
     return quota * 1024;
+}
+
+unsigned long _PalPeakMemoryUsage(void) {
+    unsigned long peak_mem = 0;
+    if (read_proc_status("VmPeak", &peak_mem) < 0)
+        return 0;
+    return peak_mem;
 }
 
 struct parsed_ranges {

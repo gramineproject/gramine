@@ -8,6 +8,7 @@
 #include "spinlock.h"
 
 struct atomic_int g_allocated_pages;
+struct atomic_int g_peak_allocated_pages;
 
 /* list of VMAs of used memory areas kept in DESCENDING order; note that preallocated PAL internal
  * memory relies on this descending order of allocations (from high addresses to low), see
@@ -163,6 +164,20 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
     assert(vma->top - vma->bottom >= (ptrdiff_t)freed);
     size_t allocated = vma->top - vma->bottom - freed;
     __atomic_add_fetch(&g_allocated_pages.counter, allocated / g_page_size, __ATOMIC_SEQ_CST);
+
+
+    int64_t allocated_pages;
+    int64_t peak_allocated_pages;
+
+    do {
+        allocated_pages = __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST);
+        peak_allocated_pages = __atomic_load_n(&g_peak_allocated_pages.counter, __ATOMIC_SEQ_CST);
+        if (peak_allocated_pages >= allocated_pages) {
+            break;
+        }
+    } while (!__atomic_compare_exchange_n(&g_peak_allocated_pages.counter, &peak_allocated_pages,
+                                          allocated_pages, /*weak=*/false,
+                                          __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
 
     return addr;
 }

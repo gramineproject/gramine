@@ -92,5 +92,10 @@ int main(int argc, char** argv, char** envp) {
     if (avail > 0 && avail < PalGetPalPublicState()->mem_total)
         pal_printf("Get Memory Available Quota OK\n");
 
+    /* Testing peak memory usage (must be within valid range) */
+    size_t peak_mem = PalPeakMemoryUsage();
+    if (peak_mem > 0 && peak_mem < PalGetPalPublicState()->mem_total)
+        pal_printf("Get Peak Memory Usage OK\n");
+
     return 0;
 }

@@ -364,6 +364,9 @@ and to obtain an attestation report and quote.
 .. doxygenfunction:: PalMemoryAvailableQuota
    :project: pal
 
+.. doxygenfunction:: PalPeakMemoryUsage
+   :project: pal
+
 .. doxygenfunction:: PalCpuIdRetrieve
    :project: pal
 

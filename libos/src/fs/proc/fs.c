@@ -28,6 +28,7 @@ static void init_thread_dir(struct pseudo_node* ent) {
     pseudo_add_link(ent, "exe", &proc_thread_follow_link);
     pseudo_add_str(ent, "maps", &proc_thread_maps_load);
     pseudo_add_str(ent, "cmdline", &proc_thread_cmdline_load);
+    pseudo_add_str(ent, "status", &proc_thread_status_load);
 
     struct pseudo_node* fd = pseudo_add_dir(ent, "fd");
     struct pseudo_node* fd_link = pseudo_add_link(fd, /*name=*/NULL, &proc_thread_fd_follow_link);

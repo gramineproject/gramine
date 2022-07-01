@@ -57,6 +57,7 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalSegmentBaseSet);
 #endif
     PRINT_SYMBOL(PalMemoryAvailableQuota);
+    PRINT_SYMBOL(PalPeakMemoryUsage);
 
     return 0;
 }

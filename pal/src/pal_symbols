@@ -45,6 +45,7 @@ PalSegmentBaseSet
 PalStreamChangeName
 PalStreamAttributesSetByHandle
 PalMemoryAvailableQuota
+PalPeakMemoryUsage
 PalDebugMapAdd
 PalDebugMapRemove
 PalDebugDescribeLocation

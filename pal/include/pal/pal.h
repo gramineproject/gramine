@@ -840,6 +840,11 @@ int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 size_t PalMemoryAvailableQuota(void);
 
 /*!
+ * \brief Return the peak amount of memory for LibOS/application usage.
+ */
+size_t PalPeakMemoryUsage(void);
+
+/*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
