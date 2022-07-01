@@ -253,6 +253,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC));
     unsigned int addrlen = sizeof(struct sockaddr_un);
     bool nonblocking = options & PAL_OPTION_NONBLOCK;
     /* We do not take `nonblocking` into account here - it will be set by `thread_handshake_func`
