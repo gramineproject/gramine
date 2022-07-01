@@ -1,7 +1,7 @@
 pal_linux_common_sources_enclave = files(
     'bogomips.c',
     'gramine_unix_socket_addr.c',
-    'file_utils_common.c',
+    'file_info.c',
 )
 pal_linux_common_sources_urts = files(
     'debug_map.c',

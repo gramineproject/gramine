@@ -28,7 +28,3 @@ void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat) {
     attr->share_flags  = stat->st_mode & PAL_SHARE_MASK;
     attr->pending_size = stat->st_size;
 }
-
-bool is_dot_or_dotdot(const char* name) {
-    return (name[0] == '.' && !name[1]) || (name[0] == '.' && name[1] == '.' && !name[2]);
-}
