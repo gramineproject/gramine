@@ -565,18 +565,20 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 /*!
  * \brief Send data.
  *
- * \param      handle    Handle to the socket.
- * \param      iov       Array of buffers with data to send.
- * \param      iov_len   Length of \p iov array.
- * \param[out] out_size  On success contains the number of bytes sent.
- * \param      addr      Destination address. Can be NULL if the socket was connected.
+ * \param      handle             Handle to the socket.
+ * \param      iov                Array of buffers with data to send.
+ * \param      iov_len            Length of \p iov array.
+ * \param[out] out_size           On success contains the number of bytes sent.
+ * \param      addr               Destination address. Can be NULL if the socket was connected.
+ * \param      force_nonblocking  If `true` this request should not block. Otherwise just use
+ *                                whatever mode the handle is in.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * Data is sent atomically, i.e. data from two `PalSocketSend` calls will not be interleaved.
  */
 int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                  struct pal_socket_addr* addr);
+                  struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*!
  * \brief Receive data.

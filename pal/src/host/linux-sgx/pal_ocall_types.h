@@ -266,6 +266,7 @@ typedef struct {
     size_t ms_addrlen;
     void* ms_control;
     size_t ms_controllen;
+    unsigned int ms_flags;
 } ms_ocall_send_t;
 
 typedef struct {

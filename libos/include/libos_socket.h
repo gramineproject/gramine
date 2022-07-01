@@ -77,16 +77,19 @@ struct libos_sock_ops {
     /*!
      * \brief Send an array of buffers as continuous data.
      *
-     * \param      handle    A handle.
-     * \param      iov       An array of buffers to write from.
-     * \param      iov_len   The length of \p iov.
-     * \param[out] out_size  On success contains the number of bytes sent.
-     * \param      addr      An address to send to. May be NULL. It's up to the implementation to
-     *                       decide what to do with it (which might mean completely ignoring it).
-     * \param      addrlen   The length of \p addr.
+     * \param      handle             A handle.
+     * \param      iov                An array of buffers to write from.
+     * \param      iov_len            The length of \p iov.
+     * \param[out] out_size           On success contains the number of bytes sent.
+     * \param      addr               An address to send to. May be NULL. It's up to
+     *                                the implementation to decide what to do with it (which might
+     *                                mean completely ignoring it).
+     * \param      addrlen            The length of \p addr.
+     * \param      force_nonblocking  If `true` this request should not block. Otherwise just use
+     *                                whatever mode the handle is in.
      */
     int (*send)(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen);
+                void* addr, size_t addrlen, bool force_nonblocking);
 
     /*!
      * \brief Receive continuous data into an array of buffers.

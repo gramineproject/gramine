@@ -594,7 +594,7 @@ static long sgx_ocall_send(void* pms) {
     hdr.msg_controllen = ms->ms_controllen;
     hdr.msg_flags      = 0;
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(sendmsg, ms->ms_sockfd, &hdr, MSG_NOSIGNAL);
+    ret = DO_SYSCALL_INTERRUPTIBLE(sendmsg, ms->ms_sockfd, &hdr, MSG_NOSIGNAL | ms->ms_flags);
     return ret;
 }
 

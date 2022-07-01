@@ -613,10 +613,13 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
     }
-    if (!WITHIN_MASK(flags, MSG_NOSIGNAL)) {
+    if (!WITHIN_MASK(flags, MSG_NOSIGNAL | MSG_DONTWAIT)) {
         return -EOPNOTSUPP;
     }
 
+    /* Note this only indicates whether this operation was requested to be nonblocking. If it's
+     * `false`, but the handle is in nonblocking mode, this send won't block. */
+    bool force_nonblocking = flags & MSG_DONTWAIT;
     struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
@@ -641,7 +644,7 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     size_t size = 0;
-    ret = sock->ops->send(handle, iov, iov_len, &size, addr, addrlen);
+    ret = sock->ops->send(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, !ret ? size < total_size : false);
     if (!ret) {
         ret = size;

@@ -197,7 +197,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
         .iov_base = &hdl_hdr,
         .iov_len = sizeof(struct hdl_header),
     };
-    ret = ocall_send(fd, &iov, 1, NULL, 0, NULL, 0);
+    ret = ocall_send(fd, &iov, 1, NULL, 0, NULL, 0, 0);
     if (ret < 0) {
         free(hdl_data);
         return unix_to_pal_error(ret);
@@ -221,7 +221,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     /* next send FD-to-transfer as ancillary data */
     iov.iov_base = (void*)DUMMYPAYLOAD;
     iov.iov_len = DUMMYPAYLOADSIZE;
-    ret = ocall_send(fd, &iov, 1, NULL, 0, control_hdr, control_hdr->cmsg_len);
+    ret = ocall_send(fd, &iov, 1, NULL, 0, control_hdr, control_hdr->cmsg_len, 0);
     if (ret < 0) {
         free(hdl_data);
         return unix_to_pal_error(ret);
