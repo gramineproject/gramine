@@ -160,7 +160,6 @@ static bool ipf_init_fields(pf_context_t* pf) {
 
     ipf_init_root_mht(&pf->root_mht);
 
-    pf->offset         = 0;
     pf->file           = NULL;
     pf->end_of_file    = false;
     pf->need_writing   = false;
@@ -658,7 +657,7 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
 // seek to a specified file offset from the beginning
 // seek beyond the current size is supported if the file is writable,
 // the file is then extended with zeros (Intel SGX SDK implementation didn't support extending)
-static bool ipf_seek(pf_context_t* pf, uint64_t new_offset) {
+static bool ipf_check_offset(pf_context_t* pf, uint64_t new_offset) {
     if (PF_FAILURE(pf->file_status)) {
         pf->last_error = pf->file_status;
         return false;
@@ -667,7 +666,6 @@ static bool ipf_seek(pf_context_t* pf, uint64_t new_offset) {
     bool result = false;
 
     if (new_offset <= pf->encrypted_part_plain.size) {
-        pf->offset = new_offset;
         result = true;
     } else if (pf->mode & PF_FILE_MODE_WRITE) {
         // need to extend the file
@@ -718,7 +716,7 @@ static void memcpy_or_zero_initialize(void* dest, const void* src, size_t size) 
 }
 
 // write zeros if `ptr` is NULL
-static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
+static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size_t size) {
     if (size == 0) {
         pf->last_error = PF_STATUS_INVALID_PARAMETER;
         return 0;
@@ -741,20 +739,20 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
     const unsigned char* data_to_write = (const unsigned char*)ptr;
 
     // the first block of user data is written in the meta-data encrypted part
-    if (pf->offset < MD_USER_DATA_SIZE) {
+    if (offset < MD_USER_DATA_SIZE) {
         // offset is smaller than MD_USER_DATA_SIZE
-        size_t empty_place_left_in_md = MD_USER_DATA_SIZE - (size_t)pf->offset;
+        size_t empty_place_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_md);
 
-        memcpy_or_zero_initialize(&pf->encrypted_part_plain.data[pf->offset], data_to_write,
+        memcpy_or_zero_initialize(&pf->encrypted_part_plain.data[offset], data_to_write,
                                   size_to_write);
-        pf->offset += size_to_write;
+        offset += size_to_write;
         if (data_to_write)
             data_to_write += size_to_write;
         data_left_to_write -= size_to_write;
 
-        if (pf->offset > pf->encrypted_part_plain.size)
-            pf->encrypted_part_plain.size = pf->offset; // file grew, update the new file size
+        if (offset > pf->encrypted_part_plain.size)
+            pf->encrypted_part_plain.size = offset; // file grew, update the new file size
 
         pf->need_writing = true;
     }
@@ -763,25 +761,25 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
         file_node_t* file_data_node = NULL;
         // return the data node of the current offset, will read it from disk or create new one
         // if needed (and also the mht node if needed)
-        file_data_node = ipf_get_data_node(pf);
+        file_data_node = ipf_get_data_node(pf, offset);
         if (file_data_node == NULL) {
             DEBUG_PF("failed to get data node");
             break;
         }
 
-        size_t offset_in_node = (size_t)((pf->offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE);
+        uint64_t offset_in_node = (size_t)((offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE);
         size_t empty_place_left_in_node = PF_NODE_SIZE - offset_in_node;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_node);
 
         memcpy_or_zero_initialize(&file_data_node->decrypted.data.data[offset_in_node],
                                   data_to_write, size_to_write);
-        pf->offset += size_to_write;
+        offset += size_to_write;
         if (data_to_write)
             data_to_write += size_to_write;
         data_left_to_write -= size_to_write;
 
-        if (pf->offset > pf->encrypted_part_plain.size) {
-            pf->encrypted_part_plain.size = pf->offset; // file grew, update the new file size
+        if (offset > pf->encrypted_part_plain.size) {
+            pf->encrypted_part_plain.size = offset; // file grew, update the new file size
         }
 
         if (!file_data_node->need_writing) {
@@ -800,7 +798,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size) {
     return size - data_left_to_write;
 }
 
-static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size) {
+static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size) {
     if (ptr == NULL) {
         pf->last_error = PF_STATUS_INVALID_PARAMETER;
         return 0;
@@ -818,9 +816,9 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size) {
 
     size_t data_left_to_read = size;
 
-    if (((uint64_t)data_left_to_read) > (uint64_t)(pf->encrypted_part_plain.size - pf->offset)) {
+    if (((uint64_t)data_left_to_read) > (uint64_t)(pf->encrypted_part_plain.size - offset)) {
         // the request is bigger than what's left in the file
-        data_left_to_read = (size_t)(pf->encrypted_part_plain.size - pf->offset);
+        data_left_to_read = (size_t)(pf->encrypted_part_plain.size - offset);
     }
 
     // used at the end to return how much we actually read
@@ -829,13 +827,13 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size) {
     unsigned char* out_buffer = (unsigned char*)ptr;
 
     // the first block of user data is read from the meta-data encrypted part
-    if (pf->offset < MD_USER_DATA_SIZE) {
+    if (offset < MD_USER_DATA_SIZE) {
         // offset is smaller than MD_USER_DATA_SIZE
-        size_t data_left_in_md = MD_USER_DATA_SIZE - (size_t)pf->offset;
+        size_t data_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_read = MIN(data_left_to_read, data_left_in_md);
 
-        memcpy(out_buffer, &pf->encrypted_part_plain.data[pf->offset], size_to_read);
-        pf->offset += size_to_read;
+        memcpy(out_buffer, &pf->encrypted_part_plain.data[offset], size_to_read);
+        offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
     }
@@ -844,23 +842,23 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size) {
         file_node_t* file_data_node = NULL;
         // return the data node of the current offset, will read it from disk if needed
         // (and also the mht node if needed)
-        file_data_node = ipf_get_data_node(pf);
+        file_data_node = ipf_get_data_node(pf, offset);
         if (file_data_node == NULL)
             break;
 
-        size_t offset_in_node = (pf->offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE;
+        uint64_t offset_in_node = (offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE;
         size_t data_left_in_node = PF_NODE_SIZE - offset_in_node;
         size_t size_to_read = MIN(data_left_to_read, data_left_in_node);
 
         memcpy(out_buffer, &file_data_node->decrypted.data.data[offset_in_node], size_to_read);
-        pf->offset += size_to_read;
+        offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
     }
 
     if (data_left_to_read == 0 && data_attempted_to_read != size) {
         // user wanted to read more and we had to shrink the request
-        assert(pf->offset == pf->encrypted_part_plain.size);
+        assert(offset == pf->encrypted_part_plain.size);
         pf->end_of_file = true;
     }
 
@@ -910,21 +908,21 @@ static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_
         *physical_data_node_number = _physical_data_node_number;
 }
 
-static file_node_t* ipf_get_data_node(pf_context_t* pf) {
+static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
     file_node_t* file_data_node = NULL;
 
-    if (pf->offset < MD_USER_DATA_SIZE) {
+    if (offset < MD_USER_DATA_SIZE) {
         pf->last_error = PF_STATUS_UNKNOWN_ERROR;
         return NULL;
     }
 
-    if ((pf->offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE == 0
-        && pf->offset == pf->encrypted_part_plain.size) {
+    if ((offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE == 0
+        && offset == pf->encrypted_part_plain.size) {
         // new node
-        file_data_node = ipf_append_data_node(pf);
+        file_data_node = ipf_append_data_node(pf, offset);
     } else {
         // existing node
-        file_data_node = ipf_read_data_node(pf);
+        file_data_node = ipf_read_data_node(pf, offset);
     }
 
     // bump all the parents mht to reside before the data node in the cache
@@ -968,8 +966,8 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf) {
     return file_data_node;
 }
 
-static file_node_t* ipf_append_data_node(pf_context_t* pf) {
-    file_node_t* file_mht_node = ipf_get_mht_node(pf);
+static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset) {
+    file_node_t* file_mht_node = ipf_get_mht_node(pf, offset);
     if (file_mht_node == NULL) // some error happened
         return NULL;
 
@@ -982,7 +980,7 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf) {
     }
 
     uint64_t node_number, physical_node_number;
-    get_node_numbers(pf->offset, NULL, &node_number, NULL, &physical_node_number);
+    get_node_numbers(offset, NULL, &node_number, NULL, &physical_node_number);
 
     new_file_data_node->type = FILE_DATA_NODE_TYPE;
     new_file_data_node->new_node = true;
@@ -999,13 +997,13 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf) {
     return new_file_data_node;
 }
 
-static file_node_t* ipf_read_data_node(pf_context_t* pf) {
+static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     uint64_t data_node_number;
     uint64_t physical_node_number;
     file_node_t* file_mht_node;
     pf_status_t status;
 
-    get_node_numbers(pf->offset, NULL, &data_node_number, NULL, &physical_node_number);
+    get_node_numbers(offset, NULL, &data_node_number, NULL, &physical_node_number);
 
     file_node_t* file_data_node = (file_node_t*)lruc_get(pf->cache, physical_node_number);
     if (file_data_node != NULL)
@@ -1013,7 +1011,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf) {
 
     // need to read the data node from the disk
 
-    file_mht_node = ipf_get_mht_node(pf);
+    file_mht_node = ipf_get_mht_node(pf, offset);
     if (file_mht_node == NULL) // some error happened
         return NULL;
 
@@ -1062,25 +1060,25 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf) {
     return file_data_node;
 }
 
-static file_node_t* ipf_get_mht_node(pf_context_t* pf) {
+static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset) {
     file_node_t* file_mht_node;
     uint64_t mht_node_number;
     uint64_t physical_mht_node_number;
 
-    if (pf->offset < MD_USER_DATA_SIZE) {
+    if (offset < MD_USER_DATA_SIZE) {
         pf->last_error = PF_STATUS_UNKNOWN_ERROR;
         return NULL;
     }
 
-    get_node_numbers(pf->offset, &mht_node_number, NULL, &physical_mht_node_number, NULL);
+    get_node_numbers(offset, &mht_node_number, NULL, &physical_mht_node_number, NULL);
 
     if (mht_node_number == 0)
         return &pf->root_mht;
 
     // file is constructed from (ATTACHED_DATA_NODES_COUNT + CHILD_MHT_NODES_COUNT) * PF_NODE_SIZE
     // bytes per MHT node
-    if ((pf->offset - MD_USER_DATA_SIZE) % (ATTACHED_DATA_NODES_COUNT * PF_NODE_SIZE) == 0 &&
-            pf->offset == pf->encrypted_part_plain.size) {
+    if ((offset - MD_USER_DATA_SIZE) % (ATTACHED_DATA_NODES_COUNT * PF_NODE_SIZE) == 0 &&
+         offset == pf->encrypted_part_plain.size) {
         file_mht_node = ipf_append_mht_node(pf, mht_node_number);
     } else {
         file_mht_node = ipf_read_mht_node(pf, mht_node_number);
@@ -1248,9 +1246,9 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
 
     if (size > pf->encrypted_part_plain.size) {
         // Extend the file.
-        pf->offset = pf->encrypted_part_plain.size;
-        DEBUG_PF("extending the file from %lu to %lu", pf->offset, size);
-        if (ipf_write(pf, NULL, size - pf->offset) != size - pf->offset)
+        uint64_t offset = pf->encrypted_part_plain.size;
+        DEBUG_PF("extending the file from %lu to %lu", offset, size);
+        if (ipf_write(pf, NULL, offset, size - offset) != size - offset)
             return pf->last_error;
 
         return PF_STATUS_SUCCESS;
@@ -1324,16 +1322,16 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
         return PF_STATUS_SUCCESS;
     }
 
-    if (!ipf_seek(pf, offset))
+    if (!ipf_check_offset(pf, offset))
         return pf->last_error;
 
-    if (pf->end_of_file || pf->offset == pf->encrypted_part_plain.size) {
+    if (pf->end_of_file || offset == pf->encrypted_part_plain.size) {
         pf->end_of_file = true;
         *bytes_read = 0;
         return PF_STATUS_SUCCESS;
     }
 
-    size_t bytes = ipf_read(pf, output, size);
+    size_t bytes = ipf_read(pf, output, offset, size);
     if (!bytes)
         return pf->last_error;
 
@@ -1345,10 +1343,10 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    if (!ipf_seek(pf, offset))
+    if (!ipf_check_offset(pf, offset))
         return pf->last_error;
 
-    if (ipf_write(pf, input, size) != size)
+    if (ipf_write(pf, input, offset, size) != size)
         return pf->last_error;
     return PF_STATUS_SUCCESS;
 }

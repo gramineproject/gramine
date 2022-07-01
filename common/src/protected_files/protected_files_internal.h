@@ -20,7 +20,6 @@ struct pf_context {
     file_node_t root_mht; // the root of the mht is always needed (for files bigger than 3KB)
     pf_handle_t file;
     pf_file_mode_t mode;
-    uint64_t offset; // current file position (user's view)
     bool end_of_file;
     uint64_t real_file_size;
     bool need_writing;
@@ -47,10 +46,10 @@ static bool ipf_import_metadata_key(pf_context_t* pf, bool restore, pf_key_t* ou
 static bool ipf_generate_random_key(pf_context_t* pf, pf_key_t* output);
 static bool ipf_restore_current_metadata_key(pf_context_t* pf, pf_key_t* output);
 
-static file_node_t* ipf_get_data_node(pf_context_t* pf);
-static file_node_t* ipf_read_data_node(pf_context_t* pf);
-static file_node_t* ipf_append_data_node(pf_context_t* pf);
-static file_node_t* ipf_get_mht_node(pf_context_t* pf);
+static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset);
+static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset);
+static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset);
+static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset);
 static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number);
 static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_number);
 
@@ -62,7 +61,7 @@ static bool ipf_internal_flush(pf_context_t* pf);
 static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create, pf_handle_t file,
                               size_t real_size, const pf_key_t* kdk_key, pf_status_t* status);
 static bool ipf_close(pf_context_t* pf);
-static size_t ipf_read(pf_context_t* pf, void* ptr, size_t size);
-static size_t ipf_write(pf_context_t* pf, const void* ptr, size_t size);
-static bool ipf_seek(pf_context_t* pf, uint64_t new_offset);
+static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size);
+static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size_t size);
+static bool ipf_check_offset(pf_context_t* pf, uint64_t new_offset);
 static void ipf_try_clear_error(pf_context_t* pf);
