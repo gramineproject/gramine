@@ -21,7 +21,8 @@ static void write_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                     .iov_base = buf + i,
                     .iov_len = this_size,
                 };
-                CHECK(PalSocketSend(handle, &iov, 1, &this_size, /*addr=*/NULL));
+                CHECK(PalSocketSend(handle, &iov, 1, &this_size, /*addr=*/NULL,
+                                    /*force_nonblocking=*/false));
                 break;
             default:
                 BUG();

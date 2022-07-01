@@ -1513,7 +1513,7 @@ out:
 }
 
 ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const void* addr,
-                   size_t addrlen, void* control, size_t controllen) {
+                   size_t addrlen, void* control, size_t controllen, unsigned int flags) {
     ssize_t retval = 0;
     void* obuf = NULL;
     bool is_obuf_mapped = false;
@@ -1566,6 +1566,7 @@ ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const vo
     WRITE_ONCE(ms->ms_addr, untrusted_addr);
     WRITE_ONCE(ms->ms_control, untrusted_control);
     WRITE_ONCE(ms->ms_controllen, controllen);
+    WRITE_ONCE(ms->ms_flags, flags);
 
     retval = sgx_exitless_ocall(OCALL_SEND, ms);
 

@@ -34,9 +34,9 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 }
 
 int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                  struct pal_socket_addr* addr) {
+                  struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
-    return _PalSocketSend(handle, iov, iov_len, out_size, addr);
+    return _PalSocketSend(handle, iov, iov_len, out_size, addr, force_nonblocking);
 }
 
 int PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,

@@ -442,7 +442,7 @@ static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* out_size,
-                struct pal_socket_addr* addr) {
+                struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
@@ -464,8 +464,9 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
         iov[i].iov_len = pal_iov[i].iov_len;
     }
 
+    unsigned int flags = force_nonblocking ? MSG_DONTWAIT : 0;
     ssize_t ret = ocall_send(handle->sock.fd, iov, iov_len, addr ? &sa_storage : NULL,
-                             linux_addrlen, /*control=*/NULL, /*controllen=*/0);
+                             linux_addrlen, /*control=*/NULL, /*controllen=*/0, flags);
     free(iov);
     if (ret < 0) {
         return unix_to_pal_error(ret);
@@ -619,11 +620,11 @@ int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 }
 
 int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                   struct pal_socket_addr* addr) {
+                   struct pal_socket_addr* addr, bool force_nonblocking) {
     if (!handle->sock.ops->send) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->send(handle, iov, iov_len, out_size, addr);
+    return handle->sock.ops->send(handle, iov, iov_len, out_size, addr, force_nonblocking);
 }
 
 int _PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,

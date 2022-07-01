@@ -580,7 +580,7 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
 }
 
 static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen) {
+                void* addr, size_t addrlen, bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     struct libos_sock_handle* sock = &handle->info.sock;
@@ -630,7 +630,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     }
 
     int ret = PalSocketSend(sock->pal_handle, pal_iov, iov_len, out_size,
-                            addr ? &pal_ip_addr : NULL);
+                            addr ? &pal_ip_addr : NULL, force_nonblocking);
     ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     free(pal_iov);
     return ret;
