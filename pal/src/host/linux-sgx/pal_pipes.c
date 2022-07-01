@@ -175,9 +175,11 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
-    int flags = PAL_OPTION_TO_LINUX_OPEN(options);
-    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, flags);
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC));
+    bool nonblocking = options & PAL_OPTION_NONBLOCK;
+    /* We do not take `nonblocking` into account here - it will be set after the TLS handshake below
+     * if needed. */
+    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, SOCK_CLOEXEC);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -191,7 +193,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     clnt->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd          = ret;
     clnt->pipe.name        = handle->pipe.name;
-    clnt->pipe.nonblocking = !!(flags & SOCK_NONBLOCK);
+    clnt->pipe.nonblocking = nonblocking;
 
     /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
      * lazily on first read/write on this pipe */
@@ -212,6 +214,13 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
         ocall_close(clnt->pipe.fd);
         free(clnt);
         return ret;
+    }
+    if (clnt->pipe.nonblocking) {
+        ret = ocall_fsetnonblock(clnt->pipe.fd, /*nonblocking=*/1);
+        if (ret < 0) {
+            log_error("Failed to set handle as non-blocking: %d", ret);
+            _PalProcessExit(1);
+        }
     }
     __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
 
@@ -241,9 +250,9 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
         return -PAL_ERROR_DENIED;
 
     unsigned int addrlen = sizeof(struct sockaddr_un);
-
-    /* We do not take `options & PAL_OPTION_NONBLOCK` into account here - it will be set by
-     * `thread_handshake_func` later if needed. */
+    bool nonblocking = options & PAL_OPTION_NONBLOCK;
+    /* We do not take `nonblocking` into account here - it will be set by `thread_handshake_func`
+     * later if needed. */
     ret = ocall_connect(AF_UNIX, SOCK_STREAM, 0, /*ipv6_v6only=*/0, (const struct sockaddr*)&addr,
                         addrlen, NULL, NULL);
     if (ret < 0)
@@ -258,7 +267,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     init_handle_hdr(hdl, PAL_TYPE_PIPE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->pipe.fd            = ret;
-    hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
+    hdl->pipe.nonblocking   = nonblocking;
 
     /* padding with zeros is because the whole buffer is used in key derivation */
     memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
