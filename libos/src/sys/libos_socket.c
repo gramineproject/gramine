@@ -1194,9 +1194,11 @@ out:
 }
 
 static int set_socket_option(struct libos_handle* handle, int optname, char* optval, size_t len) {
+    __UNUSED(handle);
+    __UNUSED(optval);
+    __UNUSED(len);
     assert(locked(&handle->info.sock.lock));
 
-    size_t required_len;
     switch (optname) {
         case SO_ACCEPTCONN:
         case SO_DOMAIN:
@@ -1204,117 +1206,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, char* opt
         case SO_PROTOCOL:
         case SO_ERROR:
             return -EPERM;
-        case SO_KEEPALIVE:
-            required_len = sizeof(int);
-            break;
-        case SO_LINGER:
-            required_len = sizeof(struct linger);
-            break;
-        case SO_RCVBUF:
-            required_len = sizeof(int);
-            break;
-        case SO_SNDBUF:
-            required_len = sizeof(int);
-            break;
-        case SO_RCVTIMEO:
-            required_len = sizeof(struct timeval);
-            break;
-        case SO_SNDTIMEO:
-            required_len = sizeof(struct timeval);
-            break;
-        /* These options are handled by socket type specific code. */
-        case SO_REUSEADDR:
-        case SO_BROADCAST:
         default:
             return -ENOPROTOOPT;
     }
-
-    if (len < required_len) {
-        return -EINVAL;
-    }
-
-    union {
-        int i;
-        struct linger linger;
-        struct timeval tv;
-    } value = { 0 };
-    memcpy(&value, optval, required_len);
-
-    PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
-    if (!pal_handle) {
-        return -EINVAL;
-    }
-
-    PAL_STREAM_ATTR attr;
-    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-    assert(attr.handle_type == PAL_TYPE_SOCKET);
-
-    switch (optname) {
-        case SO_KEEPALIVE:
-            attr.socket.keepalive = value.i;
-            break;
-        case SO_LINGER:
-            if (value.linger.l_onoff) {
-                if (value.linger.l_linger < 0) {
-                    return -EINVAL;
-                }
-                attr.socket.linger = value.linger.l_linger;
-            } else {
-                attr.socket.linger = 0;
-            }
-            break;
-        case SO_RCVBUF:
-            if (value.i < 0) {
-                return -EINVAL;
-            }
-            /* The Linux kernel doubles this value. */
-            value.i = MIN(value.i, INT_MAX / 2);
-            value.i *= 2;
-            attr.socket.recv_buf_size = value.i;
-            break;
-        case SO_SNDBUF:
-            if (value.i < 0) {
-                return -EINVAL;
-            }
-            /* The Linux kernel doubles this value. */
-            value.i = MIN(value.i, INT_MAX / 2);
-            value.i *= 2;
-            attr.socket.send_buf_size = value.i;
-            break;
-        case SO_RCVTIMEO:
-            if (value.tv.tv_sec < 0 || value.tv.tv_usec < 0
-                    || (unsigned long)value.tv.tv_usec >= TIME_US_IN_S) {
-                return -EINVAL;
-            }
-            attr.socket.receivetimeout_us = value.tv.tv_sec * TIME_US_IN_S + value.tv.tv_usec;
-            break;
-        case SO_SNDTIMEO:
-            if (value.tv.tv_sec < 0 || value.tv.tv_usec < 0
-                    || (unsigned long)value.tv.tv_usec >= TIME_US_IN_S) {
-                return -EINVAL;
-            }
-            attr.socket.sendtimeout_us = value.tv.tv_sec * TIME_US_IN_S + value.tv.tv_usec;
-            break;
-    }
-
-    ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-
-    /* Cache values in LibOS. */
-    switch (optname) {
-        case SO_RCVTIMEO:
-            handle->info.sock.receivetimeout_us = attr.socket.receivetimeout_us;
-            break;
-        case SO_SNDTIMEO:
-            handle->info.sock.sendtimeout_us = attr.socket.sendtimeout_us;
-            break;
-    }
-    return 0;
 }
 
 long libos_syscall_setsockopt(int fd, int level, int optname, char* optval, int optlen) {
@@ -1369,7 +1263,6 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
 
     union {
         int i;
-        struct linger linger;
         struct timeval timeval;
     } value = { 0 };
     size_t value_len = sizeof(int);
@@ -1377,75 +1270,39 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
     switch (optname) {
         case SO_ACCEPTCONN:
             value.i = sock->state == SOCK_LISTENING;
-            goto out;
+            break;
         case SO_DOMAIN:
             value.i = sock->domain;
-            goto out;
+            break;
         case SO_TYPE:
             value.i = sock->type;
-            goto out;
+            break;
         case SO_PROTOCOL:
             value.i = sock->protocol;
-            goto out;
+            break;
         case SO_ERROR:
             value.i = sock->last_error;
-            goto out;
+            break;
         case SO_RCVTIMEO:
             value.timeval.tv_sec = sock->receivetimeout_us / TIME_US_IN_S;
             value.timeval.tv_usec = sock->receivetimeout_us % TIME_US_IN_S;
             value_len = sizeof(value.timeval);
-            goto out;
+            break;
         case SO_SNDTIMEO:
             value.timeval.tv_sec = sock->sendtimeout_us / TIME_US_IN_S;
             value.timeval.tv_usec = sock->sendtimeout_us % TIME_US_IN_S;
             value_len = sizeof(value.timeval);
-            goto out;
+            break;
         case SO_REUSEADDR:
             value.i = sock->reuseaddr;
-            goto out;
+            break;
         case SO_BROADCAST:
             value.i = sock->broadcast;
-            goto out;
-        case SO_KEEPALIVE:
-        case SO_LINGER:
-        case SO_RCVBUF:
-        case SO_SNDBUF:
-            /* Set below. */
             break;
         default:
             return -ENOPROTOOPT;
     }
 
-    PAL_HANDLE pal_handle = __atomic_load_n(&sock->pal_handle, __ATOMIC_ACQUIRE);
-    if (!pal_handle) {
-        return -EINVAL;
-    }
-
-    PAL_STREAM_ATTR attr;
-    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-    assert(attr.handle_type == PAL_TYPE_SOCKET);
-
-    switch (optname) {
-        case SO_KEEPALIVE:
-            value.i = attr.socket.keepalive;
-            break;
-        case SO_LINGER:
-            value.linger.l_onoff = attr.socket.linger ? 1 : 0;
-            value.linger.l_linger = attr.socket.linger;
-            value_len = sizeof(value.linger);
-            break;
-        case SO_RCVBUF:
-            value.i = attr.socket.recv_buf_size;
-            break;
-        case SO_SNDBUF:
-            value.i = attr.socket.send_buf_size;
-            break;
-    }
-
-out:
     if (*len > value_len) {
         *len = value_len;
     }
