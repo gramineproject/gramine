@@ -586,6 +586,21 @@ struct parser_table {
     [__NR_fspick] = {.slow = false, .name = "fspick", .parser = {NULL}},
     [__NR_pidfd_open] = {.slow = false, .name = "pidfd_open", .parser = {NULL}},
     [__NR_clone3] = {.slow = false, .name = "clone3", .parser = {NULL}},
+    [__NR_close_range] = {.slow = false, .name = "close_range", .parser = {NULL}},
+    [__NR_openat2] = {.slow = false, .name = "openat2", .parser = {NULL}},
+    [__NR_pidfd_getfd] = {.slow = false, .name = "pidfd_getfd", .parser = {NULL}},
+    [__NR_faccessat2] = {.slow = false, .name = "faccessat2", .parser = {NULL}},
+    [__NR_process_madvise] = {.slow = false, .name = "process_madvise", .parser = {NULL}},
+    [__NR_epoll_pwait2] = {.slow = false, .name = "epoll_pwait2", .parser = {NULL}},
+    [__NR_mount_setattr] = {.slow = false, .name = "mount_setattr", .parser = {NULL}},
+    [__NR_quotactl_fd] = {.slow = false, .name = "quotactl_fd", .parser = {NULL}},
+    [__NR_landlock_create_ruleset] = {.slow = false, .name = "landlock_create_ruleset", .parser = {NULL}},
+    [__NR_landlock_add_rule] = {.slow = false, .name = "landlock_add_rule", .parser = {NULL}},
+    [__NR_landlock_restrict_self] = {.slow = false, .name = "landlock_restrict_self", .parser = {NULL}},
+    [__NR_memfd_secret] = {.slow = false, .name = "memfd_secret", .parser = {NULL}},
+    [__NR_process_mrelease] = {.slow = false, .name = "process_mrelease", .parser = {NULL}},
+    [__NR_futex_waitv] = {.slow = false, .name = "futex_waitv", .parser = {NULL}},
+    [__NR_set_mempolicy_home_node] = {.slow = false, .name = "set_mempolicy_home_node", .parser = {NULL}},
 };
 
 const char* const siglist[SIGRTMIN] = {
