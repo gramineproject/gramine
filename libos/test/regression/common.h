@@ -15,12 +15,12 @@
         __builtin_add_overflow((val), 0, &__dummy); \
     })
 
-#define CHECK(x) ({                                     \
-    __typeof__(x) _x = (x);                             \
-    if (_x == -1) {                                     \
-        err(1, "error at %s (line %d)", #x, __LINE__);  \
-    }                                                   \
-    _x;                                                 \
+#define CHECK(x) ({                                         \
+    __typeof__(x) _x = (x);                                 \
+    if (_x == -1) {                                         \
+        err(1, "error at %s (line %d): %m", #x, __LINE__);  \
+    }                                                       \
+    _x;                                                     \
 })
 
 #define SAME_TYPE(a, b) __builtin_types_compatible_p(__typeof__(a), __typeof__(b))

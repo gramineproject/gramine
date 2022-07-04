@@ -87,7 +87,11 @@ static void client(int pipefd) {
 
     struct sockaddr_in sa = {
         .sin_family = AF_INET,
-        .sin_port   = htons((PORT)),
+        .sin_port = htons(PORT),
+        .sin_addr = {
+            /* TODO: remove this once Ubuntu 18.04 is deprecated. */
+            .s_addr = 0,
+        },
     };
     if (inet_aton(SRV_IP, &sa.sin_addr) != 1) {
         CHECK(-1);
@@ -120,7 +124,7 @@ static void client(int pipefd) {
     char buf[sizeof(g_buffer) + 1] = { 0 };
     ssize_t count = client_recv(s, buf, sizeof(buf), MSG_PEEK);
     if (count != sizeof(g_buffer)) {
-        errx(1, "recv with MSG_PEEK returned less that than available: %zd", count);
+        errx(1, "recv with MSG_PEEK returned less than available: %zd", count);
     }
     if (memcmp(buf, g_buffer, sizeof(g_buffer))) {
         errx(1, "wrong data received: %s", buf);
@@ -130,7 +134,7 @@ static void client(int pipefd) {
     /* Receive with `MSG_PEEK` again. */
     count = client_recv(s, buf, sizeof(buf), MSG_PEEK);
     if (count != sizeof(g_buffer)) {
-        errx(1, "recv with MSG_PEEK returned less that than available: %zd", count);
+        errx(1, "recv with MSG_PEEK returned less than available: %zd", count);
     }
     if (memcmp(buf, g_buffer, sizeof(g_buffer))) {
         errx(1, "wrong data received: %s", buf);
@@ -140,7 +144,7 @@ static void client(int pipefd) {
     /* Receive without `MSG_PEEK` this time. */
     count = client_recv(s, buf, sizeof(buf), /*flags=*/0);
     if (count != sizeof(g_buffer)) {
-        errx(1, "recv with MSG_PEEK returned less that than available: %zd", count);
+        errx(1, "recv with MSG_PEEK returned less than available: %zd", count);
     }
     if (memcmp(buf, g_buffer, sizeof(g_buffer))) {
         errx(1, "wrong data received: %s", buf);
