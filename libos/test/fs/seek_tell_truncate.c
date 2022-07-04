@@ -2,12 +2,13 @@
 
 #define CHUNK_SIZE 512
 
-static void setup_files(const char* path, size_t size) {
+static void setup_file(const char* path, size_t size) {
     int fd = open_output_fd(path, /*rdwr=*/false);
 
     void* buf = alloc_buffer(size);
     fill_random(buf, size);
     write_fd(path, fd, buf, size);
+    free(buf);
 
     close_fd(path, fd);
 }
@@ -17,26 +18,26 @@ static void seek_truncate(const char* path, size_t file_pos, size_t file_truncat
     printf("open(%s) output OK\n", path);
 
     seek_fd(path, fd, file_pos, SEEK_SET);
-    printf("seek(%s) output OK: %zd\n", path, file_pos);
+    printf("seek(%s) output OK: %zu\n", path, file_pos);
 
     off_t pos = tell_fd(path, fd);
-    printf("first tell(%s) output position OK: %zd\n", path, pos);
+    printf("first tell(%s) output position OK: %zu\n", path, pos);
 
     if (ftruncate(fd, file_truncate) != 0) {
-        fatal_error("Failed to truncate file %s to %zd: %s\n", path, file_truncate,
-                    strerror(errno));
+        fatal_error("Failed to truncate file %s to %zu: %m\n", path, file_truncate);
     }
-    printf("truncate(%s) to %zd OK\n", path, file_truncate);
+    printf("truncate(%s) to %zu OK\n", path, file_truncate);
 
     pos = tell_fd(path, fd);
-    printf("second tell(%s) output position OK: %zd\n", path, pos);
+    printf("second tell(%s) output position OK: %zu\n", path, pos);
 
     void* buf = alloc_buffer(CHUNK_SIZE);
     fill_random(buf, CHUNK_SIZE);
     write_fd(path, fd, buf, CHUNK_SIZE);
+    free(buf);
 
     pos = tell_fd(path, fd);
-    printf("third tell(%s) output position OK: %zd\n", path, pos);
+    printf("third tell(%s) output position OK: %zu\n", path, pos);
 
     close_fd(path, fd);
     printf("close(%s) OK\n", path);
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
     size_t file_pos      = strtoul(argv[3], NULL, 10);
     size_t file_truncate = strtoul(argv[4], NULL, 10);
 
-    setup_files(argv[1], file_size);
+    setup_file(argv[1], file_size);
     seek_truncate(argv[1], file_pos, file_truncate);
 
     return 0;
