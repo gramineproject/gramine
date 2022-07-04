@@ -654,7 +654,7 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
     return true;
 }
 
-// seek to a specified file offset from the beginning
+// verify the seek value, and set an internal state of the structure accordingly
 // seek beyond the current size is supported if the file is writable,
 // the file is then extended with zeros (Intel SGX SDK implementation didn't support extending)
 static bool ipf_check_offset(pf_context_t* pf, uint64_t new_offset) {
@@ -767,7 +767,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
             break;
         }
 
-        uint64_t offset_in_node = (size_t)((offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE);
+        uint64_t offset_in_node = (offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE;
         size_t empty_place_left_in_node = PF_NODE_SIZE - offset_in_node;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_node);
 
