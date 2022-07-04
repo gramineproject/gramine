@@ -133,7 +133,7 @@ static int get_socket_pending_size(struct libos_handle* handle, size_t* out_size
     }
 
     PAL_STREAM_ATTR attr;
-    int ret = DkStreamAttributesQueryByHandle(pal_handle, &attr);
+    int ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
