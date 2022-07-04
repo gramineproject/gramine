@@ -20,7 +20,7 @@ static void seek_truncate(const char* path, size_t file_pos, size_t file_truncat
     printf("seek(%s) output OK: %zd\n", path, file_pos);
 
     off_t pos = tell_fd(path, fd);
-    printf("tell(%s) output position OK: %zd\n", path, pos);
+    printf("first tell(%s) output position OK: %zd\n", path, pos);
 
     if (ftruncate(fd, file_truncate) != 0) {
         fatal_error("Failed to truncate file %s to %zd: %s\n", path, file_truncate,
@@ -29,14 +29,14 @@ static void seek_truncate(const char* path, size_t file_pos, size_t file_truncat
     printf("truncate(%s) to %zd OK\n", path, file_truncate);
 
     pos = tell_fd(path, fd);
-    printf("tell(%s) output position OK: %zd\n", path, pos);
+    printf("second tell(%s) output position OK: %zd\n", path, pos);
 
     void* buf = alloc_buffer(CHUNK_SIZE);
     fill_random(buf, CHUNK_SIZE);
     write_fd(path, fd, buf, CHUNK_SIZE);
 
     pos = tell_fd(path, fd);
-    printf("tell(%s) output position OK: %zd\n", path, pos);
+    printf("third tell(%s) output position OK: %zd\n", path, pos);
 
     close_fd(path, fd);
     printf("close(%s) OK\n", path);
