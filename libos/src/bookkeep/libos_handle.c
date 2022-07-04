@@ -69,12 +69,13 @@ out:
     return ret;
 }
 
-static int init_exec_handle(void) {
+int init_exec_handle(const char* const* argv, char*** out_new_argv) {
     lock(&g_process.fs_lock);
     if (g_process.exec) {
         /* `g_process.exec` handle is already initialized if we did execve. See
          * `libos_syscall_execve_rtld`. */
         unlock(&g_process.fs_lock);
+        *out_new_argv = NULL;
         return 0;
     }
     unlock(&g_process.fs_lock);
@@ -82,7 +83,7 @@ static int init_exec_handle(void) {
     /* Initialize `g_process.exec` based on `libos.entrypoint` manifest key. */
     char* entrypoint = NULL;
     const char* exec_path;
-    struct libos_handle* hdl = NULL;
+    struct libos_handle* exec_handle = NULL;
     int ret;
 
     /* Initialize `g_process.exec` based on `libos.entrypoint` manifest key. */
@@ -109,28 +110,23 @@ static int init_exec_handle(void) {
         goto out;
     }
 
-    hdl = get_new_handle();
-    if (!hdl) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    ret = open_executable(hdl, exec_path);
+    char** new_argv = NULL;
+    ret = load_and_check_exec(exec_path, argv, &exec_handle, &new_argv);
     if (ret < 0) {
-        log_error("Error opening executable %s: %d", exec_path, ret);
         goto out;
     }
 
     lock(&g_process.fs_lock);
-    g_process.exec = hdl;
-    get_handle(hdl);
+    g_process.exec = exec_handle;
+    get_handle(exec_handle);
     unlock(&g_process.fs_lock);
 
+    *out_new_argv = new_argv;
     ret = 0;
 out:
     free(entrypoint);
-    if (hdl)
-        put_handle(hdl);
+    if (exec_handle)
+        put_handle(exec_handle);
     return ret;
 }
 
@@ -152,12 +148,12 @@ int init_handle(void) {
     return 0;
 }
 
-int init_important_handles(void) {
+int init_std_handles(void) {
     int ret;
     struct libos_thread* thread = get_cur_thread();
 
     if (thread->handle_map)
-        goto done;
+        return 0;
 
     struct libos_handle_map* handle_map = get_thread_handle_map(thread);
 
@@ -228,9 +224,7 @@ int init_important_handles(void) {
         handle_map->fd_top = 2;
 
     unlock(&handle_map->lock);
-
-done:
-    return init_exec_handle();
+    return 0;
 }
 
 struct libos_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct libos_handle_map* map) {

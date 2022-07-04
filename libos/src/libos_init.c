@@ -366,7 +366,9 @@ static int read_environs(const char* const* envp) {
         }                                                                   \
     } while (0)
 
-noreturn void libos_init(int argc, const char* const* argv, const char* const* envp) {
+noreturn void libos_init(const char* const* argv, const char* const* envp) {
+    int ret;
+
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
@@ -406,7 +408,7 @@ noreturn void libos_init(int argc, const char* const* argv, const char* const* e
     if (g_pal_public_state->parent_process) {
         struct checkpoint_hdr hdr;
 
-        int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
+        ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
             log_error("libos_init: failed to read the whole checkpoint header: %d", ret);
             PalProcessExit(1);
@@ -419,28 +421,37 @@ noreturn void libos_init(int argc, const char* const* argv, const char* const* e
     }
 
     RUN_INIT(init_ipc);
-    RUN_INIT(init_process, argc, argv);
+    RUN_INIT(init_process);
     RUN_INIT(init_mount_root);
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
-    RUN_INIT(init_important_handles);
+    RUN_INIT(init_std_handles);
+
+    char** expanded_argv;
+    RUN_INIT(init_exec_handle, argv, &expanded_argv);
+    RUN_INIT(init_process_cmdline, expanded_argv ? (const char* const*)expanded_argv : argv);
 
     /* Update log prefix after we initialized `g_process.exec` */
     log_setprefix(libos_get_tcb());
 
     RUN_INIT(init_async_worker);
 
-    char** new_argp;
+    char** new_argv;
     elf_auxv_t* new_auxv;
-    RUN_INIT(init_stack, argv, envp, &new_argp, &new_auxv);
+    RUN_INIT(init_stack, expanded_argv ? (const char* const*)expanded_argv : argv, envp, &new_argv,
+             &new_auxv);
 
-    /* TODO: Support running non-ELF executables (scripts) */
+    if (expanded_argv) {
+        free(*expanded_argv);
+        free(expanded_argv);
+    }
+
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);
 
     if (g_pal_public_state->parent_process) {
-        int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
+        ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
             log_error("libos_init: failed to establish IPC connection to parent: %d", ret);
             PalProcessExit(1);
@@ -491,7 +502,7 @@ noreturn void libos_init(int argc, const char* const* argv, const char* const* e
 
     /* At this point, the exec map has been either copied from checkpoint, or initialized in
      * `init_loader`. */
-    execute_elf_object(/*exec_map=*/NULL, new_argp, new_auxv);
+    execute_elf_object(/*exec_map=*/NULL, new_argv, new_auxv);
     /* UNREACHABLE */
 }
 

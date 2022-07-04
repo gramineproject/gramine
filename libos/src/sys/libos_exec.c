@@ -123,6 +123,10 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv,
     char** new_argp;
     elf_auxv_t* new_auxv;
 
+    ret = init_process_cmdline((const char* const*)argv);
+    if (ret < 0)
+        return ret;
+
     /* note the typecast of argv here: the C standard disallows implicit conversion of `char**` ->
      * `const char* const*`, but in reality it is safe to do */
     ret = init_stack((const char* const*)argv, envp, &new_argp, &new_auxv);

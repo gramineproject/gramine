@@ -277,7 +277,8 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
                     struct libos_handle_map* map);
 
 int init_handle(void);
-int init_important_handles(void);
+int init_std_handles(void);
+int init_exec_handle(const char* const* argv, char*** out_new_argv);
 
 int open_executable(struct libos_handle* hdl, const char* path);
 

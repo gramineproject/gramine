@@ -13,9 +13,9 @@ libos_start:
     xorq %rbp, %rbp
 
     # Arguments for libos_init:
-    movq 0(%rsp), %rdi         # argc
-    leaq 8(%rsp), %rsi         # argv
-    leaq 8(%rsi,%rdi,8), %rdx  # envp, after all args (including argv[argc] = NULL)
+    movq 0(%rsp), %r8          # argc, unused by libos_init, used to calculate location of envp
+    leaq 8(%rsp), %rdi         # argv
+    leaq 8(%rdi,%r8,8), %rsi   # envp, after all args (including argv[argc] = NULL)
 
     # Required by System V AMD64 ABI.
     andq  $~0xF, %rsp
