@@ -17,7 +17,7 @@
 #include "pal.h"
 #include "pal_error.h"
 
-noreturn void libos_init(int argc, const char* const* argv, const char* const* envp);
+noreturn void libos_init(const char* const* argv, const char* const* envp);
 
 /* important macros and static inline functions */
 
