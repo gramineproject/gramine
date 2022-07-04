@@ -111,15 +111,24 @@ static int init_exec_handle(void) {
         goto out;
     }
 
+    struct libos_handle* exec_handle = NULL;
+    char** new_argv = NULL;
+    const char* argv[] = {exec_path, NULL};
+    ret = load_and_check_exec(argv[0], argv, &exec_handle, &new_argv);
+    if (ret < 0) {
+        goto out;
+    }
+
     hdl = get_new_handle();
     if (!hdl) {
         ret = -ENOMEM;
         goto out;
     }
 
-    ret = open_executable(hdl, exec_path);
+    const char* new_exec_path = new_argv[0];
+    ret = open_executable(hdl, new_exec_path);
     if (ret < 0) {
-        log_error("Error opening executable %s: %d", exec_path, ret);
+        log_error("Error opening executable %s: %d", new_exec_path, ret);
         goto out;
     }
 

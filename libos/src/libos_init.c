@@ -419,8 +419,18 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     }
 
     RUN_INIT(init_ipc);
-    RUN_INIT(init_process, argc, argv);
+    RUN_INIT(init_process);
     RUN_INIT(init_mount_root);
+
+    struct libos_handle* exec = NULL;
+    char** new_argv = NULL;
+    int ret = load_and_check_exec(argv[0], argv, &exec, &new_argv);
+    if (ret < 0) {
+        log_error("libos_init: failed to load exec: %d", ret);
+        PalProcessExit(1);
+    }
+
+    RUN_INIT(init_process_args, argc, (const char**)new_argv);
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
     RUN_INIT(init_important_handles);
@@ -432,9 +442,9 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     const char** new_argp;
     elf_auxv_t* new_auxv;
-    RUN_INIT(init_stack, argv, envp, &new_argp, &new_auxv);
 
-    /* TODO: Support running non-ELF executables (scripts) */
+    RUN_INIT(init_stack, (const char**)new_argv, envp, &new_argp, &new_auxv);
+
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);
