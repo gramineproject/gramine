@@ -63,5 +63,5 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
 static bool ipf_close(pf_context_t* pf);
 static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size);
 static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size_t size);
-static bool ipf_check_offset(pf_context_t* pf, uint64_t new_offset);
+static bool ipf_eval_offset(pf_context_t* pf, uint64_t new_offset);
 static void ipf_try_clear_error(pf_context_t* pf);
