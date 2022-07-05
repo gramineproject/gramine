@@ -273,7 +273,7 @@ static int file_getname(PAL_HANDLE handle, char* buffer, size_t count) {
     memcpy(buffer,tmp,tmp_len+1);
     free(tmp);
 
-    return strlen(tmp);
+    return tmp_len;
 }
 
 static const char* file_getrealpath(PAL_HANDLE handle) {
