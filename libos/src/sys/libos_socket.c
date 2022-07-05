@@ -618,7 +618,7 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     /* Note this only indicates whether this operation was requested to be nonblocking. If it's
-     * `false`, but the handle is in nonblocking mode, this read won't block. */
+     * `false`, but the handle is in nonblocking mode, this send won't block. */
     bool force_nonblocking = flags & MSG_DONTWAIT;
     struct libos_sock_handle* sock = &handle->info.sock;
 
