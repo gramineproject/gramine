@@ -7,12 +7,11 @@ set -eu -o pipefail
 
 files="$(git ls-files -i --exclude-standard)"
 if [ -z "${files}" ]; then
-    echo ".gitignore rules aren't violated"
     exit 0
 fi
 
 echo "================================================================================"
-echo "              ERROR: Files ignored by git exists in the repository:             "
+echo "              ERROR: Files ignored by git exist in the repository:              "
 echo "--------------------------------------------------------------------------------"
 echo "${files}"
 echo "================================================================================"
