@@ -300,7 +300,7 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp,
     if (!stack)
         return -ENOMEM;
 
-    log_debug("Allocated stack at %p (size = %ld)", stack, stack_size);
+    log_debug("Allocated stack at %p (size = %#lx)", stack, stack_size);
     /* if there is envp inherited from parent, use it */
     envp = migrated_envp ?: envp;
 
