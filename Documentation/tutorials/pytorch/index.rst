@@ -5,9 +5,8 @@ PyTorch PPML Framework Tutorial
 
 .. note::
 
-   This tutorial was tested on Gramine v1.2 (the latest stable release as of
-   the date of this writing). It is possible that some steps and configurations
-   may be outdated on newer Gramine.
+   This tutorial works with the latest Gramine master (as of the date of this
+   writing), unfortunately not with the latest stable release V1.2.
 
 This tutorial presents a framework for developing PPML (Privacy-Preserving
 Machine Learning) applications with Intel SGX and Gramine. We use `PyTorch
