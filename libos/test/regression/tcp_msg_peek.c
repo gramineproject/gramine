@@ -144,7 +144,7 @@ static void client(int pipefd) {
     /* Receive without `MSG_PEEK` this time. */
     count = client_recv(s, buf, sizeof(buf), /*flags=*/0);
     if (count != sizeof(g_buffer)) {
-        errx(1, "recv with MSG_PEEK returned less than available: %zd", count);
+        errx(1, "recv without MSG_PEEK returned less than available: %zd", count);
     }
     if (memcmp(buf, g_buffer, sizeof(g_buffer))) {
         errx(1, "wrong data received: %s", buf);
