@@ -36,6 +36,7 @@ epid: secret_prov_server_epid
 
 .PHONY: dcap
 dcap: ssl/server.crt secret_prov_server_dcap
+
 ############################# SSL DATA DEPENDENCY #############################
 
 # SSL data: key and x.509 self-signed certificate
