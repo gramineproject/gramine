@@ -1,9 +1,9 @@
 libos_sources_arch_list = {
     'fs_proc/info.c': {},
-    'shim_arch_prctl.c': {},
-    'shim_elf_entry.nasm': { 'type': 'nasm' },
-    'shim_context.c': {},
-    'shim_table.c': {},
+    'libos_arch_prctl.c': {},
+    'libos_context.c': {},
+    'libos_elf_entry.nasm': { 'type': 'nasm' },
+    'libos_table.c': {},
     'start.S': {},
     'syscallas.S': {},
 }
@@ -18,4 +18,4 @@ foreach src, params : libos_sources_arch_list
     endif
 endforeach
 
-shim_lds = join_paths(meson.current_source_dir(), 'shim.lds')
+libos_lds = join_paths(meson.current_source_dir(), 'libos.lds')

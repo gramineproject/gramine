@@ -1,19 +1,19 @@
 pal_direct_sources = files(
-    'db_devices.c',
-    'db_eventfd.c',
-    'db_events.c',
-    'db_exception.c',
-    'db_files.c',
-    'db_main.c',
-    'db_memory.c',
-    'db_misc.c',
-    'db_object.c',
-    'db_pipes.c',
-    'db_process.c',
-    'db_rtld.c',
-    'db_sockets.c',
-    'db_streams.c',
-    'db_threading.c',
+    'pal_devices.c',
+    'pal_eventfd.c',
+    'pal_events.c',
+    'pal_exception.c',
+    'pal_files.c',
+    'pal_main.c',
+    'pal_memory.c',
+    'pal_misc.c',
+    'pal_object.c',
+    'pal_pipes.c',
+    'pal_process.c',
+    'pal_rtld.c',
+    'pal_sockets.c',
+    'pal_streams.c',
+    'pal_threading.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
@@ -24,7 +24,7 @@ pal_direct_sources += pal_direct_sources_arch
 
 pal_direct_map = custom_target('pal.map[direct]',
     command: [gen_pal_map_prog, '@INPUT@', '@OUTPUT@'],
-    input: ['../../pal-symbols', 'pal.map.template'],
+    input: ['../../pal_symbols', 'pal.map.template'],
     output: 'pal.map',
 )
 

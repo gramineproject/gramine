@@ -97,24 +97,24 @@ Running all the cases
 
 As explained above, we skip many LTP tests. In case you want to analyze all the
 test results, including the tests that are currently skipped, you can use the
-``ltp-all.cfg`` configuration.
+``ltp_all.cfg`` configuration.
 
 * Build all the manifests: temporarily edit ``tests.toml`` to change ``ltp.cfg``
-  to ``ltp-all.cfg``, and invoke ``gramine-test build``.
+  to ``ltp_all.cfg``, and invoke ``gramine-test build``.
 
   (To save time, we build manifests only for those tests that are not skipped).
 
-* Run Pytest with ``ltp-all.cfg`` as configuration::
+* Run Pytest with ``ltp_all.cfg`` as configuration::
 
-    LTP_CONFIG=ltp-all.cfg python3 -m pytest -v --junit-xml=ltp-all.xml
+    LTP_CONFIG=ltp_all.cfg python3 -m pytest -v --junit-xml=ltp_all.xml
 
-The ``ltp-all.xml`` file should contain output for all tests.
+The ``ltp_all.xml`` file should contain output for all tests.
 
 SGX mode
 --------
 
-In SGX mode, we use additional files: ``ltp-sgx.cfg``, and (temporarily)
-``ltp-bug-1075.cfg``. These function as an override for ``ltp.cfg``, so that
+In SGX mode, we use additional files: ``ltp_sgx.cfg``, and (temporarily)
+``ltp_bug_1075.cfg``. These function as an override for ``ltp.cfg``, so that
 configuration is not duplicated.
 
 Helper scripts (``contrib/``)

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "shim_types.h"
+#include "libos_types.h"
 
 int __vdso_clock_gettime(clockid_t clock, struct timespec* t);
 int __vdso_gettimeofday(struct timeval* tv, struct timezone* tz);

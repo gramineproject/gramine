@@ -29,9 +29,9 @@
 #include "api.h"
 #include "asan.h"
 #include "cpu.h"
-#include "ocall_types.h"
 #include "pal_internal.h"
-#include "rpc_queue.h"
+#include "pal_ocall_types.h"
+#include "pal_rpc_queue.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
 
@@ -1448,8 +1448,9 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
 
     if (retval < 0) {
         if (retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF
-                && retval != -ECONNREFUSED && retval != -EINTR && retval != -EINVAL
-                && retval != -ENOMEM && retval != -ENOTCONN && retval != -ENOTSOCK) {
+                && retval != -ECONNREFUSED && retval != -ECONNRESET && retval != -EINTR
+                && retval != -EINVAL && retval != -ENOMEM && retval != -ENOTCONN
+                && retval != -ENOTSOCK) {
             retval = -EPERM;
         }
         goto out;
@@ -1489,17 +1490,17 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
         *controllenptr = untrusted_controllen;
     }
 
-    char* urts_buf = READ_ONCE(ms->ms_buf);
-    size_t urts_buf_idx = 0;
+    char* host_buf = READ_ONCE(ms->ms_buf);
+    size_t host_buf_idx = 0;
     size_t data_size = MIN(size, (size_t)retval);
-    for (size_t i = 0; i < iov_len && urts_buf_idx < data_size; i++) {
-        size_t this_size = MIN(data_size - urts_buf_idx, iov[i].iov_len);
+    for (size_t i = 0; i < iov_len && host_buf_idx < data_size; i++) {
+        size_t this_size = MIN(data_size - host_buf_idx, iov[i].iov_len);
         if (!sgx_copy_to_enclave(iov[i].iov_base, iov[i].iov_len,
-                                 urts_buf + urts_buf_idx, this_size)) {
+                                 host_buf + host_buf_idx, this_size)) {
             retval = -EPERM;
             goto out;
         }
-        urts_buf_idx += this_size;
+        host_buf_idx += this_size;
     }
 
     /* `retval` already set. */

@@ -42,8 +42,8 @@ int mbedtls_cipher_cmac(const mbedtls_cipher_info_t* cipher_info,
                         unsigned char* output);
 int mbedtls_cipher_cmac_finish(mbedtls_cipher_context_t* ctx, unsigned char* output);
 
+#include "enclave_api.h"
 #include "rw_file.h"
-#include "sgx_api.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
 

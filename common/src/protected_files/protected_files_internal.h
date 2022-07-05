@@ -26,7 +26,6 @@ struct pf_context {
     bool need_writing;
     pf_status_t file_status;
     pf_key_t user_kdk_key;
-    pf_key_t cur_key;
     lruc_context_t* cache;
 #ifdef DEBUG
     char* debug_buffer; // buffer for debug output

@@ -1,6 +1,6 @@
 pal_direct_sources_arch = files(
-    'db_arch_exception.c',
-    'db_arch_misc.c',
+    'pal_arch_exception.c',
+    'pal_arch_misc.c',
     'pal_start.S',
 )
 

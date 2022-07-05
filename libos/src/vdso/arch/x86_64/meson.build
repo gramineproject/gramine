@@ -3,7 +3,7 @@ vdso_so_dbg = shared_library('vdso',
     name_prefix: '',
     name_suffix: 'so.dbg',
 
-    # TODO this should only include shim_entry_api.h and files defining necessary types
+    # TODO this should only include libos_entry_api.h and files defining necessary types
     include_directories: includes_libos,
 
     c_args: [
