@@ -500,8 +500,8 @@ int init_cpuid(void) {
     if (ocall_cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0x0, values) < 0)
         return -PAL_ERROR_DENIED;
 
-    if (values[CPUID_WORD_EAX] > 1) {
-        /* max value for supported sub-leaves of "Extended Feature Flags" leaf is currently 1 */
+    if (values[CPUID_WORD_EAX] > 2) {
+        /* max value for supported sub-leaves of "Extended Feature Flags" leaf is 2 */
         return -PAL_ERROR_DENIED;
     }
 
