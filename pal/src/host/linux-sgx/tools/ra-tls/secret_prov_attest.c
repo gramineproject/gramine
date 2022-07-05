@@ -310,7 +310,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         int ret = secret_provision_start(/*in_servers=*/NULL, /*in_ca_chain_path=*/NULL,
                                          /*out_ctx=*/NULL);
         if (ret < 0) {
-            ERROR("Attestation unsuccessful\n");
+            ERROR("Secret provisioning failed, terminating the whole process\n");
             exit(1);
         }
 

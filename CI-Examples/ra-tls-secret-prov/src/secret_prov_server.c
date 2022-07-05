@@ -105,44 +105,52 @@ int main(int argc, char** argv) {
     if (ret < 0)
         return ret;
 
-    puts("--- Reading the master key for protected files from '" WRAP_KEY_FILENAME "' ---");
-    int fd = open(WRAP_KEY_FILENAME, O_RDONLY);
-    if (fd >= 0) {
-        char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
-        ssize_t bytes_read = 0;
-        while (1) {
-            ssize_t ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read);
-            if (ret > 0) {
-                bytes_read += ret;
-            } else if (ret == 0) {
-                /* end of file */
-                break;
-            } else if (errno == EAGAIN || errno == EINTR) {
-                continue;
-            } else {
-                fprintf(stderr, "[error] cannot read '" WRAP_KEY_FILENAME "'\n");
-                close(fd);
+    if (argc == 1) {
+        puts("--- Proceeding without a master key");
+        static_assert(sizeof(g_secret_string) >= sizeof(ATTESTATION_SUCCESS_STRING), "size of g_secret_string is too small");
+        strcpy(g_secret_string, ATTESTATION_SUCCESS_STRING);
+    } else {
+        puts("--- Reading the master key for encrypted files");
+        int fd = open(argv[1], O_RDONLY);
+        if (fd >= 0) {
+            char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
+            ssize_t bytes_read = 0;
+            while (1) {
+                ssize_t ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read);
+                if (ret > 0) {
+                    bytes_read += ret;
+                } else if (ret == 0) {
+                    /* end of file */
+                    break;
+                } else if (errno == EAGAIN || errno == EINTR) {
+                    continue;
+                } else {
+                    fprintf(stderr, "[error] cannot read %s\n", argv[1]);
+                    close(fd);
+                    return 1;
+                }
+            }
+
+            ret = close(fd);
+            if (ret < 0) {
+                fprintf(stderr, "[error] cannot close %s\n", argv[1]);
                 return 1;
             }
-        }
 
-        ret = close(fd);
-        if (ret < 0) {
-            fprintf(stderr, "[error] cannot close '" WRAP_KEY_FILENAME "'\n");
-            return 1;
-        }
+            if (bytes_read != WRAP_KEY_SIZE) {
+                fprintf(stderr, "[error] encryption key from %s is not 16B in size\n", argv[1]);
+                return 1;
+            }
 
-        if (bytes_read != WRAP_KEY_SIZE) {
-            fprintf(stderr, "[error] encryption key from '" WRAP_KEY_FILENAME "' is not 16B in size\n");
-            return 1;
-        }
+            uint8_t* ptr = (uint8_t*)buf;
+            for (size_t i = 0; i < bytes_read; i++)
+                sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
 
-        uint8_t* ptr = (uint8_t*)buf;
-        for (size_t i = 0; i < bytes_read; i++)
-            sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
-    }
-    else {
-        strcpy(g_secret_string, "ATTESTATION_SUCCESS_STRING");
+        } else {
+                fprintf(stderr, "[error] cannot read %s\n", argv[1]);
+                close(fd);
+                return 1;
+        }
     }
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
