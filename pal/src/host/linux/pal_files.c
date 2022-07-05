@@ -262,15 +262,16 @@ static int file_getname(PAL_HANDLE handle, char* buffer, size_t count) {
         return 0;
 
     size_t realpath_len = strlen(handle->file.realpath);
-
     char* tmp = alloc_concat(URI_PREFIX_FILE,URI_PREFIX_FILE_LEN,handle->file.realpath,realpath_len);
     if(!tmp)
         return -ENOMEM;
 
-    if(strlen(tmp)+1>count)
+    size_t tmp_len=strlen(tmp);
+    if(tmp_len+1>count)
         return -PAL_ERROR_TOOLONG;
     
-    memcpy(buffer,tmp,strlen(tmp)+1);
+    memcpy(buffer,tmp,tmp_len+1);
+    free(tmp);
 
     return strlen(tmp);
 }
@@ -490,20 +491,22 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 }
 
 static int dir_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    if (!handle->file.realpath)
+    if (!handle->dir.realpath)
         return 0;
 
-    size_t realpath_len = strlen(handle->file.realpath);
-    char* tmp = alloc_concat(URI_PREFIX_FILE,URI_PREFIX_FILE_LEN,handle->file.realpath,realpath_len);
+    size_t realpath_len = strlen(handle->dir.realpath);
+    char* tmp = alloc_concat(URI_PREFIX_FILE,URI_PREFIX_FILE_LEN,handle->dir.realpath,realpath_len);
     if(!tmp)
         return -ENOMEM;
 
-    if(strlen(tmp)+1>count)
+    size_t tmp_len=strlen(tmp);
+    if(tmp_len+1>count)
         return -PAL_ERROR_TOOLONG;
     
-    memcpy(buffer,tmp,strlen(tmp)+1);
-
-    return strlen(tmp);
+    memcpy(buffer,tmp,tmp_len+1);
+    free(tmp);
+    
+    return tmp_len;
 }
 
 static const char* dir_getrealpath(PAL_HANDLE handle) {
