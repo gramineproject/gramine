@@ -16,8 +16,8 @@
  */
 
 #include "api.h"
-#include "shim_fs_encrypted.h"
-#include "shim_fs_pseudo.h"
+#include "libos_fs_encrypted.h"
+#include "libos_fs_pseudo.h"
 #include "toml_utils.h"
 
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently

@@ -7,7 +7,7 @@
 /*
  * This file contains code for implementation of 'chroot' filesystem.
  *
- * TODO: reintroduce the file position sync (using shim_fs_sync.h) after the migration to inodes is
+ * TODO: reintroduce the file position sync (using libos_fs_sync.h) after the migration to inodes is
  * finished.
  */
 
@@ -15,14 +15,14 @@
 #include <errno.h>
 #include <linux/fcntl.h>
 
+#include "libos_flags_conv.h"
+#include "libos_fs.h"
+#include "libos_handle.h"
+#include "libos_internal.h"
+#include "libos_lock.h"
+#include "libos_utils.h"
 #include "pal.h"
 #include "perm.h"
-#include "shim_flags_conv.h"
-#include "shim_fs.h"
-#include "shim_handle.h"
-#include "shim_internal.h"
-#include "shim_lock.h"
-#include "shim_utils.h"
 #include "stat.h"
 
 /*

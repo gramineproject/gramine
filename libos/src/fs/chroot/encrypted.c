@@ -10,7 +10,7 @@
  *
  * - The mount (`libos_mount`) holds a `libos_encrypted_files_key` object. This is the encryption
  *   key for files. Multiple mounts can use the same key. The list of keys is managed in
- *   `shim_fs_encrypted.c`.
+ *   `libos_fs_encrypted.c`.
  *
  * - Inodes (`libos_inode`, for regular files) hold a `libos_encrypted_file` object. This object
  *   lives as long as the inode, but is kept *open* only as long as there are `libos_handle` objects
@@ -33,10 +33,10 @@
 #define _POSIX_C_SOURCE 200809L /* for SSIZE_MAX */
 #include <limits.h>
 
+#include "libos_fs.h"
+#include "libos_fs_encrypted.h"
+#include "libos_vma.h"
 #include "perm.h"
-#include "shim_fs.h"
-#include "shim_fs_encrypted.h"
-#include "shim_vma.h"
 #include "stat.h"
 #include "toml_utils.h"
 

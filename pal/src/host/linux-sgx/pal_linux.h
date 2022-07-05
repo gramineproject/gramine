@@ -18,17 +18,16 @@
 #include "crypto.h"
 #endif /* IN_ENCLAVE */
 
+#include "enclave_api.h"
 #include "enclave_ocalls.h"
-#include "linux_types.h"
 #include "log.h"
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux_defs.h"
-#include "sgx_api.h"
+#include "pal_linux_types.h"
+#include "pal_tls.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
-#include "sgx_syscall.h"
-#include "sgx_tls.h"
 
 /* Part of Linux-SGX PAL private state which is not shared with other PALs. */
 extern struct pal_linuxsgx_state {
@@ -108,6 +107,8 @@ bool is_tsc_usable(void);
 uint64_t get_tsc_hz(void);
 void init_tsc(void);
 
+int init_cpuid(void);
+
 int init_enclave(void);
 void init_untrusted_slab_mgr(void);
 
@@ -155,7 +156,7 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key);
  *
  * \param  peer_enclave_info  SGX information of the peer enclave.
  * \param  expected_data      Expected SGX report data, contains SHA256(K_e || tag1); see
- *                            also top-level comment in db_process.c.
+ *                            also top-level comment in pal_process.c.
  * \return 0 on success, negative error code otherwise.
  */
 bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
@@ -163,7 +164,7 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
 
 /* perform Diffie-Hellman to establish a session key and also produce a hash over (K_e || tag1) for
  * parent enclave A and a hash over (K_e || tag2) for child enclave B; see also top-level comment in
- * db_process.c */
+ * pal_process.c */
 int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
                           sgx_report_data_t* out_parent_report_data,
                           sgx_report_data_t* out_child_report_data);

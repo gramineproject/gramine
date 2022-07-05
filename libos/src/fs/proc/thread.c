@@ -7,13 +7,13 @@
  * Implementation of `/proc/<pid>` and `/proc/<pid>/task/<tid>`, for the local process.
  */
 
-#include "shim_fs.h"
-#include "shim_fs_pseudo.h"
-#include "shim_lock.h"
-#include "shim_process.h"
-#include "shim_thread.h"
-#include "shim_types.h"
-#include "shim_vma.h"
+#include "libos_fs.h"
+#include "libos_fs_pseudo.h"
+#include "libos_lock.h"
+#include "libos_process.h"
+#include "libos_thread.h"
+#include "libos_types.h"
+#include "libos_vma.h"
 
 int proc_thread_follow_link(struct libos_dentry* dent, char** out_target) {
     __UNUSED(dent);

@@ -4,6 +4,7 @@ FROM ubuntu:18.04
 # Add steps here to set up dependencies
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     autoconf \
+    bc \
     bison \
     build-essential \
     cargo \

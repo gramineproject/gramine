@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-// TODO: fix this (but see pal/include/arch/x86_64/pal-arch.h)
+// TODO: fix this (but see pal/include/arch/x86_64/pal_arch.h)
 #define INSIDE_PAL_H
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -69,7 +69,7 @@ typedef struct _pal_handle_undefined_type* PAL_HANDLE;
 
 #endif /* IN_PAL */
 
-#include "pal-arch.h"
+#include "pal_arch.h"
 #include "pal_topology.h"
 
 /********** PAL TYPE DEFINITIONS **********/
@@ -430,6 +430,7 @@ typedef struct _PAL_STREAM_ATTR {
             uint64_t receivetimeout_us, sendtimeout_us;
             bool reuseaddr;
             bool keepalive;
+            bool broadcast;
             bool tcp_cork;
             bool tcp_nodelay;
             bool ipv6_v6only;

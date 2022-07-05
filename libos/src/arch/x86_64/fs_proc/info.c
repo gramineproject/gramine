@@ -4,8 +4,8 @@
  */
 
 #include "api.h"
+#include "libos_fs_proc.h"
 #include "pal.h"
-#include "shim_fs_proc.h"
 
 #define ADD_INFO(fmt, ...)                                            \
     do {                                                              \

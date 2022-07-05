@@ -618,8 +618,8 @@ system call that is not implemented in Gramine (recall that ``-38`` is the
 
    - Implement the required sub-systems or components in general code of
      Gramine. For example, if you need to add new fields to the thread object,
-     modify ``libos/include/shim_thread.h`` and
-     ``libos/src/bookkeep/shim_thread.c``.
+     modify ``libos/include/libos_thread.h`` and
+     ``libos/src/bookkeep/libos_thread.c``.
 
    - If the system call cannot be resolved entirely inside the LibOS component
      of Gramine, and the current set of PAL API functions (``Pal..()``

@@ -20,7 +20,7 @@ from graminelibos.regression import HAS_SGX, run_command
 DEFAULT_LTP_SCENARIO = 'install/runtest/syscalls'
 DEFAULT_LTP_CONFIG = 'ltp.cfg'
 if HAS_SGX:
-    DEFAULT_LTP_CONFIG = 'ltp.cfg ltp-sgx.cfg ltp-bug-1075.cfg'
+    DEFAULT_LTP_CONFIG = 'ltp.cfg ltp_sgx.cfg ltp_bug_1075.cfg'
 
 LTP_SCENARIO = os.environ.get('LTP_SCENARIO', DEFAULT_LTP_SCENARIO)
 LTP_CONFIG = os.environ.get('LTP_CONFIG', DEFAULT_LTP_CONFIG).split(' ')
@@ -183,7 +183,7 @@ def check_must_pass(passed, failed, must_pass):
         pytest.fail('All subtests skipped, replace must-pass with skip')
 
 
-def test_ltp(cmd, section, capsys):
+def test_ltp(cmd, section):
     must_pass = section.getintset('must-pass')
 
     loader = 'gramine-sgx' if HAS_SGX else 'gramine-direct'
@@ -193,12 +193,7 @@ def test_ltp(cmd, section, capsys):
     logging.info('command: %s', full_cmd)
     logging.info('must_pass: %s', list(must_pass) if must_pass else 'all')
 
-    live_output = os.getenv('GRAMINE_LTP_LIVE_OUTPUT') or ''
-    if section.name in live_output.split(','):
-        with capsys.disabled():
-            returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
-    else:
-        returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
+    returncode, stdout, _stderr = run_command(full_cmd, timeout=timeout, can_fail=True)
 
     # Parse output regardless of whether `must_pass` is specified: unfortunately some tests
     # do not exit with non-zero code when failing, because they rely on `MAP_SHARED` (which

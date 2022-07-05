@@ -109,7 +109,7 @@ if dcap
 
     libra_tls_verify_dcap_gramine = shared_library('ra_tls_verify_dcap_gramine',
         'ra_tls_verify_dcap.c',
-        'ra_tls_verify_dcap_urts.c',
+        'ra_tls_verify_dcap_gramine.c',
         'ra_tls_verify_common.c',
         'ra_tls.h',
 
