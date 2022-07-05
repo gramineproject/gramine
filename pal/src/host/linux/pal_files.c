@@ -495,8 +495,7 @@ static int dir_getname(PAL_HANDLE handle, char* buffer, size_t count) {
         return 0;
 
     size_t realpath_len = strlen(handle->dir.realpath);
-    size_t prefix_len=static_strlen(URI_PREFIX_DIR);
-    char* tmp = alloc_concat(URI_PREFIX_DIR,prefix_len,handle->dir.realpath,realpath_len);
+    char* tmp = alloc_concat(URI_PREFIX_DIR,URI_PREFIX_DIR_LEN,handle->dir.realpath,realpath_len);
     if(!tmp)
         return -ENOMEM;
 
