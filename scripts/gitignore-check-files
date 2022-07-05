@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+# Intended to be run before a build. Returns 1 (i.e. failure) if there's at
+# least one file that should be ignored.
+
+files="$(git ls-files -i --exclude-standard)"
+if [ -z "${files}" ]; then
+    echo ".gitignore rules aren't violated"
+    exit 0
+fi
+
+echo "================================================================================"
+echo "              ERROR: Files ignored by git exists in the repository:             "
+echo "--------------------------------------------------------------------------------"
+echo "${files}"
+echo "================================================================================"
+exit 1
