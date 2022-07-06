@@ -241,9 +241,6 @@ class TC_00_FileSystem(RegressionTestCase):
         self.do_truncate_test(65537, 65536)
 
     def verify_seek_tell_truncate(self, file_out, file_size, file_pos, file_truncate):
-        chunk_size = 512
-        next_file_pos = file_pos + chunk_size
-
         _, stderr = self.run_binary([
             'seek_tell_truncate',
             file_out,
