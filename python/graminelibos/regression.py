@@ -90,7 +90,6 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
             if time_remaining < 0:
                 # if we've timed out, use a timeout of 0 to copy all leftover data
                 time_remaining = 0
-                timed_out = True
 
             if not try_pump(time_remaining):
                 break
@@ -100,6 +99,8 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         time_remaining = time_end - time.time()
         if time_remaining > 0:
             proc.wait(time_remaining)
+        else:
+            timed_out = True
 
         proc.poll()
         main_returncode = proc.returncode
