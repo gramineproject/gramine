@@ -164,13 +164,6 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return -ESRCH;
     }
 
-    lock(&thread->lock);
-    ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, user_mask_ptr);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
-
     /* User mask is being manipulated below, so make a local copy of the mask */
     uint64_t* cpumask = calloc(1, cpumask_size);
     if (!cpumask) {
@@ -178,6 +171,13 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return -ENOMEM;
     }
     memcpy(cpumask, user_mask_ptr, cpumask_size);
+
+    lock(&thread->lock);
+    ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, cpumask);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
 
     /* Verify validity of the CPU affinity (e.g. that it contains at least one online core). */
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
@@ -204,10 +204,13 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
     /* User can pass CPU affinity mask lesser than what Gramine might have allocated. So clear
      * previous affinity before copying the new affinity. */
     memset(thread->cpumask, 0, bitmask_size_in_bytes);
-    memcpy(thread->cpumask, user_mask_ptr, MIN(bitmask_size_in_bytes, cpumask_size));
+    /* User provided CPU affinity mask can contain offlined cores, so copy only the intersection of
+     * online cores and the user supplied mask. */
+    memcpy(thread->cpumask, cpumask, MIN(bitmask_size_in_bytes, cpumask_size));
 
     ret = 0;
 out:
+    free(cpumask);
     unlock(&thread->lock);
     put_thread(thread);
     return ret;

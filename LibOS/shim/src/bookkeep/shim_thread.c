@@ -62,7 +62,16 @@ static struct shim_thread* alloc_new_thread(void) {
         return NULL;
     }
 
+    /* Allocate memory to hold affinity mask for the cores present in the system. */
+    thread->cpumask = calloc(1, BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                sizeof(unsigned long));
+    if (!thread->cpumask) {
+        free(thread);
+        return NULL;
+    }
+
     if (!create_lock(&thread->lock)) {
+        free(thread->cpumask);
         free(thread);
         return NULL;
     }
@@ -70,6 +79,7 @@ static struct shim_thread* alloc_new_thread(void) {
     int ret = create_pollable_event(&thread->pollable_event);
     if (ret < 0) {
         destroy_lock(&thread->lock);
+        free(thread->cpumask);
         free(thread);
         return NULL;
     }
@@ -78,13 +88,6 @@ static struct shim_thread* alloc_new_thread(void) {
     INIT_LIST_HEAD(thread, list);
     /* default value as sigalt stack isn't specified yet */
     thread->signal_altstack.ss_flags = SS_DISABLE;
-
-    /* Allocate memory to hold affinity mask for the cores present in the system. */
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
-    thread->cpumask = calloc(1, bitmask_size_in_bytes);
-    if (!thread->cpumask)
-        return NULL;
 
     return thread;
 }
@@ -214,7 +217,7 @@ static int init_main_thread(void) {
     ret = DkEventCreate(&cur_thread->scheduler_event, /*init_signaled=*/false, /*auto_clear=*/true);
     if (ret < 0) {
         put_thread(cur_thread);
-        return pal_to_unix_errno(ret);;
+        return pal_to_unix_errno(ret);
     }
 
     /* TODO: I believe there is some Pal allocated initial stack which could be reused by the first
@@ -227,9 +230,6 @@ static int init_main_thread(void) {
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
 
-    set_cur_thread(cur_thread);
-    add_thread(cur_thread);
-
     /* Get CPU affinity from host and initialize current thread's CPU affinity mask */
     size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
                                    sizeof(unsigned long);
@@ -240,6 +240,9 @@ static int init_main_thread(void) {
         put_thread(cur_thread);
         return pal_to_unix_errno(ret);
     }
+
+    set_cur_thread(cur_thread);
+    add_thread(cur_thread);
 
     return 0;
 }
@@ -317,11 +320,8 @@ struct shim_thread* get_new_thread(void) {
     assert(map);
     set_handle_map(thread, map);
 
-    /* Linux sets the same cpu affinity mask for the forked/cloned child as the parent. Following
-     * the same convention here by copying the parent's cpu affinity mask to the child. */
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
-    memcpy(thread->cpumask, cur_thread->cpumask, bitmask_size_in_bytes);
+    memcpy(thread->cpumask, cur_thread->cpumask,
+           BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) * sizeof(unsigned long));
 
     unlock(&cur_thread->lock);
 
@@ -606,7 +606,7 @@ BEGIN_CP_FUNC(thread) {
 
         size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
                                        sizeof(unsigned long);
-        new_thread->cpumask = (unsigned long*)(base +  ADD_CP_OFFSET(bitmask_size_in_bytes));
+        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(bitmask_size_in_bytes));
         memcpy(new_thread->cpumask, thread->cpumask, bitmask_size_in_bytes);
 
         new_thread->pal_handle = NULL;
