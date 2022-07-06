@@ -179,14 +179,15 @@ int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
 
     size_t threads_cnt = g_pal_public_state.topo_info.threads_cnt;
 
-    /* Verify validity of the CPU affinity (e.g., that it contains no offlined cores) */
-    size_t idx = 0;
+    assert(cpumask_size * sizeof(unsigned long) >= threads_cnt);
+    /* Verify validity of the CPU affinity (e.g. that it contains no offlined cores). */
     for (size_t i = 0; i < threads_cnt; i++) {
-        idx = i / BITS_IN_TYPE(unsigned long);
+        size_t idx = i / BITS_IN_TYPE(unsigned long);
         if (cpu_mask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state.topo_info.threads[i].is_online) {
                 /* cpumask contains a CPU that is currently offline */
                 ret = -PAL_ERROR_INVAL;
+                break;
             }
         }
     }

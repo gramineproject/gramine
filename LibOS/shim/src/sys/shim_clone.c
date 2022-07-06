@@ -84,13 +84,6 @@ static int clone_implementation_wrapper(void* arg_) {
 
     add_thread(my_thread);
 
-    int ret = init_thread_affinity_from_host(my_thread);
-    if (ret < 0) {
-        log_error("Failed to set thread CPU affinity mask from the host");
-        put_thread(my_thread);
-        return ret;
-    }
-
     /* Copy regs before we let the parent release them. */
     PAL_CONTEXT regs;
     pal_context_copy(&regs, arg->regs);
@@ -160,13 +153,6 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct shim_
     shim_tcb.context.tls = tls;
 
     thread->shim_tcb = &shim_tcb;
-
-    /* Linux sets the same cpu affinity mask for the forked child as the parent. Following the same
-     * convention here by copying the parent's cpu affinity mask to the child. */
-    memset(thread->cpumask, 0, sizeof(thread->cpumask));
-    lock(&self->lock);
-    memcpy(thread->cpumask, self->cpumask, sizeof(thread->cpumask));
-    unlock(&self->lock);
 
     unsigned long parent_stack = 0;
     if (user_stack_addr) {

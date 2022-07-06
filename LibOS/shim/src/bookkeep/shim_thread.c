@@ -78,6 +78,14 @@ static struct shim_thread* alloc_new_thread(void) {
     INIT_LIST_HEAD(thread, list);
     /* default value as sigalt stack isn't specified yet */
     thread->signal_altstack.ss_flags = SS_DISABLE;
+
+    /* Allocate memory to hold affinity mask for the cores present in the system. */
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    thread->cpumask = calloc(1, bitmask_size_in_bytes);
+    if (!thread->cpumask)
+        return NULL;
+
     return thread;
 }
 
@@ -128,68 +136,6 @@ unmap:;
     }
     bkeep_remove_tmp_vma(tmp_vma);
     return ret;
-}
-
-int init_thread_affinity_from_host(struct shim_thread* thread) {
-    int ret;
-    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
-
-    /* Check if the system has more cores than actually supported in Gramine */
-    if (bitmask_size_in_bytes > sizeof(thread->cpumask)) {
-        log_error("Current platform has more cores (%lu) than Gramine can support in cpumask (%lu)",
-                  threads_cnt, sizeof(thread->cpumask) * BITS_IN_BYTE);
-        return -EOVERFLOW;
-    }
-
-    /* Allocate memory to hold the thread's CPU affinity mask. */
-    unsigned long* cpumask = malloc(bitmask_size_in_bytes);
-    if (!cpumask)
-        return -ENOMEM;
-
-    ret = DkThreadGetCpuAffinity(thread->pal_handle, bitmask_size_in_bytes, cpumask);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
-
-    memset(thread->cpumask, 0, sizeof(thread->cpumask));
-    memcpy(thread->cpumask, cpumask, bitmask_size_in_bytes);
-    ret = 0;
-
-out:
-    free(cpumask);
-    return ret;
-}
-
-int update_thread_affinity(struct shim_thread* thread, uint8_t* cpumask, size_t cpumask_cnt) {
-    assert(locked(&thread->lock));
-
-    /* Verify validity of the CPU affinity (e.g., that it contains at least one online core) */
-    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
-
-    size_t idx = 0;
-    size_t cores_cnt = 0;
-    for (size_t i = 0; i < MIN(threads_cnt, cpumask_cnt * BITS_IN_BYTE); i++) {
-        idx = i / BITS_IN_TYPE(uint8_t);
-        if (cpumask[idx] & 1U << (i % BITS_IN_TYPE(uint8_t))) {
-            if (!g_pal_public_state->topo_info.threads[i].is_online) {
-                /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
-                cpumask[idx] &= ~(1U << (i % BITS_IN_TYPE(uint8_t)));
-            } else {
-                cores_cnt++;
-            }
-        }
-    }
-
-    /* Intersection of online cores and the user supplied mask is empty. */
-    if (cores_cnt == 0)
-        return -EINVAL;
-
-    memset(thread->cpumask, 0, sizeof(thread->cpumask));
-    memcpy(thread->cpumask, cpumask, MIN(sizeof(thread->cpumask), cpumask_cnt));
-
-    return 0;
 }
 
 static int init_main_thread(void) {
@@ -284,11 +230,15 @@ static int init_main_thread(void) {
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
-    ret = init_thread_affinity_from_host(cur_thread);
+    /* Get CPU affinity from host and initialize current thread's CPU affinity mask */
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    ret = DkThreadGetCpuAffinity(cur_thread->pal_handle, bitmask_size_in_bytes,
+                                 cur_thread->cpumask);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);
-        return ret;
+        return pal_to_unix_errno(ret);
     }
 
     return 0;
@@ -366,6 +316,12 @@ struct shim_thread* get_new_thread(void) {
     struct shim_handle_map* map = get_thread_handle_map(cur_thread);
     assert(map);
     set_handle_map(thread, map);
+
+    /* Linux sets the same cpu affinity mask for the forked/cloned child as the parent. Following
+     * the same convention here by copying the parent's cpu affinity mask to the child. */
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    memcpy(thread->cpumask, cur_thread->cpumask, bitmask_size_in_bytes);
 
     unlock(&cur_thread->lock);
 
@@ -460,6 +416,9 @@ void put_thread(struct shim_thread* thread) {
         if (thread->tid && !is_internal(thread)) {
             release_id(thread->tid);
         }
+
+        if (thread->cpumask)
+            free(thread->cpumask);
 
         destroy_pollable_event(&thread->pollable_event);
 
@@ -645,6 +604,11 @@ BEGIN_CP_FUNC(thread) {
             memcpy(new_thread->groups_info.groups, thread->groups_info.groups, groups_size);
         }
 
+        size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                       sizeof(unsigned long);
+        new_thread->cpumask = (unsigned long*)(base +  ADD_CP_OFFSET(bitmask_size_in_bytes));
+        memcpy(new_thread->cpumask, thread->cpumask, bitmask_size_in_bytes);
+
         new_thread->pal_handle = NULL;
 
         memset(&new_thread->pollable_event, 0, sizeof(new_thread->pollable_event));
@@ -697,6 +661,7 @@ BEGIN_RS_FUNC(thread) {
     }
     CP_REBASE(thread->handle_map);
     CP_REBASE(thread->signal_dispositions);
+    CP_REBASE(thread->cpumask);
 
     if (!create_lock(&thread->lock)) {
         return -ENOMEM;

@@ -164,21 +164,47 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
         return -ESRCH;
     }
 
+    lock(&thread->lock);
     ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, user_mask_ptr);
     if (ret < 0) {
-        put_thread(thread);
-        return pal_to_unix_errno(ret);
-    }
-
-    lock(&thread->lock);
-    /* Linux passes array of unsigned longs as cpumask but provides cpumask_size in bytes. This is
-     * misleading as the general expectation is to pass the count of array elements as size instead
-     * of bytes. To fix this, we simply typecast unsigned long pointer to uint8_t in Gramine, and
-     * cpumask_size in bytes represents count of elements. */
-    ret = update_thread_affinity(thread, (uint8_t*)user_mask_ptr, cpumask_size);
-    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
         goto out;
     }
+
+    /* User mask is being manipulated below, so make a local copy of the mask */
+    uint64_t* cpumask = calloc(1, cpumask_size);
+    if (!cpumask) {
+        put_thread(thread);
+        return -ENOMEM;
+    }
+    memcpy(cpumask, user_mask_ptr, cpumask_size);
+
+    /* Verify validity of the CPU affinity (e.g. that it contains at least one online core). */
+    size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(threads_cnt) * sizeof(unsigned long);
+    size_t cores_cnt = 0;
+    for (size_t i = 0; i < MIN(threads_cnt, cpumask_size * BITS_IN_BYTE); i++) {
+        size_t idx = i / BITS_IN_TYPE(unsigned long);
+        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+            if (!g_pal_public_state->topo_info.threads[i].is_online) {
+                /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
+                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
+            } else {
+                cores_cnt++;
+            }
+        }
+    }
+
+    /* Intersection of online cores and the user supplied mask is empty. */
+    if (cores_cnt == 0) {
+        ret = -EINVAL;
+        goto out;
+    }
+
+    /* User can pass CPU affinity mask lesser than what Gramine might have allocated. So clear
+     * previous affinity before copying the new affinity. */
+    memset(thread->cpumask, 0, bitmask_size_in_bytes);
+    memcpy(thread->cpumask, user_mask_ptr, MIN(bitmask_size_in_bytes, cpumask_size));
 
     ret = 0;
 out:
@@ -225,7 +251,7 @@ long shim_do_sched_getaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 
     memset(user_mask_ptr, 0, cpumask_size);
     lock(&thread->lock);
-    memcpy(user_mask_ptr, thread->cpumask, MIN(cpumask_size, sizeof(thread->cpumask)));
+    memcpy(user_mask_ptr, thread->cpumask, MIN(cpumask_size, bitmask_size_in_bytes));
     unlock(&thread->lock);
 
     put_thread(thread);
