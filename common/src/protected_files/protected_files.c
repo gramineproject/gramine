@@ -657,7 +657,7 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
 // verify the seek value, and set an internal state of the structure accordingly
 // seek beyond the current size is supported if the file is writable,
 // the file is then extended with zeros (Intel SGX SDK implementation didn't support extending)
-static bool ipf_eval_offset(pf_context_t* pf, uint64_t new_offset) {
+static bool ipf_update_after_seek(pf_context_t* pf, uint64_t new_offset) {
     if (PF_FAILURE(pf->file_status)) {
         pf->last_error = pf->file_status;
         return false;
@@ -1322,7 +1322,7 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
         return PF_STATUS_SUCCESS;
     }
 
-    if (!ipf_eval_offset(pf, offset))
+    if (!ipf_update_after_seek(pf, offset))
         return pf->last_error;
 
     if (pf->end_of_file || offset == pf->encrypted_part_plain.size) {
@@ -1343,7 +1343,7 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    if (!ipf_eval_offset(pf, offset))
+    if (!ipf_update_after_seek(pf, offset))
         return pf->last_error;
 
     if (ipf_write(pf, input, offset, size) != size)
