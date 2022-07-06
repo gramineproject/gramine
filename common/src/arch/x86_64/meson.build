@@ -1,5 +1,5 @@
 common_src_arch_nasm = nasm_gen.process(
-    'ct_memcmp.nasm',
+    'ct_memequal.nasm',
 )
 
 common_src_arch_c = files()

@@ -249,7 +249,7 @@ void* memset(void* dest, int ch, size_t count);
 int memcmp(const void* lhs, const void* rhs, size_t count);
 
 /*!
- * \brief Constant-time buffer comparison without branches.
+ * \brief Constant-time buffer comparison.
  *
  * \param lhs    Pointer to the first buffer.
  * \param rhs    Pointer to the second buffer.
@@ -257,11 +257,14 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
  *
  * \returns 0 if the content of the two buffers is the same, otherwise non-zero.
  *
- * This is equivalent to the standard memcmp function, but using bitwise operation rather than a
- * branch. It can be used to write constant-time code by replacing branches with bit operations
- * using masks.
+ * The time taken by this function depends on `count`, but not on the data at `lhs` or `rhs`.
+ * Hence, it can be used for comparing cryptographic secrets, hashes, message authentication codes
+ * etc. without timing side-channel leaks.
+ *
+ * Note that different from the standard `memcmp` function, this function only returns whether the
+ * data at the two buffers are equal.
  */
-int ct_memcmp(const void* lhs, const void* rhs, size_t count);
+int ct_memequal(const void* lhs, const void* rhs, size_t count);
 
 /* Used by _FORTIFY_SOURCE */
 void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, size_t dest_count);

@@ -230,7 +230,7 @@ int sgx_verify_report(sgx_report_t* report) {
     log_debug("Verify report:");
     print_report(report);
 
-    if (ct_memcmp(&check_mac, &report->mac, sizeof(check_mac))) {
+    if (ct_memequal(&check_mac, &report->mac, sizeof(check_mac))) {
         log_error("Report verification failed");
         return -PAL_ERROR_DENIED;
     }
