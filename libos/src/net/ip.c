@@ -48,6 +48,32 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
     return 0;
 }
 
+static bool is_linux_sockaddr_any(const void* linux_addr) {
+    unsigned short family;
+    memcpy(&family, linux_addr, sizeof(family));
+
+    switch (family) {
+        case AF_INET:;
+            struct sockaddr_in sa_ipv4;
+            memcpy(&sa_ipv4, linux_addr, sizeof(sa_ipv4));
+            if (sa_ipv4.sin_addr.s_addr == __htonl(INADDR_ANY)) {
+                return true;
+            }
+            break;
+        case AF_INET6:;
+            struct sockaddr_in6 sa_ipv6;
+            memcpy(&sa_ipv6, linux_addr, sizeof(sa_ipv6));
+            if (memcmp(&sa_ipv6.sin6_addr, &(struct in6_addr){ 0 },
+                       sizeof(sa_ipv6.sin6_addr)) == 0) {
+                return true;
+            }
+            break;
+        default:
+            BUG();
+     };
+     return false;
+}
+
 static int create(struct libos_handle* handle) {
     assert(handle->info.sock.domain == AF_INET || handle->info.sock.domain == AF_INET6);
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
@@ -140,8 +166,9 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
                   struct libos_handle** out_client) {
     PAL_HANDLE client_pal_handle;
     struct pal_socket_addr pal_ip_addr = { 0 };
+    struct pal_socket_addr pal_local_ip_addr = { 0 };
     int ret = PalSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
-                              &client_pal_handle, &pal_ip_addr);
+                              &client_pal_handle, &pal_ip_addr, &pal_local_ip_addr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -167,8 +194,13 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     client_sock->remote_addrlen = len;
 
     lock(&handle->info.sock.lock);
-    client_sock->local_addrlen = handle->info.sock.local_addrlen;
-    memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
+    if (is_linux_sockaddr_any(&handle->info.sock.local_addr)) {
+        pal_to_linux_sockaddr(&pal_local_ip_addr, &client_sock->local_addr, &len);
+        client_sock->local_addrlen = len;
+    } else {
+        client_sock->local_addrlen = handle->info.sock.local_addrlen;
+        memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
+    }
     unlock(&handle->info.sock.lock);
 
     *out_client = client_handle;

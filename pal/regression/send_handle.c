@@ -162,7 +162,8 @@ static void do_child(void) {
 
     /* TCP socket */
     CHECK(PalReceiveHandle(PalGetPalPublicState()->parent_process, &handle));
-    CHECK(PalSocketAccept(handle, /*options=*/0, &client_handle, /*out_client_addr=*/NULL));
+    CHECK(PalSocketAccept(handle, /*options=*/0, &client_handle, /*out_client_addr=*/NULL,
+                          /*out_local_addr=*/NULL));
     PalObjectClose(handle);
     write_msg(client_handle, PAL_TYPE_SOCKET);
     PalObjectClose(client_handle);

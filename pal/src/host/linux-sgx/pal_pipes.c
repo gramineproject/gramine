@@ -181,7 +181,8 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     bool nonblocking = options & PAL_OPTION_NONBLOCK;
     /* We do not take `nonblocking` into account here - it will be set after the TLS handshake below
      * if needed. */
-    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, SOCK_CLOEXEC);
+    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, /*local_addr=*/NULL,
+                           /*local_addrlen=*/NULL, SOCK_CLOEXEC);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
