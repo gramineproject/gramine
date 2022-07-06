@@ -255,7 +255,7 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
  * \param rhs    Pointer to the second buffer.
  * \param count  The number of bytes to compare in the buffer.
  *
- * \returns 0 if the content of the two buffers is the same, otherwise non-zero.
+ * \returns true if the content of the two buffers is the same, otherwise false.
  *
  * The time taken by this function depends on `count`, but not on the data at `lhs` or `rhs`.
  * Hence, it can be used for comparing cryptographic secrets, hashes, message authentication codes
@@ -264,7 +264,7 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
  * Note that different from the standard `memcmp` function, this function only returns whether the
  * data at the two buffers are equal.
  */
-int ct_memequal(const void* lhs, const void* rhs, size_t count);
+bool ct_memequal(const void* lhs, const void* rhs, size_t count);
 
 /* Used by _FORTIFY_SOURCE */
 void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, size_t dest_count);

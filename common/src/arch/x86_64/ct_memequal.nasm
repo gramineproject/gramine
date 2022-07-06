@@ -5,7 +5,7 @@
 
 global ct_memequal
 
-; int ct_memequal(const void* lhs, const void* rhs, size_t count)
+; bool ct_memequal(const void* lhs, const void* rhs, size_t count)
 ; Arguments:
 ; - RDI: Pointer to the first buffer (lhs)
 ; - RSI: Pointer to the second buffer (rhs)
@@ -26,4 +26,6 @@ ct_memequal:
     jnz     .loop
 .return:
     mov     eax, ecx
+    test    al, al
+    sete    al
     ret
