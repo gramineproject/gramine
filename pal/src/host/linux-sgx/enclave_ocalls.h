@@ -57,7 +57,7 @@ int ocall_listen_simple(int fd, unsigned int backlog);
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
                  size_t* addrlen);
 
-int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, int options);
+int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockaddr* local_addr, size_t* local_addrlen, int options);
 
 int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const struct sockaddr* addr,
                   size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen);

@@ -140,8 +140,9 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
                   struct libos_handle** out_client) {
     PAL_HANDLE client_pal_handle;
     struct pal_socket_addr pal_ip_addr = { 0 };
+    struct pal_socket_addr pal_local_ip_addr = { 0 };
     int ret = PalSocketAccept(handle->info.sock.pal_handle, is_nonblocking ? PAL_OPTION_NONBLOCK : 0,
-                              &client_pal_handle, &pal_ip_addr);
+                              &client_pal_handle, &pal_ip_addr, &pal_local_ip_addr);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -167,8 +168,14 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     client_sock->remote_addrlen = len;
 
     lock(&handle->info.sock.lock);
-    client_sock->local_addrlen = handle->info.sock.local_addrlen;
-    memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
+    if(is_linux_sockaddr_any(&handle->info.sock.local_addr)) {
+        pal_to_linux_sockaddr(&pal_local_ip_addr, &client_sock->local_addr, &len);
+        client_sock->local_addrlen = len;
+    }
+    else {
+        client_sock->local_addrlen = handle->info.sock.local_addrlen;
+        memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
+    }
     unlock(&handle->info.sock.lock);
 
     *out_client = client_handle;

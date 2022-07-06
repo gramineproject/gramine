@@ -19,7 +19,7 @@ int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                     struct pal_socket_addr* out_client_addr) {
+                     struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
