@@ -20,7 +20,6 @@ struct pf_context {
     file_node_t root_mht; // the root of the mht is always needed (for files bigger than 3KB)
     pf_handle_t file;
     pf_file_mode_t mode;
-    bool end_of_file;
     uint64_t real_file_size;
     bool need_writing;
     pf_status_t file_status;
@@ -62,5 +61,4 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
 static bool ipf_close(pf_context_t* pf);
 static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size);
 static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size_t size);
-static bool ipf_update_after_seek(pf_context_t* pf, uint64_t new_offset);
 static void ipf_try_clear_error(pf_context_t* pf);

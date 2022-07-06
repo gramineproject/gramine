@@ -99,6 +99,8 @@ class TC_00_FileSystem(RegressionTestCase):
     # pylint: disable=too-many-arguments
     def verify_seek_tell(self, stdout, stderr, input_path, output_path_1, output_path_2, size):
         self.assertNotIn('ERROR: ', stderr)
+
+        # seek_input_fd:
         self.assertIn('open(' + input_path + ') input OK', stdout)
         self.assertIn('seek(' + input_path + ') input start OK', stdout)
         self.assertIn('seek(' + input_path + ') input end OK', stdout)
@@ -106,6 +108,8 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('seek(' + input_path + ') input rewind OK', stdout)
         self.assertIn('tell(' + input_path + ') input start OK: 0', stdout)
         self.assertIn('close(' + input_path + ') input OK', stdout)
+
+        # seek_input_stdio:
         self.assertIn('fopen(' + input_path + ') input OK', stdout)
         self.assertIn('fseek(' + input_path + ') input start OK', stdout)
         self.assertIn('fseek(' + input_path + ') input end OK', stdout)
@@ -114,6 +118,7 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('ftell(' + input_path + ') input start OK: 0', stdout)
         self.assertIn('fclose(' + input_path + ') input OK', stdout)
 
+        # seek_output_fd:
         self.assertIn('open(' + output_path_1 + ') output OK', stdout)
         self.assertIn('seek(' + output_path_1 + ') output start OK', stdout)
         self.assertIn('seek(' + output_path_1 + ') output end OK', stdout)
@@ -121,7 +126,17 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('seek(' + output_path_1 + ') output end 2 OK', stdout)
         self.assertIn('seek(' + output_path_1 + ') output end 3 OK', stdout)
         self.assertIn('tell(' + output_path_1 + ') output end 2 OK: ' + str(size + 4098), stdout)
+        self.assertIn('seek(' + output_path_1 + ') output beyond end OK', stdout)
+        self.assertIn(
+            'tell(' + output_path_1 + ') output beyond end OK: ' + str((size + 4098) * 2),
+            stdout
+        )
+        self.assertIn('read(' + output_path_1 + ') output OK: 0', stdout)
+        self.assertIn('seek(' + output_path_1 + ') output end 4 OK', stdout)
+        self.assertIn('tell(' + output_path_1 + ') output end 3 OK: ' + str(size + 4098), stdout)
         self.assertIn('close(' + output_path_1 + ') output OK', stdout)
+
+        # seek_output_stdio:
         self.assertIn('fopen(' + output_path_2 + ') output OK', stdout)
         self.assertIn('fseek(' + output_path_2 + ') output start OK', stdout)
         self.assertIn('fseek(' + output_path_2 + ') output end OK', stdout)
@@ -129,6 +144,14 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('fseek(' + output_path_2 + ') output end 2 OK', stdout)
         self.assertIn('fseek(' + output_path_2 + ') output end 3 OK', stdout)
         self.assertIn('ftell(' + output_path_2 + ') output end 2 OK: ' + str(size + 4098), stdout)
+        self.assertIn('fseek(' + output_path_2 + ') output beyond end OK', stdout)
+        self.assertIn(
+            'ftell(' + output_path_2 + ') output beyond end OK: ' + str((size + 4098) * 2),
+            stdout
+        )
+        self.assertIn('fread(' + output_path_2 + ') output OK: 0', stdout)
+        self.assertIn('fseek(' + output_path_2 + ') output end 4 OK', stdout)
+        self.assertIn('ftell(' + output_path_2 + ') output end 3 OK: ' + str(size + 4098), stdout)
         self.assertIn('fclose(' + output_path_2 + ') output OK', stdout)
 
         expected_size = size + 4098

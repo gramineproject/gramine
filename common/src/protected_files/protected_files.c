@@ -161,13 +161,28 @@ static bool ipf_init_fields(pf_context_t* pf) {
     ipf_init_root_mht(&pf->root_mht);
 
     pf->file           = NULL;
-    pf->end_of_file    = false;
     pf->need_writing   = false;
     pf->file_status    = PF_STATUS_UNINITIALIZED;
     pf->last_error     = PF_STATUS_SUCCESS;
     pf->real_file_size = 0;
 
     pf->cache = lruc_create();
+    return true;
+}
+
+static bool ipf_check_writable(pf_context_t* pf) {
+    if (PF_FAILURE(pf->file_status)) {
+        pf->last_error = pf->file_status;
+        DEBUG_PF("bad file status %d", pf->last_error);
+        return false;
+    }
+
+    if (!(pf->mode & PF_FILE_MODE_WRITE)) {
+        pf->last_error = PF_STATUS_INVALID_MODE;
+        DEBUG_PF("File is read-only");
+        return false;
+    }
+
     return true;
 }
 
@@ -654,32 +669,6 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
     return true;
 }
 
-// verify the seek value, and set an internal state of the structure accordingly
-// seek beyond the current size is supported if the file is writable,
-// the file is then extended with zeros (Intel SGX SDK implementation didn't support extending)
-static bool ipf_update_after_seek(pf_context_t* pf, uint64_t new_offset) {
-    if (PF_FAILURE(pf->file_status)) {
-        pf->last_error = pf->file_status;
-        return false;
-    }
-
-    bool result = false;
-
-    if (new_offset <= pf->encrypted_part_plain.size) {
-        result = true;
-    } else if (pf->mode & PF_FILE_MODE_WRITE) {
-        // need to extend the file
-        result = PF_SUCCESS(pf_set_size(pf, new_offset));
-    }
-
-    if (result)
-        pf->end_of_file = false;
-    else
-        pf->last_error = PF_STATUS_INVALID_PARAMETER;
-
-    return result;
-}
-
 static void ipf_try_clear_error(pf_context_t* pf) {
     if (pf->file_status == PF_STATUS_UNINITIALIZED ||
         pf->file_status == PF_STATUS_CRYPTO_ERROR ||
@@ -703,7 +692,6 @@ static void ipf_try_clear_error(pf_context_t* pf) {
 
     if (pf->file_status == PF_STATUS_SUCCESS) {
         pf->last_error = PF_STATUS_SUCCESS;
-        pf->end_of_file = false;
     }
 }
 
@@ -724,15 +712,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
 
     size_t data_left_to_write = size;
 
-    if (PF_FAILURE(pf->file_status)) {
-        pf->last_error = pf->file_status;
-        DEBUG_PF("bad file status %d", pf->last_error);
-        return 0;
-    }
-
-    if (!(pf->mode & PF_FILE_MODE_WRITE)) {
-        pf->last_error = PF_STATUS_INVALID_MODE;
-        DEBUG_PF("File is read-only");
+    if (!ipf_check_writable(pf)) {
         return 0;
     }
 
@@ -854,12 +834,6 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
         offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
-    }
-
-    if (data_left_to_read == 0 && data_attempted_to_read != size) {
-        // user wanted to read more and we had to shrink the request
-        assert(offset == pf->encrypted_part_plain.size);
-        pf->end_of_file = true;
     }
 
     return data_attempted_to_read - data_left_to_read;
@@ -1276,7 +1250,6 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         ipf_init_root_mht(&pf->root_mht);
 
         pf->need_writing = true;
-        pf->end_of_file  = false;
         pf->real_file_size = 0;
 
         while ((data = lruc_get_last(pf->cache)) != NULL) {
@@ -1322,11 +1295,12 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
         return PF_STATUS_SUCCESS;
     }
 
-    if (!ipf_update_after_seek(pf, offset))
+    if (PF_FAILURE(pf->file_status)) {
+        pf->last_error = pf->file_status;
         return pf->last_error;
+    }
 
-    if (pf->end_of_file || offset == pf->encrypted_part_plain.size) {
-        pf->end_of_file = true;
+    if (offset >= pf->encrypted_part_plain.size) {
         *bytes_read = 0;
         return PF_STATUS_SUCCESS;
     }
@@ -1343,11 +1317,20 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    if (!ipf_update_after_seek(pf, offset))
+    if (!ipf_check_writable(pf))
         return pf->last_error;
+
+    if (offset > pf->encrypted_part_plain.size) {
+        pf_status_t ret = pf_set_size(pf, offset);
+        if (!PF_SUCCESS(ret)) {
+            pf->last_error = ret;
+            return pf->last_error;
+        }
+    }
 
     if (ipf_write(pf, input, offset, size) != size)
         return pf->last_error;
+
     return PF_STATUS_SUCCESS;
 }
 

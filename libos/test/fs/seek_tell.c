@@ -63,6 +63,16 @@ static void seek_output_fd(const char* path) {
     }
     pos = tell_fd(path, f);
     printf("tell(%s) output end 2 OK: %zd\n", path, pos);
+    seek_fd(path, f, pos * 2, SEEK_SET);
+    printf("seek(%s) output beyond end OK\n", path);
+    pos = tell_fd(path, f);
+    printf("tell(%s) output beyond end OK: %zd\n", path, pos);
+    ssize_t ret = read(f, &buf, 1);
+    printf("read(%s) output OK: %zd\n", path, ret);
+    seek_fd(path, f, 0, SEEK_END);
+    printf("seek(%s) output end 4 OK\n", path);
+    pos = tell_fd(path, f);
+    printf("tell(%s) output end 3 OK: %zd\n", path, pos);
     close_fd(path, f);
     printf("close(%s) output OK\n", path);
 }
@@ -94,6 +104,16 @@ static void seek_output_stdio(const char* path) {
     }
     pos = tell_stdio(path, f);
     printf("ftell(%s) output end 2 OK: %zd\n", path, pos);
+    seek_stdio(path, f, pos * 2, SEEK_SET);
+    printf("fseek(%s) output beyond end OK\n", path);
+    pos = tell_stdio(path, f);
+    printf("ftell(%s) output beyond end OK: %zd\n", path, pos);
+    ssize_t ret = fread(&buf, 1, 1, f);
+    printf("fread(%s) output OK: %zd\n", path, ret);
+    seek_stdio(path, f, 0, SEEK_END);
+    printf("fseek(%s) output end 4 OK\n", path);
+    pos = tell_stdio(path, f);
+    printf("ftell(%s) output end 3 OK: %zd\n", path, pos);
     close_stdio(path, f);
     printf("fclose(%s) output OK\n", path);
 }
