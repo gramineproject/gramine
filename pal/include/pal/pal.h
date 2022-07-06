@@ -539,13 +539,15 @@ int PalSocketListen(PAL_HANDLE handle, unsigned int backlog);
  * \param[out] out_client       On success contains a handle for the new connection.
  * \param[out] out_client_addr  On success contains the remote address of the new connection.
  *                              Can be NULL, to ignore the result.
+ * \param[out] out_local_addr   On success contains the local address of the new connection.
+ *                              Can be NULL, to ignore the result.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * This function can be safely called concurrently.
  */
 int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                    struct pal_socket_addr* out_client_addr);
+                    struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr);
 
 /*!
  * \brief Connect a socket to a remote address.

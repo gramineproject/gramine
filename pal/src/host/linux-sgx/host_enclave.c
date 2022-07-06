@@ -438,7 +438,7 @@ static long sgx_ocall_accept(void* pms) {
     long ret;
     ODEBUG(OCALL_ACCEPT, ms);
 
-    if (ms->ms_addrlen > INT_MAX) {
+    if (ms->ms_addrlen > INT_MAX || ms->ms_local_addrlen > INT_MAX) {
         ret = -EINVAL;
         goto err;
     }
@@ -452,8 +452,19 @@ static long sgx_ocall_accept(void* pms) {
 
     int fd = ret;
     ms->ms_addrlen = addrlen;
+
+    if (ms->ms_local_addr && !ms->ms_local_addr->sa_family) {
+        int addrlen = ms->ms_local_addrlen;
+        ret = DO_SYSCALL(getsockname, fd, ms->ms_local_addr, &addrlen);
+        if (ret < 0)
+            goto err_fd;
+        ms->ms_local_addrlen = addrlen;
+    }
+
     return fd;
 
+err_fd:
+    DO_SYSCALL(close, fd);
 err:
     return ret;
 }

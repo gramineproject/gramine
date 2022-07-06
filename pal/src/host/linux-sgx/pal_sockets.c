@@ -194,15 +194,17 @@ static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                      struct pal_socket_addr* out_client_addr) {
+                      struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage = { 0 };
     size_t linux_addrlen = sizeof(sa_storage);
+    struct sockaddr_storage local_addr = { 0 };
+    size_t local_addrlen = sizeof(local_addr);
     int flags = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
     flags |= SOCK_CLOEXEC;
 
-    int fd = ocall_accept(handle->sock.fd, (void*)&sa_storage, &linux_addrlen, flags);
+    int fd = ocall_accept(handle->sock.fd, (void*)&sa_storage, &linux_addrlen, (void*)&local_addr, &local_addrlen, flags);
     if (fd < 0) {
         return unix_to_pal_error(fd);
     }
@@ -218,15 +220,25 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return -PAL_ERROR_NOMEM;
     }
 
+    if (out_local_addr) {
+        int ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
+        if (ret < 0) {
+            _PalObjectClose(client);
+            return ret;
+        }
+        assert(out_client_addr->domain == client->sock.domain);
+    }
     if (out_client_addr) {
         int ret = verify_ip_addr(client->sock.domain, &sa_storage, linux_addrlen);
         if (ret < 0) {
             _PalObjectClose(client);
             return ret;
         }
-
         linux_to_pal_sockaddr(&sa_storage, out_client_addr);
         assert(out_client_addr->domain == client->sock.domain);
+    }
+    if (out_local_addr) {
+        linux_to_pal_sockaddr(&local_addr, out_local_addr);
     }
 
     *out_client = client;
@@ -603,11 +615,11 @@ int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                     struct pal_socket_addr* out_client_addr) {
+                     struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     if (!handle->sock.ops->accept) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->accept(handle, options, out_client, out_client_addr);
+    return handle->sock.ops->accept(handle, options, out_client, out_client_addr, out_local_addr);
 }
 
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,

@@ -208,7 +208,7 @@ static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                      struct pal_socket_addr* out_client_addr) {
+                      struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage = { 0 };
@@ -232,11 +232,21 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return -PAL_ERROR_NOMEM;
     }
 
+    if (out_local_addr) {
+        int ret = do_getsockname(fd, &sa_storage);
+        if (ret < 0) {
+            /* This should never happen, but we have to handle it somehow. */
+            return ret;
+        }
+        linux_to_pal_sockaddr(&sa_storage, out_local_addr);
+    }
+
     *out_client = client;
     if (out_client_addr) {
         linux_to_pal_sockaddr(&sa_storage, out_client_addr);
         assert(out_client_addr->domain == client->sock.domain);
     }
+
     return 0;
 }
 
@@ -652,11 +662,11 @@ int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                     struct pal_socket_addr* out_client_addr) {
+                     struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     if (!handle->sock.ops->accept) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->accept(handle, options, out_client, out_client_addr);
+    return handle->sock.ops->accept(handle, options, out_client, out_client_addr, out_local_addr);
 }
 
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
