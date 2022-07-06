@@ -135,7 +135,7 @@ index 54b0651dc48db45eec84a25ffeca2050af08da79..fcc44f6816735d0ff876d365b347e8a2
 +libmbedtls%.$(SOEXT_TLS): $(OBJS_TLS) libmbedx509%.so
  	echo "  LD    $@"
 -	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509 -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS)
-+	$(CC) -shared -Wl,-soname,$@ -L. -lmbedcrypto$(SUFFIX) -lmbedx509$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_TLS)
++	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509$(SUFFIX) -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
 -libmbedtls.so: libmbedtls.$(SOEXT_TLS)
 +libmbedtls%.so: libmbedtls%.$(SOEXT_TLS)
@@ -159,7 +159,7 @@ index 54b0651dc48db45eec84a25ffeca2050af08da79..fcc44f6816735d0ff876d365b347e8a2
 +libmbedx509%.$(SOEXT_X509): $(OBJS_X509) libmbedcrypto%.so
  	echo "  LD    $@"
 -	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_X509) -L. -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS)
-+	$(CC) -shared -Wl,-soname,$@ -L. -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@ $(OBJS_X509)
++	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_X509) -L. -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
 -libmbedx509.so: libmbedx509.$(SOEXT_X509)
 +libmbedx509%.so: libmbedx509%.$(SOEXT_X509)
