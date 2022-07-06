@@ -244,7 +244,7 @@ class TC_00_FileSystem(RegressionTestCase):
         chunk_size = 512
         next_file_pos = file_pos + chunk_size
 
-        stdout, stderr = self.run_binary([
+        _, stderr = self.run_binary([
             'seek_tell_truncate',
             file_out,
             str(file_size),
@@ -253,13 +253,6 @@ class TC_00_FileSystem(RegressionTestCase):
         ])
 
         self.assertNotIn('ERROR: ', stderr)
-        self.assertIn(f"open({file_out}) output OK", stdout)
-        self.assertIn(f"seek({file_out}) output OK: {file_pos}", stdout)
-        self.assertIn(f"first tell({file_out}) output position OK: {file_pos}", stdout)
-        self.assertIn(f"truncate({file_out}) to {file_truncate} OK", stdout)
-        self.assertIn(f"second tell({file_out}) output position OK: {file_pos}", stdout)
-        self.assertIn(f"third tell({file_out}) output position OK: {next_file_pos}", stdout)
-        self.assertIn(f"close({file_out}) OK", stdout)
 
     def test_141_file_seek_tell_truncate(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_141')

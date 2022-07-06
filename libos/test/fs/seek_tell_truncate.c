@@ -15,36 +15,42 @@ static void setup_file(const char* path, size_t size) {
 
 static void seek_truncate(const char* path, size_t file_pos, size_t file_truncate) {
     int fd = open_output_fd(path, /*rdwr=*/false);
-    printf("open(%s) output OK\n", path);
 
     seek_fd(path, fd, file_pos, SEEK_SET);
-    printf("seek(%s) output OK: %zu\n", path, file_pos);
 
     off_t pos = tell_fd(path, fd);
-    printf("first tell(%s) output position OK: %zd\n", path, pos);
+    if ((size_t)pos != file_pos) {
+        fatal_error("first tell failed (expected: %zu, got: %zd)", file_pos, pos);
+    }
+    printf("First tell(%s) returned position: %zd\n", path, pos);
 
     if (ftruncate(fd, file_truncate) != 0) {
         fatal_error("Failed to truncate file %s to %zu: %m\n", path, file_truncate);
     }
-    printf("truncate(%s) to %zu OK\n", path, file_truncate);
 
     pos = tell_fd(path, fd);
-    printf("second tell(%s) output position OK: %zd\n", path, pos);
+    if ((size_t)pos != file_pos) {
+        fatal_error("second tell failed (expected: %zu, got: %zd)", file_pos, pos);
+    }
+    printf("Second tell(%s) returned position: %zd\n", path, pos);
 
     void* buf = alloc_buffer(CHUNK_SIZE);
     fill_random(buf, CHUNK_SIZE);
     write_fd(path, fd, buf, CHUNK_SIZE);
     free(buf);
 
+    size_t next_file_pos = file_pos + CHUNK_SIZE;
     pos = tell_fd(path, fd);
-    printf("third tell(%s) output position OK: %zd\n", path, pos);
+    if ((size_t)pos != next_file_pos) {
+        fatal_error("third tell failed (expected: %zu, got: %zd)", next_file_pos, pos);
+    }
+    printf("Third tell(%s) returned position: %zd\n", path, pos);
 
     close_fd(path, fd);
-    printf("close(%s) OK\n", path);
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 4)
+    if (argc < 5)
         fatal_error("Usage: %s <output> <size> <position> <truncate>\n", argv[0]);
 
     setup();
