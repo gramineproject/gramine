@@ -421,6 +421,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_ipc);
     RUN_INIT(init_process);
     RUN_INIT(init_mount_root);
+    RUN_INIT(init_mount);
 
     struct libos_handle* exec = NULL;
     char** new_argv = NULL;
@@ -432,7 +433,6 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     RUN_INIT(init_process_args, argc, (const char**)new_argv);
     RUN_INIT(init_threading);
-    RUN_INIT(init_mount);
     RUN_INIT(init_important_handles);
 
     /* Update log prefix after we initialized `g_process.exec` */
