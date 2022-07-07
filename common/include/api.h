@@ -260,9 +260,6 @@ int memcmp(const void* lhs, const void* rhs, size_t count);
  * The time taken by this function depends on `count`, but not on the data at `lhs` or `rhs`.
  * Hence, it can be used for comparing cryptographic secrets, hashes, message authentication codes
  * etc. without timing side-channel leaks.
- *
- * Note that different from the standard `memcmp` function, this function only returns whether the
- * data at the two buffers are equal.
  */
 bool ct_memequal(const void* lhs, const void* rhs, size_t count);
 
