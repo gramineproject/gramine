@@ -9,7 +9,8 @@
 ; - RSP: the initial stack, contains program arguments and environment
 ; - FLAGS: should be zeroed out
 
-global    call_elf_entry
+global call_elf_entry
+section .text
 
 ; noreturn void call_elf_entry(elf_addr_t entry, void* argp)
 call_elf_entry:
