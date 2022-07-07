@@ -11,6 +11,8 @@ if [ -z "$PYLINT" ]; then
 fi
 
 find . -name \*.py \
+    -and -not -path ./build\* \
+    -and -not -path ./subprojects/\* \
     -and -not -path ./libos/test/ltp/src/\* \
     -and -not -path ./libos/test/ltp/build/\* \
     -and -not -path ./libos/test/ltp/install/\* \
