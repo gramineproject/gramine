@@ -37,7 +37,7 @@ Run the following command on Ubuntu LTS to install dependencies::
 
     sudo apt-get install -y build-essential \
         autoconf bison gawk nasm ninja-build python3 python3-click \
-        python3-jinja2 wget
+        python3-jinja2 python3-pyelftools wget
     sudo python3 -m pip install 'meson>=0.55' 'toml>=0.10'
 
 You can also install Meson and python3-toml from apt instead of pip, but only if
@@ -46,8 +46,7 @@ your distro is new enough to have Meson >= 0.55 and python3-toml >= 0.10 (Debian
 
 For GDB support and to run all tests locally you also need to install::
 
-    sudo apt-get install -y libunwind8 musl-tools python3-pyelftools \
-        python3-pytest
+    sudo apt-get install -y libunwind8 musl-tools python3-pytest
 
 If you want to build the patched ``libgomp`` library, you also need to install
 GCC's build dependencies::
