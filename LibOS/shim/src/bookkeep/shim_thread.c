@@ -63,7 +63,6 @@ static struct shim_thread* alloc_new_thread(void) {
     }
 
     if (!create_lock(&thread->lock)) {
-        free(thread->cpumask);
         free(thread);
         return NULL;
     }
@@ -71,7 +70,6 @@ static struct shim_thread* alloc_new_thread(void) {
     int ret = create_pollable_event(&thread->pollable_event);
     if (ret < 0) {
         destroy_lock(&thread->lock);
-        free(thread->cpumask);
         free(thread);
         return NULL;
     }
@@ -80,7 +78,6 @@ static struct shim_thread* alloc_new_thread(void) {
     INIT_LIST_HEAD(thread, list);
     /* default value as sigalt stack isn't specified yet */
     thread->signal_altstack.ss_flags = SS_DISABLE;
-
     return thread;
 }
 
