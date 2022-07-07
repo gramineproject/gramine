@@ -62,6 +62,7 @@ if host_machine.cpu_family() == 'x86_64'
         depfile: '@BASENAME@.dep',
         arguments: [
             '-f', 'elf64',
+            '-p', '@SOURCE_DIR@/common/src/arch/x86_64/no_exec_stack.nasm',
             '-I', '@0@/'.format(meson.current_build_dir()),
             '-MQ', '@OUTPUT@', '-MF', '@DEPFILE@',
             '@EXTRA_ARGS@',
