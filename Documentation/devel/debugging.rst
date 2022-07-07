@@ -18,10 +18,6 @@ To build Gramine with debug symbols, the source code needs to be compiled with
     ninja -C build-debug/
     sudo ninja -C build-debug/ install
 
-GDB integration also requires pyelftools Python package::
-
-    sudo apt-get install -y python3-pyelftools
-
 To run Gramine with GDB, use the following command to run your application::
 
     GDB=1 gramine-direct [application] [arguments]
@@ -40,10 +36,6 @@ To build Gramine with debug symbols, the source code needs to be compiled with
     meson setup build-debug/ --werror --buildtype=debug -Dsgx=enabled
     ninja -C build-debug/
     sudo ninja -C build-debug/ install
-
-GDB integration also requires pyelftools Python package::
-
-    sudo apt-get install -y python3-pyelftools
 
 After rebuilding Gramine with debug symbols, you need to re-sign the manifest of
 the application. For instance, if you want to debug the ``helloworld`` program,
