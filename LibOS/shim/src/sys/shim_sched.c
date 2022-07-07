@@ -165,19 +165,12 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
     }
 
     /* User mask is being manipulated below, so make a local copy of the mask */
-    uint64_t* cpumask = calloc(1, cpumask_size);
+    uint64_t* cpumask = malloc(cpumask_size);
     if (!cpumask) {
         put_thread(thread);
         return -ENOMEM;
     }
     memcpy(cpumask, user_mask_ptr, cpumask_size);
-
-    lock(&thread->lock);
-    ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, cpumask);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
 
     /* Verify validity of the CPU affinity (e.g. that it contains at least one online core). */
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
@@ -197,7 +190,15 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 
     /* Intersection of online cores and the user supplied mask is empty. */
     if (cores_cnt == 0) {
-        ret = -EINVAL;
+        free(cpumask);
+        put_thread(thread);
+        return -EINVAL;
+    }
+
+    lock(&thread->lock);
+    ret = DkThreadSetCpuAffinity(thread->pal_handle, cpumask_size, cpumask);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
         goto out;
     }
 

@@ -508,7 +508,7 @@ int DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long
  * \param cpumask_size  Size in bytes of the bitmask pointed by \a cpu_mask.
  * \param cpu_mask      Pointer to hold the current CPU mask.
  *
- * \returns 0 on success, negative error code on failure.
+ * \returns number of bytes copied into the `cpu_mask` on success, negative error code on failure.
  *
  * This function assumes that \a cpumask_size is valid and greater than 0. Also, \a cpumask_size
  * must be able to fit all the processors in the host and must be aligned by sizeof(long). For

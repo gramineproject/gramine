@@ -62,14 +62,6 @@ static struct shim_thread* alloc_new_thread(void) {
         return NULL;
     }
 
-    /* Allocate memory to hold affinity mask for the cores present in the system. */
-    thread->cpumask = calloc(1, BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                sizeof(unsigned long));
-    if (!thread->cpumask) {
-        free(thread);
-        return NULL;
-    }
-
     if (!create_lock(&thread->lock)) {
         free(thread->cpumask);
         free(thread);
@@ -160,6 +152,15 @@ static int init_main_thread(void) {
         return -ENOMEM;
     }
 
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    cur_thread->cpumask = malloc(bitmask_size_in_bytes);
+    if (!cur_thread->cpumask) {
+        log_error("Cannot allocate cpumask for the initial thread!");
+        put_thread(cur_thread);
+        return -ENOMEM;
+    }
+
     cur_thread->tid = get_new_id(/*move_ownership_to=*/0);
     if (!cur_thread->tid) {
         log_error("Cannot allocate pid for the initial thread!");
@@ -230,9 +231,6 @@ static int init_main_thread(void) {
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
 
-    /* Get CPU affinity from host and initialize current thread's CPU affinity mask */
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
     ret = DkThreadGetCpuAffinity(cur_thread->pal_handle, bitmask_size_in_bytes,
                                  cur_thread->cpumask);
     if (ret < 0) {
@@ -283,6 +281,15 @@ struct shim_thread* get_new_thread(void) {
         return NULL;
     }
 
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    thread->cpumask = malloc(bitmask_size_in_bytes);
+    if (!thread->cpumask) {
+        log_error("Cannot allocate cpumask for the new thread!");
+        put_thread(thread);
+        return NULL;
+    }
+
     struct shim_thread* cur_thread = get_cur_thread();
     size_t groups_size = cur_thread->groups_info.count * sizeof(cur_thread->groups_info.groups[0]);
     if (groups_size > 0) {
@@ -320,8 +327,7 @@ struct shim_thread* get_new_thread(void) {
     assert(map);
     set_handle_map(thread, map);
 
-    memcpy(thread->cpumask, cur_thread->cpumask,
-           BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) * sizeof(unsigned long));
+    memcpy(thread->cpumask, cur_thread->cpumask, bitmask_size_in_bytes);
 
     unlock(&cur_thread->lock);
 
@@ -417,8 +423,7 @@ void put_thread(struct shim_thread* thread) {
             release_id(thread->tid);
         }
 
-        if (thread->cpumask)
-            free(thread->cpumask);
+        free(thread->cpumask);
 
         destroy_pollable_event(&thread->pollable_event);
 
