@@ -61,5 +61,7 @@ int main(int argc, char* argv[]) {
     setup_file(argv[1], file_size);
     seek_truncate(argv[1], file_pos, file_truncate);
 
+    printf("Test passed\n");
+
     return 0;
 }

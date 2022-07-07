@@ -241,7 +241,7 @@ class TC_00_FileSystem(RegressionTestCase):
         self.do_truncate_test(65537, 65536)
 
     def verify_seek_tell_truncate(self, file_out, file_size, file_pos, file_truncate):
-        _, stderr = self.run_binary([
+        stdout, _ = self.run_binary([
             'seek_tell_truncate',
             file_out,
             str(file_size),
@@ -249,7 +249,7 @@ class TC_00_FileSystem(RegressionTestCase):
             str(file_truncate)
         ])
 
-        self.assertNotIn('ERROR: ', stderr)
+        self.assertIn('Test passed', stdout)
 
     def test_141_file_seek_tell_truncate(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_141')
