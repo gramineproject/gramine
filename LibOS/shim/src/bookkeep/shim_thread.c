@@ -149,15 +149,6 @@ static int init_main_thread(void) {
         return -ENOMEM;
     }
 
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
-    cur_thread->cpumask = malloc(bitmask_size_in_bytes);
-    if (!cur_thread->cpumask) {
-        log_error("Cannot allocate cpumask for the initial thread!");
-        put_thread(cur_thread);
-        return -ENOMEM;
-    }
-
     cur_thread->tid = get_new_id(/*move_ownership_to=*/0);
     if (!cur_thread->tid) {
         log_error("Cannot allocate pid for the initial thread!");
@@ -227,6 +218,15 @@ static int init_main_thread(void) {
     }
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
+
+    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                                   sizeof(unsigned long);
+    cur_thread->cpumask = malloc(bitmask_size_in_bytes);
+    if (!cur_thread->cpumask) {
+        log_error("Cannot allocate cpumask for the initial thread!");
+        put_thread(cur_thread);
+        return -ENOMEM;
+    }
 
     ret = DkThreadGetCpuAffinity(cur_thread->pal_handle, bitmask_size_in_bytes,
                                  cur_thread->cpumask);
