@@ -259,7 +259,7 @@ int _DkThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
 int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
     int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpumask_size, cpu_mask);
 
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 struct handle_ops g_thread_ops = {

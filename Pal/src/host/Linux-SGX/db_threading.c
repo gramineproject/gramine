@@ -191,7 +191,7 @@ int _DkThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
         }
     }
 
-    return ret;
+    return 0;
 }
 
 struct handle_ops g_thread_ops = {

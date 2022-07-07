@@ -211,8 +211,8 @@ long shim_do_sched_setaffinity(pid_t pid, unsigned int cpumask_size, unsigned lo
 
     ret = 0;
 out:
-    free(cpumask);
     unlock(&thread->lock);
+    free(cpumask);
     put_thread(thread);
     return ret;
 }
