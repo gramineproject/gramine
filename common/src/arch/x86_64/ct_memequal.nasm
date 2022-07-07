@@ -5,6 +5,8 @@
 
 global ct_memequal
 
+section .text
+
 ; bool ct_memequal(const void* lhs, const void* rhs, size_t count)
 ; Arguments:
 ; - RDI: Pointer to the first buffer (lhs)
