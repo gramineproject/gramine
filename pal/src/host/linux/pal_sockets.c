@@ -211,12 +211,12 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
                       struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
-    struct sockaddr_storage sa_storage = { 0 };
-    int linux_addrlen = sizeof(sa_storage);
+    struct sockaddr_storage client_addr = { 0 };
+    int client_addrlen = sizeof(client_addr);
     int flags = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
     flags |= SOCK_CLOEXEC;
 
-    int fd = DO_SYSCALL(accept4, handle->sock.fd, &sa_storage, &linux_addrlen, flags);
+    int fd = DO_SYSCALL(accept4, handle->sock.fd, &client_addr, &client_addrlen, flags);
     if (fd < 0) {
         return unix_to_pal_error(fd);
     }
@@ -245,7 +245,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 
     *out_client = client;
     if (out_client_addr) {
-        linux_to_pal_sockaddr(&sa_storage, out_client_addr);
+        linux_to_pal_sockaddr(&client_addr, out_client_addr);
         assert(out_client_addr->domain == client->sock.domain);
     }
 
