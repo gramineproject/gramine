@@ -168,11 +168,10 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     client_sock->remote_addrlen = len;
 
     lock(&handle->info.sock.lock);
-    if(is_linux_sockaddr_any(&handle->info.sock.local_addr)) {
+    if (is_linux_sockaddr_any(&handle->info.sock.local_addr)) {
         pal_to_linux_sockaddr(&pal_local_ip_addr, &client_sock->local_addr, &len);
         client_sock->local_addrlen = len;
-    }
-    else {
+    } else {
         client_sock->local_addrlen = handle->info.sock.local_addrlen;
         memcpy(&client_sock->local_addr, &handle->info.sock.local_addr, client_sock->local_addrlen);
     }

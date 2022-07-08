@@ -194,17 +194,19 @@ static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                      struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
+                      struct pal_socket_addr* out_client_addr,
+                      struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
 
-    struct sockaddr_storage sa_storage = { 0 };
-    size_t linux_addrlen = sizeof(sa_storage);
+    struct sockaddr_storage client_addr = { 0 };
+    size_t client_addrlen = sizeof(client_addr);
     struct sockaddr_storage local_addr = { 0 };
     size_t local_addrlen = sizeof(local_addr);
     int flags = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
     flags |= SOCK_CLOEXEC;
 
-    int fd = ocall_accept(handle->sock.fd, (void*)&sa_storage, &linux_addrlen, (void*)&local_addr, &local_addrlen, flags);
+    int fd = ocall_accept(handle->sock.fd, (void*)&client_addr, &client_addrlen,
+                          (void*)&local_addr, &local_addrlen, flags);
     if (fd < 0) {
         return unix_to_pal_error(fd);
     }
@@ -226,19 +228,21 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
             _PalObjectClose(client);
             return ret;
         }
-        assert(out_client_addr->domain == client->sock.domain);
     }
+
     if (out_client_addr) {
-        int ret = verify_ip_addr(client->sock.domain, &sa_storage, linux_addrlen);
+        int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
         if (ret < 0) {
             _PalObjectClose(client);
             return ret;
         }
-        linux_to_pal_sockaddr(&sa_storage, out_client_addr);
+        linux_to_pal_sockaddr(&client_addr, out_client_addr);
         assert(out_client_addr->domain == client->sock.domain);
     }
+
     if (out_local_addr) {
         linux_to_pal_sockaddr(&local_addr, out_local_addr);
+        assert(out_local_addr->domain == client->sock.domain);
     }
 
     *out_client = client;

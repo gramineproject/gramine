@@ -1231,7 +1231,8 @@ int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct soc
     return retval;
 }
 
-int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockaddr* local_addr, size_t* local_addrlen, int options) {
+int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockaddr* local_addr,
+                 size_t* local_addrlen, int options) {
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     size_t local_len = local_addrlen ? *local_addrlen : 0;
@@ -1252,7 +1253,8 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    void* untrusted_local_addr = (local_addr && local_len) ? sgx_copy_to_ustack(local_addr, local_len) : NULL;
+    void* untrusted_local_addr = (local_addr && local_len) ?
+                                 sgx_copy_to_ustack(local_addr, local_len) : NULL;
     if (local_addr && local_len && !untrusted_local_addr) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
@@ -1281,7 +1283,8 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
         }
         if (local_addr && local_len) {
             size_t untrusted_local_addrlen = READ_ONCE(ms->ms_local_addrlen);
-            if (!sgx_copy_to_enclave(local_addr, local_len, READ_ONCE(ms->ms_local_addr), untrusted_local_addrlen)) {
+            if (!sgx_copy_to_enclave(local_addr, local_len,
+                                     READ_ONCE(ms->ms_local_addr), untrusted_local_addrlen)) {
                 sgx_reset_ustack(old_ustack);
                 return -EPERM;
             }

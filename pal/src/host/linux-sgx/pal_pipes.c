@@ -169,7 +169,8 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
 
     static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
     int flags = PAL_OPTION_TO_LINUX_OPEN(options);
-    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, NULL, NULL, flags);
+    int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, /*local_addr=*/NULL,
+                           /*local_addrlen=*/NULL, flags);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

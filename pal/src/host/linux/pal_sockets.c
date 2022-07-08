@@ -233,12 +233,14 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
     }
 
     if (out_local_addr) {
-        int ret = do_getsockname(fd, &sa_storage);
+        struct sockaddr_storage local_addr = { 0 };
+        int ret = do_getsockname(fd, &local_addr);
         if (ret < 0) {
             /* This should never happen, but we have to handle it somehow. */
             return ret;
         }
-        linux_to_pal_sockaddr(&sa_storage, out_local_addr);
+        linux_to_pal_sockaddr(&local_addr, out_local_addr);
+        assert(out_local_addr->domain == client->sock.domain);
     }
 
     *out_client = client;
