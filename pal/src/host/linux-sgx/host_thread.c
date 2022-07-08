@@ -9,7 +9,7 @@
 #include "asan.h"
 #include "assert.h"
 #include "gdb_integration/sgx_gdb.h"
-#include "host_enclave.h"
+#include "host_ecalls.h"
 #include "host_internal.h"
 #include "spinlock.h"
 
