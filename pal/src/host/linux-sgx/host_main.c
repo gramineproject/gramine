@@ -13,7 +13,7 @@
 #include "asan.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
-#include "host_enclave.h"
+#include "host_ecalls.h"
 #include "host_internal.h"
 #include "host_log.h"
 #include "linux_utils.h"

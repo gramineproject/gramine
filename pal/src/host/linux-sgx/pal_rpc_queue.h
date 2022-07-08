@@ -147,3 +147,5 @@ out:
     spinlock_unlock(&q->lock);
     return ret;
 }
+
+int start_rpc(size_t threads_cnt);
