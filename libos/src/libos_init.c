@@ -427,7 +427,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     char** new_argv = NULL;
     int ret = load_and_check_exec(argv[0], argv, &exec, &new_argv);
     if (ret < 0) {
-        log_error("libos_init: failed to load exec: %d", ret);
+        log_error("libos_init: failed to load exec:%s  ret %d", argv[0], ret);
         PalProcessExit(1);
     }
 
