@@ -170,10 +170,11 @@ long libos_syscall_execve(const char* file, const char** argv, const char** envp
         log_debug("Unusual anomaly in arguments: %s does not track with %s, this will be corrected "
         "inside load_and_check_exec", file, argv[0]);
     }
+    const char* orig_argv[] = {file, argv[1]?argv[1]:NULL, NULL};
 
     struct libos_handle* exec = NULL;
     char** new_argv = NULL;
-    ret = load_and_check_exec(file, argv, &exec, &new_argv);
+    ret = load_and_check_exec(file, orig_argv, &exec, &new_argv);
     if (ret < 0) {
         return ret;
     }
