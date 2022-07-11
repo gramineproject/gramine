@@ -22,8 +22,8 @@ Usage: (assuming you've configured your build into ``build`` directory)
 
    ninja -C build/ clang-format
 
-This :command:`make` target **reformats all source files in-place**, so we
-recommend you first commit them (or add to `git index
+This command **reformats all source files in-place**, so we recommend you first
+commit them (or add to `git index
 <https://hackernoon.com/understanding-git-index-4821a0765cf>`__ with
 :command:`git add -A`), reformat and then verify reformatting results using
 :command:`git diff` (or :command:`git diff --cached` if you used :command:`git
