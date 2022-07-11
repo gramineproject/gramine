@@ -321,3 +321,52 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
 
     return ret;
 }
+
+int proc_thread_status_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    size_t size = 0, max = 256;
+    size_t i = 0;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
+
+    /*
+     * Minimal set of attributes from `/proc/[pid]/status`. Only `VmPeak` is supported currently.
+     */
+
+    struct {
+        const char* fmt;
+        unsigned long val;
+    } status[] = {
+        { "VmPeak:\t%8lu kB\n", get_peak_memory_usage() / 1024 },
+    };
+
+    while (i < ARRAY_SIZE(status)) {
+        int ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
+        if (ret < 0) {
+            free(str);
+            return ret;
+        }
+
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            /* TODO: use `realloc()` once it's available. */
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
+
+        size += ret;
+        i++;
+    }
+
+    *out_data = str;
+    *out_size = size;
+    return 0;
+}

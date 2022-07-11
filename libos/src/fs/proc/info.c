@@ -13,8 +13,11 @@
 int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t size, max = 128;
-    char* str = NULL;
+    size_t size = 0, max = 256;
+    size_t i = 0;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
 
     assert(g_pal_public_state->mem_total >= PalMemoryAvailableQuota());
 
@@ -54,25 +57,28 @@ int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
         { "VmallocChunk:  %8lu kB\n", /*dummy value=*/0 },
     };
 
-retry:
-    max *= 2;
-    size = 0;
-    free(str);
-    str = malloc(max);
-    if (!str)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < ARRAY_SIZE(meminfo); i++) {
+    while (i < ARRAY_SIZE(meminfo)) {
         int ret = snprintf(str + size, max - size, meminfo[i].fmt, meminfo[i].val);
         if (ret < 0) {
             free(str);
             return ret;
         }
 
-        if (size + ret >= max)
-            goto retry;
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            /* TODO: use `realloc()` once it's available. */
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
 
         size += ret;
+        i++;
     }
 
     *out_data = str;
