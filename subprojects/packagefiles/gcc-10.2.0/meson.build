@@ -8,7 +8,7 @@ gcc_output_paths = [
 ]
 
 if host_machine.cpu_family() != 'x86_64'
-    error('The patched GCC (libgomp) build is available only x86_64')
+    error('The patched GCC (libgomp) build is available only on x86_64')
 endif
 
 gcc_output = []

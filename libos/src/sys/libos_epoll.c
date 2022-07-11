@@ -226,7 +226,7 @@ static void _unlink_epoll_item(struct libos_epoll_item* item) {
 }
 
 void delete_epoll_items_for_fd(int fd, struct libos_handle* handle) {
-    /* This looks scarry, but in practice shouldn't be that bad - `fd` is rarely registered on
+    /* This looks scary, but in practice shouldn't be that bad - `fd` is rarely registered on
      * multiple epolls and even if it is, there shouldn't be many of them. */
     while (1) {
         struct libos_epoll_item* to_unlink = NULL;
