@@ -453,18 +453,17 @@ static long sgx_ocall_accept(void* pms) {
     int fd = ret;
     ms->ms_addrlen = addrlen;
 
-    if (ms->ms_local_addr) {
+    if (ms->ms_local_addrlen > 0) {
         int addrlen = ms->ms_local_addrlen;
         ret = DO_SYSCALL(getsockname, fd, ms->ms_local_addr, &addrlen);
-        if (ret < 0)
-            goto err_fd;
+        if (ret < 0) {
+            DO_SYSCALL(close, fd);
+            goto err;
+        }
         ms->ms_local_addrlen = addrlen;
     }
-
     return fd;
 
-err_fd:
-    DO_SYSCALL(close, fd);
 err:
     return ret;
 }

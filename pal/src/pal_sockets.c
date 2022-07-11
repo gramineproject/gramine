@@ -22,7 +22,8 @@ int PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                    struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
+                    struct pal_socket_addr* out_client_addr,
+                    struct pal_socket_addr* out_local_addr) {
     assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
     return _PalSocketAccept(handle, options, out_client, out_client_addr, out_local_addr);
 }

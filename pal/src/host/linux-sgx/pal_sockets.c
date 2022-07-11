@@ -222,24 +222,21 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return -PAL_ERROR_NOMEM;
     }
 
-    if (out_local_addr) {
-        int ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
-        if (ret < 0) {
-            _PalObjectClose(client);
-            return ret;
-        }
+    int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
+    if (ret < 0) {
+        _PalObjectClose(client);
+        return ret;
+    }
+    ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
+    if (ret < 0) {
+        _PalObjectClose(client);
+        return ret;
     }
 
     if (out_client_addr) {
-        int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
-        if (ret < 0) {
-            _PalObjectClose(client);
-            return ret;
-        }
         linux_to_pal_sockaddr(&client_addr, out_client_addr);
         assert(out_client_addr->domain == client->sock.domain);
     }
-
     if (out_local_addr) {
         linux_to_pal_sockaddr(&local_addr, out_local_addr);
         assert(out_local_addr->domain == client->sock.domain);
@@ -619,7 +616,8 @@ int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
 }
 
 int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                     struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr) {
+                     struct pal_socket_addr* out_client_addr,
+                     struct pal_socket_addr* out_local_addr) {
     if (!handle->sock.ops->accept) {
         return -PAL_ERROR_NOTSUPPORT;
     }

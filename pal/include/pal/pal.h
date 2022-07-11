@@ -547,7 +547,8 @@ int PalSocketListen(PAL_HANDLE handle, unsigned int backlog);
  * This function can be safely called concurrently.
  */
 int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
-                    struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr);
+                    struct pal_socket_addr* out_client_addr,
+                    struct pal_socket_addr* out_local_addr);
 
 /*!
  * \brief Connect a socket to a remote address.

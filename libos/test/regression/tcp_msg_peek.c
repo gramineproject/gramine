@@ -45,13 +45,15 @@ static void server(int pipefd) {
     socklen_t len = sizeof(local_addr);
     CHECK(getsockname(client, (struct sockaddr*)&local_addr, &len));
     char local_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, sizeof(local_ip));
+    if (inet_ntop(AF_INET, &local_addr.sin_addr, local_ip, sizeof(local_ip)) != local_ip) {
+        CHECK(-1);
+    }
     if (strcmp(local_ip, SRV_IP)) {
-        errx(1, "incorrect local address ip %s of client", local_ip);
+        errx(1, "incorrect local IP address of client: \"%s\"", local_ip);
     }
     uint16_t local_port = ntohs(local_addr.sin_port);
     if (local_port != PORT) {
-        errx(1, "incorrect local address port %ud of client", local_port);
+        errx(1, "incorrect local port of client: %hu", local_port);
     }
 
     CHECK(close(s));
