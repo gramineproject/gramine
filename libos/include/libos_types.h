@@ -164,7 +164,7 @@ typedef uint64_t HASHTYPE;
 #define FILE_OFF_MAX INT64_MAX
 typedef int64_t file_off_t;
 
-typedef struct atomic_int REFTYPE;
+typedef int64_t REFTYPE;
 
 struct libos_lock {
     PAL_HANDLE lock;

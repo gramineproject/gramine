@@ -13,7 +13,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 
-extern struct atomic_int g_allocated_pages;
+extern size_t g_allocated_pages;
 
 bool _PalCheckMemoryMappable(const void* addr, size_t size) {
     if (addr < DATA_END && addr + size > TEXT_START) {
@@ -80,11 +80,9 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     }
 #endif
 
-    static struct atomic_int at_cnt = {.counter = 0};
-    int64_t t = 0;
-    if (__atomic_compare_exchange_n(&at_cnt.counter, &t, 1, /*weak=*/false, __ATOMIC_SEQ_CST,
-                                    __ATOMIC_RELAXED))
+    if (FIRST_TIME()) {
         log_warning("PalVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
+    }
     return 0;
 }
 
@@ -94,5 +92,5 @@ uint64_t _PalMemoryQuota(void) {
 
 uint64_t _PalMemoryAvailableQuota(void) {
     return (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
-           __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
+           __atomic_load_n(&g_allocated_pages, __ATOMIC_RELAXED) * g_page_size;
 }

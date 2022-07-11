@@ -13,7 +13,7 @@
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 
-static struct atomic_int g_enclave_start_called = ATOMIC_INIT(0);
+static int64_t g_enclave_start_called = 0;
 
 /* returns 0 if rpc_queue is valid/not requested, otherwise -1 */
 static int verify_and_init_rpc_queue(rpc_queue_t* untrusted_rpc_queue) {
@@ -77,7 +77,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
     SET_ENCLAVE_TLS(untrusted_area_cache.in_use, 0UL);
 
     int64_t t = 0;
-    if (__atomic_compare_exchange_n(&g_enclave_start_called.counter, &t, 1, /*weak=*/false,
+    if (__atomic_compare_exchange_n(&g_enclave_start_called, &t, 1, /*weak=*/false,
                                     __ATOMIC_SEQ_CST, __ATOMIC_RELAXED)) {
         // ENCLAVE_START not yet called, so only valid ecall is ENCLAVE_START.
         if (ecall_index != ECALL_ENCLAVE_START) {

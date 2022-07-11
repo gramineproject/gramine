@@ -7,7 +7,7 @@
 #include "pal_linux.h"
 #include "spinlock.h"
 
-struct atomic_int g_allocated_pages;
+size_t g_allocated_pages = 0;
 
 /* list of VMAs of used memory areas kept in DESCENDING order; note that preallocated PAL internal
  * memory relies on this descending order of allocations (from high addresses to low), see
@@ -162,7 +162,7 @@ static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_interna
 
     assert(vma->top - vma->bottom >= (ptrdiff_t)freed);
     size_t allocated = vma->top - vma->bottom - freed;
-    __atomic_add_fetch(&g_allocated_pages.counter, allocated / g_page_size, __ATOMIC_SEQ_CST);
+    __atomic_add_fetch(&g_allocated_pages, allocated / g_page_size, __ATOMIC_RELAXED);
 
     return addr;
 }
@@ -308,7 +308,7 @@ int free_enclave_pages(void* addr, size_t size) {
         }
     }
 
-    __atomic_sub_fetch(&g_allocated_pages.counter, freed / g_page_size, __ATOMIC_SEQ_CST);
+    __atomic_sub_fetch(&g_allocated_pages, freed / g_page_size, __ATOMIC_RELAXED);
 
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
