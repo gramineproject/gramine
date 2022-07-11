@@ -161,7 +161,6 @@ static bool ipf_init_fields(pf_context_t* pf) {
     ipf_init_root_mht(&pf->root_mht);
 
     pf->file           = NULL;
-    pf->end_of_file    = false;
     pf->need_writing   = false;
     pf->file_status    = PF_STATUS_UNINITIALIZED;
     pf->last_error     = PF_STATUS_SUCCESS;
@@ -693,7 +692,6 @@ static void ipf_try_clear_error(pf_context_t* pf) {
 
     if (pf->file_status == PF_STATUS_SUCCESS) {
         pf->last_error = PF_STATUS_SUCCESS;
-        pf->end_of_file = false;
     }
 }
 
@@ -836,12 +834,6 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
         offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
-    }
-
-    if (data_left_to_read == 0 && data_attempted_to_read != size) {
-        // user wanted to read more and we had to shrink the request
-        assert(offset == pf->encrypted_part_plain.size);
-        pf->end_of_file = true;
     }
 
     return data_attempted_to_read - data_left_to_read;
@@ -1258,7 +1250,6 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         ipf_init_root_mht(&pf->root_mht);
 
         pf->need_writing = true;
-        pf->end_of_file  = false;
         pf->real_file_size = 0;
 
         while ((data = lruc_get_last(pf->cache)) != NULL) {
@@ -1308,8 +1299,7 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
         return pf->last_error;
     }
 
-    if (pf->end_of_file || offset >= pf->encrypted_part_plain.size) {
-        pf->end_of_file = true;
+    if (offset >= pf->encrypted_part_plain.size) {
         *bytes_read = 0;
         return PF_STATUS_SUCCESS;
     }
@@ -1330,11 +1320,11 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
         return pf->last_error;
 
     if (offset > pf->encrypted_part_plain.size) {
-        if (!PF_SUCCESS(pf_set_size(pf, offset))) {
-            pf->last_error = PF_STATUS_INVALID_PARAMETER;
+        pf_status_t ret = pf_set_size(pf, offset);
+        if (!PF_SUCCESS(ret)) {
+            pf->last_error = ret;
             return pf->last_error;
         }
-        pf->end_of_file = false;
     }
 
     if (ipf_write(pf, input, offset, size) != size)
