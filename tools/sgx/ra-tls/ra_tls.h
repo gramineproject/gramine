@@ -58,6 +58,12 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
 __attribute__ ((visibility("hidden")))
 int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
 
+__attribute__ ((visibility("hidden")))
+int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
+
+__attribute__ ((visibility("hidden")))
+int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
+
 /*!
  * \brief Callback for user-specific verification of measurements in SGX quote.
  *
@@ -76,26 +82,8 @@ __attribute__ ((visibility("default")))
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
- * \brief mbedTLS-suitable verification callback for EPID-based (IAS) or ECDSA-based (DCAP)
- *        quote verification.
- *
- * \param data   Unused (required due to mbedTLS callback function signature).
- * \param crt    Self-signed RA-TLS certificate with SGX quote embedded.
- * \param depth  Unused (required due to mbedTLS callback function signature).
- * \param flags  Unused (required due to mbedTLS callback function signature).
- *
- * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
- *
- * This callback must be registered via mbedtls_ssl_conf_verify(). All parameters required for
- * the SGX quote, IAS attestation report verification, and/or DCAP quote verification  must be
- * passed in the corresponding RA-TLS environment variables.
- */
-__attribute__ ((visibility("default")))
-int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
-
-/*!
  * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
- * verification.
+ *        verification (DER format).
  *
  * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
  * \param der_crt_size  Size of the RA-TLS certificate.
@@ -111,22 +99,6 @@ __attribute__ ((visibility("default")))
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 
 /*!
- * \brief mbedTLS-suitable function to generate a key and a corresponding RA-TLS certificate.
- *
- * \param[out] key  Populated with a generated RSA keypair.
- * \param[out] crt  Populated with a self-signed RA-TLS certificate with SGX quote embedded.
- *
- * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
- *
- * The function first generates a random RSA keypair with PKCS#1 v1.5 encoding. Then it calculates
- * the SHA256 hash over the generated public key and retrieves an SGX quote with report_data equal
- * to the calculated hash (this ties the generated certificate key to the SGX quote). Finally, it
- * generates the X.509 self-signed certificate with this key and the SGX quote embedded.
- */
-__attribute__ ((visibility("default")))
-int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
-
-/*!
  * \brief Generic function to generate a key and a corresponding RA-TLS certificate (DER format).
  *
  * \param[out] der_key       Pointer to buffer populated with generated RSA keypair in DER format.
@@ -136,9 +108,11 @@ int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
  *
  * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  *
- * The function behaves the same as ra_tls_create_key_and_crt() but generates key and certificate
- * in the DER format. The function allocates memory for key and certificate; user is expected to
- * free them after use.
+ * The function first generates a random RSA keypair with PKCS#1 v1.5 encoding. Then it calculates
+ * the SHA256 hash over the generated public key and retrieves an SGX quote with report_data equal
+ * to the calculated hash (this ties the generated certificate key to the SGX quote). Finally, it
+ * generates the X.509 self-signed certificate with this key and the SGX quote embedded. The
+ * function allocates memory for key and certificate; user is expected to free them after use.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,

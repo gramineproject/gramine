@@ -136,9 +136,6 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        /* NOTE: use ra_tls_create_key_and_crt_der() API instead of ra_tls_create_key_and_crt()
-         * simply to test it in our CI and have an example of how to use this API; we already test
-         * ra_tls_create_key_and_crt() API in the Secret Provisioning example */
         char* error;
         ra_tls_create_key_and_crt_der_f = dlsym(ra_tls_attest_lib, "ra_tls_create_key_and_crt_der");
         if ((error = dlerror()) != NULL) {

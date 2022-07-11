@@ -6,9 +6,9 @@ minimal server and client written against the mbedTLS library.
 The server and client are based on `ssl_server.c` and `ssl_client1.c` example
 programs shipped with mbedTLS. We modified them to allow using RA-TLS flows. In
 particular, the server uses a self-signed RA-TLS cert with the SGX quote
-embedded in it via `ra_tls_create_key_and_crt()`. The client uses an RA-TLS
+embedded in it via `ra_tls_create_key_and_crt_der()`. The client uses an RA-TLS
 verification callback to verify the server RA-TLS certificate via
-`ra_tls_verify_callback()`.
+`ra_tls_verify_callback_der()`.
 
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
 `ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
