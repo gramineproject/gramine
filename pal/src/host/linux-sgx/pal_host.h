@@ -15,7 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "atomic.h"
 #include "enclave_tf_structs.h"
 #include "list.h"
 #include "spinlock.h"

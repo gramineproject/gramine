@@ -13,7 +13,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "atomic.h"  // TODO: migrate to stdatomic.h
 #include "libos_defs.h"
 #include "libos_fs_mem.h"
 #include "libos_lock.h"

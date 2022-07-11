@@ -9,7 +9,6 @@
 
 #include "api.h"
 #include "assert.h"
-#include "atomic.h"
 #include "libos_defs.h"
 #include "libos_internal_arch.h"
 #include "libos_tcb.h"
@@ -159,15 +158,15 @@ void debug_print_syscall_before(unsigned long sysno, ...);
 void debug_print_syscall_after(unsigned long sysno, ...);
 
 /* reference counter APIs */
-#define REF_GET(ref)        __atomic_load_n(&(ref).counter, __ATOMIC_SEQ_CST)
-#define REF_SET(ref, count) __atomic_store_n(&(ref).counter, count, __ATOMIC_SEQ_CST);
+#define REF_GET(ref)        __atomic_load_n(&(ref), __ATOMIC_SEQ_CST)
+#define REF_SET(ref, count) __atomic_store_n(&(ref), count, __ATOMIC_SEQ_CST);
 
 static inline int64_t __ref_inc(REFTYPE* ref) {
     int64_t _c;
     do {
-        _c = __atomic_load_n(&ref->counter, __ATOMIC_SEQ_CST);
+        _c = __atomic_load_n(ref, __ATOMIC_SEQ_CST);
         assert(_c >= 0);
-    } while (!__atomic_compare_exchange_n(&ref->counter, &_c, _c + 1, /*weak=*/false,
+    } while (!__atomic_compare_exchange_n(ref, &_c, _c + 1, /*weak=*/false,
                                           __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
     return _c + 1;
 }
@@ -177,13 +176,13 @@ static inline int64_t __ref_inc(REFTYPE* ref) {
 static inline int64_t __ref_dec(REFTYPE* ref) {
     int64_t _c;
     do {
-        _c = __atomic_load_n(&ref->counter, __ATOMIC_SEQ_CST);
+        _c = __atomic_load_n(ref, __ATOMIC_SEQ_CST);
         if (!_c) {
             log_error("Fail: Trying to drop reference count below 0");
             BUG();
             return 0;
         }
-    } while (!__atomic_compare_exchange_n(&ref->counter, &_c, _c - 1, /*weak=*/false,
+    } while (!__atomic_compare_exchange_n(ref, &_c, _c - 1, /*weak=*/false,
                                           __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
     return _c - 1;
 }
