@@ -63,8 +63,8 @@ static bool is_linux_sockaddr_any(const void* linux_addr) {
         case AF_INET6:;
             struct sockaddr_in6 sa_ipv6;
             memcpy(&sa_ipv6, linux_addr, sizeof(sa_ipv6));
-            struct in6_addr in6addr_any = { 0 };
-            if (memcmp(&sa_ipv6.sin6_addr, &in6addr_any, sizeof(sa_ipv6.sin6_addr)) == 0) {
+            if (memcmp(&sa_ipv6.sin6_addr, &(struct in6_addr){ 0 },
+                       sizeof(sa_ipv6.sin6_addr)) == 0) {
                 return true;
             }
             break;

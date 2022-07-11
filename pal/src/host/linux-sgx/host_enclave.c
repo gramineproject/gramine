@@ -439,8 +439,7 @@ static long sgx_ocall_accept(void* pms) {
     ODEBUG(OCALL_ACCEPT, ms);
 
     if (ms->ms_addrlen > INT_MAX || ms->ms_local_addrlen > INT_MAX) {
-        ret = -EINVAL;
-        goto err;
+        return -EINVAL;
     }
     int addrlen = ms->ms_addrlen;
     int options = ms->options | SOCK_CLOEXEC;
@@ -448,7 +447,7 @@ static long sgx_ocall_accept(void* pms) {
 
     ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ms->ms_sockfd, ms->ms_addr, &addrlen, options);
     if (ret < 0)
-        goto err;
+        return ret;
 
     int fd = ret;
     ms->ms_addrlen = addrlen;
@@ -457,7 +456,6 @@ static long sgx_ocall_accept(void* pms) {
         int addrlen = ms->ms_local_addrlen;
         ret = DO_SYSCALL(getsockname, fd, ms->ms_local_addr, &addrlen);
         if (ret < 0) {
-            DO_SYSCALL(close, fd);
             goto err;
         }
         ms->ms_local_addrlen = addrlen;
@@ -465,6 +463,7 @@ static long sgx_ocall_accept(void* pms) {
     return fd;
 
 err:
+    DO_SYSCALL(close, fd);
     return ret;
 }
 
