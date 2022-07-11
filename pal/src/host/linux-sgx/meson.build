@@ -217,5 +217,3 @@ if debug
         install_dir: join_paths(pkglibdir, 'sgx/gdb_integration'),
     )
 endif
-
-subdir('tools')

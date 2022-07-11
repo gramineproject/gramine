@@ -240,6 +240,27 @@ class TC_00_FileSystem(RegressionTestCase):
         self.do_truncate_test(65537, 65535)
         self.do_truncate_test(65537, 65536)
 
+    def verify_seek_tell_truncate(self, file_out, file_size, file_pos, file_truncate):
+        stdout, _ = self.run_binary([
+            'seek_tell_truncate',
+            file_out,
+            str(file_size),
+            str(file_pos),
+            str(file_truncate)
+        ])
+
+        self.assertIn('Test passed', stdout)
+
+    def test_141_file_seek_tell_truncate(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_141')
+
+        self.verify_seek_tell_truncate(f"{file_path}a", 0, 0, 100)
+        self.verify_seek_tell_truncate(f"{file_path}b", 512, 512, 65536)
+        self.verify_seek_tell_truncate(f"{file_path}c", 512, 64, 65536)
+        self.verify_seek_tell_truncate(f"{file_path}d", 512, 512, 0)
+        self.verify_seek_tell_truncate(f"{file_path}e", 512, 256, 0)
+        # XXX: we do not support shrinking files to arbitrary sizes in protected files
+
     def verify_copy_content(self, input_path, output_path):
         self.assertTrue(filecmp.cmp(input_path, output_path, shallow=False))
 

@@ -6,6 +6,7 @@
  */
 
 #include "api.h"
+#include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_flags_conv.h"
@@ -169,29 +170,6 @@ static int file_flush(PAL_HANDLE handle) {
     return 0;
 }
 
-static inline int file_stat_type(struct stat* stat) {
-    if (S_ISREG(stat->st_mode))
-        return PAL_TYPE_FILE;
-    if (S_ISDIR(stat->st_mode))
-        return PAL_TYPE_DIR;
-    if (S_ISCHR(stat->st_mode))
-        return PAL_TYPE_DEV;
-    if (S_ISFIFO(stat->st_mode))
-        return PAL_TYPE_PIPE;
-    if (S_ISSOCK(stat->st_mode))
-        return PAL_TYPE_DEV;
-
-    return 0;
-}
-
-/* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
-static inline void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat) {
-    attr->handle_type  = file_stat_type(stat);
-    attr->nonblocking  = false;
-    attr->share_flags  = stat->st_mode & PAL_SHARE_MASK;
-    attr->pending_size = stat->st_size;
-}
-
 /* 'attrquery' operation for file streams */
 static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     if (strcmp(type, URI_TYPE_FILE) && strcmp(type, URI_TYPE_DIR))
@@ -342,10 +320,6 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
     *handle = hdl;
     return 0;
-}
-
-static inline bool is_dot_or_dotdot(const char* name) {
-    return (name[0] == '.' && !name[1]) || (name[0] == '.' && name[1] == '.' && !name[2]);
 }
 
 /* 'read' operation for directory stream. Directory stream will not

@@ -248,6 +248,21 @@ void* memmove(void* dest, const void* src, size_t count);
 void* memset(void* dest, int ch, size_t count);
 int memcmp(const void* lhs, const void* rhs, size_t count);
 
+/*!
+ * \brief Constant-time buffer comparison.
+ *
+ * \param lhs    Pointer to the first buffer.
+ * \param rhs    Pointer to the second buffer.
+ * \param count  The number of bytes to compare in the buffer.
+ *
+ * \returns true if the content of the two buffers is the same, otherwise false.
+ *
+ * The time taken by this function depends on `count`, but not on the data at `lhs` or `rhs`.
+ * Hence, it can be used for comparing cryptographic secrets, hashes, message authentication codes
+ * etc. without timing side-channel leaks.
+ */
+bool ct_memequal(const void* lhs, const void* rhs, size_t count);
+
 /* Used by _FORTIFY_SOURCE */
 void* __memcpy_chk(void* restrict dest, const void* restrict src, size_t count, size_t dest_count);
 void* __memmove_chk(void* dest, const void* src, size_t count, size_t dest_count);
@@ -372,6 +387,8 @@ extern const char* const* sys_errlist_internal;
 
 int get_norm_path(const char* path, char* buf, size_t* inout_size);
 int get_base_name(const char* path, char* buf, size_t* inout_size);
+
+bool is_dot_or_dotdot(const char* name);
 
 /*!
  * \brief Parse a size (number with optional "G"/"M"/"K" suffix) into an uint64_t.

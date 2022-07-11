@@ -1,11 +1,14 @@
 #pragma once
 
+#include <asm/stat.h>
 #include <linux/time.h>
 #include <linux/un.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
+
+#include "pal.h"
 
 char* get_main_exec_path(void);
 
@@ -44,3 +47,8 @@ int64_t time_ns_diff_from_now(struct timespec* ts);
 
 int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
                                  struct sockaddr_un* out_addr);
+
+int file_stat_type(struct stat* stat);
+
+/* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
+void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat);

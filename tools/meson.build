@@ -23,6 +23,8 @@ if direct
 endif
 
 if sgx
+    subdir('sgx')
+
     hostpalpath_linux_sgx = join_paths(prefix, pkglibdir, 'sgx')
     conf_gramine_sgx = configuration_data()
     conf_gramine_sgx.merge_from(conf)

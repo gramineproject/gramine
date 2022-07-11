@@ -267,7 +267,7 @@ this RA-TLS certificate is tied to the enclavized application that generated it.
 RA-TLS is shipped as three libraries: ``ra_tls_attest.so``, EPID based
 ``ra_tls_verify_epid.so`` and DCAP/ECDSA based ``ra_tls_verify_dcap.so``.
 The interfaces exposed by these libraries can be found in the following header:
-:file:`pal/src/host/linux-sgx/tools/ra-tls/ra_tls.h`.
+:file:`tools/sgx/ra-tls/ra_tls.h`.
 
 The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-mbedtls``.
 

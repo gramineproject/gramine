@@ -107,12 +107,12 @@ static void test_cpuid_leaf_reserved(void) {
     struct regs r;
     set_dummy_regs(&r);
 
-    cpuid(0x7, 0x2, &r); /* leaf 0x7 returns all-zeros on sub-leaves > 1 */
+    cpuid(0x7, 0x3, &r); /* leaf 0x7 returns all-zeros on sub-leaves > 2 */
     if (r.eax || r.ebx || r.ecx || r.edx)
         abort();
     set_dummy_regs(&r);
 
-    cpuid(0x7, 0xFFFF, &r); /* leaf 0x7 returns all-zeros on sub-leaves > 1 */
+    cpuid(0x7, 0xFFFF, &r); /* leaf 0x7 returns all-zeros on sub-leaves > 2 */
     if (r.eax || r.ebx || r.ecx || r.edx)
         abort();
     set_dummy_regs(&r);

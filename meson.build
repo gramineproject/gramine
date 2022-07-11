@@ -62,6 +62,7 @@ if host_machine.cpu_family() == 'x86_64'
         depfile: '@BASENAME@.dep',
         arguments: [
             '-f', 'elf64',
+            '-p', '@SOURCE_DIR@/common/src/arch/x86_64/no_exec_stack.nasm',
             '-I', '@0@/'.format(meson.current_build_dir()),
             '-MQ', '@OUTPUT@', '-MF', '@DEPFILE@',
             '@EXTRA_ARGS@',
@@ -258,6 +259,7 @@ mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
 if sgx
     protoc_c_prog = find_program('protoc-c')
+    protoc_prog = find_program('protoc')
 
     threads_dep = dependency('threads')
 

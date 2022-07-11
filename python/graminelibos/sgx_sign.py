@@ -16,6 +16,8 @@ from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+import elftools.elf.elffile
+
 from . import _CONFIG_PKGLIBDIR
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 from .manifest import Manifest
@@ -113,40 +115,16 @@ PAGEINFO_REG = 0x200
 
 
 def get_loadcmds(elf_filename):
-    loadcmds = []
-    proc = subprocess.Popen(['readelf', '-l', '-W', elf_filename],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        line = line.decode()
-        stripped = line.strip()
-        if not stripped.startswith('LOAD'):
-            continue
-        tokens = stripped.split()
-        if len(tokens) < 6:
-            continue
-        if len(tokens) >= 7 and tokens[7] == 'E':
-            tokens[6] += tokens[7]
-        prot = 0
-        for token in tokens[6]:
-            if token == 'R':
-                prot = prot | 4
-            if token == 'W':
-                prot = prot | 2
-            if token == 'E':
-                prot = prot | 1
-
-        loadcmds.append((int(tokens[1][2:], 16),  # offset
-                         int(tokens[2][2:], 16),  # addr
-                         int(tokens[4][2:], 16),  # filesize
-                         int(tokens[5][2:], 16),  # memsize
-                         prot))
-    proc.wait()
-    if proc.returncode != 0:
-        raise RuntimeError(f'Parsing {elf_filename} as ELF failed')
-    return loadcmds
+    with open(elf_filename, 'rb') as file:
+        for seg in elftools.elf.elffile.ELFFile(file).iter_segments():
+            if seg.header.p_type != 'PT_LOAD':
+                continue
+            yield (
+                seg.header.p_offset,
+                seg.header.p_vaddr,
+                seg.header.p_filesz,
+                seg.header.p_memsz,
+                seg.header.p_flags)
 
 
 class MemoryArea:
@@ -163,10 +141,9 @@ class MemoryArea:
         self.measure = measure
 
         if elf_filename:
-            loadcmds = get_loadcmds(elf_filename)
             mapaddr = 0xffffffffffffffff
             mapaddr_end = 0
-            for (_, addr_, _, memsize, _) in loadcmds:
+            for (_, addr_, _, memsize, _) in get_loadcmds(elf_filename):
                 if rounddown(addr_) < mapaddr:
                     mapaddr = rounddown(addr_)
                 if roundup(addr_ + memsize) > mapaddr_end:
@@ -221,15 +198,8 @@ def find_area(areas, desc, allow_none=False):
 
 
 def entry_point(elf_path):
-    env = os.environ
-    env['LC_ALL'] = 'C'
-    out = subprocess.check_output(
-        ['readelf', '-l', '--', elf_path], env=env)
-    for line in out.splitlines():
-        line = line.decode()
-        if line.startswith('Entry point '):
-            return int(line[12:], 0)
-    raise ValueError('Could not find entry point of elf file')
+    with open(elf_path, 'rb') as file:
+        return elftools.elf.elffile.ELFFile(file).header.e_entry
 
 
 def gen_area_content(attr, areas, enclave_base, enclave_heap_min):
@@ -425,7 +395,7 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
     for area in areas:
         if area.elf_filename is not None:
             with open(area.elf_filename, 'rb') as file:
-                loadcmds = get_loadcmds(area.elf_filename)
+                loadcmds = list(get_loadcmds(area.elf_filename))
                 if loadcmds:
                     mapaddr = 0xffffffffffffffff
                     for (offset, addr, filesize, memsize,
