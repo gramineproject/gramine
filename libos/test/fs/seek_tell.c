@@ -72,7 +72,7 @@ static void seek_output_fd(const char* path) {
     seek_fd(path, f, 0, SEEK_END);
     printf("seek(%s) output end 4 OK\n", path);
     pos = tell_fd(path, f);
-    printf("tell(%s) output end 2 OK: %zd\n", path, pos);
+    printf("tell(%s) output end 3 OK: %zd\n", path, pos);
     close_fd(path, f);
     printf("close(%s) output OK\n", path);
 }
@@ -113,7 +113,7 @@ static void seek_output_stdio(const char* path) {
     seek_stdio(path, f, 0, SEEK_END);
     printf("fseek(%s) output end 4 OK\n", path);
     pos = tell_stdio(path, f);
-    printf("ftell(%s) output end 2 OK: %zd\n", path, pos);
+    printf("ftell(%s) output end 3 OK: %zd\n", path, pos);
     close_stdio(path, f);
     printf("fclose(%s) output OK\n", path);
 }
