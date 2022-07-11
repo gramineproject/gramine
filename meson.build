@@ -97,7 +97,7 @@ endif
 if sgx
     conf_sgx = configuration_data()
 
-    # SGX driver options (in Make, this was ISGX_DRIVER_PATH and link-intel-driver.py)
+    # SGX driver options
     sgx_driver = get_option('sgx_driver')
     sgx_driver_include_path = get_option('sgx_driver_include_path')
     sgx_driver_device = get_option('sgx_driver_device')
