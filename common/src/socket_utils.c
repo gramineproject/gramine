@@ -8,9 +8,6 @@
 #include "pal.h"
 #include "socket_utils.h"
 
-
-const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-
 void pal_to_linux_sockaddr(const struct pal_socket_addr* pal_addr,
                            struct sockaddr_storage* linux_addr, size_t* linux_addr_len) {
     switch (pal_addr->domain) {
@@ -75,29 +72,4 @@ void linux_to_pal_sockaddr(const void* linux_addr, struct pal_socket_addr* pal_a
         default:
             BUG();
     }
-}
-
-bool is_linux_sockaddr_any(const void* linux_addr) {
-    unsigned short family;
-    memcpy(&family, linux_addr, sizeof(family));
-
-    switch (family) {
-        case AF_INET:;
-            struct sockaddr_in sa_ipv4;
-            memcpy(&sa_ipv4, linux_addr, sizeof(sa_ipv4));
-            if (sa_ipv4.sin_addr.s_addr == __htonl(INADDR_ANY)) {
-                return true;
-            }
-            break;
-        case AF_INET6:;
-            struct sockaddr_in6 sa_ipv6;
-            memcpy(&sa_ipv6, linux_addr, sizeof(sa_ipv6));
-            if (memcmp(&sa_ipv6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)) == 0) {
-                return true;
-            }
-            break;
-        default:
-            BUG();
-     };
-     return false;
 }
