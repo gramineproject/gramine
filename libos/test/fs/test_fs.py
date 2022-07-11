@@ -124,8 +124,11 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('seek(' + output_path_1 + ') output end 3 OK', stdout)
         self.assertIn('tell(' + output_path_1 + ') output end 2 OK: ' + str(size + 4098), stdout)
         self.assertIn('seek(' + output_path_2 + ') output end 4 OK', stdout)
-        self.assertIn('tell(' + output_path_2 + ') output end 3 OK: ' + str((size + 4098) * 2), stdout)
-        self.assertIn('read(' + output_path_2 + ') output OK: 0', stdout);
+        self.assertIn(
+            'tell(' + output_path_2 + ') output end 3 OK: ' + str((size + 4098) * 2),
+            stdout
+        )
+        self.assertIn('read(' + output_path_2 + ') output OK: 0', stdout)
         self.assertIn('seek(' + output_path_2 + ') output end 5 OK', stdout)
         self.assertIn('tell(' + output_path_2 + ') output end 4 OK: ' + str(size + 4098), stdout)
         self.assertIn('close(' + output_path_1 + ') output OK', stdout)
@@ -138,8 +141,11 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('fseek(' + output_path_2 + ') output end 3 OK', stdout)
         self.assertIn('ftell(' + output_path_2 + ') output end 2 OK: ' + str(size + 4098), stdout)
         self.assertIn('fseek(' + output_path_2 + ') output end 4 OK', stdout)
-        self.assertIn('ftell(' + output_path_2 + ') output end 3 OK: ' + str((size + 4098) * 2), stdout)
-        self.assertIn('fread(' + output_path_2 + ') output OK: 0', stdout);
+        self.assertIn(
+            'ftell(' + output_path_2 + ') output end 3 OK: ' + str((size + 4098) * 2),
+            stdout
+        )
+        self.assertIn('fread(' + output_path_2 + ') output OK: 0', stdout)
         self.assertIn('fseek(' + output_path_2 + ') output end 5 OK', stdout)
         self.assertIn('ftell(' + output_path_2 + ') output end 4 OK: ' + str(size + 4098), stdout)
         self.assertIn('fclose(' + output_path_2 + ') output OK', stdout)
