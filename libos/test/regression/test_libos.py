@@ -905,6 +905,8 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/2/exe: link: /proc_common', lines)
         self.assertIn('/proc/2/root: link: /', lines)
         self.assertIn('/proc/2/maps: file', lines)
+        self.assertIn('/proc/2/cmdline: file', lines)
+        self.assertIn('/proc/2/status: file', lines)
 
         # /proc/[pid]/fd
         self.assertIn('/proc/2/fd/0: link: /dev/tty', lines)
