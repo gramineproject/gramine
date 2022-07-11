@@ -58,6 +58,12 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
 __attribute__ ((visibility("hidden")))
 int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
 
+__attribute__ ((visibility("hidden")))
+int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
+
+__attribute__ ((visibility("hidden")))
+int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
+
 /*!
  * \brief Callback for user-specific verification of measurements in SGX quote.
  *
@@ -76,31 +82,14 @@ __attribute__ ((visibility("default")))
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
- * \brief mbedTLS-suitable verification callback for EPID-based (IAS) or ECDSA-based (DCAP)
- * quote verification.
- *
- * This callback must be registered via mbedtls_ssl_conf_verify(). All parameters required for
- * the SGX quote, IAS attestation report verification, and/or DCAP quote verification  must be
- * passed in the corresponding RA-TLS environment variables.
- *
- * \param[in] data   Unused (required due to mbedTLS callback function signature).
- * \param[in] crt    Self-signed RA-TLS certificate with SGX quote embedded.
- * \param[in] depth  Unused (required due to mbedTLS callback function signature).
- * \param[in] flags  Unused (required due to mbedTLS callback function signature).
- *
- * \return           0 on success, specific mbedTLS error code (negative int) otherwise.
- */
-__attribute__ ((visibility("default")))
-int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
-
-/*!
  * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
- * verification.
+ *        verification (DER format).
  *
- * This function must be called from a non-mbedTLS verification callback, e.g., from a user-defined
- * OpenSSL callback for SSL_CTX_set_cert_verify_callback(). All parameters required for the SGX
- * quote, IAS attestation report verification, and/or DCAP quote verification must be passed in the
- * corresponding RA-TLS environment variables.
+ * This function must be called from a verification callback, e.g., from a user-defined OpenSSL
+ * callback for SSL_CTX_set_cert_verify_callback() or user-defined mbedTLS callback for
+ * mbedtls_ssl_conf_verify(). All parameters required for the SGX quote, IAS attestation report
+ * verification, and/or DCAP quote verification must be passed in the corresponding RA-TLS
+ * environment variables.
  *
  * \param[in] der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
  * \param[in] der_crt_size  Size of the RA-TLS certificate.
@@ -111,27 +100,13 @@ __attribute__ ((visibility("default")))
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 
 /*!
- * \brief mbedTLS-suitable function to generate a key and a corresponding RA-TLS certificate.
+ * \brief Generic function to generate a key and a corresponding RA-TLS certificate (DER format).
  *
  * The function first generates a random RSA keypair with PKCS#1 v1.5 encoding. Then it calculates
  * the SHA256 hash over the generated public key and retrieves an SGX quote with report_data equal
  * to the calculated hash (this ties the generated certificate key to the SGX quote). Finally, it
- * generates the X.509 self-signed certificate with this key and the SGX quote embedded.
- *
- * \param[out] key   Populated with a generated RSA keypair.
- * \param[out] crt   Populated with a self-signed RA-TLS certificate with SGX quote embedded.
- *
- * \return           0 on success, specific mbedTLS error code (negative int) otherwise.
- */
-__attribute__ ((visibility("default")))
-int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
-
-/*!
- * \brief Generic function to generate a key and a corresponding RA-TLS certificate (DER format).
- *
- * The function behaves the same as ra_tls_create_key_and_crt() but generates key and certificate
- * in the DER format. The function allocates memory for key and certificate; user is expected to
- * free them after use.
+ * generates the X.509 self-signed certificate with this key and the SGX quote embedded. The
+ * function allocates memory for key and certificate; user is expected to free them after use.
  *
  * \param[out] der_key       Pointer to buffer populated with generated RSA keypair in DER format.
  * \param[out] der_key_size  Pointer to size of generated RSA keypair.
