@@ -97,7 +97,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
  */
 static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV)
+    if (handle->hdr.type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
     if (handle->pipe.fd == PAL_IDX_POISON)
@@ -236,7 +236,7 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes = DO_SYSCALL(read, handle->pipe.fd, buffer, len);
@@ -260,7 +260,7 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const 
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes = DO_SYSCALL(write, handle->pipe.fd, buffer, len);
@@ -330,12 +330,12 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    attr->handle_type  = HANDLE_HDR(handle)->type;
+    attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->pipe.nonblocking;
 
     /* get number of bytes available for reading (doesn't make sense for "listening" pipes) */
     attr->pending_size = 0;
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV) {
+    if (handle->hdr.type != PAL_TYPE_PIPESRV) {
         int val;
         ret = DO_SYSCALL(ioctl, handle->pipe.fd, FIONREAD, &val);
         if (ret < 0)

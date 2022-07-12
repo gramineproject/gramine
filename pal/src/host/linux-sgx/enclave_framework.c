@@ -953,7 +953,7 @@ int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
     size_t secret_size;
     uint8_t secret[DH_SIZE];
 
-    assert(HANDLE_HDR(stream)->type == PAL_TYPE_PROCESS);
+    assert(stream->hdr.type == PAL_TYPE_PROCESS);
 
     /* perform unauthenticated DH key exchange to produce two collaterals: the session key K_e and
      * the assymetric SHA256 hashes over K_e (for later use in SGX report's reportdata) */
@@ -1047,7 +1047,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
     uint64_t bytes;
     int64_t ret;
 
-    assert(HANDLE_HDR(stream)->type == PAL_TYPE_PROCESS);
+    assert(stream->hdr.type == PAL_TYPE_PROCESS);
 
     /* A -> B: targetinfo[A] */
     memset(&target_info, 0, sizeof(target_info));
@@ -1141,7 +1141,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
     uint64_t bytes;
     int64_t ret;
 
-    assert(HANDLE_HDR(stream)->type == PAL_TYPE_PROCESS);
+    assert(stream->hdr.type == PAL_TYPE_PROCESS);
 
     memset(&target_info, 0, sizeof(target_info));
 
@@ -1219,9 +1219,9 @@ int _PalStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* ses
                          size_t buf_size) {
     int stream_fd;
 
-    if (HANDLE_HDR(stream)->type == PAL_TYPE_PROCESS)
+    if (stream->hdr.type == PAL_TYPE_PROCESS)
         stream_fd = stream->process.stream;
-    else if (HANDLE_HDR(stream)->type == PAL_TYPE_PIPE || HANDLE_HDR(stream)->type == PAL_TYPE_PIPECLI)
+    else if (stream->hdr.type == PAL_TYPE_PIPE || stream->hdr.type == PAL_TYPE_PIPECLI)
         stream_fd = stream->pipe.fd;
     else
         return -PAL_ERROR_BADHANDLE;
