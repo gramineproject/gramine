@@ -65,7 +65,7 @@ Table of Contents
    attestation
    cloud-deployment
    gramine-users
-   gsc
+   container-integration
    sgx-intro
    glossary
 
