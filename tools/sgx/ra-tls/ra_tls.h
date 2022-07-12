@@ -26,12 +26,20 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
+#define RA_TLS_CERT_SIGNATURE_ALGO            "RA_TLS_CERT_SIGNATURE_ALGO"
+#define RA_TLS_CERT_SIGNATURE_ALGO_RSA_3072   "RSA-3072"
+#define RA_TLS_CERT_SIGNATURE_ALGO_RSA_4096   "RSA-4096"
+#define RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_384  "ECDSA-384"
+#define RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_521  "ECDSA-521"
+#define RA_TLS_CERT_SIGNATURE_ALGO_DEFAULT    RA_TLS_CERT_SIGNATURE_ALGO_RSA_3072
+
 #define SHA256_DIGEST_SIZE       32
-#define RSA_PUB_3072_KEY_LEN     3072
-#define RSA_PUB_3072_KEY_DER_LEN 422
-#define RSA_PUB_EXPONENT         65537
-#define PUB_KEY_SIZE_MAX         512
 #define IAS_REQUEST_NONCE_LEN    32
+#define PUB_KEY_SIZE_MAX         1024
+
+#define RSA_PUB_3072_KEY_LEN     3072
+#define RSA_PUB_4096_KEY_LEN     4096
+#define RSA_PUB_EXPONENT         65537
 
 #define OID(N) \
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
@@ -101,18 +109,22 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 /*!
  * \brief Generic function to generate a key and a corresponding RA-TLS certificate (DER format).
  *
- * \param[out] der_key       Pointer to buffer populated with generated RSA keypair in DER format.
- * \param[out] der_key_size  Pointer to size of generated RSA keypair.
+ * \param[out] der_key       Pointer to buffer populated with generated RSA/ECDSA keypair in DER
+ *                           format.
+ * \param[out] der_key_size  Pointer to size of generated RSA/ECDSA keypair.
  * \param[out] der_crt       Pointer to buffer populated with self-signed RA-TLS certificate.
  * \param[out] der_crt_size  Pointer to size of self-signed RA-TLS certificate.
  *
  * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  *
- * The function first generates a random RSA keypair with PKCS#1 v1.5 encoding. Then it calculates
- * the SHA256 hash over the generated public key and retrieves an SGX quote with report_data equal
- * to the calculated hash (this ties the generated certificate key to the SGX quote). Finally, it
- * generates the X.509 self-signed certificate with this key and the SGX quote embedded. The
- * function allocates memory for key and certificate; user is expected to free them after use.
+ * The function first generates a random RSA/ECDSA keypair. The RSA keypair has one of 3072, 4096
+ * public key size and has PKCS#1 v1.5 encoding; the ECDSA keypair has one of SECP384R1, SECP521R1
+ * curves. By default, the generated keypair is RSA-3072 but can be configured via the envvar
+ * RA_TLS_CERT_SIGNATURE_ALGO. Then it calculates the SHA256 hash over the generated public key and
+ * retrieves an SGX quote with report_data equal to the calculated hash (this ties the generated
+ * certificate key to the SGX quote). Finally, it generates the X.509 self-signed certificate with
+ * this key and the SGX quote embedded. The function allocates memory for key and certificate; user
+ * is expected to free them after use.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,

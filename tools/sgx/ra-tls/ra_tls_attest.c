@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/ecp.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -152,14 +153,75 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
     uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, PUB_KEY_SIZE_MAX);
-    if (pk_der_size_byte != RSA_PUB_3072_KEY_DER_LEN)
-        return MBEDTLS_ERR_PK_INVALID_PUBKEY;
+    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, sizeof(pk_der));
+    if (pk_der_size_byte < 0)
+        return pk_der_size_byte;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
 
     return mbedtls_sha256(pk_der, pk_der_size_byte, sha, /*is224=*/0);
+}
+
+/*! create keypair \p pk: can be RSA or ECDSA depending on RA-TLS envvars */
+static int create_key(mbedtls_ctr_drbg_context* ctr_drbg, mbedtls_pk_context* pk) {
+    int ret;
+    size_t rsa_key_size = 0;
+    int elliptic_curve_group_id = MBEDTLS_ECP_DP_NONE;
+
+    char* key_algo = strdup(getenv(RA_TLS_CERT_SIGNATURE_ALGO) ?: RA_TLS_CERT_SIGNATURE_ALGO_DEFAULT);
+    if (!key_algo) {
+        ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
+        goto out;
+    }
+
+    if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_RSA_3072)) {
+        rsa_key_size = RSA_PUB_3072_KEY_LEN;
+    } else if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_RSA_4096)) {
+        rsa_key_size = RSA_PUB_4096_KEY_LEN;
+    } else if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_384)) {
+        elliptic_curve_group_id = MBEDTLS_ECP_DP_SECP384R1;
+    } else if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_521)) {
+        elliptic_curve_group_id = MBEDTLS_ECP_DP_SECP521R1;
+    } else {
+        ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
+        goto out;
+    }
+
+    if (rsa_key_size) {
+        /* RSA pk generation is requested by the user of RA-TLS */
+        ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+        if (ret < 0)
+            goto out;
+
+        mbedtls_rsa_init(mbedtls_pk_rsa(*pk));
+
+        ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*pk), mbedtls_ctr_drbg_random, ctr_drbg,
+                                  rsa_key_size, RSA_PUB_EXPONENT);
+        if (ret < 0)
+            goto out;
+    } else {
+        /* TODO: uncomment the below assert once RA-TLS include dependencies are untangled.
+         * This is tracked by the following issue:
+         * https://github.com/gramineproject/gramine/issues/876.
+         */
+        /* assert(elliptic_curve_group_id != MBEDTLS_ECP_DP_NONE); */
+
+        /* ECDSA pk generation is requested by the user of RA-TLS (actually, via EC key API) */
+        ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+        if (ret < 0)
+            goto out;
+
+        ret = mbedtls_ecp_gen_key(elliptic_curve_group_id, mbedtls_pk_ec(*pk),
+                                  mbedtls_ctr_drbg_random, ctr_drbg);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free(key_algo);
+    return ret;
 }
 
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
@@ -225,14 +287,7 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
-    if (ret < 0)
-        goto out;
-
-    mbedtls_rsa_init(mbedtls_pk_rsa(*key));
-
-    ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
-                              RSA_PUB_3072_KEY_LEN, RSA_PUB_EXPONENT);
+    ret = create_key(&ctr_drbg, key);
     if (ret < 0)
         goto out;
 

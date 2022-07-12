@@ -12,6 +12,7 @@
 #include "crypto.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/cmac.h"
+#include "mbedtls/ecp.h"
 #include "mbedtls/gcm.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/net_sockets.h"
@@ -36,6 +37,7 @@ static int mbedtls_to_pal_error(int error) {
 
         case MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE:
         case MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE:
+        case MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE:
             return -PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE;
 
         case MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA:
@@ -43,9 +45,11 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_HKDF_BAD_INPUT_DATA:
         case MBEDTLS_ERR_MD_BAD_INPUT_DATA:
         case MBEDTLS_ERR_MPI_BAD_INPUT_DATA:
+        case MBEDTLS_ERR_PK_BAD_INPUT_DATA:
         case MBEDTLS_ERR_RSA_BAD_INPUT_DATA:
         case MBEDTLS_ERR_RSA_PUBLIC_FAILED:  // see mbedtls_rsa_public()
         case MBEDTLS_ERR_RSA_PRIVATE_FAILED: // see mbedtls_rsa_private()
+        case MBEDTLS_ERR_ECP_BAD_INPUT_DATA:
             return -PAL_ERROR_CRYPTO_BAD_INPUT_DATA;
 
         case MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE:
@@ -56,6 +60,8 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_MD_ALLOC_FAILED:
         case MBEDTLS_ERR_SSL_ALLOC_FAILED:
         case MBEDTLS_ERR_PK_ALLOC_FAILED:
+        case MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL:
+        case MBEDTLS_ERR_ECP_ALLOC_FAILED:
             return -PAL_ERROR_NOMEM;
 
         case MBEDTLS_ERR_CIPHER_INVALID_PADDING:
@@ -85,19 +91,28 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_RSA_KEY_GEN_FAILED:
             return -PAL_ERROR_CRYPTO_KEY_GEN_FAILED;
 
+        case MBEDTLS_ERR_ECP_INVALID_KEY:
         case MBEDTLS_ERR_RSA_KEY_CHECK_FAILED:
             return -PAL_ERROR_CRYPTO_INVALID_KEY;
 
         case MBEDTLS_ERR_RSA_VERIFY_FAILED:
+        case MBEDTLS_ERR_ECP_VERIFY_FAILED:
+        case MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH:
             return -PAL_ERROR_CRYPTO_VERIFY_FAILED;
 
         case MBEDTLS_ERR_RSA_RNG_FAILED:
+        case MBEDTLS_ERR_ECP_RANDOM_FAILED:
             return -PAL_ERROR_CRYPTO_RNG_FAILED;
+
+        case MBEDTLS_ERR_PK_INVALID_ALG:
+        case MBEDTLS_ERR_PK_UNKNOWN_PK_ALG:
+            return -PAL_ERROR_CRYPTO_INVALID_ALGO;
 
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
         case MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS:
         case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
+        case MBEDTLS_ERR_ECP_IN_PROGRESS:
             return -PAL_ERROR_TRYAGAIN;
 
         case MBEDTLS_ERR_NET_CONN_RESET:
