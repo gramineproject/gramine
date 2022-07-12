@@ -69,6 +69,7 @@ int proc_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
             size = 0;
             i = 0;
             free(str);
+            /* TODO: use `realloc()` once it's available. */
             str = malloc(max);
             if (!str)
                 return -ENOMEM;

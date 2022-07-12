@@ -25,7 +25,9 @@
 #include "libos_vma.h"
 #include "spinlock.h"
 
+/* The amount of total memory usage, all accesses must be protected by `vma_tree_lock`. */
 size_t g_total_memory_size;
+/* The peak amount of total memory usage, all accesses must use atomics. */
 size_t g_peak_total_memory_size;
 
 /* Filter flags that will be saved in `struct libos_vma`. For example there is no need for saving
@@ -117,6 +119,8 @@ static void total_memory_size_add(size_t length) {
 
 static void total_memory_size_sub(size_t length) {
     assert(spinlock_is_locked(&vma_tree_lock));
+    assert(g_total_memory_size >= length);
+
     g_total_memory_size -= length;
 }
 
