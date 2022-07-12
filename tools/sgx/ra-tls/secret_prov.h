@@ -37,12 +37,12 @@ typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
  * This function can be called after an RA-TLS session is established via client-side call to
  * secret_provision_start() or in the server-side callback secret_provision_cb_t().
  *
- * \param[in] ctx   Established RA-TLS session, obtained from secret_provision_start() or in
- *                  secret_provision_cb_t() callback.
- * \param[in] buf   Buffer with arbitrary data to write.
- * \param[in] size  Size of buffer.
+ * \param ctx   Established RA-TLS session, obtained from secret_provision_start() or in
+ *              secret_provision_cb_t() callback.
+ * \param buf   Buffer with arbitrary data to write.
+ * \param size  Size of buffer.
  *
- * \return          0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size);
@@ -53,12 +53,12 @@ int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t si
  * This function can be called after an RA-TLS session is established via client-side call to
  * secret_provision_start() or in the server-side callback secret_provision_cb_t().
  *
- * \param[in]  ctx    Established RA-TLS session, obtained from secret_provision_start() or in
+ * \param      ctx   Established RA-TLS session, obtained from secret_provision_start() or in
  *                   secret_provision_cb_t() callback.
  * \param[out] buf   Buffer with arbitrary data to read.
- * \param[in]  size  Size of buffer.
+ * \param      size  Size of buffer.
  *
- * \return           0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
@@ -71,9 +71,9 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
  * application-specific protocol to provision secrets is implemented via secret_provision_read()
  * and secret_provision_write(), and this function is called to finish secret provisioning.
  *
- * \param[in] ctx  Established RA-TLS session.
+ * \param ctx  Established RA-TLS session.
  *
- * \return         0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
@@ -89,7 +89,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * \param[out] out_secret       Pointer to buffer with secret (allocated by the library).
  * \param[out] out_secret_size  Size of allocated buffer.
  *
- * \return                      0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_get(uint8_t** out_secret, size_t* out_secret_size);
@@ -113,11 +113,11 @@ void secret_provision_destroy(void);
  * retrieved via secret_provision_get() and later destroyed via secret_provision_destroy().
  * Not thread-safe.
  *
- * \param[in] in_servers        List of servers (in format "server1:port1;server2:port2;..."). If
+ * \param     in_servers        List of servers (in format "server1:port1;server2:port2;..."). If
  *                              not specified, environment variable `SECRET_PROVISION_SERVERS` is
  *                              used. If the environment variable is also not specified, default
  *                              value is used.
- * \param[in] in_ca_chain_path  Path to the CA chain to verify the server. If not specified,
+ * \param     in_ca_chain_path  Path to the CA chain to verify the server. If not specified,
  *                              environment variable `SECRET_PROVISION_CA_CHAIN_PATH` is used. If
  *                              the environment variable is also not specified, function returns
  *                              with error code EINVAL.
@@ -125,7 +125,7 @@ void secret_provision_destroy(void);
  *                              then only the first secret is retrieved from the server and the
  *                              RA-TLS session is closed.
  *
- * \return                      0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
@@ -144,19 +144,19 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
  * the server invokes a user-supplied callback f_cb() for user-specific communication with the
  * client (if user supplied it). This function is thread-safe and requires pthread library.
  *
- * \param[in] secret      First secret (arbitrary binary blob) to send to client after
- *                        establishing RA-TLS session.
- * \param[in] secret_size Size of first secret.
- * \param[in] port        Listening port of the server.
- * \param[in] cert_path   Path to X.509 certificate of the server.
- * \param[in] key_path    Path to private key of the server.
- * \param[in] m_cb        Callback for user-specific verification of measurements in client's SGX
- *                        quote. If user supplies NULL, then default logic of RA-TLS is invoked.
- * \param[in] f_cb        Callback for user-specific communication with the client, e.g., to send
- *                        more secrets. If user supplies NULL, then only the first secret is sent
- *                        to the client and the RA-TLS session is closed.
+ * \param secret       First secret (arbitrary binary blob) to send to client after establishing
+ *                     RA-TLS session.
+ * \param secret_size  Size of first secret.
+ * \param port         Listening port of the server.
+ * \param cert_path    Path to X.509 certificate of the server.
+ * \param key_path     Path to private key of the server.
+ * \param m_cb         Callback for user-specific verification of measurements in client's SGX
+ *                     quote. If user supplies NULL, then default logic of RA-TLS is invoked.
+ * \param f_cb         Callback for user-specific communication with the client, e.g., to send
+ *                     more secrets. If user supplies NULL, then only the first secret is sent
+ *                     to the client and the RA-TLS session is closed.
  *
- * \return                0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start_server(uint8_t* secret, size_t secret_size, const char* port,

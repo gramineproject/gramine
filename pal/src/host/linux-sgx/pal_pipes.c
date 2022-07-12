@@ -108,10 +108,11 @@ static noreturn int thread_handshake_func(void* param) {
  * end of the pipe connects to this listening socket, a new accepted socket and the corresponding
  * PAL handle are created, and this `pipesrv` handle can be closed.
  *
- * \param[out] handle  PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
- * \param[in]  name    String uniquely identifying the pipe.
- * \param[in]  options May contain PAL_OPTION_NONBLOCK.
- * \return             0 on success, negative PAL error code otherwise.
+ * \param[out] handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
+ * \param      name     String uniquely identifying the pipe.
+ * \param      options  May contain PAL_OPTION_NONBLOCK.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
@@ -163,10 +164,11 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * corresponding underlying socket and is returned in `client`. This `pipecli` PAL handle denotes
  * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
  *
- * \param[in]  handle  PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
- * \param[out] client  PAL handle of type `pipecli` connected to the other end of the pipe (`pipe`).
- * \param      options flags to set on \p client handle.
- * \return             0 on success, negative PAL error code otherwise.
+ * \param      handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
+ * \param[out] client   PAL handle of type `pipecli` connected to the other end of the pipe (`pipe`).
+ * \param      options  flags to set on \p client handle.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV)
@@ -240,10 +242,11 @@ out_err:
  * `pipe` PAL handle is created with the corresponding underlying socket and is returned in
  * `handle`. The other end of the pipe is typically of type `pipecli`.
  *
- * \param[out] handle  PAL handle of type `pipe` with abstract UNIX socket connected to another end.
- * \param[in]  name    String uniquely identifying the pipe.
- * \param[in]  options May contain PAL_OPTION_NONBLOCK.
- * \return             0 on success, negative PAL error code otherwise.
+ * \param[out] handle   PAL handle of type `pipe` with abstract UNIX socket connected to another end.
+ * \param      name     String uniquely identifying the pipe.
+ * \param      options  May contain PAL_OPTION_NONBLOCK.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
@@ -322,14 +325,15 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
  *                            `get_gramine_unix_socket_addr`.
  *
- * \param[out] handle  Created PAL handle of type `pipesrv` or `pipe`.
- * \param[in]  type    Can be URI_TYPE_PIPE or URI_TYPE_PIPE_SRV.
- * \param[in]  uri     Content is either NUL (for anonymous pipe) or a string with pipe name.
- * \param[in]  access  Not used.
- * \param[in]  share   Not used.
- * \param[in]  create  Not used.
- * \param[in]  options May contain PAL_OPTION_NONBLOCK.
- * \return             0 on success, negative PAL error code otherwise.
+ * \param[out] handle   Created PAL handle of type `pipesrv` or `pipe`.
+ * \param      type     Can be URI_TYPE_PIPE or URI_TYPE_PIPE_SRV.
+ * \param      uri      Content is either NUL (for anonymous pipe) or a string with pipe name.
+ * \param      access   Not used.
+ * \param      share    Not used.
+ * \param      create   Not used.
+ * \param      options  May contain PAL_OPTION_NONBLOCK.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
@@ -356,11 +360,12 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 /*!
  * \brief Read from pipe.
  *
- * \param[in]  handle  PAL handle of type `pipecli` or `pipe`.
- * \param[in]  offset  Not used.
- * \param[in]  len     Size of user-supplied buffer.
+ * \param      handle  PAL handle of type `pipecli` or `pipe`.
+ * \param      offset  Not used.
+ * \param      len     Size of user-supplied buffer.
  * \param[out] buffer  User-supplied buffer to read data to.
- * \return             Number of bytes read on success, negative PAL error code otherwise.
+ *
+ * \returns Number of bytes read on success, negative PAL error code otherwise.
  */
 static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
     if (offset)
@@ -386,11 +391,12 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
 /*!
  * \brief Write to pipe.
  *
- * \param[in] handle  PAL handle of type `pipecli` or `pipe`.
- * \param[in] offset  Not used.
- * \param[in] len     Size of user-supplied buffer.
- * \param[in] buffer  User-supplied buffer to write data from.
- * \return            Number of bytes written on success, negative PAL error code otherwise.
+ * \param handle  PAL handle of type `pipecli` or `pipe`.
+ * \param offset  Not used.
+ * \param len     Size of user-supplied buffer.
+ * \param buffer  User-supplied buffer to write data from.
+ *
+ * \returns Number of bytes written on success, negative PAL error code otherwise.
  */
 static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, const void* buffer) {
     if (offset)
@@ -416,8 +422,9 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
 /*!
  * \brief Close pipe.
  *
- * \param[in] handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- * \return            0 on success, negative PAL error code otherwise.
+ * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_close(PAL_HANDLE handle) {
     if (handle->pipe.fd != PAL_IDX_POISON) {
@@ -438,9 +445,10 @@ static int pipe_close(PAL_HANDLE handle) {
 /*!
  * \brief Shut down pipe.
  *
- * \param[in] handle       PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- * \param[in] delete_mode  See #pal_delete_mode.
- * \return                 0 on success, negative PAL error code otherwise.
+ * \param handle       PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ * \param delete_mode  See #pal_delete_mode.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     int shutdown;
@@ -474,9 +482,10 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 /*!
  * \brief Retrieve attributes of PAL handle.
  *
- * \param[in]  handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ * \param      handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[out] attr    User-supplied buffer to store handle's current attributes.
- * \return             0 on success, negative PAL error code otherwise.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret;
@@ -507,9 +516,10 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  *
  * Currently only `nonblocking` attribute can be set.
  *
- * \param[in] handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- * \param[in] attr    User-supplied buffer with new handle's attributes.
- * \return            0 on success, negative PAL error code otherwise.
+ * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ * \param attr    User-supplied buffer with new handle's attributes.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->pipe.fd == PAL_IDX_POISON)
@@ -538,10 +548,11 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  *
  * Full URI is composed of the type and pipe name: "<type>:<pipename>".
  *
- * \param[in]  handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ * \param      handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[out] buffer  User-supplied buffer to write URI to.
- * \param[in]  count   Size of the user-supplied buffer.
- * \return             Number of bytes written on success, negative PAL error code otherwise.
+ * \param      count   Size of the user-supplied buffer.
+ *
+ * \returns Number of bytes written on success, negative PAL error code otherwise.
  */
 static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
     size_t old_count = count;

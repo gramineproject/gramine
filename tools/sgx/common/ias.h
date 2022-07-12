@@ -15,10 +15,11 @@ struct ias_context_t;
 /*!
  * \brief Create and initialize context used for IAS communication.
  *
- * \param[in] ias_api_key    API key for IAS access.
- * \param[in] ias_verify_url URL for IAS attestation verification API.
- * \param[in] ias_sigrl_url  URL for IAS "Retrieve SigRL" API.
- * \return Context to be used in further ias_* calls or NULL on failure.
+ * \param ias_api_key     API key for IAS access.
+ * \param ias_verify_url  URL for IAS attestation verification API.
+ * \param ias_sigrl_url   URL for IAS "Retrieve SigRL" API.
+ *
+ * \returns Context to be used in further ias_* calls or NULL on failure.
  *
  * \details Should be called once, before handling any request.
  */
@@ -28,7 +29,8 @@ struct ias_context_t* ias_init(const char* ias_api_key, const char* ias_verify_u
 /*!
  * \brief Clean up and free context used for IAS communication.
  *
- * \param[in] context IAS context returned by ias_init().
+ * \param context  IAS context returned by ias_init().
+ *
  * \details Should be called once, after serving last request.
  */
 void ias_cleanup(struct ias_context_t* context);
@@ -36,25 +38,27 @@ void ias_cleanup(struct ias_context_t* context);
 /*!
  * \brief Get the signature revocation list for a given EPID group.
  *
- * \param[in]  context    IAS context returned by ias_init().
- * \param[in]  gid        EPID group ID to get SigRL for.
- * \param[out] sigrl_size Size of the SigRL (may be 0).
- * \param[out] sigrl      SigRL data, needs to be freed by the caller.
- * \return 0 on success, -1 otherwise.
+ * \param      context     IAS context returned by ias_init().
+ * \param      gid         EPID group ID to get SigRL for.
+ * \param[out] sigrl_size  Size of the SigRL (may be 0).
+ * \param[out] sigrl       SigRL data, needs to be freed by the caller.
+ *
+ * \returns 0 on success, -1 otherwise.
  */
 int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_size, void** sigrl);
 
 /*!
  * \brief Send quote to IAS for verification.
  *
- * \param[in] context       IAS context returned by ias_init().
- * \param[in] quote         Binary quote data blob.
- * \param[in] quote_size    Size of \a quote.
- * \param[in] nonce         (Optional) Nonce string to send with the IAS request (max 32 chars).
- * \param[in] report_path   (Optional) File to save IAS report to.
- * \param[in] sig_path      (Optional) File to save IAS report's signature to.
- * \param[in] cert_path     (Optional) File to save IAS certificate to.
- * \return 0 on success, -1 otherwise.
+ * \param context      IAS context returned by ias_init().
+ * \param quote        Binary quote data blob.
+ * \param quote_size   Size of \a quote.
+ * \param nonce        (Optional) Nonce string to send with the IAS request (max 32 chars).
+ * \param report_path  (Optional) File to save IAS report to.
+ * \param sig_path     (Optional) File to save IAS report's signature to.
+ * \param cert_path    (Optional) File to save IAS certificate to.
+ *
+ * \returns 0 on success, -1 otherwise.
  *
  *  This version of the function is convenient for command-line utilities. To get raw IAS contents,
  *  use ias_send_quote_get_report_raw().
@@ -69,22 +73,23 @@ int ias_send_quote_get_report(struct ias_context_t* context, const void* quote, 
  * \brief Send quote to IAS for verification (same as ias_send_quote_get_report() but not saving to
  *        files).
  *
- * \param[in] context             IAS context returned by ias_init().
- * \param[in] quote               Binary quote data blob.
- * \param[in] quote_size          Size of \a quote.
- * \param[in] nonce               (Optional) Nonce string to send with IAS request (max 32 chars).
- * \param[out] report_data_ptr    (Optional) Pointer to allocated IAS report.
- * \param[out] report_data_size   (Optional) Size of allocated IAS report.
- * \param[out] sig_data_ptr       (Optional) Pointer to allocated IAS report's signature.
- * \param[out] sig_data_size      (Optional) Size of allocated IAS report's signature.
- * \param[out] cert_data_ptr      (Optional) Pointer to allocated IAS certificate.
- * \param[out] cert_data_size     (Optional) Size of allocated IAS certificate.
- * \return 0 on success, -1 otherwise.
+ * \param      context           IAS context returned by ias_init().
+ * \param      quote             Binary quote data blob.
+ * \param      quote_size        Size of \a quote.
+ * \param      nonce             (Optional) Nonce string to send with IAS request (max 32 chars).
+ * \param[out] report_data_ptr   (Optional) Pointer to allocated IAS report.
+ * \param[out] report_data_size  (Optional) Size of allocated IAS report.
+ * \param[out] sig_data_ptr      (Optional) Pointer to allocated IAS report's signature.
+ * \param[out] sig_data_size     (Optional) Size of allocated IAS report's signature.
+ * \param[out] cert_data_ptr     (Optional) Pointer to allocated IAS certificate.
+ * \param[out] cert_data_size    (Optional) Size of allocated IAS certificate.
  *
- *  This version of the function is convenient for library usage. This function allocates buffers
- *  for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr and
- *  \a cert_data_ptr. The caller is responsible for freeing them.
- *  To save IAS contents to files, use ias_send_quote_get_report().
+ * \returns 0 on success, -1 otherwise.
+ *
+ * This version of the function is convenient for library usage. This function allocates buffers
+ * for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr and
+ * \a cert_data_ptr. The caller is responsible for freeing them.
+ * To save IAS contents to files, use ias_send_quote_get_report().
  *
  * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
  */
@@ -95,22 +100,22 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
                                   size_t* cert_data_size);
 
 /*!
- *  \brief Verify IAS attestation report. Also extract the SGX quote contained in IAS report:
- *         allocate enough memory to hold the quote and pass it to the user.
+ * \brief Verify IAS attestation report. Also extract the SGX quote contained in IAS report:
+ *        allocate enough memory to hold the quote and pass it to the user.
  *
- *  \param[in] ias_report         IAS attestation verification report.
- *  \param[in] ias_report_size    Size of \a ias_report in bytes.
- *  \param[in] ias_sig_b64        IAS report signature (base64-encoded as returned by IAS).
- *  \param[in] ias_sig_b64_size   Size of \a ias_sig_b64 in bytes.
- *  \param[in] allow_outdated_tcb Treat IAS status codes: GROUP_OUT_OF_DATE, CONFIGURATION_NEEDED,
- *                                SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
- *  \param[in] nonce              (Optional) Nonce that's expected in the report.
- *  \param[in] ias_pub_key_pem    (Optional) IAS public RSA key (PEM format, NULL-terminated).
- *                                If not specified, a hardcoded Intel's key is used.
- *  \param[out] out_quote         Buffer with quote. User is responsible for freeing it.
- *  \param[out] out_quote_size    Size of \a out_quote in bytes.
+ * \param ias_report           IAS attestation verification report.
+ * \param ias_report_size      Size of \a ias_report in bytes.
+ * \param ias_sig_b64          IAS report signature (base64-encoded as returned by IAS).
+ * \param ias_sig_b64_size     Size of \a ias_sig_b64 in bytes.
+ * \param allow_outdated_tcb   Treat IAS status codes: GROUP_OUT_OF_DATE, CONFIGURATION_NEEDED,
+ *                             SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
+ * \param nonce                (Optional) Nonce that's expected in the report.
+ * \param ias_pub_key_pem      (Optional) IAS public RSA key (PEM format, NULL-terminated).
+ *                             If not specified, a hardcoded Intel's key is used.
+ * \param[out] out_quote       Buffer with quote. User is responsible for freeing it.
+ * \param[out] out_quote_size  Size of \a out_quote in bytes.
  *
- *  \return 0 on successful verification, negative value on error.
+ * \returns 0 on successful verification, negative value on error.
  */
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
                                     uint8_t* ias_sig_b64, size_t ias_sig_b64_size,

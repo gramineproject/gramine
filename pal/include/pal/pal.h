@@ -787,8 +787,8 @@ void PalObjectClose(PAL_HANDLE object_handle);
 /*!
  * \brief Output a message to the debug stream.
  *
- * \param     buffer  Message to write.
- * \param[in] size    \p buffer size.
+ * \param buffer  Message to write.
+ * \param size    \p buffer size.
  *
  * \returns 0 on success, negative error code on failure.
  */
@@ -805,7 +805,7 @@ int PalSystemTimeQuery(uint64_t* time);
  * \brief Cryptographically secure RNG.
  *
  * \param[out] buffer  Output buffer.
- * \param[in]  size    \p buffer size.
+ * \param      size    \p buffer size.
  *
  * \returns 0 on success, negative on failure.
  */
@@ -844,7 +844,7 @@ size_t PalMemoryAvailableQuota(void);
 /*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
- * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
+ * \param         user_report_data       Report data with arbitrary contents (typically uniquely
  *                                       identifies this Gramine instance). Must be a 64B buffer
  *                                       in case of SGX PAL.
  * \param[in,out] user_report_data_size  Caller specifies size of `user_report_data`; on return,
@@ -878,10 +878,10 @@ int PalAttestationReport(const void* user_report_data, size_t* user_report_data_
 /*!
  * \brief Obtain the attestation quote with `user_report_data` embedded into it.
  *
- * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
+ * \param         user_report_data       Report data with arbitrary contents (typically uniquely
  *                                       identifies this Gramine instance). Must be a 64B buffer
  *                                       in case of SGX PAL.
- * \param[in]     user_report_data_size  Size in bytes of `user_report_data`. Must be exactly 64B
+ * \param         user_report_data_size  Size in bytes of `user_report_data`. Must be exactly 64B
  *                                       in case of SGX PAL.
  * \param[out]    quote                  Attestation quote with `user_report_data` embedded.
  * \param[in,out] quote_size             Caller specifies maximum size allocated for `quote`; on
@@ -895,7 +895,7 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
 /*!
  * \brief Get special key (specific to PAL host).
  *
- * \param[in]     name      Key name.
+ * \param         name      Key name.
  * \param[out]    key       On success, will be set to retrieved key.
  * \param[in,out] key_size  Caller specifies maximum size for `key`. On success, will contain actual
  *                          size.

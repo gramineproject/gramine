@@ -62,15 +62,16 @@ void util_set_fd(int stdout_fd, int stderr_fd);
 uint64_t get_file_size(int fd);
 
 /*!
- *  \brief Read file contents
+ * \brief Read file contents.
  *
- *  \param[in]     path   Path to the file.
- *  \param[in,out] size   On entry, number of bytes to read. 0 means to read the entire file.
+ * \param         path    Path to the file.
+ * \param[in,out] size    On entry, number of bytes to read. 0 means to read the entire file.
  *                        On exit, number of bytes read. Unchanged on failure.
- *  \param[in]     buffer Buffer to read data to. If NULL, this function allocates one.
- *  \return On success, pointer to the data buffer. If \p buffer was NULL, caller should free this.
+ * \param         buffer  Buffer to read data to. If NULL, this function allocates one.
+ *
+ * \returns On success, pointer to the data buffer. If \p buffer was NULL, caller should free it.
  *          On failure, NULL.
- *  \details If \a buffer is not NULL, \a size must contain valid buffer size.
+ * \details If \a buffer is not NULL, \a size must contain valid buffer size.
  */
 void* read_file(const char* path, size_t* size, void* buffer);
 
@@ -90,14 +91,15 @@ void hexdump_mem(const void* data, size_t size);
 #define HEXDUMP(x) hexdump_mem((const void*)&(x), sizeof(x))
 
 /*!
- *  \brief Parse hex string to buffer
+ * \brief Parse hex string to buffer
  *
- *  \param[in] hex          Hex string to be parsed.
- *  \param[in] buffer       Output buffer.
- *  \param[in] buffer_size  Size of the buffer.
- *  \param[in] mask         If non-NULL, this string will be used in error messages instead
- *                          of the input hexstring itself. Use when parsing sensitive data.
- *  \return On success, returns 0. On failure, returns -1.
- *  \details Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
+ * \param hex          Hex string to be parsed.
+ * \param buffer       Output buffer.
+ * \param buffer_size  Size of the buffer.
+ * \param mask         If non-NULL, this string will be used in error messages instead of the input
+ *                     hexstring itself. Use when parsing sensitive data.
+ *
+ * \returns 0 on success, otherwise -1.
+ * \details Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
  */
 int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask);

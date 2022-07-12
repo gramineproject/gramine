@@ -66,29 +66,29 @@ int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_
  * callback is registered (or registered as NULL), then RA-TLS defaults to verifying SGX
  * measurements against `RA_TLS_*` environment variables (if any).
  *
- * \param[in] f_cb  Callback for user-specific verification; RA-TLS passes pointers to MRENCLAVE,
- *                  MRSIGNER, ISV_PROD_ID, ISV_SVN measurements in SGX quote. Use NULL to revert to
- *                  default behavior of RA-TLS.
+ * \param f_cb  Callback for user-specific verification; RA-TLS passes pointers to MRENCLAVE,
+ *              MRSIGNER, ISV_PROD_ID, ISV_SVN measurements in SGX quote. Use NULL to revert to
+ *              default behavior of RA-TLS.
  *
- * \return          0 on success, specific error code (negative int) otherwise.
+ * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
  * \brief mbedTLS-suitable verification callback for EPID-based (IAS) or ECDSA-based (DCAP)
- * quote verification.
+ *        quote verification.
  *
  * This callback must be registered via mbedtls_ssl_conf_verify(). All parameters required for
  * the SGX quote, IAS attestation report verification, and/or DCAP quote verification  must be
  * passed in the corresponding RA-TLS environment variables.
  *
- * \param[in] data   Unused (required due to mbedTLS callback function signature).
- * \param[in] crt    Self-signed RA-TLS certificate with SGX quote embedded.
- * \param[in] depth  Unused (required due to mbedTLS callback function signature).
- * \param[in] flags  Unused (required due to mbedTLS callback function signature).
+ * \param data   Unused (required due to mbedTLS callback function signature).
+ * \param crt    Self-signed RA-TLS certificate with SGX quote embedded.
+ * \param depth  Unused (required due to mbedTLS callback function signature).
+ * \param flags  Unused (required due to mbedTLS callback function signature).
  *
- * \return           0 on success, specific mbedTLS error code (negative int) otherwise.
+ * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
@@ -102,10 +102,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
  * quote, IAS attestation report verification, and/or DCAP quote verification must be passed in the
  * corresponding RA-TLS environment variables.
  *
- * \param[in] der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
- * \param[in] der_crt_size  Size of the RA-TLS certificate.
+ * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
+ * \param der_crt_size  Size of the RA-TLS certificate.
  *
- * \return                  0 on success, specific mbedTLS error code (negative int) otherwise.
+ * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
@@ -121,7 +121,7 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
  * \param[out] key   Populated with a generated RSA keypair.
  * \param[out] crt   Populated with a self-signed RA-TLS certificate with SGX quote embedded.
  *
- * \return           0 on success, specific mbedTLS error code (negative int) otherwise.
+ * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
@@ -138,7 +138,7 @@ int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
  * \param[out] der_crt       Pointer to buffer populated with self-signed RA-TLS certificate.
  * \param[out] der_crt_size  Pointer to size of self-signed RA-TLS certificate.
  *
- * \return                   0 on success, specific mbedTLS error code (negative int) otherwise.
+ * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,

@@ -66,10 +66,10 @@ struct ias_request_resp {
 };
 
 /*!
- *  \brief Decode %-sequences ("URL encoding")
+ * \brief Decode %-sequences ("URL encoding").
  *
- *  \param[in]  src NULL-terminated URL-encoded input.
- *  \param[out] dst Buffer to write decoded output to. Can be the same as \a src.
+ * \param      src  NULL-terminated URL-encoded input.
+ * \param[out] dst  Buffer to write decoded output to. Can be the same as \a src.
  */
 static void urldecode(const char* src, char* dst) {
     char a, b;
@@ -106,14 +106,14 @@ static void urldecode(const char* src, char* dst) {
 /*!
  * \brief Parse response headers to get report signature and other metadata.
  *
- * \param[in] buffer  Single HTTP header.
- * \param[in] size    Together with \a count a size of \a buffer.
- * \param[in] count   Size of \a buffer, in \a size units.
- * \param[in] context User data pointer (ias_request_resp).
- * \return \a size * \a count
+ * \param buffer   Single HTTP header.
+ * \param size     Together with \a count a size of \a buffer.
+ * \param count    Size of \a buffer, in \a size units.
+ * \param context  User data pointer (ias_request_resp).
  *
- * \details See cURL documentation at
- *          https://curl.haxx.se/libcurl/c/CURLOPT_HEADERFUNCTION.html
+ * \returns \a size * \a count
+ *
+ * \details See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_HEADERFUNCTION.html
  */
 static size_t header_callback(char* buffer, size_t size, size_t count, void* context) {
     const char* sig_hdr = "x-iasreport-signature: "; // header containing IAS signature
@@ -165,14 +165,14 @@ static size_t header_callback(char* buffer, size_t size, size_t count, void* con
 /*!
  * \brief Add HTTP body chunk to internal buffer.
  *
- * \param[in] buffer  Chunk containing HTTP body.
- * \param[in] size    Together with \a count a size of \a buffer.
- * \param[in] count   Size of \a buffer, in \a size units.
- * \param[in] context User data pointer (ias_request_resp).
- * \return \a size * \a count
+ * \param buffer   Chunk containing HTTP body.
+ * \param size     Together with \a count a size of \a buffer.
+ * \param count    Size of \a buffer, in \a size units.
+ * \param context  User data pointer (ias_request_resp).
  *
- * \details See cURL documentation at
- *          https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
+ * \returns \a size * \a count
+ *
+ * \details See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
  */
 static size_t body_callback(char* buffer, size_t size, size_t count, void* context) {
     size_t total_size = size * count;
