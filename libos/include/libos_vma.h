@@ -132,4 +132,4 @@ int msync_handle(struct libos_handle* hdl);
 void debug_print_all_vmas(void);
 
 /* Returns the peak amount of memory usage */
-size_t peak_memory_usage(void);
+size_t get_peak_memory_usage(void);

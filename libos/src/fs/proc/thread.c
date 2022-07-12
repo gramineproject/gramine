@@ -325,39 +325,44 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
 int proc_thread_status_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t size, max = 128;
-    char* str = NULL;
+    size_t size = 0, max = 256;
+    size_t i = 0;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
 
     /*
-     * Enumerate minimal set of `/proc/[pid]/status`. Only `VmPeak` is supported currently.
+     * Minimal set of attributes from `/proc/[pid]/status`. Only `VmPeak` is supported currently.
      */
 
     struct {
         const char* fmt;
         unsigned long val;
     } status[] = {
-        { "VmPeak:  %8lu kB\n", peak_memory_usage() / 1024 },
+        { "VmPeak:\t%8lu kB\n", get_peak_memory_usage() / 1024 },
     };
 
-retry:
-    max *= 2;
-    size = 0;
-    free(str);
-    str = malloc(max);
-    if (!str)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < ARRAY_SIZE(status); i++) {
+    while (i < ARRAY_SIZE(status)) {
         int ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
         if (ret < 0) {
             free(str);
             return ret;
         }
 
-        if (size + ret >= max)
-            goto retry;
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
 
         size += ret;
+        i++;
     }
 
     *out_data = str;

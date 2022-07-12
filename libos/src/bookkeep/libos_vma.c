@@ -25,8 +25,8 @@
 #include "libos_vma.h"
 #include "spinlock.h"
 
-struct atomic_int g_allocated_pages;
-struct atomic_int g_peak_allocated_pages;
+size_t g_total_memory_size;
+size_t g_peak_total_memory_size;
 
 /* Filter flags that will be saved in `struct libos_vma`. For example there is no need for saving
  * MAP_FIXED or unsupported flags. */
@@ -55,29 +55,22 @@ struct libos_vma {
     char comment[VMA_COMMENT_LEN];
 };
 
-static inline void allocated_record_add(size_t length) {
-    int64_t allocated_pages;
-    int64_t peak_allocated_pages;
+static void total_memory_size_add(size_t length) {
+    g_total_memory_size += length;
 
-    __atomic_add_fetch(&g_allocated_pages.counter, length / ALLOC_ALIGNMENT, __ATOMIC_SEQ_CST);
+    size_t peak_total_memory_size = __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
 
     do {
-        allocated_pages = __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST);
-        assert(allocated_pages >= 0);
-
-        peak_allocated_pages = __atomic_load_n(&g_peak_allocated_pages.counter, __ATOMIC_SEQ_CST);
-        assert(peak_allocated_pages >= 0);
-
-        if (peak_allocated_pages >= allocated_pages) {
+        if (peak_total_memory_size >= g_total_memory_size) {
             break;
         }
-    } while (!__atomic_compare_exchange_n(&g_peak_allocated_pages.counter, &peak_allocated_pages,
-                                          allocated_pages, /*weak=*/false,
-                                          __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+    } while (!__atomic_compare_exchange_n(&g_peak_total_memory_size, &peak_total_memory_size,
+                                          g_total_memory_size, /*weak=*/true,
+                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
 }
 
-static inline void allocated_record_sub(size_t length) {
-    __atomic_sub_fetch(&g_allocated_pages.counter, length / ALLOC_ALIGNMENT, __ATOMIC_SEQ_CST);
+static void total_memory_size_sub(size_t length) {
+    g_total_memory_size -= length;
 }
 
 static void copy_comment(struct libos_vma* vma, const char* comment) {
@@ -269,8 +262,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
             vma->end = begin;
 
             avl_tree_insert(&vma_tree, &new_vma->tree_node);
-
-            allocated_record_add(new_vma->end - new_vma->begin);
+            total_memory_size_add(new_vma->end - new_vma->begin);
 
             return 0;
         }
@@ -288,8 +280,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
         struct libos_vma* next = _get_next_vma(vma);
 
         avl_tree_delete(&vma_tree, &vma->tree_node);
-
-        allocated_record_sub(vma->end - vma->begin);
+        total_memory_size_sub(vma->end - vma->begin);
 
         vma->next_free = NULL;
         *vmas_to_free = vma;
@@ -544,8 +535,7 @@ static int _bkeep_initial_vma(struct libos_vma* new_vma) {
         return -EEXIST;
     } else {
         avl_tree_insert(&vma_tree, &new_vma->tree_node);
-
-        allocated_record_add(new_vma->end - new_vma->begin);
+        total_memory_size_add(new_vma->end - new_vma->begin);
 
         return 0;
     }
@@ -696,8 +686,7 @@ static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* 
     copy_comment(vma, "");
 
     avl_tree_insert(&vma_tree, &vma->tree_node);
-
-    allocated_record_add(vma->end - vma->begin);
+    total_memory_size_add(vma->end - vma->begin);
 }
 
 // TODO change so that vma1 is provided by caller
@@ -751,9 +740,8 @@ void bkeep_remove_tmp_vma(void* _vma) {
 
     spinlock_lock(&vma_tree_lock);
     avl_tree_delete(&vma_tree, &vma->tree_node);
+    total_memory_size_sub(vma->end - vma->begin);
     spinlock_unlock(&vma_tree_lock);
-
-    allocated_record_sub(vma->end - vma->begin);
 
     free_vma(vma);
 }
@@ -803,8 +791,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     }
     if (ret >= 0) {
         avl_tree_insert(&vma_tree, &new_vma->tree_node);
-
-        allocated_record_add(new_vma->end - new_vma->begin);
+        total_memory_size_add(new_vma->end - new_vma->begin);
     }
     spinlock_unlock(&vma_tree_lock);
 
@@ -895,8 +882,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
         struct libos_vma* next = _get_next_vma(vma);
 
         avl_tree_insert(&vma_tree, &new_vma1->tree_node);
-
-        allocated_record_add(new_vma1->end - new_vma1->begin);
+        total_memory_size_add(new_vma1->end - new_vma1->begin);
 
         if (end < new_vma1->end) {
             struct libos_vma* new_vma2 = *new_vma_ptr2;
@@ -906,8 +892,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
             vma_update_prot(new_vma2, vma->prot);
 
             avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-
-            allocated_record_add(new_vma2->end - new_vma2->begin);
+            total_memory_size_add(new_vma2->end - new_vma2->begin);
 
             return 0;
         }
@@ -942,8 +927,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
     vma_update_prot(vma, prot);
 
     avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-
-    allocated_record_add(new_vma2->end - new_vma2->begin);
+    total_memory_size_add(new_vma2->end - new_vma2->begin);
 
     return 0;
 }
@@ -1059,8 +1043,7 @@ out_found:
     new_vma->begin = new_vma->end - length;
 
     avl_tree_insert(&vma_tree, &new_vma->tree_node);
-
-    allocated_record_add(new_vma->end - new_vma->begin);
+    total_memory_size_add(new_vma->end - new_vma->begin);
 
     ret_val = new_vma->begin;
     new_vma = NULL;
@@ -1503,6 +1486,6 @@ void debug_print_all_vmas(void) {
     spinlock_unlock(&vma_tree_lock);
 }
 
-size_t peak_memory_usage(void) {
-    return __atomic_load_n(&g_peak_allocated_pages.counter, __ATOMIC_SEQ_CST) * ALLOC_ALIGNMENT;
+size_t get_peak_memory_usage(void) {
+    return __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
 }
