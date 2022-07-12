@@ -124,7 +124,17 @@ DCAP version of the Intel SGX driver from:
 4. Install Intel SGX SDK/PSW
 """"""""""""""""""""""""""""
 
-Follow the installation instructions from:
+Follow the installation instructions from the "Intel SGX Software Installation
+Guide" version 1.14 (the latest version as of July 2022):
+
+- https://download.01.org/intel-sgx/sgx-dcap/1.14/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf
+
+In general, various documentation for Intel SGX SDK/PSW can be found here:
+
+- https://download.01.org/intel-sgx/sgx-dcap/1.14/linux/docs
+
+Additional information, package descriptions, etc. can be found in the official
+"Intel SGX for Linux" GitHub repo:
 
 - https://github.com/intel/linux-sgx
 
