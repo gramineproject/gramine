@@ -119,6 +119,8 @@ static int init_exec_handle(void) {
         goto out;
     }
 
+    free(*dummy_new_argv);
+    free(dummy_new_argv);
     lock(&g_process.fs_lock);
     g_process.exec = exec_handle;
     get_handle(exec_handle);
