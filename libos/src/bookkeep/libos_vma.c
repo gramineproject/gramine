@@ -55,24 +55,6 @@ struct libos_vma {
     char comment[VMA_COMMENT_LEN];
 };
 
-static void total_memory_size_add(size_t length) {
-    g_total_memory_size += length;
-
-    size_t peak_total_memory_size = __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
-
-    do {
-        if (peak_total_memory_size >= g_total_memory_size) {
-            break;
-        }
-    } while (!__atomic_compare_exchange_n(&g_peak_total_memory_size, &peak_total_memory_size,
-                                          g_total_memory_size, /*weak=*/true,
-                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
-}
-
-static void total_memory_size_sub(size_t length) {
-    g_total_memory_size -= length;
-}
-
 static void copy_comment(struct libos_vma* vma, const char* comment) {
     size_t size = MIN(sizeof(vma->comment), strlen(comment) + 1);
     memcpy(vma->comment, comment, size);
@@ -117,6 +99,26 @@ static bool cmp_addr_to_vma(void* addr, struct avl_tree_node* node) {
  */
 static struct avl_tree vma_tree = {.cmp = vma_tree_cmp};
 static spinlock_t vma_tree_lock = INIT_SPINLOCK_UNLOCKED;
+
+static void total_memory_size_add(size_t length) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
+    g_total_memory_size += length;
+
+    size_t peak_total_memory_size = __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
+    do {
+        if (peak_total_memory_size >= g_total_memory_size) {
+            break;
+        }
+    } while (!__atomic_compare_exchange_n(&g_peak_total_memory_size, &peak_total_memory_size,
+                                          g_total_memory_size, /*weak=*/true,
+                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+}
+
+static void total_memory_size_sub(size_t length) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+    g_total_memory_size -= length;
+}
 
 static struct libos_vma* node2vma(struct avl_tree_node* node) {
     if (!node) {
