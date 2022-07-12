@@ -9,6 +9,11 @@
  * with both EPID-based (quote v2) and ECDSA-based (quote v3 or DCAP) SGX quotes (in fact, it is
  * agnostic to the format of the SGX quote).
  *
+ * The self-signed RA-TLS certificate is signed by an ephemeral keypair generated and kept inside
+ * the enclave. The keypair is either RSA (the available public key size are 3072, 4096) or ECDSA
+ * (the available curves are SECP384R1, SECP521R1). By default, the keypair is RSA-3072 but can be
+ * configured via the envvar RA_TLS_CERT_SIGNATURE_ALGO.
+ *
  * This file is part of the RA-TLS attestation library which is typically linked into server
  * applications. This library is *not* thread-safe.
  */
@@ -23,6 +28,7 @@
 #include <unistd.h>
 
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/ecp.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
@@ -153,13 +159,72 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
 
     /* below function writes data at the end of the buffer */
     int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, PUB_KEY_SIZE_MAX);
-    if (pk_der_size_byte != RSA_PUB_3072_KEY_DER_LEN)
-        return MBEDTLS_ERR_PK_INVALID_PUBKEY;
+    if (pk_der_size_byte <= 0)
+        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
 
     return mbedtls_sha256_ret(pk_der, pk_der_size_byte, sha, /*is224=*/0);
+}
+
+/*! create keypair \p pk: can be RSA or ECDSA depending on RA-TLS envvars */
+static int create_key(mbedtls_ctr_drbg_context* ctr_drbg, mbedtls_pk_context* pk) {
+    int ret;
+    size_t key_size = 0;
+    char* key_algo = NULL;
+
+    key_algo = strdup(getenv(RA_TLS_CERT_SIGNATURE_ALGO) ? : RA_TLS_CERT_SIGNATURE_ALGO_DEFAULT);
+    if (!key_algo) {
+        ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
+        goto out;
+    }
+
+    if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_RSA_3072)) {
+        key_size = RSA_PUB_3072_KEY_LEN;
+    } else if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_RSA_4096)) {
+        key_size = RSA_PUB_4096_KEY_LEN;
+    }
+
+    if (key_size) {
+        /* RSA pk generation is requested by the user of RA-TLS */
+        ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+        if (ret < 0)
+            goto out;
+
+        mbedtls_rsa_init((mbedtls_rsa_context*)pk->pk_ctx, MBEDTLS_RSA_PKCS_V15, /*hash_id=*/0);
+
+        ret = mbedtls_rsa_gen_key((mbedtls_rsa_context*)pk->pk_ctx, mbedtls_ctr_drbg_random,
+                                  ctr_drbg, key_size, RSA_PUB_EXPONENT);
+        if (ret < 0)
+            goto out;
+    } else {
+        /* ECDSA pk generation is requested by the user of RA-TLS (actually, via EC key API) */
+        ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
+        if (ret < 0)
+            goto out;
+
+        int elliptic_curve_group_id = 0;
+        if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_384)) {
+            elliptic_curve_group_id = MBEDTLS_ECP_DP_SECP384R1;
+        } else if (!strcmp(key_algo, RA_TLS_CERT_SIGNATURE_ALGO_ECDSA_521)) {
+            elliptic_curve_group_id = MBEDTLS_ECP_DP_SECP521R1;
+        } else {
+            /* unrecognized ECDSA curve */
+            ret = MBEDTLS_ERR_ECP_BAD_INPUT_DATA;
+            goto out;
+        }
+
+        ret = mbedtls_ecp_gen_key(elliptic_curve_group_id, mbedtls_pk_ec(*pk),
+                                  mbedtls_ctr_drbg_random, ctr_drbg);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free(key_algo);
+    return ret;
 }
 
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
@@ -225,14 +290,7 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
-    if (ret < 0)
-        goto out;
-
-    mbedtls_rsa_init((mbedtls_rsa_context*)key->pk_ctx, MBEDTLS_RSA_PKCS_V15, /*hash_id=*/0);
-
-    ret = mbedtls_rsa_gen_key((mbedtls_rsa_context*)key->pk_ctx, mbedtls_ctr_drbg_random, &ctr_drbg,
-                              RSA_PUB_3072_KEY_LEN, RSA_PUB_EXPONENT);
+    ret = create_key(&ctr_drbg, key);
     if (ret < 0)
         goto out;
 
