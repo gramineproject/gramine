@@ -62,7 +62,7 @@ ssize_t (*file_write_f)(const char* path, const char* buf, size_t bytes);
  * If verification succeeds, it means the enclave which produced `report` runs on same platform
  * as the enclave executing this function.
  *
- * \return 0 if signature verification succeeded, -1 otherwise.
+ * \returns 0 if signature verification succeeded, -1 otherwise.
  */
 static int verify_report_mac(sgx_report_t* report) {
     int ret;
@@ -173,7 +173,7 @@ static int test_protected_files_key(void) {
  *   4. read `report` file
  *   5. verify data read from `report`
  *
- * \return 0 if the test succeeded, -1 otherwise.
+ * \returns 0 if the test succeeded, -1 otherwise.
  */
 static int test_local_attestation(void) {
     ssize_t bytes;
@@ -237,7 +237,7 @@ static const char* paths[] = {
  *   1. open one of the /dev/attestation files
  *   2. close this file
  *
- * \return 0 if the test succeeded, -1 otherwise.
+ * \returns 0 if the test succeeded, -1 otherwise.
  */
 static int test_resource_leak(void) {
     /* repeatedly open()/close() pseudo-files to hopefully uncover resource leaks */
@@ -267,7 +267,7 @@ static int test_resource_leak(void) {
  *   2. read `quote` file
  *   3. verify report data read from `quote`
  *
- * \return 0 if the test succeeds, -1 otherwise.
+ * \returns 0 if the test succeeds, -1 otherwise.
  */
 static int test_quote_interface(void) {
     ssize_t bytes;

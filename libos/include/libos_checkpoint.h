@@ -346,8 +346,6 @@ typedef int (*migrate_func_t)(struct libos_cp_store*, struct libos_process*, str
 /*!
  * \brief Create child process and migrate state to it.
  *
- * Called in parent process during fork/clone.
- *
  * \param migrate_func         Migration function defined by the caller.
  * \param child_process        Struct bookkeeping the child process, added to the children list.
  * \param process_description  Struct describing the new process (child).
@@ -356,6 +354,8 @@ typedef int (*migrate_func_t)(struct libos_cp_store*, struct libos_process*, str
  * The remaining arguments are passed into the migration function.
  *
  * \returns 0 on success, negative POSIX error code on failure.
+ *
+ * Called in parent process during fork/clone.
  */
 int create_process_and_send_checkpoint(migrate_func_t migrate_func,
                                        struct libos_child_process* child_process,
@@ -365,10 +365,10 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
 /*!
  * \brief Receive a checkpoint from parent process and restore state based on it.
  *
- * Called in child process during initialization.
- *
  * \param hdr  Checkpoint header already received from the parent.
  *
  * \returns 0 on success, negative POSIX error code on failure.
+ *
+ * Called in child process during initialization.
  */
 int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr);

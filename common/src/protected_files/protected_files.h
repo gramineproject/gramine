@@ -67,112 +67,119 @@ typedef enum _pf_file_mode_t {
 typedef void* pf_handle_t;
 
 /*!
- * \brief File read callback
+ * \brief File read callback.
  *
- * \param [in] handle File handle
- * \param [out] buffer Buffer to read to
- * \param [in] offset Offset to read from
- * \param [in] size Number of bytes to read
- * \return PF status
+ * \param      handle  File handle.
+ * \param[out] buffer  Buffer to read to.
+ * \param      offset  Offset to read from.
+ * \param      size    Number of bytes to read.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_read_f)(pf_handle_t handle, void* buffer, uint64_t offset, size_t size);
 
 /*!
- * \brief File write callback
+ * \brief File write callback.
  *
- * \param [in] handle File handle
- * \param [in] buffer Buffer to write from
- * \param [in] offset Offset to write to
- * \param [in] size Number of bytes to write
- * \return PF status
+ * \param handle  File handle.
+ * \param buffer  Buffer to write from.
+ * \param offset  Offset to write to.
+ * \param size    Number of bytes to write.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_write_f)(pf_handle_t handle, const void* buffer, uint64_t offset,
                                   size_t size);
 
 /*!
- * \brief File truncate callback
+ * \brief File truncate callback.
  *
- * \param [in] handle File handle
- * \param [in] size Target file size
- * \return PF status
+ * \param handle  File handle.
+ * \param size    Target file size.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_truncate_f)(pf_handle_t handle, uint64_t size);
 
 /*!
- * \brief Debug print callback
+ * \brief Debug print callback.
  *
- * \param [in] msg Message to print
+ * \param msg  Message to print.
  */
 typedef void (*pf_debug_f)(const char* msg);
 
 /*!
- * \brief AES-CMAC callback used for key derivation
+ * \brief AES-CMAC callback used for key derivation.
  *
- * \param [in] key AES-GCM key
- * \param [in] input Plaintext data
- * \param [in] input_size Size of \a input in bytes
- * \param [out] mac MAC computed for \a input
- * \return PF status
+ * \param      key         AES-GCM key.
+ * \param      input       Plaintext data.
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] mac         MAC computed for \p input.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_cmac_f)(const pf_key_t* key, const void* input, size_t input_size,
                                      pf_mac_t* mac);
 
 /*!
- * \brief AES-GCM encrypt callback
+ * \brief AES-GCM encrypt callback.
  *
- * \param [in] key AES-GCM key
- * \param [in] iv Initialization vector
- * \param [in] aad (optional) Additional authenticated data
- * \param [in] aad_size Size of \a aad in bytes
- * \param [in] input Plaintext data
- * \param [in] input_size Size of \a input in bytes
- * \param [out] output Buffer for encrypted data (size: \a input_size)
- * \param [out] mac MAC computed for \a input and \a aad
- * \return PF status
+ * \param      key         AES-GCM key.
+ * \param      iv          Initialization vector.
+ * \param      aad         (optional) Additional authenticated data.
+ * \param      aad_size    Size of \p aad in bytes.
+ * \param      input       Plaintext data.
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] output      Buffer for encrypted data (size: \p input_size).
+ * \param[out] mac         MAC computed for \p input and \p aad.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_gcm_encrypt_f)(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                             size_t aad_size, const void* input, size_t input_size,
                                             void* output, pf_mac_t* mac);
 
 /*!
- * \brief AES-GCM decrypt callback
+ * \brief AES-GCM decrypt callback.
  *
- * \param [in] key AES-GCM key
- * \param [in] iv Initialization vector
- * \param [in] aad (optional) Additional authenticated data
- * \param [in] aad_size Size of \a aad in bytes
- * \param [in] input Encrypted data
- * \param [in] input_size Size of \a input in bytes
- * \param [out] output Buffer for decrypted data (size: \a input_size)
- * \param [in] mac Expected MAC
- * \return PF status
+ * \param      key         AES-GCM key.
+ * \param      iv          Initialization vector.
+ * \param      aad         (optional) Additional authenticated data.
+ * \param      aad_size    Size of \p aad in bytes.
+ * \param      input       Encrypted data.
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] output      Buffer for decrypted data (size: \p input_size).
+ * \param      mac         Expected MAC.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_gcm_decrypt_f)(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                             size_t aad_size, const void* input, size_t input_size,
                                             void* output, const pf_mac_t* mac);
 
 /*!
- * \brief Cryptographic random number generator callback
+ * \brief Cryptographic random number generator callback.
  *
- * \param [out] buffer Buffer to fill with random bytes
- * \param [in] size Size of \a buffer in bytes
- * \return PF status
+ * \param[out] buffer  Buffer to fill with random bytes.
+ * \param      size    Size of \p buffer in bytes.
+ *
+ * \returns PF status.
  */
 typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
 
 /*!
- * \brief Initialize I/O callbacks
+ * \brief Initialize I/O callbacks.
  *
- * \param [in] read_f File read callback
- * \param [in] write_f File write callback
- * \param [in] truncate_f File truncate callback
- * \param [in] aes_cmac_f AES-CMAC callback
- * \param [in] aes_gcm_encrypt_f AES-GCM encrypt callback
- * \param [in] aes_gcm_decrypt_f AES-GCM decrypt callback
- * \param [in] random_f Cryptographic random number generator callback
- * \param [in] debug_f (optional) Debug print callback
+ * \param read_f             File read callback.
+ * \param write_f            File write callback.
+ * \param truncate_f         File truncate callback.
+ * \param aes_cmac_f         AES-CMAC callback.
+ * \param aes_gcm_encrypt_f  AES-GCM encrypt callback.
+ * \param aes_gcm_decrypt_f  AES-GCM decrypt callback.
+ * \param random_f           Cryptographic random number generator callback.
+ * \param debug_f            (optional) Debug print callback.
  *
- * \details Must be called before any actual APIs
+ * Must be called before any actual APIs.
  */
 void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_truncate_f truncate_f,
                       pf_aes_cmac_f aes_cmac_f, pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
@@ -185,77 +192,86 @@ typedef struct pf_context pf_context_t;
 /* Public API */
 
 /*!
- * \brief Convert error code to error message
+ * \brief Convert error code to error message.
  *
- * \param [in] err Error code
- * \return Error message
+ * \param err  Error code.
+ *
+ * \returns Error message.
  */
 const char* pf_strerror(int err);
 
 /*!
- * \brief Open a protected file
+ * \brief Open a protected file.
  *
- * \param [in] handle Open underlying file handle
- * \param [in] path Path to the file. If NULL and \a create is false, don't check path for validity.
- * \param [in] underlying_size Underlying file size
- * \param [in] mode Access mode
- * \param [in] create Overwrite file contents if true
- * \param [in] key Wrap key
- * \param [out] context PF context for later calls
- * \return PF status
+ * \param      handle           Open underlying file handle.
+ * \param      path             Path to the file. If NULL and \p create is false, don't check path
+ *                              for validity.
+ * \param      underlying_size  Underlying file size.
+ * \param      mode             Access mode.
+ * \param      create           Overwrite file contents if true.
+ * \param      key              Wrap key.
+ * \param[out] context          PF context for later calls.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
                     pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context);
 
 /*!
- * \brief Close a protected file and commit all changes to disk
+ * \brief Close a protected file and commit all changes to disk.
  *
- * \param [in] pf PF context
- * \return PF status
+ * \param pf  PF context.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_close(pf_context_t* pf);
 
 /*!
- * \brief Read from a protected file
+ * \brief Read from a protected file.
  *
- * \param [in] pf PF context
- * \param [in] offset Data offset to read from
- * \param [in] size Number of bytes to read
- * \param [out] output Destination buffer
- * \param [out] bytes_read Number of bytes actually read
- * \return PF status
+ * \param      pf          PF context.
+ * \param      offset      Data offset to read from.
+ * \param      size        Number of bytes to read.
+ * \param[out] output      Destination buffer.
+ * \param[out] bytes_read  Number of bytes actually read.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output,
                     size_t* bytes_read);
 
 /*!
- * \brief Write to a protected file
+ * \brief Write to a protected file.
  *
- * \param [in] pf PF context
- * \param [in] offset Data offset to write to
- * \param [in] size Number of bytes to write
- * \param [in] input Source buffer
- * \return PF status
+ * \param pf      PF context.
+ * \param offset  Data offset to write to.
+ * \param size    Number of bytes to write.
+ * \param input   Source buffer.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void* input);
 
 /*!
- * \brief Get data size of a PF
+ * \brief Get data size of a PF.
  *
- * \param [in] pf PF context
- * \param [out] size Data size of \a pf
- * \return PF status
+ * \param      pf    PF context.
+ * \param[out] size  Data size of \p pf.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size);
 
 /*!
- * \brief Set data size of a PF
+ * \brief Set data size of a PF.
  *
- * \param [in] pf PF context
- * \param [in] size Data size to set
- * \return PF status
- * \details If the file is extended, added bytes are zero.
- *          Shrinking to arbitrary size is not implemented yet (TODO).
+ * \param pf    PF context.
+ * \param size  Data size to set.
+ *
+ * \returns PF status.
+ *
+ * If the file is extended, added bytes are zero. Shrinking to arbitrary size is not implemented
+ * yet (TODO).
  */
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 
@@ -271,18 +287,20 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path);
 
 /*!
- * \brief Get underlying handle of a PF
+ * \brief Get underlying handle of a PF.
  *
- * \param [in] pf PF context
- * \param [out] handle Handle to the backing file
- * \return PF status
+ * \param      pf      PF context.
+ * \param[out] handle  Handle to the backing file.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle);
 
 /*!
- * \brief Flush any pending data of a protected file to disk
+ * \brief Flush any pending data of a protected file to disk.
  *
- * \param [in] pf PF context
- * \return PF status
+ * \param pf  PF context.
+ *
+ * \returns PF status.
  */
 pf_status_t pf_flush(pf_context_t* pf);

@@ -158,14 +158,14 @@ int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
 /*!
  * \brief Main initialization function.
  *
- * This function must be called by the host-specific loader.
- *
  * \param instance_id     Current instance ID.
  * \param exec_uri        Executable URI.
  * \param parent_process  Parent process if it's a child.
  * \param first_thread    First thread handle.
  * \param arguments       Application arguments.
  * \param environments    Environment variables.
+ *
+ * This function must be called by the host-specific loader.
  */
 noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
                        const char** arguments, const char** environments);

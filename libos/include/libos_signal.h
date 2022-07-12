@@ -139,7 +139,7 @@ int append_signal(struct libos_thread* thread, siginfo_t* info);
 /*!
  * \brief Pop any of the pending signals allowed in \p mask.
  *
- * \param[in]  mask    Mask of blocked signals to compare against. If NULL, then the current thread
+ * \param      mask    Mask of blocked signals to compare against. If NULL, then the current thread
  *                     signal mask is used.
  * \param[out] signal  Pointer to signal, filled with signal info.
  *

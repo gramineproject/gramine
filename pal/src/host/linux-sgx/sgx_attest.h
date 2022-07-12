@@ -74,19 +74,20 @@ enum {
 /*!
  * \brief Obtain SGX Quote from the Quoting Enclave (communicate via AESM).
  *
- * First create enclave report (sgx_report_t) with target info of the Quoting Enclave, and
- * then call out of the enclave to request the corresponding Quote from the Quoting Enclave.
- * Communication is done via AESM service, in the form of protobuf request/response messages.
- *
- * \param[in]  spid         Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
- * \param[in]  nonce        16B nonce to be included in the quote for freshness; ignored if
+ * \param      spid         Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
+ * \param      nonce        16B nonce to be included in the quote for freshness; ignored if
  *                          DCAP/ECDSA is used.
- * \param[in]  report_data  64B bytestring to be included in the report and the quote.
- * \param[in]  linkable     Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
+ * \param      report_data  64B bytestring to be included in the report and the quote.
+ * \param      linkable     Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
  * \param[out] quote        Quote returned by the Quoting Enclave (allocated via malloc() in this
  *                          function; the caller gets the ownership of the quote).
  * \param[out] quote_len    Length of the quote returned by the Quoting Enclave.
- * \return                  0 on success, negative PAL error code otherwise.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * First create enclave report (sgx_report_t) with target info of the Quoting Enclave, and
+ * then call out of the enclave to request the corresponding Quote from the Quoting Enclave.
+ * Communication is done via AESM service, in the form of protobuf request/response messages.
  */
 int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,

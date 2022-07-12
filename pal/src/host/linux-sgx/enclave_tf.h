@@ -33,25 +33,25 @@ int init_file_check_policy(void);
 int get_file_check_policy(void);
 
 /*!
- * \brief Get trusted/allowed file struct, if corresponding path entry exists in the manifest
+ * \brief Get trusted/allowed file struct, if corresponding path entry exists in the manifest.
  *
- * \param path  Normalized path to search for trusted/allowed files
+ * \param path  Normalized path to search for trusted/allowed files.
  *
- * \return trusted/allowed file struct if found, NULL otherwise
+ * \returns trusted/allowed file struct if found, NULL otherwise.
  */
 struct trusted_file* get_trusted_or_allowed_file(const char* path);
 
 /*!
- * \brief Open the file as trusted or allowed, according to the manifest
+ * \brief Open the file as trusted or allowed, according to the manifest.
  *
- * \param tf                trusted file struct corresponding to this file
- * \param file              file handle to be opened
- * \param create            whether this file is newly created
- * \param out_chunk_hashes  array of hashes over file chunks
- * \param out_size          returns size of opened file
- * \param out_umem          untrusted memory address at which the file was loaded
+ * \param tf                Trusted file struct corresponding to this file.
+ * \param file              File handle to be opened.
+ * \param create            Whether this file is newly created.
+ * \param out_chunk_hashes  Array of hashes over file chunks.
+ * \param out_size          Returns size of opened file.
+ * \param out_umem          Untrusted memory address at which the file was loaded.
  *
- * \return 0 on success, negative error code on failure
+ * \returns 0 on success, negative error code on failure
  */
 int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool create,
                                  sgx_chunk_hash_t** out_chunk_hashes, uint64_t* out_size,
@@ -60,17 +60,17 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
 /*!
  * \brief Copy and check file contents from untrusted outside buffer to in-enclave buffer
  *
- * \param path            file path (currently only for a log message)
- * \param buf             in-enclave buffer where contents of the file are copied
- * \param umem            start of untrusted file memory mapped outside the enclave
- * \param aligned_offset  offset into file contents to copy, aligned to TRUSTED_CHUNK_SIZE
- * \param aligned_end     end of file contents to copy, aligned to TRUSTED_CHUNK_SIZE
- * \param offset          unaligned offset into file contents to copy
- * \param end             unaligned end of file contents to copy
- * \param chunk_hashes    array of hashes of all file chunks
- * \param file_size       total size of the file
+ * \param path            File path (currently only for a log message).
+ * \param buf             In-enclave buffer where contents of the file are copied.
+ * \param umem            Start of untrusted file memory mapped outside the enclave.
+ * \param aligned_offset  Offset into file contents to copy, aligned to TRUSTED_CHUNK_SIZE.
+ * \param aligned_end     End of file contents to copy, aligned to TRUSTED_CHUNK_SIZE.
+ * \param offset          Unaligned offset into file contents to copy.
+ * \param end             Unaligned end of file contents to copy.
+ * \param chunk_hashes    Array of hashes of all file chunks.
+ * \param file_size       Total size of the file.
  *
- * \return 0 on success, negative error code on failure
+ * \returns 0 on success, negative error code on failure
  */
 int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* umem,
                                  off_t aligned_offset, off_t aligned_end, off_t offset, off_t end,
