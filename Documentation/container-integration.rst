@@ -29,10 +29,12 @@ To run the Gramine image via Docker, the recommended command is::
     docker run --device /dev/sgx_enclave -it gramineproject/gramine
 
 If you want to run :program:`gramine-direct` in addition to
-command:`gramine-sgx`, then you should run Docker with a custom seccomp profile.
-See
-https://gramine.readthedocs.io/projects/gsc/en/latest/#execute-with-linux-pal-instead-of-linux-sgx-pal
-for details.
+command:`gramine-sgx`, then you should run Docker with our custom seccomp
+profile using ``--security-opt seccomp=<profile_file>``. You can download the
+profile file from
+https://github.com/gramineproject/gramine/blob/master/scripts/docker_seccomp.json.
+Alternatively you can disable seccomp completely (``--security-opt
+seccomp=unconfined``).
 
 GSC (Gramine Shielded Containers)
 ---------------------------------
