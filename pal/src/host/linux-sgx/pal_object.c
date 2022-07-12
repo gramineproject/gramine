@@ -43,7 +43,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
             fds[i].fd = -1;
         }
 
-        if (HANDLE_HDR(handle)->type == PAL_TYPE_PIPE) {
+        if (handle->hdr.type == PAL_TYPE_PIPE) {
             while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
                 CPU_RELAX();
             }

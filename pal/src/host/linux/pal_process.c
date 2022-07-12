@@ -342,7 +342,7 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->process.stream == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    attr->handle_type  = HANDLE_HDR(handle)->type;
+    attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->process.nonblocking;
 
     /* get number of bytes available for reading */

@@ -176,7 +176,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
 }
 
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
-    if (HANDLE_HDR(target_process)->type != PAL_TYPE_PROCESS)
+    if (target_process->hdr.type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
     /* serialize cargo handle into a blob hdl_data */
@@ -242,7 +242,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
 }
 
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
-    if (HANDLE_HDR(source_process)->type != PAL_TYPE_PROCESS)
+    if (source_process->hdr.type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
     ssize_t ret;

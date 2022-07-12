@@ -42,7 +42,7 @@ static noreturn int thread_handshake_func(void* param) {
     PAL_HANDLE handle = (PAL_HANDLE)param;
 
     assert(handle);
-    assert(HANDLE_HDR(handle)->type == PAL_TYPE_PIPE);
+    assert(handle->hdr.type == PAL_TYPE_PIPE);
     assert(!handle->pipe.ssl_ctx);
     assert(!handle->pipe.handshake_done);
 
@@ -77,7 +77,7 @@ static noreturn int thread_handshake_func(void* param) {
         CPU_RELAX();
 
     thread->thread_hdl = handle->pipe.handshake_helper_thread_hdl;
-    assert(HANDLE_HDR(thread->thread_hdl)->type == PAL_TYPE_THREAD);
+    assert(thread->thread_hdl->hdr.type == PAL_TYPE_THREAD);
 
     INIT_LIST_HEAD(thread, list);
     thread->clear_on_thread_exit = 1;
@@ -161,7 +161,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * \return             0 on success, negative PAL error code otherwise.
  */
 static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV)
+    if (handle->hdr.type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
     if (handle->pipe.fd == PAL_IDX_POISON)
@@ -343,7 +343,7 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes;
@@ -373,7 +373,7 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPECLI && HANDLE_HDR(handle)->type != PAL_TYPE_PIPE)
+    if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes;
@@ -461,12 +461,12 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_BADHANDLE;
 
-    attr->handle_type  = HANDLE_HDR(handle)->type;
+    attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->pipe.nonblocking;
 
     /* get number of bytes available for reading (doesn't make sense for "listening" pipes) */
     attr->pending_size = 0;
-    if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV) {
+    if (handle->hdr.type != PAL_TYPE_PIPESRV) {
         ret = ocall_fionread(handle->pipe.fd);
         if (ret < 0)
             return unix_to_pal_error(ret);

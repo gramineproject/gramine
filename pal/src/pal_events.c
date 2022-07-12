@@ -13,16 +13,16 @@ int PalEventCreate(PAL_HANDLE* handle, bool init_signaled, bool auto_clear) {
 }
 
 void PalEventSet(PAL_HANDLE handle) {
-    assert(handle && HANDLE_HDR(handle)->type == PAL_TYPE_EVENT);
+    assert(handle && handle->hdr.type == PAL_TYPE_EVENT);
     _PalEventSet(handle);
 }
 
 void PalEventClear(PAL_HANDLE handle) {
-    assert(handle && HANDLE_HDR(handle)->type == PAL_TYPE_EVENT);
+    assert(handle && handle->hdr.type == PAL_TYPE_EVENT);
     _PalEventClear(handle);
 }
 
 int PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
-    assert(handle && HANDLE_HDR(handle)->type == PAL_TYPE_EVENT);
+    assert(handle && handle->hdr.type == PAL_TYPE_EVENT);
     return _PalEventWait(handle, timeout_us);
 }
