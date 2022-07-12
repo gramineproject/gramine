@@ -84,7 +84,7 @@ static int init_exec_handle(void) {
     /* Initialize `g_process.exec` based on `libos.entrypoint` manifest key. */
     char* entrypoint = NULL;
     const char* exec_path;
-    struct libos_handle* hdl = NULL;
+    struct libos_handle* exec_handle = NULL;
     int ret;
 
     /* Initialize `g_process.exec` based on `libos.entrypoint` manifest key. */
@@ -111,37 +111,24 @@ static int init_exec_handle(void) {
         goto out;
     }
 
-    struct libos_handle* exec_handle = NULL;
-    char** new_argv = NULL;
-    const char* argv[] = {exec_path, NULL};
-    ret = load_and_check_exec(argv[0], argv, &exec_handle, &new_argv);
+    /* entrypoint may be a shebang script instead of the ELF binary,  get the actual ELF binary name in this case */
+    char** dummy_new_argv = NULL;
+    const char* dummy_argv[] = {exec_path, NULL};
+    ret = load_and_check_exec(exec_path, dummy_argv, &exec_handle, &dummy_new_argv);
     if (ret < 0) {
-        goto out;
-    }
-
-    hdl = get_new_handle();
-    if (!hdl) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    const char* new_exec_path = new_argv[0];
-    ret = open_executable(hdl, new_exec_path);
-    if (ret < 0) {
-        log_error("Error opening executable %s: %d", new_exec_path, ret);
         goto out;
     }
 
     lock(&g_process.fs_lock);
-    g_process.exec = hdl;
-    get_handle(hdl);
+    g_process.exec = exec_handle;
+    get_handle(exec_handle);
     unlock(&g_process.fs_lock);
 
     ret = 0;
 out:
     free(entrypoint);
-    if (hdl)
-        put_handle(hdl);
+    if (exec_handle)
+        put_handle(exec_handle);
     return ret;
 }
 

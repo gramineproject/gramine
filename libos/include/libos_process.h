@@ -70,7 +70,8 @@ struct libos_process {
 extern struct libos_process g_process;
 
 int init_process(void);
-int init_process_args(int argc, const char** argv);
+int init_process_cmdline(int argc, const char** argv);
+int init_process_args(const char* path, const char** argv, char*** out_new_argv);
 
 /* Allocates a new child process structure, initializing all fields. */
 struct libos_child_process* create_child_process(void);

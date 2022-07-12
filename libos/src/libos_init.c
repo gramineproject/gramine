@@ -423,15 +423,9 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_mount_root);
     RUN_INIT(init_mount);
 
-    struct libos_handle* exec = NULL;
     char** new_argv = NULL;
-    int ret = load_and_check_exec(argv[0], argv, &exec, &new_argv);
-    if (ret < 0) {
-        log_error("libos_init: failed to load exec:%s  ret %d", argv[0], ret);
-        PalProcessExit(1);
-    }
-
-    RUN_INIT(init_process_args, argc, (const char**)new_argv);
+    RUN_INIT(init_process_args, argv[0], argv, &new_argv);
+    RUN_INIT(init_process_cmdline, argc, (const char**)new_argv);
     RUN_INIT(init_threading);
     RUN_INIT(init_important_handles);
 
