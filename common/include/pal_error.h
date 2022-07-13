@@ -57,7 +57,7 @@ typedef enum _pal_error_t {
     PAL_ERROR_CRYPTO_RNG_FAILED,
     PAL_ERROR_CRYPTO_INVALID_DH_STATE,
     PAL_ERROR_CRYPTO_INVALID_PK_ALG,
-#define PAL_ERROR_CRYPTO_END PAL_ERROR_CRYPTO_INVALID_DH_STATE
+#define PAL_ERROR_CRYPTO_END PAL_ERROR_CRYPTO_INVALID_PK_ALG
 } pal_error_t;
 
 /* err - value of error code, either positive or negative */

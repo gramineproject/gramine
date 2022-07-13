@@ -40,8 +40,6 @@
 #define RSA_PUB_3072_KEY_LEN     3072
 #define RSA_PUB_4096_KEY_LEN     4096
 #define RSA_PUB_EXPONENT         65537
-#define PUB_KEY_SIZE_MAX         512
-#define IAS_REQUEST_NONCE_LEN    32
 
 #define OID(N) \
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
