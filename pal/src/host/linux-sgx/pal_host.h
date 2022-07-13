@@ -25,7 +25,6 @@ void free_untrusted(void* mem);
 DEFINE_LIST(pal_handle_thread);
 struct pal_handle_thread {
     PAL_HDR reserved;
-    PAL_IDX tid;
     void* tcs;
     LIST_TYPE(pal_handle_thread) list;
     void* param;
