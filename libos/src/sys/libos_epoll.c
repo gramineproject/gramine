@@ -26,6 +26,7 @@
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_pollable_event.h"
+#include "libos_refcount.h"
 #include "libos_signal.h"
 #include "libos_table.h"
 #include "libos_thread.h"
@@ -79,7 +80,7 @@ struct libos_epoll_item {
     /* `events` and `data` are guarded by `epoll_handle->info.epoll.lock`. */
     uint32_t events;
     uint64_t data;
-    REFTYPE ref_count;
+    refcount_t ref_count;
 };
 
 DEFINE_LIST(libos_epoll_waiter);
@@ -91,11 +92,11 @@ struct libos_epoll_waiter {
 };
 
 static void get_epoll_item(struct libos_epoll_item* item) {
-    REF_INC(item->ref_count);
+    refcount_inc(&item->ref_count);
 }
 
 static void put_epoll_item(struct libos_epoll_item* item) {
-    int64_t ref_count = REF_DEC(item->ref_count);
+    refcount_t ref_count = refcount_dec(&item->ref_count);
 
     if (!ref_count) {
         put_handle(item->epoll_handle);
@@ -324,7 +325,7 @@ static int do_epoll_add(struct libos_handle* epoll_handle, struct libos_handle* 
     get_handle(epoll_handle);
     new_item->data = event->data;
     new_item->events = event->events & ~EPOLL_NEEDS_REARM;
-    REF_SET(new_item->ref_count, 1);
+    refcount_set(&new_item->ref_count, 1);
 
     if (!(handle->acc_mode & MAY_READ)) {
         new_item->events &= ~(EPOLLIN | EPOLLRDNORM);
@@ -774,7 +775,7 @@ BEGIN_CP_FUNC(epoll_items_list) {
         new_item->fd = item->fd;
         new_item->events = item->events;
         new_item->data = item->data;
-        REF_SET(new_item->ref_count, 0);
+        refcount_set(&new_item->ref_count, 0);
 
         LISTP_ADD(new_item, &new_handle->info.epoll.items, epoll_list);
         new_handle->info.epoll.items_count++;

@@ -41,7 +41,7 @@ static struct libos_dentry* alloc_dentry(void) {
 
     memset(dent, 0, sizeof(struct libos_dentry));
 
-    REF_SET(dent->ref_count, 1);
+    refcount_set(&dent->ref_count, 1);
 
     INIT_LISTP(&dent->children);
     INIT_LIST_HEAD(dent, siblings);
@@ -95,15 +95,14 @@ int init_dcache(void) {
 
 /* Increment the reference count for a dentry */
 void get_dentry(struct libos_dentry* dent) {
+    refcount_t count = refcount_inc(&dent->ref_count);
 #ifdef DEBUG_REF
-    int64_t count = REF_INC(dent->ref_count);
-
     const char* path = NULL;
     dentry_abs_path(dent, &path, /*size=*/NULL);
-    log_debug("get dentry %p(%s) (ref_count = %lld)", dent, path, count);
+    log_debug("get dentry %p(%s) (ref_count = %ld)", dent, path, count);
     free(path);
 #else
-    REF_INC(dent->ref_count);
+    __UNUSED(count);
 #endif
 }
 
@@ -130,14 +129,13 @@ static void free_dentry(struct libos_dentry* dent) {
 }
 
 void put_dentry(struct libos_dentry* dent) {
-    int64_t count = REF_DEC(dent->ref_count);
+    refcount_t count = refcount_dec(&dent->ref_count);
 #ifdef DEBUG_REF
     const char* path = NULL;
     dentry_abs_path(dent, &path, /*size=*/NULL);
-    log_debug("put dentry %p(%s) (ref_count = %lld)", dent, path, count);
+    log_debug("put dentry %p(%s) (ref_count = %ld)", dent, path, count);
     free(path);
 #endif
-    assert(count >= 0);
 
     if (count == 0) {
         assert(LIST_EMPTY(dent, siblings));
@@ -150,7 +148,7 @@ void dentry_gc(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->parent);
 
-    if (REF_GET(dent->ref_count) != 1)
+    if (refcount_get(&dent->ref_count) != 1)
         return;
 
     if (dent->inode)
@@ -369,16 +367,16 @@ struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t
 
     inode->data = NULL;
 
-    REF_SET(inode->ref_count, 1);
+    refcount_set(&inode->ref_count, 1);
     return inode;
 }
 
 void get_inode(struct libos_inode* inode) {
-    REF_INC(inode->ref_count);
+    refcount_inc(&inode->ref_count);
 }
 
 void put_inode(struct libos_inode* inode) {
-    if (REF_DEC(inode->ref_count) == 0) {
+    if (refcount_dec(&inode->ref_count) == 0) {
         if (inode->fs->d_ops && inode->fs->d_ops->idrop) {
             lock(&inode->lock);
             inode->fs->d_ops->idrop(inode);
@@ -428,7 +426,7 @@ static void dump_dentry(struct libos_dentry* dent, unsigned int level) {
 
     buf_printf(&buf, "[%6.6s ", dent->inode ? dent->inode->fs->name : "");
 
-    buf_printf(&buf, "%3d] ", (int)REF_GET(dent->ref_count));
+    buf_printf(&buf, "%3ld] ", refcount_get(&dent->ref_count));
 
     if (dent->inode) {
         dump_dentry_mode(&buf, dent->inode->type, dent->inode->perm);
@@ -528,7 +526,7 @@ BEGIN_CP_FUNC(dentry) {
         *new_dent = *dent;
         INIT_LISTP(&new_dent->children);
         INIT_LIST_HEAD(new_dent, siblings);
-        REF_SET(new_dent->ref_count, 0);
+        refcount_set(&new_dent->ref_count, 0);
 
         /* `fs_lock` is used only by process leader. */
         new_dent->fs_lock = NULL;
@@ -622,7 +620,7 @@ BEGIN_CP_FUNC(inode) {
 
         /* `lock` will be initialized during restore */
 
-        REF_SET(new_inode->ref_count, 0);
+        refcount_set(&new_inode->ref_count, 0);
 
         if (inode->fs->d_ops && inode->fs->d_ops->icheckpoint) {
             void* cp_data;

@@ -17,6 +17,7 @@
 #include "libos_fs_mem.h"
 #include "libos_lock.h"
 #include "libos_pollable_event.h"
+#include "libos_refcount.h"
 #include "libos_sync.h"
 #include "libos_types.h"
 #include "linux_socket.h"
@@ -146,7 +147,7 @@ struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
 
-    REFTYPE ref_count;
+    refcount_t ref_count;
 
     struct libos_fs* fs;
     struct libos_dentry* dentry;
@@ -235,7 +236,7 @@ struct libos_handle_map {
     uint32_t fd_top;
 
     /* refrence count and lock */
-    REFTYPE ref_count;
+    refcount_t ref_count;
     struct libos_lock lock;
 
     /* An array of file descriptor belong to this mapping */
