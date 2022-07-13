@@ -694,7 +694,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
      * `*out_new_argv` must be always freed by caller */
     size_t curr_argv_bytes = 0, curr_argv_cnt = 0;
     for (const char** a = argv; *a; a++) {
-        curr_argv_bytes += strlen(*a) + 1;
+        curr_argv_bytes += strlen(curr_argv_cnt == 0? path: *a) + 1;
         curr_argv_cnt++;
     }
 
@@ -712,8 +712,8 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
 
     size_t curr_argv_idx = 0;
     for (const char** a = argv; *a; a++) {
-        size_t size = strlen(*a) + 1;
-        memcpy(curr_argv_ptr, *a, size);
+        size_t size = strlen(curr_argv_idx == 0? path: *a) + 1;
+        memcpy(curr_argv_ptr, curr_argv_idx == 0? path: *a, size);
         curr_argv[curr_argv_idx] = curr_argv_ptr;
         curr_argv_idx++;
         curr_argv_ptr += size;
