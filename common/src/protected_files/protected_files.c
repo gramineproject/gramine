@@ -170,6 +170,22 @@ static bool ipf_init_fields(pf_context_t* pf) {
     return true;
 }
 
+static bool ipf_check_writable(pf_context_t* pf) {
+    if (PF_FAILURE(pf->file_status)) {
+        pf->last_error = pf->file_status;
+        DEBUG_PF("bad file status %d", pf->last_error);
+        return false;
+    }
+
+    if (!(pf->mode & PF_FILE_MODE_WRITE)) {
+        pf->last_error = PF_STATUS_INVALID_MODE;
+        DEBUG_PF("File is read-only");
+        return false;
+    }
+
+    return true;
+}
+
 static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create, pf_handle_t file,
                               uint64_t real_size, const pf_key_t* kdk_key, pf_status_t* status) {
     *status = PF_STATUS_NO_MEMORY;
@@ -647,22 +663,6 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
     }
 
     if (!ipf_write_node(pf, pf->file, /*node_number=*/0, &pf->file_metadata, PF_NODE_SIZE)) {
-        return false;
-    }
-
-    return true;
-}
-
-static bool ipf_check_writable(pf_context_t* pf) {
-    if (PF_FAILURE(pf->file_status)) {
-        pf->last_error = pf->file_status;
-        DEBUG_PF("bad file status %d", pf->last_error);
-        return false;
-    }
-
-    if (!(pf->mode & PF_FILE_MODE_WRITE)) {
-        pf->last_error = PF_STATUS_INVALID_MODE;
-        DEBUG_PF("File is read-only");
         return false;
     }
 
