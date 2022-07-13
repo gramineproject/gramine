@@ -1296,6 +1296,7 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
     }
 
     if (PF_FAILURE(pf->file_status)) {
+        pf->last_error = pf->file_status;
         return pf->last_error;
     }
 
