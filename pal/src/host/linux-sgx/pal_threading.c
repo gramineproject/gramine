@@ -35,8 +35,8 @@ extern void* g_enclave_base;
  */
 static PAL_IDX pal_assign_tid(void) {
     /* tid 1 is assigned to the first thread; see pal_linux_main() */
-    static int64_t tid = 1;
-    return __atomic_add_fetch(&tid, 1, __ATOMIC_SEQ_CST);
+    static PAL_IDX tid = 1;
+    return __atomic_add_fetch(&tid, 1, __ATOMIC_RELAXED);
 }
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
