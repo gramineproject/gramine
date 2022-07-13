@@ -220,16 +220,15 @@ static int init_main_thread(void) {
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
 
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
-    cur_thread->cpumask = malloc(bitmask_size_in_bytes);
+    cur_thread->cpumask_size = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                               sizeof(unsigned long);
+    cur_thread->cpumask = malloc(cur_thread->cpumask_size);
     if (!cur_thread->cpumask) {
-        log_error("Cannot allocate cpumask for the initial thread!");
         put_thread(cur_thread);
         return -ENOMEM;
     }
 
-    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, bitmask_size_in_bytes,
+    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, cur_thread->cpumask_size,
                                   cur_thread->cpumask);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
@@ -279,11 +278,10 @@ struct libos_thread* get_new_thread(void) {
         return NULL;
     }
 
-    size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                   sizeof(unsigned long);
-    thread->cpumask = malloc(bitmask_size_in_bytes);
+    thread->cpumask_size = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
+                           sizeof(unsigned long);
+    thread->cpumask = malloc(thread->cpumask_size);
     if (!thread->cpumask) {
-        log_error("Cannot allocate cpumask for the new thread!");
         put_thread(thread);
         return NULL;
     }
@@ -325,7 +323,7 @@ struct libos_thread* get_new_thread(void) {
     assert(map);
     set_handle_map(thread, map);
 
-    memcpy(thread->cpumask, cur_thread->cpumask, bitmask_size_in_bytes);
+    memcpy(thread->cpumask, cur_thread->cpumask, thread->cpumask_size);
 
     unlock(&cur_thread->lock);
 
@@ -608,10 +606,9 @@ BEGIN_CP_FUNC(thread) {
             memcpy(new_thread->groups_info.groups, thread->groups_info.groups, groups_size);
         }
 
-        size_t bitmask_size_in_bytes = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                                       sizeof(unsigned long);
-        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(bitmask_size_in_bytes));
-        memcpy(new_thread->cpumask, thread->cpumask, bitmask_size_in_bytes);
+        /* new_thread->cpumask_size is updated as part of the shallow copy above. */
+        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(thread->cpumask_size));
+        memcpy(new_thread->cpumask, thread->cpumask, thread->cpumask_size);
 
         new_thread->pal_handle = NULL;
 
