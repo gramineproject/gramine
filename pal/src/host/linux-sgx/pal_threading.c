@@ -27,18 +27,6 @@ struct thread_param {
 
 extern void* g_enclave_base;
 
-/*
- * We do not currently handle tid counter wrap-around, and could, in
- * principle, end up with two threads with the same ID. This is ok, as strict
- * uniqueness is not required; the tid is only used for debugging. We could
- * ensure uniqueness if needed in the future
- */
-static PAL_IDX pal_assign_tid(void) {
-    /* tid 1 is assigned to the first thread; see pal_linux_main() */
-    static PAL_IDX tid = 1;
-    return __atomic_add_fetch(&tid, 1, __ATOMIC_RELAXED);
-}
-
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
  * g_thread_list, initializes its TCB/TLS, and jumps into the callback-to-run. Gramine uses GCC's
  * stack protector that looks for a canary at gs:[0x8], but this function starts with a default
@@ -52,7 +40,6 @@ void pal_start_thread(void) {
     LISTP_FOR_EACH_ENTRY(tmp, &g_thread_list, list)
         if (!tmp->tcs) {
             new_thread = tmp;
-            new_thread->tid = pal_assign_tid();
             __atomic_store_n(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TLS(tcs_offset)),
                              __ATOMIC_RELEASE);
             break;
@@ -94,11 +81,6 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     init_handle_hdr(new_thread, PAL_TYPE_THREAD);
 
-    /*
-     * tid will be filled later by pal_start_thread()
-     * tid is cleared to avoid random value here.
-     */
-    new_thread->thread.tid = 0;
     new_thread->thread.tcs = NULL;
     INIT_LIST_HEAD(&new_thread->thread, list);
     struct thread_param* thread_param = malloc(sizeof(struct thread_param));
