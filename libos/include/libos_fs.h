@@ -13,6 +13,7 @@
 
 #include "libos_defs.h"
 #include "libos_handle.h"
+#include "libos_refcount.h"
 #include "libos_types.h"
 #include "libos_utils.h"
 #include "list.h"
@@ -237,7 +238,7 @@ struct libos_dentry {
      * `libos_fs_lock.c`. */
     bool maybe_has_fs_locks;
 
-    REFTYPE ref_count;
+    refcount_t ref_count;
 };
 
 /*
@@ -272,7 +273,7 @@ struct libos_inode {
     void* data;
 
     struct libos_lock lock;
-    REFTYPE ref_count;
+    refcount_t ref_count;
 };
 
 typedef int (*readdir_callback_t)(const char* name, void* arg);
@@ -491,7 +492,7 @@ struct libos_mount {
     void* cpdata;
     size_t cpsize;
 
-    REFTYPE ref_count;
+    refcount_t ref_count;
     LIST_TYPE(libos_mount) hlist;
     LIST_TYPE(libos_mount) list;
 };

@@ -23,6 +23,7 @@
 #include "assert.h"
 #include "avl_tree.h"
 #include "libos_internal.h"
+#include "libos_refcount.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
@@ -54,7 +55,7 @@ struct libos_futex {
     /* This lock guards every access to *uaddr (futex word value) and waiters (above).
      * Always take g_futex_tree_lock before taking this lock. */
     spinlock_t lock;
-    REFTYPE _ref_count;
+    refcount_t _ref_count;
 };
 
 static bool futex_tree_cmp(struct avl_tree_node* node_a, struct avl_tree_node* node_b) {
@@ -69,11 +70,11 @@ static struct avl_tree g_futex_tree = { .cmp = futex_tree_cmp };
 static spinlock_t g_futex_tree_lock = INIT_SPINLOCK_UNLOCKED;
 
 static void get_futex(struct libos_futex* futex) {
-    REF_INC(futex->_ref_count);
+    refcount_inc(&futex->_ref_count);
 }
 
 static void put_futex(struct libos_futex* futex) {
-    if (!REF_DEC(futex->_ref_count)) {
+    if (!refcount_dec(&futex->_ref_count)) {
         free(futex);
     }
 }
@@ -278,7 +279,7 @@ static struct libos_futex* create_new_futex(uint32_t* uaddr) {
         return NULL;
     }
 
-    REF_SET(futex->_ref_count, 1);
+    refcount_set(&futex->_ref_count, 1);
 
     futex->uaddr = uaddr;
     futex->in_tree = false;

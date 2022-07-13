@@ -43,11 +43,11 @@ static void unlock_client(void) {
 }
 
 static void get_sync_handle(struct sync_handle* handle) {
-    REF_INC(handle->ref_count);
+    refcount_inc(&handle->ref_count);
 }
 
 static void put_sync_handle(struct sync_handle* handle) {
-    if (!REF_DEC(handle->ref_count)) {
+    if (!refcount_dec(&handle->ref_count)) {
         log_trace("sync client: destroying handle: 0x%lx", handle->id);
         free(handle->data);
         destroy_lock(&handle->use_lock);
@@ -173,7 +173,7 @@ static int sync_init(struct sync_handle* handle, uint64_t id) {
     handle->server_req_state = SYNC_STATE_NONE;
     handle->used = false;
 
-    REF_SET(handle->ref_count, 1);
+    refcount_set(&handle->ref_count, 1);
 
     lock_client();
 

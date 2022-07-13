@@ -18,6 +18,7 @@
 #include "libos_internal.h"
 #include "libos_ipc.h"
 #include "libos_lock.h"
+#include "libos_refcount.h"
 #include "libos_types.h"
 #include "libos_utils.h"
 #include "pal.h"
@@ -26,7 +27,7 @@ struct libos_ipc_connection {
     struct avl_tree_node node;
     IDTYPE vmid;
     int seen_error;
-    REFTYPE ref_count;
+    refcount_t ref_count;
     PAL_HANDLE handle;
     /* This lock guards concurrent accesses to `handle` and `seen_error`. If you need both this lock
      * and `g_ipc_connections_lock`, take the latter first. */
@@ -74,11 +75,11 @@ int init_ipc(void) {
 }
 
 static void get_ipc_connection(struct libos_ipc_connection* conn) {
-    REF_INC(conn->ref_count);
+    refcount_inc(&conn->ref_count);
 }
 
 static void put_ipc_connection(struct libos_ipc_connection* conn) {
-    int64_t ref_count = REF_DEC(conn->ref_count);
+    refcount_t ref_count = refcount_dec(&conn->ref_count);
 
     if (!ref_count) {
         PalObjectClose(conn->handle);
@@ -131,7 +132,7 @@ static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
         }
 
         conn->vmid = dest;
-        REF_SET(conn->ref_count, 1);
+        refcount_set(&conn->ref_count, 1);
         avl_tree_insert(&g_ipc_connections, &conn->node);
     }
 

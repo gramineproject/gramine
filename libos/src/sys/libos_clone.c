@@ -363,7 +363,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
 
         /* We should not have saved any references to this thread anywhere and `put_thread` below
          * should free it. */
-        assert(REF_GET(thread->ref_count) == 1);
+        assert(refcount_get(&thread->ref_count) == 1);
 
         /* We do not own `thread->tid` aka `tid` anymore, clean it so that `put_thread` does not
          * try to release it. */

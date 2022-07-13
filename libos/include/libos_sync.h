@@ -140,6 +140,7 @@
 
 #include <stdint.h>
 
+#include "libos_refcount.h"
 #include "libos_types.h"
 #include "list.h"
 #include "pal.h"
@@ -223,7 +224,7 @@ struct sync_handle {
 
     /* Reference count, used internally by sync client: the user of the handle just calls
      * `sync_create` / `sync_destroy`. */
-    REFTYPE ref_count;
+    refcount_t ref_count;
 };
 
 /*** User interface (sync_handle) ***/

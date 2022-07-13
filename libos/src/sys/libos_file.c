@@ -381,8 +381,8 @@ long libos_syscall_renameat(int olddirfd, const char* oldpath, int newdirfd, con
         goto out;
 
     // Both dentries should have a ref count of at least 2 at this point
-    assert(REF_GET(old_dent->ref_count) >= 2);
-    assert(REF_GET(new_dent->ref_count) >= 2);
+    assert(refcount_get(&old_dent->ref_count) >= 2);
+    assert(refcount_get(&new_dent->ref_count) >= 2);
 
     ret = do_rename(old_dent, new_dent);
 

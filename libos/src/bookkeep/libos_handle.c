@@ -338,7 +338,7 @@ struct libos_handle* get_new_handle(void) {
         return NULL;
 
     memset(new_handle, 0, sizeof(struct libos_handle));
-    REF_SET(new_handle->ref_count, 1);
+    refcount_set(&new_handle->ref_count, 1);
     if (!create_lock(&new_handle->lock)) {
         free_mem_obj_to_mgr(handle_mgr, new_handle);
         return NULL;
@@ -465,12 +465,11 @@ static inline __attribute__((unused)) const char* __handle_name(struct libos_han
 }
 
 void get_handle(struct libos_handle* hdl) {
+    refcount_t ref_count = refcount_inc(&hdl->ref_count);
 #ifdef DEBUG_REF
-    int ref_count = REF_INC(hdl->ref_count);
-
-    log_debug("get handle %p(%s) (ref_count = %d)", hdl, __handle_name(hdl), ref_count);
+    log_debug("get handle %p(%s) (ref_count = %ld)", hdl, __handle_name(hdl), ref_count);
 #else
-    REF_INC(hdl->ref_count);
+    __UNUSED(ref_count);
 #endif
 }
 
@@ -482,10 +481,10 @@ static void destroy_handle(struct libos_handle* hdl) {
 }
 
 void put_handle(struct libos_handle* hdl) {
-    int ref_count = REF_DEC(hdl->ref_count);
+    refcount_t ref_count = refcount_dec(&hdl->ref_count);
 
 #ifdef DEBUG_REF
-    log_debug("put handle %p(%s) (ref_count = %d)", hdl, __handle_name(hdl), ref_count);
+    log_debug("put handle %p(%s) (ref_count = %ld)", hdl, __handle_name(hdl), ref_count);
 #endif
 
     if (!ref_count) {
@@ -561,7 +560,7 @@ static struct libos_handle_map* get_new_handle_map(uint32_t size) {
         return NULL;
     }
 
-    REF_SET(handle_map->ref_count, 1);
+    refcount_set(&handle_map->ref_count, 1);
 
     return handle_map;
 }
@@ -636,11 +635,11 @@ done:
 }
 
 void get_handle_map(struct libos_handle_map* map) {
-    REF_INC(map->ref_count);
+    refcount_inc(&map->ref_count);
 }
 
 void put_handle_map(struct libos_handle_map* map) {
-    int ref_count = REF_DEC(map->ref_count);
+    refcount_t ref_count = refcount_dec(&map->ref_count);
 
     if (!ref_count) {
         if (map->fd_top == FD_NULL)
@@ -714,7 +713,7 @@ BEGIN_CP_FUNC(handle) {
         *new_hdl = *hdl;
 
         new_hdl->dentry = NULL;
-        REF_SET(new_hdl->ref_count, 0);
+        refcount_set(&new_hdl->ref_count, 0);
         clear_lock(&new_hdl->lock);
         clear_lock(&new_hdl->pos_lock);
 
@@ -891,7 +890,7 @@ BEGIN_CP_FUNC(handle_map) {
         new_handle_map->fd_size = fd_size;
         new_handle_map->map     = fd_size ? ptr_array : NULL;
 
-        REF_SET(new_handle_map->ref_count, 0);
+        refcount_set(&new_handle_map->ref_count, 0);
         clear_lock(&new_handle_map->lock);
 
         for (int i = 0; i < fd_size; i++) {

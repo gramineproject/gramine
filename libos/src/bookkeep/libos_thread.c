@@ -33,7 +33,7 @@ struct libos_lock g_thread_list_lock;
 //#define DEBUG_REF
 
 #ifdef DEBUG_REF
-#define DEBUG_PRINT_REF_COUNT(rc) log_debug("%s %p ref_count = %d", __func__, dispositions, rc)
+#define DEBUG_PRINT_REF_COUNT(rc) log_debug("%s %p ref_count = %ld", __func__, dispositions, rc)
 #else
 #define DEBUG_PRINT_REF_COUNT(rc) __UNUSED(rc)
 #endif
@@ -48,7 +48,7 @@ static struct libos_signal_dispositions* alloc_default_signal_dispositions(void)
         free(dispositions);
         return NULL;
     }
-    REF_SET(dispositions->ref_count, 1);
+    refcount_set(&dispositions->ref_count, 1);
     for (size_t i = 0; i < ARRAY_SIZE(dispositions->actions); i++) {
         sigaction_make_defaults(&dispositions->actions[i]);
     }
@@ -74,7 +74,7 @@ static struct libos_thread* alloc_new_thread(void) {
         return NULL;
     }
 
-    REF_SET(thread->ref_count, 1);
+    refcount_set(&thread->ref_count, 1);
     INIT_LIST_HEAD(thread, list);
     /* default value as sigalt stack isn't specified yet */
     thread->signal_altstack.ss_flags = SS_DISABLE;
@@ -316,12 +316,12 @@ struct libos_thread* get_new_internal_thread(void) {
 }
 
 void get_signal_dispositions(struct libos_signal_dispositions* dispositions) {
-    int ref_count = REF_INC(dispositions->ref_count);
+    refcount_t ref_count = refcount_inc(&dispositions->ref_count);
     DEBUG_PRINT_REF_COUNT(ref_count);
 }
 
 void put_signal_dispositions(struct libos_signal_dispositions* dispositions) {
-    int ref_count = REF_DEC(dispositions->ref_count);
+    refcount_t ref_count = refcount_dec(&dispositions->ref_count);
 
     DEBUG_PRINT_REF_COUNT(ref_count);
 
@@ -332,12 +332,12 @@ void put_signal_dispositions(struct libos_signal_dispositions* dispositions) {
 }
 
 void get_thread(struct libos_thread* thread) {
-    int ref_count = REF_INC(thread->ref_count);
+    refcount_t ref_count = refcount_inc(&thread->ref_count);
     DEBUG_PRINT_REF_COUNT(ref_count);
 }
 
 void put_thread(struct libos_thread* thread) {
-    int ref_count = REF_DEC(thread->ref_count);
+    refcount_t ref_count = refcount_dec(&thread->ref_count);
 
     DEBUG_PRINT_REF_COUNT(ref_count);
 
@@ -526,7 +526,7 @@ BEGIN_CP_FUNC(signal_dispositions) {
 
         *new_dispositions = *dispositions;
         clear_lock(&new_dispositions->lock);
-        REF_SET(new_dispositions->ref_count, 0);
+        refcount_set(&new_dispositions->ref_count, 0);
 
         unlock(&dispositions->lock);
 
@@ -585,7 +585,7 @@ BEGIN_CP_FUNC(thread) {
         new_thread->handle_map = NULL;
         memset(&new_thread->signal_queue, 0, sizeof(new_thread->signal_queue));
         new_thread->robust_list = NULL;
-        REF_SET(new_thread->ref_count, 0);
+        refcount_set(&new_thread->ref_count, 0);
 
         DO_CP_MEMBER(signal_dispositions, thread, new_thread, signal_dispositions);
 
