@@ -71,6 +71,7 @@ uint64_t get_file_size(int fd);
  *
  * \returns On success, pointer to the data buffer. If \p buffer was NULL, caller should free it.
  *          On failure, NULL.
+ *
  * \details If \a buffer is not NULL, \a size must contain valid buffer size.
  */
 void* read_file(const char* path, size_t* size, void* buffer);
@@ -100,6 +101,7 @@ void hexdump_mem(const void* data, size_t size);
  *                     hexstring itself. Use when parsing sensitive data.
  *
  * \returns 0 on success, otherwise -1.
+ *
  * \details Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
  */
 int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask);

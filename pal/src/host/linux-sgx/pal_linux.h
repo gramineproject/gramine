@@ -156,9 +156,9 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key);
  * with the same configuration have the same SGX enclave info), and that the signer of the SGX
  * report is the owner of the newly established session key.
  *
- * \param  peer_enclave_info  SGX information of the peer enclave.
- * \param  expected_data      Expected SGX report data, contains SHA256(K_e || tag1); see
- *                            also top-level comment in pal_process.c.
+ * \param peer_enclave_info  SGX information of the peer enclave.
+ * \param expected_data      Expected SGX report data, contains SHA256(K_e || tag1); see also
+ *                           top-level comment in pal_process.c.
  *
  * \returns 0 on success, negative error code otherwise.
  */
@@ -175,9 +175,9 @@ int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
 /*!
  * \brief Request a local report on an RPC stream (typically called by parent enclave).
  *
- * \param  stream           Stream handle for sending and receiving messages.
- * \param  my_report_data   User-defined data to embed into outgoing SGX report.
- * \param  peer_report_data User-defined data expected in the incoming SGX report.
+ * \param stream            Stream handle for sending and receiving messages.
+ * \param my_report_data    User-defined data to embed into outgoing SGX report.
+ * \param peer_report_data  User-defined data expected in the incoming SGX report.
  *
  * \returns 0 on success, negative error code otherwise.
  */
@@ -187,9 +187,9 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
 /*!
  * \brief Respond with a local report on an RPC stream (typically called by child enclave).
  *
- * \param  stream           Stream handle for sending and receiving messages.
- * \param  my_report_data   User-defined data to embed into outgoing SGX report.
- * \param  peer_report_data User-defined data expected in the incoming SGX report.
+ * \param stream            Stream handle for sending and receiving messages.
+ * \param my_report_data    User-defined data to embed into outgoing SGX report.
+ * \param peer_report_data  User-defined data expected in the incoming SGX report.
  *
  * \returns 0 on success, negative error code otherwise.
  */
