@@ -63,6 +63,7 @@ Table of Contents
    quickstart
    manifest-syntax
    attestation
+   performance
    cloud-deployment
    gramine-users
    gsc
@@ -99,7 +100,6 @@ Table of Contents
    devel/coding-style
    devel/setup
    devel/debugging
-   devel/performance
    devel/new-syscall
    devel/packaging
 
