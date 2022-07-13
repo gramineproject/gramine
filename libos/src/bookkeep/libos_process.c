@@ -59,13 +59,11 @@ int init_process(void) {
     return 0;
 }
 
-int init_process_args(const char* path, const char** argv, char*** out_new_argv) {
-
+int init_process_args(const char** argv, char*** out_new_argv) {
     struct libos_handle* dummy_exec = NULL;
-    int ret = load_and_check_exec(path, argv, &dummy_exec, out_new_argv);
+    int ret = load_and_check_exec(argv[0], argv, &dummy_exec, out_new_argv);
     if (ret < 0) {
-        log_error("libos_init: failed to load exec:%s  ret %d", argv[0], ret);
-        PalProcessExit(1);
+        return ret;
     }
 
     if (dummy_exec)

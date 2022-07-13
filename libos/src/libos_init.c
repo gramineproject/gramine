@@ -423,9 +423,9 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     RUN_INIT(init_mount_root);
     RUN_INIT(init_mount);
 
-    char** new_argv = NULL;
-    RUN_INIT(init_process_args, argv[0], argv, &new_argv);
-    RUN_INIT(init_process_cmdline, argc, (const char**)new_argv);
+    char** expanded_argv = NULL;
+    RUN_INIT(init_process_args, argv, &expanded_argv);
+    RUN_INIT(init_process_cmdline, argc, (const char**)expanded_argv);
     RUN_INIT(init_threading);
     RUN_INIT(init_important_handles);
 
@@ -437,7 +437,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     const char** new_argp;
     elf_auxv_t* new_auxv;
 
-    RUN_INIT(init_stack, (const char**)new_argv, envp, &new_argp, &new_auxv);
+    RUN_INIT(init_stack, (const char**)expanded_argv, envp, &new_argp, &new_auxv);
 
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);

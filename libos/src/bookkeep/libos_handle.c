@@ -111,7 +111,7 @@ static int init_exec_handle(void) {
         goto out;
     }
 
-    /* entrypoint may be a shebang script instead of the ELF binary,  get the actual ELF binary name in this case */
+    /* entrypoint may be a shebang script instead of the ELF binary, get the actual ELF binary name in this case */
     char** dummy_new_argv = NULL;
     const char* dummy_argv[] = {exec_path, NULL};
     ret = load_and_check_exec(exec_path, dummy_argv, &exec_handle, &dummy_new_argv);
