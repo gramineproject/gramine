@@ -98,8 +98,7 @@ def run_command(cmd, *, timeout, can_fail=False, **kwds):
         if time_remaining > 0:
             proc.wait(time_remaining)
 
-        time_remaining = time_end - time.time()
-        timed_out = time_remaining < 0
+        timed_out = time_end < time.time()
 
         proc.poll()
         main_returncode = proc.returncode
