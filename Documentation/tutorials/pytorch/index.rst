@@ -23,7 +23,7 @@ deployed to interpret unknown future data, which allows us to forecast weather,
 classify images, recommend content, and so on.
 
 As machine learning pervades our daily lives, privacy concerns emerge as one of
-the key issues about this technology.  In this tutorial, we focus on protecting
+the key issues about this technology. In this tutorial, we focus on protecting
 the confidentiality and integrity of the input data when the computation takes
 place on an untrusted platform such as a public cloud virtual machine. We also
 protect the model for cases where the model owner is concerned about protecting
@@ -72,7 +72,7 @@ As a second preliminary step, the user must encrypt the input and model files
 with her encryption key and send these encrypted files to the remote
 storage accessible from the SGX platform (2).
 
-Next, the remote platform starts PyTorch inside of the SGX enclave.  Meanwhile,
+Next, the remote platform starts PyTorch inside of the SGX enclave. Meanwhile,
 the user starts the secret provisioning application on her own machine. The two
 machines establish a TLS connection using RA-TLS (3), the user verifies that the
 remote platform has a genuine up-to-date SGX processor and that the application
@@ -136,9 +136,9 @@ Go to the directory with Gramine's PyTorch example::
    cd examples/pytorch
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
-files.  The script reads a `pretrained AlexNet model
+files. The script reads a `pretrained AlexNet model
 <https://pytorch.org/docs/stable/torchvision/models.html>`__ and an image
-``input.jpg``, and infers the class of an object in the image.  Then, the script
+``input.jpg``, and infers the class of an object in the image. Then, the script
 writes the top-5 classification results to a file ``result.txt``.
 
 We first download and save the pre-trained AlexNet model::
@@ -172,7 +172,7 @@ still only shows the non-PPML workflow where Gramine doesn't protect
 input/output user files; the end-to-end PPML workflow will be described below.
 
 The porting effort to run PyTorch in Gramine is minimal and boils down to
-creation of the *Gramine PyTorch-specific manifest file*.  When Gramine runs
+creation of the *Gramine PyTorch-specific manifest file*. When Gramine runs
 an executable, it reads a manifest file that describes the execution environment
 including the security posture, environment variables, dynamic libraries,
 arguments, and so on.  In the rest of this tutorial, we will create this
@@ -234,8 +234,14 @@ This command will autogenerate the non-SGX Gramine manifest (``pytorch.manifest`
 from the template manifest file. This file will be used by Gramine to decide on
 different manifest options how to execute PyTorch inside Gramine.
 
+Let's also remove the file :file:`result.txt` (it should exist from the previous
+native run). Otherwise the Gramine run may fail, but the file with results will
+still be available, which may be confusing. So let's remove it unconditionally::
+
+   rm -f result.txt
+
 Now, launch Gramine via :command:`gramine-direct`. You can simply append the
-arguments after the application path.  Our example takes
+arguments after the application path. Our example takes
 :file:`pytorchexample.py` as an argument::
 
    gramine-direct ./pytorch pytorchexample.py
@@ -247,12 +253,12 @@ Executing PyTorch with Gramine in SGX Enclave
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this section, we will learn how to use Gramine to run the same PyTorch
-example inside an Intel SGX enclave.  Let's go back to the manifest template
+example inside an Intel SGX enclave. Let's go back to the manifest template
 (recall that the manifest keys starting with ``sgx.`` are SGX-specific syntax;
 these entries are ignored if Gramine runs in non-SGX mode).
 
 Below, we will highlight some of the SGX-specific manifest options in
-:file:`pytorch.manifest.template`.  SGX syntax is fully described `here
+:file:`pytorch.manifest.template`. SGX syntax is fully described `here
 <https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
 
 First, here are the following SGX-specific lines in the manifest template::
@@ -279,7 +285,7 @@ specifies files unconditionally allowed by the enclave::
      ...
    ]
 
-Allowed files are *not* cryptographically hashed and verified.  Thus, this is
+Allowed files are *not* cryptographically hashed and verified. Thus, this is
 *insecure* and discouraged for production use (unless you are sure that the
 contents of the files are irrelevant to security of your workload). Here, we use
 these allowed files only for simplicity.
@@ -301,7 +307,12 @@ The above command performs the following tasks:
    used for backwards compatibility with SGX platforms with EPID and without
    Flexible Launch Control).
 
-After running this command and building all the required files, we can use
+Let's also remove the file :file:`result.txt` (it should exist from the previous
+:command:`gramine-direct` run)::
+
+   rm -f result.txt
+
+After running the above commands and building all the required files, we can use
 :command:`gramine-sgx` to launch the PyTorch workload inside an SGX enclave::
 
    gramine-sgx ./pytorch pytorchexample.py
@@ -330,14 +341,15 @@ enclave and provision secrets to it. Secret Provisioning builds on top of RA-TLS
 and typically runs before the application. Both features are provided as opt-in
 libraries.
 
-The `Secret Provisioning library <https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
-provides a simple non-programmatic API to applications: it transparently initializes
-the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a secret obtained
-from the remote user during remote attestation (note that ``SECRET_PROVISION_CONSTRUCTOR``
-must also be set). In our PyTorch example, the provisioned secret is the encryption key
-to encrypt/decrypt user files. To inform Gramine that the obtained secret is
-indeed the key for file encryption, it is enough to set the environment
-variable ``SECRET_PROVISION_SET_KEY``.
+The `Secret Provisioning library
+<https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
+provides a simple non-programmatic API to applications: it transparently
+initializes the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a
+secret obtained from the remote user during remote attestation (note that
+``SECRET_PROVISION_CONSTRUCTOR`` must also be set). In our PyTorch example, the
+provisioned secret is the encryption key to encrypt/decrypt user files. To
+inform Gramine that the obtained secret is indeed the key for file encryption,
+it is enough to set the environment variable ``SECRET_PROVISION_SET_KEY``.
 
 Note that RA-TLS and Secret Provisioning work both with the EPID-based and the
 ECDSA/DCAP schemes of SGX remote attestation. Since this tutorial concentrates
@@ -363,58 +375,56 @@ Preparing Confidential PyTorch Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this section, we will transform our native PyTorch application into an
-end-to-end confidential application.  We will encrypt all user files before
+end-to-end confidential application. We will encrypt all user files before
 starting the enclave, mark them as encrypted, let the enclave communicate with
-the secret provisioning server to get attested and receive the master wrap key
-for encryption and decryption of encrypted files, and finally run the actual
-PyTorch inference.
+the secret provisioning server to get attested and receive the master key for
+encryption and decryption of encrypted files, and finally run the actual PyTorch
+inference.
 
-We will use the previous non-confidential PyTorch example as a starting point,
-so copy the entire PyTorch directory::
-
-   cd examples
-   cp -R pytorch pytorch-confidential
-
-We will also use the reference implementation of Secret Provisioning found under
-``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine repository),
-so build the secret provisioning server and copy all the relevant files from there,
-as detailed ahead::
+We will use the reference implementation of the Secret Provisioning server found
+under ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine
+repository), so let's build the secret provisioning server::
 
    git clone --depth 1 --branch v1.2 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
    make app dcap
 
-The above line builds the secret provisioning server ``secret_prov_server_dcap``.
-We will use this server to provision the master wrap key (used to encrypt/decrypt
-security sensitive input and output files) to the PyTorch enclave.
-See `Secret Provisioning Minimal Examples
+The above line builds the secret provisioning server
+``secret_prov_server_dcap``. We will use this server to provision the master key
+(used to encrypt/decrypt security sensitive input and output files) to the
+PyTorch enclave. See `Secret Provisioning Minimal Examples
 <https://github.com/gramineproject/gramine/tree/master/CI-Examples/ra-tls-secret-prov>`__
 for more information.
 
 Preparing Input Files
 ^^^^^^^^^^^^^^^^^^^^^
 
-The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
-``alexnet-pretrained.pt``.  For simplicity, we re-use the already-existing encryption key
-``wrap-key`` from the ``CI-Examples/ra-tls-secret-prov`` directory::
+We will use the previous non-confidential PyTorch example as a starting point,
+so copy the entire PyTorch directory::
 
-   cd examples/pytorch-confidential
+   cd examples
+   cp -R pytorch pytorch-confidential
+   cd pytorch-confidential
+
+Let's make sure that ``alexnet-pretrained.pt`` network-model file exists under
+our new directory::
+
+   python3 download-pretrained-model.py
+
+The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
+``alexnet-pretrained.pt``. For simplicity, we re-use the already-existing
+encryption key ``wrap-key`` from the ``CI-Examples/ra-tls-secret-prov``
+directory::
+
    mkdir files
    cp gramine/CI-Examples/ra-tls-secret-prov/files/wrap-key files/
 
 In real deployments, the user must replace this ``wrap-key`` with her own
 128-bit encryption key.
 
-We also re-use the ``gramine-sgx-pf-crypt`` utility to encrypt/decrypt the
-necessary files.
-
-Let's also make sure that ``alexnet-pretrained.pt`` network-model file exists
-under our new directory::
-
-   python3 download-pretrained-model.py
-
-Now let's encrypt the original plaintext files. We first move these files under
-the ``plaintext/`` directory and then encrypt them using the wrap key::
+We use the ``gramine-sgx-pf-crypt`` utility to encrypt/decrypt the necessary
+files. Let's encrypt the original plaintext files. We first move these files
+under the ``plaintext/`` directory and then encrypt them using the wrap key::
 
    mkdir plaintext/
    mv input.jpg classes.txt alexnet-pretrained.pt plaintext/
@@ -431,7 +441,7 @@ Preparing Secret Provisioning
 
 The user must prepare the secret provisioning server and start it. For this,
 copy the secret provisioning executable from ``CI-Examples/ra-tls-secret-prov``
-to the current directory::
+(that you built in one of the previous steps) to the current directory::
 
    cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
 
@@ -458,7 +468,7 @@ launch the server in the background.
 Preparing Manifest File
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Finally, let's modify the manifest file.  Open ``pytorch.manifest.template``
+Finally, let's modify the manifest file. Open ``pytorch.manifest.template``
 with your favorite text editor.
 
 Remove the input files from ``sgx.trusted_files`` and move them to the encrypted
