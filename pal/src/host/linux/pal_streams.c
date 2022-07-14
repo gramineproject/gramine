@@ -58,7 +58,7 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
      * no handle type has more than one such field, and some have none */
     /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
      * work? Probably unused. Or pure luck. */
-    switch (PAL_GET_TYPE(handle)) {
+    switch (handle->hdr.type) {
         case PAL_TYPE_FILE:
             d   = handle->file.realpath;
             dsz = strlen(handle->file.realpath) + 1;
@@ -109,7 +109,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     size_t hdlsz = handle_size(hdl);
 
     /* update handle fields to point to correct contents (located right after handle itself) */
-    switch (PAL_GET_TYPE(hdl)) {
+    switch (hdl->hdr.type) {
         case PAL_TYPE_FILE:
             hdl->file.realpath = (hdl->file.realpath ? (const char*)hdl + hdlsz : NULL);
             break;

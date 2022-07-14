@@ -381,7 +381,7 @@ static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
     const char* prefix = NULL;
     size_t prefix_len  = 0;
 
-    switch (PAL_GET_TYPE(handle)) {
+    switch (handle->hdr.type) {
         case PAL_TYPE_PIPESRV:
         case PAL_TYPE_PIPECLI:
             prefix_len = static_strlen(URI_TYPE_PIPE_SRV);

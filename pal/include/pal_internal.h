@@ -106,7 +106,7 @@ struct handle_ops {
 extern const struct handle_ops* g_pal_handle_ops[];
 
 static inline const struct handle_ops* HANDLE_OPS(PAL_HANDLE handle) {
-    int _type = PAL_GET_TYPE(handle);
+    int _type = handle->hdr.type;
     if (_type < 0 || _type >= PAL_HANDLE_TYPE_BOUND)
         return NULL;
     if (handle->hdr.ops) {

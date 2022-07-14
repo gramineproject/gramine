@@ -151,7 +151,7 @@ static int do_getsockname(int fd, struct sockaddr_storage* sa_storage) {
 }
 
 static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != handle->sock.domain) {
         return -PAL_ERROR_INVAL;
     }
@@ -202,14 +202,14 @@ static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
 }
 
 static int tcp_listen(PAL_HANDLE handle, unsigned int backlog) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     int ret = DO_SYSCALL(listen, handle->sock.fd, backlog);
     return unix_to_pal_error(ret);
 }
 
 static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,
                       struct pal_socket_addr* out_client_addr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage = { 0 };
     int linux_addrlen = sizeof(sa_storage);
@@ -242,7 +242,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 
 static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                    struct pal_socket_addr* out_local_addr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
         return -PAL_ERROR_INVAL;
     }
@@ -291,7 +291,7 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 }
 
 static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
 
     memset(attr, 0, sizeof(*attr));
 
@@ -320,7 +320,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 /* Warning: if this is used to change two fields and the second set fails, the first set is not
  * undone. */
 static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (attr->handle_type != PAL_TYPE_SOCKET) {
         return -PAL_ERROR_INVAL;
     }
@@ -489,7 +489,7 @@ static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
     size_t linux_addrlen = 0;
@@ -527,7 +527,7 @@ static int send(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len, si
 
 static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
                 size_t* out_total_size, struct pal_socket_addr* addr, bool force_nonblocking) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
 
     struct sockaddr_storage sa_storage;
     struct iovec* iov = malloc(iov_len * sizeof(*iov));
@@ -564,7 +564,7 @@ static int recv(PAL_HANDLE handle, struct pal_iovec* pal_iov, size_t iov_len,
 }
 
 static int delete_tcp(PAL_HANDLE handle, enum pal_delete_mode mode) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     int how;
     switch (mode) {
         case PAL_DELETE_ALL:
@@ -621,7 +621,7 @@ static struct handle_ops g_udp_handle_ops = {
 };
 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle) {
-    assert(PAL_GET_TYPE(handle) == PAL_TYPE_SOCKET);
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
     switch (handle->sock.type) {
         case PAL_SOCKET_TCP:
             handle->sock.ops = &g_tcp_sock_ops;
