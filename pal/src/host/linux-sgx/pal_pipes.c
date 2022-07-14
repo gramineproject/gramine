@@ -102,17 +102,17 @@ static noreturn int thread_handshake_func(void* param) {
 /*!
  * \brief Create a listening abstract UNIX socket as preparation for connecting two ends of a pipe.
  *
- * An abstract UNIX socket with name "/gramine/<instance_id>/<pipename>" is opened for listening. A
- * corresponding PAL handle with type `pipesrv` is created. This PAL handle typically serves only as
- * an intermediate step to connect two ends of the pipe (`pipecli` and `pipe`). As soon as the other
- * end of the pipe connects to this listening socket, a new accepted socket and the corresponding
- * PAL handle are created, and this `pipesrv` handle can be closed.
- *
  * \param[out] handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
  * \param      name     String uniquely identifying the pipe.
  * \param      options  May contain PAL_OPTION_NONBLOCK.
  *
  * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * An abstract UNIX socket with name "/gramine/<instance_id>/<pipename>" is opened for listening. A
+ * corresponding PAL handle with type `pipesrv` is created. This PAL handle typically serves only as
+ * an intermediate step to connect two ends of the pipe (`pipecli` and `pipe`). As soon as the other
+ * end of the pipe connects to this listening socket, a new accepted socket and the corresponding
+ * PAL handle are created, and this `pipesrv` handle can be closed.
  */
 static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
@@ -158,17 +158,17 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
 /*!
  * \brief Accept the other end of the pipe and create PAL handle for our end of the pipe.
  *
- * Caller creates a `pipesrv` PAL handle with the underlying abstract UNIX socket opened for
- * listening, and then calls this function to wait for the other end of the pipe to connect.
- * When the connection request arrives, a new `pipecli` PAL handle is created with the
- * corresponding underlying socket and is returned in `client`. This `pipecli` PAL handle denotes
- * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
- *
  * \param      handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
  * \param[out] client   PAL handle of type `pipecli` connected to the other end of the pipe (`pipe`).
  * \param      options  flags to set on \p client handle.
  *
  * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * Caller creates a `pipesrv` PAL handle with the underlying abstract UNIX socket opened for
+ * listening, and then calls this function to wait for the other end of the pipe to connect.
+ * When the connection request arrives, a new `pipecli` PAL handle is created with the
+ * corresponding underlying socket and is returned in `client`. This `pipecli` PAL handle denotes
+ * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
  */
 static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     if (HANDLE_HDR(handle)->type != PAL_TYPE_PIPESRV)
@@ -237,16 +237,16 @@ out_err:
 /*!
  * \brief Connect to the other end of the pipe and create PAL handle for our end of the pipe.
  *
- * This function connects to the other end of the pipe, represented as an abstract UNIX socket
- * "/gramine/<instance_id>/<pipename>" opened for listening. When the connection succeeds, a new
- * `pipe` PAL handle is created with the corresponding underlying socket and is returned in
- * `handle`. The other end of the pipe is typically of type `pipecli`.
- *
  * \param[out] handle   PAL handle of type `pipe` with abstract UNIX socket connected to another end.
  * \param      name     String uniquely identifying the pipe.
  * \param      options  May contain PAL_OPTION_NONBLOCK.
  *
  * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * This function connects to the other end of the pipe, represented as an abstract UNIX socket
+ * "/gramine/<instance_id>/<pipename>" opened for listening. When the connection succeeds, a new
+ * `pipe` PAL handle is created with the corresponding underlying socket and is returned in
+ * `handle`. The other end of the pipe is typically of type `pipecli`.
  */
 static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
     int ret;
@@ -316,15 +316,6 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
 /*!
  * \brief Create PAL handle of type `pipesrv` or `pipe` depending on `type`.
  *
- * Depending on the combination of `type` and `uri`, the following PAL handles are created:
- *
- * - `type` is URI_TYPE_PIPE_SRV: create `pipesrv` handle (intermediate listening socket) with
- *                                the name created by `get_gramine_unix_socket_addr`. Caller is
- *                                expected to call pipe_waitforclient() afterwards.
- *
- * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
- *                            `get_gramine_unix_socket_addr`.
- *
  * \param[out] handle   Created PAL handle of type `pipesrv` or `pipe`.
  * \param      type     Can be URI_TYPE_PIPE or URI_TYPE_PIPE_SRV.
  * \param      uri      Content is either NUL (for anonymous pipe) or a string with pipe name.
@@ -334,6 +325,15 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * \param      options  May contain PAL_OPTION_NONBLOCK.
  *
  * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * Depending on the combination of `type` and `uri`, the following PAL handles are created:
+ *
+ * - `type` is URI_TYPE_PIPE_SRV: create `pipesrv` handle (intermediate listening socket) with
+ *                                the name created by `get_gramine_unix_socket_addr`. Caller is
+ *                                expected to call pipe_waitforclient() afterwards.
+ *
+ * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
+ *                            `get_gramine_unix_socket_addr`.
  */
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
@@ -514,12 +514,12 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 /*!
  * \brief Set attributes of PAL handle.
  *
- * Currently only `nonblocking` attribute can be set.
- *
  * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param attr    User-supplied buffer with new handle's attributes.
  *
  * \returns 0 on success, negative PAL error code otherwise.
+ *
+ * Currently only `nonblocking` attribute can be set.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->pipe.fd == PAL_IDX_POISON)
@@ -546,13 +546,13 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 /*!
  * \brief Retrieve full URI of PAL handle.
  *
- * Full URI is composed of the type and pipe name: "<type>:<pipename>".
- *
  * \param      handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  * \param[out] buffer  User-supplied buffer to write URI to.
  * \param      count   Size of the user-supplied buffer.
  *
  * \returns Number of bytes written on success, negative PAL error code otherwise.
+ *
+ * Full URI is composed of the type and pipe name: "<type>:<pipename>".
  */
 static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
     size_t old_count = count;

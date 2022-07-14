@@ -58,18 +58,18 @@ struct ias_context_t {
 /*! IAS response with attestation evidence or signature revocation list */
 struct ias_request_resp {
     char* signature;          /*!< X-IASReport-Signature data, NULL terminated string */
-    size_t signature_size;    /*!< size of \a signature string */
+    size_t signature_size;    /*!< size of \p signature string */
     char* certificate;        /*!< x-iasreport-signing-certificate data, NULL terminated string */
-    size_t certificate_size;  /*!< size of \a certificate string */
+    size_t certificate_size;  /*!< size of \p certificate string */
     char* data;               /*!< response data */
-    size_t data_size;         /*!< size of \a data field */
+    size_t data_size;         /*!< size of \p data field */
 };
 
 /*!
  * \brief Decode %-sequences ("URL encoding").
  *
  * \param      src  NULL-terminated URL-encoded input.
- * \param[out] dst  Buffer to write decoded output to. Can be the same as \a src.
+ * \param[out] dst  Buffer to write decoded output to. Can be the same as \p src.
  */
 static void urldecode(const char* src, char* dst) {
     char a, b;
@@ -107,13 +107,13 @@ static void urldecode(const char* src, char* dst) {
  * \brief Parse response headers to get report signature and other metadata.
  *
  * \param buffer   Single HTTP header.
- * \param size     Together with \a count a size of \a buffer.
- * \param count    Size of \a buffer, in \a size units.
+ * \param size     Together with \p count a size of \p buffer.
+ * \param count    Size of \p buffer, in \p size units.
  * \param context  User data pointer (ias_request_resp).
  *
- * \returns \a size * \a count
+ * \returns \p size * \p count
  *
- * \details See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_HEADERFUNCTION.html
+ * See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_HEADERFUNCTION.html
  */
 static size_t header_callback(char* buffer, size_t size, size_t count, void* context) {
     const char* sig_hdr = "x-iasreport-signature: "; // header containing IAS signature
@@ -166,13 +166,13 @@ static size_t header_callback(char* buffer, size_t size, size_t count, void* con
  * \brief Add HTTP body chunk to internal buffer.
  *
  * \param buffer   Chunk containing HTTP body.
- * \param size     Together with \a count a size of \a buffer.
- * \param count    Size of \a buffer, in \a size units.
+ * \param size     Together with \p count a size of \p buffer.
+ * \param count    Size of \p buffer, in \p size units.
  * \param context  User data pointer (ias_request_resp).
  *
- * \returns \a size * \a count
+ * \returns \p size * \p count
  *
- * \details See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
+ * See cURL documentation at https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
  */
 static size_t body_callback(char* buffer, size_t size, size_t count, void* context) {
     size_t total_size = size * count;
@@ -375,7 +375,7 @@ out:
     return ret;
 }
 
-/*! Send request to IAS and save response in \a ias_resp; caller is responsible for its cleanup */
+/*! Send request to IAS and save response in \p ias_resp; caller is responsible for its cleanup */
 static int ias_send_request(struct ias_context_t* context, struct ias_request_resp* ias_resp,
                             const void* quote, size_t quote_size, const char* nonce) {
     int ret = -1;

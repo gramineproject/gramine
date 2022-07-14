@@ -125,13 +125,13 @@ int sgx_verify_report(sgx_report_t* report);
 /*!
  * \brief Obtain a CPU-signed report for local attestation.
  *
- * Caller must align all parameters to 512 bytes (cf. `__sgx_mem_aligned`).
- *
  * \param      target_info  Information on the target enclave.
  * \param      data         User-specified data to be included in the report.
  * \param[out] report       Output buffer to store the report.
  *
  * \returns 0 on success, negative error code otherwise.
+ *
+ * Caller must align all parameters to 512 bytes (cf. `__sgx_mem_aligned`).
  */
 int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t* data,
                    sgx_report_t* report);
@@ -152,15 +152,15 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key);
 /*!
  * \brief Verify the peer enclave during SGX local attestation.
  *
- * Verifies that the SGX information of the peer enclave is the same as ours (all Gramine enclaves
- * with the same configuration have the same SGX enclave info), and that the signer of the SGX
- * report is the owner of the newly established session key.
- *
  * \param peer_enclave_info  SGX information of the peer enclave.
  * \param expected_data      Expected SGX report data, contains SHA256(K_e || tag1); see also
  *                           top-level comment in pal_process.c.
  *
  * \returns 0 on success, negative error code otherwise.
+ *
+ * Verifies that the SGX information of the peer enclave is the same as ours (all Gramine enclaves
+ * with the same configuration have the same SGX enclave info), and that the signer of the SGX
+ * report is the owner of the newly established session key.
  */
 bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
                         sgx_report_data_t* expected_data);

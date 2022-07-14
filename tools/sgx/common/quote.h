@@ -15,7 +15,7 @@
  *
  * \param quote_data  Buffer with quote data. This can be a full quote (sgx_quote_t) or a quote
  *                    from IAS attestation report (which is missing signature fields).
- * \param quote_size  Size of \a quote_data in bytes.
+ * \param quote_size  Size of \p quote_data in bytes.
  */
 void display_quote(const void* quote_data, size_t quote_size);
 
@@ -31,8 +31,8 @@ void display_quote(const void* quote_data, size_t quote_size);
  * \param expected_as_str  If true, then all expected SGX fields are treated as hex and decimal
  *                         strings. Otherwise, they are treated as raw bytes.
  *
- * If \a expected_as_str is true, then \a mr_signer, \a mr_enclave and \a report_data are treated
- * as hex strings, and \a isv_prod_id and a isv_svn are treated as decimal strings. This is
+ * If \p expected_as_str is true, then \p mr_signer, \p mr_enclave and \p report_data are treated
+ * as hex strings, and \p isv_prod_id and a isv_svn are treated as decimal strings. This is
  * convenient for command-line utilities.
  *
  * \returns 0 on successful verification, negative value on error.

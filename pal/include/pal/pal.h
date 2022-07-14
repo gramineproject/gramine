@@ -636,7 +636,7 @@ int PalThreadResume(PAL_HANDLE thread);
  * \brief Set the CPU affinity of a thread.
  *
  * \param thread        PAL thread for which to set the CPU affinity.
- * \param cpumask_size  Size in bytes of the bitmask pointed by \a cpu_mask.
+ * \param cpumask_size  Size in bytes of the bitmask pointed by \p cpu_mask.
  * \param cpu_mask      Pointer to the new CPU mask.
  *
  * \returns 0 on success, negative error code on failure.
@@ -650,14 +650,14 @@ int PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned lon
  * \brief Get the CPU affinity of a thread.
  *
  * \param thread        PAL thread for which to get the CPU affinity.
- * \param cpumask_size  Size in bytes of the bitmask pointed by \a cpu_mask.
+ * \param cpumask_size  Size in bytes of the bitmask pointed by \p cpu_mask.
  * \param cpu_mask      Pointer to hold the current CPU mask.
  *
  * \returns 0 on success, negative error code on failure.
  *
- * This function assumes that \a cpumask_size is valid and greater than 0. Also, \a cpumask_size
+ * This function assumes that \p cpumask_size is valid and greater than 0. Also, \p cpumask_size
  * must be able to fit all the processors in the host and must be aligned by sizeof(long). For
- * example, if the host supports 4 CPUs, \a cpumask_size should be 8 bytes.
+ * example, if the host supports 4 CPUs, \p cpumask_size should be 8 bytes.
  */
 int PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
 

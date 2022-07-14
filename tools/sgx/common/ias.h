@@ -21,7 +21,7 @@ struct ias_context_t;
  *
  * \returns Context to be used in further ias_* calls or NULL on failure.
  *
- * \details Should be called once, before handling any request.
+ * Should be called once, before handling any request.
  */
 struct ias_context_t* ias_init(const char* ias_api_key, const char* ias_verify_url,
                                const char* ias_sigrl_url);
@@ -31,7 +31,7 @@ struct ias_context_t* ias_init(const char* ias_api_key, const char* ias_verify_u
  *
  * \param context  IAS context returned by ias_init().
  *
- * \details Should be called once, after serving last request.
+ * Should be called once, after serving last request.
  */
 void ias_cleanup(struct ias_context_t* context);
 
@@ -52,7 +52,7 @@ int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_s
  *
  * \param context      IAS context returned by ias_init().
  * \param quote        Binary quote data blob.
- * \param quote_size   Size of \a quote.
+ * \param quote_size   Size of \p quote.
  * \param nonce        (Optional) Nonce string to send with the IAS request (max 32 chars).
  * \param report_path  (Optional) File to save IAS report to.
  * \param sig_path     (Optional) File to save IAS report's signature to.
@@ -63,7 +63,7 @@ int ias_get_sigrl(struct ias_context_t* context, uint8_t gid[4], size_t* sigrl_s
  *  This version of the function is convenient for command-line utilities. To get raw IAS contents,
  *  use ias_send_quote_get_report_raw().
  *
- * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
+ * Sends quote to the "Verify Attestation Evidence" IAS endpoint.
  */
 int ias_send_quote_get_report(struct ias_context_t* context, const void* quote, size_t quote_size,
                               const char* nonce, const char* report_path, const char* sig_path,
@@ -75,7 +75,7 @@ int ias_send_quote_get_report(struct ias_context_t* context, const void* quote, 
  *
  * \param      context           IAS context returned by ias_init().
  * \param      quote             Binary quote data blob.
- * \param      quote_size        Size of \a quote.
+ * \param      quote_size        Size of \p quote.
  * \param      nonce             (Optional) Nonce string to send with IAS request (max 32 chars).
  * \param[out] report_data_ptr   (Optional) Pointer to allocated IAS report.
  * \param[out] report_data_size  (Optional) Size of allocated IAS report.
@@ -87,11 +87,11 @@ int ias_send_quote_get_report(struct ias_context_t* context, const void* quote, 
  * \returns 0 on success, -1 otherwise.
  *
  * This version of the function is convenient for library usage. This function allocates buffers
- * for IAS contents and passes them to caller via \a report_data_ptr, \a sig_data_ptr and
- * \a cert_data_ptr. The caller is responsible for freeing them.
+ * for IAS contents and passes them to caller via \p report_data_ptr, \p sig_data_ptr and
+ * \p cert_data_ptr. The caller is responsible for freeing them.
  * To save IAS contents to files, use ias_send_quote_get_report().
  *
- * \details Sends quote to the "Verify Attestation Evidence" IAS endpoint.
+ * Sends quote to the "Verify Attestation Evidence" IAS endpoint.
  */
 int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quote,
                                   size_t quote_size, const char* nonce, char** report_data_ptr,
@@ -104,16 +104,16 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
  *        allocate enough memory to hold the quote and pass it to the user.
  *
  * \param ias_report           IAS attestation verification report.
- * \param ias_report_size      Size of \a ias_report in bytes.
+ * \param ias_report_size      Size of \p ias_report in bytes.
  * \param ias_sig_b64          IAS report signature (base64-encoded as returned by IAS).
- * \param ias_sig_b64_size     Size of \a ias_sig_b64 in bytes.
+ * \param ias_sig_b64_size     Size of \p ias_sig_b64 in bytes.
  * \param allow_outdated_tcb   Treat IAS status codes: GROUP_OUT_OF_DATE, CONFIGURATION_NEEDED,
  *                             SW_HARDENING_NEEDED, CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
  * \param nonce                (Optional) Nonce that's expected in the report.
  * \param ias_pub_key_pem      (Optional) IAS public RSA key (PEM format, NULL-terminated).
  *                             If not specified, a hardcoded Intel's key is used.
  * \param[out] out_quote       Buffer with quote. User is responsible for freeing it.
- * \param[out] out_quote_size  Size of \a out_quote in bytes.
+ * \param[out] out_quote_size  Size of \p out_quote in bytes.
  *
  * \returns 0 on successful verification, negative value on error.
  */

@@ -164,6 +164,8 @@ Preferred Doxygen style
        *
        * \returns Sum of the arguments. Sometimes a longer description is needed, then it should be
        *          wrapped and aligned like this.
+       *
+       * Longer description goes here (only for functions complex enough to deserve it).
        */
       int foo(int first, int second) {
           return first + second;

@@ -113,8 +113,8 @@ typedef void (*pf_debug_f)(const char* msg);
  *
  * \param      key         AES-GCM key.
  * \param      input       Plaintext data.
- * \param      input_size  Size of \a input in bytes.
- * \param[out] mac         MAC computed for \a input.
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] mac         MAC computed for \p input.
  *
  * \returns PF status.
  */
@@ -127,11 +127,11 @@ typedef pf_status_t (*pf_aes_cmac_f)(const pf_key_t* key, const void* input, siz
  * \param      key         AES-GCM key.
  * \param      iv          Initialization vector.
  * \param      aad         (optional) Additional authenticated data.
- * \param      aad_size    Size of \a aad in bytes.
+ * \param      aad_size    Size of \p aad in bytes.
  * \param      input       Plaintext data.
- * \param      input_size  Size of \a input in bytes.
- * \param[out] output      Buffer for encrypted data (size: \a input_size).
- * \param[out] mac         MAC computed for \a input and \a aad.
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] output      Buffer for encrypted data (size: \p input_size).
+ * \param[out] mac         MAC computed for \p input and \p aad.
  *
  * \returns PF status.
  */
@@ -145,10 +145,10 @@ typedef pf_status_t (*pf_aes_gcm_encrypt_f)(const pf_key_t* key, const pf_iv_t* 
  * \param      key         AES-GCM key.
  * \param      iv          Initialization vector.
  * \param      aad         (optional) Additional authenticated data.
- * \param      aad_size    Size of \a aad in bytes.
+ * \param      aad_size    Size of \p aad in bytes.
  * \param      input       Encrypted data.
- * \param      input_size  Size of \a input in bytes.
- * \param[out] output      Buffer for decrypted data (size: \a input_size).
+ * \param      input_size  Size of \p input in bytes.
+ * \param[out] output      Buffer for decrypted data (size: \p input_size).
  * \param      mac         Expected MAC.
  *
  * \returns PF status.
@@ -161,7 +161,7 @@ typedef pf_status_t (*pf_aes_gcm_decrypt_f)(const pf_key_t* key, const pf_iv_t* 
  * \brief Cryptographic random number generator callback.
  *
  * \param[out] buffer  Buffer to fill with random bytes.
- * \param      size    Size of \a buffer in bytes.
+ * \param      size    Size of \p buffer in bytes.
  *
  * \returns PF status.
  */
@@ -179,7 +179,7 @@ typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
  * \param random_f           Cryptographic random number generator callback.
  * \param debug_f            (optional) Debug print callback.
  *
- * \details Must be called before any actual APIs.
+ * Must be called before any actual APIs.
  */
 void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_truncate_f truncate_f,
                       pf_aes_cmac_f aes_cmac_f, pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
@@ -204,7 +204,7 @@ const char* pf_strerror(int err);
  * \brief Open a protected file.
  *
  * \param      handle           Open underlying file handle.
- * \param      path             Path to the file. If NULL and \a create is false, don't check path
+ * \param      path             Path to the file. If NULL and \p create is false, don't check path
  *                              for validity.
  * \param      underlying_size  Underlying file size.
  * \param      mode             Access mode.
@@ -256,7 +256,7 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
  * \brief Get data size of a PF.
  *
  * \param      pf    PF context.
- * \param[out] size  Data size of \a pf.
+ * \param[out] size  Data size of \p pf.
  *
  * \returns PF status.
  */
@@ -269,8 +269,9 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size);
  * \param size  Data size to set.
  *
  * \returns PF status.
- * \details If the file is extended, added bytes are zero.
- *          Shrinking to arbitrary size is not implemented yet (TODO).
+ *
+ * If the file is extended, added bytes are zero. Shrinking to arbitrary size is not implemented
+ * yet (TODO).
  */
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 

@@ -34,15 +34,15 @@ typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
 /*!
  * \brief Write arbitrary data in an established RA-TLS session.
  *
- * This function can be called after an RA-TLS session is established via client-side call to
- * secret_provision_start() or in the server-side callback secret_provision_cb_t().
- *
  * \param ctx   Established RA-TLS session, obtained from secret_provision_start() or in
  *              secret_provision_cb_t() callback.
  * \param buf   Buffer with arbitrary data to write.
  * \param size  Size of buffer.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * This function can be called after an RA-TLS session is established via client-side call to
+ * secret_provision_start() or in the server-side callback secret_provision_cb_t().
  */
 __attribute__ ((visibility("default")))
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size);
@@ -50,15 +50,15 @@ int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t si
 /*!
  * \brief Read arbitrary data in an established RA-TLS session.
  *
- * This function can be called after an RA-TLS session is established via client-side call to
- * secret_provision_start() or in the server-side callback secret_provision_cb_t().
- *
  * \param      ctx   Established RA-TLS session, obtained from secret_provision_start() or in
  *                   secret_provision_cb_t() callback.
  * \param[out] buf   Buffer with arbitrary data to read.
  * \param      size  Size of buffer.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * This function can be called after an RA-TLS session is established via client-side call to
+ * secret_provision_start() or in the server-side callback secret_provision_cb_t().
  */
 __attribute__ ((visibility("default")))
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
@@ -66,14 +66,14 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
 /*!
  * \brief Close an established RA-TLS session.
  *
+ * \param ctx  Established RA-TLS session.
+ *
+ * \returns 0 on success, specific error code (negative int) otherwise.
+ *
  * This function can be called after an RA-TLS session is established via client-side call to
  * secret_provision_start() or in the server-side callback secret_provision_cb_t(). Typically,
  * application-specific protocol to provision secrets is implemented via secret_provision_read()
  * and secret_provision_write(), and this function is called to finish secret provisioning.
- *
- * \param ctx  Established RA-TLS session.
- *
- * \returns 0 on success, specific error code (negative int) otherwise.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
@@ -81,15 +81,15 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
 /*!
  * \brief Get a provisioned secret.
  *
- * This function is relevant only for clients. Typically, the client would ask for secret
- * provisioning via secret_provision_start() which will obtain the secret from the server and
- * save it in enclave memory. After that, the client can call this function to retrieve the
- * secret from memory.
- *
  * \param[out] out_secret       Pointer to buffer with secret (allocated by the library).
  * \param[out] out_secret_size  Size of allocated buffer.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * This function is relevant only for clients. Typically, the client would ask for secret
+ * provisioning via secret_provision_start() which will obtain the secret from the server and
+ * save it in enclave memory. After that, the client can call this function to retrieve the
+ * secret from memory.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_get(uint8_t** out_secret, size_t* out_secret_size);
@@ -105,14 +105,6 @@ void secret_provision_destroy(void);
 /*!
  * \brief Establish an RA-TLS session and retrieve first secret (client-side).
  *
- * This function must be called before other functions. It establishes a secure RA-TLS session
- * with the first available server from the \a in_servers list and retrieves the first secret.
- * If \a out_ssl pointer is supplied by the user, the session is not closed and the user can
- * continue this secure session with the server via secret_provision_read(),
- * secret_provision_write(), and the final secret_provision_close(). The first secret can be
- * retrieved via secret_provision_get() and later destroyed via secret_provision_destroy().
- * Not thread-safe.
- *
  * \param     in_servers        List of servers (in format "server1:port1;server2:port2;..."). If
  *                              not specified, environment variable `SECRET_PROVISION_SERVERS` is
  *                              used. If the environment variable is also not specified, default
@@ -126,6 +118,14 @@ void secret_provision_destroy(void);
  *                              RA-TLS session is closed.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * This function must be called before other functions. It establishes a secure RA-TLS session
+ * with the first available server from the \p in_servers list and retrieves the first secret.
+ * If \p out_ssl pointer is supplied by the user, the session is not closed and the user can
+ * continue this secure session with the server via secret_provision_read(),
+ * secret_provision_write(), and the final secret_provision_close(). The first secret can be
+ * retrieved via secret_provision_get() and later destroyed via secret_provision_destroy().
+ * Not thread-safe.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
@@ -133,16 +133,6 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 
 /*!
  * \brief Start a secret provisioning service (server-side).
- *
- * This function starts a multi-threaded secret provisioning server. It listens to client
- * connections on \a port. For each new client, it spawns a new thread in which the RA-TLS
- * mutually-attested session is established. The server provides a normal X.509 certificate to the
- * client (initialized with \a cert_path and \a key_path). The server expects a self-signed RA-TLS
- * certificate from the client. During TLS handshake, the server invokes a user-supplied callback
- * m_cb() for user-specific verification of measurements in client's SGX quote (if user supplied
- * it). After successfuly establishing the RA-TLS session and sending the first secret \a secret,
- * the server invokes a user-supplied callback f_cb() for user-specific communication with the
- * client (if user supplied it). This function is thread-safe and requires pthread library.
  *
  * \param secret       First secret (arbitrary binary blob) to send to client after establishing
  *                     RA-TLS session.
@@ -157,6 +147,16 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
  *                     to the client and the RA-TLS session is closed.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * This function starts a multi-threaded secret provisioning server. It listens to client
+ * connections on \p port. For each new client, it spawns a new thread in which the RA-TLS
+ * mutually-attested session is established. The server provides a normal X.509 certificate to the
+ * client (initialized with \p cert_path and \p key_path). The server expects a self-signed RA-TLS
+ * certificate from the client. During TLS handshake, the server invokes a user-supplied callback
+ * m_cb() for user-specific verification of measurements in client's SGX quote (if user supplied
+ * it). After successfuly establishing the RA-TLS session and sending the first secret \p secret,
+ * the server invokes a user-supplied callback f_cb() for user-specific communication with the
+ * client (if user supplied it). This function is thread-safe and requires pthread library.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start_server(uint8_t* secret, size_t secret_size, const char* port,
