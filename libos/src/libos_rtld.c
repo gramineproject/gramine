@@ -580,7 +580,7 @@ static int read_file_fragment(struct libos_handle* file, void* buf, size_t size,
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
 static int load_and_check_shebang(struct libos_handle* file, char** argv,
-                                  char*** out_new_argv) {
+                                  char*** out_new_argv, const char* argv0) {
     int ret;
 
     char** new_argv = NULL;
@@ -634,7 +634,7 @@ static int load_and_check_shebang(struct libos_handle* file, char** argv,
         new_argv_cnt++;
     }
     for (char** a = argv; *a; a++) {
-        new_argv_bytes += strlen(*a) + 1;
+        new_argv_bytes += strlen(new_argv_cnt == 0 ? argv0 : *a) + 1;
         new_argv_cnt++;
     }
 
@@ -662,8 +662,8 @@ static int load_and_check_shebang(struct libos_handle* file, char** argv,
         new_argv_ptr += size;
     }
     for (char** a = argv; *a; a++) {
-        size_t size = strlen(*a) + 1;
-        memcpy(new_argv_ptr, *a, size);
+        size_t size = strlen(new_argv_idx == 0 ? argv0 : *a) + 1;
+        memcpy(new_argv_ptr, new_argv_idx == 0 ? argv0 : *a, size);
         new_argv[new_argv_idx] = new_argv_ptr;
         new_argv_idx++;
         new_argv_ptr += size;
@@ -694,7 +694,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
      * `*out_new_argv` must be always freed by caller */
     size_t curr_argv_bytes = 0, curr_argv_cnt = 0;
     for (const char** a = argv; *a; a++) {
-        curr_argv_bytes += strlen(curr_argv_cnt == 0 ? path: *a) + 1;
+        curr_argv_bytes += strlen(*a) + 1;
         curr_argv_cnt++;
     }
 
@@ -712,8 +712,8 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
 
     size_t curr_argv_idx = 0;
     for (const char** a = argv; *a; a++) {
-        size_t size = strlen(curr_argv_idx == 0 ? path: *a) + 1;
-        memcpy(curr_argv_ptr, curr_argv_idx == 0 ? path: *a, size);
+        size_t size = strlen(*a) + 1;
+        memcpy(curr_argv_ptr, *a, size);
         curr_argv[curr_argv_idx] = curr_argv_ptr;
         curr_argv_idx++;
         curr_argv_ptr += size;
@@ -753,7 +753,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
                   depth > 1 ? curr_argv[0] : path);
 
         char** new_argv = NULL;
-        ret = load_and_check_shebang(file, curr_argv, &new_argv);
+        ret = load_and_check_shebang(file, curr_argv, &new_argv, path);
         if (ret < 0) {
             goto err;
         }
