@@ -30,14 +30,6 @@
 static LISTP_TYPE(libos_thread) g_thread_list = LISTP_INIT;
 struct libos_lock g_thread_list_lock;
 
-//#define DEBUG_REF
-
-#ifdef DEBUG_REF
-#define DEBUG_PRINT_REF_COUNT(rc) log_debug("%s %p ref_count = %ld", __func__, dispositions, rc)
-#else
-#define DEBUG_PRINT_REF_COUNT(rc) __UNUSED(rc)
-#endif
-
 static struct libos_signal_dispositions* alloc_default_signal_dispositions(void) {
     struct libos_signal_dispositions* dispositions = malloc(sizeof(*dispositions));
     if (!dispositions) {
@@ -316,14 +308,11 @@ struct libos_thread* get_new_internal_thread(void) {
 }
 
 void get_signal_dispositions(struct libos_signal_dispositions* dispositions) {
-    refcount_t ref_count = refcount_inc(&dispositions->ref_count);
-    DEBUG_PRINT_REF_COUNT(ref_count);
+    refcount_inc(&dispositions->ref_count);
 }
 
 void put_signal_dispositions(struct libos_signal_dispositions* dispositions) {
     refcount_t ref_count = refcount_dec(&dispositions->ref_count);
-
-    DEBUG_PRINT_REF_COUNT(ref_count);
 
     if (!ref_count) {
         destroy_lock(&dispositions->lock);
@@ -332,14 +321,11 @@ void put_signal_dispositions(struct libos_signal_dispositions* dispositions) {
 }
 
 void get_thread(struct libos_thread* thread) {
-    refcount_t ref_count = refcount_inc(&thread->ref_count);
-    DEBUG_PRINT_REF_COUNT(ref_count);
+    refcount_inc(&thread->ref_count);
 }
 
 void put_thread(struct libos_thread* thread) {
     refcount_t ref_count = refcount_dec(&thread->ref_count);
-
-    DEBUG_PRINT_REF_COUNT(ref_count);
 
     if (!ref_count) {
         assert(LIST_EMPTY(thread, list));

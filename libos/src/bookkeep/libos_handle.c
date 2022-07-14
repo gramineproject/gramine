@@ -31,8 +31,6 @@ static MEM_MGR handle_mgr = NULL;
 
 #define INIT_HANDLE_MAP_SIZE 32
 
-//#define DEBUG_REF
-
 static int init_tty_handle(struct libos_handle* hdl, bool write) {
     int flags = write ? (O_WRONLY | O_APPEND) : O_RDONLY;
     return open_namei(hdl, /*start=*/NULL, "/dev/tty", flags, LOOKUP_FOLLOW, /*found=*/NULL);
@@ -465,12 +463,7 @@ static inline __attribute__((unused)) const char* __handle_name(struct libos_han
 }
 
 void get_handle(struct libos_handle* hdl) {
-    refcount_t ref_count = refcount_inc(&hdl->ref_count);
-#ifdef DEBUG_REF
-    log_debug("get handle %p(%s) (ref_count = %ld)", hdl, __handle_name(hdl), ref_count);
-#else
-    __UNUSED(ref_count);
-#endif
+    refcount_inc(&hdl->ref_count);
 }
 
 static void destroy_handle(struct libos_handle* hdl) {
@@ -482,10 +475,6 @@ static void destroy_handle(struct libos_handle* hdl) {
 
 void put_handle(struct libos_handle* hdl) {
     refcount_t ref_count = refcount_dec(&hdl->ref_count);
-
-#ifdef DEBUG_REF
-    log_debug("put handle %p(%s) (ref_count = %ld)", hdl, __handle_name(hdl), ref_count);
-#endif
 
     if (!ref_count) {
         assert(hdl->epoll_items_count == 0);
@@ -501,9 +490,6 @@ void put_handle(struct libos_handle* hdl) {
         free(hdl->uri);
 
         if (hdl->pal_handle) {
-#ifdef DEBUG_REF
-            log_debug("handle %p closes PAL handle %p", hdl, hdl->pal_handle);
-#endif
             PalObjectClose(hdl->pal_handle); // TODO: handle errors
             hdl->pal_handle = NULL;
         }
