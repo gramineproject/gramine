@@ -29,7 +29,7 @@
  * TODO: add AMD-specific flags once needed.
  */
 
-static const char* const g_cpu_flags_cpuid_1_ecx[] = {
+static const char* const g_cpu_flags_cpuid_1_ecx[32] = {
     [0]  = "pni",                /* "pni" SSE-3 */
     [1]  = "pclmulqdq",          /* PCLMULQDQ instruction */
     [2]  = "dtes64",             /* 64-bit Debug Store */
@@ -63,7 +63,7 @@ static const char* const g_cpu_flags_cpuid_1_ecx[] = {
     [31] = "hypervisor",         /* Running on a hypervisor */
 };
 
-static const char* const g_cpu_flags_cpuid_1_edx[] = {
+static const char* const g_cpu_flags_cpuid_1_edx[32] = {
     [0]  = "fpu",     /* Onboard FPU */
     [1]  = "vme",     /* Virtual Mode Extensions */
     [2]  = "de",      /* Debugging Extensions */
@@ -96,7 +96,7 @@ static const char* const g_cpu_flags_cpuid_1_edx[] = {
     [31] = "pbe",     /* Pending Break Enable */
 };
 
-static const char* const g_cpu_flags_cpuid_6_eax[] = {
+static const char* const g_cpu_flags_cpuid_6_eax[32] = {
     [0]  = "dtherm",         /* Digital Thermal Sensor */
     [1]  = "ida",            /* Intel Dynamic Acceleration */
     [2]  = "arat",           /* Always Running APIC Timer */
@@ -110,7 +110,7 @@ static const char* const g_cpu_flags_cpuid_6_eax[] = {
     [19] = "hfi",            /* Hardware Feedback Interface */
 };
 
-static const char* const g_cpu_flags_cpuid_7_0_ebx[] = {
+static const char* const g_cpu_flags_cpuid_7_0_ebx[32] = {
     [0]  = "fsgsbase",        /* RDFSBASE, WRFSBASE, RDGSBASE, WRGSBASE instructions*/
     [1]  = "tsc_adjust",      /* TSC adjustment MSR 0x3B */
     [2]  = "sgx",             /* Software Guard Extensions */
@@ -144,7 +144,7 @@ static const char* const g_cpu_flags_cpuid_7_0_ebx[] = {
     [31] = "avx512vl",        /* AVX-512 VL (128/256 Vector Length) Extensions */
 };
 
-static const char* const g_cpu_flags_cpuid_7_0_ecx[] = {
+static const char* const g_cpu_flags_cpuid_7_0_ecx[32] = {
     [1]  = "avx512vbmi",       /* AVX512 Vector Bit Manipulation instructions*/
     [2]  = "umip",             /* User Mode Instruction Protection */
     [3]  = "pku",              /* Protection Keys for Userspace */
@@ -168,7 +168,7 @@ static const char* const g_cpu_flags_cpuid_7_0_ecx[] = {
     [30] = "sgx_lc",           /* Software Guard Extensions Launch Control */
 };
 
-static const char* const g_cpu_flags_cpuid_7_0_edx[] = {
+static const char* const g_cpu_flags_cpuid_7_0_edx[32] = {
     [2]  = "avx512_4vnniw",       /* AVX-512 Neural Network Instructions */
     [3]  = "avx512_4fmaps",       /* AVX-512 Multiply Accumulation Single precision */
     [4]  = "fsrm",                /* Fast Short Rep Mov */
@@ -195,12 +195,12 @@ static const char* const g_cpu_flags_cpuid_7_0_edx[] = {
     [31] = "",                    /* "" Speculative Store Bypass Disable */
 };
 
-static const char* const g_cpu_flags_cpuid_7_1_eax[] = {
+static const char* const g_cpu_flags_cpuid_7_1_eax[32] = {
     [4] = "avx_vnni",    /* AVX VNNI instructions */
     [5] = "avx512_bf16", /* AVX512 BFLOAT16 instructions */
 };
 
-static const char* const g_cpu_flags_cpuid_d_1_eax[] = {
+static const char* const g_cpu_flags_cpuid_d_1_eax[32] = {
     [0] = "xsaveopt", /* XSAVEOPT instruction */
     [1] = "xsavec",   /* XSAVEC instruction */
     [2] = "xgetbv1",  /* XGETBV with ECX = 1 instruction */
@@ -208,7 +208,7 @@ static const char* const g_cpu_flags_cpuid_d_1_eax[] = {
     [4] = "",         /* "" eXtended Feature Disabling */
 };
 
-static const char* const g_cpu_flags_cpuid_8000_0001_ecx[] = {
+static const char* const g_cpu_flags_cpuid_8000_0001_ecx[32] = {
     [0]  = "lahf_lm",       /* LAHF/SAHF in long mode */
     [1]  = "cmp_legacy",    /* If yes HyperThreading not valid */
     [2]  = "svm",           /* Secure Virtual Machine */
@@ -237,7 +237,7 @@ static const char* const g_cpu_flags_cpuid_8000_0001_ecx[] = {
     [29] = "mwaitx",        /* MWAIT extension (MONITORX/MWAITX instructions) */
 };
 
-static const char* const g_cpu_flags_cpuid_8000_0001_edx[] = {
+static const char* const g_cpu_flags_cpuid_8000_0001_edx[32] = {
     [11] = "syscall",  /* SYSCALL/SYSRET */
     [19] = "mp",       /* MP Capable */
     [20] = "nx",       /* Execute Disable */
