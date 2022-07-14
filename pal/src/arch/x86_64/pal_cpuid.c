@@ -20,6 +20,15 @@
     (s)[2] = ((w) >> 16) & 0xff;    \
     (s)[3] = ((w) >> 24) & 0xff;
 
+/*
+ *  List of x86 CPU feature flags. This list was last revised in July 2022, see below for details:
+ *
+ * - https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/Documentation/x86/cpuinfo.rst
+ * - https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/x86/include/asm/cpufeatures.h
+ *
+ * TODO: add AMD-specific flags once needed.
+ */
+
 static const char* const g_cpu_flags_cpuid_1_ecx[] = {
     [0]  = "pni",                /* "pni" SSE-3 */
     [1]  = "pclmulqdq",          /* PCLMULQDQ instruction */
@@ -47,7 +56,7 @@ static const char* const g_cpu_flags_cpuid_1_ecx[] = {
     [24] = "tsc_deadline_timer", /* TSC deadline timer */
     [25] = "aes",                /* AES instructions */
     [26] = "xsave",              /* XSAVE/XRSTOR/XSETBV/XGETBV instructions */
-    [27] = "osxsave",            /* "" XSAVE instruction enabled in the OS */
+    [27] = "",                   /* "" XSAVE instruction enabled in the OS */
     [28] = "avx",                /* Advanced Vector Extensions */
     [29] = "f16c",               /* 16-bit FP conversions */
     [30] = "rdrand",             /* RDRAND instruction */
@@ -108,14 +117,14 @@ static const char* const g_cpu_flags_cpuid_7_0_ebx[] = {
     [3]  = "bmi1",            /* 1st group bit manipulation extensions */
     [4]  = "hle",             /* Hardware Lock Elision */
     [5]  = "avx2",            /* AVX2 instructions */
-    [6]  = "fdp_excptn_only", /* "" FPU data pointer updated only on x87 exceptions */
+    [6]  = "",                /* "" FPU data pointer updated only on x87 exceptions */
     [7]  = "smep",            /* Supervisor Mode Execution Protection */
     [8]  = "bmi2",            /* 2nd group bit manipulation extensions */
     [9]  = "erms",            /* Enhanced REP MOVSB/STOSB instructions */
     [10] = "invpcid",         /* Invalidate Processor Context ID */
     [11] = "rtm",             /* Restricted Transactional Memory */
     [12] = "cqm",             /* Cache QoS Monitoring */
-    [13] = "zero_fcs_fds",    /* "" Zero out FPU CS and FPU DS */
+    [13] = "",                /* "" Zero out FPU CS and FPU DS */
     [14] = "mpx",             /* Memory Protection Extension */
     [15] = "rdt_a",           /* Resource Director Technology Allocation */
     [16] = "avx512f",         /* AVX-512 Foundation */
@@ -164,12 +173,12 @@ static const char* const g_cpu_flags_cpuid_7_0_edx[] = {
     [3]  = "avx512_4fmaps",       /* AVX-512 Multiply Accumulation Single precision */
     [4]  = "fsrm",                /* Fast Short Rep Mov */
     [8]  = "avx512_vp2intersect", /* AVX-512 Intersect for D/Q */
-    [9]  = "srbds_ctrl",          /* "" SRBDS mitigation MSR available */
+    [9]  = "",                    /* "" SRBDS mitigation MSR available */
     [10] = "md_clear",            /* VERW clears CPU buffers */
-    [11] = "rtm_always_abort",    /* "" RTM transaction always aborts */
-    [13] = "tsx_force_abort",     /* "" TSX_FORCE_ABORT */
+    [11] = "",                    /* "" RTM transaction always aborts */
+    [13] = "",                    /* "" TSX_FORCE_ABORT */
     [14] = "serialize",           /* SERIALIZE instruction */
-    [15] = "hybrid_cpu",          /* "" This part has CPUs of more than one type */
+    [15] = "",                    /* "" This part has CPUs of more than one type */
     [16] = "tsxldtrk",            /* TSX Suspend Load Address Tracking */
     [18] = "pconfig",             /* Intel PCONFIG */
     [19] = "arch_lbr",            /* Intel ARCH LBR */
@@ -178,12 +187,12 @@ static const char* const g_cpu_flags_cpuid_7_0_edx[] = {
     [23] = "avx512_fp16",         /* AVX512 FP16 */
     [24] = "amx_tile",            /* AMX tile Support */
     [25] = "amx_int8",            /* AMX int8 Support */
-    [26] = "spec_ctrl",           /* "" Speculation Control (IBRS + IBPB) */
-    [27] = "intel_stibp",         /* "" Single Thread Indirect Branch Predictors */
+    [26] = "",                    /* "" Speculation Control (IBRS + IBPB) */
+    [27] = "",                    /* "" Single Thread Indirect Branch Predictors */
     [28] = "flush_l1d",           /* Flush L1D cache */
     [29] = "arch_capabilities",   /* IA32_ARCH_CAPABILITIES MSR (Intel) */
-    [30] = "core_capabilities",   /* "" IA32_CORE_CAPABILITIES MSR */
-    [31] = "spec_ctrl_ssbd",      /* "" Speculative Store Bypass Disable */
+    [30] = "",                    /* "" IA32_CORE_CAPABILITIES MSR */
+    [31] = "",                    /* "" Speculative Store Bypass Disable */
 };
 
 static const char* const g_cpu_flags_cpuid_7_1_eax[] = {
@@ -196,7 +205,7 @@ static const char* const g_cpu_flags_cpuid_d_1_eax[] = {
     [1] = "xsavec",   /* XSAVEC instruction */
     [2] = "xgetbv1",  /* XGETBV with ECX = 1 instruction */
     [3] = "xsaves",   /* XSAVES/XRSTORS instructions */
-    [4] = "xfd",      /* "" eXtended Feature Disabling */
+    [4] = "",         /* "" eXtended Feature Disabling */
 };
 
 static const char* const g_cpu_flags_cpuid_8000_0001_ecx[] = {
@@ -245,10 +254,8 @@ static int extend_cap_flags(const char* const cpu_flags[], const unsigned int* w
                             enum CPUID_WORD w, char** flags, size_t* flen, size_t* fmax) {
     assert(*flags != NULL);
 
-    int rv = 0;
-
     for (int i = 0; i < 32; i++) {
-        if (!cpu_flags[i])
+        if (!cpu_flags[i] || strlen(cpu_flags[i]) == 0)
             continue;
 
         if (BIT_EXTRACT_LE(words[w], i, i + 1)) {
@@ -256,8 +263,7 @@ static int extend_cap_flags(const char* const cpu_flags[], const unsigned int* w
             if (*flen + len + 1 > *fmax) {
                 char* new_flags = malloc(*fmax * 2);
                 if (!new_flags) {
-                    rv = -PAL_ERROR_NOMEM;
-                    goto out_err;
+                    return -PAL_ERROR_NOMEM;
                 }
                 memcpy(new_flags, *flags, *flen);
                 free(*flags);
@@ -271,11 +277,13 @@ static int extend_cap_flags(const char* const cpu_flags[], const unsigned int* w
     }
 
     return 0;
-
-out_err:
-    free(*flags);
-    return rv;
 }
+
+#define EXTEND_CAP_FLAGS(cpu_flags, reg)                                           \
+    rv = extend_cap_flags(cpu_flags, words, reg, &flags, &flen, &fmax);            \
+    if (rv < 0) {                                                                  \
+        goto out_err;                                                              \
+    }                                                                              \
 
 int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
@@ -303,6 +311,13 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         rv = -PAL_ERROR_NOMEM;
         goto out_err;
     }
+
+    _PalCpuIdRetrieve(0x80000000, 0, words);
+    unsigned int extended_cpuid_level = words[CPUID_WORD_EAX];
+    if (extended_cpuid_level < 0x80000004) {
+        goto out_err;
+    }
+
     _PalCpuIdRetrieve(0x80000002, 0, words);
     memcpy(&brand[ 0], words, sizeof(unsigned int) * CPUID_WORD_NUM);
     _PalCpuIdRetrieve(0x80000003, 0, words);
@@ -331,14 +346,14 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     }
 
     /* Intel-defined flags: level 0x00000001 */
-    extend_cap_flags(g_cpu_flags_cpuid_1_ecx, words, CPUID_WORD_ECX, &flags, &flen, &fmax);
-    extend_cap_flags(g_cpu_flags_cpuid_1_edx, words, CPUID_WORD_EDX, &flags, &flen, &fmax);
+    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_ecx, CPUID_WORD_ECX);
+    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_edx, CPUID_WORD_EDX);
 
     /* Thermal and Power Management Leaf: level 0x00000006 (eax) */
     if (cpuid_level >= 0x00000006) {
         _PalCpuIdRetrieve(0x00000006, 0, words);
 
-        extend_cap_flags(g_cpu_flags_cpuid_6_eax, words, CPUID_WORD_EAX, &flags, &flen, &fmax);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_6_eax, CPUID_WORD_EAX);
     }
 
     /* Additional Intel-defined flags: level 0x00000007 */
@@ -346,15 +361,15 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         _PalCpuIdRetrieve(0x00000007, 0, words);
 
         unsigned int eax = words[CPUID_WORD_EAX];
-        extend_cap_flags(g_cpu_flags_cpuid_7_0_ebx, words, CPUID_WORD_EBX, &flags, &flen, &fmax);
-        extend_cap_flags(g_cpu_flags_cpuid_7_0_ecx, words, CPUID_WORD_ECX, &flags, &flen, &fmax);
-        extend_cap_flags(g_cpu_flags_cpuid_7_0_edx, words, CPUID_WORD_EDX, &flags, &flen, &fmax);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_0_ebx, CPUID_WORD_EBX);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_0_ecx, CPUID_WORD_ECX);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_0_edx, CPUID_WORD_EDX);
 
         /* Check valid sub-leaf index before accessing it */
         if (eax >= 1) {
             _PalCpuIdRetrieve(0x00000007, 1, words);
 
-            extend_cap_flags(g_cpu_flags_cpuid_7_1_eax, words, CPUID_WORD_EAX, &flags, &flen, &fmax);
+            EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_1_eax, CPUID_WORD_EAX);
         }
     }
 
@@ -362,21 +377,14 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     if (cpuid_level >= 0x0000000d) {
         _PalCpuIdRetrieve(0x0000000d, 1, words);
 
-        extend_cap_flags(g_cpu_flags_cpuid_d_1_eax, words, CPUID_WORD_EAX, &flags, &flen, &fmax);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_d_1_eax, CPUID_WORD_EAX);
     }
 
     /* AMD-defined flags: level 0x80000001 */
-    _PalCpuIdRetrieve(0x80000000, 0, words);
-    unsigned int eax = words[CPUID_WORD_EAX];
+    _PalCpuIdRetrieve(0x80000001, 0, words);
 
-    if ((eax & 0xffff0000) == 0x80000000) {
-        if (eax >= 0x80000001) {
-            _PalCpuIdRetrieve(0x80000001, 0, words);
-
-            extend_cap_flags(g_cpu_flags_cpuid_8000_0001_ecx, words, CPUID_WORD_ECX, &flags, &flen, &fmax);
-            extend_cap_flags(g_cpu_flags_cpuid_8000_0001_edx, words, CPUID_WORD_EDX, &flags, &flen, &fmax);
-        }
-    }
+    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_ecx, CPUID_WORD_ECX);
+    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_edx, CPUID_WORD_EDX);
 
     /* End the capability flags extension */
     flags[flen ? flen - 1 : 0] = 0;
