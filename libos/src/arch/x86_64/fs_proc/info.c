@@ -41,6 +41,9 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
             cores_in_socket++;
     }
     ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
+
+    ADD_INFO("flags\t\t: %s\n", cpu->cpu_flags);
+
     double bogomips = cpu->cpu_bogomips;
     // Apparently Gramine snprintf cannot into floats.
     ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,
