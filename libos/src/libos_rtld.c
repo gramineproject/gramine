@@ -753,7 +753,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
                   depth > 1 ? curr_argv[0] : path);
 
         char** new_argv = NULL;
-        ret = load_and_check_shebang(file, curr_argv, path, &new_argv);
+        ret = load_and_check_shebang(file, curr_argv, depth > 1? curr_argv[0] : path, &new_argv);
         if (ret < 0) {
             goto err;
         }
