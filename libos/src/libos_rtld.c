@@ -580,7 +580,7 @@ static int read_file_fragment(struct libos_handle* file, void* buf, size_t size,
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
 static int load_and_check_shebang(struct libos_handle* file, char** argv,
-                                  char*** out_new_argv, const char* argv0) {
+                                  const char* argv0, char*** out_new_argv) {
     int ret;
 
     char** new_argv = NULL;
@@ -753,7 +753,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
                   depth > 1 ? curr_argv[0] : path);
 
         char** new_argv = NULL;
-        ret = load_and_check_shebang(file, curr_argv, &new_argv, path);
+        ret = load_and_check_shebang(file, curr_argv, path, &new_argv);
         if (ret < 0) {
             goto err;
         }
