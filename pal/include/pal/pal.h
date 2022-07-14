@@ -55,8 +55,7 @@ typedef struct {
 
 #include "pal_host.h"
 
-#define PAL_GET_TYPE(h) (h->hdr.type)
-#define UNKNOWN_HANDLE(handle) (PAL_GET_TYPE(handle) >= PAL_HANDLE_TYPE_BOUND)
+#define UNKNOWN_HANDLE(handle) (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
 
 static inline void init_handle_hdr(PAL_HANDLE handle, int pal_type) {
     handle->hdr.type = pal_type;
