@@ -72,7 +72,7 @@ int init_process_args(const char** argv, char*** out_new_argv) {
     return 0;
 }
 
-int init_process_cmdline(int argc, const char** argv) {
+int init_process_cmdline(const char** argv) {
     /* The command line arguments passed are stored in /proc/self/cmdline as part of the proc fs.
      * They are not separated by space, but by NUL instead. So, it is essential to maintain the
      * cmdline_size also as a member here. */
@@ -80,12 +80,12 @@ int init_process_cmdline(int argc, const char** argv) {
     memset(g_process.cmdline, '\0', ARRAY_SIZE(g_process.cmdline));
     size_t tmp_size = 0;
 
-    for (int i = 0; i < argc; i++) {
-        if (tmp_size + strlen(argv[i]) + 1 > ARRAY_SIZE(g_process.cmdline))
+    for (const char** a = argv; *a; a++) {
+        if (tmp_size + strlen(*a) + 1 > ARRAY_SIZE(g_process.cmdline))
             return -ENOMEM;
 
-        memcpy(g_process.cmdline + tmp_size, argv[i], strlen(argv[i]));
-        tmp_size += strlen(argv[i]) + 1;
+        memcpy(g_process.cmdline + tmp_size, *a, strlen(*a));
+        tmp_size += strlen(*a) + 1;
     }
 
     g_process.cmdline_size = tmp_size;

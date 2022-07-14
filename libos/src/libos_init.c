@@ -367,6 +367,7 @@ static int read_environs(const char** envp) {
     } while (0)
 
 noreturn void* libos_init(int argc, const char** argv, const char** envp) {
+    __UNUSED(argc);
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
@@ -425,7 +426,8 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     char** expanded_argv = NULL;
     RUN_INIT(init_process_args, argv, &expanded_argv);
-    RUN_INIT(init_process_cmdline, argc, (const char**)expanded_argv);
+    RUN_INIT(init_process_cmdline, (const char**)expanded_argv);
+
     RUN_INIT(init_threading);
     RUN_INIT(init_important_handles);
 
@@ -436,7 +438,6 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     const char** new_argp;
     elf_auxv_t* new_auxv;
-
     RUN_INIT(init_stack, (const char**)expanded_argv, envp, &new_argp, &new_auxv);
 
     RUN_INIT(init_elf_objects);
