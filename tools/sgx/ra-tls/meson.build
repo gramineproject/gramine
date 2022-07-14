@@ -13,6 +13,7 @@ libra_tls_attest = shared_library('ra_tls_attest',
     c_args: ra_tls_args,
     include_directories: sgx_inc,
     dependencies: [
+        sgx_util_dep,
         mbedtls_static_dep,
     ],
     install: true,
