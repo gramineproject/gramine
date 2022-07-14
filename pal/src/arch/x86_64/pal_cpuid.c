@@ -334,7 +334,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
 
     if (!memcmp(vendor_id, "GenuineIntel", 12) || !memcmp(vendor_id, "AuthenticAMD", 12)) {
         ci->cpu_family += BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 20, 28);
-        ci->cpu_model += BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 16, 20) << 4;
+        ci->cpu_model  += BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 16, 20) << 4;
     }
 
     size_t flen = 0;
