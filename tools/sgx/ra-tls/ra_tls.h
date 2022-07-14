@@ -35,7 +35,7 @@
 
 #define SHA256_DIGEST_SIZE       32
 #define IAS_REQUEST_NONCE_LEN    32
-#define PUB_KEY_SIZE_MAX         512
+#define PUB_KEY_SIZE_MAX         1024
 
 #define RSA_PUB_3072_KEY_LEN     3072
 #define RSA_PUB_4096_KEY_LEN     4096

@@ -19,6 +19,7 @@ fs.mounts = [
 ]
 
 sgx.debug = true
+sgx.enclave_size = "512M"
 
 sgx.remote_attestation = "{{ ra_type }}"
 sgx.ra_client_spid = "{{ ra_client_spid }}"
