@@ -84,6 +84,7 @@ manifests = [
   "pthread_set_get_affinity",
   "readdir",
   "rename_unlink",
+  "run_script",
   "run_test",
   "sched",
   "sched_set_get_affinity",

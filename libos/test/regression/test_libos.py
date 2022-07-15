@@ -222,6 +222,14 @@ class TC_01_Bootstrap(RegressionTestCase):
             'ALPHA BRAVO CHARLIE DELTA '
             'scripts/foo.sh STRING FROM EXECVE', stdout)
 
+    @unittest.skipIf(USES_MUSL, 'Test uses /bin/sh from the host which is built against Glibc')
+    def test_212_run_script(self):
+        stdout, _ = self.run_binary(['run_script'])
+        self.assertIn('Printing Args: '
+            'scripts/baz.sh ECHO FOXTROT GOLF scripts/bar.sh '
+            'ALPHA BRAVO CHARLIE DELTA '
+            'scripts/foo.sh', stdout)
+
     def test_220_send_handle(self):
         path = 'tmp/send_handle_test'
         try:
