@@ -298,7 +298,8 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertFalse(pathlib.Path('file_delete.tmp').exists())
 
     def test_110_directory(self):
-        for path in ['dir_exist.tmp', 'dir_nonexist.tmp', 'dir_delete.tmp']:
+        for path in ['dir_exist.tmp', 'dir_nonexist.tmp', 'dir_delete.tmp',
+                     'dir_rename.tmp', 'dir_rename_delete.tmp']:
             try:
                 shutil.rmtree(path)
             except FileNotFoundError:
@@ -337,6 +338,8 @@ class TC_20_SingleProcess(RegressionTestCase):
 
         # Directory Deletion
         self.assertFalse(pathlib.Path('dir_delete.tmp').exists())
+        self.assertFalse(pathlib.Path('dir_rename.tmp').exists())
+        self.assertFalse(pathlib.Path('dir_rename_delete.tmp').exists())
 
     def test_200_event(self):
         _, stderr = self.run_binary(['Event'])
