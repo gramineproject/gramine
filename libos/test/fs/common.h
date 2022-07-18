@@ -48,5 +48,6 @@ FILE* open_output_stdio(const char* path, bool rdwr);
 void write_stdio(const char* path, FILE* f, const void* buffer, size_t size);
 void* alloc_buffer(size_t size);
 void fill_random(void* buffer, size_t size);
+uint64_t file_size(const char* path);
 
 void copy_data(int fi, int fo, const char* input_path, const char* output_path, size_t size);
