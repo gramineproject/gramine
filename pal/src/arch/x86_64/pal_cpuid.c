@@ -347,18 +347,18 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         goto out_err;
     }
 
-    /* Intel-defined flags: level 0x00000001 */
+    /* Intel-defined flags: level 0x1 */
     EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_ecx, CPUID_WORD_ECX);
     EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_edx, CPUID_WORD_EDX);
 
-    /* Thermal and Power Management Leaf: level 0x00000006 (eax) */
+    /* Thermal and Power Management Leaf: level 0x6 (eax) */
     if (max_supported_cpuid_leaf >= 6) {
         _PalCpuIdRetrieve(6, 0, words);
 
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_6_eax, CPUID_WORD_EAX);
     }
 
-    /* Additional Intel-defined flags: level 0x00000007 */
+    /* Additional Intel-defined flags: level 0x7 */
     if (max_supported_cpuid_leaf >= 7) {
         _PalCpuIdRetrieve(7, 0, words);
 
@@ -374,7 +374,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         }
     }
 
-    /* Extended state features: level 0x0000000d */
+    /* Extended state features: level 0xd */
     if (max_supported_cpuid_leaf >= 0xd) {
         _PalCpuIdRetrieve(0xd, 1, words);
 
