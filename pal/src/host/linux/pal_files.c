@@ -39,7 +39,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     /* if try_create_path succeeded, prepare for the file handle */
     size_t uri_size = strlen(uri) + 1;
-    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(file) + uri_size);
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(file));
     if (!hdl) {
         DO_SYSCALL(close, ret);
         return -PAL_ERROR_NOMEM;
@@ -48,11 +48,19 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     init_handle_hdr(hdl, PAL_TYPE_FILE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->file.fd = ret;
-    char* path = (void*)hdl + HANDLE_SIZE(file);
+
+    char* path = malloc(uri_size);
+    if (!path) {
+        DO_SYSCALL(close, hdl->file.fd);
+        free(hdl);
+        return -PAL_ERROR_NOMEM;
+    }
+
     ret = get_norm_path(uri, path, &uri_size);
     if (ret < 0) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
+        free(path);
         return ret;
     }
 
@@ -63,6 +71,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     if (ret < 0) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
+        free(path);
         return unix_to_pal_error(ret);
     }
 
@@ -112,10 +121,7 @@ static int file_close(PAL_HANDLE handle) {
 
     int ret = DO_SYSCALL(close, fd);
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->file.realpath && handle->file.realpath != (void*)handle + HANDLE_SIZE(file)) {
-        free((void*)handle->file.realpath);
-    }
+    free(handle->file.realpath);
 
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
@@ -226,11 +232,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->file.realpath && handle->file.realpath != (void*)handle + HANDLE_SIZE(file)) {
-        free((void*)handle->file.realpath);
-    }
-
+    free(handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -297,8 +299,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    size_t len = strlen(uri);
-    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir) + len + 1);
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         DO_SYSCALL(close, fd);
         return -PAL_ERROR_NOMEM;
@@ -309,8 +310,12 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
 
-    char* path = (void*)hdl + HANDLE_SIZE(dir);
-    memcpy(path, uri, len + 1);
+    char* path = strdup(uri);
+    if (!path) {
+        DO_SYSCALL(close, hdl->dir.fd);
+        free(hdl);
+        return -PAL_ERROR_NOMEM;
+    }
 
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
@@ -410,10 +415,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->dir.realpath && handle->dir.realpath != (void*)handle + HANDLE_SIZE(dir)) {
-        free((void*)handle->dir.realpath);
-    }
+    free(handle->dir.realpath);
 
     if (ret < 0)
         return -PAL_ERROR_BADHANDLE;
@@ -426,12 +428,7 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    int ret = dir_close(handle);
-
-    if (ret < 0)
-        return ret;
-
-    ret = DO_SYSCALL(rmdir, handle->dir.realpath);
+    int ret = DO_SYSCALL(rmdir, handle->dir.realpath);
 
     return (ret < 0 && ret != -ENOENT) ? -PAL_ERROR_DENIED : 0;
 }
@@ -450,11 +447,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->dir.realpath && handle->dir.realpath != (void*)handle + HANDLE_SIZE(dir)) {
-        free((void*)handle->dir.realpath);
-    }
-
+    free(handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }

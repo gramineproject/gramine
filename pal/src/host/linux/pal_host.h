@@ -38,7 +38,7 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
-            const char* realpath;
+            char* realpath;
             bool seekable; /* regular files are seekable, FIFO pipes are not */
         } file;
 
@@ -61,7 +61,7 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
-            const char* realpath;
+            char* realpath;
             void* buf;
             void* ptr;
             void* end;

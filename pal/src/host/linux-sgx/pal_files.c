@@ -60,7 +60,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     }
 
     /* create file PAL handle with path string placed at the end of this handle object */
-    hdl = calloc(1, HANDLE_SIZE(file) + normpath_size);
+    hdl = calloc(1, HANDLE_SIZE(file));
     if (!hdl) {
         free(normpath);
         return -PAL_ERROR_NOMEM;
@@ -69,11 +69,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     init_handle_hdr(hdl, PAL_TYPE_FILE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
-    memcpy((char*)hdl + HANDLE_SIZE(file), normpath, normpath_size);
-    hdl->file.realpath = (const char*)hdl + HANDLE_SIZE(file);
-
-    free(normpath); /* was copied into the file PAL handle object, not needed anymore */
-    normpath = NULL;
+    hdl->file.realpath = normpath;
 
     struct trusted_file* tf   = NULL;
 
@@ -159,6 +155,8 @@ fail:
     if (fd >= 0)
         ocall_close(fd);
 
+    free(hdl->file.realpath);
+
     free(hdl);
     return ret;
 }
@@ -233,9 +231,7 @@ static int file_close(PAL_HANDLE handle) {
 
     ocall_close(fd);
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->file.realpath && handle->file.realpath != (void*)handle + HANDLE_SIZE(file))
-        free((void*)handle->file.realpath);
+    free(handle->file.realpath);
 
     return 0;
 }
@@ -460,11 +456,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->file.realpath && handle->file.realpath != (void*)handle + HANDLE_SIZE(file)) {
-        free((void*)handle->file.realpath);
-    }
-
+    free(handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -531,17 +523,24 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    size_t len = strlen(uri);
-    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir) + len + 1);
+    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         ocall_close(fd);
         return -PAL_ERROR_NOMEM;
     }
+
     init_handle_hdr(hdl, PAL_TYPE_DIR);
+
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
-    char* path  = (void*)hdl + HANDLE_SIZE(dir);
-    memcpy(path, uri, len + 1);
+
+    char* path = strdup(uri);
+    if (!path) {
+        ocall_close(fd);
+        free(hdl);
+        return -PAL_ERROR_NOMEM;
+    }
+
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
     hdl->dir.ptr         = NULL;
@@ -643,9 +642,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->dir.realpath && handle->dir.realpath != (void*)handle + HANDLE_SIZE(dir))
-        free((void*)handle->dir.realpath);
+    free(handle->dir.realpath);
 
     return 0;
 }
@@ -655,11 +652,8 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    int ret = dir_close(handle);
-    if (ret < 0)
-        return ret;
+    int ret = ocall_delete(handle->dir.realpath);
 
-    ret = ocall_delete(handle->dir.realpath);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
@@ -677,11 +671,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    /* initial realpath is part of handle object and will be freed with it */
-    if (handle->dir.realpath && handle->dir.realpath != (void*)handle + HANDLE_SIZE(dir)) {
-        free((void*)handle->dir.realpath);
-    }
-
+    free(handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }
