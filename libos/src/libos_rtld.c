@@ -637,7 +637,11 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
         new_argv_bytes += strlen(a == argv ? pathname : *a) + 1;
         new_argv_cnt++;
     }
-
+    if (*argv == NULL) {
+        /* corner case: if arg list is { NULL }, then must transform it to { pathname, NULL } */
+        new_argv_bytes += strlen(pathname) + 1;
+        new_argv_cnt++;
+    }
     log_debug("Assembling %zu execve arguments (total size is %zu bytes)", new_argv_cnt,
               new_argv_bytes);
 
@@ -667,6 +671,12 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
         new_argv[new_argv_idx] = new_argv_ptr;
         new_argv_idx++;
         new_argv_ptr += size;
+    }
+    if (*argv == NULL) {
+        /* corner case: if arg list is { NULL }, then must transform it to { pathname, NULL } */
+        memcpy(new_argv_ptr, pathname, strlen(pathname) + 1);
+        new_argv[new_argv_idx] = new_argv_ptr;
+        new_argv_idx++;
     }
     new_argv[new_argv_idx] = NULL;
 
