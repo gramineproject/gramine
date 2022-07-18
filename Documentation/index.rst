@@ -57,7 +57,7 @@ Table of Contents
 *****************
 
 .. toctree::
-   :caption: Introduction
+   :caption: User Manual
    :maxdepth: 2
 
    quickstart
