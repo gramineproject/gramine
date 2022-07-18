@@ -168,3 +168,12 @@ void fill_random(void* buffer, size_t size) {
     for (size_t i = 0; i < size; i++)
         ((uint8_t*)buffer)[i] = rand() % 256;
 }
+
+size_t file_size(const char *path) {
+    struct stat st;
+
+    if (stat(path, &st) < 0)
+        fatal_error("Failed do stat file %s: %s\n", path, strerror(errno));
+
+    return st.st_size;
+}
