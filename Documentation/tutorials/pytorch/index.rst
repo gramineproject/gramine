@@ -77,8 +77,7 @@ the user starts the secret provisioning application on her own machine. The two
 machines establish a TLS connection using RA-TLS (3), the user verifies that the
 remote platform has a genuine up-to-date SGX processor and that the application
 runs in a genuine SGX enclave (4), and finally provisions the encryption key to
-this remote platform (5). Note that during build time, Gramine informs the user
-of the expected measurements of the SGX application.
+this remote platform (5).
 
 After the encryption key is provisioned, the remote platform may start
 executing the application. Gramine uses Encrypted FS to transparently decrypt
@@ -108,7 +107,7 @@ Prerequisites
 - Intel SGX Driver. This tutorial assumes a modern Linux kernel (at least 5.11).
   If the Linux kernel is older than this, then the user must install the
   out-of-tree SGX driver manually, following e.g. our documentation:
-  https://gramine.readthedocs.io/en/stable/devel/building.html#install-the-intel-sgx-driver
+  https://gramine.readthedocs.io/en/latest/devel/building.html#install-the-intel-sgx-driver
 
 - SDK/PSW. You need a machine that supports Intel SGX and
   FLC/DCAP. Please follow `this guide
@@ -118,7 +117,7 @@ Prerequisites
 - Gramine. Unfortunately, the latest stable release (v1.2) has a bug that
   prevents correct execution of this tutorial. Please follow the `Building
   docs <https://gramine.readthedocs.io/en/latest/devel/building.html>`__ to
-  build and install the latest unstable Gramine version.
+  build and install the latest Gramine version.
 
 Executing Native PyTorch
 ------------------------
@@ -179,7 +178,7 @@ arguments, and so on.  In the rest of this tutorial, we will create this
 manifest file and explain its options and rationale behind them. Note that the
 manifest file contains both general non-SGX options for Gramine and
 SGX-specific ones.  Please refer to `this
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html>`__ for further
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html>`__ for further
 details about the syntax of Gramine manifests.
 
 Executing PyTorch with non-SGX Gramine
@@ -210,7 +209,7 @@ inside Gramine. This trick allows to transparently replace standard C libraries
 with Gramine-patched libraries::
 
    fs.mounts = [
-     { type = "chroot", uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
+     { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
      ...
    ]
 
@@ -223,7 +222,7 @@ via pip::
 
    fs.mounts = [
      ...
-     { type = "chroot", uri = "file:{{ pillow_path }}", path = "{{ pillow_path }}" },
+     { uri = "file:{{ pillow_path }}", path = "{{ pillow_path }}" },
    ]
 
 Now we can run ``make`` to build/copy all required Gramine files::
@@ -231,12 +230,13 @@ Now we can run ``make`` to build/copy all required Gramine files::
    make
 
 This command will autogenerate the non-SGX Gramine manifest (``pytorch.manifest``)
-from the template manifest file. This file will be used by Gramine to decide on
-different manifest options how to execute PyTorch inside Gramine.
+from the template manifest file. Gramine will parse ``pytorch.manifest`` upon
+startup to prepare an environment in which PyTorch will be executed (e.g., which
+host directories to mount and which environment variables to set).
 
 Let's also remove the file :file:`result.txt` (it should exist from the previous
-native run). Otherwise the Gramine run may fail, but the file with results will
-still be available, which may be confusing. So let's remove it unconditionally::
+native run). Otherwise in case Gramine fails for unrelated reasons, the file
+will misleadingly be present. So let's remove it unconditionally::
 
    rm -f result.txt
 
@@ -259,7 +259,7 @@ these entries are ignored if Gramine runs in non-SGX mode).
 
 Below, we will highlight some of the SGX-specific manifest options in
 :file:`pytorch.manifest.template`. SGX syntax is fully described `here
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
 
 First, here are the following SGX-specific lines in the manifest template::
 
@@ -281,7 +281,7 @@ The PyTorch manifest template also contains ``sgx.allowed_files`` list. It
 specifies files unconditionally allowed by the enclave::
 
    sgx.allowed_files = [
-     "file:/tmp",
+     "file:result.txt",
      ...
    ]
 
@@ -331,7 +331,7 @@ user. This way the user gains trust in the SGX enclave running in an untrusted
 environment, ships the application code and data, and is sure that the *correct*
 application was executed inside a *genuine* SGX enclave. This process of gaining
 trust in a remote SGX machine is called
-`Remote Attestation (RA) <https://gramine.readthedocs.io/en/stable/attestation.html>`__.
+`Remote Attestation (RA) <https://gramine.readthedocs.io/en/latest/attestation.html>`__.
 
 Gramine has two features that transparently add SGX RA to the application: (1)
 RA-TLS augments normal SSL/TLS sessions with an SGX-specific handshake callback,
@@ -342,7 +342,7 @@ and typically runs before the application. Both features are provided as opt-in
 libraries.
 
 The `Secret Provisioning library
-<https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
+<https://gramine.readthedocs.io/en/latest/attestation.html#secret-prov-attest-so>`__
 provides a simple non-programmatic API to applications: it transparently
 initializes the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a
 secret obtained from the remote user during remote attestation (note that
@@ -359,7 +359,7 @@ Background on Encrypted Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Gramine provides a feature of `Encrypted Files
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=protected#encrypted-files>`__,
+<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=protected#encrypted-files>`__,
 which encrypts files and transparently decrypts them when the application reads
 or writes them. Integrity- or confidentiality-sensitive files (or whole
 directories) accessed by the application must be put under the "encrypted"
@@ -494,7 +494,7 @@ files to be transparently decrypted by the provisioned key. Recall that we
 launched the secret provisioning server locally on the same machine, so we
 re-use the same ``ssl/`` directory and specify ``localhost``::
 
-   sgx.remote_attestation = true
+   sgx.remote_attestation = "dcap"
 
    loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
    loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
