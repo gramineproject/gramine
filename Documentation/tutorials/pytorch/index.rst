@@ -213,9 +213,9 @@ with Gramine-patched libraries::
      ...
    ]
 
-We also mount other directories such as ``/usr``,  ``/etc``, and ``/tmp``
-required by Python and PyTorch (they search for libraries and utility files in
-these system directories).
+We also mount other directories such as ``/usr`` and  ``/etc`` required by
+Python and PyTorch (they search for libraries and utility files in these system
+directories).
 
 Finally, we mount the path containing the Python and Pytorch packages installed
 via pip::
@@ -278,17 +278,16 @@ of directories they are recursively traversed and all files inside them are
 hashed.
 
 The PyTorch manifest template also contains ``sgx.allowed_files`` list. It
-specifies files unconditionally allowed by the enclave::
+specifies a single file unconditionally allowed by the enclave::
 
    sgx.allowed_files = [
-     "file:result.txt",
-     ...
+     "file:result.txt"
    ]
 
 Allowed files are *not* cryptographically hashed and verified. Thus, this is
 *insecure* and discouraged for production use (unless you are sure that the
-contents of the files are irrelevant to security of your workload). Here, we use
-these allowed files only for simplicity.
+contents of the files are irrelevant to security of your workload). In the
+following section, we will remove the list of allowed files completely.
 
 Now we desribed how the manifest template looks like and what the SGX-specific
 manifest entries represent. Let's prepare all the files needed to run PyTorch in
