@@ -1,12 +1,11 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
-libos.entrypoint = "run_script.sh"
-loader.argv0_override = "run_script.sh"
+libos.entrypoint = "shebang_test_script.sh"
+loader.argv0_override = "shebang_test_script.sh"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/bin", uri = "file:/bin" },
@@ -19,12 +18,7 @@ sgx.debug = true
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
-  "file:{{ arch_libdir }}/libgcc_s.so.1",
-  "file:/usr{{ arch_libdir }}/libstdc++.so.6",
-  "file:{{ binary_dir }}/{{ entrypoint }}",
-  "file:{{ binary_dir }}/exec_victim",
   "file:/bin/sh",
-  "file:run_script.sh",
+  "file:shebang_test_script.sh",
   "file:scripts/",
 ]
-

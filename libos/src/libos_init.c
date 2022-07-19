@@ -426,7 +426,7 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     char** expanded_argv = NULL;
     RUN_INIT(init_process_args, argv, &expanded_argv);
-    RUN_INIT(init_process_cmdline, (const char**)expanded_argv);
+    RUN_INIT(init_process_cmdline, expanded_argv);
 
     RUN_INIT(init_threading);
     RUN_INIT(init_important_handles);
