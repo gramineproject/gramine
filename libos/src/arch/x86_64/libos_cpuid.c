@@ -41,7 +41,7 @@ static const char* const g_cpu_flags[] = {
     "pbe",    // "pending break event"
 };
 
-int libos_get_cpu_flags(const char** cpu_flags) {
+int libos_get_cpu_flags(const char** out_cpu_flags) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
     char* flags = NULL;
@@ -81,7 +81,7 @@ int libos_get_cpu_flags(const char** cpu_flags) {
 
     flags[flen ? flen - 1 : 0] = 0;
     log_error("flags: %s", flags);
-    *cpu_flags = flags;
+    *out_cpu_flags = flags;
 
     return 0;
 

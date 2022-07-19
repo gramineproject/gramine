@@ -2,4 +2,14 @@
 /* Copyright (C) 2022 Intel Corporation
  */
 
-int libos_get_cpu_flags(const char** cpu_flags);
+/*!
+ * \brief Get CPU feature flags.
+ *
+ * \param[out] out_cpu_flags  On success, set to CPU feature flags.
+ *
+ * \returns 0 on success, negative on failure.
+ *
+ * This function returns a new buffer with CPU feature flags, the caller is responsible to free it
+ * afterwards.
+ */
+int libos_get_cpu_flags(const char** out_cpu_flags);
