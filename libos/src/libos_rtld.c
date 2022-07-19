@@ -579,8 +579,8 @@ static int read_file_fragment(struct libos_handle* file, void* buf, size_t size,
 
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
-static int load_and_check_shebang(struct libos_handle* file, const char* pathname,
-                                  char** argv, char*** out_new_argv) {
+static int load_and_check_shebang(struct libos_handle* file, const char* pathname, char** argv,
+                                  char*** out_new_argv) {
     int ret;
 
     char** new_argv = NULL;
@@ -633,14 +633,15 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
         new_argv_bytes += strlen(*a) + 1;
         new_argv_cnt++;
     }
-    for (char** a = argv; *a; a++) {
-        new_argv_bytes += strlen(a == argv ? pathname : *a) + 1;
-        new_argv_cnt++;
-    }
-    if (*argv == NULL) {
-        /* corner case: if arg list is { NULL }, then must transform it to { pathname, NULL } */
-        new_argv_bytes += strlen(pathname) + 1;
-        new_argv_cnt++;
+
+    /* if arg list is { NULL }, then must transform it to { pathname, NULL } */
+    new_argv_bytes += strlen(pathname) + 1;
+    new_argv_cnt++;
+    if (*argv) {
+        for (char** a = argv + 1; *a; a++) {
+            new_argv_bytes += strlen(*a) + 1;
+            new_argv_cnt++;
+        }
     }
     log_debug("Assembling %zu execve arguments (total size is %zu bytes)", new_argv_cnt,
               new_argv_bytes);
@@ -665,18 +666,19 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
         new_argv_idx++;
         new_argv_ptr += size;
     }
-    for (char** a = argv; *a; a++) {
-        size_t size = strlen(a == argv ? pathname : *a) + 1;
-        memcpy(new_argv_ptr, a == argv ? pathname : *a, size);
+
+    /* if arg list is { NULL }, then must transform it to { pathname, NULL } */
+    size_t size = strlen(pathname) + 1;
+    memcpy(new_argv_ptr, pathname, size);
+    new_argv[new_argv_idx] = new_argv_ptr;
+    new_argv_idx++;
+    new_argv_ptr += size;
+    for (char** a = argv + 1; *a; a++) {
+        size_t size = strlen(*a) + 1;
+        memcpy(new_argv_ptr, *a, size);
         new_argv[new_argv_idx] = new_argv_ptr;
         new_argv_idx++;
         new_argv_ptr += size;
-    }
-    if (*argv == NULL) {
-        /* corner case: if arg list is { NULL }, then must transform it to { pathname, NULL } */
-        memcpy(new_argv_ptr, pathname, strlen(pathname) + 1);
-        new_argv[new_argv_idx] = new_argv_ptr;
-        new_argv_idx++;
     }
     new_argv[new_argv_idx] = NULL;
 
