@@ -169,7 +169,7 @@ void fill_random(void* buffer, size_t size) {
         ((uint8_t*)buffer)[i] = rand() % 256;
 }
 
-size_t file_size(const char *path) {
+size_t file_size(const char* path) {
     struct stat st;
 
     if (stat(path, &st) < 0)
