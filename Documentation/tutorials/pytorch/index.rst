@@ -405,11 +405,8 @@ the confidential wrap key::
 In real deployments, the user must replace this ``wrap-key`` with her own
 128-bit encryption key.
 
-We also re-use the ``pf_crypt`` utility (with its ``libsgx_util.so`` helper
-library and required mbedTLS libraries) that encrypts/decrypts the files::
+We also re-use the ``pf_crypt`` utility that encrypts/decrypts the files::
 
-   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libsgx_util.so .
-   cp <gramine repository>/CI-Examples/ra-tls-secret-prov/libs/libmbed*.so* .
    cp <gramine repository>/CI-Examples/ra-tls-secret-prov/pf_crypt .
 
 Let's also make sure that ``alexnet-pretrained.pt`` network-model file exists
