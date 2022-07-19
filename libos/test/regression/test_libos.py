@@ -214,7 +214,8 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('execve(invalid-argv) correctly returned error', stdout)
         self.assertIn('execve(invalid-envp) correctly returned error', stdout)
 
-    @unittest.skipIf(USES_MUSL, 'Test uses /bin/sh from the host which is built against Glibc')
+    @unittest.skipIf(USES_MUSL, 'Test uses /bin/sh from the host which is usually built against'
+    'glibc')
     def test_211_exec_script(self):
         stdout, _ = self.run_binary(['exec_script'])
         self.assertIn('Printing Args: '
