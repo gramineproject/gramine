@@ -2,6 +2,7 @@ libos_sources_arch_list = {
     'fs_proc/info.c': {},
     'libos_arch_prctl.c': {},
     'libos_context.c': {},
+    'libos_cpuid.c': {},
     'libos_elf_entry.nasm': { 'type': 'nasm' },
     'libos_table.c': {},
     'start.S': {},

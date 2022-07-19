@@ -69,7 +69,6 @@ struct pal_cpu_info {
     uint64_t cpu_model;
     uint64_t cpu_stepping;
     double cpu_bogomips;
-    const char* cpu_flags;
 };
 
 union pal_csgsfs {

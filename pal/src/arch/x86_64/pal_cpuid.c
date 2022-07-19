@@ -20,45 +20,9 @@
     (s)[2] = ((w) >> 16) & 0xff;    \
     (s)[3] = ((w) >> 24) & 0xff;
 
-static const char* const g_cpu_flags[] = {
-    "fpu",    // "x87 FPU on chip"
-    "vme",    // "virtual-8086 mode enhancement"
-    "de",     // "debugging extensions"
-    "pse",    // "page size extensions"
-    "tsc",    // "time stamp counter"
-    "msr",    // "RDMSR and WRMSR support"
-    "pae",    // "physical address extensions"
-    "mce",    // "machine check exception"
-    "cx8",    // "CMPXCHG8B inst."
-    "apic",   // "APIC on chip"
-    NULL,
-    "sep",    // "SYSENTER and SYSEXIT"
-    "mtrr",   // "memory type range registers"
-    "pge",    // "PTE global bit"
-    "mca",    // "machine check architecture"
-    "cmov",   // "conditional move/compare instruction"
-    "pat",    // "page attribute table"
-    "pse36",  // "page size extension"
-    "pn",     // "processor serial number"
-    "clflush",    // "CLFLUSH instruction"
-    NULL,
-    "dts",    // "debug store"
-    "acpi",   // "Onboard thermal control"
-    "mmx",    // "MMX Technology"
-    "fxsr",   // "FXSAVE/FXRSTOR"
-    "sse",    // "SSE extensions"
-    "sse2",   // "SSE2 extensions"
-    "ss",     // "self snoop"
-    "ht",     // "hyper-threading / multi-core supported"
-    "tm",     // "therm. monitor"
-    "ia64",   // "IA64"
-    "pbe",    // "pending break event"
-};
-
 int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     unsigned int words[CPUID_WORD_NUM];
     int rv = 0;
-    char* flags = NULL;
     char* brand = NULL;
     char* vendor_id = NULL;
 
@@ -99,40 +63,6 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         ci->cpu_model  += BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 16, 20) << 4;
     }
 
-    size_t flen = 0;
-    size_t fmax = 80;
-    flags = malloc(fmax);
-    if (!flags) {
-        rv = -PAL_ERROR_NOMEM;
-        goto out_err;
-    }
-
-    for (int i = 0; i < 32; i++) {
-        if (!g_cpu_flags[i])
-            continue;
-
-        if (BIT_EXTRACT_LE(words[CPUID_WORD_EDX], i, i + 1)) {
-            size_t len = strlen(g_cpu_flags[i]);
-            if (flen + len + 1 > fmax) {
-                char* new_flags = malloc(fmax * 2);
-                if (!new_flags) {
-                    rv = -PAL_ERROR_NOMEM;
-                    goto out_err;
-                }
-                memcpy(new_flags, flags, flen);
-                free(flags);
-                fmax *= 2;
-                flags = new_flags;
-            }
-            memcpy(flags + flen, g_cpu_flags[i], len);
-            flen += len;
-            flags[flen++] = ' ';
-        }
-    }
-
-    flags[flen ? flen - 1 : 0] = 0;
-    ci->cpu_flags = flags;
-
     ci->cpu_bogomips = _PalGetBogomips();
     if (ci->cpu_bogomips == 0.0) {
         log_warning("bogomips could not be retrieved, passing 0.0 to the application");
@@ -141,7 +71,6 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     return 0;
 
 out_err:
-    free(flags);
     free(brand);
     free(vendor_id);
     return rv;

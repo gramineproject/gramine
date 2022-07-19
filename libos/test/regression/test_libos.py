@@ -12,6 +12,13 @@ from graminelibos.regression import (
     RegressionTestCase,
 )
 
+CPUINFO_TEST_FLAGS = [
+    'fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce', 'cx8', 'apic', 'sep',
+    'mtrr', 'pge', 'mca', 'cmov', 'pat', 'pse36', 'pn', 'clflush', 'dts',
+    'acpi', 'mmx', 'fxsr', 'sse', 'sse2', 'ss', 'ht', 'tm', 'ia64', 'pbe',
+]
+
+
 class TC_00_Unittests(RegressionTestCase):
     def test_000_spinlock(self):
         stdout, _ = self.run_binary(['spinlock'], timeout=20)
@@ -961,7 +968,17 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     def test_020_cpuinfo(self):
-        stdout, _ = self.run_binary(['proc_cpuinfo'])
+        with open('/proc/cpuinfo') as file_:
+            cpuinfo = file_.read().strip().split('\n\n')[-1]
+        cpuinfo = dict(map(str.strip, line.split(':'))
+            for line in cpuinfo.split('\n'))
+        if 'flags' in cpuinfo:
+            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags']
+                if flag in CPUINFO_TEST_FLAGS)
+        else:
+            cpuinfo['flags'] = ''
+
+        stdout, _ = self.run_binary(['proc_cpuinfo', cpuinfo['flags']])
 
         # proc/cpuinfo Linux-based formatting
         self.assertIn('cpuinfo test passed', stdout)
