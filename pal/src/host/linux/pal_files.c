@@ -233,6 +233,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 
     if (handle->file.realpath) {
         free((void*)handle->file.realpath);
+        handle->file.realpath = NULL;
     }
 
     handle->file.realpath = tmp;
@@ -467,6 +468,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 
     if (handle->dir.realpath) {
         free((void*)handle->dir.realpath);
+        handle->dir.realpath = NULL;
     }
 
     handle->dir.realpath = tmp;
