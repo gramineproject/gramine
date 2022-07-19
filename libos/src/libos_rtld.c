@@ -673,12 +673,14 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     new_argv[new_argv_idx] = new_argv_ptr;
     new_argv_idx++;
     new_argv_ptr += size;
-    for (char** a = argv + 1; *a; a++) {
-        size_t size = strlen(*a) + 1;
-        memcpy(new_argv_ptr, *a, size);
-        new_argv[new_argv_idx] = new_argv_ptr;
-        new_argv_idx++;
-        new_argv_ptr += size;
+    if (*argv) {
+        for (char** a = argv + 1; *a; a++) {
+            size_t size = strlen(*a) + 1;
+            memcpy(new_argv_ptr, *a, size);
+            new_argv[new_argv_idx] = new_argv_ptr;
+            new_argv_idx++;
+            new_argv_ptr += size;
+        }
     }
     new_argv[new_argv_idx] = NULL;
 
