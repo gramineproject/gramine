@@ -84,16 +84,6 @@ const char* pf_strerror(int err) {
     return g_pf_error_list[err_idx];
 }
 
-static bool ipf_generate_random_key(pf_context_t* pf, pf_key_t* output) {
-    pf_status_t status = g_cb_random((uint8_t*)output, sizeof(*output));
-    if (PF_FAILURE(status)) {
-        pf->last_error = status;
-        return false;
-    }
-
-    return true;
-}
-
 static void swap_nodes(file_node_t** data, size_t idx1, size_t idx2) {
     file_node_t* tmp = data[idx1];
     data[idx1] = data[idx2];
@@ -134,14 +124,14 @@ static void sort_nodes(file_node_t** data, size_t low, size_t high) {
     }
 }
 
-static void ipf_init_root_mht(file_node_t* mht) {
-    memset(mht, 0, sizeof(*mht));
+static bool ipf_generate_random_key(pf_context_t* pf, pf_key_t* output) {
+    pf_status_t status = g_cb_random((uint8_t*)output, sizeof(*output));
+    if (PF_FAILURE(status)) {
+        pf->last_error = status;
+        return false;
+    }
 
-    mht->type                 = FILE_MHT_NODE_TYPE;
-    mht->physical_node_number = 1;
-    mht->node_number          = 0;
-    mht->new_node             = true;
-    mht->need_writing         = false;
+    return true;
 }
 
 // The key derivation function follow recommendations from NIST Special Publication 800-108:
@@ -198,6 +188,16 @@ static bool ipf_generate_random_metadata_key(pf_context_t* pf, pf_key_t* output)
 
 static bool ipf_restore_current_metadata_key(pf_context_t* pf, pf_key_t* output) {
     return ipf_import_metadata_key(pf, /*restore=*/true, output);
+}
+
+static void ipf_init_root_mht(file_node_t* mht) {
+    memset(mht, 0, sizeof(*mht));
+
+    mht->type                 = FILE_MHT_NODE_TYPE;
+    mht->physical_node_number = 1;
+    mht->node_number          = 0;
+    mht->new_node             = true;
+    mht->need_writing         = false;
 }
 
 static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
