@@ -111,7 +111,7 @@ Prerequisites
 
 - SDK/PSW. You need a machine that supports Intel SGX and
   FLC/DCAP. Please follow `this guide
-  <https://download.01.org/intel-sgx/sgx-linux/2.16/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf>`__
+  <https://download.01.org/intel-sgx/sgx-linux/2.17/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf>`__
   to install the Intel SGX driver and SDK/PSW.
 
 - Gramine. Unfortunately, the latest stable release (v1.2) has a bug that
@@ -213,8 +213,8 @@ with Gramine-patched libraries::
      ...
    ]
 
-We also mount other directories such as ``/usr`` and  ``/etc`` required by
-Python and PyTorch (they search for libraries and utility files in these system
+We also mount other directories such as ``/usr`` and ``/etc`` required by Python
+and PyTorch (they search for libraries and utility files in these system
 directories).
 
 Finally, we mount the path containing the Python and Pytorch packages installed
