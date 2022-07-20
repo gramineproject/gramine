@@ -71,9 +71,8 @@ running, and Intel SGX SDK/PSW/DCAP must be installed.
 """"""""""""""""""""
 Run the following commands on Ubuntu to install SGX-related dependencies::
 
-    sudo apt-get install -y libcurl4-openssl-dev \
-        libprotobuf-c-dev protobuf-c-compiler protobuf-compiler \
-        python3-cryptography python3-pip python3-protobuf
+    sudo apt-get install -y libprotobuf-c-dev protobuf-c-compiler \
+        protobuf-compiler python3-cryptography python3-pip python3-protobuf
 
 2. Install Linux kernel with patched FSGSBASE
 """""""""""""""""""""""""""""""""""""""""""""
