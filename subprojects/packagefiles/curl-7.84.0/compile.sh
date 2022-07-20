@@ -21,14 +21,29 @@ log "preparing sources..."
 rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
-BUILDDIR="$PRIVATE_DIR/lib/.libs"
-
 (
     cd "$PRIVATE_DIR"
 
     log "running configure..."
+    # The list of configure options is selected based on:
+    # https://github.com/curl/curl/blob/curl-7_84_0/docs/INSTALL.md#reducing-size
     ./configure                     \
         --disable-shared            \
+        --disable-ftp               \
+        --disable-file              \
+        --disable-ldap              \
+        --disable-ldaps             \
+        --disable-rtsp              \
+        --disable-proxy             \
+        --disable-dict              \
+        --disable-telnet            \
+        --disable-tftp              \
+        --disable-pop3              \
+        --disable-imap              \
+        --disable-smb               \
+        --disable-smtp              \
+        --disable-gopher            \
+        --disable-mqtt              \
         --disable-alt-svc           \
         --disable-ares              \
         --disable-cookies           \
@@ -68,6 +83,6 @@ BUILDDIR="$PRIVATE_DIR/lib/.libs"
     make -j"$(nproc)" >>"$BUILD_LOG" 2>&1
 )
 
-cp -r "$BUILDDIR"/* "$CURRENT_BUILD_DIR"/
+cp -r "$PRIVATE_DIR"/lib/.libs/* "$CURRENT_BUILD_DIR"/
 
 log "done"
