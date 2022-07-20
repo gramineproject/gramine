@@ -263,7 +263,8 @@ if sgx
 
     threads_dep = dependency('threads')
 
-    libcurl_dep = dependency('libcurl', version: '>=7.58.0')
+    curl_proj = subproject('curl-7.84.0')
+    libcurl_dep = curl_proj.get_variable('curl_minimal_dep')
 
     cjson_dep = dependency('cjson', required: false)
     if not cjson_dep.found()
