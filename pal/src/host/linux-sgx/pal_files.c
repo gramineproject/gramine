@@ -157,7 +157,6 @@ fail:
 
     if (hdl->file.realpath) {
         free((void*)hdl->file.realpath);
-        hdl->file.realpath = NULL;
     }
 
     free(hdl);
@@ -462,11 +461,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    if (handle->file.realpath) {
-        free((void*)handle->file.realpath);
-        handle->file.realpath = NULL;
-    }
-
+    free((void*)handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -533,22 +528,24 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    size_t len = strlen(uri);
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         ocall_close(fd);
         return -PAL_ERROR_NOMEM;
     }
+
     init_handle_hdr(hdl, PAL_TYPE_DIR);
+
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
-    char* path  = malloc(len + 1);
+
+    char* path  = strdup(uri);
     if (!path) {
         ocall_close(fd);
         free(hdl);
         return -PAL_ERROR_NOMEM;
     }
-    memcpy(path, uri, len + 1);
+
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
     hdl->dir.ptr         = NULL;
@@ -663,18 +660,8 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    char* tmp = strdup(handle->dir.realpath);
-    if (!tmp)
-        return -PAL_ERROR_NOMEM;
+    int ret = ocall_delete(handle->dir.realpath);
 
-    int ret = dir_close(handle);
-    if (ret < 0) {
-        free(tmp);
-        return ret;
-    }
-
-    ret = ocall_delete(tmp);
-    free(tmp);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
@@ -692,11 +679,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    if (handle->dir.realpath) {
-        free((void*)handle->dir.realpath);
-        handle->dir.realpath = NULL;
-    }
-
+    free((void*)handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }

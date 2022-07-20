@@ -48,16 +48,19 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     init_handle_hdr(hdl, PAL_TYPE_FILE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->file.fd = ret;
+
     char* path = malloc(uri_size);
     if (!path) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
         return -PAL_ERROR_NOMEM;
     }
+
     ret = get_norm_path(uri, path, &uri_size);
     if (ret < 0) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
+        free(path);
         return ret;
     }
 
@@ -68,6 +71,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     if (ret < 0) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
+        free(path);
         return unix_to_pal_error(ret);
     }
 
@@ -231,11 +235,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    if (handle->file.realpath) {
-        free((void*)handle->file.realpath);
-        handle->file.realpath = NULL;
-    }
-
+    free((void*)handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -302,7 +302,6 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    size_t len = strlen(uri);
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         DO_SYSCALL(close, fd);
@@ -314,13 +313,12 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
 
-    char* path = malloc(len + 1);
+    char* path = strdup(uri);
     if (!path) {
         DO_SYSCALL(close, hdl->dir.fd);
         free(hdl);
         return -PAL_ERROR_NOMEM;
     }
-    memcpy(path, uri, len + 1);
 
     hdl->dir.realpath    = path;
     hdl->dir.buf         = NULL;
@@ -436,19 +434,8 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    char* tmp = strdup(handle->dir.realpath);
-    if (!tmp)
-        return -PAL_ERROR_NOMEM;
+    int ret = DO_SYSCALL(rmdir, handle->dir.realpath);
 
-    int ret = dir_close(handle);
-
-    if (ret < 0) {
-        free(tmp);
-        return ret;
-    }
-
-    ret = DO_SYSCALL(rmdir, tmp);
-    free(tmp);
     return (ret < 0 && ret != -ENOENT) ? -PAL_ERROR_DENIED : 0;
 }
 
@@ -466,11 +453,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    if (handle->dir.realpath) {
-        free((void*)handle->dir.realpath);
-        handle->dir.realpath = NULL;
-    }
-
+    free((void*)handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }
