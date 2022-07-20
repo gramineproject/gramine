@@ -240,6 +240,11 @@ uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 mbedtls_proj = subproject('mbedtls-mbedtls-3.2.1')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
+mbedtls_curl_dep = mbedtls_proj.get_variable('mbedtls_curl_dep')
+# Specify a Meson runtime-dependency based on `mbedtls_curl_dep` so that the curl subproject can
+# find and retrieve it, see:
+# https://mesonbuild.com/Reference-manual_builtin_meson.html#mesonoverride_dependency for details
+meson.override_dependency('mbedtls_curl', mbedtls_curl_dep)
 
 if sgx
     protoc_c_prog = find_program('protoc-c')
@@ -247,7 +252,8 @@ if sgx
 
     threads_dep = dependency('threads')
 
-    libcurl_dep = dependency('libcurl', version: '>=7.58.0')
+    curl_proj = subproject('curl-7.84.0')
+    libcurl_dep = curl_proj.get_variable('curl_minimal_dep')
 
     cjson_dep = dependency('cjson', required: false)
     if not cjson_dep.found()
