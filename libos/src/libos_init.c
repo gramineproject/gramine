@@ -366,8 +366,7 @@ static int read_environs(const char** envp) {
         }                                                                   \
     } while (0)
 
-noreturn void* libos_init(int argc, const char** argv, const char** envp) {
-    __UNUSED(argc);
+noreturn void* libos_init(const char** argv, const char** envp) {
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 

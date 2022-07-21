@@ -1,2 +1,2 @@
-#!  /bin/sh
-scripts/foo.sh
+#!/bin/sh
+exec scripts/foo.sh
