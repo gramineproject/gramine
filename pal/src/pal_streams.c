@@ -142,7 +142,7 @@ int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t sha
 
 static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
                                    pal_stream_options_t options) {
-    if (UNKNOWN_HANDLE(handle))
+    if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
         return -PAL_ERROR_BADHANDLE;
 
     const struct handle_ops* ops = HANDLE_OPS(handle);
@@ -463,7 +463,7 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
 /* _PalStreamFlush for internal use. This function sync up the handle with devices. Some streams may
  *  not support this operations. */
 int _PalStreamFlush(PAL_HANDLE handle) {
-    if (UNKNOWN_HANDLE(handle))
+    if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
         return -PAL_ERROR_BADHANDLE;
 
     const struct handle_ops* ops = HANDLE_OPS(handle);
