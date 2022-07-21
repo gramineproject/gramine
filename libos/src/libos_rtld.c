@@ -698,7 +698,7 @@ err:
 
 /* Note that `**out_new_argv` is allocated as a single object -- a concatenation of all argv
  * strings; caller of this function should do a single free(**out_new_argv). */
-int load_and_check_exec(const char* path, const char** argv, struct libos_handle** out_exec,
+int load_and_check_exec(const char* path, const char* const* argv, struct libos_handle** out_exec,
                         char*** out_new_argv) {
     int ret;
 
@@ -707,7 +707,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
     /* immediately copy `argv` into `curr_argv`; this simplifies ownership tracking because this way
      * `*out_new_argv` must be always freed by caller */
     size_t curr_argv_bytes = 0, curr_argv_cnt = 0;
-    for (const char** a = argv; *a; a++) {
+    for (const char* const* a = argv; *a; a++) {
         curr_argv_bytes += strlen(*a) + 1;
         curr_argv_cnt++;
     }
@@ -725,7 +725,7 @@ int load_and_check_exec(const char* path, const char** argv, struct libos_handle
     }
 
     size_t curr_argv_idx = 0;
-    for (const char** a = argv; *a; a++) {
+    for (const char* const* a = argv; *a; a++) {
         size_t size = strlen(*a) + 1;
         memcpy(curr_argv_ptr, *a, size);
         curr_argv[curr_argv_idx] = curr_argv_ptr;

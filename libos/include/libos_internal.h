@@ -17,7 +17,7 @@
 #include "pal.h"
 #include "pal_error.h"
 
-noreturn void* libos_init(int argc, const char** argv, const char** envp);
+noreturn void libos_init(int argc, const char* const* argv, const char* const* envp);
 
 /* important macros and static inline functions */
 
@@ -185,7 +185,7 @@ static inline bool memory_migrated(void* mem) {
 extern void* __load_address;
 extern void* __load_address_end;
 
-extern const char** migrated_envp;
+extern const char* const* migrated_envp; /* TODO: needs to be removed */
 
 int init_brk_region(void* brk_region, size_t data_segment_size);
 void reset_brk(void);
@@ -250,7 +250,8 @@ void delete_epoll_items_for_fd(int fd, struct libos_handle* handle);
 void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool was_partial);
 
 void* allocate_stack(size_t size, size_t protect_size, bool user);
-int init_stack(const char** argv, const char** envp, const char*** out_argp, elf_auxv_t** out_auxv);
+int init_stack(const char* const* argv, const char* const* envp, char*** out_argp,
+               elf_auxv_t** out_auxv);
 
 /*!
  * \brief Jump to the defined entry point.

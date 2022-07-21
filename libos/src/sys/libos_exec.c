@@ -95,7 +95,10 @@ error:
     process_exit(/*error_code=*/0, /*term_signal=*/SIGKILL);
 }
 
-static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, const char** envp) {
+/* `libos_syscall_execve()` passes ownership of `argv` to this function, so this function is
+ * responsible for freeing it (both the array of pointers and the strings themselves) */
+static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv,
+                                     const char* const* envp) {
     struct libos_thread* cur_thread = get_cur_thread();
     int ret;
 
@@ -117,12 +120,12 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, cons
 
     migrated_envp = NULL;
 
-    const char** new_argp;
+    char** new_argp;
     elf_auxv_t* new_auxv;
 
-    /* TODO: init_stack() and its call chain have a wrong signature for `argv`; for now explicitly
-     *       cast it to the expected type to silence compiler warnings */
-    ret = init_stack((const char**)argv, envp, &new_argp, &new_auxv);
+    /* note the typecast of argv here: the C standard disallows implicit conversion of `char**` ->
+     * `const char* const*`, but in reality it is safe to do */
+    ret = init_stack((const char* const*)argv, envp, &new_argp, &new_auxv);
     if (ret < 0)
         return ret;
 
@@ -138,13 +141,13 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, cons
     /* UNREACHABLE */
 }
 
-long libos_syscall_execve(const char* file, const char** argv, const char** envp) {
+long libos_syscall_execve(const char* file, const char* const* argv, const char* const* envp) {
     int ret = 0, argc = 0;
 
     if (!is_user_string_readable(file))
         return -EFAULT;
 
-    for (const char** a = argv; /* no condition*/; a++, argc++) {
+    for (const char* const* a = argv; /* no condition*/; a++, argc++) {
         if (!is_user_memory_readable(a, sizeof(*a)))
             return -EFAULT;
         if (*a == NULL)
@@ -157,7 +160,7 @@ long libos_syscall_execve(const char* file, const char** argv, const char** envp
     if (!envp)
         envp = migrated_envp;
 
-    for (const char** e = envp; /* no condition*/; e++) {
+    for (const char* const* e = envp; /* no condition*/; e++) {
         if (!is_user_memory_readable(e, sizeof(*e)))
             return -EFAULT;
         if (*e == NULL)
