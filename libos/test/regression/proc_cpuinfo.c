@@ -158,6 +158,8 @@ int main(int argc, char* argv[]) {
     }
 
     fclose(fp);
+    free(ci);
+    free(line);
 
     if (rv != 0)
         return 1;
