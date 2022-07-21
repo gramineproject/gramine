@@ -15,12 +15,6 @@ from graminelibos.regression import (
     expectedFailureIf,
 )
 
-CPUINFO_FLAGS_WHITELIST = [
-    'fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce', 'cx8', 'apic', 'sep',
-    'mtrr', 'pge', 'mca', 'cmov', 'pat', 'pse36', 'pn', 'clflush', 'dts',
-    'acpi', 'mmx', 'fxsr', 'sse', 'sse2', 'ss', 'ht', 'tm', 'ia64', 'pbe',
-]
-
 
 class TC_00_Basic(RegressionTestCase):
     def test_001_path_normalization(self):
@@ -105,9 +99,6 @@ class TC_01_Bootstrap(RegressionTestCase):
             cpuinfo = file_.read().strip().split('\n\n')[-1]
         cpuinfo = dict(map(str.strip, line.split(':'))
             for line in cpuinfo.split('\n'))
-        if 'flags' in cpuinfo:
-            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags']
-                if flag in CPUINFO_FLAGS_WHITELIST)
 
         _, stderr = self.run_binary(['Bootstrap'])
 
@@ -118,7 +109,6 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('CPU family: {[cpu family]}'.format(cpuinfo), stderr)
         self.assertIn('CPU model: {[model]}'.format(cpuinfo), stderr)
         self.assertIn('CPU stepping: {[stepping]}'.format(cpuinfo), stderr)
-        self.assertIn('CPU flags: {[flags]}'.format(cpuinfo), stderr)
 
     def test_103_dotdot(self):
         _, stderr = self.run_binary(['..Bootstrap'])

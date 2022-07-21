@@ -16,6 +16,7 @@ struct cpuinfo {
     int stepping;
     int core_id;
     int cpu_cores;
+    char flags[1000];
 #endif
 };
 
@@ -29,6 +30,7 @@ static void init_cpuinfo(struct cpuinfo* ci) {
     ci->stepping  = -1;
     ci->core_id   = -1;
     ci->cpu_cores = -1;
+    memset(&ci->flags, 0, sizeof(ci->flags));
 #endif
 }
 
@@ -73,6 +75,8 @@ static int parse_line(char* line, struct cpuinfo* ci) {
         snprintf(ci->vendor_id, sizeof(ci->vendor_id), "%s", v);
     } else if (!strcmp(k, "model name")) {
         snprintf(ci->model_name, sizeof(ci->model_name), "%s", v);
+    } else if (!strcmp(k, "flags")) {
+        snprintf(ci->flags, sizeof(ci->flags), "%s", v);
 #endif
     }
     return 0;
