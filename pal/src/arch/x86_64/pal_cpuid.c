@@ -6,6 +6,15 @@
 #include "cpu.h"
 #include "pal_internal.h"
 
+#define BPI  32
+#define POWER2(power) \
+    (1ULL << (power))
+#define RIGHTMASK(width) \
+    (((unsigned long)(width) >= BPI) ? ~0ULL : POWER2(width) - 1ULL)
+
+#define BIT_EXTRACT_LE(value, start, after) \
+    (((unsigned long)(value) & RIGHTMASK(after)) >> start)
+
 #define FOUR_CHARS_VALUE(s, w)      \
     (s)[0] = (w) & 0xff;            \
     (s)[1] = ((w) >>  8) & 0xff;    \

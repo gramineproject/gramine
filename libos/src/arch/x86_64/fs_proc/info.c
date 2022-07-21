@@ -43,13 +43,13 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
     }
     ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
 
-    const char* cpu_flags = NULL;
+    char* cpu_flags = NULL;
     int ret = libos_get_cpu_flags(&cpu_flags);
     if (ret < 0) {
         return ret;
     }
     ADD_INFO("flags\t\t: %s\n", cpu_flags);
-    free((void*)cpu_flags);
+    free(cpu_flags);
 
     double bogomips = cpu->cpu_bogomips;
     // Apparently Gramine snprintf cannot into floats.

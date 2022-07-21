@@ -4,6 +4,7 @@
 
 #include "cpu.h"
 #include "libos_cpuid.h"
+#include "libos_internal.h"
 #include "libos_utils.h"
 
 static const char* const g_cpu_flags[] = {
@@ -41,18 +42,20 @@ static const char* const g_cpu_flags[] = {
     "pbe",    // "pending break event"
 };
 
-int libos_get_cpu_flags(const char** out_cpu_flags) {
+int libos_get_cpu_flags(char** out_cpu_flags) {
     unsigned int words[CPUID_WORD_NUM];
-    int rv = 0;
-    char* flags = NULL;
+    int ret;
 
-    PalCpuIdRetrieve(1, 0, words);
+    ret = PalCpuIdRetrieve(1, 0, words);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
 
     size_t flen = 0;
     size_t fmax = 80;
-    flags = malloc(fmax);
+    char* flags = malloc(fmax);
     if (!flags) {
-        rv = -ENOMEM;
+        ret = -ENOMEM;
         goto out_err;
     }
 
@@ -60,12 +63,12 @@ int libos_get_cpu_flags(const char** out_cpu_flags) {
         if (!g_cpu_flags[i])
             continue;
 
-        if (BIT_EXTRACT_LE(words[CPUID_WORD_EDX], i, i + 1)) {
+        if ((words[CPUID_WORD_EDX] >> i) & 1) {
             size_t len = strlen(g_cpu_flags[i]);
             if (flen + len + 1 > fmax) {
                 char* new_flags = malloc(fmax * 2);
                 if (!new_flags) {
-                    rv = -ENOMEM;
+                    ret = -ENOMEM;
                     goto out_err;
                 }
                 memcpy(new_flags, flags, flen);
@@ -80,12 +83,11 @@ int libos_get_cpu_flags(const char** out_cpu_flags) {
     }
 
     flags[flen ? flen - 1 : 0] = 0;
-    log_error("flags: %s", flags);
     *out_cpu_flags = flags;
 
     return 0;
 
 out_err:
     free(flags);
-    return rv;
+    return ret;
 }

@@ -12,4 +12,4 @@
  * This function returns a new buffer with CPU feature flags, the caller is responsible to free it
  * afterwards.
  */
-int libos_get_cpu_flags(const char** out_cpu_flags);
+int libos_get_cpu_flags(char** out_cpu_flags);

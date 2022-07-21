@@ -101,7 +101,3 @@ static inline noreturn void die_or_inf_loop(void) {
 #define MB()  __asm__ __volatile__("mfence" ::: "memory")
 #define RMB() __asm__ __volatile__("lfence" ::: "memory")
 #define WMB() __asm__ __volatile__("sfence" ::: "memory")
-
-#define RIGHTMASK(width) (((uint64_t)(width) >= 32) ? ~0UL : (1UL << (width)) - 1UL)
-
-#define BIT_EXTRACT_LE(value, start, after) (((uint64_t)(value) & RIGHTMASK(after)) >> start)
