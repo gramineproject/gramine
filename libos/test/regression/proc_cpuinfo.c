@@ -1,8 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define CPUINFO_FILE "/proc/cpuinfo"
-#define BUFFSIZE     2048
+#define CPUINFO_FILE   "/proc/cpuinfo"
+#define BUFFSIZE       (10 * 1024) /* 10KB */
+#define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
+#define NUM_TEST_FLAGS 3
+
+static const char* const g_test_cpu_flags[NUM_TEST_FLAGS] = { "fpu", "msr", "apic" };
 
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
  * (see Linux's arch/x86/include/asm/processor.h) */
@@ -16,7 +21,7 @@ struct cpuinfo {
     int stepping;
     int core_id;
     int cpu_cores;
-    char flags[1000];
+    char* flags;
 #endif
 };
 
@@ -30,7 +35,7 @@ static void init_cpuinfo(struct cpuinfo* ci) {
     ci->stepping  = -1;
     ci->core_id   = -1;
     ci->cpu_cores = -1;
-    memset(&ci->flags, 0, sizeof(ci->flags));
+    memset(ci->flags, 0, FLAGS_BUF_SIZE);
 #endif
 }
 
@@ -76,7 +81,7 @@ static int parse_line(char* line, struct cpuinfo* ci) {
     } else if (!strcmp(k, "model name")) {
         snprintf(ci->model_name, sizeof(ci->model_name), "%s", v);
     } else if (!strcmp(k, "flags")) {
-        snprintf(ci->flags, sizeof(ci->flags), "%s", v);
+        snprintf(ci->flags, FLAGS_BUF_SIZE, "%s", v);
 #endif
     }
     return 0;
@@ -101,15 +106,34 @@ static int check_cpuinfo(struct cpuinfo* ci) {
         return -1;
     }
 #endif
+#if defined(__x86_64__)
+    for (int i = 0; i < NUM_TEST_FLAGS; i++) {
+        if (!strstr(ci->flags, g_test_cpu_flags[i])) {
+            fprintf(stderr, "Could not get cpu flag: %s\n", g_test_cpu_flags[i]);
+            return -1;
+        }
+    }
+#endif
 
     return 0;
 }
 
 int main(int argc, char* argv[]) {
     FILE* fp = NULL;
-    char line[BUFFSIZE];
-    struct cpuinfo ci;
     int cpu_cnt = 0, rv = 0;
+
+    char* line = calloc(1, BUFFSIZE);
+    if (!line) {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
+
+    struct cpuinfo ci;
+    ci.flags = malloc(FLAGS_BUF_SIZE);
+    if (!ci.flags) {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
 
     init_cpuinfo(&ci);
 
@@ -118,7 +142,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    while (fgets(line, sizeof(line), fp) != NULL) {
+    while (fgets(line, BUFFSIZE, fp) != NULL) {
         if (line[0] == '\n') {
             if ((rv = check_cpuinfo(&ci)) != 0)
                 break;
@@ -131,6 +155,9 @@ int main(int argc, char* argv[]) {
     }
 
     fclose(fp);
+    free(ci.flags);
+    ci.flags = NULL;
+    free(line);
 
     if (rv != 0)
         return 1;

@@ -3,7 +3,6 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
-#include "cpu.h"
 #include "pal_internal.h"
 
 #define BPI  32
