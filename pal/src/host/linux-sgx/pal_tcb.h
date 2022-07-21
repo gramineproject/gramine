@@ -16,10 +16,9 @@ struct untrusted_area {
 };
 
 /*
- * Beside the classic thread control block (like ustack, thread, etc.) the TCB
- * area is also used to pass parameters needed during enclave or thread
- * initialization. Some of them are thread specific (like tcs_offset) and some
- * of them are identical for all threads (like enclave_size).
+ * Beside the classic thread control block (like ustack, thread, etc.) the TCB area is also used to
+ * pass parameters needed during enclave or thread initialization. Some of them are thread specific
+ * (like tcs_offset) and some of them are identical for all threads (like enclave_size).
  */
 struct pal_tcb_sgx {
     PAL_TCB common;
@@ -56,7 +55,7 @@ extern uint64_t dummy_debug_variable;
 
 #ifdef IN_ENCLAVE
 
-static inline struct pal_tcb_sgx* get_tcb_trts(void) {
+static inline struct pal_tcb_sgx* pal_get_tcb_sgx(void) {
     return (struct pal_tcb_sgx*)pal_get_tcb();
 }
 
