@@ -2,12 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CPUINFO_FILE   "/proc/cpuinfo"
-#define BUFFSIZE       (10 * 1024) /* 10KB */
-#define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
-#define NUM_TEST_FLAGS 3
+#include "common.h"
 
-static const char* const g_test_cpu_flags[NUM_TEST_FLAGS] = { "fpu", "msr", "apic" };
+#define CPUINFO_FILE   "/proc/cpuinfo"
+#define BUF_SIZE       (10 * 1024) /* 10KB */
+#define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
+
+#if defined(__x86_64__)
+/* This subset of flags is picked for testing, chosen to be available on any modern x86-64 CPU */
+static const char* const g_test_cpu_flags[] = { "fpu", "msr", "apic" };
+#endif
 
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
  * (see Linux's arch/x86/include/asm/processor.h) */
@@ -21,7 +25,7 @@ struct cpuinfo {
     int stepping;
     int core_id;
     int cpu_cores;
-    char* flags;
+    char flags[FLAGS_BUF_SIZE];
 #endif
 };
 
@@ -107,7 +111,7 @@ static int check_cpuinfo(struct cpuinfo* ci) {
     }
 #endif
 #if defined(__x86_64__)
-    for (int i = 0; i < NUM_TEST_FLAGS; i++) {
+    for (size_t i = 0; i < ARRAY_LEN(g_test_cpu_flags); i++) {
         if (!strstr(ci->flags, g_test_cpu_flags[i])) {
             fprintf(stderr, "Could not get cpu flag: %s\n", g_test_cpu_flags[i]);
             return -1;
@@ -122,42 +126,38 @@ int main(int argc, char* argv[]) {
     FILE* fp = NULL;
     int cpu_cnt = 0, rv = 0;
 
-    char* line = calloc(1, BUFFSIZE);
+    char* line = calloc(1, BUF_SIZE);
     if (!line) {
         fprintf(stderr, "out of memory\n");
         return 1;
     }
 
-    struct cpuinfo ci;
-    ci.flags = malloc(FLAGS_BUF_SIZE);
-    if (!ci.flags) {
+    struct cpuinfo* ci = malloc(sizeof(*ci));
+    if (!ci) {
         fprintf(stderr, "out of memory\n");
         return 1;
     }
 
-    init_cpuinfo(&ci);
+    init_cpuinfo(ci);
 
     if ((fp = fopen(CPUINFO_FILE, "r")) == NULL) {
         perror("fopen");
         return 1;
     }
 
-    while (fgets(line, BUFFSIZE, fp) != NULL) {
+    while (fgets(line, BUF_SIZE, fp) != NULL) {
         if (line[0] == '\n') {
-            if ((rv = check_cpuinfo(&ci)) != 0)
+            if ((rv = check_cpuinfo(ci)) != 0)
                 break;
             cpu_cnt++;
-            init_cpuinfo(&ci);
+            init_cpuinfo(ci);
             continue;
         }
-        if ((rv = parse_line(line, &ci)) != 0)
+        if ((rv = parse_line(line, ci)) != 0)
             break;
     }
 
     fclose(fp);
-    free(ci.flags);
-    ci.flags = NULL;
-    free(line);
 
     if (rv != 0)
         return 1;
