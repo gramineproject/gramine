@@ -628,11 +628,13 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    enum sgx_attestation_type attestation_type;
-    ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
-    if (ret < 0) {
-        log_error("Failed to parse attestation type: %d", unix_to_pal_error(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
+    enum sgx_attestation_type attestation_type=SGX_ATTESTATION_NONE;
+    if(parent_stream_fd < 0){
+        ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
+        if (ret < 0) {
+            log_error("Failed to parse attestation type: %d", unix_to_pal_error(ret));
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
     }
     g_pal_public_state.attestation_type = attestation_type_to_str(attestation_type);
 
