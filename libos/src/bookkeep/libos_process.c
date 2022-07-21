@@ -17,7 +17,7 @@ typedef bool (*child_cmp_t)(const struct libos_child_process*, unsigned long);
 
 struct libos_process g_process = { .pid = 0 };
 
-int init_process(int argc, const char** argv) {
+int init_process(int argc, char* const* argv) {
     if (g_process.pid) {
         /* `g_process` is already initialized, e.g. via checkpointing code. */
         return 0;
