@@ -23,7 +23,7 @@
 #include "host_internal.h"
 #include "host_log.h"
 #include "linux_utils.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "spinlock.h"
 
 #ifdef SGX_VTUNE_PROFILE
@@ -235,7 +235,7 @@ static bool update_time(void) {
     uint64_t sample_time = ts.tv_sec * NSEC_IN_SEC + ts.tv_nsec;
 
     // Compare and update last recorded time per thread
-    PAL_TCB_HOST* tcb = get_tcb_host();
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
     if (tcb->profile_sample_time == 0) {
         tcb->profile_sample_time = sample_time;
         return false;

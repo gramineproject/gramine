@@ -94,7 +94,7 @@ static bool interrupted_in_enclave(struct ucontext* uc) {
 }
 
 static bool interrupted_in_aex_profiling(void) {
-    return get_tcb_host()->is_in_aex_profiling != 0;
+    return pal_get_host_tcb()->is_in_aex_profiling != 0;
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
@@ -109,7 +109,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
 
     if (interrupted_in_enclave(uc)) {
         /* exception happened in app/LibOS/trusted PAL code, handle signal inside enclave */
-        get_tcb_host()->sync_signal_cnt++;
+        pal_get_host_tcb()->sync_signal_cnt++;
         sgx_raise(event);
         return;
     }
@@ -161,17 +161,17 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
     if (interrupted_in_enclave(uc) || interrupted_in_aex_profiling()) {
         /* signal arrived while in app/LibOS/trusted PAL code or when handling another AEX, handle
          * signal inside enclave */
-        get_tcb_host()->async_signal_cnt++;
+        pal_get_host_tcb()->async_signal_cnt++;
         sgx_raise(event);
         return;
     }
 
     assert(event == PAL_EVENT_INTERRUPTED || event == PAL_EVENT_QUIT);
-    if (get_tcb_host()->last_async_event != PAL_EVENT_QUIT) {
+    if (pal_get_host_tcb()->last_async_event != PAL_EVENT_QUIT) {
         /* Do not overwrite `PAL_EVENT_QUIT`. The only other possible event here is
          * `PAL_EVENT_INTERRUPTED`, which is basically a no-op (just makes sure that a thread
          * notices any new signals or other state changes, which also happens for other events). */
-        get_tcb_host()->last_async_event = event;
+        pal_get_host_tcb()->last_async_event = event;
     }
 
     uint64_t rip = ucontext_get_ip(uc);

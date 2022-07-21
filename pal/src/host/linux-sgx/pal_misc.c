@@ -709,7 +709,7 @@ int _PalRandomBitsRead(void* buffer, size_t size) {
 int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
-            *addr = GET_ENCLAVE_TLS(fsbase);
+            *addr = GET_ENCLAVE_TCB(fsbase);
             return 0;
         case PAL_SEGMENT_GS:
             /* GS is internally used, deny any access to it */
@@ -722,7 +722,7 @@ int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
 int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     switch (reg) {
         case PAL_SEGMENT_FS:
-            SET_ENCLAVE_TLS(fsbase, addr);
+            SET_ENCLAVE_TCB(fsbase, addr);
             wrfsbase((uint64_t)addr);
             return 0;
         case PAL_SEGMENT_GS:

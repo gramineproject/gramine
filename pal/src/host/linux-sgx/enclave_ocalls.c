@@ -154,11 +154,11 @@ noreturn void ocall_exit(int exitcode, int is_exitgroup) {
 
 #ifdef ASAN
     /* Unpoison the stacks allocated for this thread. They can be later used for a new thread. */
-    uintptr_t initial_stack_addr = GET_ENCLAVE_TLS(initial_stack_addr);
+    uintptr_t initial_stack_addr = GET_ENCLAVE_TCB(initial_stack_addr);
     asan_unpoison_region(initial_stack_addr - ENCLAVE_STACK_SIZE, ENCLAVE_STACK_SIZE);
 
-    uintptr_t sig_stack_low = GET_ENCLAVE_TLS(sig_stack_low);
-    uintptr_t sig_stack_high = GET_ENCLAVE_TLS(sig_stack_high);
+    uintptr_t sig_stack_low = GET_ENCLAVE_TCB(sig_stack_low);
+    uintptr_t sig_stack_high = GET_ENCLAVE_TCB(sig_stack_high);
     asan_unpoison_region(sig_stack_low, sig_stack_high - sig_stack_low);
 #endif
 
@@ -286,7 +286,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
     *addrptr = NULL;
     *need_munmap = false;
 
-    struct untrusted_area* cache = &get_tcb_trts()->untrusted_area_cache;
+    struct untrusted_area* cache = &pal_get_enclave_tcb()->untrusted_area_cache;
 
     uint64_t in_use = 0;
     if (!__atomic_compare_exchange_n(&cache->in_use, &in_use, 1, /*weak=*/false, __ATOMIC_RELAXED,
@@ -333,7 +333,7 @@ static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munm
         ocall_munmap_untrusted(addr, size);
         /* there is not much we can do in case of error */
     } else {
-        struct untrusted_area* cache = &get_tcb_trts()->untrusted_area_cache;
+        struct untrusted_area* cache = &pal_get_enclave_tcb()->untrusted_area_cache;
         __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
     }
 }

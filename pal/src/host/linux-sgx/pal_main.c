@@ -440,8 +440,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
-    g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TLS(heap_min);
-    g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TLS(heap_max);
+    g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TCB(heap_min);
+    g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TCB(heap_max);
 
     /* Skip URI_PREFIX_FILE. */
     if (libpal_uri_len < URI_PREFIX_FILE_LEN) {
@@ -501,7 +501,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    SET_ENCLAVE_TLS(ready_for_exceptions, 1UL);
+    SET_ENCLAVE_TCB(ready_for_exceptions, 1UL);
 
     /* initialize "Invariant TSC" HW feature for fast and accurate gettime and immediately probe
      * RDTSC instruction inside SGX enclave (via dummy get_tsc) -- it is possible that
@@ -536,7 +536,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         }
     }
 
-    uint64_t manifest_size = GET_ENCLAVE_TLS(manifest_size);
+    uint64_t manifest_size = GET_ENCLAVE_TCB(manifest_size);
     void* manifest_addr = g_enclave_top - ALIGN_UP_PTR_POW2(manifest_size, g_page_size);
 
     ret = add_preloaded_range((uintptr_t)manifest_addr, (uintptr_t)manifest_addr + manifest_size,
@@ -650,9 +650,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     init_handle_hdr(first_thread, PAL_TYPE_THREAD);
-    first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TLS(tcs_offset);
+    first_thread->thread.tcs = g_enclave_base + GET_ENCLAVE_TCB(tcs_offset);
     g_pal_public_state.first_thread = first_thread;
-    SET_ENCLAVE_TLS(thread, &first_thread->thread);
+    SET_ENCLAVE_TCB(thread, &first_thread->thread);
 
     uint64_t stack_protector_canary;
     ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));

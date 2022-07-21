@@ -8,12 +8,12 @@
 #include "api.h"
 #include "assert.h"
 #include "host_syscall.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 
 /* `offsetof` is evaluated at compile time, which happens only after the preprocessor is run, so it
  * cannot be used in `XSTRINGIFY()`, hence we have to use an immediate value. */
-#define PAL_TCB_HOST_LAST_ASYNC_EVENT_OFFSET 0x58
-static_assert(offsetof(PAL_TCB_HOST, last_async_event) == PAL_TCB_HOST_LAST_ASYNC_EVENT_OFFSET,
+#define PAL_HOST_TCB_LAST_ASYNC_EVENT_OFFSET 0x58
+static_assert(offsetof(PAL_HOST_TCB, last_async_event) == PAL_HOST_TCB_LAST_ASYNC_EVENT_OFFSET,
               "error");
 
 __asm__ (
@@ -34,7 +34,7 @@ __asm__ (
     "mov %r8, %r10\n"
     "mov %r9, %r8\n"
     "mov 8(%rsp), %r9\n"
-    "cmpl $0, %gs:" XSTRINGIFY(PAL_TCB_HOST_LAST_ASYNC_EVENT_OFFSET) "\n"
+    "cmpl $0, %gs:" XSTRINGIFY(PAL_HOST_TCB_LAST_ASYNC_EVENT_OFFSET) "\n"
 "do_syscall_intr_after_check1:\n"
     "jne do_syscall_intr_eintr\n"
 "do_syscall_intr_after_check2:\n"

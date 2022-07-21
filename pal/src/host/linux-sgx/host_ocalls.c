@@ -21,7 +21,7 @@
 #include "linux_utils.h"
 #include "pal_ocall_types.h"
 #include "pal_rpc_queue.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "pal_topology.h"
 #include "sgx_arch.h"
 #include "sigset.h"
