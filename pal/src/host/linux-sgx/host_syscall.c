@@ -8,7 +8,7 @@
 #include "api.h"
 #include "assert.h"
 #include "host_syscall.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 
 /* `offsetof` is evaluated at compile time, which happens only after the preprocessor is run, so it
  * cannot be used in `XSTRINGIFY()`, hence we have to use an immediate value. */

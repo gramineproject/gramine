@@ -6,7 +6,7 @@
 #include "pal_ecall_types.h"
 #include "pal_linux_defs.h"
 #include "pal_ocall_types.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "sgx_arch.h"
 
 const char* generated_offsets_name = "PAL_SGX";
@@ -78,31 +78,31 @@ const struct generated_offset generated_offsets[] = {
     DEFINE(SGX_CPU_CONTEXT_SIZE, sizeof(sgx_cpu_context_t)),
     DEFINE(SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, sizeof(sgx_cpu_context_t) % PAL_XSTATE_ALIGN),
 
-    /* struct enclave_tls */
-    OFFSET(SGX_COMMON_SELF, enclave_tls, common.self),
-    OFFSET(SGX_COMMON_STACK_PROTECTOR_CANARY, enclave_tls, common.stack_protector_canary),
-    OFFSET(SGX_ENCLAVE_SIZE, enclave_tls, enclave_size),
-    OFFSET(SGX_TCS_OFFSET, enclave_tls, tcs_offset),
-    OFFSET(SGX_INITIAL_STACK_ADDR, enclave_tls, initial_stack_addr),
-    OFFSET(SGX_TMP_RIP, enclave_tls, tmp_rip),
-    OFFSET(SGX_ECALL_RETURN_ADDR, enclave_tls, ecall_return_addr),
-    OFFSET(SGX_SIG_STACK_LOW, enclave_tls, sig_stack_low),
-    OFFSET(SGX_SIG_STACK_HIGH, enclave_tls, sig_stack_high),
-    OFFSET(SGX_SSA, enclave_tls, ssa),
-    OFFSET(SGX_GPR, enclave_tls, gpr),
-    OFFSET(SGX_EXIT_TARGET, enclave_tls, exit_target),
-    OFFSET(SGX_FSBASE, enclave_tls, fsbase),
-    OFFSET(SGX_PRE_OCALL_STACK, enclave_tls, pre_ocall_stack),
-    OFFSET(SGX_USTACK_TOP, enclave_tls, ustack_top),
-    OFFSET(SGX_USTACK, enclave_tls, ustack),
-    OFFSET(SGX_THREAD, enclave_tls, thread),
-    OFFSET(SGX_OCALL_EXIT_CALLED, enclave_tls, ocall_exit_called),
-    OFFSET(SGX_THREAD_STARTED, enclave_tls, thread_started),
-    OFFSET(SGX_READY_FOR_EXCEPTIONS, enclave_tls, ready_for_exceptions),
-    OFFSET(SGX_MANIFEST_SIZE, enclave_tls, manifest_size),
-    OFFSET(SGX_HEAP_MIN, enclave_tls, heap_min),
-    OFFSET(SGX_HEAP_MAX, enclave_tls, heap_max),
-    OFFSET(SGX_CLEAR_CHILD_TID, enclave_tls, clear_child_tid),
+    /* struct pal_tcb_sgx */
+    OFFSET(SGX_COMMON_SELF, pal_tcb_sgx, common.self),
+    OFFSET(SGX_COMMON_STACK_PROTECTOR_CANARY, pal_tcb_sgx, common.stack_protector_canary),
+    OFFSET(SGX_ENCLAVE_SIZE, pal_tcb_sgx, enclave_size),
+    OFFSET(SGX_TCS_OFFSET, pal_tcb_sgx, tcs_offset),
+    OFFSET(SGX_INITIAL_STACK_ADDR, pal_tcb_sgx, initial_stack_addr),
+    OFFSET(SGX_TMP_RIP, pal_tcb_sgx, tmp_rip),
+    OFFSET(SGX_ECALL_RETURN_ADDR, pal_tcb_sgx, ecall_return_addr),
+    OFFSET(SGX_SIG_STACK_LOW, pal_tcb_sgx, sig_stack_low),
+    OFFSET(SGX_SIG_STACK_HIGH, pal_tcb_sgx, sig_stack_high),
+    OFFSET(SGX_SSA, pal_tcb_sgx, ssa),
+    OFFSET(SGX_GPR, pal_tcb_sgx, gpr),
+    OFFSET(SGX_EXIT_TARGET, pal_tcb_sgx, exit_target),
+    OFFSET(SGX_FSBASE, pal_tcb_sgx, fsbase),
+    OFFSET(SGX_PRE_OCALL_STACK, pal_tcb_sgx, pre_ocall_stack),
+    OFFSET(SGX_USTACK_TOP, pal_tcb_sgx, ustack_top),
+    OFFSET(SGX_USTACK, pal_tcb_sgx, ustack),
+    OFFSET(SGX_THREAD, pal_tcb_sgx, thread),
+    OFFSET(SGX_OCALL_EXIT_CALLED, pal_tcb_sgx, ocall_exit_called),
+    OFFSET(SGX_THREAD_STARTED, pal_tcb_sgx, thread_started),
+    OFFSET(SGX_READY_FOR_EXCEPTIONS, pal_tcb_sgx, ready_for_exceptions),
+    OFFSET(SGX_MANIFEST_SIZE, pal_tcb_sgx, manifest_size),
+    OFFSET(SGX_HEAP_MIN, pal_tcb_sgx, heap_min),
+    OFFSET(SGX_HEAP_MAX, pal_tcb_sgx, heap_max),
+    OFFSET(SGX_CLEAR_CHILD_TID, pal_tcb_sgx, clear_child_tid),
 
     /* struct pal_tcb_host aka PAL_TCB_HOST */
     OFFSET(PAL_TCB_HOST_TCS, pal_tcb_host, tcs),

@@ -23,7 +23,7 @@
 #include "host_internal.h"
 #include "host_log.h"
 #include "linux_utils.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "spinlock.h"
 
 #ifdef SGX_VTUNE_PROFILE

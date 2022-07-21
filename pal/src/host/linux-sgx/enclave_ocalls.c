@@ -154,11 +154,11 @@ noreturn void ocall_exit(int exitcode, int is_exitgroup) {
 
 #ifdef ASAN
     /* Unpoison the stacks allocated for this thread. They can be later used for a new thread. */
-    uintptr_t initial_stack_addr = GET_ENCLAVE_TLS(initial_stack_addr);
+    uintptr_t initial_stack_addr = GET_ENCLAVE_TCB(initial_stack_addr);
     asan_unpoison_region(initial_stack_addr - ENCLAVE_STACK_SIZE, ENCLAVE_STACK_SIZE);
 
-    uintptr_t sig_stack_low = GET_ENCLAVE_TLS(sig_stack_low);
-    uintptr_t sig_stack_high = GET_ENCLAVE_TLS(sig_stack_high);
+    uintptr_t sig_stack_low = GET_ENCLAVE_TCB(sig_stack_low);
+    uintptr_t sig_stack_high = GET_ENCLAVE_TCB(sig_stack_high);
     asan_unpoison_region(sig_stack_low, sig_stack_high - sig_stack_low);
 #endif
 

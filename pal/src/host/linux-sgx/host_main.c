@@ -22,7 +22,7 @@
 #include "pal_linux_error.h"
 #include "pal_rpc_queue.h"
 #include "pal_rtld.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "toml.h"
 #include "toml_utils.h"
 #include "topo_info.h"
@@ -468,7 +468,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
         if (areas[i].data_src == TLS) {
             for (uint32_t t = 0; t < enclave->thread_num; t++) {
-                struct enclave_tls* gs = data + g_page_size * t;
+                struct pal_tcb_sgx* gs = data + g_page_size * t;
                 memset(gs, 0, g_page_size);
                 assert(sizeof(*gs) <= g_page_size);
                 gs->common.self = (PAL_TCB*)(tls_area->addr + g_page_size * t);

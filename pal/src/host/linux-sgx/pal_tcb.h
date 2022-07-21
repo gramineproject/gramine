@@ -10,18 +10,18 @@
 struct untrusted_area {
     void* addr;
     size_t size;
-    uint64_t in_use; /* must be uint64_t, because SET_ENCLAVE_TLS() currently supports only 8-byte
+    uint64_t in_use; /* must be uint64_t, because SET_ENCLAVE_TCB() currently supports only 8-byte
                       * types. TODO: fix this. */
     bool valid;
 };
 
 /*
- * Beside the classic thread local storage (like ustack, thread, etc.) the TLS
+ * Beside the classic thread control block (like ustack, thread, etc.) the TCB
  * area is also used to pass parameters needed during enclave or thread
  * initialization. Some of them are thread specific (like tcs_offset) and some
  * of them are identical for all threads (like enclave_size).
  */
-struct enclave_tls {
+struct pal_tcb_sgx {
     PAL_TCB common;
 
     /* private to Linux-SGX PAL */
@@ -56,29 +56,29 @@ extern uint64_t dummy_debug_variable;
 
 #ifdef IN_ENCLAVE
 
-static inline struct enclave_tls* get_tcb_trts(void) {
-    return (struct enclave_tls*)pal_get_tcb();
+static inline struct pal_tcb_sgx* get_tcb_trts(void) {
+    return (struct pal_tcb_sgx*)pal_get_tcb();
 }
 
-#define GET_ENCLAVE_TLS(member)                                                                \
+#define GET_ENCLAVE_TCB(member)                                                                \
     ({                                                                                         \
-        struct enclave_tls* tmp;                                                               \
+        struct pal_tcb_sgx* tmp;                                                               \
         uint64_t val;                                                                          \
-        static_assert(sizeof(tmp->member) == 8, "sgx_tls member should have 8-byte type");     \
+        static_assert(sizeof(tmp->member) == 8, "pal_tcb_sgx member should have 8-byte type"); \
         __asm__("movq %%gs:%c1, %0"                                                            \
                 : "=r"(val)                                                                    \
-                : "i"(offsetof(struct enclave_tls, member))                                    \
+                : "i"(offsetof(struct pal_tcb_sgx, member))                                    \
                 : "memory");                                                                   \
         (__typeof(tmp->member))val;                                                            \
     })
-#define SET_ENCLAVE_TLS(member, value)                                                         \
+#define SET_ENCLAVE_TCB(member, value)                                                         \
     do {                                                                                       \
-        struct enclave_tls* tmp;                                                               \
-        static_assert(sizeof(tmp->member) == 8, "sgx_tls member should have 8-byte type");     \
-        static_assert(sizeof(value) == 8, "only 8-byte type can be set to sgx_tls");           \
+        struct pal_tcb_sgx* tmp;                                                               \
+        static_assert(sizeof(tmp->member) == 8, "pal_tcb_sgx member should have 8-byte type"); \
+        static_assert(sizeof(value) == 8, "only 8-byte type can be set to pal_tcb_sgx");       \
         __asm__("movq %0, %%gs:%c1"                                                            \
                 :                                                                              \
-                : "ir"(value), "i"(offsetof(struct enclave_tls, member))                       \
+                : "ir"(value), "i"(offsetof(struct pal_tcb_sgx, member))                       \
                 : "memory");                                                                   \
     } while (0)
 
@@ -86,7 +86,7 @@ static inline struct enclave_tls* get_tcb_trts(void) {
 __attribute_no_stack_protector
 static inline void pal_set_tcb_stack_canary(uint64_t canary) {
     ((char*)&canary)[0] = 0; /* prevent C-string-based stack leaks from exposing the cookie */
-    SET_ENCLAVE_TLS(common.stack_protector_canary, canary);
+    SET_ENCLAVE_TCB(common.stack_protector_canary, canary);
 }
 
 #else /* IN_ENCLAVE */

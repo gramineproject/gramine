@@ -814,7 +814,7 @@ _restore_sgx_context:
 
     # See the comment at .Lcssa1_exception_during_enclave_run.
     #
-    # The use of SGX_TMP_RIP (enclave_tls::tmp_rip per-enclave-thread field) must be atomic.
+    # The use of SGX_TMP_RIP (pal_tcb_sgx::tmp_rip per-enclave-thread field) must be atomic.
     # Consider a data race:
     #
     # (1) thread handles a previous exception in SSA=0,
@@ -823,7 +823,7 @@ _restore_sgx_context:
     # (4) the exception handler for this new exception is prepared in SSA=1,
     # (5) thread returns back to SSA=0 and handles this new exception,
     # (6) thread is done and returns from exception handler via _restore_sgx_context() and updates
-    #     SGX_TMP_RIP (overwrites enclave_tls::tmp_rip). Now the thread returned in the middle of
+    #     SGX_TMP_RIP (overwrites pal_tcb_sgx::tmp_rip). Now the thread returned in the middle of
     #     _restore_sgx_context() and will try to `jmp *%gs:SGX_TMP_RIP` but this value is lost, and
     #     SIGILL/SEGFAULT follows.
     #

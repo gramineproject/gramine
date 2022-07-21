@@ -40,7 +40,7 @@ void pal_start_thread(void) {
     LISTP_FOR_EACH_ENTRY(tmp, &g_thread_list, list)
         if (!tmp->tcs) {
             new_thread = tmp;
-            __atomic_store_n(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TLS(tcs_offset)),
+            __atomic_store_n(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TCB(tcs_offset)),
                              __ATOMIC_RELEASE);
             break;
         }
@@ -55,8 +55,8 @@ void pal_start_thread(void) {
     free(thread_param);
     new_thread->param = NULL;
 
-    SET_ENCLAVE_TLS(thread, new_thread);
-    SET_ENCLAVE_TLS(ready_for_exceptions, 1UL);
+    SET_ENCLAVE_TCB(thread, new_thread);
+    SET_ENCLAVE_TCB(ready_for_exceptions, 1UL);
 
     /* each newly-created thread (including the first thread) has its own random stack canary */
     uint64_t stack_protector_canary;
@@ -125,12 +125,12 @@ void _PalThreadYieldExecution(void) {
 
 /* _PalThreadExit for internal use: Thread exiting */
 noreturn void _PalThreadExit(int* clear_child_tid) {
-    struct pal_handle_thread* exiting_thread = GET_ENCLAVE_TLS(thread);
+    struct pal_handle_thread* exiting_thread = GET_ENCLAVE_TCB(thread);
 
     /* thread is ready to exit, must inform LibOS by erasing clear_child_tid;
      * note that we don't do it now (because this thread still occupies SGX
      * TCS slot) but during handle_thread_reset in assembly code */
-    SET_ENCLAVE_TLS(clear_child_tid, clear_child_tid);
+    SET_ENCLAVE_TCB(clear_child_tid, clear_child_tid);
     static_assert(sizeof(*clear_child_tid) == 4, "unexpected clear_child_tid size");
 
     /* main thread is not part of the g_thread_list */
