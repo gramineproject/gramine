@@ -594,7 +594,7 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
             /* this may fail, but we are already inside a more serious error handler */
             dentry_abs_path(file->dentry, &path, /*size=*/NULL);
         }
-        log_error("Failed to read shebang line from %s", path ? path : "(unknown)");
+        log_debug("Failed to read shebang line from %s", path ? path : "(unknown)");
         free(path);
         return -ENOEXEC;
     }
