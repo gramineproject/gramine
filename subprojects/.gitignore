@@ -1,6 +1,7 @@
 /packagecache
 
 /cJSON-*/
+/curl-*/
 /gcc-*/
 /glibc-*/
 /mbedtls-*/

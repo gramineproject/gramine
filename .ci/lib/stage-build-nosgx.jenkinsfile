@@ -45,7 +45,7 @@ stage('build') {
     env.GRAMINE_PKGLIBDIR = libdir + '/gramine'
 
     // In CI we install to non-standard --prefix (see above). This makes sure the libraries are
-    // available anyway (e.g. gramine-sgx-pf-crypt needs libsgx_util.so).
+    // available anyway.
     env.PKG_CONFIG_PATH = libdir + '/pkgconfig'
 
     // prevent cheating and testing from repo

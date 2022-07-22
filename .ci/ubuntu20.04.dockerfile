@@ -18,7 +18,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libapr1-dev \
     libaprutil1-dev \
     libcjson-dev \
-    libcurl4-openssl-dev \
     libelf-dev \
     libevent-dev \
     libexpat1 \
