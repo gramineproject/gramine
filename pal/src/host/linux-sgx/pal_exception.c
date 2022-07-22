@@ -27,8 +27,8 @@ noreturn static void restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE*
 
 #ifdef ASAN
     /* Unpoison the signal stack before leaving it */
-    uintptr_t sig_stack_low = GET_ENCLAVE_TLS(sig_stack_low);
-    uintptr_t sig_stack_high = GET_ENCLAVE_TLS(sig_stack_high);
+    uintptr_t sig_stack_low = GET_ENCLAVE_TCB(sig_stack_low);
+    uintptr_t sig_stack_high = GET_ENCLAVE_TCB(sig_stack_high);
     asan_unpoison_current_stack(sig_stack_low, sig_stack_high - sig_stack_low);
 #endif
 

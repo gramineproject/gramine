@@ -71,21 +71,21 @@ bool sgx_is_completely_outside_enclave(const void* addr, size_t size) {
 
 #define UPDATE_USTACK(_ustack)                           \
     do {                                                 \
-        SET_ENCLAVE_TLS(ustack, _ustack);                \
-        GET_ENCLAVE_TLS(gpr)->ursp = (uint64_t)_ustack;  \
+        SET_ENCLAVE_TCB(ustack, _ustack);                \
+        GET_ENCLAVE_TCB(gpr)->ursp = (uint64_t)_ustack;  \
     } while(0)
 
 #else
 
-#define UPDATE_USTACK(_ustack) SET_ENCLAVE_TLS(ustack, _ustack)
+#define UPDATE_USTACK(_ustack) SET_ENCLAVE_TCB(ustack, _ustack)
 
 #endif
 
 void* sgx_prepare_ustack(void) {
-    void* old_ustack = GET_ENCLAVE_TLS(ustack);
+    void* old_ustack = GET_ENCLAVE_TCB(ustack);
 
     void* ustack = old_ustack;
-    if (ustack != GET_ENCLAVE_TLS(ustack_top))
+    if (ustack != GET_ENCLAVE_TCB(ustack_top))
         ustack -= RED_ZONE_SIZE;
     UPDATE_USTACK(ustack);
 
@@ -94,7 +94,7 @@ void* sgx_prepare_ustack(void) {
 
 void* sgx_alloc_on_ustack_aligned(size_t size, size_t alignment) {
     assert(IS_POWER_OF_2(alignment));
-    void* ustack = GET_ENCLAVE_TLS(ustack) - size;
+    void* ustack = GET_ENCLAVE_TCB(ustack) - size;
     ustack = ALIGN_DOWN_PTR_POW2(ustack, alignment);
     if (!sgx_is_completely_outside_enclave(ustack, size)) {
         return NULL;
@@ -119,7 +119,7 @@ void* sgx_copy_to_ustack(const void* ptr, size_t size) {
 }
 
 void sgx_reset_ustack(const void* old_ustack) {
-    assert(old_ustack <= GET_ENCLAVE_TLS(ustack_top));
+    assert(old_ustack <= GET_ENCLAVE_TCB(ustack_top));
     UPDATE_USTACK(old_ustack);
 }
 

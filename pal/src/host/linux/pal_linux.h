@@ -76,7 +76,7 @@ extern char __text_start, __text_end, __data_start, __data_end;
 #define ADDR_IN_PAL_OR_VDSO(addr) \
         (((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END) || is_in_vdso(addr))
 
-typedef struct pal_tcb_linux {
+typedef struct pal_linux_tcb {
     PAL_TCB common;
     struct {
         /* private to Linux PAL */
@@ -85,11 +85,11 @@ typedef struct pal_tcb_linux {
         int        (*callback)(void*);
         void*      param;
     };
-} PAL_TCB_LINUX;
+} PAL_LINUX_TCB;
 
 int pal_thread_init(void* tcbptr);
 
-static inline void pal_tcb_linux_init(PAL_TCB_LINUX* tcb, PAL_HANDLE handle, void* alt_stack,
+static inline void pal_linux_tcb_init(PAL_LINUX_TCB* tcb, PAL_HANDLE handle, void* alt_stack,
                                       int (*callback)(void*), void* param) {
     tcb->common.self = &tcb->common;
     tcb->handle      = handle;
@@ -98,8 +98,8 @@ static inline void pal_tcb_linux_init(PAL_TCB_LINUX* tcb, PAL_HANDLE handle, voi
     tcb->param       = param;
 }
 
-static inline PAL_TCB_LINUX* get_tcb_linux(void) {
-    return (PAL_TCB_LINUX*)pal_get_tcb();
+static inline PAL_LINUX_TCB* pal_get_linux_tcb(void) {
+    return (PAL_LINUX_TCB*)pal_get_tcb();
 }
 
 __attribute_no_stack_protector

@@ -25,7 +25,7 @@
 #include "pal_internal.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_types.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
 

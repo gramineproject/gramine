@@ -6,7 +6,7 @@
 #include "pal_ecall_types.h"
 #include "pal_linux_defs.h"
 #include "pal_ocall_types.h"
-#include "pal_tls.h"
+#include "pal_tcb.h"
 #include "sgx_arch.h"
 
 const char* generated_offsets_name = "PAL_SGX";
@@ -78,39 +78,39 @@ const struct generated_offset generated_offsets[] = {
     DEFINE(SGX_CPU_CONTEXT_SIZE, sizeof(sgx_cpu_context_t)),
     DEFINE(SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, sizeof(sgx_cpu_context_t) % PAL_XSTATE_ALIGN),
 
-    /* struct enclave_tls */
-    OFFSET(SGX_COMMON_SELF, enclave_tls, common.self),
-    OFFSET(SGX_COMMON_STACK_PROTECTOR_CANARY, enclave_tls, common.stack_protector_canary),
-    OFFSET(SGX_ENCLAVE_SIZE, enclave_tls, enclave_size),
-    OFFSET(SGX_TCS_OFFSET, enclave_tls, tcs_offset),
-    OFFSET(SGX_INITIAL_STACK_ADDR, enclave_tls, initial_stack_addr),
-    OFFSET(SGX_TMP_RIP, enclave_tls, tmp_rip),
-    OFFSET(SGX_ECALL_RETURN_ADDR, enclave_tls, ecall_return_addr),
-    OFFSET(SGX_SIG_STACK_LOW, enclave_tls, sig_stack_low),
-    OFFSET(SGX_SIG_STACK_HIGH, enclave_tls, sig_stack_high),
-    OFFSET(SGX_SSA, enclave_tls, ssa),
-    OFFSET(SGX_GPR, enclave_tls, gpr),
-    OFFSET(SGX_EXIT_TARGET, enclave_tls, exit_target),
-    OFFSET(SGX_FSBASE, enclave_tls, fsbase),
-    OFFSET(SGX_PRE_OCALL_STACK, enclave_tls, pre_ocall_stack),
-    OFFSET(SGX_USTACK_TOP, enclave_tls, ustack_top),
-    OFFSET(SGX_USTACK, enclave_tls, ustack),
-    OFFSET(SGX_THREAD, enclave_tls, thread),
-    OFFSET(SGX_OCALL_EXIT_CALLED, enclave_tls, ocall_exit_called),
-    OFFSET(SGX_THREAD_STARTED, enclave_tls, thread_started),
-    OFFSET(SGX_READY_FOR_EXCEPTIONS, enclave_tls, ready_for_exceptions),
-    OFFSET(SGX_MANIFEST_SIZE, enclave_tls, manifest_size),
-    OFFSET(SGX_HEAP_MIN, enclave_tls, heap_min),
-    OFFSET(SGX_HEAP_MAX, enclave_tls, heap_max),
-    OFFSET(SGX_CLEAR_CHILD_TID, enclave_tls, clear_child_tid),
+    /* struct pal_enclave_tcb */
+    OFFSET(SGX_COMMON_SELF, pal_enclave_tcb, common.self),
+    OFFSET(SGX_COMMON_STACK_PROTECTOR_CANARY, pal_enclave_tcb, common.stack_protector_canary),
+    OFFSET(SGX_ENCLAVE_SIZE, pal_enclave_tcb, enclave_size),
+    OFFSET(SGX_TCS_OFFSET, pal_enclave_tcb, tcs_offset),
+    OFFSET(SGX_INITIAL_STACK_ADDR, pal_enclave_tcb, initial_stack_addr),
+    OFFSET(SGX_TMP_RIP, pal_enclave_tcb, tmp_rip),
+    OFFSET(SGX_ECALL_RETURN_ADDR, pal_enclave_tcb, ecall_return_addr),
+    OFFSET(SGX_SIG_STACK_LOW, pal_enclave_tcb, sig_stack_low),
+    OFFSET(SGX_SIG_STACK_HIGH, pal_enclave_tcb, sig_stack_high),
+    OFFSET(SGX_SSA, pal_enclave_tcb, ssa),
+    OFFSET(SGX_GPR, pal_enclave_tcb, gpr),
+    OFFSET(SGX_EXIT_TARGET, pal_enclave_tcb, exit_target),
+    OFFSET(SGX_FSBASE, pal_enclave_tcb, fsbase),
+    OFFSET(SGX_PRE_OCALL_STACK, pal_enclave_tcb, pre_ocall_stack),
+    OFFSET(SGX_USTACK_TOP, pal_enclave_tcb, ustack_top),
+    OFFSET(SGX_USTACK, pal_enclave_tcb, ustack),
+    OFFSET(SGX_THREAD, pal_enclave_tcb, thread),
+    OFFSET(SGX_OCALL_EXIT_CALLED, pal_enclave_tcb, ocall_exit_called),
+    OFFSET(SGX_THREAD_STARTED, pal_enclave_tcb, thread_started),
+    OFFSET(SGX_READY_FOR_EXCEPTIONS, pal_enclave_tcb, ready_for_exceptions),
+    OFFSET(SGX_MANIFEST_SIZE, pal_enclave_tcb, manifest_size),
+    OFFSET(SGX_HEAP_MIN, pal_enclave_tcb, heap_min),
+    OFFSET(SGX_HEAP_MAX, pal_enclave_tcb, heap_max),
+    OFFSET(SGX_CLEAR_CHILD_TID, pal_enclave_tcb, clear_child_tid),
 
-    /* struct pal_tcb_host aka PAL_TCB_HOST */
-    OFFSET(PAL_TCB_HOST_TCS, pal_tcb_host, tcs),
-    OFFSET(PAL_TCB_HOST_IN_AEX_PROF, pal_tcb_host, is_in_aex_profiling),
-    OFFSET(PAL_TCB_HOST_EENTER_CNT, pal_tcb_host, eenter_cnt),
-    OFFSET(PAL_TCB_HOST_EEXIT_CNT, pal_tcb_host, eexit_cnt),
-    OFFSET(PAL_TCB_HOST_AEX_CNT, pal_tcb_host, aex_cnt),
-    OFFSET(PAL_TCB_HOST_LAST_ASYNC_EVENT, pal_tcb_host, last_async_event),
+    /* struct pal_host_tcb aka PAL_HOST_TCB */
+    OFFSET(PAL_HOST_TCB_TCS, pal_host_tcb, tcs),
+    OFFSET(PAL_HOST_TCB_IN_AEX_PROF, pal_host_tcb, is_in_aex_profiling),
+    OFFSET(PAL_HOST_TCB_EENTER_CNT, pal_host_tcb, eenter_cnt),
+    OFFSET(PAL_HOST_TCB_EEXIT_CNT, pal_host_tcb, eexit_cnt),
+    OFFSET(PAL_HOST_TCB_AEX_CNT, pal_host_tcb, aex_cnt),
+    OFFSET(PAL_HOST_TCB_LAST_ASYNC_EVENT, pal_host_tcb, last_async_event),
 
     /* sgx_arch_tcs_t */
     OFFSET_T(TCS_FLAGS, sgx_arch_tcs_t, flags),

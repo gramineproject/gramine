@@ -32,10 +32,10 @@ sgx_ecall:
 
 .Ldo_ecall:
     # increment per-thread EENTER counter for stats
-    lock incq %gs:PAL_TCB_HOST_EENTER_CNT
+    lock incq %gs:PAL_HOST_TCB_EENTER_CNT
 
     # RBX has to be the TCS of the thread
-    movq %gs:PAL_TCB_HOST_TCS, %rbx
+    movq %gs:PAL_HOST_TCB_TCS, %rbx
 
     # RCX has to be the AEP (Asynchronous Exit Pointer)
     leaq async_exit_pointer(%rip), %rcx
@@ -68,11 +68,11 @@ async_exit_pointer:
     .cfi_undefined %rip
 
     # increment per-thread AEX counter for stats
-    lock incq %gs:PAL_TCB_HOST_AEX_CNT
+    lock incq %gs:PAL_HOST_TCB_AEX_CNT
 
 #ifdef DEBUG
     # Inform that we are in AEX profiling code
-    movb $1, %gs:PAL_TCB_HOST_IN_AEX_PROF
+    movb $1, %gs:PAL_HOST_TCB_IN_AEX_PROF
     # Save ERESUME parameters
     pushq %rax
     .cfi_adjust_cfa_offset 8
@@ -101,7 +101,7 @@ async_exit_pointer:
     .cfi_adjust_cfa_offset -8
     popq %rax
     .cfi_adjust_cfa_offset -8
-    movb $0, %gs:PAL_TCB_HOST_IN_AEX_PROF
+    movb $0, %gs:PAL_HOST_TCB_IN_AEX_PROF
 #endif
 
     .cfi_endproc
@@ -131,7 +131,7 @@ sgx_raise:
     .cfi_startproc
 
     # increment per-thread EEXIT counter for stats
-    lock incq %gs:PAL_TCB_HOST_EEXIT_CNT
+    lock incq %gs:PAL_HOST_TCB_EEXIT_CNT
 
     leaq ocall_table(%rip), %rbx
     movq (%rbx,%rdi,8), %rbx
@@ -171,7 +171,7 @@ sgx_raise:
 
     movq %rax, %rdi
     movq $PAL_EVENT_NO_EVENT, %rsi
-    lock xchgl %esi, %gs:PAL_TCB_HOST_LAST_ASYNC_EVENT
+    lock xchgl %esi, %gs:PAL_HOST_TCB_LAST_ASYNC_EVENT
 
     # return to enclave, arguments:
     # RDI - return value
