@@ -155,7 +155,7 @@ out_fail:;
 /* populate already-allocated stack with copied argv and envp and space for auxv;
  * returns a pointer to first stack frame (starting with argc, then argv pointers, and so on)
  * and a pointer inside first stack frame (with auxv[0], auxv[1], and so on) */
-static int populate_stack(void* stack, size_t stack_size, char* const* argv,
+static int populate_stack(void* stack, size_t stack_size, const char* const* argv,
                           const char* const* envp, char*** out_argp, elf_auxv_t** out_auxv) {
     void* stack_low_addr  = stack;
     void* stack_high_addr = stack + stack_size;
@@ -197,7 +197,7 @@ static int populate_stack(void* stack, size_t stack_size, char* const* argv,
      */
     size_t argc      = 0;
     size_t argv_size = 0;
-    for (char* const* a = argv; *a; a++) {
+    for (const char* const* a = argv; *a; a++) {
         argv_size += strlen(*a) + 1;
         argc++;
     }
@@ -215,7 +215,7 @@ static int populate_stack(void* stack, size_t stack_size, char* const* argv,
      * (notably Node.js's libuv) assume the compact encoding of argv where (1) all strings are
      * located adjacently and (2) in increasing order. */
     char** new_argv = stack_low_addr;
-    for (char* const* a = argv; *a; a++) {
+    for (const char* const* a = argv; *a; a++) {
         size_t size = strlen(*a) + 1;
         char** argv_ptr = ALLOCATE_FROM_LOW_ADDR(sizeof(char*)); /* ptr to argv[i] */
         memcpy(argv_str, *a, size);                              /* argv[i] string */
@@ -276,9 +276,7 @@ static int populate_stack(void* stack, size_t stack_size, char* const* argv,
     return 0;
 }
 
-/* this function cannot use `const char* const* argv` because `libos_syscall_execve_rtld()` calls it
- * with `char** argv` (the C standard disallows such conversion) */
-int init_stack(char* const* argv, const char* const* envp, char*** out_argp,
+int init_stack(const char* const* argv, const char* const* envp, char*** out_argp,
                elf_auxv_t** out_auxv) {
     int ret;
 
@@ -368,7 +366,7 @@ static int read_environs(const char* const* envp) {
         }                                                                   \
     } while (0)
 
-noreturn void libos_init(int argc, char* const* argv, const char* const* envp) {
+noreturn void libos_init(int argc, const char* const* argv, const char* const* envp) {
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 

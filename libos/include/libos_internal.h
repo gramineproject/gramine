@@ -17,7 +17,7 @@
 #include "pal.h"
 #include "pal_error.h"
 
-noreturn void libos_init(int argc, char* const* argv, const char* const* envp);
+noreturn void libos_init(int argc, const char* const* argv, const char* const* envp);
 
 /* important macros and static inline functions */
 
@@ -250,7 +250,7 @@ void delete_epoll_items_for_fd(int fd, struct libos_handle* handle);
 void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool was_partial);
 
 void* allocate_stack(size_t size, size_t protect_size, bool user);
-int init_stack(char* const* argv, const char* const* envp, char*** out_argp,
+int init_stack(const char* const* argv, const char* const* envp, char*** out_argp,
                elf_auxv_t** out_auxv);
 
 /*!
