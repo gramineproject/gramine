@@ -366,7 +366,7 @@ static int read_environs(const char** envp) {
         }                                                                   \
     } while (0)
 
-noreturn void* libos_init(int argc, const char** argv, const char** envp) {
+noreturn void* libos_init(const char** argv, const char** envp) {
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
@@ -419,10 +419,15 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
     }
 
     RUN_INIT(init_ipc);
-    RUN_INIT(init_process, argc, argv);
+    RUN_INIT(init_process);
     RUN_INIT(init_mount_root);
-    RUN_INIT(init_threading);
     RUN_INIT(init_mount);
+
+    char** expanded_argv = NULL;
+    RUN_INIT(init_process_args, argv, &expanded_argv);
+    RUN_INIT(init_process_cmdline, expanded_argv);
+
+    RUN_INIT(init_threading);
     RUN_INIT(init_important_handles);
 
     /* Update log prefix after we initialized `g_process.exec` */
@@ -432,9 +437,8 @@ noreturn void* libos_init(int argc, const char** argv, const char** envp) {
 
     const char** new_argp;
     elf_auxv_t* new_auxv;
-    RUN_INIT(init_stack, argv, envp, &new_argp, &new_auxv);
+    RUN_INIT(init_stack, (const char**)expanded_argv, envp, &new_argp, &new_auxv);
 
-    /* TODO: Support running non-ELF executables (scripts) */
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);
