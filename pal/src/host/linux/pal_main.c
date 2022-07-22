@@ -151,7 +151,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* we don't yet have a TCB in the GS register, but GCC's stack protector will look for a canary
      * at gs:[0x8] in functions called below, so let's install a dummy TCB with a default canary */
-    PAL_TCB_LINUX dummy_tcb_for_stack_protector = { 0 };
+    PAL_LINUX_TCB dummy_tcb_for_stack_protector = { 0 };
     dummy_tcb_for_stack_protector.common.self = &dummy_tcb_for_stack_protector.common;
     pal_tcb_set_stack_canary(&dummy_tcb_for_stack_protector.common, STACK_PROTECTOR_CANARY_DEFAULT);
     ret = pal_set_tcb(&dummy_tcb_for_stack_protector.common);
@@ -291,8 +291,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     first_thread->thread.stack = alt_stack;
 
     // Initialize TCB at the top of the alternative stack.
-    PAL_TCB_LINUX* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_TCB_LINUX);
-    pal_tcb_linux_init(tcb, first_thread, alt_stack, /*callback=*/NULL, /*param=*/NULL);
+    PAL_LINUX_TCB* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_LINUX_TCB);
+    pal_linux_tcb_init(tcb, first_thread, alt_stack, /*callback=*/NULL, /*param=*/NULL);
     ret = pal_thread_init(tcb);
     if (ret < 0)
         INIT_FAIL("pal_thread_init() failed: %d", unix_to_pal_error(ret));

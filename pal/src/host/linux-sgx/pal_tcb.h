@@ -20,7 +20,7 @@ struct untrusted_area {
  * pass parameters needed during enclave or thread initialization. Some of them are thread specific
  * (like tcs_offset) and some of them are identical for all threads (like enclave_size).
  */
-struct pal_tcb_sgx {
+struct pal_enclave_tcb {
     PAL_TCB common;
 
     /* private to Linux-SGX PAL */
@@ -55,29 +55,29 @@ extern uint64_t dummy_debug_variable;
 
 #ifdef IN_ENCLAVE
 
-static inline struct pal_tcb_sgx* pal_get_tcb_sgx(void) {
-    return (struct pal_tcb_sgx*)pal_get_tcb();
+static inline struct pal_enclave_tcb* pal_get_enclave_tcb(void) {
+    return (struct pal_enclave_tcb*)pal_get_tcb();
 }
 
 #define GET_ENCLAVE_TCB(member)                                                                \
     ({                                                                                         \
-        struct pal_tcb_sgx* tmp;                                                               \
+        struct pal_enclave_tcb* tmp;                                                               \
         uint64_t val;                                                                          \
-        static_assert(sizeof(tmp->member) == 8, "pal_tcb_sgx member should have 8-byte type"); \
+        static_assert(sizeof(tmp->member) == 8, "pal_enclave_tcb member should have 8-byte type"); \
         __asm__("movq %%gs:%c1, %0"                                                            \
                 : "=r"(val)                                                                    \
-                : "i"(offsetof(struct pal_tcb_sgx, member))                                    \
+                : "i"(offsetof(struct pal_enclave_tcb, member))                                    \
                 : "memory");                                                                   \
         (__typeof(tmp->member))val;                                                            \
     })
 #define SET_ENCLAVE_TCB(member, value)                                                         \
     do {                                                                                       \
-        struct pal_tcb_sgx* tmp;                                                               \
-        static_assert(sizeof(tmp->member) == 8, "pal_tcb_sgx member should have 8-byte type"); \
-        static_assert(sizeof(value) == 8, "only 8-byte type can be set to pal_tcb_sgx");       \
+        struct pal_enclave_tcb* tmp;                                                               \
+        static_assert(sizeof(tmp->member) == 8, "pal_enclave_tcb member should have 8-byte type"); \
+        static_assert(sizeof(value) == 8, "only 8-byte type can be set to pal_enclave_tcb");       \
         __asm__("movq %0, %%gs:%c1"                                                            \
                 :                                                                              \
-                : "ir"(value), "i"(offsetof(struct pal_tcb_sgx, member))                       \
+                : "ir"(value), "i"(offsetof(struct pal_enclave_tcb, member))                       \
                 : "memory");                                                                   \
     } while (0)
 
@@ -91,8 +91,8 @@ static inline void pal_set_tcb_stack_canary(uint64_t canary) {
 #else /* IN_ENCLAVE */
 
 /* private to untrusted Linux PAL, unique to each untrusted thread */
-typedef struct pal_tcb_host {
-    struct pal_tcb_host* self;
+typedef struct pal_host_tcb {
+    struct pal_host_tcb* self;
     sgx_arch_tcs_t* tcs;           /* TCS page of SGX corresponding to thread, for EENTER */
     void* stack;                   /* bottom of stack, for later freeing when thread exits */
     void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
@@ -104,15 +104,15 @@ typedef struct pal_tcb_host {
     atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
-} PAL_TCB_HOST;
+} PAL_HOST_TCB;
 
-extern void pal_tcb_host_init(PAL_TCB_HOST* tcb, void* stack, void* alt_stack);
+extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
 
-static inline PAL_TCB_HOST* get_tcb_host(void) {
-    PAL_TCB_HOST* tcb;
+static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
+    PAL_HOST_TCB* tcb;
     __asm__("movq %%gs:%c1, %0\n"
             : "=r"(tcb)
-            : "i"(offsetof(PAL_TCB_HOST, self))
+            : "i"(offsetof(PAL_HOST_TCB, self))
             : "memory");
     return tcb;
 }

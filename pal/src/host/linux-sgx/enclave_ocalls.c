@@ -286,7 +286,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
     *addrptr = NULL;
     *need_munmap = false;
 
-    struct untrusted_area* cache = &pal_get_tcb_sgx()->untrusted_area_cache;
+    struct untrusted_area* cache = &pal_get_enclave_tcb()->untrusted_area_cache;
 
     uint64_t in_use = 0;
     if (!__atomic_compare_exchange_n(&cache->in_use, &in_use, 1, /*weak=*/false, __ATOMIC_RELAXED,
@@ -333,7 +333,7 @@ static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munm
         ocall_munmap_untrusted(addr, size);
         /* there is not much we can do in case of error */
     } else {
-        struct untrusted_area* cache = &pal_get_tcb_sgx()->untrusted_area_cache;
+        struct untrusted_area* cache = &pal_get_enclave_tcb()->untrusted_area_cache;
         __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
     }
 }
