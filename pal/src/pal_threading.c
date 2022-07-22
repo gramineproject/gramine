@@ -35,10 +35,10 @@ int PalThreadResume(PAL_HANDLE thread_handle) {
     return _PalThreadResume(thread_handle);
 }
 
-int PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    return _PalThreadSetCpuAffinity(thread, cpumask_size, cpu_mask);
+int PalThreadSetCpuAffinity(PAL_HANDLE thread, uint8_t* cpu_mask, size_t cpumask_size) {
+    return _PalThreadSetCpuAffinity(thread, cpu_mask, cpumask_size);
 }
 
-int PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    return _PalThreadGetCpuAffinity(thread, cpumask_size, cpu_mask);
+int PalThreadGetCpuAffinity(PAL_HANDLE thread, uint8_t* cpu_mask, size_t cpumask_size) {
+    return _PalThreadGetCpuAffinity(thread, cpu_mask, cpumask_size);
 }

@@ -221,8 +221,8 @@ void _PalThreadYieldExecution(void);
 int _PalThreadResume(PAL_HANDLE thread_handle);
 int _PalProcessCreate(PAL_HANDLE* handle, const char** args);
 noreturn void _PalProcessExit(int exit_code);
-int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
-int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask);
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, uint8_t* cpu_mask, size_t cpumask_size);
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, uint8_t* cpu_mask, size_t cpumask_size);
 
 /* PalEvent calls */
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);

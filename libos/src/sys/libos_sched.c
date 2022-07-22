@@ -166,23 +166,23 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     }
 
     /* User mask is being manipulated below, so make a local copy of the mask */
-    unsigned long* cpumask = malloc(user_mask_size);
+    uint8_t* cpumask = malloc(user_mask_size);
     if (!cpumask) {
         put_thread(thread);
         return -ENOMEM;
     }
-    memcpy(cpumask, user_mask_ptr, user_mask_size);
+    memcpy(cpumask, (uint8_t*)user_mask_ptr, user_mask_size);
 
     /* Verify validity of the CPU affinity (e.g. that it contains at least one online core). */
     size_t threads_cnt = g_pal_public_state->topo_info.threads_cnt;
     size_t cores_cnt = 0;
     for (size_t i = 0; i < MIN(threads_cnt, user_mask_size * BITS_IN_BYTE); i++) {
-        size_t idx = i / BITS_IN_TYPE(unsigned long);
-        if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
+        size_t idx = i / BITS_IN_TYPE(uint8_t);
+        if (cpumask[idx] & 1U << (i % BITS_IN_TYPE(uint8_t))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
                  /* User-supplied cpumask contains a CPU that is currently offline, so remove it
                   * from the local copy `cpumask` */
-                cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
+                cpumask[idx] &= ~(1U << (i % BITS_IN_TYPE(uint8_t)));
             } else {
                 cores_cnt++;
             }
@@ -197,7 +197,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     }
 
     lock(&thread->lock);
-    ret = PalThreadSetCpuAffinity(thread->pal_handle, user_mask_size, cpumask);
+    ret = PalThreadSetCpuAffinity(thread->pal_handle, cpumask, user_mask_size);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -253,7 +253,7 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int user_mask_size,
 
     memset(user_mask_ptr, 0, user_mask_size);
     lock(&thread->lock);
-    memcpy(user_mask_ptr, thread->cpumask, MIN(user_mask_size, cpumask_size));
+    memcpy((uint8_t*)user_mask_ptr, thread->cpumask, MIN(user_mask_size, cpumask_size));
     unlock(&thread->lock);
 
     put_thread(thread);

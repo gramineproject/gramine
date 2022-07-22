@@ -226,7 +226,7 @@ static int init_main_thread(void) {
         return -ENOMEM;
     }
 
-    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, GET_CPUMASK_SIZE(), cur_thread->cpumask);
+    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, cur_thread->cpumask, GET_CPUMASK_SIZE());
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);
@@ -602,7 +602,7 @@ BEGIN_CP_FUNC(thread) {
         }
 
         /* new_thread->cpumask_size is updated as part of the shallow copy above. */
-        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(GET_CPUMASK_SIZE()));
+        new_thread->cpumask = (uint8_t*)(base + ADD_CP_OFFSET(GET_CPUMASK_SIZE()));
         memcpy(new_thread->cpumask, thread->cpumask, GET_CPUMASK_SIZE());
 
         new_thread->pal_handle = NULL;

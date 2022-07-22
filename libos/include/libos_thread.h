@@ -133,7 +133,7 @@ struct libos_thread {
     void* frameptr;
 
     /* Current CPU affinity mask for this thread. */
-    unsigned long* cpumask;
+    uint8_t* cpumask;
 
     REFTYPE ref_count;
     struct libos_lock lock;

@@ -2039,7 +2039,7 @@ out:
     return retval;
 }
 
-int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
+int ocall_sched_setaffinity(void* tcs, void* cpu_mask, size_t cpumask_size) {
     int retval = 0;
     ms_ocall_sched_setaffinity_t* ms;
 
@@ -2092,7 +2092,7 @@ static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
     return !(cpumask & invalid_cpumask);
 }
 
-int ocall_sched_getaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
+int ocall_sched_getaffinity(void* tcs, void* cpu_mask, size_t cpumask_size) {
     int retval = 0;
     ms_ocall_sched_getaffinity_t* ms;
 
