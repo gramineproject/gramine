@@ -48,12 +48,12 @@ ssl/server.crt: ssl/ca_config.conf
 # TODO: install headers, and `make install` before copying them
 #
 
-MBEDTLS_VERSION ?= 2.26.0
+MBEDTLS_VERSION ?= 2.28.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
 	https://packages.gramineproject.io/distfiles
-MBEDTLS_HASH ?= 35d8d87509cd0d002bddbd5508b9d2b931c5e83747d087234cc7ad551d53fe05
+MBEDTLS_HASH ?= f644248f23cf04315cf9bb58d88c4c9471c16ca0533ecf33f86fb7749a3e5fa6
 
 ifeq ($(DEBUG),1)
 MBED_BUILD_TYPE=Debug
