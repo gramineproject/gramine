@@ -155,9 +155,7 @@ fail:
     if (fd >= 0)
         ocall_close(fd);
 
-    if (hdl->file.realpath) {
-        free((void*)hdl->file.realpath);
-    }
+    free((void*)hdl->file.realpath);
 
     free(hdl);
     return ret;
@@ -233,10 +231,7 @@ static int file_close(PAL_HANDLE handle) {
 
     ocall_close(fd);
 
-    if (handle->file.realpath) {
-        free((void*)handle->file.realpath);
-        handle->file.realpath = NULL;
-    }
+    free((void*)handle->file.realpath);
 
     return 0;
 }
@@ -539,7 +534,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     hdl->flags |= PAL_HANDLE_FD_READABLE;
     hdl->dir.fd = fd;
 
-    char* path  = strdup(uri);
+    char* path = strdup(uri);
     if (!path) {
         ocall_close(fd);
         free(hdl);
@@ -647,10 +642,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    if (handle->dir.realpath) {
-        free((void*)handle->dir.realpath);
-        handle->dir.realpath = NULL;
-    }
+    free((void*)handle->dir.realpath);
 
     return 0;
 }

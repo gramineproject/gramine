@@ -121,10 +121,7 @@ static int file_close(PAL_HANDLE handle) {
 
     int ret = DO_SYSCALL(close, fd);
 
-    if (handle->file.realpath) {
-        free((void*)handle->file.realpath);
-        handle->file.realpath = NULL;
-    }
+    free((void*)handle->file.realpath);
 
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
@@ -418,10 +415,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    if (handle->dir.realpath) {
-        free((void*)handle->dir.realpath);
-        handle->dir.realpath = NULL;
-    }
+    free((void*)handle->dir.realpath);
 
     if (ret < 0)
         return -PAL_ERROR_BADHANDLE;

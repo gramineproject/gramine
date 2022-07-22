@@ -101,17 +101,38 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
 }
 
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
-    PAL_HANDLE hdl = malloc(size);
-    if (!hdl)
-        return -PAL_ERROR_NOMEM;
+    PAL_HANDLE hdl = NULL;
+    size_t hdlsz = handle_size((PAL_HANDLE)data);
+    void* d = NULL;
+    size_t dsz = 0;
 
-    memcpy(hdl, data, size);
-    size_t hdlsz = handle_size(hdl);
+    if (size > hdlsz) {
+        hdl = malloc(hdlsz);
+        if (!hdl)
+            return -PAL_ERROR_NOMEM;
 
-    /* update handle fields to point to correct contents (located right after handle itself) */
+        memcpy(hdl, data, hdlsz);
+
+        dsz = size - hdlsz;
+        d = malloc(dsz);
+        if (!d) {
+            free(hdl);
+            return -PAL_ERROR_NOMEM;
+        }
+
+        memcpy(d, (const char*)data + hdlsz, dsz);
+    } else {
+        hdl = malloc(size);
+        if (!hdl)
+            return -PAL_ERROR_NOMEM;
+
+        memcpy(hdl, data, size);
+    }
+
+    /* update handle fields to point to correct contents */
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE:
-            hdl->file.realpath = (hdl->file.realpath ? (const char*)hdl + hdlsz : NULL);
+            hdl->file.realpath = (hdl->file.realpath ? (const char*)d : NULL);
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
@@ -120,7 +141,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_DEV:
             break;
         case PAL_TYPE_DIR:
-            hdl->dir.realpath = (hdl->dir.realpath ? (const char*)hdl + hdlsz : NULL);
+            hdl->dir.realpath = (hdl->dir.realpath ? (const char*)d : NULL);
             break;
         case PAL_TYPE_SOCKET:
             fixup_socket_handle_after_deserialization(hdl);
@@ -130,6 +151,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             break;
         default:
             free(hdl);
+            free(d);
             return -PAL_ERROR_BADHANDLE;
     }
 
