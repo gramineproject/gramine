@@ -101,9 +101,8 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         output_path_2 = os.path.join(self.OUTPUT_DIR, 'test_115b')
         self.copy_input(plaintext_path, output_path_1) # encrypt
         self.copy_input(plaintext_path, output_path_2)
-        stdout, stderr = self.run_binary(['seek_tell', input_path, output_path_1, output_path_2])
-        self.verify_seek_tell(stdout, stderr, input_path, output_path_1, output_path_2,
-                              self.FILE_SIZES[-1])
+        stdout, _ = self.run_binary(['seek_tell', input_path, output_path_1, output_path_2])
+        self.verify_seek_tell(stdout, output_path_1, output_path_2, self.FILE_SIZES[-1])
 
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_130_file_stat(self):
