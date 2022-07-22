@@ -59,26 +59,26 @@ static inline struct pal_enclave_tcb* pal_get_enclave_tcb(void) {
     return (struct pal_enclave_tcb*)pal_get_tcb();
 }
 
-#define GET_ENCLAVE_TCB(member)                                                                \
-    ({                                                                                         \
+#define GET_ENCLAVE_TCB(member)                                                                    \
+    ({                                                                                             \
         struct pal_enclave_tcb* tmp;                                                               \
-        uint64_t val;                                                                          \
+        uint64_t val;                                                                              \
         static_assert(sizeof(tmp->member) == 8, "pal_enclave_tcb member should have 8-byte type"); \
-        __asm__("movq %%gs:%c1, %0"                                                            \
-                : "=r"(val)                                                                    \
+        __asm__("movq %%gs:%c1, %0"                                                                \
+                : "=r"(val)                                                                        \
                 : "i"(offsetof(struct pal_enclave_tcb, member))                                    \
-                : "memory");                                                                   \
-        (__typeof(tmp->member))val;                                                            \
+                : "memory");                                                                       \
+        (__typeof(tmp->member))val;                                                                \
     })
-#define SET_ENCLAVE_TCB(member, value)                                                         \
-    do {                                                                                       \
+#define SET_ENCLAVE_TCB(member, value)                                                             \
+    do {                                                                                           \
         struct pal_enclave_tcb* tmp;                                                               \
         static_assert(sizeof(tmp->member) == 8, "pal_enclave_tcb member should have 8-byte type"); \
         static_assert(sizeof(value) == 8, "only 8-byte type can be set to pal_enclave_tcb");       \
-        __asm__("movq %0, %%gs:%c1"                                                            \
-                :                                                                              \
+        __asm__("movq %0, %%gs:%c1"                                                                \
+                :                                                                                  \
                 : "ir"(value), "i"(offsetof(struct pal_enclave_tcb, member))                       \
-                : "memory");                                                                   \
+                : "memory");                                                                       \
     } while (0)
 
 
