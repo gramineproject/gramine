@@ -86,8 +86,6 @@ long pal_to_unix_errno(long err) {
 void* migrated_memory_start;
 void* migrated_memory_end;
 
-const char** migrated_envp __attribute_migratable;
-
 /* `g_library_paths` is populated with LD_PRELOAD entries once during LibOS initialization and is
  * used in `__load_interp_object()` to search for ELF program interpreter in specific paths. Once
  * allocated, its memory is never freed or updated. */
@@ -265,12 +263,6 @@ static int populate_stack(void* stack, size_t stack_size, const char** argv, con
     /* clear working area at the bottom */
     memset(stack, 0, shift);
 
-    /* TODO: remove this, but see the comment in `libos_syscall_execve`. */
-    /* set global envp pointer for future checkpoint/migration: this is required for fork/clone
-     * case (so that migrated envp points to envvars on the migrated stack) and redundant for
-     * execve case (because execve passes an explicit list of envvars to child process) */
-    migrated_envp = new_envp;
-
     *out_argp = new_stack_low_addr;
     *out_auxv = new_auxv;
     return 0;
@@ -301,9 +293,6 @@ int init_stack(const char** argv, const char** envp, const char*** out_argp,
         return -ENOMEM;
 
     log_debug("Allocated stack at %p (size = %#lx)", stack, stack_size);
-
-    /* if there is envp inherited from parent, use it */
-    envp = migrated_envp ?: envp;
 
     ret = populate_stack(stack, stack_size, argv, envp, out_argp, out_auxv);
     if (ret < 0)

@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -135,7 +136,20 @@ static void test_execve_start(char* self) {
     CHECK(kill(getpid(), SIGALRM));
 
     char* argv[] = {self, (char*)"cont", NULL};
-    CHECK(execve(self, argv, NULL));
+
+    /* Gramine behaves incorrectly if envp doesn't contain LD_LIBRARY_PATH (cannot find
+     * Gramine-specific Glibc libraries), so add this single envvar for execve() */
+    char* ld_library_path_value = getenv("LD_LIBRARY_PATH");
+    if (!ld_library_path_value) {
+        printf("No LD_LIBRARY_PATH envvar found\n");
+        exit(1);
+    }
+    char ld_library_path_envvar[512];
+    strcpy(ld_library_path_envvar, "LD_LIBRARY_PATH=");
+    strcat(ld_library_path_envvar, ld_library_path_value);
+    char* envp[] = {ld_library_path_envvar, NULL};
+
+    CHECK(execve(self, argv, envp));
 }
 
 static void test_execve_continue(void) {

@@ -185,8 +185,6 @@ static inline bool memory_migrated(void* mem) {
 extern void* __load_address;
 extern void* __load_address_end;
 
-extern const char** migrated_envp;
-
 int init_brk_region(void* brk_region, size_t data_segment_size);
 void reset_brk(void);
 int init_rlimit(void);

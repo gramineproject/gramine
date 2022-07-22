@@ -115,8 +115,6 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, cons
     cur_thread->stack     = NULL;
     cur_thread->stack_red = NULL;
 
-    migrated_envp = NULL;
-
     const char** new_argp;
     elf_auxv_t* new_auxv;
 
@@ -138,6 +136,10 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv, cons
     /* UNREACHABLE */
 }
 
+/*
+ * TODO: Linux treats argv == NULL and envp == NULL as `argv = {NULL}` and `envp = {NULL}`.
+ *       Gramine currently doesn't implement this corner case.
+ */
 long libos_syscall_execve(const char* file, const char** argv, const char** envp) {
     int ret = 0, argc = 0;
 
@@ -153,10 +155,16 @@ long libos_syscall_execve(const char* file, const char** argv, const char** envp
             return -EFAULT;
     }
 
-    /* TODO: This should be removed, but: https://github.com/gramineproject/graphene/issues/2081 */
-    if (!envp)
-        envp = migrated_envp;
+    /*
+     * TODO: Gramine has special treatment of `LD_LIBRARY_PATH`: almost all manifests set this
+     *       envvar to contain `/lib:` as the first entry, to find Gramine-specific glibc etc.
+     *       If this envvar is missing from the environment, Gramine fails to start (ld.so is unable
+     *       to find glibc). For now, we print a warning if we detect such a case.
+     *
+     *       See https://github.com/gramineproject/graphene/issues/2081 for details.
+     */
 
+    bool found_ld_library_path_envvar = false;
     for (const char** e = envp; /* no condition*/; e++) {
         if (!is_user_memory_readable(e, sizeof(*e)))
             return -EFAULT;
@@ -164,6 +172,13 @@ long libos_syscall_execve(const char* file, const char** argv, const char** envp
             break;
         if (!is_user_string_readable(*e))
             return -EFAULT;
+        if (strstartswith(*e, "LD_LIBRARY_PATH="))
+            found_ld_library_path_envvar = true;
+    }
+
+    if (!found_ld_library_path_envvar) {
+        log_warning("execve: did not find LD_LIBRARY_PATH in the environment, Gramine may behave "
+                    "incorrectly");
     }
 
     struct libos_handle* exec = NULL;
