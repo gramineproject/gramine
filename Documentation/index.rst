@@ -66,7 +66,7 @@ Table of Contents
    performance
    cloud-deployment
    gramine-users
-   gsc
+   container-integration
    sgx-intro
    glossary
 
