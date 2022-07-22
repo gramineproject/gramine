@@ -206,7 +206,35 @@ static dev_t makedev(unsigned int major, unsigned int minor) {
     return dev;
 }
 
-static int pseudo_istat(struct libos_dentry* dent, struct libos_inode* inode, struct stat* buf) {
+static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int whence) {
+    file_off_t ret;
+
+    struct pseudo_node* node = hdl->inode->data;
+    switch (node->type) {
+        case PSEUDO_STR: {
+            lock(&hdl->lock);
+            file_off_t pos = hdl->pos;
+            ret = generic_seek(pos, hdl->info.str.mem.size, offset, whence, &pos);
+            if (ret == 0) {
+                hdl->pos = pos;
+                ret = pos;
+            }
+            unlock(&hdl->lock);
+            return ret;
+        }
+
+        case PSEUDO_DEV:
+            if (!node->dev.dev_ops.seek)
+                return -EACCES;
+            return node->dev.dev_ops.seek(hdl, offset, whence);
+
+        default:
+            return -ENOSYS;
+    }
+}
+
+static int pseudo_istat(struct libos_handle* handle, struct libos_dentry* dent,
+                        struct libos_inode* inode, struct stat* buf) {
     memset(buf, 0, sizeof(*buf));
     buf->st_dev = 1;
     buf->st_mode = inode->type | inode->perm;
@@ -241,7 +269,20 @@ static int pseudo_istat(struct libos_dentry* dent, struct libos_inode* inode, st
             buf->st_rdev = makedev(node->dev.major, node->dev.minor);
             buf->st_nlink = 1;
             break;
-        default:
+        case PSEUDO_STR:
+            buf->st_nlink = 1;
+            if (handle) {
+                int ret = pseudo_seek(handle, 0, SEEK_END);
+                if (ret < 0)
+                    return ret;
+                buf->st_size = ret;
+
+                ret = pseudo_seek(handle, 0, SEEK_SET);
+                if (ret < 0)
+                    return ret;
+            }
+            break;
+        default: /* Symbolic link */
             buf->st_nlink = 1;
             break;
     }
@@ -252,11 +293,11 @@ static int pseudo_stat(struct libos_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    return pseudo_istat(dent, dent->inode, buf);
+    return pseudo_istat(NULL/*handle*/, dent, dent->inode, buf);
 }
 
 static int pseudo_hstat(struct libos_handle* handle, struct stat* buf) {
-    return pseudo_istat(handle->dentry, handle->inode, buf);
+    return pseudo_istat(handle, handle->dentry, handle->inode, buf);
 }
 
 static int pseudo_follow_link(struct libos_dentry* dent, char** out_target) {
@@ -379,33 +420,6 @@ static ssize_t pseudo_write(struct libos_handle* hdl, const void* buf, size_t si
             if (!node->dev.dev_ops.write)
                 return -EACCES;
             return node->dev.dev_ops.write(hdl, buf, size);
-
-        default:
-            return -ENOSYS;
-    }
-}
-
-static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int whence) {
-    file_off_t ret;
-
-    struct pseudo_node* node = hdl->inode->data;
-    switch (node->type) {
-        case PSEUDO_STR: {
-            lock(&hdl->lock);
-            file_off_t pos = hdl->pos;
-            ret = generic_seek(pos, hdl->info.str.mem.size, offset, whence, &pos);
-            if (ret == 0) {
-                hdl->pos = pos;
-                ret = pos;
-            }
-            unlock(&hdl->lock);
-            return ret;
-        }
-
-        case PSEUDO_DEV:
-            if (!node->dev.dev_ops.seek)
-                return -EACCES;
-            return node->dev.dev_ops.seek(hdl, offset, whence);
 
         default:
             return -ENOSYS;
