@@ -83,7 +83,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
                          int* child_tidptr, unsigned long tls);
 long libos_syscall_fork(void);
 long libos_syscall_vfork(void);
-long libos_syscall_execve(const char* file, const char** argv, const char** envp);
+long libos_syscall_execve(const char* file, const char* const* argv, const char* const* envp);
 long libos_syscall_exit(int error_code);
 long libos_syscall_waitid(int which, pid_t id, siginfo_t* infop, int options,
                           struct __kernel_rusage* ru);
