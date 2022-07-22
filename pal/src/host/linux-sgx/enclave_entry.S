@@ -823,9 +823,9 @@ _restore_sgx_context:
     # (4) the exception handler for this new exception is prepared in SSA=1,
     # (5) thread returns back to SSA=0 and handles this new exception,
     # (6) thread is done and returns from exception handler via _restore_sgx_context() and updates
-    #     SGX_TMP_RIP (overwrites pal_enclave_tcb::tmp_rip). Now the thread returned in the middle of
-    #     _restore_sgx_context() and will try to `jmp *%gs:SGX_TMP_RIP` but this value is lost, and
-    #     SIGILL/SEGFAULT follows.
+    #     SGX_TMP_RIP (overwrites pal_enclave_tcb::tmp_rip). Now the thread returned in the middle
+    #     of _restore_sgx_context() and will try to `jmp *%gs:SGX_TMP_RIP` but this value is lost,
+    #     and SIGILL/SEGFAULT follows.
     #
     # The last 4 instructions that restore RIP, RSP and R15 (needed as tmp reg) need to be atomic
     # wrt .Lcssa1_exception_during_enclave_run.
