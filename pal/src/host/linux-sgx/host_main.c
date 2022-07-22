@@ -953,7 +953,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         return ret;
 
     sgx_target_info_t qe_targetinfo = {0};
-    if (enclave->attestation_type != SGX_ATTESTATION_NONE) {
+    if (enclave->attestation_type != SGX_ATTESTATION_NONE && parent_stream_fd < 0) {
         /* initialize communication with Quoting Enclave only if app requests attestation */
         log_debug("Using SGX attestation type \"%s\"",
                   attestation_type_to_str(enclave->attestation_type));

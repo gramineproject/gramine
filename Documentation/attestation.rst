@@ -10,9 +10,11 @@ initial state.
 There are two types of attestation: :term:`Local Attestation` and
 :term:`Remote Attestation`. Local attestation is used when two TEEs run on the
 same physical machine and remote attestation is used when a user attests a TEE
-running on a remote physical machine. In the following, even though Gramine
-attestation flows are designed to be TEE-agnostic, we discuss only :term:`SGX`
-attestation flows (the SGX flows are currently the only ones implemented).
+running on a remote physical machine. Only initial process in Gramine can 
+attest remotely; child processes have no access to attestation flows. In the 
+following, even though Gramine attestation flows are designed to be 
+TEE-agnostic, we discuss only :term:`SGX` attestation flows (the SGX flows are 
+currently the only ones implemented).
 
 By itself, remote attestation only provides the assurance to the user that the
 remotely executing TEE is trusted, that the correct code is executed and that
