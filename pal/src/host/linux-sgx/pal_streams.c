@@ -123,31 +123,27 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     size_t dsz = 0;
 
     if (size > hdlsz) {
-        hdl = malloc(hdlsz);
-        if (!hdl)
-            return -PAL_ERROR_NOMEM;
-
-        memcpy(hdl, data, hdlsz);
-
         dsz = size - hdlsz;
-        d = malloc(dsz);
-        if (!d) {
-            free(hdl);
-            return -PAL_ERROR_NOMEM;
-        }
-
-        memcpy(d, (const char*)data + hdlsz, dsz);
-    } else {
-        hdl = malloc(size);
-        if (!hdl)
-            return -PAL_ERROR_NOMEM;
-
-        memcpy(hdl, data, size);
+        size = hdlsz;
     }
+
+    hdl = malloc(size);
+    if (!hdl)
+        return -PAL_ERROR_NOMEM;
+
+    memcpy(hdl, data, size);
 
     /* update handle fields to point to correct contents */
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE:
+            d = malloc(dsz);
+            if (!d) {
+                free(hdl);
+                return -PAL_ERROR_NOMEM;
+            }
+
+            memcpy(d, (const char*)data + hdlsz, dsz);
+
             hdl->file.realpath = hdl->file.realpath ? (const char*)d : NULL;
             hdl->file.chunk_hashes = NULL;
             break;
@@ -157,8 +153,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->pipe.fd = host_fd; /* correct host FD must be passed to SSL context */
             ret = _PalStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
                                        (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
-                                       (const uint8_t*)d, dsz);
-            free(d);
+                                       (const uint8_t*)data + hdlsz, dsz);
             if (ret < 0) {
                 free(hdl);
                 return -PAL_ERROR_DENIED;
@@ -169,6 +164,14 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_DEV:
             break;
         case PAL_TYPE_DIR:
+            d = malloc(dsz);
+            if (!d) {
+                free(hdl);
+                return -PAL_ERROR_NOMEM;
+            }
+
+            memcpy(d, (const char*)data + hdlsz, dsz);
+
             hdl->dir.realpath = hdl->dir.realpath ? (const char*)d : NULL;
             break;
         case PAL_TYPE_SOCKET:
@@ -179,8 +182,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->process.stream = host_fd; /* correct host FD must be passed to SSL context */
             ret = _PalStreamSecureInit(hdl, hdl->process.is_server, &hdl->process.session_key,
                                        (LIB_SSL_CONTEXT**)&hdl->process.ssl_ctx,
-                                       (const uint8_t*)d, dsz);
-            free(d);
+                                       (const uint8_t*)data + hdlsz, dsz);
             if (ret < 0) {
                 free(hdl);
                 return -PAL_ERROR_DENIED;
@@ -190,7 +192,6 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             break;
         default:
             free(hdl);
-            free(d);
             return -PAL_ERROR_BADHANDLE;
     }
 
