@@ -460,6 +460,7 @@ static int process_files(const char* input_dir, const char* output_dir, const ch
     struct stat st;
     char* input_path  = NULL;
     char* output_path = NULL;
+    DIR* dfd = NULL;
 
     if (mode != MODE_ENCRYPT && mode != MODE_DECRYPT) {
         ERROR("Invalid mode: %d\n", mode);
@@ -496,7 +497,7 @@ static int process_files(const char* input_dir, const char* output_dir, const ch
 
     /* Process input directory */
     struct dirent* dir;
-    DIR* dfd = opendir(input_dir);
+    dfd = opendir(input_dir);
     if (!dfd) {
         ERROR("Failed to open input directory: %s\n", strerror(errno));
         goto out;
@@ -559,6 +560,8 @@ static int process_files(const char* input_dir, const char* output_dir, const ch
 out:
     free(input_path);
     free(output_path);
+    if (dfd)
+        closedir(dfd);
     return ret;
 }
 
