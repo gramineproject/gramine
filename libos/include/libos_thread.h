@@ -20,6 +20,10 @@
 #include "pal.h"
 
 #define WAKE_QUEUE_TAIL ((void*)1)
+
+#define GET_CPUMASK_SIZE() \
+    (BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) * sizeof(unsigned long))
+
 /* If next is NULL, then this node is not on any queue.
  * Otherwise it is a valid pointer to the next node or WAKE_QUEUE_TAIL. */
 struct wake_queue_node {
@@ -130,7 +134,6 @@ struct libos_thread {
 
     /* Current CPU affinity mask for this thread. */
     unsigned long* cpumask;
-    size_t cpumask_size;
 
     REFTYPE ref_count;
     struct libos_lock lock;

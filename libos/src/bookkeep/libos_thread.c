@@ -220,16 +220,13 @@ static int init_main_thread(void) {
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
 
-    cur_thread->cpumask_size = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                               sizeof(unsigned long);
-    cur_thread->cpumask = malloc(cur_thread->cpumask_size);
+    cur_thread->cpumask = malloc(GET_CPUMASK_SIZE());
     if (!cur_thread->cpumask) {
         put_thread(cur_thread);
         return -ENOMEM;
     }
 
-    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, cur_thread->cpumask_size,
-                                  cur_thread->cpumask);
+    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, GET_CPUMASK_SIZE(), cur_thread->cpumask);
     if (ret < 0) {
         log_error("Failed to set thread CPU affinity mask from the host");
         put_thread(cur_thread);
@@ -278,9 +275,7 @@ struct libos_thread* get_new_thread(void) {
         return NULL;
     }
 
-    thread->cpumask_size = BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt) *
-                           sizeof(unsigned long);
-    thread->cpumask = malloc(thread->cpumask_size);
+    thread->cpumask = malloc(GET_CPUMASK_SIZE());
     if (!thread->cpumask) {
         put_thread(thread);
         return NULL;
@@ -323,7 +318,7 @@ struct libos_thread* get_new_thread(void) {
     assert(map);
     set_handle_map(thread, map);
 
-    memcpy(thread->cpumask, cur_thread->cpumask, thread->cpumask_size);
+    memcpy(thread->cpumask, cur_thread->cpumask, GET_CPUMASK_SIZE());
 
     unlock(&cur_thread->lock);
 
@@ -607,8 +602,8 @@ BEGIN_CP_FUNC(thread) {
         }
 
         /* new_thread->cpumask_size is updated as part of the shallow copy above. */
-        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(thread->cpumask_size));
-        memcpy(new_thread->cpumask, thread->cpumask, thread->cpumask_size);
+        new_thread->cpumask = (unsigned long*)(base + ADD_CP_OFFSET(GET_CPUMASK_SIZE()));
+        memcpy(new_thread->cpumask, thread->cpumask, GET_CPUMASK_SIZE());
 
         new_thread->pal_handle = NULL;
 

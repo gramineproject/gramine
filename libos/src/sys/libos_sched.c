@@ -166,7 +166,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     }
 
     /* User mask is being manipulated below, so make a local copy of the mask */
-    uint64_t* cpumask = malloc(user_mask_size);
+    unsigned long* cpumask = malloc(user_mask_size);
     if (!cpumask) {
         put_thread(thread);
         return -ENOMEM;
@@ -180,7 +180,8 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
         size_t idx = i / BITS_IN_TYPE(unsigned long);
         if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
-                /* cpumask contains a CPU that is currently offline, remove it from the cpumask */
+                 /* User-supplied cpumask contains a CPU that is currently offline, so remove it
+                  * from the local copy `cpumask` */
                 cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
             } else {
                 cores_cnt++;
@@ -204,10 +205,10 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
 
     /* User can pass CPU affinity mask lesser than what Gramine might have allocated. So clear
      * previous affinity before copying the new affinity. */
-    memset(thread->cpumask, 0, thread->cpumask_size);
+    memset(thread->cpumask, 0, GET_CPUMASK_SIZE());
     /* User provided CPU affinity mask can contain offlined cores, so copy only the intersection of
      * online cores and the user supplied mask. */
-    memcpy(thread->cpumask, cpumask, MIN(thread->cpumask_size, user_mask_size));
+    memcpy(thread->cpumask, cpumask, MIN(GET_CPUMASK_SIZE(), user_mask_size));
 
     ret = 0;
 out:
@@ -222,6 +223,13 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int user_mask_size,
     /* Check if user_mask_ptr is valid */
     if (!is_user_memory_writable(user_mask_ptr, user_mask_size))
         return -EFAULT;
+
+    size_t cpumask_size = GET_CPUMASK_SIZE();
+    if (user_mask_size < cpumask_size) {
+        log_warning("size of cpumask must be at least %lu but supplied cpumask is %u",
+                    cpumask_size, user_mask_size);
+        return -EINVAL;
+    }
 
     /* Linux kernel also rejects non-natural size */
     if (user_mask_size & (sizeof(long) - 1))
@@ -243,20 +251,14 @@ long libos_syscall_sched_getaffinity(pid_t pid, unsigned int user_mask_size,
         return -ESRCH;
     }
 
-    if (user_mask_size < thread->cpumask_size) {
-        log_warning("size of cpumask must be at least %lu but supplied cpumask is %u",
-                    thread->cpumask_size, user_mask_size);
-        return -EINVAL;
-    }
-
     memset(user_mask_ptr, 0, user_mask_size);
     lock(&thread->lock);
-    memcpy(user_mask_ptr, thread->cpumask, MIN(user_mask_size, thread->cpumask_size));
+    memcpy(user_mask_ptr, thread->cpumask, MIN(user_mask_size, cpumask_size));
     unlock(&thread->lock);
 
     put_thread(thread);
     /* on success, imitate Linux kernel implementation: see SYSCALL_DEFINE3(sched_getaffinity) */
-    return thread->cpumask_size;
+    return cpumask_size;
 }
 
 /* dummy implementation: always return cpu0  */
