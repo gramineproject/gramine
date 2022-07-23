@@ -66,6 +66,7 @@ int libos_get_cpu_flags(char** out_cpu_flags) {
         if ((words[CPUID_WORD_EDX] >> i) & 1) {
             size_t len = strlen(g_cpu_flags[i]);
             if (flen + len + 1 > fmax) {
+                /* TODO: use `realloc()` once it's available. */
                 char* new_flags = malloc(fmax * 2);
                 if (!new_flags) {
                     ret = -ENOMEM;

@@ -1,16 +1,14 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "common.h"
 
 #define CPUINFO_FILE   "/proc/cpuinfo"
 #define BUF_SIZE       (10 * 1024) /* 10KB */
 #define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
 
-#if defined(__x86_64__)
-/* This subset of flags is picked for testing, chosen to be available on any modern x86-64 CPU */
-static const char* const g_test_cpu_flags[] = { "fpu", "msr", "apic" };
+#if defined(__i386__) || defined(__x86_64__)
+static char* g_test_cpu_flags = NULL;
 #endif
 
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
@@ -105,18 +103,43 @@ static int check_cpuinfo(struct cpuinfo* ci) {
         fprintf(stderr, "Could not get core id\n");
         return -1;
     }
+
     if (ci->cpu_cores == -1) {
         fprintf(stderr, "Could not get cpu cores\n");
         return -1;
     }
-#endif
-#if defined(__x86_64__)
-    for (size_t i = 0; i < ARRAY_LEN(g_test_cpu_flags); i++) {
-        if (!strstr(ci->flags, g_test_cpu_flags[i])) {
-            fprintf(stderr, "Could not get cpu flag: %s\n", g_test_cpu_flags[i]);
+
+    char* flags = calloc(1, FLAGS_BUF_SIZE);
+    if (!flags) {
+        fprintf(stderr, "out of memory\n");
+        return -1;
+    }
+
+    char* test_flag = strtok(g_test_cpu_flags, " ");
+    while (test_flag != NULL) {
+        bool found = false;
+
+        snprintf(flags, FLAGS_BUF_SIZE, "%s", ci->flags);
+
+        char* flag = strtok(flags, " ");
+        while (flag != NULL) {
+            if (!strcmp(flag, test_flag)) {
+                found = true;
+                break;
+            }
+            flag = strtok(NULL, " ");
+        }
+
+        if (!found) {
+            fprintf(stderr, "Could not get cpu flag: %s\n", test_flag);
             return -1;
         }
+
+        memset(flags, 0, FLAGS_BUF_SIZE);
+        test_flag = strtok(NULL, " ");
     }
+
+    free(flags);
 #endif
 
     return 0;
@@ -125,6 +148,14 @@ static int check_cpuinfo(struct cpuinfo* ci) {
 int main(int argc, char* argv[]) {
     FILE* fp = NULL;
     int cpu_cnt = 0, rv = 0;
+
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <CPU feature flags to validate>\n", argv[0]);
+        return 1;
+    }
+#if defined(__i386__) || defined(__x86_64__)
+    g_test_cpu_flags = argv[1];
+#endif
 
     char* line = calloc(1, BUF_SIZE);
     if (!line) {
