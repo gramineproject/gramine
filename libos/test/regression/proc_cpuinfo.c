@@ -82,8 +82,11 @@ static int parse_line(char* line, struct cpuinfo* ci) {
 #endif
     } else if (!strcmp(k, "flags")) {
         snprintf(ci->flags, sizeof(ci->flags), "%s", v);
-        /* Store `ci->flags` without the trailing `\n` for easier proper splitting */
-        ci->flags[strlen(ci->flags) - 1] = '\0';
+        size_t len = strlen(ci->flags);
+        if (len > 0 && ci->flags[len - 1] == '\n') {
+            /* Store `ci->flags` without the trailing `\n` for easier proper splitting */
+            ci->flags[--len] = '\0';
+        }
     }
     return 0;
 
