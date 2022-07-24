@@ -92,7 +92,7 @@ fmt_err:
     return -1;
 };
 
-static int check_cpuinfo(struct cpuinfo* ci, const char* const test_cpu_flags) {
+static int check_cpuinfo(struct cpuinfo* ci, const char* test_cpu_flags) {
     if (ci->processor == -1) {
         fprintf(stderr, "Could not get cpu index\n");
         return -1;
