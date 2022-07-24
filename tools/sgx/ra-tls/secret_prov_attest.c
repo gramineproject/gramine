@@ -120,8 +120,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         goto out;
     }
 
-    char* saveptr1;
-    char* saveptr2;
+    char* saveptr1 = NULL;
+    char* saveptr2 = NULL;
     char* str1;
     for (str1 = servers; /*no condition*/; str1 = NULL) {
         ret = -ECONNREFUSED;
