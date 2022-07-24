@@ -1,5 +1,6 @@
-#include <stdio.h>
+#define _GNU_SOURCE
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -7,9 +8,7 @@
 #define BUF_SIZE       (10 * 1024) /* 10KB */
 #define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
 
-#if defined(__i386__) || defined(__x86_64__)
-static char* g_test_cpu_flags = NULL;
-#endif
+static const char* g_test_cpu_flags = NULL;
 
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
  * (see Linux's arch/x86/include/asm/processor.h) */
@@ -109,37 +108,60 @@ static int check_cpuinfo(struct cpuinfo* ci) {
         return -1;
     }
 
-    char* flags = calloc(1, FLAGS_BUF_SIZE);
+    char* flags;
+    char* state_flags;
+    char* test_flags;
+    char* state_test_flags;
+    int ret;
+
+    flags = strdup(ci->flags);
     if (!flags) {
         fprintf(stderr, "out of memory\n");
-        return -1;
+        ret = -1;
+        goto out;
+    }
+    test_flags = strdup(g_test_cpu_flags);
+    if (!test_flags) {
+        fprintf(stderr, "out of memory\n");
+        ret = -1;
+        goto out;
     }
 
-    char* test_flag = strtok(g_test_cpu_flags, " ");
+    char* test_flag = strtok_r(test_flags, " ", &state_test_flags);
     while (test_flag != NULL) {
         bool found = false;
 
-        snprintf(flags, FLAGS_BUF_SIZE, "%s", ci->flags);
+        /* Strip the trailing `\n` in `flags` so that the last token splitted by `strtok_r()` can
+         * be properly compared */
+        flags[strlen(flags) - 1] = '\0';
 
-        char* flag = strtok(flags, " ");
+        char* flag = strtok_r(flags, " ", &state_flags);
         while (flag != NULL) {
             if (!strcmp(flag, test_flag)) {
                 found = true;
                 break;
             }
-            flag = strtok(NULL, " ");
+            flag = strtok_r(NULL, " ", &state_flags);
         }
 
         if (!found) {
             fprintf(stderr, "Could not get cpu flag: %s\n", test_flag);
-            return -1;
+            ret = -1;
+            goto out;
         }
 
-        memset(flags, 0, FLAGS_BUF_SIZE);
-        test_flag = strtok(NULL, " ");
+        /* `strtok_r()` destroys `flags`, re-initialize it */
+        strcpy(flags, ci->flags);
+
+        test_flag = strtok_r(NULL, " ", &state_test_flags);
     }
 
+    ret = 0;
+
+out:
+    free(test_flags);
     free(flags);
+    return ret;
 #endif
 
     return 0;
@@ -153,9 +175,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Usage: %s <CPU feature flags to validate>\n", argv[0]);
         return 1;
     }
-#if defined(__i386__) || defined(__x86_64__)
     g_test_cpu_flags = argv[1];
-#endif
 
     char* line = calloc(1, BUF_SIZE);
     if (!line) {

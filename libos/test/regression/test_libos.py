@@ -975,6 +975,8 @@ class TC_40_FileSystem(RegressionTestCase):
         if 'flags' in cpuinfo:
             cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags']
                 if flag in CPUINFO_TEST_FLAGS)
+        else:
+            cpuinfo['flags'] = ''
 
         stdout, _ = self.run_binary(['proc_cpuinfo', cpuinfo['flags']])
 
