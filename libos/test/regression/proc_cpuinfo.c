@@ -1,8 +1,12 @@
+#define _GNU_SOURCE
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define CPUINFO_FILE "/proc/cpuinfo"
-#define BUFFSIZE     2048
+#define CPUINFO_FILE   "/proc/cpuinfo"
+#define BUF_SIZE       (10 * 1024) /* 10KB */
+#define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
 
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
  * (see Linux's arch/x86/include/asm/processor.h) */
@@ -17,6 +21,7 @@ struct cpuinfo {
     int core_id;
     int cpu_cores;
 #endif
+    char flags[FLAGS_BUF_SIZE];
 };
 
 static void init_cpuinfo(struct cpuinfo* ci) {
@@ -30,6 +35,7 @@ static void init_cpuinfo(struct cpuinfo* ci) {
     ci->core_id   = -1;
     ci->cpu_cores = -1;
 #endif
+    memset(ci->flags, 0, sizeof(ci->flags));
 }
 
 static int parse_line(char* line, struct cpuinfo* ci) {
@@ -74,6 +80,13 @@ static int parse_line(char* line, struct cpuinfo* ci) {
     } else if (!strcmp(k, "model name")) {
         snprintf(ci->model_name, sizeof(ci->model_name), "%s", v);
 #endif
+    } else if (!strcmp(k, "flags")) {
+        snprintf(ci->flags, sizeof(ci->flags), "%s", v);
+        size_t len = strlen(ci->flags);
+        if (len > 0 && ci->flags[len - 1] == '\n') {
+            /* Store `ci->flags` without the trailing `\n` for easier proper splitting */
+            ci->flags[--len] = '\0';
+        }
     }
     return 0;
 
@@ -82,7 +95,7 @@ fmt_err:
     return -1;
 };
 
-static int check_cpuinfo(struct cpuinfo* ci) {
+static int check_cpuinfo(struct cpuinfo* ci, const char* test_cpu_flags) {
     if (ci->processor == -1) {
         fprintf(stderr, "Could not get cpu index\n");
         return -1;
@@ -92,41 +105,108 @@ static int check_cpuinfo(struct cpuinfo* ci) {
         fprintf(stderr, "Could not get core id\n");
         return -1;
     }
+
     if (ci->cpu_cores == -1) {
         fprintf(stderr, "Could not get cpu cores\n");
         return -1;
     }
 #endif
+    char* flags = NULL;
+    char* state_flags = NULL;
+    char* test_flags = NULL;
+    char* state_test_flags = NULL;
+    int ret;
 
-    return 0;
+    /* `strtok_r()` destroys strings so duplicate them first. */
+    flags = strdup(ci->flags);
+    if (!flags) {
+        fprintf(stderr, "out of memory\n");
+        ret = -1;
+        goto out;
+    }
+    test_flags = strdup(test_cpu_flags);
+    if (!test_flags) {
+        fprintf(stderr, "out of memory\n");
+        ret = -1;
+        goto out;
+    }
+
+    char* test_flag = strtok_r(test_flags, " ", &state_test_flags);
+    while (test_flag != NULL) {
+        bool found = false;
+
+        char* flag = strtok_r(flags, " ", &state_flags);
+        while (flag != NULL) {
+            if (!strcmp(flag, test_flag)) {
+                found = true;
+                break;
+            }
+            flag = strtok_r(NULL, " ", &state_flags);
+        }
+
+        if (!found) {
+            fprintf(stderr, "Could not get cpu flag: %s\n", test_flag);
+            ret = -1;
+            goto out;
+        }
+
+        /* `strtok_r()` destroys `flags`, re-initialize it */
+        strcpy(flags, ci->flags);
+
+        test_flag = strtok_r(NULL, " ", &state_test_flags);
+    }
+
+    ret = 0;
+
+out:
+    free(test_flags);
+    free(flags);
+    return ret;
 }
 
 int main(int argc, char* argv[]) {
     FILE* fp = NULL;
-    char line[BUFFSIZE];
-    struct cpuinfo ci;
     int cpu_cnt = 0, rv = 0;
 
-    init_cpuinfo(&ci);
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <CPU feature flags to validate>\n", argv[0]);
+        return 1;
+    }
+
+    char* line = calloc(1, BUF_SIZE);
+    if (!line) {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
+
+    struct cpuinfo* ci = malloc(sizeof(*ci));
+    if (!ci) {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
+
+    init_cpuinfo(ci);
 
     if ((fp = fopen(CPUINFO_FILE, "r")) == NULL) {
         perror("fopen");
         return 1;
     }
 
-    while (fgets(line, sizeof(line), fp) != NULL) {
+    while (fgets(line, BUF_SIZE, fp) != NULL) {
         if (line[0] == '\n') {
-            if ((rv = check_cpuinfo(&ci)) != 0)
+            if ((rv = check_cpuinfo(ci, argv[1])) != 0)
                 break;
             cpu_cnt++;
-            init_cpuinfo(&ci);
+            init_cpuinfo(ci);
             continue;
         }
-        if ((rv = parse_line(line, &ci)) != 0)
+        if ((rv = parse_line(line, ci)) != 0)
             break;
     }
 
     fclose(fp);
+    free(ci);
+    free(line);
 
     if (rv != 0)
         return 1;

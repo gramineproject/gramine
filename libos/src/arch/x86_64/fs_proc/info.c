@@ -4,6 +4,7 @@
  */
 
 #include "api.h"
+#include "libos_cpuid.h"
 #include "libos_fs_proc.h"
 #include "pal.h"
 
@@ -41,6 +42,15 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
             cores_in_socket++;
     }
     ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
+
+    char* cpu_flags = NULL;
+    int ret = libos_get_cpu_flags(&cpu_flags);
+    if (ret < 0) {
+        return ret;
+    }
+    ADD_INFO("flags\t\t: %s\n", cpu_flags);
+    free(cpu_flags);
+
     double bogomips = cpu->cpu_bogomips;
     // Apparently Gramine snprintf cannot into floats.
     ADD_INFO("bogomips\t: %lu.%02lu\n", (unsigned long)bogomips,

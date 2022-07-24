@@ -42,7 +42,6 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("CPU family: %ld\n",   ci->cpu_family);
     pal_printf("CPU model: %ld\n",    ci->cpu_model);
     pal_printf("CPU stepping: %ld\n", ci->cpu_stepping);
-    pal_printf("CPU flags: %s\n",     ci->cpu_flags);
 
     return 0;
 }
