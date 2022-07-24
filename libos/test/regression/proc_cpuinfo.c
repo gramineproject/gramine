@@ -8,8 +8,6 @@
 #define BUF_SIZE       (10 * 1024) /* 10KB */
 #define FLAGS_BUF_SIZE (8 * 1024) /* 8KB */
 
-static const char* g_test_cpu_flags = NULL;
-
 /* vendor_id, model_name size reference Linux kernel struct cpuinfo_x86
  * (see Linux's arch/x86/include/asm/processor.h) */
 struct cpuinfo {
@@ -22,8 +20,8 @@ struct cpuinfo {
     int stepping;
     int core_id;
     int cpu_cores;
-    char flags[FLAGS_BUF_SIZE];
 #endif
+    char flags[FLAGS_BUF_SIZE];
 };
 
 static void init_cpuinfo(struct cpuinfo* ci) {
@@ -36,8 +34,8 @@ static void init_cpuinfo(struct cpuinfo* ci) {
     ci->stepping  = -1;
     ci->core_id   = -1;
     ci->cpu_cores = -1;
-    memset(ci->flags, 0, sizeof(ci->flags));
 #endif
+    memset(ci->flags, 0, sizeof(ci->flags));
 }
 
 static int parse_line(char* line, struct cpuinfo* ci) {
@@ -81,9 +79,11 @@ static int parse_line(char* line, struct cpuinfo* ci) {
         snprintf(ci->vendor_id, sizeof(ci->vendor_id), "%s", v);
     } else if (!strcmp(k, "model name")) {
         snprintf(ci->model_name, sizeof(ci->model_name), "%s", v);
+#endif
     } else if (!strcmp(k, "flags")) {
         snprintf(ci->flags, sizeof(ci->flags), "%s", v);
-#endif
+        /* Store `ci->flags` without the trailing `\n` for easier proper splitting */
+        ci->flags[strlen(ci->flags) - 1] = '\0';
     }
     return 0;
 
@@ -92,7 +92,7 @@ fmt_err:
     return -1;
 };
 
-static int check_cpuinfo(struct cpuinfo* ci) {
+static int check_cpuinfo(struct cpuinfo* ci, const char* const test_cpu_flags) {
     if (ci->processor == -1) {
         fprintf(stderr, "Could not get cpu index\n");
         return -1;
@@ -107,20 +107,21 @@ static int check_cpuinfo(struct cpuinfo* ci) {
         fprintf(stderr, "Could not get cpu cores\n");
         return -1;
     }
-
-    char* flags;
-    char* state_flags;
-    char* test_flags;
-    char* state_test_flags;
+#endif
+    char* flags = NULL;
+    char* state_flags = NULL;
+    char* test_flags = NULL;
+    char* state_test_flags = NULL;
     int ret;
 
+    /* `strtok_r()` destroys strings so duplicate them first. */
     flags = strdup(ci->flags);
     if (!flags) {
         fprintf(stderr, "out of memory\n");
         ret = -1;
         goto out;
     }
-    test_flags = strdup(g_test_cpu_flags);
+    test_flags = strdup(test_cpu_flags);
     if (!test_flags) {
         fprintf(stderr, "out of memory\n");
         ret = -1;
@@ -130,10 +131,6 @@ static int check_cpuinfo(struct cpuinfo* ci) {
     char* test_flag = strtok_r(test_flags, " ", &state_test_flags);
     while (test_flag != NULL) {
         bool found = false;
-
-        /* Strip the trailing `\n` in `flags` so that the last token splitted by `strtok_r()` can
-         * be properly compared */
-        flags[strlen(flags) - 1] = '\0';
 
         char* flag = strtok_r(flags, " ", &state_flags);
         while (flag != NULL) {
@@ -162,9 +159,6 @@ out:
     free(test_flags);
     free(flags);
     return ret;
-#endif
-
-    return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -175,7 +169,6 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Usage: %s <CPU feature flags to validate>\n", argv[0]);
         return 1;
     }
-    g_test_cpu_flags = argv[1];
 
     char* line = calloc(1, BUF_SIZE);
     if (!line) {
@@ -198,7 +191,7 @@ int main(int argc, char* argv[]) {
 
     while (fgets(line, BUF_SIZE, fp) != NULL) {
         if (line[0] == '\n') {
-            if ((rv = check_cpuinfo(ci)) != 0)
+            if ((rv = check_cpuinfo(ci, argv[1])) != 0)
                 break;
             cpu_cnt++;
             init_cpuinfo(ci);
