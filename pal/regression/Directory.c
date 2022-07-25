@@ -101,12 +101,12 @@ int main(int argc, char** argv, char** envp) {
     if (ret >= 0 && dir8) {
         ret = PalStreamChangeName(dir8, "dir:dir_rename_delete.tmp");
         if (ret < 0) {
-            pal_printf("PalStreamChangeName failed, %d\n", ret);
+            pal_printf("PalStreamChangeName failed: %d\n", ret);
             return 1;
         }
         ret = PalStreamDelete(dir8, PAL_DELETE_ALL);
         if (ret < 0) {
-            pal_printf("PalStreamDelete failed, %d\n", ret);
+            pal_printf("PalStreamDelete failed: %d\n", ret);
             return 1;
         }
         PalObjectClose(dir8);

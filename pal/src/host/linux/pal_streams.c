@@ -101,52 +101,47 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
 }
 
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
-    PAL_HANDLE hdl = NULL;
-    size_t hdlsz = handle_size((PAL_HANDLE)data);
-    void* d = NULL;
-    size_t dsz = 0;
-
-    if (size > hdlsz) {
-        dsz = size - hdlsz;
-        size = hdlsz;
-    }
-
-    hdl = malloc(size);
+    size_t hdl_size = handle_size((PAL_HANDLE)data);
+    PAL_HANDLE hdl = malloc(hdl_size);
     if (!hdl)
         return -PAL_ERROR_NOMEM;
 
-    memcpy(hdl, data, size);
+    memcpy(hdl, data, hdl_size);
 
     /* update handle fields to point to correct contents */
     switch (PAL_GET_TYPE(hdl)) {
-        case PAL_TYPE_FILE:
-            d = malloc(dsz);
-            if (!d) {
+        case PAL_TYPE_FILE: {
+            size_t path_size = size - hdl_size;
+            char* path = malloc(path_size);
+            if (!path) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
             }
 
-            memcpy(d, (const char*)data + hdlsz, dsz);
+            memcpy(path, (const char*)data + hdl_size, path_size);
 
-            hdl->file.realpath = (hdl->file.realpath ? (const char*)d : NULL);
+            hdl->file.realpath = (const char*)path;
             break;
+        }
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
         case PAL_TYPE_PIPECLI:
             break;
         case PAL_TYPE_DEV:
             break;
-        case PAL_TYPE_DIR:
-            d = malloc(dsz);
-            if (!d) {
+        case PAL_TYPE_DIR: {
+            size_t path_size = size - hdl_size;
+            char* path = malloc(path_size);
+            if (!path) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
             }
 
-            memcpy(d, (const char*)data + hdlsz, dsz);
+            memcpy(path, (const char*)data + hdl_size, path_size);
 
-            hdl->dir.realpath = (hdl->dir.realpath ? (const char*)d : NULL);
+            hdl->dir.realpath = (const char*)path;
             break;
+        }
         case PAL_TYPE_SOCKET:
             fixup_socket_handle_after_deserialization(hdl);
             break;
