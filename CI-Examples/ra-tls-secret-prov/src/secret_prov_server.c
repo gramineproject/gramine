@@ -108,6 +108,7 @@ int main(int argc, char** argv) {
         puts("--- Proceeding without a master key ---");
         static_assert(sizeof(g_secret_string) >= sizeof(ATTESTATION_SUCCESS_STRING),
                       "size of g_secret_string is too small");
+        static_assert(sizeof(g_secret_string) != WRAP_KEY_SIZE * 2, "invalid g_secret_string size");
         strcpy(g_secret_string, ATTESTATION_SUCCESS_STRING);
     } else {
         printf("--- Reading the master key for encrypted files from '%s' ---\n", argv[1]);
