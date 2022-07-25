@@ -114,7 +114,6 @@ int main(int argc, char** argv) {
         int fd = open(argv[1], O_RDONLY);
         if (fd < 0) {
             fprintf(stderr, "[error] cannot open %s\n", argv[1]);
-            close(fd);
             return 1;
         }
         char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
