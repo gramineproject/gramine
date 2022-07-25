@@ -166,7 +166,8 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     }
 
     /* User mask is being manipulated below, so make a local copy of the mask */
-    unsigned long* cpumask = malloc(user_mask_size);
+    size_t mask_count = ALIGN_UP(user_mask_size, sizeof(unsigned long)) / sizeof(unsigned long);
+    unsigned long* cpumask = calloc(mask_count, sizeof(unsigned long));
     if (!cpumask) {
         put_thread(thread);
         return -ENOMEM;
@@ -181,7 +182,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
         if (cpumask[idx] & 1UL << (i % BITS_IN_TYPE(unsigned long))) {
             if (!g_pal_public_state->topo_info.threads[i].is_online) {
                  /* User-supplied cpumask contains a CPU that is currently offline, so remove it
-                  * from the local copy `cpumask` */
+                  * from the local copy (`cpumask`) */
                 cpumask[idx] &= ~(1UL << (i % BITS_IN_TYPE(unsigned long)));
             } else {
                 cores_cnt++;
