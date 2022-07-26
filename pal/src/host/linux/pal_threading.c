@@ -249,16 +249,24 @@ int _PalThreadResume(PAL_HANDLE thread_handle) {
     return 0;
 }
 
-int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    int ret = DO_SYSCALL(sched_setaffinity, thread->thread.tid, cpumask_size, cpu_mask);
-
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
+    int ret = DO_SYSCALL(sched_setaffinity, thread->thread.tid, cpu_mask_len * sizeof(*cpu_mask),
+                         cpu_mask);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpumask_size, cpu_mask);
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
+    /* Linux syscall takes the size of `cpu_mask` in bytes. */
+    int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpu_mask_len * sizeof(*cpu_mask),
+                         cpu_mask);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+    if (ret % sizeof(*cpu_mask)) {
+        return -PAL_ERROR_INVAL;
+    }
 
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return 0;
 }
 
 struct handle_ops g_thread_ops = {

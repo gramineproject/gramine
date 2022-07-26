@@ -32,11 +32,11 @@ int _PalThreadResume(PAL_HANDLE thread_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

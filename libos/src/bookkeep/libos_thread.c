@@ -199,7 +199,7 @@ static int init_main_thread(void) {
                          /*auto_clear=*/true);
     if (ret < 0) {
         put_thread(cur_thread);
-        return pal_to_unix_errno(ret);;
+        return pal_to_unix_errno(ret);
     }
 
     /* TODO: I believe there is some PAL allocated initial stack which could be reused by the first
@@ -211,6 +211,20 @@ static int init_main_thread(void) {
     }
 
     cur_thread->pal_handle = g_pal_public_state->first_thread;
+
+    cur_thread->cpu_affinity_mask = calloc(GET_CPU_MASK_LEN(),
+                                           sizeof(*cur_thread->cpu_affinity_mask));
+    if (!cur_thread->cpu_affinity_mask) {
+        put_thread(cur_thread);
+        return -ENOMEM;
+    }
+    ret = PalThreadGetCpuAffinity(cur_thread->pal_handle, cur_thread->cpu_affinity_mask,
+                                  GET_CPU_MASK_LEN());
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        log_error("Failed to get thread CPU affinity mask: %d", ret);
+        return ret;
+    }
 
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
@@ -266,6 +280,12 @@ struct libos_thread* get_new_thread(void) {
         memcpy(thread->groups_info.groups, cur_thread->groups_info.groups, groups_size);
     }
 
+    thread->cpu_affinity_mask = malloc(GET_CPU_MASK_LEN() * sizeof(*thread->cpu_affinity_mask));
+    if (!thread->cpu_affinity_mask) {
+        put_thread(thread);
+        return NULL;
+    }
+
     lock(&cur_thread->lock);
 
     thread->uid       = cur_thread->uid;
@@ -290,6 +310,9 @@ struct libos_thread* get_new_thread(void) {
     struct libos_handle_map* map = get_thread_handle_map(cur_thread);
     assert(map);
     set_handle_map(thread, map);
+
+    memcpy(thread->cpu_affinity_mask, cur_thread->cpu_affinity_mask,
+           GET_CPU_MASK_LEN() * sizeof(*thread->cpu_affinity_mask));
 
     unlock(&cur_thread->lock);
 
@@ -379,6 +402,8 @@ void put_thread(struct libos_thread* thread) {
         if (thread->tid && !is_internal(thread)) {
             release_id(thread->tid);
         }
+
+        free(thread->cpu_affinity_mask);
 
         destroy_pollable_event(&thread->pollable_event);
 
@@ -566,6 +591,11 @@ BEGIN_CP_FUNC(thread) {
 
         new_thread->pal_handle = NULL;
 
+        size_t mask_off = ADD_CP_OFFSET(GET_CPU_MASK_LEN() * sizeof(*thread->cpu_affinity_mask));
+        new_thread->cpu_affinity_mask = (void*)(base + mask_off);
+        memcpy(new_thread->cpu_affinity_mask, thread->cpu_affinity_mask,
+               GET_CPU_MASK_LEN() * sizeof(*thread->cpu_affinity_mask));
+
         memset(&new_thread->pollable_event, 0, sizeof(new_thread->pollable_event));
 
         new_thread->handle_map = NULL;
@@ -643,6 +673,8 @@ BEGIN_RS_FUNC(thread) {
         *thread->set_child_tid = thread->tid;
         thread->set_child_tid = NULL;
     }
+
+    CP_REBASE(thread->cpu_affinity_mask);
 
     assert(!get_cur_thread());
 
