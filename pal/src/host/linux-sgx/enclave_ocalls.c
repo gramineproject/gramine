@@ -2059,7 +2059,7 @@ out:
     return retval;
 }
 
-int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
+int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len) {
     int retval = 0;
     ms_ocall_sched_setaffinity_t* ms;
 
@@ -2070,9 +2070,10 @@ int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
         return -EPERM;
     }
 
+    size_t cpu_mask_size = cpu_mask_len * sizeof(*cpu_mask);
     WRITE_ONCE(ms->ms_tcs, tcs);
-    WRITE_ONCE(ms->ms_cpumask_size, cpumask_size);
-    void* untrusted_cpu_mask = sgx_copy_to_ustack(cpu_mask, cpumask_size);
+    WRITE_ONCE(ms->ms_cpumask_size, cpu_mask_size);
+    void* untrusted_cpu_mask = sgx_copy_to_ustack(cpu_mask, cpu_mask_size);
     if (!untrusted_cpu_mask) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
@@ -2091,44 +2092,48 @@ int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
     return retval;
 }
 
-static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
+static bool is_cpumask_valid(unsigned long* cpu_mask, size_t cpu_mask_len) {
     /* Linux seems to allow setting affinity to offline threads, so we only need to check against
      * the count of possible threads. */
-    size_t max_cpumask_bits = cpumask_size * BITS_IN_BYTE;
-    size_t valid_cpumask_bits = g_pal_public_state.topo_info.threads_cnt;
-    size_t invalid_bits = max_cpumask_bits - valid_cpumask_bits;
-
-    if (invalid_bits == 0)
+    size_t max_bitmask_len = BITS_TO_LONGS(g_pal_public_state.topo_info.threads_cnt);
+    if (cpu_mask_len < max_bitmask_len) {
         return true;
+    }
+    assert(max_bitmask_len > 0);
 
-    /* create an invalid cpu_mask bits */
-    unsigned long invalid_cpumask = SET_HIGHEST_N_BITS(unsigned long, invalid_bits);
+    size_t invalid_bits_count = max_bitmask_len * BITS_IN_TYPE(unsigned long)
+                                - g_pal_public_state.topo_info.threads_cnt;
+    if (cpu_mask[max_bitmask_len - 1] & SET_HIGHEST_N_BITS(unsigned long, invalid_bits_count)) {
+        return false;
+    }
 
-    /* Extract last 64bits to check if any invalid cpu bits are set */
-    assert(cpumask_size >= sizeof(unsigned long));
-    size_t idx = (cpumask_size / sizeof(unsigned long)) - 1;
-    unsigned long cpumask = ((unsigned long*)cpu_mask)[idx];
+    for (size_t i = max_bitmask_len; i < cpu_mask_len; i++) {
+        if (cpu_mask[i]) {
+            return false;
+        }
+    }
 
-    return !(cpumask & invalid_cpumask);
+    return true;
 }
 
-int ocall_sched_getaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
+int ocall_sched_getaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len) {
     int retval = 0;
     ms_ocall_sched_getaffinity_t* ms;
 
     void* old_ustack = sgx_prepare_ustack();
     ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
     if (!ms) {
-        sgx_reset_ustack(old_ustack);
-        return -EPERM;
+        retval = -EPERM;
+        goto out;
     }
 
+    size_t cpu_mask_size = cpu_mask_len * sizeof(*cpu_mask);
     WRITE_ONCE(ms->ms_tcs, tcs);
-    WRITE_ONCE(ms->ms_cpumask_size, cpumask_size);
-    void* untrusted_cpu_mask = sgx_copy_to_ustack(cpu_mask, cpumask_size);
+    WRITE_ONCE(ms->ms_cpumask_size, cpu_mask_size);
+    void* untrusted_cpu_mask = sgx_alloc_on_ustack_aligned(cpu_mask_size, alignof(*cpu_mask));
     if (!untrusted_cpu_mask) {
-        sgx_reset_ustack(old_ustack);
-        return -EPERM;
+        retval = -EPERM;
+        goto out;
     }
     WRITE_ONCE(ms->ms_cpu_mask, untrusted_cpu_mask);
 
@@ -2136,16 +2141,32 @@ int ocall_sched_getaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
         retval = sgx_exitless_ocall(OCALL_SCHED_GETAFFINITY, ms);
     } while (retval == -EINTR);
 
-    if (retval < 0 && retval != -EINVAL && retval != -EPERM && retval != -ESRCH) {
-        retval = -EPERM;
+    if (retval < 0) {
+        if (retval != -EINVAL && retval != -EPERM && retval != -ESRCH) {
+            retval = -EPERM;
+        }
+        goto out;
     }
 
-    if (retval > 0 && !sgx_copy_to_enclave(cpu_mask, cpumask_size, untrusted_cpu_mask, retval))
+    if (retval % sizeof(*cpu_mask)) {
         retval = -EPERM;
+        goto out;
+    }
 
-    if (retval > 0 && !is_cpumask_valid(cpu_mask, cpumask_size))
+    if (!sgx_copy_to_enclave(cpu_mask, cpu_mask_size, untrusted_cpu_mask, retval)) {
         retval = -EPERM;
+        goto out;
+    }
 
+    assert((size_t)retval <= cpu_mask_size);
+    if (!is_cpumask_valid(cpu_mask, retval / sizeof(*cpu_mask))) {
+        retval = -EPERM;
+        goto out;
+    }
+
+    retval = 0;
+
+out:
     sgx_reset_ustack(old_ustack);
     return retval;
 }
