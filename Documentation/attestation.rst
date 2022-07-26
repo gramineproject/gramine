@@ -317,8 +317,8 @@ SGX measurements:
   ``MRENCLAVE``. This is a hex string.
 - ``RA_TLS_ISV_PROD_ID`` -- verify that the attesting enclave has this
   ``ISV_PROD_ID``. This is a decimal string.
-- ``RA_TLS_ISV_SVN`` -- verify that the attesting enclave has this ``ISV_SVN``.
-  This is a decimal string.
+- ``RA_TLS_ISV_SVN`` -- verify that the attesting enclave has this or higher
+  ``ISV_SVN``. This is a decimal string.
 
 For each of these settings, you may specify the special value ``any`` to skip
 verifying a particular measurement. This used to be the default, which would
