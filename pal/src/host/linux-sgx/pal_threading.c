@@ -148,14 +148,33 @@ int _PalThreadResume(PAL_HANDLE thread_handle) {
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-int _PalThreadSetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    int ret = ocall_sched_setaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
+    int ret = ocall_sched_setaffinity(thread->thread.tcs, cpu_mask, cpu_mask_len);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-int _PalThreadGetCpuAffinity(PAL_HANDLE thread, size_t cpumask_size, unsigned long* cpu_mask) {
-    int ret = ocall_sched_getaffinity(thread->thread.tcs, cpumask_size, cpu_mask);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
+    int ret = ocall_sched_getaffinity(thread->thread.tcs, cpu_mask, cpu_mask_len);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+
+    /* Verify that the CPU affinity mask contains only online cores. */
+    size_t threads_count = g_pal_public_state.topo_info.threads_cnt;
+    for (size_t i = 0; i < cpu_mask_len; i++) {
+        for (size_t j = 0; j < BITS_IN_TYPE(__typeof__(*cpu_mask)); j++) {
+            size_t thread_idx = i * BITS_IN_TYPE(__typeof__(*cpu_mask)) + j;
+            if (thread_idx >= threads_count) {
+                break;
+            }
+            if ((cpu_mask[i] & (1ul << j))
+                    && !g_pal_public_state.topo_info.threads[thread_idx].is_online) {
+                return -PAL_ERROR_INVAL;
+            }
+        }
+    }
+
+    return 0;
 }
 
 struct handle_ops g_thread_ops = {
