@@ -111,6 +111,8 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     /* update handle fields to point to correct contents */
     switch (PAL_GET_TYPE(hdl)) {
         case PAL_TYPE_FILE: {
+            assert(hdl_size < size);
+
             size_t path_size = size - hdl_size;
             char* path = malloc(path_size);
             if (!path) {
@@ -120,7 +122,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
 
             memcpy(path, (const char*)data + hdl_size, path_size);
 
-            hdl->file.realpath = (const char*)path;
+            hdl->file.realpath = path;
             break;
         }
         case PAL_TYPE_PIPE:
@@ -130,6 +132,8 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_DEV:
             break;
         case PAL_TYPE_DIR: {
+            assert(hdl_size < size);
+
             size_t path_size = size - hdl_size;
             char* path = malloc(path_size);
             if (!path) {
@@ -139,7 +143,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
 
             memcpy(path, (const char*)data + hdl_size, path_size);
 
-            hdl->dir.realpath = (const char*)path;
+            hdl->dir.realpath = path;
             break;
         }
         case PAL_TYPE_SOCKET:

@@ -121,7 +121,7 @@ static int file_close(PAL_HANDLE handle) {
 
     int ret = DO_SYSCALL(close, fd);
 
-    free((void*)handle->file.realpath);
+    free(handle->file.realpath);
 
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
@@ -232,7 +232,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    free((void*)handle->file.realpath);
+    free(handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -415,7 +415,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    free((void*)handle->dir.realpath);
+    free(handle->dir.realpath);
 
     if (ret < 0)
         return -PAL_ERROR_BADHANDLE;
@@ -447,7 +447,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    free((void*)handle->dir.realpath);
+    free(handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }

@@ -155,7 +155,7 @@ fail:
     if (fd >= 0)
         ocall_close(fd);
 
-    free((void*)hdl->file.realpath);
+    free(hdl->file.realpath);
 
     free(hdl);
     return ret;
@@ -231,7 +231,7 @@ static int file_close(PAL_HANDLE handle) {
 
     ocall_close(fd);
 
-    free((void*)handle->file.realpath);
+    free(handle->file.realpath);
 
     return 0;
 }
@@ -456,7 +456,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    free((void*)handle->file.realpath);
+    free(handle->file.realpath);
     handle->file.realpath = tmp;
     return 0;
 }
@@ -642,7 +642,7 @@ static int dir_close(PAL_HANDLE handle) {
         handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
     }
 
-    free((void*)handle->dir.realpath);
+    free(handle->dir.realpath);
 
     return 0;
 }
@@ -671,7 +671,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
         return unix_to_pal_error(ret);
     }
 
-    free((void*)handle->dir.realpath);
+    free(handle->dir.realpath);
     handle->dir.realpath = tmp;
     return 0;
 }
