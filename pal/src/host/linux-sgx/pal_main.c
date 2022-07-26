@@ -33,25 +33,7 @@ struct pal_linuxsgx_state g_pal_linuxsgx_state;
 
 PAL_SESSION_KEY g_master_key = {0};
 
-/* Limit of PAL memory available for _PalVirtualMemoryAlloc(PAL_ALLOC_INTERNAL) */
-size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
-
 const size_t g_page_size = PRESET_PAGESIZE;
-
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
-    *out_start = g_pal_linuxsgx_state.heap_min;
-    *out_end   = g_pal_linuxsgx_state.heap_max;
-
-    /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
-     * track of PAL memory, so without this limit it could overwrite internal PAL memory). See also
-     * `enclave_pages.c`. */
-    *out_end = SATURATED_P_SUB(*out_end, g_pal_internal_mem_size, *out_start);
-
-    if (*out_end <= *out_start) {
-        log_error("Not enough enclave memory, please increase enclave size!");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-}
 
 static bool verify_and_init_rpc_queue(void* untrusted_rpc_queue) {
     if (!untrusted_rpc_queue) {
@@ -554,7 +536,8 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
-                             void* uptr_rpc_queue, void* uptr_dns_conf) {
+                             void* uptr_rpc_queue, void* uptr_dns_conf,
+                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -580,6 +563,22 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TCB(heap_min);
     g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TCB(heap_max);
+
+    /* No need for adding any initial memory ranges - they are all outside of the available memory
+     * set below. */
+    g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
+    g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
+
+    if (parent_stream_fd < 0) {
+        /* First process does not have reserved memory ranges. */
+        urts_reserved_mem_ranges = NULL;
+        urts_reserved_mem_ranges_size = 0;
+    }
+    ret = init_reserved_ranges(urts_reserved_mem_ranges, urts_reserved_mem_ranges_size);
+    if (ret < 0) {
+        log_error("init_reserved_ranges failed: %d", ret);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
 
     if (libpal_uri_len < URI_PREFIX_FILE_LEN) {
         log_error("Invalid libpal_uri length (missing \"%s\" prefix?)", URI_PREFIX_FILE);
@@ -607,9 +606,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
-     * because the slab manager can use normal allocations (`_PalVirtualMemoryAlloc`) right away. */
-    init_slab_mgr(/*mem_pool=*/NULL, /*mem_pool_size=*/0);
+    init_slab_mgr();
 
     /* initialize enclave properties */
     ret = init_enclave();
@@ -671,26 +668,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     uint64_t manifest_size = GET_ENCLAVE_TCB(manifest_size);
     void* manifest_addr = (void*)(g_enclave_top - ALIGN_UP_POW2(manifest_size, g_page_size));
 
-    ret = add_preloaded_range((uintptr_t)manifest_addr, (uintptr_t)manifest_addr + manifest_size,
-                              "manifest");
-    if (ret < 0) {
-        log_error("Failed to initialize manifest preload range: %d", ret);
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    /* TOML parser (for whatever reason) allocates a lot of memory when parsing the manifest into an
-     * in-memory struct. We heuristically pre-allocate additional PAL internal memory if the
-     * manifest file looks large enough. Hopefully below sizes are sufficient for any manifest.
-     *
-     * FIXME: this is a quick hack, we need proper memory allocation in PAL. */
-    if (manifest_size > 10 * 1024 * 1024) {
-        log_always("Detected a huge manifest, preallocating 128MB of internal memory.");
-        g_pal_internal_mem_size += 128 * 1024 * 1024; /* 10MB manifest -> 64 + 128 MB PAL mem */
-    } else if (manifest_size > 5 * 1024 * 1024) {
-        log_always("Detected a huge manifest, preallocating 64MB of internal memory.");
-        g_pal_internal_mem_size += 64 * 1024 * 1024; /* 5MB manifest -> 64 + 64 MB PAL mem */
-    }
-
     /* parse manifest */
     char errbuf[256];
     toml_table_t* manifest_root = toml_parse(manifest_addr, errbuf, sizeof(errbuf));
@@ -735,24 +712,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     if (preheat_enclave)
         do_preheat_enclave();
-
-    /* For backward compatibility, `loader.pal_internal_mem_size` does not include
-     * PAL_INITIAL_MEM_SIZE */
-    size_t extra_mem_size;
-    ret = toml_sizestring_in(g_pal_public_state.manifest_root, "loader.pal_internal_mem_size",
-                             /*defaultval=*/0, &extra_mem_size);
-    if (ret < 0) {
-        log_error("Cannot parse 'loader.pal_internal_mem_size'");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if (extra_mem_size + PAL_INITIAL_MEM_SIZE < g_pal_internal_mem_size) {
-        log_error("Too small `loader.pal_internal_mem_size`, need at least %luMB because the "
-                  "manifest is large",
-                  (g_pal_internal_mem_size - PAL_INITIAL_MEM_SIZE) / 1024 / 1024);
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-    g_pal_internal_mem_size = extra_mem_size + PAL_INITIAL_MEM_SIZE;
 
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %d", ret);

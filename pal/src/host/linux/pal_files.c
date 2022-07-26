@@ -134,21 +134,19 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 }
 
 /* 'map' operation for file stream. */
-static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                     uint64_t size) {
     int fd = handle->file.fd;
-    void* mem = *addr;
-    int flags = PAL_MEM_FLAGS_TO_LINUX(0, prot) | (mem ? MAP_FIXED : 0);
+    int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
     /* The memory will always be allocated with flag MAP_PRIVATE. */
     // TODO: except it will not since `assert(flags & MAP_PRIVATE)` fails on LTP
-    mem = (void*)DO_SYSCALL(mmap, mem, size, linux_prot, flags, fd, offset);
+    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, fd, offset);
 
-    if (IS_PTR_ERR(mem))
-        return unix_to_pal_error(PTR_TO_ERR(mem));
+    if (IS_PTR_ERR(addr))
+        return unix_to_pal_error(PTR_TO_ERR(addr));
 
-    *addr = mem;
     return 0;
 }
 

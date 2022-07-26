@@ -251,7 +251,6 @@ void delete_epoll_items_for_fd(int fd, struct libos_handle* handle);
  */
 void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool was_partial);
 
-void* allocate_stack(size_t size, size_t protect_size, bool user);
 int init_stack(const char* const* argv, const char* const* envp, char*** out_argp,
                elf_auxv_t** out_auxv);
 

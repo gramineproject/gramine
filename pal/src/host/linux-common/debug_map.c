@@ -106,7 +106,7 @@ static int debug_map_init_callback(struct proc_maps_range* r, void* arg) {
     __UNUSED(arg);
 
     /* not executable */
-    if (!(r->prot & PROT_EXEC))
+    if (!(r->prot & PAL_PROT_EXEC))
         return 0;
 
     /* no name */

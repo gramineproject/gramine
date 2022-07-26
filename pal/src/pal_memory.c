@@ -1,90 +1,361 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
-
-/*
- * This file contains APIs that allocate, free or protect virtual memory.
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
+
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "api.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot) {
-    assert(addr_ptr);
-    void* map_addr = *addr_ptr;
-
-    if ((map_addr && !IS_ALLOC_ALIGNED_PTR(map_addr)) || !size || !IS_ALLOC_ALIGNED(size)) {
+int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (map_addr && _PalCheckMemoryMappable(map_addr, size)) {
-        return -PAL_ERROR_DENIED;
-    }
-
-    if ((alloc_type & PAL_ALLOC_INTERNAL) && map_addr) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (!(alloc_type & PAL_ALLOC_INTERNAL) && !map_addr) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    return _PalVirtualMemoryAlloc(addr_ptr, size, alloc_type, prot);
+    return _PalVirtualMemoryAlloc(addr, size, prot);
 }
 
 int PalVirtualMemoryFree(void* addr, size_t size) {
-    if (!addr || !size) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
-    }
-
-    if (!IS_ALLOC_ALIGNED_PTR(addr) || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (_PalCheckMemoryMappable(addr, size)) {
-        return -PAL_ERROR_DENIED;
     }
 
     return _PalVirtualMemoryFree(addr, size);
 }
 
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
-    if (!addr || !size) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
-    }
-
-    if (!IS_ALLOC_ALIGNED_PTR(addr) || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (_PalCheckMemoryMappable(addr, size)) {
-        return -PAL_ERROR_DENIED;
     }
 
     return _PalVirtualMemoryProtect(addr, size, prot);
 }
 
-int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment) {
-    size_t new_cnt = g_pal_public_state.preloaded_ranges_cnt + 1;
-    void* new_ranges = malloc(new_cnt * sizeof(*g_pal_public_state.preloaded_ranges));
-    if (!new_ranges) {
+/*
+ * Allocator for PAL internal memory.
+ * There are a few phases, which differ in how memory is allocated.
+ * 1) PAL initial code - before LibOS is initialized. This is where most of this code is used,
+ *    the exact details are described below.
+ * 2) After PAL is initialized and before LibOS is ready for memory bookkeeping. At this phase we do
+ *    not allocate any memory in PAL.
+ * 3) After LibOS calls `PalSetMemoryBookkeepingUpcalls` (which should be done as soon as possible).
+ *    From this point PAL simply calls the upcalls when it wants to free or allocate the memory,
+ *    LibOS manages all the bookkeeping.
+ *
+ * For the initial part (1), we have an array of memory ranges (`g_initial_mem_ranges`).
+ * To free a range, we simply mark it as freed in this array. To allocate some memory we first look
+ * through all previously used (and now marked as freed) ranges in hope of finding something big
+ * enough to hold our request. If nothing is found, we then go through this array and find a memory
+ * range that was never allocated before (is not in this array), but we also make sure that it does
+ * not overlap any of reserved ranges.
+ * Because reserved ranges can be arbitrarily long and due to the fact that we cannot really
+ * allocate memory without first inspecting them (so we do not map on top of them), we go through
+ * them only once. They are kept sorted, so we only have to hold the last seen reserved range and
+ * the last address we allocated at.
+ */
+static int (*g_mem_bkeep_alloc_upcall)(size_t size, uintptr_t* out_addr) = NULL;
+static int (*g_mem_bkeep_free_upcall)(uintptr_t addr, size_t size) = NULL;
+
+static bool g_initial_mem_disabled = false;
+static uintptr_t g_last_alloc_addr = UINTPTR_MAX;
+/* Array of initial (PAL) memory ranges. Must be kept sorted in descending order. */
+struct pal_initial_mem_range g_initial_mem_ranges[0x100] = { 0 };
+
+void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_addr),
+                                    int (*free)(uintptr_t addr, size_t size)) {
+    if (!FIRST_TIME()) {
+        BUG();
+    }
+    g_mem_bkeep_alloc_upcall = alloc;
+    g_mem_bkeep_free_upcall = free;
+}
+
+static void insert_range_at(size_t idx, uintptr_t addr, size_t size, pal_prot_flags_t prot,
+                            const char* comment) {
+    assert(idx <= g_pal_public_state.initial_mem_ranges_len);
+
+    memmove(&g_initial_mem_ranges[idx + 1], &g_initial_mem_ranges[idx],
+            (g_pal_public_state.initial_mem_ranges_len - idx) * sizeof(g_initial_mem_ranges[0]));
+    g_initial_mem_ranges[idx] = (struct pal_initial_mem_range){
+        .start = addr,
+        .end = addr + size,
+        .prot = prot,
+        .is_free = false,
+    };
+    memcpy(&g_initial_mem_ranges[idx].comment, comment,
+           MIN(sizeof(g_initial_mem_ranges[idx].comment) - 1, strlen(comment)));
+
+    g_pal_public_state.initial_mem_ranges_len++;
+    assert(g_pal_public_state.initial_mem_ranges_len <= ARRAY_SIZE(g_initial_mem_ranges));
+}
+
+int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment) {
+    if (g_pal_public_state.initial_mem_ranges_len >= ARRAY_SIZE(g_initial_mem_ranges)) {
         return -PAL_ERROR_NOMEM;
     }
 
-    if (g_pal_public_state.preloaded_ranges_cnt) {
-        memcpy(new_ranges, g_pal_public_state.preloaded_ranges,
-               g_pal_public_state.preloaded_ranges_cnt * sizeof(*g_pal_public_state.preloaded_ranges));
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (g_initial_mem_ranges[i].end <= addr) {
+            insert_range_at(i, addr, size, prot, comment);
+            return 0;
+        }
     }
 
-    free(g_pal_public_state.preloaded_ranges);
-    g_pal_public_state.preloaded_ranges = new_ranges;
-
-    g_pal_public_state.preloaded_ranges[g_pal_public_state.preloaded_ranges_cnt].start = start;
-    g_pal_public_state.preloaded_ranges[g_pal_public_state.preloaded_ranges_cnt].end = end;
-    g_pal_public_state.preloaded_ranges[g_pal_public_state.preloaded_ranges_cnt].comment = comment;
-    g_pal_public_state.preloaded_ranges_cnt++;
-
+    insert_range_at(g_pal_public_state.initial_mem_ranges_len, addr, size, prot, comment);
     return 0;
+}
+
+static void mark_range_free(size_t idx) {
+    g_initial_mem_ranges[idx].is_free = true;
+
+    size_t ranges_to_rm = 0;
+    size_t move_idx;
+    if (idx + 1 < g_pal_public_state.initial_mem_ranges_len && g_initial_mem_ranges[idx + 1].is_free
+            && g_initial_mem_ranges[idx].start == g_initial_mem_ranges[idx + 1].end) {
+        g_initial_mem_ranges[idx].start = g_initial_mem_ranges[idx + 1].start;
+        move_idx = idx + 1;
+        ranges_to_rm++;
+    }
+    if (idx > 0 && g_initial_mem_ranges[idx - 1].is_free
+            && g_initial_mem_ranges[idx - 1].start == g_initial_mem_ranges[idx].end) {
+        g_initial_mem_ranges[idx - 1].start = g_initial_mem_ranges[idx].start;
+        move_idx = idx;
+        ranges_to_rm++;
+    }
+
+    if (ranges_to_rm) {
+        size_t tail_len = g_pal_public_state.initial_mem_ranges_len - (move_idx + ranges_to_rm);
+        memmove(&g_initial_mem_ranges[move_idx], &g_initial_mem_ranges[move_idx + ranges_to_rm],
+                tail_len * sizeof(g_initial_mem_ranges[0]));
+
+        g_pal_public_state.initial_mem_ranges_len -= ranges_to_rm;
+    }
+}
+
+static int remove_initial_range(uintptr_t addr, size_t size) {
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (g_initial_mem_ranges[i].start == addr && g_initial_mem_ranges[i].end == addr + size) {
+            mark_range_free(i);
+            return 0;
+        }
+        if (g_initial_mem_ranges[i].end <= addr) {
+            break;
+        }
+    }
+
+    return -PAL_ERROR_INVAL;
+}
+
+static bool find_free_range(size_t size, uintptr_t* out_addr) {
+    size_t idx = g_pal_public_state.initial_mem_ranges_len;
+    size_t best_size = SIZE_MAX;
+
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (g_initial_mem_ranges[i].is_free) {
+            size_t range_size = g_initial_mem_ranges[i].end - g_initial_mem_ranges[i].start;
+            if (range_size >= size && range_size < best_size) {
+                best_size = range_size;
+                idx = i;
+                if (range_size == size) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (idx >= g_pal_public_state.initial_mem_ranges_len) {
+        return false;
+    }
+
+    g_initial_mem_ranges[idx].end -= size;
+    *out_addr = g_initial_mem_ranges[idx].end;
+
+    if (g_initial_mem_ranges[idx].start == g_initial_mem_ranges[idx].end) {
+        size_t tail_len = g_pal_public_state.initial_mem_ranges_len - (idx + 1);
+        memmove(&g_initial_mem_ranges[idx], &g_initial_mem_ranges[idx + 1],
+                tail_len * sizeof(g_initial_mem_ranges[0]));
+
+        g_pal_public_state.initial_mem_ranges_len--;
+    }
+
+    return true;
+}
+
+static int find_non_reserved_range_below(uintptr_t addr, size_t size, uintptr_t* out_addr) {
+    static uintptr_t g_last_reserved_range_start = UINTPTR_MAX;
+    static uintptr_t g_last_reserved_range_end = UINTPTR_MAX;
+
+    if (addr < size) {
+        return -PAL_ERROR_NOMEM;
+    }
+
+    uintptr_t candidate = addr - size;
+
+    while (candidate < g_last_reserved_range_end) {
+        if (g_last_reserved_range_start < size) {
+            return -PAL_ERROR_NOMEM;
+        }
+        candidate = MIN(candidate, g_last_reserved_range_start - size);
+        pal_read_next_reserved_range(g_last_reserved_range_start,
+                                     &g_last_reserved_range_start, &g_last_reserved_range_end);
+    }
+
+    *out_addr = candidate;
+    return 0;
+}
+
+static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_addr) {
+    uintptr_t end = addr + size;
+    assert(addr < end);
+
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (!(g_initial_mem_ranges[i].end <= addr || end <= g_initial_mem_ranges[i].start)) {
+            *out_addr = g_initial_mem_ranges[i].start;
+            return true;
+        }
+        if (g_initial_mem_ranges[i].end <= addr) {
+            return false;
+        }
+    }
+
+    return false;
+}
+
+/* This function is called only in early init code which is single-threaded, hence it does not need
+ * any locking. */
+static int initial_mem_alloc(size_t size, void** out_addr) {
+    if (g_initial_mem_disabled) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    if (g_last_alloc_addr == UINTPTR_MAX) {
+        g_last_alloc_addr = (uintptr_t)g_pal_public_state.memory_address_end;
+    }
+
+    int ret;
+    uintptr_t addr;
+    if (!find_free_range(size, &addr)) {
+        addr = g_last_alloc_addr;
+        while (1) {
+            ret = find_non_reserved_range_below(addr, size, &addr);
+            if (ret < 0) {
+                return ret;
+            }
+            if (addr < (uintptr_t)g_pal_public_state.memory_address_start) {
+                return -PAL_ERROR_NOMEM;
+            }
+            if (!overlaps_existing_range(addr, size, &addr)) {
+                break;
+            }
+        }
+        g_last_alloc_addr = addr;
+    }
+
+    ret = pal_add_initial_range(addr, size, PAL_PROT_READ | PAL_PROT_WRITE, "PAL internal memory");
+    if (ret < 0) {
+        return ret;
+    }
+
+    ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
+    if (ret < 0) {
+        log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
+        _PalProcessExit(1);
+    }
+
+    *out_addr = (void*)addr;
+    return 0;
+}
+
+/* This function is called only in early init code which is single-threaded, hence it does not need
+ * any locking. */
+static int initial_mem_free(uintptr_t addr, size_t size) {
+    if (g_initial_mem_disabled) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    int ret = remove_initial_range(addr, size);
+    if (ret < 0) {
+        return ret;
+    }
+    ret = _PalVirtualMemoryFree((void*)addr, size);
+    if (ret < 0) {
+        log_error("%s: failed to free initial PAL internal memory: %d", __func__, ret);
+        _PalProcessExit(1);
+    }
+    return 0;
+}
+
+int pal_internal_memory_alloc(size_t size, void** out_addr) {
+    assert(IS_ALLOC_ALIGNED(size));
+
+    if (g_mem_bkeep_alloc_upcall) {
+        uintptr_t addr;
+        int ret = g_mem_bkeep_alloc_upcall(size, &addr);
+        if (ret < 0) {
+            log_warning("%s: failed to bookkeep PAL internal memory: %d", __func__, ret);
+            return -PAL_ERROR_NOMEM;
+        }
+        ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
+        if (ret < 0) {
+            log_warning("%s: failed to allocate PAL internal memory: %d", __func__, ret);
+            ret = g_mem_bkeep_free_upcall(addr, size);
+            if (ret < 0) {
+                BUG();
+            }
+            return -PAL_ERROR_NOMEM;
+        }
+
+        *out_addr = (void*)addr;
+        return 0;
+    }
+
+    return initial_mem_alloc(size, out_addr);
+}
+
+int pal_internal_memory_free(void* addr, size_t size) {
+    assert(IS_ALLOC_ALIGNED(size));
+
+    if (g_mem_bkeep_free_upcall) {
+        int ret = _PalVirtualMemoryFree(addr, size);
+        if (ret < 0) {
+            log_warning("%s: failed to free PAL internal memory: %d", __func__, ret);
+            return ret;
+        }
+        ret = g_mem_bkeep_free_upcall((uintptr_t)addr, size);
+        if (ret < 0) {
+            log_error("%s: failed to release PAL internal memory: %d", __func__, ret);
+            _PalProcessExit(1);
+        }
+        return 0;
+    }
+
+    return initial_mem_free((uintptr_t)addr, size);
+}
+
+void pal_disable_early_memory_bookkeeping(void) {
+    g_initial_mem_disabled = true;
+
+    /* Find some unocuppied range for initial LibOS memory. We set an arbitrary limit of 1MB and 5%
+     * of total process memory - should be enough™. */
+    size_t size = MIN(g_pal_public_state.mem_total / 20, 1024ul * 1024);
+    uintptr_t addr = g_last_alloc_addr;
+    while (1) {
+        int ret = find_non_reserved_range_below(addr, size, &addr);
+        if (ret < 0 || addr < (uintptr_t)g_pal_public_state.memory_address_start) {
+            /* Let LibOS handle this. `early_libos_mem_range_start` and `early_libos_mem_range_end`
+             * are both `0`, so LibOS will most likely fail to allocate early memory. */
+            return;
+        }
+        if (!overlaps_existing_range(addr, size, &addr)) {
+            break;
+        }
+    }
+
+    g_pal_public_state.early_libos_mem_range_start = addr;
+    g_pal_public_state.early_libos_mem_range_end = addr + size;
 }

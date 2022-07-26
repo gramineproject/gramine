@@ -174,6 +174,8 @@ typedef struct {
 
 typedef struct {
     int ms_stream_fd;
+    void* ms_reserved_mem_ranges;
+    size_t ms_reserved_mem_ranges_size;
     size_t ms_nargs;
     const char* ms_args[];
 } ms_ocall_create_process_t;

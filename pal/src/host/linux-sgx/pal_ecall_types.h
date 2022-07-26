@@ -28,6 +28,8 @@ typedef struct {
     sgx_target_info_t*        ms_qe_targetinfo;
     struct pal_topo_info*     ms_topo_info;
     struct pal_dns_host_conf* ms_dns_host_conf;
+    void*                     ms_reserved_mem_ranges;
+    size_t                    ms_reserved_mem_ranges_size;
 
     struct rpc_queue*  rpc_queue; /* pointer to RPC queue in untrusted mem */
 } ms_ecall_enclave_start_t;

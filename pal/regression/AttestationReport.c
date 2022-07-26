@@ -40,24 +40,23 @@ int main(int argc, char** argv) {
                user_report_data_size, target_info_size, report_size);
 
     void* user_report_data = NULL;
-    ret = PalVirtualMemoryAlloc(&user_report_data, ALLOC_ALIGN_UP(user_report_data_size),
-                                PAL_ALLOC_INTERNAL, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = memory_alloc(ALLOC_ALIGN_UP(user_report_data_size), PAL_PROT_READ | PAL_PROT_WRITE,
+                       &user_report_data);
     if (ret < 0) {
         pal_printf("ERROR: Cannot allocate memory for user_report_data\n");
         return -1;
     }
 
     void* target_info = NULL;
-    ret = PalVirtualMemoryAlloc(&target_info, ALLOC_ALIGN_UP(target_info_size),
-                                PAL_ALLOC_INTERNAL, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = memory_alloc(ALLOC_ALIGN_UP(target_info_size), PAL_PROT_READ | PAL_PROT_WRITE,
+                       &target_info);
     if (ret < 0) {
         pal_printf("ERROR: Cannot allocate memory for target_info\n");
         return -1;
     }
 
     void* report = NULL;
-    ret = PalVirtualMemoryAlloc(&report, ALLOC_ALIGN_UP(report_size),
-                                PAL_ALLOC_INTERNAL, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = memory_alloc(ALLOC_ALIGN_UP(report_size), PAL_PROT_READ | PAL_PROT_WRITE, &report);
     if (ret < 0) {
         pal_printf("ERROR: Cannot allocate memory for report\n");
         return -1;
@@ -91,16 +90,16 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    if (PalVirtualMemoryFree(user_report_data, ALLOC_ALIGN_UP(user_report_data_size)) < 0) {
-        pal_printf("PalVirtualMemoryFree on `user_report_data` failed\n");
+    if (memory_free(user_report_data, ALLOC_ALIGN_UP(user_report_data_size)) < 0) {
+        pal_printf("memory_free on `user_report_data` failed\n");
         return 1;
     }
-    if (PalVirtualMemoryFree(target_info, ALLOC_ALIGN_UP(target_info_size)) < 0) {
-        pal_printf("PalVirtualMemoryFree on `target_info` failed\n");
+    if (memory_free(target_info, ALLOC_ALIGN_UP(target_info_size)) < 0) {
+        pal_printf("memory_free on `target_info` failed\n");
         return 1;
     }
-    if (PalVirtualMemoryFree(report, ALLOC_ALIGN_UP(report_size)) < 0) {
-        pal_printf("PalVirtualMemoryFree on `report` failed\n");
+    if (memory_free(report, ALLOC_ALIGN_UP(report_size)) < 0) {
+        pal_printf("memory_free on `report` failed\n");
         return 1;
     }
 

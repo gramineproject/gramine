@@ -121,7 +121,6 @@ void unmap_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
 
-int sgx_init_child_process(int parent_stream_fd, char** out_application_path, char** out_manifest);
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
 

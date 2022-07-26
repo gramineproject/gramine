@@ -60,8 +60,14 @@ int main(int argc, char** argv, char** envp) {
 
         /* test file map */
 
-        void* mem1 = (void*)PalGetPalPublicState()->user_address_start;
-        ret = PalStreamMap(file1, &mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
+        uintptr_t mem1_addr;
+        ret = mem_bkeep_alloc(PAGE_SIZE, &mem1_addr);
+        if (ret < 0) {
+            pal_printf("mem_bkeep_alloc failed: %d\n", ret);
+            return 1;
+        }
+        void* mem1 = (void*)mem1_addr;
+        ret = PalStreamMap(file1, mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
         if (ret >= 0 && mem1) {
             memcpy(buffer1, mem1, 40);
             print_hex("Map Test 1 (0th - 40th): %s\n", buffer1, 40);
@@ -72,6 +78,11 @@ int main(int argc, char** argv, char** envp) {
             ret = PalStreamUnmap(mem1, PAGE_SIZE);
             if (ret < 0) {
                 pal_printf("PalStreamUnmap failed\n");
+                return 1;
+            }
+            ret = mem_bkeep_free((uintptr_t)mem1, PAGE_SIZE);
+            if (ret < 0) {
+                pal_printf("mem_bkeep_free failed: %d\n", ret);
                 return 1;
             }
         } else {

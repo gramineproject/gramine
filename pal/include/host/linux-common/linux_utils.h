@@ -29,7 +29,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
 struct proc_maps_range {
     uintptr_t start;
     uintptr_t end;
-    int prot;
+    pal_prot_flags_t prot;
     size_t offset;
     const char* name; /* NULL if no name */
 };
@@ -52,3 +52,7 @@ int file_stat_type(struct stat* stat);
 
 /* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
 void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat);
+
+int create_reserved_mem_ranges_fd(void* reserved_mem_ranges, size_t reserved_mem_ranges_size);
+
+void probe_stack(size_t pages_count);
