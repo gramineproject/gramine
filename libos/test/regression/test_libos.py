@@ -13,9 +13,9 @@ from graminelibos.regression import (
 )
 
 CPUINFO_TEST_FLAGS = [
-    'fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce', 'cx8', 'apic', 'sep',
-    'mtrr', 'pge', 'mca', 'cmov', 'pat', 'pse36', 'pn', 'clflush', 'dts',
-    'acpi', 'mmx', 'fxsr', 'sse', 'sse2', 'ss', 'ht', 'tm', 'ia64', 'pbe',
+    'fpu', 'msr', 'apic', 'xsave', 'xsaveopt', 'avx', 'sse', 'sse2',
+    'avx512cd', 'sgx_lc', 'amx_tile', 'avx_vnni', 'mwaitx', 'rdtscp',
+    'syscall',
 ]
 
 
@@ -983,7 +983,7 @@ class TC_40_FileSystem(RegressionTestCase):
         cpuinfo = dict(map(str.strip, line.split(':'))
             for line in cpuinfo.split('\n'))
         if 'flags' in cpuinfo:
-            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags']
+            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags'].split()
                 if flag in CPUINFO_TEST_FLAGS)
         else:
             cpuinfo['flags'] = ''
