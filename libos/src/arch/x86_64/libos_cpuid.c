@@ -335,15 +335,14 @@ int libos_get_cpu_flags(char** out_cpu_flags) {
 
     RETRIEVE_CPUID(0x80000000, 0);
     unsigned int max_supported_extended_cpuid_leaf = words[CPUID_WORD_EAX];
-    if (max_supported_extended_cpuid_leaf < 0x80000004) {
-        goto out_err;
-    }
 
     /* Extended processor info and feature flags: level 0x80000001 */
-    RETRIEVE_CPUID(0x80000001, 0);
+    if (max_supported_extended_cpuid_leaf >= 0x80000001) {
+        RETRIEVE_CPUID(0x80000001, 0);
 
-    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_ecx, CPUID_WORD_ECX);
-    EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_edx, CPUID_WORD_EDX);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_ecx, CPUID_WORD_ECX);
+        EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_edx, CPUID_WORD_EDX);
+    }
 
     /* End the capability flags extension.
      * NOTE: this string is always ended with a space, so we can overwrite it. */
