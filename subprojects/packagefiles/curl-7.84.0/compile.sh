@@ -54,7 +54,6 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-get-easy-options  \
         --disable-hsts              \
         --disable-http-auth         \
-        --disable-ipv6              \
         --disable-libcurl-option    \
         --disable-manual            \
         --disable-netrc             \
