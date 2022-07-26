@@ -367,8 +367,6 @@ static int read_environs(const char* const* envp) {
     } while (0)
 
 noreturn void libos_init(const char* const* argv, const char* const* envp) {
-    int ret;
-
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
@@ -408,7 +406,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     if (g_pal_public_state->parent_process) {
         struct checkpoint_hdr hdr;
 
-        ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
+        int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
             log_error("libos_init: failed to read the whole checkpoint header: %d", ret);
             PalProcessExit(1);
@@ -427,7 +425,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
 
-    char** expanded_argv;
+    char** expanded_argv = NULL;
     RUN_INIT(init_exec_handle, argv, &expanded_argv);
     RUN_INIT(init_process_cmdline, expanded_argv ? (const char* const*)expanded_argv : argv);
 
@@ -451,7 +449,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_ipc_worker);
 
     if (g_pal_public_state->parent_process) {
-        ret = connect_to_process(g_process_ipc_ids.parent_vmid);
+        int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
             log_error("libos_init: failed to establish IPC connection to parent: %d", ret);
             PalProcessExit(1);
