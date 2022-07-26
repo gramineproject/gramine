@@ -309,14 +309,16 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
 
         int ret = secret_provision_start(/*in_servers=*/NULL, /*in_ca_chain_path=*/NULL,
                                          /*out_ctx=*/NULL);
-        if (ret < 0)
-            return;
+        if (ret < 0) {
+            ERROR("Secret provisioning failed, terminating the whole process\n");
+            exit(1);
+        }
 
         ret = secret_provision_get(&secret, &secret_size);
         if (ret < 0 || !secret || !secret_size || secret_size > PATH_MAX ||
                 secret[secret_size - 1] != '\0') {
-            /* secret is not a null-terminated string, cannot do anything about such secret */
-            return;
+            ERROR("Secret is not a null-terminated string, cannot do anything about such secret\n");
+            exit(1);
         }
 
         /* successfully retrieved the secret: is it a key for encrypted files? */
@@ -333,18 +335,22 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
 
         if (key_name) {
             sgx_key_128bit_t keydata;
-            if (parse_hex((char*)secret, keydata, sizeof(keydata), "provisioned secret") < 0)
-                return;
+            if (parse_hex((char*)secret, keydata, sizeof(keydata), "provisioned secret") < 0) {
+                ERROR("Secret Provisioning cannot parse the provisioned key %s\n", key_name);
+                exit(1);
+            }
 
             char path_buf[256];
             if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", key_name) >= 256) {
-                ERROR("Key name '%s' too long\n", key_name);
-                return;
+                ERROR("Provisioned key name '%s' is too long\n", key_name);
+                exit(1);
             }
 
             int fd = open(path_buf, O_WRONLY);
-            if (fd < 0)
-                return;
+            if (fd < 0) {
+                ERROR("Secret Provisioning cannot open '%s'\n", path_buf);
+                exit(1);
+            }
 
             size_t total_written = 0;
             while (total_written < sizeof(keydata)) {
@@ -358,7 +364,8 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                     continue;
                 } else {
                     close(fd);
-                    return;
+                    ERROR("Secret Provisioning cannot write to '%s'\n", path_buf);
+                    exit(1);
                 }
             }
 
