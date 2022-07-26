@@ -8,7 +8,7 @@
 #include "libos_utils.h"
 
 /*
- *  List of x86 CPU feature flags. This list was last revised in July 2022, see below for details:
+ *  List of x86 CPU feature flags. This list is based on Linux v5.19-rc7, see below for details:
  *
  * - https://elixir.bootlin.com/linux/v5.19-rc7/source/Documentation/x86/cpuinfo.rst
  * - https://elixir.bootlin.com/linux/v5.19-rc7/source/arch/x86/include/asm/cpufeatures.h
