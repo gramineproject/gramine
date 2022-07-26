@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "mbedtls/config.h"
+#include "mbedtls/mbedtls_config.h"
 
 #define MBEDTLS_CMAC_C
 

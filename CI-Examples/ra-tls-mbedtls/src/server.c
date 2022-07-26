@@ -1,28 +1,17 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *               2020, Intel Labs
+ */
+
 /*
- *  SSL server demonstration program (with RA-TLS)
- *  This program is heavily based on an mbedTLS 2.26.0 example ssl_server.c
- *  but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
- *  is required by user.
- *
- *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
- *                2020, Intel Labs
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * SSL server demonstration program (with RA-TLS)
+ * This program is heavily based on an mbedTLS 3.2.1 example ssl_server.c
+ * but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
+ * is required by user.
  */
 
 #define _GNU_SOURCE
-#include "mbedtls/config.h"
+#include "mbedtls/build_info.h"
 
 #include <assert.h>
 #include <dlfcn.h>
@@ -147,6 +136,18 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    mbedtls_printf("  . Seeding the random number generator...");
+    fflush(stdout);
+
+    ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                (const unsigned char*)pers, strlen(pers));
+    if (ret != 0) {
+        mbedtls_printf(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
+        goto exit;
+    }
+
+    mbedtls_printf(" ok\n");
+
     if (ra_tls_attest_lib) {
         mbedtls_printf("\n  . Creating the RA-TLS server cert and key (using \"%s\" as "
                        "attestation type)...", attestation_type_str);
@@ -167,7 +168,8 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0);
+        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0,
+                                   mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
             goto exit;
@@ -213,7 +215,8 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, /*password=*/NULL);
+        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, NULL,
+                                       mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_keyfile returned %d\n\n", ret);
             goto exit;
@@ -228,18 +231,6 @@ int main(int argc, char** argv) {
     ret = mbedtls_net_bind(&listen_fd, NULL, "4433", MBEDTLS_NET_PROTO_TCP);
     if (ret != 0) {
         mbedtls_printf(" failed\n  ! mbedtls_net_bind returned %d\n\n", ret);
-        goto exit;
-    }
-
-    mbedtls_printf(" ok\n");
-
-    mbedtls_printf("  . Seeding the random number generator...");
-    fflush(stdout);
-
-    ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                (const unsigned char*)pers, strlen(pers));
-    if (ret != 0) {
-        mbedtls_printf(" failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret);
         goto exit;
     }
 

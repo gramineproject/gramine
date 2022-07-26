@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mbedtls/config.h"
+#include "mbedtls/build_info.h"
 
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
@@ -178,7 +178,8 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
         goto out;
     }
 
-    ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL);
+    ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL, mbedtls_ctr_drbg_random,
+                                   &ctr_drbg);
     if (ret < 0) {
         goto out;
     }
