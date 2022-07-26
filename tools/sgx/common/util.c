@@ -54,14 +54,17 @@ endianness_t get_endianness(void) {
 }
 
 /* return -1 on error */
-uint64_t get_file_size(int fd) {
-    struct stat64 st;
-
-    if (fstat64(fd, &st) != 0)
+ uint64_t get_file_size(int fd) {
+    off_t pos = lseek(fd, 0L, SEEK_END);
+    if (pos < 0)
         return (uint64_t)-1;
 
-    return st.st_size;
-}
+    off_t reset_pos = lseek(fd, 0L, SEEK_SET);
+    if (reset_pos < 0)
+         return (uint64_t)-1;
+
+   return (uint64_t)pos;
+ }
 
 void* read_file(const char* path, size_t* size, void* buffer) {
     FILE* f = NULL;
