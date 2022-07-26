@@ -348,7 +348,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
 
             int fd = open(path_buf, O_WRONLY);
             if (fd < 0) {
-                ERROR("Secret Provisioning cannot open %s\n", path_buf);
+                ERROR("Secret Provisioning cannot open '%s'\n", path_buf);
                 exit(1);
             }
 
@@ -364,7 +364,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                     continue;
                 } else {
                     close(fd);
-                    ERROR("Secret Provisioning cannot write %s\n", path_buf);
+                    ERROR("Secret Provisioning cannot write '%s'\n", path_buf);
                     exit(1);
                 }
             }
