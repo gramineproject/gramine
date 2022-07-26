@@ -13,9 +13,46 @@ from graminelibos.regression import (
 )
 
 CPUINFO_TEST_FLAGS = [
-    'fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce', 'cx8', 'apic', 'sep',
-    'mtrr', 'pge', 'mca', 'cmov', 'pat', 'pse36', 'pn', 'clflush', 'dts',
-    'acpi', 'mmx', 'fxsr', 'sse', 'sse2', 'ss', 'ht', 'tm', 'ia64', 'pbe',
+    'pni', 'pclmulqdq', 'dtes64', 'monitor', 'ds_cpl', 'vmx', 'smx', 'est',
+    'tm2', 'ssse3', 'cid', 'sdbg', 'fma', 'cx16', 'xtpr', 'pdcm', 'pcid',
+    'dca', 'sse4_1', 'sse4_2', 'x2apic', 'movbe', 'popcnt',
+    'tsc_deadline_timer', 'aes', 'xsave', 'avx', 'f16c', 'rdrand',
+    'hypervisor',
+
+    'fpu', 'vme', 'de', 'pse', 'tsc', 'msr', 'pae', 'mce', 'cx8', 'apic',
+    'sep', 'mtrr', 'pge', 'mca', 'cmov', 'pat', 'pse36', 'pn', 'clflush',
+    'dts', 'acpi', 'mmx', 'fxsr', 'sse', 'sse2', 'ss', 'ht', 'tm', 'ia64',
+    'pbe',
+
+    'dtherm', 'ida', 'arat', 'pln', 'pts', 'hwp', 'hwp_notify',
+    'hwp_act_window', 'hwp_epp', 'hwp_pkg_req', 'hfi',
+
+    'fsgsbase', 'tsc_adjust', 'sgx', 'bmi1', 'hle', 'avx2', 'smep', 'bmi2',
+    'erms', 'invpcid', 'rtm', 'cqm', 'mpx', 'rdt_a', 'avx512f', 'avx512dq',
+    'rdseed', 'adx', 'smap', 'avx512ifma', 'clflushopt', 'clwb', 'intel_pt',
+    'avx512pf', 'avx512er', 'avx512cd', 'sha_ni', 'avx512bw', 'avx512vl',
+
+    'avx512vbmi', 'umip', 'pku', 'ospke', 'waitpkg', 'avx512_vbmi2', 'gfni',
+    'vaes', 'vpclmulqdq', 'avx512_vnni', 'avx512_bitalg', 'tme',
+    'avx512_vpopcntdq', 'la57', 'rdpid', 'bus_lock_detect', 'cldemote',
+    'movdiri', 'movdir64b', 'enqcmd', 'sgx_lc',
+
+    'avx512_4vnniw', 'avx512_4fmaps', 'fsrm', 'avx512_vp2intersect',
+    'md_clear', 'serialize', 'tsxldtrk', 'pconfig', 'arch_lbr', 'ibt',
+    'amx_bf16', 'avx512_fp16', 'amx_tile', 'amx_int8', 'flush_l1d',
+    'arch_capabilities',
+
+    'avx_vnni', 'avx512_bf16',
+
+    'xsaveopt', 'xsavec', 'xgetbv1', 'xsaves',
+
+    'lahf_lm', 'cmp_legacy', 'svm', 'extapic', 'cr8_legacy', 'abm', 'sse4a',
+    'misalignsse', '3dnowprefetch', 'osvw', 'ibs', 'xop', 'skinit', 'wdt',
+    'lwp', 'fma4', 'tce', 'nodeid_msr', 'tbm', 'topoext', 'perfctr_core',
+    'perfctr_nb', 'bpext', 'ptsc', 'perfctr_llc', 'mwaitx',
+
+    'syscall', 'mp', 'nx', 'mmxext', 'fxsr_opt', 'pdpe1gb', 'rdtscp', 'lm',
+    '3dnowext', '3dnow',
 ]
 
 
@@ -973,7 +1010,7 @@ class TC_40_FileSystem(RegressionTestCase):
         cpuinfo = dict(map(str.strip, line.split(':'))
             for line in cpuinfo.split('\n'))
         if 'flags' in cpuinfo:
-            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags']
+            cpuinfo['flags'] = ' '.join(flag for flag in cpuinfo['flags'].split()
                 if flag in CPUINFO_TEST_FLAGS)
         else:
             cpuinfo['flags'] = ''
