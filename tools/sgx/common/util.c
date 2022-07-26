@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /*! Console stdout fd */
 int g_stdout_fd = 1;
@@ -55,13 +56,20 @@ endianness_t get_endianness(void) {
 
 /* return -1 on error */
 uint64_t get_file_size(int fd) {
-    struct stat64 st;
-
-    if (fstat64(fd, &st) != 0)
+    off_t cur_pos = lseek(fd, 0L, SEEK_CUR);
+    if (cur_pos < 0)
         return (uint64_t)-1;
 
-    return st.st_size;
-}
+    off_t pos = lseek(fd, 0L, SEEK_END);
+    if (pos < 0)
+        return (uint64_t)-1;
+
+    off_t reset_pos = lseek(fd, cur_pos, SEEK_SET);
+    if (reset_pos < 0)
+         return (uint64_t)-1;
+
+   return (uint64_t)pos;
+ }
 
 void* read_file(const char* path, size_t* size, void* buffer) {
     FILE* f = NULL;
