@@ -63,8 +63,8 @@ static const char* g_pf_error_list[] = {
 };
 
 /* ipf prefix means "Intel protected files", these are functions from the SGX SDK implementation */
-static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset);
 static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_number);
+static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset);
 static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number);
 static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset);
 
