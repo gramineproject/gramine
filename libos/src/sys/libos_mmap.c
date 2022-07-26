@@ -132,8 +132,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < g_pal_public_state->user_address_start
-                || (uintptr_t)g_pal_public_state->user_address_end < (uintptr_t)addr + length) {
+        if (addr < g_pal_public_state->memory_address_start
+                || (uintptr_t)g_pal_public_state->memory_address_end < (uintptr_t)addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
@@ -150,9 +150,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr && (uintptr_t)g_pal_public_state->user_address_start <= (uintptr_t)addr
-                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->user_address_end) {
-            ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
+        if (addr && (uintptr_t)g_pal_public_state->memory_address_start <= (uintptr_t)addr
+                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->memory_address_end) {
+            ret = bkeep_mmap_any_in_range(g_pal_public_state->memory_address_start,
                                           (char*)addr + length, length, prot, flags, hdl, offset,
                                           NULL, &addr);
         } else {
@@ -172,7 +172,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
 
     if (!hdl) {
-        ret = PalVirtualMemoryAlloc(&addr, length, 0, LINUX_PROT_TO_PAL(prot, flags));
+        ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
         if (ret < 0) {
             if (ret == -PAL_ERROR_DENIED) {
                 ret = -EPERM;

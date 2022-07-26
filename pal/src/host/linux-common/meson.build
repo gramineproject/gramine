@@ -9,6 +9,7 @@ pal_linux_common_sources_host = files(
     'file_utils.c',
     'main_exec_path.c',
     'proc_maps.c',
+    'reserved_ranges.c',
     'timespec_utils.c',
     'topo_info.c',
 )

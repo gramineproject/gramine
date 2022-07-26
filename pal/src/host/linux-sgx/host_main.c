@@ -17,8 +17,8 @@
 #include "host_ecalls.h"
 #include "host_internal.h"
 #include "host_log.h"
+#include "host_process.h"
 #include "linux_utils.h"
-#include "pal_internal_arch.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "pal_rpc_queue.h"
@@ -916,7 +916,8 @@ out:
 /* Warning: This function does not free up resources on failure - it assumes that the whole process
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd, bool need_gsgx) {
+                        size_t env_size, int parent_stream_fd, bool need_gsgx,
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
     int ret;
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
@@ -1022,20 +1023,13 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
-                        &qe_targetinfo, &topo_info, &dns_conf);
+                        &qe_targetinfo, &topo_info, &dns_conf, reserved_mem_ranges,
+                        reserved_mem_ranges_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
     DO_SYSCALL(exit, 0);
     die_or_inf_loop();
-}
-
-/* Grow the stack of the main thread to THREAD_STACK_SIZE by probing each stack page above current
- * stack pointer (Linux dynamically grows the stack of the main thread but gets confused with
- * huge-jump stack accesses coming from within the enclave). Note that other, non-main threads
- * are created manually via clone(.., THREAD_STACK_SIZE, ..) and thus do not need this hack. */
-static void force_linux_to_grow_stack(void) {
-    ARCH_PROBE_STACK(THREAD_STACK_SIZE, PRESET_PAGESIZE);
 }
 
 noreturn static void print_usage_and_exit(const char* argv_0) {
@@ -1095,6 +1089,8 @@ int main(int argc, char* argv[], char* envp[]) {
     int ret = 0;
     bool need_gsgx = true;
     char* manifest = NULL;
+    void* reserved_mem_ranges = NULL;
+    size_t reserved_mem_ranges_size = 0;
 
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();
@@ -1104,7 +1100,13 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 #endif
 
-    force_linux_to_grow_stack();
+    /* Grow the stack of the main thread to THREAD_STACK_SIZE by probing each stack page above
+     * the current stack pointer (Linux dynamically grows the stack of the main thread but gets
+     * confused with huge-jump stack accesses coming from within the enclave). Note that other,
+     * non-main threads do not have growing stacks and thus do not need this hack. */
+    static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
+    probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
+
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);
@@ -1163,7 +1165,8 @@ int main(int argc, char* argv[], char* envp[]) {
             return ret;
         }
 
-        ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest);
+        ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest,
+                                     &reserved_mem_ranges, &reserved_mem_ranges_size);
         if (ret < 0)
             return ret;
     }
@@ -1191,7 +1194,8 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx);
+    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx,
+                       reserved_mem_ranges, reserved_mem_ranges_size);
     if (ret < 0) {
         log_error("load_enclave() failed with error %d", ret);
     }

@@ -200,6 +200,15 @@ bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usi
     return true;
 }
 
+bool sgx_copy_from_enclave(void* urts_ptr, const void* enclave_ptr, size_t size) {
+    if (!sgx_is_valid_untrusted_ptr(urts_ptr, size, /*alignment=*/1)
+            || !sgx_is_completely_within_enclave(enclave_ptr, size)) {
+        return false;
+    }
+    memcpy(urts_ptr, enclave_ptr, size);
+    return true;
+}
+
 void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt) {
     size_t size;
     if (__builtin_mul_overflow(elem_size, elem_cnt, &size))

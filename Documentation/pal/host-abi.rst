@@ -111,10 +111,12 @@ memory.
 .. doxygenfunction:: PalVirtualMemoryFree
    :project: pal
 
-.. doxygentypedef:: pal_alloc_flags_t
-   :project: pal
 .. doxygentypedef:: pal_prot_flags_t
    :project: pal
+
+.. doxygenstruct:: pal_initial_mem_range
+   :project: pal
+   :members:
 
 .. doxygenfunction:: PalVirtualMemoryProtect
    :project: pal

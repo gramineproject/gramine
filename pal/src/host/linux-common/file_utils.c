@@ -101,6 +101,7 @@ out:
     return (int)ret;
 }
 
+/* This function is called by early init code and as such can't use dynamically allocated memory! */
 int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg,
                                                                 bool* out_stop),
                               void* arg) {
@@ -110,17 +111,12 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     if (fd < 0)
         return fd;
 
-    size_t buf_size = 256;
-    char* buf = malloc(buf_size);
-    if (!buf) {
-        ret = -ENOMEM;
-        goto out;
-    }
+    char buf[0x200];
 
     bool stop = false;
     size_t len = 0;
     while (true) {
-        ssize_t n = DO_SYSCALL(read, fd, &buf[len], buf_size - 1 - len);
+        ssize_t n = DO_SYSCALL(read, fd, &buf[len], sizeof(buf) - 1 - len);
         if (n == -EINTR) {
             continue;
         } else if (n < 0) {
@@ -150,18 +146,10 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
             memmove(buf, line_end + 1, len + 1);
         }
 
-        if (len == buf_size - 1) {
-            /* The current line might be longer than buffer. Reallocate. */
-            size_t new_buf_size = buf_size * 2;
-            char* new_buf = malloc(new_buf_size);
-            if (!new_buf) {
-                ret = -ENOMEM;
-                goto out;
-            }
-            memcpy(new_buf, buf, buf_size);
-            free(buf);
-            buf_size = new_buf_size;
-            buf = new_buf;
+        if (len == sizeof(buf) - 1) {
+            /* The current line might be longer than buffer. */
+            ret = -E2BIG;
+            goto out;
         }
     }
     /* Process the rest of buffer; it should not contain any newlines. */
@@ -172,8 +160,8 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         /* ignore `stop`, we've finished either way */
     }
     ret = 0;
-out:
-    free(buf);
+
+out:;
     int close_ret = DO_SYSCALL(close, fd);
     if (close_ret < 0)
         return close_ret;

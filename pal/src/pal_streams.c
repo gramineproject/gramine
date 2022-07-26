@@ -309,12 +309,9 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return ops->attrsetbyhdl(handle, attr);
 }
 
-/* _PalStreamMap for internal use. Map specific handle to certain memory, with given protection,
- *  offset and size */
-int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset));
-    void* addr = *addr_ptr;
     int ret;
 
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
@@ -327,27 +324,23 @@ int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uin
     if (!ops->map)
         return -PAL_ERROR_NOTSUPPORT;
 
-    if ((ret = ops->map(handle, &addr, prot, offset, size)) < 0)
+    if ((ret = ops->map(handle, addr, prot, offset, size)) < 0)
         return ret;
 
-    *addr_ptr = addr;
     return 0;
 }
 
-int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size) {
-    assert(addr_ptr);
-    void* map_addr = *addr_ptr;
-
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (!map_addr) {
+    if (!addr) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (!IS_ALLOC_ALIGNED_PTR(map_addr)) {
+    if (!IS_ALLOC_ALIGNED_PTR(addr)) {
         return -PAL_ERROR_INVAL;
     }
 
@@ -355,20 +348,12 @@ int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint
         return -PAL_ERROR_INVAL;
     }
 
-    if (_PalCheckMemoryMappable(map_addr, size)) {
-        return -PAL_ERROR_DENIED;
-    }
-
-    return _PalStreamMap(handle, addr_ptr, prot, offset, size);
+    return _PalStreamMap(handle, addr, prot, offset, size);
 }
 
 int PalStreamUnmap(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
-    }
-
-    if (_PalCheckMemoryMappable(addr, size)) {
-        return -PAL_ERROR_DENIED;
     }
 
     return _PalStreamUnmap(addr, size);

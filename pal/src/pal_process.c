@@ -12,12 +12,12 @@
 #include "pal.h"
 #include "pal_internal.h"
 
-int PalProcessCreate(const char** args, PAL_HANDLE* handle) {
-    *handle = NULL;
-    return _PalProcessCreate(handle, args);
+int PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                     size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle) {
+    *out_handle = NULL;
+    return _PalProcessCreate(args, reserved_mem_ranges, reserved_mem_ranges_len, out_handle);
 }
 
 noreturn void PalProcessExit(int exitcode) {
     _PalProcessExit(exitcode);
-    die_or_inf_loop();
 }

@@ -12,7 +12,6 @@ from graminelibos.regression import (
     HAS_SGX,
     ON_X86,
     RegressionTestCase,
-    expectedFailureIf,
 )
 
 
@@ -121,7 +120,7 @@ class TC_01_Bootstrap(RegressionTestCase):
     @unittest.skipUnless(HAS_SGX, 'this test requires SGX')
     def test_120_8gb_enclave(self):
         _, stderr = self.run_binary(['Bootstrap6'], timeout=360)
-        self.assertIn('User Address Range OK', stderr)
+        self.assertIn('Memory Address Range OK', stderr)
 
     def test_130_large_number_of_items_in_manifest(self):
         _, stderr = self.run_binary(['Bootstrap7'])
@@ -141,6 +140,7 @@ class TC_02_Symbols(RegressionTestCase):
         'PalVirtualMemoryAlloc',
         'PalVirtualMemoryFree',
         'PalVirtualMemoryProtect',
+        'PalSetMemoryBookkeepingUpcalls',
         'PalProcessCreate',
         'PalProcessExit',
         'PalStreamOpen',
@@ -339,37 +339,20 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertIn('TEST OK', stderr)
 
     def test_300_memory(self):
-        _, stderr = self.run_binary(['Memory'])
-
-        # Memory Allocation
-        self.assertIn('Memory Allocation OK', stderr)
-
-        # Memory Allocation with Address
-        self.assertIn('Memory Allocation with Address OK', stderr)
-
-        # Get Memory Total Quota
-        self.assertIn('Total Memory:', stderr)
-        for line in stderr.split('\n'):
-            if line.startswith('Total Memory:'):
-                self.assertNotEqual(line, 'Total Memory: 0')
-
-        # Get Memory Available Quota
-        self.assertIn('Get Memory Available Quota OK', stderr)
-
-    @expectedFailureIf(HAS_SGX)
-    def test_301_memory_nosgx(self):
-        _, stderr = self.run_binary(['Memory'])
-
-        # SGX1 does not support unmapping a page or changing its permission
-        # after enclave init. Therefore the memory protection and deallocation
-        # tests will fail. By utilizing SGX2 it's possibile to fix this.
-
-        # Memory Protection
-        self.assertIn('Memory Allocation Protection (RW) OK', stderr)
-        self.assertIn('Memory Protection (R) OK', stderr)
-
-        # Memory Deallocation
-        self.assertIn('Memory Deallocation OK', stderr)
+        if not HAS_SGX:
+            _, stderr = self.run_binary(['memory'])
+            self.assertIn('TEST OK', stderr)
+        else:
+            # SGX1 does not support unmapping a page or changing its permission after enclave init.
+            # Therefore the memory protection and deallocation tests will fail. By utilizing SGX2
+            # it's possible to fix this.
+            try:
+                self.run_binary(['memory'])
+                self.fail('expected to return nonzero')
+            except subprocess.CalledProcessError as e:
+                self.assertEqual(e.returncode, 1)
+                stderr = e.stderr.decode()
+                self.assertRegex(stderr, r'write to R mem at 0x[0-9a-f]+ unexpectedly succeeded')
 
     def test_400_pipe(self):
         _, stderr = self.run_binary(['Pipe'])
