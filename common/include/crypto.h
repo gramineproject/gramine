@@ -50,6 +50,8 @@ typedef struct {
     int stream_fd;
 } LIB_SSL_CONTEXT;
 
+int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t* olen);
+
 #endif /* CRYPTO_USE_MBEDTLS */
 
 #ifndef CRYPTO_PROVIDER_SPECIFIED

@@ -12,7 +12,6 @@
 #include "crypto.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/cmac.h"
-#include "mbedtls/entropy_poll.h"
 #include "mbedtls/gcm.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/net_sockets.h"
@@ -210,7 +209,7 @@ int lib_AESCMAC(const uint8_t* key, size_t key_size, const uint8_t* input, size_
 
     const mbedtls_cipher_info_t* cipher_info = mbedtls_cipher_info_from_type(cipher);
 
-    if (!cipher_info || mac_size < cipher_info->block_size) {
+    if (!cipher_info || mac_size < mbedtls_cipher_info_get_block_size(cipher_info)) {
         return -PAL_ERROR_INVAL;
     }
 
@@ -253,7 +252,7 @@ int lib_AESCMACFinish(LIB_AESCMAC_CONTEXT* context, uint8_t* mac, size_t mac_siz
     const mbedtls_cipher_info_t* cipher_info = mbedtls_cipher_info_from_type(context->cipher);
 
     int ret = -PAL_ERROR_INVAL;
-    if (!cipher_info || mac_size < cipher_info->block_size)
+    if (!cipher_info || mac_size < mbedtls_cipher_info_get_block_size(cipher_info))
         goto exit;
 
     ret = mbedtls_cipher_cmac_finish(&context->ctx, mac);
@@ -264,6 +263,8 @@ exit:
     return ret;
 }
 
+/* mbedTLS library will use this implementation of a hardware entropy collector, see
+ * https://github.com/Mbed-TLS/mbedtls/blob/v3.2.1/include/mbedtls/mbedtls_config.h#L465 */
 int mbedtls_hardware_poll(void* data, unsigned char* output, size_t len, size_t* olen) {
     __UNUSED(data);
     assert(output && olen);
@@ -432,20 +433,26 @@ static int random_wrapper(void* private, unsigned char* data, size_t size) {
 
 int lib_DhInit(LIB_DH_CONTEXT* context) {
     int ret;
+    mbedtls_mpi dhm_P, dhm_G;
     mbedtls_dhm_init(context);
+    const unsigned char dhm_P_3072[] = MBEDTLS_DHM_RFC3526_MODP_3072_P_BIN;
+    const unsigned char dhm_G_3072[] = MBEDTLS_DHM_RFC3526_MODP_3072_G_BIN;
+
+    mbedtls_mpi_init(&dhm_P);
+    mbedtls_mpi_init(&dhm_G);
 
     /* Configure parameters. Note that custom Diffie-Hellman parameters are considered more secure,
      * but require more data be exchanged between the two parties to establish the parameters, so we
      * haven't implemented that yet. */
-    ret = mbedtls_mpi_read_string(&context->P, 16 /* radix */, MBEDTLS_DHM_RFC3526_MODP_3072_P);
+    ret = mbedtls_mpi_read_binary(&dhm_P, dhm_P_3072, sizeof(dhm_P_3072));
     if (ret < 0)
         return mbedtls_to_pal_error(ret);
 
-    ret = mbedtls_mpi_read_string(&context->G, 16 /* radix */, MBEDTLS_DHM_RFC3526_MODP_3072_G);
+    ret = mbedtls_mpi_read_binary(&dhm_G, dhm_G_3072, sizeof(dhm_G_3072));
     if (ret < 0)
         return mbedtls_to_pal_error(ret);
 
-    context->len = mbedtls_mpi_size(&context->P);
+    ret = mbedtls_dhm_set_group(context, &dhm_P, &dhm_G);
 
     return 0;
 }
@@ -454,8 +461,8 @@ int lib_DhCreatePublic(LIB_DH_CONTEXT* context, uint8_t* public, size_t public_s
     if (public_size != DH_SIZE)
         return -PAL_ERROR_INVAL;
 
-    int ret = mbedtls_dhm_make_public(context, context->len, public, public_size, random_wrapper,
-                                      /*p_rng=*/NULL);
+    int ret = mbedtls_dhm_make_public(context, mbedtls_dhm_get_len(context), public, public_size,
+                                      random_wrapper, /*p_rng=*/NULL);
     return mbedtls_to_pal_error(ret);
 }
 

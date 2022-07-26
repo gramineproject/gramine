@@ -159,7 +159,7 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
 
-    return mbedtls_sha256_ret(pk_der, pk_der_size_byte, sha, /*is224=*/0);
+    return mbedtls_sha256(pk_der, pk_der_size_byte, sha, /*is224=*/0);
 }
 
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
@@ -229,9 +229,9 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    mbedtls_rsa_init((mbedtls_rsa_context*)key->pk_ctx, MBEDTLS_RSA_PKCS_V15, /*hash_id=*/0);
+    mbedtls_rsa_init(mbedtls_pk_rsa(*key));
 
-    ret = mbedtls_rsa_gen_key((mbedtls_rsa_context*)key->pk_ctx, mbedtls_ctr_drbg_random, &ctr_drbg,
+    ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
                               RSA_PUB_3072_KEY_LEN, RSA_PUB_EXPONENT);
     if (ret < 0)
         goto out;

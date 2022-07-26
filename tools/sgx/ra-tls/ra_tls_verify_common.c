@@ -174,7 +174,7 @@ static int sha256_over_crt_pk(mbedtls_x509_crt* crt, uint8_t* sha) {
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
 
-    return mbedtls_sha256_ret(pk_der, pk_der_size_byte, sha, /*is224=*/0);
+    return mbedtls_sha256(pk_der, pk_der_size_byte, sha, /*is224=*/0);
 }
 
 /*! compares if report_data from \quote corresponds to sha256 of public key in \p crt */

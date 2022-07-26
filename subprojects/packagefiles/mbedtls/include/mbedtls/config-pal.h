@@ -3,7 +3,7 @@
  * Copyright (C) 2021 Intel Corp.
  */
 
-/* This mbedTLS config is for v2.26.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
+/* This mbedTLS config is for v3.2.1 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
 #pragma once
 
@@ -36,6 +36,7 @@
 #define MBEDTLS_PKCS1_V15
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_RSA_C
+#define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
 #define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256
 #define MBEDTLS_SSL_CLI_C
@@ -43,15 +44,3 @@
 #define MBEDTLS_SSL_PROTO_TLS1_2
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
-
-#define MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
-
-#include <limits.h>
-#include <stddef.h>
-
-void* calloc(size_t num, size_t size);
-void free(void*);
-
-#define MBEDTLS_PLATFORM_STD_CALLOC   calloc
-#define MBEDTLS_PLATFORM_STD_FREE     free
-#define MBEDTLS_PLATFORM_STD_SNPRINTF snprintf
