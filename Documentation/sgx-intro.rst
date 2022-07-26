@@ -552,7 +552,11 @@ SGX terminology
    Security Version Number
    SVN
 
-      .. todo:: TBD
+      Each element of the SGX :term:`TCB` is assigned a Security Version Number
+      (SVN). For the hardware, these SVNs are referred to collectively as
+      CPU_SVN, and for software referred as ISV_SVN. A TCB is considered up to
+      date if all components of the TCB have SVNs greater than or equal to a
+      threshold published by the author of the component.
 
    Trusted Execution Environment
    TEE

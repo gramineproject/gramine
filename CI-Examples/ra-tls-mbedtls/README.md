@@ -47,8 +47,10 @@ verification.
 If client is run without additional command-line arguments, it uses default
 RA-TLS verification callback that compares `MRENCLAVE`, `MRSIGNER`,
 `ISV_PROD_ID` and `ISV_SVN` against the corresonding `RA_TLS_*` environment
-variables. To run the client with its own verification callback, execute it with
-four additional command-line arguments (see the source code for details).
+variables. `MRENCLAVE`, `MRSIGNER` and `ISV_PROD_ID` are expected to match
+`RA_TLS_*` ones. `ISV_SVN` is expected to be equal or greater than `RA_TLS_ISV_SVN`.
+To run the client with its own verification callback, execute it with four
+additional command-line arguments (see the source code for details).
 
 Also, because this example builds and uses debug SGX enclaves (`sgx.debug` is
 set to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
