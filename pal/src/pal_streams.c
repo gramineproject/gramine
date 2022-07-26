@@ -412,20 +412,12 @@ int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint
         return -PAL_ERROR_INVAL;
     }
 
-    if (_PalCheckMemoryMappable(map_addr, size)) {
-        return -PAL_ERROR_DENIED;
-    }
-
     return _PalStreamMap(handle, addr_ptr, prot, offset, size);
 }
 
 int PalStreamUnmap(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
-    }
-
-    if (_PalCheckMemoryMappable(addr, size)) {
-        return -PAL_ERROR_DENIED;
     }
 
     return _PalStreamUnmap(addr, size);

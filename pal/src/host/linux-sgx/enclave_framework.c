@@ -143,6 +143,15 @@ bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usi
     return true;
 }
 
+bool sgx_copy_from_enclave(void* urts_ptr, const void* enclave_ptr, size_t size) {
+    if (!sgx_is_completely_outside_enclave(urts_ptr, size)
+            || !sgx_is_completely_within_enclave(enclave_ptr, size)) {
+        return false;
+    }
+    memcpy(urts_ptr, enclave_ptr, size);
+    return true;
+}
+
 void* sgx_import_to_enclave(const void* uptr, size_t usize) {
     if (!sgx_is_completely_outside_enclave(uptr, usize))
         return NULL;

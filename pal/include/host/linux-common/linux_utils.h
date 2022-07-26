@@ -29,7 +29,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
 struct proc_maps_range {
     uintptr_t start;
     uintptr_t end;
-    int prot;
+    pal_prot_flags_t prot;
     size_t offset;
     const char* name; /* NULL if no name */
 };

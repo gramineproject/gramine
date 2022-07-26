@@ -18,6 +18,7 @@ void sgx_reset_ustack(const void* old_ustack);
 
 bool sgx_copy_ptr_to_enclave(void** ptr, void* uptr, size_t size);
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize);
+bool sgx_copy_from_enclave(void* urts_ptr, const void* enclave_ptr, size_t size);
 void* sgx_import_to_enclave(const void* uptr, size_t usize);
 void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt);
 void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt1,

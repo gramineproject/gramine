@@ -23,8 +23,6 @@
 #include "pal_linux_error.h"
 #include "stat.h"
 
-#include "enclave_pages.h"
-
 /* this macro is used to emulate mmap() via pread() in chunks of 128MB (mmapped files may be many
  * GBs in size, and a pread OCALL could fail with -ENOMEM, so we cap to reasonably small size) */
 #define MAX_READ_SIZE (PRESET_PAGESIZE * 1024 * 32)
@@ -283,9 +281,12 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         return -PAL_ERROR_DENIED;
     }
 
-    mem = get_enclave_pages(mem, size, /*is_pal_internal=*/false);
     if (!mem)
-        return -PAL_ERROR_NOMEM;
+        return -PAL_ERROR_INVAL;
+
+#ifdef ASAN
+    asan_unpoison_region((uintptr_t)mem, size);
+#endif
 
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
@@ -354,7 +355,10 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
 
 out:
     if (ret < 0) {
-        free_enclave_pages(mem, size);
+        assert(sgx_is_completely_within_enclave(mem, size));
+#ifdef ASAN
+        asan_poison_region((uintptr_t)mem, size, ASAN_POISON_USER);
+#endif
     }
     return ret;
 }

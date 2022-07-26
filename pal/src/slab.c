@@ -18,15 +18,6 @@ static spinlock_t g_slab_mgr_lock = INIT_SPINLOCK_UNLOCKED;
 #define SYSTEM_UNLOCK() spinlock_unlock(&g_slab_mgr_lock)
 #define SYSTEM_LOCKED() spinlock_is_locked(&g_slab_mgr_lock)
 
-/* Initial memory pool, optionally provided to `init_slab_mgr()` */
-static char* g_mem_pool = NULL;
-static bool g_alloc_from_low = true; /* allocate from low addresses if true, from high if false */
-static void* g_mem_pool_end;
-
-/* `g_low` and `g_high` are protected by `SYSTEM_LOCK()` */
-static void* g_low;
-static void* g_high;
-
 static inline void* __malloc(size_t size);
 static inline void __free(void* addr, size_t size);
 #define system_malloc(size) __malloc(size)
@@ -37,40 +28,15 @@ static inline void __free(void* addr, size_t size);
 static inline void* __malloc(size_t size) {
     void* addr = NULL;
 
-    size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);
+    size = ALLOC_ALIGN_UP(size);
 
-    /* Use `g_mem_pool`, if available */
-    if (g_mem_pool) {
-        SYSTEM_LOCK();
-        if (g_low + size <= g_high) {
-            /* alternate allocating objects from low and high addresses of available memory pool;
-             * this allows to free memory for patterns like "malloc1 - malloc2 - free1" (seen in
-             * e.g. realloc) */
-            if (g_alloc_from_low) {
-                addr = g_low;
-                g_low += size;
-            } else {
-                addr = g_high - size;
-                g_high -= size;
-            }
-            g_alloc_from_low = !g_alloc_from_low; /* switch alloc direction for next malloc */
-        }
-        SYSTEM_UNLOCK();
-        if (addr)
-            return addr;
-    }
-
-    /* We could not use `g_mem_pool`, let's fall back to PAL-internal allocations. PAL allocator
-     * must be careful though because LibOS doesn't know about PAL-internal memory, limited via
-     * manifest option `loader.pal_internal_mem_size` and thus this malloc may return -ENOMEM. */
-    int ret = _PalVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(size), PAL_ALLOC_INTERNAL,
-                                     PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = pal_internal_memory_alloc(size, &addr);
     if (ret < 0) {
-        log_error("*** Out-of-memory in PAL (try increasing `loader.pal_internal_mem_size`) ***");
-        _PalProcessExit(1);
+        return NULL;
     }
+
 #ifdef ASAN
-    asan_poison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size), ASAN_POISON_HEAP_LEFT_REDZONE);
+    asan_poison_region((uintptr_t)addr, size, ASAN_POISON_HEAP_LEFT_REDZONE);
 #endif
 
     return addr;
@@ -80,52 +46,24 @@ static inline void __free(void* addr, size_t size) {
     if (!addr)
         return;
 
-    size = ALIGN_UP(size, MIN_MALLOC_ALIGNMENT);
-
-    if (g_mem_pool && addr >= (void*)g_mem_pool && addr < g_mem_pool_end) {
-        SYSTEM_LOCK();
-        if (addr == g_high) {
-            /* reclaim space of last object allocated at high addresses */
-            g_high = addr + size;
-        } else if (addr + size == g_low) {
-            /* reclaim space of last object allocated at low addresses */
-            g_low = addr;
-        }
-        /* not a last object from low/high addresses, can't do anything about this case */
-#ifdef ASAN
-        /* Keep the now-unused part of `g_mem_pool` poisoned, because we know it won't be used by
-         * anything other than our allocator */
-        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_HEAP_LEFT_REDZONE);
-#endif
-        SYSTEM_UNLOCK();
-        return;
-    }
+    size = ALLOC_ALIGN_UP(size);
 
 #ifdef ASAN
     /* Unpoison the memory before unmapping it */
-    asan_unpoison_region((uintptr_t)addr, ALLOC_ALIGN_UP(size));
+    asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
-    _PalVirtualMemoryFree(addr, ALLOC_ALIGN_UP(size));
+    int ret = pal_internal_memory_free(addr, size);
+    if (ret < 0) {
+        log_error("%s:%d freeing memory failed: %d", __FILE__, __LINE__, ret);
+        _PalProcessExit(1);
+    }
 }
 
 static SLAB_MGR g_slab_mgr = NULL;
 
-void init_slab_mgr(char* mem_pool, size_t mem_pool_size) {
+void init_slab_mgr(void) {
     assert(!g_slab_mgr);
-
-    if (mem_pool) {
-        g_mem_pool = mem_pool;
-        g_mem_pool_end = mem_pool + mem_pool_size;
-
-        g_low = g_mem_pool;
-        g_high = g_mem_pool_end;
-
-#ifdef ASAN
-        /* Poison all of `mem_pool` initially */
-        asan_poison_region((uintptr_t)mem_pool, mem_pool_size, ASAN_POISON_HEAP_LEFT_REDZONE);
-#endif
-    }
 
     g_slab_mgr = create_slab_mgr();
     if (!g_slab_mgr)
@@ -142,15 +80,6 @@ void* malloc(size_t size) {
         memset(ptr, 0xa5, size);
 #endif
 
-    if (!ptr) {
-        /*
-         * Normally, the PAL should not run out of memory.
-         * If malloc() failed internally, we cannot handle the
-         * condition and must terminate the current process.
-         */
-        log_error("******** Out-of-memory in PAL ********");
-        _PalProcessExit(1);
-    }
     return ptr;
 }
 

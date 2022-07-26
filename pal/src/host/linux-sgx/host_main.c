@@ -16,6 +16,7 @@
 #include "host_ecalls.h"
 #include "host_internal.h"
 #include "host_log.h"
+#include "host_process.h"
 #include "linux_utils.h"
 #include "pal_internal_arch.h"
 #include "pal_linux_defs.h"
@@ -898,7 +899,8 @@ out:
 /* Warning: This function does not free up resources on failure - it assumes that the whole process
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd, bool need_gsgx) {
+                        size_t env_size, int parent_stream_fd, bool need_gsgx,
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
     int ret;
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
@@ -990,7 +992,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
-                        &qe_targetinfo, &topo_info);
+                        &qe_targetinfo, &topo_info, reserved_mem_ranges, reserved_mem_ranges_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
@@ -1063,6 +1065,8 @@ int main(int argc, char* argv[], char* envp[]) {
     int ret = 0;
     bool need_gsgx = true;
     char* manifest = NULL;
+    void* reserved_mem_ranges = NULL;
+    size_t reserved_mem_ranges_size = 0;
 
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();
@@ -1126,7 +1130,8 @@ int main(int argc, char* argv[], char* envp[]) {
 
         /* We'll receive our argv and config via IPC. */
         parent_stream_fd = atoi(argv[3]);
-        ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest);
+        ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest,
+                                     &reserved_mem_ranges, &reserved_mem_ranges_size);
         if (ret < 0)
             return ret;
     }
@@ -1154,7 +1159,8 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx);
+    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx,
+                       reserved_mem_ranges, reserved_mem_ranges_size);
     if (ret < 0) {
         log_error("load_enclave() failed with error %d", ret);
     }

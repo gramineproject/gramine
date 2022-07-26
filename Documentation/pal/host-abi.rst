@@ -111,8 +111,6 @@ memory.
 .. doxygenfunction:: PalVirtualMemoryFree
    :project: pal
 
-.. doxygentypedef:: pal_alloc_flags_t
-   :project: pal
 .. doxygentypedef:: pal_prot_flags_t
    :project: pal
 

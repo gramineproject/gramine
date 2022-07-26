@@ -146,8 +146,6 @@ struct socket_ops {
  */
 void notify_failure(unsigned long error);
 
-int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
-
 #define IS_ALLOC_ALIGNED(addr)     IS_ALIGNED_POW2(addr, g_pal_public_state.alloc_align)
 #define IS_ALLOC_ALIGNED_PTR(addr) IS_ALIGNED_PTR_POW2(addr, g_pal_public_state.alloc_align)
 #define ALLOC_ALIGN_UP(addr)       ALIGN_UP_POW2(addr, g_pal_public_state.alloc_align)
@@ -172,8 +170,6 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 
 /* For initialization */
 
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end);
-bool _PalCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _PalMemoryQuota(void);
 unsigned long _PalMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
@@ -220,7 +216,8 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
 noreturn void _PalThreadExit(int* clear_child_tid);
 void _PalThreadYieldExecution(void);
 int _PalThreadResume(PAL_HANDLE thread_handle);
-int _PalProcessCreate(PAL_HANDLE* handle, const char** args);
+int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                      size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle);
 noreturn void _PalProcessExit(int exit_code);
 int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
 int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
@@ -232,8 +229,7 @@ void _PalEventClear(PAL_HANDLE handle);
 int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 /* PalVirtualMemory calls */
-int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                           pal_prot_flags_t prot);
+int _PalVirtualMemoryAlloc(void* addr_ptr, uint64_t size, pal_prot_flags_t prot);
 int _PalVirtualMemoryFree(void* addr, uint64_t size);
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
@@ -277,7 +273,13 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
         _PalProcessExit(1);                                             \
     } while (0)
 
-void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
+void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end);
+int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment);
+int pal_internal_memory_alloc(size_t size, void** out_ptr);
+int pal_internal_memory_free(void* addr, size_t size);
+void pal_disable_early_memory_bookkeeping(void);
+
+void init_slab_mgr(void);
 void* malloc(size_t size);
 void* malloc_copy(const void* mem, size_t size);
 void* calloc(size_t num, size_t size);
@@ -310,7 +312,3 @@ const char* pal_event_name(enum pal_event event);
         _PalProcessExit(1);                    \
     } while (0)
 #include "uthash.h"
-
-/* Size of PAL memory available before parsing the manifest; `loader.pal_internal_mem_size` does not
- * include this memory */
-#define PAL_INITIAL_MEM_SIZE (64 * 1024 * 1024)

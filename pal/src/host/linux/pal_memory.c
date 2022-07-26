@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ */
 
 /*
  * This file contains APIs that allocate, free or protect virtual memory.
@@ -16,66 +19,21 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "spinlock.h"
 
-/* Internal-PAL memory is allocated in range [g_pal_internal_mem_addr, g_pal_internal_mem_size).
- * This range is "preloaded" (LibOS is notified that it cannot use this range), so there can be no
- * overlap between LibOS and internal-PAL allocations.
- *
- * Internal-PAL allocation is trivial: we simply increment a global pointer to the next available
- * memory region on allocations and do nothing on deallocations (and fail loudly if the limit
- * specified in the manifest is exceeded). This wastes memory, but we assume that internal-PAL
- * allocations are rare, and that PAL doesn't consume much memory anyway. In near future, we need to
- * rewrite Gramine allocation logic in PAL.
- */
-
-static size_t g_pal_internal_mem_used = 0;
-static spinlock_t g_pal_internal_mem_lock = INIT_SPINLOCK_UNLOCKED;
-
-bool _PalCheckMemoryMappable(const void* addr, size_t size) {
-    if (addr < DATA_END && addr + size > TEXT_START) {
-        log_error("Address %p-%p is not mappable", addr, addr + size);
-        return true;
-    }
-    return false;
-}
-
-int _PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                           pal_prot_flags_t prot) {
-    assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
-    assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
-
-    void* addr = *addr_ptr;
-
-    if (alloc_type & PAL_ALLOC_INTERNAL) {
-        size = ALIGN_UP(size, g_page_size);
-        spinlock_lock(&g_pal_internal_mem_lock);
-        if (size > g_pal_internal_mem_size - g_pal_internal_mem_used) {
-            /* requested PAL-internal allocation would exceed the limit, fail */
-            spinlock_unlock(&g_pal_internal_mem_lock);
-            return -PAL_ERROR_NOMEM;
-        }
-        addr = g_pal_internal_mem_addr + g_pal_internal_mem_used;
-        g_pal_internal_mem_used += size;
-        assert(IS_ALIGNED(g_pal_internal_mem_used, g_page_size));
-        spinlock_unlock(&g_pal_internal_mem_lock);
-    }
-
+int _PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
+    assert(WITHIN_MASK(prot, PAL_PROT_MASK));
     assert(addr);
 
-    int flags = PAL_MEM_FLAGS_TO_LINUX(alloc_type, prot | PAL_PROT_WRITECOPY);
+    int flags = PAL_MEM_FLAGS_TO_LINUX(prot);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
     flags |= MAP_ANONYMOUS | MAP_FIXED;
     addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
 
     if (IS_PTR_ERR(addr)) {
-        /* note that we don't undo operations on `g_pal_internal_mem_used` in case of internal-PAL
-         * allocations: this could lead to data races, so we just waste some memory on errors */
         return unix_to_pal_error(PTR_TO_ERR(addr));
     }
 
-    *addr_ptr = addr;
     return 0;
 }
 
@@ -163,8 +121,7 @@ unsigned long _PalMemoryAvailableQuota(void) {
 struct parsed_ranges {
     uintptr_t vdso_start;
     uintptr_t vdso_end;
-    uintptr_t vvar_start;
-    uintptr_t vvar_end;
+    uintptr_t highest_addr;
 };
 
 static int parsed_ranges_callback(struct proc_maps_range* r, void* arg) {
@@ -174,26 +131,82 @@ static int parsed_ranges_callback(struct proc_maps_range* r, void* arg) {
         if (!strcmp(r->name, "[vdso]")) {
             ranges->vdso_start = r->start;
             ranges->vdso_end = r->end;
-        } else if (!strcmp(r->name, "[vvar]")) {
-            ranges->vvar_start = r->start;
-            ranges->vvar_end = r->end;
         }
     }
 
-    return 0;
+    if (ranges->highest_addr < r->end) {
+        ranges->highest_addr = r->end;
+    }
+
+    return pal_add_initial_range(r->start, r->end - r->start, r->prot, r->name ?: "");
 }
 
-int get_vdso_and_vvar_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end, uintptr_t* vvar_start,
-                             uintptr_t* vvar_end) {
-
-    struct parsed_ranges ranges = {0};
+int init_initial_memory_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end) {
+    struct parsed_ranges ranges = { 0 };
     int ret = parse_proc_maps("/proc/self/maps", &parsed_ranges_callback, &ranges);
-    if (ret < 0)
+    if (ret < 0) {
         return unix_to_pal_error(ret);
+    }
+
+    uintptr_t start_addr = MMAP_MIN_ADDR;
+    uintptr_t end_addr = MIN(ranges.highest_addr, ARCH_HIGHEST_ADDR);
+
+    /* Verify that the address is mappable. */
+    while (1) {
+        if (start_addr >= end_addr) {
+            return -PAL_ERROR_NOMEM;
+        }
+
+        void* ptr = (void*)DO_SYSCALL(mmap, start_addr, g_pal_public_state.alloc_align, PROT_NONE,
+                                      MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+        if (!IS_PTR_ERR(ptr)) {
+            DO_SYSCALL(munmap, ptr, g_pal_public_state.alloc_align);
+            break;
+        } else if (PTR_TO_ERR(ptr) == -EEXIST) {
+            break;
+        }
+
+        if (start_addr >> (sizeof(start_addr) * 8 - 1)) {
+            /* Address would overflow. */
+            return -PAL_ERROR_NOMEM;
+        }
+        start_addr <<= 1;
+    }
+
+    g_pal_public_state.memory_address_start = (void*)start_addr;
+    g_pal_public_state.memory_address_end = (void*)end_addr;
 
     *vdso_start = ranges.vdso_start;
     *vdso_end = ranges.vdso_end;
-    *vvar_start = ranges.vvar_start;
-    *vvar_end = ranges.vvar_end;
+    return 0;
+}
+
+/* This fd is never closed (but it does not live through `execve`). */
+static int g_reserved_ranges_fd = -1;
+
+void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end) {
+    uintptr_t last_range[2];
+
+    int ret = -EBADF;
+    if (g_reserved_ranges_fd >= 0) {
+        ret = read_all(g_reserved_ranges_fd, last_range, sizeof(last_range));
+    }
+    if (ret < 0) {
+        *last_range_start = 0;
+        *last_range_end = 0;
+        return;
+    }
+
+    assert(last_range[0] <= last_range[1] && last_range[1] <= *last_range_start);
+    *last_range_start = last_range[0];
+    *last_range_end = last_range[1];
+}
+
+int init_reserved_ranges(int fd) {
+    int ret = DO_SYSCALL(fcntl, fd, F_SETFD, FD_CLOEXEC);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+    g_reserved_ranges_fd = fd;
     return 0;
 }

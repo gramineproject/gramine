@@ -86,7 +86,7 @@ int alloc_thread_libos_stack(struct libos_thread* thread) {
     }
 
     bool need_mem_free = false;
-    ret = PalVirtualMemoryAlloc(&addr, LIBOS_THREAD_LIBOS_STACK_SIZE, 0,
+    ret = PalVirtualMemoryAlloc(addr, LIBOS_THREAD_LIBOS_STACK_SIZE,
                                 LINUX_PROT_TO_PAL(prot, flags));
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);

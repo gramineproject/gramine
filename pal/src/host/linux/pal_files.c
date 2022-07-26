@@ -140,7 +140,7 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
                     uint64_t size) {
     int fd = handle->file.fd;
     void* mem = *addr;
-    int flags = PAL_MEM_FLAGS_TO_LINUX(0, prot) | (mem ? MAP_FIXED : 0);
+    int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (mem ? MAP_FIXED : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
     /* The memory will always be allocated with flag MAP_PRIVATE. */

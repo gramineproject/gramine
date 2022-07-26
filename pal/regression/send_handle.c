@@ -87,7 +87,7 @@ static void set_reuseaddr(PAL_HANDLE handle) {
 static void do_parent(void) {
     PAL_HANDLE child_process;
     const char* args[] = { "send_handle", "child", NULL };
-    CHECK(PalProcessCreate(args, &child_process));
+    CHECK(PalProcessCreate(args, NULL, 0, &child_process));
 
     PAL_HANDLE handle;
 

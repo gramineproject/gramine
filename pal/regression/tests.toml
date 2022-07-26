@@ -13,7 +13,7 @@ manifests = [
   "File2",
   "HelloWorld",
   "Hex",
-  "Memory",
+  "memory",
   "Misc",
   "Pie",
   "Pipe",

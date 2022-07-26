@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ */
 
 /*
  * This source file contains functions to create a child process and terminate the running process.
@@ -13,6 +16,7 @@
 #include <asm/fcntl.h>
 #include <asm/ioctls.h>
 #include <asm/poll.h>
+#include <linux/fs.h>
 #include <linux/time.h>
 #include <sys/socket.h>
 
@@ -76,6 +80,33 @@ out:
     return ret;
 }
 
+static int create_reserved_mem_ranges_fd(uintptr_t (*reserved_mem_ranges)[2],
+                                         size_t reserved_mem_ranges_len) {
+    int fd = DO_SYSCALL(memfd_create, "reserved_mem_ranges", /*flags=*/0);
+    if (fd < 0) {
+        return fd;
+    }
+
+    int ret = write_all(fd, reserved_mem_ranges,
+                        reserved_mem_ranges_len * sizeof(*reserved_mem_ranges));
+    if (ret < 0) {
+        goto out;
+    }
+
+    ret = DO_SYSCALL(lseek, fd, 0, SEEK_SET);
+    if (ret < 0) {
+        goto out;
+    }
+
+    ret = fd;
+
+out:
+    if (ret < 0) {
+        DO_SYSCALL(close, fd);
+    }
+    return ret;
+}
+
 struct proc_param {
     PAL_HANDLE parent;
     const char** argv;
@@ -102,12 +133,14 @@ static int child_process(struct proc_param* proc_param) {
     die_or_inf_loop();
 }
 
-int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                      size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle) {
     PAL_HANDLE parent_handle = NULL;
     PAL_HANDLE child_handle = NULL;
     struct proc_args* proc_args = NULL;
     void* parent_data = NULL;
     void* exec_data = NULL;
+    int reserved_mem_ranges_fd = -1;
     int ret;
 
     /* step 1: create parent and child process handle */
@@ -152,6 +185,18 @@ int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
     proc_args->manifest_data_size = manifest_data_size;
     data += manifest_data_size;
 
+    ret = create_reserved_mem_ranges_fd(reserved_mem_ranges, reserved_mem_ranges_len);
+    if (ret < 0) {
+        log_error("creating reserved mem ranges fd failed: %d", ret);
+        goto out;
+    }
+    reserved_mem_ranges_fd = ret;
+
+    char reserved_mem_ranges_fd_str[0x10];
+    ret = snprintf(reserved_mem_ranges_fd_str, sizeof(reserved_mem_ranges_fd_str), "%d",
+                   reserved_mem_ranges_fd);
+    assert(0 < ret && (size_t)ret < sizeof(reserved_mem_ranges_fd_str));
+
     /* step 3: create a child thread which will execve in the future */
 
     /* the first argument must be the PAL */
@@ -159,16 +204,17 @@ int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
     if (args)
         for (; args[argc]; argc++)
             ;
-    param.argv = __alloca(sizeof(const char*) * (argc + 5));
+    param.argv = __alloca(sizeof(const char*) * (argc + 6));
     param.argv[0] = g_pal_loader_path;
     param.argv[1] = g_libpal_path;
     param.argv[2] = "child";
     char parent_fd_str[16];
     snprintf(parent_fd_str, sizeof(parent_fd_str), "%u", parent_handle->process.stream);
     param.argv[3] = parent_fd_str;
+    param.argv[4] = reserved_mem_ranges_fd_str;
     if (args)
-        memcpy(&param.argv[4], args, sizeof(const char*) * argc);
-    param.argv[argc + 4] = NULL;
+        memcpy(&param.argv[5], args, sizeof(const char*) * argc);
+    param.argv[argc + 5] = NULL;
 
     /* Child's signal handler may mess with parent's memory during vfork(),
      * so block signals
@@ -196,7 +242,7 @@ int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
         goto out;
     }
 
-    *handle = child_handle;
+    *out_handle = child_handle;
     ret = 0;
 out:
     free(parent_data);
@@ -207,6 +253,9 @@ out:
     if (ret < 0) {
         if (child_handle)
             _PalObjectClose(child_handle);
+    }
+    if (reserved_mem_ranges_fd >= 0) {
+        DO_SYSCALL(close, reserved_mem_ranges_fd);
     }
     return ret;
 }

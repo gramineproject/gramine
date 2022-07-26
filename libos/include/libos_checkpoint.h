@@ -20,6 +20,8 @@
 extern char __migratable[];
 extern char __migratable_end;
 
+extern bool g_received_user_memory;
+
 /* FIXME: Checkpointing must be de-macroed and simplified */
 
 /* TSAI 7/11/2012:

@@ -266,6 +266,7 @@ static long sgx_ocall_create_process(void* pms) {
     ms_ocall_create_process_t* ms = (ms_ocall_create_process_t*)pms;
 
     return sgx_create_process(ms->ms_nargs, ms->ms_args, g_pal_enclave.raw_manifest_data,
+                              ms->ms_reserved_mem_ranges, ms->ms_reserved_mem_ranges_size,
                               &ms->ms_stream_fd);
 }
 

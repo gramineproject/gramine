@@ -40,15 +40,13 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback);
 int init_random(void);
 
 extern const size_t g_page_size;
-extern char* g_pal_internal_mem_addr;
-extern size_t g_pal_internal_mem_size;
 
 extern uintptr_t g_vdso_start;
 extern uintptr_t g_vdso_end;
 bool is_in_vdso(uintptr_t addr);
-/* Parse "/proc/self/maps" and return address ranges for "vdso" and "vvar". */
-int get_vdso_and_vvar_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end, uintptr_t* vvar_start,
-                             uintptr_t* vvar_end);
+/* Parse "/proc/self/maps" and bookkeep all found address ranges. */
+int init_initial_memory_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end);
+int init_reserved_ranges(int reserved_ranges_fd);
 
 int setup_vdso(elf_addr_t base_addr);
 

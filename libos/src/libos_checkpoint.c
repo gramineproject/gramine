@@ -306,7 +306,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
             size_t size = (char*)ALLOC_ALIGN_UP_PTR(entry->addr + entry->size) - (char*)addr;
             pal_prot_flags_t prot = entry->prot;
 
-            int ret = PalVirtualMemoryAlloc(&addr, size, 0, prot | PAL_PROT_WRITE);
+            int ret = PalVirtualMemoryAlloc(addr, size, prot | PAL_PROT_WRITE);
             if (ret < 0) {
                 log_error("failed allocating %p-%p", addr, addr + size);
                 return pal_to_unix_errno(ret);
@@ -440,8 +440,9 @@ static void* cp_alloc(void* addr, size_t size) {
         }
         bkeep_remove_tmp_vma(tmp_vma);
     }
+    assert(addr);
 
-    int ret = PalVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc(addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         void* tmp_vma = NULL;
         if (bkeep_munmap(addr, size, /*is_internal=*/true, &tmp_vma) < 0) {
@@ -454,6 +455,34 @@ static void* cp_alloc(void* addr, size_t size) {
     return addr;
 }
 
+static int create_mem_ranges_array(struct libos_cp_store* cpstore,
+                                   uintptr_t (**out_reserved_mem_ranges)[2],
+                                   size_t* out_reserved_mem_ranges_len) {
+    const size_t len = cpstore->mem_entries_cnt;
+    uintptr_t (*reserved_mem_ranges)[2] = malloc(len * sizeof(*reserved_mem_ranges));
+    if (!reserved_mem_ranges) {
+        return -ENOMEM;
+    }
+
+    /* Save the list in reversed oreder. */
+    struct libos_mem_entry* entry = cpstore->first_mem_entry;
+    for (size_t i = 0; i < len; i++, entry = entry->next) {
+        assert(entry);
+
+        reserved_mem_ranges[len - 1 - i][0] = (uintptr_t)entry->addr;
+        reserved_mem_ranges[len - 1 - i][1] = (uintptr_t)entry->addr + entry->size;
+
+        assert(i == 0
+               || reserved_mem_ranges[len - 1 - i + 1][1] <= reserved_mem_ranges[len - 1 - i][0]);
+    }
+
+    assert(!entry);
+
+    *out_reserved_mem_ranges = reserved_mem_ranges;
+    *out_reserved_mem_ranges_len = len;
+    return 0;
+}
+
 int create_process_and_send_checkpoint(migrate_func_t migrate_func,
                                        struct libos_child_process* child_process,
                                        struct libos_process* process_description,
@@ -461,15 +490,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     assert(child_process);
 
     int ret = 0;
-
-    /* FIXME: Child process requires some time to initialize before starting to receive checkpoint
-     * data. Parallelizing process creation and checkpointing could improve latency of forking. */
     PAL_HANDLE pal_process = NULL;
-    ret = PalProcessCreate(/*args=*/NULL, &pal_process);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
 
     /* allocate a space for dumping the checkpoint data */
     struct libos_cp_store cpstore;
@@ -524,6 +545,22 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     if (cpstore.palhdl_entries_cnt) {
         hdr.palhdl_offset      = (uintptr_t)cpstore.last_palhdl_entry - cpstore.base;
         hdr.palhdl_entries_cnt = cpstore.palhdl_entries_cnt;
+    }
+
+    uintptr_t (*reserved_mem_ranges)[2] = NULL;
+    size_t reserved_mem_ranges_len = 0;
+    ret = create_mem_ranges_array(&cpstore, &reserved_mem_ranges, &reserved_mem_ranges_len);
+    if (ret < 0) {
+        log_error("creating reserved memory ranges failed: %d", ret);
+        goto out;
+    }
+
+    ret = PalProcessCreate(/*args=*/NULL, reserved_mem_ranges, reserved_mem_ranges_len,
+                           &pal_process);
+    free(reserved_mem_ranges);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
     }
 
     /* send a checkpoint header to child process to notify it to start receiving checkpoint */
@@ -601,8 +638,8 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
     size_t mapsize = (char*)ALLOC_ALIGN_UP_PTR(base + hdr->size) - (char*)mapaddr;
 
     /* first try allocating at address used by parent process */
-    if (g_pal_public_state->user_address_start <= mapaddr &&
-            mapaddr + mapsize <= g_pal_public_state->user_address_end) {
+    if (g_pal_public_state->memory_address_start <= mapaddr &&
+            mapaddr + mapsize <= g_pal_public_state->memory_address_end) {
         ret = bkeep_mmap_fixed(mapaddr, mapsize, PROT_READ | PROT_WRITE,
                                CP_MMAP_FLAGS | MAP_FIXED_NOREPLACE, NULL, 0, "cpstore");
         if (ret < 0) {
@@ -626,7 +663,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
         mapsize = ALLOC_ALIGN_UP(hdr->size);
     }
 
-    ret = PalVirtualMemoryAlloc(&mapaddr, mapsize, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(mapaddr, mapsize, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         void* tmp_vma = NULL;
         if (bkeep_munmap(mapaddr, mapsize, /*is_internal=*/true, &tmp_vma) < 0)
@@ -648,6 +685,7 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
         goto out_fail;
     }
     log_debug("restored memory from checkpoint");
+    g_received_user_memory = true;
 
     /* if checkpoint is loaded at a different address in child from where it was created in parent,
      * need to rebase the pointers in the checkpoint */

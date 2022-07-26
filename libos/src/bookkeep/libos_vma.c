@@ -320,7 +320,7 @@ static void* _vma_malloc(size_t size) {
         return NULL;
     }
 
-    int ret = PalVirtualMemoryAlloc(&addr, size, 0, PAL_PROT_WRITE | PAL_PROT_READ);
+    int ret = PalVirtualMemoryAlloc(addr, size, PAL_PROT_WRITE | PAL_PROT_READ);
     if (ret < 0) {
         struct libos_vma* vmas_to_free = NULL;
 
@@ -547,32 +547,29 @@ static int _bkeep_initial_vma(struct libos_vma* new_vma) {
     }
 }
 
+static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
+static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
+
 #define ASLR_BITS 12
 /* This variable is written to only once, during initialization, so it does not need to
  * be atomic. */
 static void* g_aslr_addr_top = NULL;
 
 int init_vma(void) {
-    struct libos_vma init_vmas[2 + g_pal_public_state->preloaded_ranges_cnt];
+    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free);
+
+    struct libos_vma init_vmas[1 + g_pal_public_state->initial_mem_ranges_len];
 
     init_vmas[0].begin = 0; // vma for creation of memory manager
 
-    init_vmas[1].begin  = (uintptr_t)&__load_address;
-    init_vmas[1].end    = (uintptr_t)ALLOC_ALIGN_UP_PTR(&__load_address_end);
-    init_vmas[1].prot   = PROT_NONE;
-    init_vmas[1].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
-    init_vmas[1].file   = NULL;
-    init_vmas[1].offset = 0;
-    copy_comment(&init_vmas[1], "LibOS");
-
-    for (size_t i = 0; i < g_pal_public_state->preloaded_ranges_cnt; i++) {
-        init_vmas[2 + i].begin  = ALLOC_ALIGN_DOWN(g_pal_public_state->preloaded_ranges[i].start);
-        init_vmas[2 + i].end    = ALLOC_ALIGN_UP(g_pal_public_state->preloaded_ranges[i].end);
-        init_vmas[2 + i].prot   = PROT_NONE;
-        init_vmas[2 + i].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
-        init_vmas[2 + i].file   = NULL;
-        init_vmas[2 + i].offset = 0;
-        copy_comment(&init_vmas[2 + i], g_pal_public_state->preloaded_ranges[i].comment);
+    for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
+        init_vmas[1 + i].begin  = ALLOC_ALIGN_DOWN(g_pal_public_state->initial_mem_ranges[i].start);
+        init_vmas[1 + i].end    = ALLOC_ALIGN_UP(g_pal_public_state->initial_mem_ranges[i].end);
+        init_vmas[1 + i].prot   = PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
+        init_vmas[1 + i].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
+        init_vmas[1 + i].file   = NULL;
+        init_vmas[1 + i].offset = 0;
+        copy_comment(&init_vmas[1 + i], g_pal_public_state->initial_mem_ranges[i].comment);
     }
 
     spinlock_lock(&vma_tree_lock);
@@ -610,12 +607,12 @@ int init_vma(void) {
         return ret;
     }
 
-    g_aslr_addr_top = g_pal_public_state->user_address_end;
+    g_aslr_addr_top = g_pal_public_state->memory_address_end;
 
     if (!g_pal_public_state->disable_aslr) {
         /* Inspired by: https://elixir.bootlin.com/linux/v5.6.3/source/arch/x86/mm/mmap.c#L80 */
-        size_t gap_max_size =
-            (g_pal_public_state->user_address_end - g_pal_public_state->user_address_start) / 6 * 5;
+        size_t gap_max_size = (g_pal_public_state->memory_address_end
+                               - g_pal_public_state->memory_address_start) / 6 * 5;
         /* We do address space randomization only if we have at least ASLR_BITS to randomize. */
         if (gap_max_size / ALLOC_ALIGNMENT >= (1ul << ASLR_BITS)) {
             size_t gap = 0;
@@ -980,6 +977,8 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
                             struct libos_handle* file, uint64_t offset, const char* comment,
                             void** ret_val_ptr) {
     assert(_bottom_addr < _top_addr);
+    assert(g_pal_public_state->memory_address_start <= _bottom_addr
+           && _top_addr <= g_pal_public_state->memory_address_end);
 
     if (!length || !IS_ALLOC_ALIGNED(length)) {
         return -EINVAL;
@@ -992,6 +991,18 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     uintptr_t bottom_addr = (uintptr_t)_bottom_addr;
     int ret = 0;
     uintptr_t ret_val = 0;
+
+    if (!g_received_user_memory && flags & VMA_INTERNAL) {
+        /* Early init code must not overlap memory that will be restored during checkpointing. */
+        if (top_addr <= g_pal_public_state->early_libos_mem_range_start
+                || g_pal_public_state->early_libos_mem_range_end <= bottom_addr) {
+            /* Ranges do not overlap. */
+            return -ENOMEM;
+        }
+        bottom_addr = MAX(bottom_addr, g_pal_public_state->early_libos_mem_range_start);
+        top_addr = MIN(top_addr, g_pal_public_state->early_libos_mem_range_end);
+        assert(bottom_addr < top_addr);
+    }
 
 #ifdef MAP_32BIT /* x86_64-specific */
     if (flags & MAP_32BIT) {
@@ -1067,21 +1078,44 @@ out:
 
 int bkeep_mmap_any(size_t length, int prot, int flags, struct libos_handle* file, uint64_t offset,
                    const char* comment, void** ret_val_ptr) {
-    return bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
-                                   g_pal_public_state->user_address_end,
+    return bkeep_mmap_any_in_range(g_pal_public_state->memory_address_start,
+                                   g_pal_public_state->memory_address_end,
                                    length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
 int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr) {
     int ret;
-    ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start, g_aslr_addr_top, length,
+    ret = bkeep_mmap_any_in_range(g_pal_public_state->memory_address_start, g_aslr_addr_top, length,
                                   prot, flags, file, offset, comment, ret_val_ptr);
     if (ret >= 0) {
         return ret;
     }
 
     return bkeep_mmap_any(length, prot, flags, file, offset, comment, ret_val_ptr);
+}
+
+static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
+    int ret;
+    void* addr;
+    ret = bkeep_mmap_any(size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL,
+                         /*file=*/NULL, /*offset=*/0, "pal internal memory", &addr);
+    if (ret < 0) {
+        return ret;
+    }
+    *out_addr = (uintptr_t)addr;
+    return 0;
+}
+
+static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
+    void* tmp_vma;
+    int ret = bkeep_munmap((void*)addr, size, /*is_internal=*/true, &tmp_vma);
+    if (ret < 0) {
+        return ret;
+    }
+    /* Remove the temporary VMA immediately - PAL already freed the memory. */
+    bkeep_remove_tmp_vma(tmp_vma);
+    return 0;
 }
 
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
@@ -1456,6 +1490,7 @@ BEGIN_CP_FUNC(all_vmas) {
         return ret;
     }
 
+    /* Checkpoint VMAs in descending order - checkpointing code requires it. */
     for (struct libos_vma_info* vma = &vmas[count - 1];; vma--) {
         DO_CP(vma, vma, NULL);
         if (vma == vmas)

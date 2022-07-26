@@ -980,15 +980,18 @@ int ocall_clone_thread(void) {
     return retval;
 }
 
-int ocall_create_process(size_t nargs, const char** args, int* stream_fd) {
-    int retval = 0;
-    ms_ocall_create_process_t* ms;
-
+int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                         size_t reserved_mem_ranges_len, int* stream_fd) {
+    int ret;
+    void* urts_reserved_mem_ranges = NULL;
+    size_t reserved_mem_ranges_size = reserved_mem_ranges_len * sizeof(*reserved_mem_ranges);
+    bool need_munmap;
     void* old_ustack = sgx_prepare_ustack();
-    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms) + nargs * sizeof(char*), alignof(*ms));
+    ms_ocall_create_process_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms) + nargs * sizeof(char*),
+                                                                alignof(*ms));
     if (!ms) {
-        sgx_reset_ustack(old_ustack);
-        return -EPERM;
+        ret = -EPERM;
+        goto out;
     }
 
     WRITE_ONCE(ms->ms_nargs, nargs);
@@ -997,33 +1000,54 @@ int ocall_create_process(size_t nargs, const char** args, int* stream_fd) {
         void* unstrusted_arg = args[i] ? sgx_copy_to_ustack(args[i], size) : NULL;
 
         if (args[i] && !unstrusted_arg) {
-            sgx_reset_ustack(old_ustack);
-            return -EPERM;
+            ret = -EPERM;
+            goto out;
         }
         WRITE_ONCE(ms->ms_args[i], unstrusted_arg);
     }
 
+    if (reserved_mem_ranges_size) {
+        ret = ocall_mmap_untrusted_cache(reserved_mem_ranges_size, &urts_reserved_mem_ranges,
+                                         &need_munmap);
+        if (ret < 0) {
+            goto out;
+        }
+        if (!sgx_copy_from_enclave(urts_reserved_mem_ranges, reserved_mem_ranges,
+                                   reserved_mem_ranges_size)) {
+            ret = -EPERM;
+            goto out;
+        }
+    }
+    WRITE_ONCE(ms->ms_reserved_mem_ranges, urts_reserved_mem_ranges);
+    WRITE_ONCE(ms->ms_reserved_mem_ranges_size, reserved_mem_ranges_size);
+
     do {
         /* FIXME: if there was an EINTR, there may be an untrusted process left over */
-        retval = sgx_exitless_ocall(OCALL_CREATE_PROCESS, ms);
-    } while (retval == -EINTR);
+        ret = sgx_exitless_ocall(OCALL_CREATE_PROCESS, ms);
+    } while (ret == -EINTR);
 
-    if (retval < 0 && retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF &&
-            retval != -EFBIG && retval != -EINVAL && retval != -EIO && retval != -ENOSPC &&
-            retval != -EPIPE && retval != -ENOMEM && retval != -EACCES && retval != -EISDIR &&
-            retval != -ELOOP && retval != -EMFILE && retval != -ENAMETOOLONG &&
-            retval != -ENFILE && retval != -ENOENT && retval != -ENOEXEC && retval != -ENOTDIR &&
-            retval != -EPERM) {
-        retval = -EPERM;
+    if (ret < 0) {
+        if (ret != -EAGAIN && ret != -EWOULDBLOCK && ret != -EBADF && ret != -EFBIG
+                && ret != -EINVAL && ret != -EIO && ret != -ENOSPC && ret != -EPIPE
+                && ret != -ENOMEM && ret != -EACCES && ret != -EISDIR && ret != -ELOOP
+                && ret != -EMFILE && ret != -ENAMETOOLONG && ret != -ENFILE && ret != -ENOENT
+                && ret != -ENOEXEC && ret != -ENOTDIR && ret != -EPERM) {
+            ret = -EPERM;
+        }
+        goto out;
     }
 
-    if (!retval) {
-        if (stream_fd)
-            *stream_fd = READ_ONCE(ms->ms_stream_fd);
-    }
+    if (stream_fd)
+        *stream_fd = READ_ONCE(ms->ms_stream_fd);
 
+out:
+    if (urts_reserved_mem_ranges) {
+        /* Cannot really handle errors here - but this is just host memory and this cannot fail on
+         * non-malicious host. */
+        ocall_munmap_untrusted_cache(urts_reserved_mem_ranges, reserved_mem_ranges_size, need_munmap);
+    }
     sgx_reset_ustack(old_ustack);
-    return retval;
+    return ret;
 }
 
 int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {

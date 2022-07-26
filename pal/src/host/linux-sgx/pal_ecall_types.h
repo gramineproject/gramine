@@ -27,6 +27,8 @@ typedef struct {
     int                   ms_parent_stream_fd;
     sgx_target_info_t*    ms_qe_targetinfo;
     struct pal_topo_info* ms_topo_info;
+    void*                 ms_reserved_mem_ranges;
+    size_t                ms_reserved_mem_ranges_size;
 
     struct rpc_queue*  rpc_queue; /* pointer to RPC queue in untrusted mem */
 } ms_ecall_enclave_start_t;

@@ -15,6 +15,7 @@
 #endif
 
 #include "api.h"
+#include "cpu.h"
 #include "syscall.h"
 
 /* Linux v5.16 supports Intel AMX. To enable this feature, Linux added several XSTATE-related
@@ -24,6 +25,8 @@
 #ifndef ARCH_REQ_XCOMP_PERM
 #define ARCH_REQ_XCOMP_PERM 0x1023
 #endif
+
+#define ARCH_HIGHEST_ADDR ((1ul << 47) - PAGE_SIZE)
 
 /* Gramine uses GCC's stack protector that looks for canary at gs:[0x8], but this function changes
  * the GS register value, so we disable stack protector here (even though it is mostly inlined) */
