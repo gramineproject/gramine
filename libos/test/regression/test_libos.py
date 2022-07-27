@@ -170,6 +170,18 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('User Program Started', stdout)
         self.assertIn('Exception \'test runtime error\' caught', stdout)
 
+    @unittest.skipUnless(ON_X86, 'x86-specific')
+    @unittest.skipIf(USES_MUSL, 'C++ is not supported with musl')
+    def test_111_basic_bootstrapping_cpp_unexpected_arg(self):
+        try:
+            self.run_binary(['bootstrap_cpp', 'unexpected arg'])
+            self.fail('expected to return nonzero')
+        except subprocess.CalledProcessError as e:
+            self.assertEqual(e.returncode, 1)
+            stderr = e.stderr.decode()
+            self.assertIn('argv handling wasn\'t configured in the manifest, but cmdline arguments '
+                          'were specified', stderr)
+
     def test_200_exec(self):
         stdout, _ = self.run_binary(['exec'])
 

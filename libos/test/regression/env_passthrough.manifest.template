@@ -3,7 +3,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
-loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 loader.env.A = { passthrough = true }

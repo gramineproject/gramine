@@ -110,17 +110,6 @@ Command-line arguments
 
 ::
 
-   loader.argv0_override = "[STRING]"
-
-This syntax specifies an arbitrary string (typically the executable name) that
-will be passed as the first argument (``argv[0]``) to the executable.
-
-If the string is not specified in the manifest, the application will get
-``argv[0]`` from :program:`gramine-direct` or :program:`gramine-sgx`
-invocation.
-
-::
-
    loader.insecure__use_cmdline_argv = true
 
 or
@@ -143,6 +132,9 @@ arguments to be provided at runtime from an external (trusted) source.
    Pointing to an encrypted file is currently not supported, due to the fact
    that encryption key provisioning currently happens after setting up
    arguments.
+
+If none of the above arguments-handling manifest options is specified in the
+manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^

@@ -1,7 +1,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
-loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 # Preload libunwind so that it has precedence over libstdc++ when resolving stack-unwinding routines

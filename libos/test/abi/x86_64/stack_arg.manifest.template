@@ -1,6 +1,11 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
+# The argv source file must set argv[0] as the basename of the entrypoint. This is crucial for
+# stack tests because if argv[0] contains an absolute path to the binary, then tests become
+# unreliable.
+loader.argv_src_file = "file:stack_arg_argv_input"
+
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
@@ -14,4 +19,8 @@ sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/",
+]
+
+sgx.allowed_files = [
+  "file:stack_arg_argv_input",
 ]

@@ -1,8 +1,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
-loader.argv0_override = "{{ entrypoint }}"
-
 # Gramine optionally provides patched OpenMP runtime library that runs faster inside SGX enclaves
 # (add `-Dlibgomp=enabled` when configuring the build). This library will replace the native one
 # because Gramine's Runtime path has priority in LD_LIBRARY_PATH.
