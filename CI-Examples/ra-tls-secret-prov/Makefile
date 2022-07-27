@@ -153,9 +153,9 @@ secret_prov_pf_client.token: secret_prov_pf_client.sig
 check_epid: app epid files/input.txt
 	./secret_prov_server_epid >/dev/null & SERVER_ID=$$!; \
 	sleep 3; \
-	gramine-sgx ./secret_prov_min_client > OUTPUT; \
-	gramine-sgx ./secret_prov_client >> OUTPUT; \
-	gramine-sgx ./secret_prov_pf_client >> OUTPUT; \
+	gramine-sgx secret_prov_min_client > OUTPUT; \
+	gramine-sgx secret_prov_client >> OUTPUT; \
+	gramine-sgx secret_prov_pf_client >> OUTPUT; \
 	kill -9 $$SERVER_ID;
 	@grep "Received secret = 'ffeeddccbbaa99887766554433221100'" OUTPUT && echo "[ Success 1/4 ]"
 	@grep "Received secret1 = 'ffeeddccbbaa99887766554433221100', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"
@@ -167,9 +167,9 @@ check_epid: app epid files/input.txt
 check_dcap: app dcap files/input.txt
 	./secret_prov_server_dcap >/dev/null & SERVER_ID=$$!; \
 	sleep 3; \
-	gramine-sgx ./secret_prov_min_client > OUTPUT; \
-	gramine-sgx ./secret_prov_client >> OUTPUT; \
-	gramine-sgx ./secret_prov_pf_client >> OUTPUT; \
+	gramine-sgx secret_prov_min_client > OUTPUT; \
+	gramine-sgx secret_prov_client >> OUTPUT; \
+	gramine-sgx secret_prov_pf_client >> OUTPUT; \
 	kill -9 $$SERVER_ID;
 	@grep "Received secret = 'ffeeddccbbaa99887766554433221100'" OUTPUT && echo "[ Success 1/4 ]"
 	@grep "Received secret1 = 'ffeeddccbbaa99887766554433221100', secret2 = '42'" OUTPUT && echo "[ Success 2/4 ]"

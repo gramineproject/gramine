@@ -7,7 +7,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 
 # Entrypoint binary which Gramine invokes.
-libos.entrypoint = "redis-server"
+libos.entrypoint = "/redis-server"
 
 # Verbosity of Gramine debug log (none/error/warning/debug/trace/all). Note
 # that GRAMINE_LOG_LEVEL macro is expanded in the Makefile as part of the
@@ -59,6 +59,10 @@ fs.mounts = [
   # Mount host-OS directory to NSS files required by Glibc + NSS libs (in 'uri')
   # into in-Gramine visible directory /etc (in 'path').
   { path = "/etc", uri = "file:/etc" },
+
+  # Mount redis-server executable (located in the current directory) under the
+  # in-Gramine visible root directory.
+  { path = "/redis-server", uri = "file:redis-server" },
 ]
 
 ############################### SGX: GENERAL ##################################

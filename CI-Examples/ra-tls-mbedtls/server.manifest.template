@@ -1,7 +1,7 @@
 # RA-TLS manifest file example
 
 loader.entrypoint = "file:{{ gramine.libos }}"
-libos.entrypoint = "server"
+libos.entrypoint = "/server"
 
 loader.log_level = "{{ log_level }}"
 
@@ -16,6 +16,7 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/etc", uri = "file:/etc" },
+  { path = "/server", uri = "file:server" },
 ]
 
 sgx.debug = true
