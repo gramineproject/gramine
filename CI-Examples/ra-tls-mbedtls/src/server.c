@@ -7,6 +7,7 @@
  * SSL server demonstration program (with RA-TLS)
  * This program is originally based on an mbedTLS example ssl_server.c but uses RA-TLS flows (SGX
  * Remote Attestation flows) if RA-TLS library is required by user.
+ * Note that this program builds against mbedTLS 3.x.
  */
 
 #define _GNU_SOURCE

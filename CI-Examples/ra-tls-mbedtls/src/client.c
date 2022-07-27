@@ -7,6 +7,7 @@
  * SSL client demonstration program (with RA-TLS).
  * This program is originally based on an mbedTLS example ssl_client1.c but uses RA-TLS flows (SGX
  * Remote Attestation flows) if RA-TLS library is required by user.
+ * Note that this program builds against mbedTLS 3.x.
  */
 
 #include "mbedtls/build_info.h"
