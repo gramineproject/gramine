@@ -51,7 +51,7 @@
 #include <stddef.h>
 
 /* Prevent conflict with `api_fortified.h` which might redefine `snprintf` as macro */
-#ifndef API_H
+#ifndef GRAMINE_API_HEADER_USED
 void* calloc(size_t num, size_t size);
 void free(void*);
 int snprintf(char* buf, size_t buf_size, const char* fmt, ...)

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#define API_H
+#define GRAMINE_API_HEADER_USED
 
 #include <stdarg.h>
 #include <stdbool.h>

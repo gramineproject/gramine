@@ -5,9 +5,8 @@
 
 /*
  * SSL server demonstration program (with RA-TLS)
- * This program is heavily based on an mbedTLS 3.2.1 example ssl_server.c
- * but uses RA-TLS flows (SGX Remote Attestation flows) if RA-TLS library
- * is required by user.
+ * This program is originally based on an mbedTLS example ssl_server.c but uses RA-TLS flows (SGX
+ * Remote Attestation flows) if RA-TLS library is required by user.
  */
 
 #define _GNU_SOURCE
@@ -215,8 +214,8 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, NULL,
-                                       mbedtls_ctr_drbg_random, &ctr_drbg);
+        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, NULL, mbedtls_ctr_drbg_random,
+                                       &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_keyfile returned %d\n\n", ret);
             goto exit;
