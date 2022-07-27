@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define API_H
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>

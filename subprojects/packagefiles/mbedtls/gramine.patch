@@ -135,7 +135,7 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
 +libmbedtls%.$(SOEXT_TLS): $(OBJS_TLS) libmbedx509%.so
  	echo "  LD    $@"
 -	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509 -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS)
-+	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedcrypto$(SUFFIX) -lmbedx509$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
++	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509$(SUFFIX) -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
 -libmbedtls.so: libmbedtls.$(SOEXT_TLS)
 +libmbedtls%.so: libmbedtls%.$(SOEXT_TLS)
@@ -189,4 +189,3 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  	echo "  LN    $@ -> $<"
  	ln -sf $< $@
  
-
