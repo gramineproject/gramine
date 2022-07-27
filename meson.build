@@ -8,7 +8,7 @@ project(
     version: '1.2post-UNRELEASED',
     license: 'LGPLv3+',
 
-    meson_version: '>=0.55',
+    meson_version: '>=0.56',
 
     default_options: [
         'c_std=c11',
