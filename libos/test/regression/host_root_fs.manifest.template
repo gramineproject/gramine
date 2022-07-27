@@ -1,7 +1,6 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ binary_dir }}/{{ entrypoint }}"
 
-loader.argv0_override = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.root.uri = "file:/"

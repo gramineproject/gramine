@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import os
+import subprocess
+
 from graminelibos.regression import RegressionTestCase
 
 class TC_00_Entrypoint(RegressionTestCase):
@@ -19,7 +22,14 @@ class TC_00_Entrypoint(RegressionTestCase):
         self.run_binary(['stack'])
 
     def test_060_arg(self):
-        self.run_binary(['stack_arg', 'foo', 'bar'])
+        args = ['stack_arg', 'foo', 'bar']
+        result = subprocess.check_output(['gramine-argv-serializer'] + args)
+        with open('stack_arg_argv_input', 'wb') as f:
+            f.write(result)
+        try:
+            self.run_binary(['stack_arg'])
+        finally:
+            os.remove('stack_arg_argv_input')
 
     def test_070_env(self):
         self.run_binary(['stack_env'])

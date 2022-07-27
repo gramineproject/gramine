@@ -79,7 +79,7 @@ endif
 
 .PHONY: check
 check: all
-	$(GRAMINE) ./busybox echo "Hello" > OUTPUT
+	$(GRAMINE) busybox echo "Hello" > OUTPUT
 	@grep -q "Hello" OUTPUT && echo "[ Success 1/1 ]"
 	@rm OUTPUT
 

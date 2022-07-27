@@ -1,7 +1,7 @@
 # Client manifest file
 
 loader.entrypoint = "file:{{ gramine.libos }}"
-libos.entrypoint = "client"
+libos.entrypoint = "/client"
 
 loader.log_level = "{{ log_level }}"
 
@@ -19,6 +19,7 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/etc", uri = "file:/etc" },
+  { path = "/client", uri = "file:client" },
 ]
 
 sgx.debug = true

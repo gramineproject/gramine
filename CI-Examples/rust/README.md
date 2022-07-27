@@ -15,7 +15,7 @@ make SGX=1
 
 # run the server in Gramine-SGX against an HTTP benchmark
 make SGX=1 start-gramine-server &
-../common_tools/benchmark-http.sh 127.0.0.1:3000
+../common_tools/benchmark-http.sh http://127.0.0.1:3000
 kill -SIGINT %%
 ```
 

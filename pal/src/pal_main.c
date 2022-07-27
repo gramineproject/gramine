@@ -404,33 +404,37 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     /* Load argv */
-    /* TODO: Add an option to specify argv inline in the manifest. 'loader.argv0_override' won't be
-     * needed after implementing this feature and resolving
-     * https://github.com/gramineproject/gramine/issues/13 (RFC: graphene invocation). */
-    bool argv0_overridden = false;
-    char* argv0_override = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv0_override",
-                         &argv0_override);
-    if (ret < 0)
-        INIT_FAIL_MANIFEST("Cannot parse 'loader.argv0_override'");
-
-    if (argv0_override) {
-        argv0_overridden = true;
-        if (!arguments[0]) {
-            arguments = malloc(sizeof(const char*) * 2);
-            if (!arguments)
-                INIT_FAIL("malloc() failed");
-            arguments[1] = NULL;
-        }
-        arguments[0] = argv0_override;
-    }
-
+    /* TODO: Add an option to specify argv inline in the manifest. */
     bool use_cmdline_argv;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
                        /*defaultval=*/false, &use_cmdline_argv);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_cmdline_argv' (the value must be "
                            "`true` or `false`)");
+    }
+
+    char* argv0_override = NULL;
+    ret = toml_string_in(g_pal_public_state.manifest_root, "libos.entrypoint", &argv0_override);
+    if (ret < 0)
+        INIT_FAIL_MANIFEST("Cannot parse 'libos.entrypoint'");
+
+    if (!argv0_override) {
+        /* possible in e.g. PAL regression tests, in this case use loader.entrypoint */
+        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint",
+                             &argv0_override);
+        if (ret < 0)
+            INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
+
+        if (!argv0_override)
+            INIT_FAIL("'libos.entrypoint' and 'loader.entrypoint' are not specified in manifest");
+    }
+    assert(argv0_override);
+
+    if (use_cmdline_argv && !parent_process) {
+        /* argv[0] in host cmdline args is the name of manifest, but app expects the entrypoint */
+        if (!arguments[0])
+            INIT_FAIL("Gramine started with no arguments, this is unsupported");
+        arguments[0] = argv0_override;
     }
 
     if (!use_cmdline_argv) {
@@ -453,9 +457,17 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                 INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
 
             free(argv_src_file);
-        } else if (!argv0_overridden || (arguments[0] && arguments[1])) {
+        } else if (arguments[0] && arguments[1]) {
             INIT_FAIL("argv handling wasn't configured in the manifest, but cmdline arguments were "
                       "specified.");
+        } else if (!parent_process) {
+            /* no argv handling and no cmdline args -- override argv[0] with entrypoint */
+            arguments = malloc(sizeof(const char*) * 2);
+            if (!arguments)
+                INIT_FAIL("malloc() failed");
+
+            arguments[0] = argv0_override;
+            arguments[1] = NULL;
         }
     }
 
