@@ -256,7 +256,6 @@ int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t 
 }
 
 int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
-    /* Linux syscall takes the size of `cpu_mask` in bytes. */
     int ret = DO_SYSCALL(sched_getaffinity, thread->thread.tid, cpu_mask_len * sizeof(*cpu_mask),
                          cpu_mask);
     if (ret < 0) {

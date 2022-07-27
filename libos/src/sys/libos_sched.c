@@ -159,19 +159,13 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     }
 
     int ret;
-    size_t cpu_mask_size = GET_CPU_MASK_LEN() * sizeof(unsigned long);
-    unsigned long* cpu_mask = malloc(cpu_mask_size);
+    unsigned long* cpu_mask = calloc(GET_CPU_MASK_LEN(), sizeof(*cpu_mask));
     if (!cpu_mask) {
         ret = -ENOMEM;
         goto out;
     }
 
-    if (user_mask_size < cpu_mask_size) {
-        memset(cpu_mask, 0, cpu_mask_size);
-    } else if (user_mask_size > cpu_mask_size) {
-        user_mask_size = cpu_mask_size;
-    }
-    memcpy(cpu_mask, user_mask_ptr, user_mask_size);
+    memcpy(cpu_mask, user_mask_ptr, MIN(user_mask_size, GET_CPU_MASK_LEN() * sizeof(*cpu_mask)));
 
     bool seen_online = false;
     size_t threads_count = g_pal_public_state->topo_info.threads_cnt;
@@ -203,7 +197,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
         goto out_unlock;
     }
 
-    memcpy(thread->cpu_affinity_mask, cpu_mask, cpu_mask_size);
+    memcpy(thread->cpu_affinity_mask, cpu_mask, GET_CPU_MASK_LEN() * sizeof(*cpu_mask));
     ret = 0;
 
 out_unlock:
