@@ -56,7 +56,7 @@ class TC_00_BasicSet2(RegressionTestCase):
     @unittest.skipIf(HAS_SGX, "Pipes must be created in two parallel threads under SGX")
     def test_Process4(self):
         _, stderr = self.run_binary(['Process4'], timeout=5)
-        self.assertRegex(stderr, r'In process: (.*?)Process4', stderr)
+        self.assertRegex(stderr, r'In process: .*Process4')
         self.assertIn('wall time = ', stderr)
         for i in range(100):
             self.assertIn('In process: Process4 %d ' % i, stderr)
@@ -76,7 +76,7 @@ class TC_01_Bootstrap(RegressionTestCase):
 
         # One Argument Given
         self.assertIn('# of Arguments: 1', stderr)
-        self.assertRegex(stderr, r'argv\[0\] = (.*?)Bootstrap', stderr)
+        self.assertRegex(stderr, r'argv\[0\] = .*Bootstrap')
 
         # Control Block: Debug Stream (Inline)
         self.assertIn('Written to Debug Stream', stderr)

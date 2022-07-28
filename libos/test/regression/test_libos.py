@@ -170,18 +170,6 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('User Program Started', stdout)
         self.assertIn('Exception \'test runtime error\' caught', stdout)
 
-    @unittest.skipUnless(ON_X86, 'x86-specific')
-    @unittest.skipIf(USES_MUSL, 'C++ is not supported with musl')
-    def test_111_basic_bootstrapping_cpp_unexpected_arg(self):
-        try:
-            self.run_binary(['bootstrap_cpp', 'unexpected arg'])
-            self.fail('expected to return nonzero')
-        except subprocess.CalledProcessError as e:
-            self.assertEqual(e.returncode, 1)
-            stderr = e.stderr.decode()
-            self.assertIn('argv handling wasn\'t configured in the manifest, but cmdline arguments '
-                          'were specified', stderr)
-
     def test_200_exec(self):
         stdout, _ = self.run_binary(['exec'])
 
@@ -400,6 +388,18 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('Host:', log)
         self.assertIn('LibOS initialized', log)
         self.assertIn('--- exit_group', log)
+
+    def test_702_debug_log_inline_unexpected_arg(self):
+        try:
+            # `debug_log_inline` program logic is irrelevant here, we only want to test Gramine's
+            # handling of unexpected args when the manifest has no explicit argv handling options
+            self.run_binary(['debug_log_inline', 'unexpected arg'])
+            self.fail('expected to return nonzero')
+        except subprocess.CalledProcessError as e:
+            self.assertEqual(e.returncode, 1)
+            stderr = e.stderr.decode()
+            self.assertIn('argv handling wasn\'t configured in the manifest, but cmdline arguments '
+                          'were specified', stderr)
 
 
 class TC_02_OpenMP(RegressionTestCase):

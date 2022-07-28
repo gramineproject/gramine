@@ -432,7 +432,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     if (use_cmdline_argv && !parent_process) {
         /* argv[0] in host cmdline args is the name of manifest, but app expects the entrypoint */
-        assert(arguments[0]);
+        if (!arguments[0])
+            INIT_FAIL("Gramine started with no arguments, this is unsupported");
         arguments[0] = argv0_override;
     }
 

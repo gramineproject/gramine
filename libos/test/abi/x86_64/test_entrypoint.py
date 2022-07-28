@@ -23,10 +23,9 @@ class TC_00_Entrypoint(RegressionTestCase):
 
     def test_060_arg(self):
         args = ['stack_arg', 'foo', 'bar']
-        result = subprocess.run(['gramine-argv-serializer'] + args,
-                                stdout=subprocess.PIPE, check=True)
+        result = subprocess.check_output(['gramine-argv-serializer'] + args)
         with open('stack_arg_argv_input', 'wb') as f:
-            f.write(result.stdout)
+            f.write(result)
         try:
             self.run_binary(['stack_arg'])
         finally:
