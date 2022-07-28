@@ -148,7 +148,6 @@ int main(int argc, char** argv) {
         uint8_t* ptr = (uint8_t*)buf;
         for (size_t i = 0; i < bytes_read; i++)
             sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
-
     }
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
