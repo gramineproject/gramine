@@ -17,7 +17,7 @@
 
 #define EXPECTED_STRING "MORE"
 #define SECRET_STRING "42" /* answer to ultimate question of life, universe, and everything */
-#define DUMMY_KEY   "FEDCBA9876543210FEDCBA9876543210"
+#define DUMMY_KEY "FEDCBA9876543210FEDCBA9876543210"
 
 #define WRAP_KEY_SIZE     16
 
