@@ -66,10 +66,10 @@ uint64_t get_file_size(int fd) {
 
     off_t reset_pos = lseek(fd, cur_pos, SEEK_SET);
     if (reset_pos < 0)
-         return (uint64_t)-1;
+        return (uint64_t)-1;
 
-   return (uint64_t)pos;
- }
+    return (uint64_t)pos;
+}
 
 void* read_file(const char* path, size_t* size, void* buffer) {
     FILE* f = NULL;
