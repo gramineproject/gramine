@@ -17,7 +17,7 @@
 
 #define EXPECTED_STRING "MORE"
 #define SECRET_STRING "42" /* answer to ultimate question of life, universe, and everything */
-#define ATTESTATION_SUCCESS_STRING "REMOTE_ATTESTATION_SUCCESSFUL"
+#define DUMMY_KEY   "FEDCBA9876543210FEDCBA9876543210"
 
 #define WRAP_KEY_SIZE     16
 
@@ -105,12 +105,10 @@ int main(int argc, char** argv) {
         return ret;
 
     if (argc < 2) {
-        puts("--- Proceeding without a master key ---");
-        static_assert(sizeof(g_secret_string) >= sizeof(ATTESTATION_SUCCESS_STRING),
+        puts("--- No master key is provided, proceeding with a dummy key ---");
+        static_assert(sizeof(g_secret_string) >= sizeof(DUMMY_KEY),
                       "size of g_secret_string is too small");
-        static_assert(sizeof(ATTESTATION_SUCCESS_STRING) != WRAP_KEY_SIZE * 2 + 1, "bad string."
-                     "WRAP_KEY_SIZE is expected for valid keys only");
-        strcpy(g_secret_string, ATTESTATION_SUCCESS_STRING);
+        strcpy(g_secret_string, DUMMY_KEY);
     } else {
         printf("--- Reading the master key for encrypted files from '%s' ---\n", argv[1]);
         int fd = open(argv[1], O_RDONLY);
