@@ -40,5 +40,6 @@ int PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t c
 }
 
 int PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
+    memset(cpu_mask, 0, cpu_mask_len * sizeof(*cpu_mask));
     return _PalThreadGetCpuAffinity(thread, cpu_mask, cpu_mask_len);
 }

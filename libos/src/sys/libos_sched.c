@@ -173,10 +173,8 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++) {
         for (size_t j = 0; j < BITS_IN_TYPE(__typeof__(*cpu_mask)); j++) {
             size_t thread_idx = i * BITS_IN_TYPE(__typeof__(*cpu_mask)) + j;
-            if (thread_idx >= threads_count) {
-                break;
-            }
-            if (!g_pal_public_state->topo_info.threads[thread_idx].is_online) {
+            if (thread_idx >= threads_count
+                    || !g_pal_public_state->topo_info.threads[thread_idx].is_online) {
                 cpu_mask[i] &= ~(1ul << j);
             }
             if (cpu_mask[i] & (1ul << j)) {

@@ -87,7 +87,6 @@ typedef ptrdiff_t ssize_t;
 #define BITS_IN_TYPE(type)              (sizeof(type) * BITS_IN_BYTE)
 #define BITS_TO_UINT32S(nr)             UDIV_ROUND_UP(nr, BITS_IN_TYPE(uint32_t))
 #define BITS_TO_LONGS(nr)               UDIV_ROUND_UP(nr, BITS_IN_TYPE(long))
-/* Note: This macro is not intended for use when nbits == BITS_IN_TYPE(type) */
 #define SET_HIGHEST_N_BITS(type, nbits) (nbits ? ~(((type)1 << (BITS_IN_TYPE(type) - (nbits))) - 1) : 0)
 #define WITHIN_MASK(val, mask) (((val) | (mask)) == (mask))
 

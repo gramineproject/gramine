@@ -641,7 +641,7 @@ int PalThreadResume(PAL_HANDLE thread);
  * \returns 0 on success, negative error code on failure.
  *
  * All bit positions exceeding the count of host CPUs are ignored. \p cpu_mask should select at
- * least one CPU.
+ * least one online CPU.
  */
 int PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
 
@@ -654,8 +654,7 @@ int PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t c
  *
  * \returns 0 on success, negative error code on failure.
  *
- * \p cpu_mask must be able to fit all the processors in the host. This function may overwrite less
- * than \p cpu_mask_len entries, so \p cpu_mask should be zero-initialized.
+ * \p cpu_mask must be able to fit all the processors on the host.
  */
 int PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
 
