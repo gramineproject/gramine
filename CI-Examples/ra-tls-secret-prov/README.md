@@ -75,6 +75,10 @@ make app epid files/input.txt RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
+RA_TLS_MRENCLAVE=<MRENCLAVE of the client enclave> \
+RA_TLS_MRSIGNER=<MRSIGNER of the client enclave> \
+RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the client enclave> \
+RA_TLS_ISV_SVN=<ISV_SVN of the client enclave> \
 ./secret_prov_server_epid &
 
 # test minimal client
@@ -94,9 +98,12 @@ kill %%
 ```sh
 make app dcap files/input.txt RA_TYPE=dcap
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-./secret_prov_server_dcap &
+RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
+    ./secret_prov_server_dcap \
+    <MRENCLAVE of the client enclave> \
+    <MRSIGNER of the client enclave> \
+    <ISV_PROD_ID of the client enclave> \
+    <ISV_SVN of the client enclave> &
 
 # test minimal client
 gramine-sgx ./secret_prov_min_client

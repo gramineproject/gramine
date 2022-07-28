@@ -2,9 +2,11 @@
 /* Copyright (C) 2020 Intel Labs */
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +36,29 @@ static void hexdump_mem(const void* data, size_t size) {
     printf("\n");
 }
 
+static int parse_hex(const char* hex, void* buffer, size_t buffer_size) {
+    if (strlen(hex) != buffer_size * 2)
+        return -1;
+
+    for (size_t i = 0; i < buffer_size; i++) {
+        if (!isxdigit(hex[i * 2]) || !isxdigit(hex[i * 2 + 1]))
+            return -1;
+        sscanf(hex + i * 2, "%02hhx", &((uint8_t*)buffer)[i]);
+    }
+    return 0;
+}
+
+/* expected SGX measurements in binary form */
+static char g_expected_mrenclave[32];
+static char g_expected_mrsigner[32];
+static char g_expected_isv_prod_id[2];
+static char g_expected_isv_svn[2];
+
+static bool g_verify_mrenclave   = false;
+static bool g_verify_mrsigner    = false;
+static bool g_verify_isv_prod_id = false;
+static bool g_verify_isv_svn     = false;
+
 /* our own callback to verify SGX measurements during TLS handshake */
 static int verify_measurements_callback(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn) {
@@ -45,9 +70,28 @@ static int verify_measurements_callback(const char* mrenclave, const char* mrsig
     printf("  - MRSIGNER:    "); hexdump_mem(mrsigner, 32);
     printf("  - ISV_PROD_ID: %hu\n", *((uint16_t*)isv_prod_id));
     printf("  - ISV_SVN:     %hu\n", *((uint16_t*)isv_svn));
-    puts("[ WARNING: In reality, you would want to compare against expected values! ]");
     pthread_mutex_unlock(&g_print_lock);
 
+    if (g_verify_mrenclave &&
+            memcmp(mrenclave, g_expected_mrenclave, sizeof(g_expected_mrenclave))){
+	    puts("Error: MRENCLAVE mismatch");
+        return -1;
+    }
+    if (g_verify_mrsigner &&
+            memcmp(mrsigner, g_expected_mrsigner, sizeof(g_expected_mrsigner))){
+	    puts("Error: MRSIGNER mismatch");
+        return -1;
+    }
+    if (g_verify_isv_prod_id &&
+            memcmp(isv_prod_id, g_expected_isv_prod_id, sizeof(g_expected_isv_prod_id))){
+	    puts("Error: ISV_PROD_ID mismatch");
+        return -1;
+    }
+    if (g_verify_isv_svn &&
+            memcmp(isv_svn, g_expected_isv_svn, sizeof(g_expected_isv_svn))){
+	    puts("Error: ISV_SVN mismatch");
+        return -1;
+    }
     return 0;
 }
 
@@ -98,8 +142,71 @@ out:
 }
 
 int main(int argc, char** argv) {
-    int ret;
 
+    if (argc > 1) {
+        if (argc != 5) {
+            printf("USAGE: %s <expected mrenclave> <expected mrsigner>"
+                           " <expected isv_prod_id> <expected isv_svn>\n"
+                           "       (first two in hex, last two as decimal; set to 0 to ignore)\n",
+                           argv[0]);
+            return 1;
+        }
+
+        printf("[ using our own SGX-measurement verification callback"
+                       " (via command line options) ]\n");
+
+        g_verify_mrenclave   = true;
+        g_verify_mrsigner    = true;
+        g_verify_isv_prod_id = true;
+        g_verify_isv_svn     = true;
+
+        if (!strcmp(argv[1], "0")) {
+            printf("  - ignoring MRENCLAVE\n");
+            g_verify_mrenclave = false;
+        } else if (parse_hex(argv[1], g_expected_mrenclave, sizeof(g_expected_mrenclave)) < 0) {
+            printf("Cannot parse MRENCLAVE!\n");
+            return 1;
+        }
+
+        if (!strcmp(argv[2], "0")) {
+            printf("  - ignoring MRSIGNER\n");
+            g_verify_mrsigner = false;
+        } else if (parse_hex(argv[2], g_expected_mrsigner, sizeof(g_expected_mrsigner)) < 0) {
+            printf("Cannot parse MRSIGNER!\n");
+            return 1;
+        }
+
+        if (!strcmp(argv[3], "0")) {
+            printf("  - ignoring ISV_PROD_ID\n");
+            g_verify_isv_prod_id = false;
+        } else {
+            errno = 0;
+            uint16_t isv_prod_id = (uint16_t)strtoul(argv[3], NULL, 10);
+            if (errno) {
+                printf("Cannot parse ISV_PROD_ID!\n");
+                return 1;
+            }
+            memcpy(g_expected_isv_prod_id, &isv_prod_id, sizeof(isv_prod_id));
+        }
+
+        if (!strcmp(argv[4], "0")) {
+            printf("  - ignoring ISV_SVN\n");
+            g_verify_isv_svn = false;
+        } else {
+            errno = 0;
+            uint16_t isv_svn = (uint16_t)strtoul(argv[4], NULL, 10);
+            if (errno) {
+                printf("Cannot parse ISV_SVN\n");
+                return 1;
+            }
+            memcpy(g_expected_isv_svn, &isv_svn, sizeof(isv_svn));
+        }
+    } else {
+        printf("[ using default SGX-measurement verification callback"
+                       " (via RA_TLS_* environment variables) ]\n");
+    }
+
+    int ret;
     ret = pthread_mutex_init(&g_print_lock, NULL);
     if (ret < 0)
         return ret;
