@@ -273,14 +273,14 @@ static int extend_cap_flags(const char* const cpu_flags[], const unsigned int* w
     ret = extend_cap_flags(cpu_flags, words, reg, &flags, &flen, &fmax);           \
     if (ret < 0) {                                                                 \
         goto out_err;                                                              \
-    }                                                                              \
+    }
 
 #define RETRIEVE_CPUID(leaf, subleaf)                                              \
     ret = PalCpuIdRetrieve(leaf, subleaf, words);                                  \
     if (ret < 0) {                                                                 \
         ret = pal_to_unix_errno(ret);                                              \
         goto out_err;                                                              \
-    }                                                                              \
+    }
 
 int libos_get_cpu_flags(char** out_cpu_flags) {
     unsigned int words[CPUID_WORD_NUM];
