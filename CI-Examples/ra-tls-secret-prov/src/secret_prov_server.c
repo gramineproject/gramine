@@ -98,9 +98,9 @@ static int verify_measurements_callback(const char* mrenclave, const char* mrsig
     pthread_mutex_unlock(&g_print_lock);
     return 0;
 
-    fail:
-         pthread_mutex_unlock(&g_print_lock);
-         return -1;
+fail:
+    pthread_mutex_unlock(&g_print_lock);
+    return -1;
 }
 
 /* this callback is called in a new thread associated with a client; be careful to make this code
@@ -151,6 +151,7 @@ out:
 
 int main(int argc, char** argv) {
     int ret;
+
     if (argc > 1) {
         if (argc != 5) {
             printf("USAGE: %s <expected mrenclave> <expected mrsigner>"
