@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
     ret = secret_provision_start_server((uint8_t*)g_secret_pf_key_hex, sizeof(g_secret_pf_key_hex),
                                         "4433", SRV_CRT_PATH, SRV_KEY_PATH,
-                                        verify_measurements_callback,
+                                        argc > 1 ? verify_measurements_callback : NULL,
                                         communicate_with_client_callback);
     if (ret < 0) {
         fprintf(stderr, "[error] secret_provision_start_server() returned %d\n", ret);
