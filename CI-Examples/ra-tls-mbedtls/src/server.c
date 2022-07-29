@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, NULL, 0,
+        ret = mbedtls_pk_parse_key(&pkey, (unsigned char*)der_key, der_key_size, /*pwd=*/NULL, 0,
                                    mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_key returned %d\n\n", ret);
@@ -215,8 +215,8 @@ int main(int argc, char** argv) {
             goto exit;
         }
 
-        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, NULL, mbedtls_ctr_drbg_random,
-                                       &ctr_drbg);
+        ret = mbedtls_pk_parse_keyfile(&pkey, SRV_KEY_PATH, /*password=*/NULL,
+                                       mbedtls_ctr_drbg_random, &ctr_drbg);
         if (ret != 0) {
             mbedtls_printf(" failed\n  !  mbedtls_pk_parse_keyfile returned %d\n\n", ret);
             goto exit;
