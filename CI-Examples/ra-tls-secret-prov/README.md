@@ -27,6 +27,12 @@ There are two versions of the server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
 build time.
 
+If the server is run without additional command-line arguments, it uses the
+default RA-TLS verification logic that compares `MRENCLAVE`, `MRSIGNER`,
+`ISV_PROD_ID` and `ISV_SVN` against the corresponding `RA_TLS_*` environment
+variables. To run the server with its own verification logic, execute it with
+four additional command-line arguments (see the examples below).
+
 Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
 to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
 Note that in production environments, you must *not* use this option!

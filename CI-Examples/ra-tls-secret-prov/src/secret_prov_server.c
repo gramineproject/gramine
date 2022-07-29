@@ -70,29 +70,37 @@ static int verify_measurements_callback(const char* mrenclave, const char* mrsig
     printf("  - MRSIGNER:    "); hexdump_mem(mrsigner, 32);
     printf("  - ISV_PROD_ID: %hu\n", *((uint16_t*)isv_prod_id));
     printf("  - ISV_SVN:     %hu\n", *((uint16_t*)isv_svn));
-    pthread_mutex_unlock(&g_print_lock);
 
     if (g_verify_mrenclave &&
             memcmp(mrenclave, g_expected_mrenclave, sizeof(g_expected_mrenclave))){
-	    puts("Error: MRENCLAVE mismatch");
-        return -1;
+        puts("Error: MRENCLAVE mismatch");
+        goto fail;
     }
+
     if (g_verify_mrsigner &&
             memcmp(mrsigner, g_expected_mrsigner, sizeof(g_expected_mrsigner))){
-	    puts("Error: MRSIGNER mismatch");
-        return -1;
+        puts("Error: MRSIGNER mismatch");
+        goto fail;
     }
+
     if (g_verify_isv_prod_id &&
             memcmp(isv_prod_id, g_expected_isv_prod_id, sizeof(g_expected_isv_prod_id))){
-	    puts("Error: ISV_PROD_ID mismatch");
-        return -1;
+        puts("Error: ISV_PROD_ID mismatch");
+        goto fail;
     }
+
     if (g_verify_isv_svn &&
             memcmp(isv_svn, g_expected_isv_svn, sizeof(g_expected_isv_svn))){
-	    puts("Error: ISV_SVN mismatch");
-        return -1;
+        puts("Error: ISV_SVN mismatch");
+        goto fail;
     }
+
+    pthread_mutex_unlock(&g_print_lock);
     return 0;
+
+    fail:
+         pthread_mutex_unlock(&g_print_lock);
+         return -1;
 }
 
 /* this callback is called in a new thread associated with a client; be careful to make this code
@@ -142,18 +150,18 @@ out:
 }
 
 int main(int argc, char** argv) {
-
+    int ret;
     if (argc > 1) {
         if (argc != 5) {
             printf("USAGE: %s <expected mrenclave> <expected mrsigner>"
-                           " <expected isv_prod_id> <expected isv_svn>\n"
-                           "       (first two in hex, last two as decimal; set to 0 to ignore)\n",
-                           argv[0]);
+                   " <expected isv_prod_id> <expected isv_svn>\n"
+                   "       (first two in hex, last two as decimal; set to 0 to ignore)\n",
+                   argv[0]);
             return 1;
         }
 
         printf("[ using our own SGX-measurement verification callback"
-                       " (via command line options) ]\n");
+               " (via command line options) ]\n");
 
         g_verify_mrenclave   = true;
         g_verify_mrsigner    = true;
@@ -203,10 +211,9 @@ int main(int argc, char** argv) {
         }
     } else {
         printf("[ using default SGX-measurement verification callback"
-                       " (via RA_TLS_* environment variables) ]\n");
+               " (via RA_TLS_* environment variables) ]\n");
     }
 
-    int ret;
     ret = pthread_mutex_init(&g_print_lock, NULL);
     if (ret < 0)
         return ret;
