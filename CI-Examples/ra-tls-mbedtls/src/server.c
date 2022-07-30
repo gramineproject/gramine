@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
             mbedtls_printf("  . Maliciously modifying SGX quote embedded in RA-TLS cert...");
             fflush(stdout);
 
-            uint8_t oid[] = {0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, 0x06};
+            uint8_t oid[] = {0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, 0x06};
             uint8_t* p = memmem(srvcert.v3_ext.p, srvcert.v3_ext.len, oid, sizeof(oid));
             if (!p) {
                 mbedtls_printf(" failed\n  !  No embedded SGX quote found\n\n");
