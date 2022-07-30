@@ -461,8 +461,8 @@ int lib_DhCreatePublic(LIB_DH_CONTEXT* context, uint8_t* public, size_t public_s
     if (public_size != DH_SIZE)
         return -PAL_ERROR_INVAL;
 
-    int ret = mbedtls_dhm_make_public(context, (int)mbedtls_dhm_get_len(context), public,
-                                      public_size, random_wrapper, /*p_rng=*/NULL);
+    int ret = mbedtls_dhm_make_public(context, mbedtls_dhm_get_len(context), public, public_size,
+                                      random_wrapper, /*p_rng=*/NULL);
     return mbedtls_to_pal_error(ret);
 }
 

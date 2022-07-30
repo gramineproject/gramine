@@ -34,7 +34,6 @@
 #define MBEDTLS_OID_C
 #define MBEDTLS_PKCS1
 #define MBEDTLS_PKCS1_V15
-#define MBEDTLS_PLATFORM_C
 #define MBEDTLS_RSA_C
 #define MBEDTLS_SHA224_C
 #define MBEDTLS_SHA256_C
@@ -44,22 +43,3 @@
 #define MBEDTLS_SSL_PROTO_TLS1_2
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
-
-#define MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
-
-#include <limits.h>
-#include <stddef.h>
-
-/* Prevent conflict with `api_fortified.h` which might redefine `snprintf` as macro */
-#ifndef GRAMINE_API_HEADER_USED
-void* calloc(size_t num, size_t size);
-void free(void*);
-int snprintf(char* buf, size_t buf_size, const char* fmt, ...)
-    __attribute__((format(printf, 3, 4)));
-#endif
-
-#define MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_PLATFORM_SNPRINTF_ALT
-#define MBEDTLS_PLATFORM_STD_CALLOC   calloc
-#define MBEDTLS_PLATFORM_STD_FREE     free
-#define MBEDTLS_PLATFORM_STD_SNPRINTF snprintf
