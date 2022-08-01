@@ -234,10 +234,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         'Test uses /bin/sh from the host which is usually built against glibc')
     def test_212_shebang_test_script(self):
         stdout, _ = self.run_binary(['shebang_test_script'])
-        self.assertIn('Printing Args: '
-            'scripts/baz.sh ECHO FOXTROT GOLF scripts/bar.sh '
-            'ALPHA BRAVO CHARLIE DELTA '
-            'scripts/foo.sh', stdout)
+        self.assertRegex(stdout, r'Printing Args: '
+            r'scripts/baz\.sh ECHO FOXTROT GOLF scripts/bar\.sh '
+            r'ALPHA BRAVO CHARLIE DELTA '
+            r'/?scripts/foo\.sh')
 
     def test_220_send_handle(self):
         path = 'tmp/send_handle_test'
