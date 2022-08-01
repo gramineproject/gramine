@@ -223,6 +223,7 @@ static int init_main_thread(void) {
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         log_error("Failed to get thread CPU affinity mask: %d", ret);
+        put_thread(cur_thread);
         return ret;
     }
 
