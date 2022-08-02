@@ -208,6 +208,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     char* token_path = NULL;
     int sigfile_fd = -1, token_fd = -1;
     int enclave_mem = -1;
+    size_t areas_size = 0;
+    struct mem_area* areas = NULL;
 
     /* this array may overflow the stack, so we allocate it in BSS */
     static void* tcs_addrs[MAX_DBG_THREADS];
@@ -334,8 +336,16 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * + enclave->thread_num for normal stack
      * + enclave->thread_num for signal stack
      */
-    int max_area_cnt = 10 + enclave->thread_num * 2;
-    struct mem_area* areas = __alloca(sizeof(areas[0]) * max_area_cnt);
+    areas_size = ALIGN_UP_POW2(sizeof(*areas) * (10 + enclave->thread_num * 2), PRESET_PAGESIZE);
+    areas = (struct mem_area*)DO_SYSCALL(mmap, NULL, areas_size, PROT_READ | PROT_WRITE,
+                                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (IS_PTR_ERR(areas)) {
+        log_error("Allocating memory failed");
+        areas = NULL;
+        ret = -ENOMEM;
+        goto out;
+    }
+
     int area_num = 0;
 
     /* The manifest needs to be allocated at the upper end of the enclave
@@ -608,6 +618,8 @@ out:
         DO_SYSCALL(close, sigfile_fd);
     if (token_fd >= 0)
         DO_SYSCALL(close, token_fd);
+    if (areas)
+        DO_SYSCALL(munmap, areas, areas_size);
     free(sig_path);
     free(token_path);
     return ret;
@@ -655,19 +667,13 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    if (thread_num_int64 < 0) {
-        log_error("Negative 'sgx.thread_num' is impossible");
+    if (thread_num_int64 <= 0) {
+        log_error("Non-positive 'sgx.thread_num' is impossible");
         ret = -EINVAL;
         goto out;
     }
 
     enclave_info->thread_num = thread_num_int64;
-
-    if (!enclave_info->thread_num) {
-        log_warning("Number of enclave threads ('sgx.thread_num') is not specified; assumed "
-                    "to be 1");
-        enclave_info->thread_num = 1;
-    }
 
     if (enclave_info->thread_num > MAX_DBG_THREADS) {
         log_error("Too large 'sgx.thread_num', maximum allowed is %d", MAX_DBG_THREADS);

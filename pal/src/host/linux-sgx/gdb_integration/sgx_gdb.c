@@ -41,6 +41,11 @@ static struct {
     int memdev;
 } g_memdevs[32];
 
+/* this object may overflow the stack, so we allocate it in BSS; it is safe to use a single global
+ * object because GDB itself is single-threaded so no races can occur */
+static struct enclave_dbginfo g_ei_tmp;
+static_assert(sizeof(g_ei_tmp) % sizeof(long) == 0, "Unsupported size");
+
 #if DEBUG_GDB_PTRACE == 1
 static char* str_ptrace_request(enum __ptrace_request request) {
     static char buf[50];
@@ -372,11 +377,13 @@ static int poke_regs(int memdev, pid_t tid, struct enclave_dbginfo* ei,
  * initialized), -2 on other, severe failures.
  *  */
 static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
-    struct enclave_dbginfo eib = {.pid = -1};
     char memdev_path[40];
     uint64_t flags;
     int ret;
     int fd;
+
+    memset(&g_ei_tmp, 0, sizeof(g_ei_tmp));
+    g_ei_tmp.pid = -1;
 
     /* Check if corresponding memdevice of this thread was already opened;
      * this works when tid = pid (single-threaded apps) but does not work
@@ -389,9 +396,7 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
         }
     }
 
-    static_assert(sizeof(eib) % sizeof(long) == 0, "Unsupported eib size");
-
-    for (size_t off = 0; off < sizeof(eib); off += sizeof(long)) {
+    for (size_t off = 0; off < sizeof(g_ei_tmp); off += sizeof(long)) {
         errno = 0;
         long val = host_ptrace(PTRACE_PEEKDATA, tid, (void*)DBGINFO_ADDR + off, NULL);
         if (val < 0 && errno != 0) {
@@ -399,20 +404,20 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
             return -1;
         }
 
-        memcpy((void*)&eib + off, &val, sizeof(val));
+        memcpy((void*)&g_ei_tmp + off, &val, sizeof(val));
     }
 
     /* Check again if corresponding memdevice was already opened but now
-     * using actual pid of app (eib.pid), case for multi-threaded apps */
+     * using actual pid of app (g_ei_tmp.pid), case for multi-threaded apps */
     for (int i = 0; i < g_memdevs_cnt; i++) {
-        if (g_memdevs[i].pid == eib.pid) {
+        if (g_memdevs[i].pid == g_ei_tmp.pid) {
             *memdev = g_memdevs[i].memdev;
             *ei = &g_memdevs[i].ei;
             return update_thread_tids(*ei);
         }
     }
 
-    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", eib.pid);
+    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", g_ei_tmp.pid);
 
     if (g_memdevs_cnt == sizeof(g_memdevs) / sizeof(g_memdevs[0])) {
         DEBUG_LOG("Too many debugged processes (max = %d)\n", g_memdevs_cnt);
@@ -428,10 +433,10 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
 
     /* setting debug bit in TCS flags */
     for (int i = 0; i < MAX_DBG_THREADS; i++) {
-        if (!eib.tcs_addrs[i])
+        if (!g_ei_tmp.tcs_addrs[i])
             continue;
 
-        void* flags_addr = eib.tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
+        void* flags_addr = g_ei_tmp.tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
 
         ssize_t bytes_read = pread(fd, &flags, sizeof(flags), (off_t)flags_addr);
         if (bytes_read < 0 || (size_t)bytes_read < sizeof(flags)) {
@@ -454,9 +459,9 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
         }
     }
 
-    g_memdevs[g_memdevs_cnt].pid    = eib.pid;
+    g_memdevs[g_memdevs_cnt].pid    = g_ei_tmp.pid;
     g_memdevs[g_memdevs_cnt].memdev = fd;
-    g_memdevs[g_memdevs_cnt].ei     = eib;
+    g_memdevs[g_memdevs_cnt].ei     = g_ei_tmp;
     memset(g_memdevs[g_memdevs_cnt].ei.thread_stepping, 0,
            sizeof(g_memdevs[g_memdevs_cnt].ei.thread_stepping));
 
