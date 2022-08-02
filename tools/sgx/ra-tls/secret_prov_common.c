@@ -16,22 +16,24 @@
 
 #include "secret_prov.h"
 
-int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
+int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
+int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
+int secret_provision_common_close(mbedtls_ssl_context* ssl);
+
+int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size) {
     int ret;
 
-    if (!ctx || !ctx->ssl || size > INT_MAX)
+    if (!ssl || size > INT_MAX)
         return -EINVAL;
-
-    mbedtls_ssl_context* _ssl = (mbedtls_ssl_context*)ctx->ssl;
 
     size_t written = 0;
     while (written < size) {
-        ret = mbedtls_ssl_write(_ssl, buf + written, size - written);
+        ret = mbedtls_ssl_write(ssl, buf + written, size - written);
         if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
             continue;
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : ret;
+            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
         }
         written += (size_t)ret;
     }
@@ -39,24 +41,22 @@ int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t si
     return (int)written;
 }
 
-int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
+int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size) {
     int ret;
 
-    if (!ctx || !ctx->ssl || size > INT_MAX)
+    if (!ssl || size > INT_MAX)
         return -EINVAL;
-
-    mbedtls_ssl_context* _ssl = (mbedtls_ssl_context*)ctx->ssl;
 
     size_t read = 0;
     while (read < size) {
-        ret = mbedtls_ssl_read(_ssl, buf + read, size - read);
+        ret = mbedtls_ssl_read(ssl, buf + read, size - read);
         if (!ret)
             return -ECONNRESET;
         if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE)
             continue;
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : ret;
+            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
         }
         read += (size_t)ret;
     }
@@ -65,21 +65,19 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
     return (int)read;
 }
 
-int secret_provision_close(struct ra_tls_ctx* ctx) {
-    if (!ctx || !ctx->ssl)
+int secret_provision_common_close(mbedtls_ssl_context* ssl) {
+    if (!ssl)
         return 0;
-
-    mbedtls_ssl_context* _ssl = (mbedtls_ssl_context*)ctx->ssl;
 
     int ret = -1;
     while (ret < 0) {
-        ret = mbedtls_ssl_close_notify(_ssl);
+        ret = mbedtls_ssl_close_notify(ssl);
         if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
             continue;
         }
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : ret;
+            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
         }
     }
     return 0;

@@ -22,9 +22,7 @@
 
 #define DEFAULT_SERVERS "localhost:4433"
 
-struct ra_tls_ctx {
-    void* ssl;
-};
+struct ra_tls_ctx;
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
@@ -64,7 +62,7 @@ __attribute__ ((visibility("default")))
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
 
 /*!
- * \brief Close an established RA-TLS session.
+ * \brief Close an established RA-TLS session and its associated secret.
  *
  * \param ctx  Established RA-TLS session.
  *
@@ -74,6 +72,8 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
  * secret_provision_start() or in the server-side callback secret_provision_cb_t(). Typically,
  * application-specific protocol to provision secrets is implemented via secret_provision_read()
  * and secret_provision_write(), and this function is called to finish secret provisioning.
+ *
+ * This function zeroes out the memory where provisioned secret is stored and frees it.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
@@ -81,6 +81,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
 /*!
  * \brief Get a provisioned secret.
  *
+ * \param      ctx              Established RA-TLS session.
  * \param[out] out_secret       Pointer to buffer with secret (allocated by the library).
  * \param[out] out_secret_size  Size of allocated buffer.
  *
@@ -92,15 +93,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * secret from memory.
  */
 __attribute__ ((visibility("default")))
-int secret_provision_get(uint8_t** out_secret, size_t* out_secret_size);
-
-/*!
- * \brief Destroy a provisioned secret.
- *
- * This function zeroes out the memory where provisioned secret is stored and frees it.
- */
-__attribute__ ((visibility("default")))
-void secret_provision_destroy(void);
+int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size);
 
 /*!
  * \brief Establish an RA-TLS session and retrieve first secret (client-side).
@@ -113,23 +106,22 @@ void secret_provision_destroy(void);
  *                              environment variable `SECRET_PROVISION_CA_CHAIN_PATH` is used. If
  *                              the environment variable is also not specified, function returns
  *                              with error code EINVAL.
- * \param[out] out_ctx          Pointer to an established RA-TLS session. If user supplies NULL,
- *                              then only the first secret is retrieved from the server and the
- *                              RA-TLS session is closed.
+ * \param[out] out_ctx          Pointer to an established RA-TLS session. Cannot be NULL.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
  *
  * This function must be called before other functions. It establishes a secure RA-TLS session
  * with the first available server from the \p in_servers list and retrieves the first secret.
- * If \p out_ssl pointer is supplied by the user, the session is not closed and the user can
- * continue this secure session with the server via secret_provision_read(),
- * secret_provision_write(), and the final secret_provision_close(). The first secret can be
- * retrieved via secret_provision_get() and later destroyed via secret_provision_destroy().
- * Not thread-safe.
+ *
+ * The user can continue this secure session with the server via secret_provision_read() and
+ * secret_provision_write(). The user must finish the session by calling secret_provision_close().
+ *
+ * The first secret can be retrieved via secret_provision_get(). The secret is destroyed together
+ * with the session during secret_provision_close().
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
-                           struct ra_tls_ctx* out_ctx);
+                           struct ra_tls_ctx** out_ctx);
 
 /*!
  * \brief Start a secret provisioning service (server-side).
@@ -156,7 +148,9 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
  * m_cb() for user-specific verification of measurements in client's SGX quote (if user supplied
  * it). After successfuly establishing the RA-TLS session and sending the first secret \p secret,
  * the server invokes a user-supplied callback f_cb() for user-specific communication with the
- * client (if user supplied it). This function is thread-safe and requires pthread library.
+ * client (if user supplied it).
+ *
+ * This function is thread-safe and requires pthread library.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_start_server(uint8_t* secret, size_t secret_size, const char* port,

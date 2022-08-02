@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     int ret;
     int bytes;
 
-    struct ra_tls_ctx ctx = {0};
+    struct ra_tls_ctx* ctx = NULL;
 
     uint8_t* secret1   = NULL;
     size_t secret1_size = 0;
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    ret = secret_provision_get(&secret1, &secret1_size);
+    ret = secret_provision_get(ctx, &secret1, &secret1_size);
     if (ret < 0) {
         fprintf(stderr, "[error] secret_provision_get() returned %d\n", ret);
         goto out;
@@ -55,14 +55,14 @@ int main(int argc, char** argv) {
 
     if (!is_constructor) {
         /* let's ask for another secret (just to show communication with secret-prov server) */
-        bytes = secret_provision_write(&ctx, (uint8_t*)SEND_STRING, sizeof(SEND_STRING));
+        bytes = secret_provision_write(ctx, (uint8_t*)SEND_STRING, sizeof(SEND_STRING));
         if (bytes < 0) {
             fprintf(stderr, "[error] secret_provision_write() returned %d\n", bytes);
             goto out;
         }
 
         /* the secret we expect in return is a 2-char string */
-        bytes = secret_provision_read(&ctx, secret2, sizeof(secret2));
+        bytes = secret_provision_read(ctx, secret2, sizeof(secret2));
         if (bytes < 0) {
             fprintf(stderr, "[error] secret_provision_read() returned %d\n", bytes);
             goto out;
@@ -79,7 +79,6 @@ int main(int argc, char** argv) {
     printf("--- Received secret1 = '%s', secret2 = '%s' ---\n", secret1, secret2);
     ret = 0;
 out:
-    secret_provision_destroy();
-    secret_provision_close(&ctx);
+    secret_provision_close(ctx);
     return ret;
 }
