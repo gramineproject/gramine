@@ -30,54 +30,53 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
     # https://github.com/curl/curl/blob/curl-7_84_0/docs/INSTALL.md#reducing-size
     CPPFLAGS=-I"$MBEDTLS_INC"       \
         ./configure                 \
-        --disable-shared            \
-        --disable-ftp               \
-        --disable-file              \
-        --disable-ldap              \
-        --disable-ldaps             \
-        --disable-rtsp              \
-        --disable-proxy             \
-        --disable-dict              \
-        --disable-telnet            \
-        --disable-tftp              \
-        --disable-pop3              \
-        --disable-imap              \
-        --disable-smb               \
-        --disable-smtp              \
-        --disable-gopher            \
-        --disable-mqtt              \
         --disable-alt-svc           \
         --disable-ares              \
         --disable-cookies           \
         --disable-crypto-auth       \
         --disable-dateparse         \
+        --disable-dict              \
         --disable-dnsshuffle        \
         --disable-doh               \
+        --disable-file              \
+        --disable-ftp               \
         --disable-get-easy-options  \
+        --disable-gopher            \
         --disable-hsts              \
         --disable-http-auth         \
+        --disable-imap              \
+        --disable-ldap              \
+        --disable-ldaps             \
         --disable-libcurl-option    \
         --disable-manual            \
+        --disable-mqtt              \
         --disable-netrc             \
         --disable-ntlm-wb           \
+        --disable-pop3              \
         --disable-progress-meter    \
         --disable-proxy             \
         --disable-pthreads          \
+        --disable-rtsp              \
+        --disable-shared            \
+        --disable-smb               \
+        --disable-smtp              \
         --disable-socketpair        \
+        --disable-telnet            \
+        --disable-tftp              \
         --disable-threaded-resolver \
         --disable-tls-srp           \
         --disable-unix-sockets      \
         --disable-verbose           \
         --disable-versioned-symbols \
+        --with-mbedtls              \
         --without-brotli            \
+        --without-libidn2           \
         --without-libpsl            \
+        --without-librtmp           \
         --without-nghttp2           \
         --without-ngtcp2            \
-        --without-zstd              \
-        --without-libidn2           \
-        --without-librtmp           \
         --without-zlib              \
-        --with-mbedtls              \
+        --without-zstd              \
         >>"$BUILD_LOG" 2>&1
 
     # HACK: We need to configure libcurl with mbedTLS and should not build the curl executable to
