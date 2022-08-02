@@ -280,8 +280,10 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
 
     /* restore cargo handle's FDs from the received FDs-to-transfer */
     struct cmsghdr* control_hdr = CMSG_FIRSTHDR(&message_hdr);
-    if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
+    if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS) {
+        _PalObjectClose(handle);
         return -PAL_ERROR_DENIED;
+    }
 
     if (hdl_hdr.has_fd) {
         assert(control_hdr->cmsg_len == CMSG_LEN(sizeof(int)));
