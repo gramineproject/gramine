@@ -61,12 +61,20 @@ int _DkVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_
         spinlock_unlock(&g_pal_internal_mem_lock);
     }
 
+#if 0
     assert(addr);
+#else
+    if (alloc_type & PAL_ALLOC_RESERVE) {
+        /* magic hint from LibOS that this is shared anon memory -- remove this flag */
+        alloc_type &= ~PAL_ALLOC_RESERVE;
+    }
+#endif
 
     int flags = PAL_MEM_FLAGS_TO_LINUX(alloc_type, prot | PAL_PROT_WRITECOPY);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
-    flags |= MAP_ANONYMOUS | MAP_FIXED;
+    flags |= MAP_ANONYMOUS;
+    flags |= addr ? MAP_FIXED : 0;
     addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
 
     if (IS_PTR_ERR(addr)) {

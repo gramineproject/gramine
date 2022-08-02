@@ -976,11 +976,33 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
 out:
 #if 0
     for (int i = 0; i < sub_regions_cnt; i++) {
-        /* we print 4B memory cells in hope that this memory cell is accessible (only for debug) */
-        uint32_t value = sub_regions[i].encl_addr ? *((uint32_t*)sub_regions[i].encl_addr) : 0;
-        log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%u",
-                  i, sub_regions[i].name, sub_regions[i].size,
-                  sub_regions[i].encl_addr, value);
+        /* only for debug */
+        if (sub_regions[i].size == 1) {
+            uint8_t value = sub_regions[i].encl_addr ? *((uint8_t*)sub_regions[i].encl_addr) : 0;
+            log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%lu",
+                      i, sub_regions[i].name, sub_regions[i].size,
+                      sub_regions[i].encl_addr, (uint64_t)value);
+        } else if (sub_regions[i].size == 2) {
+            uint16_t value = sub_regions[i].encl_addr ? *((uint16_t*)sub_regions[i].encl_addr) : 0;
+            log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%lu",
+                      i, sub_regions[i].name, sub_regions[i].size,
+                      sub_regions[i].encl_addr, (uint64_t)value);
+        } else if (sub_regions[i].size == 4) {
+            uint32_t value = sub_regions[i].encl_addr ? *((uint32_t*)sub_regions[i].encl_addr) : 0;
+            log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%lu",
+                      i, sub_regions[i].name, sub_regions[i].size,
+                      sub_regions[i].encl_addr, (uint64_t)value);
+        } else if (sub_regions[i].size == 8) {
+            uint64_t value = sub_regions[i].encl_addr ? *((uint64_t*)sub_regions[i].encl_addr) : 0;
+            log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%lu",
+                      i, sub_regions[i].name, sub_regions[i].size,
+                      sub_regions[i].encl_addr, (uint64_t)value);
+        } else {
+            uint64_t value = sub_regions[i].encl_addr ? *((uint64_t*)sub_regions[i].encl_addr) : 0;
+            log_error("===== sub_region[%d]: '%s', size=%ld, addr=%p, value=%lu...",
+                      i, sub_regions[i].name, sub_regions[i].size,
+                      sub_regions[i].encl_addr, value);
+        }
     }
 #endif
     for (int i = 0; i < sub_regions_cnt; i++) {
