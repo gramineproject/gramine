@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
@@ -367,77 +368,86 @@ static int poke_regs(int memdev, pid_t tid, struct enclave_dbginfo* ei,
     return poke_gpr(memdev, tid, ei, &gpr);
 }
 
-/* Find corresponding memdevice of thread tid (open and populate on first
- * access). Return 0 on success, -1 on benign failure (enclave in not yet
- * initialized), -2 on other, severe failures.
- *  */
-static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
-    struct enclave_dbginfo eib = {.pid = -1};
+/* Find corresponding memdevice of thread tid (open and populate on first access). Return 0 on
+ * success, -1 on benign failure (enclave in not yet initialized), -2 on other, severe failures. */
+static int open_memdevice(pid_t tid, int* out_memdev, struct enclave_dbginfo** out_ei) {
     char memdev_path[40];
     uint64_t flags;
     int ret;
-    int fd;
+    int fd = -1;
 
     /* Check if corresponding memdevice of this thread was already opened;
      * this works when tid = pid (single-threaded apps) but does not work
      * for other threads of multi-threaded apps, this case covered below */
     for (int i = 0; i < g_memdevs_cnt; i++) {
         if (g_memdevs[i].pid == tid) {
-            *memdev = g_memdevs[i].memdev;
-            *ei = &g_memdevs[i].ei;
-            return update_thread_tids(*ei);
+            *out_memdev = g_memdevs[i].memdev;
+            *out_ei = &g_memdevs[i].ei;
+            return update_thread_tids(*out_ei);
         }
     }
 
-    static_assert(sizeof(eib) % sizeof(long) == 0, "Unsupported eib size");
+    struct enclave_dbginfo* ei = calloc(1, sizeof(*ei));
+    if (!ei) {
+        DEBUG_LOG("Cannot allocate temporary memory\n");
+        ret = -2;
+        goto out;
+    }
+    ei->pid = -1;
 
-    for (size_t off = 0; off < sizeof(eib); off += sizeof(long)) {
+    static_assert(sizeof(*ei) % sizeof(long) == 0, "Unsupported size");
+
+    for (size_t off = 0; off < sizeof(*ei); off += sizeof(long)) {
         errno = 0;
         long val = host_ptrace(PTRACE_PEEKDATA, tid, (void*)DBGINFO_ADDR + off, NULL);
         if (val < 0 && errno != 0) {
             /* benign failure: enclave is not yet initialized */
-            return -1;
+            ret = -1;
+            goto out;
         }
 
-        memcpy((void*)&eib + off, &val, sizeof(val));
+        memcpy((char*)ei + off, &val, sizeof(val));
     }
 
     /* Check again if corresponding memdevice was already opened but now
-     * using actual pid of app (eib.pid), case for multi-threaded apps */
+     * using actual pid of app (ei.pid), case for multi-threaded apps */
     for (int i = 0; i < g_memdevs_cnt; i++) {
-        if (g_memdevs[i].pid == eib.pid) {
-            *memdev = g_memdevs[i].memdev;
-            *ei = &g_memdevs[i].ei;
-            return update_thread_tids(*ei);
+        if (g_memdevs[i].pid == ei->pid) {
+            *out_memdev = g_memdevs[i].memdev;
+            *out_ei = &g_memdevs[i].ei;
+            ret = update_thread_tids(*out_ei);
+            goto out;
         }
     }
 
-    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", eib.pid);
+    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", ei->pid);
 
     if (g_memdevs_cnt == sizeof(g_memdevs) / sizeof(g_memdevs[0])) {
         DEBUG_LOG("Too many debugged processes (max = %d)\n", g_memdevs_cnt);
-        return -2;
+        ret = -2;
+        goto out;
     }
 
     snprintf(memdev_path, sizeof(memdev_path), "/proc/%d/mem", tid);
     fd = open(memdev_path, O_RDWR);
     if (fd < 0) {
         DEBUG_LOG("Cannot open %s\n", memdev_path);
-        return -2;
+        ret = -2;
+        goto out;
     }
 
     /* setting debug bit in TCS flags */
     for (int i = 0; i < MAX_DBG_THREADS; i++) {
-        if (!eib.tcs_addrs[i])
+        if (!ei->tcs_addrs[i])
             continue;
 
-        void* flags_addr = eib.tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
+        void* flags_addr = ei->tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
 
         ssize_t bytes_read = pread(fd, &flags, sizeof(flags), (off_t)flags_addr);
         if (bytes_read < 0 || (size_t)bytes_read < sizeof(flags)) {
             DEBUG_LOG("Cannot read TCS flags (address = %p)\n", flags_addr);
             ret = -2;
-            goto out_err;
+            goto out;
         }
 
         if (flags & TCS_FLAGS_DBGOPTIN)
@@ -450,23 +460,25 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
         if (bytes_written < 0 || (size_t)bytes_written < sizeof(flags)) {
             DEBUG_LOG("Cannot write TCS flags (address = %p)\n", flags_addr);
             ret = -2;
-            goto out_err;
+            goto out;
         }
     }
 
-    g_memdevs[g_memdevs_cnt].pid    = eib.pid;
+    g_memdevs[g_memdevs_cnt].pid    = ei->pid;
     g_memdevs[g_memdevs_cnt].memdev = fd;
-    g_memdevs[g_memdevs_cnt].ei     = eib;
+    g_memdevs[g_memdevs_cnt].ei     = *ei;
     memset(g_memdevs[g_memdevs_cnt].ei.thread_stepping, 0,
            sizeof(g_memdevs[g_memdevs_cnt].ei.thread_stepping));
 
-    *memdev = fd;
-    *ei = &g_memdevs[g_memdevs_cnt].ei;
+    *out_memdev = fd;
+    *out_ei = &g_memdevs[g_memdevs_cnt].ei;
     g_memdevs_cnt++;
 
-    return 0;
-out_err:
-    close(fd);
+    ret = 0;
+out:
+    if (ret < 0 && fd >= 0)
+        close(fd);
+    free(ei);
     return ret;
 }
 

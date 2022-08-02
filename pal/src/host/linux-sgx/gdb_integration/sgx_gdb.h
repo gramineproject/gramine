@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define MAX_DBG_THREADS 1024
+#define MAX_DBG_THREADS 4096
 
 /*
  * Pre-defined address at which Gramine-SGX writes the `enclave_dbginfo` object, and periodically
