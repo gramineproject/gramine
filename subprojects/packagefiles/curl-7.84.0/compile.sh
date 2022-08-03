@@ -82,12 +82,12 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
     # HACK: We need to configure libcurl with mbedTLS and should not build the curl executable to
     # avoid it being linked with the mbedTLS library.
     # To achieve this, overriding the curl config to force using mbedTLS (even if curl does not
-    # detects it) and disabling in Makefile (which is not supported by curl autotools) the building
+    # detect it) and disabling in Makefile (which is not supported by curl autotools) the building
     # of the curl executable.
     BDL_PATH='\"\/etc\/ssl\/certs\/ca-certificates\.crt\"'
     sed -i "s|/\* #undef USE_MBEDTLS \*/|#define USE_MBEDTLS 1|" lib/curl_config.h
     sed -i "s|/\* #undef CURL_CA_BUNDLE \*/|#define CURL_CA_BUNDLE $BDL_PATH|" lib/curl_config.h
-    sed -i "s/SUBDIRS = lib src/SUBDIRS = lib # src/" Makefile
+    sed -i "s/SUBDIRS = lib src/SUBDIRS = lib/" Makefile
 
     log "running make..."
     make -j"$(nproc)" >>"$BUILD_LOG" 2>&1
