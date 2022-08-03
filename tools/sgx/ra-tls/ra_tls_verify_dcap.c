@@ -135,7 +135,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     uint32_t collateral_expiration_status  = 1;
     sgx_ql_qv_result_t verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
 
-    /* call into libsgx_dcap_quoteverify to verify ECDSA/based SGX quote */
+    /* call into libsgx_dcap_quoteverify to verify ECDSA-based SGX quote */
     ret = sgx_qv_verify_quote((uint8_t*)quote, (uint32_t)quote_size, /*p_quote_collateral=*/NULL,
                               current_time, &collateral_expiration_status, &verification_result,
                               /*p_qve_report_info=*/NULL, supplemental_data_size,
