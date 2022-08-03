@@ -11,15 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 
-/*
- * HACK: Since we don't have access to mbedtls headers here (mbedtls is built as a Meson suproject,
- * and this file is compiled using Make), we inline the relevant definitions.
- *
- * As soon as this test is built using Meson, use #include instead of the below definitions.
- */
-
-// #include "mbedtls/base64.h"
-// #include "mbedtls/cmac.h"
+#include "mbedtls/cipher.h"
+#include "mbedtls/cmac.h"
 
 #define MANIFEST_KEY "ffeeddccbbaa99887766554433221100"
 #define NEW_KEY      "00112233445566778899aabbccddeeff"
@@ -27,20 +20,6 @@
 #define KEY_LEN 32
 
 #define KEY_PATH "/dev/attestation/protected_files_key"
-
-typedef enum {
-    MBEDTLS_CIPHER_AES_128_ECB = 2,
-} mbedtls_cipher_type_t;
-
-typedef struct mbedtls_cipher_context_t mbedtls_cipher_context_t;
-typedef struct mbedtls_cipher_info_t mbedtls_cipher_info_t;
-
-const mbedtls_cipher_info_t* mbedtls_cipher_info_from_type(const mbedtls_cipher_type_t cipher_type);
-int mbedtls_cipher_cmac(const mbedtls_cipher_info_t* cipher_info,
-                        const unsigned char* key, size_t keylen,
-                        const unsigned char* input, size_t ilen,
-                        unsigned char* output);
-int mbedtls_cipher_cmac_finish(mbedtls_cipher_context_t* ctx, unsigned char* output);
 
 #include "enclave_api.h"
 #include "rw_file.h"
