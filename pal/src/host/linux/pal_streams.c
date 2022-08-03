@@ -272,6 +272,10 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (ret < 0)
         return unix_to_pal_error(ret);
 
+    struct cmsghdr* control_hdr = CMSG_FIRSTHDR(&message_hdr);
+    if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
+        return -PAL_ERROR_DENIED;
+
     /* deserialize cargo handle from a blob hdl_data */
     PAL_HANDLE handle = NULL;
     ret = handle_deserialize(&handle, hdl_data, hdl_hdr.data_size);
@@ -279,12 +283,6 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return ret;
 
     /* restore cargo handle's FDs from the received FDs-to-transfer */
-    struct cmsghdr* control_hdr = CMSG_FIRSTHDR(&message_hdr);
-    if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS) {
-        _PalObjectClose(handle);
-        return -PAL_ERROR_DENIED;
-    }
-
     if (hdl_hdr.has_fd) {
         assert(control_hdr->cmsg_len == CMSG_LEN(sizeof(int)));
         memcpy(&handle->generic.fd, CMSG_DATA(control_hdr), sizeof(int));
