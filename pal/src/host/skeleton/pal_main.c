@@ -14,6 +14,7 @@
 /* must implement "pal_start", and call "pal_main" inside */
 void pal_start(void);
 
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
+void _PalGetAvailableUserAddressRange(void** out_private_start, void** out_private_end,
+                                      void** out_shared_start, void** out_shared_end) {
     /* needs to be implemented */
 }

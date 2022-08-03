@@ -61,9 +61,10 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         return -EINVAL;
     }
 
-    if (brk_start && brk_start <= g_pal_public_state->user_address_end
-            && brk_max_size <= (uintptr_t)g_pal_public_state->user_address_end
-            && (uintptr_t)brk_start < (uintptr_t)g_pal_public_state->user_address_end - brk_max_size) {
+    if (brk_start && brk_start <= g_pal_public_state->private_user_address_end
+            && brk_max_size <= (uintptr_t)g_pal_public_state->private_user_address_end
+            && (uintptr_t)brk_start <
+               (uintptr_t)g_pal_public_state->private_user_address_end - brk_max_size) {
         int ret;
         size_t offset = 0;
 
@@ -74,8 +75,9 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
             }
             /* Linux randomizes brk at offset from 0 to 0x2000000 from main executable data section
              * https://elixir.bootlin.com/linux/v5.6.3/source/arch/x86/kernel/process.c#L914 */
-            offset %= MIN((size_t)0x2000000, (size_t)((char*)g_pal_public_state->user_address_end -
-                                                      brk_max_size - (char*)brk_start));
+            offset %= MIN((size_t)0x2000000,
+                          (size_t)((char*)g_pal_public_state->private_user_address_end -
+                                   brk_max_size - (char*)brk_start));
             offset = ALLOC_ALIGN_DOWN(offset);
         }
 

@@ -264,6 +264,15 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     void* mem = *addr;
 
+    /* If the address is within shared address, map the file outside of enclave. */
+    if ((mem >= g_pal_public_state.shared_user_address_start && 
+                  mem + size <= g_pal_public_state.shared_user_address_end)) {
+        ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
+                                   handle->file.fd, offset);
+        if (ret >= 0)
+            *addr = mem;
+        return ret < 0 ? unix_to_pal_error(ret) : ret;
+    }
     /* If the file is listed in the manifest as an "allowed" file, we allow mapping the file outside
      * the enclave, if the library OS does not request a specific address. */
     if (!mem && !chunk_hashes && !(prot & PAL_PROT_WRITECOPY)) {

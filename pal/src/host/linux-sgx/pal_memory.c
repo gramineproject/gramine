@@ -10,8 +10,10 @@
 #include "enclave_pages.h"
 #include "pal.h"
 #include "pal_error.h"
+#include "pal_flags_conv.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "pal_linux_error.h"
 
 extern size_t g_allocated_pages;
 
@@ -38,6 +40,16 @@ int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t all
         return -PAL_ERROR_INVAL;
 
     void* addr = *addr_ptr;
+
+    if (alloc_type & PAL_ALLOC_SHARED) {
+        int flags = PAL_MEM_FLAGS_TO_LINUX(alloc_type, prot | PAL_PROT_WRITECOPY);
+        int linux_prot = PAL_PROT_TO_LINUX(prot);
+        flags |= MAP_ANONYMOUS | MAP_FIXED;
+        int ret = ocall_mmap_untrusted(addr_ptr, size, linux_prot, flags, /*fd=*/-1, /*offset=*/0);
+        if (ret < 0)
+            return unix_to_pal_error(ret);
+        return 0;
+    }
 
     void* mem = get_enclave_pages(addr, size, alloc_type & PAL_ALLOC_INTERNAL);
     if (!mem)

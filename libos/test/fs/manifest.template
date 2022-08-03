@@ -16,6 +16,7 @@ fs.mounts = [
   { type = "encrypted", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
   { type = "encrypted", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
   { type = "tmpfs", path = "/mnt-tmpfs" },
+  { type = "shm" },
 ]
 
 fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"

@@ -601,8 +601,8 @@ int receive_checkpoint_and_restore(struct checkpoint_hdr* hdr) {
     size_t mapsize = (char*)ALLOC_ALIGN_UP_PTR(base + hdr->size) - (char*)mapaddr;
 
     /* first try allocating at address used by parent process */
-    if (g_pal_public_state->user_address_start <= mapaddr &&
-            mapaddr + mapsize <= g_pal_public_state->user_address_end) {
+    if (g_pal_public_state->private_user_address_start <= mapaddr &&
+            mapaddr + mapsize <= g_pal_public_state->private_user_address_end) {
         ret = bkeep_mmap_fixed(mapaddr, mapsize, PROT_READ | PROT_WRITE,
                                CP_MMAP_FLAGS | MAP_FIXED_NOREPLACE, NULL, 0, "cpstore");
         if (ret < 0) {

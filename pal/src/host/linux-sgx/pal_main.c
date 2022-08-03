@@ -35,19 +35,37 @@ size_t g_pal_internal_mem_size = PAL_INITIAL_MEM_SIZE;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
-    *out_start = g_pal_linuxsgx_state.heap_min;
-    *out_end   = g_pal_linuxsgx_state.heap_max;
+void _PalGetAvailableUserAddressRange(void** out_private_start, void** out_private_end,
+                                      void** out_shared_start, void** out_shared_end) {
+    *out_private_start = g_pal_linuxsgx_state.heap_min;
+    *out_private_end   = g_pal_linuxsgx_state.heap_max;
 
     /* Keep some heap for internal PAL objects allocated at runtime (recall that LibOS does not keep
      * track of PAL memory, so without this limit it could overwrite internal PAL memory). See also
      * `enclave_pages.c`. */
-    *out_end = SATURATED_P_SUB(*out_end, g_pal_internal_mem_size, *out_start);
+    *out_private_end = SATURATED_P_SUB(*out_private_end, g_pal_internal_mem_size,
+                                       *out_private_start);
 
-    if (*out_end <= *out_start) {
+    if (*out_private_end <= *out_private_start) {
         log_error("Not enough enclave memory, please increase enclave size!");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    void* shared_heap_start = (void*)SHARED_HEAP_MIN;
+    while (1) {
+        int ret = _PalVirtualMemoryAlloc(&shared_heap_start, SHARED_HEAP_SIZE, PAL_ALLOC_SHARED,
+                                         PROT_NONE);
+        if (ret == 0) 
+            break;
+        if (shared_heap_start > (void*)((unsigned long)shared_heap_start << 1)) {
+            log_error("Not enough shared memory.");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+        shared_heap_start = (void*)((unsigned long)shared_heap_start << 1);
+    }
+
+    *out_shared_start = shared_heap_start;
+    *out_shared_end = shared_heap_start + SHARED_HEAP_SIZE;
 }
 
 /*

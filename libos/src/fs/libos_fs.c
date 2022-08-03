@@ -31,6 +31,7 @@ static struct libos_fs* g_builtin_fs[] = {
     &pseudo_builtin_fs,
     &synthetic_builtin_fs,
     &path_builtin_fs,
+    &shm_builtin_fs,
 };
 
 static struct libos_lock g_mount_mgr_lock;
@@ -232,29 +233,31 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     }
 
     if (!mount_path) {
-        log_error("No value provided for '%s.path'", prefix);
-        ret = -EINVAL;
-        goto out;
-    }
-
-    if (!strcmp(mount_path, "/")) {
-        log_error("'%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
-                  "via the 'fs.root' manifest entry.", prefix);
-        ret = -EINVAL;
-        goto out;
-    }
-
-    if (mount_path[0] != '/') {
-        /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow them
-         * completely two versions after it. */
-        if (is_dot_or_dotdot(mount_path)) {
-            log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
+        if (!mount_type || strcmp(mount_type, "shm")) {
+            log_error("No value provided for '%s.path'", prefix);
             ret = -EINVAL;
             goto out;
         }
-        log_error("Detected deprecated syntax: '%s.path' (\"%s\") is not absolute. "
-                  "Consider converting it to absolute by adding \"/\" at the beginning.",
-                  prefix, mount_path);
+    } else {
+        if (!strcmp(mount_path, "/")) {
+            log_error("'%s.path' cannot be \"/\". The root mount (\"/\") can be customized "
+                    "via the 'fs.root' manifest entry.", prefix);
+            ret = -EINVAL;
+            goto out;
+        }
+
+        if (mount_path[0] != '/') {
+            /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow
+             * them completely two versions after it. */
+            if (is_dot_or_dotdot(mount_path)) {
+                log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
+                ret = -EINVAL;
+                goto out;
+            }
+            log_error("Detected deprecated syntax: '%s.path' (\"%s\") is not absolute. "
+                    "Consider converting it to absolute by adding \"/\" at the beginning.",
+                    prefix, mount_path);
+        }
     }
 
     if (!mount_type || !strcmp(mount_type, "chroot")) {
@@ -282,6 +285,10 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         .uri = mount_uri,
         .key_name = mount_key_name,
     };
+    if (!strcmp(params.type, "shm")) {
+        params.path = "/dev/shm/";
+        params.uri = "file:/dev/shm/";
+    }
     ret = mount_fs(&params);
 
 out:

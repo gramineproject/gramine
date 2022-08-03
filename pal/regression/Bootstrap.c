@@ -28,12 +28,20 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Allocation Alignment: %ld\n", pal_public_state->alloc_align);
 
     /* user address range */
-    pal_printf("User Address Range: %p - %p\n", pal_public_state->user_address_start,
-               pal_public_state->user_address_end);
+    pal_printf("Private User Address Range: %p - %p\n", pal_public_state->private_user_address_start,
+               pal_public_state->private_user_address_end);
 
-    if (pal_public_state->user_address_start && pal_public_state->user_address_end &&
-        pal_public_state->user_address_start < pal_public_state->user_address_end)
-        pal_printf("User Address Range OK\n");
+    if (pal_public_state->private_user_address_start && pal_public_state->private_user_address_end &&
+        pal_public_state->private_user_address_start < pal_public_state->private_user_address_end)
+        pal_printf("Private User Address Range OK\n");
+
+    pal_printf("Shared User Address Range: %p - %p\n",pal_public_state->shared_user_address_start,
+               pal_public_state->shared_user_address_end);
+
+    if (pal_public_state->shared_user_address_start && pal_public_state->shared_user_address_end &&
+        pal_public_state->shared_user_address_start < pal_public_state->shared_user_address_end &&
+        pal_public_state->private_user_address_end <= pal_public_state->shared_user_address_start)
+        pal_printf("Shared User Address Range OK\n");
 
     const struct pal_cpu_info* ci = &pal_public_state->cpu_info;
     pal_printf("CPU num: %zu\n",      pal_public_state->topo_info.threads_cnt);

@@ -107,8 +107,10 @@ struct pal_public_state {
      * Memory layout
      */
     bool disable_aslr;        /*!< disable ASLR (may be necessary for restricted environments) */
-    void* user_address_start; /*!< User address range start */
-    void* user_address_end;   /*!< User address range end */
+    void* private_user_address_start; /*!< Private user address range start */
+    void* private_user_address_end;   /*!< Private user address range end */
+    void* shared_user_address_start;  /*!< Shared user address range start */
+    void* shared_user_address_end;    /*!< Shared user address range end */
 
     struct {
         uintptr_t start;
@@ -148,7 +150,8 @@ struct pal_public_state* PalGetPalPublicState(void);
 typedef uint32_t pal_alloc_flags_t; /* bitfield */
 #define PAL_ALLOC_RESERVE  0x1 /*!< Only reserve the memory */
 #define PAL_ALLOC_INTERNAL 0x2 /*!< Allocate for PAL (valid only if #IN_PAL) */
-#define PAL_ALLOC_MASK     0x3
+#define PAL_ALLOC_SHARED   0x4 /*!< Allocate for shared memory */
+#define PAL_ALLOC_MASK     0x7
 
 /*! memory protection flags */
 typedef uint32_t pal_prot_flags_t; /* bitfield */

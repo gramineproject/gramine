@@ -49,6 +49,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                          unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
+    void* user_address_start, *user_address_end = NULL;
+    pal_alloc_flags_t alloc_type = 0;
 
     if (!(flags & MAP_FIXED) && addr)
         addr = ALLOC_ALIGN_DOWN_PTR(addr);
@@ -130,11 +132,21 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     if ((flags & (MAP_32BIT | MAP_FIXED)) == (MAP_32BIT | MAP_FIXED))
         flags &= ~MAP_32BIT;
 #endif
+    if (flags & MAP_SHARED && hdl && !strcmp(hdl->fs->name, "shm")) {
+        user_address_start = g_pal_public_state->shared_user_address_start;
+        user_address_end = g_pal_public_state->shared_user_address_end;
+        alloc_type = PAL_ALLOC_SHARED;
+    }
+    else {
+        user_address_start = g_pal_public_state->private_user_address_start;
+        user_address_end = g_pal_public_state->private_user_address_end;
+        alloc_type = 0;
+    }
 
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < g_pal_public_state->user_address_start
-                || (uintptr_t)g_pal_public_state->user_address_end < (uintptr_t)addr + length) {
+        if (addr < user_address_start
+                || (uintptr_t)user_address_end < (uintptr_t)addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
@@ -151,9 +163,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr && (uintptr_t)g_pal_public_state->user_address_start <= (uintptr_t)addr
-                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->user_address_end) {
-            ret = bkeep_mmap_any_in_range(g_pal_public_state->user_address_start,
+        if (addr && (uintptr_t)user_address_start <= (uintptr_t)addr
+                && (uintptr_t)addr + length <= (uintptr_t)user_address_end) {
+            ret = bkeep_mmap_any_in_range(user_address_start,
                                           (char*)addr + length, length, prot, flags, hdl, offset,
                                           NULL, &addr);
         } else {
@@ -162,8 +174,12 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
         if (ret < 0) {
             /* We either had no hinted address or could not allocate memory at it. */
-            ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
-        }
+            if (alloc_type == PAL_ALLOC_SHARED) {
+                ret = bkeep_mmap_any_in_range(user_address_start,user_address_end, length, prot, flags, hdl, offset, NULL, &addr);
+            } else {
+                ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
+            }
+       }
         if (ret < 0) {
             ret = -ENOMEM;
             goto out_handle;
@@ -173,7 +189,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
 
     if (!hdl) {
-        ret = PalVirtualMemoryAlloc(&addr, length, 0, LINUX_PROT_TO_PAL(prot, flags));
+        ret = PalVirtualMemoryAlloc(&addr, length, alloc_type, LINUX_PROT_TO_PAL(prot, flags));
         if (ret < 0) {
             if (ret == -PAL_ERROR_DENIED) {
                 ret = -EPERM;

@@ -25,6 +25,7 @@ static inline int PAL_MEM_FLAGS_TO_LINUX(pal_alloc_flags_t alloc_type, pal_prot_
     assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
 
     return (alloc_type & PAL_ALLOC_RESERVE ? MAP_NORESERVE | MAP_UNINITIALIZED : 0) |
+           (alloc_type & PAL_ALLOC_SHARED  ? MAP_NORESERVE | MAP_UNINITIALIZED : 0) |
            (prot & PAL_PROT_WRITECOPY      ? MAP_PRIVATE : MAP_SHARED);
 }
 

@@ -172,7 +172,8 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 
 /* For initialization */
 
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end);
+void _PalGetAvailableUserAddressRange(void** out_private_start, void** out_private_end,
+                                      void** out_shared_start, void** out_shared_end);
 bool _PalCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _PalMemoryQuota(void);
 unsigned long _PalMemoryAvailableQuota(void);
@@ -314,3 +315,10 @@ const char* pal_event_name(enum pal_event event);
 /* Size of PAL memory available before parsing the manifest; `loader.pal_internal_mem_size` does not
  * include this memory */
 #define PAL_INITIAL_MEM_SIZE (64 * 1024 * 1024)
+
+/*
+ * The address should be in untrusted memory (outside of enclave), and should not overlap with the
+ * ASan shadow memory area (see `asan.h`) or DBGINFO_ADDR (see `sgx_gdb.h`).
+ */
+#define SHARED_HEAP_MIN 0x40000000000ULL /* 4TB */
+#define SHARED_HEAP_SIZE 0x10000000000ULL /* 1TB */

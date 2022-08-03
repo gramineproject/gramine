@@ -60,7 +60,7 @@ int main(int argc, char** argv, char** envp) {
 
         /* test file map */
 
-        void* mem1 = (void*)PalGetPalPublicState()->user_address_start;
+        void* mem1 = (void*)PalGetPalPublicState()->private_user_address_start;
         ret = PalStreamMap(file1, &mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
         if (ret >= 0 && mem1) {
             memcpy(buffer1, mem1, 40);

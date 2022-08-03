@@ -385,6 +385,11 @@ Gramine currently supports the following types of mount points:
   process has its own, non-shared tmpfs (i.e. processes don't see each other's
   files).
 
+* ``shm``: shared-memory files. A host-level path ``/dev/shm/`` is visible to
+  graminized application as ``/dev/shm/``. Files under ``/dev/shm/`` support
+  read-write pass-through mmap and fork/clone. The ``[URI]`` and ``[PATH]``
+  parameters are always ignored, and can be omitted.
+
 Start (current working) directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
