@@ -340,7 +340,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     areas = (struct mem_area*)DO_SYSCALL(mmap, NULL, areas_size, PROT_READ | PROT_WRITE,
                                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (IS_PTR_ERR(areas)) {
-        log_error("Allocating memory failed");
+        log_error("Allocating memory failed (%ld)", PTR_TO_ERR(areas));
         areas = NULL;
         ret = -ENOMEM;
         goto out;
