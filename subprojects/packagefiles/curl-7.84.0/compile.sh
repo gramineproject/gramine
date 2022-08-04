@@ -25,6 +25,11 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 (
     cd "$PRIVATE_DIR"
 
+    # HACK: We need to configure libcurl with mbedTLS (even if curl does not detect it). Thus
+    # patching the configure file here so that it forces the mbedTLS check to always pass.
+    sed -i "s|mbedtls_havege_init=no|mbedtls_havege_init=yes|" configure
+    sed -i "s|      LIBS=\"-lmbedtls -lmbedx509 -lmbedcrypto \$LIBS\"||" configure
+
     log "running configure..."
     # The list of configure options is selected based on:
     # https://github.com/curl/curl/blob/curl-7_84_0/docs/INSTALL.md#reducing-size
@@ -79,18 +84,10 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --without-zstd              \
         >>"$BUILD_LOG" 2>&1
 
-    # HACK: We need to configure libcurl with mbedTLS and should not build the curl executable to
-    # avoid it being linked with the mbedTLS library.
-    # To achieve this, overriding the curl config to force using mbedTLS (even if curl does not
-    # detect it) and disabling in Makefile (which is not supported by curl autotools) the building
-    # of the curl executable.
-    BDL_PATH='\"\/etc\/ssl\/certs\/ca-certificates\.crt\"'
-    sed -i "s|/\* #undef USE_MBEDTLS \*/|#define USE_MBEDTLS 1|" lib/curl_config.h
-    sed -i "s|/\* #undef CURL_CA_BUNDLE \*/|#define CURL_CA_BUNDLE $BDL_PATH|" lib/curl_config.h
-    sed -i "s/SUBDIRS = lib src/SUBDIRS = lib/" Makefile
-
+    # Only build libcurl since building the curl executable requires a linking stage which will fail
+    # if there is no mbedTLS installed on the host.
     log "running make..."
-    make -j"$(nproc)" >>"$BUILD_LOG" 2>&1
+    cd lib; make -j"$(nproc)" >>"$BUILD_LOG" 2>&1
 )
 
 cp -r "$PRIVATE_DIR"/lib/.libs/* "$CURRENT_BUILD_DIR"/
