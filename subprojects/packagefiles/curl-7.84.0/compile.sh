@@ -22,13 +22,13 @@ log "preparing sources..."
 rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
+for patch in "$CURRENT_SOURCE_DIR"/*.patch
+do
+    patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
+done
+
 (
     cd "$PRIVATE_DIR"
-
-    # HACK: We need to configure libcurl with mbedTLS (even if curl does not detect it). Thus
-    # patching the configure file here so that it forces the mbedTLS check to always pass.
-    sed -i "s|mbedtls_havege_init=no|mbedtls_havege_init=yes|" configure
-    sed -i "s|      LIBS=\"-lmbedtls -lmbedx509 -lmbedcrypto \$LIBS\"||" configure
 
     log "running configure..."
     # The list of configure options is selected based on:
