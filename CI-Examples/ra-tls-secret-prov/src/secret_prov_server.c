@@ -99,6 +99,8 @@ out:
 
 int main(int argc, char** argv) {
     int ret;
+    char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
+    ssize_t bytes_read = 0;
 
     ret = pthread_mutex_init(&g_print_lock, NULL);
     if (ret < 0)
@@ -106,13 +108,12 @@ int main(int argc, char** argv) {
 
     if (argc < 2) {
         puts("--- No master key is provided, proceeding with a random key ---");
-        static_assert(sizeof(g_secret_string) >= WRAP_KEY_SIZE,
-                      "size of g_secret_string is too small");
-        ssize_t size = getrandom(g_secret_string, WRAP_KEY_SIZE, GRND_NONBLOCK);
+        ssize_t size = getrandom(buf, WRAP_KEY_SIZE, GRND_NONBLOCK);
         if (size <= 0) {
             fprintf(stderr, "[error] cannot generate a random key");
             return 1;
         }
+        bytes_read = size;
     } else {
         printf("--- Reading the master key for encrypted files from '%s' ---\n", argv[1]);
         int fd = open(argv[1], O_RDONLY);
@@ -120,8 +121,6 @@ int main(int argc, char** argv) {
             fprintf(stderr, "[error] cannot open %s\n", argv[1]);
             return 1;
         }
-        char buf[WRAP_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
-        ssize_t bytes_read = 0;
         while (1) {
             ssize_t ret = read(fd, buf + bytes_read, sizeof(buf) - bytes_read);
             if (ret > 0) {
@@ -148,11 +147,10 @@ int main(int argc, char** argv) {
             fprintf(stderr, "[error] encryption key from %s is not 16B in size\n", argv[1]);
             return 1;
         }
-
-        uint8_t* ptr = (uint8_t*)buf;
-        for (size_t i = 0; i < bytes_read; i++)
-            sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
     }
+    uint8_t* ptr = (uint8_t*)buf;
+    for (size_t i = 0; i < bytes_read; i++)
+        sprintf(&g_secret_string[i * 2], "%02x", ptr[i]);
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
     ret = secret_provision_start_server((uint8_t*)g_secret_string, sizeof(g_secret_string),
