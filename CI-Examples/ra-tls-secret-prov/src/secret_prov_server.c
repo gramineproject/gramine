@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/random.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -17,7 +18,6 @@
 
 #define EXPECTED_STRING "MORE"
 #define SECRET_STRING "42" /* answer to ultimate question of life, universe, and everything */
-#define DUMMY_KEY "FEDCBA9876543210FEDCBA9876543210"
 
 #define WRAP_KEY_SIZE     16
 
@@ -105,10 +105,14 @@ int main(int argc, char** argv) {
         return ret;
 
     if (argc < 2) {
-        puts("--- No master key is provided, proceeding with a dummy key ---");
-        static_assert(sizeof(g_secret_string) >= sizeof(DUMMY_KEY),
+        puts("--- No master key is provided, proceeding with a random key ---");
+        static_assert(sizeof(g_secret_string) >= WRAP_KEY_SIZE,
                       "size of g_secret_string is too small");
-        strcpy(g_secret_string, DUMMY_KEY);
+        ssize_t size = getrandom(g_secret_string, WRAP_KEY_SIZE, GRND_NONBLOCK);
+        if (size <= 0) {
+            fprintf(stderr, "[error] cannot generate a random key");
+            return 1;
+        }
     } else {
         printf("--- Reading the master key for encrypted files from '%s' ---\n", argv[1]);
         int fd = open(argv[1], O_RDONLY);

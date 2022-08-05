@@ -21,9 +21,9 @@ server listens for client connections. For each connected client, the server
 verifies the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends the first secret back to the client (the master key
 for encrypted files, read from `files/wrap-key` that is passed as a command-line
-argument while running the server, or a 16B dummy key `FEDCBA9876543210FEDCBA9876543210`
-if no command-line argument is provided). If the client requests a second secret,
-the server sends the dummy string `42` as the second secret.
+argument while running the server, or a 16B random key if no command-line argument
+is provided). If the client requests a second secret, the server sends the dummy
+string `42` as the second secret.
 
 There are two versions of the server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
