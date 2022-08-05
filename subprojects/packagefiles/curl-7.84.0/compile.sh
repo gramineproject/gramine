@@ -9,7 +9,7 @@ log() {
 CURRENT_SOURCE_DIR="$1"
 CURRENT_BUILD_DIR="$2"
 PRIVATE_DIR="$3"
-MBEDTLS_INC="$4"
+SUBPROJ_ROOT="$4"
 shift 4
 
 BUILD_LOG=$(realpath "$CURRENT_BUILD_DIR/curl-build.log")
@@ -22,10 +22,10 @@ log "preparing sources..."
 rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
-for patch in "$CURRENT_SOURCE_DIR"/*.patch
-do
-    patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
-done
+# for patch in "$CURRENT_SOURCE_DIR"/*.patch
+# do
+#     patch --quiet -p1 --directory "$PRIVATE_DIR" <"$patch"
+# done
 
 (
     cd "$PRIVATE_DIR"
@@ -33,7 +33,6 @@ done
     log "running configure..."
     # The list of configure options is selected based on:
     # https://github.com/curl/curl/blob/curl-7_84_0/docs/INSTALL.md#reducing-size
-    CPPFLAGS=-I"$MBEDTLS_INC"       \
         ./configure                 \
         --disable-alt-svc           \
         --disable-ares              \
@@ -73,7 +72,7 @@ done
         --disable-unix-sockets      \
         --disable-verbose           \
         --disable-versioned-symbols \
-        --with-mbedtls              \
+        --with-mbedtls="$SUBPROJ_ROOT"/mbedtls-curl              \
         --without-brotli            \
         --without-libidn2           \
         --without-libpsl            \

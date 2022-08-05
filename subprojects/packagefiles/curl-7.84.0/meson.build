@@ -1,13 +1,14 @@
 project('curl', 'c', version: '7.84.0')
 
-mbedtls_inc = join_paths(
-    meson.source_root(),
-    'subprojects/mbedtls-mbedtls-3.2.1/mbedtls-mbedtls-3.2.1/include',
-)
+mbedtls_gramine = dependency('mbedtls_proj')
 
 curl_libs_output = [
     'libcurl.a',
 ]
+
+libmbedtls = static_library('mbedtls',
+    dependencies: mbedtls_gramine,
+)
 
 curl = custom_target('curl',
     command: [
@@ -15,10 +16,12 @@ curl = custom_target('curl',
         '@CURRENT_SOURCE_DIR@',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
-        mbedtls_inc,
+        '@0@'.format(join_paths(meson.build_root(), 'subprojects')),
     ],
 
     output: curl_libs_output,
+
+    depends: libmbedtls,
 )
 
 curl_minimal_dep = declare_dependency(
