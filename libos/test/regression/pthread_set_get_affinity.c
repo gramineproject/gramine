@@ -21,20 +21,31 @@
 #define INTERNAL_THREAD_CNT     2
 #define MANIFEST_SGX_THREAD_CNT 8 /* corresponds to sgx.thread_num in the manifest template */
 
+struct parent_to_child_args {
+    unsigned int thread_affinity;
+    uint64_t iterations;
+};
+
 /* barrier to synchronize between parent and children */
 pthread_barrier_t barrier;
 
 /* Run a busy loop for some iterations, so that we can verify affinity with htop manually */
 static void* dowork(void* args) {
-    volatile uint64_t iterations = *(uint64_t*)args;
+    struct parent_to_child_args* thread_args = (struct parent_to_child_args*)args;
 
-    while (iterations != 0)
-        iterations--;
+    while (thread_args->iterations != 0)
+        thread_args->iterations--;
+
+    /* Preempt the thread to ensure parent can set its affinity before invoking `getcpu` */
+    sleep(1);
 
     unsigned int cpu, node;
     int ret = syscall(SYS_getcpu, &cpu, &node);
     if (ret < 0)
         err(EXIT_FAILURE, "getcpu failed!");
+
+    if (cpu != thread_args->thread_affinity)
+        err(EXIT_FAILURE, "Expected cpu = %d returned cpu = %d", thread_args->thread_affinity, cpu);
 
     printf("Thread %ld is running on cpu: %u, node: %u\n", syscall(SYS_gettid), cpu, node);
 
@@ -73,13 +84,18 @@ int main(int argc, const char** argv) {
     cpu_set_t cpus, get_cpus;
     uint64_t iterations = argc > 1 ? atol(argv[1]) : 10000000000;
 
+    struct parent_to_child_args thread_args[numprocs];
+
     /* Validate parent set/get affinity for child */
     for (long i = 0; i < numprocs; i++) {
         CPU_ZERO(&cpus);
         CPU_ZERO(&get_cpus);
-        CPU_SET(i*2, &cpus);
+        unsigned int set_affinity = i*2;
+        CPU_SET(set_affinity, &cpus);
 
-        ret = pthread_create(&threads[i], NULL, dowork, (void*)&iterations);
+        thread_args[i].thread_affinity = set_affinity;
+        thread_args[i].iterations = iterations;
+        ret = pthread_create(&threads[i], NULL, dowork, (void*)&thread_args[i]);
         if (ret != 0) {
             free(threads);
             errx(EXIT_FAILURE, "pthread_create failed!");
