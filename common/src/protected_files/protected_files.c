@@ -951,11 +951,10 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     pf->real_file_size = real_size;
     pf->mode = mode;
 
-    if (!create) {
+    if (!create && real_size > 0) {
         // existing file
         if (!ipf_init_existing_file(pf, path))
             goto out;
-
     } else {
         // new file
         if (!ipf_init_new_file(pf, path))
