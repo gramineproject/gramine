@@ -158,7 +158,7 @@ struct parser_table {
     [__NR_shutdown] = {.slow = false, .name = "shutdown", .parser = {parse_long_arg,
                        parse_integer_arg, parse_integer_arg}},
     [__NR_bind] = {.slow = false, .name = "bind", .parser = {parse_long_arg, parse_integer_arg,
-                   parse_pointer_arg, parse_integer_arg}},
+                   parse_sockaddr, parse_integer_arg}},
     [__NR_listen] = {.slow = false, .name = "listen", .parser = {parse_long_arg, parse_integer_arg,
                      parse_integer_arg}},
     [__NR_getsockname] = {.slow = false, .name = "getsockname", .parser = {parse_long_arg,
@@ -1139,7 +1139,7 @@ static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
             struct sockaddr_in6* a = (void*)addr;
             unsigned short* ip     = (void*)&a->sin6_addr.s6_addr;
             buf_printf(buf,
-                "{family=INET,ip=[%x:%x:%x:%x:%x:%x:%x:%x],"
+                "{family=INET6,ip=[%x:%x:%x:%x:%x:%x:%x:%x],"
                 "port=htons(%u)}",
                 __ntohs(ip[0]), __ntohs(ip[1]), __ntohs(ip[2]), __ntohs(ip[3]), __ntohs(ip[4]),
                 __ntohs(ip[5]), __ntohs(ip[6]), __ntohs(ip[7]), __ntohs(a->sin6_port));
