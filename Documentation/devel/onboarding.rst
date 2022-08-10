@@ -531,7 +531,8 @@ fine on native Linux but fails under Gramine::
      reviewers do not track new git commits in PRs!
 
 #. If some reviewers do not reply for a long time (5-7 days), ping them
-   explicitly, either on GitHub or via our Gitter messaging system.
+   explicitly, either on GitHub or via our
+   `Gitter chat <https://gitter.im/gramineproject/community>`__.
 
 #. Continue resolving reviewers' comments until all reviewers explicitly approve
    the PR. Remember that at least two reviewers from two different organizations
