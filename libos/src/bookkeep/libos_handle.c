@@ -341,6 +341,7 @@ void detach_all_fds(void) {
                 if (!handle) {
                     log_warning("process %u detaching fd %u handle failed",
                                 g_process_ipc_ids.self_vmid, i);
+                    continue;
                 }
 
                 clear_posix_locks(handle);
