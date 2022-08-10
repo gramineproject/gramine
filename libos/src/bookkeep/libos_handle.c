@@ -294,16 +294,24 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
 struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
                                       struct libos_handle_map* handle_map) {
     struct libos_handle* handle = NULL;
+    bool handle_map_locked = false;
 
-    if (!handle_map && !(handle_map = get_thread_handle_map(NULL)))
+    if (handle_map || (handle_map = get_thread_handle_map(NULL))) {
+        handle_map_locked = locked(&handle_map->lock);
+    } else {
         return NULL;
+    }
 
-    lock(&handle_map->lock);
+    if (!handle_map_locked) {
+        lock(&handle_map->lock);
+    }
 
     if (fd < handle_map->fd_size)
         handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
 
-    unlock(&handle_map->lock);
+    if (!handle_map_locked) {
+        unlock(&handle_map->lock);
+    }
 
     if (handle && handle->dentry) {
         /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even

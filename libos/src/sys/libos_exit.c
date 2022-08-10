@@ -54,6 +54,26 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     terminate_ipc_worker();
 
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+    lock(&handle_map->lock);
+
+    uint32_t fd_top = handle_map->fd_top;
+    if (fd_top != FD_NULL) {
+        for (uint32_t i = 0; i <= fd_top; i++) {
+            if (handle_map->map[i] && handle_map->map[i]->handle) {
+                struct libos_handle* handle = detach_fd_handle(i, NULL, handle_map);
+                if (!handle) {
+                    log_warning("process %u detaching fd %u handle failed", g_process_ipc_ids.self_vmid, i);
+                }
+
+                put_handle(handle);
+            }
+        }
+    }
+
+    unlock(&handle_map->lock);
+
     log_debug("process %u exited with status %d", g_process_ipc_ids.self_vmid, exit_code);
 
     /* TODO: We exit whole libos, but there are some objects that might need cleanup - we should do
