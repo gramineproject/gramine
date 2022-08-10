@@ -109,11 +109,10 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         puts("--- No master key is provided, proceeding with a random key ---");
         ssize_t bytes_read = getrandom(buf, WRAP_KEY_SIZE, 0);
-        if (bytes_read <= 0) {
+        if (bytes_read < WRAP_KEY_SIZE) {
             fprintf(stderr, "[error] cannot generate a random key");
             return 1;
         }
-        assert(bytes_read == WRAP_KEY_SIZE);
     } else {
         printf("--- Reading the master key for encrypted files from '%s' ---\n", argv[1]);
         int fd = open(argv[1], O_RDONLY);
