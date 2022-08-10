@@ -28,20 +28,18 @@ struct libos_clone_args {
 };
 
 /*
- * This Function is a wrapper around the user provided function.
- * Code flow for clone is as follows -
- * 1) User application allocates stack for child process and
- *    calls clone. The clone code sets up the user function
- *    address and the argument address on the child stack.
- * 2)we Hijack the clone call and control flows to libos_clone
- * 3)In Shim Clone we just call the DK Api to create a thread by providing a
- *   wrapper function around the user provided function
- * 4)PAL layer allocates a stack and then invokes the clone syscall
- * 5)PAL runs thread_init function on PAL allocated Stack
- * 6)thread_init calls our wrapper and gives the user provided stack
- *   address.
- * 7.In the wrapper function ,we just do the stack switch to user
- *   Provided stack and execute the user Provided function.
+ * This function is a wrapper around the user provided function.
+ * Code flow for clone is as follows:
+ * 1) User application allocates stack for child process and calls clone. The clone code sets up the
+ *    user function address and the argument address on the child stack.
+ * 2) We hijack the clone call and control flows to libos_clone.
+ * 3) In libos_clone we just call the PAL API to create a thread by providing a wrapper function
+ *    around the user provided function.
+ * 4) PAL layer allocates a stack and then invokes the clone syscall.
+ * 5) PAL runs thread_init function on PAL allocated Stack.
+ * 6) thread_init calls our wrapper and gives the user provided stack address.
+ * 7) In the wrapper function, we just do the stack switch to user. Provided stack and execute the
+ *    user Provided function.
  */
 static int clone_implementation_wrapper(void* arg_) {
     /* The child thread created by PAL is now running on the PAL allocated stack. We need to switch

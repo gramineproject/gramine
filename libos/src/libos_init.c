@@ -401,7 +401,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_handle);
     RUN_INIT(init_r_debug);
 
-    log_debug("Shim loaded at %p, ready to initialize", &__load_address);
+    log_debug("LibOS loaded at %p, ready to initialize", &__load_address);
 
     if (g_pal_public_state->parent_process) {
         struct checkpoint_hdr hdr;
