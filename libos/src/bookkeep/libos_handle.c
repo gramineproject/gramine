@@ -291,28 +291,7 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
     return handle;
 }
 
-struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
-                                      struct libos_handle_map* handle_map) {
-    struct libos_handle* handle = NULL;
-    bool handle_map_locked = false;
-
-    if (handle_map || (handle_map = get_thread_handle_map(NULL))) {
-        handle_map_locked = locked(&handle_map->lock);
-    } else {
-        return NULL;
-    }
-
-    if (!handle_map_locked) {
-        lock(&handle_map->lock);
-    }
-
-    if (fd < handle_map->fd_size)
-        handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
-
-    if (!handle_map_locked) {
-        unlock(&handle_map->lock);
-    }
-
+static void clear_posix_locks(struct libos_handle* handle) {
     if (handle && handle->dentry) {
         /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
          * if the process holds other handles for that file, or duplicated FDs for the same
@@ -327,8 +306,51 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
         if (ret < 0)
             log_warning("error releasing locks: %d", ret);
     }
+}
+
+struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
+                                      struct libos_handle_map* handle_map) {
+    struct libos_handle* handle = NULL;
+
+    if (!handle_map && !(handle_map = get_thread_handle_map(NULL)))
+        return NULL;
+
+    lock(&handle_map->lock);
+
+    if (fd < handle_map->fd_size)
+        handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
+
+    unlock(&handle_map->lock);
+
+    clear_posix_locks(handle);
 
     return handle;
+}
+
+void detach_all_fds(void) {
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+    lock(&handle_map->lock);
+
+    uint32_t fd_top = handle_map->fd_top;
+    if (fd_top != FD_NULL) {
+        for (uint32_t i = 0; i <= fd_top; i++) {
+            if (handle_map->map[i] && handle_map->map[i]->handle) {
+                struct libos_handle* handle = __detach_fd_handle(handle_map->map[i], NULL,
+                                                                 handle_map);
+                if (!handle) {
+                    log_warning("process %u detaching fd %u handle failed",
+                                g_process_ipc_ids.self_vmid, i);
+                }
+
+                clear_posix_locks(handle);
+
+                put_handle(handle);
+            }
+        }
+    }
+
+    unlock(&handle_map->lock);
 }
 
 struct libos_handle* get_new_handle(void) {
