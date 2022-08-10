@@ -1130,17 +1130,15 @@ static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
         case AF_INET: {
             struct sockaddr_in* a = (void*)addr;
             unsigned char* ip     = (void*)&a->sin_addr.s_addr;
-            buf_printf(buf, "{family=INET,ip=%u.%u.%u.%u,port=htons(%u)}", ip[0], ip[1], ip[2], ip[3],
-                   __ntohs(a->sin_port));
+            buf_printf(buf, "{family=IPv4,ip=%u.%u.%u.%u,port=%u}", ip[0], ip[1], ip[2], ip[3],
+                __ntohs(a->sin_port));
             break;
         }
 
         case AF_INET6: {
             struct sockaddr_in6* a = (void*)addr;
             unsigned short* ip     = (void*)&a->sin6_addr.s6_addr;
-            buf_printf(buf,
-                "{family=INET6,ip=[%x:%x:%x:%x:%x:%x:%x:%x],"
-                "port=htons(%u)}",
+            buf_printf(buf, "{family=IPv6,ip=[%x:%x:%x:%x:%x:%x:%x:%x],port=%u}",
                 __ntohs(ip[0]), __ntohs(ip[1]), __ntohs(ip[2]), __ntohs(ip[3]), __ntohs(ip[4]),
                 __ntohs(ip[5]), __ntohs(ip[6]), __ntohs(ip[7]), __ntohs(a->sin6_port));
             break;
