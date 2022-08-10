@@ -7,6 +7,7 @@
  */
 
 #include "libos_fs_lock.h"
+#include "libos_handle.h"
 #include "libos_ipc.h"
 #include "libos_lock.h"
 #include "libos_process.h"
@@ -98,6 +99,8 @@ noreturn void thread_exit(int error_code, int term_signal) {
     int ret = posix_lock_clear_pid(g_process.pid);
     if (ret < 0)
         log_warning("error clearing POSIX locks: %d", ret);
+
+    detach_all_fds();
 
     /* This is the last thread of the process. Let parent know we exited. */
     ret = ipc_cld_exit_send(error_code, term_signal);

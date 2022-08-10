@@ -323,6 +323,19 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
     return handle;
 }
 
+static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
+    struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+    put_handle(hdl);
+    return 0;
+}
+
+void detach_all_fds(void) {
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    walk_handle_map(&detach_fd, handle_map);
+}
+
 struct libos_handle* get_new_handle(void) {
     struct libos_handle* new_handle =
         get_mem_obj_from_mgr_enlarge(handle_mgr, size_align_up(HANDLE_MGR_ALLOC));
@@ -651,10 +664,7 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
     int ret = 0;
     lock(&map->lock);
 
-    if (map->fd_top == FD_NULL)
-        goto done;
-
-    for (uint32_t i = 0; i <= map->fd_top; i++) {
+    for (uint32_t i = 0; map->fd_top != FD_NULL && i <= map->fd_top; i++) {
         if (!HANDLE_ALLOCATED(map->map[i]))
             continue;
 
@@ -662,7 +672,6 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
             break;
     }
 
-done:
     unlock(&map->lock);
     return ret;
 }
