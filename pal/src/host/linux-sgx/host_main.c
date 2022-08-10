@@ -1012,7 +1012,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
                "\tFirst process: %s <path to libpal.so> init <application> args...\n"
                "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
-    log_always("This is an internal interface. Use gramine-* wrappers to launch applications in "
+    log_always("This is an internal interface. Use gramine-sgx wrapper to launch applications in "
                "Gramine.");
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
