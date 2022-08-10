@@ -47,9 +47,11 @@ static inline void unlock(struct libos_lock* l) {
     PalEventSet(l->lock);
 }
 
+#ifdef DEBUG
 static inline bool locked(struct libos_lock* l) {
     if (!l->lock) {
         return false;
     }
     return get_cur_tid() == l->owner;
 }
+#endif // DEBUG
