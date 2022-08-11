@@ -55,8 +55,6 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     terminate_ipc_worker();
 
-    detach_all_fds();
-
     log_debug("process %u exited with status %d", g_process_ipc_ids.self_vmid, exit_code);
 
     /* TODO: We exit whole libos, but there are some objects that might need cleanup - we should do
@@ -101,6 +99,8 @@ noreturn void thread_exit(int error_code, int term_signal) {
     int ret = posix_lock_clear_pid(g_process.pid);
     if (ret < 0)
         log_warning("error clearing POSIX locks: %d", ret);
+
+    detach_all_fds();
 
     /* This is the last thread of the process. Let parent know we exited. */
     ret = ipc_cld_exit_send(error_code, term_signal);

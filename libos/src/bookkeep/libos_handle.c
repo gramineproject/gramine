@@ -344,8 +344,6 @@ void detach_all_fds(void) {
                     continue;
                 }
 
-                clear_posix_locks(handle);
-
                 put_handle(handle);
             }
         }
