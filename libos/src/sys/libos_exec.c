@@ -18,9 +18,7 @@
 static int close_on_exec(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {
         struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
-        if (hdl) {
-            put_handle(hdl);
-        }
+        put_handle(hdl);
     }
     return 0;
 }
