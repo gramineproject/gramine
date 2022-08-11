@@ -291,6 +291,27 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
     return handle;
 }
 
+static int clear_posix_locks(struct libos_handle* handle) {
+    if (handle && handle->dentry) {
+        /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
+         * if the process holds other handles for that file, or duplicated FDs for the same
+         * handle. */
+        struct posix_lock pl = {
+            .type = F_UNLCK,
+            .start = 0,
+            .end = FS_LOCK_EOF,
+            .pid = g_process.pid,
+        };
+        int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
+        if (ret < 0) {
+            log_warning("error releasing locks: %d", ret);
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
 struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
                                       struct libos_handle_map* handle_map) {
     struct libos_handle* handle = NULL;
@@ -305,20 +326,7 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
 
     unlock(&handle_map->lock);
 
-    if (handle && handle->dentry) {
-        /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
-         * if the process holds other handles for that file, or duplicated FDs for the same
-         * handle. */
-        struct posix_lock pl = {
-            .type = F_UNLCK,
-            .start = 0,
-            .end = FS_LOCK_EOF,
-            .pid = g_process.pid,
-        };
-        int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
-        if (ret < 0)
-            log_warning("error releasing locks: %d", ret);
-    }
+    (void)clear_posix_locks(handle);
 
     return handle;
 }
@@ -674,6 +682,29 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
 
     unlock(&map->lock);
     return ret;
+}
+
+void close_cloexec_handles(struct libos_handle_map* map) {
+    lock(&map->lock);
+
+    for (uint32_t i = 0; map->fd_top != FD_NULL && i <= map->fd_top; i++) {
+        struct libos_fd_handle* fd_hdl = map->map[i];
+
+        if (!HANDLE_ALLOCATED(fd_hdl))
+            continue;
+
+        if (fd_hdl->flags & FD_CLOEXEC) {
+            struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+
+            unlock(&map->lock);
+            (void)clear_posix_locks(hdl);
+
+            put_handle(hdl);
+            lock(&map->lock);
+        }
+    }
+
+    unlock(&map->lock);
 }
 
 BEGIN_CP_FUNC(handle) {

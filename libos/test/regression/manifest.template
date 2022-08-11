@@ -40,6 +40,7 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ binary_dir }}/exec_victim",
   "file:/bin/sh",
+  "file:/bin/sleep",
 ]
 
 sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"

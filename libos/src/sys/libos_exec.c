@@ -15,18 +15,6 @@
 #include "libos_vma.h"
 #include "pal.h"
 
-static int close_on_exec(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
-    if (fd_hdl->flags & FD_CLOEXEC) {
-        struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
-        put_handle(hdl);
-    }
-    return 0;
-}
-
-static int close_cloexec_handle(struct libos_handle_map* map) {
-    return walk_handle_map(&close_on_exec, map);
-}
-
 /* new_argp: pointer to beginning of first stack frame (argc, argv[0], ...)
  * new_auxv: pointer inside first stack frame (auxv[0], auxv[1], ...) */
 noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new_auxv) {
@@ -102,8 +90,7 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv,
     struct libos_thread* cur_thread = get_cur_thread();
     int ret;
 
-    if ((ret = close_cloexec_handle(cur_thread->handle_map)) < 0)
-        return ret;
+    close_cloexec_handles(cur_thread->handle_map);
 
     lock(&g_process.fs_lock);
     put_handle(g_process.exec);

@@ -10,6 +10,7 @@
  * The tests usually start another process, and coordinate with it using pipes.
  */
 
+#define _GNU_SOURCE
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -400,11 +401,53 @@ static void test_range_with_eof(void) {
     close_pipes(pipes);
 }
 
+/* Test: parent waits for child to close a FD (thus release a lock) on exec. */
+static void test_parent_wait_child_cloexec(void) {
+    printf("testing parent wait for child to release a lock upon exec calls (close-on-exec)...\n");
+    unlock(0, 0);
+
+    int pipes[2][2];
+    open_pipes(pipes);
+
+    pid_t pid = fork();
+    if (pid < 0)
+        err(1, "fork");
+
+    if (pid == 0) {
+        lock(F_RDLCK, 0, 100);
+        write_pipe(pipes[0]);
+        read_pipe(pipes[1]);
+
+        /* A dummy `execve` to close the FD and thus to release the taken lock. We expect child to
+         * not exit to make sure that parent can acquire the same lock indeed released by
+         * close-on-exec. */
+        char* argv[] = {(char*)"sleep", (char*)"10000", NULL};
+        execve("/bin/sleep", argv, NULL);
+        exit(1);
+    }
+
+    /* parent process: */
+
+    read_pipe(pipes[0]);
+
+    /* read lock should succeed */
+    lock(F_RDLCK, 0, 100);
+    lock_fail(F_WRLCK, 0, 100);
+    write_pipe(pipes[1]);
+    lock_wait_ok(F_WRLCK, 0, 100);
+
+    if (kill(pid, SIGKILL) < 0) {
+        err(1, "kill");
+    }
+    wait_for_child();
+    close_pipes(pipes);
+}
+
 
 int main(void) {
     setbuf(stdout, NULL);
 
-    g_fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC, 0600);
+    g_fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (g_fd < 0)
         err(1, "open");
 
@@ -413,6 +456,7 @@ int main(void) {
     test_file_close();
     test_child_wait();
     test_parent_wait();
+    test_parent_wait_child_cloexec();
     test_range_with_eof();
 
     if (close(g_fd) < 0)
