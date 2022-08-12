@@ -154,6 +154,8 @@ struct pal_initial_mem_range {
     uintptr_t start;
     uintptr_t end;
     pal_prot_flags_t prot;
+    // TODO: remove, this cannot be used properly without allocating memory for it
+    // or make this an inline array
     const char* comment;
 };
 
@@ -366,15 +368,15 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 /*!
  * \brief Map a file to a virtual memory address in the current process.
  *
- * \param         handle    Handle to the stream to be mapped.
- * \param[in,out] addr_ptr  See #PalVirtualMemoryAlloc.
- * \param         prot      See #PalVirtualMemoryAlloc.
- * \param         offset    Offset in the stream to be mapped. Must be properly aligned.
- * \param         size      Size of the requested mapping. Must be non-zero and properly aligned.
+ * \param handle  Handle to the stream to be mapped.
+ * \param addr    See #PalVirtualMemoryAlloc.
+ * \param prot    See #PalVirtualMemoryAlloc.
+ * \param offset  Offset in the stream to be mapped. Must be properly aligned.
+ * \param size    Size of the requested mapping. Must be non-zero and properly aligned.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size);
 
 /*!

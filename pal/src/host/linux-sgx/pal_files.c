@@ -244,7 +244,7 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 }
 
 /* 'map' operation for file stream. */
-static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint64_t offset,
+static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                     uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
     int ret;
@@ -259,19 +259,6 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         return -PAL_ERROR_INVAL;
     }
 
-    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
-    void* mem = *addr;
-
-    /* If the file is listed in the manifest as an "allowed" file, we allow mapping the file outside
-     * the enclave, if the library OS does not request a specific address. */
-    if (!mem && !chunk_hashes && !(prot & PAL_PROT_WRITECOPY)) {
-        ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED, handle->file.fd,
-                                   offset);
-        if (ret >= 0)
-            *addr = mem;
-        return ret < 0 ? unix_to_pal_error(ret) : ret;
-    }
-
     if (!(prot & PAL_PROT_WRITECOPY) && (prot & PAL_PROT_WRITE)) {
         log_warning(
             "file_map does not currently support writable pass-through mappings on SGX. You "
@@ -281,13 +268,14 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         return -PAL_ERROR_DENIED;
     }
 
-    if (!mem)
+    if (!addr)
         return -PAL_ERROR_INVAL;
 
 #ifdef ASAN
-    asan_unpoison_region((uintptr_t)mem, size);
+    asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
+    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
@@ -296,8 +284,7 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
             /* file is mmapped at offset beyond file size, there are no trusted-file contents to
              * back mmapped enclave pages; this is a legit case, so simply zero out these enclave
              * pages (for sanity) and return success */
-            memset(mem, 0, size);
-            *addr = mem;
+            memset(addr, 0, size);
             return 0;
         }
 
@@ -311,7 +298,7 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
             goto out;
         }
 
-        ret = copy_and_verify_trusted_file(handle->file.realpath, mem, handle->file.umem,
+        ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
                                            aligned_offset, aligned_end, offset, end, chunk_hashes,
                                            handle->file.total);
         if (ret < 0) {
@@ -322,14 +309,14 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
         size_t bytes_filled = end - offset;
         if (size > bytes_filled) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
-            memset(mem + bytes_filled, 0, size - bytes_filled);
+            memset((char*)addr + bytes_filled, 0, size - bytes_filled);
         }
     } else {
         /* case of allowed file: simply read from underlying file descriptor into enclave memory */
         size_t bytes_read = 0;
         while (bytes_read < size) {
             size_t read_size = MIN(size - bytes_read, MAX_READ_SIZE);
-            ssize_t bytes = ocall_pread(handle->file.fd, mem + bytes_read, read_size,
+            ssize_t bytes = ocall_pread(handle->file.fd, (char*)addr + bytes_read, read_size,
                                         offset + bytes_read);
             if (bytes > 0) {
                 bytes_read += bytes;
@@ -346,18 +333,17 @@ static int file_map(PAL_HANDLE handle, void** addr, pal_prot_flags_t prot, uint6
 
         if (size > bytes_read) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
-            memset(mem + bytes_read, 0, size - bytes_read);
+            memset((char*)addr + bytes_read, 0, size - bytes_read);
         }
     }
 
-    *addr = mem;
     ret = 0;
 
 out:
     if (ret < 0) {
-        assert(sgx_is_completely_within_enclave(mem, size));
+        assert(sgx_is_completely_within_enclave(addr, size));
 #ifdef ASAN
-        asan_poison_region((uintptr_t)mem, size, ASAN_POISON_USER);
+        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
 #endif
     }
     return ret;

@@ -332,12 +332,10 @@ static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int pr
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
 
-    void* actual_addr = addr;
-    int ret = PalStreamMap(hdl->pal_handle, &actual_addr, pal_prot, offset, size);
+    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    assert(actual_addr == addr);
     return 0;
 }
 

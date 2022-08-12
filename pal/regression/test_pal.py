@@ -12,7 +12,6 @@ from graminelibos.regression import (
     HAS_SGX,
     ON_X86,
     RegressionTestCase,
-    expectedFailureIf,
 )
 
 

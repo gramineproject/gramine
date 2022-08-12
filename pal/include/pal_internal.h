@@ -73,10 +73,10 @@ struct handle_ops {
      * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
      * by mmap, so unmap also needs 'handle' to deal with special cases.
      *
-     * Common PAL code will ensure that *address, offset, and size are page-aligned. 'address'
+     * Common PAL code will ensure that address, offset, and size are page-aligned. 'address'
      * should not be NULL.
      */
-    int (*map)(PAL_HANDLE handle, void** address, pal_prot_flags_t prot, uint64_t offset,
+    int (*map)(PAL_HANDLE handle, void* address, pal_prot_flags_t prot, uint64_t offset,
                uint64_t size);
 
     /* 'setlength' is used by PalStreamFlush. It truncate the stream to certain size. */
@@ -187,7 +187,7 @@ int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, cons
                         const char* addr, int addrlen);
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size);
 int _PalStreamUnmap(void* addr, uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
@@ -229,7 +229,7 @@ void _PalEventClear(PAL_HANDLE handle);
 int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 /* PalVirtualMemory calls */
-int _PalVirtualMemoryAlloc(void* addr_ptr, uint64_t size, pal_prot_flags_t prot);
+int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot);
 int _PalVirtualMemoryFree(void* addr, uint64_t size);
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
