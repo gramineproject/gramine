@@ -60,50 +60,126 @@ void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_add
     g_mem_bkeep_free_upcall = free;
 }
 
+static void insert_range_at(size_t idx, uintptr_t addr, size_t size, pal_prot_flags_t prot,
+                            const char* comment) {
+    assert(idx <= g_pal_public_state.initial_mem_ranges_len);
+
+    memmove(&g_initial_mem_ranges[idx + 1], &g_initial_mem_ranges[idx],
+            (g_pal_public_state.initial_mem_ranges_len - idx) * sizeof(g_initial_mem_ranges[0]));
+    g_initial_mem_ranges[idx] = (struct pal_initial_mem_range){
+        .start = addr,
+        .end = addr + size,
+        .prot = prot,
+        .is_free = false,
+    };
+    memcpy(&g_initial_mem_ranges[idx].comment, comment,
+           MIN(sizeof(g_initial_mem_ranges[idx].comment) - 1, strlen(comment)));
+
+    g_pal_public_state.initial_mem_ranges_len++;
+    assert(g_pal_public_state.initial_mem_ranges_len <= ARRAY_SIZE(g_initial_mem_ranges));
+}
+
 int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment) {
     if (g_pal_public_state.initial_mem_ranges_len >= ARRAY_SIZE(g_initial_mem_ranges)) {
         return -PAL_ERROR_NOMEM;
     }
 
-    g_initial_mem_ranges[g_pal_public_state.initial_mem_ranges_len].start = addr;
-    g_initial_mem_ranges[g_pal_public_state.initial_mem_ranges_len].end = addr + size;
-    g_initial_mem_ranges[g_pal_public_state.initial_mem_ranges_len].prot = prot;
-    g_initial_mem_ranges[g_pal_public_state.initial_mem_ranges_len].comment = comment;
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (g_initial_mem_ranges[i].end <= addr) {
+            insert_range_at(i, addr, size, prot, comment);
+            return 0;
+        }
+    }
 
-    g_pal_public_state.initial_mem_ranges_len++;
+    insert_range_at(g_pal_public_state.initial_mem_ranges_len, addr, size, prot, comment);
     return 0;
 }
 
+static void mark_range_free(size_t idx) {
+    g_initial_mem_ranges[idx].is_free = true;
+
+    size_t ranges_to_rm = 0;
+    size_t move_idx;
+    if (idx + 1 < g_pal_public_state.initial_mem_ranges_len && g_initial_mem_ranges[idx + 1].is_free
+            && g_initial_mem_ranges[idx].start == g_initial_mem_ranges[idx + 1].end) {
+        g_initial_mem_ranges[idx].start = g_initial_mem_ranges[idx + 1].start;
+        move_idx = idx + 1;
+        ranges_to_rm++;
+    }
+    if (idx > 0 && g_initial_mem_ranges[idx - 1].is_free
+            && g_initial_mem_ranges[idx - 1].start == g_initial_mem_ranges[idx].end) {
+        g_initial_mem_ranges[idx - 1].start = g_initial_mem_ranges[idx].start;
+        move_idx = idx;
+        ranges_to_rm++;
+    }
+
+    if (ranges_to_rm) {
+        size_t tail_len = g_pal_public_state.initial_mem_ranges_len - (move_idx + ranges_to_rm);
+        memmove(&g_initial_mem_ranges[move_idx], &g_initial_mem_ranges[move_idx + ranges_to_rm],
+                tail_len * sizeof(g_initial_mem_ranges[0]));
+
+        g_pal_public_state.initial_mem_ranges_len -= ranges_to_rm;
+    }
+}
+
 static int remove_initial_range(uintptr_t addr, size_t size) {
-    size_t idx = g_pal_public_state.initial_mem_ranges_len;
     for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
         if (g_initial_mem_ranges[i].start == addr && g_initial_mem_ranges[i].end == addr + size) {
-            idx = i;
+            mark_range_free(i);
+            return 0;
+        }
+        if (g_initial_mem_ranges[i].end <= addr) {
             break;
         }
     }
 
-    if (idx >= g_pal_public_state.initial_mem_ranges_len) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    size_t len = g_pal_public_state.initial_mem_ranges_len - (idx + 1);
-    memmove(&g_initial_mem_ranges[idx], &g_initial_mem_ranges[idx + 1],
-            len * sizeof(*g_initial_mem_ranges));
-
-    g_pal_public_state.initial_mem_ranges_len--;
-    return 0;
+    return -PAL_ERROR_INVAL;
 }
 
-static int find_non_reserved_range_above(uintptr_t* addr, size_t size) {
+static bool find_free_range(size_t size, uintptr_t* out_addr) {
+    size_t idx = g_pal_public_state.initial_mem_ranges_len;
+    size_t best_size = SIZE_MAX;
+
+    for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
+        if (g_initial_mem_ranges[i].is_free) {
+            size_t range_size = g_initial_mem_ranges[i].end - g_initial_mem_ranges[i].start;
+            if (range_size >= size && range_size < best_size) {
+                best_size = range_size;
+                idx = i;
+                if (range_size == size) {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (idx >= g_pal_public_state.initial_mem_ranges_len) {
+        return false;
+    }
+
+    g_initial_mem_ranges[idx].end -= size;
+    *out_addr = g_initial_mem_ranges[idx].end;
+
+    if (g_initial_mem_ranges[idx].start == g_initial_mem_ranges[idx].end) {
+        size_t tail_len = g_pal_public_state.initial_mem_ranges_len - (idx + 1);
+        memmove(&g_initial_mem_ranges[idx], &g_initial_mem_ranges[idx + 1],
+                tail_len * sizeof(g_initial_mem_ranges[0]));
+
+        g_pal_public_state.initial_mem_ranges_len--;
+    }
+
+    return true;
+}
+
+static int find_non_reserved_range_above(uintptr_t addr, size_t size, uintptr_t* out_addr) {
     static uintptr_t g_last_reserved_range_start = UINTPTR_MAX;
     static uintptr_t g_last_reserved_range_end = UINTPTR_MAX;
 
-    if (*addr < size) {
+    if (addr < size) {
         return -PAL_ERROR_NOMEM;
     }
 
-    uintptr_t candidate = *addr - size;
+    uintptr_t candidate = addr - size;
 
     while (candidate < g_last_reserved_range_end) {
         if (g_last_reserved_range_start < size) {
@@ -113,18 +189,21 @@ static int find_non_reserved_range_above(uintptr_t* addr, size_t size) {
         pal_read_one_reserved_range(&g_last_reserved_range_start, &g_last_reserved_range_end);
     }
 
-    *addr = candidate;
+    *out_addr = candidate;
     return 0;
 }
 
-static bool overlaps_existing_range(uintptr_t* addr, size_t size) {
-    uintptr_t end = *addr + size;
-    assert(*addr < end);
+static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_addr) {
+    uintptr_t end = addr + size;
+    assert(addr < end);
 
     for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
-        if (!(g_initial_mem_ranges[i].end <= *addr || end <= g_initial_mem_ranges[i].start)) {
-            *addr = g_initial_mem_ranges[i].start;
+        if (!(g_initial_mem_ranges[i].end <= addr || end <= g_initial_mem_ranges[i].start)) {
+            *out_addr = g_initial_mem_ranges[i].start;
             return true;
+        }
+        if (g_initial_mem_ranges[i].end <= addr) {
+            return false;
         }
     }
 
@@ -143,18 +222,22 @@ static int initial_mem_alloc(size_t size, void** out_ptr) {
     }
 
     int ret;
-    uintptr_t addr = g_last_alloc_addr;
-    while (1) {
-        ret = find_non_reserved_range_above(&addr, size);
-        if (ret < 0) {
-            return ret;
+    uintptr_t addr;
+    if (!find_free_range(size, &addr)) {
+        addr = g_last_alloc_addr;
+        while (1) {
+            ret = find_non_reserved_range_above(addr, size, &addr);
+            if (ret < 0) {
+                return ret;
+            }
+            if (addr < (uintptr_t)g_pal_public_state.memory_address_start) {
+                return -PAL_ERROR_NOMEM;
+            }
+            if (!overlaps_existing_range(addr, size, &addr)) {
+                break;
+            }
         }
-        if (addr < (uintptr_t)g_pal_public_state.memory_address_start) {
-            return -PAL_ERROR_NOMEM;
-        }
-        if (!overlaps_existing_range(&addr, size)) {
-            break;
-        }
+        g_last_alloc_addr = addr;
     }
 
     ret = pal_add_initial_range(addr, size, PAL_PROT_READ | PAL_PROT_WRITE, "PAL internal memory");
@@ -168,7 +251,6 @@ static int initial_mem_alloc(size_t size, void** out_ptr) {
         _PalProcessExit(1);
     }
 
-    g_last_alloc_addr = addr;
     *out_ptr = (void*)addr;
     return 0;
 }
@@ -247,12 +329,12 @@ void pal_disable_early_memory_bookkeeping(void) {
     size_t size = MIN(g_pal_public_state.mem_total / 20, 1024ul * 1024);
     uintptr_t addr = g_last_alloc_addr;
     while (1) {
-        int ret = find_non_reserved_range_above(&addr, size);
+        int ret = find_non_reserved_range_above(addr, size, &addr);
         if (ret < 0 || addr < (uintptr_t)g_pal_public_state.memory_address_start) {
             /* Let LibOS handle this. */
             return;
         }
-        if (!overlaps_existing_range(&addr, size)) {
+        if (!overlaps_existing_range(addr, size, &addr)) {
             break;
         }
     }

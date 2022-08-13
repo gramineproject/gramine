@@ -558,19 +558,36 @@ static void* g_aslr_addr_top = NULL;
 int init_vma(void) {
     PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free);
 
-    struct libos_vma init_vmas[1 + g_pal_public_state->initial_mem_ranges_len];
+    size_t initial_ranges_count = 0;
+    for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
+        if (!g_pal_public_state->initial_mem_ranges[i].is_free) {
+            initial_ranges_count++;
+        }
+    }
+
+    struct libos_vma init_vmas[1 + initial_ranges_count];
 
     init_vmas[0].begin = 0; // vma for creation of memory manager
 
+    size_t idx = 0;
     for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
-        init_vmas[1 + i].begin  = ALLOC_ALIGN_DOWN(g_pal_public_state->initial_mem_ranges[i].start);
-        init_vmas[1 + i].end    = ALLOC_ALIGN_UP(g_pal_public_state->initial_mem_ranges[i].end);
-        init_vmas[1 + i].prot   = PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
-        init_vmas[1 + i].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
-        init_vmas[1 + i].file   = NULL;
-        init_vmas[1 + i].offset = 0;
-        copy_comment(&init_vmas[1 + i], g_pal_public_state->initial_mem_ranges[i].comment);
+        if (g_pal_public_state->initial_mem_ranges[i].is_free) {
+            continue;
+        }
+
+        init_vmas[1 + idx].begin  = g_pal_public_state->initial_mem_ranges[i].start;
+        init_vmas[1 + idx].end    = g_pal_public_state->initial_mem_ranges[i].end;
+        init_vmas[1 + idx].prot   = PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
+        init_vmas[1 + idx].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
+        init_vmas[1 + idx].file   = NULL;
+        init_vmas[1 + idx].offset = 0;
+        copy_comment(&init_vmas[1 + idx], g_pal_public_state->initial_mem_ranges[i].comment);
+
+        assert(IS_ALLOC_ALIGNED(init_vmas[1 + idx].begin)
+               && IS_ALLOC_ALIGNED(init_vmas[1 + idx].end));
+        idx++;
     }
+    assert(1 + idx == ARRAY_SIZE(init_vmas));
 
     spinlock_lock(&vma_tree_lock);
     int ret = 0;

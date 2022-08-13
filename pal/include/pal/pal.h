@@ -154,9 +154,8 @@ struct pal_initial_mem_range {
     uintptr_t start;
     uintptr_t end;
     pal_prot_flags_t prot;
-    // TODO: remove, this cannot be used properly without allocating memory for it
-    // or make this an inline array
-    const char* comment;
+    bool is_free;
+    char comment[0x13];
 };
 
 /*!
