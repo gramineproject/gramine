@@ -1457,6 +1457,12 @@ BEGIN_CP_FUNC(vma) {
             }
         }
 
+        // TODO:
+        // after all other possible DO_CP_SIZE(memory, )
+        struct libos_mem_entry* mem;
+        DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
+        mem->dummy = true;
+
         ADD_CP_FUNC_ENTRY(off);
         ADD_CP_ENTRY(ADDR, (uintptr_t)remap_from_file);
     } else {

@@ -21,6 +21,7 @@
 struct libos_clone_args {
     PAL_HANDLE create_event;
     PAL_HANDLE initialize_event;
+    bool is_thread_initialized;
     struct libos_thread* thread;
     void* stack;
     unsigned long tls;
@@ -95,6 +96,7 @@ static int clone_implementation_wrapper(void* arg_) {
 
     /* Inform the parent thread that we finished initialization. */
     PalEventSet(arg->initialize_event);
+    __atomic_store_n(&arg->is_thread_initialized, true, __ATOMIC_RELEASE);
 
     put_thread(my_thread);
 
@@ -413,8 +415,18 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
      * implies CLONE_SIGHAND). */
     assert(flags & CLONE_SIGHAND);
 
-    struct libos_clone_args new_args;
-    memset(&new_args, 0, sizeof(new_args));
+    struct libos_thread* self = get_cur_thread();
+    struct libos_clone_args new_args = {
+        .is_thread_initialized = false,
+        .stack = (void*)(user_stack_addr ?: pal_context_get_sp(self->libos_tcb->context.regs)),
+        .tls = tls,
+        .regs = self->libos_tcb->context.regs,
+        .thread = thread,
+    };
+
+    /* Increasing refcount due to copy above. Passing ownership of the new copy
+     * of this pointer to the new thread (receiver of new_args). */
+    get_thread(thread);
 
     ret = PalEventCreate(&new_args.create_event, /*init_signaled=*/false, /*auto_clear=*/false);
     if (ret < 0) {
@@ -428,21 +440,10 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
         goto clone_thread_failed;
     }
 
-    struct libos_thread* self = get_cur_thread();
-
-    /* Increasing refcount due to copy below. Passing ownership of the new copy
-     * of this pointer to the new thread (receiver of new_args). */
-    get_thread(thread);
-    new_args.thread = thread;
-    new_args.stack  = (void*)(user_stack_addr ?: pal_context_get_sp(self->libos_tcb->context.regs));
-    new_args.tls    = tls;
-    new_args.regs   = self->libos_tcb->context.regs;
-
     PAL_HANDLE pal_handle = NULL;
     ret = PalThreadCreate(clone_implementation_wrapper, &new_args, &pal_handle);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
-        put_thread(new_args.thread);
         goto clone_thread_failed;
     }
 
@@ -459,6 +460,9 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
         log_error("event_wait_with_retry failed with: %ld", ret);
         PalProcessExit(1);
     }
+    while (!__atomic_load_n(&new_args.is_thread_initialized, __ATOMIC_ACQUIRE)) {
+        CPU_RELAX();
+    }
     PalObjectClose(new_args.initialize_event);
     PalObjectClose(new_args.create_event);
 
@@ -466,6 +470,8 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     return tid;
 
 clone_thread_failed:
+    if (new_args.thread)
+        put_thread(new_args.thread);
     if (new_args.create_event)
         PalObjectClose(new_args.create_event);
     if (new_args.initialize_event)
