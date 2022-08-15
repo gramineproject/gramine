@@ -176,6 +176,11 @@ static int chroot_encrypted_open(struct libos_handle* hdl, struct libos_dentry* 
     __UNUSED(flags);
 
     int ret;
+    char* uri = NULL;
+
+    ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
+    if (ret < 0)
+        return ret;
 
     if (dent->inode->type == S_IFREG) {
         struct libos_encrypted_file* enc = dent->inode->data;
@@ -183,15 +188,22 @@ static int chroot_encrypted_open(struct libos_handle* hdl, struct libos_dentry* 
         lock(&dent->inode->lock);
         ret = encrypted_file_get(enc);
         unlock(&dent->inode->lock);
-        if (ret < 0)
-            return ret;
+        if (ret < 0) {
+            goto out;
+        }
     }
 
+    hdl->uri = uri;
+    uri = NULL;
     hdl->inode = dent->inode;
     get_inode(dent->inode);
     hdl->type = TYPE_CHROOT_ENCRYPTED;
     hdl->pos = 0;
-    return 0;
+    ret = 0;
+
+out:
+    free(uri);
+    return ret;
 }
 
 static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags,
