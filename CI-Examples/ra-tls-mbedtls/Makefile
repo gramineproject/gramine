@@ -1,7 +1,16 @@
 GRAMINEDIR ?= ../..
-GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
-
+OS_TYPE ?= $(shell cat /etc/os-release | grep -w NAME)
+ifeq ($(findstring Ubuntu, $(OS_TYPE)),Ubuntu)
+GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
+else
+ifeq ($(findstring Anolis OS,$(OS_TYPE)),Anolis OS)
+GRAMINE_PKGLIBDIR ?= /usr/lib64/gramine
+ARCH_LIBDIR ?= /lib64
+else
+echo "Unsupported operation system!"
+endif
+endif
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
