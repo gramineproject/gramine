@@ -47,7 +47,7 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
 
     handle->type = TYPE_SOCK;
     handle->fs = &socket_builtin_fs;
-    handle->flags = is_nonblocking ? O_NONBLOCK : 0;
+    handle->flags = O_RDWR | (is_nonblocking ? O_NONBLOCK : 0);
     handle->acc_mode = MAY_READ | MAY_WRITE;
 
     struct libos_sock_handle* sock = &handle->info.sock;

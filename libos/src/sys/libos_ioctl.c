@@ -30,7 +30,10 @@ static void signal_io(IDTYPE caller, void* arg) {
 }
 
 long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
-    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, handle_map);
     if (!hdl)
         return -EBADF;
 
@@ -58,11 +61,17 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             ret = set_handle_nonblocking(hdl, !!nonblocking_on);
             break;
         case FIONCLEX:
-            hdl->flags &= ~FD_CLOEXEC;
+            lock(&handle_map->lock);
+            if (HANDLE_ALLOCATED(handle_map->map[fd]))
+                handle_map->map[fd]->flags &= ~FD_CLOEXEC;
+            unlock(&handle_map->lock);
             ret = 0;
             break;
         case FIOCLEX:
-            hdl->flags |= FD_CLOEXEC;
+            lock(&handle_map->lock);
+            if (HANDLE_ALLOCATED(handle_map->map[fd]))
+                handle_map->map[fd]->flags |= FD_CLOEXEC;
+            unlock(&handle_map->lock);
             ret = 0;
             break;
         case FIOASYNC:
