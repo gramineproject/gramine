@@ -7,7 +7,7 @@
     uint64_t __l = (expected);                              \
     uint64_t __r = (got);                                   \
     if (__l != __r) {                                       \
-        fatal_error("%s:%d %s (expected %zu, got %zu)",     \
+        fatal_error("%s:%d %s (expected %ju, got %ju)",     \
                     __func__, __LINE__, msg, __l, __r);     \
     }                                                       \
 } while(0)
