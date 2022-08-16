@@ -495,7 +495,8 @@ static int create_mem_ranges_array(const struct libos_cp_store* cpstore,
         return -ENOMEM;
     }
 
-    /* Save the list in reversed oreder. */
+    /* Save the list in reversed order - PAL expect this list in descending order. See
+     * `pal_read_one_reserved_range` for more details. */
     size_t i = 0;
     for (entry = cpstore->first_mem_entry; entry; entry = entry->next) {
         if (!entry->dummy) {
@@ -526,10 +527,10 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     PAL_HANDLE pal_process = NULL;
 
     /* allocate a space for dumping the checkpoint data */
-    struct libos_cp_store cpstore;
-    memset(&cpstore, 0, sizeof(cpstore));
-    cpstore.alloc = cp_alloc;
-    cpstore.bound = CP_INIT_VMA_SIZE;
+    struct libos_cp_store cpstore = {
+        .alloc = cp_alloc,
+        .bound = CP_INIT_VMA_SIZE,
+    };
 
     while (1) {
         /* try allocating checkpoint; if allocation fails, try with smaller sizes */
@@ -615,17 +616,6 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         goto out;
     }
 
-    void* tmp_vma = NULL;
-    ret = bkeep_munmap((void*)cpstore.base, cpstore.bound, /*is_internal=*/true, &tmp_vma);
-    if (ret < 0) {
-        log_error("failed unmaping checkpoint (ret = %d)", ret);
-        goto out;
-    }
-    if (PalVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {
-        BUG();
-    }
-    bkeep_remove_tmp_vma(tmp_vma);
-
     /* wait for final ack from child process */
     char dummy_c = 0;
     ret = read_exact(pal_process, &dummy_c, sizeof(dummy_c));
@@ -652,7 +642,22 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     }
 
     ret = 0;
+
 out:
+    if (cpstore.base) {
+        void* tmp_vma = NULL;
+        int tmp_ret = bkeep_munmap((void*)cpstore.base, cpstore.bound, /*is_internal=*/true,
+                                   &tmp_vma);
+        if (tmp_ret < 0) {
+            log_error("failed unmaping checkpoint (ret = %d)", tmp_ret);
+            PalProcessExit(1);
+        }
+        if (PalVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {
+            BUG();
+        }
+        bkeep_remove_tmp_vma(tmp_vma);
+    }
+
     if (pal_process)
         PalObjectClose(pal_process);
 

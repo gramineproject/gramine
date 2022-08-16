@@ -1113,10 +1113,10 @@ int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle*
 }
 
 static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
-    int ret;
     void* addr;
-    ret = bkeep_mmap_any(size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL,
-                         /*file=*/NULL, /*offset=*/0, "pal internal memory", &addr);
+    int ret = bkeep_mmap_any(size, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL, /*file=*/NULL,
+                             /*offset=*/0, "pal internal memory", &addr);
     if (ret < 0) {
         return ret;
     }
@@ -1512,9 +1512,13 @@ BEGIN_CP_FUNC(all_vmas) {
     if (ret < 0) {
         return ret;
     }
+    if (count == 0) {
+        return -ENOMEM;
+    }
 
-    /* Checkpoint VMAs in descending order - checkpointing code requires it. */
-    for (struct libos_vma_info* vma = &vmas[count - 1];; vma--) {
+    /* Checkpoint VMAs in descending order - checkpointing code requires it. See
+     * `create_mem_ranges_array` for details. */
+    for (struct libos_vma_info* vma = &vmas[count - 1]; true; vma--) {
         DO_CP(vma, vma, NULL);
         if (vma == vmas)
             break;

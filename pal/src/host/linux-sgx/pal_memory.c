@@ -103,23 +103,23 @@ void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_ra
         return;
     }
 
-    uintptr_t last_range[2];
-    if (!sgx_copy_to_enclave(&last_range, sizeof(last_range),
+    uintptr_t new_range[2];
+    if (!sgx_copy_to_enclave(&new_range, sizeof(new_range),
                              g_urts_next_reserved_range, sizeof(*g_urts_next_reserved_range))) {
         /* Should be impossible as we already checked the pointer. */
         BUG();
     }
     g_urts_next_reserved_range++;
 
-    if (last_range[0] > last_range[1] || last_range[1] > *last_range_start
-            || !IS_ALLOC_ALIGNED(last_range[0]) || !IS_ALLOC_ALIGNED(last_range[1])) {
+    if (new_range[0] > new_range[1] || new_range[1] > *last_range_start
+            || !IS_ALLOC_ALIGNED(new_range[0]) || !IS_ALLOC_ALIGNED(new_range[1])) {
         log_error("URTS passed invalid reserved memory range: %#lx-%#lx (previous was %#lx-%#lx)",
-                  last_range[0], last_range[1], *last_range_start, *last_range_end);
+                  new_range[0], new_range[1], *last_range_start, *last_range_end);
         _PalProcessExit(1);
     }
 
-    *last_range_start = last_range[0];
-    *last_range_end = last_range[1];
+    *last_range_start = new_range[0];
+    *last_range_end = new_range[1];
 }
 
 int init_reserved_ranges(void* urts_ptr, size_t urts_size) {

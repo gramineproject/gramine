@@ -139,6 +139,7 @@ nitpick_ignore = [
     ('c:type', 'int32_t'),
     ('c:type', 'int64_t'),
     ('c:type', 'uintptr_t'),
+    ('c:type', 'uintptr_t (*)[2]'),
     ('c:type', 'union'),
     ('c:type', 'enum'), # parsing of these seems to be broken:
                         #     WARNING: c:type reference target not found: enum

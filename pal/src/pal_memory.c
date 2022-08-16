@@ -21,11 +21,7 @@ int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
 }
 
 int PalVirtualMemoryFree(void* addr, size_t size) {
-    if (!addr || !size) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (!IS_ALLOC_ALIGNED_PTR(addr) || !IS_ALLOC_ALIGNED(size)) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
@@ -33,22 +29,47 @@ int PalVirtualMemoryFree(void* addr, size_t size) {
 }
 
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
-    if (!addr || !size) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    if (!IS_ALLOC_ALIGNED_PTR(addr) || !IS_ALLOC_ALIGNED(size)) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
     return _PalVirtualMemoryProtect(addr, size, prot);
 }
 
+/*
+ * Allocator for PAL internal memory.
+ * There are a few phases, which differ in how memory is allocated.
+ * 1) PAL initial code - before LibOS is initialized. This is where most of this code is used,
+ *    the exact details are described below.
+ * 2) After PAL is initialized and before LibOS is ready for memory bookkeeping. At this phase we do
+ *    not allocate any memory in PAL.
+ * 3) After LibOS calls `PalSetMemoryBookkeepingUpcalls` (which should be done as soon as possible).
+ *    From this point PAL simply calls the upcalls when it wants to free or allocate the memory,
+ *    LibOS manages all the bookkeeping.
+ *
+ * For the initial part (1), we have an array of memory ranges (`g_initial_mem_ranges`).
+ * To free a range, we simply mark it as freed in this array. To allocate some memory we first look
+ * through all previously used ranges in hope of finding something big enough to hold our request.
+ * If nothing is found, we then go through this array and find a memory range that was never
+ * allocated before (is not in this array), but we also make sure that it does not overlap any of
+ * reserved ranges.
+ * Because reserved ranges can be arbitrarily long and due to the fact that we cannot really
+ * allocate memory without first inspecting them (so we do not map on top of them), we go through
+ * them only once. They are kept sorted, so we only have to hold the last seen reserved range and
+ * the last address we allocated at.
+ *
+ * TODO: I've just realised (or just reminded myself a previous idea, don't remember now) that we
+ * could just map these reserved ranges anywhere and then unmap them in
+ * `pal_disable_early_memory_bookkeeping`. Not sure if that would make the code easier to read or
+ * faster (there could be quite a lot of these ranges, whereas there are not a lot of early
+ * allocated ranges (in `g_initial_mem_ranges`).
+ */
 static int (*g_mem_bkeep_alloc_upcall)(size_t size, uintptr_t* out_addr) = NULL;
 static int (*g_mem_bkeep_free_upcall)(uintptr_t addr, size_t size) = NULL;
 
 static bool g_initial_mem_disabled = false;
 static uintptr_t g_last_alloc_addr = UINTPTR_MAX;
+/* Array of initial (PAL) memory ranges. Must be kept sorted in descending order. */
 struct pal_initial_mem_range g_initial_mem_ranges[0x100] = { 0 };
 
 void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_addr),
@@ -212,9 +233,9 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
 
 /* This function is called only in early init code which is single-threaded, hence it does not need
  * any locking. */
-static int initial_mem_alloc(size_t size, void** out_ptr) {
+static int initial_mem_alloc(size_t size, void** out_addr) {
     if (g_initial_mem_disabled) {
-        return -PAL_ERROR_NOMEM;
+        return -PAL_ERROR_INVAL;
     }
 
     if (g_last_alloc_addr == UINTPTR_MAX) {
@@ -247,11 +268,11 @@ static int initial_mem_alloc(size_t size, void** out_ptr) {
 
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
-        log_error("%s: failed to allocate initial internal memory: %d", __func__, ret);
+        log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
         _PalProcessExit(1);
     }
 
-    *out_ptr = (void*)addr;
+    *out_addr = (void*)addr;
     return 0;
 }
 
@@ -259,7 +280,7 @@ static int initial_mem_alloc(size_t size, void** out_ptr) {
  * any locking. */
 static int initial_mem_free(uintptr_t addr, size_t size) {
     if (g_initial_mem_disabled) {
-        return -PAL_ERROR_NOMEM;
+        return -PAL_ERROR_INVAL;
     }
 
     int ret = remove_initial_range(addr, size);
@@ -268,13 +289,13 @@ static int initial_mem_free(uintptr_t addr, size_t size) {
     }
     ret = _PalVirtualMemoryFree((void*)addr, size);
     if (ret < 0) {
-        log_error("%s: failed to free PAL internal memory: %d", __func__, ret);
+        log_error("%s: failed to free initial PAL internal memory: %d", __func__, ret);
         _PalProcessExit(1);
     }
     return 0;
 }
 
-int pal_internal_memory_alloc(size_t size, void** out_ptr) {
+int pal_internal_memory_alloc(size_t size, void** out_addr) {
     assert(IS_ALLOC_ALIGNED(size));
 
     if (g_mem_bkeep_alloc_upcall) {
@@ -294,17 +315,17 @@ int pal_internal_memory_alloc(size_t size, void** out_ptr) {
             return -PAL_ERROR_NOMEM;
         }
 
-        *out_ptr = (void*)addr;
+        *out_addr = (void*)addr;
         return 0;
     }
 
-    return initial_mem_alloc(size, out_ptr);
+    return initial_mem_alloc(size, out_addr);
 }
 
 int pal_internal_memory_free(void* addr, size_t size) {
     assert(IS_ALLOC_ALIGNED(size));
 
-    if (g_mem_bkeep_alloc_upcall) {
+    if (g_mem_bkeep_free_upcall) {
         int ret = _PalVirtualMemoryFree(addr, size);
         if (ret < 0) {
             log_warning("%s: failed to free PAL internal memory: %d", __func__, ret);

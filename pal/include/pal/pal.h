@@ -109,8 +109,8 @@ struct pal_public_state {
     bool disable_aslr;                      /*!< disable ASLR */
     void* memory_address_start;             /*!< usable memory start address */
     void* memory_address_end;               /*!< usable memory end address */
-    uintptr_t early_libos_mem_range_start;  /*!< start of memory usable pre-checkpointing */
-    uintptr_t early_libos_mem_range_end;    /*!< end of memory usable pre-checkpointing */
+    uintptr_t early_libos_mem_range_start;  /*!< start of memory usable before checkpoint restore */
+    uintptr_t early_libos_mem_range_end;    /*!< end of memory usable before checkpoint restore */
 
     struct pal_initial_mem_range* initial_mem_ranges; /*!< array of initial memory ranges */
     size_t initial_mem_ranges_len;
@@ -154,7 +154,11 @@ struct pal_initial_mem_range {
     uintptr_t start;
     uintptr_t end;
     pal_prot_flags_t prot;
+    /* Denotes whether the range was present (was used at some point), but is now free (is not used
+     * anymore). */
     bool is_free;
+    /* These structs are stored in a global array, so keep the total size of this struct aligned to
+     * it's alignemnt requirement. */
     char comment[0x13];
 };
 
@@ -213,7 +217,7 @@ void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_add
  * \param      args                     An array of strings -- the arguments to be passed to the new
  *                                      process.
  * \param      reserved_mem_ranges      List of memory ranges that should not be used by the child
- *                                      process untill app memory is checkpointed. Must be sorted in
+ *                                      process until app memory is checkpointed. Must be sorted in
  *                                      descending order.
  * \param      reserved_mem_ranges_len  Length of \p reserved_mem_ranges.
  * \param[out] out_handle               On success contains the process handle.

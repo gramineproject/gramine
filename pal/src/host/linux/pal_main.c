@@ -148,15 +148,9 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
-    uintptr_t vdso_start = 0;
-    uintptr_t vdso_end = 0;
-    ret = init_initial_memory_ranges(&vdso_start, &vdso_end);
+    ret = init_initial_memory_ranges();
     if (ret < 0) {
         INIT_FAIL("init_initial_memory_ranges failed: %d", ret);
-    }
-    if (vdso_start || vdso_end) {
-        g_vdso_start = vdso_start;
-        g_vdso_end = vdso_end;
     }
 
     ret = init_random();

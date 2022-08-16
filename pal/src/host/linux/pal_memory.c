@@ -20,6 +20,13 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 
+uintptr_t g_vdso_start = 0;
+uintptr_t g_vdso_end = 0;
+
+bool is_in_vdso(uintptr_t addr) {
+    return (g_vdso_start || g_vdso_end) && g_vdso_start <= addr && addr < g_vdso_end;
+}
+
 int _PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
     assert(addr);
@@ -141,7 +148,7 @@ static int parsed_ranges_callback(struct proc_maps_range* r, void* arg) {
     return pal_add_initial_range(r->start, r->end - r->start, r->prot, r->name ?: "");
 }
 
-int init_initial_memory_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end) {
+int init_initial_memory_ranges(void) {
     struct parsed_ranges ranges = { 0 };
     int ret = parse_proc_maps("/proc/self/maps", &parsed_ranges_callback, &ranges);
     if (ret < 0) {
@@ -176,8 +183,8 @@ int init_initial_memory_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end) {
     g_pal_public_state.memory_address_start = (void*)start_addr;
     g_pal_public_state.memory_address_end = (void*)end_addr;
 
-    *vdso_start = ranges.vdso_start;
-    *vdso_end = ranges.vdso_end;
+    g_vdso_start = ranges.vdso_start;
+    g_vdso_end = ranges.vdso_end;
     return 0;
 }
 
@@ -185,11 +192,11 @@ int init_initial_memory_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end) {
 static int g_reserved_ranges_fd = -1;
 
 void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end) {
-    uintptr_t last_range[2];
+    uintptr_t new_range[2];
 
     int ret = -EBADF;
     if (g_reserved_ranges_fd >= 0) {
-        ret = read_all(g_reserved_ranges_fd, last_range, sizeof(last_range));
+        ret = read_all(g_reserved_ranges_fd, new_range, sizeof(new_range));
     }
     if (ret < 0) {
         *last_range_start = 0;
@@ -197,9 +204,9 @@ void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_ra
         return;
     }
 
-    assert(last_range[0] <= last_range[1] && last_range[1] <= *last_range_start);
-    *last_range_start = last_range[0];
-    *last_range_end = last_range[1];
+    assert(new_range[0] <= new_range[1] && new_range[1] <= *last_range_start);
+    *last_range_start = new_range[0];
+    *last_range_end = new_range[1];
 }
 
 int init_reserved_ranges(int fd) {
