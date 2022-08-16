@@ -1,15 +1,17 @@
+#include <inttypes.h>
+
 #include "common.h"
 
 #define EXTEND_SIZE 4097
 
 // Verify Unsigned
-#define VERIFYU(msg, expected, got) do {                    \
-    uint64_t __l = (expected);                              \
-    uint64_t __r = (got);                                   \
-    if (__l != __r) {                                       \
-        fatal_error("%s:%d %s (expected %ju, got %ju)",     \
-                    __func__, __LINE__, msg, __l, __r);     \
-    }                                                       \
+#define VERIFYU(msg, expected, got) do {                                \
+    uint64_t __l = (expected);                                          \
+    uint64_t __r = (got);                                               \
+    if (__l != __r) {                                                   \
+        fatal_error("%s:%d %s (expected %""PRIu64, got %""PRIu64)",     \
+                    __func__, __LINE__, msg, __l, __r);                 \
+    }                                                                   \
 } while(0)
 
 static void seek_input_fd(const char* path, uint64_t size) {
