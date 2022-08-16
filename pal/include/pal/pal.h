@@ -34,6 +34,9 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* maximum length of URIs */
 #define URI_MAX 4096
 
+/* maximum length of hostname */
+#define PAL_HOSTNAME_MAX 255
+
 /* Common types used by host specific header. */
 enum pal_socket_domain {
     PAL_DISCONNECT,
@@ -134,6 +137,9 @@ struct pal_public_state {
 
     struct pal_cpu_info cpu_info;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
+
+    bool passthrough_etc_files;
+    char hostname[PAL_HOSTNAME_MAX];
 };
 
 /* We cannot mark this as returning a pointer to `const` object, because LibOS can

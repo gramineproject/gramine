@@ -5,6 +5,8 @@ import signal
 import subprocess
 import unittest
 
+from socket import gethostname
+
 from graminelibos.regression import (
     HAS_SGX,
     ON_X86,
@@ -1118,6 +1120,14 @@ class TC_40_FileSystem(RegressionTestCase):
     def test_060_synthetic(self):
         stdout, _ = self.run_binary(['synthetic'])
         self.assertIn("TEST OK", stdout)
+
+    def test_070_hostname_localhost(self):
+        stdout, _ = self.run_binary(['hostname', 'localhost', ''])
+        self.assertIn("hostname test passed", stdout)
+
+    def test_071_hostname_pass_etc(self):
+        stdout, _ = self.run_binary(['hostname_pass_etc', gethostname(), gethostname()])
+        self.assertIn("hostname test passed", stdout)
 
 
 class TC_50_GDB(RegressionTestCase):

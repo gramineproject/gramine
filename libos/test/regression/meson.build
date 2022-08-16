@@ -49,6 +49,7 @@ tests = {
     'groups': {},
     'helloworld': {},
     'host_root_fs': {},
+    'hostname': {},
     'init_fail': {},
     'keys': {},
     'kill_all': {},

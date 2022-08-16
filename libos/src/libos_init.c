@@ -424,6 +424,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
+    RUN_INIT(init_mount_etc);
 
     char** expanded_argv = NULL;
     RUN_INIT(init_exec_handle, argv, &expanded_argv);
@@ -486,6 +487,9 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     /* Note that in the main process, we initialize both sync server and sync client, and the client
      * communicates with server over a "loopback" IPC connection. */
     RUN_INIT(init_sync_client);
+
+    RUN_INIT(libos_set_hostname, g_pal_public_state->hostname,
+             strlen(g_pal_public_state->hostname) + 1);
 
     log_debug("LibOS initialized");
 

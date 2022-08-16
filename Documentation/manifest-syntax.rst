@@ -136,6 +136,20 @@ arguments to be provided at runtime from an external (trusted) source.
 If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
+etc passthrough
+^^^^^^^^^^^^^^^
+
+::
+
+    libos.passthrough_etc_files = [true|false]
+    (Default: false)
+
+This specifies whether to passthrough extra runtime files from ``/etc``.
+Before the files are available to the application, they will be sanitized.
+The set of extra runtime files is limited to:
+
+- ``/etc/hostname``
+
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
 

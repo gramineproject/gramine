@@ -1,0 +1,22 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "hostname"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+loader.insecure__use_cmdline_argv = true
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/hostname", uri = "file:{{ binary_dir }}/hostname" },
+]
+
+sgx.debug = true
+sgx.nonpie_binary = true
+sgx.thread_num = 16
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/hostname",
+]
+
+libos.passthrough_etc_files = true

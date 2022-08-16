@@ -14,6 +14,7 @@
 #include "cpu.h"
 #include "debug_map.h"
 #include "elf/elf.h"
+#include "host_info.h"
 #include "init.h"
 #include "linux_utils.h"
 #include "pal.h"
@@ -118,6 +119,27 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
                self, self);
     log_always("This is an internal interface. Use pal_loader to launch applications in Gramine.");
     _PalProcessExit(1);
+}
+
+static void get_host_info(void) {
+    int ret;
+
+    ret = get_topology_info(&g_pal_public_state.topo_info);
+    if (ret < 0)
+        INIT_FAIL("get_topology_info() failed: %d", ret);
+
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.passthrough_etc_files",
+                       false, &g_pal_public_state.passthrough_etc_files);
+    if (ret < 0)
+        INIT_FAIL("Unable to parse manifest");
+
+    if (!g_pal_public_state.passthrough_etc_files)
+        return;
+
+    if (get_hostname(g_pal_public_state.hostname,
+                          sizeof(g_pal_public_state.hostname)) < 0) {
+        INIT_FAIL("Unable to get hostname");
+    }
 }
 
 #ifdef ASAN
@@ -264,14 +286,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("failed to init debug maps: %d", unix_to_pal_error(ret));
 #endif
 
-    /* Get host topology information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (first_process) {
-        ret = get_topology_info(&g_pal_public_state.topo_info);
-        if (ret < 0)
-            INIT_FAIL("get_topology_info() failed: %d", ret);
-    }
-
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);
     if (!g_pal_loader_path || !g_libpal_path) {
@@ -401,6 +415,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
                              /*defaultval=*/g_page_size, &g_pal_internal_mem_size);
     if (ret < 0) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
+    }
+
+    /* Host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (first_process) {
+        get_host_info();
     }
 
     void* internal_mem_addr = (void*)DO_SYSCALL(mmap, NULL, g_pal_internal_mem_size,

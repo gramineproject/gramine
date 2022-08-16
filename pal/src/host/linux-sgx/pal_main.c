@@ -208,30 +208,22 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
     return 0;
 }
 
-static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
-    /* Import topology information via an untrusted pointer. This is only a shallow copy and we use
-     * this temp variable to do deep copy into `g_pal_public_state.topo_info` */
-    struct pal_topo_info shallow_topo_info;
-    if (!sgx_copy_to_enclave(&shallow_topo_info, sizeof(shallow_topo_info),
-                             uptr_topo_info, sizeof(*uptr_topo_info))) {
-        return -PAL_ERROR_DENIED;
-    }
-
+static int import_and_sanitize_topo_info(struct pal_topo_info* shallow_topo_info) {
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
 
-    size_t caches_cnt     = shallow_topo_info.caches_cnt;
-    size_t threads_cnt    = shallow_topo_info.threads_cnt;
-    size_t cores_cnt      = shallow_topo_info.cores_cnt;
-    size_t sockets_cnt    = shallow_topo_info.sockets_cnt;
-    size_t numa_nodes_cnt = shallow_topo_info.numa_nodes_cnt;
+    size_t caches_cnt     = shallow_topo_info->caches_cnt;
+    size_t threads_cnt    = shallow_topo_info->threads_cnt;
+    size_t cores_cnt      = shallow_topo_info->cores_cnt;
+    size_t sockets_cnt    = shallow_topo_info->sockets_cnt;
+    size_t numa_nodes_cnt = shallow_topo_info->numa_nodes_cnt;
 
-    struct pal_cache_info*      caches     = sgx_import_array_to_enclave(shallow_topo_info.caches,     sizeof(*caches),     caches_cnt);
-    struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info.threads,    sizeof(*threads),    threads_cnt);
-    struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info.cores,      sizeof(*cores),      cores_cnt);
-    struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info.sockets,    sizeof(*sockets),    sockets_cnt);
-    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info.numa_nodes, sizeof(*numa_nodes), numa_nodes_cnt);
+    struct pal_cache_info*      caches     = sgx_import_array_to_enclave(shallow_topo_info->caches,     sizeof(*caches),     caches_cnt);
+    struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info->threads,    sizeof(*threads),    threads_cnt);
+    struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info->cores,      sizeof(*cores),      cores_cnt);
+    struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info->sockets,    sizeof(*sockets),    sockets_cnt);
+    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info->numa_nodes, sizeof(*numa_nodes), numa_nodes_cnt);
 
-    size_t* distances = sgx_import_array2d_to_enclave(shallow_topo_info.numa_distance_matrix,
+    size_t* distances = sgx_import_array2d_to_enclave(shallow_topo_info->numa_distance_matrix,
                                                       sizeof(*distances),
                                                       numa_nodes_cnt,
                                                       numa_nodes_cnt);
@@ -253,6 +245,64 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
     topo_info->numa_nodes_cnt = numa_nodes_cnt;
 
     return sanitize_topo_info(topo_info);
+}
+
+static bool is_hostname_valid(const char* hostname) {
+    const char* ptr = hostname;
+    size_t chrcount = 0;
+
+    if (*ptr == '-')
+        return false;
+
+    while (*ptr != '\0') {
+        if ((*ptr >= 'a' && *ptr <= 'z') ||
+            (*ptr >= 'A' && *ptr <= 'Z') ||
+            (*ptr >= '0' && *ptr <= '9') ||
+            *ptr == '-') {
+                chrcount++;
+                ptr++;
+                continue;
+        } else if (*ptr == '.') {
+                if (chrcount == 0 || chrcount > 63) {
+                    return false;
+                }
+                chrcount = 0;
+                ptr++;
+                continue;
+        }
+
+        return false;
+    }
+
+    if (chrcount == 0 || chrcount > 63)
+        return false;
+    /* rewind to last character */
+    ptr--;
+    if (ptr - hostname > PAL_HOSTNAME_MAX)
+        return false;
+    if (*ptr == '-')
+        return false;
+
+    return true;
+}
+
+static int init_passthrough_etc_files(pal_host_info_t* shallow_host_info) {
+    coerce_untrusted_bool(&shallow_host_info->passthrough_etc);
+
+    if (!shallow_host_info->passthrough_etc)
+        return 0;
+
+    g_pal_public_state.passthrough_etc_files = true;
+
+    if (!is_hostname_valid(shallow_host_info->hostname)) {
+        log_warning("The hostname on the host seems to be invalid."
+                    "The Gramine hostname will be set to \"localhost\".");
+    } else {
+        memcpy(g_pal_public_state.hostname, shallow_host_info->hostname,
+               sizeof(g_pal_public_state.hostname) - 1);
+    }
+
+    return 0;
 }
 
 extern void* g_enclave_base;
@@ -416,7 +466,7 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
                              int parent_stream_fd, sgx_target_info_t* uptr_qe_targetinfo,
-                             struct pal_topo_info* uptr_topo_info) {
+                             pal_host_info_t* uptr_host_info) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -559,6 +609,15 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         g_pal_internal_mem_size += 64 * 1024 * 1024; /* 5MB manifest -> 64 + 64 MB PAL mem */
     }
 
+    /* get host information */
+    pal_host_info_t host_info = {0};
+    assert(uptr_host_info != NULL);
+    if (!sgx_copy_to_enclave(&host_info, sizeof(host_info), uptr_host_info,
+                             sizeof(host_info))) {
+        log_error("Unable to read host info");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     /* parse manifest */
     char errbuf[256];
     toml_table_t* manifest_root = toml_parse(manifest_addr, errbuf, sizeof(errbuf));
@@ -573,7 +632,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
      * checkpointed and restored during forking of the child process(es). */
     if (parent_stream_fd < 0) {
         /* parse and store host topology info into g_pal_public_state struct */
-        ret = import_and_sanitize_topo_info(uptr_topo_info);
+        ret = import_and_sanitize_topo_info(&host_info.topo_info);
         if (ret < 0) {
             log_error("Failed to copy and sanitize topology information");
             ocall_exit(1, /*is_exitgroup=*/true);
@@ -626,6 +685,15 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    /* Get host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
+        if ((ret = init_passthrough_etc_files(&host_info)) < 0) {
+            log_error("Failed to initialize etc files: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
     }
 
     enum sgx_attestation_type attestation_type;

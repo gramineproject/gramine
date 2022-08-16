@@ -9,7 +9,7 @@
 
 int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
-                        struct pal_topo_info* topo_info) {
+                        pal_host_info_t* host_info) {
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
@@ -30,7 +30,7 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
     ms.ms_env_size         = env_size;
     ms.ms_parent_stream_fd = parent_stream_fd;
     ms.ms_qe_targetinfo    = qe_targetinfo;
-    ms.ms_topo_info        = topo_info;
+    ms.ms_host_info        = host_info;
     ms.rpc_queue           = g_rpc_queue;
     return sgx_ecall(ECALL_ENCLAVE_START, &ms);
 }
