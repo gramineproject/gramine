@@ -1034,7 +1034,8 @@ int register_library(const char* name, unsigned long load_address) {
         return err;
     }
 
-    append_r_debug(hdl->uri, (void*)load_address);
+    if (hdl->uri)
+        append_r_debug(hdl->uri, (void*)load_address);
     put_handle(hdl);
     return 0;
 }
