@@ -124,3 +124,7 @@ struct linux_dirent64 {
 #define DT_WHT     14
 
 #define DIRBUF_SIZE 1024
+
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif // MAP_FIXED_NOREPLACE
