@@ -179,7 +179,6 @@ unsigned long _PalMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
 int _PalGetCPUInfo(struct pal_cpu_info* info);
 
-/* Internal PAL calls, in case any of the internal routines needs to use them */
 /* PalStream calls */
 int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
@@ -245,7 +244,6 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
 /* PalException calls & structures */
 pal_event_handler_t _PalGetExceptionHandler(enum pal_event event);
 
-/* other PAL calls */
 int _PalSystemTimeQuery(uint64_t* out_usec);
 
 /*
