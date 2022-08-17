@@ -195,6 +195,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     return 0;
 }
 
+/* Used only in debug code / by deprecated options, no need to be side-channel-resistant. */
 int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     size_t len = strlen(key_str);
     if (len != sizeof(*pf_key) * 2) {

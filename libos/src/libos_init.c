@@ -504,6 +504,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     /* UNREACHABLE */
 }
 
+/* Warning: not side-channel-resistant! But we don't need this property in the current callsites. */
 static int get_256b_random_hex_string(char* buf, size_t size) {
     char random[32]; /* 256-bit random value, sufficiently crypto secure */
 
@@ -542,6 +543,8 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
             if (len >= sizeof(pipename))
                 return -ERANGE;
         } else {
+            /* No need for a side-channel-resistant hex conversion, this name is known to the
+             * untrusted host anyways. */
             ret = get_256b_random_hex_string(pipename, sizeof(pipename));
             if (ret < 0)
                 return ret;

@@ -386,10 +386,10 @@ repository), so let's build the secret provisioning server::
 
    git clone --depth 1 --branch v1.2 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
-   make app dcap
+   make app dcap RA_TYPE=dcap
 
 The above line builds the secret provisioning server
-``secret_prov_server_dcap``. We will use this server to provision the master key
+``secret_prov_pf/server_dcap`` which we will use to provision the master key
 (used to encrypt/decrypt security sensitive input and output files) to the
 PyTorch enclave. See `Secret Provisioning Minimal Examples
 <https://github.com/gramineproject/gramine/tree/master/CI-Examples/ra-tls-secret-prov>`__
@@ -411,15 +411,10 @@ our new directory::
    python3 download-pretrained-model.py
 
 The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
-``alexnet-pretrained.pt``. For simplicity, we re-use the already-existing
-encryption key ``wrap-key`` from the ``CI-Examples/ra-tls-secret-prov``
-directory::
+``alexnet-pretrained.pt``. Let's start with generating an encryption key::
 
    mkdir files
-   cp gramine/CI-Examples/ra-tls-secret-prov/files/wrap-key files/
-
-In real deployments, the user must replace this ``wrap-key`` with her own
-128-bit encryption key.
+   dd if=/dev/urandom of=files/wrap_key bs=16 count=1
 
 We use the ``gramine-sgx-pf-crypt`` utility to encrypt/decrypt the necessary
 files. Let's encrypt the original plaintext files. We first move these files
@@ -428,9 +423,9 @@ under the ``plaintext/`` directory and then encrypt them using the wrap key::
    mkdir plaintext/
    mv input.jpg classes.txt alexnet-pretrained.pt plaintext/
 
-   gramine-sgx-pf-crypt encrypt -w files/wrap-key -i plaintext/input.jpg -o input.jpg
-   gramine-sgx-pf-crypt encrypt -w files/wrap-key -i plaintext/classes.txt -o classes.txt
-   gramine-sgx-pf-crypt encrypt -w files/wrap-key -i plaintext/alexnet-pretrained.pt -o alexnet-pretrained.pt
+   gramine-sgx-pf-crypt encrypt -w files/wrap_key -i plaintext/input.jpg -o input.jpg
+   gramine-sgx-pf-crypt encrypt -w files/wrap_key -i plaintext/classes.txt -o classes.txt
+   gramine-sgx-pf-crypt encrypt -w files/wrap_key -i plaintext/alexnet-pretrained.pt -o alexnet-pretrained.pt
 
 You can verify now that the input files are encrypted. In real deployments,
 these files must be shipped to the remote untrusted cloud.
@@ -442,7 +437,7 @@ The user must prepare the secret provisioning server and start it. For this,
 copy the secret provisioning executable from ``CI-Examples/ra-tls-secret-prov``
 (that you built in one of the previous steps) to the current directory::
 
-   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_server_dcap .
+   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_pf/server_dcap .
 
 Also, copy the server-identifying certificates so that in-Gramine secret
 provisioning library can verify the provisioning server (via classical X.509
@@ -456,7 +451,7 @@ and use them.
 
 Now we can launch the secret provisioning server::
 
-    ./secret_prov_server_dcap &
+    ./server_dcap &
 
 In this tutorial, we simply run it locally (``localhost:4433`` as hard-coded in the
 server source code) for simplicity. In reality, the user must run it on a trusted
@@ -553,7 +548,7 @@ After our PyTorch inference is finished, you'll see :file:`result.txt`
 in the directory. This file is encrypted with the same key as was used for
 encryption of input files. In order to decrypt it, use the following command::
 
-   gramine-sgx-pf-crypt decrypt -w files/wrap-key -i result.txt -o plaintext/result.txt
+   gramine-sgx-pf-crypt decrypt -w files/wrap_key -i result.txt -o plaintext/result.txt
 
 You can check the result written in :file:`plaintext/result.txt`. It must be the
 same as in our previous runs.

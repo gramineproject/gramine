@@ -442,11 +442,10 @@ environment variables if available:
   will be provisioned into the Gramine enclave as the secret. For example,
   setting this environment variable to ``default`` will install the provisioned
   key as the default encryption key for encrypted files. The key must be sent
-  (by the secret provisioning service) as a 32-char null-terminated AES-GCM
-  encryption key in hex format, similar to ``fs.insecure__keys.[KEY_NAME]``
-  manifest option. This environment variable is checked only if
-  ``SECRET_PROVISION_CONSTRUCTOR`` is set. The library puts the provisioned key
-  into ``/dev/attestation/keys/<key_name>`` so that Gramine recognizes it.
+  (by the secret provisioning service) as 16-bytes-long AES-GCM encryption key.
+  This environment variable is checked only if ``SECRET_PROVISION_CONSTRUCTOR``
+  is set. The library puts the provisioned key into
+  ``/dev/attestation/keys/<key_name>`` so that Gramine recognizes it.
 
 .. note::
    Previously, ``SECRET_PROVISION_SET_PF_KEY = 1/true/TRUE`` was used for
@@ -467,11 +466,21 @@ environment variables if available:
 The secret may be retrieved by the application in two ways:
 
 - Reading ``SECRET_PROVISION_SECRET_STRING`` environment variable. It is updated
-  only if ``SECRET_PROVISION_CONSTRUCTOR`` is set to true and if the secret is
-  representable as a string of maximum 4K characters.
+  only if ``SECRET_PROVISION_CONSTRUCTOR`` is set to true, if
+  ``SECRET_PROVISION_SET_KEY`` is not set, and if the secret is representable
+  as a string of maximum 4K characters.
 
 - Calling ``secret_provision_get()`` function. It always updates its pointer
   argument to the secret (or ``NULL`` if secret provisioning failed).
+
+.. warning::
+
+   Provisioned secrets must be treated with utmost care, otherwise they could be
+   inadvertently leaked. For example, if a provisioned secret is a
+   base64-encoded encryption key, then the user should decode it from base64
+   into binary using side-channel-resistant functions (e.g.,
+   ``mbedtls_base64_decode()``) instead of non-crypto-secure functions (e.g.,
+   self-written decoding logic or a standard library function).
 
 ``secret_prov_verify_epid.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

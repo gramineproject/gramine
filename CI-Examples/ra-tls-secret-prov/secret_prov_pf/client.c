@@ -14,13 +14,6 @@
 #define INPUT_FILENAME "files/input.txt"
 
 static int print_pf_key_and_read_protected_file(char* who) {
-    char* secret = getenv("SECRET_PROVISION_SECRET_STRING");
-    if (!secret) {
-        fprintf(stderr, "did not receive protected files master key!\n");
-        return -1;
-    }
-    printf("--- [%s] Received protected files master key = '%s' ---\n", who, secret);
-
     int fd = open(INPUT_FILENAME, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "[error] cannot open '" INPUT_FILENAME "'\n");
