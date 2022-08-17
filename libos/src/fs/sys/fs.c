@@ -251,6 +251,7 @@ static void init_node_dir(struct pseudo_node* node) {
 
     pseudo_add_str(nodeX, "cpumap", &sys_node_load);
     pseudo_add_str(nodeX, "distance", &sys_node_load);
+    pseudo_add_str(nodeX, "meminfo", &sys_node_meminfo_load);
 
     // TODO(mkow): Does this show up for offline nodes? I never succeeded in shutting down one, even
     // after shutting down all CPUs inside the node it shows up as online on `node/online` list.
