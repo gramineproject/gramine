@@ -254,8 +254,6 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
     /* Allocate memory to hold the thread's cpu affinity mask. */
     struct libos_thread* thread = get_cur_thread();
 
-    /* Generate a random number and use it to find a random bit set in the first non-empty
-     * unsigned long of the cpu affinity mask. */
     unsigned long rand_num = 0;
     ret = PalRandomBitsRead(&rand_num, sizeof(rand_num));
     if (ret < 0) {
@@ -265,21 +263,21 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
     lock(&thread->lock);
     /* CPU affinity mask is basically an array of unsigned long(s). Below logic randomly selects a
      * bit set from the threads's cpu affinity mask and returns it to the user. */
-    unsigned int num_bits = 0;
-    for (unsigned int idx = 0; idx < GET_CPU_MASK_LEN(); idx++)
-        num_bits += count_ulong_bits_set(thread->cpu_affinity_mask[idx]);
+    unsigned short num_bits = 0;
+    for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++)
+        num_bits += count_ulong_bits_set(thread->cpu_affinity_mask[i]);
     assert(num_bits);
-    unsigned int nth_setbit = rand_num % num_bits + 1;
+    unsigned short nth_setbit = rand_num % num_bits;
 
-    unsigned long cpu_current = ULONG_MAX;
+    unsigned short cpu_current = USHRT_MAX;
     for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++) {
-        size_t cnt_bits_set = count_ulong_bits_set(thread->cpu_affinity_mask[i]);
-        if (nth_setbit > cnt_bits_set) {
+        unsigned short cnt_bits_set = count_ulong_bits_set(thread->cpu_affinity_mask[i]);
+        if (nth_setbit >= cnt_bits_set) {
             nth_setbit -= cnt_bits_set;
         } else {
             unsigned long cpumask = thread->cpu_affinity_mask[i];
             /* Mask out `nth_setbit` lowest bits. */
-            while (--nth_setbit) {
+            while (nth_setbit--) {
                 cpumask &= cpumask - 1;
             }
             assert(cpumask);

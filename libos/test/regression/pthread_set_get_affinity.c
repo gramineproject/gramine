@@ -23,7 +23,7 @@
 
 struct parent_to_child_args {
     unsigned int thread_affinity;
-    uint64_t iterations;
+    volatile uint64_t iterations;
 };
 
 /* barrier to synchronize between parent and children */
@@ -36,40 +36,45 @@ static void* dowork(void* args) {
     while (thread_args->iterations != 0)
         thread_args->iterations--;
 
-    /* Preempt the thread to ensure parent can set its affinity before invoking `getcpu` */
-    sleep(1);
-
-    unsigned int cpu, node;
-    int ret = syscall(SYS_getcpu, &cpu, &node);
-    if (ret < 0)
-        err(EXIT_FAILURE, "getcpu failed!");
-
-    if (cpu != thread_args->thread_affinity)
-        err(EXIT_FAILURE, "Expected cpu = %d returned cpu = %d", thread_args->thread_affinity, cpu);
-
-    printf("Thread %ld is running on cpu: %u, node: %u\n", syscall(SYS_gettid), cpu, node);
-
-    ret = pthread_barrier_wait(&barrier);
+    int ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {
         errx(EXIT_FAILURE, "Child did not wait on barrier!");
     }
+
+    unsigned int cpu, node;
+    ret = syscall(SYS_getcpu, &cpu, &node);
+    if (ret < 0)
+        err(EXIT_FAILURE, "getcpu failed!");
+
+    unsigned long cpumask = (1UL << cpu);
+    if ((cpumask & thread_args->thread_affinity) == 0) {
+        errx(EXIT_FAILURE, "Expected cpumask = %d returned cpumask = %d",
+             thread_args->thread_affinity, cpu);
+    }
+
+    printf("Thread %ld is running on cpu: %u, node: %u\n", syscall(SYS_gettid), cpu, node);
+
     return NULL;
 }
 
 int main(int argc, const char** argv) {
     int ret;
-    long numprocs = sysconf(_SC_NPROCESSORS_ONLN);
-    if (numprocs < 0) {
+    long onlineprocs = sysconf(_SC_NPROCESSORS_ONLN);
+    if (onlineprocs < 0) {
         err(EXIT_FAILURE, "Failed to retrieve the number of logical processors!");
     }
 
     /* If you want to run on all cores then increase sgx.thread_num in the manifest.template and
      * also set MANIFEST_SGX_THREAD_CNT to the same value.
      */
-    numprocs = min(numprocs, (MANIFEST_SGX_THREAD_CNT - (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
+    long numprocs = min(onlineprocs, (MANIFEST_SGX_THREAD_CNT - (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
 
     /* Affinitize threads to alternate logical processors to do a quick check from htop manually */
     numprocs = (numprocs >= 2) ? numprocs/2 : 1;
+
+    /* Below logic affinitizes each thread to 2 cores. So limiting to 32 cores so that we can store
+     * the affinity within a single unsigned long */
+    numprocs = (numprocs > 32) ? 32: numprocs;
 
     pthread_t* threads = (pthread_t*)malloc(numprocs * sizeof(pthread_t));
     if (!threads) {
@@ -90,8 +95,16 @@ int main(int argc, const char** argv) {
     for (long i = 0; i < numprocs; i++) {
         CPU_ZERO(&cpus);
         CPU_ZERO(&get_cpus);
-        unsigned int set_affinity = i*2;
-        CPU_SET(set_affinity, &cpus);
+
+        unsigned long set_affinity;
+        if (onlineprocs == 1) {
+            CPU_SET(0, &cpus);
+            set_affinity = 1UL;
+        } else {
+            CPU_SET(i * 2, &cpus);
+            CPU_SET(i * 2 + 1, &cpus);
+            set_affinity = 1UL << (i * 2) | 1UL << (i * 2 + 1);
+        }
 
         thread_args[i].thread_affinity = set_affinity;
         thread_args[i].iterations = iterations;
