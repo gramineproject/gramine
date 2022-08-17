@@ -13,7 +13,7 @@
 
 #define SEND_STRING "MORE"
 
-#define CA_CRT_PATH "ssl/ca.crt"
+#define CA_CRT_PATH "ca.crt"
 
 int main(int argc, char** argv) {
     int ret;

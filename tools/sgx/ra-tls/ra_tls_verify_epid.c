@@ -93,6 +93,8 @@ static int generate_nonce(char* buf, size_t size) {
 
     fclose(f);
 
+    /* Nonce will be known to the untrusted host, no need for a side-channel-resistant hex
+     * conversion. */
     if (hexdump_mem_to_buffer(&random_data, sizeof(random_data), buf, size) < 0) {
         return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     }

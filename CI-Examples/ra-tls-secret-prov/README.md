@@ -1,12 +1,13 @@
 # Secret Provisioning Minimal Examples
 
-This directory contains the Makefile, the template client manifests, and the
-minimal server and clients written against the Secret Provisioning library.
+This directory contains a Makefile, template client manifests, and a few
+examples of server and clients written against the Secret Provisioning
+library.
 
-This example uses the Secret Provisioning libraries `secret_prov_attest.so` for
-clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-server. These libraries are installed together with Gramine (for DCAP version,
-you need `meson setup ... -Ddcap=enabled`). Additionally, mbedTLS libraries are
+These examples use the Secret Provisioning libraries `secret_prov_attest.so` for
+the clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
+the server. They are installed together with Gramine (but for DCAP version, you
+need `meson setup ... -Ddcap=enabled`). Additionally, mbedTLS libraries are
 required. For ECDSA/DCAP attestation, the DCAP software infrastructure must be
 installed and work correctly on the host.
 
@@ -16,18 +17,15 @@ https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## Secret Provisioning server
 
-The server is supposed to run on a trusted machine (not in the SGX enclave). The
+The server is supposed to run on a trusted machine (not in an SGX enclave). The
 server listens for client connections. For each connected client, the server
 verifies the client's RA-TLS certificate and the embedded SGX quote and, if
-verification succeeds, sends the first secret back to the client (the master key
-for encrypted files, read from `files/wrap-key` that is passed as a command-line
-argument while running the server, or a 16B random key if no command-line argument
-is provided). If the client requests a second secret, the server sends the dummy
-string `42` as the second secret.
+verification succeeds, sends secrets back to the client (e.g. the master
+key for encrypted files in `secret_prov_pf` example).
 
-There are two versions of the server: the EPID one and the DCAP one. Each of
-them links against the corresponding EPID/DCAP secret-provisioning library at
-build time.
+There are two versions of each the server: the EPID one and the DCAP one. Each
+of them links against the corresponding EPID/DCAP secret-provisioning library
+at build time.
 
 Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
 to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
@@ -49,10 +47,10 @@ There are three clients in this example:
 2. Feature-rich client. It uses a programmatic C API to get two secrets from the
    server.
 3. Encrypted-files client. Similarly to the minimal client, it relies on
-   constructor-time secret provisioning and instructs Gramine to consider the
+   constructor-time secret provisioning and instructs Gramine to use the
    provisioned secret as the encryption key for the Encrypted Files feature.
    After the master key is applied, the client reads an encrypted file
-   `files/input.txt`.
+   `input.txt`.
 
 As part of secret provisioning flow, all clients create a self-signed RA-TLS
 certificate with the embedded SGX quote, send it to the server for verification,
@@ -71,22 +69,18 @@ build time.
 [spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
 
 ```sh
-make app epid files/input.txt RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
-    RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
+make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
+     RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
 
+# test encrypted files client (other examples can be tested similarly)
+cd secret_prov_pf
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
-./secret_prov_server_epid files/wrap-key &
+./server_epid wrap_key &
 
 # test minimal client
-gramine-sgx ./secret_prov_min_client
-
-# test feature-rich client
-gramine-sgx ./secret_prov_client
-
-# test encrypted-files client
-gramine-sgx ./secret_prov_pf_client
+gramine-sgx ./client
 
 kill %%
 ```
@@ -94,20 +88,15 @@ kill %%
 - Secret Provisioning flows, ECDSA-based (DCAP) attestation:
 
 ```sh
-make app dcap files/input.txt RA_TYPE=dcap
+make app dcap RA_TYPE=dcap
 
+# test encrypted files client (other examples can be tested similarly)
+cd secret_prov_pf
 RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-./secret_prov_server_dcap files/wrap-key &
+./server_dcap wrap_key &
 
-# test minimal client
-gramine-sgx ./secret_prov_min_client
-
-# test feature-rich client
-gramine-sgx ./secret_prov_client
-
-# test encrypted-files client
-gramine-sgx ./secret_prov_pf_client
+gramine-sgx ./client
 
 kill %%
 ```
