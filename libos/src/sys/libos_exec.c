@@ -18,7 +18,14 @@
 static int close_on_exec(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
     if (fd_hdl->flags & FD_CLOEXEC) {
         struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+
+        /* At this point (when we are in `close_on_exec()`), there is a single thread left that
+         * called into `exec()` syscall. It's certain that the implementation of FS locks will never
+         * try to acquire `map->lock`, and the `exec()` code here will never touch FS-lock-internal
+         * locks. Hence, it's safe here to call `clear_posix_locks()` which takes some
+         * FS-lock-internal locks while holding `map->lock` as no deadlocks can happen. */
         clear_posix_locks(hdl);
+
         put_handle(hdl);
     }
     return 0;
