@@ -99,3 +99,93 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
 
     return sys_load(str, out_data, out_size);
 }
+
+int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    size_t numa_nodes_cnt = g_pal_public_state->topo_info.numa_nodes_cnt;
+    /* Simply "mimic" a typical environment: each NUMA node returns the same proportion of
+     * `MemTotal` and `MemFree` */
+    size_t node_mem_total = g_pal_public_state->mem_total / numa_nodes_cnt;
+    size_t node_mem_free = PalMemoryAvailableQuota() / numa_nodes_cnt;
+
+    assert(node_mem_total >= node_mem_free);
+
+    int ret;
+    unsigned int node_id;
+    ret = sys_resource_find(dent, "node", &node_id);
+    if (ret < 0)
+        return ret;
+
+    size_t size = 0, max = 256;
+    size_t i = 0;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
+
+    /*
+     * Enumerate minimum set of node meminfo stats. This set is based on Linux v5.19, see below for
+     * details:
+     *
+     * - https://github.com/torvalds/linux/blob/v5.19/drivers/base/node.c
+    */
+
+    struct {
+        const char* fmt;
+        unsigned long val;
+    } meminfo[] = {
+        { "Node %d MemTotal:       %8lu kB\n", node_mem_total / 1024 },
+        { "Node %d MemFree:        %8lu kB\n", node_mem_free / 1024 },
+        { "Node %d MemUsed:        %8lu kB\n", (node_mem_total - node_mem_free) / 1024 },
+        { "Node %d SwapCached:     %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Active:         %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Inactive:       %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Active(anon):   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Inactive(anon): %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Active(file):   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Inactive(file): %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Unevictable:    %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Mlocked:        %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Dirty:          %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Writeback:      %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d FilePages:      %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Mapped:         %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d AnonPages:      %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Shmem:          %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d KernelStack:    %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d PageTables:     %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d NFS_Unstable:   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Bounce:         %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d WritebackTmp:   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d KReclaimable:   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d Slab:           %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d SReclaimable:   %8lu kB\n", /*dummy value=*/0 },
+        { "Node %d SUnreclaim:     %8lu kB\n", /*dummy value=*/0 },
+    };
+
+    while (i < ARRAY_SIZE(meminfo)) {
+        int ret = snprintf(str + size, max - size, meminfo[i].fmt, node_id, meminfo[i].val);
+        if (ret < 0) {
+            free(str);
+            return ret;
+        }
+
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            /* TODO: use `realloc()` once it's available. */
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
+
+        size += ret;
+        i++;
+    }
+
+    *out_data = str;
+    *out_size = size;
+    return 0;
+}
