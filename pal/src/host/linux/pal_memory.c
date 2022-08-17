@@ -18,6 +18,9 @@
 #include "pal_linux_error.h"
 #include "spinlock.h"
 
+#define PROC_MEMINFO_PATH "/proc/meminfo"
+#define SYS_NODE_MEMINFO_PATH_PREFIX "/sys/devices/system/node/node"
+
 /* Internal-PAL memory is allocated in range [g_pal_internal_mem_addr, g_pal_internal_mem_size).
  * This range is "preloaded" (LibOS is notified that it cannot use this range), so there can be no
  * overlap between LibOS and internal-PAL allocations.
@@ -89,8 +92,13 @@ int _PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-static int read_proc_meminfo(const char* key, unsigned long* val) {
-    int fd = DO_SYSCALL(open, "/proc/meminfo", O_RDONLY, 0);
+static int read_structured_info(const char* path, const char* key, unsigned long* val) {
+    if (strcmp(path, PROC_MEMINFO_PATH) != 0 &&
+            !strstartswith(path, SYS_NODE_MEMINFO_PATH_PREFIX)) {
+        return -PAL_ERROR_NOTIMPLEMENTED;
+    }
+
+    int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
 
     if (fd < 0)
         return -PAL_ERROR_DENIED;
@@ -145,7 +153,7 @@ unsigned long _PalMemoryQuota(void) {
         return g_pal_linux_state.memory_quota;
 
     unsigned long quota = 0;
-    if (read_proc_meminfo("MemTotal", &quota) < 0) {
+    if (read_structured_info(PROC_MEMINFO_PATH, "MemTotal", &quota) < 0) {
         g_pal_linux_state.memory_quota = (unsigned long)-1;
         return 0;
     }
@@ -153,9 +161,43 @@ unsigned long _PalMemoryQuota(void) {
     return (g_pal_linux_state.memory_quota = quota * 1024);
 }
 
+unsigned long _PalNodeMemTotal(unsigned int node_id) {
+    unsigned long mem_total_kb = 0;
+    char path[256];
+    char key[40];
+
+    if (snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/meminfo", node_id) < 0)
+        return 0;
+    if (snprintf(key, sizeof(key), "Node %d MemTotal", node_id) < 0)
+        return 0;
+
+    if (read_structured_info(path, key, &mem_total_kb) < 0) {
+        return 0;
+    }
+
+    return mem_total_kb * 1024;
+}
+
+unsigned long _PalNodeMemFree(unsigned int node_id) {
+    unsigned long mem_free_kb = 0;
+    char path[256];
+    char key[40];
+
+    if (snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/meminfo", node_id) < 0)
+        return 0;
+    if (snprintf(key, sizeof(key), "Node %d MemFree", node_id) < 0)
+        return 0;
+
+    if (read_structured_info(path, key, &mem_free_kb) < 0) {
+        return 0;
+    }
+
+    return mem_free_kb * 1024;
+}
+
 unsigned long _PalMemoryAvailableQuota(void) {
     unsigned long quota = 0;
-    if (read_proc_meminfo("MemFree", &quota) < 0)
+    if (read_structured_info(PROC_MEMINFO_PATH, "MemFree", &quota) < 0)
         return 0;
     return quota * 1024;
 }

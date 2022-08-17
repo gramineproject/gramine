@@ -94,3 +94,15 @@ uint64_t _PalMemoryAvailableQuota(void) {
     return (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
            __atomic_load_n(&g_allocated_pages, __ATOMIC_RELAXED) * g_page_size;
 }
+
+uint64_t _PalNodeMemTotal(unsigned int node_id) {
+    __UNUSED(node_id);
+
+    return _PalMemoryQuota();
+}
+
+uint64_t _PalNodeMemFree(unsigned int node_id) {
+    __UNUSED(node_id);
+
+    return _PalMemoryAvailableQuota();
+}

@@ -839,6 +839,15 @@ int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 size_t PalMemoryAvailableQuota(void);
 
 /*!
+ * \brief Get the current free memory of the given NUMA node.
+ *
+ * \param node_id  The NUMA node id to get free memory stats.
+ *
+ * \returns the amount of currently free memory of the given NUMA node for LibOS/application usage.
+ */
+size_t PalNodeMemFree(size_t node_id);
+
+/*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
  * \param         user_report_data       Report data with arbitrary contents (typically uniquely

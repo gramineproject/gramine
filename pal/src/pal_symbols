@@ -53,3 +53,4 @@ PalAttestationQuote
 PalGetSpecialKey
 PalDebugLog
 PalGetPalPublicState
+PalNodeMemFree

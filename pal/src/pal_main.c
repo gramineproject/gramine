@@ -540,6 +540,10 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_public_state.mem_total = _PalMemoryQuota();
 
+    for (size_t i = 0; i < g_pal_public_state.topo_info.numa_nodes_cnt; i++) {
+        g_pal_public_state.topo_info.numa_nodes[i].mem_total = _PalNodeMemTotal(i);
+    }
+
     if (toml_key_exists(g_pal_public_state.manifest_root,
                         "fs.experimental__enable_sysfs_topology")) {
         // TODO: Deprecation started in v1.2, drop in 2 releases.

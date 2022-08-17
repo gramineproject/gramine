@@ -79,6 +79,8 @@ struct pal_numa_node_info {
     /* Everything below is valid only if the node is online! */
 
     size_t nr_hugepages[HUGEPAGES_MAX];
+
+    size_t mem_total;
 };
 
 /* We store the platform topology in a series of flat arrays, and use IDs (array indices) for

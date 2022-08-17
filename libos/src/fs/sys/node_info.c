@@ -106,14 +106,16 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
     ret = sys_resource_find(dent, "node", &node_id);
     if (ret < 0)
         return ret;
+    size_t mem_total = g_pal_public_state->topo_info.numa_nodes[node_id].mem_total;
+    size_t mem_free = PalNodeMemFree(node_id);
+
+    assert(mem_total >= mem_free);
 
     size_t size = 0, max = 256;
     size_t i = 0;
     char* str = malloc(max);
     if (!str)
         return -ENOMEM;
-
-    assert(g_pal_public_state->mem_total >= PalMemoryAvailableQuota());
 
     /*
      * Enumerate minimum set of node meminfo stats. This set is based on Linux v5.19, see below for
@@ -126,10 +128,9 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
         const char* fmt;
         unsigned long val;
     } meminfo[] = {
-        { "Node %d MemTotal:       %8lu kB\n", g_pal_public_state->mem_total / 1024 },
-        { "Node %d MemFree:        %8lu kB\n", PalMemoryAvailableQuota() / 1024 },
-        { "Node %d MemUsed:        %8lu kB\n",
-            (g_pal_public_state->mem_total - PalMemoryAvailableQuota()) / 1024 },
+        { "Node %d MemTotal:       %8lu kB\n", mem_total / 1024 },
+        { "Node %d MemFree:        %8lu kB\n", mem_free / 1024 },
+        { "Node %d MemUsed:        %8lu kB\n", (mem_total - mem_free) / 1024 },
         { "Node %d SwapCached:     %8lu kB\n", /*dummy value=*/0 },
         { "Node %d Active:         %8lu kB\n", /*dummy value=*/0 },
         { "Node %d Inactive:       %8lu kB\n", /*dummy value=*/0 },
