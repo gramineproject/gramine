@@ -368,11 +368,9 @@ static int poke_regs(int memdev, pid_t tid, struct enclave_dbginfo* ei,
     return poke_gpr(memdev, tid, ei, &gpr);
 }
 
-/* Find corresponding memdevice of thread tid (open and populate on first
- * access). Return 0 on success, -1 on benign failure (enclave in not yet
- * initialized), -2 on other, severe failures.
- *  */
-static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
+/* Find corresponding memdevice of thread tid (open and populate on first access). Return 0 on
+ * success, -1 on benign failure (enclave in not yet initialized), -2 on other, severe failures. */
+static int open_memdevice(pid_t tid, int* out_memdev, struct enclave_dbginfo** out_ei) {
     char memdev_path[40];
     uint64_t flags;
     int ret;
@@ -383,23 +381,23 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
      * for other threads of multi-threaded apps, this case covered below */
     for (int i = 0; i < g_memdevs_cnt; i++) {
         if (g_memdevs[i].pid == tid) {
-            *memdev = g_memdevs[i].memdev;
-            *ei = &g_memdevs[i].ei;
-            return update_thread_tids(*ei);
+            *out_memdev = g_memdevs[i].memdev;
+            *out_ei = &g_memdevs[i].ei;
+            return update_thread_tids(*out_ei);
         }
     }
 
-    struct enclave_dbginfo* ei_tmp = calloc(1, sizeof(*ei_tmp));
-    if (!ei_tmp) {
+    struct enclave_dbginfo* ei = calloc(1, sizeof(*ei));
+    if (!ei) {
         DEBUG_LOG("Cannot allocate temporary memory\n");
         ret = -2;
         goto out;
     }
-    ei_tmp->pid = -1;
+    ei->pid = -1;
 
-    static_assert(sizeof(*ei_tmp) % sizeof(long) == 0, "Unsupported size");
+    static_assert(sizeof(*ei) % sizeof(long) == 0, "Unsupported size");
 
-    for (size_t off = 0; off < sizeof(*ei_tmp); off += sizeof(long)) {
+    for (size_t off = 0; off < sizeof(*ei); off += sizeof(long)) {
         errno = 0;
         long val = host_ptrace(PTRACE_PEEKDATA, tid, (void*)DBGINFO_ADDR + off, NULL);
         if (val < 0 && errno != 0) {
@@ -408,21 +406,21 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
             goto out;
         }
 
-        memcpy((char*)ei_tmp + off, &val, sizeof(val));
+        memcpy((char*)ei + off, &val, sizeof(val));
     }
 
     /* Check again if corresponding memdevice was already opened but now
-     * using actual pid of app (ei_tmp.pid), case for multi-threaded apps */
+     * using actual pid of app (ei.pid), case for multi-threaded apps */
     for (int i = 0; i < g_memdevs_cnt; i++) {
-        if (g_memdevs[i].pid == ei_tmp->pid) {
-            *memdev = g_memdevs[i].memdev;
-            *ei = &g_memdevs[i].ei;
-            ret = update_thread_tids(*ei);
+        if (g_memdevs[i].pid == ei->pid) {
+            *out_memdev = g_memdevs[i].memdev;
+            *out_ei = &g_memdevs[i].ei;
+            ret = update_thread_tids(*out_ei);
             goto out;
         }
     }
 
-    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", ei_tmp->pid);
+    DEBUG_LOG("Retrieved debug information (enclave reports PID %d)\n", ei->pid);
 
     if (g_memdevs_cnt == sizeof(g_memdevs) / sizeof(g_memdevs[0])) {
         DEBUG_LOG("Too many debugged processes (max = %d)\n", g_memdevs_cnt);
@@ -440,10 +438,10 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
 
     /* setting debug bit in TCS flags */
     for (int i = 0; i < MAX_DBG_THREADS; i++) {
-        if (!ei_tmp->tcs_addrs[i])
+        if (!ei->tcs_addrs[i])
             continue;
 
-        void* flags_addr = ei_tmp->tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
+        void* flags_addr = ei->tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
 
         ssize_t bytes_read = pread(fd, &flags, sizeof(flags), (off_t)flags_addr);
         if (bytes_read < 0 || (size_t)bytes_read < sizeof(flags)) {
@@ -466,21 +464,21 @@ static int open_memdevice(pid_t tid, int* memdev, struct enclave_dbginfo** ei) {
         }
     }
 
-    g_memdevs[g_memdevs_cnt].pid    = ei_tmp->pid;
+    g_memdevs[g_memdevs_cnt].pid    = ei->pid;
     g_memdevs[g_memdevs_cnt].memdev = fd;
-    g_memdevs[g_memdevs_cnt].ei     = *ei_tmp;
+    g_memdevs[g_memdevs_cnt].ei     = *ei;
     memset(g_memdevs[g_memdevs_cnt].ei.thread_stepping, 0,
            sizeof(g_memdevs[g_memdevs_cnt].ei.thread_stepping));
 
-    *memdev = fd;
-    *ei = &g_memdevs[g_memdevs_cnt].ei;
+    *out_memdev = fd;
+    *out_ei = &g_memdevs[g_memdevs_cnt].ei;
     g_memdevs_cnt++;
 
     ret = 0;
 out:
     if (ret < 0 && fd >= 0)
         close(fd);
-    free(ei_tmp);
+    free(ei);
     return ret;
 }
 

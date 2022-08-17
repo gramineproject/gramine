@@ -667,13 +667,13 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         goto out;
     }
 
-    if (thread_num_int64 <= 0) {
-        log_error("Non-positive 'sgx.thread_num' is impossible");
+    if (thread_num_int64 < 0) {
+        log_error("Negative 'sgx.thread_num' is impossible");
         ret = -EINVAL;
         goto out;
     }
 
-    enclave_info->thread_num = thread_num_int64;
+    enclave_info->thread_num = thread_num_int64 ?: 1;
 
     if (enclave_info->thread_num > MAX_DBG_THREADS) {
         log_error("Too large 'sgx.thread_num', maximum allowed is %d", MAX_DBG_THREADS);
