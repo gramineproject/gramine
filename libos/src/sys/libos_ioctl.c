@@ -61,18 +61,22 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             ret = set_handle_nonblocking(hdl, !!nonblocking_on);
             break;
         case FIONCLEX:
+            ret = 0;
             lock(&handle_map->lock);
             if (HANDLE_ALLOCATED(handle_map->map[fd]))
                 handle_map->map[fd]->flags &= ~FD_CLOEXEC;
+            else
+                ret = -EBADF;
             unlock(&handle_map->lock);
-            ret = 0;
             break;
         case FIOCLEX:
+            ret = 0;
             lock(&handle_map->lock);
             if (HANDLE_ALLOCATED(handle_map->map[fd]))
                 handle_map->map[fd]->flags |= FD_CLOEXEC;
+            else
+                ret = -EBADF;
             unlock(&handle_map->lock);
-            ret = 0;
             break;
         case FIOASYNC:
             ret = install_async_event(hdl->pal_handle, 0, &signal_io, NULL);
