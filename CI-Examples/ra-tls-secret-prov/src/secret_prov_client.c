@@ -18,9 +18,9 @@
 int main(int argc, char** argv) {
     int ret;
 
-    uint8_t* secret1    = NULL;
+    uint8_t* secret1 = NULL;
     size_t secret1_size = 0;
-    uint8_t secret2[3]  = {0}; /* we expect second secret to be 2-char string */
+    uint8_t secret2[3] = {0}; /* we expect second secret to be 2-char string */
 
     struct ra_tls_ctx* ctx = NULL;
     ret = secret_provision_start("dummyserver:80;localhost:4433;anotherdummy:4433",
@@ -59,10 +59,7 @@ int main(int argc, char** argv) {
     printf("--- Received secret1 = '%s', secret2 = '%s' ---\n", secret1, secret2);
     ret = 0;
 out:
-    if (secret1) {
-        memset(secret1, 0, secret1_size);
-        free(secret1);
-    }
+    free(secret1);
     secret_provision_close(ctx);
     return ret;
 }

@@ -305,7 +305,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 
     memset(buf, 0, sizeof(buf));
     ret = secret_provision_common_read(ssl, buf, sizeof(SECRET_PROVISION_RESPONSE) +
-                                                  sizeof(secret_size));
+                                                 sizeof(secret_size));
     if (ret < 0) {
         goto out;
     }

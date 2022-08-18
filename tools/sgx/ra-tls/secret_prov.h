@@ -79,7 +79,7 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
  *
  * This function zeroes out the memory where provisioned secret is stored and frees it.
  *
- * This function must not be called again even if it returns an error. \p ctx is always freed.
+ * This function must not be called again even if it returned an error. \p ctx is always freed.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
@@ -96,8 +96,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * This function is relevant only for clients. Typically, the client would ask for secret
  * provisioning via secret_provision_start() which will obtain the secret from the server and
  * save it in enclave memory. After that, the client can call this function to retrieve the
- * copy of the secret from memory. The client must erase the memory of the retrieved copy of the
- * secret and free the buffer afterwards.
+ * copy of the secret from memory. The client must free the copied-secret buffer afterwards.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size);
