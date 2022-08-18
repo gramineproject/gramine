@@ -258,4 +258,4 @@ int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
                          const void* callback_arg);
 
 /* etcfs */
-int init_etc(void);
+int init_etcfs(void);

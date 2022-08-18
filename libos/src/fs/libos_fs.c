@@ -75,7 +75,7 @@ int init_fs(void) {
     if ((ret = init_sysfs()) < 0)
         goto err;
 
-    if ((ret = init_etc()) < 0)
+    if ((ret = init_etcfs()) < 0)
         goto err;
 
     return 0;

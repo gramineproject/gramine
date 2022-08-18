@@ -22,7 +22,6 @@
 #include "spinlock.h"
 #include "toml_utils.h"
 #include "topo_info.h"
-#include "linux_utils.h"
 
 /* The timeout of 50ms was found to be a safe TSC drift correction periodicity based on results
  * from multiple systems. Any higher or lower could pose risks of negative time drift or

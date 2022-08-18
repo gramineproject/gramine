@@ -518,7 +518,7 @@ extern struct libos_dentry* g_dentry_root;
 int init_fs(void);
 int init_mount_root(void);
 int init_mount(void);
-int init_mount_etc(void);
+int init_mount_etcfs(void);
 
 /* file system operations */
 

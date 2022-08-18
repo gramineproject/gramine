@@ -40,7 +40,7 @@ long libos_syscall_uname(struct new_utsname* buf) {
     return 0;
 }
 
-long libos_set_hostname(char* name, size_t len) {
+long set_hostname(char* name, size_t len) {
     if (len >= sizeof(g_current_uname.nodename))
         return -EINVAL;
 
@@ -57,7 +57,7 @@ long libos_syscall_sethostname(char* name, int len) {
     if (!is_user_memory_readable(name, len))
         return -EFAULT;
 
-    return libos_set_hostname(name, len);
+    return set_hostname(name, len);
 }
 
 long libos_syscall_setdomainname(char* name, int len) {

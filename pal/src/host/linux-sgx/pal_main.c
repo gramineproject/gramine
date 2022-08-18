@@ -254,7 +254,7 @@ static bool is_hostname_valid(const char* hostname) {
     if (*ptr == '-')
         return false;
 
-    while (*ptr != '\0') {
+    while (*ptr != '\0' && ptr - hostname < PAL_HOSTNAME_MAX) {
         if ((*ptr >= 'a' && *ptr <= 'z') ||
             (*ptr >= 'A' && *ptr <= 'Z') ||
             (*ptr >= '0' && *ptr <= '9') ||
@@ -274,12 +274,12 @@ static bool is_hostname_valid(const char* hostname) {
         return false;
     }
 
+    if (*ptr != '\0')
+        return false;
     if (chrcount == 0 || chrcount > 63)
         return false;
     /* rewind to last character */
     ptr--;
-    if (ptr - hostname > PAL_HOSTNAME_MAX)
-        return false;
     if (*ptr == '-')
         return false;
 
@@ -628,17 +628,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
 
-    /* Get host topology information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (parent_stream_fd < 0) {
-        /* parse and store host topology info into g_pal_public_state struct */
-        ret = import_and_sanitize_topo_info(&host_info.topo_info);
-        if (ret < 0) {
-            log_error("Failed to copy and sanitize topology information");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-    }
-
     bool preheat_enclave;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.preheat_enclave",
                        /*defaultval=*/false, &preheat_enclave);
@@ -690,6 +679,11 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     /* Get host information only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
     if (parent_stream_fd < 0) {
+        /* parse and store host topology info into g_pal_public_state struct */
+        if ((ret = import_and_sanitize_topo_info(&host_info.topo_info)) < 0) {
+            log_error("Failed to copy and sanitize topology information: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
         if ((ret = init_passthrough_etc_files(&host_info)) < 0) {
             log_error("Failed to initialize etc files: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);

@@ -4,7 +4,8 @@
  */
 
 /*
- * This file contains the implementation of `etc` passthrough.
+ * This file contains the implementation of `etc` FS.
+ * LibOS assumes that contents of all etc files were already sanitized.
  */
 
 #include "libos_checkpoint.h"
@@ -24,12 +25,12 @@ static int provide_etc_hostname(struct libos_dentry* dent, char** out_data, size
     return 0;
 }
 
-int init_etc(void) {
+int init_etcfs(void) {
     pseudo_add_str(NULL, "hostname", &provide_etc_hostname);
     return 0;
 }
 
-int init_mount_etc(void) {
+int init_mount_etcfs(void) {
     int ret;
 
     if (!g_pal_public_state->passthrough_etc_files)

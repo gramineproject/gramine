@@ -2,10 +2,9 @@ import os
 import re
 import shutil
 import signal
+import socket
 import subprocess
 import unittest
-
-from socket import gethostname
 
 from graminelibos.regression import (
     HAS_SGX,
@@ -1122,12 +1121,19 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn("TEST OK", stdout)
 
     def test_070_hostname_localhost(self):
+        # The manifest doesn't contain etc passthrough.
+        # This means that the /etc/hostname file doesn't exist.
+        # To test it, we pass the empty second argument.
         stdout, _ = self.run_binary(['hostname', 'localhost', ''])
-        self.assertIn("hostname test passed", stdout)
+        self.assertIn("TEST OK", stdout)
 
     def test_071_hostname_pass_etc(self):
-        stdout, _ = self.run_binary(['hostname_pass_etc', gethostname(), gethostname()])
-        self.assertIn("hostname test passed", stdout)
+        stdout, _ = self.run_binary([
+            'hostname_pass_etc',
+            socket.gethostname(),
+            socket.gethostname(),
+        ])
+        self.assertIn("TEST OK", stdout)
 
 
 class TC_50_GDB(RegressionTestCase):

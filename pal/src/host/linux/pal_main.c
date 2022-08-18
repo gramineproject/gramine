@@ -14,7 +14,7 @@
 #include "cpu.h"
 #include "debug_map.h"
 #include "elf/elf.h"
-#include "host_info.h"
+#include "etc_host_info.h"
 #include "init.h"
 #include "linux_utils.h"
 #include "pal.h"
@@ -130,8 +130,9 @@ static void get_host_info(void) {
 
     ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.passthrough_etc_files",
                        false, &g_pal_public_state.passthrough_etc_files);
-    if (ret < 0)
-        INIT_FAIL("Unable to parse manifest");
+    if (ret < 0) {
+        INIT_FAIL("Cannot parse 'libos.passthrough_etc_files'");
+    }
 
     if (!g_pal_public_state.passthrough_etc_files)
         return;

@@ -150,6 +150,10 @@ The set of extra runtime files is limited to:
 
 - ``/etc/hostname``
 
+This option takes precedence over ``fs.mount``.
+This means that files provided in it will be overridden with the ones
+sanitized by LibOS.
+
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
 

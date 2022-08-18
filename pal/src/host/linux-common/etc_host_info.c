@@ -10,8 +10,7 @@
 #include <asm/errno.h>
 #include <linux/utsname.h>
 
-#include "linux_utils.h"
-#include "host_info.h"
+#include "etc_host_info.h"
 
 int get_hostname(char* hostname, size_t size) {
     struct new_utsname c_uname;

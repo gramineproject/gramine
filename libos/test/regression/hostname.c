@@ -1,83 +1,77 @@
 #define _DEFAULT_SOURCE BSD /* This is required for gethostname */
 
-#include <sys/wait.h>
 #include <errno.h>
+#include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
-static void test_fork(const char* tag, const char* name, void (*f)(const char*, const char*)) {
+static void test_fork(const char* tag, const char* expected_name,
+                      void (*f)(const char*, const char*)) {
     int status;
 
     pid_t pid = fork();
     if (pid == -1) {
-        printf("Unable to fork %s\n", tag);
-        exit(1);
+        err(1, "Unable to fork %s", tag);
     }
 
     if (pid == 0) {
-        f(tag, name);
+        f(tag, expected_name);
         exit(0);
     }
 
     if (wait(&status) == -1) {
-        printf("Wait failed %s\n", tag);
-        exit(1);
+        err(1, "Wait failed %s", tag);
     }
 
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        printf("Test failed %s\n", tag);
-        exit(1);
+        err(1, "Test failed %s", tag);
     }
 }
 
-static void test_gethostname(const char* tag, const char* name) {
+static void test_gethostname(const char* tag, const char* expected_name) {
     char buf[512] = {0};
 
     if (gethostname(buf, sizeof(buf)) != 0) {
-        printf("%sgethostname: failed %d\n", tag, errno);
-        exit(1);
+        err(1, "%s gethostname: failed", tag);
     }
 
-    if (strcmp(buf, name) != 0) {
-        printf("%sgethostname dosen't match hostname (expected: %s, got: %s)\n",
-               tag, name, buf);
-        exit(1);
+    if (strcmp(buf, expected_name) != 0) {
+        errx(1, "%s gethostname doesn't match hostname (expected: %s, got: %s)",
+               tag, expected_name, buf);
     }
 }
 
-static void test_etc_hostname(const char* tag, const char* name) {
+static void test_etc_hostname(const char* tag, const char* expected_name) {
     char buf[512] = {0};
     int fd;
 
     fd = open("/etc/hostname", O_RDONLY);
 
     /*
-     * If the etc hostname was not provided, assume that etc shouldn't exists.
+     * If the etc expected name was not provided, assume that etc shouldn't exist.
      */
-    if (strcmp(name, "") == 0) {
+    if (strcmp(expected_name, "") == 0) {
         if (fd != -1 || errno != ENOENT) {
-            printf("The etc file shouldn't exists, but exists\n");
-            exit(1);
+            err(1, "The etc file shouldn't exist, but exists");
         }
         return;
     }
 
     if (fd == -1) {
-        printf("Unable to open /etc/hostname in %s\n", tag);
-        exit(1);
+        err(1, "Unable to open /etc/hostname in %s", tag);
     }
 
     int ret = read(fd, buf, sizeof(buf));
     if (ret <= 0) {
-        printf("Unable to read /etc/hostname in %s\n", tag);
-        exit(1);
+        err(1, "Unable to read /etc/hostname in %s", tag);
     }
 
     /*
-     * Sometimes etc hostname might have a trailing '\n', gramine is romving it,
+     * Sometimes etc hostname might have a trailing '\n', gramine is removing it,
      * do the same in the test.
      */
     size_t len = strlen(buf);
@@ -85,10 +79,9 @@ static void test_etc_hostname(const char* tag, const char* name) {
         buf[len - 1] = '\0';
     }
 
-    if (strcmp(buf, name) != 0) {
-        printf("%s etc don't have a expected value (expected: %s, got: %s)\n",
-               tag, name, buf);
-        exit(1);
+    if (strcmp(buf, expected_name) != 0) {
+        err(1, "%s /etc/hostname don't have a expected value (expected: %s, got: %s)",
+               tag, expected_name, buf);
     }
 }
 
@@ -98,11 +91,11 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    test_gethostname("", argv[1]);
-    test_etc_hostname("", argv[2]);
+    test_gethostname("normal", argv[1]);
+    test_etc_hostname("normal etc", argv[2]);
     test_fork("fork gethostname", argv[1], test_gethostname);
-    test_fork("fork etc gethostname", argv[2], test_etc_hostname);
+    test_fork("fork etc_hostname", argv[2], test_etc_hostname);
 
-    printf("hostname test passed\n");
+    printf("TEST OK\n");
     return 0;
 }

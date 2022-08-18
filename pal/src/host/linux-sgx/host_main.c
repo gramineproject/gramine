@@ -12,10 +12,10 @@
 
 #include "asan.h"
 #include "debug_map.h"
+#include "etc_host_info.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "host_ecalls.h"
 #include "host_internal.h"
-#include "host_info.h"
 #include "host_log.h"
 #include "linux_utils.h"
 #include "pal_internal_arch.h"
@@ -917,7 +917,7 @@ static int get_host_info(pal_host_info_t* host_info, int parent_stream_fd) {
     if (ret < 0)
         return ret;
 
-    /* If we do not expose etc, we don't need any addiotianl information about host. */
+    /* If we do not expose etc, we don't need any additional information about host. */
     if (!host_info->passthrough_etc)
         return 0;
 

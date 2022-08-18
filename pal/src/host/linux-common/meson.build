@@ -5,8 +5,8 @@ pal_linux_common_sources_enclave = files(
 )
 pal_linux_common_sources_host = files(
     'debug_map.c',
+    'etc_host_info.c',
     'file_utils.c',
-    'host_info.c',
     'main_exec_path.c',
     'proc_maps.c',
     'timespec_utils.c',
