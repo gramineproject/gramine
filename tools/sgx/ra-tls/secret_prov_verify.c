@@ -51,13 +51,13 @@ struct thread_info {
 static pthread_mutex_t g_handshake_lock;
 
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
-    if (!ctx || !buf)
+    if (!ctx || (size && !buf))
         return -EINVAL;
     return secret_provision_common_write(ctx->ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
-    if (!ctx || !buf)
+    if (!ctx || (size && !buf))
         return -EINVAL;
     return secret_provision_common_read(ctx->ssl, buf, size);
 }
@@ -132,7 +132,7 @@ static void* client_connection(void* data) {
     memcpy(buf + sizeof(SECRET_PROVISION_RESPONSE), &send_secret_size, sizeof(send_secret_size));
 
     ret = secret_provision_common_write(&ssl, buf, sizeof(SECRET_PROVISION_RESPONSE)
-                                                       + sizeof(send_secret_size));
+                                                   + sizeof(send_secret_size));
     if (ret < 0) {
         goto out;
     }

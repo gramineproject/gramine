@@ -57,13 +57,13 @@ int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* o
 }
 
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
-    if (!ctx || !buf)
+    if (!ctx || (size && !buf))
         return -EINVAL;
     return secret_provision_common_write(ctx->ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
-    if (!ctx || !buf)
+    if (!ctx || (size && !buf))
         return -EINVAL;
     return secret_provision_common_read(ctx->ssl, buf, size);
 }
