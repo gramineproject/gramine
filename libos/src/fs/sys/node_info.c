@@ -125,7 +125,7 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
      * Enumerate minimum set of node meminfo stats. This set is based on Linux v5.19, see below for
      * details:
      *
-     * - https://github.com/torvalds/linux/blob/v5.19/drivers/base/node.c
+     * - https://elixir.bootlin.com/linux/v5.19/source/drivers/base/node.c#L369
     */
 
     struct {
