@@ -96,7 +96,8 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * This function is relevant only for clients. Typically, the client would ask for secret
  * provisioning via secret_provision_start() which will obtain the secret from the server and
  * save it in enclave memory. After that, the client can call this function to retrieve the
- * copy of the secret from memory. The client must free the copied-secret buffer afterwards.
+ * copy of the secret from memory. Content of \p out_secret is dynamically allocated and should be
+ * released using `free(*out_secret)`.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size);

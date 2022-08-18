@@ -52,7 +52,7 @@ static int verify_measurements_callback(const char* mrenclave, const char* mrsig
 }
 
 /* this callback is called in a new thread associated with a client; be careful to make this code
- * thread-local and/or thread-safe; note that there is no need to call secret_provision_close() */
+ * thread-local and/or thread-safe */
 static int communicate_with_client_callback(struct ra_tls_ctx* ctx) {
     int ret;
 
@@ -60,9 +60,9 @@ static int communicate_with_client_callback(struct ra_tls_ctx* ctx) {
     printf("--- Sent secret1 = '%s' ---\n", g_secret_pf_key_hex);
 
     /* let's send another secret (just to show communication with secret-awaiting client) */
-    uint8_t buf[128] = {0};
+    uint8_t buf[sizeof(EXPECTED_STRING)] = {0};
 
-    ret = secret_provision_read(ctx, buf, sizeof(EXPECTED_STRING));
+    ret = secret_provision_read(ctx, buf, sizeof(buf));
     if (ret < 0) {
         if (ret == -ECONNRESET) {
             /* client doesn't want another secret, shutdown communication gracefully */

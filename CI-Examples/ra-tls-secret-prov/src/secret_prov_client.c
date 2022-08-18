@@ -61,5 +61,5 @@ int main(int argc, char** argv) {
 out:
     free(secret1);
     secret_provision_close(ctx);
-    return ret;
+    return ret == 0 ?: 1;
 }

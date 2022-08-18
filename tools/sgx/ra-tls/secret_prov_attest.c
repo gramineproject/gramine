@@ -57,13 +57,13 @@ int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* o
 }
 
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
-    if (!ctx)
+    if (!ctx || !buf)
         return -EINVAL;
     return secret_provision_common_write(ctx->ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
-    if (!ctx)
+    if (!ctx || !buf)
         return -EINVAL;
     return secret_provision_common_read(ctx->ssl, buf, size);
 }
@@ -128,10 +128,11 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         return -ENOMEM;
     }
 
-    ctx->ssl    = ssl;
-    ctx->conf   = conf;
-    ctx->net    = net;
-    ctx->secret = NULL;
+    ctx->ssl         = ssl;
+    ctx->conf        = conf;
+    ctx->net         = net;
+    ctx->secret      = NULL;
+    ctx->secret_size = 0;
 
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
@@ -156,7 +157,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         in_ca_chain_path = getenv(SECRET_PROVISION_CA_CHAIN_PATH);
         if (!in_ca_chain_path) {
             ERROR("Secret Provisioning could not find envvar " SECRET_PROVISION_CA_CHAIN_PATH "\n");
-            return -EINVAL;
+            ret = -EINVAL;
+            goto out;
         }
     }
 
@@ -182,7 +184,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     char* saveptr2 = NULL;
     char* str1;
     for (str1 = servers; /*no condition*/; str1 = NULL) {
-        ret = -ECONNREFUSED;
+        ret = MBEDTLS_ERR_NET_CONNECT_FAILED;
         char* token = strtok_r(str1, ",; ", &saveptr1);
         if (!token)
             break;
@@ -201,12 +203,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     }
 
     if (ret < 0) {
-        if (ret != -ECONNREFUSED) {
-            ERROR("Secret Provisioning failed during mbedtls_net_connect with error %d\n", ret);
-            ret = -EPERM;
-        }
         ERROR("Secret Provisioning could not connect to any of the servers specified in "
-              SECRET_PROVISION_SERVERS "\n");
+              SECRET_PROVISION_SERVERS "; last mbedTLS error was %d\n", ret);
         goto out;
     }
 
@@ -304,8 +302,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
                   "buffer must be sufficiently large to hold SECRET_PROVISION_RESPONSE + int32");
 
     memset(buf, 0, sizeof(buf));
-    ret = secret_provision_common_read(ssl, buf, sizeof(SECRET_PROVISION_RESPONSE) +
-                                                 sizeof(secret_size));
+    ret = secret_provision_common_read(ssl, buf,
+                                       sizeof(SECRET_PROVISION_RESPONSE) + sizeof(secret_size));
     if (ret < 0) {
         goto out;
     }
