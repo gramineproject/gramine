@@ -31,6 +31,7 @@
 
 #include "ra_tls.h"
 #include "secret_prov.h"
+#include "secret_prov_common.h"
 #include "util.h"
 
 struct ra_tls_ctx {
@@ -42,29 +43,35 @@ struct ra_tls_ctx {
 };
 
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size) {
-    if (!out_secret || !out_secret_size)
+    if (!ctx || !out_secret || !out_secret_size)
         return -EINVAL;
 
-    *out_secret      = ctx->secret;
+    uint8_t* secret_copy = malloc(ctx->secret_size);
+    if (!secret_copy)
+        return -ENOMEM;
+
+    memcpy(secret_copy, ctx->secret, ctx->secret_size);
+    *out_secret      = secret_copy;
     *out_secret_size = ctx->secret_size;
     return 0;
 }
 
-extern int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
-extern int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
-extern int secret_provision_common_close(mbedtls_ssl_context* ssl);
-
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
-    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
-    return secret_provision_common_write(ssl, buf, size);
+    if (!ctx)
+        return -EINVAL;
+    return secret_provision_common_write(ctx->ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
-    mbedtls_ssl_context* ssl = (mbedtls_ssl_context*)ctx->ssl;
-    return secret_provision_common_read(ssl, buf, size);
+    if (!ctx)
+        return -EINVAL;
+    return secret_provision_common_read(ctx->ssl, buf, size);
 }
 
 int secret_provision_close(struct ra_tls_ctx* ctx) {
+    if (!ctx)
+        return -EINVAL;
+
     if (ctx->secret && ctx->secret_size) {
 #ifdef __STDC_LIB_EXT1__
         memset_s(ctx->secret, 0, ctx->secret_size);
@@ -98,7 +105,6 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     char* connected_port = NULL;
 
     uint8_t* secret = NULL;
-    struct ra_tls_ctx* ctx = NULL;
 
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_entropy_context entropy;
@@ -112,12 +118,20 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     mbedtls_net_context* net  = malloc(sizeof(*net));
     mbedtls_ssl_config*  conf = malloc(sizeof(*conf));
     mbedtls_ssl_context* ssl  = malloc(sizeof(*ssl));
-    if (!net || !conf || !ssl) {
+    struct ra_tls_ctx*   ctx  = malloc(sizeof(*ctx));
+
+    if (!net || !conf || !ssl || !ctx) {
         free(net);
         free(conf);
         free(ssl);
+        free(ctx);
         return -ENOMEM;
     }
+
+    ctx->ssl    = ssl;
+    ctx->conf   = conf;
+    ctx->net    = net;
+    ctx->secret = NULL;
 
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
@@ -133,14 +147,17 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                 (const uint8_t*)pers, strlen(pers));
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ctr_drbg_seed with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     if (!in_ca_chain_path) {
         in_ca_chain_path = getenv(SECRET_PROVISION_CA_CHAIN_PATH);
-        if (!in_ca_chain_path)
+        if (!in_ca_chain_path) {
+            ERROR("Secret Provisioning could not find envvar " SECRET_PROVISION_CA_CHAIN_PATH "\n");
             return -EINVAL;
+        }
     }
 
     ca_chain_path = strdup(in_ca_chain_path);
@@ -184,19 +201,26 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     }
 
     if (ret < 0) {
-        ret = -EPERM;
+        if (ret != -ECONNREFUSED) {
+            ERROR("Secret Provisioning failed during mbedtls_net_connect with error %d\n", ret);
+            ret = -EPERM;
+        }
+        ERROR("Secret Provisioning could not connect to any of the servers specified in "
+              SECRET_PROVISION_SERVERS "\n");
         goto out;
     }
 
     ret = mbedtls_ssl_config_defaults(conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM,
                                       MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_config_defaults with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     ret = mbedtls_x509_crt_parse_file(&verifier_ca_chain, ca_chain_path);
     if (ret != 0) {
+        ERROR("Secret Provisioning failed during mbedtls_x509_crt_parse_file with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -204,6 +228,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     char crt_issuer[256];
     ret = mbedtls_x509_dn_gets(crt_issuer, sizeof(crt_issuer), &verifier_ca_chain.issuer);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_x509_dn_gets with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -213,6 +238,7 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 
     ret = ra_tls_create_key_and_crt(&my_ratls_key, &my_ratls_cert);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during ra_tls_create_key_and_crt with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -221,38 +247,40 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 
     ret = mbedtls_ssl_conf_own_cert(conf, &my_ratls_cert, &my_ratls_key);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_conf_own_cert with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     ret = mbedtls_ssl_setup(ssl, conf);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_setup with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     ret = mbedtls_ssl_set_hostname(ssl, connected_addr);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_set_hostname with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     mbedtls_ssl_set_bio(ssl, net, mbedtls_net_send, mbedtls_net_recv, NULL);
 
-    ret = -1;
-    while (ret < 0) {
+    do {
         ret = mbedtls_ssl_handshake(ssl);
-        if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-            continue;
-        }
-        if (ret < 0) {
-            ret = -EPERM;
-            goto out;
-        }
+    } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+    if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_handshake with error %d\n", ret);
+        ret = -EPERM;
+        goto out;
     }
 
     uint32_t flags = mbedtls_ssl_get_verify_result(ssl);
     if (flags != 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_get_verify_result (flags = %u)\n",
+              flags);
         ret = -EPERM;
         goto out;
     }
@@ -283,6 +311,8 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     }
 
     if (memcmp(buf, SECRET_PROVISION_RESPONSE, sizeof(SECRET_PROVISION_RESPONSE))) {
+        ERROR("Secret Provisioning read a response that doesn't match the expected "
+              SECRET_PROVISION_RESPONSE "\n");
         ret = -EINVAL;
         goto out;
     }
@@ -306,31 +336,16 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         goto out;
     }
 
-    ctx = malloc(sizeof(*ctx));
-    if (!ctx) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    ctx->ssl         = ssl;
-    ctx->conf        = conf;
-    ctx->net         = net;
     ctx->secret      = secret;
     ctx->secret_size = secret_size;
-
     *out_ctx = ctx;
     ret = 0;
 out:
     if (ret < 0) {
-        secret_provision_common_close(ssl);
-        mbedtls_ssl_free(ssl);
-        mbedtls_ssl_config_free(conf);
-        mbedtls_net_free(net);
-        free(ssl);
-        free(conf);
-        free(net);
         free(secret);
-        free(ctx);
+        int close_ret = secret_provision_close(ctx);
+        if (close_ret < 0)
+            INFO("WARNING: Closing the secret-prov context failed with error %d.\n", close_ret);
     }
 
     mbedtls_x509_crt_free(&my_ratls_cert);

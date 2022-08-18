@@ -7,18 +7,15 @@
  * This file contains common utilities for secret provisioning library.
  */
 
+#define _XOPEN_SOURCE 700
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 
-#include "mbedtls/ssl.h"
-
 #include "secret_prov.h"
-
-int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
-int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
-int secret_provision_common_close(mbedtls_ssl_context* ssl);
+#include "secret_prov_common.h"
+#include "util.h"
 
 int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size) {
     int ret;
@@ -33,12 +30,15 @@ int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, 
             continue;
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
+            if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+                return -ECONNRESET;
+            ERROR("Secret Provisioning failed during write with mbedTLS error %d\n", ret);
+            return -EPERM;
         }
         written += (size_t)ret;
     }
     assert(written == size);
-    return (int)written;
+    return 0;
 }
 
 int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size) {
@@ -56,29 +56,31 @@ int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t 
             continue;
         if (ret < 0) {
             /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
+            if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+                return -ECONNRESET;
+            ERROR("Secret Provisioning failed during read with mbedTLS error %d\n", ret);
+            return -EPERM;
         }
         read += (size_t)ret;
     }
-
     assert(read == size);
-    return (int)read;
+    return 0;
 }
 
 int secret_provision_common_close(mbedtls_ssl_context* ssl) {
     if (!ssl)
         return 0;
 
-    int ret = -1;
-    while (ret < 0) {
+    int ret;
+    do {
         ret = mbedtls_ssl_close_notify(ssl);
-        if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-            continue;
-        }
-        if (ret < 0) {
-            /* use well-known error code for a typical case when remote party closes connection */
-            return ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ? -ECONNRESET : -EPERM;
-        }
+    } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+    if (ret < 0) {
+        /* use well-known error code for a typical case when remote party closes connection */
+        if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY)
+            return -ECONNRESET;
+        ERROR("Secret Provisioning failed during connection close with mbedTLS error %d\n", ret);
+        return -EPERM;
     }
     return 0;
 }

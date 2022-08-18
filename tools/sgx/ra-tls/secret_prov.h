@@ -41,6 +41,8 @@ typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
  *
  * This function can be called after an RA-TLS session is established via client-side call to
  * secret_provision_start() or in the server-side callback secret_provision_cb_t().
+ *
+ * This function always writes all \p size bytes on success (partial writes are not possible).
  */
 __attribute__ ((visibility("default")))
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size);
@@ -57,6 +59,8 @@ int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t si
  *
  * This function can be called after an RA-TLS session is established via client-side call to
  * secret_provision_start() or in the server-side callback secret_provision_cb_t().
+ *
+ * This function always reads all \p size bytes on success (partial reads are not possible).
  */
 __attribute__ ((visibility("default")))
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
@@ -69,20 +73,22 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
  * \returns 0 on success, specific error code (negative int) otherwise.
  *
  * This function can be called after an RA-TLS session is established via client-side call to
- * secret_provision_start() or in the server-side callback secret_provision_cb_t(). Typically,
- * application-specific protocol to provision secrets is implemented via secret_provision_read()
- * and secret_provision_write(), and this function is called to finish secret provisioning.
+ * secret_provision_start(). Typically, application-specific protocol to provision secrets is
+ * implemented via secret_provision_read() and secret_provision_write(), and this function is called
+ * to finish secret provisioning.
  *
  * This function zeroes out the memory where provisioned secret is stored and frees it.
+ *
+ * This function must not be called again even if it returns an error. \p ctx is always freed.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
 
 /*!
- * \brief Get a provisioned secret.
+ * \brief Get a copy of the provisioned secret.
  *
  * \param      ctx              Established RA-TLS session.
- * \param[out] out_secret       Pointer to buffer with secret (allocated by the library).
+ * \param[out] out_secret       Pointer to newly allocated buffer with secret.
  * \param[out] out_secret_size  Size of allocated buffer.
  *
  * \returns 0 on success, specific error code (negative int) otherwise.
@@ -90,7 +96,8 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * This function is relevant only for clients. Typically, the client would ask for secret
  * provisioning via secret_provision_start() which will obtain the secret from the server and
  * save it in enclave memory. After that, the client can call this function to retrieve the
- * secret from memory.
+ * copy of the secret from memory. The client must erase the memory of the retrieved copy of the
+ * secret and free the buffer afterwards.
  */
 __attribute__ ((visibility("default")))
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size);

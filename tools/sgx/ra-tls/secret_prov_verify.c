@@ -13,6 +13,7 @@
  * into the secret provisioning server. This library is *not* thread-safe.
  */
 
+#define _XOPEN_SOURCE 700
 #include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
@@ -31,6 +32,8 @@
 
 #include "ra_tls.h"
 #include "secret_prov.h"
+#include "secret_prov_common.h"
+#include "util.h"
 
 struct ra_tls_ctx {
     mbedtls_ssl_context* ssl;
@@ -47,19 +50,21 @@ struct thread_info {
 /* SSL/TLS + RA-TLS handshake is not thread-safe, use coarse-grained lock */
 static pthread_mutex_t g_handshake_lock;
 
-extern int secret_provision_common_write(mbedtls_ssl_context* ssl, const uint8_t* buf, size_t size);
-extern int secret_provision_common_read(mbedtls_ssl_context* ssl, uint8_t* buf, size_t size);
-extern int secret_provision_common_close(mbedtls_ssl_context* ssl);
-
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size) {
+    if (!ctx)
+        return -EINVAL;
     return secret_provision_common_write(ctx->ssl, buf, size);
 }
 
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size) {
+    if (!ctx)
+        return -EINVAL;
     return secret_provision_common_read(ctx->ssl, buf, size);
 }
 
 int secret_provision_close(struct ra_tls_ctx* ctx) {
+    if (!ctx)
+        return -EINVAL;
     /* no need to free the ctx resources, this will be done in client_connection() */
     return secret_provision_common_close(ctx->ssl);
 }
@@ -73,28 +78,28 @@ static void* client_connection(void* data) {
 
     ret = mbedtls_ssl_setup(&ssl, ti->conf);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_setup with error %d\n", ret);
         goto out;
     }
 
     mbedtls_ssl_set_bio(&ssl, &ti->client_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
 
-    ret = -1;
-    while (ret < 0) {
+    do {
         /* FIXME: this coarse-grained locking is less than optimal; need to switch to thread-safe
          *        mbedTLS configuration and thread-safe RA-TLS in the future */
         pthread_mutex_lock(&g_handshake_lock);
         ret = mbedtls_ssl_handshake(&ssl);
         pthread_mutex_unlock(&g_handshake_lock);
-        if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-            continue;
-        }
-        if (ret < 0) {
-            goto out;
-        }
+    } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+    if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_handshake with error %d\n", ret);
+        goto out;
     }
 
     uint32_t flags = mbedtls_ssl_get_verify_result(&ssl);
     if (flags != 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_get_verify_result (flags = %u)\n",
+              flags);
         goto out;
     }
 
@@ -108,6 +113,8 @@ static void* client_connection(void* data) {
     }
 
     if (memcmp(buf, SECRET_PROVISION_REQUEST, sizeof(SECRET_PROVISION_REQUEST))) {
+        ERROR("Secret Provisioning read a request that doesn't match the expected "
+              SECRET_PROVISION_REQUEST "\n");
         goto out;
     }
 
@@ -136,13 +143,10 @@ static void* client_connection(void* data) {
     }
 
     if (ti->f_cb) {
-        /* pass ownership of SSL session with client to the caller; it is caller's responsibility
-         * to gracefuly terminate the session using secret_provision_close() */
         struct ra_tls_ctx ctx = { .ssl = &ssl };
         ti->f_cb(&ctx);
-    } else {
-        secret_provision_common_close(&ssl);
     }
+    secret_provision_common_close(&ssl);
 
 out:
     mbedtls_ssl_free(&ssl);
@@ -183,12 +187,14 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                 (const uint8_t*)pers, strlen(pers));
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ctr_drbg_seed with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     ret = mbedtls_x509_crt_parse_file(&srvcert, cert_path);
     if (ret != 0) {
+        ERROR("Secret Provisioning failed during mbedtls_x509_crt_parse_file with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -196,6 +202,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     char crt_issuer[256];
     ret = mbedtls_x509_dn_gets(crt_issuer, sizeof(crt_issuer), &srvcert.issuer);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_x509_dn_gets with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -203,12 +210,14 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     ret = mbedtls_pk_parse_keyfile(&srvkey, key_path, /*password=*/NULL, mbedtls_ctr_drbg_random,
                                    &ctr_drbg);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_pk_parse_keyfile with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
 
     ret = mbedtls_net_bind(&listen_fd, NULL, port ?: "4433", MBEDTLS_NET_PROTO_TCP);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_net_bind with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -216,6 +225,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_STREAM,
                                       MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_config_defaults with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
@@ -232,6 +242,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
 
     ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &srvkey);
     if (ret < 0) {
+        ERROR("Secret Provisioning failed during mbedtls_ssl_conf_own_cert with error %d\n", ret);
         ret = -EPERM;
         goto out;
     }
