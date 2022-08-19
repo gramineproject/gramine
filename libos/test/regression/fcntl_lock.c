@@ -439,6 +439,7 @@ static void test_parent_wait_child_cloexec(void) {
     if (kill(pid, SIGKILL) < 0) {
         err(1, "kill");
     }
+    wait_for_child();
     close_pipes(pipes);
 }
 
