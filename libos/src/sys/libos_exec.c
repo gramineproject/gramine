@@ -90,7 +90,7 @@ static int libos_syscall_execve_rtld(struct libos_handle* hdl, char** argv,
     struct libos_thread* cur_thread = get_cur_thread();
     int ret;
 
-    close_cloexec_handle(cur_thread->handle_map);
+    close_cloexec_handles(cur_thread->handle_map);
 
     lock(&g_process.fs_lock);
     put_handle(g_process.exec);

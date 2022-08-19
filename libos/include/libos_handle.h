@@ -268,8 +268,7 @@ int set_new_fd_handle_above_fd(uint32_t fd, struct libos_handle* hdl, int fd_fla
 struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
                                         struct libos_handle_map* map);
 struct libos_handle* detach_fd_handle(uint32_t fd, int* flags, struct libos_handle_map* map);
-void clear_posix_locks(struct libos_handle* handle);
-void close_cloexec_handle(struct libos_handle_map* map);
+void close_cloexec_handles(struct libos_handle_map* map);
 
 /* manage handle mapping */
 int dup_handle_map(struct libos_handle_map** new_map, struct libos_handle_map* old_map);

@@ -260,6 +260,8 @@ struct libos_handle* get_fd_handle(uint32_t fd, int* fd_flags, struct libos_hand
 
 struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
                                         struct libos_handle_map* map) {
+    assert(locked(&map->lock));
+
     struct libos_handle* handle = NULL;
 
     if (HANDLE_ALLOCATED(fd)) {
@@ -289,7 +291,7 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
     return handle;
 }
 
-void clear_posix_locks(struct libos_handle* handle) {
+static void clear_posix_locks(struct libos_handle* handle) {
     if (handle && handle->dentry) {
         /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
          * if the process holds other handles for that file, or duplicated FDs for the same
@@ -669,7 +671,9 @@ done:
     return ret;
 }
 
-void close_cloexec_handle(struct libos_handle_map* map) {
+void close_cloexec_handles(struct libos_handle_map* map) {
+    lock(&map->lock);
+
     for (uint32_t i = 0; map->fd_top != FD_NULL && i <= map->fd_top; i++) {
         struct libos_fd_handle* fd_hdl = map->map[i];
 
@@ -678,10 +682,16 @@ void close_cloexec_handle(struct libos_handle_map* map) {
 
         if (fd_hdl->flags & FD_CLOEXEC) {
             struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+
+            unlock(&map->lock);
             clear_posix_locks(hdl);
+            lock(&map->lock);
+
             put_handle(hdl);
         }
     }
+
+    unlock(&map->lock);
 }
 
 BEGIN_CP_FUNC(handle) {
