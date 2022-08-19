@@ -326,7 +326,7 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
 
     unlock(&handle_map->lock);
 
-    clear_posix_locks(handle);
+    (void)clear_posix_locks(handle);
 
     return handle;
 }
@@ -688,7 +688,7 @@ void close_cloexec_handles(struct libos_handle_map* map) {
             struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
 
             unlock(&map->lock);
-            clear_posix_locks(hdl);
+            (void)clear_posix_locks(hdl);
 
             put_handle(hdl);
             lock(&map->lock);
