@@ -403,7 +403,7 @@ static void test_range_with_eof(void) {
 
 /* Test: parent waits for child to close a FD (thus release a lock) on exec. */
 static void test_parent_wait_child_cloexec(void) {
-    printf("testing parent wait child cloexec...\n");
+    printf("testing parent wait for child to release a lock upon exec calls (close-on-exec)...\n");
     unlock(0, 0);
 
     int pipes[2][2];
