@@ -424,7 +424,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
-    /* The init_mount_etcfs takes precedence over users fs.mounts, and because of that,
+    /* The init_mount_etcfs takes precedence over user's fs.mounts, and because of that,
      * it has to be called after init_mount. */
     RUN_INIT(init_mount_etcfs);
 

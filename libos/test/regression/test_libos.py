@@ -1121,7 +1121,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn("TEST OK", stdout)
 
     def test_070_hostname_localhost(self):
-        # The manifest doesn't contain etc passthrough.
+        # The generic manifest (manifest.template) doesn't contain etc passthrough.
         # This means that the /etc/hostname file doesn't exist.
         # To test it, we pass the empty second argument.
         stdout, _ = self.run_binary(['hostname', 'localhost', ''])

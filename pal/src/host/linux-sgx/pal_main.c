@@ -247,6 +247,18 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* shallow_topo_info
     return sanitize_topo_info(topo_info);
 }
 
+/*
+ * Gramine assumes that the hostname is valid when:
+ * - the length of the hostname is below or equal to 255 characters (including '\0'),
+ * - the length of a single label is between 1 and 63,
+ * - every label is separated with '.',
+ * - the hostname doesn't start or end with '.' and '-',
+ * - the hostname contains only alphanumeric characters, '-', and '.',
+ * These rules were deducted from:
+ * - https://www.rfc-editor.org/rfc/rfc1123
+ * - https://www.ietf.org/rfc/rfc0952.txt
+ * - https://www.rfc-editor.org/rfc/rfc2181
+ */
 static bool is_hostname_valid(const char* hostname) {
     const char* ptr = hostname;
     size_t chrcount = 0;
@@ -287,12 +299,8 @@ static bool is_hostname_valid(const char* hostname) {
 }
 
 static int init_passthrough_etc_files(pal_host_info_t* shallow_host_info) {
-    coerce_untrusted_bool(&shallow_host_info->passthrough_etc);
-
     if (!shallow_host_info->passthrough_etc)
         return 0;
-
-    g_pal_public_state.passthrough_etc_files = true;
 
     if (!is_hostname_valid(shallow_host_info->hostname)) {
         log_warning("The hostname on the host seems to be invalid."
@@ -300,6 +308,31 @@ static int init_passthrough_etc_files(pal_host_info_t* shallow_host_info) {
     } else {
         memcpy(g_pal_public_state.hostname, shallow_host_info->hostname,
                sizeof(g_pal_public_state.hostname) - 1);
+    }
+
+    return 0;
+}
+
+static int get_host_info(bool first_process, pal_host_info_t *shallow_host_info) {
+    int ret;
+
+    coerce_untrusted_bool(&shallow_host_info->passthrough_etc);
+    g_pal_public_state.passthrough_etc_files = shallow_host_info->passthrough_etc;
+
+    /* Get host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (!first_process) {
+        return 0;
+    }
+
+    if ((ret = import_and_sanitize_topo_info(&shallow_host_info->topo_info)) < 0) {
+        log_error("Failed to copy and sanitize topology information: %d", ret);
+        return ret;
+    }
+
+    if ((ret = init_passthrough_etc_files(shallow_host_info)) < 0) {
+        log_error("Failed to initialize etc files: %d", ret);
+        return ret;
     }
 
     return 0;
@@ -676,18 +709,9 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* Get host information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (parent_stream_fd < 0) {
-        /* parse and store host topology info into g_pal_public_state struct */
-        if ((ret = import_and_sanitize_topo_info(&host_info.topo_info)) < 0) {
-            log_error("Failed to copy and sanitize topology information: %d", ret);
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-        if ((ret = init_passthrough_etc_files(&host_info)) < 0) {
-            log_error("Failed to initialize etc files: %d", ret);
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
+    if ((ret = get_host_info(parent_stream_fd < 0, &host_info)) < 0) {
+        log_error("Failed to initialize host info");
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     enum sgx_attestation_type attestation_type;

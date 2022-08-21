@@ -121,18 +121,24 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     _PalProcessExit(1);
 }
 
-static void get_host_info(void) {
+static void get_host_info(bool first_process) {
     int ret;
-
-    ret = get_topology_info(&g_pal_public_state.topo_info);
-    if (ret < 0)
-        INIT_FAIL("get_topology_info() failed: %d", ret);
 
     ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.passthrough_etc_files",
                        false, &g_pal_public_state.passthrough_etc_files);
     if (ret < 0) {
         INIT_FAIL("Cannot parse 'libos.passthrough_etc_files'");
     }
+
+    /* Get host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (!first_process) {
+        return;
+    }
+
+    ret = get_topology_info(&g_pal_public_state.topo_info);
+    if (ret < 0)
+        INIT_FAIL("get_topology_info() failed: %d", ret);
 
     if (!g_pal_public_state.passthrough_etc_files)
         return;
@@ -418,11 +424,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
     }
 
-    /* Host information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (first_process) {
-        get_host_info();
-    }
+    get_host_info(first_process);
 
     void* internal_mem_addr = (void*)DO_SYSCALL(mmap, NULL, g_pal_internal_mem_size,
                                                 PROT_READ | PROT_WRITE,

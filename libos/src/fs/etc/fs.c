@@ -53,15 +53,10 @@ BEGIN_CP_FUNC(etc_info) {
     __UNUSED(objp);
 
     /* Propagate hostname */
-    size_t off = ADD_CP_OFFSET(sizeof(g_pal_public_state->hostname) +
-                               sizeof(g_pal_public_state->passthrough_etc_files));
+    size_t off = ADD_CP_OFFSET(sizeof(g_pal_public_state->hostname));
     char* new_hostname = (char*)(base + off);
     memcpy(new_hostname, g_pal_public_state->hostname, sizeof(g_pal_public_state->hostname));
 
-    /* Propagate passthrough_etc_files */
-    bool* new_passthrough_etc_files = (bool*)(new_hostname +
-       sizeof(g_pal_public_state->hostname));
-    *new_passthrough_etc_files = g_pal_public_state->passthrough_etc_files;
     ADD_CP_FUNC_ENTRY(off);
 }
 END_CP_FUNC(etc_info)
@@ -72,8 +67,5 @@ BEGIN_RS_FUNC(etc_info) {
 
     const char* hostname = (const char*)(base + GET_CP_FUNC_ENTRY());
     memcpy(&g_pal_public_state->hostname, hostname, sizeof(g_pal_public_state->hostname));
-
-    g_pal_public_state->passthrough_etc_files = *(bool*)(hostname +
-        sizeof(g_pal_public_state->hostname));
 }
 END_RS_FUNC(etc_info)
