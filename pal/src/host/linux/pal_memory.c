@@ -125,38 +125,38 @@ unsigned long _PalMemoryAvailableQuota(void) {
     return quota * 1024;
 }
 
-struct parsed_ranges {
+struct proc_maps_info {
     uintptr_t vdso_start;
     uintptr_t vdso_end;
     uintptr_t highest_addr;
 };
 
-static int parsed_ranges_callback(struct proc_maps_range* r, void* arg) {
-    struct parsed_ranges* ranges = arg;
+static int proc_maps_info_callback(struct proc_maps_range* r, void* arg) {
+    struct proc_maps_info* proc_maps_info = arg;
 
     if (r->name) {
         if (!strcmp(r->name, "[vdso]")) {
-            ranges->vdso_start = r->start;
-            ranges->vdso_end = r->end;
+            proc_maps_info->vdso_start = r->start;
+            proc_maps_info->vdso_end = r->end;
         }
     }
 
-    if (ranges->highest_addr < r->end) {
-        ranges->highest_addr = r->end;
+    if (proc_maps_info->highest_addr < r->end) {
+        proc_maps_info->highest_addr = r->end;
     }
 
     return pal_add_initial_range(r->start, r->end - r->start, r->prot, r->name ?: "");
 }
 
 int init_initial_memory_ranges(void) {
-    struct parsed_ranges ranges = { 0 };
-    int ret = parse_proc_maps("/proc/self/maps", &parsed_ranges_callback, &ranges);
+    struct proc_maps_info proc_maps_info = { 0 };
+    int ret = parse_proc_maps("/proc/self/maps", &proc_maps_info_callback, &proc_maps_info);
     if (ret < 0) {
         return unix_to_pal_error(ret);
     }
 
     uintptr_t start_addr = MMAP_MIN_ADDR;
-    uintptr_t end_addr = MIN(ranges.highest_addr, ARCH_HIGHEST_ADDR);
+    uintptr_t end_addr = MIN(proc_maps_info.highest_addr, ARCH_HIGHEST_ADDR);
 
     /* Verify that the address is mappable. */
     while (1) {
@@ -183,15 +183,16 @@ int init_initial_memory_ranges(void) {
     g_pal_public_state.memory_address_start = (void*)start_addr;
     g_pal_public_state.memory_address_end = (void*)end_addr;
 
-    g_vdso_start = ranges.vdso_start;
-    g_vdso_end = ranges.vdso_end;
+    g_vdso_start = proc_maps_info.vdso_start;
+    g_vdso_end = proc_maps_info.vdso_end;
     return 0;
 }
 
 /* This fd is never closed (but it does not live through `execve`). */
 static int g_reserved_ranges_fd = -1;
 
-void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end) {
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end) {
     uintptr_t new_range[2];
 
     int ret = -EBADF;
@@ -199,14 +200,14 @@ void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_ra
         ret = read_all(g_reserved_ranges_fd, new_range, sizeof(new_range));
     }
     if (ret < 0) {
-        *last_range_start = 0;
-        *last_range_end = 0;
+        *out_next_range_start = 0;
+        *out_next_range_end = 0;
         return;
     }
 
-    assert(new_range[0] <= new_range[1] && new_range[1] <= *last_range_start);
-    *last_range_start = new_range[0];
-    *last_range_end = new_range[1];
+    assert(new_range[0] <= new_range[1] && new_range[1] <= last_range_start);
+    *out_next_range_start = new_range[0];
+    *out_next_range_end = new_range[1];
 }
 
 int init_reserved_ranges(int fd) {

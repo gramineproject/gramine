@@ -122,7 +122,7 @@ int main(void) {
     mem_write(addr2, 0);
     COMPILER_BARRIER();
     if (!g_write_failed) {
-        log_error("write to R mem at %p succeeded", addr2);
+        log_error("write to R mem at %p unexpectedly succeeded", addr2);
         PalProcessExit(1);
     }
 
@@ -148,7 +148,7 @@ int main(void) {
     mem_write(addr3, 0);
     COMPILER_BARRIER();
     if (!g_write_failed) {
-        log_error("write to mem with no permissions at %p succeeded", addr3);
+        log_error("write to mem with no permissions at %p unexpectedly succeeded", addr3);
         PalProcessExit(1);
     }
 
@@ -157,7 +157,7 @@ int main(void) {
     x = mem_read(addr3);
     COMPILER_BARRIER();
     if (!g_read_failed) {
-        log_error("read from mem with no permissions at %p succeeded", addr3);
+        log_error("read from mem with no permissions at %p unexpectedly succeeded", addr3);
         PalProcessExit(1);
     }
 

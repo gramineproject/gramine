@@ -274,26 +274,27 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
     } while (0)
 
 /*!
- * \brief Get next reserved memory range.
+ * \brief Get the next reserved memory range.
  *
- * \param[in,out] last_range_start  Must contain the previous reserved memory range start at entry,
- *                                  contains new reange start at return.
- * \param[in,out] last_range_end    Must contain the previous reserved memory range end at entry,
- *                                  contains new reange end at return.
+ * \param      last_range_start      The previous reserved memory range start.
+ * \param[out] out_next_range_start  Contains new range start at return.
+ * \param[out] out_next_range_end    Contains new range end at return.
  *
- * Next (returned) reserved memory range will be strictly below (at lower address) the previous one.
+ * The next (returned) reserved memory range will be strictly below (at lower address) than
+ * the previous one.
  */
-void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end);
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end);
 
 /*!
  * \brief Add initial memory range.
  *
  * \param addr     Address of the start of the range.
  * \param size     Size of the range.
- * \param prot     Memmory protection of the range.
+ * \param prot     Memory protection of the range.
  * \param comment  Comment associated with this memory range.
  *
- * Caller must make sure that the new range does not overlap any previouslt added range.
+ * Caller must make sure that the new range does not overlap any previously added range.
  */
 int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment);
 int pal_internal_memory_alloc(size_t size, void** out_addr);

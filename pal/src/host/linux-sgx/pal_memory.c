@@ -23,8 +23,7 @@ static size_t g_allocated_pages = 0;
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     __UNUSED(prot);
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
-    assert(addr && IS_ALIGNED_PTR(addr, g_page_size));
-    assert(size && IS_ALIGNED(size, g_page_size));
+    assert(IS_ALIGNED_PTR(addr, g_page_size) && IS_ALIGNED(size, g_page_size));
     assert(access_ok(addr, size));
     assert(sgx_is_completely_within_enclave(addr, size));
 
@@ -96,10 +95,11 @@ uint64_t _PalMemoryAvailableQuota(void) {
 static uintptr_t (*g_urts_next_reserved_range)[2] = NULL;
 static uintptr_t (*g_urts_reserved_ranges_end)[2] = NULL;
 
-void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end) {
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end) {
     if (g_urts_next_reserved_range == g_urts_reserved_ranges_end) {
-        *last_range_start = 0;
-        *last_range_end = 0;
+        *out_next_range_start = 0;
+        *out_next_range_end = 0;
         return;
     }
 
@@ -111,15 +111,15 @@ void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_ra
     }
     g_urts_next_reserved_range++;
 
-    if (new_range[0] > new_range[1] || new_range[1] > *last_range_start
+    if (new_range[0] > new_range[1] || new_range[1] > last_range_start
             || !IS_ALLOC_ALIGNED(new_range[0]) || !IS_ALLOC_ALIGNED(new_range[1])) {
-        log_error("URTS passed invalid reserved memory range: %#lx-%#lx (previous was %#lx-%#lx)",
-                  new_range[0], new_range[1], *last_range_start, *last_range_end);
+        log_error("URTS passed invalid reserved memory range: %#lx-%#lx (previous started at %#lx)",
+                  new_range[0], new_range[1], last_range_start);
         _PalProcessExit(1);
     }
 
-    *last_range_start = new_range[0];
-    *last_range_end = new_range[1];
+    *out_next_range_start = new_range[0];
+    *out_next_range_end = new_range[1];
 }
 
 int init_reserved_ranges(void* urts_ptr, size_t urts_size) {

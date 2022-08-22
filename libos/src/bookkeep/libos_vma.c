@@ -1010,7 +1010,9 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     uintptr_t ret_val = 0;
 
     if (!g_received_user_memory && flags & VMA_INTERNAL) {
-        /* Early init code must not overlap memory that will be restored during checkpointing. */
+        /* Early LibOS init code must allocate memory only in
+         * `[early_libos_mem_range_start; early_libos_mem_range_end)` range, not to overlap memory
+         * that will be restored during checkpointing. */
         if (top_addr <= g_pal_public_state->early_libos_mem_range_start
                 || g_pal_public_state->early_libos_mem_range_end <= bottom_addr) {
             /* Ranges do not overlap. */

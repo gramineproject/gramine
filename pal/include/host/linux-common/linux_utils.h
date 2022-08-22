@@ -52,3 +52,5 @@ int file_stat_type(struct stat* stat);
 
 /* copy attr content from POSIX stat struct to PAL_STREAM_ATTR */
 void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat);
+
+int create_reserved_mem_ranges_fd(void* reserved_mem_ranges, size_t reserved_mem_ranges_size);

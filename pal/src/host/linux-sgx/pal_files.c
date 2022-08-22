@@ -268,8 +268,10 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         return -PAL_ERROR_DENIED;
     }
 
-    if (!addr)
+    /* Sanity checks. */
+    if (!addr || !sgx_is_completely_within_enclave(addr, size)) {
         return -PAL_ERROR_INVAL;
+    }
 
 #ifdef ASAN
     asan_unpoison_region((uintptr_t)addr, size);
@@ -340,12 +342,11 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
     ret = 0;
 
 out:
-    if (ret < 0) {
-        assert(sgx_is_completely_within_enclave(addr, size));
 #ifdef ASAN
+    if (ret < 0) {
         asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
-#endif
     }
+#endif
     return ret;
 }
 

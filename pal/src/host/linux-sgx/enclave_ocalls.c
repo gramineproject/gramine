@@ -981,7 +981,7 @@ int ocall_clone_thread(void) {
 }
 
 int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
-                         size_t reserved_mem_ranges_len, int* stream_fd) {
+                         size_t reserved_mem_ranges_len, int* out_stream_fd) {
     int ret;
     void* urts_reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = reserved_mem_ranges_len * sizeof(*reserved_mem_ranges);
@@ -1037,8 +1037,8 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
         goto out;
     }
 
-    if (stream_fd)
-        *stream_fd = READ_ONCE(ms->ms_stream_fd);
+    if (out_stream_fd)
+        *out_stream_fd = READ_ONCE(ms->ms_stream_fd);
 
 out:
     if (urts_reserved_mem_ranges) {

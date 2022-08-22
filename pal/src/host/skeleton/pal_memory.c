@@ -30,7 +30,8 @@ unsigned long _PalMemoryAvailableQuota(void) {
     return 0;
 }
 
-void pal_read_one_reserved_range(uintptr_t* last_range_start, uintptr_t* last_range_end) {
-    *last_range_start = 0;
-    *last_range_end = 0;
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end) {
+    *out_next_range_start = 0;
+    *out_next_range_end = 0;
 }

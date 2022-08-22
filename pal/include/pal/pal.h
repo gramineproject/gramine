@@ -158,7 +158,7 @@ struct pal_initial_mem_range {
      * anymore). */
     bool is_free;
     /* These structs are stored in a global array, so keep the total size of this struct aligned to
-     * it's alignemnt requirement. */
+     * it's alignment requirement. */
     char comment[0x13];
 };
 

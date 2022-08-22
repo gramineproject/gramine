@@ -342,7 +342,7 @@ class TC_20_SingleProcess(RegressionTestCase):
         else:
             # SGX1 does not support unmapping a page or changing its permission after enclave init.
             # Therefore the memory protection and deallocation tests will fail. By utilizing SGX2
-            # it's possibile to fix this.
+            # it's possible to fix this.
             try:
                 self.run_binary(['memory'])
                 self.fail('expected to return nonzero')

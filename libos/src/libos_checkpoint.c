@@ -495,8 +495,8 @@ static int create_mem_ranges_array(const struct libos_cp_store* cpstore,
         return -ENOMEM;
     }
 
-    /* Save the list in reversed order - PAL expect this list in descending order. See
-     * `pal_read_one_reserved_range` for more details. */
+    /* Save the list in reversed order - PAL expects this list in descending order. See
+     * `pal_read_next_reserved_range` for more details. */
     size_t i = 0;
     for (entry = cpstore->first_mem_entry; entry; entry = entry->next) {
         if (!entry->dummy) {

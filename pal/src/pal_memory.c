@@ -49,20 +49,14 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
  *
  * For the initial part (1), we have an array of memory ranges (`g_initial_mem_ranges`).
  * To free a range, we simply mark it as freed in this array. To allocate some memory we first look
- * through all previously used ranges in hope of finding something big enough to hold our request.
- * If nothing is found, we then go through this array and find a memory range that was never
- * allocated before (is not in this array), but we also make sure that it does not overlap any of
- * reserved ranges.
+ * through all previously used (and now marked as freed) ranges in hope of finding something big
+ * enough to hold our request. If nothing is found, we then go through this array and find a memory
+ * range that was never allocated before (is not in this array), but we also make sure that it does
+ * not overlap any of reserved ranges.
  * Because reserved ranges can be arbitrarily long and due to the fact that we cannot really
  * allocate memory without first inspecting them (so we do not map on top of them), we go through
  * them only once. They are kept sorted, so we only have to hold the last seen reserved range and
  * the last address we allocated at.
- *
- * TODO: I've just realised (or just reminded myself a previous idea, don't remember now) that we
- * could just map these reserved ranges anywhere and then unmap them in
- * `pal_disable_early_memory_bookkeeping`. Not sure if that would make the code easier to read or
- * faster (there could be quite a lot of these ranges, whereas there are not a lot of early
- * allocated ranges (in `g_initial_mem_ranges`).
  */
 static int (*g_mem_bkeep_alloc_upcall)(size_t size, uintptr_t* out_addr) = NULL;
 static int (*g_mem_bkeep_free_upcall)(uintptr_t addr, size_t size) = NULL;
@@ -207,7 +201,8 @@ static int find_non_reserved_range_above(uintptr_t addr, size_t size, uintptr_t*
             return -PAL_ERROR_NOMEM;
         }
         candidate = MIN(candidate, g_last_reserved_range_start - size);
-        pal_read_one_reserved_range(&g_last_reserved_range_start, &g_last_reserved_range_end);
+        pal_read_next_reserved_range(g_last_reserved_range_start,
+                                     &g_last_reserved_range_start, &g_last_reserved_range_end);
     }
 
     *out_addr = candidate;
@@ -352,7 +347,8 @@ void pal_disable_early_memory_bookkeeping(void) {
     while (1) {
         int ret = find_non_reserved_range_above(addr, size, &addr);
         if (ret < 0 || addr < (uintptr_t)g_pal_public_state.memory_address_start) {
-            /* Let LibOS handle this. */
+            /* Let LibOS handle this. `early_libos_mem_range_start` and `early_libos_mem_range_end`
+             * are both `0`, so LibOS will most likely fail to allocate early memory. */
             return;
         }
         if (!overlaps_existing_range(addr, size, &addr)) {

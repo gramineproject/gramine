@@ -16,7 +16,6 @@
 #include <asm/fcntl.h>
 #include <asm/ioctls.h>
 #include <asm/poll.h>
-#include <linux/fs.h>
 #include <linux/time.h>
 #include <sys/socket.h>
 
@@ -76,33 +75,6 @@ out:
             DO_SYSCALL(close, fds[0]);
         if (fds[1] != -1)
             DO_SYSCALL(close, fds[1]);
-    }
-    return ret;
-}
-
-static int create_reserved_mem_ranges_fd(uintptr_t (*reserved_mem_ranges)[2],
-                                         size_t reserved_mem_ranges_len) {
-    int fd = DO_SYSCALL(memfd_create, "reserved_mem_ranges", /*flags=*/0);
-    if (fd < 0) {
-        return fd;
-    }
-
-    int ret = write_all(fd, reserved_mem_ranges,
-                        reserved_mem_ranges_len * sizeof(*reserved_mem_ranges));
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = DO_SYSCALL(lseek, fd, 0, SEEK_SET);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = fd;
-
-out:
-    if (ret < 0) {
-        DO_SYSCALL(close, fd);
     }
     return ret;
 }
@@ -185,7 +157,8 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
     proc_args->manifest_data_size = manifest_data_size;
     data += manifest_data_size;
 
-    ret = create_reserved_mem_ranges_fd(reserved_mem_ranges, reserved_mem_ranges_len);
+    ret = create_reserved_mem_ranges_fd(reserved_mem_ranges,
+                                        reserved_mem_ranges_len * sizeof(*reserved_mem_ranges));
     if (ret < 0) {
         log_error("creating reserved mem ranges fd failed: %d", ret);
         goto out;

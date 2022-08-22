@@ -11,6 +11,7 @@ struct vma {
     uintptr_t end;
 };
 
+/* Array of allocated memroy ranges. Always kept sorted in descending order. */
 static struct vma g_vmas[0x100];
 static size_t g_vmas_len = 0;
 
@@ -28,7 +29,6 @@ int mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
     for (size_t i = 1; i < g_vmas_len; i++) {
         assert(g_vmas[i - 1].begin >= g_vmas[i].end);
         if (g_vmas[i - 1].begin - g_vmas[i].end >= size) {
-            assert(g_vmas_len + 1 <= ARRAY_LEN(g_vmas));
             memmove(&g_vmas[i + 1], &g_vmas[i], (g_vmas_len - i) * sizeof(g_vmas[0]));
 
             g_vmas[i] = (struct vma){

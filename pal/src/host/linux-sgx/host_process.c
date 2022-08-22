@@ -14,7 +14,6 @@
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
-#include <linux/fs.h>
 
 #include "host_internal.h"
 #include "host_process.h"
@@ -39,32 +38,6 @@ static int vfork_exec(const char** argv) {
     DO_SYSCALL(execve, g_pal_loader_path, argv, environ);
     DO_SYSCALL(exit_group, 1);
     die_or_inf_loop();
-}
-
-static int create_reserved_mem_ranges_fd(void* reserved_mem_ranges,
-                                         size_t reserved_mem_ranges_size) {
-    int fd = DO_SYSCALL(memfd_create, "reserved_mem_ranges", /*flags=*/0);
-    if (fd < 0) {
-        return fd;
-    }
-
-    int ret = write_all(fd, reserved_mem_ranges, reserved_mem_ranges_size);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = DO_SYSCALL(lseek, fd, 0, SEEK_SET);
-    if (ret < 0) {
-        goto out;
-    }
-
-    ret = fd;
-
-out:
-    if (ret < 0) {
-        DO_SYSCALL(close, fd);
-    }
-    return ret;
 }
 
 int sgx_create_process(size_t nargs, const char** args, const char* manifest,
