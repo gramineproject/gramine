@@ -14,12 +14,14 @@
 
 int get_hostname(char* hostname, size_t size) {
     struct new_utsname c_uname;
+    int ret;
 
     assert(hostname != NULL);
     assert(size > 0);
 
-    if (DO_SYSCALL(uname, &c_uname) != 0)
-        return -1;
+    ret = DO_SYSCALL(uname, &c_uname);
+    if (ret < 0)
+        return ret;
 
     size_t len = strlen(c_uname.nodename) + 1;
     memcpy(hostname, &c_uname.nodename,
