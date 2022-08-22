@@ -42,6 +42,14 @@ struct ra_tls_ctx {
     size_t   secret_size;
 };
 
+static void erase_secret(uint8_t* secret, size_t secret_size) {
+#ifdef __STDC_LIB_EXT1__
+        memset_s(secret, 0, secret_size);
+#else
+        memset(secret, 0, secret_size);
+#endif
+}
+
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size) {
     if (!ctx || !out_secret || !out_secret_size)
         return -EINVAL;
@@ -73,11 +81,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx) {
         return -EINVAL;
 
     if (ctx->secret && ctx->secret_size) {
-#ifdef __STDC_LIB_EXT1__
-        memset_s(ctx->secret, 0, ctx->secret_size);
-#else
-        memset(ctx->secret, 0, ctx->secret_size);
-#endif
+        erase_secret(ctx->secret, ctx->secret_size);
     }
 
     int ret = secret_provision_common_close(ctx->ssl);
@@ -446,5 +450,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         setenv(SECRET_PROVISION_SECRET_STRING, (const char*)secret, /*overwrite=*/1);
 
         secret_provision_close(ctx);
+        erase_secret(secret, secret_size);
+        free(secret);
     }
 }
