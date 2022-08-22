@@ -26,7 +26,7 @@ static int provide_etc_hostname(struct libos_dentry* dent, char** out_data, size
 }
 
 int init_etcfs(void) {
-    pseudo_add_str(NULL, "hostname", &provide_etc_hostname);
+    pseudo_add_str(NULL, "etc-passthrough-hostname", &provide_etc_hostname);
     return 0;
 }
 
@@ -39,7 +39,7 @@ int init_mount_etcfs(void) {
     ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/etc/hostname",
-        .uri = "hostname",
+        .uri = "etc-passthrough-hostname",
     });
     if (ret < 0)
         return ret;
