@@ -71,7 +71,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     hdl->file.realpath = normpath;
 
-    struct trusted_file* tf   = NULL;
+    struct trusted_file* tf = NULL;
 
     if (!(pal_options & PAL_OPTION_PASSTHROUGH)) {
         tf = get_trusted_or_allowed_file(hdl->file.realpath);
@@ -461,27 +461,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-static int file_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    if (!handle->file.realpath)
-        return 0;
-
-    size_t len = strlen(handle->file.realpath);
-    char* tmp = strcpy_static(buffer, URI_PREFIX_FILE, count);
-
-    if (!tmp || buffer + count < tmp + len + 1)
-        return -PAL_ERROR_TOOLONG;
-
-    memcpy(tmp, handle->file.realpath, len + 1);
-    return tmp + len - buffer;
-}
-
-static const char* file_getrealpath(PAL_HANDLE handle) {
-    return handle->file.realpath;
-}
-
 struct handle_ops g_file_ops = {
-    .getname        = &file_getname,
-    .getrealpath    = &file_getrealpath,
     .open           = &file_open,
     .read           = &file_read,
     .write          = &file_write,
@@ -676,30 +656,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-static int dir_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    if (!handle->dir.realpath)
-        return 0;
-
-    size_t len = strlen(handle->dir.realpath);
-    char* tmp  = strcpy_static(buffer, URI_PREFIX_DIR, count);
-
-    if (!tmp || buffer + count < tmp + len + 1)
-        return -PAL_ERROR_TOOLONG;
-
-    memcpy(tmp, handle->dir.realpath, len + 1);
-    return tmp + len - buffer;
-
-    if (len + 6 >= count)
-        return -PAL_ERROR_TOOLONG;
-}
-
-static const char* dir_getrealpath(PAL_HANDLE handle) {
-    return handle->dir.realpath;
-}
-
 struct handle_ops g_dir_ops = {
-    .getname        = &dir_getname,
-    .getrealpath    = &dir_getrealpath,
     .open           = &dir_open,
     .read           = &dir_read,
     .close          = &dir_close,

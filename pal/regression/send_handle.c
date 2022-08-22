@@ -14,7 +14,7 @@ static void write_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
             case PAL_TYPE_FILE:
             case PAL_TYPE_PIPE:
             case PAL_TYPE_PIPECLI:
-                CHECK(PalStreamWrite(handle, 0, &this_size, buf + i, NULL));
+                CHECK(PalStreamWrite(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
                 struct pal_iovec iov = {
@@ -42,7 +42,7 @@ static void read_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
         switch (type) {
             case PAL_TYPE_FILE:
             case PAL_TYPE_PIPE:
-                CHECK(PalStreamRead(handle, 0, &this_size, buf + i, NULL, 0));
+                CHECK(PalStreamRead(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
                 struct pal_iovec iov = {

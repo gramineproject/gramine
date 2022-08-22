@@ -32,7 +32,6 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalStreamAttributesQuery);
     PRINT_SYMBOL(PalStreamAttributesQueryByHandle);
     PRINT_SYMBOL(PalStreamAttributesSetByHandle);
-    PRINT_SYMBOL(PalStreamGetName);
     PRINT_SYMBOL(PalStreamChangeName);
     PRINT_SYMBOL(PalStreamsWaitEvents);
 

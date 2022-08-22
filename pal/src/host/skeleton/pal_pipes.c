@@ -25,9 +25,6 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
                      pal_stream_options_t options) {
-    if (strlen(uri) + 1 > PIPE_NAME_MAX)
-        return -PAL_ERROR_INVAL;
-
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
         return pipe_listen(handle, uri, options);
 
@@ -57,12 +54,7 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
 struct handle_ops g_pipe_ops = {
-    .getname       = &pipe_getname,
     .open          = &pipe_open,
     .waitforclient = &pipe_waitforclient,
     .read          = &pipe_read,

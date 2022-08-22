@@ -20,7 +20,7 @@ int main(int argc, char** argv, char** envp) {
         }
 
         size_t bytes = sizeof(buffer);
-        ret = PalStreamRead(dir1, 0, &bytes, buffer, NULL, 0);
+        ret = PalStreamRead(dir1, 0, &bytes, buffer);
         if (ret >= 0 && bytes) {
             for (char* c = buffer; c < buffer + bytes; c += strlen(c) + 1)
                 if (strlen(c))

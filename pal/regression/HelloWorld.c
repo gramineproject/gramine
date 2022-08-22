@@ -16,7 +16,7 @@ int main(int argc, char** argv, char** envp) {
     }
 
     size_t bytes = sizeof(str) - 1;
-    ret = PalStreamWrite(out, 0, &bytes, str, NULL);
+    ret = PalStreamWrite(out, 0, &bytes, str);
 
     if (ret < 0 || bytes != sizeof(str) - 1) {
         pal_printf("PalStreamWrite failed\n");

@@ -32,9 +32,9 @@ static spinlock_t g_handshake_helper_thread_list_lock = INIT_SPINLOCK_UNLOCKED;
 DEFINE_LISTP(handshake_helper_thread);
 static LISTP_TYPE(handshake_helper_thread) g_handshake_helper_thread_list = LISTP_INIT;
 
-static int pipe_session_key(PAL_PIPE_NAME* name, PAL_SESSION_KEY* session_key) {
+static int pipe_session_key(const char* name, size_t name_size, PAL_SESSION_KEY* session_key) {
     return lib_HKDF_SHA256((uint8_t*)&g_master_key, sizeof(g_master_key), /*salt=*/NULL,
-                           /*salt_size=*/0, (uint8_t*)name->str, sizeof(name->str),
+                           /*salt_size=*/0, (const uint8_t*)name, name_size,
                            (uint8_t*)session_key, sizeof(*session_key));
 }
 
@@ -62,7 +62,7 @@ static noreturn int thread_handshake_func(void* param) {
     int ret = _PalStreamSecureInit(handle, handle->pipe.is_server, &handle->pipe.session_key,
                                    (LIB_SSL_CONTEXT**)&handle->pipe.ssl_ctx, NULL, 0);
     if (ret < 0) {
-        log_error("Failed to initialize secure pipe %s: %d", handle->pipe.name.str, ret);
+        log_error("Failed to initialize secure pipe: %d", ret);
         _PalProcessExit(1);
     }
 
@@ -141,15 +141,17 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     hdl->pipe.fd          = ret;
     hdl->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
-    /* padding with zeros is because the whole buffer is used in key derivation */
-    memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
-    memcpy(&hdl->pipe.name.str, name, strlen(name) + 1);
-
     /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = false;
     hdl->pipe.handshake_done = true; /* pipesrv doesn't do any handshake so consider it done */
-    memset(hdl->pipe.session_key, 0, sizeof(hdl->pipe.session_key));
+
+    ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
+    if (ret < 0) {
+        ocall_close(hdl->pipe.fd);
+        free(hdl);
+        return -PAL_ERROR_DENIED;
+    }
 
     *handle = hdl;
     return 0;
@@ -195,7 +197,6 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     init_handle_hdr(clnt, PAL_TYPE_PIPECLI);
     clnt->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd          = ret;
-    clnt->pipe.name        = handle->pipe.name;
     clnt->pipe.nonblocking = nonblocking;
 
     /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
@@ -203,11 +204,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     clnt->pipe.ssl_ctx        = NULL;
     clnt->pipe.is_server      = false;
     clnt->pipe.handshake_done = false;
-
-    ret = pipe_session_key(&clnt->pipe.name, &clnt->pipe.session_key);
-    if (ret < 0) {
-        goto out_err;
-    }
+    COPY_ARRAY(clnt->pipe.session_key, handle->pipe.session_key);
 
     ret = _PalStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
                                (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
@@ -278,12 +275,8 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     hdl->pipe.fd            = ret;
     hdl->pipe.nonblocking   = nonblocking;
 
-    /* padding with zeros is because the whole buffer is used in key derivation */
-    memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
-    memcpy(&hdl->pipe.name.str, name, strlen(name) + 1);
-
     /* create the SSL pre-shared key for this end of the pipe and initialize SSL context */
-    ret = pipe_session_key(&hdl->pipe.name, &hdl->pipe.session_key);
+    ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
     if (ret < 0) {
         ocall_close(hdl->pipe.fd);
         free(hdl);
@@ -344,9 +337,6 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     assert(create == PAL_CREATE_IGNORED);
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
-        return -PAL_ERROR_INVAL;
-
-    if (strlen(uri) + 1 > PIPE_NAME_MAX)
         return -PAL_ERROR_INVAL;
 
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
@@ -544,61 +534,7 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
-/*!
- * \brief Retrieve full URI of PAL handle.
- *
- * \param      handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- * \param[out] buffer  User-supplied buffer to write URI to.
- * \param      count   Size of the user-supplied buffer.
- *
- * \returns Number of bytes written on success, negative PAL error code otherwise.
- *
- * Full URI is composed of the type and pipe name: "<type>:<pipename>".
- */
-static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    size_t old_count = count;
-    int ret;
-
-    const char* prefix = NULL;
-    size_t prefix_len  = 0;
-
-    switch (HANDLE_TYPE(handle)) {
-        case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPECLI:
-            prefix_len = static_strlen(URI_TYPE_PIPE_SRV);
-            prefix     = URI_TYPE_PIPE_SRV;
-            break;
-        case PAL_TYPE_PIPE:
-            prefix_len = static_strlen(URI_TYPE_PIPE);
-            prefix     = URI_TYPE_PIPE;
-            break;
-        default:
-            return -PAL_ERROR_INVAL;
-    }
-
-    if (prefix_len >= count)
-        return -PAL_ERROR_OVERFLOW;
-
-    memcpy(buffer, prefix, prefix_len);
-    buffer[prefix_len] = ':';
-    buffer += prefix_len + 1;
-    count -= prefix_len + 1;
-
-    ret = snprintf(buffer, count, "%s\n", handle->pipe.name.str);
-    if (buffer[ret - 1] != '\n') {
-        memset(buffer, 0, count);
-        return -PAL_ERROR_OVERFLOW;
-    }
-
-    buffer[ret - 1] = 0;
-    buffer += ret - 1;
-    count -= ret - 1;
-
-    return old_count - count;
-}
-
 struct handle_ops g_pipe_ops = {
-    .getname        = &pipe_getname,
     .open           = &pipe_open,
     .waitforclient  = &pipe_waitforclient,
     .read           = &pipe_read,

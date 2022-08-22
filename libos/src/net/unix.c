@@ -360,7 +360,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = PalStreamWrite(pal_handle, /*offset=*/0, &size, buf, NULL);
+    int ret = PalStreamWrite(pal_handle, /*offset=*/0, &size, buf);
     free(backing_buf);
     if (ret < 0) {
         return (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
@@ -415,7 +415,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = PalStreamRead(pal_handle, /*offset=*/0, &size, buf, NULL, 0);
+    int ret = PalStreamRead(pal_handle, /*offset=*/0, &size, buf);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
     } else {

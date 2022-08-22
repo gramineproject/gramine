@@ -290,7 +290,7 @@ static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, fi
     assert(hdl->type == TYPE_CHROOT);
 
     size_t actual_count = count;
-    int ret = PalStreamRead(hdl->pal_handle, *pos, &actual_count, buf, /*source=*/NULL, /*size=*/0);
+    int ret = PalStreamRead(hdl->pal_handle, *pos, &actual_count, buf);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -306,7 +306,7 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     assert(hdl->type == TYPE_CHROOT);
 
     size_t actual_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf, /*dest=*/NULL);
+    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -375,7 +375,7 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
 
     while (true) {
         size_t read_size = buf_size;
-        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf, /*source=*/NULL, /*size=*/0);
+        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;

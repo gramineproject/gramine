@@ -178,40 +178,24 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return _PalStreamDelete(handle, delete_mode);
 }
 
-/* _PalStreamRead for internal use. Read from stream as absolute offset.
- * The actual behavior of stream read is defined by handler */
-int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
-                       int addrlen) {
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
         return -PAL_ERROR_BADHANDLE;
 
-    int64_t ret;
+    if (!ops->read)
+        return -PAL_ERROR_NOTSUPPORT;
 
-    if (addr) {
-        if (!ops->readbyaddr)
-            return -PAL_ERROR_NOTSUPPORT;
-
-        ret = ops->readbyaddr(handle, offset, count, buf, addr, addrlen);
-    } else {
-        if (!ops->read)
-            return -PAL_ERROR_NOTSUPPORT;
-
-        ret = ops->read(handle, offset, count, buf);
-    }
-
-    return ret;
+    return ops->read(handle, offset, count, buf);
 }
 
-int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
-                  size_t size) {
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _PalStreamRead(handle, offset, *count, buffer, size ? source : NULL,
-                                 source ? size : 0);
+    int64_t ret = _PalStreamRead(handle, offset, *count, buffer);
 
     if (ret < 0) {
         return ret;
@@ -221,39 +205,24 @@ int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffe
     return 0;
 }
 
-/* _PalStreamWrite for internal use, write to stream at absolute offset.
- * The actual behavior of stream write is defined by handler. */
-int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
-                        const char* addr, int addrlen) {
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
         return -PAL_ERROR_BADHANDLE;
 
-    int64_t ret;
+    if (!ops->write)
+        return -PAL_ERROR_NOTSUPPORT;
 
-    if (addr) {
-        if (!ops->writebyaddr)
-            return -PAL_ERROR_NOTSUPPORT;
-
-        ret = ops->writebyaddr(handle, offset, count, buf, addr, addrlen);
-    } else {
-        if (!ops->write)
-            return -PAL_ERROR_NOTSUPPORT;
-
-        ret = ops->write(handle, offset, count, buf);
-    }
-
-    return ret;
+    return ops->write(handle, offset, count, buf);
 }
 
-int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
-                   const char* dest) {
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _PalStreamWrite(handle, offset, *count, buffer, dest, dest ? strlen(dest) : 0);
+    int64_t ret = _PalStreamWrite(handle, offset, *count, buffer);
 
     if (ret < 0) {
         return ret;
@@ -338,32 +307,6 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     return ops->attrsetbyhdl(handle, attr);
-}
-
-int _PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
-    const struct handle_ops* ops = HANDLE_OPS(handle);
-
-    if (!ops)
-        return -PAL_ERROR_BADHANDLE;
-
-    if (!ops->getname)
-        return -PAL_ERROR_NOTSUPPORT;
-
-    int ret = ops->getname(handle, buffer, size ? size - 1 : 0);
-
-    if (ret < 0)
-        return ret;
-
-    buffer[ret] = 0;
-    return ret;
-}
-
-int PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size) {
-    if (!handle || !buffer || !size) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    return _PalStreamGetName(handle, buffer, size);
 }
 
 /* _PalStreamMap for internal use. Map specific handle to certain memory, with given protection,
@@ -525,17 +468,6 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* uri) {
 out:
     free(type);
     return ret;
-}
-
-/* _PalStreamRealpath is used to obtain the real path of a stream. Some streams may not have a real
- *  path. */
-const char* _PalStreamRealpath(PAL_HANDLE hdl) {
-    const struct handle_ops* ops = HANDLE_OPS(hdl);
-
-    if (!ops || !ops->getrealpath)
-        return NULL;
-
-    return ops->getrealpath(hdl);
 }
 
 int PalDebugLog(const void* buffer, size_t size) {

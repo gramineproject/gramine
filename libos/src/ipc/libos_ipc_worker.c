@@ -136,7 +136,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
         /* Receive at least the message header. */
         while (size < sizeof(buf.msg_header)) {
             size_t tmp_size = sizeof(buf) - size;
-            int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size, NULL, 0);
+            int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size);
             if (ret < 0) {
                 if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                     continue;

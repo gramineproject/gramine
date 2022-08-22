@@ -74,7 +74,7 @@ int set_pollable_event(struct libos_pollable_event* event) {
     do {
         char c = 0;
         size_t size = sizeof(c);
-        ret = PalStreamWrite(event->write_handle, /*offset=*/0, &size, &c, /*dest=*/NULL);
+        ret = PalStreamWrite(event->write_handle, /*offset=*/0, &size, &c);
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;
@@ -97,7 +97,7 @@ int clear_pollable_event(struct libos_pollable_event* event) {
     do {
         char buf[0x100];
         size_t size = sizeof(buf);
-        int ret = PalStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL, 0);
+        int ret = PalStreamRead(event->read_handle, /*offset=*/0, &size, buf);
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;

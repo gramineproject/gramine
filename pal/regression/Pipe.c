@@ -40,22 +40,22 @@ int main(int argc, char** argv, char** envp) {
                 pal_printf("Pipe Connection 1 OK\n");
 
                 size_t size = sizeof(buffer1);
-                ret = PalStreamWrite(pipe3, 0, &size, buffer1, NULL);
+                ret = PalStreamWrite(pipe3, 0, &size, buffer1);
                 if (ret == 0 && size > 0)
                     pal_printf("Pipe Write 1 OK\n");
 
                 size = sizeof(buffer3);
-                ret = PalStreamRead(pipe2, 0, &size, buffer3, NULL, 0);
+                ret = PalStreamRead(pipe2, 0, &size, buffer3);
                 if (ret == 0 && size > 0)
                     pal_printf("Pipe Read 1: %s\n", buffer3);
 
                 size = sizeof(buffer2);
-                ret = PalStreamWrite(pipe2, 0, &size, buffer2, NULL);
+                ret = PalStreamWrite(pipe2, 0, &size, buffer2);
                 if (ret == 0 && size > 0)
                     pal_printf("Pipe Write 2 OK\n");
 
                 size = sizeof(buffer4);
-                ret = PalStreamRead(pipe3, 0, &size, buffer4, NULL, 0);
+                ret = PalStreamRead(pipe3, 0, &size, buffer4);
                 if (ret == 0 && size > 0)
                     pal_printf("Pipe Read 2: %s\n", buffer4);
             }

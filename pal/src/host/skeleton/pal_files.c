@@ -67,17 +67,7 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int file_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
-static const char* file_getrealpath(PAL_HANDLE handle) {
-    return NULL;
-}
-
 struct handle_ops g_file_ops = {
-    .getname        = &file_getname,
-    .getrealpath    = &file_getrealpath,
     .open           = &file_open,
     .read           = &file_read,
     .write          = &file_write,
@@ -124,17 +114,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int dir_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
-static const char* dir_getrealpath(PAL_HANDLE handle) {
-    return NULL;
-}
-
 struct handle_ops g_dir_ops = {
-    .getname        = &dir_getname,
-    .getrealpath    = &dir_getrealpath,
     .open           = &dir_open,
     .read           = &dir_read,
     .close          = &dir_close,

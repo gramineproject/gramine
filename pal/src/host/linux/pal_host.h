@@ -17,10 +17,6 @@
 #include "spinlock.h"
 
 typedef struct {
-    char str[PIPE_NAME_MAX];
-} PAL_PIPE_NAME;
-
-typedef struct {
     /* TSAI: Here we define the internal types of PAL_HANDLE
      * in PAL design, user has not to access the content inside the
      * handle, also there is no need to allocate the internal
@@ -44,7 +40,6 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
-            PAL_PIPE_NAME name;
             bool nonblocking;
         } pipe;
 

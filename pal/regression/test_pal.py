@@ -153,7 +153,6 @@ class TC_02_Symbols(RegressionTestCase):
         'PalStreamAttributesQuery',
         'PalStreamAttributesQueryByHandle',
         'PalStreamAttributesSetByHandle',
-        'PalStreamGetName',
         'PalStreamChangeName',
         'PalThreadCreate',
         'PalThreadYieldExecution',

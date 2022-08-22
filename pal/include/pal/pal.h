@@ -28,9 +28,6 @@ typedef struct toml_table_t toml_table_t;
 
 typedef uint32_t    PAL_IDX; /*!< an index */
 
-/* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
-#define PIPE_NAME_MAX 96
-
 /* maximum length of URIs */
 #define URI_MAX 4096
 
@@ -312,17 +309,13 @@ int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opt
  * \param[in,out] count   Contains size of \p buffer. On success, will be set to the number of bytes
  *                        read.
  * \param         buffer  Pointer to the buffer to read into.
- * \param[out]    source  If \p handle is a UDP socket, \p size is not zero and \p source is not
- *                        NULL, the remote socket address is returned in it.
- * \param         size    Size of the \p source buffer.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * If \p handle is a directory, PalStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer, char* source,
-                  size_t size);
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer);
 
 /*!
  * \brief Write data to an open stream.
@@ -333,12 +326,10 @@ int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffe
  * \param[in,out] count   Contains size of \p buffer. On success, will be set to the number of bytes
  *                        written.
  * \param         buffer  Pointer to the buffer to write from.
- * \param         dest    If the handle is a UDP socket, specifies the remote socket address.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
-                   const char* dest);
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer);
 
 enum pal_delete_mode {
     PAL_DELETE_ALL,  /*!< delete the whole resource / shut down both directions */
@@ -455,11 +446,6 @@ int PalStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
  * mutual exclusion).
  */
 int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
-
-/*!
- * \brief Query the name of an open stream. On success `buffer` contains a null-terminated string.
- */
-int PalStreamGetName(PAL_HANDLE handle, char* buffer, size_t size);
 
 /*!
  * \brief This API changes the name of an open stream.

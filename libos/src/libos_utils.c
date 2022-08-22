@@ -11,7 +11,7 @@ int read_exact(PAL_HANDLE handle, void* buf, size_t size) {
     size_t read = 0;
     while (read < size) {
         size_t tmp_read = size - read;
-        int ret = PalStreamRead(handle, /*offset=*/0, &tmp_read, (char*)buf + read, NULL, 0);
+        int ret = PalStreamRead(handle, /*offset=*/0, &tmp_read, (char*)buf + read);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 continue;
@@ -29,7 +29,7 @@ int write_exact(PAL_HANDLE handle, void* buf, size_t size) {
     size_t written = 0;
     while (written < size) {
         size_t tmp_written = size - written;
-        int ret = PalStreamWrite(handle, /*offset=*/0, &tmp_written, (char*)buf + written, NULL);
+        int ret = PalStreamWrite(handle, /*offset=*/0, &tmp_written, (char*)buf + written);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                 continue;

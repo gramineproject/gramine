@@ -73,10 +73,6 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
-    /* padding with zeros is for uniformity with other PALs (in particular, Linux-SGX) */
-    memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
-    memcpy(&hdl->pipe.name.str, name, strlen(name) + 1);
-
     *handle = hdl;
     return 0;
 }
@@ -118,7 +114,6 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     init_handle_hdr(clnt, PAL_TYPE_PIPECLI);
     clnt->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd            = newfd;
-    clnt->pipe.name          = handle->pipe.name;
     clnt->pipe.nonblocking   = !!(flags & SOCK_NONBLOCK);
 
     *client = clnt;
@@ -170,10 +165,6 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     hdl->pipe.fd            = fd;
     hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
 
-    /* padding with zeros is for uniformity with other PALs (in particular, Linux-SGX) */
-    memset(&hdl->pipe.name.str, 0, sizeof(hdl->pipe.name.str));
-    memcpy(&hdl->pipe.name.str, name, strlen(name) + 1);
-
     *handle = hdl;
     return 0;
 }
@@ -208,9 +199,6 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     assert(create == PAL_CREATE_IGNORED);
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
-        return -PAL_ERROR_INVAL;
-
-    if (strlen(uri) + 1 > PIPE_NAME_MAX)
         return -PAL_ERROR_INVAL;
 
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
@@ -374,61 +362,7 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
-/*!
- * \brief Retrieve full URI of PAL handle.
- *
- * \param      handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- * \param[out] buffer  User-supplied buffer to write URI to.
- * \param      count   Size of the user-supplied buffer.
- *
- * \returns Number of bytes written on success, negative PAL error code otherwise.
- *
- * Full URI is composed of the type and pipe name: "<type>:<pipename>".
- */
-static int pipe_getname(PAL_HANDLE handle, char* buffer, size_t count) {
-    size_t old_count = count;
-    int ret;
-
-    const char* prefix = NULL;
-    size_t prefix_len  = 0;
-
-    switch (handle->hdr.type) {
-        case PAL_TYPE_PIPESRV:
-        case PAL_TYPE_PIPECLI:
-            prefix_len = static_strlen(URI_TYPE_PIPE_SRV);
-            prefix     = URI_TYPE_PIPE_SRV;
-            break;
-        case PAL_TYPE_PIPE:
-            prefix_len = static_strlen(URI_TYPE_PIPE);
-            prefix     = URI_TYPE_PIPE;
-            break;
-        default:
-            return -PAL_ERROR_INVAL;
-    }
-
-    if (prefix_len >= count)
-        return -PAL_ERROR_OVERFLOW;
-
-    memcpy(buffer, prefix, prefix_len);
-    buffer[prefix_len] = ':';
-    buffer += prefix_len + 1;
-    count -= prefix_len + 1;
-
-    ret = snprintf(buffer, count, "%s\n", handle->pipe.name.str);
-    if (buffer[ret - 1] != '\n') {
-        memset(buffer, 0, count);
-        return -PAL_ERROR_OVERFLOW;
-    }
-
-    buffer[ret - 1] = 0;
-    buffer += ret - 1;
-    count -= ret - 1;
-
-    return old_count - count;
-}
-
 struct handle_ops g_pipe_ops = {
-    .getname        = &pipe_getname,
     .open           = &pipe_open,
     .waitforclient  = &pipe_waitforclient,
     .read           = &pipe_read,

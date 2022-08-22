@@ -18,7 +18,7 @@ int main(int argc, char** argv, char** envp) {
     }
 
     size_t bytes = sizeof(str) - 1;
-    ret = PalStreamWrite(out, 0, &bytes, str, NULL);
+    ret = PalStreamWrite(out, 0, &bytes, str);
     if (ret < 0 || bytes != sizeof(str) - 1) {
         pal_printf("second PalStreamWrite failed\n");
         return 1;
@@ -36,7 +36,7 @@ int main(int argc, char** argv, char** envp) {
 
     bytes = sizeof(str);
     memset(str, 0, bytes);
-    ret = PalStreamRead(in, 0, &bytes, str, NULL, 0);
+    ret = PalStreamRead(in, 0, &bytes, str);
     if (ret < 0) {
         pal_printf("PalStreamRead failed\n");
         return 1;

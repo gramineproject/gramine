@@ -203,9 +203,6 @@ applications.
 .. doxygenfunction:: PalStreamAttributesSetByHandle
    :project: pal
 
-.. doxygenfunction:: PalStreamGetName
-   :project: pal
-
 .. doxygenfunction:: PalStreamChangeName
    :project: pal
 

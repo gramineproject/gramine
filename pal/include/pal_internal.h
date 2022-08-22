@@ -35,16 +35,9 @@ struct pal_common_state {
 extern struct pal_common_state g_pal_common_state;
 extern struct pal_public_state g_pal_public_state;
 
-// TODO: clean unused stuff
 /* handle_ops is the operators provided for each handler type. They are mostly used by
  * stream-related PAL calls, but can also be used by some others in special ways. */
 struct handle_ops {
-    /* 'getrealpath' return the real path that represent the handle */
-    const char* (*getrealpath)(PAL_HANDLE handle);
-
-    /* 'getname' is used by PalStreamGetName. It's different from 'getrealpath' */
-    int (*getname)(PAL_HANDLE handle, char* buffer, size_t count);
-
     /* 'open' is used by PalStreamOpen. 'handle' is a preallocated handle, 'type' will be a
      * normalized prefix, 'uri' is the remaining string of uri. access, share, create, and options
      * follow the same flags defined for PalStreamOpen in pal.h. */
@@ -55,13 +48,6 @@ struct handle_ops {
      * prototype as them. */
     int64_t (*read)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer);
     int64_t (*write)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer);
-
-    /* 'readbyaddr' and 'writebyaddr' are the same as read and write, but with extra field to
-     * specify address */
-    int64_t (*readbyaddr)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer,
-                          char* addr, size_t addrlen);
-    int64_t (*writebyaddr)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer,
-                           const char* addr, size_t addrlen);
 
     /* 'close' and 'delete' is used by PalObjectClose and PalStreamDelete, 'close' will close the
      * stream, while 'delete' actually destroy the stream, such as deleting a file or shutting
@@ -184,10 +170,8 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
                    pal_stream_options_t options);
 int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
-int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf, char* addr,
-                       int addrlen);
-int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
-                        const char* addr, int addrlen);
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf);
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
 int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
@@ -195,8 +179,6 @@ int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uin
 int _PalStreamUnmap(void* addr, uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _PalStreamFlush(PAL_HANDLE handle);
-int _PalStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
-const char* _PalStreamRealpath(PAL_HANDLE hdl);
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 

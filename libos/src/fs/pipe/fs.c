@@ -92,7 +92,7 @@ static ssize_t pipe_read(struct libos_handle* hdl, void* buf, size_t count, file
         return -EACCES;
 
     size_t orig_count = count;
-    int ret = PalStreamRead(hdl->pal_handle, 0, &count, buf, NULL, 0);
+    int ret = PalStreamRead(hdl->pal_handle, 0, &count, buf);
     ret = pal_to_unix_errno(ret);
     maybe_epoll_et_trigger(hdl, ret, /*in=*/true, ret == 0 ? count < orig_count : false);
     if (ret < 0) {
@@ -111,7 +111,7 @@ static ssize_t pipe_write(struct libos_handle* hdl, const void* buf, size_t coun
         return -EACCES;
 
     size_t orig_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, 0, &count, (void*)buf, NULL);
+    int ret = PalStreamWrite(hdl->pal_handle, 0, &count, (void*)buf);
     ret = pal_to_unix_errno(ret);
     maybe_epoll_et_trigger(hdl, ret, /*in=*/false, ret == 0 ? count < orig_count : false);
     if (ret < 0) {

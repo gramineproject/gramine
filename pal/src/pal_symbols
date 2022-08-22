@@ -30,7 +30,6 @@ PalSocketRecv
 PalSendHandle
 PalReceiveHandle
 PalStreamWaitForClient
-PalStreamGetName
 PalStreamAttributesQueryByHandle
 PalStreamAttributesQuery
 PalProcessCreate

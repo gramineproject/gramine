@@ -32,19 +32,19 @@ int main(int argc, char** argv, char** envp) {
 
         /* test file read */
         size_t size = sizeof(buffer1);
-        ret = PalStreamRead(file1, 0, &size, buffer1, NULL, 0);
+        ret = PalStreamRead(file1, 0, &size, buffer1);
         if (ret == 0 && size == sizeof(buffer1)) {
             print_hex("Read Test 1 (0th - 40th): %s\n", buffer1, size);
         }
 
         size = sizeof(buffer1);
-        ret = PalStreamRead(file1, 0, &size, buffer1, NULL, 0);
+        ret = PalStreamRead(file1, 0, &size, buffer1);
         if (ret == 0 && size == sizeof(buffer1)) {
             print_hex("Read Test 2 (0th - 40th): %s\n", buffer1, size);
         }
 
         size = sizeof(buffer2);
-        ret = PalStreamRead(file1, 200, &size, buffer2, NULL, 0);
+        ret = PalStreamRead(file1, 200, &size, buffer2);
         if (ret == 0 && size == sizeof(buffer2)) {
             print_hex("Read Test 3 (200th - 240th): %s\n", buffer2, size);
         }
@@ -135,17 +135,17 @@ int main(int argc, char** argv, char** envp) {
         /* test file writing */
 
         size_t size = sizeof(buffer1);
-        ret = PalStreamWrite(file4, 0, &size, buffer1, NULL);
+        ret = PalStreamWrite(file4, 0, &size, buffer1);
         if (ret < 0)
             goto fail_writing;
 
         size = sizeof(buffer2);
-        ret = PalStreamWrite(file4, 0, &size, buffer2, NULL);
+        ret = PalStreamWrite(file4, 0, &size, buffer2);
         if (ret < 0)
             goto fail_writing;
 
         size = sizeof(buffer1);
-        ret = PalStreamWrite(file4, 200, &size, buffer1, NULL);
+        ret = PalStreamWrite(file4, 200, &size, buffer1);
         if (ret < 0)
             goto fail_writing;
 

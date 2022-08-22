@@ -287,18 +287,18 @@ static int perform_relocations(struct link_map* map) {
 
 /* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
  * we don't bother undoing _PalStreamMap() and _PalVirtualMemoryAlloc() in case of failure. */
-static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* elf_file_buf) {
+static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
+                                          const char* elf_file_buf) {
     int ret;
     struct loadcmd* loadcmds = NULL;
 
     elf_addr_t l_relro_addr = 0x0;
     size_t l_relro_size = 0;
 
-    const char* name = _PalStreamRealpath(handle);
-    if (!name)
+    if (!strstartswith(uri, URI_PREFIX_FILE))
         return -PAL_ERROR_INVAL;
 
-    g_entrypoint_map.l_name = strdup(name);
+    g_entrypoint_map.l_name = strdup(uri + URI_PREFIX_FILE_LEN);
     if (!g_entrypoint_map.l_name) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
@@ -507,7 +507,7 @@ int load_entrypoint(const char* uri) {
     if (ret < 0)
         return ret;
 
-    ret = _PalStreamRead(handle, 0, sizeof(buf), buf, NULL, 0);
+    ret = _PalStreamRead(handle, 0, sizeof(buf), buf);
     if (ret < 0) {
         log_error("Reading ELF file failed");
         goto out;
@@ -547,7 +547,7 @@ int load_entrypoint(const char* uri) {
         goto out;
     }
 
-    ret = create_and_relocate_entrypoint(handle, buf);
+    ret = create_and_relocate_entrypoint(handle, uri, buf);
     if (ret < 0) {
         log_error("Could not map the ELF file into memory and then relocate it");
         ret = -PAL_ERROR_INVAL;
