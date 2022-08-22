@@ -193,6 +193,7 @@ static int g_reserved_ranges_fd = -1;
 
 void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
                                   uintptr_t* out_next_range_end) {
+    __UNUSED(last_range_start);
     uintptr_t new_range[2];
 
     int ret = -EBADF;
