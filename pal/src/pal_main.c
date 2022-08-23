@@ -21,7 +21,7 @@ struct pal_common_state g_pal_common_state;
 struct pal_public_state g_pal_public_state = {
     /* Enable log to catch early initialization errors; it will be overwritten in pal_main(). */
     .log_level = PAL_LOG_DEFAULT_LEVEL,
-    .hostname = "localhost"
+    .hostname = "localhost",
 };
 
 struct pal_public_state* PalGetPalPublicState(void) {

@@ -7,5 +7,4 @@
 
 #include "pal.h"
 
-/* Function to fetch the hostname */
 int get_hostname(char* hostname, size_t size);

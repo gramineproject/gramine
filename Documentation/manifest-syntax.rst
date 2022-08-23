@@ -136,8 +136,8 @@ arguments to be provided at runtime from an external (trusted) source.
 If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
-``etc`` passthrough
-^^^^^^^^^^^^^^^^^^^
+``/etc`` passthrough
+^^^^^^^^^^^^^^^^^^^^
 
 ::
 

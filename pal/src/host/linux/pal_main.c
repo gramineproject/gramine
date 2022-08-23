@@ -144,7 +144,7 @@ static void get_host_info(bool first_process) {
         return;
 
     if (get_hostname(g_pal_public_state.hostname,
-                          sizeof(g_pal_public_state.hostname)) < 0) {
+                     sizeof(g_pal_public_state.hostname)) < 0) {
         INIT_FAIL("Unable to get hostname");
     }
 }

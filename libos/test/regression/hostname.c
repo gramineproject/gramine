@@ -40,8 +40,8 @@ static void test_gethostname(const char* tag, const char* expected_name) {
     }
 
     if (strcmp(buf, expected_name) != 0) {
-        errx(1, "%s gethostname doesn't match hostname (expected: %s, got: %s)",
-               tag, expected_name, buf);
+        errx(1, "%s gethostname result doesn't match hostname (expected: %s, got: %s)",
+             tag, expected_name, buf);
     }
 }
 
@@ -52,7 +52,7 @@ static void test_etc_hostname(const char* tag, const char* expected_name) {
     fd = open("/etc/hostname", O_RDONLY);
 
     /*
-     * If the etc expected name was not provided, assume that etc shouldn't exist.
+     * If the etc expected name was not provided, assume that /etc/hostname shouldn't exist.
      */
     if (strcmp(expected_name, "") == 0) {
         if (fd != -1 || errno != ENOENT) {
@@ -65,13 +65,22 @@ static void test_etc_hostname(const char* tag, const char* expected_name) {
         err(1, "Unable to open /etc/hostname in %s", tag);
     }
 
-    int ret = read(fd, buf, sizeof(buf));
-    if (ret <= 0) {
-        err(1, "Unable to read /etc/hostname in %s", tag);
+    off_t offset = 0;
+    size_t size = sizeof(buf);
+    while (size > 0) {
+        ssize_t ret = read(fd, buf + offset, size);
+        if (ret < 0 && errno == EINTR)
+            continue;
+        if (ret < 0)
+            err(1, "Unable to read /etc/hostname in %s", tag);
+        if (ret == 0)
+            break;
+        size -= ret;
+        offset += ret;
     }
 
     /*
-     * Sometimes etc hostname might have a trailing '\n', gramine is removing it,
+     * Sometimes /etc/hostname might have a trailing '\n', Gramine is removing it,
      * do the same in the test.
      */
     size_t len = strlen(buf);
@@ -81,7 +90,7 @@ static void test_etc_hostname(const char* tag, const char* expected_name) {
 
     if (strcmp(buf, expected_name) != 0) {
         err(1, "%s /etc/hostname don't have a expected value (expected: %s, got: %s)",
-               tag, expected_name, buf);
+            tag, expected_name, buf);
     }
 }
 
