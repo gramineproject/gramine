@@ -22,8 +22,7 @@
 #define MANIFEST_SGX_THREAD_CNT 8 /* corresponds to sgx.thread_num in the manifest template */
 
 struct parent_to_child_args {
-    unsigned int thread_affinity;
-    volatile uint64_t iterations;
+    unsigned long thread_affinity;
 };
 
 /* barrier to synchronize between parent and children */
@@ -32,9 +31,6 @@ pthread_barrier_t barrier;
 /* Run a busy loop for some iterations, so that we can verify affinity with htop manually */
 static void* dowork(void* args) {
     struct parent_to_child_args* thread_args = (struct parent_to_child_args*)args;
-
-    while (thread_args->iterations != 0)
-        thread_args->iterations--;
 
     int ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {
@@ -48,7 +44,7 @@ static void* dowork(void* args) {
 
     unsigned long cpumask = (1UL << cpu);
     if ((cpumask & thread_args->thread_affinity) == 0) {
-        errx(EXIT_FAILURE, "Expected cpumask = %d returned cpumask = %d",
+        errx(EXIT_FAILURE, "Expected cpumask = %ld returned cpumask = %d",
              thread_args->thread_affinity, cpu);
     }
 
@@ -67,32 +63,36 @@ int main(int argc, const char** argv) {
     /* If you want to run on all cores then increase sgx.thread_num in the manifest.template and
      * also set MANIFEST_SGX_THREAD_CNT to the same value.
      */
-    long numprocs = min(onlineprocs, (MANIFEST_SGX_THREAD_CNT - (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
+    long numthreads = min(onlineprocs, (MANIFEST_SGX_THREAD_CNT - (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
 
-    /* Affinitize threads to alternate logical processors to do a quick check from htop manually */
-    numprocs = (numprocs >= 2) ? numprocs/2 : 1;
+    /* Each thread will be affinitized to run on 2 distinct cores (e.g., thread 0 will be
+     * affinitized to run on cpus 0,1 and thread 1 will be affinitized to run on cpus 2,3 and so
+     * on..). So reduce the number of threads to take into account odd number of cores present in
+     * the system. */
+    numthreads = (numthreads >= 2) ? numthreads/2 : 1;
 
-    /* Below logic affinitizes each thread to 2 cores. So limiting to 32 cores so that we can store
-     * the affinity within a single unsigned long */
-    numprocs = (numprocs > 32) ? 32: numprocs;
+    /* Limit to 32 threads so that we can store the affinity within a single unsigned long */
+    if (numthreads > 32)
+        numthreads = 32;
 
-    pthread_t* threads = (pthread_t*)malloc(numprocs * sizeof(pthread_t));
+    pthread_t* threads = (pthread_t*)malloc(numthreads * sizeof(pthread_t));
     if (!threads) {
-         errx(EXIT_FAILURE, "memory allocation failed");
+         errx(EXIT_FAILURE, "thread allocation failed");
     }
 
-    if (pthread_barrier_init(&barrier, NULL, numprocs + 1)) {
+    struct parent_to_child_args* thread_args = malloc(numthreads * sizeof(*thread_args));
+    if (!thread_args) {
+         errx(EXIT_FAILURE, "thread args allocation failed");
+    }
+
+    if (pthread_barrier_init(&barrier, NULL, numthreads + 1)) {
         free(threads);
         errx(EXIT_FAILURE, "pthread barrier init failed");
     }
 
-    cpu_set_t cpus, get_cpus;
-    uint64_t iterations = argc > 1 ? atol(argv[1]) : 10000000000;
-
-    struct parent_to_child_args thread_args[numprocs];
-
     /* Validate parent set/get affinity for child */
-    for (long i = 0; i < numprocs; i++) {
+    cpu_set_t cpus, get_cpus;
+    for (long i = 0; i < numthreads; i++) {
         CPU_ZERO(&cpus);
         CPU_ZERO(&get_cpus);
 
@@ -107,27 +107,30 @@ int main(int argc, const char** argv) {
         }
 
         thread_args[i].thread_affinity = set_affinity;
-        thread_args[i].iterations = iterations;
         ret = pthread_create(&threads[i], NULL, dowork, (void*)&thread_args[i]);
         if (ret != 0) {
             free(threads);
+            free(thread_args);
             errx(EXIT_FAILURE, "pthread_create failed!");
         }
 
         ret = pthread_setaffinity_np(threads[i], sizeof(cpus), &cpus);
         if (ret != 0) {
             free(threads);
+            free(thread_args);
             errx(EXIT_FAILURE, "pthread_setaffinity_np failed for child!");
         }
 
         ret = pthread_getaffinity_np(threads[i], sizeof(get_cpus), &get_cpus);
         if (ret != 0) {
             free(threads);
+            free(thread_args);
             errx(EXIT_FAILURE, "pthread_getaffinity_np failed for child!");
         }
 
         if (!CPU_EQUAL_S(sizeof(cpus), &cpus, &get_cpus)) {
             free(threads);
+            free(thread_args);
             errx(EXIT_FAILURE, "get cpuset is not equal to set cpuset on proc: %ld", i);
         }
     }
@@ -136,13 +139,15 @@ int main(int argc, const char** argv) {
     ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {
         free(threads);
+        free(thread_args);
         errx(EXIT_FAILURE, "Parent did not wait on barrier!");
     }
 
-    for (int i = 0; i < numprocs; i++) {
+    for (int i = 0; i < numthreads; i++) {
         ret = pthread_join(threads[i], NULL);
         if (ret != 0) {
             free(threads);
+            free(thread_args);
             errx(EXIT_FAILURE, "pthread_join failed!");
         }
     }
@@ -150,6 +155,7 @@ int main(int argc, const char** argv) {
     /* Validating parent set/get affinity for children done. Free resources */
     pthread_barrier_destroy(&barrier);
     free(threads);
+    free(thread_args);
 
     /* Validate parent set/get affinity for itself */
     CPU_ZERO(&cpus);
