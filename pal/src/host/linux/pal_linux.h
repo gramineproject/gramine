@@ -45,7 +45,7 @@ extern uintptr_t g_vdso_start;
 extern uintptr_t g_vdso_end;
 bool is_in_vdso(uintptr_t addr);
 /* Parse "/proc/self/maps" and bookkeep all found address ranges. */
-int init_initial_memory_ranges(void);
+int init_memory_bookkeeping(void);
 int init_reserved_ranges(int reserved_ranges_fd);
 
 int setup_vdso(elf_addr_t base_addr);

@@ -148,9 +148,9 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
-    ret = init_initial_memory_ranges();
+    ret = init_memory_bookkeeping();
     if (ret < 0) {
-        INIT_FAIL("init_initial_memory_ranges failed: %d", ret);
+        INIT_FAIL("init_memory_bookkeeping failed: %d", ret);
     }
 
     ret = init_random();

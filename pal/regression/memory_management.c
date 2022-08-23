@@ -11,7 +11,7 @@ struct vma {
     uintptr_t end;
 };
 
-/* Array of allocated memroy ranges. Always kept sorted in descending order. */
+/* Array of allocated memory ranges. Always kept sorted in descending order. */
 static struct vma g_vmas[0x100];
 static size_t g_vmas_len = 0;
 

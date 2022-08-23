@@ -186,7 +186,7 @@ static bool find_free_range(size_t size, uintptr_t* out_addr) {
     return true;
 }
 
-static int find_non_reserved_range_above(uintptr_t addr, size_t size, uintptr_t* out_addr) {
+static int find_non_reserved_range_below(uintptr_t addr, size_t size, uintptr_t* out_addr) {
     static uintptr_t g_last_reserved_range_start = UINTPTR_MAX;
     static uintptr_t g_last_reserved_range_end = UINTPTR_MAX;
 
@@ -242,7 +242,7 @@ static int initial_mem_alloc(size_t size, void** out_addr) {
     if (!find_free_range(size, &addr)) {
         addr = g_last_alloc_addr;
         while (1) {
-            ret = find_non_reserved_range_above(addr, size, &addr);
+            ret = find_non_reserved_range_below(addr, size, &addr);
             if (ret < 0) {
                 return ret;
             }
@@ -345,7 +345,7 @@ void pal_disable_early_memory_bookkeeping(void) {
     size_t size = MIN(g_pal_public_state.mem_total / 20, 1024ul * 1024);
     uintptr_t addr = g_last_alloc_addr;
     while (1) {
-        int ret = find_non_reserved_range_above(addr, size, &addr);
+        int ret = find_non_reserved_range_below(addr, size, &addr);
         if (ret < 0 || addr < (uintptr_t)g_pal_public_state.memory_address_start) {
             /* Let LibOS handle this. `early_libos_mem_range_start` and `early_libos_mem_range_end`
              * are both `0`, so LibOS will most likely fail to allocate early memory. */

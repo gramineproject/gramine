@@ -25,7 +25,7 @@ extern char __migratable_end;
  * is no parent process it's always `true`.
  * While this is set to `false`, LibOS is allowed to allocate internal memory only in special range
  * `[early_libos_mem_range_start, early_libos_mem_range_end)`, which is guaranteed not to overlap
- * any user memory that is checkpointed. If for some reason this range overlaps user memroy (e.g.
+ * any user memory that is checkpointed. If for some reason this range overlaps user memory (e.g.
  * a bug or a malicious host), Gramine will terminate the child process (because checkpointing will
  * fail).
  */

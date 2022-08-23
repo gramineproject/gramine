@@ -31,7 +31,11 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
-    /* initialize contents of new memory region to zero (LibOS layer expects zeroed-out memory) */
+    /*
+     * This function doesn't have to do anything - in SGX1 the memory is already mapped (it happens
+     * at the enclave initialization). Just clear the (possible) previous memory content (this
+     * function must return zeroed memory).
+     */
     memset(addr, 0, size);
 
     __atomic_add_fetch(&g_allocated_pages, size / g_page_size, __ATOMIC_RELAXED);
@@ -50,6 +54,11 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
 #ifdef ASAN
         asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
 #endif
+
+        /*
+         * This function doesn't have to do anything - in SGX1 the memory is mapped only at
+         * the enclave initialization and cannot be unmapped.
+         */
 
         __atomic_sub_fetch(&g_allocated_pages, size / g_page_size, __ATOMIC_RELAXED);
     } else {

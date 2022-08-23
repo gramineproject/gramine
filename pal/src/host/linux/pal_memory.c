@@ -148,7 +148,7 @@ static int proc_maps_info_callback(struct proc_maps_range* r, void* arg) {
     return pal_add_initial_range(r->start, r->end - r->start, r->prot, r->name ?: "");
 }
 
-int init_initial_memory_ranges(void) {
+int init_memory_bookkeeping(void) {
     struct proc_maps_info proc_maps_info = { 0 };
     int ret = parse_proc_maps("/proc/self/maps", &proc_maps_info_callback, &proc_maps_info);
     if (ret < 0) {

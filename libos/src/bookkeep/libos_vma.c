@@ -1459,8 +1459,16 @@ BEGIN_CP_FUNC(vma) {
             }
         }
 
-        // TODO:
-        // after all other possible DO_CP_SIZE(memory, )
+        /*
+         * Add a dummy memory region, to the checkpoint. The content of this memory won't be
+         * actually sent, just this metadata. See `receive_memory_on_stream` for more info.
+         * This must come after all other `DO_CP_SIZE(memory, ...)` in this function, to maintain
+         * proper ordering (memory entries are appended to the beginning of a list in
+         * the checkpoint).
+         *
+         * XXX: we could go with an alternative (less hacky?) approach - instead of dummy memory
+         * regions we could add a dedicated list of VMAs to restore before rest of the checkpoint.
+         */
         struct libos_mem_entry* mem;
         DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
         mem->dummy = true;
