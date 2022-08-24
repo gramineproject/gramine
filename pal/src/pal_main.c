@@ -388,15 +388,22 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     configure_logging();
 
+    toml_table_t* manifest_loader = toml_table_in(g_pal_public_state.manifest_root, "loader");
+    if (manifest_loader == NULL) {
+        INIT_FAIL("'loader' section wasn't configured in the manifest, at least 'loader.entrypoint' "
+                  "needs to be defined");
+    }
+
     char* dummy_exec_str = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.exec", &dummy_exec_str);
-    if (ret < 0 || dummy_exec_str)
-        INIT_FAIL("loader.exec is not supported anymore. Please update your manifest according to "
-                  "the current documentation.");
+    ret = toml_string_in(manifest_loader, "exec", &dummy_exec_str);
+    if (ret < 0 || dummy_exec_str) {
+        INIT_FAIL("'loader.exec' is not supported anymore. Please update your manifest according "
+                  "to the current documentation.");
+    }
     free(dummy_exec_str);
 
     bool disable_aslr;
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
+    ret = toml_bool_in(manifest_loader, "insecure__disable_aslr",
                        /*defaultval=*/false, &disable_aslr);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__disable_aslr' (the value must be "
@@ -404,13 +411,30 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     /* Load argv */
-    /* TODO: Add an option to specify argv inline in the manifest. */
     bool use_cmdline_argv;
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
+    ret = toml_bool_in(manifest_loader, "insecure__use_cmdline_argv",
                        /*defaultval=*/false, &use_cmdline_argv);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_cmdline_argv' (the value must be "
                            "`true` or `false`)");
+    }
+    char* argv_src_file = NULL;
+    ret = toml_string_in(manifest_loader, "argv_src_file",
+                         &argv_src_file);
+    if (ret < 0)
+        INIT_FAIL_MANIFEST("Cannot parse 'loader.argv_src_file'");
+
+    ssize_t argv_option_cnt = 0;
+    toml_array_t* argv_option = toml_array_in(manifest_loader, "argv");
+    if (argv_option) {
+        argv_option_cnt = toml_array_nelem(argv_option);
+        if (argv_option_cnt < 0)
+            INIT_FAIL_MANIFEST("Cannot parse 'loader.argv'");
+    }
+
+    if ((use_cmdline_argv ? 1 : 0) + (argv_option_cnt > 0 ? 1 : 0) + (argv_src_file ? 1 : 0) > 1) {
+        INIT_FAIL_MANIFEST("Options loader.argv, loader.argv_src_file, and "
+                           "loader.insecure__use_cmdline_argv are mutually exclusive");
     }
 
     char* argv0_override = NULL;
@@ -420,7 +444,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     if (!argv0_override) {
         /* possible in e.g. PAL regression tests, in this case use loader.entrypoint */
-        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint",
+        ret = toml_string_in(manifest_loader, "entrypoint",
                              &argv0_override);
         if (ret < 0)
             INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
@@ -430,52 +454,51 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     assert(argv0_override);
 
-    if (use_cmdline_argv && !parent_process) {
-        /* argv[0] in host cmdline args is the name of manifest, but app expects the entrypoint */
-        if (!arguments[0])
-            INIT_FAIL("Gramine started with no arguments, this is unsupported");
-        arguments[0] = argv0_override;
-    }
-
-    if (!use_cmdline_argv) {
-        char* argv_src_file = NULL;
-
-        ret = toml_string_in(g_pal_public_state.manifest_root, "loader.argv_src_file",
-                             &argv_src_file);
-        if (ret < 0)
-            INIT_FAIL_MANIFEST("Cannot parse 'loader.argv_src_file'");
-
-        if (argv_src_file) {
-            /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
-             * be achieved using trusted files). */
-            if (arguments[0] && arguments[1])
-                log_error("Discarding cmdline arguments (%s %s [...]) because loader.argv_src_file "
-                          "was specified in the manifest.", arguments[0], arguments[1]);
-
-            ret = load_cstring_array(argv_src_file, &arguments);
-            if (ret < 0)
-                INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
-
-            free(argv_src_file);
-        } else if (arguments[0] && arguments[1]) {
-            INIT_FAIL("argv handling wasn't configured in the manifest, but cmdline arguments were "
-                      "specified.");
-        } else if (!parent_process) {
-            /* no argv handling and no cmdline args -- override argv[0] with entrypoint */
-            arguments = malloc(sizeof(const char*) * 2);
-            if (!arguments)
-                INIT_FAIL("malloc() failed");
-
+    if (use_cmdline_argv) {
+        if (!parent_process) {
+            /* argv[0] in host cmdline args is the name of manifest, but app expects the entrypoint */
+            if (!arguments[0])
+                INIT_FAIL("Gramine started with no arguments, this is unsupported");
             arguments[0] = argv0_override;
-            arguments[1] = NULL;
         }
+    } else if (argv_option_cnt > 0) {
+        const char** new_args = malloc(sizeof(*new_args) * argv_option_cnt);
+        if (new_args == NULL) {
+            INIT_FAIL("Cannot allocate memory for arguments");
+        }
+
+        for (ssize_t i = 0; i < argv_option_cnt; i++) {
+            toml_datum_t toml_arg = toml_string_at(argv_option, i);
+            if (!toml_arg.ok) {
+                INIT_FAIL("Cannot parse argv[%zd]", i);
+            }
+            new_args[i] = toml_arg.u.s;
+        }
+        arguments = new_args;
+    } else if (argv_src_file) {
+        ret = load_cstring_array(argv_src_file, &arguments);
+        if (ret < 0)
+            INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
+
+        free(argv_src_file);
+    } else if (arguments[0] && arguments[1]) {
+        INIT_FAIL("argv handling wasn't configured in the manifest, but cmdline arguments were "
+                  "specified.");
+    } else if (!parent_process) {
+        /* no argv handling and no cmdline args -- override argv[0] with entrypoint */
+        arguments = malloc(sizeof(const char*) * 2);
+        if (!arguments)
+            INIT_FAIL("malloc() failed");
+
+        arguments[0] = argv0_override;
+        arguments[1] = NULL;
     }
 
     const char** orig_environments  = NULL;
     const char** final_environments = NULL;
 
     bool use_host_env;
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_host_env",
+    ret = toml_bool_in(manifest_loader, "insecure__use_host_env",
                        /*defaultval=*/false, &use_host_env);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_host_env' (the value must be `true` "
@@ -483,7 +506,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
 
     char* env_src_file = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.env_src_file", &env_src_file);
+    ret = toml_string_in(manifest_loader, "env_src_file", &env_src_file);
     if (ret < 0)
         INIT_FAIL_MANIFEST("Cannot parse 'loader.env_src_file'");
 
@@ -517,7 +540,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     free(env_src_file);
 
     char* entrypoint_name = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint", &entrypoint_name);
+    ret = toml_string_in(manifest_loader, "entrypoint", &entrypoint_name);
     if (ret < 0)
         INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
 
