@@ -17,7 +17,7 @@ static void write_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                 CHECK(PalStreamWrite(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
-                struct pal_iovec iov = {
+                struct iovec iov = {
                     .iov_base = buf + i,
                     .iov_len = this_size,
                 };
@@ -45,7 +45,7 @@ static void read_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                 CHECK(PalStreamRead(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
-                struct pal_iovec iov = {
+                struct iovec iov = {
                     .iov_base = buf + i,
                     .iov_len = this_size,
                 };
