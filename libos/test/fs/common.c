@@ -30,10 +30,11 @@ void read_fd(const char* path, int fd, void* buffer, size_t size) {
     off_t offset = 0;
     while (size > 0) {
         ssize_t ret = read(fd, buffer + offset, size);
-        if (ret == -EINTR)
-            continue;
-        if (ret < 0)
+        if (ret < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
             fatal_error("Failed to read file %s: %s\n", path, strerror(errno));
+        }
         if (ret == 0)
             break;
         size -= ret;
@@ -68,10 +69,11 @@ void write_fd(const char* path, int fd, const void* buffer, size_t size) {
     off_t offset = 0;
     while (size > 0) {
         ssize_t ret = write(fd, buffer + offset, size);
-        if (ret == -EINTR)
-            continue;
-        if (ret < 0)
+        if (ret < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
             fatal_error("Failed to write file %s: %s\n", path, strerror(errno));
+        }
         size -= ret;
         offset += ret;
     }
@@ -80,11 +82,12 @@ void write_fd(const char* path, int fd, const void* buffer, size_t size) {
 void sendfile_fd(const char* input_path, const char* output_path, int fi, int fo, size_t size) {
     while (size > 0) {
         ssize_t ret = sendfile(fo, fi, /*offset=*/NULL, size);
-        if (ret == -EAGAIN)
-            continue;
-        if (ret < 0)
+        if (ret < 0) {
+            if (errno == EAGAIN || errno == EINTR)
+                continue;
             fatal_error("Failed to sendfile from %s to %s: %s\n", input_path, output_path,
                         strerror(errno));
+        }
         size -= ret;
     }
 }
