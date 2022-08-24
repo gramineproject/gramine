@@ -275,7 +275,7 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
             target_bit -= cnt_bits_set;
         } else {
             unsigned long cpumask = thread->cpu_affinity_mask[i];
-            /* Mask out `nth_setbit` lowest bits. */
+            /* Mask out `target_bit` lowest bits. */
             while (target_bit--) {
                 cpumask &= cpumask - 1;
             }
