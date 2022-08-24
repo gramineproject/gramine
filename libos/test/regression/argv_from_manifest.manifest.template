@@ -1,0 +1,28 @@
+{% set entrypoint = "bootstrap" -%}
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+loader.argv = [
+  "{{ entrypoint }}",
+  "THIS",
+  "SHOULD GO",
+  "TO",
+  "THE",
+  "APP ", # note the trailing space (app should see this trailing space in its argv[5])
+]
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
+
+sgx.nonpie_binary = true
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]

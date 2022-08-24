@@ -4,6 +4,7 @@ libc = "musl"
 
 manifests = [
   "argv_from_file",
+  "argv_from_manifest",
   "abort",
   "abort_multithread",
   "bootstrap",
