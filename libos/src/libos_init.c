@@ -424,9 +424,6 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_threading);
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
-    /* The init_mount_etcfs takes precedence over user's fs.mounts, and because of that,
-     * it has to be called after init_mount. */
-    RUN_INIT(init_mount_etcfs);
 
     char** expanded_argv = NULL;
     RUN_INIT(init_exec_handle, argv, &expanded_argv);
@@ -491,7 +488,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_sync_client);
 
     RUN_INIT(set_hostname, g_pal_public_state->hostname,
-             strlen(g_pal_public_state->hostname) + 1);
+             strlen(g_pal_public_state->hostname));
 
     log_debug("LibOS initialized");
 

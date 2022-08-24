@@ -12,6 +12,8 @@
 #include <asm/errno.h>
 #include <linux/utsname.h>
 
+#include "api.h"
+
 int get_hostname(char* hostname, size_t size) {
     struct new_utsname c_uname;
     int ret;
@@ -21,11 +23,10 @@ int get_hostname(char* hostname, size_t size) {
         return ret;
 
     size_t node_size = strlen(c_uname.nodename) + 1;
-    memcpy(hostname, &c_uname.nodename,
-           node_size > size ? size : node_size);
+    memcpy(hostname, c_uname.nodename, MIN(node_size, size));
 
     assert(size > 0);
-    hostname[size - 1] = '\0';
+    hostname[size - 1] = 0;
 
     return 0;
 }

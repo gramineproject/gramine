@@ -5,7 +5,7 @@
 
 /*
  * This file contains the implementation of `etc` FS.
- * LibOS assumes that contents of all etc files were already sanitized.
+ * LibOS assumes that contents of all data obtained from host were already sanitized.
  */
 
 #include "libos_checkpoint.h"
@@ -30,7 +30,7 @@ int init_etcfs(void) {
     return 0;
 }
 
-int init_mount_etcfs(void) {
+int mount_etcfs(void) {
     int ret;
 
     if (!g_pal_public_state->passthrough_etc_files)

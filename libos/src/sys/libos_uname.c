@@ -40,7 +40,7 @@ long libos_syscall_uname(struct new_utsname* buf) {
     return 0;
 }
 
-int set_hostname(char* name, size_t len) {
+int set_hostname(const char* name, size_t len) {
     if (len >= sizeof(g_current_uname.nodename))
         return -EINVAL;
 

@@ -653,6 +653,10 @@ int init_mount(void) {
     }
     /* Otherwise `cwd` is already initialized. */
 
+    /* The mount_etcfs takes precedence over user's fs.mounts, and because of that,
+     * it has to be called at the end. */
+    mount_etcfs();
+
     return 0;
 }
 

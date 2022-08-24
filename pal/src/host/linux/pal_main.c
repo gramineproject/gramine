@@ -136,10 +136,6 @@ static void get_host_info(bool first_process) {
         return;
     }
 
-    ret = get_topology_info(&g_pal_public_state.topo_info);
-    if (ret < 0)
-        INIT_FAIL("get_topology_info() failed: %d", ret);
-
     if (!g_pal_public_state.passthrough_etc_files)
         return;
 
@@ -292,6 +288,14 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL("failed to init debug maps: %d", unix_to_pal_error(ret));
 #endif
+
+    /* Get host topology information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (first_process) {
+        ret = get_topology_info(&g_pal_public_state.topo_info);
+        if (ret < 0)
+            INIT_FAIL("get_topology_info() failed: %d", ret);
+    }
 
     g_pal_loader_path = get_main_exec_path();
     g_libpal_path = strdup(argv[1]);
