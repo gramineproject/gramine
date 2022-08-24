@@ -148,6 +148,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
 
+    /* Force stack to grow for at least `THREAD_STACK_SIZE`. `init_memory_bookkeeping()` below
+     * requires the stack to be fully present and visible in "/proc/self/maps". */
+    probe_stack(THREAD_STACK_SIZE);
+
     ret = init_memory_bookkeeping();
     if (ret < 0) {
         INIT_FAIL("init_memory_bookkeeping failed: %d", ret);

@@ -18,7 +18,6 @@
 #include "host_log.h"
 #include "host_process.h"
 #include "linux_utils.h"
-#include "pal_internal_arch.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "pal_rpc_queue.h"
@@ -1005,7 +1004,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
  * huge-jump stack accesses coming from within the enclave). Note that other, non-main threads
  * are created manually via clone(.., THREAD_STACK_SIZE, ..) and thus do not need this hack. */
 static void force_linux_to_grow_stack(void) {
-    ARCH_PROBE_STACK(THREAD_STACK_SIZE, PRESET_PAGESIZE);
+    probe_stack(THREAD_STACK_SIZE);
 }
 
 noreturn static void print_usage_and_exit(const char* argv_0) {

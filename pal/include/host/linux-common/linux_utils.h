@@ -54,3 +54,5 @@ int file_stat_type(struct stat* stat);
 void file_attrcopy(PAL_STREAM_ATTR* attr, struct stat* stat);
 
 int create_reserved_mem_ranges_fd(void* reserved_mem_ranges, size_t reserved_mem_ranges_size);
+
+void probe_stack(size_t size);

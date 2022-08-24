@@ -129,6 +129,7 @@ struct proc_maps_info {
     uintptr_t vdso_start;
     uintptr_t vdso_end;
     uintptr_t highest_addr;
+    uintptr_t stack_top;
 };
 
 static int proc_maps_info_callback(struct proc_maps_range* r, void* arg) {
@@ -138,6 +139,8 @@ static int proc_maps_info_callback(struct proc_maps_range* r, void* arg) {
         if (!strcmp(r->name, "[vdso]")) {
             proc_maps_info->vdso_start = r->start;
             proc_maps_info->vdso_end = r->end;
+        } else if (!strcmp(r->name, "[stack]")) {
+            proc_maps_info->stack_top = r->start;
         }
     }
 
@@ -155,6 +158,28 @@ int init_memory_bookkeeping(void) {
         return unix_to_pal_error(ret);
     }
 
+    if (proc_maps_info.stack_top == 0) {
+        log_error("failed to find the stack in \"/proc/self/maps\"");
+        return -PAL_ERROR_NOMEM;
+    }
+
+#ifdef __hppa__
+#error "Your arch grows stack upwards, this is not supported."
+#endif
+    /* Allocate a guard page above the stack. We do not support further stack auto growth. */
+    void* ptr = (void*)(proc_maps_info.stack_top - PAGE_SIZE);
+    ptr = (void*)DO_SYSCALL(mmap, ptr, PAGE_SIZE, PROT_NONE,
+                            MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (IS_PTR_ERR(ptr)) {
+        ret = PTR_TO_ERR(ptr);
+        log_error("failed to map a stack guard page: %d", ret);
+        return ret;
+    }
+    ret = pal_add_initial_range((uintptr_t)ptr, PAGE_SIZE, /*prot=*/0, "stack guard");
+    if (ret < 0) {
+        return ret;
+    }
+
     uintptr_t start_addr = MMAP_MIN_ADDR;
     uintptr_t end_addr = MIN(proc_maps_info.highest_addr, ARCH_HIGHEST_ADDR);
 
@@ -164,8 +189,8 @@ int init_memory_bookkeeping(void) {
             return -PAL_ERROR_NOMEM;
         }
 
-        void* ptr = (void*)DO_SYSCALL(mmap, start_addr, g_pal_public_state.alloc_align, PROT_NONE,
-                                      MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+        ptr = (void*)DO_SYSCALL(mmap, start_addr, PAGE_SIZE, PROT_NONE,
+                                MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if (!IS_PTR_ERR(ptr)) {
             DO_SYSCALL(munmap, ptr, g_pal_public_state.alloc_align);
             break;
