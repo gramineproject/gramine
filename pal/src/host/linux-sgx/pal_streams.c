@@ -16,6 +16,7 @@
 #include "api.h"
 #include "crypto.h"
 #include "enclave_pages.h"
+#include "linux_socket.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"

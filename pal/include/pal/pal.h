@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
+#include "iovec.h"
+
 // TODO: fix this (but see pal/include/arch/x86_64/pal_arch.h)
 #define INSIDE_PAL_H
 
@@ -509,13 +511,6 @@ struct pal_socket_addr {
     };
 };
 
-/* This could be just `struct iovec` from Linux, but we don't want to set a precedent of using Linux
- * types in PAL API. */
-struct pal_iovec {
-    void* iov_base;
-    size_t iov_len;
-};
-
 /*!
  * \brief Create a socket handle.
  *
@@ -602,8 +597,12 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
  * \returns 0 on success, negative error code on failure.
  *
  * Data is sent atomically, i.e. data from two `PalSocketSend` calls will not be interleaved.
+ *
+ * We use Linux `struct iovec` as argument here, because the alternative is to use a custom
+ * structure, but it would contain exactly the same fields, which would achieve nothing, but could
+ * worsen performance in certain cases.
  */
-int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*!
@@ -622,8 +621,12 @@ int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size
  * \returns 0 on success, negative error code on failure.
  *
  * Data is received atomically, i.e. data from two `PalSocketRecv` calls will not be interleaved.
+ *
+ * We use Linux `struct iovec` as argument here, because the alternative is to use a custom
+ * structure, but it would contain exactly the same fields, which would achieve nothing, but could
+ * worsen performance in certain cases.
  */
-int PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+int PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                   struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*

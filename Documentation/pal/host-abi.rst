@@ -241,7 +241,7 @@ Socket handling
 .. doxygenstruct:: pal_socket_addr
    :project: pal
 
-.. doxygenstruct:: pal_iovec
+.. doxygenstruct:: iovec
    :project: pal
 
 .. doxygenfunction:: PalSocketCreate
