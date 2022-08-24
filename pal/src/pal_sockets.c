@@ -34,13 +34,13 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     return _PalSocketConnect(handle, addr, local_addr);
 }
 
-int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     return _PalSocketSend(handle, iov, iov_len, out_size, addr, force_nonblocking);
 }
 
-int PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+int PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                   struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     return _PalSocketRecv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);

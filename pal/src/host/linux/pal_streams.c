@@ -6,12 +6,11 @@
  */
 
 #include <asm/fcntl.h>
-#include <netinet/in.h>
 #include <stdalign.h>
 #include <stdbool.h>
-#include <sys/socket.h>
 
 #include "api.h"
+#include "linux_socket.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
