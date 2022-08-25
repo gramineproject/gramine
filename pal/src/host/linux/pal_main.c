@@ -150,7 +150,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* Force stack to grow for at least `THREAD_STACK_SIZE`. `init_memory_bookkeeping()` below
      * requires the stack to be fully present and visible in "/proc/self/maps". */
-    probe_stack(THREAD_STACK_SIZE);
+    static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
+    probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
 
     ret = init_memory_bookkeeping();
     if (ret < 0) {

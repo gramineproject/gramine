@@ -5,12 +5,9 @@
 global probe_stack
 section .text
 
-; void probe_stack(size_t size)
+; void probe_stack(size_t pages_count)
 probe_stack:
-    ; get the number of pages
     mov rcx, rdi
-    shr rcx, 12
-
     mov rdi, rsp
 
 .Lrep:

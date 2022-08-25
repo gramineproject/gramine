@@ -999,14 +999,6 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     die_or_inf_loop();
 }
 
-/* Grow the stack of the main thread to THREAD_STACK_SIZE by probing each stack page above current
- * stack pointer (Linux dynamically grows the stack of the main thread but gets confused with
- * huge-jump stack accesses coming from within the enclave). Note that other, non-main threads
- * are created manually via clone(.., THREAD_STACK_SIZE, ..) and thus do not need this hack. */
-static void force_linux_to_grow_stack(void) {
-    probe_stack(THREAD_STACK_SIZE);
-}
-
 noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
@@ -1075,7 +1067,13 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 #endif
 
-    force_linux_to_grow_stack();
+    /* Grow the stack of the main thread to THREAD_STACK_SIZE by probing each stack page above
+     * the current stack pointer (Linux dynamically grows the stack of the main thread but gets
+     * confused with huge-jump stack accesses coming from within the enclave). Note that other,
+     * non-main threads do not have growing stacks and thus do not need this hack. */
+    static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
+    probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
+
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);
