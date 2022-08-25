@@ -18,8 +18,6 @@
  *        values and report success instead of injecting -EINTR).
  */
 
-#include "enclave_ocalls.h"
-
 #include <asm/errno.h>
 #include <linux/futex.h>
 #include <stdalign.h>
@@ -29,6 +27,7 @@
 #include "api.h"
 #include "asan.h"
 #include "cpu.h"
+#include "enclave_ocalls.h"
 #include "pal_internal.h"
 #include "pal_ocall_types.h"
 #include "pal_rpc_queue.h"

@@ -2,7 +2,6 @@
 /* Copyright (C) 2014 Stony Brook University */
 
 #include "host_ecalls.h"
-
 #include "host_internal.h"
 #include "pal_ecall_types.h"
 #include "pal_rpc_queue.h"

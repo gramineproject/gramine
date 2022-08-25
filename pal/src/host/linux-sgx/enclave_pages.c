@@ -1,7 +1,6 @@
-#include "enclave_pages.h"
-
 #include "api.h"
 #include "asan.h"
+#include "enclave_pages.h"
 #include "list.h"
 #include "pal_error.h"
 #include "pal_linux.h"

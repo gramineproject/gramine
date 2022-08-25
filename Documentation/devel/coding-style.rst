@@ -102,11 +102,11 @@ Code formatting
 
    Groups:
 
-   #. Matching :file:`.h` header for :file:`.c` files.
    #. Standard library headers.
    #. Non-standard headers not included in Gramine's repository (e.g. from
       external dependencies, like :file:`curl.h`).
-   #. Gramine's headers.
+   #. Gramine's headers (including matching :file:`.h` header for :file:`.c`
+      files).
 
 #. Assignments may be aligned when assigning some structurized data (e.g. struct
    members). Example::

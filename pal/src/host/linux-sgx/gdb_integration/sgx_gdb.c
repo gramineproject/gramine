@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#include "sgx_gdb.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -17,6 +16,7 @@
 #include <wait.h>
 
 #include "assert.h"
+#include "sgx_gdb.h"
 #include "../sgx_arch.h"
 
 /* Used by GDB with PTRACE_GETREGSET. */

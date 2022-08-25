@@ -1,8 +1,7 @@
-#include "enclave_ecalls.h"
-
 #include <stdalign.h>
 
 #include "api.h"
+#include "enclave_ecalls.h"
 #include "pal_ecall_types.h"
 #include "pal_linux.h"
 #include "pal_rpc_queue.h"

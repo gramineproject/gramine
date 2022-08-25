@@ -5,12 +5,11 @@
  * This file contains implementation of checkpoint and restore.
  */
 
-#include "libos_checkpoint.h"
-
 #include <asm/mman.h>
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_ipc.h"
 #include "libos_process.h"
