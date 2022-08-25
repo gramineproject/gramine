@@ -13,10 +13,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/param.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#define min(a, b)               (((a) < (b)) ? (a) : (b))
 #define MAIN_THREAD_CNT         1
 #define INTERNAL_THREAD_CNT     2
 #define MANIFEST_SGX_THREAD_CNT 8 /* corresponds to sgx.thread_num in the manifest template */
@@ -36,10 +36,7 @@ static void* dowork(void* args) {
         err(EXIT_FAILURE, "getcpu failed!");
 
     cpu_set_t* thread_cpuaffinity = (cpu_set_t*)args;
-    cpu_set_t cpumask;
-    CPU_SET(cpu, &cpumask);
-    CPU_AND(&cpumask, &cpumask, thread_cpuaffinity);
-    if (!CPU_COUNT(&cpumask)) {
+    if (!CPU_ISSET(cpu, thread_cpuaffinity)) {
         errx(EXIT_FAILURE, "cpu = %d is not part of thread %ld affinity mask", cpu,
                             syscall(SYS_gettid));
     }
@@ -53,16 +50,6 @@ static void* dowork(void* args) {
 /* This function tries to set 2 cores as part of thread cpu affinity mask. But if there is only one
  * core online then it is set as the thread's cpu affinity mask. */
 static int select_thread_cpu_affinity(cpu_set_t* set_cpumask, cpu_set_t* online_cpumask) {
-    int online_cores_from_mask = CPU_COUNT(online_cpumask);
-    if (online_cores_from_mask == 0)
-        return -1;
-
-    CPU_ZERO(set_cpumask);
-    if (online_cores_from_mask <= 2) {
-        CPU_OR(set_cpumask, set_cpumask, online_cpumask);
-        return 0;
-    }
-
     long total_cores = sysconf(_SC_NPROCESSORS_CONF);
     if (total_cores < 0)
         return -1;
@@ -104,12 +91,12 @@ int main(int argc, const char** argv) {
     /* If you want to run on all cores then increase sgx.thread_num in the manifest.template and
      * also set MANIFEST_SGX_THREAD_CNT to the same value.
      */
-    long numthreads = min(online_cores, (MANIFEST_SGX_THREAD_CNT -
-                                        (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
+    size_t numthreads = MIN(online_cores, (MANIFEST_SGX_THREAD_CNT -
+                                          (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
 
     /* Each thread will be affinitized to run on 2 distinct cores. So reduce the number of threads
      * to half of cores. */
-    numthreads = (numthreads >= 2) ? numthreads/2 : 1;
+    numthreads = MAX(numthreads / 2, 1);
 
     pthread_t* threads = (pthread_t*)malloc(numthreads * sizeof(pthread_t));
     if (!threads) {
@@ -117,52 +104,39 @@ int main(int argc, const char** argv) {
     }
 
     if (pthread_barrier_init(&barrier, NULL, numthreads + 1)) {
-        free(threads);
         errx(EXIT_FAILURE, "pthread barrier init failed");
     }
 
-    /* Validate parent set/get affinity for child */
     cpu_set_t* set_cpumask = malloc(numthreads * sizeof(*set_cpumask));
     if (!set_cpumask) {
-        free(threads);
         errx(EXIT_FAILURE, "cpumask allocation failed");
     }
 
     cpu_set_t get_cpumask;
-    for (long i = 0; i < numthreads; i++) {
+    for (size_t i = 0; i < numthreads; i++) {
         /* Find cores that will be affinitized to this thread. */
         ret = select_thread_cpu_affinity(&set_cpumask[i], &online_cpumask);
         if (ret < 0) {
-            free(threads);
-            free(set_cpumask);
             errx(EXIT_FAILURE, "Cannot find cores to affinitize threads");
         }
 
-        ret = pthread_create(&threads[i], NULL, dowork, (void*)&set_cpumask[i]);
+        ret = pthread_create(&threads[i], NULL, dowork, &set_cpumask[i]);
         if (ret != 0) {
-            free(threads);
-            free(set_cpumask);
             errx(EXIT_FAILURE, "pthread_create failed!");
         }
 
         ret = pthread_setaffinity_np(threads[i], sizeof(set_cpumask[i]), &set_cpumask[i]);
         if (ret != 0) {
-            free(threads);
-            free(set_cpumask);
             errx(EXIT_FAILURE, "pthread_setaffinity_np failed for child!");
         }
 
         CPU_ZERO(&get_cpumask);
         ret = pthread_getaffinity_np(threads[i], sizeof(get_cpumask), &get_cpumask);
         if (ret != 0) {
-            free(threads);
-            free(set_cpumask);
             errx(EXIT_FAILURE, "pthread_getaffinity_np failed for child!");
         }
 
-        if (!CPU_EQUAL_S(sizeof(set_cpumask[i]), &set_cpumask[i], &get_cpumask)) {
-            free(threads);
-            free(set_cpumask);
+        if (!CPU_EQUAL(&set_cpumask[i], &get_cpumask)) {
             errx(EXIT_FAILURE, "get cpuset is not equal to set cpuset on proc: %ld", i);
         }
     }
@@ -170,16 +144,12 @@ int main(int argc, const char** argv) {
     /* unblock the child threads */
     ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {
-        free(threads);
-        free(set_cpumask);
         errx(EXIT_FAILURE, "Parent did not wait on barrier!");
     }
 
-    for (int i = 0; i < numthreads; i++) {
+    for (size_t i = 0; i < numthreads; i++) {
         ret = pthread_join(threads[i], NULL);
         if (ret != 0) {
-            free(threads);
-            free(set_cpumask);
             errx(EXIT_FAILURE, "pthread_join failed!");
         }
     }
@@ -204,7 +174,7 @@ int main(int argc, const char** argv) {
         errx(EXIT_FAILURE, "pthread_getaffinity_np failed for parent!");
     }
 
-    if (!CPU_EQUAL_S(sizeof(cpumask), &cpumask, &get_cpumask)) {
+    if (!CPU_EQUAL(&cpumask, &get_cpumask)) {
         errx(EXIT_FAILURE, "get cpuset is not equal to set cpuset on proc 0");
     }
 
