@@ -468,7 +468,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                       "specified in the manifest.", arguments[0], arguments[1]);
         }
 
-        const char** new_args = malloc(sizeof(*new_args) * argv_option_cnt);
+        const char** new_args = malloc(sizeof(*new_args) * (argv_option_cnt + 1));
         if (new_args == NULL) {
             INIT_FAIL("Cannot allocate memory for arguments");
         }
@@ -480,6 +480,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
             }
             new_args[i] = toml_arg.u.s;
         }
+        new_args[argv_option_cnt] = NULL;
         arguments = new_args;
     } else if (argv_src_file) {
         /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
