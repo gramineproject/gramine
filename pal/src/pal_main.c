@@ -403,8 +403,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     free(dummy_exec_str);
 
     bool disable_aslr;
-    ret = toml_bool_in(manifest_loader, "insecure__disable_aslr",
-                       /*defaultval=*/false, &disable_aslr);
+    ret = toml_bool_in(manifest_loader, "insecure__disable_aslr", /*defaultval=*/false,
+                       &disable_aslr);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__disable_aslr' (the value must be "
                            "`true` or `false`)");
@@ -412,15 +412,14 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     /* Load argv */
     bool use_cmdline_argv;
-    ret = toml_bool_in(manifest_loader, "insecure__use_cmdline_argv",
-                       /*defaultval=*/false, &use_cmdline_argv);
+    ret = toml_bool_in(manifest_loader, "insecure__use_cmdline_argv", /*defaultval=*/false,
+                       &use_cmdline_argv);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_cmdline_argv' (the value must be "
                            "`true` or `false`)");
     }
     char* argv_src_file = NULL;
-    ret = toml_string_in(manifest_loader, "argv_src_file",
-                         &argv_src_file);
+    ret = toml_string_in(manifest_loader, "argv_src_file", &argv_src_file);
     if (ret < 0)
         INIT_FAIL_MANIFEST("Cannot parse 'loader.argv_src_file'");
 
@@ -430,6 +429,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         argv_option_cnt = toml_array_nelem(argv_option);
         if (argv_option_cnt < 0)
             INIT_FAIL_MANIFEST("Cannot parse 'loader.argv'");
+        if (argv_option_cnt == 0)
+            INIT_FAIL_MANIFEST("'loader.argv' has no arguments, this is unsupported");
     }
 
     if ((use_cmdline_argv ? 1 : 0) + (argv_option_cnt > 0 ? 1 : 0) + (argv_src_file ? 1 : 0) > 1) {
@@ -444,8 +445,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     if (!argv0_override) {
         /* possible in e.g. PAL regression tests, in this case use loader.entrypoint */
-        ret = toml_string_in(manifest_loader, "entrypoint",
-                             &argv0_override);
+        ret = toml_string_in(manifest_loader, "entrypoint", &argv0_override);
         if (ret < 0)
             INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
 
@@ -462,6 +462,12 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
             arguments[0] = argv0_override;
         }
     } else if (argv_option_cnt > 0) {
+        /* Load argv from a manifest and discard cmdline argv. */
+        if (arguments[0] && arguments[1]) {
+            log_error("Discarding cmdline arguments (%s %s [...]) because loader.argv was "
+                      "specified in the manifest.", arguments[0], arguments[1]);
+        }
+
         const char** new_args = malloc(sizeof(*new_args) * argv_option_cnt);
         if (new_args == NULL) {
             INIT_FAIL("Cannot allocate memory for arguments");
@@ -476,6 +482,13 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         }
         arguments = new_args;
     } else if (argv_src_file) {
+        /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
+         * be achieved using trusted files). */
+         if (arguments[0] && arguments[1]) {
+            log_error("Discarding cmdline arguments (%s %s [...]) because loader.argv_src_file "
+                      "was specified in the manifest.", arguments[0], arguments[1]);
+        }
+
         ret = load_cstring_array(argv_src_file, &arguments);
         if (ret < 0)
             INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
@@ -498,8 +511,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     const char** final_environments = NULL;
 
     bool use_host_env;
-    ret = toml_bool_in(manifest_loader, "insecure__use_host_env",
-                       /*defaultval=*/false, &use_host_env);
+    ret = toml_bool_in(manifest_loader, "insecure__use_host_env", /*defaultval=*/false,
+                       &use_host_env);
     if (ret < 0) {
         INIT_FAIL_MANIFEST("Cannot parse 'loader.insecure__use_host_env' (the value must be `true` "
                            "or `false`)");

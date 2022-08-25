@@ -10,7 +10,7 @@ loader.argv = [
   "SHOULD GO",
   "TO",
   "THE",
-  "APP ",
+  "APP ", # note the trailing space (app should see this trailing space in its argv[5])
 ]
 
 fs.mounts = [
@@ -20,10 +20,6 @@ fs.mounts = [
 
 sgx.nonpie_binary = true
 sgx.debug = true
-
-sgx.allowed_files = [
-  "file:argv_test_input",
-]
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

@@ -140,7 +140,7 @@ arguments to be provided at runtime from an external (trusted) source.
    arguments.
 
 The ``loader.insecure__use_cmdline_argv``, ``loader.argv``, and
-``loader.argv_src_file`` are mutually exclusive.
+``loader.argv_src_file`` options are mutually exclusive.
 
 If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
