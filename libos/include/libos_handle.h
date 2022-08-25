@@ -81,6 +81,8 @@ enum libos_sock_state {
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
  * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/libos_socket.c").
+ * Access to `force_nonblocking_users_count` is protected by the lock of the handle wrapping this
+ * struct.
  * `pal_handle` should be accessed using atomic operations.
  * If you need to take both `recv_lock` and `lock`, take the former first.
  */
@@ -105,9 +107,11 @@ struct libos_sock_handle {
         size_t data_size;
     } peek;
     struct libos_lock recv_lock;
-    unsigned int last_error;
+    /* This field is only used by UNIX sockets. */
+    size_t force_nonblocking_users_count;
     uint64_t sendtimeout_us;
     uint64_t receivetimeout_us;
+    unsigned int last_error;
     /* This field denotes whether the socket was ever bound. */
     bool was_bound;
     /* This field indicates if the socket is ready for read-like operations (`recv`/`read` or

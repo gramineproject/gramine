@@ -81,6 +81,8 @@ static int setflags(struct libos_handle* handle, unsigned int flags, unsigned in
     assert(mask != 0);
     assert((flags & ~mask) == 0);
 
+    /* If you add support for other flags, check "libos/src/net/unix.c", which also (temporarily)
+     * changes these flags. */
     if (!WITHIN_MASK(flags, O_NONBLOCK)) {
         return -EINVAL;
     }
@@ -95,6 +97,12 @@ static int setflags(struct libos_handle* handle, unsigned int flags, unsigned in
     PAL_HANDLE pal_handle = __atomic_load_n(&sock->pal_handle, __ATOMIC_ACQUIRE);
     if (!pal_handle) {
         /* Just save the flags for later. */
+        goto out_set_flags;
+    }
+
+    if (handle->info.sock.force_nonblocking_users_count) {
+        /* Some thread is forcing a nonblocking operation, it will set the correct flags in PAL, we
+         * just need to set flags in LibOS. */
         goto out_set_flags;
     }
 

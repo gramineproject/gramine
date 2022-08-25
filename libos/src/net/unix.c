@@ -309,6 +309,100 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
     return -ENOPROTOOPT;
 }
 
+static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_handle* handle,
+                                           PAL_HANDLE pal_handle,
+                                           int (*func)(PAL_HANDLE, uint64_t, size_t*, void*),
+                                           void* buf, size_t* size) {
+    /*
+     * There are 3 kinds of operations that can race here:
+     * 1) operation with force_nonblocking set,
+     * 2) operation with force_nonblocking not set,
+     * 3) changing blockingness of the handle,
+     * and any combination of any of them should yield correct results.
+     *
+     * 1-1, 2-2, 3-3 races are "normal" and proper locking orders them correctly.
+     * 1-2 races - operation 2 does not affect 1; operation 2 will be repeated if handle is
+     *             temporarily nonblocking (concurrent operation 1 happening).
+     * 1-3 races - we count threads using the handle in temporary nonblocking mode. The first thread
+     *             to use it does the change on PAL level and the last thread restores the correct
+     *             (currently set in LibOS) mode. Operation 3 takes that into account - sets flags
+     *             only in LibOS if `handle->info.sock.force_nonblocking_users_count` is nonzero
+     *             (see "libos/src/fs/socket/fs.c"). `handle->lock` provides proper ordering.
+     * 2-3 races - this is inherently racy - operation 2 will be either in the old or new mode,
+     *             depending on how it ends up ordered vs operation 3. This works exactly the same
+     *             on normal Linux - doing operations 2 and 3 concurrently, user app cannot know
+     *             whether operation 2 ends up being blocking or not.
+     */
+    int ret;
+    if (force_nonblocking) {
+        /* We already have `pal_handle` set, so there is no need for taking `sock->lock`. */
+        lock(&handle->lock);
+        handle->info.sock.force_nonblocking_users_count += 1;
+        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users_count == 1) {
+            /* Temporarily set `pal_handle` in nonblocking mode. */
+            PAL_STREAM_ATTR attr;
+            ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
+            if (ret < 0) {
+                unlock(&handle->lock);
+                return pal_to_unix_errno(ret);
+            }
+            assert(!attr.nonblocking);
+            attr.nonblocking = true;
+            ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
+            if (ret < 0) {
+                unlock(&handle->lock);
+                return pal_to_unix_errno(ret);
+            }
+        }
+        unlock(&handle->lock);
+    }
+
+again:
+    ret = func(pal_handle, /*offset=*/0, size, buf);
+    if (ret < 0) {
+        ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
+        if (ret == -EAGAIN && !force_nonblocking) {
+            lock(&handle->lock);
+            bool handle_is_blocking = !(handle->flags & O_NONBLOCK);
+            unlock(&handle->lock);
+            if (handle_is_blocking) {
+                /* Spurious `EAGAIN`, retry. */
+                goto again;
+            }
+        }
+    }
+
+    if (force_nonblocking) {
+        lock(&handle->lock);
+        handle->info.sock.force_nonblocking_users_count -= 1;
+        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users_count == 0) {
+            /* `pal_handle` was temporarily in nonblocking mode, fix it. */
+            PAL_STREAM_ATTR attr;
+            int tmp_ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
+            if (tmp_ret < 0) {
+                unlock(&handle->lock);
+                tmp_ret = pal_to_unix_errno(tmp_ret);
+                log_error("%s: nonblocking restore: failed to get handle attrs: %d", __func__,
+                          tmp_ret);
+                PalProcessExit(1);
+            }
+            assert(attr.nonblocking);
+            attr.nonblocking = false;
+            tmp_ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
+            if (tmp_ret < 0) {
+                unlock(&handle->lock);
+                tmp_ret = pal_to_unix_errno(tmp_ret);
+                log_error("%s: nonblocking restore: failed to set handle attrs: %d", __func__,
+                          tmp_ret);
+                PalProcessExit(1);
+            }
+        }
+        unlock(&handle->lock);
+    }
+
+    return ret;
+}
+
 static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 void* addr, size_t addrlen, bool force_nonblocking) {
     __UNUSED(addr);
@@ -322,17 +416,6 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
     if (!pal_handle) {
         return -ENOTCONN;
-    }
-
-    if (force_nonblocking) {
-        lock(&handle->lock);
-        bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
-        unlock(&handle->lock);
-        if (!handle_is_nonblocking) {
-            /* XXX: `PalStreamWrite` has no way of making one-time nonblocking write, so we have no
-             * other option but to fail. */
-            return -EINVAL;
-        }
     }
 
     void* buf;
@@ -360,10 +443,11 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = PalStreamWrite(pal_handle, /*offset=*/0, &size, buf);
+    int ret = maybe_force_nonblocking_wrapper(force_nonblocking, handle, pal_handle, PalStreamWrite,
+                                              buf, &size);
     free(backing_buf);
     if (ret < 0) {
-        return (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
+        return ret;
     }
     *out_size = size;
     return 0;
@@ -382,17 +466,6 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
     if (!pal_handle) {
         return -ENOTCONN;
-    }
-
-    if (force_nonblocking) {
-        lock(&handle->lock);
-        bool handle_is_nonblocking = handle->flags & O_NONBLOCK;
-        unlock(&handle->lock);
-        if (!handle_is_nonblocking) {
-            /* XXX: `PalStreamRead` has no way of making one-time nonblocking read, so we have no
-             * other option but to fail. */
-            return -EINVAL;
-        }
     }
 
     void* buf;
@@ -415,11 +488,9 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         /* `size` is already correct. */
     }
 
-    int ret = PalStreamRead(pal_handle, /*offset=*/0, &size, buf);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-    } else {
-        *out_size = size;
+    int ret = maybe_force_nonblocking_wrapper(force_nonblocking, handle, pal_handle, PalStreamRead,
+                                              buf, &size);
+    if (ret == 0) {
         if (backing_buf) {
             /* Need to copy back to user buffers. */
             size_t copied = 0;
@@ -430,7 +501,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
             }
             assert(copied == size);
         }
-        ret = 0;
+        *out_size = size;
     }
     free(backing_buf);
     return ret;
