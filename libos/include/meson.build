@@ -19,3 +19,10 @@ libos_asm_offsets_h = custom_target('asm_offsets.h[libos]',
     capture: true,
     output: 'asm_offsets.h',
 )
+
+gramine_hash_header = vcs_tag(
+    command: ['git', 'rev-parse', '--verify', 'HEAD' ],
+    input: 'gramine_hash.h.in',
+    output: 'gramine_hash.h',
+    replace_string: '@GRAMINE_COMMIT_HASH_MARKER@',
+)

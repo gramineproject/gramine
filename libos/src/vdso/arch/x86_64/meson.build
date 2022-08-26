@@ -1,5 +1,8 @@
 vdso_so_dbg = shared_library('vdso',
     'vdso.c',
+    'vdso_note.S',
+    gramine_hash_header,
+
     name_prefix: '',
     name_suffix: 'so.dbg',
 
