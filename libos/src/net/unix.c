@@ -321,22 +321,24 @@ static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_
      * and any combination of any of them should yield correct results.
      *
      * 1-1, 2-2, 3-3 races are "normal" and proper locking orders them correctly.
-     * 1-2 races - operation 2 does not affect 1; operation 2 will be repated if handle is blocking.
+     * 1-2 races - operation 2 does not affect 1; operation 2 will be repeated if handle is
+     *             temporarily nonblocking (concurrent operation 1 happening).
      * 1-3 races - we count threads using the handle in temporary nonblocking mode. The first thread
      *             to use it does the change on PAL level and the last thread restores the correct
      *             (currently set in LibOS) mode. Operation 3 takes that into account - sets flags
-     *             only in LibOS if `handle->info.sock.force_nonblocking_users` is nonzero.
-     *             `handle->lock` provides proper ordering.
+     *             only in LibOS if `handle->info.sock.force_nonblocking_users_count` is nonzero
+     *             (see "libos/src/fs/socket/fs.c"). `handle->lock` provides proper ordering.
      * 2-3 races - this is inherently racy - operation 2 will be either in the old or new mode,
      *             depending on how it ends up ordered vs operation 3. This works exactly the same
-     *             on normal Linux.
+     *             on normal Linux - doing operations 2 and 3 concurrently, user app cannot know
+     *             whether operation 2 ends up being blocking or not.
      */
     int ret;
     if (force_nonblocking) {
         /* We already have `pal_handle` set, so there is no need for taking `sock->lock`. */
         lock(&handle->lock);
-        handle->info.sock.force_nonblocking_users += 1;
-        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users == 1) {
+        handle->info.sock.force_nonblocking_users_count += 1;
+        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users_count == 1) {
             /* Temporarily set `pal_handle` in nonblocking mode. */
             PAL_STREAM_ATTR attr;
             ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
@@ -372,8 +374,8 @@ again:
 
     if (force_nonblocking) {
         lock(&handle->lock);
-        handle->info.sock.force_nonblocking_users -= 1;
-        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users == 0) {
+        handle->info.sock.force_nonblocking_users_count -= 1;
+        if (!(handle->flags & O_NONBLOCK) && handle->info.sock.force_nonblocking_users_count == 0) {
             /* `pal_handle` was temporarily in nonblocking mode, fix it. */
             PAL_STREAM_ATTR attr;
             int tmp_ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);

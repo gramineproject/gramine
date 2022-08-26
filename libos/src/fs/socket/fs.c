@@ -100,7 +100,7 @@ static int setflags(struct libos_handle* handle, unsigned int flags, unsigned in
         goto out_set_flags;
     }
 
-    if (handle->info.sock.force_nonblocking_users) {
+    if (handle->info.sock.force_nonblocking_users_count) {
         /* Some thread is forcing a nonblocking operation, it will set the correct flags in PAL, we
          * just need to set flags in LibOS. */
         goto out_set_flags;
