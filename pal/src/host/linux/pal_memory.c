@@ -90,7 +90,7 @@ int _PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
 }
 
 static int read_proc_meminfo(const char* key, unsigned long* val) {
-    int fd = DO_SYSCALL(open, "/proc/meminfo", O_RDONLY, 0);
+    int fd = DO_SYSCALL(open, "/proc/meminfo", O_RDONLY | O_CLOEXEC, 0);
 
     if (fd < 0)
         return -PAL_ERROR_DENIED;

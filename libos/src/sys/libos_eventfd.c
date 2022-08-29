@@ -45,7 +45,6 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
     int pal_flags = 0;
 
     pal_flags |= flags & EFD_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
-    pal_flags |= flags & EFD_CLOEXEC ? PAL_OPTION_CLOEXEC : 0;
     pal_flags |= flags & EFD_SEMAPHORE ? PAL_OPTION_EFD_SEMAPHORE : 0;
 
     ret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,

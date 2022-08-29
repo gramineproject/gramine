@@ -259,11 +259,10 @@ enum pal_create_mode {
 
 /*! stream misc flags */
 typedef uint32_t pal_stream_options_t; /* bitfield */
-#define PAL_OPTION_CLOEXEC         0x1
-#define PAL_OPTION_EFD_SEMAPHORE   0x2 /*!< specific to `eventfd` syscall */
-#define PAL_OPTION_NONBLOCK        0x4
-#define PAL_OPTION_PASSTHROUGH     0x8 /*!< Disregard `sgx.{allowed,trusted}_files` */
-#define PAL_OPTION_MASK            0xF
+#define PAL_OPTION_EFD_SEMAPHORE   0x1 /*!< specific to `eventfd` syscall */
+#define PAL_OPTION_NONBLOCK        0x2
+#define PAL_OPTION_PASSTHROUGH     0x4 /*!< Disregard `sgx.{allowed,trusted}_files` */
+#define PAL_OPTION_MASK            0x7
 
 /*!
  * \brief Open/create a stream resource specified by `uri`.

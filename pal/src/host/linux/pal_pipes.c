@@ -99,7 +99,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    static_assert(O_CLOEXEC == SOCK_CLOEXEC && O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
+    static_assert(O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
     int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
     int newfd = DO_SYSCALL(accept4, handle->pipe.fd, NULL, NULL, flags);
     if (newfd < 0)

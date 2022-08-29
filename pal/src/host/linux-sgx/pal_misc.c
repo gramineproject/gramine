@@ -649,7 +649,7 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
 ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
     int fd;
 
-    fd = ocall_open(filename, O_RDONLY, 0);
+    fd = ocall_open(filename, O_RDONLY | O_CLOEXEC, 0);
     if (fd < 0)
         return fd;
 

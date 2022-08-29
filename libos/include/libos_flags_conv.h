@@ -53,6 +53,5 @@ static inline enum pal_create_mode LINUX_OPEN_FLAGS_TO_PAL_CREATE(int flags) {
 }
 
 static inline pal_stream_options_t LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(int flags) {
-    return (flags & O_CLOEXEC  ? PAL_OPTION_CLOEXEC  : 0) |
-           (flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0);
+    return flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
 }

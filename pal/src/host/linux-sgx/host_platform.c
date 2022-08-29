@@ -50,7 +50,7 @@ static const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id = {
  * for each request to the AESM service.
  */
 static int connect_aesm_service(void) {
-    int sock = DO_SYSCALL(socket, AF_UNIX, SOCK_STREAM, 0);
+    int sock = DO_SYSCALL(socket, AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (sock < 0)
         return sock;
 
