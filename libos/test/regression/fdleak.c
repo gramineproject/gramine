@@ -11,7 +11,7 @@
 
 #define OPEN_CLOSE_FILES_COUNT 1000
 #define INITIAL_OPEN_FDS 10
-#define SPAWN_CHILDREN_COUNT 100
+#define SPAWN_CHILDREN_COUNT 10
 
 static void test_open_close(const char* fname) {
     for (size_t i = 0; i < OPEN_CLOSE_FILES_COUNT; i++) {
