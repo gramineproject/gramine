@@ -39,9 +39,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     bool do_create = (pal_create == PAL_CREATE_ALWAYS) || (pal_create == PAL_CREATE_TRY);
 
     struct stat st;
-    int flags = PAL_ACCESS_TO_LINUX_OPEN(pal_access) |
-                PAL_CREATE_TO_LINUX_OPEN(pal_create) |
-                PAL_OPTION_TO_LINUX_OPEN(pal_options);
+    int flags = PAL_ACCESS_TO_LINUX_OPEN(pal_access) | PAL_CREATE_TO_LINUX_OPEN(pal_create)
+                | PAL_OPTION_TO_LINUX_OPEN(pal_options) | O_CLOEXEC;
 
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
@@ -383,7 +382,7 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
 
     /* open the file with O_NONBLOCK to avoid blocking the current thread if it is actually a FIFO
      * pipe; O_NONBLOCK will be reset below if it is a regular file */
-    int fd = ocall_open(uri, O_NONBLOCK, 0);
+    int fd = ocall_open(uri, O_NONBLOCK | O_CLOEXEC, 0);
     if (fd < 0)
         return unix_to_pal_error(fd);
 
@@ -499,7 +498,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         }
     }
 
-    int fd = ocall_open(uri, O_DIRECTORY | PAL_OPTION_TO_LINUX_OPEN(options), 0);
+    int fd = ocall_open(uri, O_DIRECTORY | O_CLOEXEC | PAL_OPTION_TO_LINUX_OPEN(options), 0);
     if (fd < 0)
         return unix_to_pal_error(fd);
 

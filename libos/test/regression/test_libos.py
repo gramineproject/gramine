@@ -1019,8 +1019,11 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/stat test passed', stdout)
 
     def test_030_fdleak(self):
-        stdout, _ = self.run_binary(['fdleak'], timeout=10)
-        self.assertIn("Test succeeded.", stdout)
+        # The fd limit is rather arbitrary, but must be in sync with numbers from the test.
+        # Currently test opens 10 fds simultaneously, so 50 is a safe margin for any fds that
+        # Gramine might open internally.
+        stdout, _ = self.run_binary(['fdleak'], timeout=40, open_fds_limit=50)
+        self.assertIn("TEST OK", stdout)
 
     def get_cache_levels_cnt(self):
         cpu0 = '/sys/devices/system/cpu/cpu0/'

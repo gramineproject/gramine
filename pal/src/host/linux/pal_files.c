@@ -26,8 +26,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     /* try to do the real open */
-    // FIXME: No idea why someone hardcoded O_CLOEXEC here. We should drop it and carefully
-    // investigate if this causes any descriptor leaks.
     int ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
                                     PAL_CREATE_TO_LINUX_OPEN(create)  |
                                     PAL_OPTION_TO_LINUX_OPEN(options) |
@@ -182,7 +180,6 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
         return -PAL_ERROR_INVAL;
 
     struct stat stat_buf;
-    /* try to do the real open */
     int ret = DO_SYSCALL(stat, uri, &stat_buf);
 
     /* if it failed, return the right error code */

@@ -2,6 +2,7 @@ import contextlib
 import logging
 import os
 import pathlib
+import resource
 import select
 import signal
 import subprocess
@@ -24,10 +25,15 @@ def expectedFailureIf(predicate):
         return unittest.expectedFailure
     return lambda func: func
 
-def run_command(cmd, *, timeout, can_fail=False, **kwds):
+def set_open_fds_limit(n):
+    if n is not None:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (n, n))
+
+def run_command(cmd, *, timeout, open_fds_limit=None, can_fail=False, **kwds):
     # pylint: disable=too-many-locals
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          preexec_fn=os.setsid, **kwds) as proc:
+                          preexec_fn=lambda: set_open_fds_limit(open_fds_limit),
+                          start_new_session=True, **kwds) as proc:
         class LoggingSplice:
             def __init__(self, input_pipe, output_pipe):
                 self.logged_data = b''

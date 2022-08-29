@@ -125,7 +125,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     size_t addrlen = sizeof(struct sockaddr_un);
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
-    ret = ocall_listen(AF_UNIX, SOCK_STREAM | nonblock, 0, /*ipv6_v6only=*/0,
+    ret = ocall_listen(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | nonblock, 0, /*ipv6_v6only=*/0,
                        (struct sockaddr*)&addr, &addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
@@ -179,7 +179,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC));
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK));
     bool nonblocking = options & PAL_OPTION_NONBLOCK;
     /* We do not take `nonblocking` into account here - it will be set after the TLS handshake below
      * if needed. */
@@ -254,13 +254,13 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_CLOEXEC));
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK));
     unsigned int addrlen = sizeof(struct sockaddr_un);
     bool nonblocking = options & PAL_OPTION_NONBLOCK;
     /* We do not take `nonblocking` into account here - it will be set by `thread_handshake_func`
      * later if needed. */
-    ret = ocall_connect(AF_UNIX, SOCK_STREAM, 0, /*ipv6_v6only=*/0, (const struct sockaddr*)&addr,
-                        addrlen, NULL, NULL);
+    ret = ocall_connect(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, /*ipv6_v6only=*/0,
+                        (const struct sockaddr*)&addr, addrlen, NULL, NULL);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

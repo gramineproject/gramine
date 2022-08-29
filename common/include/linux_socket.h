@@ -61,6 +61,7 @@ struct mmsghdr {
 #define MSG_TRUNC 0x20
 #define MSG_DONTWAIT 0x40
 #define MSG_NOSIGNAL 0x4000
+#define MSG_CMSG_CLOEXEC 0x40000000
 
 /* Option levels. */
 #define SOL_SOCKET 1

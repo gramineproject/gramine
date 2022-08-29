@@ -24,7 +24,7 @@ int host_log_init(const char* path) {
             return ret;
     }
 
-    ret = DO_SYSCALL(open, path, O_WRONLY | O_APPEND | O_CREAT, PERM_rw_______);
+    ret = DO_SYSCALL(open, path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, PERM_rw_______);
     if (ret < 0)
         return ret;
     g_host_log_fd = ret;

@@ -117,11 +117,7 @@ static long sgx_ocall_cpuid(void* pms) {
 
 static long sgx_ocall_open(void* pms) {
     ms_ocall_open_t* ms = (ms_ocall_open_t*)pms;
-    long ret;
-    // FIXME: No idea why someone hardcoded O_CLOEXEC here. We should drop it and carefully
-    // investigate if this cause any descriptor leaks.
-    ret = DO_SYSCALL_INTERRUPTIBLE(open, ms->ms_pathname, ms->ms_flags | O_CLOEXEC, ms->ms_mode);
-    return ret;
+    return DO_SYSCALL_INTERRUPTIBLE(open, ms->ms_pathname, ms->ms_flags, ms->ms_mode);
 }
 
 static long sgx_ocall_close(void* pms) {
@@ -312,7 +308,7 @@ static long sgx_ocall_futex(void* pms) {
 
 static long sgx_ocall_socket(void* pms) {
     ms_ocall_socket_t* ms = pms;
-    return DO_SYSCALL(socket, ms->ms_family, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
+    return DO_SYSCALL(socket, ms->ms_family, ms->ms_type, ms->ms_protocol);
 }
 
 static long sgx_ocall_bind(void* pms) {
@@ -362,7 +358,7 @@ static long sgx_ocall_listen(void* pms) {
         goto err;
     }
 
-    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
+    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type, ms->ms_protocol);
     if (ret < 0)
         goto err;
 
@@ -416,7 +412,7 @@ static long sgx_ocall_accept(void* pms) {
         return -EINVAL;
     }
     int addrlen = ms->ms_addrlen;
-    int options = ms->options | SOCK_CLOEXEC;
+    int options = ms->options;
     assert(WITHIN_MASK(options, SOCK_CLOEXEC | SOCK_NONBLOCK));
 
     ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ms->ms_sockfd, ms->ms_addr, &addrlen, options);
@@ -451,7 +447,7 @@ static long sgx_ocall_connect(void* pms) {
         goto err;
     }
 
-    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type | SOCK_CLOEXEC, ms->ms_protocol);
+    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type, ms->ms_protocol);
     if (ret < 0)
         goto err;
 

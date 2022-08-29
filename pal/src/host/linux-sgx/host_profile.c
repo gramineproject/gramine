@@ -112,7 +112,7 @@ int sgx_profile_init(void) {
     g_profile_period = NSEC_IN_SEC / g_pal_enclave.profile_frequency;
     g_profile_mode = g_pal_enclave.profile_mode;
 
-    ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE, 0);
+    ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
     if (ret < 0) {
         log_error("sgx_profile_init: opening /proc/self/mem failed: %d", ret);
         goto out;
@@ -327,7 +327,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
 
     // Open the file and mmap it.
 
-    int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
+    int fd = DO_SYSCALL(open, path, O_RDONLY | O_CLOEXEC, 0);
     if (fd < 0) {
         log_error("sgx_profile_report_elf(%s): open failed: %d", filename, fd);
         return;
