@@ -1012,8 +1012,8 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/stat test passed', stdout)
 
     def test_030_fdleak(self):
-        stdout, _ = self.run_binary(['fdleak'], timeout=10)
-        self.assertIn("Test succeeded.", stdout)
+        stdout, _ = self.run_binary(['fdleak'], timeout=10, open_fds_limit=50)
+        self.assertIn("TEST OK", stdout)
 
     def get_cache_levels_cnt(self):
         cpu0 = '/sys/devices/system/cpu/cpu0/'
