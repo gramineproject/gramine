@@ -383,6 +383,11 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     } else {
         // Children receive their argv and config via IPC.
         int parent_stream_fd = atoi(argv[3]);
+        ret = DO_SYSCALL(fcntl, parent_stream_fd, F_SETFD, FD_CLOEXEC);
+        if (ret < 0) {
+            INIT_FAIL("Failed to set `CLOEXEC` flag on `parent_stream_fd`: %d",
+                      unix_to_pal_error(ret));
+        }
         init_child_process(parent_stream_fd, &parent, &manifest, &instance_id);
     }
     assert(manifest);

@@ -429,7 +429,7 @@ static int open_memdevice(pid_t tid, int* out_memdev, struct enclave_dbginfo** o
     }
 
     snprintf(memdev_path, sizeof(memdev_path), "/proc/%d/mem", tid);
-    fd = open(memdev_path, O_RDWR);
+    fd = open(memdev_path, O_RDWR | O_CLOEXEC);
     if (fd < 0) {
         DEBUG_LOG("Cannot open %s\n", memdev_path);
         ret = -2;

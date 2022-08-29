@@ -50,6 +50,12 @@ typedef struct {
     struct handle_ops* ops;
 } PAL_HDR;
 
+/*
+ * This header provides `PAL_HANDLE` type definition.
+ * All host resources being part of `PAL_HANDLE` must be released when spawning another process
+ * (`PalProcessCreate`), e.g. Linux PAL must set `OCLOEXEC` flag on all open file descriptors.
+ * LibOS layer takes care of migrating all necessary handles using `PalSendHandle`.
+ */
 #include "pal_host.h"
 
 static inline void init_handle_hdr(PAL_HANDLE handle, int pal_type) {
@@ -259,11 +265,10 @@ enum pal_create_mode {
 
 /*! stream misc flags */
 typedef uint32_t pal_stream_options_t; /* bitfield */
-#define PAL_OPTION_CLOEXEC         0x1
-#define PAL_OPTION_EFD_SEMAPHORE   0x2 /*!< specific to `eventfd` syscall */
-#define PAL_OPTION_NONBLOCK        0x4
-#define PAL_OPTION_PASSTHROUGH     0x8 /*!< Disregard `sgx.{allowed,trusted}_files` */
-#define PAL_OPTION_MASK            0xF
+#define PAL_OPTION_EFD_SEMAPHORE   0x1 /*!< specific to `eventfd` syscall */
+#define PAL_OPTION_NONBLOCK        0x2
+#define PAL_OPTION_PASSTHROUGH     0x4 /*!< Disregard `sgx.{allowed,trusted}_files` */
+#define PAL_OPTION_MASK            0x7
 
 /*!
  * \brief Open/create a stream resource specified by `uri`.

@@ -79,6 +79,7 @@ int sgx_create_process(size_t nargs, const char** args, const char* manifest, in
 
     /* TODO: add error checking. */
     DO_SYSCALL(close, fds[0]); /* child stream */
+    fds[0] = -1;
 
     struct proc_args proc_args;
     proc_args.application_path_size = strlen(g_pal_enclave.application_path);

@@ -248,11 +248,6 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return unix_to_pal_error(ret);
 
     if ((size_t)ret != sizeof(hdl_hdr)) {
-        /* This check is to shield from a Iago attack. We know that sendmsg() in _PalSendHandle()
-         * transfers the message atomically, and that our recvmsg() receives it atomically. So
-         * the only valid values for ret must be zero or the size of the header. */
-        if (!ret)
-            return -PAL_ERROR_TRYAGAIN;
         return -PAL_ERROR_DENIED;
     }
 
@@ -268,7 +263,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     message_hdr.msg_iov    = iov;
     message_hdr.msg_iovlen = 1;
 
-    ret = DO_SYSCALL(recvmsg, fd, &message_hdr, 0);
+    ret = DO_SYSCALL(recvmsg, fd, &message_hdr, MSG_CMSG_CLOEXEC);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -288,6 +283,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         memcpy(&handle->generic.fd, CMSG_DATA(control_hdr), sizeof(int));
     } else {
         handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
+        handle->generic.fd = -1;
     }
 
     *out_cargo = handle;
@@ -304,7 +300,7 @@ int _PalInitDebugStream(const char* path) {
             return unix_to_pal_error(ret);
     }
 
-    ret = DO_SYSCALL(open, path, O_WRONLY | O_APPEND | O_CREAT, PERM_rw_______);
+    ret = DO_SYSCALL(open, path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, PERM_rw_______);
     if (ret < 0)
         return unix_to_pal_error(ret);
     g_log_fd = ret;

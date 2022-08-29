@@ -19,12 +19,9 @@
 #include "pal_linux_error.h"
 
 static inline int eventfd_type(pal_stream_options_t options) {
-    int type = 0;
+    int type = EFD_CLOEXEC;
     if (options & PAL_OPTION_NONBLOCK)
         type |= EFD_NONBLOCK;
-
-    if (options & PAL_OPTION_CLOEXEC)
-        type |= EFD_CLOEXEC;
 
     if (options & PAL_OPTION_EFD_SEMAPHORE)
         type |= EFD_SEMAPHORE;

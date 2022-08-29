@@ -143,7 +143,7 @@ static int pd_write(struct perf_data* pd, const void* data, size_t size) {
 struct perf_data* pd_open(const char* file_name, bool with_stack) {
     int ret;
 
-    int fd = DO_SYSCALL(open, file_name, O_WRONLY | O_TRUNC | O_CREAT, PERM_rw_r__r__);
+    int fd = DO_SYSCALL(open, file_name, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, PERM_rw_r__r__);
     if (fd < 0) {
         log_error("pd_open: cannot open %s for writing: %d", file_name, fd);
         return NULL;

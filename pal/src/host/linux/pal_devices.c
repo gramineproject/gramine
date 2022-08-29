@@ -56,7 +56,8 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
         ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
                                     PAL_CREATE_TO_LINUX_OPEN(create)  |
-                                    PAL_OPTION_TO_LINUX_OPEN(options),
+                                    PAL_OPTION_TO_LINUX_OPEN(options) |
+                                    O_CLOEXEC,
                          share);
         if (ret < 0) {
             ret = unix_to_pal_error(ret);

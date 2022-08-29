@@ -58,7 +58,8 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
         ret = ocall_open(uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
                               PAL_CREATE_TO_LINUX_OPEN(create)  |
-                              PAL_OPTION_TO_LINUX_OPEN(options),
+                              PAL_OPTION_TO_LINUX_OPEN(options) |
+                              O_CLOEXEC,
                          share);
         if (ret < 0) {
             ret = unix_to_pal_error(ret);
@@ -148,7 +149,7 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         attr->pending_size = 0;
     } else {
         /* other devices must query the host */
-        int fd = ocall_open(uri, 0, 0);
+        int fd = ocall_open(uri, O_RDONLY | O_CLOEXEC, 0);
         if (fd < 0)
             return unix_to_pal_error(fd);
 

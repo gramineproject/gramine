@@ -214,7 +214,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     /* this array may overflow the stack, so we allocate it in BSS */
     static void* tcs_addrs[MAX_DBG_THREADS];
 
-    enclave_image = DO_SYSCALL(open, enclave->libpal_uri + URI_PREFIX_FILE_LEN, O_RDONLY, 0);
+    enclave_image = DO_SYSCALL(open, enclave->libpal_uri + URI_PREFIX_FILE_LEN,
+                               O_RDONLY | O_CLOEXEC, 0);
     if (enclave_image < 0) {
         log_error("Cannot find enclave image: %s", enclave->libpal_uri);
         ret = enclave_image;
@@ -558,7 +559,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     if (g_sgx_enable_stats || g_vtune_profile_enabled) {
         /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
-        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE, 0);
+        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
         if (ret < 0) {
             log_error("Setting TCS.FLAGS.DBGOPTIN failed: %d", ret);
             goto out;
@@ -1132,6 +1133,11 @@ int main(int argc, char* argv[], char* envp[]) {
 
         /* We'll receive our argv and config via IPC. */
         parent_stream_fd = atoi(argv[3]);
+        ret = DO_SYSCALL(fcntl, parent_stream_fd, F_SETFD, FD_CLOEXEC);
+        if (ret < 0) {
+            return ret;
+        }
+
         ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest);
         if (ret < 0)
             return ret;
