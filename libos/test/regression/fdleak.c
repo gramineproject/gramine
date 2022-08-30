@@ -44,6 +44,7 @@ static void test_open_fork(const char* fname) {
                 /* Parent just exits. */
                 exit(0);
             }
+            /* Child continues and spawns the next child (nested forks). */
         }
 
         /* Last child done, inform the first process. */
