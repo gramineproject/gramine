@@ -53,10 +53,10 @@ typedef uint16_t sgx_isv_svn_t;
 typedef uint16_t sgx_config_svn_t;
 typedef uint8_t sgx_config_id_t[SGX_CONFIGID_SIZE];
 
-#define SGX_ISVEXT_PROD_ID_SIZE 16
+#define SGX_ISV_EXT_PROD_ID_SIZE 16
 #define SGX_ISV_FAMILY_ID_SIZE  16
 
-typedef uint8_t sgx_isvext_prod_id_t[SGX_ISVEXT_PROD_ID_SIZE];
+typedef uint8_t sgx_isv_ext_prod_id_t[SGX_ISV_EXT_PROD_ID_SIZE];
 typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 
 #define SGX_FLAGS_INITIALIZED   0x01ULL
@@ -64,6 +64,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 #define SGX_FLAGS_MODE64BIT     0x04ULL
 #define SGX_FLAGS_PROVISION_KEY 0x10ULL
 #define SGX_FLAGS_LICENSE_KEY   0x20ULL
+#define SGX_FLAGS_KSS           0x80ULL
 
 /* EINIT must verify *all* SECS.ATTRIBUTES[63..0] bits (FLAGS bits) against
  * SIGSTRUCT.ATTRIBUTES[63..0].
@@ -281,7 +282,7 @@ typedef struct _css_body_t {
     sgx_attributes_t     attribute_mask;
     sgx_measurement_t    enclave_hash;
     uint8_t              reserved2[16];
-    sgx_isvext_prod_id_t isvext_prod_id;
+    sgx_isv_ext_prod_id_t isv_ext_prod_id;
     uint16_t             isv_prod_id;
     uint16_t             isv_svn;
 } css_body_t;
@@ -338,7 +339,7 @@ typedef struct _report_body_t {
     sgx_cpu_svn_t        cpu_svn;
     sgx_misc_select_t    misc_select;
     uint8_t              reserved1[12];
-    sgx_isvext_prod_id_t isv_ext_prod_id;
+    sgx_isv_ext_prod_id_t isv_ext_prod_id;
     sgx_attributes_t     attributes;
     sgx_measurement_t    mr_enclave;
     uint8_t              reserved2[32];

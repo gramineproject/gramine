@@ -81,6 +81,7 @@ def collect_bits(manifest_sgx, options_dict):
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
+        'kss': offs.SGX_FLAGS_KSS,
     }
 
     xfrms_dict = {
@@ -533,6 +534,9 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     sig['attribute_flags'] = attribute_flags
     sig['attribute_xfrms'] = attribute_xfrms
     sig['misc_select'] = misc_select
+    if attribute_flags & offs.SGX_FLAGS_KSS:
+        sig['isv_ext_prod_id'] = int(manifest_sgx['isvextprodid'], 16).to_bytes(16, 'little')
+        sig['isv_family_id'] = int(manifest_sgx['isvfamilyid'], 16).to_bytes(16, 'little')
 
     return sig
 

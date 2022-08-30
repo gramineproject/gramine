@@ -568,6 +568,19 @@ ISV Product ID and SVN
 This syntax specifies the ISV Product ID and SVN to be added to the enclave
 signature.
 
+Extended ISV Product ID (KSS)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.kss = [true|false] (default: false)
+    sgx.isvextprodid = "[16-byte hex value]"  (default: "0x00000000000000000000000000000000")
+    sgx.isvfamily    = "[16-byte hex value]"  (default: "0x00000000000000000000000000000000")
+
+If ``sgx.kss = true``, this syntax specifies the extended ISV product ID and family ID to be added to the
+enclave signature. The platform must support KSS to launch the enclave.
+Otherwise, these two fields are ignored and remain zero.
+
 Attribute masks for SGX sealing key derivation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
