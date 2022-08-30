@@ -1,0 +1,29 @@
+# Hello World manifest file example
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "/kss-helloworld"
+loader.log_level = "{{ log_level }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/kss-helloworld", uri = "file:kss-helloworld" },
+]
+
+sgx.debug = true
+sgx.nonpie_binary = true
+
+sgx.remote_attestation = "{{ ra_type }}"
+
+sgx.kss = true
+sgx.isvprodid = 5
+sgx.isvsvn = 2
+sgx.isvfamilyid = "0x00112233445566778899aabbccddeeff"
+sgx.isvextprodid = "0xcafef00dcafef00df00dcafef00dcafe"
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:kss-helloworld",
+  "file:{{ gramine.runtimedir() }}/",
+]
