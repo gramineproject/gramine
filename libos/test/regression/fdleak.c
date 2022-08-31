@@ -69,7 +69,7 @@ static void test_open_fork(const char* fname) {
 
 int main(int argc, char** argv) {
     if (argc != 1) {
-        errx(1, "invalid argc: %d", argc);
+        errx(1, "unexpected argc: %d (expected 1)", argc);
     }
 
     test_open_close(argv[0]);
