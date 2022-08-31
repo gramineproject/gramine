@@ -273,6 +273,14 @@ SGX terminology
       A |~| hardware feature of :term:`SGX2`, allows dynamic memory allocation,
       which in turn allows dynamic thread creation.
 
+   Key Separation and Sharing
+   KSS
+      A feature of SGX that lets developer define additional enclave identity attributes and configuration identifier. Extended enclave identity is defined by the developer on enclave build, and configuration is defined on enclave launch.
+
+      Extended identifiers and configuration are part of the :term:`SGX Report`, which provides more fine-grained control over :term:`Attestation`.
+      
+      Also, additional identifies can be used in key derivation, which allows more flexible control over key derivation. This allows more flexibility in SGX key derivation, for example by allowing different keys per configuration, or sharing keys between two different enclaves that are part of the same application.
+
    Enclave Page Cache
    EPC
 
