@@ -136,16 +136,17 @@ arguments to be provided at runtime from an external (trusted) source.
 If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
-``/etc`` passthrough
-^^^^^^^^^^^^^^^^^^^^
+Emulate ``/etc``
+^^^^^^^^^^^^^^^^
 
 ::
 
-    libos.passthrough_etc_files = [true|false]
+    libos.emulate_etc_files = [true|false]
     (Default: false)
 
-This specifies whether to passthrough extra runtime files from host's ``/etc``.
-Before the files are available to the application, they will be sanitized.
+This specifies whether to emulate runtime files under ``/etc``.
+In the case of SGX on Linux, this is achieved by taking the host's ``/etc``
+files, filter supported options, and sanitize them.
 The set of extra runtime files is limited to:
 
 - ``/etc/hostname``

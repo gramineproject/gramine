@@ -26,25 +26,19 @@ static int provide_etc_hostname(struct libos_dentry* dent, char** out_data, size
 }
 
 int init_etcfs(void) {
-    pseudo_add_str(NULL, "etc-passthrough-hostname", &provide_etc_hostname);
+    pseudo_add_str(NULL, "emulate-etc-hostname", &provide_etc_hostname);
     return 0;
 }
 
 int mount_etcfs(void) {
-    int ret;
-
-    if (!g_pal_public_state->passthrough_etc_files)
+    if (!g_pal_public_state->emulate_etc_files)
         return 0;
 
-    ret = mount_fs(&(struct libos_mount_params){
+    return mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/etc/hostname",
-        .uri = "etc-passthrough-hostname",
+        .uri = "emulate-etc-hostname",
     });
-    if (ret < 0)
-        return ret;
-
-    return 0;
 }
 
 BEGIN_CP_FUNC(etc_info) {

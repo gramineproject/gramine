@@ -52,7 +52,7 @@ manifests = [
   "groups",
   "helloworld",
   "hostname",
-  "hostname_pass_etc",
+  "hostname_emulate_etc",
   "host_root_fs",
   "init_fail",
   "keys",

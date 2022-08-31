@@ -266,10 +266,10 @@ static bool is_hostname_valid(const char* hostname) {
     if (*ptr == '-')
         return false;
 
-    while (*ptr != '\0' && ptr - hostname < PAL_HOSTNAME_MAX) {
-        if ((*ptr >= 'a' && *ptr <= 'z') ||
-            (*ptr >= 'A' && *ptr <= 'Z') ||
-            (*ptr >= '0' && *ptr <= '9') ||
+    while (ptr - hostname < PAL_HOSTNAME_MAX && *ptr != '\0') {
+        if (('a' <= *ptr && *ptr <= 'z') ||
+            ('A' <= *ptr && *ptr <= 'Z') ||
+            ('0' <= *ptr && *ptr <= '9') ||
             *ptr == '-') {
                 chrcount++;
                 ptr++;
@@ -286,7 +286,7 @@ static bool is_hostname_valid(const char* hostname) {
         return false;
     }
 
-    if (*ptr != '\0')
+    if (ptr - hostname >= PAL_HOSTNAME_MAX)
         return false;
     if (chrcount == 0 || chrcount > 63)
         return false;
@@ -298,8 +298,8 @@ static bool is_hostname_valid(const char* hostname) {
     return true;
 }
 
-static int init_passthrough_etc_files(pal_host_info_t* shallow_host_info) {
-    if (!shallow_host_info->passthrough_etc)
+static int init_emulation_etc_files(struct pal_host_info* shallow_host_info) {
+    if (!g_pal_public_state.emulate_etc_files)
         return 0;
 
     if (!is_hostname_valid(shallow_host_info->hostname)) {
@@ -308,16 +308,19 @@ static int init_passthrough_etc_files(pal_host_info_t* shallow_host_info) {
     } else {
         memcpy(g_pal_public_state.hostname, shallow_host_info->hostname,
                sizeof(g_pal_public_state.hostname) - 1);
+        g_pal_public_state.hostname[sizeof(g_pal_public_state.hostname) - 1] = '\0';
     }
 
     return 0;
 }
 
-static int get_host_info(bool first_process, pal_host_info_t *shallow_host_info) {
-    int ret;
-
-    coerce_untrusted_bool(&shallow_host_info->passthrough_etc);
-    g_pal_public_state.passthrough_etc_files = shallow_host_info->passthrough_etc;
+static int get_host_info(bool first_process, struct pal_host_info* shallow_host_info) {
+    int ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
+                           &g_pal_public_state.emulate_etc_files);
+    if (ret < 0) {
+        log_error("Cannot parse 'libos.emulate_etc_files'");
+        return ret;
+    }
 
     /* Get host information only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
@@ -330,7 +333,7 @@ static int get_host_info(bool first_process, pal_host_info_t *shallow_host_info)
         return ret;
     }
 
-    if ((ret = init_passthrough_etc_files(shallow_host_info)) < 0) {
+    if ((ret = init_emulation_etc_files(shallow_host_info)) < 0) {
         log_error("Failed to initialize etc files: %d", ret);
         return ret;
     }
@@ -499,7 +502,7 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
                              int parent_stream_fd, sgx_target_info_t* uptr_qe_targetinfo,
-                             pal_host_info_t* uptr_host_info) {
+                             struct pal_host_info* uptr_host_info) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -643,10 +646,10 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     /* get host information */
-    pal_host_info_t host_info = {0};
+    struct pal_host_info host_info = {0};
     assert(uptr_host_info != NULL);
     if (!sgx_copy_to_enclave(&host_info, sizeof(host_info), uptr_host_info,
-                             sizeof(host_info))) {
+                             sizeof(*uptr_host_info))) {
         log_error("Unable to read host info");
         ocall_exit(1, /*is_exitgroup=*/true);
     }

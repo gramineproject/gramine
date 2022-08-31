@@ -95,7 +95,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
             return;
 
-        pal_host_info_t* host_info = READ_ONCE(ms->ms_host_info);
+        struct pal_host_info* host_info = READ_ONCE(ms->ms_host_info);
         if (!host_info || !sgx_is_completely_outside_enclave(host_info, sizeof(*host_info)))
             return;
 

@@ -7,7 +7,7 @@ loader.insecure__use_cmdline_argv = true
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/hostname", uri = "file:{{ binary_dir }}/hostname" },
-  # dummy file to check that `libos.passthrough_etc_files` overrides
+  # dummy file to check that `libos.emulate_etc_files` overrides
   # /etc/hostname unconditionally
   { path = "/etc/hostname", uri = "file:{{ binary_dir }}/hostname" },
 ]
@@ -21,4 +21,4 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/hostname",
 ]
 
-libos.passthrough_etc_files = true
+libos.emulate_etc_files = true

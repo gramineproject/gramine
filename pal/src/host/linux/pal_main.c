@@ -121,13 +121,11 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     _PalProcessExit(1);
 }
 
-static void get_host_info(bool first_process) {
-    int ret;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.passthrough_etc_files",
-                       false, &g_pal_public_state.passthrough_etc_files);
+static void get_host_etc_configs(bool first_process) {
+    int ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
+                           &g_pal_public_state.emulate_etc_files);
     if (ret < 0) {
-        INIT_FAIL("Cannot parse 'libos.passthrough_etc_files'");
+        INIT_FAIL("Cannot parse 'libos.emulate_etc_files'");
     }
 
     /* Get host information only for the first process. This information will be
@@ -136,11 +134,10 @@ static void get_host_info(bool first_process) {
         return;
     }
 
-    if (!g_pal_public_state.passthrough_etc_files)
+    if (!g_pal_public_state.emulate_etc_files)
         return;
 
-    if (get_hostname(g_pal_public_state.hostname,
-                     sizeof(g_pal_public_state.hostname)) < 0) {
+    if (get_hostname(g_pal_public_state.hostname, sizeof(g_pal_public_state.hostname)) < 0) {
         INIT_FAIL("Unable to get hostname");
     }
 }
@@ -428,7 +425,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
     }
 
-    get_host_info(first_process);
+    get_host_etc_configs(first_process);
 
     void* internal_mem_addr = (void*)DO_SYSCALL(mmap, NULL, g_pal_internal_mem_size,
                                                 PROT_READ | PROT_WRITE,

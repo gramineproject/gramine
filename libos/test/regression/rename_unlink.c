@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "rw_file.h"
 
 static const char message1[] = "first message\n";
 static const size_t message1_len = sizeof(message1) - 1;
@@ -36,29 +37,6 @@ static int write_all(int fd, const char* str, size_t size) {
         if (n == -1) {
             warn("write");
             return -1;
-        }
-        assert(n >= 0 && (size_t)n <= size);
-        size -= n;
-        str += n;
-    }
-    return 0;
-}
-
-static int read_all(int fd, char* str, size_t size) {
-    while (size > 0) {
-        ssize_t n = read(fd, str, size);
-        /* Treat EINTR as error: we don't expect it because the test doesn't use any signal
-         * handlers. */
-        if (n == -1) {
-            warn("read");
-            return -1;
-        }
-        if (n == 0) {
-            if (size > 0) {
-                warnx("read less bytes than expected");
-                return -1;
-            }
-            break;
         }
         assert(n >= 0 && (size_t)n <= size);
         size -= n;
@@ -107,8 +85,11 @@ static void should_contain(const char* desc, int fd, const char* str, size_t len
     if (lseek(fd, 0, SEEK_SET) == -1)
         err(1, "%s: lseek", desc);
 
-    if (read_all(fd, buffer, len) == -1)
-        errx(1, "%s: read_all failed", desc);
+    ssize_t n = posix_fd_read(fd, buffer, len);
+    if (n < 0)
+        errx(1, "%s: read_fd failed", desc);
+    if ((size_t)n != len)
+        warnx("%s: read less bytes than expected", desc);
     if (memcmp(buffer, str, len) != 0)
         errx(1, "%s: wrong content", desc);
 

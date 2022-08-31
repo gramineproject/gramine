@@ -616,7 +616,7 @@ out:
 
 /* Parses only the information needed by the untrusted PAL to correctly initialize the enclave. */
 static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
-                               pal_host_info_t* host_info) {
+                               bool *emulate_etc) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
@@ -883,12 +883,10 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
     g_host_log_level = log_level;
 
-    ret = toml_bool_in(manifest_root, "libos.passthrough_etc_files", false,
-                       &host_info->passthrough_etc);
+    ret = toml_bool_in(manifest_root, "libos.emulate_etc_files", false, emulate_etc);
     if (ret < 0) {
-        log_error("Cannot parse 'libos.passthrough_etc_files'");
-        ret = -EINVAL;
-        goto out;
+        log_error("Cannot parse 'libos.emulate_etc_files'");
+        return ret;
     }
 
     ret = 0;
@@ -905,20 +903,13 @@ out:
     return ret;
 }
 
-static int get_host_info(pal_host_info_t* host_info, int parent_stream_fd) {
-    int ret;
-
-    /* Get host information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (parent_stream_fd >= 0)
-        return 0;
-
-    ret = get_topology_info(&host_info->topo_info);
+static int get_host_configs(struct pal_host_info* host_info, bool emulate_etc) {
+    int ret = get_topology_info(&host_info->topo_info);
     if (ret < 0)
         return ret;
 
     /* If we do not expose etc, we don't need any additional information about host. */
-    if (!host_info->passthrough_etc)
+    if (!emulate_etc)
         return 0;
 
     ret = get_hostname(host_info->hostname, sizeof(host_info->hostname));
@@ -934,8 +925,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
-    pal_host_info_t host_info = {0};
-
+    struct pal_host_info host_info = {0};
+    bool emulate_etc;
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
     start_time = tv.tv_sec * 1000000UL + tv.tv_usec;
@@ -944,7 +935,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         /* only print during main process's startup (note that this message is always printed) */
         log_always("Gramine is starting. Parsing TOML manifest file, this may take some time...");
     }
-    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &host_info);
+    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &emulate_etc);
     if (ret < 0) {
         log_error("Parsing manifest failed");
         return -EINVAL;
@@ -958,10 +949,14 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    ret = get_host_info(&host_info, parent_stream_fd);
-    if (ret < 0) {
-        log_error("Unable to get host info");
-        return ret;
+    /* Get host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
+        ret = get_host_configs(&host_info, emulate_etc);
+        if (ret < 0) {
+            log_error("Unable to get host info");
+            return ret;
+        }
     }
 
     enclave->libpal_uri = alloc_concat(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN, g_libpal_path, -1);

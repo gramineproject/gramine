@@ -9,6 +9,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "rw_file.h"
+
 static void test_fork(const char* tag, const char* expected_name,
                       void (*f)(const char*, const char*)) {
     int status;
@@ -65,19 +67,8 @@ static void test_etc_hostname(const char* tag, const char* expected_name) {
         err(1, "Unable to open /etc/hostname in %s", tag);
     }
 
-    off_t offset = 0;
-    size_t size = sizeof(buf);
-    while (size > 0) {
-        ssize_t ret = read(fd, buf + offset, size);
-        if (ret < 0 && errno == EINTR)
-            continue;
-        if (ret < 0)
-            err(1, "Unable to read /etc/hostname in %s", tag);
-        if (ret == 0)
-            break;
-        size -= ret;
-        offset += ret;
-    }
+    if (posix_fd_read(fd, buf, sizeof(buf)) < 0)
+        err(1, "Unable to read /etc/hostname in %s", tag);
 
     /*
      * Sometimes /etc/hostname might have a trailing '\n', Gramine is removing it,

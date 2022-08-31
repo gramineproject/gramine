@@ -138,7 +138,7 @@ struct pal_public_state {
     struct pal_cpu_info cpu_info;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
 
-    bool passthrough_etc_files;
+    bool emulate_etc_files;
     char hostname[PAL_HOSTNAME_MAX];
 };
 
