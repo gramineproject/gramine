@@ -28,6 +28,8 @@ Features which might be considered part of SGX2:
 - :term:`EDMM` (Enclave Dynamic Memory Management) is part of SGX2
 - :term:`FLC` (Flexible Launch Control), not strictly part of SGX2, but was not
   part of original SGX hardware either
+- :term:`KSS` (Key Separation and Sharing), also not part of SGX2, but was not
+  part of original SGX hardware either
 
 As of now there is hardware support (on a |~| limited set of CPUs) for FLC and
 (on an even more limited set of CPUs) SGX2/EDMM. Most of the literature
@@ -272,6 +274,16 @@ SGX terminology
    EDMM
       A |~| hardware feature of :term:`SGX2`, allows dynamic memory allocation,
       which in turn allows dynamic thread creation.
+
+   Key Separation and Sharing
+   KSS
+      A feature that lets developer define additional enclave identity attributes and configuration identifier. Extended enclave identity is defined by the developer on enclave build, and configuration is defined on enclave launch.
+
+      Extended identifiers and configuration are part of the :term:`SGX Report`, which provides more precise information in enclave :term:`Attestation`.
+
+      Also, additional identifies can be used in key derivation, which allows more flexible control over the resulting keys. This flexibility allows, for example, use of different keys per configuration, or to derive shared keys between two different enclaves of the same family.
+
+      This feature was not part of original SGX and therefore not supported by all SGX-enabled hardware.
 
    Enclave Page Cache
    EPC
