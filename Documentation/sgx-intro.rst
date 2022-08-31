@@ -353,25 +353,27 @@ SGX terminology
    KSS
       A feature that lets developer define additional enclave identity
       attributes and configuration identifier. Extended enclave identity
-      is defined by the developer on enclave build, and configuration is
-      defined on enclave launch.
+      is defined by the developer on enclave build. Enclave configuration is
+      defined on enclave launch and cannot be modified afterwards.
 
       In addition to the calculated enclave and signer measurements, developer
-      is expected to define a product ID and :term:`SVN` for its enclaves.
+      is expected to define a product ID and :term:`SVN` for her enclaves.
       These identifiers are part of the :term:`SGX Report` and are expected to
       be used in :term:`Attestation`. They are also used by SGX key derivation
       to derive different keys per enclave.
 
       KSS adds two more attributes for enclave build and two new ones for
-      enclave launch. These attributes are part of :term:`SGX Report` and
-      additional key policy attributes are added to provide fine-grained
+      enclave launch, which are part of the :term:`SGX Report`.
+      Additionally,  key policy attributes are extended to provide fine-grained
       control over key derivation.
 
       New build attributes:
+
       - Extended product ID
       - Family ID
 
       New enclave launch attributes:
+
       - Config ID
       - Config SVN
 
