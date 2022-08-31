@@ -72,266 +72,267 @@ enum {
     OCALL_NR,
 };
 
-typedef struct {
-    int ms_exitcode;
-    int ms_is_exitgroup;
-} ms_ocall_exit_t;
+struct ocall_exit {
+    int exitcode;
+    int is_exitgroup;
+};
 
-typedef struct {
-    void* ms_addr;
-    size_t ms_size;
-    int ms_prot;
-    int ms_flags;
-    int ms_fd;
-    off_t ms_offset;
-} ms_ocall_mmap_untrusted_t;
+struct ocall_mmap_untrusted {
+    void* addr;
+    size_t size;
+    int prot;
+    int flags;
+    int fd;
+    off_t offset;
+};
 
-typedef struct {
-    const void* ms_addr;
-    size_t ms_size;
-} ms_ocall_munmap_untrusted_t;
+struct ocall_munmap_untrusted {
+    const void* addr;
+    size_t size;
+};
 
-typedef struct {
-    unsigned int ms_leaf;
-    unsigned int ms_subleaf;
-    unsigned int ms_values[4];
-} ms_ocall_cpuid_t;
+struct ocall_cpuid {
+    unsigned int leaf;
+    unsigned int subleaf;
+    unsigned int values[4];
+};
 
-typedef struct {
-    const char* ms_pathname;
-    int ms_flags;
-    unsigned short ms_mode;
-} ms_ocall_open_t;
+struct ocall_open {
+    const char* pathname;
+    int flags;
+    unsigned short mode;
+};
 
-typedef struct {
-    int ms_fd;
-} ms_ocall_close_t;
+struct ocall_close {
+    int fd;
+};
 
-typedef struct {
-    int ms_fd;
-    void* ms_buf;
-    unsigned int ms_count;
-} ms_ocall_read_t;
+struct ocall_read {
+    int fd;
+    void* buf;
+    unsigned int count;
+};
 
-typedef struct {
-    int ms_fd;
-    const void* ms_buf;
-    unsigned int ms_count;
-} ms_ocall_write_t;
+struct ocall_write {
+    int fd;
+    const void* buf;
+    unsigned int count;
+};
 
-typedef struct {
-    int ms_fd;
-    void* ms_buf;
-    size_t ms_count;
-    off_t ms_offset;
-} ms_ocall_pread_t;
+struct ocall_pread {
+    int fd;
+    void* buf;
+    size_t count;
+    off_t offset;
+};
 
-typedef struct {
-    int ms_fd;
-    const void* ms_buf;
-    size_t ms_count;
-    off_t ms_offset;
-} ms_ocall_pwrite_t;
+struct ocall_pwrite {
+    int fd;
+    const void* buf;
+    size_t count;
+    off_t offset;
+};
 
-typedef struct {
-    int ms_fd;
-    struct stat ms_stat;
-} ms_ocall_fstat_t;
+struct ocall_fstat {
+    int fd;
+    struct stat stat;
+};
 
-typedef struct {
-    int ms_fd;
-} ms_ocall_fionread_t;
+struct ocall_fionread {
+    int fd;
+};
 
-typedef struct {
-    int ms_fd;
-    int ms_nonblocking;
-} ms_ocall_fsetnonblock_t;
+struct ocall_fsetnonblock {
+    int fd;
+    int nonblocking;
+};
 
-typedef struct {
-    int ms_fd;
-    unsigned short ms_mode;
-} ms_ocall_fchmod_t;
+struct ocall_fchmod {
+    int fd;
+    unsigned short mode;
+};
 
-typedef struct {
-    int ms_fd;
-} ms_ocall_fsync_t;
+struct ocall_fsync {
+    int fd;
+};
 
-typedef struct {
-    int ms_fd;
-    uint64_t ms_length;
-} ms_ocall_ftruncate_t;
+struct ocall_ftruncate {
+    int fd;
+    uint64_t length;
+};
 
-typedef struct {
-    const char* ms_pathname;
-    unsigned short ms_mode;
-} ms_ocall_mkdir_t;
+struct ocall_mkdir {
+    const char* pathname;
+    unsigned short mode;
+};
 
-typedef struct {
-    int ms_fd;
-    struct linux_dirent64* ms_dirp;
-    size_t ms_size;
-} ms_ocall_getdents_t;
+struct ocall_getdents {
+    int fd;
+    struct linux_dirent64* dirp;
+    size_t size;
+};
 
-typedef struct {
-    int ms_stream_fd;
-    void* ms_reserved_mem_ranges;
-    size_t ms_reserved_mem_ranges_size;
-    size_t ms_nargs;
-    const char* ms_args[];
-} ms_ocall_create_process_t;
+struct ocall_create_process {
+    int stream_fd;
+    void* reserved_mem_ranges;
+    size_t reserved_mem_ranges_size;
+    size_t nargs;
+    const char* args[];
+};
 
-typedef struct {
-    void* ms_tcs;
-    size_t ms_cpumask_size;
-    void* ms_cpu_mask;
-} ms_ocall_sched_setaffinity_t;
+struct ocall_sched_setaffinity {
+    void* tcs;
+    size_t cpumask_size;
+    void* cpu_mask;
+};
 
-typedef struct {
-    void* ms_tcs;
-    size_t ms_cpumask_size;
-    void* ms_cpu_mask;
-} ms_ocall_sched_getaffinity_t;
+struct ocall_sched_getaffinity {
+    void* tcs;
+    size_t cpumask_size;
+    void* cpu_mask;
+};
 
-typedef struct {
-    uint32_t* ms_futex;
-    int ms_op, ms_val;
-    uint64_t ms_timeout_us;
-} ms_ocall_futex_t;
+struct ocall_futex {
+    uint32_t* futex;
+    int op;
+    int val;
+    uint64_t timeout_us;
+};
 
-typedef struct {
-    int ms_family;
-    int ms_type;
-    int ms_protocol;
-} ms_ocall_socket_t;
+struct ocall_socket {
+    int family;
+    int type;
+    int protocol;
+};
 
-typedef struct {
-    int ms_fd;
-    struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-    uint16_t ms_new_port;
-} ms_ocall_bind_t;
+struct ocall_bind {
+    int fd;
+    struct sockaddr* addr;
+    size_t addrlen;
+    uint16_t new_port;
+};
 
-typedef struct {
-    int ms_fd;
-    unsigned int ms_backlog;
-} ms_ocall_listen_simple_t;
+struct ocall_listen_simple {
+    int fd;
+    unsigned int backlog;
+};
 
-typedef struct {
-    int ms_domain;
-    int ms_type;
-    int ms_protocol;
-    int ms_ipv6_v6only;
-    const struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-} ms_ocall_listen_t;
+struct ocall_listen {
+    int domain;
+    int type;
+    int protocol;
+    int ipv6_v6only;
+    const struct sockaddr* addr;
+    size_t addrlen;
+};
 
-typedef struct {
-    int ms_sockfd;
+struct ocall_accept {
+    int sockfd;
     int options;
-    struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-    struct sockaddr* ms_local_addr;
-    size_t ms_local_addrlen;
-} ms_ocall_accept_t;
+    struct sockaddr* addr;
+    size_t addrlen;
+    struct sockaddr* local_addr;
+    size_t local_addrlen;
+};
 
-typedef struct {
-    int ms_domain;
-    int ms_type;
-    int ms_protocol;
-    int ms_ipv6_v6only;
-    const struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-    struct sockaddr* ms_bind_addr;
-    size_t ms_bind_addrlen;
-} ms_ocall_connect_t;
+struct ocall_connect {
+    int domain;
+    int type;
+    int protocol;
+    int ipv6_v6only;
+    const struct sockaddr* addr;
+    size_t addrlen;
+    struct sockaddr* bind_addr;
+    size_t bind_addrlen;
+};
 
-typedef struct {
-    int ms_fd;
-    struct sockaddr_storage* ms_addr;
-    size_t ms_addrlen;
-} ms_ocall_connect_simple_t;
+struct ocall_connect_simple {
+    int fd;
+    struct sockaddr_storage* addr;
+    size_t addrlen;
+};
 
-typedef struct {
-    PAL_IDX ms_sockfd;
-    void* ms_buf;
-    size_t ms_count;
-    struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-    void* ms_control;
-    size_t ms_controllen;
-    unsigned int ms_flags;
-} ms_ocall_recv_t;
+struct ocall_recv {
+    PAL_IDX sockfd;
+    void* buf;
+    size_t count;
+    struct sockaddr* addr;
+    size_t addrlen;
+    void* control;
+    size_t controllen;
+    unsigned int flags;
+};
 
-typedef struct {
-    PAL_IDX ms_sockfd;
-    const void* ms_buf;
-    size_t ms_count;
-    const struct sockaddr* ms_addr;
-    size_t ms_addrlen;
-    void* ms_control;
-    size_t ms_controllen;
-    unsigned int ms_flags;
-} ms_ocall_send_t;
+struct ocall_send {
+    PAL_IDX sockfd;
+    const void* buf;
+    size_t count;
+    const struct sockaddr* addr;
+    size_t addrlen;
+    void* control;
+    size_t controllen;
+    unsigned int flags;
+};
 
-typedef struct {
-    int ms_sockfd;
-    int ms_level;
-    int ms_optname;
-    const void* ms_optval;
-    size_t ms_optlen;
-} ms_ocall_setsockopt_t;
+struct ocall_setsockopt {
+    int sockfd;
+    int level;
+    int optname;
+    const void* optval;
+    size_t optlen;
+};
 
-typedef struct {
-    int ms_sockfd;
-    int ms_how;
-} ms_ocall_shutdown_t;
+struct ocall_shutdown {
+    int sockfd;
+    int how;
+};
 
-typedef struct {
-    uint64_t ms_microsec;
-} ms_ocall_gettime_t;
+struct ocall_gettime {
+    uint64_t microsec;
+};
 
-typedef struct {
-    struct pollfd* ms_fds;
-    size_t ms_nfds;
-    uint64_t ms_timeout_us;
-} ms_ocall_poll_t;
+struct ocall_poll {
+    struct pollfd* fds;
+    size_t nfds;
+    uint64_t timeout_us;
+};
 
-typedef struct {
-    const char* ms_oldpath;
-    const char* ms_newpath;
-} ms_ocall_rename_t;
+struct ocall_rename {
+    const char* oldpath;
+    const char* newpath;
+};
 
-typedef struct {
-    const char* ms_pathname;
-} ms_ocall_delete_t;
+struct ocall_delete {
+    const char* pathname;
+};
 
-typedef struct {
-    const char* ms_name;
-    void* ms_addr;
-} ms_ocall_debug_map_add_t;
+struct ocall_debug_map_add {
+    const char* name;
+    void* addr;
+};
 
-typedef struct {
-    void* ms_addr;
-} ms_ocall_debug_map_remove_t;
+struct ocall_debug_map_remove {
+    void* addr;
+};
 
-typedef struct {
-    uintptr_t ms_addr;
-    char* ms_buf;
-    size_t ms_buf_size;
-} ms_ocall_debug_describe_location_t;
+struct ocall_debug_describe_location {
+    uintptr_t addr;
+    char* buf;
+    size_t buf_size;
+};
 
-typedef struct {
-    int          ms_flags;
-} ms_ocall_eventfd_t;
+struct ocall_eventfd {
+    int          flags;
+};
 
-typedef struct {
-    bool              ms_is_epid;
-    sgx_spid_t        ms_spid;
-    bool              ms_linkable;
-    sgx_report_t      ms_report;
-    sgx_quote_nonce_t ms_nonce;
-    char*             ms_quote;
-    size_t            ms_quote_len;
-} ms_ocall_get_quote_t;
+struct ocall_get_quote {
+    bool              is_epid;
+    sgx_spid_t        spid;
+    bool              linkable;
+    sgx_report_t      report;
+    sgx_quote_nonce_t nonce;
+    char*             quote;
+    size_t            quote_len;
+};
 
 #pragma pack(pop)
