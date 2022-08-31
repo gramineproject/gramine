@@ -32,17 +32,17 @@ extern bool g_vtune_profile_enabled;
 
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
-static long sgx_ocall_exit(void* pms) {
-    ms_ocall_exit_t* ms = (ms_ocall_exit_t*)pms;
+static long sgx_ocall_exit(void* pargs) {
+    struct ocall_exit* ocall_exit_args = (struct ocall_exit*)pargs;
 
-    if (ms->ms_exitcode != (int)((uint8_t)ms->ms_exitcode)) {
+    if (ocall_exit_args->exitcode != (int)((uint8_t)ocall_exit_args->exitcode)) {
         log_debug("Saturation error in exit code %d, getting rounded down to %u",
-                  ms->ms_exitcode, (uint8_t)ms->ms_exitcode);
-        ms->ms_exitcode = 255;
+                  ocall_exit_args->exitcode, (uint8_t)ocall_exit_args->exitcode);
+        ocall_exit_args->exitcode = 255;
     }
 
     /* exit the whole process if exit_group() */
-    if (ms->ms_is_exitgroup) {
+    if (ocall_exit_args->is_exitgroup) {
         update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
         sgx_profile_finish();
@@ -54,7 +54,7 @@ static long sgx_ocall_exit(void* pms) {
             __itt_fini_ittlib();
         }
 #endif
-        DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
+        DO_SYSCALL(exit_group, (int)ocall_exit_args->exitcode);
         die_or_inf_loop();
     }
 
@@ -76,212 +76,200 @@ static long sgx_ocall_exit(void* pms) {
             __itt_fini_ittlib();
         }
 #endif
-        DO_SYSCALL(exit_group, (int)ms->ms_exitcode);
+        DO_SYSCALL(exit_group, (int)ocall_exit_args->exitcode);
         die_or_inf_loop();
     }
 
-    thread_exit((int)ms->ms_exitcode);
+    thread_exit((int)ocall_exit_args->exitcode);
     return 0;
 }
 
-static long sgx_ocall_mmap_untrusted(void* pms) {
-    ms_ocall_mmap_untrusted_t* ms = (ms_ocall_mmap_untrusted_t*)pms;
+static long sgx_ocall_mmap_untrusted(void* pargs) {
+    struct ocall_mmap_untrusted* ocall_mmap_args = (struct ocall_mmap_untrusted*)pargs;
     void* addr;
 
-    addr = (void*)DO_SYSCALL(mmap, ms->ms_addr, ms->ms_size, ms->ms_prot, ms->ms_flags, ms->ms_fd,
-                             ms->ms_offset);
+    addr = (void*)DO_SYSCALL(mmap, ocall_mmap_args->addr, ocall_mmap_args->size,
+                             ocall_mmap_args->prot, ocall_mmap_args->flags, ocall_mmap_args->fd,
+                             ocall_mmap_args->offset);
     if (IS_PTR_ERR(addr))
         return PTR_TO_ERR(addr);
 
-    ms->ms_addr = addr;
+    ocall_mmap_args->addr = addr;
     return 0;
 }
 
-static long sgx_ocall_munmap_untrusted(void* pms) {
-    ms_ocall_munmap_untrusted_t* ms = (ms_ocall_munmap_untrusted_t*)pms;
-    DO_SYSCALL(munmap, ms->ms_addr, ms->ms_size);
+static long sgx_ocall_munmap_untrusted(void* pargs) {
+    struct ocall_munmap_untrusted* ocall_munmap_args = (struct ocall_munmap_untrusted*)pargs;
+    DO_SYSCALL(munmap, ocall_munmap_args->addr, ocall_munmap_args->size);
     return 0;
 }
 
-static long sgx_ocall_cpuid(void* pms) {
-    ms_ocall_cpuid_t* ms = (ms_ocall_cpuid_t*)pms;
+static long sgx_ocall_cpuid(void* pargs) {
+    struct ocall_cpuid* ocall_cpuid_args = (struct ocall_cpuid*)pargs;
     __asm__ volatile("cpuid"
-                     : "=a"(ms->ms_values[0]),
-                       "=b"(ms->ms_values[1]),
-                       "=c"(ms->ms_values[2]),
-                       "=d"(ms->ms_values[3])
-                     : "a"(ms->ms_leaf), "c"(ms->ms_subleaf)
+                     : "=a"(ocall_cpuid_args->values[0]),
+                       "=b"(ocall_cpuid_args->values[1]),
+                       "=c"(ocall_cpuid_args->values[2]),
+                       "=d"(ocall_cpuid_args->values[3])
+                     : "a"(ocall_cpuid_args->leaf), "c"(ocall_cpuid_args->subleaf)
                      : "memory");
     return 0;
 }
 
-static long sgx_ocall_open(void* pms) {
-    ms_ocall_open_t* ms = (ms_ocall_open_t*)pms;
-    return DO_SYSCALL_INTERRUPTIBLE(open, ms->ms_pathname, ms->ms_flags, ms->ms_mode);
+static long sgx_ocall_open(void* pargs) {
+    struct ocall_open* ocall_open_args = (struct ocall_open*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(open, ocall_open_args->pathname, ocall_open_args->flags,
+                                    ocall_open_args->mode);
 }
 
-static long sgx_ocall_close(void* pms) {
-    ms_ocall_close_t* ms = (ms_ocall_close_t*)pms;
+static long sgx_ocall_close(void* pargs) {
+    struct ocall_close* ocall_close_args = (struct ocall_close*)pargs;
     /* Callers cannot retry close on `-EINTR`, so we do not call `DO_SYSCALL_INTERRUPTIBLE`. */
-    return DO_SYSCALL(close, ms->ms_fd);
+    return DO_SYSCALL(close, ocall_close_args->fd);
 }
 
-static long sgx_ocall_read(void* pms) {
-    ms_ocall_read_t* ms = (ms_ocall_read_t*)pms;
-    long ret;
-    ret = DO_SYSCALL_INTERRUPTIBLE(read, ms->ms_fd, ms->ms_buf, ms->ms_count);
-    return ret;
+static long sgx_ocall_read(void* pargs) {
+    struct ocall_read* ocall_read_args = (struct ocall_read*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(read, ocall_read_args->fd, ocall_read_args->buf,
+                                    ocall_read_args->count);
 }
 
-static long sgx_ocall_write(void* pms) {
-    ms_ocall_write_t* ms = (ms_ocall_write_t*)pms;
-    long ret;
-    ret = DO_SYSCALL_INTERRUPTIBLE(write, ms->ms_fd, ms->ms_buf, ms->ms_count);
-    return ret;
+static long sgx_ocall_write(void* pargs) {
+    struct ocall_write* ocall_write_args = (struct ocall_write*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(write, ocall_write_args->fd, ocall_write_args->buf,
+                                    ocall_write_args->count);
 }
 
-static long sgx_ocall_pread(void* pms) {
-    ms_ocall_pread_t* ms = (ms_ocall_pread_t*)pms;
-    long ret;
-    ret = DO_SYSCALL_INTERRUPTIBLE(pread64, ms->ms_fd, ms->ms_buf, ms->ms_count, ms->ms_offset);
-    return ret;
+static long sgx_ocall_pread(void* pargs) {
+    struct ocall_pread* ocall_pread_args = (struct ocall_pread*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(pread64, ocall_pread_args->fd, ocall_pread_args->buf,
+                                    ocall_pread_args->count, ocall_pread_args->offset);
 }
 
-static long sgx_ocall_pwrite(void* pms) {
-    ms_ocall_pwrite_t* ms = (ms_ocall_pwrite_t*)pms;
-    long ret;
-    ret = DO_SYSCALL_INTERRUPTIBLE(pwrite64, ms->ms_fd, ms->ms_buf, ms->ms_count, ms->ms_offset);
-    return ret;
+static long sgx_ocall_pwrite(void* pargs) {
+    struct ocall_pwrite* ocall_pwrite_args = (struct ocall_pwrite*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(pwrite64, ocall_pwrite_args->fd, ocall_pwrite_args->buf,
+                                    ocall_pwrite_args->count, ocall_pwrite_args->offset);
 }
 
-static long sgx_ocall_fstat(void* pms) {
-    ms_ocall_fstat_t* ms = (ms_ocall_fstat_t*)pms;
-    long ret;
-    ret = DO_SYSCALL_INTERRUPTIBLE(fstat, ms->ms_fd, &ms->ms_stat);
-    return ret;
+static long sgx_ocall_fstat(void* pargs) {
+    struct ocall_fstat* ocall_fstat_args = (struct ocall_fstat*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(fstat, ocall_fstat_args->fd, &ocall_fstat_args->stat);
 }
 
-static long sgx_ocall_fionread(void* pms) {
-    ms_ocall_fionread_t* ms = (ms_ocall_fionread_t*)pms;
-    long ret;
+static long sgx_ocall_fionread(void* pargs) {
+    struct ocall_fionread* ocall_fionread_args = (struct ocall_fionread*)pargs;
     int val;
-    ret = DO_SYSCALL_INTERRUPTIBLE(ioctl, ms->ms_fd, FIONREAD, &val);
+    long ret = DO_SYSCALL_INTERRUPTIBLE(ioctl, ocall_fionread_args->fd, FIONREAD, &val);
     return ret < 0 ? ret : val;
 }
 
-static long sgx_ocall_fsetnonblock(void* pms) {
-    ms_ocall_fsetnonblock_t* ms = (ms_ocall_fsetnonblock_t*)pms;
+static long sgx_ocall_fsetnonblock(void* pargs) {
+    struct ocall_fsetnonblock* ocall_fsetnonblock_args = (struct ocall_fsetnonblock*)pargs;
     long ret;
     int flags;
 
-    ret = DO_SYSCALL(fcntl, ms->ms_fd, F_GETFL);
+    ret = DO_SYSCALL(fcntl, ocall_fsetnonblock_args->fd, F_GETFL);
     if (ret < 0)
         return ret;
 
     flags = ret;
-    if (ms->ms_nonblocking) {
+    if (ocall_fsetnonblock_args->nonblocking) {
         if (!(flags & O_NONBLOCK))
-            ret = DO_SYSCALL(fcntl, ms->ms_fd, F_SETFL, flags | O_NONBLOCK);
+            ret = DO_SYSCALL(fcntl, ocall_fsetnonblock_args->fd, F_SETFL, flags | O_NONBLOCK);
     } else {
         if (flags & O_NONBLOCK)
-            ret = DO_SYSCALL(fcntl, ms->ms_fd, F_SETFL, flags & ~O_NONBLOCK);
+            ret = DO_SYSCALL(fcntl, ocall_fsetnonblock_args->fd, F_SETFL, flags & ~O_NONBLOCK);
     }
 
     return ret;
 }
 
-static long sgx_ocall_fchmod(void* pms) {
-    ms_ocall_fchmod_t* ms = (ms_ocall_fchmod_t*)pms;
-    long ret;
-    ret = DO_SYSCALL(fchmod, ms->ms_fd, ms->ms_mode);
-    return ret;
+static long sgx_ocall_fchmod(void* pargs) {
+    struct ocall_fchmod* ocall_fchmod_args = (struct ocall_fchmod*)pargs;
+    return DO_SYSCALL(fchmod, ocall_fchmod_args->fd, ocall_fchmod_args->mode);
 }
 
-static long sgx_ocall_fsync(void* pms) {
-    ms_ocall_fsync_t* ms = (ms_ocall_fsync_t*)pms;
-    return DO_SYSCALL_INTERRUPTIBLE(fsync, ms->ms_fd);
+static long sgx_ocall_fsync(void* pargs) {
+    struct ocall_fsync* ocall_fsync_args = (struct ocall_fsync*)pargs;
+    return DO_SYSCALL_INTERRUPTIBLE(fsync, ocall_fsync_args->fd);
 }
 
-static long sgx_ocall_ftruncate(void* pms) {
-    ms_ocall_ftruncate_t* ms = (ms_ocall_ftruncate_t*)pms;
-    long ret;
-    ret = DO_SYSCALL(ftruncate, ms->ms_fd, ms->ms_length);
-    return ret;
+static long sgx_ocall_ftruncate(void* pargs) {
+    struct ocall_ftruncate* ocall_ftruncate_args = (struct ocall_ftruncate*)pargs;
+    return DO_SYSCALL(ftruncate, ocall_ftruncate_args->fd, ocall_ftruncate_args->length);
 }
 
-static long sgx_ocall_mkdir(void* pms) {
-    ms_ocall_mkdir_t* ms = (ms_ocall_mkdir_t*)pms;
-    long ret;
-    ret = DO_SYSCALL(mkdir, ms->ms_pathname, ms->ms_mode);
-    return ret;
+static long sgx_ocall_mkdir(void* pargs) {
+    struct ocall_mkdir* ocall_mkdir_args = (struct ocall_mkdir*)pargs;
+    return DO_SYSCALL(mkdir, ocall_mkdir_args->pathname, ocall_mkdir_args->mode);
 }
 
-static long sgx_ocall_getdents(void* pms) {
-    ms_ocall_getdents_t* ms = (ms_ocall_getdents_t*)pms;
-    long ret;
-    unsigned int count = ms->ms_size <= UINT_MAX ? ms->ms_size : UINT_MAX;
-    ret = DO_SYSCALL_INTERRUPTIBLE(getdents64, ms->ms_fd, ms->ms_dirp, count);
-    return ret;
+static long sgx_ocall_getdents(void* pargs) {
+    struct ocall_getdents* ocall_getdents_args = (struct ocall_getdents*)pargs;
+    unsigned int count;
+    count = ocall_getdents_args->size <= UINT_MAX ? ocall_getdents_args->size : UINT_MAX;
+    return DO_SYSCALL_INTERRUPTIBLE(getdents64, ocall_getdents_args->fd, ocall_getdents_args->dirp,
+                                    count);
 }
 
-static long sgx_ocall_resume_thread(void* pms) {
-    int tid = get_tid_from_tcs(pms);
+static long sgx_ocall_resume_thread(void* pargs) {
+    int tid = get_tid_from_tcs(pargs);
     if (tid < 0)
         return tid;
 
-    long ret = DO_SYSCALL(tgkill, g_host_pid, tid, SIGCONT);
-    return ret;
+    return DO_SYSCALL(tgkill, g_host_pid, tid, SIGCONT);
 }
 
-static long sgx_ocall_sched_setaffinity(void* pms) {
-    ms_ocall_sched_setaffinity_t* ms = (ms_ocall_sched_setaffinity_t*)pms;
-    int tid = get_tid_from_tcs(ms->ms_tcs);
+static long sgx_ocall_sched_setaffinity(void* pargs) {
+    struct ocall_sched_setaffinity* ocall_sched_args = (struct ocall_sched_setaffinity*)pargs;
+    int tid = get_tid_from_tcs(ocall_sched_args->tcs);
     if (tid < 0)
         return tid;
 
-    long ret = DO_SYSCALL(sched_setaffinity, tid, ms->ms_cpumask_size, ms->ms_cpu_mask);
-    return ret;
+    return DO_SYSCALL(sched_setaffinity, tid, ocall_sched_args->cpumask_size,
+                      ocall_sched_args->cpu_mask);
 }
 
-static long sgx_ocall_sched_getaffinity(void* pms) {
-    ms_ocall_sched_getaffinity_t* ms = (ms_ocall_sched_getaffinity_t*)pms;
-    int tid = get_tid_from_tcs(ms->ms_tcs);
+static long sgx_ocall_sched_getaffinity(void* pargs) {
+    struct ocall_sched_getaffinity* ocall_sched_args = (struct ocall_sched_getaffinity*)pargs;
+    int tid = get_tid_from_tcs(ocall_sched_args->tcs);
     if (tid < 0)
         return tid;
 
-    long ret = DO_SYSCALL(sched_getaffinity, tid, ms->ms_cpumask_size, ms->ms_cpu_mask);
-    return ret;
+    return DO_SYSCALL(sched_getaffinity, tid, ocall_sched_args->cpumask_size,
+                      ocall_sched_args->cpu_mask);
 }
 
-static long sgx_ocall_clone_thread(void* pms) {
-    __UNUSED(pms);
+static long sgx_ocall_clone_thread(void* pargs) {
+    __UNUSED(pargs);
     return clone_thread();
 }
 
-static long sgx_ocall_create_process(void* pms) {
-    ms_ocall_create_process_t* ms = (ms_ocall_create_process_t*)pms;
+static long sgx_ocall_create_process(void* pargs) {
+    struct ocall_create_process* ocall_cp_args = (struct ocall_create_process*)pargs;
 
-    return sgx_create_process(ms->ms_nargs, ms->ms_args, g_pal_enclave.raw_manifest_data,
-                              ms->ms_reserved_mem_ranges, ms->ms_reserved_mem_ranges_size,
-                              &ms->ms_stream_fd);
+    return sgx_create_process(ocall_cp_args->nargs, ocall_cp_args->args,
+                              g_pal_enclave.raw_manifest_data, ocall_cp_args->reserved_mem_ranges,
+                              ocall_cp_args->reserved_mem_ranges_size, &ocall_cp_args->stream_fd);
 }
 
-static long sgx_ocall_futex(void* pms) {
-    ms_ocall_futex_t* ms = (ms_ocall_futex_t*)pms;
+static long sgx_ocall_futex(void* pargs) {
+    struct ocall_futex* ocall_futex_args = (struct ocall_futex*)pargs;
     long ret;
 
     struct timespec timeout = { 0 };
-    bool have_timeout = ms->ms_timeout_us != (uint64_t)-1;
+    bool have_timeout = ocall_futex_args->timeout_us != (uint64_t)-1;
     if (have_timeout) {
-        time_get_now_plus_ns(&timeout, ms->ms_timeout_us * TIME_NS_IN_US);
+        time_get_now_plus_ns(&timeout, ocall_futex_args->timeout_us * TIME_NS_IN_US);
     }
 
     /* `FUTEX_WAIT` treats timeout parameter as a relative value. We want to have an absolute one
      * (since we need to get start time anyway, to calculate remaining time later on), hence we use
      * `FUTEX_WAIT_BITSET` with `FUTEX_BITSET_MATCH_ANY`. */
     uint32_t val3 = 0;
-    int priv_flag = ms->ms_op & FUTEX_PRIVATE_FLAG;
-    int op = ms->ms_op & ~FUTEX_PRIVATE_FLAG;
+    int priv_flag = ocall_futex_args->op & FUTEX_PRIVATE_FLAG;
+    int op = ocall_futex_args->op & ~FUTEX_PRIVATE_FLAG;
     if (op == FUTEX_WAKE) {
         op = FUTEX_WAKE_BITSET;
         val3 = FUTEX_BITSET_MATCH_ANY;
@@ -293,7 +281,8 @@ static long sgx_ocall_futex(void* pms) {
         return -EINVAL;
     }
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(futex, ms->ms_futex, op | priv_flag, ms->ms_val,
+    ret = DO_SYSCALL_INTERRUPTIBLE(futex, ocall_futex_args->futex, op | priv_flag,
+                                   ocall_futex_args->val,
                                    have_timeout ? &timeout : NULL, NULL, val3);
 
     if (have_timeout) {
@@ -302,38 +291,42 @@ static long sgx_ocall_futex(void* pms) {
             /* We might have slept a bit too long. */
             diff = 0;
         }
-        ms->ms_timeout_us = (uint64_t)diff / TIME_NS_IN_US;
+        ocall_futex_args->timeout_us = (uint64_t)diff / TIME_NS_IN_US;
     }
     return ret;
 }
 
-static long sgx_ocall_socket(void* pms) {
-    ms_ocall_socket_t* ms = pms;
-    return DO_SYSCALL(socket, ms->ms_family, ms->ms_type, ms->ms_protocol);
+static long sgx_ocall_socket(void* pargs) {
+    struct ocall_socket* ocall_socket_args = pargs;
+    return DO_SYSCALL(socket, ocall_socket_args->family, ocall_socket_args->type,
+                      ocall_socket_args->protocol);
 }
 
-static long sgx_ocall_bind(void* pms) {
-    ms_ocall_bind_t* ms = pms;
-    int ret = DO_SYSCALL(bind, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+static long sgx_ocall_bind(void* pargs) {
+    struct ocall_bind* ocall_bind_args = pargs;
+    int ret = DO_SYSCALL(bind, ocall_bind_args->fd, ocall_bind_args->addr,
+                         (int)ocall_bind_args->addrlen);
     if (ret < 0) {
         return ret;
     }
 
     struct sockaddr_storage addr = { 0 };
     int addrlen = sizeof(addr);
-    ret = DO_SYSCALL(getsockname, ms->ms_fd, &addr, &addrlen);
+    ret = DO_SYSCALL(getsockname, ocall_bind_args->fd, &addr, &addrlen);
     if (ret < 0) {
         return ret;
     }
 
     switch (addr.ss_family) {
         case AF_INET:
-            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in, sin_port),
-                   sizeof(ms->ms_new_port));
+            memcpy(&ocall_bind_args->new_port,
+                   (char*)&addr + offsetof(struct sockaddr_in, sin_port),
+                   sizeof(ocall_bind_args->new_port));
             break;
         case AF_INET6:
-            memcpy(&ms->ms_new_port, (char*)&addr + offsetof(struct sockaddr_in6, sin6_port),
-                   sizeof(ms->ms_new_port));
+            memcpy(&ocall_bind_args->new_port,
+                   (char*)&addr + offsetof(struct sockaddr_in6, sin6_port),
+                   sizeof(ocall_bind_args->new_port));
             break;
         default:
             log_error("%s: unknown address family: %d", __func__, addr.ss_family);
@@ -344,22 +337,23 @@ static long sgx_ocall_bind(void* pms) {
     return 0;
 }
 
-static long sgx_ocall_listen_simple(void* pms) {
-    ms_ocall_listen_simple_t* ms = pms;
-    return DO_SYSCALL(listen, ms->ms_fd, ms->ms_backlog);
+static long sgx_ocall_listen_simple(void* pargs) {
+    struct ocall_listen_simple* ocall_listen_args = pargs;
+    return DO_SYSCALL(listen, ocall_listen_args->fd, ocall_listen_args->backlog);
 }
 
-static long sgx_ocall_listen(void* pms) {
-    ms_ocall_listen_t* ms = (ms_ocall_listen_t*)pms;
+static long sgx_ocall_listen(void* pargs) {
+    struct ocall_listen* ocall_listen_args = (struct ocall_listen*)pargs;
     long ret;
     int fd;
 
-    if (ms->ms_addrlen > INT_MAX) {
+    if (ocall_listen_args->addrlen > INT_MAX) {
         ret = -EINVAL;
         goto err;
     }
 
-    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type, ms->ms_protocol);
+    ret = DO_SYSCALL(socket, ocall_listen_args->domain, ocall_listen_args->type,
+                     ocall_listen_args->protocol);
     if (ret < 0)
         goto err;
 
@@ -371,27 +365,28 @@ static long sgx_ocall_listen(void* pms) {
     if (ret < 0)
         goto err_fd;
 
-    if (ms->ms_domain == AF_INET6) {
+    if (ocall_listen_args->domain == AF_INET6) {
         /* IPV6_V6ONLY socket option can only be set before first bind */
-        ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ms->ms_ipv6_v6only,
-                         sizeof(ms->ms_ipv6_v6only));
+        ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ocall_listen_args->ipv6_v6only,
+                         sizeof(ocall_listen_args->ipv6_v6only));
         if (ret < 0)
             goto err_fd;
     }
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(bind, fd, ms->ms_addr, (int)ms->ms_addrlen);
+    ret = DO_SYSCALL_INTERRUPTIBLE(bind, fd, ocall_listen_args->addr,
+                                   (int)ocall_listen_args->addrlen);
     if (ret < 0)
         goto err_fd;
 
-    if (ms->ms_addr) {
-        int addrlen = ms->ms_addrlen;
-        ret = DO_SYSCALL(getsockname, fd, ms->ms_addr, &addrlen);
+    if (ocall_listen_args->addr) {
+        int addrlen = ocall_listen_args->addrlen;
+        ret = DO_SYSCALL(getsockname, fd, ocall_listen_args->addr, &addrlen);
         if (ret < 0)
             goto err_fd;
-        ms->ms_addrlen = addrlen;
+        ocall_listen_args->addrlen = addrlen;
     }
 
-    if (ms->ms_type & SOCK_STREAM) {
+    if (ocall_listen_args->type & SOCK_STREAM) {
         ret = DO_SYSCALL_INTERRUPTIBLE(listen, fd, DEFAULT_BACKLOG);
         if (ret < 0)
             goto err_fd;
@@ -405,31 +400,32 @@ err:
     return ret;
 }
 
-static long sgx_ocall_accept(void* pms) {
-    ms_ocall_accept_t* ms = (ms_ocall_accept_t*)pms;
+static long sgx_ocall_accept(void* pargs) {
+    struct ocall_accept* ocall_accept_args = (struct ocall_accept*)pargs;
     long ret;
 
-    if (ms->ms_addrlen > INT_MAX || ms->ms_local_addrlen > INT_MAX) {
+    if (ocall_accept_args->addrlen > INT_MAX || ocall_accept_args->local_addrlen > INT_MAX) {
         return -EINVAL;
     }
-    int addrlen = ms->ms_addrlen;
-    int options = ms->options;
+    int addrlen = ocall_accept_args->addrlen;
+    int options = ocall_accept_args->options;
     assert(WITHIN_MASK(options, SOCK_CLOEXEC | SOCK_NONBLOCK));
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ms->ms_sockfd, ms->ms_addr, &addrlen, options);
+    ret = DO_SYSCALL_INTERRUPTIBLE(accept4, ocall_accept_args->sockfd, ocall_accept_args->addr,
+                                   &addrlen, options);
     if (ret < 0)
         return ret;
 
     int fd = ret;
-    ms->ms_addrlen = addrlen;
+    ocall_accept_args->addrlen = addrlen;
 
-    if (ms->ms_local_addrlen > 0) {
-        int addrlen = ms->ms_local_addrlen;
-        ret = DO_SYSCALL(getsockname, fd, ms->ms_local_addr, &addrlen);
+    if (ocall_accept_args->local_addrlen > 0) {
+        int addrlen = ocall_accept_args->local_addrlen;
+        ret = DO_SYSCALL(getsockname, fd, ocall_accept_args->local_addr, &addrlen);
         if (ret < 0) {
             goto err;
         }
-        ms->ms_local_addrlen = addrlen;
+        ocall_accept_args->local_addrlen = addrlen;
     }
     return fd;
 
@@ -438,38 +434,42 @@ err:
     return ret;
 }
 
-static long sgx_ocall_connect(void* pms) {
-    ms_ocall_connect_t* ms = (ms_ocall_connect_t*)pms;
+static long sgx_ocall_connect(void* pargs) {
+    struct ocall_connect* ocall_connect_args = (struct ocall_connect*)pargs;
     long ret;
     int fd;
 
-    if (ms->ms_addrlen > INT_MAX || ms->ms_bind_addrlen > INT_MAX) {
+    if (ocall_connect_args->addrlen > INT_MAX || ocall_connect_args->bind_addrlen > INT_MAX) {
         ret = -EINVAL;
         goto err;
     }
 
-    ret = DO_SYSCALL(socket, ms->ms_domain, ms->ms_type, ms->ms_protocol);
+    ret = DO_SYSCALL(socket, ocall_connect_args->domain, ocall_connect_args->type,
+                     ocall_connect_args->protocol);
     if (ret < 0)
         goto err;
 
     fd = ret;
 
-    if (ms->ms_bind_addr && ms->ms_bind_addr->sa_family) {
-        if (ms->ms_domain == AF_INET6) {
+    if (ocall_connect_args->bind_addr && ocall_connect_args->bind_addr->sa_family) {
+        if (ocall_connect_args->domain == AF_INET6) {
             /* IPV6_V6ONLY socket option can only be set before first bind */
-            ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY, &ms->ms_ipv6_v6only,
-                             sizeof(ms->ms_ipv6_v6only));
+            ret = DO_SYSCALL(setsockopt, fd, IPPROTO_IPV6, IPV6_V6ONLY,
+                             &ocall_connect_args->ipv6_v6only,
+                             sizeof(ocall_connect_args->ipv6_v6only));
             if (ret < 0)
                 goto err_fd;
         }
 
-        ret = DO_SYSCALL_INTERRUPTIBLE(bind, fd, ms->ms_bind_addr, ms->ms_bind_addrlen);
+        ret = DO_SYSCALL_INTERRUPTIBLE(bind, fd, ocall_connect_args->bind_addr,
+                                       ocall_connect_args->bind_addrlen);
         if (ret < 0)
             goto err_fd;
     }
 
-    if (ms->ms_addr) {
-        ret = DO_SYSCALL_INTERRUPTIBLE(connect, fd, ms->ms_addr, ms->ms_addrlen);
+    if (ocall_connect_args->addr) {
+        ret = DO_SYSCALL_INTERRUPTIBLE(connect, fd, ocall_connect_args->addr,
+                                       ocall_connect_args->addrlen);
 
         if (ret == -EINPROGRESS) {
             do {
@@ -486,12 +486,12 @@ static long sgx_ocall_connect(void* pms) {
             goto err_fd;
     }
 
-    if (ms->ms_bind_addr && !ms->ms_bind_addr->sa_family) {
-        int addrlen = ms->ms_bind_addrlen;
-        ret = DO_SYSCALL(getsockname, fd, ms->ms_bind_addr, &addrlen);
+    if (ocall_connect_args->bind_addr && !ocall_connect_args->bind_addr->sa_family) {
+        int addrlen = ocall_connect_args->bind_addrlen;
+        ret = DO_SYSCALL(getsockname, fd, ocall_connect_args->bind_addr, &addrlen);
         if (ret < 0)
             goto err_fd;
-        ms->ms_bind_addrlen = addrlen;
+        ocall_connect_args->bind_addrlen = addrlen;
     }
 
     return fd;
@@ -502,9 +502,10 @@ err:
     return ret;
 }
 
-static long sgx_ocall_connect_simple(void* pms) {
-    ms_ocall_connect_simple_t* ms = pms;
-    int ret = DO_SYSCALL_INTERRUPTIBLE(connect, ms->ms_fd, ms->ms_addr, (int)ms->ms_addrlen);
+static long sgx_ocall_connect_simple(void* pargs) {
+    struct ocall_connect_simple* ocall_connect_args = pargs;
+    int ret = DO_SYSCALL_INTERRUPTIBLE(connect, ocall_connect_args->fd, ocall_connect_args->addr,
+                                       (int)ocall_connect_args->addrlen);
     if (ret < 0) {
         /* XXX: Non blocking socket. Currently there is no way of notifying LibOS of successful or
          * failed connection, so we have to block and wait. */
@@ -512,7 +513,7 @@ static long sgx_ocall_connect_simple(void* pms) {
             return ret;
         }
         struct pollfd pfd = {
-            .fd = ms->ms_fd,
+            .fd = ocall_connect_args->fd,
             .events = POLLOUT,
         };
         ret = DO_SYSCALL(poll, &pfd, 1, /*timeout=*/-1);
@@ -521,7 +522,7 @@ static long sgx_ocall_connect_simple(void* pms) {
         }
         int val = 0;
         unsigned int len = sizeof(val);
-        ret = DO_SYSCALL(getsockopt, ms->ms_fd, SOL_SOCKET, SO_ERROR, &val, &len);
+        ret = DO_SYSCALL(getsockopt, ocall_connect_args->fd, SOL_SOCKET, SO_ERROR, &val, &len);
         if (ret < 0 || val < 0) {
             return ret < 0 ? ret : -EINVAL;
         }
@@ -531,126 +532,124 @@ static long sgx_ocall_connect_simple(void* pms) {
         /* Connect succeeded. */
     }
 
-    int addrlen = sizeof(*ms->ms_addr);
-    ret = DO_SYSCALL(getsockname, ms->ms_fd, ms->ms_addr, &addrlen);
+    int addrlen = sizeof(*ocall_connect_args->addr);
+    ret = DO_SYSCALL(getsockname, ocall_connect_args->fd, ocall_connect_args->addr, &addrlen);
     if (ret < 0) {
         return ret;
     }
 
-    ms->ms_addrlen = addrlen;
+    ocall_connect_args->addrlen = addrlen;
     return 0;
 }
 
-static long sgx_ocall_recv(void* pms) {
-    ms_ocall_recv_t* ms = (ms_ocall_recv_t*)pms;
+static long sgx_ocall_recv(void* pargs) {
+    struct ocall_recv* ocall_recv_args = (struct ocall_recv*)pargs;
     long ret;
 
-    if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
+    if (ocall_recv_args->addr && ocall_recv_args->addrlen > INT_MAX) {
         return -EINVAL;
     }
-    int addrlen = ms->ms_addr ? ms->ms_addrlen : 0;
+    int addrlen = ocall_recv_args->addr ? ocall_recv_args->addrlen : 0;
 
     struct msghdr hdr;
     struct iovec iov[1];
 
-    iov[0].iov_base    = ms->ms_buf;
-    iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = ms->ms_addr;
+    iov[0].iov_base    = ocall_recv_args->buf;
+    iov[0].iov_len     = ocall_recv_args->count;
+    hdr.msg_name       = ocall_recv_args->addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;
-    hdr.msg_control    = ms->ms_control;
-    hdr.msg_controllen = ms->ms_controllen;
+    hdr.msg_control    = ocall_recv_args->control;
+    hdr.msg_controllen = ocall_recv_args->controllen;
     hdr.msg_flags      = 0;
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(recvmsg, ms->ms_sockfd, &hdr, ms->ms_flags);
+    ret = DO_SYSCALL_INTERRUPTIBLE(recvmsg, ocall_recv_args->sockfd, &hdr, ocall_recv_args->flags);
 
     if (ret >= 0 && hdr.msg_name) {
-        /* note that ms->ms_addr is filled by recvmsg() itself */
-        ms->ms_addrlen = hdr.msg_namelen;
+        /* note that ocall_recv_args->addr is filled by recvmsg() itself */
+        ocall_recv_args->addrlen = hdr.msg_namelen;
     }
 
     if (ret >= 0 && hdr.msg_control) {
-        /* note that ms->ms_control is filled by recvmsg() itself */
-        ms->ms_controllen = hdr.msg_controllen;
+        /* note that ocall_recv_args->control is filled by recvmsg() itself */
+        ocall_recv_args->controllen = hdr.msg_controllen;
     }
 
     return ret;
 }
 
-static long sgx_ocall_send(void* pms) {
-    ms_ocall_send_t* ms = (ms_ocall_send_t*)pms;
-    long ret;
+static long sgx_ocall_send(void* pargs) {
+    struct ocall_send* ocall_send_args = (struct ocall_send*)pargs;
 
-    if (ms->ms_addr && ms->ms_addrlen > INT_MAX) {
+    if (ocall_send_args->addr && ocall_send_args->addrlen > INT_MAX) {
         return -EINVAL;
     }
-    int addrlen = ms->ms_addr ? ms->ms_addrlen : 0;
+    int addrlen = ocall_send_args->addr ? ocall_send_args->addrlen : 0;
 
     struct msghdr hdr;
     struct iovec iov[1];
 
-    iov[0].iov_base    = (void*)ms->ms_buf;
-    iov[0].iov_len     = ms->ms_count;
-    hdr.msg_name       = (void*)ms->ms_addr;
+    iov[0].iov_base    = (void*)ocall_send_args->buf;
+    iov[0].iov_len     = ocall_send_args->count;
+    hdr.msg_name       = (void*)ocall_send_args->addr;
     hdr.msg_namelen    = addrlen;
     hdr.msg_iov        = iov;
     hdr.msg_iovlen     = 1;
-    hdr.msg_control    = ms->ms_control;
-    hdr.msg_controllen = ms->ms_controllen;
+    hdr.msg_control    = ocall_send_args->control;
+    hdr.msg_controllen = ocall_send_args->controllen;
     hdr.msg_flags      = 0;
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(sendmsg, ms->ms_sockfd, &hdr, MSG_NOSIGNAL | ms->ms_flags);
-    return ret;
+    return DO_SYSCALL_INTERRUPTIBLE(sendmsg, ocall_send_args->sockfd, &hdr,
+                                    MSG_NOSIGNAL | ocall_send_args->flags);
 }
 
-static long sgx_ocall_setsockopt(void* pms) {
-    ms_ocall_setsockopt_t* ms = (ms_ocall_setsockopt_t*)pms;
-    long ret;
-    if (ms->ms_optlen > INT_MAX) {
+static long sgx_ocall_setsockopt(void* pargs) {
+    struct ocall_setsockopt* ocall_setsockopt_args = (struct ocall_setsockopt*)pargs;
+    if (ocall_setsockopt_args->optlen > INT_MAX) {
         return -EINVAL;
     }
-    ret = DO_SYSCALL(setsockopt, ms->ms_sockfd, ms->ms_level, ms->ms_optname, ms->ms_optval,
-                     (int)ms->ms_optlen);
-    return ret;
+    return DO_SYSCALL(setsockopt, ocall_setsockopt_args->sockfd, ocall_setsockopt_args->level,
+                      ocall_setsockopt_args->optname, ocall_setsockopt_args->optval,
+                      (int)ocall_setsockopt_args->optlen);
 }
 
-static long sgx_ocall_shutdown(void* pms) {
-    ms_ocall_shutdown_t* ms = (ms_ocall_shutdown_t*)pms;
-    DO_SYSCALL_INTERRUPTIBLE(shutdown, ms->ms_sockfd, ms->ms_how);
+static long sgx_ocall_shutdown(void* pargs) {
+    struct ocall_shutdown* ocall_shutdown_args = (struct ocall_shutdown*)pargs;
+    DO_SYSCALL_INTERRUPTIBLE(shutdown, ocall_shutdown_args->sockfd, ocall_shutdown_args->how);
     return 0;
 }
 
-static long sgx_ocall_gettime(void* pms) {
-    ms_ocall_gettime_t* ms = (ms_ocall_gettime_t*)pms;
+static long sgx_ocall_gettime(void* pargs) {
+    struct ocall_gettime* ocall_gettime_args = (struct ocall_gettime*)pargs;
     struct timeval tv;
     DO_SYSCALL(gettimeofday, &tv, NULL);
-    ms->ms_microsec = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
+    ocall_gettime_args->microsec = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
     return 0;
 }
 
-static long sgx_ocall_sched_yield(void* pms) {
-    __UNUSED(pms);
+static long sgx_ocall_sched_yield(void* pargs) {
+    __UNUSED(pargs);
     DO_SYSCALL_INTERRUPTIBLE(sched_yield);
     return 0;
 }
 
-static long sgx_ocall_poll(void* pms) {
-    ms_ocall_poll_t* ms = (ms_ocall_poll_t*)pms;
+static long sgx_ocall_poll(void* pargs) {
+    struct ocall_poll* ocall_poll_args = (struct ocall_poll*)pargs;
     long ret;
 
     struct timespec* timeout = NULL;
     struct timespec end_time = { 0 };
-    bool have_timeout = ms->ms_timeout_us != (uint64_t)-1;
+    bool have_timeout = ocall_poll_args->timeout_us != (uint64_t)-1;
     if (have_timeout) {
-        uint64_t timeout_ns = ms->ms_timeout_us * TIME_NS_IN_US;
+        uint64_t timeout_ns = ocall_poll_args->timeout_us * TIME_NS_IN_US;
         timeout = __alloca(sizeof(*timeout));
         timeout->tv_sec = timeout_ns / TIME_NS_IN_S;
         timeout->tv_nsec = timeout_ns % TIME_NS_IN_S;
         time_get_now_plus_ns(&end_time, timeout_ns);
     }
 
-    ret = DO_SYSCALL_INTERRUPTIBLE(ppoll, ms->ms_fds, ms->ms_nfds, timeout, NULL);
+    ret = DO_SYSCALL_INTERRUPTIBLE(ppoll, ocall_poll_args->fds, ocall_poll_args->nfds, timeout, NULL);
 
     if (have_timeout) {
         int64_t diff = time_ns_diff_from_now(&end_time);
@@ -658,83 +657,79 @@ static long sgx_ocall_poll(void* pms) {
             /* We might have slept a bit too long. */
             diff = 0;
         }
-        ms->ms_timeout_us = (uint64_t)diff / TIME_NS_IN_US;
+        ocall_poll_args->timeout_us = (uint64_t)diff / TIME_NS_IN_US;
     }
 
     return ret;
 }
 
-static long sgx_ocall_rename(void* pms) {
-    ms_ocall_rename_t* ms = (ms_ocall_rename_t*)pms;
-    long ret;
-    ret = DO_SYSCALL(rename, ms->ms_oldpath, ms->ms_newpath);
-    return ret;
+static long sgx_ocall_rename(void* pargs) {
+    struct ocall_rename* ocall_rename_args = (struct ocall_rename*)pargs;
+    return DO_SYSCALL(rename, ocall_rename_args->oldpath, ocall_rename_args->newpath);
 }
 
-static long sgx_ocall_delete(void* pms) {
-    ms_ocall_delete_t* ms = (ms_ocall_delete_t*)pms;
+static long sgx_ocall_delete(void* pargs) {
+    struct ocall_delete* ocall_delete_args = (struct ocall_delete*)pargs;
     long ret;
 
-    ret = DO_SYSCALL(unlink, ms->ms_pathname);
+    ret = DO_SYSCALL(unlink, ocall_delete_args->pathname);
 
     if (ret == -EISDIR)
-        ret = DO_SYSCALL(rmdir, ms->ms_pathname);
+        ret = DO_SYSCALL(rmdir, ocall_delete_args->pathname);
 
     return ret;
 }
 
-static long sgx_ocall_eventfd(void* pms) {
-    ms_ocall_eventfd_t* ms = (ms_ocall_eventfd_t*)pms;
-    long ret;
-
-    ret = DO_SYSCALL(eventfd2, 0, ms->ms_flags);
-
-    return ret;
+static long sgx_ocall_eventfd(void* pargs) {
+    struct ocall_eventfd* ocall_eventfd_args = (struct ocall_eventfd*)pargs;
+    return DO_SYSCALL(eventfd2, 0, ocall_eventfd_args->flags);
 }
 
-static long sgx_ocall_debug_map_add(void* pms) {
-    ms_ocall_debug_map_add_t* ms = (ms_ocall_debug_map_add_t*)pms;
+static long sgx_ocall_debug_map_add(void* pargs) {
+    struct ocall_debug_map_add* ocall_debug_args = (struct ocall_debug_map_add*)pargs;
 
 #ifdef DEBUG
-    int ret = debug_map_add(ms->ms_name, ms->ms_addr);
+    int ret = debug_map_add(ocall_debug_args->name, ocall_debug_args->addr);
     if (ret < 0)
-        log_error("debug_map_add(%s, %p): %d", ms->ms_name, ms->ms_addr, ret);
+        log_error("debug_map_add(%s, %p): %d", ocall_debug_args->name, ocall_debug_args->addr, ret);
 
-    sgx_profile_report_elf(ms->ms_name, ms->ms_addr);
+    sgx_profile_report_elf(ocall_debug_args->name, ocall_debug_args->addr);
 #else
-    __UNUSED(ms);
+    __UNUSED(ocall_debug_args);
 #endif
     return 0;
 }
 
-static long sgx_ocall_debug_map_remove(void* pms) {
-    ms_ocall_debug_map_remove_t* ms = (ms_ocall_debug_map_remove_t*)pms;
+static long sgx_ocall_debug_map_remove(void* pargs) {
+    struct ocall_debug_map_remove* ocall_debug_args = (struct ocall_debug_map_remove*)pargs;
 
 #ifdef DEBUG
-    int ret = debug_map_remove(ms->ms_addr);
+    int ret = debug_map_remove(ocall_debug_args->addr);
     if (ret < 0)
-        log_error("debug_map_remove(%p): %d", ms->ms_addr, ret);
+        log_error("debug_map_remove(%p): %d", ocall_debug_args->addr, ret);
 #else
-    __UNUSED(ms);
+    __UNUSED(ocall_debug_args);
 #endif
     return 0;
 }
 
-static long sgx_ocall_debug_describe_location(void* pms) {
-    ms_ocall_debug_describe_location_t* ms = (ms_ocall_debug_describe_location_t*)pms;
+static long sgx_ocall_debug_describe_location(void* pargs) {
+    struct ocall_debug_describe_location* debug_args = (struct ocall_debug_describe_location*)pargs;
 
 #ifdef DEBUG
-    return debug_describe_location(ms->ms_addr, ms->ms_buf, ms->ms_buf_size);
+    return debug_describe_location(debug_args->addr, debug_args->buf, debug_args->buf_size);
 #else
-    __UNUSED(ms);
+    __UNUSED(debug_args);
     return -ENOSYS;
 #endif
 }
 
-static long sgx_ocall_get_quote(void* pms) {
-    ms_ocall_get_quote_t* ms = (ms_ocall_get_quote_t*)pms;
-    return retrieve_quote(ms->ms_is_epid ? &ms->ms_spid : NULL, ms->ms_linkable, &ms->ms_report,
-                          &ms->ms_nonce, &ms->ms_quote, &ms->ms_quote_len);
+static long sgx_ocall_get_quote(void* pargs) {
+    struct ocall_get_quote* ocall_quote_args = (struct ocall_get_quote*)pargs;
+    return retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
+                          ocall_quote_args->linkable, &ocall_quote_args->report,
+                          &ocall_quote_args->nonce, &ocall_quote_args->quote,
+                          &ocall_quote_args->quote_len);
 }
 
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {

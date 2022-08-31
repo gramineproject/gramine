@@ -21,22 +21,22 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
         /* after this point, g_rpc_queue != NULL */
     }
 
-    ms_ecall_enclave_start_t ms = {
-        .ms_libpal_uri               = libpal_uri,
-        .ms_libpal_uri_len           = strlen(ms.ms_libpal_uri),
-        .ms_args                     = args,
-        .ms_args_size                = args_size,
-        .ms_env                      = env,
-        .ms_env_size                 = env_size,
-        .ms_parent_stream_fd         = parent_stream_fd,
-        .ms_qe_targetinfo            = qe_targetinfo,
-        .ms_topo_info                = topo_info,
-        .ms_dns_host_conf            = dns_conf,
-        .ms_reserved_mem_ranges      = reserved_mem_ranges,
-        .ms_reserved_mem_ranges_size = reserved_mem_ranges_size,
-        .rpc_queue                   = g_rpc_queue,
+    struct ecall_enclave_start start_args = {
+        .libpal_uri               = libpal_uri,
+        .libpal_uri_len           = strlen(start_args.libpal_uri),
+        .args                     = args,
+        .args_size                = args_size,
+        .env                      = env,
+        .env_size                 = env_size,
+        .parent_stream_fd         = parent_stream_fd,
+        .qe_targetinfo            = qe_targetinfo,
+        .topo_info                = topo_info,
+        .dns_host_conf            = dns_conf,
+        .reserved_mem_ranges      = reserved_mem_ranges,
+        .reserved_mem_ranges_size = reserved_mem_ranges_size,
+        .rpc_queue                = g_rpc_queue,
     };
-    return sgx_ecall(ECALL_ENCLAVE_START, &ms);
+    return sgx_ecall(ECALL_ENCLAVE_START, &start_args);
 }
 
 int ecall_thread_start(void) {
