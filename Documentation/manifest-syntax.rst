@@ -116,7 +116,7 @@ or
 
 ::
 
-   loader.argv = ["arg0", "arg1", "arg2"]
+   loader.argv = ["arg0", "arg1", "arg2", ...]
 
 or
 

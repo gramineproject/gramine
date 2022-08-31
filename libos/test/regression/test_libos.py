@@ -170,12 +170,12 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('User Program Started', stdout)
         self.assertIn('Exception \'test runtime error\' caught', stdout)
 
-    def test_111_argv(self):
-        args = ['bootstrap', 'THIS', 'SHOULD GO', 'TO', 'THE', 'APP ']
-        stdout, _ = self.run_binary(['argv'])
-        self.assertIn('# of arguments: %d\n' % len(args), stdout)
-        for i, arg in enumerate(args):
-            self.assertIn('argv[%d] = %s\n' % (i, arg), stdout)
+    def test_111_argv_from_manifest(self):
+        expected_argv = ['bootstrap', 'THIS', 'SHOULD GO', 'TO', 'THE', 'APP ']
+        stdout, _ = self.run_binary(['argv_from_manifest'])
+        self.assertIn(f'# of arguments: {len(expected_argv)}\n', stdout)
+        for i, arg in enumerate(expected_argv):
+            self.assertIn(f'argv[{i}] = {arg}\n', stdout)
 
     def test_200_exec(self):
         stdout, _ = self.run_binary(['exec'])

@@ -423,17 +423,19 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (ret < 0)
         INIT_FAIL_MANIFEST("Cannot parse 'loader.argv_src_file'");
 
-    ssize_t argv_option_cnt = 0;
-    toml_array_t* argv_option = toml_array_in(manifest_loader, "argv");
-    if (argv_option) {
-        argv_option_cnt = toml_array_nelem(argv_option);
-        if (argv_option_cnt < 0)
+    size_t manifest_argv_cnt = 0;
+    toml_array_t* manifest_argv = toml_array_in(manifest_loader, "argv");
+    if (manifest_argv) {
+        int argv_nelem = toml_array_nelem(manifest_argv);
+        if (argv_nelem < 0)
             INIT_FAIL_MANIFEST("Cannot parse 'loader.argv'");
-        if (argv_option_cnt == 0)
+        /* XXX: Remove this when the support of argc == 0 is added. */
+        if (argv_nelem == 0)
             INIT_FAIL_MANIFEST("'loader.argv' has no arguments, this is unsupported");
+        manifest_argv_cnt = argv_nelem;
     }
 
-    if ((use_cmdline_argv ? 1 : 0) + (argv_option_cnt > 0 ? 1 : 0) + (argv_src_file ? 1 : 0) > 1) {
+    if ((use_cmdline_argv ? 1 : 0) + (manifest_argv_cnt > 0 ? 1 : 0) + (argv_src_file ? 1 : 0) > 1) {
         INIT_FAIL_MANIFEST("Options loader.argv, loader.argv_src_file, and "
                            "loader.insecure__use_cmdline_argv are mutually exclusive");
     }
@@ -461,26 +463,26 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                 INIT_FAIL("Gramine started with no arguments, this is unsupported");
             arguments[0] = argv0_override;
         }
-    } else if (argv_option_cnt > 0) {
+    } else if (manifest_argv_cnt > 0) {
         /* Load argv from a manifest and discard cmdline argv. */
         if (arguments[0] && arguments[1]) {
             log_error("Discarding cmdline arguments (%s %s [...]) because loader.argv was "
                       "specified in the manifest.", arguments[0], arguments[1]);
         }
 
-        const char** new_args = malloc(sizeof(*new_args) * (argv_option_cnt + 1));
+        const char** new_args = malloc(sizeof(*new_args) * (manifest_argv_cnt + 1));
         if (new_args == NULL) {
             INIT_FAIL("Cannot allocate memory for arguments");
         }
 
-        for (ssize_t i = 0; i < argv_option_cnt; i++) {
-            toml_datum_t toml_arg = toml_string_at(argv_option, i);
+        for (size_t i = 0; i < manifest_argv_cnt; i++) {
+            toml_datum_t toml_arg = toml_string_at(manifest_argv, i);
             if (!toml_arg.ok) {
                 INIT_FAIL("Cannot parse argv[%zd]", i);
             }
             new_args[i] = toml_arg.u.s;
         }
-        new_args[argv_option_cnt] = NULL;
+        new_args[manifest_argv_cnt] = NULL;
         arguments = new_args;
     } else if (argv_src_file) {
         /* Load argv from a file and discard cmdline argv. We trust the file contents (this can
