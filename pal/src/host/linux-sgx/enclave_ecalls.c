@@ -86,7 +86,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
             return;
         }
 
-        ms_ecall_enclave_start_t* ms = (ms_ecall_enclave_start_t*)ecall_args;
+        ecall_enclave_start_t* ms = (ecall_enclave_start_t*)ecall_args;
 
         if (!ms || !sgx_is_completely_outside_enclave(ms, sizeof(*ms))) {
             return;
@@ -95,7 +95,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
             return;
 
-        struct pal_topo_info* topo_info = READ_ONCE(ms->ms_topo_info);
+        struct pal_topo_info* topo_info = READ_ONCE(ms->topo_info);
         if (!topo_info || !sgx_is_completely_outside_enclave(topo_info, sizeof(*topo_info)))
             return;
 
@@ -111,10 +111,10 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         init_xsave_size(report.body.attributes.xfrm);
 
         /* pal_linux_main is responsible for checking the passed arguments */
-        pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
-                       READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
-                       READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd),
-                       READ_ONCE(ms->ms_qe_targetinfo), topo_info);
+        pal_linux_main(READ_ONCE(ms->libpal_uri), READ_ONCE(ms->libpal_uri_len),
+                       READ_ONCE(ms->args), READ_ONCE(ms->args_size), READ_ONCE(ms->env),
+                       READ_ONCE(ms->env_size), READ_ONCE(ms->parent_stream_fd),
+                       READ_ONCE(ms->qe_targetinfo), topo_info);
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

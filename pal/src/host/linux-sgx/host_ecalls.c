@@ -21,17 +21,17 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
         /* after this point, g_rpc_queue != NULL */
     }
 
-    ms_ecall_enclave_start_t ms;
-    ms.ms_libpal_uri       = libpal_uri;
-    ms.ms_libpal_uri_len   = strlen(ms.ms_libpal_uri);
-    ms.ms_args             = args;
-    ms.ms_args_size        = args_size;
-    ms.ms_env              = env;
-    ms.ms_env_size         = env_size;
-    ms.ms_parent_stream_fd = parent_stream_fd;
-    ms.ms_qe_targetinfo    = qe_targetinfo;
-    ms.ms_topo_info        = topo_info;
-    ms.rpc_queue           = g_rpc_queue;
+    ecall_enclave_start_t ms;
+    ms.libpal_uri       = libpal_uri;
+    ms.libpal_uri_len   = strlen(ms.libpal_uri);
+    ms.args             = args;
+    ms.args_size        = args_size;
+    ms.env              = env;
+    ms.env_size         = env_size;
+    ms.parent_stream_fd = parent_stream_fd;
+    ms.qe_targetinfo    = qe_targetinfo;
+    ms.topo_info        = topo_info;
+    ms.rpc_queue        = g_rpc_queue;
     return sgx_ecall(ECALL_ENCLAVE_START, &ms);
 }
 
