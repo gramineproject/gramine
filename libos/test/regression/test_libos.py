@@ -1144,7 +1144,7 @@ class TC_50_GDB(RegressionTestCase):
         stdout, _ = self.run_gdb(['debug'], 'debug.gdb')
 
         backtrace_1 = self.find('backtrace 1', stdout)
-        self.assertIn(f' main ()', backtrace_1)
+        self.assertIn(' main ()', backtrace_1)
         self.assertIn(' _start ()', backtrace_1)
         self.assertIn('debug.c', backtrace_1)
         if not USES_MUSL:
