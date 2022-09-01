@@ -50,6 +50,12 @@ typedef struct {
     struct handle_ops* ops;
 } PAL_HDR;
 
+/*
+ * This header provides `PAL_HANDLE` type definition.
+ * All host resources being part of `PAL_HANDLE` must be released when spawning another process
+ * (`PalProcessCreate`), e.g. Linux PAL must set `OCLOEXEC` flag on all open file descriptors.
+ * LibOS layer takes care of migrating all necessary handles using `PalSendHandle`.
+ */
 #include "pal_host.h"
 
 static inline void init_handle_hdr(PAL_HANDLE handle, int pal_type) {
