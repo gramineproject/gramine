@@ -1,6 +1,3 @@
-GRAMINEDIR ?= ../..
-GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
-
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 ifeq ($(DEBUG),1)
@@ -51,9 +48,13 @@ ssl/server.crt: ssl/ca_config.conf
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/tools/sgx/ra-tls \
-          $(shell pkg-config --cflags mbedtls_gramine)
-LDFLAGS += $(shell pkg-config --libs mbedtls_gramine)
+# Use hard-coded GRAMINEDIR because we currently fail to provide secret prov headers in Gramine
+# installation. We also use `sgx_util` pkg-config because we don't have a secret prov one.
+# TODO: Create a pkg-config file for secretprov_gramine libs, and use it in below
+#       CFLAGS/LDFLAGS lines (via `pkg-config {--cflags|--libs} secretprov_gramine`).
+GRAMINEDIR ?= ../..
+CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/tools/sgx/ra-tls
+LDFLAGS += -Wl,--enable-new-dtags $(shell pkg-config --libs sgx_util)
 
 %/server_epid: %/server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@

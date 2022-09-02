@@ -1,6 +1,3 @@
-GRAMINEDIR ?= ../..
-GRAMINE_PKGLIBDIR ?= /usr/lib/x86_64-linux-gnu/gramine # this is debian/ubuntu specific
-
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 ifeq ($(DEBUG),1)
@@ -42,11 +39,9 @@ ssl/server.crt: ssl/ca_config.conf
 
 ############################# MBEDTLS DEPENDENCY ##############################
 
-#
-# This download is done to get headers in include/, because we currently fail
-# to provide the headers.
-# TODO: install headers, and `make install` before copying them
-#
+# This download is done to get headers in include/, because we currently fail to provide the headers
+# (`pkg-config --cflags mbedtls_gramine` in the below CFLAGS line returns a non-existing directory).
+# TODO: install mbedtls_gramine headers during Gramine install, and use them in below CFLAGS line.
 
 MBEDTLS_VERSION ?= 3.2.1
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
@@ -77,8 +72,9 @@ mbedtls/.mbedtls_configured: mbedtls/.mbedtls_downloaded
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += -I./mbedtls/include $(shell pkg-config --cflags mbedtls_gramine)
-LDFLAGS += -ldl $(shell pkg-config --libs mbedtls_gramine)
+# TODO: use `$(shell pkg-config --cflags mbedtls_gramine)` instead of local mbedtls includes
+CFLAGS += -I./mbedtls/include
+LDFLAGS += -ldl -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
 
 server: src/server.c mbedtls/.mbedtls_configured
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
