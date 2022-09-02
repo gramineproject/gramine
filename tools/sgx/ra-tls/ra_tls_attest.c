@@ -14,7 +14,6 @@
  */
 
 #define _GNU_SOURCE
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -155,8 +154,8 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
 
     /* below function writes data at the end of the buffer */
     int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, sizeof(pk_der));
-    if (pk_der_size_byte <= 0)
-        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+    if (pk_der_size_byte < 0)
+        return pk_der_size_byte;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
@@ -202,8 +201,6 @@ static int create_key(mbedtls_ctr_drbg_context* ctr_drbg, mbedtls_pk_context* pk
         if (ret < 0)
             goto out;
     } else {
-        assert(elliptic_curve_group_id != MBEDTLS_ECP_DP_NONE);
-
         /* ECDSA pk generation is requested by the user of RA-TLS (actually, via EC key API) */
         ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
         if (ret < 0)

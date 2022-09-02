@@ -167,9 +167,9 @@ static int sha256_over_crt_pk(mbedtls_x509_crt* crt, uint8_t* sha) {
     uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, PUB_KEY_SIZE_MAX);
-    if (pk_der_size_byte <= 0)
-        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, sizeof(pk_der));
+    if (pk_der_size_byte < 0)
+        return pk_der_size_byte;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
