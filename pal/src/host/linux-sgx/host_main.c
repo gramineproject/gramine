@@ -631,6 +631,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
     char* profile_str = NULL;
+    char* cpu_feature_str = NULL;
 #ifdef DEBUG
     char* profile_mode_str = NULL;
 #endif
@@ -739,6 +740,35 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
         /* error is already printed by the called func */
         goto out;
     }
+
+    /* check if not-security-critical HW features should be disabled for XSAVE/AEX performance */
+    ret = toml_string_in(manifest_root, "sgx.cpu_features.avx", &cpu_feature_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.cpu_features.avx'");
+        ret = -EINVAL;
+        goto out;
+    }
+    enclave_info->avx_disabled = strcmp(cpu_feature_str, "disabled") == 0;
+    free(cpu_feature_str);
+    cpu_feature_str = NULL;
+
+    ret = toml_string_in(manifest_root, "sgx.cpu_features.avx512", &cpu_feature_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.cpu_features.avx512'");
+        ret = -EINVAL;
+        goto out;
+    }
+    enclave_info->avx512_disabled = strcmp(cpu_feature_str, "disabled") == 0;
+    free(cpu_feature_str);
+    cpu_feature_str = NULL;
+
+    ret = toml_string_in(manifest_root, "sgx.cpu_features.amx", &cpu_feature_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.cpu_features.amx'");
+        ret = -EINVAL;
+        goto out;
+    }
+    enclave_info->amx_disabled = strcmp(cpu_feature_str, "disabled") == 0;
 
     ret = toml_string_in(manifest_root, "sgx.profile.enable", &profile_str);
     if (ret < 0) {
@@ -892,6 +922,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info)
 out:
     free(dummy_sigfile_str);
     free(profile_str);
+    free(cpu_feature_str);
 #ifdef DEBUG
     free(profile_mode_str);
 #endif

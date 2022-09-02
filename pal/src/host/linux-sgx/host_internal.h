@@ -51,6 +51,11 @@ struct pal_enclave {
     enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 
+    /* disable not-security-critical HW features (for performance of XSAVE/XRSTOR/AEX) */
+    bool avx_disabled;
+    bool avx512_disabled;
+    bool amx_disabled;
+
 #ifdef DEBUG
     /* profiling */
     bool profile_enable;

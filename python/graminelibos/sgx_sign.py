@@ -73,10 +73,19 @@ def parse_size(value):
 def collect_bits(manifest_sgx, options_dict):
     val = 0
     for opt, bits in options_dict.items():
-        if manifest_sgx[opt] == 1:
+        if manifest_sgx.get(opt, 0) == 1:
             val |= bits
     return val
 
+def collect_cpu_feature_bits(manifest_sgx, options_dict):
+    if manifest_sgx.get('cpu_features') is None:
+        return 0
+
+    val = 0
+    for opt, bits in options_dict.items():
+        if manifest_sgx['cpu_features'].get(opt, "") == "required":
+            val |= bits
+    return val
 
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
@@ -84,11 +93,11 @@ def get_enclave_attributes(manifest_sgx):
     }
 
     xfrms_dict = {
-        'require_avx': offs.SGX_XFRM_AVX,
-        'require_avx512': offs.SGX_XFRM_AVX512,
-        'require_mpx': offs.SGX_XFRM_MPX,
-        'require_pkru': offs.SGX_XFRM_PKRU,
-        'require_amx': offs.SGX_XFRM_AMX,
+        'avx': offs.SGX_XFRM_AVX,
+        'avx512': offs.SGX_XFRM_AVX512,
+        'mpx': offs.SGX_XFRM_MPX,
+        'pkru': offs.SGX_XFRM_PKRU,
+        'amx': offs.SGX_XFRM_AMX,
     }
 
     miscs_dict = {
@@ -99,8 +108,18 @@ def get_enclave_attributes(manifest_sgx):
     if ARCHITECTURE == 'amd64':
         flags |= offs.SGX_FLAGS_MODE64BIT
 
-    xfrms = offs.SGX_XFRM_LEGACY | collect_bits(manifest_sgx, xfrms_dict)
+    xfrms = offs.SGX_XFRM_LEGACY | collect_cpu_feature_bits(manifest_sgx, xfrms_dict)
     miscs = collect_bits(manifest_sgx, miscs_dict)
+
+    # TODO: these were deprecated in release v1.3, so they should be removed in v1.5
+    deprecated_xfrms_dict = {
+        'require_avx': offs.SGX_XFRM_AVX,
+        'require_avx512': offs.SGX_XFRM_AVX512,
+        'require_mpx': offs.SGX_XFRM_MPX,
+        'require_pkru': offs.SGX_XFRM_PKRU,
+        'require_amx': offs.SGX_XFRM_AMX,
+    }
+    xfrms |= collect_bits(manifest_sgx, deprecated_xfrms_dict)
 
     return flags, xfrms, miscs
 

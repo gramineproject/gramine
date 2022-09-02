@@ -91,14 +91,16 @@ class Manifest:
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
-        sgx.setdefault('require_avx', False)
-        sgx.setdefault('require_avx512', False)
-        sgx.setdefault('require_mpx', False)
-        sgx.setdefault('require_pkru', False)
-        sgx.setdefault('require_amx', False)
         sgx.setdefault('support_exinfo', False)
         sgx.setdefault('nonpie_binary', False)
         sgx.setdefault('enable_stats', False)
+
+        sgx_cpu_features = sgx.setdefault('cpu_features', {})
+        sgx_cpu_features.setdefault('mpx', "autodetect")
+        sgx_cpu_features.setdefault('pkru', "autodetect")
+        sgx_cpu_features.setdefault('avx', "autodetect")
+        sgx_cpu_features.setdefault('avx512', "autodetect")
+        sgx_cpu_features.setdefault('amx', "autodetect")
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
