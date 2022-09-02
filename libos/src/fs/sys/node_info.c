@@ -119,8 +119,8 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
         return -ENOMEM;
 
     /*
-     * Enumerate minimum set of node meminfo stats (the default stats in Linux, without specific `#ifdef CONFIG_xxx`).
-     * This set is based on Linux v5.19, see below for details:
+     * Enumerate minimum set of node meminfo stats (the default stats in Linux, without specific
+     * `#ifdef CONFIG_xxx`). This set is based on Linux v5.19, see below for details:
      *
      * - https://elixir.bootlin.com/linux/v5.19/source/drivers/base/node.c#L369
     */
