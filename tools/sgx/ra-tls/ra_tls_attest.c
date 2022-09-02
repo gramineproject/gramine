@@ -9,11 +9,6 @@
  * with both EPID-based (quote v2) and ECDSA-based (quote v3 or DCAP) SGX quotes (in fact, it is
  * agnostic to the format of the SGX quote).
  *
- * The self-signed RA-TLS certificate is signed by an ephemeral keypair generated and kept inside
- * the enclave. The keypair is either RSA (the available public key sizes are 3072, 4096) or ECDSA
- * (the available curves are SECP384R1, SECP521R1). By default, the keypair is RSA-3072 but can be
- * configured via the envvar RA_TLS_CERT_SIGNATURE_ALGO.
- *
  * This file is part of the RA-TLS attestation library which is typically linked into server
  * applications. This library is *not* thread-safe.
  */
@@ -159,7 +154,7 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
     uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, PUB_KEY_SIZE_MAX);
+    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, sizeof(pk_der));
     if (pk_der_size_byte <= 0)
         return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
 
@@ -174,9 +169,8 @@ static int create_key(mbedtls_ctr_drbg_context* ctr_drbg, mbedtls_pk_context* pk
     int ret;
     size_t rsa_key_size = 0;
     int elliptic_curve_group_id = MBEDTLS_ECP_DP_NONE;
-    char* key_algo = NULL;
 
-    key_algo = strdup(getenv(RA_TLS_CERT_SIGNATURE_ALGO) ? : RA_TLS_CERT_SIGNATURE_ALGO_DEFAULT);
+    char* key_algo = strdup(getenv(RA_TLS_CERT_SIGNATURE_ALGO) ?: RA_TLS_CERT_SIGNATURE_ALGO_DEFAULT);
     if (!key_algo) {
         ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
         goto out;

@@ -93,12 +93,12 @@ static int mbedtls_to_pal_error(int error) {
             return -PAL_ERROR_CRYPTO_KEY_GEN_FAILED;
 
         case MBEDTLS_ERR_ECP_INVALID_KEY:
-        case MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH:
         case MBEDTLS_ERR_RSA_KEY_CHECK_FAILED:
             return -PAL_ERROR_CRYPTO_INVALID_KEY;
 
         case MBEDTLS_ERR_RSA_VERIFY_FAILED:
         case MBEDTLS_ERR_ECP_VERIFY_FAILED:
+        case MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH:
             return -PAL_ERROR_CRYPTO_VERIFY_FAILED;
 
         case MBEDTLS_ERR_RSA_RNG_FAILED:
@@ -107,7 +107,7 @@ static int mbedtls_to_pal_error(int error) {
 
         case MBEDTLS_ERR_PK_INVALID_ALG:
         case MBEDTLS_ERR_PK_UNKNOWN_PK_ALG:
-            return -PAL_ERROR_CRYPTO_INVALID_PK_ALG;
+            return -PAL_ERROR_CRYPTO_INVALID_ALGO;
 
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
