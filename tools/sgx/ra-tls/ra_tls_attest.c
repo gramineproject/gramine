@@ -201,6 +201,12 @@ static int create_key(mbedtls_ctr_drbg_context* ctr_drbg, mbedtls_pk_context* pk
         if (ret < 0)
             goto out;
     } else {
+        /* TODO: uncomment the below assert once RA-TLS include dependencies are untangled.
+         * This is tracked by the following issue:
+         * https://github.com/gramineproject/gramine/issues/876.
+         */
+        /* assert(elliptic_curve_group_id != MBEDTLS_ECP_DP_NONE); */
+
         /* ECDSA pk generation is requested by the user of RA-TLS (actually, via EC key API) */
         ret = mbedtls_pk_setup(pk, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
         if (ret < 0)
