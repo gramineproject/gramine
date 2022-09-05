@@ -124,10 +124,16 @@ or
 
    loader.argv_src_file = "file:file_with_serialized_argv"
 
-If you want your application to use commandline arguments you need to either set
-``loader.insecure__use_cmdline_argv`` (insecure in almost all cases), put them
-into ``loader.argv`` array or point ``loader.argv_src_file`` to a file
-containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
+If you want your application to use commandline arguments, you must choose one
+of the three mutually exclusive options:
+
+- set ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases),
+- put commandline arguments into ``loader.argv`` array,
+- point ``loader.argv_src_file`` to a file
+  containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
+
+If none of the above arguments-handling manifest options is specified in the
+manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
 encrypted file. The former allows to securely hardcode arguments (current
@@ -138,12 +144,6 @@ arguments to be provided at runtime from an external (trusted) source.
    Pointing to an encrypted file is currently not supported, due to the fact
    that encryption key provisioning currently happens after setting up
    arguments.
-
-The ``loader.insecure__use_cmdline_argv``, ``loader.argv``, and
-``loader.argv_src_file`` options are mutually exclusive.
-
-If none of the above arguments-handling manifest options is specified in the
-manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
