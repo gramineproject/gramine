@@ -101,6 +101,7 @@ mbedtls_curl_libs = custom_target('mbedtls_curl',
         'libmbedcrypto.a',
         'libmbedtls.a',
         'libmbedx509.a',
+        'mbedtls-curl-dummy.h'
     ],
 
     build_by_default: true,
@@ -124,6 +125,7 @@ mbedtls_curl_dep = declare_dependency(
     # HACK: Apparently Meson considers the `mbedtls_pal_libs` to be "not linkable", because it has
     # multiple outputs; however, it allows picking the outputs one by one.
     link_with: [mbedtls_curl_libs[0], mbedtls_curl_libs[1], mbedtls_curl_libs[2]],
+    sources: [mbedtls_curl_libs[3]],
     include_directories: mbedtls_inc,
     compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-pal.h"',
 )

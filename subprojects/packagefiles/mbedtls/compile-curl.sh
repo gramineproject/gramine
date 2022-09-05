@@ -29,3 +29,4 @@ patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/gramine.patch
 patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/fcntl.patch
 
 make -C "$PRIVATE_DIR" lib "$@" install DESTDIR="$SUBPROJ_ROOT"/mbedtls-curl
+touch mbedtls-curl-dummy.h

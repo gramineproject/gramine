@@ -257,7 +257,7 @@ mbedtls_proj = subproject('mbedtls-mbedtls-3.2.1')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 mbedtls_curl_dep = mbedtls_proj.get_variable('mbedtls_curl_dep')
-meson.override_dependency('mbedtls_proj', mbedtls_curl_dep)
+meson.override_dependency('mbedtls_curl', mbedtls_curl_dep)
 
 if sgx
     protoc_c_prog = find_program('protoc-c')
