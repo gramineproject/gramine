@@ -8,6 +8,7 @@ hopefully emerge soon], ...).
 Currently officially supported distributions:
 
 - Ubuntu (20.04 LTS, 18.04 LTS).
+- RHEL-8-like distributions (like AlmaLinux 8, CentOS 8, Rocky Linux 8, ...).
 
 Exceptions
 ----------
