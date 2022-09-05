@@ -136,9 +136,9 @@ If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
-encrypted file. The former allows to securely hardcode arguments (current
-manifest syntax doesn't allow to include them inline), the latter allows the
-arguments to be provided at runtime from an external (trusted) source.
+encrypted file. The former allows to securely hardcode arguments, the latter
+allows the arguments to be provided at runtime from an external (trusted)
+source.
 
 .. note ::
    Pointing to an encrypted file is currently not supported, due to the fact
