@@ -47,12 +47,12 @@ ssl/server.crt: ssl/ca_config.conf
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
 # Use hard-coded GRAMINEDIR because we currently fail to provide secret prov headers in Gramine
-# installation. We also use `mbedtls_gramine` package because we don't have a secret prov one.
-# TODO: Install secretprov_gramine package during Gramine install, and use it in below
+# installation. We also use `sgx_util` package because we don't have a secret prov one.
+# TODO: Create a pkgconfig file for secretprov_gramine libs, and use it in below
 #       CFLAGS/LDFLAGS lines (via `pkg-config {--cflags|--libs} secretprov_gramine`).
 GRAMINEDIR ?= ../..
 CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/tools/sgx/ra-tls
-LDFLAGS += -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
+LDFLAGS += -Wl,--enable-new-dtags $(shell pkg-config --libs sgx_util)
 
 secret_prov_server_epid: src/secret_prov_server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@
