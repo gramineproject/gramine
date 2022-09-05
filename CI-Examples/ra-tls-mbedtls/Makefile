@@ -41,6 +41,7 @@ ssl/server.crt: ssl/ca_config.conf
 
 # This download is done to get headers in include/, because we currently fail to provide the headers
 # (`pkg-config --cflags mbedtls_gramine` in the below CFLAGS line returns a non-existing directory).
+# TODO: install mbedtls_gramine headers during Gramine install, and use them in below CFLAGS line.
 
 MBEDTLS_VERSION ?= 3.2.1
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
@@ -71,7 +72,8 @@ mbedtls/.mbedtls_configured: mbedtls/.mbedtls_downloaded
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += -I./mbedtls/include $(shell pkg-config --cflags mbedtls_gramine)
+# TODO: use `$(shell pkg-config --cflags mbedtls_gramine)` instead of local mbedtls includes
+CFLAGS += -I./mbedtls/include
 LDFLAGS += -ldl -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
 
 server: src/server.c mbedtls/.mbedtls_configured
