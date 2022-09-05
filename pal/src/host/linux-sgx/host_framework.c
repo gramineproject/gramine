@@ -58,7 +58,9 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
         return bytes;
 
 #ifdef SGX_DCAP
-    log_debug("Read dummy DCAP token");
+    log_debug("Read dummy DCAP token (only `attr` field is used):");
+    log_debug("    attr.flags:            0x%016lx", token->body.attributes.flags);
+    log_debug("    attr.xfrm:             0x%016lx", token->body.attributes.xfrm);
 #else
     char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
 #define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
