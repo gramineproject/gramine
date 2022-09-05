@@ -216,22 +216,29 @@ Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
 ---------------------------------------------------
 
 SGX technology allows to specify which CPU features are required to run the SGX
-enclave. Gramine "inherits" this and has the following manifest options:
-``sgx.require_avx``, ``sgx.require_avx512``, ``sgx.require_mpx``,
-``sgx.require_pkru``, ``sgx.require_amx``. By default, all of them are set to
-``false`` – this means that SGX hardware will allow running the SGX enclave on
-any system, whether the system has AVX/AVX512/MPX/PKRU/AMX features or not.
+enclave. Gramine "inherits" this and has the manifest options for
+AVX/AVX512/MPX/PKRU/AMX CPU features under ``sgx.cpu_features``. By default, all
+the CPU features are set to ``"autodetect"`` -- this means that Gramine will
+allow running the SGX enclave on any platform, whether the platform has the CPU
+features or not.
 
 Gramine typically correctly identifies the features of the underlying platform
 and propagates the information on AVX/AVX512/MPX/PKRU/AMX inside the enclave and
 to the application. It is recommended to leave these manifest options as-is (set
-to ``false``). However, we observed on some platforms that the graminized
+to ``"autodetect"``). However, we observed on some platforms that the graminized
 application cannot detect these features and falls back to a slow
 implementation. For example, some crypto libraries do not recognize AVX on the
 platform and use very slow functions, leading to 10-100x overhead over native
 (we still don't know the reason for this behavior). If you suspect this can be
-your case, enable the features in the manifest, e.g., set ``sgx.require_avx =
-true``.
+your case, enable the features in the manifest, e.g., set ``sgx.cpu_features.avx
+= "required"``.
+
+Gramine also allows to explicitly disable CPU features using the ``"disabled"``
+keyword -- this disables the corresponding CPU feature inside the SGX enclave
+even if this CPU feature is available on the system. This may improve enclave
+performance because this CPU feature will *not* be saved and restored during
+enclave entry/exit. But be aware that if the graminized application relies on
+this CPU feature, the application will crash with "illegal instruction".
 
 For more information on SGX logic regarding optional CPU features, see the Intel
 Software Developer Manual, Table 38-3 ("Layout of ATTRIBUTES Structure") under

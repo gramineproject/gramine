@@ -540,18 +540,51 @@ Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
 
 ::
 
-    sgx.require_avx    = [true|false]
-    sgx.require_avx512 = [true|false]
-    sgx.require_mpx    = [true|false]
-    sgx.require_pkru   = [true|false]
-    sgx.require_amx    = [true|false]
-    (Default: false)
+    sgx.cpu_features.avx    = "[autodetect|required|disabled]"
+    sgx.cpu_features.avx512 = "[autodetect|required|disabled]"
+    sgx.cpu_features.mpx    = "[autodetect|required|disabled]"
+    sgx.cpu_features.pkru   = "[autodetect|required|disabled]"
+    sgx.cpu_features.amx    = "[autodetect|required|disabled]"
+    (Default: "autodetect")
 
-This syntax ensures that the CPU features are available and enabled for the
-enclave. If the options are set in the manifest but the features are unavailable
-on the platform, enclave initialization will fail. If the options are unset,
-enclave initialization will succeed even if these features are unavailable on
-the platform.
+The ``"autodetect"`` syntax means that the enclave initialization will succeed
+regardless of whether the CPU feature is available on the platform or not. The
+not-security-critical CPU features (currently only AVX, AVX512 and AMX) will be
+enabled in the enclave if they are available on the platform. Note that
+security-critical CPU features (currently MPX and PKRU) will be disabled.
+
+The ``"required"`` syntax ensures that the CPU feature is available and enabled
+for the enclave. If such option is set in the manifest but the CPU feature is
+unavailable on the platform, enclave initialization will fail.
+
+The ``"disabled"`` syntax disables the CPU feature inside the enclave even if
+this CPU feature is available on the platform. This may improve enclave
+performance because this CPU feature will *not* be saved and restored during
+enclave entry/exit. This syntax is provided to improve performance of
+applications that are known to *not* rely on certain CPU features. Be aware that
+if the application relies on some disabled CPU features, the application will
+fail with SIGILL ("illegal instruction"). For example, if the application is
+built with AVX support, and AVX is disabled in the manifest, the application
+will crash.
+
+In case of doubt, it is recommended to keep the default values for these
+features (e.g. ``sgx.cpu_features.avx = "autodetect"``). In this case, Gramine
+auto-detects the corresponding not-security-critical CPU features on the
+platform and enables them if available, regardless of whether the application
+uses them or not.
+
+At the technical level, the mapping from CPU features to SGX fields is as
+follows:
+
+- ``"autodetect"``: ``SIGSTRUCT.ATTRIBUTEMASK[feature] = 0`` for
+  not-security-critical CPU features (currently AVX, AVX512 and AMX). The
+  untrusted loader of Gramine sets ``SECS.ATTRIBUTES[feature] = 0`` if it can't
+  detect the feature on the platform, and ``SECS.ATTRIBUTES[feature] = 1``
+  otherwise.
+- ``"required"``: ``SIGSTRUCT.ATTRIBUTEMASK[feature] = 1`` and
+  ``SIGSTRUCT.ATTRIBUTES[feature] = 1``.
+- ``"disabled"``: ``SIGSTRUCT.ATTRIBUTEMASK[feature] = 1`` and
+  ``SIGSTRUCT.ATTRIBUTES[feature] = 0``.
 
 ISV Product ID and SVN
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -950,3 +983,18 @@ value has been replaced with the string value. The ``none`` value in the new
 syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
 explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
 ``true`` boolean value in the deprecated syntax.
+
+Optional CPU features (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.require_avx    = [true|false]
+    sgx.require_avx512 = [true|false]
+    sgx.require_mpx    = [true|false]
+    sgx.require_pkru   = [true|false]
+    sgx.require_amx    = [true|false]
+
+This syntax specified whether to require certain CPU features to be available on
+the platform where the enclave executes. This syntax has been replaced with
+``sgx.cpu_features.[avx|avx512|mpx|pkru|amx]``.

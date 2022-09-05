@@ -73,36 +73,59 @@ def parse_size(value):
 def collect_bits(manifest_sgx, options_dict):
     val = 0
     for opt, bits in options_dict.items():
-        if manifest_sgx[opt] == 1:
+        if manifest_sgx.get(opt, 0) == 1:
             val |= bits
     return val
+
+
+def collect_cpu_feature_bits(manifest_sgx, options_dict):
+    val, mask = offs.SGX_XFRM_LEGACY, offs.SGX_XFRM_MASK_CONST
+    if manifest_sgx.get('cpu_features') is None:
+        return val, mask
+
+    for opt, bits in options_dict.items():
+        if manifest_sgx['cpu_features'].get(opt, "") == "required":
+            val |= bits
+            mask |= bits
+        elif manifest_sgx['cpu_features'].get(opt, "") == "disabled":
+            val &= ~bits
+            mask |= bits
+    return val, mask
 
 
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
     }
+    flags = collect_bits(manifest_sgx, flags_dict)
+    if ARCHITECTURE == 'amd64':
+        flags |= offs.SGX_FLAGS_MODE64BIT
+
+    miscs_dict = {
+        'support_exinfo': offs.SGX_MISCSELECT_EXINFO,
+    }
+    miscs = collect_bits(manifest_sgx, miscs_dict)
 
     xfrms_dict = {
+        'avx': offs.SGX_XFRM_AVX,
+        'avx512': offs.SGX_XFRM_AVX512,
+        'mpx': offs.SGX_XFRM_MPX,
+        'pkru': offs.SGX_XFRM_PKRU,
+        'amx': offs.SGX_XFRM_AMX,
+    }
+    xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx, xfrms_dict)
+
+    # TODO: these were deprecated in release v1.3, so they should be removed in v1.5
+    deprecated_xfrms_dict = {
         'require_avx': offs.SGX_XFRM_AVX,
         'require_avx512': offs.SGX_XFRM_AVX512,
         'require_mpx': offs.SGX_XFRM_MPX,
         'require_pkru': offs.SGX_XFRM_PKRU,
         'require_amx': offs.SGX_XFRM_AMX,
     }
+    xfrms |= collect_bits(manifest_sgx, deprecated_xfrms_dict)
 
-    miscs_dict = {
-        'support_exinfo': offs.SGX_MISCSELECT_EXINFO,
-    }
-
-    flags = collect_bits(manifest_sgx, flags_dict)
-    if ARCHITECTURE == 'amd64':
-        flags |= offs.SGX_FLAGS_MODE64BIT
-
-    xfrms = offs.SGX_XFRM_LEGACY | collect_bits(manifest_sgx, xfrms_dict)
-    miscs = collect_bits(manifest_sgx, miscs_dict)
-
-    return flags, xfrms, miscs
+    return flags, miscs, xfrms, xfrms_mask
 
 
 # Populate Enclave Memory
@@ -521,10 +544,11 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     sig['isv_prod_id'] = manifest_sgx['isvprodid']
     sig['isv_svn'] = manifest_sgx['isvsvn']
 
-    attribute_flags, attribute_xfrms, misc_select = get_enclave_attributes(manifest_sgx)
+    attribute_flags, misc_select, attribute_xfrms, xfrms_mask = get_enclave_attributes(manifest_sgx)
     sig['attribute_flags'] = attribute_flags
-    sig['attribute_xfrms'] = attribute_xfrms
     sig['misc_select'] = misc_select
+    sig['attribute_xfrms'] = attribute_xfrms
+    sig['attribute_xfrm_mask'] = xfrms_mask
 
     return sig
 
