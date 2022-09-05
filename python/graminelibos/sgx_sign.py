@@ -443,20 +443,12 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     attr = {
         'enclave_size': parse_size(manifest_sgx['enclave_size']),
         'thread_num': manifest_sgx['thread_num'],
-        'isv_prod_id': manifest_sgx['isvprodid'],
-        'isv_svn': manifest_sgx['isvsvn'],
     }
-    attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
     if verbose:
-        print('Attributes:')
+        print('Attributes (required for enclave measurement):')
         print(f'    size:        {attr["enclave_size"]:#x}')
         print(f'    thread_num:  {attr["thread_num"]}')
-        print(f'    isv_prod_id: {attr["isv_prod_id"]}')
-        print(f'    isv_svn:     {attr["isv_svn"]}')
-        print(f'    attr.flags:  {attr["flags"]:#x}')
-        print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
-        print(f'    misc_select: {attr["misc_select"]:#x}')
 
         print('SGX remote attestation:')
         attestation_type = manifest_sgx.get('remote_attestation', 'none')
