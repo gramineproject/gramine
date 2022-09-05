@@ -93,12 +93,6 @@ class Manifest:
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
-        sgx.setdefault('require_avx', False)
-        sgx.setdefault('require_avx512', False)
-        sgx.setdefault('require_mpx', False)
-        sgx.setdefault('require_pkru', False)
-        sgx.setdefault('require_amx', False)
-        sgx.setdefault('require_exinfo', False)
         sgx.setdefault('enable_stats', False)
         sgx.setdefault('edmm_enable', False)
 
@@ -106,6 +100,22 @@ class Manifest:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_WITH_EDMM)
         else:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_NO_EDMM)
+
+        # TODO: below was deprecated in release v1.6, remove this check in v1.7
+        #       (but keep the `if` body)
+        if not 'require_exinfo' in sgx:
+            sgx.setdefault('use_exinfo', False)
+
+        # TODO: below were deprecated in release v1.6, remove this check in v1.7
+        #       (but keep the `if` body)
+        deprecated = ['require_avx', 'require_avx512', 'require_amx', 'require_mpx', 'require_pkru']
+        if not any(key in sgx for key in deprecated):
+            sgx_cpu_features = sgx.setdefault('cpu_features', {})
+            sgx_cpu_features.setdefault('avx', "unspecified")
+            sgx_cpu_features.setdefault('avx512', "unspecified")
+            sgx_cpu_features.setdefault('amx', "unspecified")
+            sgx_cpu_features.setdefault('mpx', "disabled")
+            sgx_cpu_features.setdefault('pkru', "disabled")
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
