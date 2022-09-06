@@ -68,6 +68,11 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
         if (ret < 0) {
             goto out;
         }
+    } else {
+        if (flag & AT_REMOVEDIR) {
+            ret = -EACCES;
+            goto out;
+        }
     }
 
     put_inode(dent->inode);
