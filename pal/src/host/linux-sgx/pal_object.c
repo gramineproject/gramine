@@ -63,7 +63,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
 
     for (size_t i = 0; i < count; i++) {
         if (fds[i].fd == -1) {
-            /* We skipped this fd. Or malicious host changes this fd to `-1` - doesn't matter. */
+            /* We skipped this fd. Or malicious host changed this fd to `-1` - doesn't matter. */
             continue;
         }
 
