@@ -31,6 +31,13 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* maximum length of URIs */
 #define URI_MAX 4096
 
+/* maximum length of hostname */
+#define PAL_HOSTNAME_MAX 255
+
+/* DNS limits */
+#define PAL_MAXNS       3
+#define PAL_MAXDNSRCH   6
+
 /* Common types used by host specific header. */
 enum pal_socket_domain {
     PAL_DISCONNECT,
@@ -91,6 +98,23 @@ enum {
 
 /********** PAL APIs **********/
 
+struct pal_dns_host_conf_addr {
+    bool     is_ipv6;
+    uint32_t ipv4;
+    uint16_t ipv6[8];
+};
+
+struct pal_dns_host_conf {
+    struct pal_dns_host_conf_addr nsaddr_list[PAL_MAXNS];
+    size_t                        nsaddr_list_count;
+
+    char   dnsrch[PAL_MAXDNSRCH][PAL_HOSTNAME_MAX];
+    size_t dnsrch_count;
+
+    bool inet6;
+    bool rotate;
+};
+
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
  * started by PAL (usually our LibOS). */
 struct pal_public_state {
@@ -137,6 +161,9 @@ struct pal_public_state {
 
     struct pal_cpu_info cpu_info;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
+
+    bool emulate_etc_files;
+    struct pal_dns_host_conf dns_host;
 };
 
 /* We cannot mark this as returning a pointer to `const` object, because LibOS can

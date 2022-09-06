@@ -145,6 +145,30 @@ source.
    that encryption key provisioning currently happens after setting up
    arguments.
 
+Emulate ``/etc``
+^^^^^^^^^^^^^^^^
+
+::
+
+    libos.emulate_etc_files = [true|false]
+    (Default: false)
+
+This specifies whether to emulate runtime files under ``/etc``.
+In the case of Linux-SGX PAL, this is achieved by taking the host's ``/etc``
+files, filter supported options, and sanitize them.
+The set of extra runtime files is limited to:
+
+- ``/etc/resolv.conf``
+   Supported keywords:
+
+   - ``nameserver``
+   - ``search``
+   - ``options`` (``inet6`` | ``rotate``)
+
+This option takes precedence over ``fs.mounts``.
+This means that etc files provided via ``fs.mounts`` will be overridden with
+the ones sanitized by LibOS.
+
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
 

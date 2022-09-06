@@ -208,30 +208,22 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
     return 0;
 }
 
-static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
-    /* Import topology information via an untrusted pointer. This is only a shallow copy and we use
-     * this temp variable to do deep copy into `g_pal_public_state.topo_info` */
-    struct pal_topo_info shallow_topo_info;
-    if (!sgx_copy_to_enclave(&shallow_topo_info, sizeof(shallow_topo_info),
-                             uptr_topo_info, sizeof(*uptr_topo_info))) {
-        return -PAL_ERROR_DENIED;
-    }
-
+static int import_and_sanitize_topo_info(struct pal_topo_info* shallow_topo_info) {
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
 
-    size_t caches_cnt     = shallow_topo_info.caches_cnt;
-    size_t threads_cnt    = shallow_topo_info.threads_cnt;
-    size_t cores_cnt      = shallow_topo_info.cores_cnt;
-    size_t sockets_cnt    = shallow_topo_info.sockets_cnt;
-    size_t numa_nodes_cnt = shallow_topo_info.numa_nodes_cnt;
+    size_t caches_cnt     = shallow_topo_info->caches_cnt;
+    size_t threads_cnt    = shallow_topo_info->threads_cnt;
+    size_t cores_cnt      = shallow_topo_info->cores_cnt;
+    size_t sockets_cnt    = shallow_topo_info->sockets_cnt;
+    size_t numa_nodes_cnt = shallow_topo_info->numa_nodes_cnt;
 
-    struct pal_cache_info*      caches     = sgx_import_array_to_enclave(shallow_topo_info.caches,     sizeof(*caches),     caches_cnt);
-    struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info.threads,    sizeof(*threads),    threads_cnt);
-    struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info.cores,      sizeof(*cores),      cores_cnt);
-    struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info.sockets,    sizeof(*sockets),    sockets_cnt);
-    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info.numa_nodes, sizeof(*numa_nodes), numa_nodes_cnt);
+    struct pal_cache_info*      caches     = sgx_import_array_to_enclave(shallow_topo_info->caches,     sizeof(*caches),     caches_cnt);
+    struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info->threads,    sizeof(*threads),    threads_cnt);
+    struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info->cores,      sizeof(*cores),      cores_cnt);
+    struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info->sockets,    sizeof(*sockets),    sockets_cnt);
+    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info->numa_nodes, sizeof(*numa_nodes), numa_nodes_cnt);
 
-    size_t* distances = sgx_import_array2d_to_enclave(shallow_topo_info.numa_distance_matrix,
+    size_t* distances = sgx_import_array2d_to_enclave(shallow_topo_info->numa_distance_matrix,
                                                       sizeof(*distances),
                                                       numa_nodes_cnt,
                                                       numa_nodes_cnt);
@@ -253,6 +245,126 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
     topo_info->numa_nodes_cnt = numa_nodes_cnt;
 
     return sanitize_topo_info(topo_info);
+}
+
+/*
+ * Gramine assumes that the hostname is valid when:
+ * - the length of the hostname is below or equal to 255 characters (including '\0'),
+ * - the length of a single label is between 1 and 63,
+ * - every label is separated with '.',
+ * - the hostname doesn't start or end with '.' and '-',
+ * - the hostname contains only alphanumeric characters, '-', and '.',
+ * These rules were deducted from:
+ * - https://www.rfc-editor.org/rfc/rfc1123
+ * - https://www.ietf.org/rfc/rfc0952.txt
+ * - https://www.rfc-editor.org/rfc/rfc2181
+ */
+static bool is_hostname_valid(const char* hostname) {
+    const char* ptr = hostname;
+    size_t chrcount = 0;
+
+    if (*ptr == '-')
+        return false;
+
+    while (ptr - hostname < PAL_HOSTNAME_MAX && *ptr != '\0') {
+        if (('a' <= *ptr && *ptr <= 'z') ||
+            ('A' <= *ptr && *ptr <= 'Z') ||
+            ('0' <= *ptr && *ptr <= '9') ||
+            *ptr == '-') {
+                chrcount++;
+                ptr++;
+                continue;
+        } else if (*ptr == '.') {
+                if (chrcount == 0 || chrcount > 63) {
+                    return false;
+                }
+                chrcount = 0;
+                ptr++;
+                continue;
+        }
+
+        return false;
+    }
+
+    if (ptr - hostname >= PAL_HOSTNAME_MAX)
+        return false;
+    if (chrcount == 0 || chrcount > 63)
+        return false;
+    /* rewind to last character */
+    ptr--;
+    if (*ptr == '-')
+        return false;
+
+    return true;
+}
+
+static int init_emulation_etc_files(struct pal_host_info* shallow_host_info) {
+    struct pal_dns_host_conf *pub_dns = &g_pal_public_state.dns_host;
+    struct pal_dns_host_conf *shallow_dns = &shallow_host_info->dns_host;
+    size_t i, j;
+
+    if (!g_pal_public_state.emulate_etc_files)
+        return 0;
+
+    if (shallow_dns->nsaddr_list_count > PAL_MAXNS) {
+        log_error("To many nameservers provided");
+        return -EINVAL;
+    }
+    pub_dns->nsaddr_list_count = shallow_dns->nsaddr_list_count;
+    for (i = 0; i < pub_dns->nsaddr_list_count; i++) {
+        coerce_untrusted_bool(&shallow_dns->nsaddr_list[i].is_ipv6);
+        /* All binnary IP address are already valid ones. */
+        if (!shallow_dns->nsaddr_list[i].is_ipv6) {
+            pub_dns->nsaddr_list[i].ipv4 = shallow_dns->nsaddr_list[i].ipv4;
+            pub_dns->nsaddr_list[i].is_ipv6 = false;
+        } else {
+            memcpy(&pub_dns->nsaddr_list[i].ipv6, &shallow_dns->nsaddr_list[i].ipv6,
+                   sizeof(pub_dns->nsaddr_list[i].ipv6));
+            pub_dns->nsaddr_list[i].is_ipv6 = true;
+        }
+    }
+
+    if (shallow_dns->dnsrch_count > PAL_MAXDNSRCH) {
+        log_error("To many search entries provided");
+        return -EINVAL;
+    }
+
+    for (i = 0, j = 0; i < shallow_dns->dnsrch_count; i++) {
+        if (!is_hostname_valid(shallow_dns->dnsrch[i])) {
+            log_warning("One of host's search entries is invalid, skipping it");
+            continue;
+        }
+
+        memcpy(pub_dns->dnsrch[j], shallow_dns->dnsrch[i],
+               sizeof(pub_dns->dnsrch[j]) - 1);
+        pub_dns->dnsrch[j][sizeof(pub_dns->dnsrch[j]) - 1] = '\0';
+        j++;
+    }
+    pub_dns->dnsrch_count = j;
+
+    coerce_untrusted_bool(&shallow_dns->inet6);
+    coerce_untrusted_bool(&shallow_dns->rotate);
+
+    pub_dns->inet6 = shallow_dns->inet6;
+    pub_dns->rotate = shallow_dns->rotate;
+
+    return 0;
+}
+
+static int get_host_info(struct pal_host_info* shallow_host_info) {
+    int ret;
+
+    if ((ret = import_and_sanitize_topo_info(&shallow_host_info->topo_info)) < 0) {
+        log_error("Failed to copy and sanitize topology information: %d", ret);
+        return ret;
+    }
+
+    if ((ret = init_emulation_etc_files(shallow_host_info)) < 0) {
+        log_error("Failed to initialize etc files: %d", ret);
+        return ret;
+    }
+
+    return 0;
 }
 
 extern void* g_enclave_base;
@@ -416,7 +528,7 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
                              int parent_stream_fd, sgx_target_info_t* uptr_qe_targetinfo,
-                             struct pal_topo_info* uptr_topo_info) {
+                             struct pal_host_info* uptr_host_info) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -559,6 +671,14 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         g_pal_internal_mem_size += 64 * 1024 * 1024; /* 5MB manifest -> 64 + 64 MB PAL mem */
     }
 
+    /* get host information */
+    struct pal_host_info host_info = {0};
+    if (!sgx_copy_to_enclave(&host_info, sizeof(host_info), uptr_host_info,
+                             sizeof(*uptr_host_info))) {
+        log_error("Unable to read host info");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     /* parse manifest */
     char errbuf[256];
     toml_table_t* manifest_root = toml_parse(manifest_addr, errbuf, sizeof(errbuf));
@@ -568,17 +688,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
-
-    /* Get host topology information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
-    if (parent_stream_fd < 0) {
-        /* parse and store host topology info into g_pal_public_state struct */
-        ret = import_and_sanitize_topo_info(uptr_topo_info);
-        if (ret < 0) {
-            log_error("Failed to copy and sanitize topology information");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-    }
 
     bool preheat_enclave;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.preheat_enclave",
@@ -626,6 +735,22 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
+                           &g_pal_public_state.emulate_etc_files);
+    if (ret < 0) {
+        log_error("Cannot parse 'libos.emulate_etc_files'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    /* Get host information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
+        if ((ret = get_host_info(&host_info)) < 0) {
+            log_error("Failed to initialize host info");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
     }
 
     enum sgx_attestation_type attestation_type;

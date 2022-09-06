@@ -17,6 +17,11 @@ enum {
 
 struct rpc_queue;
 
+struct pal_host_info {
+    struct pal_topo_info     topo_info;
+    struct pal_dns_host_conf dns_host;
+};
+
 typedef struct {
     char*                 ms_libpal_uri;
     size_t                ms_libpal_uri_len;
@@ -26,7 +31,7 @@ typedef struct {
     size_t                ms_env_size;
     int                   ms_parent_stream_fd;
     sgx_target_info_t*    ms_qe_targetinfo;
-    struct pal_topo_info* ms_topo_info;
+    struct pal_host_info* ms_host_info;
 
     struct rpc_queue*  rpc_queue; /* pointer to RPC queue in untrusted mem */
 } ms_ecall_enclave_start_t;
