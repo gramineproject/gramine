@@ -42,6 +42,7 @@ Install Gramine (DCAP driver version) on Ubuntu 18.04::
 
 Install Gramine (in-kernel driver version) on Ubuntu 20.04::
 
+   sudo apt-get update
    sudo apt-get install gramine
 
 Prepare a signing key
