@@ -24,7 +24,7 @@
 /* barrier to synchronize between parent and children */
 pthread_barrier_t barrier;
 
-static void* dowork(void* args) {
+static void* do_work(void* args) {
     int ret = pthread_barrier_wait(&barrier);
     if (ret != 0 && ret != PTHREAD_BARRIER_SERIAL_THREAD) {
         errx(EXIT_FAILURE, "Child did not wait on barrier!");
@@ -38,7 +38,7 @@ static void* dowork(void* args) {
     cpu_set_t* thread_cpuaffinity = (cpu_set_t*)args;
     if (!CPU_ISSET(cpu, thread_cpuaffinity)) {
         errx(EXIT_FAILURE, "cpu = %d is not part of thread %ld affinity mask", cpu,
-                            syscall(SYS_gettid));
+             syscall(SYS_gettid));
     }
 
     printf("Thread %ld is running on cpu: %u, node: %u\n", syscall(SYS_gettid), cpu, node);
@@ -91,8 +91,8 @@ int main(int argc, const char** argv) {
     /* If you want to run on all cores then increase sgx.thread_num in the manifest.template and
      * also set MANIFEST_SGX_THREAD_CNT to the same value.
      */
-    size_t numthreads = MIN(online_cores, (MANIFEST_SGX_THREAD_CNT -
-                                          (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
+    size_t numthreads = MIN(online_cores, (MANIFEST_SGX_THREAD_CNT
+                                           - (INTERNAL_THREAD_CNT + MAIN_THREAD_CNT)));
 
     /* Each thread will be affinitized to run on 2 distinct cores. So reduce the number of threads
      * to half of cores. */
@@ -114,13 +114,13 @@ int main(int argc, const char** argv) {
 
     cpu_set_t get_cpumask;
     for (size_t i = 0; i < numthreads; i++) {
-        /* Find cores that will be affinitized to this thread. */
+        /* Select cores that will be affinitized to this thread. */
         ret = select_thread_cpu_affinity(&set_cpumask[i], &online_cpumask);
         if (ret < 0) {
-            errx(EXIT_FAILURE, "Cannot find cores to affinitize threads");
+            errx(EXIT_FAILURE, "Cannot select cores to affinitize threads");
         }
 
-        ret = pthread_create(&threads[i], NULL, dowork, &set_cpumask[i]);
+        ret = pthread_create(&threads[i], NULL, do_work, &set_cpumask[i]);
         if (ret != 0) {
             errx(EXIT_FAILURE, "pthread_create failed!");
         }
