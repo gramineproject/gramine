@@ -494,7 +494,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* Set up page allocator and slab manager. There is no need to provide any initial memory pool,
      * because the slab manager can use normal allocations (`_PalVirtualMemoryAlloc`) right away. */
     init_slab_mgr(/*mem_pool=*/NULL, /*mem_pool_size=*/0);
-    init_untrusted_slab_mgr();
 
     /* initialize enclave properties */
     ret = init_enclave();
