@@ -25,7 +25,7 @@ struct thread_param {
     void* param;
 };
 
-extern void* g_enclave_base;
+extern uintptr_t g_enclave_base;
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
  * g_thread_list, initializes its TCB/TLS, and jumps into the callback-to-run. Gramine uses GCC's
@@ -40,7 +40,8 @@ void pal_start_thread(void) {
     LISTP_FOR_EACH_ENTRY(tmp, &g_thread_list, list)
         if (!tmp->tcs) {
             new_thread = tmp;
-            __atomic_store_n(&new_thread->tcs, (g_enclave_base + GET_ENCLAVE_TCB(tcs_offset)),
+            __atomic_store_n(&new_thread->tcs,
+                             (void*)(g_enclave_base + GET_ENCLAVE_TCB(tcs_offset)),
                              __ATOMIC_RELEASE);
             break;
         }

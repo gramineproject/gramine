@@ -19,8 +19,8 @@
 
 static int register_file(const char* uri, const char* hash_str, bool check_duplicates);
 
-void* g_enclave_base;
-void* g_enclave_top;
+uintptr_t g_enclave_base;
+uintptr_t g_enclave_top;
 bool g_allowed_files_warn = false;
 
 /*
@@ -43,20 +43,26 @@ static_assert(sizeof(g_seal_key_flags_mask) + sizeof(g_seal_key_xfrm_mask) ==
                   sizeof(sgx_attributes_t), "wrong types");
 static_assert(sizeof(g_seal_key_misc_mask) == sizeof(sgx_misc_select_t), "wrong types");
 
-bool sgx_is_completely_within_enclave(const void* addr, size_t size) {
-    if ((uintptr_t)addr > UINTPTR_MAX - size) {
+bool sgx_is_completely_within_enclave(const void* _addr, size_t size) {
+    uintptr_t addr = (uintptr_t)_addr;
+    if (addr > UINTPTR_MAX - size) {
         return false;
     }
 
     return g_enclave_base <= addr && addr + size <= g_enclave_top;
 }
 
-bool sgx_is_completely_outside_enclave(const void* addr, size_t size) {
-    if ((uintptr_t)addr > UINTPTR_MAX - size) {
+bool sgx_is_valid_untrusted_ptr(const void* _addr, size_t size, size_t alignment) {
+    uintptr_t addr = (uintptr_t)_addr;
+    if (addr > UINTPTR_MAX - size) {
         return false;
     }
 
-    return g_enclave_base >= addr + size || g_enclave_top <= addr;
+    if (!(addr + size <= g_enclave_base || g_enclave_top <= addr)) {
+        return false;
+    }
+
+    return IS_ALIGNED(addr, alignment);
 }
 
 /*
@@ -96,7 +102,7 @@ void* sgx_alloc_on_ustack_aligned(size_t size, size_t alignment) {
     assert(IS_POWER_OF_2(alignment));
     void* ustack = GET_ENCLAVE_TCB(ustack) - size;
     ustack = ALIGN_DOWN_PTR_POW2(ustack, alignment);
-    if (!sgx_is_completely_outside_enclave(ustack, size)) {
+    if (!sgx_is_valid_untrusted_ptr(ustack, size, alignment)) {
         return NULL;
     }
     UPDATE_USTACK(ustack);
@@ -123,36 +129,14 @@ void sgx_reset_ustack(const void* old_ustack) {
     UPDATE_USTACK(old_ustack);
 }
 
-bool sgx_copy_ptr_to_enclave(void** ptr, void* uptr, size_t size) {
-    assert(ptr);
-    if (!sgx_is_completely_outside_enclave(uptr, size)) {
-        *ptr = NULL;
-        return false;
-    }
-    *ptr = uptr;
-    return true;
-}
-
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize) {
     if (usize > maxsize ||
-        !sgx_is_completely_outside_enclave(uptr, usize) ||
-        !sgx_is_completely_within_enclave(ptr, usize)) {
+        !sgx_is_valid_untrusted_ptr(uptr, usize, /*alignment=*/1) ||
+        !sgx_is_completely_within_enclave(ptr, maxsize)) {
         return false;
     }
     memcpy(ptr, uptr, usize);
     return true;
-}
-
-void* sgx_import_to_enclave(const void* uptr, size_t usize) {
-    if (!sgx_is_completely_outside_enclave(uptr, usize))
-        return NULL;
-
-    void* buf = malloc(usize);
-    if (!buf)
-        return NULL;
-
-    memcpy(buf, uptr, usize);
-    return buf;
 }
 
 void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt) {
@@ -160,7 +144,17 @@ void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t ele
     if (__builtin_mul_overflow(elem_size, elem_cnt, &size))
         return NULL;
 
-    return sgx_import_to_enclave(uptr, size);
+    void* buf = malloc(size);
+    if (!buf) {
+        return NULL;
+    }
+
+    if (!sgx_copy_to_enclave(buf, size, uptr, size)) {
+        free(buf);
+        return NULL;
+    }
+
+    return buf;
 }
 
 void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt1,
@@ -411,7 +405,8 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
             goto fail;
 
         /* to prevent TOCTOU attacks, copy file contents into the enclave before hashing */
-        memcpy(tmp_chunk, *out_umem + offset, chunk_size);
+        if (!sgx_copy_to_enclave(tmp_chunk, TRUSTED_CHUNK_SIZE, *out_umem + offset, chunk_size))
+            goto fail;
 
         ret = lib_SHA256Update(&file_sha, tmp_chunk, chunk_size);
         if (ret < 0)
@@ -422,6 +417,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
             goto fail;
 
         sgx_chunk_hash_t chunk_hash[2]; /* each chunk_hash is 128 bits in size */
+        static_assert(sizeof(chunk_hash) * 8 == 256, "");
         ret = lib_SHA256Final(&chunk_sha, (uint8_t*)&chunk_hash[0]);
         if (ret < 0)
             goto fail;
@@ -508,7 +504,9 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
         if (chunk_offset >= offset && chunk_end <= end) {
             /* if current chunk-to-copy completely resides in the requested region-to-copy,
              * directly copy into buf (without a scratch buffer) and hash in-place */
-            memcpy(buf_pos, umem + chunk_offset, chunk_size);
+            if (!sgx_copy_to_enclave(buf_pos, chunk_size, umem + chunk_offset, chunk_size)) {
+                goto failed;
+            }
 
             ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
             if (ret < 0)
@@ -519,7 +517,9 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
             /* if current chunk-to-copy only partially overlaps with the requested region-to-copy,
              * read the file contents into a scratch buffer, verify hash and then copy only the part
              * needed by the caller */
-            memcpy(tmp_chunk, umem + chunk_offset, chunk_size);
+            if (!sgx_copy_to_enclave(tmp_chunk, chunk_size, umem + chunk_offset, chunk_size)) {
+                goto failed;
+            }
 
             ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
             if (ret < 0)
