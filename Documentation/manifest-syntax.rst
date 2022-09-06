@@ -145,6 +145,40 @@ source.
    that encryption key provisioning currently happens after setting up
    arguments.
 
+Domain names configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.enable_extra_runtime_domain_names_conf = [true|false]
+    (Default: false)
+
+This option will generate following extra runtime files:
+
+- ``/etc/resolv.conf``
+   Supported keywords:
+
+   - ``nameserver``
+   - ``search``
+   - ``options`` (``inet6`` | ``rotate``)
+
+Unsupported keywords and malformed lines are ignored, and invalid values are
+reported as an error.
+
+This functionality is achieved by taking the host's configuration via various
+APIs and reading the host's configuration files. In the case of Linux PAL,
+most information comes from the host's ``/etc``. The gathered information is
+used to create ``/etc`` files inside Gramine's file system, or change Gramine
+process configuration. For security-enforcing modes (such as SGX), Gramine
+additionally sanitizes the information gathered from the host.
+
+Note that Gramine supports only a subset of the configuration.
+Refer to the list of supported keywords.
+
+This option takes precedence over ``fs.mounts``.
+This means that etc files provided via ``fs.mounts`` will be overridden with
+the ones added via this option.
+
 Environment variables
 ^^^^^^^^^^^^^^^^^^^^^
 

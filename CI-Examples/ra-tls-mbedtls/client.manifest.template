@@ -22,6 +22,8 @@ fs.mounts = [
   { path = "/client", uri = "file:client" },
 ]
 
+sys.enable_extra_runtime_domain_names_conf = true
+
 sgx.debug = true
 sgx.enclave_size = "512M"
 sgx.thread_num = 4
@@ -39,7 +41,6 @@ sgx.trusted_files = [
 sgx.allowed_files = [
   "file:/etc/nsswitch.conf",
   "file:/etc/host.conf",
-  "file:/etc/resolv.conf",
   "file:/etc/ethers",
   "file:/etc/hosts",
   "file:/etc/group",

@@ -236,6 +236,7 @@ int tolower(int c);
 int toupper(int c);
 int isalpha(int c);
 int isdigit(int c);
+int isxdigit(int c);
 int isalnum(int c);
 
 char* strchr(const char* s, int c);
