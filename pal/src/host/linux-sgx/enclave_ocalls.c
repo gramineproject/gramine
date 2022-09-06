@@ -134,7 +134,7 @@ static long sgx_exitless_ocall(uint64_t code, void* ms) {
     }
 
     sgx_reset_ustack(old_ustack);
-    return READ_ONCE(req->result);
+    return COPY_UNTRUSTED_VALUE(&req->result);
 }
 
 __attribute_no_sanitize_address
@@ -218,7 +218,7 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
         return retval;
     }
 
-    void* returned_addr = READ_ONCE(ms->ms_addr);
+    void* returned_addr = COPY_UNTRUSTED_VALUE(&ms->ms_addr);
     if (flags & MAP_FIXED) {
         /* addrptr already contains the mmap'ed address, no need to update it */
         if (returned_addr != requested_addr) {
@@ -365,10 +365,10 @@ int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[4])
     }
 
     if (!retval) {
-        values[0] = READ_ONCE(ms->ms_values[0]);
-        values[1] = READ_ONCE(ms->ms_values[1]);
-        values[2] = READ_ONCE(ms->ms_values[2]);
-        values[3] = READ_ONCE(ms->ms_values[3]);
+        values[0] = COPY_UNTRUSTED_VALUE(&ms->ms_values[0]);
+        values[1] = COPY_UNTRUSTED_VALUE(&ms->ms_values[1]);
+        values[2] = COPY_UNTRUSTED_VALUE(&ms->ms_values[2]);
+        values[3] = COPY_UNTRUSTED_VALUE(&ms->ms_values[3]);
     }
 
     sgx_reset_ustack(old_ustack);
@@ -1024,7 +1024,7 @@ int ocall_create_process(size_t nargs, const char** args, int* stream_fd) {
 
     if (!retval) {
         if (stream_fd)
-            *stream_fd = READ_ONCE(ms->ms_stream_fd);
+            *stream_fd = COPY_UNTRUSTED_VALUE(&ms->ms_stream_fd);
     }
 
     sgx_reset_ustack(old_ustack);
@@ -1072,7 +1072,7 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
     }
 
     if (timeout_us) {
-        uint64_t remaining_time_us = READ_ONCE(ms->ms_timeout_us);
+        uint64_t remaining_time_us = COPY_UNTRUSTED_VALUE(&ms->ms_timeout_us);
         if (retval == -ETIMEDOUT) {
             remaining_time_us = 0;
         }
@@ -1145,7 +1145,7 @@ int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* 
         goto out;
     }
 
-    uint16_t new_port = READ_ONCE(ms->ms_new_port);
+    uint16_t new_port = COPY_UNTRUSTED_VALUE(&ms->ms_new_port);
     if (new_port == 0) {
         ret = -EPERM;
         goto out;
@@ -1223,7 +1223,7 @@ int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct soc
 
     if (retval >= 0) {
         if (addr && len) {
-            size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
+            size_t untrusted_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_addrlen);
             if (!sgx_copy_to_enclave(addr, len, untrusted_addr, untrusted_addrlen)) {
                 sgx_reset_ustack(old_ustack);
                 return -EPERM;
@@ -1279,7 +1279,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
 
     if (retval >= 0) {
         if (addr && len) {
-            size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
+            size_t untrusted_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_addrlen);
             if (!sgx_copy_to_enclave(addr, len, untrusted_addr, untrusted_addrlen)) {
                 sgx_reset_ustack(old_ustack);
                 return -EPERM;
@@ -1287,7 +1287,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
             *addrlen = untrusted_addrlen;
         }
         if (local_addr && local_len) {
-            size_t untrusted_local_addrlen = READ_ONCE(ms->ms_local_addrlen);
+            size_t untrusted_local_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_local_addrlen);
             if (!sgx_copy_to_enclave(local_addr, local_len, untrusted_local_addr,
                                      untrusted_local_addrlen)) {
                 sgx_reset_ustack(old_ustack);
@@ -1345,7 +1345,7 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
 
     if (retval >= 0) {
         if (bind_addr && bind_len) {
-            size_t untrusted_addrlen = READ_ONCE(ms->ms_bind_addrlen);
+            size_t untrusted_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_bind_addrlen);
             bool copied = sgx_copy_to_enclave(bind_addr, bind_len, untrusted_bind_addr,
                                               untrusted_addrlen);
             if (!copied) {
@@ -1397,7 +1397,7 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
         goto out;
     }
 
-    size_t new_addrlen = READ_ONCE(ms->ms_addrlen);
+    size_t new_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_addrlen);
     if (new_addrlen > sizeof(*addr)) {
         ret = -EPERM;
         goto out;
@@ -1495,7 +1495,7 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
     }
 
     if (addr && addrlen) {
-        size_t untrusted_addrlen = READ_ONCE(ms->ms_addrlen);
+        size_t untrusted_addrlen = COPY_UNTRUSTED_VALUE(&ms->ms_addrlen);
         if (!sgx_copy_to_enclave(addr, addrlen, untrusted_addr, untrusted_addrlen)) {
             retval = -EPERM;
             goto out;
@@ -1504,7 +1504,7 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
     }
 
     if (control && controllen) {
-        size_t untrusted_controllen = READ_ONCE(ms->ms_controllen);
+        size_t untrusted_controllen = COPY_UNTRUSTED_VALUE(&ms->ms_controllen);
         bool copied = sgx_copy_to_enclave(control, controllen, untrusted_control,
                                           untrusted_controllen);
         if (!copied) {
@@ -1703,7 +1703,7 @@ int ocall_gettime(uint64_t* microsec_ptr) {
     }
 
     if (!retval) {
-        uint64_t microsec = READ_ONCE(ms->ms_microsec);
+        uint64_t microsec = COPY_UNTRUSTED_VALUE(&ms->ms_microsec);
         if (microsec < last_microsec_before_ocall) {
             /* Probably a malicious host. */
             log_error("OCALL_GETTIME returned time value smaller than in the previous call");
@@ -1758,7 +1758,7 @@ int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us) {
     retval = sgx_exitless_ocall(OCALL_POLL, ms);
 
     if (timeout_us) {
-        remaining_time_us = retval == 0 ? 0 : READ_ONCE(ms->ms_timeout_us);
+        remaining_time_us = retval == 0 ? 0 : COPY_UNTRUSTED_VALUE(&ms->ms_timeout_us);
         if (remaining_time_us > *timeout_us) {
             remaining_time_us = *timeout_us;
         }

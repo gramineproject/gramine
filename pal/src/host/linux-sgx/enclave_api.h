@@ -16,10 +16,17 @@ void* sgx_alloc_on_ustack(uint64_t size);
 void* sgx_copy_to_ustack(const void* ptr, uint64_t size);
 void sgx_reset_ustack(const void* old_ustack);
 
+void sgx_copy_to_enclave_verified(void* ptr, const void* uptr, size_t size);
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize);
 void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt);
 void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt1,
                                     size_t elem_cnt2);
+
+#define COPY_UNTRUSTED_VALUE(untrusted_ptr) ({                          \
+    __typeof__(*(untrusted_ptr)) val;                                   \
+    sgx_copy_to_enclave_verified(&val, (untrusted_ptr), sizeof(val));   \
+    val;                                                                \
+})
 
 /*!
  * \brief Low-level wrapper around EREPORT instruction leaf.

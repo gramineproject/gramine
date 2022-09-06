@@ -1,4 +1,9 @@
 /*
+ * FIXME: This feature is currently insecure. It keeps most objects in untrusted memory and uses
+ * some functions, like `spinlock_lock`, on that memory. Since we have to use 8-byte naturally
+ * aligned untrusted memory accesses to mitigate CVE-2022-21233, we must mark this feature as
+ * insecure until we rewrite it or that CVE is fully fixed in hardware or microcode.
+ *
  * RPC threads are helper threads that run in untrusted mode alongside enclave threads. RPC threads
  * issue system calls on behalf of enclave threads. This allows "exitless" design when app threads
  * never leave the enclave (except for a few syscalls where there is no benefit, e.g., nanosleep).
@@ -6,9 +11,9 @@
  * "Exitless" design alleviates expensive OCALLs/ECALLs. This was first proposed by SCONE (by
  * Arnautov et al at OSDI 2016) and by Eleos (by Orenbach et al at EuroSys 2017).
  *
- * Brief description: user must specify "sgx.rpc_thread_num = 2" in manifest to create two RPC
- * threads. If user specifies "0" or omits this directive, then no RPC threads are created and all
- * syscalls perform an enclave exit (as in previous versions of Gramine).
+ * Brief description: user must specify "sgx.insecure__rpc_thread_num = 2" in manifest to create two
+ * RPC threads. If user specifies "0" or omits this directive, then no RPC threads are created and
+ * all syscalls perform an enclave exit (as in previous versions of Gramine).
  *
  * All enclave and RPC threads work on a single shared RPC queue (global variable `g_rpc_queue`).
  * To issue a syscall, enclave thread enqueues syscall request in the queue and spins waiting for

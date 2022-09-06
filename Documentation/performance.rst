@@ -163,6 +163,9 @@ to OCALLs:
 Exitless feature
 ----------------
 
+Note this feature is currently insecure and not recommended for production
+usage (potentially susceptible to CVE-2022-21233 aka INTEL-SA-00657).
+
 Gramine supports the Exitless (or Switchless) feature – it trades off CPU cores
 for faster OCALL execution. More specifically, with Exitless, enclave threads do
 not exit the enclave on OCALLs but instead busy wait for untrusted helper
@@ -172,28 +175,28 @@ requests for OCALLs from enclave threads (untrusted helper threads periodically
 sleep if there have been no OCALL requests for a long time to save some CPU
 cycles).
 
-Exitless is configured by ``sgx.rpc_thread_num = xyz``. By default, the Exitless
-feature is disabled – all enclave threads perform an actual OCALL for each
-system call and exit the enclave. The feature can be disabled by specifying
-``sgx.rpc_thread_num = 0``.
+Exitless is configured by ``sgx.insecure__rpc_thread_num = xyz``. By default,
+the Exitless feature is disabled – all enclave threads perform an actual OCALL
+for each system call and exit the enclave. The feature can be disabled by
+specifying ``sgx.insecure__rpc_thread_num = 0``.
 
 You must decide how many untrusted helper RPC threads your application needs. A
-rule of thumb: specify ``sgx.rpc_thread_num == sgx.thread_num``, i.e., the
-number of untrusted RPC threads should be the same as the number of enclave
+rule of thumb: specify ``sgx.insecure__rpc_thread_num == sgx.thread_num``, i.e.,
+the number of untrusted RPC threads should be the same as the number of enclave
 threads. For example, native Redis 6.0 uses 3-4 enclave threads during its
 execution, plus Gramine uses another 1-2 helper enclave threads. So Redis
 manifest has an over-approximation of this number: ``sgx.thread_num = 8``. Thus,
-to correctly enable the Exitless feature, specify ``sgx.rpc_thread_num = 8``.
-Here is an example:
+to correctly enable the Exitless feature, specify
+``sgx.insecure__rpc_thread_num = 8``. Here is an example:
 
 ::
 
-   # exitless disabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 0`
+   # exitless disabled: `sgx.thread_num = 8` and `sgx.insecure__rpc_thread_num = 0`
    CI-Examples/redis$ gramine-sgx redis-server --save '' --protected-mode no &
    CI-Examples/redis$ src/src/redis-benchmark -t set
    43010.75 requests per second
 
-   # exitless enabled: `sgx.thread_num = 8` and `sgx.rpc_thread_num = 8`
+   # exitless enabled: `sgx.thread_num = 8` and `sgx.insecure__rpc_thread_num = 8`
    CI-Examples/redis$ gramine-sgx redis-server --save '' --protected-mode no &
    CI-Examples/redis$ src/src/redis-benchmark -t set
    68119.89 requests per second

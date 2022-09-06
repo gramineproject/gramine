@@ -24,9 +24,6 @@ sgx.nonpie_binary = true
 sgx.enclave_size = "512M"
 sgx.thread_num = 4
 
-# Nginx benefits from Exitless. Uncomment the below line to use it.
-#sgx.rpc_thread_num = 4
-
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ install_dir }}/sbin/nginx",
