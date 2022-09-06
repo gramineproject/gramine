@@ -57,6 +57,9 @@ long libos_syscall_dup3(unsigned int oldfd, unsigned int newfd, int flags) {
     if ((flags & ~O_CLOEXEC) || oldfd == newfd)
         return -EINVAL;
 
+    if (newfd >= get_rlimit_cur(RLIMIT_NOFILE))
+        return -EBADF;
+
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
 
