@@ -15,17 +15,22 @@
 #include "libos_utils.h"
 #include "spinlock.h"
 
-static void signal_alarm(IDTYPE caller, void* arg) {
-    __UNUSED(caller);
-    __UNUSED(arg);
+static void signal_current_proc(int signo) {
     siginfo_t info = {
-        .si_signo = SIGALRM,
+        .si_signo = signo,
         .si_pid = g_process.pid,
         .si_code = SI_USER,
     };
     if (kill_current_proc(&info) < 0) {
         log_warning("signal_alarm: failed to deliver a signal");
     }
+}
+
+
+static void signal_alarm(IDTYPE caller, void* arg) {
+    __UNUSED(caller);
+    __UNUSED(arg);
+    signal_current_proc(SIGALRM);
 }
 
 long libos_syscall_alarm(unsigned int seconds) {
@@ -63,6 +68,8 @@ static void signal_itimer(IDTYPE target, void* arg) {
     g_real_itimer.timeout += g_real_itimer.reset;
     g_real_itimer.reset = 0;
     spinlock_unlock(&g_real_itimer_lock);
+
+    signal_current_proc(SIGALRM);
 }
 
 #ifndef ITIMER_REAL
