@@ -13,6 +13,8 @@ manifests = [
   "File2",
   "HelloWorld",
   "Hex",
+  "ipv4_parser",
+  "ipv6_parser",
   "Memory",
   "Misc",
   "Pie",

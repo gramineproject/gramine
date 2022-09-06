@@ -277,8 +277,116 @@ static int import_and_sanitize_topo_info(void* uptr_topo_info) {
     return sanitize_topo_info(topo_info);
 }
 
-extern uintptr_t g_enclave_base;
-extern uintptr_t g_enclave_top;
+/*
+ * Gramine assumes that the hostname is valid when:
+ * - the length of the hostname is below or equal to 255 characters (including '\0'),
+ * - the length of a single label is between 1 and 63,
+ * - every label is separated with '.',
+ * - the hostname doesn't start or end with '.' and '-',
+ * - the hostname contains only alphanumeric characters, '-', and '.',
+ * These rules were taken from:
+ * - RFC1123,
+ * - RFC0952,
+ * - RFC2181.
+ */
+static bool is_hostname_valid(const char* hostname) {
+    const char* ptr = hostname;
+    size_t label_len = 0;
+
+    if (*ptr == '-')
+        return false;
+
+    while (ptr - hostname < PAL_HOSTNAME_MAX && *ptr != 0x00) {
+        if (('a' <= *ptr && *ptr <= 'z')
+                || ('A' <= *ptr && *ptr <= 'Z')
+                || ('0' <= *ptr && *ptr <= '9')
+                || *ptr == '-') {
+            label_len++;
+        } else if (*ptr == '.') {
+            if (label_len == 0 || label_len > 63) {
+                return false;
+            }
+            label_len = 0;
+        } else {
+            return false;
+        }
+
+        ptr++;
+    }
+
+    if (ptr - hostname >= PAL_HOSTNAME_MAX)
+        return false;
+    if (label_len == 0 || label_len > 63)
+        return false;
+    /* rewind to last character */
+    ptr--;
+    if (*ptr == '-')
+        return false;
+
+    return true;
+}
+
+static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dns_conf) {
+    struct pal_dns_host_conf* pub_dns = &g_pal_public_state.dns_host;
+
+    if (!g_pal_public_state.emulate_etc_files)
+        return 0;
+
+    struct pal_dns_host_conf untrusted_dns;
+    if (!sgx_copy_to_enclave(&untrusted_dns, sizeof(untrusted_dns), uptr_dns_conf,
+                             sizeof(*uptr_dns_conf))) {
+        log_error("Unable to read host dns info");
+        return -EINVAL;
+    }
+
+    if (untrusted_dns.nsaddr_list_count > PAL_MAX_NAMESPACES) {
+        log_error("Too many nameservers provided");
+        return -EINVAL;
+    }
+
+    pub_dns->nsaddr_list_count = untrusted_dns.nsaddr_list_count;
+    for (size_t i = 0; i < pub_dns->nsaddr_list_count; i++) {
+        coerce_untrusted_bool(&untrusted_dns.nsaddr_list[i].is_ipv6);
+        /* All binary IP addresses are valid. */
+        if (!untrusted_dns.nsaddr_list[i].is_ipv6) {
+            pub_dns->nsaddr_list[i].ipv4 = untrusted_dns.nsaddr_list[i].ipv4;
+            pub_dns->nsaddr_list[i].is_ipv6 = false;
+        } else {
+            memcpy(&pub_dns->nsaddr_list[i].ipv6, &untrusted_dns.nsaddr_list[i].ipv6,
+                   sizeof(pub_dns->nsaddr_list[i].ipv6));
+            pub_dns->nsaddr_list[i].is_ipv6 = true;
+        }
+    }
+
+    if (untrusted_dns.dn_search_count > PAL_MAX_DN_SEARCH) {
+        log_error("Too many search entries provided");
+        return -EINVAL;
+    }
+
+    size_t j = 0;
+    for (size_t i = 0; i < untrusted_dns.dn_search_count; i++) {
+        if (!is_hostname_valid(untrusted_dns.dn_search[i])) {
+            log_warning("The search domain name %s is invalid, skipping it", untrusted_dns.dn_search[i]);
+            continue;
+        }
+
+        memcpy(pub_dns->dn_search[j], untrusted_dns.dn_search[i], sizeof(pub_dns->dn_search[j]) - 1);
+        pub_dns->dn_search[j][sizeof(pub_dns->dn_search[j]) - 1] = 0x00;
+        j++;
+    }
+    pub_dns->dn_search_count = j;
+
+    coerce_untrusted_bool(&untrusted_dns.inet6);
+    coerce_untrusted_bool(&untrusted_dns.rotate);
+
+    pub_dns->inet6 = untrusted_dns.inet6;
+    pub_dns->rotate = untrusted_dns.rotate;
+
+    return 0;
+}
+
+extern void* g_enclave_base;
+extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
@@ -438,7 +546,7 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
-                             void* uptr_rpc_queue) {
+                             void* uptr_rpc_queue, void* uptr_dns_conf) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -606,7 +714,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         /* Parse, sanitize and store host topology info into g_pal_public_state struct */
         ret = import_and_sanitize_topo_info(uptr_topo_info);
         if (ret < 0) {
-            log_error("Failed to copy and sanitize topology information");
+            log_error("Failed to copy and sanitize topology information: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }
@@ -657,6 +765,23 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.emulate_etc_files",
+                       /*defaultval*/false, &g_pal_public_state.emulate_etc_files);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.emulate_etc_files'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    /* Get host information for etc emulation only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (parent_stream_fd < 0) {
+        ret = import_and_init_emulation_etc_files(uptr_dns_conf);
+        if (ret < 0) {
+            log_error("Failed to initialize host info: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
     }
 
     enum sgx_attestation_type attestation_type;

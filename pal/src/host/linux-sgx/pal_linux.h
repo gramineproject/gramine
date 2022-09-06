@@ -74,7 +74,7 @@ extern size_t g_pal_internal_mem_size;
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
-                             void* uptr_rpc_queue);
+                             void* uptr_rpc_queue, void* uptr_dns_conf);
 void pal_start_thread(void);
 
 extern char __text_start, __text_end, __data_start, __data_end;

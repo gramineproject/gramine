@@ -257,3 +257,6 @@ int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
 int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
                          bool (*is_present)(size_t ind, const void* arg),
                          const void* callback_arg);
+
+/* etcfs */
+int init_etcfs(void);

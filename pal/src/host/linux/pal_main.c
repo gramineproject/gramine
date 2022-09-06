@@ -14,6 +14,7 @@
 #include "cpu.h"
 #include "debug_map.h"
 #include "elf/elf.h"
+#include "etc_host_info.h"
 #include "init.h"
 #include "linux_utils.h"
 #include "pal.h"
@@ -119,6 +120,15 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     log_always("This is an internal interface. Use gramine-direct wrapper to launch applications "
                "in Gramine.");
     _PalProcessExit(1);
+}
+
+static void get_host_etc_configs(void) {
+    if (!g_pal_public_state.emulate_etc_files)
+        return;
+
+    if (parse_resolv_conf(&g_pal_public_state.dns_host) < 0) {
+        INIT_FAIL("Unable to parse /etc/resolv.conf");
+    }
 }
 
 #ifdef ASAN
@@ -407,6 +417,18 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
                              /*defaultval=*/g_page_size, &g_pal_internal_mem_size);
     if (ret < 0) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
+    }
+
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.emulate_etc_files",
+                       /*defaultval=*/false, &g_pal_public_state.emulate_etc_files);
+    if (ret < 0) {
+        INIT_FAIL("Cannot parse 'sys.emulate_etc_files'");
+    }
+
+    /* Get host /etc information only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
+    if (first_process) {
+        get_host_etc_configs();
     }
 
     void* internal_mem_addr = (void*)DO_SYSCALL(mmap, NULL, g_pal_internal_mem_size,
