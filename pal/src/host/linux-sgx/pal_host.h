@@ -19,9 +19,6 @@
 #include "list.h"
 #include "spinlock.h"
 
-void* malloc_untrusted(size_t size);
-void free_untrusted(void* mem);
-
 DEFINE_LIST(pal_handle_thread);
 struct pal_handle_thread {
     PAL_HDR reserved;

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
@@ -8,12 +8,93 @@
 #include <linux/futex.h>
 #include <stdbool.h>
 
+#include "asan.h"
 #include "assert.h"
+#include "enclave_api.h"
 #include "enclave_ocalls.h"
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 #include "spinlock.h"
+
+static uintptr_t g_untrusted_page_next_entry = 0;
+static spinlock_t g_untrusted_page_lock = INIT_SPINLOCK_UNLOCKED;
+
+static int alloc_untrusted_futex_word(uint32_t** out_addr) {
+    spinlock_lock(&g_untrusted_page_lock);
+    static_assert(PAGE_SIZE % sizeof(uint32_t) == 0, "required by the check below");
+    if (g_untrusted_page_next_entry % PAGE_SIZE == 0) {
+        void* untrusted_page;
+        int ret = ocall_mmap_untrusted(&untrusted_page, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                                       MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1, /*offset=*/0);
+        if (ret < 0) {
+            spinlock_unlock(&g_untrusted_page_lock);
+            return unix_to_pal_error(ret);
+        }
+#ifdef ASAN
+        asan_poison_region((uintptr_t)untrusted_page, PAGE_SIZE, ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
+
+        g_untrusted_page_next_entry = (uintptr_t)untrusted_page;
+        /* Reserve space for users counter. */
+        g_untrusted_page_next_entry += sizeof(uint64_t);
+#ifdef ASAN
+        asan_unpoison_region((uintptr_t)untrusted_page, sizeof(uint64_t));
+#endif
+    }
+
+    uintptr_t addr = g_untrusted_page_next_entry;
+    g_untrusted_page_next_entry += sizeof(uint32_t);
+#ifdef ASAN
+    /* ASAN requires 8-byte aligned addresses, so we need to pad. */
+    g_untrusted_page_next_entry += sizeof(uint32_t);
+    asan_unpoison_region(addr, 2 * sizeof(uint32_t));
+#endif
+
+    /* This counter is only used to decide when to free the page - untrusted host can do this anyway
+     * at any point, so we can keep the counter in untrusted memory. */
+    uint64_t* untrusted_users_counter_ptr = (uint64_t*)ALIGN_DOWN(addr, PAGE_SIZE);
+    uint64_t users_counter = COPY_UNTRUSTED_VALUE(untrusted_users_counter_ptr);
+    WRITE_ONCE(*untrusted_users_counter_ptr, users_counter + 1);
+    spinlock_unlock(&g_untrusted_page_lock);
+
+    *out_addr = (uint32_t*)addr;
+    return 0;
+}
+
+static void free_untrusted_futex_word(uint32_t* addr) {
+    uint64_t* untrusted_users_counter_ptr = (uint64_t*)ALIGN_DOWN((uintptr_t)addr, PAGE_SIZE);
+
+    void* addr_to_munmap = NULL;
+    spinlock_lock(&g_untrusted_page_lock);
+    uint64_t users_counter = COPY_UNTRUSTED_VALUE(untrusted_users_counter_ptr);
+    if (users_counter == 1) {
+        /* Counter is at the begining of the page. */
+        addr_to_munmap = untrusted_users_counter_ptr;
+        if (ALIGN_DOWN(g_untrusted_page_next_entry, PAGE_SIZE) == (uintptr_t)addr_to_munmap) {
+            g_untrusted_page_next_entry = 0;
+        }
+    } else {
+        assert(users_counter);
+        WRITE_ONCE(*untrusted_users_counter_ptr, users_counter - 1);
+    }
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, 2 * sizeof(uint32_t), ASAN_POISON_HEAP_LEFT_REDZONE);
+#endif
+    spinlock_unlock(&g_untrusted_page_lock);
+
+    if (addr_to_munmap) {
+#ifdef ASAN
+        /* First 64 bits are for users counter - already not poisoned. */
+        asan_unpoison_region((uintptr_t)addr_to_munmap + sizeof(uint64_t),
+                             PAGE_SIZE - sizeof(uint64_t));
+#endif
+        int ret = ocall_munmap_untrusted(addr_to_munmap, PAGE_SIZE);
+        if (ret < 0) {
+            log_error("Failed to free untrusted page at %p: %d", addr_to_munmap, ret);
+        }
+    }
+}
 
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
     PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
@@ -22,11 +103,13 @@ int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear)
     }
 
     init_handle_hdr(handle, PAL_TYPE_EVENT);
-    handle->event.signaled_untrusted = malloc_untrusted(sizeof(*handle->event.signaled_untrusted));
-    if (!handle->event.signaled_untrusted) {
+
+    int ret = alloc_untrusted_futex_word(&handle->event.signaled_untrusted);
+    if (ret < 0) {
         free(handle);
-        return -PAL_ERROR_NOMEM;
+        return ret;
     }
+
     spinlock_init(&handle->event.lock);
     handle->event.waiters_cnt = 0;
     handle->event.signaled = init_signaled;
@@ -101,7 +184,7 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
 }
 
 static int event_close(PAL_HANDLE handle) {
-    free_untrusted(handle->event.signaled_untrusted);
+    free_untrusted_futex_word(handle->event.signaled_untrusted);
     return 0;
 }
 
