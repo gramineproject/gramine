@@ -10,7 +10,7 @@ fs.mounts = [
 
 # app runs with 4 parallel threads + Gramine has couple internal threads
 sgx.thread_num = 8
-sgx.rpc_thread_num = 8
+sgx.insecure__rpc_thread_num = 8
 
 sgx.nonpie_binary = true
 sgx.debug = true
