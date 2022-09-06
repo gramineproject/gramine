@@ -71,6 +71,30 @@ int sgx_qv_verify_quote(const uint8_t* p_quote, uint32_t quote_size, void* p_quo
                         sgx_ql_qv_result_t* p_quote_verification_result, void* p_qve_report_info,
                         uint32_t supplemental_data_size, uint8_t* p_supplemental_data);
 
+static const char* sgx_ql_qv_result_to_str(sgx_ql_qv_result_t verification_result) {
+    switch (verification_result) {
+        case SGX_QL_QV_RESULT_OK:
+            return "OK";
+        case SGX_QL_QV_RESULT_CONFIG_NEEDED:
+            return "CONFIG_NEEDED";
+        case SGX_QL_QV_RESULT_OUT_OF_DATE:
+            return "OUT_OF_DATE";
+        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+            return "OUT_OF_DATE_CONFIG_NEEDED";
+        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
+            return "SW_HARDENING_NEEDED";
+        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+            return "CONFIG_AND_SW_HARDENING_NEEDED";
+        case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
+            return "INVALID_SIGNATURE";
+        case SGX_QL_QV_RESULT_REVOKED:
+            return "REVOKED";
+        case SGX_QL_QV_RESULT_UNSPECIFIED:
+            return "UNSPECIFIED";
+    }
+    return "<unrecognized error>";
+}
+
 int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags) {
     (void)data;
 
@@ -167,6 +191,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
             break;
     }
     if (ret < 0) {
+        ERROR("Quote: verification failed with error %s\n",
+              sgx_ql_qv_result_to_str(verification_result));
         goto out;
     }
 
