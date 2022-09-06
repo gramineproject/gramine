@@ -1932,7 +1932,7 @@ int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     void* old_ustack = sgx_prepare_ustack();
     ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
     ms_buf = sgx_alloc_on_ustack(buf_size);
-    if (!ms || ms_buf) {
+    if (!ms || !ms_buf) {
         retval = -EPERM;
         goto out;
     }
