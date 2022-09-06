@@ -7,23 +7,20 @@
 #include "pal_rpc_queue.h"
 #include "sgx_arch.h"
 
-#define SGX_CAST(type, item) ((type)(item))
-
-extern void* g_enclave_base;
-extern void* g_enclave_top;
+extern uintptr_t g_enclave_base;
+extern uintptr_t g_enclave_top;
 
 static int64_t g_enclave_start_called = 0;
 
 /* returns 0 if rpc_queue is valid/not requested, otherwise -1 */
-static int verify_and_init_rpc_queue(rpc_queue_t* untrusted_rpc_queue) {
-    g_rpc_queue = NULL;
-
+static int verify_and_init_rpc_queue(void* untrusted_rpc_queue) {
     if (!untrusted_rpc_queue) {
         /* user app didn't request RPC queue (i.e., the app didn't request exitless syscalls) */
         return 0;
     }
 
-    if (!sgx_is_completely_outside_enclave(untrusted_rpc_queue, sizeof(*untrusted_rpc_queue))) {
+    if (!sgx_is_valid_untrusted_ptr(untrusted_rpc_queue, sizeof(*g_rpc_queue),
+                                    alignof(__typeof__(*g_rpc_queue)))) {
         /* malicious RPC queue object, return error */
         return -1;
     }
@@ -60,18 +57,23 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         return;
 
     if (!g_enclave_top) {
-        g_enclave_base = enclave_base_addr;
-        g_enclave_top  = enclave_base_addr + GET_ENCLAVE_TCB(enclave_size);
+        g_enclave_base = (uintptr_t)enclave_base_addr;
+        g_enclave_top  = g_enclave_base + GET_ENCLAVE_TCB(enclave_size);
     }
 
     /* disallow malicious URSP (that points into the enclave) */
-    void* ursp = (void*)GET_ENCLAVE_TCB(gpr)->ursp;
+    uintptr_t ursp = GET_ENCLAVE_TCB(gpr)->ursp;
     if (g_enclave_base <= ursp && ursp <= g_enclave_top)
         return;
 
+    /* Sanity check. */
+    if (!((uintptr_t)exit_target < g_enclave_base || g_enclave_top <= (uintptr_t)exit_target)) {
+        return;
+    }
+
     SET_ENCLAVE_TCB(exit_target,     exit_target);
-    SET_ENCLAVE_TCB(ustack,          ursp);
-    SET_ENCLAVE_TCB(ustack_top,      ursp);
+    SET_ENCLAVE_TCB(ustack,          (void*)ursp);
+    SET_ENCLAVE_TCB(ustack_top,      (void*)ursp);
     SET_ENCLAVE_TCB(clear_child_tid, NULL);
     SET_ENCLAVE_TCB(untrusted_area_cache.in_use, 0UL);
 
@@ -85,17 +87,13 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
             return;
         }
 
-        ms_ecall_enclave_start_t* ms = (ms_ecall_enclave_start_t*)ecall_args;
-
-        if (!ms || !sgx_is_completely_outside_enclave(ms, sizeof(*ms))) {
+        ms_ecall_enclave_start_t* ms;
+        if (!sgx_is_valid_untrusted_ptr(ecall_args, sizeof(*ms), alignof(__typeof__(*ms)))) {
             return;
         }
+        ms = ecall_args;
 
         if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
-            return;
-
-        struct pal_topo_info* topo_info = READ_ONCE(ms->ms_topo_info);
-        if (!topo_info || !sgx_is_completely_outside_enclave(topo_info, sizeof(*topo_info)))
             return;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
@@ -113,7 +111,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
                        READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
                        READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd),
-                       READ_ONCE(ms->ms_qe_targetinfo), topo_info);
+                       READ_ONCE(ms->ms_qe_targetinfo), READ_ONCE(ms->ms_topo_info));
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.
