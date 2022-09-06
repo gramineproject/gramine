@@ -118,46 +118,7 @@ long libos_syscall_mkdirat(int dfd, const char* pathname, int mode) {
 }
 
 long libos_syscall_rmdir(const char* pathname) {
-    int ret = 0;
-    struct libos_dentry* dent = NULL;
-
-    if (!is_user_string_readable(pathname))
-        return -EFAULT;
-
-    lock(&g_dcache_lock);
-    ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW | LOOKUP_DIRECTORY, &dent);
-    if (ret < 0) {
-        goto out;
-    }
-
-    if (!dent->parent) {
-        ret = -EACCES;
-        goto out;
-    }
-
-    if (dent->inode->type != S_IFDIR) {
-        ret = -ENOTDIR;
-        goto out;
-    }
-
-    struct libos_fs* fs = dent->inode->fs;
-    if (!fs || !fs->d_ops || !fs->d_ops->unlink) {
-        ret = -EACCES;
-        goto out;
-    }
-
-    ret = fs->d_ops->unlink(dent);
-    if (ret < 0)
-        goto out;
-
-    put_inode(dent->inode);
-    dent->inode = NULL;
-    ret = 0;
-out:
-    unlock(&g_dcache_lock);
-    if (dent)
-        put_dentry(dent);
-    return ret;
+    return libos_syscall_unlinkat(AT_FDCWD, pathname, AT_REMOVEDIR);
 }
 
 long libos_syscall_umask(mode_t mask) {
