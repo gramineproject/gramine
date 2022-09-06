@@ -75,6 +75,9 @@ int init_fs(void) {
     if ((ret = init_sysfs()) < 0)
         goto err;
 
+    if ((ret = init_etcfs()) < 0)
+        goto err;
+
     return 0;
 
 err:
@@ -650,7 +653,9 @@ int init_mount(void) {
     }
     /* Otherwise `cwd` is already initialized. */
 
-    return 0;
+    /* The mount_etcfs takes precedence over user's fs.mounts, and because of that,
+     * it has to be called at the end. */
+    return mount_etcfs();
 }
 
 struct libos_fs* find_fs(const char* name) {

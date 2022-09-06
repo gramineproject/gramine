@@ -31,6 +31,10 @@ int isdigit(int c) {
     return (unsigned)c - '0' < 10;
 }
 
+int isxdigit(int c) {
+    return isdigit(c) || (unsigned)tolower(c) - 'a' < 6;
+}
+
 int isalnum(int c) {
     return isalpha(c) || isdigit(c);
 }

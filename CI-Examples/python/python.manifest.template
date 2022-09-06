@@ -22,10 +22,12 @@ fs.mounts = [
   { type = "tmpfs", path = "/tmp" },
 ]
 
+sys.stack.size = "2M"
+sys.enable_extra_runtime_domain_names_conf = true
+
 sgx.debug = true
 sgx.nonpie_binary = true
 sgx.enclave_size = "512M"
-sys.stack.size = "2M"
 sgx.thread_num = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
@@ -53,5 +55,4 @@ sgx.allowed_files = [
   "file:/etc/passwd",
   "file:/etc/gai.conf",
   "file:/etc/host.conf",
-  "file:/etc/resolv.conf",
 ]
