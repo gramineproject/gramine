@@ -4,30 +4,12 @@
 #include "enclave_ecalls.h"
 #include "pal_ecall_types.h"
 #include "pal_linux.h"
-#include "pal_rpc_queue.h"
 #include "sgx_arch.h"
 
 extern uintptr_t g_enclave_base;
 extern uintptr_t g_enclave_top;
 
 static int64_t g_enclave_start_called = 0;
-
-/* returns 0 if rpc_queue is valid/not requested, otherwise -1 */
-static int verify_and_init_rpc_queue(void* untrusted_rpc_queue) {
-    if (!untrusted_rpc_queue) {
-        /* user app didn't request RPC queue (i.e., the app didn't request exitless syscalls) */
-        return 0;
-    }
-
-    if (!sgx_is_valid_untrusted_ptr(untrusted_rpc_queue, sizeof(*g_rpc_queue),
-                                    alignof(__typeof__(*g_rpc_queue)))) {
-        /* malicious RPC queue object, return error */
-        return -1;
-    }
-
-    g_rpc_queue = untrusted_rpc_queue;
-    return 0;
-}
 
 /*
  * Called from enclave_entry.S to execute ecalls.
@@ -93,9 +75,6 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         }
         ms = ecall_args;
 
-        if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
-            return;
-
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
         // TODO: This eats 1KB of a stack frame which lives for the whole lifespan of this enclave.
         //       We should move it somewhere else and deallocate right after use.
@@ -108,10 +87,14 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         init_xsave_size(report.body.attributes.xfrm);
 
         /* pal_linux_main is responsible for checking the passed arguments */
-        pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
-                       READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
-                       READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd),
-                       READ_ONCE(ms->ms_qe_targetinfo), READ_ONCE(ms->ms_topo_info));
+        pal_linux_main(COPY_UNTRUSTED_VALUE(&ms->ms_libpal_uri),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_libpal_uri_len),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_args), COPY_UNTRUSTED_VALUE(&ms->ms_args_size),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_env), COPY_UNTRUSTED_VALUE(&ms->ms_env_size),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_parent_stream_fd),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_qe_targetinfo),
+                       COPY_UNTRUSTED_VALUE(&ms->ms_topo_info),
+                       COPY_UNTRUSTED_VALUE(&ms->rpc_queue));
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

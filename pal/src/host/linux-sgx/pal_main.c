@@ -10,6 +10,8 @@
  * arguments and manifest.
  */
 
+#include <stdalign.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 
@@ -21,6 +23,7 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
+#include "pal_rpc_queue.h"
 #include "pal_rtld.h"
 #include "pal_topology.h"
 #include "toml.h"
@@ -48,6 +51,22 @@ void _PalGetAvailableUserAddressRange(void** out_start, void** out_end) {
         log_error("Not enough enclave memory, please increase enclave size!");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+}
+
+static bool verify_and_init_rpc_queue(void* untrusted_rpc_queue) {
+    if (!untrusted_rpc_queue) {
+        /* user app didn't request RPC queue (i.e., the app didn't request exitless syscalls) */
+        return true;
+    }
+
+    if (!sgx_is_valid_untrusted_ptr(untrusted_rpc_queue, sizeof(*g_rpc_queue),
+                                    alignof(__typeof__(*g_rpc_queue)))) {
+        /* malicious RPC queue object, return error */
+        return false;
+    }
+
+    g_rpc_queue = untrusted_rpc_queue;
+    return true;
 }
 
 /*
@@ -418,7 +437,8 @@ static void do_preheat_enclave(void) {
 __attribute_no_stack_protector
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
-                             int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info) {
+                             int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
+                             void* uptr_rpc_queue) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -565,6 +585,21 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
+
+
+    int64_t rpc_thread_num;
+    ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",
+                      /*defaultval=*/0, &rpc_thread_num);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    if (rpc_thread_num > 0) {
+        if (!verify_and_init_rpc_queue(uptr_rpc_queue)) {
+            log_error("Invalid rpc queue pointer");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    }
 
     /* Get host topology information only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
