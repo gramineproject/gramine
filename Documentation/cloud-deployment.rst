@@ -35,9 +35,12 @@ Add Intel SGX repository::
    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
    # (if you're on Ubuntu 18.04, write "bionic" instead of "focal" above)
 
-Install Gramine (DCAP driver version) on Ubuntu 18.04::
+Fetch the latest versions of package lists from the newly added repos::
 
    sudo apt-get update
+
+Install Gramine (DCAP driver version) on Ubuntu 18.04::
+
    sudo apt-get install gramine-dcap
 
 Install Gramine (in-kernel driver version) on Ubuntu 20.04::
