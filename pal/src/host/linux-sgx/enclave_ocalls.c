@@ -299,6 +299,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
         *need_munmap = true;
         return 0;
     }
+    COMPILER_BARRIER();
 
     /* normal execution case: cache was not in use, so use it/allocate new one for reuse */
     if (cache->valid) {
@@ -309,6 +310,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
         ret = ocall_munmap_untrusted(cache->addr, cache->size);
         if (ret < 0) {
             cache->valid = false;
+            COMPILER_BARRIER();
             __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
             return ret;
         }
@@ -318,6 +320,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
                                /*fd=*/-1, /*offset=*/0);
     if (ret < 0) {
         cache->valid = false;
+        COMPILER_BARRIER();
         __atomic_store_n(&cache->in_use, 0, __ATOMIC_RELAXED);
     } else {
         cache->valid = true;
