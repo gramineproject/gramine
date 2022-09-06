@@ -3,7 +3,7 @@ project('curl', 'c', version: '7.84.0')
 mbedtls_gramine = dependency('mbedtls_curl')
 
 # This dummy target is needed, because custom_target(depends:) needs a "target", not a "dependency"
-mbedtls_dummy_tgt = static_library('dummy', 'dummy.c', dependencies: mbedtls_gramine)
+mbedtls_dummy_target = static_library('dummy', 'dummy.c', dependencies: mbedtls_gramine)
 
 curl_libs_output = [
     'libcurl.a',
@@ -18,7 +18,7 @@ curl = custom_target('curl',
         join_paths(meson.build_root(), 'subprojects'),
     ],
 
-    depends: mbedtls_dummy_tgt,
+    depends: mbedtls_dummy_target,
     output: curl_libs_output,
 )
 
