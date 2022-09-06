@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/random.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -47,8 +47,9 @@ static int verify_measurements_callback(const char* mrenclave, const char* mrsig
 
 int main(int argc, char** argv) {
     int ret;
-    #define SECRET_SIZE 16
-    uint8_t secret_key[SECRET_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than expected */
+    #define SECRET_KEY_SIZE 16
+    uint8_t secret_key[SECRET_KEY_SIZE + 1] = {0}; /* +1 is to detect if file is not bigger than
+                                                    * expected */
     ssize_t bytes_read = 0;
 
     ret = pthread_mutex_init(&g_print_lock, NULL);
@@ -87,14 +88,15 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        if (bytes_read != SECRET_SIZE) {
-            fprintf(stderr, "[error] encryption key from %s is not 16B in size\n", argv[1]);
+        if (bytes_read != SECRET_KEY_SIZE) {
+            fprintf(stderr, "[error] encryption key from %s is not %dB in size\n", argv[1],
+                    SECRET_KEY_SIZE);
             return 1;
         }
     }
 
     puts("--- Starting the Secret Provisioning server on port 4433 ---");
-    ret = secret_provision_start_server(secret_key, SECRET_SIZE,
+    ret = secret_provision_start_server(secret_key, SECRET_KEY_SIZE,
                                         "4433", SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         NULL);

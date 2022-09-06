@@ -99,6 +99,8 @@ secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.templat
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$(notdir $<) > $(notdir $@)
 
+# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
+# see the helloworld example for details on this workaround.
 secret_prov_minimal/client.manifest.sgx secret_prov_minimal/client.sig: sgx_sign_secret_prov_minimal_client
 	@:
 
@@ -106,8 +108,8 @@ secret_prov_minimal/client.manifest.sgx secret_prov_minimal/client.sig: sgx_sign
 sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest secret_prov_minimal/client
 	cd secret_prov_minimal && \
 	gramine-sgx-sign \
-		--manifest client.manifest \
-		--output client.manifest.sgx
+		--manifest $(notdir $<) \
+		--output $(notdir $<).sgx
 
 secret_prov_minimal/client.token: secret_prov_minimal/client.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -124,8 +126,6 @@ secret_prov/client.manifest: secret_prov/client.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$(notdir $<) > $(notdir $@)
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
 secret_prov/client.manifest.sgx secret_prov/client.sig: sgx_sign_secret_prov_client
 	@:
 
@@ -138,15 +138,6 @@ sgx_sign_secret_prov_client: secret_prov/client.manifest secret_prov/client
 
 secret_prov/client.token: secret_prov/client.sig
 	gramine-sgx-get-token --output $@ --sig $<
-
-########################## PREPARE PROTECTED FILES ############################
-
-secret_prov_pf/wrap_key:
-	dd if=/dev/urandom of=$@ bs=16 count=1
-
-secret_prov_pf/enc_files/input.txt: secret_prov_pf/wrap_key secret_prov_pf/plain_files/input.txt
-	cd secret_prov_pf && \
-	gramine-sgx-pf-crypt encrypt -w wrap_key -i plain_files/input.txt -o enc_files/input.txt
 
 ############################## PF CLIENT MANIFEST #############################
 
@@ -172,6 +163,15 @@ sgx_sign_secret_prov_pf_client: secret_prov_pf/client.manifest secret_prov_pf/cl
 
 secret_prov_pf/client.token: secret_prov_pf/client.sig
 	gramine-sgx-get-token --output $@ --sig $<
+
+########################## PREPARE PROTECTED FILES ############################
+
+secret_prov_pf/wrap_key:
+	dd if=/dev/urandom of=$@ bs=16 count=1
+
+secret_prov_pf/enc_files/input.txt: secret_prov_pf/wrap_key secret_prov_pf/plain_files/input.txt
+	cd secret_prov_pf && \
+	gramine-sgx-pf-crypt encrypt -w wrap_key -i plain_files/input.txt -o enc_files/input.txt
 
 ############################# SGX CHECKS FOR CI ###############################
 

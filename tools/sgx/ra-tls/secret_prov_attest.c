@@ -435,7 +435,7 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                     continue;
                 } else {
                     close(fd);
-                    ERROR("Secret Provisioning cannot write to '%s'\n", path_buf);
+                    ERROR("Secret provisioning cannot write to '%s'\n", path_buf);
                     exit(1);
                 }
             }

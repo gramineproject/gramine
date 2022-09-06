@@ -1,15 +1,14 @@
 # Secret Provisioning Minimal Examples
 
 This directory contains a Makefile, template client manifests, and a few
-examples of server and clients written against the Secret Provisioning
+examples of servers and clients written against the Secret Provisioning
 library.
 
 These examples use the Secret Provisioning libraries `secret_prov_attest.so` for
 the clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-the server. They are installed together with Gramine (but for DCAP version, you
-need `meson setup ... -Ddcap=enabled`). Additionally, mbedTLS libraries are
-required. For ECDSA/DCAP attestation, the DCAP software infrastructure must be
-installed and work correctly on the host.
+the servers. These libraries are installed together with Gramine (but for DCAP
+version, you need `meson setup ... -Ddcap=enabled`). For DCAP attestation, the
+DCAP software infrastructure must be installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
@@ -23,9 +22,9 @@ verifies the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends secrets back to the client (e.g. the master
 key for encrypted files in `secret_prov_pf` example).
 
-There are two versions of each the server: the EPID one and the DCAP one. Each
-of them links against the corresponding EPID/DCAP secret-provisioning library
-at build time.
+There are two versions of each server: the EPID one and the DCAP one. Each of
+them links against the corresponding EPID/DCAP secret-provisioning library at
+build time.
 
 Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
 to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
@@ -79,7 +78,6 @@ RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
 ./server_epid wrap_key &
 
-# test minimal client
 gramine-sgx ./client
 
 kill %%

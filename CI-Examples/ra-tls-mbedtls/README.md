@@ -13,9 +13,8 @@ verification callback to verify the server RA-TLS certificate via
 This example uses the RA-TLS libraries `ra_tls_attest.so` for server and
 `ra_tls_verify_epid.so`/ `ra_tls_verify_dcap.so` for client. These libraries are
 installed together with Gramine (for DCAP version, you need `meson setup ...
--Ddcap=enabled`). Additionally, mbedTLS libraries are required to correctly run
-RA-TLS, the client, and the server. For ECDSA/DCAP attestation, the DCAP
-software infrastructure must be installed and work correctly on the host.
+-Ddcap=enabled`). For DCAP attestation, the DCAP software infrastructure must be
+ installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
