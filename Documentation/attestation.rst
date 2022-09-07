@@ -474,12 +474,13 @@ The secret may be retrieved by the application in two ways:
   argument to the secret (or ``NULL`` if secret provisioning failed).
 
 .. warning::
-  Provisioned secrets must be treated with utmost care, otherwise they could be
-  inadvertently leaked. For example, if a provisioned secret is a base64-encoded
-  encryption key, then the user should decode it from base64 into binary using
-  side-channel-resistant functions (e.g., `mbedtls_base64_decode()`) instead of
-  non-crypto-secure functions (e.g., self-written decoding logic or a standard
-  library function).
+
+   Provisioned secrets must be treated with utmost care, otherwise they could be
+   inadvertently leaked. For example, if a provisioned secret is a
+   base64-encoded encryption key, then the user should decode it from base64
+   into binary using side-channel-resistant functions (e.g.,
+   `mbedtls_base64_decode()`) instead of non-crypto-secure functions (e.g.,
+   self-written decoding logic or a standard library function).
 
 ``secret_prov_verify_epid.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
