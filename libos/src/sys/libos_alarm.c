@@ -26,7 +26,6 @@ static void signal_current_proc(int signo) {
     }
 }
 
-
 static void signal_alarm(IDTYPE caller, void* arg) {
     __UNUSED(caller);
     __UNUSED(arg);
@@ -54,9 +53,9 @@ static struct {
 
 static spinlock_t g_real_itimer_lock = INIT_SPINLOCK_UNLOCKED;
 
-static void signal_itimer(IDTYPE target, void* arg) {
+static void signal_itimer(IDTYPE caller, void* arg) {
     // XXX: Can we simplify this code or streamline with the other callback?
-    __UNUSED(target);
+    __UNUSED(caller);
 
     spinlock_lock(&g_real_itimer_lock);
 
