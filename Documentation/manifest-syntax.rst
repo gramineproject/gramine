@@ -153,9 +153,13 @@ Emulate ``/etc``
     libos.emulate_etc_files = [true|false]
     (Default: false)
 
-This specifies whether to emulate runtime files under ``/etc``.
-In the case of Linux-SGX PAL, this is achieved by taking the host's ``/etc``
-files, filter supported options, and sanitize them.
+This is achieved by taking the host's ``/etc`` files, parsing them, and
+re-creating them inside Gramine's file system. For security-enforcing
+modes (such as SGX), Gramine additionally sanitizes the contents of these files.
+
+Note that Gramine's parsers for these files support only a subset of the corresponding
+specifications. See below for the list of supported keywords/formats for each file.
+
 The set of extra runtime files is limited to:
 
 - ``/etc/resolv.conf``

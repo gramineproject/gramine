@@ -12,7 +12,7 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
-static int put_string(char** buf, ssize_t* bufsize, const char* fmt, ...) {
+static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     int ret = vsnprintf(*buf, *bufsize, fmt, ap);
@@ -23,13 +23,13 @@ static int put_string(char** buf, ssize_t* bufsize, const char* fmt, ...) {
     *bufsize -= ret;
     *buf += ret;
 
-    return ret;
+    return 0;
 }
 
-static int provide_etc_resolv(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    ssize_t size = 0;
+    size_t size = 0;
 
     /* Estimate the size of buffer: */
     /* nameservers - lets assume all entries will be IPv6 plus a new line */
@@ -57,7 +57,7 @@ static int provide_etc_resolv(struct libos_dentry* dent, char** out_data, size_t
                              (addr & 0xFF000000) >> 24, (addr & 0x00FF0000) >> 16,
                              (addr & 0x0000FF00) >> 8, (addr & 0x000000FF));
         } else {
-            uint16_t *addrv6 = g_pal_public_state->dns_host.nsaddr_list[i].ipv6;
+            uint16_t* addrv6 = g_pal_public_state->dns_host.nsaddr_list[i].ipv6;
             ret = put_string(&ptr, &size, "nameserver %x:%x:%x:%x:%x:%x:%x:%x\n",
                              addrv6[0], addrv6[1], addrv6[2], addrv6[3], addrv6[4], addrv6[5],
                              addrv6[6], addrv6[7]);
@@ -90,14 +90,14 @@ static int provide_etc_resolv(struct libos_dentry* dent, char** out_data, size_t
             goto out;
     }
 
-    assert(size >= 0);
     /* Use the string (without null terminator) as file data */
     size_t finalsize = strlen(data);
     char* finalbuf = malloc(finalsize);
-    if (finalbuf == NULL) {
+    if (!finalbuf) {
         ret = -ENOMEM;
         goto out;
     }
+    assert(finalsize <= size);
     memcpy(finalbuf, data, finalsize);
 
     *out_data = finalbuf;
@@ -110,7 +110,7 @@ out:
 }
 
 int init_etcfs(void) {
-    pseudo_add_str(NULL, "emulate-etc-resolv", &provide_etc_resolv);
+    pseudo_add_str(NULL, "emulate-etc-resolv-conf", &provide_etc_resolv_conf);
     return 0;
 }
 
@@ -121,7 +121,7 @@ int mount_etcfs(void) {
     return mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/etc/resolv.conf",
-        .uri = "emulate-etc-resolv",
+        .uri = "emulate-etc-resolv-conf",
     });
 }
 
