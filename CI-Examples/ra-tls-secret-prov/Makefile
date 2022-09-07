@@ -109,7 +109,7 @@ sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest secret_
 	cd secret_prov_minimal && \
 	gramine-sgx-sign \
 		--manifest $(notdir $<) \
-		--output $(notdir $<).sgx
+		--output $(notdir $<.sgx)
 
 secret_prov_minimal/client.token: secret_prov_minimal/client.sig
 	gramine-sgx-get-token --output $@ --sig $<
@@ -181,7 +181,7 @@ secret_prov_pf/enc_files/input.txt: secret_prov_pf/wrap_key secret_prov_pf/plain
 # case.
 
 .PHONY: check_epid
-check_epid: app epid secret_prov_pf/wrap_key secret_prov_pf/enc_files/input.txt
+check_epid: app epid
 	# secret_prov_minimal
 	cd secret_prov_minimal; \
 	./server_epid >/dev/null & SERVER_ID=$$!; \

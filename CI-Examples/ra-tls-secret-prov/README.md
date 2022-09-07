@@ -14,13 +14,13 @@ The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
 https://gramine.readthedocs.io/en/latest/attestation.html.
 
-## Secret Provisioning server
+## Secret Provisioning servers
 
-The server is supposed to run on a trusted machine (not in an SGX enclave). The
-server listens for client connections. For each connected client, the server
-verifies the client's RA-TLS certificate and the embedded SGX quote and, if
-verification succeeds, sends secrets back to the client (e.g. the master
-key for encrypted files in `secret_prov_pf` example).
+The servers are supposed to run on trusted machines (not in SGX enclaves). The
+servers listen for client connections. For each connected client, the servers
+verify the client's RA-TLS certificate and the embedded SGX quote and, if
+verification succeeds, sends secrets back to the client (e.g. the master key
+for encrypted files in `secret_prov_pf` example).
 
 There are two versions of each server: the EPID one and the DCAP one. Each of
 them links against the corresponding EPID/DCAP secret-provisioning library at
