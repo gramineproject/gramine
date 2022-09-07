@@ -41,7 +41,10 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
         return ret;
 
     lock(&g_dcache_lock);
-    ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW, &dent);
+    int flags = LOOKUP_NO_FOLLOW;
+    if (flag & AT_REMOVEDIR)
+        flags |= LOOKUP_DIRECTORY;
+    ret = path_lookupat(dir, pathname, flags, &dent);
     if (ret < 0)
         goto out;
 
