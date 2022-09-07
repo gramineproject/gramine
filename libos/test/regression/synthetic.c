@@ -49,8 +49,8 @@ int main(void) {
 
     test_list(path, subpath);
 
-    if (unlinkat(AT_FDCWD, path, AT_REMOVEDIR) != -1 || errno != EACCES)
-        err(1, "unlink should return EACCES");
+    if (rmdir(path) != -1 || errno != EACCES)
+        err(1, "rmdir should return EACCES");
 
     if (stat(path, &statbuf) == -1)
         err(1, "stat");
