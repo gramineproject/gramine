@@ -55,7 +55,6 @@ There are three client examples:
    from the environment variable `SECRET_PROVISION_SECRET_STRING`.
 2. Feature-rich client (found under `secret_prov/`). It uses a programmatic C
    API to get two secrets from the server.
-
 3. Encrypted files client (found under `secret_prov_pf/`). Similarly to the
    minimal client, it relies on constructor-time secret provisioning and
    instructs Gramine to use the provisioned secret as the encryption key for the
