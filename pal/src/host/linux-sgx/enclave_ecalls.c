@@ -94,8 +94,12 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
             return;
 
-        struct pal_host_info* host_info = READ_ONCE(ms->ms_host_info);
-        if (!host_info || !sgx_is_completely_outside_enclave(host_info, sizeof(*host_info)))
+        struct pal_topo_info* topo_info = READ_ONCE(ms->ms_topo_info);
+        if (!topo_info || !sgx_is_completely_outside_enclave(topo_info, sizeof(*topo_info)))
+            return;
+
+        struct pal_dns_host_conf* dns_conf = READ_ONCE(ms->ms_dns_host_conf);
+        if (!dns_conf || !sgx_is_completely_outside_enclave(dns_conf, sizeof(*dns_conf)))
             return;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
@@ -113,7 +117,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
                        READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
                        READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd),
-                       READ_ONCE(ms->ms_qe_targetinfo), host_info);
+                       READ_ONCE(ms->ms_qe_targetinfo), topo_info, dns_conf);
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

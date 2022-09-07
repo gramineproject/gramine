@@ -157,8 +157,9 @@ This is achieved by taking the host's ``/etc`` files, parsing them, and
 re-creating them inside Gramine's file system. For security-enforcing
 modes (such as SGX), Gramine additionally sanitizes the contents of these files.
 
-Note that Gramine's parsers for these files support only a subset of the corresponding
-specifications. See below for the list of supported keywords/formats for each file.
+Note that Gramine's parsers for these files support only a subset of
+the corresponding specifications. See below for the list of supported
+keywords/formats for each file.
 
 The set of extra runtime files is limited to:
 
@@ -168,6 +169,9 @@ The set of extra runtime files is limited to:
    - ``nameserver``
    - ``search``
    - ``options`` (``inet6`` | ``rotate``)
+
+Unsupported keywords and malformed lines are ignored, and invalid values are
+reported as an error.
 
 This option takes precedence over ``fs.mounts``.
 This means that etc files provided via ``fs.mounts`` will be overridden with

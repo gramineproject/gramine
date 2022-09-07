@@ -126,8 +126,8 @@ static void get_host_etc_configs(void) {
     if (!g_pal_public_state.emulate_etc_files)
         return;
 
-    if (get_resolv_conf(&g_pal_public_state.dns_host) < 0) {
-        INIT_FAIL("Unable to get resolv.conf");
+    if (parse_resolv_conf(&g_pal_public_state.dns_host) < 0) {
+        INIT_FAIL("Unable to get /etc/resolv.conf");
     }
 }
 
@@ -420,12 +420,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
-                           &g_pal_public_state.emulate_etc_files);
+                       &g_pal_public_state.emulate_etc_files);
     if (ret < 0) {
         INIT_FAIL("Cannot parse 'libos.emulate_etc_files'");
     }
 
-    /* Get host information only for the first process. This information will be
+    /* Get host /etc information only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
     if (first_process) {
         get_host_etc_configs();

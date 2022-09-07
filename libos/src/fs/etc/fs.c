@@ -12,6 +12,9 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
+#define OPTION_INET6    "options inet6\n"
+#define OPTION_ROTATE   "options rotate\n"
+
 static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -19,7 +22,7 @@ static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_end(ap);
     if (ret < 0)
         return ret;
-    assert(*bufsize > ret);
+    assert(*bufsize > (size_t)ret);
     *bufsize -= ret;
     *buf += ret;
 
@@ -38,8 +41,8 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
     size += strlen("search") + 1;
     size += g_pal_public_state->dns_host.dnsrch_count * (PAL_HOSTNAME_MAX + 1);
     /* and lets add some space for each option */
-    size += (g_pal_public_state->dns_host.inet6 ? 32 : 0) +
-            (g_pal_public_state->dns_host.rotate ? 32 : 0);
+    size += (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0) +
+            (g_pal_public_state->dns_host.rotate ? strlen(OPTION_ROTATE) : 0);
     /* snprintf adds the terminating character */
     size += 1;
 
@@ -80,12 +83,12 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
             goto out;
     }
     if (g_pal_public_state->dns_host.inet6) {
-        ret = put_string(&ptr, &size, "options inet6\n");
+        ret = put_string(&ptr, &size, OPTION_INET6);
         if (ret < 0)
             goto out;
     }
     if (g_pal_public_state->dns_host.rotate) {
-        ret = put_string(&ptr, &size, "options rotate\n");
+        ret = put_string(&ptr, &size, OPTION_ROTATE);
         if (ret < 0)
             goto out;
     }

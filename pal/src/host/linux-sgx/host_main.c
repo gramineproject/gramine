@@ -628,8 +628,7 @@ out:
 }
 
 /* Parses only the information needed by the untrusted PAL to correctly initialize the enclave. */
-static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
-                               bool *emulate_etc) {
+static int out_emulate_etc(char* manifest, struct pal_enclave* enclave_info, bool* emulate_etc) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
@@ -910,29 +909,14 @@ out:
     return ret;
 }
 
-static int get_host_configs(struct pal_host_info* host_info, bool emulate_etc) {
-    int ret = get_topology_info(&host_info->topo_info);
-    if (ret < 0)
-        return ret;
-
-    /* If we do not expose etc, we don't need any additional information about host. */
-    if (!emulate_etc)
-        return 0;
-
-    ret = get_resolv_conf(&host_info->dns_host);
-    if (ret < 0)
-        return ret;
-
-    return 0;
-}
-
 /* Warning: This function does not free up resources on failure - it assumes that the whole process
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
-    struct pal_host_info host_info = {0};
+    struct pal_topo_info topo_info = {0};
+    struct pal_dns_host_conf dns_conf = {0};
     bool emulate_etc;
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
@@ -942,7 +926,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         /* only print during main process's startup (note that this message is always printed) */
         log_always("Gramine is starting. Parsing TOML manifest file, this may take some time...");
     }
-    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &emulate_etc);
+    ret = out_emulate_etc(enclave->raw_manifest_data, enclave, &emulate_etc);
     if (ret < 0) {
         log_error("Parsing manifest failed");
         return -EINVAL;
@@ -956,13 +940,19 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    /* Get host information only for the first process. This information will be
+    /* Get host information and topology only for the first process. This information will be
      * checkpointed and restored during forking of the child process(es). */
     if (parent_stream_fd < 0) {
-        ret = get_host_configs(&host_info, emulate_etc);
-        if (ret < 0) {
-            log_error("Unable to get host info");
+        ret = get_topology_info(&topo_info);
+        if (ret < 0)
             return ret;
+
+        if (emulate_etc) {
+            ret = parse_resolv_conf(&dns_conf);
+            if (ret < 0) {
+                log_error("Unable to parse host's /etc/resolv.conf");
+                return ret;
+            }
         }
     }
 
@@ -1023,7 +1013,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
-                        &qe_targetinfo, &host_info);
+                        &qe_targetinfo, &topo_info, &dns_conf);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);

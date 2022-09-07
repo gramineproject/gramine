@@ -7,4 +7,4 @@
 
 #include "pal.h"
 
-int get_resolv_conf(struct pal_dns_host_conf* conf);
+int parse_resolv_conf(struct pal_dns_host_conf* conf);
