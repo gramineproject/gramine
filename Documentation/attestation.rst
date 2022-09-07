@@ -479,7 +479,7 @@ The secret may be retrieved by the application in two ways:
    inadvertently leaked. For example, if a provisioned secret is a
    base64-encoded encryption key, then the user should decode it from base64
    into binary using side-channel-resistant functions (e.g.,
-   `mbedtls_base64_decode()`) instead of non-crypto-secure functions (e.g.,
+   ``mbedtls_base64_decode()``) instead of non-crypto-secure functions (e.g.,
    self-written decoding logic or a standard library function).
 
 ``secret_prov_verify_epid.so``

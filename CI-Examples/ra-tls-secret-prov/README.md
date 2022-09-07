@@ -21,7 +21,7 @@ There are three server examples:
 1. Minimal server (found under `secret_prov_minimal/`). It sends only one,
    hardcoded secret.
 2. More complex server (found under `secret_prov/`), which uses the negotiated
-   TLS connection to exchange more data with the enclave.
+   TLS connection to exchange more data with the client enclave.
 3. Encrypted files server (found under `secret_prov_pf/`) - similarly to the
    minimal client, it sends only a single secret, but loads it from a file, with
    intended purpose of provisioning the encrypted files key to client enclaves.
@@ -53,7 +53,7 @@ There are three client examples:
 1. Minimal client (found under `secret_prov_minimal/`). It relies on
    constructor-time secret provisioning and gets the first (and only) secret
    from the environment variable `SECRET_PROVISION_SECRET_STRING`.
-2. Feature-rich client (found under `secret_prov/`). It uses a programmatic C
+2. More complex client (found under `secret_prov/`). It uses a programmatic C
    API to get two secrets from the server.
 3. Encrypted files client (found under `secret_prov_pf/`). Similarly to the
    minimal client, it relies on constructor-time secret provisioning and
