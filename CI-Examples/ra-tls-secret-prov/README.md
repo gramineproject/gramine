@@ -16,6 +16,16 @@ https://gramine.readthedocs.io/en/latest/attestation.html.
 
 ## Secret Provisioning servers
 
+There are three server examples:
+
+1. Minimal server (found under `secret_prov_minimal/`). It sends only one,
+   hardcoded secret.
+2. More complex server (found under `secret_prov/`), which uses the negotiated
+   TLS connection to exchange more data with the enclave.
+3. Encrypted files server (found under `secret_prov_pf/`) - similarly to the
+   minimal client, it sends only a single secret, but loads it from a file, with
+   intended purpose of provisioning the encrypted files key to client enclaves.
+
 The servers are supposed to run on trusted machines (not in SGX enclaves). The
 servers listen for client connections. For each connected client, the servers
 verify the client's RA-TLS certificate and the embedded SGX quote and, if
@@ -38,24 +48,25 @@ be used in production.
 
 ## Secret Provisioning clients
 
-There are three clients in this example:
+There are three client examples:
 
-1. Minimal client. It relies on constructor-time secret provisioning and gets
-   the first (and only) secret from the environment variable
-   `SECRET_PROVISION_SECRET_STRING`.
-2. Feature-rich client. It uses a programmatic C API to get two secrets from the
-   server.
-3. Encrypted-files client. Similarly to the minimal client, it relies on
-   constructor-time secret provisioning and instructs Gramine to use the
-   provisioned secret as the encryption key for the Encrypted Files feature.
-   After the master key is applied, the client reads an encrypted file
-   `input.txt`.
+1. Minimal client (found under `secret_prov_minimal/`). It relies on
+   constructor-time secret provisioning and gets the first (and only) secret
+   from the environment variable `SECRET_PROVISION_SECRET_STRING`.
+2. Feature-rich client (found under `secret_prov/`). It uses a programmatic C
+   API to get two secrets from the server.
+
+3. Encrypted files client (found under `secret_prov_pf/`). Similarly to the
+   minimal client, it relies on constructor-time secret provisioning and
+   instructs Gramine to use the provisioned secret as the encryption key for the
+   encrypted files feature. After the master key is applied, the client reads an
+   encrypted file `input.txt`.
 
 As part of secret provisioning flow, all clients create a self-signed RA-TLS
 certificate with the embedded SGX quote, send it to the server for verification,
 and expect secrets in return.
 
-The minimal and the encrypted-files clients rely on the `LD_PRELOAD` trick that
+The minimal and the encrypted files clients rely on the `LD_PRELOAD` trick that
 preloads `libsecret_prov_attest.so` and runs it before the clients' main logic.
 The feature-rich client links against `libsecret_prov_attest.so` explicitly at
 build time.
