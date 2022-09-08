@@ -1,8 +1,8 @@
 /*
- * FIXME: This feature is currently insecure. It keeps most object in untrusted memory and uses some
- * functions, like `spinlock_lock`, on that memory. Since we have to use 8-byte naturally aligned
- * memory accesses to mitigate CVE-2022-21233, we must mark this feature as insecure until we
- * rewrite it or that CVE is fully fixed in hardware or microcode.
+ * FIXME: This feature is currently insecure. It keeps most objects in untrusted memory and uses
+ * some functions, like `spinlock_lock`, on that memory. Since we have to use 8-byte naturally
+ * aligned untrusted memory accesses to mitigate CVE-2022-21233, we must mark this feature as
+ * insecure until we rewrite it or that CVE is fully fixed in hardware or microcode.
  *
  * RPC threads are helper threads that run in untrusted mode alongside enclave threads. RPC threads
  * issue system calls on behalf of enclave threads. This allows "exitless" design when app threads

@@ -536,7 +536,7 @@ Redis instance on Linux becomes 5-threaded on Gramine with Exitless. Thus,
 Exitless may negatively impact throughput but may improve latency.
 
 This feature is currently marked as insecure, because it reads untrusted memory
-in potentially insecure manner.
+in potentially insecure manner - susceptible to CVE-2022-21233 (INTEL-SA-00657).
 
 Optional CPU features (AVX, AVX512, MPX, PKRU, AMX)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
