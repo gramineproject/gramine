@@ -262,7 +262,7 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
  * - every label is separated with '.',
  * - the hostname doesn't start or end with '.' and '-',
  * - the hostname contains only alphanumeric characters, '-', and '.',
- * These rules were deducted from:
+ * These rules were got from:
  * - https://www.rfc-editor.org/rfc/rfc1123
  * - https://www.ietf.org/rfc/rfc0952.txt
  * - https://www.rfc-editor.org/rfc/rfc2181
@@ -279,16 +279,16 @@ static bool is_hostname_valid(const char* hostname) {
             ('A' <= *ptr && *ptr <= 'Z') ||
             ('0' <= *ptr && *ptr <= '9') ||
             *ptr == '-') {
-                chrcount++;
-                ptr++;
-                continue;
+            chrcount++;
+            ptr++;
+            continue;
         } else if (*ptr == '.') {
-                if (chrcount == 0 || chrcount > 63) {
-                    return false;
-                }
-                chrcount = 0;
-                ptr++;
-                continue;
+            if (chrcount == 0 || chrcount > 63) {
+                return false;
+            }
+            chrcount = 0;
+            ptr++;
+            continue;
         }
 
         return false;
@@ -313,22 +313,22 @@ static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dn
     if (!g_pal_public_state.emulate_etc_files)
         return 0;
 
-    struct pal_dns_host_conf shallow_dns = {0};
+    struct pal_dns_host_conf shallow_dns;
     if (!sgx_copy_to_enclave(&shallow_dns, sizeof(shallow_dns), uptr_dns_conf,
                              sizeof(*uptr_dns_conf))) {
         log_error("Unable to read host info");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    if (shallow_dns.nsaddr_list_count > PAL_MAXNS) {
-        log_error("To many nameservers provided");
+    if (shallow_dns.nsaddr_list_count > PAL_MAX_NAMESPACES) {
+        log_error("Too many nameservers provided");
         return -EINVAL;
     }
 
     pub_dns->nsaddr_list_count = shallow_dns.nsaddr_list_count;
     for (i = 0; i < pub_dns->nsaddr_list_count; i++) {
         coerce_untrusted_bool(&shallow_dns.nsaddr_list[i].is_ipv6);
-        /* All binary IP addresses are already valid ones. */
+        /* All binary IP addresses are valid. */
         if (!shallow_dns.nsaddr_list[i].is_ipv6) {
             pub_dns->nsaddr_list[i].ipv4 = shallow_dns.nsaddr_list[i].ipv4;
             pub_dns->nsaddr_list[i].is_ipv6 = false;
@@ -339,19 +339,18 @@ static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dn
         }
     }
 
-    if (shallow_dns.dnsrch_count > PAL_MAXDNSRCH) {
-        log_error("To many search entries provided");
+    if (shallow_dns.dnsrch_count > PAL_MAX_DN_SEARCH) {
+        log_error("Too many search entries provided");
         return -EINVAL;
     }
 
     for (i = 0, j = 0; i < shallow_dns.dnsrch_count; i++) {
         if (!is_hostname_valid(shallow_dns.dnsrch[i])) {
-            log_warning("The search entire %s is invalid, skipping it", shallow_dns.dnsrch[i]);
+            log_warning("The search domain name %s is invalid, skipping it", shallow_dns.dnsrch[i]);
             continue;
         }
 
-        memcpy(pub_dns->dnsrch[j], shallow_dns.dnsrch[i],
-               sizeof(pub_dns->dnsrch[j]) - 1);
+        memcpy(pub_dns->dnsrch[j], shallow_dns.dnsrch[i], sizeof(pub_dns->dnsrch[j]) - 1);
         pub_dns->dnsrch[j][sizeof(pub_dns->dnsrch[j]) - 1] = 0x00;
         j++;
     }
@@ -687,7 +686,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         /* parse and store host topology info into g_pal_public_state struct */
         ret = import_and_sanitize_topo_info(uptr_topo_info);
         if (ret < 0) {
-            log_error("Failed to copy and sanitize topology information");
+            log_error("Failed to copy and sanitize topology information: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }
@@ -741,7 +740,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     }
 
     ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
-                           &g_pal_public_state.emulate_etc_files);
+                       &g_pal_public_state.emulate_etc_files);
     if (ret < 0) {
         log_error("Cannot parse 'libos.emulate_etc_files'");
         ocall_exit(1, /*is_exitgroup=*/true);
@@ -751,7 +750,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
      * checkpointed and restored during forking of the child process(es). */
     if (parent_stream_fd < 0) {
         if ((ret = import_and_init_emulation_etc_files(uptr_dns_conf)) < 0) {
-            log_error("Failed to initialize host info");
+            log_error("Failed to initialize host info: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }

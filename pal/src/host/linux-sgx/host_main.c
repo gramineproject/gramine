@@ -628,7 +628,7 @@ out:
 }
 
 /* Parses only the information needed by the untrusted PAL to correctly initialize the enclave. */
-static int out_emulate_etc(char* manifest, struct pal_enclave* enclave_info, bool* emulate_etc) {
+static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info, bool* emulate_etc) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
@@ -926,7 +926,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         /* only print during main process's startup (note that this message is always printed) */
         log_always("Gramine is starting. Parsing TOML manifest file, this may take some time...");
     }
-    ret = out_emulate_etc(enclave->raw_manifest_data, enclave, &emulate_etc);
+    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &emulate_etc);
     if (ret < 0) {
         log_error("Parsing manifest failed");
         return -EINVAL;

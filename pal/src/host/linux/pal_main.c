@@ -127,7 +127,7 @@ static void get_host_etc_configs(void) {
         return;
 
     if (parse_resolv_conf(&g_pal_public_state.dns_host) < 0) {
-        INIT_FAIL("Unable to get /etc/resolv.conf");
+        INIT_FAIL("Unable to parse /etc/resolv.conf");
     }
 }
 
