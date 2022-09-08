@@ -5,6 +5,7 @@ Paste any logs using three backticks (```).
 
 IMPORTANT: please do not post general questions here;
 if you have questions, please use our mailing list: users@gramineproject.io
+or join our chat: https://gitter.im/gramineproject/community
 -->
 
 ## Description of the problem
