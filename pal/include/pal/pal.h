@@ -35,8 +35,8 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 #define PAL_HOSTNAME_MAX 255
 
 /* DNS limits, used in resolv.conf emulation */
-#define PAL_MAXNS       3
-#define PAL_MAXDNSRCH   6
+#define PAL_MAX_NAMESPACES 3
+#define PAL_MAX_DN_SEARCH  6
 
 /* Common types used by host specific header. */
 enum pal_socket_domain {
@@ -106,10 +106,10 @@ struct pal_dns_host_conf_addr {
 
 /* Used in resolv.conf emulation */
 struct pal_dns_host_conf {
-    struct pal_dns_host_conf_addr nsaddr_list[PAL_MAXNS];
-    size_t                        nsaddr_list_count;
+    struct pal_dns_host_conf_addr nsaddr_list[PAL_MAX_NAMESPACES];
+    size_t nsaddr_list_count;
 
-    char   dnsrch[PAL_MAXDNSRCH][PAL_HOSTNAME_MAX];
+    char   dnsrch[PAL_MAX_DN_SEARCH][PAL_HOSTNAME_MAX];
     size_t dnsrch_count;
 
     bool inet6;

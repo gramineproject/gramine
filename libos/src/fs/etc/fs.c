@@ -22,7 +22,8 @@ static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_end(ap);
     if (ret < 0)
         return ret;
-    assert(*bufsize > (size_t)ret);
+    if ((size_t)ret >= *bufsize)
+        return -EOVERFLOW;
     *bufsize -= ret;
     *buf += ret;
 
@@ -43,7 +44,7 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
     /* and lets add some space for each option */
     size += (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0) +
             (g_pal_public_state->dns_host.rotate ? strlen(OPTION_ROTATE) : 0);
-    /* snprintf adds the terminating character */
+    /* make space for terminating character */
     size += 1;
 
     char* data = malloc(size);
@@ -113,7 +114,7 @@ out:
 }
 
 int init_etcfs(void) {
-    pseudo_add_str(NULL, "emulate-etc-resolv-conf", &provide_etc_resolv_conf);
+    pseudo_add_str(NULL, "emulated-etc-resolv-conf", &provide_etc_resolv_conf);
     return 0;
 }
 
@@ -124,7 +125,7 @@ int mount_etcfs(void) {
     return mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/etc/resolv.conf",
-        .uri = "emulate-etc-resolv-conf",
+        .uri = "emulated-etc-resolv-conf",
     });
 }
 
