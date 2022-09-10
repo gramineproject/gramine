@@ -15,7 +15,7 @@
 
 #define CA_CRT_PATH "ca.crt"
 
-int main(int argc, char** argv) {
+int main(void) {
     int ret;
 
     uint8_t* secret1 = NULL;

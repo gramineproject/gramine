@@ -55,25 +55,13 @@ CFLAGS += -Wall -std=c11 -I$(GRAMINEDIR)/tools/sgx/ra-tls \
           $(shell pkg-config --cflags mbedtls_gramine)
 LDFLAGS += $(shell pkg-config --libs mbedtls_gramine)
 
-secret_prov_minimal/server_epid: secret_prov_minimal/server.c
-	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@
-
-secret_prov/server_epid: secret_prov/server.c
-	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@
-
-secret_prov_pf/server_epid: secret_prov_pf/server.c
+%/server_epid: %/server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -lsecret_prov_verify_epid -pthread -o $@
 
 # linker option --no-as-needed is required because SGX DCAP library (libsgx_dcap_quoteverify.so)
 # does dlopen() instead of directly linking against libsgx_urts.so, and without this option
 # compilers remove the "seemingly unused" libsgx_urts.so
-secret_prov_minimal/server_dcap: secret_prov_minimal/server.c
-	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
-
-secret_prov/server_dcap: secret_prov/server.c
-	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
-
-secret_prov_pf/server_dcap: secret_prov_pf/server.c
+%/server_dcap: %/server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -Wl,--no-as-needed -lsgx_urts -lsecret_prov_verify_dcap -pthread -o $@
 
 secret_prov/client: secret_prov/client.c

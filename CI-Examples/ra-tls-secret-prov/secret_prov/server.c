@@ -86,7 +86,7 @@ static int communicate_with_client_callback(struct ra_tls_ctx* ctx) {
     return 0;
 }
 
-int main() {
+int main(void) {
     int ret = pthread_mutex_init(&g_print_lock, NULL);
     if (ret < 0)
         return ret;

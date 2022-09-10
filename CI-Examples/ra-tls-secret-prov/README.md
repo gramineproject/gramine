@@ -4,7 +4,7 @@ This directory contains a Makefile, template client manifests, and a few
 examples of servers and clients written against the Secret Provisioning
 library.
 
-These examples use the Secret Provisioning libraries `secret_prov_attest.so` for
+These examples use the Secret Provisioning library `secret_prov_attest.so` for
 the clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
 the servers. These libraries are installed together with Gramine (but for DCAP
 version, you need `meson setup ... -Ddcap=enabled`). For DCAP attestation, the
@@ -24,7 +24,8 @@ There are three server examples:
    TLS connection to exchange more data with the client enclave.
 3. Encrypted files server (found under `secret_prov_pf/`) - similarly to the
    minimal client, it sends only a single secret, but loads it from a file, with
-   intended purpose of provisioning the encrypted files key to client enclaves.
+   intended purpose of the secret being an encrypted files key to be provisioned
+   to client enclaves.
 
 The servers are supposed to run on trusted machines (not in SGX enclaves). The
 servers listen for client connections. For each connected client, the servers
