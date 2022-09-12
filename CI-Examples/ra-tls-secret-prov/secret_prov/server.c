@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/random.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -91,9 +90,9 @@ int main(void) {
     if (ret < 0)
         return ret;
 
-    uint8_t g_secret[] = "FIRST_SECRET";
+    uint8_t secret[] = "FIRST_SECRET";
     puts("--- Starting the Secret Provisioning server on port " PORT " ---");
-    ret = secret_provision_start_server(g_secret, sizeof(g_secret),
+    ret = secret_provision_start_server(secret, sizeof(secret),
                                         PORT, SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         communicate_with_client_callback);

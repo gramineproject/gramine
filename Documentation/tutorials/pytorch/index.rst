@@ -411,15 +411,10 @@ our new directory::
    python3 download-pretrained-model.py
 
 The user must encrypt all input files: ``input.jpg``, ``classes.txt``, and
-``alexnet-pretrained.pt``. For simplicity, we re-use the already-existing
-encryption key ``wrap_key`` from the
-``CI-Examples/ra-tls-secret-prov/secret_prov_pf`` directory::
+``alexnet-pretrained.pt``. Let's start with generating an encryption key::
 
    mkdir files
-   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_pf/wrap_key files/
-
-In real deployments, the user must replace this ``wrap_key`` with her own
-128-bit encryption key.
+   dd if=/dev/urandom of=files/wrap_key bs=16 count=1
 
 We use the ``gramine-sgx-pf-crypt`` utility to encrypt/decrypt the necessary
 files. Let's encrypt the original plaintext files. We first move these files

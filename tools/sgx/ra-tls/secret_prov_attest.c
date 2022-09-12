@@ -412,7 +412,8 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
             }
 
             char path_buf[256];
-            if (snprintf(path_buf, 256, "/dev/attestation/keys/%s", key_name) >= 256) {
+            ret = snprintf(path_buf, sizeof(path_buf), "/dev/attestation/keys/%s", key_name);
+            if (ret < 0 || (size_t)ret >= (ssize_t)sizeof(path_buf)) {
                 ERROR("Provisioned key name '%s' is too long\n", key_name);
                 exit(1);
             }
