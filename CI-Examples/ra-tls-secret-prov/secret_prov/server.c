@@ -92,7 +92,7 @@ int main(void) {
         return ret;
 
     puts("--- Starting the Secret Provisioning server on port " PORT " ---");
-    ret = secret_provision_start_server(FIRST_SECRET, sizeof(FIRST_SECRET),
+    ret = secret_provision_start_server((uint8_t*)FIRST_SECRET, sizeof(FIRST_SECRET),
                                         PORT, SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         communicate_with_client_callback);

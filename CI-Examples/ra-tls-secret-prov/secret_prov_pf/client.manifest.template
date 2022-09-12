@@ -21,7 +21,7 @@ fs.mounts = [
   { path = "/etc", uri = "file:/etc" },
   { path = "/client", uri = "file:client" },
   { path = "/ca.crt", uri = "file:../ssl/ca.crt" },
-  { path = "/files", uri = "file:enc_files/", type = "encrypted" },
+  { path = "/files", uri = "file:enc_files", type = "encrypted" },
 ]
 
 sgx.enclave_size = "512M"
