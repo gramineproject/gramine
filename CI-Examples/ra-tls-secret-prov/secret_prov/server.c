@@ -17,7 +17,8 @@
 
 #define PORT "4433"
 #define EXPECTED_STRING "MORE"
-#define SECOND_STRING "42" /* answer to ultimate question of life, universe, and everything */
+#define FIRST_SECRET "FIRST_SECRET"
+#define SECOND_SECRET "42" /* answer to ultimate question of life, universe, and everything */
 
 #define SRV_CRT_PATH "../ssl/server.crt"
 #define SRV_KEY_PATH "../ssl/server.key"
@@ -75,13 +76,13 @@ static int communicate_with_client_callback(struct ra_tls_ctx* ctx) {
         return -EINVAL;
     }
 
-    ret = secret_provision_write(ctx, (uint8_t*)SECOND_STRING, sizeof(SECOND_STRING));
+    ret = secret_provision_write(ctx, (uint8_t*)SECOND_SECRET, sizeof(SECOND_SECRET));
     if (ret < 0) {
         fprintf(stderr, "[error] secret_provision_write() returned %d\n", ret);
         return -EINVAL;
     }
 
-    printf("--- Sent secret2 = '%s' ---\n", SECOND_STRING);
+    printf("--- Sent secret2 = '%s' ---\n", SECOND_SECRET);
     return 0;
 }
 
@@ -90,9 +91,8 @@ int main(void) {
     if (ret < 0)
         return ret;
 
-    uint8_t secret[] = "FIRST_SECRET";
     puts("--- Starting the Secret Provisioning server on port " PORT " ---");
-    ret = secret_provision_start_server(secret, sizeof(secret),
+    ret = secret_provision_start_server(FIRST_SECRET, sizeof(FIRST_SECRET),
                                         PORT, SRV_CRT_PATH, SRV_KEY_PATH,
                                         verify_measurements_callback,
                                         communicate_with_client_callback);
