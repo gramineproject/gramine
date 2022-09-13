@@ -131,12 +131,10 @@ void sgx_reset_ustack(const void* old_ustack) {
 
 static void copy_u64s(void* dst, const void* untrusted_src, size_t count) {
     assert((uintptr_t)untrusted_src % 8 == 0);
-    /* The output operands are needed because we cannot specify the same register as both input and
-     * clobbered in GCC inline assembly. */
     __asm__ volatile (
         "rep movsq\n"
         : "+D"(dst), "+S"(untrusted_src), "+c"(count)
-        :  "D"(dst),  "S"(untrusted_src),  "c"(count)
+        :
         : "memory", "cc"
     );
 }
