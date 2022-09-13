@@ -10,6 +10,7 @@
 
 #include "api.h"
 #include "etc_host_info.h"
+#include "etc_host_info_internal.h"
 #include "linux_utils.h"
 
 static void jmp_to_end_of_line(const char** pptr) {
@@ -21,7 +22,7 @@ static void jmp_to_end_of_line(const char** pptr) {
     *pptr = ptr;
 }
 
-static void skip_whitespace(const char** pptr) {
+static void skip_whitespaces(const char** pptr) {
     const char* ptr = *pptr;
 
     while (*ptr == ' ' || *ptr == '\t')
@@ -30,19 +31,23 @@ static void skip_whitespace(const char** pptr) {
     *pptr = ptr;
 }
 
-static bool is_end_of_word(const char ch) {
+static bool is_end_of_word(char ch) {
     return ch == 0x00 || ch == '\n' || ch == ' ' || ch == '\t';
 }
 
-static bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
-    long long octet;
+bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
     const char* ptr = *pptr;
     char* next;
     uint32_t addr[4];
-    int i;
+    size_t i;
 
     for (i = 0; i < 4; i++) {
-        octet = strtoll(ptr, &next, 10);
+        /* NOTE: Gramine strtoll/strtol skips white spaces that are before the number, and doesn't
+         *       treat this as an error, this behavior is different from glibc.
+         */
+        if (*ptr == ' ' || *ptr == '\t' || *ptr == '+')
+            return false;
+        long long octet = strtoll(ptr, &next, 10);
         if (ptr == next)
             return false;
         if (octet < 0 || octet > UINT32_MAX)
@@ -59,32 +64,31 @@ static bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
     }
     if (!is_end_of_word(*next))
         return false;
+    assert(i < 4);
 
     uint32_t result = 0;
     if (i == 0) {
-        /* Address A has to be converted to: A.A.A.A
-         * The value a is interpreted as a 32-bit. */
+        /* Address A has to be converted to A[31:24].A[23:16].A[15:8].A[7:0]
+         * The value A is interpreted as a 32-bit. */
         result = addr[0];
     } else if (i == 1) {
-        /* Address A.B has to be converted to: A.B.B.B
+        /* Address A.B has to be converted to A.B[23:16].B[15:8].B[7:0]
          * Part B is interpreted as a 24-bit. */
         if (addr[0] > 0xFF || addr[1] > 0xFFFFFF) {
             return false;
         }
         result = addr[0] << 24 | addr[1];
     } else if (i == 2) {
-        /* Address A.B.C has to be converted to: A.B.C.C
+        /* Address A.B.C has to be converted to A.B.C[15:8].C[7:0]
          * Part C is interpreted as a 16-bit value. */
         if (addr[0] > 0xFF || addr[1] > 0xFF || addr[2] > 0xFFFF)
             return false;
         result = addr[0] << 24 | addr[1] << 16 | addr[2];
     } else {
         /* Address A.B.C.D */
-        for (i = 0; i < 4; i++) {
-            if (addr[i] > 0xFF)
-                return false;
-            result = result << 8 | addr[i];
-        }
+        if (addr[0] > 0xFF || addr[1] > 0xFF || addr[2] > 0xFF || addr[3] > 0xFF)
+            return false;
+        result = addr[0] << 24 | addr[1] << 16 | addr[2] << 8 | addr[3];
     }
 
     *pptr = ptr;
@@ -93,70 +97,75 @@ static bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
     return true;
 }
 
-/*
- * Supported notations:
- *  - Full IPv6 address
- *  - Abbreviations `::1`, `ff::1:2`
- */
-static bool parse_ip_addr_ipv6(const char** pptr, uint16_t* out_addr) {
-    long part;
+bool parse_ip_addr_ipv6(const char** pptr, uint16_t addr[static 8]) {
     const char* ptr = *pptr;
-    char* next;
-    int i, twocomas = -1;
-    uint16_t addr[8];
+    ssize_t double_colon_pos = -1;
+    size_t parts_seen = 0;
 
-    memset(&addr, 0, sizeof(addr));
-    for (i = 0; i < 8; i++) {
-        part = strtol(ptr, &next, 16);
+    if (ptr[0] == ':' && ptr[1] == ':') {
+        double_colon_pos = 0;
+        ptr += 2;
+    }
 
-        if (ptr == next) {
-            if (twocomas == -1 && *ptr == ':') {
-                if (i == 0) {
-                    /* The IPv6 address starts with the ':', this means that the next character
-                     * has to be also ':' (to support ::something), otherwise it is invalid
-                     * (:something). When i > 0 we know already that the previous char was a ':',
-                     * or we exited earlier. */
-                    if (*(ptr + 1) != ':')
-                        return false;
-                    ptr++;
-                }
-                twocomas = i;
-                i--;
-                ptr++;
-                continue;
-            }
-            if (twocomas != -1 && is_end_of_word(*next))
-                break;
-            return false;
-        }
-        if (part < 0 || part > 0xFFFF)
-            return false;
-
-        addr[i] = part;
-
-        if (is_end_of_word(*next))
+    memset(addr, 0, sizeof(*addr) * 8);
+    for (size_t i = 0; i < 8; i++) {
+        if (is_end_of_word(ptr[0])) {
             break;
-        if (*next != ':')
-            return false;
+        }
 
-        ptr = next + 1;
-    }
-    if (!is_end_of_word(*next))
-        return false;
-    if (twocomas == -1 && i != 7)
-        return false;
-    if (twocomas != -1 && i >= 7)
-        return false;
-    if (twocomas != -1) {
-        for (int j = 7; i >= twocomas; j--, i--) {
-            addr[j] = addr[i];
-            addr[i] = 0;
+        if (!isxdigit(ptr[0])) {
+            return false;
+        }
+
+        char* next;
+        long val = strtol(ptr, &next, 16);
+        if (val < 0 || val > 0xFFFF) {
+            return false;
+        }
+        /* strtol skips 0x prefix, this prefix is invalid in IPv6 */
+        if (next - ptr >= 2 && !isxdigit(ptr[1]))
+            return false;
+        addr[parts_seen] = val;
+        parts_seen++;
+        ptr = next;
+
+        if (ptr[0] == ':' && ptr[1] == ':' && isxdigit(ptr[2])) {
+            if (double_colon_pos != -1)
+                return false;
+
+            double_colon_pos = parts_seen;
+            ptr += 2;
+        } else if (ptr[0] == ':') {
+            ptr++;
+        } else {
+            break;
         }
     }
 
-    memcpy(out_addr, &addr, sizeof(addr));
-    *pptr = ptr;
+    if (!is_end_of_word(ptr[0])) {
+        return false;
+    }
+    if (parts_seen > 0 && !isxdigit(*(ptr - 1))) {
+        return false;
+    }
 
+    if (double_colon_pos == -1) {
+        if (parts_seen != 8)
+            return false;
+        /* `addr` already correct. */
+    } else { /* double_colon_pos != -1 */
+        if (parts_seen == 8)
+            return false;
+        if (parts_seen > 0) {
+            ssize_t i = parts_seen - 1;
+            for (ssize_t j = 7; i >= double_colon_pos; j--, i--) {
+                addr[j] = addr[i];
+                addr[i] = 0;
+            }
+        }
+    }
+
+    *pptr = ptr;
     return true;
 }
 
@@ -174,6 +183,7 @@ static void resolv_nameserver(struct pal_dns_host_conf* conf, const char** pptr)
      * Check if nameserver is using IPv6 or IPv4.
      * If address contains ':', it is a IPv6 address.
      * If address contains '.', it is a IPv4 address.
+     * If we haven't found ':' nor '.' it means it is IPv4 address.
      */
     while (!is_end_of_word(*ptr)) {
         if (*ptr == ':') {
@@ -185,7 +195,6 @@ static void resolv_nameserver(struct pal_dns_host_conf* conf, const char** pptr)
         ptr++;
     }
 
-    /* If we haven't found ':' nor '.' it means it is IPv4 address. */
     if (is_ipv6) {
         if (!parse_ip_addr_ipv6(pptr, conf->nsaddr_list[conf->nsaddr_list_count].ipv6)) {
             log_error("Host's /etc/resolv.conf has invalid or unsupported notation in nameserver "
@@ -204,15 +213,15 @@ static void resolv_nameserver(struct pal_dns_host_conf* conf, const char** pptr)
     conf->nsaddr_list_count++;
 }
 
-static void parse_values_list_in_one_line(struct pal_dns_host_conf* conf, const char** pptr,
-                                          void (*setter)(struct pal_dns_host_conf*, const char*, size_t)) {
+static void parse_values_one_line(struct pal_dns_host_conf* conf, const char** pptr,
+                                  void (*setter)(struct pal_dns_host_conf*, const char*, size_t)) {
     const char* ptr = *pptr;
     const char* namestart = ptr;
 
-    while (*ptr != 0x00 && *ptr != '\n' && *ptr != '#') {
+    while (*ptr != 0x00 && *ptr != '\n' && *ptr != '#' && *ptr != ';') {
         if (*ptr == ' ' || *ptr == '\t') {
             setter(conf, namestart, ptr - namestart);
-            skip_whitespace(&ptr);
+            skip_whitespaces(&ptr);
             namestart = ptr;
             continue;
         }
@@ -232,21 +241,21 @@ static void resolv_search_setter(struct pal_dns_host_conf* conf, const char* ptr
     if (length == 0) {
         return;
     }
-    if (conf->dnsrch_count >= PAL_MAX_DN_SEARCH) {
+    if (conf->dn_search_count >= PAL_MAX_DN_SEARCH) {
         log_error("Host's /etc/resolv.conf contains too many search domains in single search "
                   "keyword");
         return;
     }
 
-    memcpy(conf->dnsrch[conf->dnsrch_count], ptr, length);
-    conf->dnsrch[conf->dnsrch_count][length] = 0x0;
-    conf->dnsrch_count++;
+    memcpy(conf->dn_search[conf->dn_search_count], ptr, length);
+    conf->dn_search[conf->dn_search_count][length] = 0x0;
+    conf->dn_search_count++;
 }
 
 static void resolv_search(struct pal_dns_host_conf* conf, const char** pptr) {
     /* Each search keyword overrides previous one. */
-    conf->dnsrch_count = 0;
-    parse_values_list_in_one_line(conf, pptr, resolv_search_setter);
+    conf->dn_search_count = 0;
+    parse_values_one_line(conf, pptr, resolv_search_setter);
 }
 
 static void resolv_options_setter(struct pal_dns_host_conf* conf, const char* ptr, size_t length) {
@@ -267,7 +276,7 @@ static void resolv_options_setter(struct pal_dns_host_conf* conf, const char* pt
 }
 
 static void resolv_options(struct pal_dns_host_conf* conf, const char** pptr) {
-    parse_values_list_in_one_line(conf, pptr, resolv_options_setter);
+    parse_values_one_line(conf, pptr, resolv_options_setter);
 }
 
 static struct {
@@ -277,39 +286,35 @@ static struct {
     { "nameserver", resolv_nameserver },
     { "search",     resolv_search },
     { "options",    resolv_options },
-    { NULL, 0 },
 };
 
 static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* buf) {
     const char* ptr = buf;
-    const char* startline = buf;
 
+    /*
+     * From resolv.conf(5):
+     * The keyword and value must appear on a single line, and the
+     * keyword (e.g., nameserver) must start the line.  The value
+     * follows the keyword, separated by white space.
+     */
     while (*ptr != 0x00) {
-        if (*ptr == '\n') {
-            ptr++;
-            startline = ptr;
-            continue;
-        } else if (startline == ptr && *ptr == '#') {
-            /* comment, ignoring whole line */
-            jmp_to_end_of_line(&ptr);
-            continue;
-        } else if ((ptr != startline) && (*ptr == ' ' || *ptr == '\t')) {
-            for (size_t i = 0; resolv_keys[i].keyword != NULL; i++) {
-                if (strncmp(startline, resolv_keys[i].keyword, ptr - startline - 1) == 0) {
+        if (*ptr != '\n' && *ptr != '#' && *ptr != ';') {
+            for (size_t i = 0; i < ARRAY_SIZE(resolv_keys); i++) {
+                if (strncmp(ptr, resolv_keys[i].keyword, strlen(resolv_keys[i].keyword)) == 0) {
+                    ptr += strlen(resolv_keys[i].keyword);
                     /* Because the buffer in strncmp is not ended with 0x00, let's
-                     * verify that the length of keywords is the same. */
-                    if (resolv_keys[i].keyword[ptr - startline] != 0x00)
-                        continue;
-                    skip_whitespace(&ptr);
+                     * verify that this is ent of word. */
+                    if (!is_end_of_word(*ptr))
+                        break;
+                    skip_whitespaces(&ptr);
                     resolv_keys[i].set_value(conf, &ptr);
-                    break;
                 }
             }
-            /* Make sure we are at the end of line, even if parsing of this line failed */
-            jmp_to_end_of_line(&ptr);
-            continue;
         }
-        ptr++;
+        /* Make sure we are at the end of line, even if parsing of this line failed */
+        jmp_to_end_of_line(&ptr);
+        if (*ptr != 0x00)
+            ptr++;
     }
 }
 

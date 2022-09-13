@@ -628,7 +628,8 @@ out:
 }
 
 /* Parses only the information needed by the untrusted PAL to correctly initialize the enclave. */
-static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info, bool* emulate_etc) {
+static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
+                               bool* out_emulate_etc) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
@@ -889,10 +890,11 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
     g_host_log_level = log_level;
 
-    ret = toml_bool_in(manifest_root, "libos.emulate_etc_files", false, emulate_etc);
+    ret = toml_bool_in(manifest_root, "libos.emulate_etc_files", /*defaultval=*/false,
+                       out_emulate_etc);
     if (ret < 0) {
         log_error("Cannot parse 'libos.emulate_etc_files'");
-        return ret;
+        goto out;
     }
 
     ret = 0;

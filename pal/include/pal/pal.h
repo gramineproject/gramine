@@ -38,6 +38,8 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 #define PAL_MAX_NAMESPACES 3
 #define PAL_MAX_DN_SEARCH  6
 
+#define MAX_IPV6_ADDR_LEN  40
+
 /* Common types used by host specific header. */
 enum pal_socket_domain {
     PAL_DISCONNECT,
@@ -100,8 +102,10 @@ enum {
 
 struct pal_dns_host_conf_addr {
     bool     is_ipv6;
-    uint32_t ipv4;
-    uint16_t ipv6[8];
+    union {
+        uint32_t ipv4;
+        uint16_t ipv6[8];
+    };
 };
 
 /* Used in resolv.conf emulation */
@@ -109,8 +113,8 @@ struct pal_dns_host_conf {
     struct pal_dns_host_conf_addr nsaddr_list[PAL_MAX_NAMESPACES];
     size_t nsaddr_list_count;
 
-    char   dnsrch[PAL_MAX_DN_SEARCH][PAL_HOSTNAME_MAX];
-    size_t dnsrch_count;
+    char dn_search[PAL_MAX_DN_SEARCH][PAL_HOSTNAME_MAX];
+    size_t dn_search_count;
 
     bool inet6;
     bool rotate;

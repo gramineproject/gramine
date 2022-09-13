@@ -19,6 +19,26 @@ tests = {
     'File2': {},
     'HelloWorld': {},
     'Hex': {},
+    'ipv4_parser': {
+        'filenames': [
+            'ipv4_parser.c',
+            '../src/host/linux-common/etc_host_info.c',
+        ],
+        'include_directories': include_directories(
+            # for `etc_host_info_internal.h`
+            join_paths('../include/host/linux-common'),
+        ),
+    },
+    'ipv6_parser': {
+        'filenames': [
+            'ipv6_parser.c',
+            '../src/host/linux-common/etc_host_info.c',
+        ],
+        'include_directories': include_directories(
+            # for `etc_host_info_internal.h`
+            join_paths('../include/host/linux-common'),
+        ),
+    },
     'Memory': {},
     'Misc': {},
     'Pie': {
@@ -98,8 +118,15 @@ foreach name, params : tests
     # compiler builds it by default. See issue: https://github.com/mesonbuild/meson/issues/4651
     pie = params.get('pie', false)
 
+    filenames = ''
+    if (params.has_key('filenames'))
+        filenames = params.get('filenames')
+    else
+        filenames = '@0@.c'.format(name)
+    endif
+
     executable(name,
-        '@0@.c'.format(name),
+        filenames,
         user_start_src,
 
         include_directories: [
