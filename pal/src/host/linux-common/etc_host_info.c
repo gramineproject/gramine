@@ -45,7 +45,7 @@ bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
         /* NOTE: Gramine strtoll/strtol skips white spaces that are before the number, and doesn't
          *       treat this as an error, this behavior is different from glibc.
          */
-        if (*ptr == ' ' || *ptr == '\t' || *ptr == '+')
+        if (!isdigit(*ptr))
             return false;
         long long octet = strtoll(ptr, &next, 10);
         if (ptr == next)
@@ -153,7 +153,7 @@ bool parse_ip_addr_ipv6(const char** pptr, uint16_t addr[static 8]) {
         if (parts_seen != 8)
             return false;
         /* `addr` already correct. */
-    } else { /* double_colon_pos != -1 */
+    } else {
         if (parts_seen == 8)
             return false;
         if (parts_seen > 0) {
@@ -294,7 +294,7 @@ static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* bu
     /*
      * From resolv.conf(5):
      * The keyword and value must appear on a single line, and the
-     * keyword (e.g., nameserver) must start the line.  The value
+     * keyword (e.g., nameserver) must start the line. The value
      * follows the keyword, separated by white space.
      */
     while (*ptr != 0x00) {
@@ -303,18 +303,21 @@ static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* bu
                 if (strncmp(ptr, resolv_keys[i].keyword, strlen(resolv_keys[i].keyword)) == 0) {
                     ptr += strlen(resolv_keys[i].keyword);
                     /* Because the buffer in strncmp is not ended with 0x00, let's
-                     * verify that this is ent of word. */
+                     * verify that this is end of word. */
                     if (!is_end_of_word(*ptr))
                         break;
                     skip_whitespaces(&ptr);
                     resolv_keys[i].set_value(conf, &ptr);
+                    break;
                 }
             }
         }
         /* Make sure we are at the end of line, even if parsing of this line failed */
         jmp_to_end_of_line(&ptr);
-        if (*ptr != 0x00)
+        if (*ptr != 0x00) {
+            assert(*ptr == '\n');
             ptr++;
+        }
     }
 }
 
