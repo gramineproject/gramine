@@ -99,7 +99,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
             return;
 
         struct pal_dns_host_conf* dns_conf = READ_ONCE(ms->ms_dns_host_conf);
-        if (!dns_conf || !sgx_is_completely_outside_enclave(dns_conf, sizeof(*dns_conf)))
+        if (!sgx_is_completely_outside_enclave(dns_conf, sizeof(*dns_conf)))
             return;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */

@@ -473,6 +473,15 @@ class TC_23_SendHandle(RegressionTestCase):
         self.assertIn('Parent: test OK', stderr)
         self.assertIn('Child: test OK', stderr)
 
+class TC_30_IPParser(RegressionTestCase):
+    def test_000_ipv4(self):
+        _, stderr = self.run_binary(['ipv4_parser'])
+        self.assertIn('TEST OK', stderr)
+
+    def test_010_ipv6(self):
+        _, stderr = self.run_binary(['ipv6_parser'])
+        self.assertIn('TEST OK', stderr)
+
 @unittest.skipUnless(HAS_SGX, 'This test is only meaningful on SGX PAL')
 class TC_50_Attestation(RegressionTestCase):
     def test_000_attestation_report(self):

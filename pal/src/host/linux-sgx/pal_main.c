@@ -262,41 +262,39 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
  * - every label is separated with '.',
  * - the hostname doesn't start or end with '.' and '-',
  * - the hostname contains only alphanumeric characters, '-', and '.',
- * These rules were got from:
- * - https://www.rfc-editor.org/rfc/rfc1123
- * - https://www.ietf.org/rfc/rfc0952.txt
- * - https://www.rfc-editor.org/rfc/rfc2181
+ * These rules were taken from:
+ * - RFC1123,
+ * - RFC0952,
+ * - RFC2181.
  */
 static bool is_hostname_valid(const char* hostname) {
     const char* ptr = hostname;
-    size_t chrcount = 0;
+    size_t label_len = 0;
 
     if (*ptr == '-')
         return false;
 
     while (ptr - hostname < PAL_HOSTNAME_MAX && *ptr != 0x00) {
-        if (('a' <= *ptr && *ptr <= 'z') ||
-            ('A' <= *ptr && *ptr <= 'Z') ||
-            ('0' <= *ptr && *ptr <= '9') ||
-            *ptr == '-') {
-            chrcount++;
-            ptr++;
-            continue;
+        if (('a' <= *ptr && *ptr <= 'z')
+                || ('A' <= *ptr && *ptr <= 'Z')
+                || ('0' <= *ptr && *ptr <= '9')
+                || *ptr == '-') {
+            label_len++;
         } else if (*ptr == '.') {
-            if (chrcount == 0 || chrcount > 63) {
+            if (label_len == 0 || label_len > 63) {
                 return false;
             }
-            chrcount = 0;
-            ptr++;
-            continue;
+            label_len = 0;
+        } else {
+            return false;
         }
 
-        return false;
+        ptr++;
     }
 
     if (ptr - hostname >= PAL_HOSTNAME_MAX)
         return false;
-    if (chrcount == 0 || chrcount > 63)
+    if (label_len == 0 || label_len > 63)
         return false;
     /* rewind to last character */
     ptr--;
@@ -308,59 +306,59 @@ static bool is_hostname_valid(const char* hostname) {
 
 static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dns_conf) {
     struct pal_dns_host_conf* pub_dns = &g_pal_public_state.dns_host;
-    size_t i, j;
 
     if (!g_pal_public_state.emulate_etc_files)
         return 0;
 
-    struct pal_dns_host_conf shallow_dns;
-    if (!sgx_copy_to_enclave(&shallow_dns, sizeof(shallow_dns), uptr_dns_conf,
+    struct pal_dns_host_conf untrusted_dns;
+    if (!sgx_copy_to_enclave(&untrusted_dns, sizeof(untrusted_dns), uptr_dns_conf,
                              sizeof(*uptr_dns_conf))) {
-        log_error("Unable to read host info");
-        ocall_exit(1, /*is_exitgroup=*/true);
+        log_error("Unable to read host dns info");
+        return -EINVAL;
     }
 
-    if (shallow_dns.nsaddr_list_count > PAL_MAX_NAMESPACES) {
+    if (untrusted_dns.nsaddr_list_count > PAL_MAX_NAMESPACES) {
         log_error("Too many nameservers provided");
         return -EINVAL;
     }
 
-    pub_dns->nsaddr_list_count = shallow_dns.nsaddr_list_count;
-    for (i = 0; i < pub_dns->nsaddr_list_count; i++) {
-        coerce_untrusted_bool(&shallow_dns.nsaddr_list[i].is_ipv6);
+    pub_dns->nsaddr_list_count = untrusted_dns.nsaddr_list_count;
+    for (size_t i = 0; i < pub_dns->nsaddr_list_count; i++) {
+        coerce_untrusted_bool(&untrusted_dns.nsaddr_list[i].is_ipv6);
         /* All binary IP addresses are valid. */
-        if (!shallow_dns.nsaddr_list[i].is_ipv6) {
-            pub_dns->nsaddr_list[i].ipv4 = shallow_dns.nsaddr_list[i].ipv4;
+        if (!untrusted_dns.nsaddr_list[i].is_ipv6) {
+            pub_dns->nsaddr_list[i].ipv4 = untrusted_dns.nsaddr_list[i].ipv4;
             pub_dns->nsaddr_list[i].is_ipv6 = false;
         } else {
-            memcpy(&pub_dns->nsaddr_list[i].ipv6, &shallow_dns.nsaddr_list[i].ipv6,
+            memcpy(&pub_dns->nsaddr_list[i].ipv6, &untrusted_dns.nsaddr_list[i].ipv6,
                    sizeof(pub_dns->nsaddr_list[i].ipv6));
             pub_dns->nsaddr_list[i].is_ipv6 = true;
         }
     }
 
-    if (shallow_dns.dnsrch_count > PAL_MAX_DN_SEARCH) {
+    if (untrusted_dns.dn_search_count > PAL_MAX_DN_SEARCH) {
         log_error("Too many search entries provided");
         return -EINVAL;
     }
 
-    for (i = 0, j = 0; i < shallow_dns.dnsrch_count; i++) {
-        if (!is_hostname_valid(shallow_dns.dnsrch[i])) {
-            log_warning("The search domain name %s is invalid, skipping it", shallow_dns.dnsrch[i]);
+    size_t i, j;
+    for (i = 0, j = 0; i < untrusted_dns.dn_search_count; i++) {
+        if (!is_hostname_valid(untrusted_dns.dn_search[i])) {
+            log_warning("The search domain name %s is invalid, skipping it", untrusted_dns.dn_search[i]);
             continue;
         }
 
-        memcpy(pub_dns->dnsrch[j], shallow_dns.dnsrch[i], sizeof(pub_dns->dnsrch[j]) - 1);
-        pub_dns->dnsrch[j][sizeof(pub_dns->dnsrch[j]) - 1] = 0x00;
+        memcpy(pub_dns->dn_search[j], untrusted_dns.dn_search[i], sizeof(pub_dns->dn_search[j]) - 1);
+        pub_dns->dn_search[j][sizeof(pub_dns->dn_search[j]) - 1] = 0x00;
         j++;
     }
-    pub_dns->dnsrch_count = j;
+    pub_dns->dn_search_count = j;
 
-    coerce_untrusted_bool(&shallow_dns.inet6);
-    coerce_untrusted_bool(&shallow_dns.rotate);
+    coerce_untrusted_bool(&untrusted_dns.inet6);
+    coerce_untrusted_bool(&untrusted_dns.rotate);
 
-    pub_dns->inet6 = shallow_dns.inet6;
-    pub_dns->rotate = shallow_dns.rotate;
+    pub_dns->inet6 = untrusted_dns.inet6;
+    pub_dns->rotate = untrusted_dns.rotate;
 
     return 0;
 }
@@ -746,10 +744,12 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* Get host information only for the first process. This information will be
-     * checkpointed and restored during forking of the child process(es). */
+    /* Get host information for etc emulation only for the first process.
+     * This information will be checkpointed and restored during forking of the
+     * child process(es). */
     if (parent_stream_fd < 0) {
-        if ((ret = import_and_init_emulation_etc_files(uptr_dns_conf)) < 0) {
+        ret = import_and_init_emulation_etc_files(uptr_dns_conf);
+        if (ret < 0) {
             log_error("Failed to initialize host info: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
         }

@@ -165,15 +165,15 @@ The set of extra runtime files is limited to:
 Unsupported keywords and malformed lines are ignored, and invalid values are
 reported as an error.
 
-This emulation is achieved by taking the host's configuration via different
+This emulation is achieved by taking the host's configuration via various
 APIs and reading the host's configuration files. In the case of Linux PAL,
 most information comes from the host's ``/etc``. The gathered information is
 used to create ``/etc`` files inside Gramine's file system.
 For security-enforcing modes (such as SGX), Gramine additionally sanitizes
 the information gathered from the host.
 
-Note that Gramine's parsers for the hosts information support only a subset
-of the corresponding options. Refer to the list of supported keywords.
+Note that Gramine support only a subset of the corresponding options.
+Refer to the list of supported keywords.
 
 This option takes precedence over ``fs.mounts``.
 This means that etc files provided via ``fs.mounts`` will be overridden with

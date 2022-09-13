@@ -12,8 +12,8 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
-#define OPTION_INET6    "options inet6\n"
-#define OPTION_ROTATE   "options rotate\n"
+#define OPTION_INET6 "options inet6\n"
+#define OPTION_ROTATE "options rotate\n"
 
 static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_list ap;
@@ -36,12 +36,14 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
     size_t size = 0;
 
     /* Estimate the size of buffer: */
-    /* nameservers - lets assume all entries will be IPv6 plus a new line */
-    size += g_pal_public_state->dns_host.nsaddr_list_count * (strlen("nameserver ") + 40 + 1);
-    /* search - lets assume maximum length of entries, plus a new line and white spaces */
-    size += strlen("search") + 1;
-    size += g_pal_public_state->dns_host.dnsrch_count * (PAL_HOSTNAME_MAX + 1);
-    /* and lets add some space for each option */
+    /* nameservers - let's assume all entries will be IPv6 plus a new line */
+    size += g_pal_public_state->dns_host.nsaddr_list_count *
+            (strlen("nameserver ") + MAX_IPV6_ADDR_LEN + 1);
+    /* search - let's assume maximum length of entries, plus a new line and white spaces */
+    size += strlen("search");
+    size += g_pal_public_state->dns_host.dn_search_count * (PAL_HOSTNAME_MAX + 1);
+    size += 1;
+    /* and let's add some space for each option */
     size += (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0) +
             (g_pal_public_state->dns_host.rotate ? strlen(OPTION_ROTATE) : 0);
     /* make space for terminating character */
@@ -53,7 +55,7 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
 
     /* Generate data: */
     char* ptr = data;
-    int ret = 0;
+    int ret;
     for (size_t i = 0; i < g_pal_public_state->dns_host.nsaddr_list_count; i++) {
         if (!g_pal_public_state->dns_host.nsaddr_list[i].is_ipv6) {
             uint32_t addr = g_pal_public_state->dns_host.nsaddr_list[i].ipv4;
@@ -70,12 +72,12 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
             goto out;
     }
 
-    if (g_pal_public_state->dns_host.dnsrch_count > 0) {
+    if (g_pal_public_state->dns_host.dn_search_count > 0) {
         ret = put_string(&ptr, &size, "search");
         if (ret < 0)
             goto out;
-        for (size_t i = 0; i < g_pal_public_state->dns_host.dnsrch_count; i++) {
-            ret = put_string(&ptr, &size, " %s", g_pal_public_state->dns_host.dnsrch[i]);
+        for (size_t i = 0; i < g_pal_public_state->dns_host.dn_search_count; i++) {
+            ret = put_string(&ptr, &size, " %s", g_pal_public_state->dns_host.dn_search[i]);
             if (ret < 0)
                 goto out;
         }
@@ -101,7 +103,7 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
         ret = -ENOMEM;
         goto out;
     }
-    assert(finalsize <= size);
+    assert(finalsize < size);
     memcpy(finalbuf, data, finalsize);
 
     *out_data = finalbuf;

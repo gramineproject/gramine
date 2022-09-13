@@ -419,8 +419,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
     }
 
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
-                       &g_pal_public_state.emulate_etc_files);
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files",
+                       /*defaultval=*/false, &g_pal_public_state.emulate_etc_files);
     if (ret < 0) {
         INIT_FAIL("Cannot parse 'libos.emulate_etc_files'");
     }
