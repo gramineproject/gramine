@@ -150,9 +150,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
                                         bool create, pal_share_flags_t share_flags) {
     assert(!enc->pf);
 
-    assert(strstartswith(enc->uri, URI_PREFIX_FILE));
-    const char* path = enc->uri + static_strlen(URI_PREFIX_FILE);
     int ret;
+    char* normpath = NULL;
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
@@ -168,31 +167,52 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
     if (ret < 0) {
         log_warning("%s: PalStreamAttributesQueryByHandle failed: %d", __func__, ret);
-        PalObjectClose(pal_handle);
-        return pal_to_unix_errno(ret);
+        ret = pal_to_unix_errno(ret);
+        goto out;
     }
     size_t size = pal_attr.pending_size;
+
+    assert(strstartswith(enc->uri, URI_PREFIX_FILE));
+    const char* path = enc->uri + static_strlen(URI_PREFIX_FILE);
+
+    size_t normpath_size = strlen(path) + 1;
+    normpath = malloc(normpath_size);
+    if (!normpath) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    ret = get_norm_path(path, normpath, &normpath_size);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
 
     pf_context_t* pf;
     lock(&g_keys_lock);
     if (!enc->key->is_set) {
         log_warning("%s: key '%s' is not set", __func__, enc->key->name);
         unlock(&g_keys_lock);
-        PalObjectClose(pal_handle);
-        return -EACCES;
+        ret = -EACCES;
+        goto out;
     }
-    pf_status_t pfs = pf_open(pal_handle, path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
+    pf_status_t pfs = pf_open(pal_handle, normpath, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
                               create, &enc->key->pf_key, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("%s: pf_open failed: %s", __func__, pf_strerror(pfs));
-        PalObjectClose(pal_handle);
-        return -EACCES;
+        ret = -EACCES;
+        goto out;
     }
 
     enc->pf = pf;
     enc->pal_handle = pal_handle;
-    return 0;
+    ret = 0;
+out:
+    free(normpath);
+    if (ret < 0)
+        PalObjectClose(pal_handle);
+    return ret;
 }
 
 /* Used only in debug code / by deprecated options, no need to be side-channel-resistant. */
@@ -623,11 +643,12 @@ int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
 int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri) {
     assert(enc->pf);
 
+    int ret;
+    char* new_normpath = NULL;
+
     char* new_uri_copy = strdup(new_uri);
     if (!new_uri_copy)
         return -ENOMEM;
-
-    int ret;
 
     assert(strstartswith(enc->uri, URI_PREFIX_FILE));
     const char* old_path = enc->uri + static_strlen(URI_PREFIX_FILE);
@@ -635,7 +656,20 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     assert(strstartswith(new_uri, URI_PREFIX_FILE));
     const char* new_path = new_uri + static_strlen(URI_PREFIX_FILE);
 
-    pf_status_t pfs = pf_rename(enc->pf, new_path);
+    size_t new_normpath_size = strlen(new_path) + 1;
+    new_normpath = malloc(new_normpath_size);
+    if (!new_normpath) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    ret = get_norm_path(new_path, new_normpath, &new_normpath_size);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    pf_status_t pfs = pf_rename(enc->pf, new_normpath);
     if (PF_FAILURE(pfs)) {
         log_warning("%s: pf_rename failed: %s", __func__, pf_strerror(pfs));
         ret = -EACCES;
@@ -663,6 +697,7 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     ret = 0;
 
 out:
+    free(new_normpath);
     free(new_uri_copy);
     return ret;
 }
