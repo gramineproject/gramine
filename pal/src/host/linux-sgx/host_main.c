@@ -890,10 +890,10 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
     g_host_log_level = log_level;
 
-    ret = toml_bool_in(manifest_root, "libos.emulate_etc_files", /*defaultval=*/false,
+    ret = toml_bool_in(manifest_root, "sys.emulate_etc_files", /*defaultval=*/false,
                        out_emulate_etc);
     if (ret < 0) {
-        log_error("Cannot parse 'libos.emulate_etc_files'");
+        log_error("Cannot parse 'sys.emulate_etc_files'");
         goto out;
     }
 

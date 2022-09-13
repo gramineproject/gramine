@@ -737,10 +737,10 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "libos.emulate_etc_files", false,
-                       &g_pal_public_state.emulate_etc_files);
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.emulate_etc_files",
+                       /*defaultval*/false, &g_pal_public_state.emulate_etc_files);
     if (ret < 0) {
-        log_error("Cannot parse 'libos.emulate_etc_files'");
+        log_error("Cannot parse 'sys.emulate_etc_files'");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 

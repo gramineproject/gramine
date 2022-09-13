@@ -101,7 +101,7 @@ enum {
 /********** PAL APIs **********/
 
 struct pal_dns_host_conf_addr {
-    bool     is_ipv6;
+    bool is_ipv6;
     union {
         uint32_t ipv4;
         uint16_t ipv6[8];

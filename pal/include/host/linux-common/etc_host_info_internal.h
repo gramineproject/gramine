@@ -6,4 +6,4 @@
 #pragma once
 
 bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr);
-bool parse_ip_addr_ipv6(const char** pptr, uint16_t out_addr[8]);
+bool parse_ip_addr_ipv6(const char** pptr, uint16_t out_addr[static 8]);

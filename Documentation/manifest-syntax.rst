@@ -150,7 +150,7 @@ Emulate ``/etc``
 
 ::
 
-    libos.emulate_etc_files = [true|false]
+    sys.emulate_etc_files = [true|false]
     (Default: false)
 
 The set of extra runtime files is limited to:
@@ -172,7 +172,7 @@ used to create ``/etc`` files inside Gramine's file system.
 For security-enforcing modes (such as SGX), Gramine additionally sanitizes
 the information gathered from the host.
 
-Note that Gramine support only a subset of the corresponding options.
+Note that Gramine supports only a subset of the corresponding options.
 Refer to the list of supported keywords.
 
 This option takes precedence over ``fs.mounts``.
