@@ -18,13 +18,13 @@ static int ipv6_valid(const char* buf, uint16_t reference_addr[static 8]) {
     const char* ptr = buf;
 
     if (!parse_ip_addr_ipv6(&ptr, addr)) {
-        pal_printf("Unable to parse %s\n", buf);
+        pal_printf("Unable to parse \"%s\"\n", buf);
         return -1;
     }
 
     if (memcmp(reference_addr, addr, sizeof(addr)) != 0) {
         pal_printf(
-            "Invalid result of parsing %s "
+            "Invalid result of parsing \"%s\" "
             "(expected: %.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x, "
             "got: %.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x:%.4x)\n",
             buf, reference_addr[0], reference_addr[1], reference_addr[2], reference_addr[3],
@@ -41,7 +41,7 @@ static int ipv6_invalid(const char* buf) {
     const char* ptr = buf;
 
     if (parse_ip_addr_ipv6(&ptr, addr)) {
-        pal_printf("We parsed %s successfully, but it's an invalid IPv6 address\n", buf);
+        pal_printf("We parsed \"%s\" successfully, but it's an invalid IPv6 address\n", buf);
         return -1;
     }
 
@@ -66,6 +66,7 @@ int main(void) {
         {"1337:1:2:3:4:5:6:7 suffix", {0x1337, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7}},
         {":: suffix", {0, 0, 0, 0, 0, 0, 0, 0}},
         {"::1 suffix", {0, 0, 0, 0, 0, 0, 0, 1}},
+        {"1::", {1, 0, 0, 0, 0, 0, 0, 0}},
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(valid_test_cases); i++) {
@@ -98,6 +99,9 @@ int main(void) {
     CHECK(ipv6_invalid("::1::1"));
     CHECK(ipv6_invalid("2::1::1"));
     CHECK(ipv6_invalid("2::1::1::3"));
+    CHECK(ipv6_invalid("1:::"));
+    CHECK(ipv6_invalid("1::::"));
+    CHECK(ipv6_invalid("1::0x12"));
 
     pal_printf("TEST OK\n");
 

@@ -18,12 +18,12 @@ static int ipv4_valid(const char* buf, uint32_t reference_addr) {
     const char* ptr = buf;
 
     if (!parse_ip_addr_ipv4(&ptr, &addr)) {
-        pal_printf("Unable to parse %s\n", buf);
+        pal_printf("Unable to parse \"%s\"\n", buf);
         return -1;
     }
 
     if (reference_addr != addr) {
-        pal_printf("Invalid result of parsing %s (expected: %.8x, got: %.8x)\n", buf,
+        pal_printf("Invalid result of parsing \"%s\" (expected: %.8x, got: %.8x)\n", buf,
                    reference_addr, addr);
         return -1;
     }
@@ -36,7 +36,7 @@ static int ipv4_invalid(const char* buf) {
     const char* ptr = buf;
 
     if (parse_ip_addr_ipv4(&ptr, &addr)) {
-        pal_printf("We parsed %s successfully, but it's an invalid IPv4 address\n", buf);
+        pal_printf("We parsed \"%s\" successfully, but it's an invalid IPv4 address\n", buf);
         return -1;
     }
 
@@ -82,13 +82,19 @@ int main(void) {
     CHECK(ipv4_invalid("8.8.8.\t8"));
     CHECK(ipv4_invalid("8.8.+8.8"));
     CHECK(ipv4_invalid("8.8.-8.8"));
-    CHECK(ipv4_invalid("0x8.8.8.8"));
-    CHECK(ipv4_invalid("8.8.0x8.8"));
-    CHECK(ipv4_invalid("0b1.8.8.8"));
     CHECK(ipv4_invalid("8.b1.8.8"));
-    CHECK(ipv4_invalid("8.0b1.8.8"));
     CHECK(ipv4_invalid("b1.8.8.8"));
-    pal_printf("TEST OK\n");
+    CHECK(ipv4_invalid("8.8.8.018"));
+    CHECK(ipv4_invalid("8.0b1.8.8"));
 
-    return 0;
+    /* This addresses are valid ones, but (at least for now) we don't want to support other notions
+     * then decimal, because other notions are (probably) not used widdly besides situation where
+     * attacker wants to omits some WAFs rules.
+     */
+    CHECK(ipv4_invalid("8.8.0x8.8"));
+    CHECK(ipv4_invalid("8.8.8.017"));
+    CHECK(ipv4_invalid("0x8.8.8.8"));
+    CHECK(ipv4_invalid("0b1.8.8.8"));
+
+    pal_printf("TEST OK\n");
 }

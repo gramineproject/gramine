@@ -3,6 +3,10 @@
  *                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
  */
 
+/*
+ * This file contains a list of external functions for which Gramine has unit tests.
+ */
+
 #pragma once
 
 bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr);

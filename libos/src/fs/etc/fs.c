@@ -37,8 +37,8 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
 
     /* Estimate the size of buffer: */
     /* nameservers - let's assume all entries will be IPv6 plus a new line */
-    size += g_pal_public_state->dns_host.nsaddr_list_count *
-            (strlen("nameserver ") + MAX_IPV6_ADDR_LEN + 1);
+    size += g_pal_public_state->dns_host.nsaddr_list_count
+            * (strlen("nameserver ") + MAX_IPV6_ADDR_LEN + 1);
     /* search - let's assume maximum length of entries, plus a new line and white spaces */
     size += strlen("search");
     size += g_pal_public_state->dns_host.dn_search_count * (PAL_HOSTNAME_MAX + 1);

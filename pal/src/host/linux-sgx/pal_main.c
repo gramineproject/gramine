@@ -341,8 +341,8 @@ static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dn
         return -EINVAL;
     }
 
-    size_t i, j;
-    for (i = 0, j = 0; i < untrusted_dns.dn_search_count; i++) {
+    size_t j = 0;
+    for (size_t i = 0; i < untrusted_dns.dn_search_count; i++) {
         if (!is_hostname_valid(untrusted_dns.dn_search[i])) {
             log_warning("The search domain name %s is invalid, skipping it", untrusted_dns.dn_search[i]);
             continue;
@@ -744,9 +744,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* Get host information for etc emulation only for the first process.
-     * This information will be checkpointed and restored during forking of the
-     * child process(es). */
+    /* Get host information for etc emulation only for the first process. This information will be
+     * checkpointed and restored during forking of the child process(es). */
     if (parent_stream_fd < 0) {
         ret = import_and_init_emulation_etc_files(uptr_dns_conf);
         if (ret < 0) {

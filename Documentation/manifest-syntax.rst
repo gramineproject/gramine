@@ -172,7 +172,7 @@ used to create ``/etc`` files inside Gramine's file system.
 For security-enforcing modes (such as SGX), Gramine additionally sanitizes
 the information gathered from the host.
 
-Note that Gramine supports only a subset of the corresponding options.
+Note that Gramine supports only a subset of the configuration.
 Refer to the list of supported keywords.
 
 This option takes precedence over ``fs.mounts``.

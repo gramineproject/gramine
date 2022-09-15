@@ -52,6 +52,9 @@ bool parse_ip_addr_ipv4(const char** pptr, uint32_t* out_addr) {
             return false;
         if (octet < 0 || octet > UINT32_MAX)
             return false;
+        /* strtoll skips a prefix with 0 */
+        if (next - ptr > 1 && *ptr == '0')
+            return false;
 
         addr[i] = octet;
 
@@ -123,15 +126,17 @@ bool parse_ip_addr_ipv6(const char** pptr, uint16_t addr[static 8]) {
             return false;
         }
         /* strtol skips 0x prefix, this prefix is invalid in IPv6 */
-        if (next - ptr >= 2 && !isxdigit(ptr[1]))
+        if (next - ptr >= 2 && !isxdigit(ptr[1])) {
             return false;
+        }
         addr[parts_seen] = val;
         parts_seen++;
         ptr = next;
 
-        if (ptr[0] == ':' && ptr[1] == ':' && isxdigit(ptr[2])) {
-            if (double_colon_pos != -1)
+        if (ptr[0] == ':' && ptr[1] == ':') {
+            if (double_colon_pos != -1) {
                 return false;
+            }
 
             double_colon_pos = parts_seen;
             ptr += 2;
@@ -145,7 +150,8 @@ bool parse_ip_addr_ipv6(const char** pptr, uint16_t addr[static 8]) {
     if (!is_end_of_word(ptr[0])) {
         return false;
     }
-    if (parts_seen > 0 && !isxdigit(*(ptr - 1))) {
+    if (parts_seen > 0 && !isxdigit(*(ptr - 1)) && (ssize_t)parts_seen != double_colon_pos) {
+        assert(ptr[-1] == ':');
         return false;
     }
 
@@ -293,9 +299,8 @@ static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* bu
 
     /*
      * From resolv.conf(5):
-     * The keyword and value must appear on a single line, and the
-     * keyword (e.g., nameserver) must start the line. The value
-     * follows the keyword, separated by white space.
+     * The keyword and value must appear on a single line, and the keyword (e.g., nameserver) must
+     * start the line. The value follows the keyword, separated by white space.
      */
     while (*ptr != 0x00) {
         if (*ptr != '\n' && *ptr != '#' && *ptr != ';') {
