@@ -278,6 +278,8 @@ static int import_and_sanitize_topo_info(void* uptr_topo_info) {
 }
 
 /*
+ * This function analyze the untrusted buffer, before using it, please make sure
+ * that the buffer is NULL terminated.
  * Gramine assumes that the hostname is valid when:
  * - the length of the hostname is below or equal to 255 characters (including '\0'),
  * - the length of a single label is between 1 and 63,
@@ -296,7 +298,7 @@ static bool is_hostname_valid(const char* hostname) {
     if (*ptr == '-')
         return false;
 
-    while (ptr - hostname < PAL_HOSTNAME_MAX && *ptr != 0x00) {
+    while (*ptr != 0x00) {
         if (('a' <= *ptr && *ptr <= 'z')
                 || ('A' <= *ptr && *ptr <= 'Z')
                 || ('0' <= *ptr && *ptr <= '9')
@@ -365,13 +367,13 @@ static int import_and_init_emulation_etc_files(struct pal_dns_host_conf* uptr_dn
 
     size_t j = 0;
     for (size_t i = 0; i < untrusted_dns.dn_search_count; i++) {
+        untrusted_dns.dn_search[i][PAL_HOSTNAME_MAX - 1] = 0x00;
         if (!is_hostname_valid(untrusted_dns.dn_search[i])) {
             log_warning("The search domain name %s is invalid, skipping it", untrusted_dns.dn_search[i]);
             continue;
         }
 
-        memcpy(pub_dns->dn_search[j], untrusted_dns.dn_search[i], sizeof(pub_dns->dn_search[j]) - 1);
-        pub_dns->dn_search[j][sizeof(pub_dns->dn_search[j]) - 1] = 0x00;
+        memcpy(pub_dns->dn_search[j], untrusted_dns.dn_search[i], sizeof(pub_dns->dn_search[j]));
         j++;
     }
     pub_dns->dn_search_count = j;

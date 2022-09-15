@@ -26,6 +26,7 @@ sgx.debug = true
 sgx.nonpie_binary = true
 sgx.enclave_size = "512M"
 sys.stack.size = "2M"
+sys.emulate_etc_files = true
 sgx.thread_num = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
@@ -53,5 +54,4 @@ sgx.allowed_files = [
   "file:/etc/passwd",
   "file:/etc/gai.conf",
   "file:/etc/host.conf",
-  "file:/etc/resolv.conf",
 ]
