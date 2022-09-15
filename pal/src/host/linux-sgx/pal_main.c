@@ -278,8 +278,6 @@ static int import_and_sanitize_topo_info(void* uptr_topo_info) {
 }
 
 /*
- * This function analyze the untrusted buffer, before using it, please make sure
- * that the buffer is NULL terminated.
  * Gramine assumes that the hostname is valid when:
  * - the length of the hostname is below or equal to 255 characters (including '\0'),
  * - the length of a single label is between 1 and 63,
