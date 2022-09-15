@@ -88,8 +88,8 @@ int main(void) {
     CHECK(ipv4_invalid("8.0b1.8.8"));
 
     /* This addresses are valid ones, but (at least for now) we don't want to support other notions
-     * then decimal, because other notions are (probably) not used widdly besides situation where
-     * attacker wants to omits some WAFs rules.
+     * than decimal, because other notions are (probably) not used widely besides situation where
+     * attacker wants to omit some WAF rules.
      */
     CHECK(ipv4_invalid("8.8.0x8.8"));
     CHECK(ipv4_invalid("8.8.8.017"));
