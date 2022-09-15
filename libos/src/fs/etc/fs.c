@@ -52,6 +52,7 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
     char* data = malloc(size);
     if (!data)
         return -ENOMEM;
+    memset(data, 0, size);
 
     /* Generate data: */
     char* ptr = data;
@@ -103,7 +104,6 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
         ret = -ENOMEM;
         goto out;
     }
-    assert(finalsize < size);
     memcpy(finalbuf, data, finalsize);
 
     *out_data = finalbuf;
