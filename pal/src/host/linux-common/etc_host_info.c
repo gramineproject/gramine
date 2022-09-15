@@ -303,18 +303,16 @@ static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* bu
      * start the line. The value follows the keyword, separated by white space.
      */
     while (*ptr != 0x00) {
-        if (*ptr != '\n' && *ptr != '#' && *ptr != ';') {
-            for (size_t i = 0; i < ARRAY_SIZE(resolv_keys); i++) {
-                if (strncmp(ptr, resolv_keys[i].keyword, strlen(resolv_keys[i].keyword)) == 0) {
-                    ptr += strlen(resolv_keys[i].keyword);
-                    /* Because the buffer in strncmp is not ended with 0x00, let's
-                     * verify that this is end of word. */
-                    if (!is_end_of_word(*ptr))
-                        break;
-                    skip_whitespaces(&ptr);
-                    resolv_keys[i].set_value(conf, &ptr);
+        for (size_t i = 0; i < ARRAY_SIZE(resolv_keys); i++) {
+            if (strncmp(ptr, resolv_keys[i].keyword, strlen(resolv_keys[i].keyword)) == 0) {
+                ptr += strlen(resolv_keys[i].keyword);
+                /* Because the buffer in strncmp is not ended with 0x00, let's
+                 * verify that this is end of word. */
+                if (!is_end_of_word(*ptr))
                     break;
-                }
+                skip_whitespaces(&ptr);
+                resolv_keys[i].set_value(conf, &ptr);
+                break;
             }
         }
         /* Make sure we are at the end of line, even if parsing of this line failed */

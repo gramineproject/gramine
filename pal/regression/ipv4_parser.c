@@ -11,7 +11,10 @@
 /* We define this to not link with many unneeded files, which are required by functions in
  * etc_host_info.c which we don't use here. */
 void read_text_file_to_cstr(void);
-void read_text_file_to_cstr(void) {}
+void read_text_file_to_cstr(void) {
+    pal_printf("This function is a mock function and shouldn't be called\n");
+    PalProcessExit(1);
+}
 
 static int ipv4_valid(const char* buf, uint32_t reference_addr) {
     uint32_t addr;
@@ -86,15 +89,14 @@ int main(void) {
     CHECK(ipv4_invalid("b1.8.8.8"));
     CHECK(ipv4_invalid("8.8.8.018"));
     CHECK(ipv4_invalid("8.0b1.8.8"));
+    CHECK(ipv4_invalid("0b1.8.8.8"));
 
-    /* This addresses are valid ones, but (at least for now) we don't want to support other notions
-     * than decimal, because other notions are (probably) not used widely besides situation where
-     * attacker wants to omit some WAF rules.
+    /* These addresses are valid ones, but (at least for now) we don't want to support other notions
+     * than decimal, because other notions are (probably) not used widely.
      */
     CHECK(ipv4_invalid("8.8.0x8.8"));
     CHECK(ipv4_invalid("8.8.8.017"));
     CHECK(ipv4_invalid("0x8.8.8.8"));
-    CHECK(ipv4_invalid("0b1.8.8.8"));
 
     pal_printf("TEST OK\n");
 }
