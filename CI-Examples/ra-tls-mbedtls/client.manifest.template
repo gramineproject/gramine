@@ -22,9 +22,10 @@ fs.mounts = [
   { path = "/client", uri = "file:client" },
 ]
 
+sys.emulate_etc_files = true
+
 sgx.debug = true
 sgx.enclave_size = "512M"
-sys.emulate_etc_files = true
 sgx.thread_num = 4
 
 sgx.trusted_files = [

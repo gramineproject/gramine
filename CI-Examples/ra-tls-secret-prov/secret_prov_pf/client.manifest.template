@@ -24,8 +24,9 @@ fs.mounts = [
   { path = "/files/", uri = "file:enc_files/", type = "encrypted" },
 ]
 
-sgx.enclave_size = "512M"
 sys.emulate_etc_files = true
+
+sgx.enclave_size = "512M"
 sgx.debug = true
 
 sgx.remote_attestation = "{{ ra_type }}"

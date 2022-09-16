@@ -33,28 +33,29 @@ static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
 static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t space_left = 0;
+    size_t size = 0;
 
-    /* Estimate the space_left of buffer: */
+    /* Estimate the size of buffer: */
     /* nameservers - let's assume all entries will be IPv6 plus a new line */
-    space_left += g_pal_public_state->dns_host.nsaddr_list_count
+    size += g_pal_public_state->dns_host.nsaddr_list_count
             * (strlen("nameserver ") + MAX_IPV6_ADDR_LEN + 1);
     /* search - let's assume maximum length of entries, plus a new line and white spaces */
-    space_left += strlen("search");
-    space_left += g_pal_public_state->dns_host.dn_search_count * (PAL_HOSTNAME_MAX + 1);
-    space_left += 1;
+    size += strlen("search");
+    size += g_pal_public_state->dns_host.dn_search_count * (PAL_HOSTNAME_MAX + 1);
+    size += 1;
     /* and let's add some space for each option */
-    space_left += (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0) +
+    size += (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0) +
             (g_pal_public_state->dns_host.rotate ? strlen(OPTION_ROTATE) : 0);
     /* make space for terminating character */
-    space_left += 1;
+    size += 1;
 
-    char* data = malloc(space_left);
+    char* data = malloc(size);
     if (!data)
         return -ENOMEM;
-    memset(data, 0, space_left);
+    memset(data, 0, size);
 
     /* Generate data: */
+    size_t space_left = size;
     char* ptr = data;
     int ret;
     for (size_t i = 0; i < g_pal_public_state->dns_host.nsaddr_list_count; i++) {
@@ -104,6 +105,7 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
         ret = -ENOMEM;
         goto out;
     }
+    assert(finalsize < size);
     memcpy(finalbuf, data, finalsize);
 
     *out_data = finalbuf;
