@@ -40,6 +40,16 @@ long libos_syscall_uname(struct new_utsname* buf) {
     return 0;
 }
 
+int set_hostname(const char* name, size_t len) {
+    if (len >= sizeof(g_current_uname.nodename))
+        return -EINVAL;
+
+    memcpy(&g_current_uname.nodename, name, len);
+    memset(&g_current_uname.nodename[len], 0, sizeof(g_current_uname.nodename) - len);
+
+    return 0;
+}
+
 long libos_syscall_sethostname(char* name, int len) {
     if (len < 0 || (size_t)len >= sizeof(g_current_uname.nodename))
         return -EINVAL;
@@ -47,9 +57,7 @@ long libos_syscall_sethostname(char* name, int len) {
     if (!is_user_memory_readable(name, len))
         return -EFAULT;
 
-    memcpy(&g_current_uname.nodename, name, len);
-    memset(&g_current_uname.nodename[len], 0, sizeof(g_current_uname.nodename) - len);
-    return 0;
+    return set_hostname(name, len);
 }
 
 long libos_syscall_setdomainname(char* name, int len) {

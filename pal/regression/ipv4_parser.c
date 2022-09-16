@@ -8,14 +8,6 @@
 #include "pal_error.h"
 #include "pal_regression.h"
 
-/* We define this to not link with many unneeded files, which are required by functions in
- * etc_host_info.c which we don't use here. */
-void read_text_file_to_cstr(void);
-void read_text_file_to_cstr(void) {
-    pal_printf("This function is a mock function and shouldn't be called\n");
-    PalProcessExit(1);
-}
-
 static int ipv4_valid(const char* buf, uint32_t reference_addr) {
     uint32_t addr;
     const char* ptr = buf;

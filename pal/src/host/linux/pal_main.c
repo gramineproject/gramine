@@ -129,6 +129,11 @@ static void get_host_etc_configs(void) {
     if (parse_resolv_conf(&g_pal_public_state.dns_host) < 0) {
         INIT_FAIL("Unable to parse /etc/resolv.conf");
     }
+
+    if (get_hostname(g_pal_public_state.dns_host.hostname,
+        sizeof(g_pal_public_state.dns_host.hostname)) < 0) {
+        INIT_FAIL("Unable to get hostname");
+    }
 }
 
 #ifdef ASAN

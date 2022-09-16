@@ -153,24 +153,25 @@ Domain names configuration
     sys.enable_extra_runtime_domain_names_conf = [true|false]
     (Default: false)
 
-This option will generate following extra runtime files:
+This option will generate following extra configuration:
 
-- ``/etc/resolv.conf``
-   Supported keywords:
+- Set up the Gramine hostname to the host's hostname.
+- Generate ``/etc/resolv.conf``, with keywords
 
    - ``nameserver``
    - ``search``
    - ``options`` (``inet6`` | ``rotate``)
 
-Unsupported keywords and malformed lines are ignored, and invalid values are
-reported as an error.
+  Unsupported keywords and malformed lines from ``/etc/resolv.conf`` are ignored.
 
-This functionality is achieved by taking the host's configuration via various
+The functionality is achieved by taking the host's configuration via various
 APIs and reading the host's configuration files. In the case of Linux PAL,
 most information comes from the host's ``/etc``. The gathered information is
 used to create ``/etc`` files inside Gramine's file system, or change Gramine
 process configuration. For security-enforcing modes (such as SGX), Gramine
-additionally sanitizes the information gathered from the host.
+additionally sanitizes the information gathered from the host. Invalid host's
+configuration is reported as an error (ex. invalid hostname, or invalid IPv4
+address in ``nameserver`` keyword).
 
 Note that Gramine supports only a subset of the configuration.
 Refer to the list of supported keywords.

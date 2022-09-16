@@ -6,12 +6,17 @@
 /*
  * This file contains the APIs to retrieve information from the host:
  *   - parses host file `/etc/resolv.conf` into `struct pal_dns_host_conf`
+ *   - get host's hostname through uname syscall
  */
+
+#include <asm/errno.h>
+#include <linux/utsname.h>
 
 #include "api.h"
 #include "etc_host_info.h"
 #include "etc_host_info_internal.h"
 #include "linux_utils.h"
+#include "syscall.h"
 
 static void jmp_to_end_of_line(const char** pptr) {
     const char* ptr = *pptr;
@@ -175,6 +180,7 @@ bool parse_ip_addr_ipv6(const char** pptr, uint16_t addr[static 8]) {
     return true;
 }
 
+#ifndef PARSERS_ONLY
 static void resolv_nameserver(struct pal_dns_host_conf* conf, const char** pptr) {
     const char* ptr = *pptr;
     bool is_ipv6 = false;
@@ -336,3 +342,21 @@ int parse_resolv_conf(struct pal_dns_host_conf* conf) {
     free(buf);
     return 0;
 }
+
+int get_hostname(char* hostname, size_t size) {
+    struct new_utsname c_uname;
+    int ret;
+
+    ret = DO_SYSCALL(uname, &c_uname);
+    if (ret < 0)
+        return ret;
+
+    size_t node_size = strlen(c_uname.nodename) + 1;
+    memcpy(hostname, c_uname.nodename, MIN(node_size, size));
+
+    assert(size > 0);
+    hostname[size - 1] = 0;
+
+    return 0;
+}
+#endif

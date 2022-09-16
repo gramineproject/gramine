@@ -50,6 +50,8 @@ manifests = [
   "gettimeofday",
   "groups",
   "helloworld",
+  "hostname",
+  "hostname_extra_runtime_conf",
   "host_root_fs",
   "init_fail",
   "keys",

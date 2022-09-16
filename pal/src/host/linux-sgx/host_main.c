@@ -957,6 +957,11 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                 log_error("Unable to parse host's /etc/resolv.conf");
                 return ret;
             }
+            ret = get_hostname(dns_conf.hostname, sizeof(dns_conf.hostname));
+            if (ret < 0) {
+                log_error("Unable to get host's hostname");
+                return ret;
+            }
         }
     }
 
