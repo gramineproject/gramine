@@ -153,6 +153,8 @@ bool handle_signal(PAL_CONTEXT* context);
  */
 long pal_to_unix_errno(long err);
 
+int set_hostname(const char* name, size_t len);
+
 void warn_unsupported_syscall(unsigned long sysno);
 void debug_print_syscall_before(unsigned long sysno, ...);
 void debug_print_syscall_after(unsigned long sysno, ...);
