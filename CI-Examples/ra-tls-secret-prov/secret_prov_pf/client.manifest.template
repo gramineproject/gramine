@@ -24,7 +24,7 @@ fs.mounts = [
   { path = "/files/", uri = "file:enc_files/", type = "encrypted" },
 ]
 
-sys.emulate_etc_files = true
+sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.enclave_size = "512M"
 sgx.debug = true

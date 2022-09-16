@@ -629,7 +629,7 @@ out:
 
 /* Parses only the information needed by the untrusted PAL to correctly initialize the enclave. */
 static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
-                               bool* out_emulate_etc) {
+                               bool* extra_runtime_domain_names_conf) {
     int ret = 0;
     toml_table_t* manifest_root = NULL;
     char* dummy_sigfile_str = NULL;
@@ -892,10 +892,10 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
     g_host_log_level = log_level;
 
-    ret = toml_bool_in(manifest_root, "sys.emulate_etc_files", /*defaultval=*/false,
-                       out_emulate_etc);
+    ret = toml_bool_in(manifest_root, "sys.enable_extra_runtime_domain_names_conf",
+                       /*defaultval=*/false, extra_runtime_domain_names_conf);
     if (ret < 0) {
-        log_error("Cannot parse 'sys.emulate_etc_files'");
+        log_error("Cannot parse 'sys.enable_extra_runtime_domain_names_conf'");
         goto out;
     }
 
@@ -921,7 +921,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
     struct pal_dns_host_conf dns_conf = {0};
-    bool emulate_etc;
+    bool extra_runtime_domain_names_conf;
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
     start_time = tv.tv_sec * 1000000UL + tv.tv_usec;
@@ -930,7 +930,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         /* only print during main process's startup (note that this message is always printed) */
         log_always("Gramine is starting. Parsing TOML manifest file, this may take some time...");
     }
-    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &emulate_etc);
+    ret = parse_loader_config(enclave->raw_manifest_data, enclave, &extra_runtime_domain_names_conf);
     if (ret < 0) {
         log_error("Parsing manifest failed");
         return -EINVAL;
@@ -951,7 +951,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         if (ret < 0)
             return ret;
 
-        if (emulate_etc) {
+        if (extra_runtime_domain_names_conf) {
             ret = parse_resolv_conf(&dns_conf);
             if (ret < 0) {
                 log_error("Unable to parse host's /etc/resolv.conf");

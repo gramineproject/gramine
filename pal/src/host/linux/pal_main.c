@@ -123,7 +123,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
 }
 
 static void get_host_etc_configs(void) {
-    if (!g_pal_public_state.emulate_etc_files)
+    if (!g_pal_public_state.extra_runtime_domain_names_conf)
         return;
 
     if (parse_resolv_conf(&g_pal_public_state.dns_host) < 0) {
@@ -419,10 +419,11 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         INIT_FAIL("Cannot parse 'loader.pal_internal_mem_size'");
     }
 
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.emulate_etc_files",
-                       /*defaultval=*/false, &g_pal_public_state.emulate_etc_files);
+    ret = toml_bool_in(g_pal_public_state.manifest_root,
+                       "sys.enable_extra_runtime_domain_names_conf", /*defaultval=*/false,
+                       &g_pal_public_state.extra_runtime_domain_names_conf);
     if (ret < 0) {
-        INIT_FAIL("Cannot parse 'sys.emulate_etc_files'");
+        INIT_FAIL("Cannot parse 'sys.enable_extra_runtime_domain_names_conf'");
     }
 
     /* Get host /etc information only for the first process. This information will be

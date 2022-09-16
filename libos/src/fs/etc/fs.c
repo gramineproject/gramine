@@ -123,7 +123,7 @@ int init_etcfs(void) {
 }
 
 int mount_etcfs(void) {
-    if (!g_pal_public_state->emulate_etc_files)
+    if (!g_pal_public_state->extra_runtime_domain_names_conf)
         return 0;
 
     return mount_fs(&(struct libos_mount_params){

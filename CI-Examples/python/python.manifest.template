@@ -23,7 +23,7 @@ fs.mounts = [
 ]
 
 sys.stack.size = "2M"
-sys.emulate_etc_files = true
+sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 sgx.nonpie_binary = true

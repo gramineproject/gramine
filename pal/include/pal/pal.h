@@ -167,7 +167,7 @@ struct pal_public_state {
     struct pal_cpu_info cpu_info;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
 
-    bool emulate_etc_files;
+    bool extra_runtime_domain_names_conf;
     struct pal_dns_host_conf dns_host;
 };
 
