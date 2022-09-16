@@ -24,6 +24,10 @@ tests = {
             'ipv4_parser.c',
             '../src/host/linux-common/etc_host_info.c',
         ],
+        'c_args': [
+            '-DPARSERS_ONLY',
+            '-Wno-unused-function',
+        ],
         'include_directories': include_directories(
             # for `etc_host_info_internal.h`
             join_paths('../include/host/linux-common'),
@@ -33,6 +37,10 @@ tests = {
         'filenames': [
             'ipv6_parser.c',
             '../src/host/linux-common/etc_host_info.c',
+        ],
+        'c_args': [
+            '-DPARSERS_ONLY',
+            '-Wno-unused-function',
         ],
         'include_directories': include_directories(
             # for `etc_host_info_internal.h`

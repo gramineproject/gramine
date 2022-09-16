@@ -382,6 +382,14 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
     pub_dns->inet6 = untrusted_dns.inet6;
     pub_dns->rotate = untrusted_dns.rotate;
 
+    untrusted_dns.hostname[sizeof(untrusted_dns.hostname) - 1] = 0x00;
+    if (!is_hostname_valid(untrusted_dns.hostname)) {
+        log_warning("The hostname on the host seems to be invalid. "
+                    "The Gramine hostname will be set to \"localhost\".");
+    } else {
+        memcpy(pub_dns->hostname, untrusted_dns.hostname, sizeof(pub_dns->hostname));
+    }
+
     return 0;
 }
 

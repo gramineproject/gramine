@@ -118,6 +118,8 @@ struct pal_dns_host_conf {
 
     bool inet6;
     bool rotate;
+
+    char hostname[PAL_HOSTNAME_MAX];
 };
 
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
