@@ -326,7 +326,7 @@ static bool is_hostname_valid(const char* hostname) {
     return true;
 }
 
-static int import_and_init_extra_runtime(struct pal_dns_host_conf* uptr_dns_conf) {
+static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* uptr_dns_conf) {
     struct pal_dns_host_conf* pub_dns = &g_pal_public_state.dns_host;
 
     if (!g_pal_public_state.extra_runtime_domain_names_conf)
@@ -775,11 +775,11 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* Get host information for extra runtimes configuration only for the first process.
+    /* Get host information about domain name configuration only for the first process.
      * This information will be checkpointed and restored during forking of the child
      * process(es). */
     if (parent_stream_fd < 0) {
-        ret = import_and_init_extra_runtime(uptr_dns_conf);
+        ret = import_and_init_extra_runtime_domain_names(uptr_dns_conf);
         if (ret < 0) {
             log_error("Failed to initialize host info: %d", ret);
             ocall_exit(1, /*is_exitgroup=*/true);
