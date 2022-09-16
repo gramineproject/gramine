@@ -143,6 +143,8 @@ long libos_syscall_sched_rr_get_interval(pid_t pid, struct timespec* interval) {
 
 long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
                                      unsigned long* user_mask_ptr) {
+    int ret;
+
     if (!is_user_memory_readable(user_mask_ptr, user_mask_size)) {
         return -EFAULT;
     }
@@ -158,14 +160,28 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
         get_thread(thread);
     }
 
-    int ret;
-    unsigned long* cpu_mask = calloc(GET_CPU_MASK_LEN(), sizeof(*cpu_mask));
-    if (!cpu_mask) {
-        ret = -ENOMEM;
-        goto out;
+    /* allocate temporary CPU mask on stack for the common case of platforms with <= 1024 CPUs; we
+     * try to avoid heap allocations because current memory allocator has a global lock */
+    bool cpu_mask_on_heap;
+    unsigned long* cpu_mask;
+    size_t cpu_mask_size = GET_CPU_MASK_LEN() * sizeof(*cpu_mask);
+
+    if (cpu_mask_size <= 128) {
+        /* fast path: allocate on stack if the platform has <= 1024 CPUs */
+        cpu_mask_on_heap = false;
+        cpu_mask = __alloca(cpu_mask_size);
+    } else {
+        /* slow path: allocate on heap if the platform has > 1024 CPUs */
+        cpu_mask_on_heap = true;
+        cpu_mask = malloc(cpu_mask_size);
+        if (!cpu_mask) {
+            ret = -ENOMEM;
+            goto out;
+        }
     }
 
-    memcpy(cpu_mask, user_mask_ptr, MIN(user_mask_size, GET_CPU_MASK_LEN() * sizeof(*cpu_mask)));
+    memset(cpu_mask, 0, cpu_mask_size);
+    memcpy(cpu_mask, user_mask_ptr, MIN(user_mask_size, cpu_mask_size));
 
     bool seen_online = false;
     size_t threads_count = g_pal_public_state->topo_info.threads_cnt;
@@ -195,13 +211,14 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
         goto out_unlock;
     }
 
-    memcpy(thread->cpu_affinity_mask, cpu_mask, GET_CPU_MASK_LEN() * sizeof(*cpu_mask));
+    memcpy(thread->cpu_affinity_mask, cpu_mask, cpu_mask_size);
     ret = 0;
 
 out_unlock:
     unlock(&thread->lock);
 out:
-    free(cpu_mask);
+    if (cpu_mask_on_heap)
+        free(cpu_mask);
     put_thread(thread);
     return ret;
 }
