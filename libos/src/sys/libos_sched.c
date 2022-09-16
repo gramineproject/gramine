@@ -8,7 +8,6 @@
  * "getcpu".
  */
 
-#include <alloca.h>
 #include <errno.h>
 #include <linux/resource.h>
 #include <linux/sched.h>
@@ -170,7 +169,7 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     if (cpu_mask_size <= 128) {
         /* fast path: allocate on stack if the platform has <= 1024 CPUs */
         cpu_mask_on_heap = false;
-        cpu_mask = alloca(cpu_mask_size);
+        cpu_mask = __alloca(cpu_mask_size);
     } else {
         /* slow path: allocate on heap if the platform has > 1024 CPUs */
         cpu_mask_on_heap = true;
