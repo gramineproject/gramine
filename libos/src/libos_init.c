@@ -487,6 +487,10 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
      * communicates with server over a "loopback" IPC connection. */
     RUN_INIT(init_sync_client);
 
+    /* XXX: this will break uname checkpointing (if we implement it). */
+    RUN_INIT(set_hostname, g_pal_public_state->dns_host.hostname,
+             strlen(g_pal_public_state->dns_host.hostname));
+
     log_debug("LibOS initialized");
 
     libos_tcb_t* cur_tcb = libos_get_tcb();
