@@ -359,4 +359,4 @@ int get_hostname(char* hostname, size_t size) {
 
     return 0;
 }
-#endif
+#endif /* ifndef PARSERS_ONLY */
