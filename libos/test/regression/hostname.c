@@ -13,7 +13,7 @@ static void test_fork(const char* tag, const char* expected_name,
 
     pid_t pid = fork();
     if (pid == -1) {
-        err(1, "Unable to fork %s", tag);
+        err(1, "%s: unable to fork", tag);
     }
 
     if (pid == 0) {
@@ -22,11 +22,11 @@ static void test_fork(const char* tag, const char* expected_name,
     }
 
     if (wait(&status) == -1) {
-        err(1, "Wait failed %s", tag);
+        err(1, "%s: wait failed", tag);
     }
 
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        err(1, "Test failed %s", tag);
+        errx(1, "%s: exit status of child is not zero", tag);
     }
 }
 
@@ -34,11 +34,11 @@ static void test_gethostname(const char* tag, const char* expected_name) {
     char buf[512] = {0};
 
     if (gethostname(buf, sizeof(buf)) != 0) {
-        err(1, "%s gethostname: failed", tag);
+        err(1, "%s: failed", tag);
     }
 
     if (strcmp(buf, expected_name) != 0) {
-        errx(1, "%s gethostname result doesn't match hostname (expected: %s, got: %s)",
+        errx(1, "%s: result doesn't match hostname (expected: %s, got: %s)",
              tag, expected_name, buf);
     }
 }
@@ -49,8 +49,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    test_gethostname("normal", argv[1]);
-    test_fork("fork gethostname", argv[1], test_gethostname);
+    test_gethostname("gethostname", argv[1]);
+    test_fork("gethostname after fork", argv[1], test_gethostname);
 
     printf("TEST OK\n");
     return 0;

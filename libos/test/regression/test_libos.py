@@ -913,7 +913,7 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/lock_file')
         self.assertIn('TEST OK', stdout)
 
-    def test_120_gethostname_localhost(self):
+    def test_120_gethostname_default(self):
         # The generic manifest (manifest.template) doesn't use extra runtime conf.
         stdout, _ = self.run_binary(['hostname', 'localhost'])
         self.assertIn("TEST OK", stdout)

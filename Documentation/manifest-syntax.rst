@@ -153,10 +153,11 @@ Domain names configuration
     sys.enable_extra_runtime_domain_names_conf = [true|false]
     (Default: false)
 
-This option will generate following extra configuration:
+This option will generate the following extra configuration:
 
-- Set up the Gramine hostname to the host's hostname.
-- Generate ``/etc/resolv.conf``, with keywords
+- Hostname (obtained by apps via `nodename` field in `uname` syscall),
+  set to the host's hostname at initialization.
+- Pseudo-file ``/etc/resolv.conf``, with keywords:
 
    - ``nameserver``
    - ``search``
@@ -170,7 +171,7 @@ most information comes from the host's ``/etc``. The gathered information is
 used to create ``/etc`` files inside Gramine's file system, or change Gramine
 process configuration. For security-enforcing modes (such as SGX), Gramine
 additionally sanitizes the information gathered from the host. Invalid host's
-configuration is reported as an error (ex. invalid hostname, or invalid IPv4
+configuration is reported as an error (e.g. invalid hostname, or invalid IPv4
 address in ``nameserver`` keyword).
 
 Note that Gramine supports only a subset of the configuration.

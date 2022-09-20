@@ -21,7 +21,7 @@
  * our `uname` implementation. */
 static struct new_utsname g_current_uname = {
     .sysname  = "Linux",
-    .nodename = "localhost",
+    .nodename = "(none)", /* overwritten by PAL-provided value at startup */
     .release  = "3.10.0",
     .version  = "1",
 #ifdef __x86_64__

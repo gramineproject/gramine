@@ -9,4 +9,4 @@
 
 int parse_resolv_conf(struct pal_dns_host_conf* conf);
 
-int get_hostname(char* hostname, size_t size);
+int get_hosts_hostname(char* hostname, size_t size);

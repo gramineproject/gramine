@@ -6,7 +6,7 @@
 /*
  * This file contains the APIs to retrieve information from the host:
  *   - parses host file `/etc/resolv.conf` into `struct pal_dns_host_conf`
- *   - get host's hostname through uname syscall
+ *   - gets host's hostname through uname syscall
  */
 
 #include <asm/errno.h>
@@ -343,11 +343,10 @@ int parse_resolv_conf(struct pal_dns_host_conf* conf) {
     return 0;
 }
 
-int get_hostname(char* hostname, size_t size) {
+int get_hosts_hostname(char* hostname, size_t size) {
     struct new_utsname c_uname;
-    int ret;
 
-    ret = DO_SYSCALL(uname, &c_uname);
+    int ret = DO_SYSCALL(uname, &c_uname);
     if (ret < 0)
         return ret;
 
