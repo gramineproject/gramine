@@ -161,7 +161,7 @@ This option will generate the following extra configuration:
 
    - ``nameserver``
    - ``search``
-   - ``options`` (``inet6`` | ``rotate``)
+   - ``options`` [``edns0``] [``inet6``] [``rotate``] [``use-vc``]
 
   Unsupported keywords and malformed lines from ``/etc/resolv.conf`` are ignored.
 

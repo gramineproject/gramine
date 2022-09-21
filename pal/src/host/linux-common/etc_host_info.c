@@ -280,10 +280,14 @@ static void resolv_options_setter(struct pal_dns_host_conf* conf, const char* pt
     memcpy(option, ptr, length);
     option[length] = 0x00;
 
-    if (strcmp(option, "inet6") == 0) {
+    if (strcmp(option, "edns0") == 0) {
+        conf->edns0 = true;
+    } else if (strcmp(option, "inet6") == 0) {
         conf->inet6 = true;
     } else if (strcmp(option, "rotate") == 0) {
         conf->rotate = true;
+    } else if (strcmp(option, "use-vc") == 0) {
+        conf->use_vc = true;
     }
 }
 

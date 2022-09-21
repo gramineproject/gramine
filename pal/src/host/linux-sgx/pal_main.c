@@ -376,11 +376,15 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
     }
     pub_dns->dn_search_count = j;
 
+    coerce_untrusted_bool(&untrusted_dns.edns0);
     coerce_untrusted_bool(&untrusted_dns.inet6);
     coerce_untrusted_bool(&untrusted_dns.rotate);
+    coerce_untrusted_bool(&untrusted_dns.use_vc);
 
+    pub_dns->edns0 = untrusted_dns.edns0;
     pub_dns->inet6 = untrusted_dns.inet6;
     pub_dns->rotate = untrusted_dns.rotate;
+    pub_dns->use_vc = untrusted_dns.use_vc;
 
     untrusted_dns.hostname[sizeof(untrusted_dns.hostname) - 1] = 0x00;
     if (!is_hostname_valid(untrusted_dns.hostname)) {

@@ -116,8 +116,10 @@ struct pal_dns_host_conf {
     char dn_search[PAL_MAX_DN_SEARCH][PAL_HOSTNAME_MAX];
     size_t dn_search_count;
 
+    bool edns0;
     bool inet6;
     bool rotate;
+    bool use_vc;
 
     char hostname[PAL_HOSTNAME_MAX];
 };
