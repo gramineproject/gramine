@@ -135,7 +135,21 @@ static void test_epoll_oneshot(void) {
     CHECK(close(epfd));
 }
 
+static void test_epoll_empty(void) {
+    int epfd = CHECK(epoll_create1(0));
+
+    struct epoll_event event = { 0 };
+    int x = CHECK(epoll_wait(epfd, &event, 1, 0));
+    if (x != 0) {
+        ERR("epoll_wait on empty epoll instance returned: %d", x);
+    }
+
+    CHECK(close(epfd));
+}
+
 int main(void) {
+    test_epoll_empty();
+
     test_epoll_migration();
 
     test_epoll_oneshot();

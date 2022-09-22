@@ -519,10 +519,19 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
 
     int ret;
     struct libos_epoll_handle* epoll = &epoll_handle->info.epoll;
-    struct libos_epoll_item** items = NULL;
-    PAL_HANDLE* pal_handles = NULL;
-    pal_wait_flags_t* pal_events = NULL;
     size_t arrays_len = 0;
+    struct libos_epoll_item** items = NULL;
+    /* Reserve one slot for the waiter's wakeup handle. */
+    PAL_HANDLE* pal_handles = malloc(1 * sizeof(*pal_handles));
+    /* Double the amount of PAL events - one part are input events, the other - output. */
+    pal_wait_flags_t* pal_events = malloc(2 * sizeof(*pal_events));
+
+    if (!pal_handles || !pal_events) {
+        free(pal_handles);
+        free(pal_events);
+        put_handle(epoll_handle);
+        return -ENOMEM;
+    }
 
     lock(&epoll->lock);
 
