@@ -78,7 +78,7 @@ static void signal_itimer(IDTYPE caller, void* arg) {
 long libos_syscall_setitimer(int which, struct __kernel_itimerval* value,
                              struct __kernel_itimerval* ovalue) {
     if (which != ITIMER_REAL)
-        return -ENOSYS;
+        return -EINVAL;
 
     if (!value)
         return -EFAULT;
