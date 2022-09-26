@@ -284,7 +284,7 @@ static void resolv_options_setter(struct pal_dns_host_conf* conf, const char* pt
         conf->edns0 = true;
     } else if (strcmp(option, "inet6") == 0) {
         conf->inet6 = true;
-    } else if (strncmp(option, "ndots:", sizeof("ndots:") - 1) == 0) {
+    } else if (strstartswith(option, "ndots:") == 0) {
         long ndots = strtoll(option + sizeof("ndots:") - 1, NULL, 10);
         if (ndots > PAL_MAX_NDOTS)
             ndots = PAL_MAX_NDOTS;
@@ -312,6 +312,7 @@ static struct {
 };
 
 static void conf_init_defaults_options(struct pal_dns_host_conf* conf) {
+    memset(conf, 0, sizeof(*conf));
     conf->ndots = 1;
 }
 
