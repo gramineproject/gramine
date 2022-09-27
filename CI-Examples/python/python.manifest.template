@@ -7,6 +7,11 @@ loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
+# Python's NumPy spawns as many threads as there are CPU cores, and each thread
+# consumes a chunk of memory, so on large machines 1G enclave size may be not enough.
+# We limit the number of spawned threads via OMP_NUM_THREADS env variable.
+loader.env.OMP_NUM_THREADS = "4"
+
 loader.insecure__use_cmdline_argv = true
 
 sys.enable_sigterm_injection = true
@@ -29,7 +34,7 @@ sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 sgx.nonpie_binary = true
-sgx.enclave_size = "512M"
+sgx.enclave_size = "1G"
 sgx.max_threads = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
