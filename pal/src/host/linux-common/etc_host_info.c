@@ -284,13 +284,6 @@ static void resolv_options_setter(struct pal_dns_host_conf* conf, const char* pt
         conf->edns0 = true;
     } else if (strcmp(option, "inet6") == 0) {
         conf->inet6 = true;
-    } else if (strstartswith(option, "ndots:") == 0) {
-        long ndots = strtoll(option + sizeof("ndots:") - 1, NULL, 10);
-        if (ndots > PAL_MAX_NDOTS)
-            ndots = PAL_MAX_NDOTS;
-        if (ndots < 0)
-            ndots = 0;
-        conf->ndots = ndots;
     } else if (strcmp(option, "rotate") == 0) {
         conf->rotate = true;
     } else if (strcmp(option, "use-vc") == 0) {
@@ -311,15 +304,8 @@ static struct {
     { "options",    resolv_options },
 };
 
-static void conf_init_defaults_options(struct pal_dns_host_conf* conf) {
-    memset(conf, 0, sizeof(*conf));
-    conf->ndots = 1;
-}
-
 static void parse_resolv_buf_conf(struct pal_dns_host_conf* conf, const char* buf) {
     const char* ptr = buf;
-
-    conf_init_defaults_options(conf);
 
     /*
      * From resolv.conf(5):

@@ -37,7 +37,6 @@ typedef uint32_t    PAL_IDX; /*!< an index */
 /* DNS limits, used in resolv.conf emulation */
 #define PAL_MAX_NAMESPACES 3
 #define PAL_MAX_DN_SEARCH  6
-#define PAL_MAX_NDOTS      15
 
 #define MAX_IPV6_ADDR_LEN  40
 
@@ -121,7 +120,6 @@ struct pal_dns_host_conf {
     bool inet6;
     bool rotate;
     bool use_vc;
-    uint8_t ndots;
 
     char hostname[PAL_HOSTNAME_MAX];
 };

@@ -16,7 +16,6 @@
 #define OPTION_INET6 "options inet6\n"
 #define OPTION_ROTATE "options rotate\n"
 #define OPTION_USE_VC "options use-vc\n"
-#define OPTION_NDOTS "options ndots:"
 
 static int put_string(char** buf, size_t* bufsize, const char* fmt, ...) {
     va_list ap;
@@ -51,10 +50,6 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
             + (g_pal_public_state->dns_host.inet6 ? strlen(OPTION_INET6) : 0)
             + (g_pal_public_state->dns_host.rotate ? strlen(OPTION_ROTATE) : 0)
             + (g_pal_public_state->dns_host.use_vc ? strlen(OPTION_USE_VC) : 0);
-    if (g_pal_public_state->dns_host.ndots != 1) {
-        /* ndots option + space for two digit number + new line */
-        size += strlen(OPTION_NDOTS) + 2 + 1;
-    }
 
     /* make space for terminating character */
     size += 1;
@@ -114,12 +109,6 @@ static int provide_etc_resolv_conf(struct libos_dentry* dent, char** out_data, s
     }
     if (g_pal_public_state->dns_host.use_vc) {
         ret = put_string(&ptr, &space_left, OPTION_USE_VC);
-        if (ret < 0)
-            goto out;
-    }
-    if (g_pal_public_state->dns_host.ndots != 1) {
-        ret = put_string(&ptr, &space_left, OPTION_NDOTS "%hhu\n",
-                         g_pal_public_state->dns_host.ndots);
         if (ret < 0)
             goto out;
     }
