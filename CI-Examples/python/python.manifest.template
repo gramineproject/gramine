@@ -9,6 +9,10 @@ loader.env.LD_LIBRARY_PATH = "{{ python.stdlib }}/lib:/lib:{{ arch_libdir }}:/us
 
 loader.insecure__use_cmdline_argv = true
 
+loader.env.OMP_NUM_THREADS = "4"
+
+loader.pal_internal_mem_size = "128M"
+
 sys.enable_sigterm_injection = true
 
 fs.mounts = [
@@ -27,7 +31,7 @@ sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 sgx.nonpie_binary = true
-sgx.enclave_size = "512M"
+sgx.enclave_size = "1G"
 sgx.thread_num = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
@@ -45,6 +49,7 @@ sgx.trusted_files = [
   "file:scripts/",
   "file:/etc/mime.types",
   "file:/etc/default/apport",
+  "file:{{ python.get_path('stdlib', vars={'installed_base': '/usr/local'}) }}/",
 ]
 
 sgx.allowed_files = [
