@@ -24,25 +24,27 @@ VM instances. The description below uses a *DCsv3 VM* running Ubuntu
 Install Gramine
 ^^^^^^^^^^^^^^^
 
-Add a Gramine repository::
+On Ubuntu 20.04::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
-
-Add Intel SGX repository::
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | sudo tee /etc/apt/sources.list.d/gramine.list
 
    curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-   # (if you're on Ubuntu 18.04, write "bionic" instead of "focal" above)
 
-Install Gramine (DCAP driver version) on Ubuntu 18.04::
+   sudo apt-get update
+   sudo apt-get install gramine
+
+On Ubuntu 18.04::
+
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bionic main' | sudo tee /etc/apt/sources.list.d/gramine.list
+
+   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
    sudo apt-get install gramine-dcap
-
-Install Gramine (in-kernel driver version) on Ubuntu 20.04::
-
-   sudo apt-get install gramine
 
 Prepare a signing key
 ^^^^^^^^^^^^^^^^^^^^^
