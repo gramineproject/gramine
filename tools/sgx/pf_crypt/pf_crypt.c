@@ -23,8 +23,8 @@ struct option g_options[] = {
     { 0, 0, 0, 0 }
 };
 
-static void usage(void) {
-    INFO("\nUsage: pf_crypt mode [options]\n");
+static void usage(const char* argv0) {
+    INFO("\nUsage: %s mode [options]\n", argv0);
     INFO("Available modes:\n");
     INFO("  gen-key                 Generate and save wrap key to file\n");
     INFO("  encrypt                 Encrypt plaintext files\n");
@@ -80,17 +80,17 @@ int main(int argc, char* argv[]) {
                 verify = true;
                 break;
             case 'h':
-                usage();
+                usage(argv[0]);
                 exit(0);
             default:
                 ERROR("Unknown option: %c\n", this_option);
-                usage();
+                usage(argv[0]);
         }
     }
 
     if (optind >= argc) {
         ERROR("Mode not specified\n");
-        usage();
+        usage(argv[0]);
         goto out;
     }
 
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
         case 'e': /* encrypt */
             if (!input_path || !output_path) {
                 ERROR("Input or output path not specified\n");
-                usage();
+                usage(argv[0]);
                 goto out;
             }
             ret = pf_encrypt_files(input_path, output_path, wrap_key_path);
@@ -123,14 +123,14 @@ int main(int argc, char* argv[]) {
         case 'd': /* decrypt */
             if (!input_path || !output_path) {
                 ERROR("Input or output path not specified\n");
-                usage();
+                usage(argv[0]);
                 goto out;
             }
             ret = pf_decrypt_files(input_path, output_path, verify, wrap_key_path);
             break;
 
         default:
-            usage();
+            usage(argv[0]);
             goto out;
     }
 
