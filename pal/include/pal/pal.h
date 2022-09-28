@@ -460,6 +460,7 @@ typedef struct _PAL_STREAM_ATTR {
             bool tcp_cork;
             bool tcp_nodelay;
             bool ipv6_v6only;
+            bool udp_cork;
         } socket;
     };
 } PAL_STREAM_ATTR;
@@ -596,13 +597,15 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
  * \param      addr               Destination address. Can be NULL if the socket was connected.
  * \param      force_nonblocking  If `true` this request should not block. Otherwise just use
  *                                whatever mode the handle is in.
+ * \param      force_cork         If `true` this request is corked. Otherwise just use
+ *                                whatever mode the handle is in.
  *
  * \returns 0 on success, negative error code on failure.
  *
  * Data is sent atomically, i.e. data from two `PalSocketSend` calls will not be interleaved.
  */
 int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                  struct pal_socket_addr* addr, bool force_nonblocking);
+                  struct pal_socket_addr* addr, bool force_nonblocking, bool force_cork);
 
 /*!
  * \brief Receive data.

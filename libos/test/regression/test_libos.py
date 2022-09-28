@@ -1215,6 +1215,7 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['getsockopt'])
         self.assertIn('getsockopt: Got socket type OK', stdout)
         self.assertIn('getsockopt: Got TCP_NODELAY flag OK', stdout)
+        self.assertIn('getsockopt: Got UDP_CORK flag OK', stdout)
 
     def test_010_epoll(self):
         stdout, _ = self.run_binary(['epoll_test'])

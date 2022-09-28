@@ -30,7 +30,7 @@ int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 }
 
 int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                   struct pal_socket_addr* addr, bool force_nonblocking) {
+                   struct pal_socket_addr* addr, bool force_nonblocking, bool force_cork) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

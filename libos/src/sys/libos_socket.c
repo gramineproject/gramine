@@ -613,13 +613,14 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
     }
-    if (!WITHIN_MASK(flags, MSG_NOSIGNAL | MSG_DONTWAIT)) {
+    if (!WITHIN_MASK(flags, MSG_NOSIGNAL | MSG_DONTWAIT | MSG_MORE)) {
         return -EOPNOTSUPP;
     }
 
     /* Note this only indicates whether this operation was requested to be nonblocking. If it's
      * `false`, but the handle is in nonblocking mode, this send won't block. */
     bool force_nonblocking = flags & MSG_DONTWAIT;
+    bool force_cork = flags & MSG_MORE;
     struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
@@ -630,6 +631,13 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
 
     if (!ret && !sock->can_be_written) {
         ret = -EPIPE;
+    }
+
+    if (!ret && force_cork) {
+        if (sock->domain != AF_INET && sock->domain != AF_INET6) {
+            log_warning("%s: MSG_MORE on non IPv4 or IPv6 sockets is not supported", __func__);
+            ret = -EOPNOTSUPP;
+        }
     }
 
     unlock(&sock->lock);
@@ -644,7 +652,7 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     size_t size = 0;
-    ret = sock->ops->send(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking);
+    ret = sock->ops->send(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking, force_cork);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, !ret ? size < total_size : false);
     if (!ret) {
         ret = size;

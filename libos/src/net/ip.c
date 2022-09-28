@@ -276,6 +276,31 @@ static int set_tcp_option(struct libos_handle* handle, int optname, void* optval
     return pal_to_unix_errno(ret);
 }
 
+static int set_udp_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
+    PAL_STREAM_ATTR attr;
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    assert(attr.handle_type == PAL_TYPE_SOCKET);
+
+    if (len < sizeof(int)) {
+        /* All currently supported options use `int`. */
+        return -EINVAL;
+    }
+
+    switch (optname) {
+        case UDP_CORK:
+            attr.socket.udp_cork = *(int*)optval;
+            break;
+        default:
+            return -ENOPROTOOPT;
+    }
+
+    ret = PalStreamAttributesSetByHandle(handle->info.sock.pal_handle, &attr);
+    return pal_to_unix_errno(ret);
+}
+
 static int set_ipv4_option(struct libos_handle* handle, int optname, void* optval, size_t len) {
     __UNUSED(handle);
     __UNUSED(optval);
@@ -483,6 +508,11 @@ static int setsockopt(struct libos_handle* handle, int level, int optname, void*
                 return -EOPNOTSUPP;
             }
             return set_tcp_option(handle, optname, optval, len);
+        case SOL_UDP:
+            if (sock->type != SOCK_DGRAM) {
+                return -EOPNOTSUPP;
+            }
+            return set_udp_option(handle, optname, optval, len);
         default:
             return -ENOPROTOOPT;
     }
@@ -503,6 +533,31 @@ static int get_tcp_option(struct libos_handle* handle, int optname, void* optval
             break;
         case TCP_NODELAY:
             val = attr.socket.tcp_nodelay;
+            break;
+        default:
+            return -ENOPROTOOPT;
+    }
+
+    if (*len > sizeof(val)) {
+        /* Cap the buffer size to the option size. */
+        *len = sizeof(val);
+    }
+    memcpy(optval, &val, *len);
+    return 0;
+}
+
+static int get_udp_option(struct libos_handle* handle, int optname, void* optval, size_t* len) {
+    PAL_STREAM_ATTR attr;
+    int ret = PalStreamAttributesQueryByHandle(handle->info.sock.pal_handle, &attr);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    assert(attr.handle_type == PAL_TYPE_SOCKET);
+
+    int val;
+    switch (optname) {
+        case UDP_CORK:
+            val = attr.socket.udp_cork;
             break;
         default:
             return -ENOPROTOOPT;
@@ -606,13 +661,18 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
                 return -EOPNOTSUPP;
             }
             return get_tcp_option(handle, optname, optval, len);
+        case SOL_UDP:
+            if (sock->type != SOCK_DGRAM) {
+                return -EOPNOTSUPP;
+            }
+            return get_udp_option(handle, optname, optval, len);
         default:
             return -EOPNOTSUPP;
     }
 }
 
 static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+                void* addr, size_t addrlen, bool force_nonblocking, bool force_cork) {
     assert(handle->type == TYPE_SOCK);
 
     struct libos_sock_handle* sock = &handle->info.sock;
@@ -662,7 +722,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     }
 
     int ret = PalSocketSend(sock->pal_handle, pal_iov, iov_len, out_size,
-                            addr ? &pal_ip_addr : NULL, force_nonblocking);
+                            addr ? &pal_ip_addr : NULL, force_nonblocking, force_cork);
     ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     free(pal_iov);
     return ret;

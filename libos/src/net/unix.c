@@ -404,12 +404,17 @@ again:
 }
 
 static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+                void* addr, size_t addrlen, bool force_nonblocking, bool force_cork) {
     __UNUSED(addr);
     __UNUSED(addrlen);
 
     if (handle->info.sock.type == SOCK_DGRAM) {
         /* We do not support datagram UNIX sockets. */
+        BUG();
+    }
+
+    if (force_cork == true) {
+        /* MSG_MORE flag is not supported by UNIX domain sockets. */
         BUG();
     }
 

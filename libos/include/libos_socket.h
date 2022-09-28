@@ -87,9 +87,11 @@ struct libos_sock_ops {
      * \param      addrlen            The length of \p addr.
      * \param      force_nonblocking  If `true` this request should not block. Otherwise just use
      *                                whatever mode the handle is in.
+     * \param      force_cork         If `true` this request is corked. Otherwise just use
+     *                                whatever mode the handle is in.
      */
     int (*send)(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking);
+                void* addr, size_t addrlen, bool force_nonblocking, bool force_cork);
 
     /*!
      * \brief Receive continuous data into an array of buffers.

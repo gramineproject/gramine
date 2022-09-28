@@ -61,11 +61,13 @@ struct mmsghdr {
 #define MSG_TRUNC 0x20
 #define MSG_DONTWAIT 0x40
 #define MSG_NOSIGNAL 0x4000
+#define MSG_MORE 0x8000
 #define MSG_CMSG_CLOEXEC 0x40000000
 
 /* Option levels. */
 #define SOL_SOCKET 1
 #define SOL_TCP 6
+#define SOL_UDP 17
 
 /* Socket options. */
 #define SO_REUSEADDR 2
@@ -85,6 +87,9 @@ struct mmsghdr {
 /* TCP options. */
 #define TCP_NODELAY 1
 #define TCP_CORK 3
+
+/* UDP options. */
+#define UDP_CORK 1
 
 struct linger {
     int l_onoff;

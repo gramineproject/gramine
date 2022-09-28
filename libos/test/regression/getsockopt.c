@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -47,5 +48,24 @@ int main(int argc, char** argv) {
     }
 
     printf("getsockopt: Got TCP_NODELAY flag OK\n");
+
+    int fd2 = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd2 < 0) {
+        perror("socket failed");
+        return 1;
+    }
+    ret = getsockopt(fd2, SOL_UDP, UDP_CORK, (void*)&so_flags, &optlen);
+    if (ret < 0) {
+        perror("getsockopt(SOL_UDP, UDP_CORK) failed");
+        return 1;
+    }
+
+    if (optlen != sizeof(so_flags) || (so_flags != 0 && so_flags != 1)) {
+        fprintf(stderr, "getsockopt(SOL_UDP, UDP_CORK) failed\n");
+        return 1;
+    }
+
+    printf("getsockopt: Got UDP_CORK flag OK\n");
+
     return 0;
 }

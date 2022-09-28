@@ -103,6 +103,7 @@ typedef struct {
             bool tcp_cork;
             bool tcp_nodelay;
             bool ipv6_v6only;
+            bool udp_cork;
         } sock;
 
         struct {

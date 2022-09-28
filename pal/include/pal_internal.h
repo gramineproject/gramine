@@ -119,7 +119,7 @@ struct socket_ops {
     int (*connect)(PAL_HANDLE handle, struct pal_socket_addr* addr,
                    struct pal_socket_addr* out_local_addr);
     int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                struct pal_socket_addr* addr, bool force_nonblocking);
+                struct pal_socket_addr* addr, bool force_nonblocking, bool force_cork);
     int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool force_nonblocking);
 };
@@ -192,7 +192,7 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                       struct pal_socket_addr* out_local_addr);
 int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
-                   struct pal_socket_addr* addr, bool force_nonblocking);
+                   struct pal_socket_addr* addr, bool force_nonblocking, bool force_cork);
 int _PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
                    struct pal_socket_addr* addr, bool force_nonblocking);
 
