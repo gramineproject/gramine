@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "rw_file.h"
 
 static const char message1[] = "first message\n";
 static const size_t message1_len = sizeof(message1) - 1;
@@ -27,45 +28,6 @@ static const char message2[] = "second message\n";
 static const size_t message2_len = sizeof(message2) - 1;
 
 static_assert(sizeof(message1) != sizeof(message2), "the messages should have different lengths");
-
-static int write_all(int fd, const char* str, size_t size) {
-    while (size > 0) {
-        ssize_t n = write(fd, str, size);
-        /* Treat EINTR as error: we don't expect it because the test doesn't use any signal
-         * handlers. */
-        if (n == -1) {
-            warn("write");
-            return -1;
-        }
-        assert(n >= 0 && (size_t)n <= size);
-        size -= n;
-        str += n;
-    }
-    return 0;
-}
-
-static int read_all(int fd, char* str, size_t size) {
-    while (size > 0) {
-        ssize_t n = read(fd, str, size);
-        /* Treat EINTR as error: we don't expect it because the test doesn't use any signal
-         * handlers. */
-        if (n == -1) {
-            warn("read");
-            return -1;
-        }
-        if (n == 0) {
-            if (size > 0) {
-                warnx("read less bytes than expected");
-                return -1;
-            }
-            break;
-        }
-        assert(n >= 0 && (size_t)n <= size);
-        size -= n;
-        str += n;
-    }
-    return 0;
-}
 
 static void should_not_exist(const char* path) {
     struct stat statbuf;
@@ -107,8 +69,12 @@ static void should_contain(const char* desc, int fd, const char* str, size_t len
     if (lseek(fd, 0, SEEK_SET) == -1)
         err(1, "%s: lseek", desc);
 
-    if (read_all(fd, buffer, len) == -1)
-        errx(1, "%s: read_all failed", desc);
+    ssize_t n = posix_fd_read(fd, buffer, len);
+    if (n < 0)
+        errx(1, "%s: posix_fd_read failed", desc);
+    if ((size_t)n != len)
+        errx(1, "%s: read less bytes than expected", desc);
+
     if (memcmp(buffer, str, len) != 0)
         errx(1, "%s: wrong content", desc);
 
@@ -120,8 +86,11 @@ static int create_file(const char* path, const char* str, size_t len) {
     if (fd == -1)
         err(1, "open %s", path);
 
-    if (write_all(fd, str, len) == -1)
-        errx(1, "write_all %s", path);
+    ssize_t n = posix_fd_write(fd, str, len);
+    if (n < 0)
+        errx(1, "posix_fd_write %s", path);
+    if ((size_t)n != len)
+        errx(1, "written less bytes than expected into %s", path);
 
     return fd;
 }
@@ -242,8 +211,11 @@ static void test_unlink_and_write(const char* path) {
 
     should_not_exist(path);
 
-    if (write_all(fd, message1, message1_len) == -1)
-        errx(1, "write_all %s", path);
+    ssize_t n = posix_fd_write(fd, message1, message1_len);
+    if (n < 0)
+        errx(1, "posix_fd_write %s", path);
+    if ((size_t)n != message1_len)
+        errx(1, "written less bytes than expected into %s", path);
 
     should_contain("unlinked file", fd, message1, message1_len);
     should_not_exist(path);
