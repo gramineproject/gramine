@@ -277,14 +277,14 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
         goto out;
     }
 
-    norm_output_path = strdup(output_path);
+    size_t output_path_size = strlen(output_path) + 1;
+    norm_output_path = malloc(output_path_size);
     if (!norm_output_path) {
         ERROR("Out of memory\n");
         goto out;
     }
 
-    size_t inout_size = strlen(norm_output_path) + 1;
-    int norm_ret = get_norm_path(output_path, norm_output_path, &inout_size);
+    int norm_ret = get_norm_path(output_path, norm_output_path, &output_path_size);
     if (norm_ret < 0) {
         ERROR("Failed to normalize path '%s'\n", output_path);
         goto out;
@@ -401,14 +401,14 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     }
 
     if (verify_path) {
-        norm_input_path = strdup(input_path);
+        size_t input_path_size = strlen(input_path) + 1;
+        norm_input_path = malloc(input_path_size);
         if (!norm_input_path) {
             ERROR("Out of memory\n");
             goto out;
         }
 
-        size_t inout_size = strlen(norm_input_path) + 1;
-        int norm_ret = get_norm_path(input_path, norm_input_path, &inout_size);
+        int norm_ret = get_norm_path(input_path, norm_input_path, &input_path_size);
         if (norm_ret < 0) {
             ERROR("Failed to normalize path '%s'\n", input_path);
             goto out;

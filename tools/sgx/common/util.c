@@ -267,8 +267,9 @@ static inline bool find_prev_slash_offset(const char* path, size_t* offset) {
         return false;
     }
 
-    off--;
+    off--; // get offset to last character
 
+    /* Skip trailing '/' if there is one */
     if (off && path[off] == '/') {
         off--;
     }
