@@ -269,9 +269,24 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
     int input = -1;
     int output = -1;
     pf_context_t* pf = NULL;
+    char* norm_output_path = NULL;
+
     void* chunk = malloc(PF_NODE_SIZE);
     if (!chunk) {
         ERROR("Out of memory\n");
+        goto out;
+    }
+
+    norm_output_path = strdup(output_path);
+    if (!norm_output_path) {
+        ERROR("Out of memory\n");
+        goto out;
+    }
+
+    size_t inout_size = strlen(norm_output_path) + 1;
+    int norm_ret = get_norm_path(output_path, norm_output_path, &inout_size);
+    if (norm_ret < 0) {
+        ERROR("Failed to normalize path '%s'\n", output_path);
         goto out;
     }
 
@@ -281,19 +296,19 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
         goto out;
     }
 
-    output = open(output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
+    output = open(norm_output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
     if (output < 0) {
-        ERROR("Failed to create output file '%s': %s\n", output_path, strerror(errno));
+        ERROR("Failed to create output file '%s': %s\n", norm_output_path, strerror(errno));
         goto out;
     }
 
-    INFO("Encrypting: %s -> %s\n", input_path, output_path);
+    INFO("Encrypting: %s -> %s\n", input_path, norm_output_path);
     INFO("            (Gramine's sgx.protected_files must contain this exact path: \"%s\")\n",
-                      output_path);
+                      norm_output_path);
 
     pf_handle_t handle = (pf_handle_t)&output;
-    pf_status_t pfs = pf_open(handle, output_path, /*size=*/0, PF_FILE_MODE_WRITE, /*create=*/true,
-                              wrap_key, &pf);
+    pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, PF_FILE_MODE_WRITE,
+                              /*create=*/true, wrap_key, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Failed to open output PF: %s\n", pf_strerror(pfs));
         goto out;
@@ -341,6 +356,7 @@ out:
     }
 
     free(chunk);
+    free(norm_output_path);
     if (input >= 0)
         close(input);
     if (output >= 0)
@@ -355,6 +371,8 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     int input = -1;
     int output = -1;
     pf_context_t* pf = NULL;
+    char* norm_input_path = NULL;
+
     void* chunk = malloc(PF_NODE_SIZE);
     if (!chunk) {
         ERROR("Out of memory\n");
@@ -382,8 +400,22 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
         goto out;
     }
 
-    const char* path = verify_path ? input_path : NULL;
-    pf_status_t pfs = pf_open((pf_handle_t)&input, path, input_size, PF_FILE_MODE_READ,
+    if (verify_path) {
+        norm_input_path = strdup(input_path);
+        if (!norm_input_path) {
+            ERROR("Out of memory\n");
+            goto out;
+        }
+
+        size_t inout_size = strlen(norm_input_path) + 1;
+        int norm_ret = get_norm_path(input_path, norm_input_path, &inout_size);
+        if (norm_ret < 0) {
+            ERROR("Failed to normalize path '%s'\n", input_path);
+            goto out;
+        }
+    }
+
+    pf_status_t pfs = pf_open((pf_handle_t)&input, norm_input_path, input_size, PF_FILE_MODE_READ,
                               /*create=*/false, wrap_key, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Opening protected input file failed: %s\n", pf_strerror(pfs));
@@ -438,6 +470,7 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     ret = 0;
 
 out:
+    free(norm_input_path);
     free(chunk);
     if (pf)
         pf_close(pf);

@@ -251,3 +251,114 @@ void _log(int level, const char* fmt, ...) {
 noreturn void abort(void) {
     _Exit(ENOTRECOVERABLE);
 }
+
+/* below functions are copied from common/src/path.c */
+static inline const char* find_next_slash(const char* path) {
+    while (*path && *path != '/') {
+        path++;
+    }
+    return path;
+}
+
+static inline bool find_prev_slash_offset(const char* path, size_t* offset) {
+    size_t off = *offset;
+
+    if (!off) {
+        return false;
+    }
+
+    off--;
+
+    if (off && path[off] == '/') {
+        off--;
+    }
+    while (off && path[off] != '/') {
+        off--;
+    }
+
+    *offset = off;
+    return path[off] == '/';
+}
+
+int get_norm_path(const char* path, char* buf, size_t* inout_size) {
+    assert(path && buf && inout_size);
+    size_t path_size = strlen(path) + 1;
+    (void)path_size;  // used only for an assert at the end
+
+    size_t size = *inout_size;
+    if (!size) {
+        return -1;
+    }
+    /* reserve 1 byte for ending '\0' */
+    size--;
+
+    size_t offset = 0, ret_size = 0; /* accounts for undiscardable bytes written to `buf`
+                                      * i.e. `buf - ret_size` points to original `buf` */
+    bool need_slash = false; // is '/' needed before next token
+    bool is_absolute_path = *path == '/';
+
+    /* handle an absolute path */
+    if (is_absolute_path) {
+        if (size < 1) {
+            return -1;
+        }
+        *buf++ = '/';
+        size--;
+        ret_size++;
+        path++;
+    }
+
+    while (1) {
+        /* handle next token */
+        const char* end = find_next_slash(path);
+        if (end - path == 2 && path[0] == '.' && path[1] == '.') {
+            /* ".." */
+            if (offset) {
+                /* eat up previously written token */
+                need_slash = find_prev_slash_offset(buf, &offset);
+            } else if (!is_absolute_path) {
+                /* append undiscardable ".." since there is no previous token
+                 * but only if the path is not absolute */
+                if (need_slash + 2u > size) {
+                    return -1;
+                }
+                if (need_slash) {
+                    *buf++ = '/';
+                }
+                *buf++ = '.';
+                *buf++ = '.';
+                size -= need_slash + 2u;
+                ret_size += need_slash + 2u;
+                need_slash = true;
+            } else {
+                /* remaining case: offset == 0, path is absolute and ".." was just seen,
+                 * i.e. "/..", which is collapsed to "/", hence nothing needs to be done
+                 */
+            }
+        } else if ((end == path) || (end - path == 1 && path[0] == '.')) {
+            /* ignore "//" and "." */
+        } else {
+            size_t len = (size_t)(end - path);
+            if (need_slash + len > size - offset) {
+                return -1;
+            }
+            if (need_slash) {
+                buf[offset++] = '/';
+            }
+            memcpy(buf + offset, path, len);
+            offset += len;
+            need_slash = true;
+        }
+        if (!*end) {
+            break;
+        }
+        path = end + 1;
+    }
+
+    buf[offset] = '\0';
+
+    *inout_size = ret_size + offset + 1;
+    assert(*inout_size <= path_size);
+
+    return 0;
+}

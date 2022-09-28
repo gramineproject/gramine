@@ -33,7 +33,7 @@ struct option g_options[] = {
 };
 
 static void usage(void) {
-    INFO("\nUsage: pf_tamper [options]\n");
+    INFO("\nUsage: gramine-sgx-pf-tamper [options]\n");
     INFO("\nAvailable options:\n");
     INFO("  --help, -h           Display this help\n");
     INFO("  --verbose, -v        Enable verbose output\n");

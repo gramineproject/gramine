@@ -24,7 +24,7 @@ struct option g_options[] = {
 };
 
 static void usage(void) {
-    INFO("\nUsage: pf_crypt mode [options]\n");
+    INFO("\nUsage: gramine-sgx-pf-crypt mode [options]\n");
     INFO("Available modes:\n");
     INFO("  gen-key                 Generate and save wrap key to file\n");
     INFO("  encrypt                 Encrypt plaintext files\n");

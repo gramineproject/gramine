@@ -105,3 +105,16 @@ void hexdump_mem(const void* data, size_t size);
  * Unless the string contains exactly 2 * buffer_size hexdigits, an error will be raised.
  */
 int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mask);
+
+/*!
+ * \brief Returns normalized path
+ *
+ * \param path        Input path to be normalized.
+ * \param buf         Output buffer with normalized path.
+ * \param inout_size  Before call, `*inout_size` should hold the size of buf. After call, it holds
+ *                    number of bytes actually written to it (including the ending '\0'). This
+ *                    number is never greater than the size of the input path.
+ *
+ * \returns 0 on success, otherwise -1.
+ */
+int get_norm_path(const char* path, char* buf, size_t* inout_size);
