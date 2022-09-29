@@ -60,6 +60,7 @@ static int parse_digit(char c, int base) {
 }
 
 long strtol(const char* str, char** out_end, int base) {
+    int nothing = 1;
     const char* s;
     int sign;
 
@@ -68,8 +69,12 @@ long strtol(const char* str, char** out_end, int base) {
     long value = 0;
     while (*s != '\0') {
         int digit = parse_digit(*s, base);
-        if (digit == -1)
+        if (digit == -1) {
+            if (nothing) {
+                s = str;
+            }
             break;
+        }
 
         if (__builtin_mul_overflow(value, base, &value)) {
             return sign > 0 ? LONG_MAX : LONG_MIN;
@@ -80,6 +85,7 @@ long strtol(const char* str, char** out_end, int base) {
         }
 
         s++;
+        nothing = 0;
     }
 
     if (out_end)
