@@ -621,6 +621,13 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
 
     char* interp = shebang;
 
+    /* Strip trailing space characters */
+    size_t interp_len = strlen(interp);
+    while (interp_len > 0 && interp[interp_len - 1] == ' ') {
+        interp[interp_len - 1] = 0;
+        interp_len--;
+    }
+
     /* Separate args and interp path */
     char* spaceptr = strchr(interp, ' ');
     if (spaceptr)
