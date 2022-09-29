@@ -29,8 +29,8 @@ class TC_00_Basic(RegressionTestCase):
         _, stderr = self.run_binary(['printf_test'])
         self.assertIn("TEST OK", stderr)
 
-    def test_003_libc(self):
-        _, stderr = self.run_binary(['libc_test'])
+    def test_003_strtoll(self):
+        _, stderr = self.run_binary(['strtoll_test'])
         self.assertIn("TEST OK", stderr)
 
 
