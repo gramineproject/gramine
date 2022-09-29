@@ -90,7 +90,7 @@ static int create_file(const char* path, const char* str, size_t len) {
     if (n < 0)
         errx(1, "posix_fd_write %s", path);
     if ((size_t)n != len)
-        warnx("write less bytes than expected into %s", path);
+        warnx("written less bytes than expected into %s", path);
 
     return fd;
 }
@@ -215,7 +215,7 @@ static void test_unlink_and_write(const char* path) {
     if (n < 0)
         errx(1, "posix_fd_write %s", path);
     if ((size_t)n != message1_len)
-        warnx("write less bytes than expected into %s", path);
+        warnx("written less bytes than expected into %s", path);
 
     should_contain("unlinked file", fd, message1, message1_len);
     should_not_exist(path);
