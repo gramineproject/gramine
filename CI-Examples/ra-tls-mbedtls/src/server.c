@@ -178,9 +178,9 @@ int main(int argc, char** argv) {
         mbedtls_printf(" ok\n");
 
         if (argc > 1) {
-            if (strcmp(argv[1], "--malicious-quote") != 0) {
-                mbedtls_printf("Unrecognized command-line argument `%s` (only `--malicious-quote` "
-                               "is recognized)\n", argv[1]);
+            if (strcmp(argv[1], "--test-malicious-quote") != 0) {
+                mbedtls_printf("Unrecognized command-line argument `%s` (only "
+                               "`--test-malicious-quote` is recognized)\n", argv[1]);
                 return 1;
             }
 
