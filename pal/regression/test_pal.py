@@ -444,6 +444,10 @@ class TC_20_SingleProcess(RegressionTestCase):
         # Generate Random Bits
         self.assertIn('Generate Random Bits OK', stderr)
 
+        # Results of strtoll conversions
+        self.assertIn('123 31(1) 20( )', stderr)
+        self.assertIn('0 20( ) 20( )', stderr)
+
     def test_910_hex(self):
         _, stderr = self.run_binary(['Hex'])
         # Hex 2 String Helper Function

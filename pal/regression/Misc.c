@@ -95,5 +95,14 @@ int main(int argc, const char** argv, const char** envp) {
     if (!same)
         pal_printf("Generate Random Bits OK\n");
 
+    const char* ptr = "123 asd";
+    const char* next = ptr;
+
+    for (int i = 0; i < 2; i++) {
+       long long a = strtoll(ptr, (char**)&next, 10);
+       pal_printf("%lld %x(%c) %x(%c)\n", a, *ptr, *ptr, *next, *next);
+       ptr = next;
+    }
+
     return 0;
 }
