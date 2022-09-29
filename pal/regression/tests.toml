@@ -27,6 +27,7 @@ manifests = [
   "normalize_path",
   "printf_test",
   "send_handle",
+  "strtoll_test",
 ]
 
 [arch.x86_64]

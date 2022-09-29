@@ -4,6 +4,7 @@
  */
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "api.h"
@@ -60,6 +61,7 @@ static int parse_digit(char c, int base) {
 }
 
 long strtol(const char* str, char** out_end, int base) {
+    bool nothing_parsed = true;
     const char* s;
     int sign;
 
@@ -68,8 +70,9 @@ long strtol(const char* str, char** out_end, int base) {
     long value = 0;
     while (*s != '\0') {
         int digit = parse_digit(*s, base);
-        if (digit == -1)
+        if (digit == -1) {
             break;
+        }
 
         if (__builtin_mul_overflow(value, base, &value)) {
             return sign > 0 ? LONG_MAX : LONG_MIN;
@@ -80,10 +83,11 @@ long strtol(const char* str, char** out_end, int base) {
         }
 
         s++;
+        nothing_parsed = false;
     }
 
     if (out_end)
-        *out_end = (char*)s;
+        *out_end = (char*)(nothing_parsed ? str : s);
     return value;
 }
 

@@ -16,3 +16,9 @@ void __attribute__((format(printf, 2, 3))) _log(int level, const char* fmt, ...)
     }                                                                   \
     _x;                                                                 \
 })
+
+#define FAIL(fmt...) ({ \
+    pal_printf(fmt);    \
+    pal_printf("\n");   \
+    PalProcessExit(1);  \
+})

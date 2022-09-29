@@ -1,12 +1,6 @@
 #include "api.h"
 #include "pal_regression.h"
 
-#define FAIL(fmt...) ({ \
-    pal_printf(fmt);    \
-    pal_printf("\n");   \
-    PalProcessExit(1);  \
-})
-
 #define TEST(output_str, fmt...) ({                                                                \
     size_t output_len = strlen(output_str);                                                        \
     char buf[0x100];                                                                               \

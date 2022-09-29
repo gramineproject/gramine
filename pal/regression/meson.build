@@ -61,6 +61,7 @@ tests = {
     'normalize_path': {},
     'printf_test': {},
     'send_handle': {},
+    'strtoll_test': {},
 }
 
 if host_machine.cpu_family() == 'x86_64'
