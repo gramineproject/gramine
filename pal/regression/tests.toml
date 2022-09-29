@@ -24,6 +24,7 @@ manifests = [
   "Symbols",
   "Thread2",
   "Thread2_exitless",
+  "libc_test",
   "normalize_path",
   "printf_test",
   "send_handle",

@@ -58,6 +58,7 @@ tests = {
     'Symbols': {},
     'Thread2': {},
     'avl_tree_test': {},
+    'libc_test': {},
     'normalize_path': {},
     'printf_test': {},
     'send_handle': {},
