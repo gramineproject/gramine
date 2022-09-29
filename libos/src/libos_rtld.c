@@ -604,14 +604,13 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     memmove(&shebang[0], &shebang[2], shebang_len);
     shebang[shebang_len] = 0;
 
-    /* Strip extra space characters */
-    for (char* p = shebang; *p; p++) {
-        if (*p != ' ') {
-            shebang_len -= p - shebang;
-            memmove(shebang, p, shebang_len);
-            break;
-        }
+    /* Strip leading space/tab characters */
+    size_t shebang_spaces = 0;
+    while (shebang[shebang_spaces] == ' ' || shebang[shebang_spaces] == '\t') {
+        shebang_spaces++;
     }
+    shebang_len -= shebang_spaces;
+    memmove(shebang, shebang + shebang_spaces, shebang_len);
     shebang[shebang_len] = 0;
 
     /* Strip new line character */
@@ -621,12 +620,37 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
 
     char* interp = shebang;
 
-    /* Separate args and interp path */
-    char* spaceptr = strchr(interp, ' ');
-    if (spaceptr)
-        *spaceptr = 0;
+    /* Strip trailing space/tab characters */
+    size_t interp_len = strlen(interp);
+    while (interp_len > 0 && (interp[interp_len - 1] == ' ' || interp[interp_len - 1] == '\t')) {
+        interp[interp_len - 1] = 0;
+        interp_len--;
+    }
 
-    const char* argv_shebang[] = {interp, spaceptr ? spaceptr + 1 : NULL, NULL};
+    if (!interp_len) {
+        log_debug("Empty shebang line read from %s", pathname);
+        return -ENOEXEC;
+    }
+
+    /* Separate args and interp path; may be separated by space(s) or tab(s) */
+    char* spaceptr = strchr(interp, ' ');
+    char* tabptr = strchr(interp, '\t');
+
+    char* sepptr = NULL;
+    if (spaceptr && tabptr) {
+        sepptr = spaceptr < tabptr ? spaceptr : tabptr;
+    } else {
+        sepptr = spaceptr ?: tabptr;
+    }
+
+    if (sepptr) {
+        *sepptr = 0; /* terminate interp path */
+        sepptr++;    /* find where args start */
+        while (*sepptr == ' ' || *sepptr == '\t')
+            sepptr++;
+    }
+
+    const char* argv_shebang[] = {interp, sepptr, NULL};
 
     size_t new_argv_bytes = 0, new_argv_cnt = 0;
     for (const char** a = argv_shebang; *a; a++) {
