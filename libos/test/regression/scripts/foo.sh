@@ -1,1 +1,1 @@
-#!scripts/bar.sh ALPHA BRAVO CHARLIE DELTA
+#!scripts/bar.sh   ALPHA BRAVO CHARLIE DELTA

@@ -604,9 +604,9 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     memmove(&shebang[0], &shebang[2], shebang_len);
     shebang[shebang_len] = 0;
 
-    /* Strip extra space characters */
+    /* Strip leading space/tab characters */
     for (char* p = shebang; *p; p++) {
-        if (*p != ' ') {
+        if (*p != ' ' && *p != '\t') {
             shebang_len -= p - shebang;
             memmove(shebang, p, shebang_len);
             break;
@@ -621,19 +621,32 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
 
     char* interp = shebang;
 
-    /* Strip trailing space characters */
+    /* Strip trailing space/tab characters */
     size_t interp_len = strlen(interp);
-    while (interp_len > 0 && interp[interp_len - 1] == ' ') {
+    while (interp_len > 0 && (interp[interp_len - 1] == ' ' || interp[interp_len - 1] == '\t')) {
         interp[interp_len - 1] = 0;
         interp_len--;
     }
 
-    /* Separate args and interp path */
+    /* Separate args and interp path; may be separated by space(s) or tab(s) */
     char* spaceptr = strchr(interp, ' ');
-    if (spaceptr)
-        *spaceptr = 0;
+    char* tabptr = strchr(interp, '\t');
 
-    const char* argv_shebang[] = {interp, spaceptr ? spaceptr + 1 : NULL, NULL};
+    char* sepptr = NULL;
+    if (spaceptr && tabptr) {
+        sepptr = spaceptr < tabptr ? spaceptr : tabptr;
+    } else {
+        sepptr = spaceptr ? : tabptr;
+    }
+
+    if (sepptr) {
+        *sepptr = 0; /* terminate interp path */
+        sepptr++;    /* find where args start */
+        while (*sepptr == ' ' || *sepptr == '\t')
+            sepptr++;
+    }
+
+    const char* argv_shebang[] = {interp, sepptr ? sepptr : NULL, NULL};
 
     size_t new_argv_bytes = 0, new_argv_cnt = 0;
     for (const char** a = argv_shebang; *a; a++) {
