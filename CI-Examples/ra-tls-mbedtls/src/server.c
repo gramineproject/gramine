@@ -178,6 +178,12 @@ int main(int argc, char** argv) {
         mbedtls_printf(" ok\n");
 
         if (argc > 1) {
+            if (strcmp(argv[1], "--test-malicious-quote") != 0) {
+                mbedtls_printf("Unrecognized command-line argument `%s` (only "
+                               "`--test-malicious-quote` is recognized)\n", argv[1]);
+                return 1;
+            }
+
             /* user asks to maliciously modify the embedded SGX quote (for testing purposes) */
             mbedtls_printf("  . Maliciously modifying SGX quote embedded in RA-TLS cert...");
             fflush(stdout);

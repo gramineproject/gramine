@@ -26,9 +26,9 @@ The server is supposed to run in the SGX enclave with Gramine and RA-TLS
 dlopen-loaded. If the server is started not in the SGX enclave, then it falls
 back to using normal X.509 PKI flows.
 
-If server is run with a command-line argument (the only important thing is to
-have at least one argument), then the server will maliciously modify the SGX
-quote before sending to the client. This is useful for testing purposes.
+If server is run with a command-line argument ``--test-malicious-quote``, then
+the server will maliciously modify the SGX quote before sending to the client.
+This is useful for testing purposes.
 
 ## RA-TLS client
 
@@ -149,7 +149,7 @@ kill %%
 make clean
 make app dcap RA_TYPE=dcap
 
-gramine-sgx ./server dummy-option &
+gramine-sgx ./server --test-malicious-quote &
 ./client dcap
 
 # client will fail to verify the malicious SGX quote and will *not* connect to the server

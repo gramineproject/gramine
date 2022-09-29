@@ -164,7 +164,7 @@ check_epid: app epid
 
 .PHONY: check_epid_fail
 check_epid_fail: app epid
-	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server --test-malicious-quote >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client epid && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
@@ -184,7 +184,7 @@ check_dcap: app dcap
 
 .PHONY: check_dcap_fail
 check_dcap_fail: app dcap
-	gramine-sgx server dummy-option >/dev/null & SERVER_ID=$$!; \
+	gramine-sgx server --test-malicious-quote >/dev/null & SERVER_ID=$$!; \
 	sleep 30; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
