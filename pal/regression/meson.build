@@ -58,10 +58,10 @@ tests = {
     'Symbols': {},
     'Thread2': {},
     'avl_tree_test': {},
-    'libc_test': {},
     'normalize_path': {},
     'printf_test': {},
     'send_handle': {},
+    'strtoll_test': {},
 }
 
 if host_machine.cpu_family() == 'x86_64'
