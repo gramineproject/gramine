@@ -1,7 +1,7 @@
 @INCLUDE = Doxyfile
 PROJECT_NAME = "PAL"
 OUTPUT_DIRECTORY = _build/doxygen-pal
-INPUT = ../pal/include/arch/x86_64 ../pal/include/pal ../pal/include
+INPUT = ../pal/include/arch/x86_64 ../pal/include/pal ../pal/include ../common/include/iovec.h
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 PREDEFINED = noreturn= __x86_64__=1
