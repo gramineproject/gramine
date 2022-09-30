@@ -636,7 +636,7 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     if (spaceptr && tabptr) {
         sepptr = spaceptr < tabptr ? spaceptr : tabptr;
     } else {
-        sepptr = spaceptr ? : tabptr;
+        sepptr = spaceptr ?: tabptr;
     }
 
     if (sepptr) {
@@ -646,7 +646,7 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
             sepptr++;
     }
 
-    const char* argv_shebang[] = {interp, sepptr ? sepptr : NULL, NULL};
+    const char* argv_shebang[] = {interp, sepptr, NULL};
 
     size_t new_argv_bytes = 0, new_argv_cnt = 0;
     for (const char** a = argv_shebang; *a; a++) {
