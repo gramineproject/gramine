@@ -73,7 +73,7 @@ static void should_contain(const char* desc, int fd, const char* str, size_t len
     if (n < 0)
         errx(1, "%s: posix_fd_read failed", desc);
     if ((size_t)n != len)
-        warnx("%s: read less bytes than expected", desc);
+        errx(1, "%s: read less bytes than expected", desc);
 
     if (memcmp(buffer, str, len) != 0)
         errx(1, "%s: wrong content", desc);
@@ -90,7 +90,7 @@ static int create_file(const char* path, const char* str, size_t len) {
     if (n < 0)
         errx(1, "posix_fd_write %s", path);
     if ((size_t)n != len)
-        warnx("written less bytes than expected into %s", path);
+        errx(1, "written less bytes than expected into %s", path);
 
     return fd;
 }
@@ -215,7 +215,7 @@ static void test_unlink_and_write(const char* path) {
     if (n < 0)
         errx(1, "posix_fd_write %s", path);
     if ((size_t)n != message1_len)
-        warnx("written less bytes than expected into %s", path);
+        errx(1, "written less bytes than expected into %s", path);
 
     should_contain("unlinked file", fd, message1, message1_len);
     should_not_exist(path);
