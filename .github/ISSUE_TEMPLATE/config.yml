@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 I need help with Gramine usage
+    url: https://github.com/gramineproject/gramine/discussions/categories/general
+    about: Open a discussion thread
+  - name: 🔒 Report a security vulnerability
+    # GitHub doesn't seem to accept `mailto:` URLs here :/
+    url: https://gramine.readthedocs.io/en/latest/devel/contributing.html#reporting-security-vulnerabilities
+    about: Write an email to security@gramineproject.io

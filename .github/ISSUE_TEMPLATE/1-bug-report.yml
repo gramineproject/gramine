@@ -1,0 +1,38 @@
+name: 🐞 Bug report
+description: Report a bug in Gramine
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug.
+
+        Please provide as much information as possible.
+        When pasting logs use three backticks (```).
+
+        **IMPORTANT**: Please do not post general questions here, the issue tracker is for bugs and feature requests only. If you have a question, please either:
+             - Open [a discussion thread](https://github.com/gramineproject/gramine/discussions/categories/general)
+             - Join [our chat](https://gitter.im/gramineproject/community)
+             - Write to our [mailing list](mailto:users@gramineproject.io)
+  - type: textarea
+    attributes:
+      label: Description of the problem
+      description:
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: '**PLEASE ENSURE THAT THE ISSUE REPRODUCES ON THE CURRENT MASTER BRANCH**'
+  - type: textarea
+    attributes:
+      label: Expected results
+      description:
+  - type: textarea
+    attributes:
+      label: Actual results
+      description:
+  - type: input
+    attributes:
+      label: Gramine commit hash
+      description: |
+        Please provide the hash of the commit you used to build Gramine. If you installed Gramine from a repository or other prebuilt package, please provide the exact version.
+    validations:
+      required: true
