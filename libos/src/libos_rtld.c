@@ -605,13 +605,12 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     shebang[shebang_len] = 0;
 
     /* Strip leading space/tab characters */
-    for (char* p = shebang; *p; p++) {
-        if (*p != ' ' && *p != '\t') {
-            shebang_len -= p - shebang;
-            memmove(shebang, p, shebang_len);
-            break;
-        }
+    size_t shebang_spaces = 0;
+    while (shebang[shebang_spaces] == ' ' || shebang[shebang_spaces] == '\t') {
+        shebang_spaces++;
     }
+    shebang_len -= shebang_spaces;
+    memmove(shebang, shebang + shebang_spaces, shebang_len);
     shebang[shebang_len] = 0;
 
     /* Strip new line character */
@@ -626,6 +625,11 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     while (interp_len > 0 && (interp[interp_len - 1] == ' ' || interp[interp_len - 1] == '\t')) {
         interp[interp_len - 1] = 0;
         interp_len--;
+    }
+
+    if (!interp_len) {
+        log_debug("Empty shebang line read from %s", pathname);
+        return -ENOEXEC;
     }
 
     /* Separate args and interp path; may be separated by space(s) or tab(s) */
