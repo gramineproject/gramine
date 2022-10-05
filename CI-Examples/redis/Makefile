@@ -63,10 +63,10 @@ endif
 
 ################################ REDIS MANIFEST ###############################
 
-# The template file contains almost all necessary information to run Redis under
-# Gramine / Gramine-SGX. We create redis-server.manifest (to be run under
-# non-SGX Gramine) by replacing variables in the template file using the
-# "gramine-manifest" script.
+# The template file is a Jinja2 template and contains almost all necessary
+# information to run Redis under Gramine / Gramine-SGX. We create
+# redis-server.manifest (to be run under non-SGX Gramine) by replacing variables
+# in the template file using the "gramine-manifest" script.
 
 redis-server.manifest: redis-server.manifest.template
 	gramine-manifest \
@@ -109,6 +109,7 @@ redis-server: $(SRCDIR)/src/redis-server
 	cp $< $@
 
 ############################## RUNNING TESTS ##################################
+
 .PHONY: start-native-server
 start-native-server: all
 	./redis-server --save '' --protected-mode no
@@ -119,9 +120,10 @@ else
 GRAMINE = gramine-sgx
 endif
 
+# Note that command-line arguments are hardcoded in the manifest file.
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) redis-server --save '' --protected-mode no
+	$(GRAMINE) redis-server
 
 ################################## CLEANUP ####################################
 
