@@ -10,7 +10,7 @@ body:
         When pasting logs use three backticks (```).
 
         **IMPORTANT**: Please do not post general questions here, the issue tracker is for bugs and feature requests only. If you have a question, please either:
-             - Open [a discussion thread](https://github.com/gramineproject/gramine/discussions)
+             - Open [a discussion thread](https://github.com/gramineproject/gramine/discussions/categories/general)
              - Join [our chat](https://gitter.im/gramineproject/community)
              - Write to our [mailing list](mailto:users@gramineproject.io)
   - type: textarea
