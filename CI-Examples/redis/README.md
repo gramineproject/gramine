@@ -22,20 +22,20 @@ make SGX=1
 src/src/redis-benchmark
 kill %%
 
-# run Redis in non-SGX Gramine against a benchmark
-gramine-direct redis-server --save '' --protected-mode no &
+# run Redis in non-SGX Gramine against a benchmark (args are hard-coded in manifest)
+gramine-direct redis-server &
 src/src/redis-benchmark
 kill %%
 
-# run Redis in Gramine-SGX against a benchmark
-gramine-sgx redis-server --save '' --protected-mode no &
+# run Redis in Gramine-SGX against a benchmark (args are hard-coded in manifest)
+gramine-sgx redis-server &
 src/src/redis-benchmark
 kill %%
 ```
 
 # Why this Redis configuration?
 
-Notice that we run Redis with two parameters: `save ''` and `protected-mode no`:
+Notice that we run Redis with two parameters, `save ''` and `protected-mode no`:
 
 - `save ''` disables saving DB to disk (both RDB snapshots and AOF logs). We use
   this parameter to side-step some bugs in Gramine triggered during the
@@ -46,8 +46,11 @@ Notice that we run Redis with two parameters: `save ''` and `protected-mode no`:
   in Redis), Gramine hides this information. Therefore, we ask Redis to allow
   clients on all interfaces.
 
+In Gramine case, these parameters are hard-coded in the manifest file, see
+`loader.argv` there.
+
 # Redis with Select
 
 By default, Redis uses the epoll mechanism of Linux to monitor client
-connections.  To test Redis with select, add `USE_SELECT=1`, e.g., `make SGX=1
+connections. To test Redis with select, add `USE_SELECT=1`, e.g., `make SGX=1
 USE_SELECT=1`.

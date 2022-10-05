@@ -13,12 +13,12 @@ libos.entrypoint = "/redis-server"
 # that GRAMINE_LOG_LEVEL macro is expanded in the Makefile as part of the
 # building process: the default is "error" for non-debug builds, and "debug"
 # for debug builds.
-loader.log_level = "{{ log_level }}"
+loader.log_level = "error"
 
 ################################# ARGUMENTS ###################################
 
-# Read application arguments directly from the command line. Don't use this on production!
-loader.insecure__use_cmdline_argv = true
+# Hard-code application arguments. See README for explanations.
+loader.argv = ["redis-server", "--save", "", "--protected-mode", "no"]
 
 ################################# ENV VARS ####################################
 
@@ -36,7 +36,7 @@ loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 # Allow for injecting SIGTERM signal from the host.
 sys.enable_sigterm_injection = true
 
-################################# MOUNT FS  ###################################
+################################# MOUNT FS ####################################
 
 # General notes:
 # - There is only one supported type of mount points: 'chroot'.
@@ -122,25 +122,4 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
-]
-
-
-############################# SGX: ALLOWED FILES ###############################
-
-# Specify all non-static files used by app. These files may be accessed by
-# Gramine-SGX but their integrity is not verified (Gramine-SGX does not
-# measure their hashes). This may pose a security risk!
-
-sgx.allowed_files = [
-  # Name Service Switch (NSS) files. Glibc reads these files as part of name-
-  # service information gathering. For more info, see 'man nsswitch.conf'.
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-
-  # getaddrinfo(3) configuration file. Glibc reads this file to correctly find
-  # network addresses. For more info, see 'man gai.conf'.
-  "file:/etc/gai.conf",
 ]
