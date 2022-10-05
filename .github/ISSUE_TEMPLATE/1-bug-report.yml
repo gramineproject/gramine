@@ -20,7 +20,7 @@ body:
   - type: textarea
     attributes:
       label: Steps to reproduce
-      description: '**@@@ PLEASE ENSURE THAT THE ISSUE REPRODUCES ON THE CURRENT MASTER BRANCH @@@**'
+      description: '**PLEASE ENSURE THAT THE ISSUE REPRODUCES ON THE CURRENT MASTER BRANCH**'
   - type: textarea
     attributes:
       label: Expected results
