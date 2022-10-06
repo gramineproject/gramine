@@ -12,7 +12,7 @@ int main(int argc, const char** argv) {
     const char* next = ptr;
 
     long long a = strtoll(ptr, (char**)&next, 10);
-    if (a != 123 || *ptr != '1' || next != ptr + 3) {
+    if (a != 123 || next != ptr + 3) {
         FAIL("Wrong return values in %d, got (a, ptr, next) = (%lld, %c, %p), expected (%d, %c, %p)",
              __LINE__, a, *ptr, next, 123, '1', ptr + 3);
     }
@@ -20,7 +20,7 @@ int main(int argc, const char** argv) {
 
     /* nothing to convert */
     a = strtoll(ptr, (char**)&next, 10);
-    if (a != 0 || *ptr != ' ' || next != ptr) {
+    if (a != 0 || next != ptr) {
         FAIL("Wrong return values in %d, got (a, ptr, next) = (%lld, %c, %p), expected (%d, %c, %p)",
              __LINE__, a, *ptr, next, 0, ' ', ptr);
     }
@@ -28,7 +28,7 @@ int main(int argc, const char** argv) {
     ptr = " ";
     next = ptr;
     a = strtoll(ptr, (char**)&next, 10);
-    if (a != 0 || *ptr != ' ' || next != ptr) {
+    if (a != 0 || next != ptr) {
         FAIL("Wrong return values in %d, got (a, ptr, next) = (%lld, %c, %p), expected (%d, %c, %p)",
              __LINE__, a, *ptr, next, 0, ' ', ptr);
     }
