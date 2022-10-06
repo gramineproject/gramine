@@ -29,7 +29,7 @@ class TC_00_Basic(RegressionTestCase):
         _, stderr = self.run_binary(['printf_test'])
         self.assertIn("TEST OK", stderr)
 
-    def test_003_strtoll(self):
+    def test_004_strtoll(self):
         _, stderr = self.run_binary(['strtoll_test'])
         self.assertIn("TEST OK", stderr)
 
