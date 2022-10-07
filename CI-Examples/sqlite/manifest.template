@@ -5,7 +5,7 @@ libos.entrypoint = "{{ execdir }}/sqlite3"
 
 loader.log_level = "{{ log_level }}"
 
-loader.insecure__use_cmdline_argv = true
+loader.argv = ["sqlite3", "/db/test.db"]
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
 loader.env.PATH = "{{ execdir }}"
@@ -16,7 +16,15 @@ fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "{{ execdir }}/sqlite3", uri = "file:{{ execdir }}/sqlite3" },
+
+  # SQLite creates several helper files for the DB, so we specify a path instead of a single file
+  { type = "encrypted", path = "/db/", uri = "file:db/", key_name = "default" },
 ]
+
+# Unfortunately, non-SGX Gramine cannot use special keys such as "_sgx_mrenclave", so for this
+# example to work on both non-SGX and SGX versions we hardcode a dummy key. In SGX production case,
+# it is recommended to remove this insecure key and instead use "_sgx_mrenclave"/"_sgx_mrsigner".
+fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"
 
 sgx.debug = true
 sgx.enclave_size = "256M"
@@ -27,8 +35,5 @@ sgx.trusted_files = [
   "file:{{ execdir }}/sqlite3",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
-]
-
-sgx.allowed_files = [
   "file:scripts/",
 ]
