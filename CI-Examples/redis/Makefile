@@ -63,10 +63,10 @@ endif
 
 ################################ REDIS MANIFEST ###############################
 
-# The template file contains almost all necessary information to run Redis under
-# Gramine / Gramine-SGX. We create redis-server.manifest (to be run under
-# non-SGX Gramine) by replacing Jinja-style variables in the template file using
-# the "gramine-manifest" script.
+# The template file is a Jinja2 template and contains almost all necessary
+# information to run Redis under Gramine / Gramine-SGX. We create
+# redis-server.manifest (to be run under non-SGX Gramine) by replacing variables
+# in the template file using the "gramine-manifest" script.
 
 redis-server.manifest: redis-server.manifest.template
 	gramine-manifest \
