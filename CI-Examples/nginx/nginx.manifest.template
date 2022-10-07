@@ -5,17 +5,23 @@ libos.entrypoint = "{{ install_dir }}/sbin/nginx"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/local/lib:/usr/lib:/usr/{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 loader.argv_src_file = "file:nginx_args"
+
+# Gramine by default reports the root user (uid = 0) to applications. This default behavior forces
+# Nginx to attempt to drop privileges and assume some non-privileged user ID via setuid(), which is
+# meaningless in Gramine. Instead, we set up a dummy user (uid = 1000); this is irrelevant for
+# consequent Nginx execution anyway.
+loader.uid = 1000
+loader.gid = 1000
+
 sys.enable_sigterm_injection = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
-  { path = "/usr/local/lib", uri = "file:/usr/local/lib" },
-  { path = "/etc", uri = "file:/etc" },
   { path = "{{ install_dir_abspath }}", uri = "file:{{ install_dir }}" },
 ]
 
@@ -35,11 +41,8 @@ sgx.trusted_files = [
   "file:nginx_args",
 ]
 
+# For simplicity, Nginx logs are not protected. In production, you must either disable logs in Nginx
+# or mount them as "encrypted" files.
 sgx.allowed_files = [
   "file:{{ install_dir }}/logs",
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
 ]
