@@ -5,21 +5,20 @@ libos.entrypoint = "/busybox"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
-loader.env.PATH = "/:/usr/sbin:/usr/bin:/sbin:/bin"
-loader.env.USERNAME = ""
-loader.env.HOME = ""
-loader.env.PWD = ""
-loader.env.HOSTNAME = "test"
+loader.env.LD_LIBRARY_PATH = "/lib"
 
 loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
-  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/etc", uri = "file:/etc" },
   { path = "/busybox", uri = "file:busybox" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+
+  # hardcoded mappings of local hostnames to IP addresses, required by e.g. `hostname` applet
+  { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 ]
+
+# required by e.g. `wget` applet
+sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 
@@ -28,18 +27,7 @@ sgx.ra_client_spid = "{{ ra_client_spid }}"
 sgx.ra_client_linkable = {{ 'true' if ra_client_linkable == '1' else 'false' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:busybox",
   "file:{{ gramine.runtimedir() }}/",
-  "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
-]
-
-sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/localtime",
+  "file:{{ gramine.libos }}",
 ]
