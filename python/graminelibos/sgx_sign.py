@@ -537,6 +537,53 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     return sig
 
 
+def sign_with_akv(data, key):
+    """Signs *data* using *key* from Azure Key Vault's Managed HSM
+
+    Function used to generate an RSA signature over provided data using a 3072-bit private key with
+    the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
+    Suitable to be used as a callback to :py:func:`graminelibos.Sigstruct.sign()`. This function
+    requires that the user has an active subscription to Azure and Azure Key Vault's Managed HSM
+    (MHSM), a 3072-bit RSA key created in the MHSM enabled for signing and the user is logged into
+    Azure CLI. This function qualifies for production signing.
+
+    Args:
+        data (bytes): Data to calculate the signature over.
+        key (str): The key name of RSA private key created in the AKV's Managed HSM
+
+    Returns:
+        (int, int, int): Tuple of exponent, modulus and signature respectively.
+    """
+    from azure.identity import AzureCliCredential
+    from azure.keyvault.keys import KeyClient
+    from azure.keyvault.keys.crypto import CryptographyClient, SignatureAlgorithm
+
+    print('Signing with key from Azure Key Vault')
+
+    # get credential from Azure CLI
+    credential = AzureCliCredential();
+
+    vault_url = os.environ["VAULT_URL"]
+    key_client = KeyClient(vault_url=vault_url, credential=credential)
+
+    rsaKey = key_client.get_key(key)
+
+    crypto_client = CryptographyClient(rsaKey, credential=credential)
+
+    # Digest the data for signing
+    digest = hashlib.sha256(data).digest()
+
+    # Sign the data
+    result = crypto_client.sign(SignatureAlgorithm.rs256, digest)
+    signature = result.signature
+
+    exponent_int = int.from_bytes(rsaKey.key.e, byteorder='big')
+    modulus_int = int.from_bytes(rsaKey.key.n, byteorder='big')
+    signature_int = int.from_bytes(signature, byteorder='big')
+
+    return exponent_int, modulus_int, signature_int
+
+
 def sign_with_local_key(data, key):
     """Signs *data* using *key*.
 
@@ -551,6 +598,8 @@ def sign_with_local_key(data, key):
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
     """
+    print('Signing with locally supplied key')
+
     proc = subprocess.Popen(
         ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],
         stdout=subprocess.PIPE)
