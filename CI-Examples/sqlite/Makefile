@@ -17,6 +17,7 @@ sqlite3.manifest: manifest.template
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Dexecdir=$(shell dirname $(shell which sqlite3)) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dsgx=$(SGX) \
 		$< >$@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
@@ -41,21 +42,21 @@ endif
 
 .PHONY: regression
 regression: all
-	@rm -f scripts/testdir/*
+	@$(RM) db/*
 
-	$(GRAMINE) sqlite3 scripts/testdir/test.db < scripts/create.sql
+	$(GRAMINE) sqlite3 < scripts/create.sql
 	@echo "[ Success 1/3 ]"
 
-	$(GRAMINE) sqlite3 scripts/testdir/test.db < scripts/update.sql
+	$(GRAMINE) sqlite3 < scripts/update.sql
 	@echo "[ Success 2/3 ]"
 
-	$(GRAMINE) sqlite3 scripts/testdir/test.db < scripts/select.sql > OUTPUT
+	$(GRAMINE) sqlite3 < scripts/select.sql > OUTPUT
 	diff OUTPUT scripts/select.txt
 	@echo "[ Success 3/3 ]"
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT scripts/testdir/*
+	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT db/*
 
 .PHONY: distclean
 distclean: clean
