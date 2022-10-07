@@ -35,10 +35,6 @@ $(SRCDIR)/.config: $(SRCDIR)/Makefile
 	# Enable usage of Busybox's built-in applets
 	sed -e 's/.*CONFIG_FEATURE_SH_STANDALONE.*/CONFIG_FEATURE_SH_STANDALONE=y/' \
 		-i $(SRCDIR)/.config
-	# Currently '/proc/self/exe' is bugged in gramine, so manually set path
-	# to the Busybox binary
-	sed -e 's/.*CONFIG_BUSYBOX_EXEC_PATH.*/CONFIG_BUSYBOX_EXEC_PATH="\/busybox"/' \
-		-i $(SRCDIR)/.config
 
 $(SRCDIR)/busybox: $(SRCDIR)/.config
 	$(MAKE) -C $(SRCDIR)
