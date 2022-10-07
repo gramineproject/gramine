@@ -48,8 +48,7 @@ lighttpd.manifest: lighttpd.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dinstall_dir=$(INSTALL_DIR) \
-		-Dinstall_dir_abspath=$(abspath $(INSTALL_DIR)) \
+		-Dinstall_dir=$(abspath $(INSTALL_DIR)) \
 		$< >$@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
@@ -109,7 +108,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) ./lighttpd -D -m $(INSTALL_DIR)/lib -f lighttpd.conf
+	$(GRAMINE) ./lighttpd
 
 .PHONY: clean
 clean:
