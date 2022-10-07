@@ -5,7 +5,7 @@ libos.entrypoint = "{{ entrypoint }}"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "{{ python.stdlib }}/lib:/lib:{{ arch_libdir }}:/usr/lib:/usr/{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib:/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 loader.insecure__use_cmdline_argv = true
 
@@ -14,10 +14,11 @@ sys.enable_sigterm_injection = true
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/usr", uri = "file:/usr" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "{{ python.stdlib }}", uri = "file:{{ python.stdlib }}" },
   { path = "{{ python.distlib }}", uri = "file:{{ python.distlib }}" },
-  { path = "/etc", uri = "file:/etc" },
+  { path = "{{ entrypoint }}", uri = "file:{{ entrypoint }}" },
+  { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 
   { type = "tmpfs", path = "/tmp" },
 ]
@@ -43,16 +44,5 @@ sgx.trusted_files = [
   "file:{{ python.stdlib }}/",
   "file:{{ python.distlib }}/",
   "file:scripts/",
-  "file:/etc/mime.types",
-  "file:/etc/default/apport",
-]
-
-sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/gai.conf",
-  "file:/etc/host.conf",
+  "file:helper-files/",
 ]
