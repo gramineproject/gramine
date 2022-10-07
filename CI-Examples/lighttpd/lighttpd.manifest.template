@@ -7,15 +7,14 @@ loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:{{ install_dir }}/lib"
 
-loader.insecure__use_cmdline_argv = true
+loader.argv = ["lighttpd", "-D", "-m", "{{ install_dir }}/lib", "-f", "lighttpd.conf"]
 
 sys.enable_sigterm_injection = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/usr", uri = "file:/usr" },
-  { path = "{{ install_dir_abspath }}", uri = "file:{{ install_dir }}" },
+  { path = "{{ install_dir }}", uri = "file:{{ install_dir }}" },
 
   { type = "tmpfs", path = "/var/tmp" },
 ]
@@ -30,7 +29,6 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ install_dir }}/",
   "file:{{ arch_libdir }}/",
-  "file:/usr/{{ arch_libdir }}/",
   "file:lighttpd.conf",
   "file:lighttpd-generic.conf",
   "file:lighttpd-server.conf",
