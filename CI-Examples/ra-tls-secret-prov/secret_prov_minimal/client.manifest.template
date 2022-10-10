@@ -17,6 +17,7 @@ fs.mounts = [
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/client", uri = "file:client" },
   { path = "/ca.crt", uri = "file:../ssl/ca.crt" },
+  { path = "/etc/hosts", uri = "file:../helper-files/hosts" },
 ]
 
 sys.enable_extra_runtime_domain_names_conf = true
@@ -35,4 +36,5 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
   "file:../ssl/ca.crt",
+  "file:../helper-files/",
 ]
