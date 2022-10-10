@@ -18,14 +18,13 @@ fs.mounts = [
   { path = "{{ execdir }}/sqlite3", uri = "file:{{ execdir }}/sqlite3" },
 
   # SQLite creates several helper files for the DB, so we specify a path instead of a single file
-  { type = "encrypted", path = "/db/", uri = "file:db/",
-    key_name = {% if sgx %} "_sgx_mrenclave" {% else %} "default" {% endif %} },
+  { type = "encrypted", path = "/db/", uri = "file:db/", key_name = "default" },
 ]
 
-# Unfortunately, non-SGX Gramine cannot use "_sgx_mrenclave" special key, so specify a dummy key
-{% if not sgx %}
+# Unfortunately, non-SGX Gramine cannot use special keys such as "_sgx_mrenclave", so for this
+# example to work on both non-SGX and SGX versions we hardcode a dummy key. In SGX production case,
+# it is recommended to remove this insecure key and instead use "_sgx_mrenclave"/"_sgx_mrsigner".
 fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"
-{% endif %}
 
 sgx.debug = true
 sgx.enclave_size = "256M"

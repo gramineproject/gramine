@@ -17,7 +17,6 @@ sqlite3.manifest: manifest.template
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Dexecdir=$(shell dirname $(shell which sqlite3)) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
-		-Dsgx=$(SGX) \
 		$< >$@
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
