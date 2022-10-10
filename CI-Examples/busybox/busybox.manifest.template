@@ -7,12 +7,23 @@ loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
+# required when running e.g. `wget` applet in a corporate environment with a proxy
+loader.env.http_proxy = { passthrough = true }
+loader.env.https_proxy = { passthrough = true }
+loader.env.no_proxy = { passthrough = true }
+
 loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
   { path = "/busybox", uri = "file:busybox" },
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+
+  # hardcoded mappings of local hostnames to IP addresses, required by e.g. `hostname` applet
+  { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 ]
+
+# required by e.g. `wget` applet
+sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 
