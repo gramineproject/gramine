@@ -39,6 +39,7 @@ else
 GRAMINE = gramine-sgx
 endif
 
+# Note that command-line arguments are hardcoded in the manifest file.
 .PHONY: regression
 regression: all
 	@$(RM) db/*
