@@ -633,10 +633,12 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     if (!ret && (flags & MSG_MORE)) {
-        if (sock->type != SOCK_STREAM) {
-            ret = -EOPNOTSUPP;
+        if (sock->type == SOCK_STREAM) {
+            if (FIRST_TIME())
+                log_warning("%s: MSG_MORE on TCP sockets is ignored", __func__);
         } else {
-            log_warning("%s: MSG_MORE on TCP sockets is ignored", __func__);
+            log_warning("%s: MSG_MORE on non-TCP sockets is not supported", __func__);
+            ret = -EOPNOTSUPP;
         }
     }
     unlock(&sock->lock);
