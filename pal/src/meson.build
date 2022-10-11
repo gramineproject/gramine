@@ -1,6 +1,7 @@
 cflags_pal_common = [
     '-DIN_PAL',
-    '-fno-builtin',
+    '-ffreestanding',
+    '-fPIC',
 ]
 
 pal_common_sources = files(

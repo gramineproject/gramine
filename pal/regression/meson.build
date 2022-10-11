@@ -89,7 +89,7 @@ install_dir = join_paths(pkglibdir, 'tests', 'pal')
 test_c_args = [
     cflags_sanitizers,
     cflags_custom_stack_protector,
-    '-fno-builtin',
+    '-ffreestanding',
     '-nostdlib',
 
     # TODO: Many files define `main` with parameters, but don't use them
