@@ -12,7 +12,7 @@ vdso_so_dbg = shared_library('vdso',
     c_args: [
         '-fno-stack-protector',
         '-fPIC',
-        '-fno-builtin',
+        '-ffreestanding',
     ],
     link_args: [
         '-nostdlib',
