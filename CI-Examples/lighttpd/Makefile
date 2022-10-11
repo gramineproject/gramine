@@ -106,6 +106,7 @@ else
 GRAMINE = gramine-sgx
 endif
 
+# Note that command-line arguments are hardcoded in the manifest file.
 .PHONY: start-gramine-server
 start-gramine-server: all
 	$(GRAMINE) ./lighttpd
