@@ -7,11 +7,6 @@ loader.log_level = "{{ log_level }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-# required when running e.g. `wget` applet in a corporate environment with a proxy
-loader.env.http_proxy = { passthrough = true }
-loader.env.https_proxy = { passthrough = true }
-loader.env.no_proxy = { passthrough = true }
-
 loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
