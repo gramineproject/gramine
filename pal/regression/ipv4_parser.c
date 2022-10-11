@@ -91,4 +91,5 @@ int main(void) {
     CHECK(ipv4_invalid("0x8.8.8.8"));
 
     pal_printf("TEST OK\n");
+    return 0;
 }

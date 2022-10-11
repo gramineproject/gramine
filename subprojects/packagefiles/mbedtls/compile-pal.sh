@@ -10,8 +10,8 @@ CFLAGS="$CFLAGS -fno-stack-protector"
 # LibOS
 CFLAGS="$CFLAGS -fPIC"
 
-# Don't assume existence of builtins (currently Clang emits references to `bcmp`)
-CFLAGS="$CFLAGS -fno-builtin"
+# Don't assume standard library exists (currently Clang emits references to `bcmp`)
+CFLAGS="$CFLAGS -ffreestanding"
 
 export CFLAGS
 exec "$(dirname "$0")"/compile.sh "$@"
