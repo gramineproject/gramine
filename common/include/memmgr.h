@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <sys/mman.h>
+#include <stdalign.h>
 
 #include "api.h"
 #include "asan.h"
@@ -117,7 +117,7 @@ static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
     MEM_AREA area;
     MEM_MGR mgr;
 
-    assert(IS_ALIGNED_PTR(mem, __alignof__(*mgr)));
+    assert(IS_ALIGNED_PTR(mem, alignof(*mgr)));
 
     mgr        = (MEM_MGR)mem;
     mgr->size  = 0;

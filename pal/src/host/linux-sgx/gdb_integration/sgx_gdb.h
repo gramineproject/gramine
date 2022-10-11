@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdalign.h>
 #include <stdint.h>
 
 #define MAX_DBG_THREADS 4096
@@ -15,7 +16,7 @@
 
 /* This struct is read using PTRACE_PEEKDATA in 8B increments
  * therefore it is aligned as uint64_t. */
-struct __attribute__((aligned(__alignof__(uint64_t)))) enclave_dbginfo {
+struct __attribute__((aligned(alignof(uint64_t)))) enclave_dbginfo {
     int pid;
     uint64_t base;
     uint64_t size;
