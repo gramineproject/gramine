@@ -622,6 +622,15 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     bool force_nonblocking = flags & MSG_DONTWAIT;
     struct libos_sock_handle* sock = &handle->info.sock;
 
+    if (flags & MSG_MORE) {
+        if (sock->type != SOCK_STREAM) {
+            log_warning("%s: MSG_MORE on non-TCP sockets is not supported", __func__);
+            return -EOPNOTSUPP;
+        }
+        if (FIRST_TIME())
+            log_debug("%s: MSG_MORE on TCP sockets is ignored", __func__);
+    }
+
     lock(&sock->lock);
     bool has_sendtimeout_set = !!sock->sendtimeout_us;
 
@@ -632,15 +641,6 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
         ret = -EPIPE;
     }
 
-    if (!ret && (flags & MSG_MORE)) {
-        if (sock->type == SOCK_STREAM) {
-            if (FIRST_TIME())
-                log_warning("%s: MSG_MORE on TCP sockets is ignored", __func__);
-        } else {
-            log_warning("%s: MSG_MORE on non-TCP sockets is not supported", __func__);
-            ret = -EOPNOTSUPP;
-        }
-    }
     unlock(&sock->lock);
 
     if (ret < 0) {
