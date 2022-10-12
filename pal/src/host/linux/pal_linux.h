@@ -9,8 +9,6 @@
 #include <sigset.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
 
 #include "list.h"
 #include "pal.h"

@@ -14,9 +14,9 @@
 #include <asm/ioctls.h>
 #include <asm/poll.h>
 #include <linux/time.h>
-#include <sys/socket.h>
 
 #include "api.h"
+#include "linux_socket.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"

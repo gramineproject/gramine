@@ -8,7 +8,6 @@
 #include <asm/fcntl.h>
 #include <asm/stat.h>
 #include <linux/types.h>
-#include <sys/types.h>
 
 #include "api.h"
 #include "asan.h"
