@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2020 Invisible Things Lab
+/* Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2020 Invisible Things Lab
  *                    Rafal Wojdyla <omeg@invisiblethingslab.com>
- * Copyright (C) 2019 Intel Corporation
  */
 
 #include "protected_files.h"
@@ -1216,7 +1216,6 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     return PF_STATUS_SUCCESS;
 }
 
-// TODO: File truncation to arbitrary size.
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
@@ -1228,7 +1227,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
 
     if (size > pf->encrypted_part_plain.size) {
-        // Extend the file.
+        /* extend the file */
         uint64_t offset = pf->encrypted_part_plain.size;
         DEBUG_PF("extending the file from %lu to %lu", offset, size);
         if (ipf_write(pf, NULL, offset, size - offset) != size - offset)
@@ -1237,41 +1236,80 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
     }
 
-    if (size == 0) {
-        // Shrink the file to zero.
-        void* data;
-        char path[PATH_MAX_SIZE];
-        size_t path_len;
-        pf_status_t status = g_cb_truncate(pf->file, 0);
-        if (PF_FAILURE(status))
-            return status;
+    /* shrink the file
+     *    - to zero: emulated by recreating the file metadata as if it was just created
+     *    - to arbitrary size: emulated by reading file contents in a buffer, shrinking the file to
+     *                         zero as above, and writing back contents into the file */
+    int ret;
+    char* buf = NULL;
 
-        path_len = strlen(pf->encrypted_part_plain.path);
-        memcpy(path, pf->encrypted_part_plain.path, path_len);
-        erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
-        memcpy(pf->encrypted_part_plain.path, path, path_len);
-
-        memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
-        pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
-        pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
-        pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
-
-        ipf_init_root_mht(&pf->root_mht);
-
-        pf->need_writing = true;
-        pf->real_file_size = 0;
-
-        while ((data = lruc_get_last(pf->cache)) != NULL) {
-            file_node_t* file_node = (file_node_t*)data;
-            erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-            free(file_node);
-            lruc_remove_last(pf->cache);
+    if (size > 0) {
+        /* read the file's contents into a temporary buffer */
+        buf = malloc(size);
+        if (!buf) {
+            ret = PF_STATUS_NO_MEMORY;
+            goto out;
         }
 
-        return PF_STATUS_SUCCESS;
+        size_t read_total = 0;
+        while (read_total < size) {
+            size_t read_now;
+            pf_status_t status = pf_read(pf, read_total, size - read_total, buf, &read_now);
+            if (PF_FAILURE(status)) {
+                ret = status;
+                goto out;
+            }
+            read_total += read_now;
+        }
     }
 
-    return PF_STATUS_NOT_IMPLEMENTED;
+
+    /* shrink the file to zero */
+    void* data;
+    char path[PATH_MAX_SIZE];
+    size_t path_len;
+    pf_status_t status = g_cb_truncate(pf->file, 0);
+    if (PF_FAILURE(status)) {
+        ret = status;
+        goto out;
+    }
+
+    path_len = strlen(pf->encrypted_part_plain.path);
+    memcpy(path, pf->encrypted_part_plain.path, path_len);
+    erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
+    memcpy(pf->encrypted_part_plain.path, path, path_len);
+
+    memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
+    pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
+    pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
+    pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
+
+    ipf_init_root_mht(&pf->root_mht);
+
+    pf->need_writing = true;
+    pf->real_file_size = 0;
+
+    while ((data = lruc_get_last(pf->cache)) != NULL) {
+        file_node_t* file_node = (file_node_t*)data;
+        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
+        free(file_node);
+        lruc_remove_last(pf->cache);
+    }
+
+    if (size > 0) {
+        /* write the contents from a temporary buffer back into the file; note that pf_write() never
+         * writes less than provided `size` */
+        pf_status_t status = pf_write(pf, /*offset=*/0, size, buf);
+        if (PF_FAILURE(status)) {
+            ret = status;
+            goto out;
+        }
+    }
+
+    ret = PF_STATUS_SUCCESS;
+out:
+    free(buf);
+    return ret;
 }
 
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {

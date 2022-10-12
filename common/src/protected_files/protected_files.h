@@ -270,8 +270,7 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size);
  *
  * \returns PF status.
  *
- * If the file is extended, added bytes are zero. Shrinking to arbitrary size is not implemented
- * yet (TODO).
+ * If the file is extended, added bytes are zero.
  */
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 
