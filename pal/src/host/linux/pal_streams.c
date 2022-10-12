@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <stdalign.h>
 #include <stdbool.h>
-#include <sys/socket.h>
 
 #include "api.h"
 #include "linux_utils.h"

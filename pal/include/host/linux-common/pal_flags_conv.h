@@ -15,7 +15,6 @@
 
 #include <asm/fcntl.h>
 #include <linux/mman.h>
-#include <sys/types.h>
 
 #include "assert.h"
 #include "pal.h"

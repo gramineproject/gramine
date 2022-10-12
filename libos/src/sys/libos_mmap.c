@@ -10,7 +10,6 @@
  */
 
 #include <errno.h>
-#include <sys/mman.h>
 
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
