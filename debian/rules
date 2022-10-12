@@ -51,27 +51,27 @@ override_dh_auto_configure:
 		-Dsgx_driver_include_path=$(SGX_DRIVER_INCLUDE_PATH_UPSTREAM) \
 		-Ddcap=enabled \
 		debian/build
-	meson setup \
-		$(MESONARGS) \
-		-Dsgx_driver=dcap1.10 \
-		-Dsgx_driver_include_path=$(DEBIANDIR)/../SGXDataCenterAttestationPrimitives/driver/linux/include \
-		debian/build-dcap
+#	meson setup \
+#		$(MESONARGS) \
+#		-Dsgx_driver=dcap1.10 \
+#		-Dsgx_driver_include_path=$(DEBIANDIR)/../SGXDataCenterAttestationPrimitives/driver/linux/include \
+#		debian/build-dcap
 	meson setup \
 		$(MESONARGS) \
 		-Dsgx_driver=oot \
-		-Dsgx_driver_include_path=$(DEBIANDIR)/../linux-sgx-driver \
+		-Dsgx_driver_include_path=/usr/include \
 		debian/build-oot
 	
 override_dh_auto_build:
 	ninja -C debian/build
-	ninja -C debian/build-dcap
+#	ninja -C debian/build-dcap
 	ninja -C debian/build-oot
 	
 	$(MAKE) -C Documentation man
 	
 override_dh_auto_install:
 	DESTDIR=$(DEBIANDIR)/gramine ninja -C debian/build install
-	DESTDIR=$(DEBIANDIR)/gramine-dcap ninja -C debian/build-dcap install
+#	DESTDIR=$(DEBIANDIR)/gramine-dcap ninja -C debian/build-dcap install
 	DESTDIR=$(DEBIANDIR)/gramine-oot ninja -C debian/build-oot install
 	
 	install -d \
@@ -99,14 +99,15 @@ override_dh_auto_install:
 		$(DEBIANDIR)/gramine-ratls-epid/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc
 	
 	rm -fv \
-		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
-		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libsecret_prov_verify_epid* \
-		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libra_tls_verify_epid* \
-		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libsecret_prov_verify_epid* \
 		$(DEBIANDIR)/gramine-oot/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
 		$(DEBIANDIR)/gramine-oot/usr/lib/x86_64-linux-gnu/libsecret_prov_verify_epid* \
 		$(DEBIANDIR)/gramine-oot/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libra_tls_verify_epid* \
 		$(DEBIANDIR)/gramine-oot/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libsecret_prov_verify_epid*
+
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libra_tls_verify_epid* \
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/libsecret_prov_verify_epid* \
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libra_tls_verify_epid* \
+#		$(DEBIANDIR)/gramine-dcap/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/libsecret_prov_verify_epid* \
 
 #	chmod +x debian/gramine*/usr/lib/x86_64-linux-gnu/gramine/direct/libpal.so
 
