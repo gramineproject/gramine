@@ -7,8 +7,6 @@
  * Implementation of system call "brk".
  */
 
-#include <sys/mman.h>
-
 #include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_lock.h"

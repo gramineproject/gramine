@@ -8,7 +8,6 @@
 #pragma once
 
 #include <errno.h>
-#include <sys/mman.h>
 
 #include "api.h"
 #include "asan.h"

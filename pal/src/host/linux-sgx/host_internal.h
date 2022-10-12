@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <sys/syscall.h>
-
 #include "api.h"
 #include "host_syscall.h"
 #include "pal_linux.h"

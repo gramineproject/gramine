@@ -5,8 +5,6 @@
  * This file contains entry and exit functions of library OS.
  */
 
-#include <sys/mman.h>
-
 #include "api.h"
 #include "hex.h"
 #include "init.h"
