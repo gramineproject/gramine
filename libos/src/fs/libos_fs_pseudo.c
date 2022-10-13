@@ -210,6 +210,9 @@ static int pseudo_istat(struct libos_dentry* dent, struct libos_inode* inode, st
     memset(buf, 0, sizeof(*buf));
     buf->st_dev = 1;
     buf->st_mode = inode->type | inode->perm;
+    buf->st_uid  = inode->uid;
+    buf->st_gid  = inode->gid;
+
     struct pseudo_node* node = inode->data;
     switch (node->type) {
         case PSEUDO_DIR: {

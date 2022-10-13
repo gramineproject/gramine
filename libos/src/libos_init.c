@@ -420,8 +420,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
 
     RUN_INIT(init_ipc);
     RUN_INIT(init_process);
-    RUN_INIT(init_mount_root);
     RUN_INIT(init_threading);
+    RUN_INIT(init_mount_root);
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
 
