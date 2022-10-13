@@ -1,5 +1,9 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
+NUMPY_PATH ?= $(shell pip3 show numpy | grep Location: | cut -d" " -f2)/
+SCIPY_PATH ?= $(shell pip3 show scipy | grep Location: | cut -d" " -f2)/
+SIX_PATH ?= $(shell pip3 show six | grep Location: | cut -d" " -f2)/
+
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
@@ -21,6 +25,9 @@ python.manifest: python.manifest.template
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dentrypoint=$(realpath $(shell sh -c "command -v python3")) \
+		-Dnumpy_path=$(NUMPY_PATH) \
+		-Dscipy_path=$(SCIPY_PATH) \
+		-Dsix_path=$(SIX_PATH) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \

@@ -8,6 +8,7 @@ loader.log_level = "{{ log_level }}"
 loader.env.LD_LIBRARY_PATH = "/lib:/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 
 loader.insecure__use_cmdline_argv = true
+loader.pal_internal_mem_size="128M"
 
 sys.enable_sigterm_injection = true
 
@@ -16,7 +17,9 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "{{ python.stdlib }}", uri = "file:{{ python.stdlib }}" },
-  { path = "{{ python.distlib }}", uri = "file:{{ python.distlib }}" },
+  { path = "{{ numpy_path }}", uri = "file:{{ numpy_path }}" },
+  { path = "{{ scipy_path }}", uri = "file:{{ scipy_path }}" },
+  { path = "{{ six_path }}", uri = "file:{{ six_path }}" },
   { path = "{{ entrypoint }}", uri = "file:{{ entrypoint }}" },
   { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 
@@ -28,7 +31,7 @@ sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
 sgx.nonpie_binary = true
-sgx.enclave_size = "512M"
+sgx.enclave_size = "4G"
 sgx.thread_num = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
@@ -42,7 +45,9 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
   "file:{{ python.stdlib }}/",
-  "file:{{ python.distlib }}/",
+  "file:{{ numpy_path }}/",
+  "file:{{ scipy_path }}/",
+  "file:{{ six_path }}/",
   "file:scripts/",
   "file:helper-files/",
 ]
