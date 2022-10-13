@@ -981,6 +981,6 @@ void release_clear_child_tid(int* clear_child_tid) {
         return;
 
     /* child thread exited, now parent can wake up */
-    __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELEASE);
     futex_wake((uint32_t*)clear_child_tid, 1, FUTEX_BITSET_MATCH_ANY);
 }

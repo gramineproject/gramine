@@ -389,10 +389,6 @@ void put_thread(struct libos_thread* thread) {
 
         /* `signal_altstack` is provided by the user, no need for a clean up. */
 
-        if (thread->robust_list) {
-            release_robust_list(thread->robust_list);
-        }
-
         if (thread->scheduler_event) {
             PalObjectClose(thread->scheduler_event);
         }
@@ -478,11 +474,6 @@ void cleanup_thread(IDTYPE caller, void* arg) {
     /* wait on clear_child_tid_pal; this signals that PAL layer exited child thread */
     while (__atomic_load_n(&thread->clear_child_tid_pal, __ATOMIC_ACQUIRE) != 0)
         CPU_RELAX();
-
-    if (thread->robust_list) {
-        release_robust_list(thread->robust_list);
-        thread->robust_list = NULL;
-    }
 
     /* notify parent if any */
     release_clear_child_tid(thread->clear_child_tid);
