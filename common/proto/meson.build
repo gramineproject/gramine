@@ -1,5 +1,5 @@
 
-# TODO after we drop Ubuntu 18.04 (ninja 1.8):
+# TODO after we drop Ubuntu 18.04 and AlmaLinux 8 (ninja 1.8):
 #
 # Unfortunately, ninja versions older than 1.10 don't allow more than one output in dependencies
 # (see https://github.com/ninja-build/ninja/issues/1184). That means we cannot track the `.h` file
