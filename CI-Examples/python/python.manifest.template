@@ -16,7 +16,9 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "{{ python.stdlib }}", uri = "file:{{ python.stdlib }}" },
-  { path = "{{ python.distlib }}", uri = "file:{{ python.distlib }}" },
+  { path = "{{ numpy_path }}", uri = "file:{{ numpy_path }}" },
+  { path = "{{ scipy_path }}", uri = "file:{{ scipy_path }}" },
+  { path = "{{ six_path }}", uri = "file:{{ six_path }}" },
   { path = "{{ entrypoint }}", uri = "file:{{ entrypoint }}" },
   { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 
@@ -42,7 +44,9 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
   "file:{{ python.stdlib }}/",
-  "file:{{ python.distlib }}/",
+  "file:{{ numpy_path }}/",
+  "file:{{ scipy_path }}/",
+  "file:{{ six_path }}/",
   "file:scripts/",
   "file:helper-files/",
 ]
