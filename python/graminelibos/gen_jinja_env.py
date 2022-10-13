@@ -29,6 +29,11 @@ def ldd(*args):
             ret.add(line[0])
     return sorted(ret)
 
+def get_python_sys_paths():
+    for path in sys.path:
+        if os.path.exists(path) and os.access(path, os.R_OK):
+            yield path
+
 def add_globals_from_python(env):
     paths = sysconfig.get_paths()
     env.globals['python'] = {
@@ -46,6 +51,7 @@ def add_globals_from_python(env):
 
         'get_path': sysconfig.get_path,
         'get_paths': sysconfig.get_paths,
+        'get_sys_paths': get_python_sys_paths,
 
         'implementation': sys.implementation,
     }
