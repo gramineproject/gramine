@@ -361,6 +361,12 @@ struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t
     inode->mtime = 0;
     inode->atime = 0;
 
+    struct libos_thread* current = get_cur_thread();
+    lock(&current->lock);
+    inode->uid = current->euid;
+    inode->gid = current->egid;
+    unlock(&current->lock);
+
     inode->mount = mount;
     get_mount(mount);
     inode->fs = mount->fs;
@@ -610,6 +616,9 @@ BEGIN_CP_FUNC(inode) {
         new_inode->type = inode->type;
         new_inode->perm = inode->perm;
         new_inode->size = inode->size;
+
+        new_inode->uid = inode->uid;
+        new_inode->gid = inode->gid;
 
         new_inode->ctime = inode->ctime;
         new_inode->mtime = inode->mtime;
