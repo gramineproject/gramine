@@ -70,6 +70,32 @@ def append_trusted_dir_or_file(trusted_files, val, expanded):
         append_tf(trusted_files, uri, hash_file_contents(path))
         expanded.append(path)
 
+def get_unique_trusted_files(trusted_files):
+    """ Remove duplicates from ``sgx.trusted_files`` manifest entry and returns this new list.
+
+    Returns:
+        ``sgx.trusted_files`` list with duplicate entries removed.
+    """
+    iter_list = [trusted_files[0]]
+    unique_trusted_files = [trusted_files[0]]
+    for x in trusted_files:
+        add = True
+        temp_1 = x["uri"].replace("//", '/').replace("file:", '')
+        for tf in iter_list:
+            temp_2 = tf["uri"].replace("//", '/').replace("file:", '')
+            if temp_2.startswith(temp_1) and temp_2 != temp_1:
+                unique_trusted_files.remove(tf)
+            elif temp_1.startswith(temp_2) and temp_1 != temp_2:
+                add = False
+            elif temp_2 == temp_1:
+                add = False
+        if x not in iter_list and add:
+            unique_trusted_files.append(x)
+            iter_list = unique_trusted_files.copy()
+
+    return unique_trusted_files
+
+
 class Manifest:
     """Just a representation of a manifest.
 
@@ -169,12 +195,13 @@ class Manifest:
                 or some of them could not be loaded from the filesystem.
 
         """
-        trusted_files = []
+        final_trusted_files = []
         expanded = []
-        for tf in self['sgx']['trusted_files']:
-            append_trusted_dir_or_file(trusted_files, tf, expanded)
+        unique_trusted_files = get_unique_trusted_files(self['sgx']['trusted_files'])
+        for tf in unique_trusted_files:
+            append_trusted_dir_or_file(final_trusted_files, tf, expanded)
 
-        self['sgx']['trusted_files'] = trusted_files
+        self['sgx']['trusted_files'] = final_trusted_files
         return expanded
 
     def get_dependencies(self):
