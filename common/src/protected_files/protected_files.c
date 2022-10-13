@@ -1236,10 +1236,13 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
     }
 
-    /* shrink the file
-     *    - to zero: emulated by recreating the file metadata as if it was just created
+    /* Shrink the file:
+     *    - to zero: emulated by recreating the file metadata as if it was just created,
      *    - to arbitrary size: emulated by reading file contents in a buffer, shrinking the file to
-     *                         zero as above, and writing back contents into the file */
+     *                         zero as above, and writing back contents into the file.
+     *
+     * TODO: implement "shrink to arbitrary size" properly.
+     */
     int ret;
     char* buf = NULL;
 
