@@ -238,9 +238,14 @@ class TC_01_Bootstrap(RegressionTestCase):
             'ALPHA BRAVO CHARLIE DELTA '
             'scripts/foo.sh STRING FROM EXECVE', stdout)
 
+    def test_212_exec_null(self):
+        stdout, _ = self.run_binary(['exec_null'])
+        self.assertIn('Hello World ((null))!', stdout)
+        self.assertIn('envp[\'IN_EXECVE\'] = (null)', stdout)
+
     @unittest.skipIf(USES_MUSL,
         'Test uses /bin/sh from the host which is usually built against glibc')
-    def test_212_shebang_test_script(self):
+    def test_213_shebang_test_script(self):
         stdout, _ = self.run_binary(['shebang_test_script'])
         self.assertRegex(stdout, r'Printing Args: '
             r'scripts/baz\.sh ECHO FOXTROT GOLF scripts/bar\.sh '
