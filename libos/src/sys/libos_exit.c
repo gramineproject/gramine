@@ -63,10 +63,14 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 }
 
 noreturn void thread_exit(int error_code, int term_signal) {
+    struct libos_thread* cur_thread = get_cur_thread();
+    if (cur_thread->robust_list) {
+        release_robust_list(cur_thread->robust_list);
+        cur_thread->robust_list = NULL;
+    }
+
     /* Remove current thread from the threads list. */
     if (!check_last_thread(/*mark_self_dead=*/true)) {
-        struct libos_thread* cur_thread = get_cur_thread();
-
         /* ask async worker thread to cleanup this thread */
         cur_thread->clear_child_tid_pal = 1; /* any non-zero value suffices */
         /* We pass this ownership to `cleanup_thread`. */
