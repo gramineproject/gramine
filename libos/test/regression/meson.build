@@ -20,6 +20,9 @@ tests = {
     'exec': {},
     'exec_fork': {},
     'exec_invalid_args': {},
+    'exec_null': {
+        'c_args': '-Wno-nonnull',
+    },
     'exec_same': {},
     'exec_script': {},
     'exec_victim': {},
