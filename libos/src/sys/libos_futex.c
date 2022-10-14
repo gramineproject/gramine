@@ -856,14 +856,15 @@ out:
  * Process one robust futex, waking a waiter if present.
  * Returns 0 on success, negative value otherwise.
  */
-static bool handle_futex_death(uint32_t* uaddr) {
+static int handle_futex_death(uint32_t* uaddr) {
     uint32_t val;
 
     if (!IS_ALIGNED_PTR(uaddr, alignof(*uaddr))) {
         return -EINVAL;
     }
-    if (!is_valid_futex_ptr(uaddr, FUTEX_CHECK_WRITE)) {
-        return -EFAULT;
+    int ret = is_valid_futex_ptr(uaddr, FUTEX_CHECK_WRITE);
+    if (ret) {
+        return ret;
     }
 
     /* Loop until we successfully set the futex word or see someone else taking this futex. */
@@ -943,7 +944,7 @@ void release_robust_list(struct robust_list_head* head) {
         int ret = fetch_robust_entry(&next_entry, &entry->next);
 
         if (entry != pending) {
-            if (handle_futex_death(entry_to_futex(entry, futex_offset))) {
+            if (handle_futex_death(entry_to_futex(entry, futex_offset)) < 0) {
                 return;
             }
         }
@@ -961,7 +962,7 @@ void release_robust_list(struct robust_list_head* head) {
     }
 
     if (pending) {
-        if (handle_futex_death(entry_to_futex(pending, futex_offset))) {
+        if (handle_futex_death(entry_to_futex(pending, futex_offset)) < 0) {
             return;
         }
     }
