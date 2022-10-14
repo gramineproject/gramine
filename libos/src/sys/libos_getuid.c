@@ -46,6 +46,10 @@ long libos_syscall_getegid(void) {
 long libos_syscall_setuid(uid_t uid) {
     struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
+    if (current->uid == 0) {
+        /* if the process is privileged, the real UID is also set */
+        current->uid = uid;
+    }
     current->euid = uid;
     unlock(&current->lock);
     return 0;
@@ -54,6 +58,10 @@ long libos_syscall_setuid(uid_t uid) {
 long libos_syscall_setgid(gid_t gid) {
     struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
+    if (current->uid == 0) {
+        /* if the process is privileged, the real GID is also set */
+        current->gid = gid;
+    }
     current->egid = gid;
     unlock(&current->lock);
     return 0;
