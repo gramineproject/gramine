@@ -141,13 +141,15 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
 
     if (!argv) {
         argv = empty_argv;
-    } else for (const char* const* a = argv; /* no condition */; a++, argc++) {
-        if (!is_user_memory_readable(a, sizeof(*a)))
-            return -EFAULT;
-        if (*a == NULL)
-            break;
-        if (!is_user_string_readable(*a))
-            return -EFAULT;
+    } else {
+        for (const char* const* a = argv; /* no condition */; a++, argc++) {
+            if (!is_user_memory_readable(a, sizeof(*a)))
+                return -EFAULT;
+            if (*a == NULL)
+                break;
+            if (!is_user_string_readable(*a))
+                return -EFAULT;
+        }
     }
 
     /* TODO: This should be removed, but: https://github.com/gramineproject/graphene/issues/2081 */
