@@ -139,7 +139,9 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
     if (!is_user_string_readable(file))
         return -EFAULT;
 
-    for (const char* const* a = argv; a != NULL /* Linux allows argv==NULL */; a++, argc++) {
+    if (!argv) {
+        argv = empty_argv;
+    } else for (const char* const* a = argv; /* no condition */; a++, argc++) {
         if (!is_user_memory_readable(a, sizeof(*a)))
             return -EFAULT;
         if (*a == NULL)
@@ -147,8 +149,6 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
         if (!is_user_string_readable(*a))
             return -EFAULT;
     }
-    if (!argv)
-        argv = empty_argv;
 
     /* TODO: This should be removed, but: https://github.com/gramineproject/graphene/issues/2081 */
     if (!envp)
