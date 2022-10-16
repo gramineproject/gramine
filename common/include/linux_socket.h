@@ -50,7 +50,7 @@ struct cmsghdr {
     ((size_t)(mhdr)->msg_controllen >= sizeof(struct cmsghdr) \
          ? (struct cmsghdr*)(mhdr)->msg_control               \
          : (struct cmsghdr*)0)
-#define CMSG_ALIGN(len) ALIGN_UP((len), sizeof(size_t))
+#define CMSG_ALIGN(len) ALIGN_UP(len, sizeof(size_t))
 #define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
 
