@@ -48,21 +48,14 @@ long libos_syscall_setuid(uid_t uid) {
     struct libos_thread* current = get_cur_thread();
 
     lock(&current->lock);
-
     if (current->uid == 0) {
         /* if the user is root, the real UID and saved set-user-ID are also set */
         current->uid  = uid;
-        current->euid = uid;
         current->suid = uid;
-        ret = 0;
-        goto out;
-    }
-
-    if (uid != current->uid && uid != current->euid && uid != current->suid) {
+    } else if (uid != current->uid && uid != current->suid) {
         ret = -EPERM;
         goto out;
     }
-
     current->euid = uid;
     ret = 0;
 out:
@@ -75,21 +68,14 @@ long libos_syscall_setgid(gid_t gid) {
     struct libos_thread* current = get_cur_thread();
 
     lock(&current->lock);
-
-    if (current->gid == 0) {
+    if (current->uid == 0) {
         /* if the user is root, the real GID and saved set-group-ID are also set */
         current->gid  = gid;
-        current->egid = gid;
         current->sgid = gid;
-        ret = 0;
-        goto out;
-    }
-
-    if (gid != current->gid && gid != current->egid && gid != current->sgid) {
+    } else if (gid != current->gid && gid != current->sgid) {
         ret = -EPERM;
         goto out;
     }
-
     current->egid = gid;
     ret = 0;
 out:
