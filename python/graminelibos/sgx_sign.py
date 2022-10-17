@@ -392,6 +392,7 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
     if verbose:
         print('Memory:')
 
+    edmm_enable_heap = attr['edmm_enable_heap']
     for area in areas:
         if area.elf_filename is not None:
             with open(area.elf_filename, 'rb') as file:
@@ -419,6 +420,9 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
                     load_file(mrenclave, file, offset, baseaddr_ + addr, filesize, memsize,
                               desc, flags)
         else:
+            # Skip EADDing of heap ("free") pages when EDMM is enabled.
+            if edmm_enable_heap == 1 and area.desc == "free":
+                continue
             for addr in range(area.addr, area.addr + area.size, offs.PAGESIZE):
                 data = ZERO_PAGE
                 if area.content is not None:
@@ -445,6 +449,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
         'max_threads': manifest_sgx.get('max_threads', manifest_sgx.get('thread_num')),
         'isv_prod_id': manifest_sgx['isvprodid'],
         'isv_svn': manifest_sgx['isvsvn'],
+        'edmm_enable_heap': manifest_sgx['edmm_enable_heap'],
     }
     attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
@@ -457,6 +462,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
         print(f'    attr.flags:  {attr["flags"]:#x}')
         print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
         print(f'    misc_select: {attr["misc_select"]:#x}')
+        print(f'    edmm_enable_heap: {attr["edmm_enable_heap"]}')
 
         print('SGX remote attestation:')
         attestation_type = manifest_sgx.get('remote_attestation', 'none')

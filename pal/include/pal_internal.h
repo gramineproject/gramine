@@ -63,7 +63,7 @@ struct handle_ops {
      * should not be NULL.
      */
     int (*map)(PAL_HANDLE handle, void* address, pal_prot_flags_t prot, uint64_t offset,
-               uint64_t size);
+               uint64_t size, bool vma_allocated);
 
     /* 'setlength' is used by PalStreamFlush. It truncate the stream to certain size. */
     int64_t (*setlength)(PAL_HANDLE handle, uint64_t length);
@@ -170,7 +170,7 @@ int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, cons
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
 int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                  uint64_t size);
+                  uint64_t size, bool vma_allocated);
 int _PalStreamUnmap(void* addr, uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _PalStreamFlush(PAL_HANDLE handle);
@@ -211,7 +211,8 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 /* PalVirtualMemory calls */
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot);
 int _PalVirtualMemoryFree(void* addr, uint64_t size);
-int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t cur_prot,
+                             pal_prot_flags_t req_prot);
 
 /* PalObject calls */
 int _PalObjectClose(PAL_HANDLE object_handle);
@@ -276,7 +277,7 @@ void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_nex
  * Caller must make sure that the new range does not overlap any previously added range.
  */
 int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment);
-int pal_internal_memory_alloc(size_t size, void** out_addr);
+int pal_internal_memory_alloc(size_t size, void** out_addr, bool initial_alloc);
 int pal_internal_memory_free(void* addr, size_t size);
 void pal_disable_early_memory_bookkeeping(void);
 

@@ -12,6 +12,7 @@
 #include "api.h"
 #include "asan.h"
 #include "enclave_tf.h"
+#include "enclave_dmm.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -243,7 +244,7 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 
 /* 'map' operation for file stream. */
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                    uint64_t size) {
+                    uint64_t size, bool vma_allocated) {
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
     int ret;
 
@@ -275,38 +276,61 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
     asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
+    /* For protected/trusted files, we copy and verify the contents but the application might have
+     * requested page permissions without write access.In such cases, relax the permission to
+     * have write permission and then revert it to original request. */
+    pal_prot_flags_t req_prot;
+    if (g_pal_public_state.edmm_enable_heap) {
+        req_prot = (prot & PAL_PROT_WRITE) ? prot : prot | PAL_PROT_READ | PAL_PROT_WRITE;
+        if (vma_allocated) {
+            if (req_prot != prot) {
+                ret = update_enclave_page_permissions(addr, size, prot, req_prot);
+                if (ret < 0) {
+                    return -PAL_ERROR_INVAL;
+                }
+            }
+        } else {
+            ret = get_enclave_pages(addr, size, req_prot);
+            if (ret < 0)
+                return -PAL_ERROR_NOMEM;
+        }
+    } else {
+        req_prot = prot;
+    }
+
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
         off_t end = MIN(offset + size, handle->file.total);
+        size_t bytes_filled;
         if ((off_t)offset >= end) {
             /* file is mmapped at offset beyond file size, there are no trusted-file contents to
              * back mmapped enclave pages; this is a legit case, so simply zero out these enclave
              * pages (for sanity) and return success */
-            memset(addr, 0, size);
-            return 0;
+            bytes_filled = 0;
+        } else {
+            off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
+            off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
+            off_t total_size     = aligned_end - aligned_offset;
+
+            if ((uint64_t)total_size > SIZE_MAX) {
+                /* for compatibility with 32-bit systems */
+                ret = -PAL_ERROR_INVAL;
+                goto out;
+            }
+
+            ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
+                                               aligned_offset, aligned_end, offset, end, chunk_hashes,
+                                               handle->file.total);
+            if (ret < 0) {
+                log_error("file_map - copy & verify on trusted file returned %d", ret);
+                goto out;
+            }
+
+            bytes_filled = end - offset;
         }
 
-        off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
-        off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
-        off_t total_size     = aligned_end - aligned_offset;
-
-        if ((uint64_t)total_size > SIZE_MAX) {
-            /* for compatibility with 32-bit systems */
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
-                                           aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                           handle->file.total);
-        if (ret < 0) {
-            log_error("file_map - copy & verify on trusted file returned %d", ret);
-            goto out;
-        }
-
-        size_t bytes_filled = end - offset;
         if (size > bytes_filled) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
             memset((char*)addr + bytes_filled, 0, size - bytes_filled);
@@ -334,6 +358,15 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         if (size > bytes_read) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
             memset((char*)addr + bytes_read, 0, size - bytes_read);
+        }
+    }
+
+    /* If permissions were modified, revert it to original */
+    if (g_pal_public_state.edmm_enable_heap && (prot != req_prot)) {
+        ret = update_enclave_page_permissions(addr, size, req_prot, prot);
+        if (ret < 0) {
+            log_error("file_map - updating enclave page permissions returned %d", ret);
+            goto out;
         }
     }
 

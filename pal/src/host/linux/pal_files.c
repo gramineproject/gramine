@@ -135,7 +135,8 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 
 /* 'map' operation for file stream. */
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                    uint64_t size) {
+                    uint64_t size, bool vma_allocated) {
+    __UNUSED(vma_allocated);
     int fd = handle->file.fd;
     int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);

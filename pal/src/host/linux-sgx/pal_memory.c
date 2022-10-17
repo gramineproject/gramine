@@ -12,13 +12,13 @@
 
 #include "api.h"
 #include "asan.h"
+#include "enclave_dmm.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
 
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    __UNUSED(prot);
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
     assert(IS_ALIGNED_PTR(addr, g_page_size) && IS_ALIGNED(size, g_page_size));
     assert(access_ok(addr, size));
@@ -28,12 +28,29 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
+    int ret;
+    pal_prot_flags_t req_prot;
+    if (g_pal_public_state.edmm_enable_heap) {
+        req_prot = (prot & PAL_PROT_WRITE) ? prot : prot | PAL_PROT_READ | PAL_PROT_WRITE;
+
+        ret = get_enclave_pages(addr, size, req_prot);
+        if (ret < 0)
+            return ret;
+    }
+
     /*
      * This function doesn't have to do anything - in SGX1 the memory is already mapped (it happens
      * at the enclave initialization). Just clear the (possible) previous memory content (this
      * function must return zeroed memory).
      */
     memset(addr, 0, size);
+
+    /* Reset to original request. Work around for memset to succeed. */
+    if (g_pal_public_state.edmm_enable_heap && prot != req_prot) {
+        ret = _PalVirtualMemoryProtect(addr, size, req_prot, prot);
+        if (ret < 0)
+            return ret;
+    }
 
     return 0;
 }
@@ -54,6 +71,12 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
          * This function doesn't have to do anything - in SGX1 the memory is mapped only at
          * the enclave initialization and cannot be unmapped.
          */
+        if (g_pal_public_state.edmm_enable_heap) {
+            int ret = free_enclave_pages(addr, size);
+            if (ret < 0) {
+                return ret;
+            }
+        }
     } else {
         /* possible to have untrusted mapping, simply unmap memory outside the enclave */
         ocall_munmap_untrusted(addr, size);
@@ -62,27 +85,36 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
     return 0;
 }
 
-int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    __UNUSED(addr);
-    __UNUSED(size);
-    __UNUSED(prot);
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t cur_prot,
+                             pal_prot_flags_t req_prot) {
+    int ret;
+    assert(WITHIN_MASK(req_prot, PAL_PROT_MASK));
 
-    assert(WITHIN_MASK(prot, PAL_PROT_MASK));
+    if (!size)
+        return -PAL_ERROR_INVAL;
+
+    if (cur_prot == req_prot)
+        return 0;
 
 #ifdef ASAN
     if (sgx_is_completely_within_enclave(addr, size)) {
-        if (prot) {
+        if (req_prot) {
             asan_unpoison_region((uintptr_t)addr, size);
         } else {
             asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
         }
     }
 #endif
-
-    if (FIRST_TIME()) {
-        log_warning("PalVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
+    if (g_pal_public_state.edmm_enable_heap) {
+        ret = update_enclave_page_permissions(addr, size, cur_prot, req_prot);
+    } else {
+        if (FIRST_TIME()) {
+            log_warning("PalVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
+        }
+        ret = 0;
     }
-    return 0;
+
+    return ret;
 }
 
 uint64_t _PalMemoryQuota(void) {

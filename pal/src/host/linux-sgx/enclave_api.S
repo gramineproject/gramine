@@ -56,3 +56,54 @@ sgx_getkey:
     .cfi_restore %rbx
     ret
     .cfi_endproc
+
+    .global sgx_accept
+    .type sgx_accept, @function
+sgx_accept:
+    .cfi_startproc
+    # int64_t sgx_accept(sgx_arch_sec_info_t* si, const void* addr);
+
+    movq %rbx, %r10
+    .cfi_register %rbx, %r10
+
+    # EAX = EACCEPT
+    # RBX = si (Address of SECINFO)
+    # RCX = addr (Address of destination EPC)
+    movl $EACCEPT, %eax
+    movq %rdi, %rbx
+    movq %rsi, %rcx
+
+    ENCLU
+
+    # EACCEPT reports status in RAX, we return it
+
+    movq %r10, %rbx
+    .cfi_restore %rbx
+    ret
+    .cfi_endproc
+
+    .global sgx_modpe
+    .type sgx_modpe, @function
+sgx_modpe:
+    .cfi_startproc
+    # int sgx_modpe(sgx_arch_sec_info_t* si, const void* addr);
+
+    movq %rbx, %r10
+    .cfi_register %rbx, %r10
+
+    # EAX = EMODPE
+    # RBX = si (Address of SECINFO)
+    # RCX = addr (Address of destination EPC)
+    movl $EMODPE, %eax
+    movq %rdi, %rbx
+    movq %rsi, %rcx
+
+    ENCLU
+
+    # return 0
+    xorq %rax, %rax
+
+    movq %r10, %rbx
+    .cfi_restore %rbx
+    ret
+    .cfi_endproc

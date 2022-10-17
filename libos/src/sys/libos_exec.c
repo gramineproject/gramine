@@ -46,7 +46,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
         if (bkeep_munmap(vma->addr, vma->length, !!(vma->flags & VMA_INTERNAL), &tmp_vma) < 0) {
             BUG();
         }
-        if (PalVirtualMemoryFree(vma->addr, vma->length) < 0) {
+        if (!(vma->flags & VMA_UNMAPPED) && PalVirtualMemoryFree(vma->addr, vma->length) < 0) {
             BUG();
         }
         bkeep_remove_tmp_vma(tmp_vma);

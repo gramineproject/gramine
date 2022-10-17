@@ -67,7 +67,8 @@ int main(int argc, char** argv, char** envp) {
             return 1;
         }
         void* mem1 = (void*)mem1_addr;
-        ret = PalStreamMap(file1, mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
+        ret = PalStreamMap(file1, mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE,
+                           /*vma_allocated*/ false);
         if (ret >= 0 && mem1) {
             memcpy(buffer1, mem1, 40);
             print_hex("Map Test 1 (0th - 40th): %s\n", buffer1, 40);

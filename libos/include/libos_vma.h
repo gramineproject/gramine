@@ -26,11 +26,27 @@
 struct libos_vma_info {
     void* addr;
     size_t length;
-    int prot;  // memory protection flags: PROT_*
+    int cur_prot;  // current memory protection flags: PROT_*
+    int prev_prot;
     int flags; // MAP_* and VMA_*
     struct libos_handle* file;
     uint64_t file_offset;
     char comment[VMA_COMMENT_LEN];
+};
+
+struct edmm_heap_vma {
+    void* addr;
+    size_t length;
+    int cur_prot;  // current memory protection flags: PROT_*
+    int prev_prot;
+    bool is_allocated;
+};
+
+/* To pass along with `bkeep_mmap_fixed` in case of MAP_FIXED to get overlapping VMA ranges.
+ * Note: Adjacent VMA ranges with same `PROT_*` are merged. */
+struct edmm_heap_request {
+    int range_cnt;
+    struct edmm_heap_vma vma[DEFAULT_VMA_COUNT];
 };
 
 /* MAP_FIXED_NOREPLACE and MAP_SHARED_VALIDATE are fairly new and might not be defined. */
@@ -80,7 +96,8 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal);
  * atomically checks for overlaps and fails if one is found.
  */
 int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libos_handle* file,
-                     uint64_t offset, const char* comment);
+                     uint64_t offset, const char* comment,
+                     struct edmm_heap_request* out_vma_ranges);
 
 /*
  * Bookkeeping an allocation of memory at any address in the range [`bottom_addr`, `top_addr`).
@@ -118,6 +135,15 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot);
  * The returned array can be subsequently freed by `free_vma_info_array`.
  */
 int dump_all_vmas(struct libos_vma_info** vma_infos, size_t* count, bool include_unmapped);
+
+/*
+ * Dumps all non-internal and mapped VMAs within the requested range.
+ * On success returns 0 and puts the pointer to result array into `*vma_infos` and its length into
+ * `*count`. On error returns negated error code.
+ * The returned array can be subsequently freed by `free_vma_info_array`.
+ */
+int dump_all_vmas_in_range(struct libos_vma_info** ret_infos, size_t* ret_count, uintptr_t begin,
+                           uintptr_t end, bool include_unmapped);
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count);
 
 /* Implementation of madvise(MADV_DONTNEED) syscall */

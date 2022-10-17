@@ -16,6 +16,7 @@
 #include "api.h"
 #include "asan.h"
 #include "crypto.h"
+#include "enclave_dmm.h"
 #include "linux_socket.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -37,9 +38,13 @@ struct hdl_header {
 /* _PalStreamUnmap for internal use. Unmap stream at certain memory address. The memory is unmapped
  *  as a whole.*/
 int _PalStreamUnmap(void* addr, uint64_t size) {
-    __UNUSED(addr);
-    __UNUSED(size);
     assert(sgx_is_completely_within_enclave(addr, size));
+    if (g_pal_public_state.edmm_enable_heap) {
+        int ret = free_enclave_pages(addr, size);
+        if (ret < 0) {
+            return ret;
+        }
+    }
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
 #endif

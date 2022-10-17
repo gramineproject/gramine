@@ -30,6 +30,10 @@ struct ecall_enclave_start {
     struct pal_dns_host_conf* dns_host_conf;
     void*                     reserved_mem_ranges;
     size_t                    reserved_mem_ranges_size;
+    /* We cannot directly read the edmm_enable_heap flag using toml as it calls slab_alloc which
+     * will end up requesting enclave heap. So passing it as an argument but can we encapsulate
+     * such fields/flags in a common struct? */
+    bool                      edmm_enable_heap;
 
     struct rpc_queue*         rpc_queue; /* pointer to RPC queue in untrusted mem */
 };

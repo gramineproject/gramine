@@ -16,6 +16,7 @@
 #include "libos_refcount.h"
 #include "libos_types.h"
 #include "libos_utils.h"
+#include "libos_vma.h"
 #include "list.h"
 #include "pal.h"
 
@@ -125,7 +126,7 @@ struct libos_fs_ops {
      * `libos_internal.h`).
      */
     int (*mmap)(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                uint64_t offset);
+                uint64_t offset, struct edmm_heap_request* vma_range);
 
     /*
      * \brief Write back mapped memory to file.
@@ -953,7 +954,7 @@ file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int o
 int generic_inode_poll(struct libos_handle* hdl, int poll_type);
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                          uint64_t offset);
+                          uint64_t offset, struct edmm_heap_request *vma_ranges);
 int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset);
 
