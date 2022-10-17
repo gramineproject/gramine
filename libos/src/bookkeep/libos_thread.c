@@ -180,8 +180,10 @@ static int init_main_thread(void) {
 
     cur_thread->uid = uid_int64;
     cur_thread->euid = uid_int64;
+    cur_thread->suid = uid_int64;
     cur_thread->gid = gid_int64;
     cur_thread->egid = gid_int64;
+    cur_thread->sgid = gid_int64;
 
     cur_thread->signal_dispositions = alloc_default_signal_dispositions();
     if (!cur_thread->signal_dispositions) {
@@ -293,6 +295,8 @@ struct libos_thread* get_new_thread(void) {
     thread->gid       = cur_thread->gid;
     thread->euid      = cur_thread->euid;
     thread->egid      = cur_thread->egid;
+    thread->suid      = cur_thread->suid;
+    thread->sgid      = cur_thread->sgid;
 
     thread->stack     = cur_thread->stack;
     thread->stack_top = cur_thread->stack_top;
