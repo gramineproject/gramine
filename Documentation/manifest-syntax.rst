@@ -515,7 +515,7 @@ Number of threads
 
 ::
 
-    sgx.thread_num = [NUM]
+    sgx.max_threads = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -537,9 +537,9 @@ Note that Gramine uses several helper threads internally:
   each time a new pipe is created. It terminates itself immediately after the
   TLS handshake is performed.
 
-Given these internal threads, ``sgx.thread_num`` should be set to at least ``4``
-even for single-threaded applications (to accommodate for the main thread, the
-IPC thread, the Async thread and one TLS-handshake thread).
+Given these internal threads, ``sgx.max_threads`` should be set to at least
+``4`` even for single-threaded applications (to accommodate for the main thread,
+the IPC thread, the Async thread and one TLS-handshake thread).
 
 
 Number of RPC threads (Exitless feature)
@@ -547,7 +547,7 @@ Number of RPC threads (Exitless feature)
 
 ::
 
-    sgx.insecure__rpc_thread_num = [NUM]
+    sgx.insecure__rpc_max_threads = [NUM]
     (Default: 0)
 
 This syntax specifies the number of RPC threads that are created outside of
@@ -989,3 +989,14 @@ value has been replaced with the string value. The ``none`` value in the new
 syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
 explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
 ``true`` boolean value in the deprecated syntax.
+
+Number of threads/RPC threads (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.thread_num = [NUM]
+    sgx.insecure__rpc_thread_num = [NUM]
+
+These names were ambigious and were replaced with ``sgx.max_threads`` and
+``sgx.insecure__rpc_max_threads`` correspondingly.

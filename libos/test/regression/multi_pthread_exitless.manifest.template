@@ -9,6 +9,7 @@ fs.mounts = [
 ]
 
 # app runs with 4 parallel threads + Gramine has couple internal threads
+# TODO: legacy names just for testing, deprecated in v1.4, remove two versions after
 sgx.thread_num = 8
 sgx.insecure__rpc_thread_num = 8
 

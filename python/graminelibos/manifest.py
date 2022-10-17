@@ -86,7 +86,14 @@ class Manifest:
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
         sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE)
-        sgx.setdefault('thread_num', DEFAULT_THREAD_NUM)
+
+        # TODO: sgx.thread_num and sgx.insecure__rpc_thread_num are deprecated in v1.4,
+        #       simplify below logic two versions after
+        sgx.setdefault('max_threads', sgx.setdefault('thread_num', DEFAULT_THREAD_NUM))
+        sgx.pop('thread_num', None)
+        sgx.setdefault('insecure__rpc_max_threads', sgx.setdefault('insecure__rpc_thread_num', 0))
+        sgx.pop('insecure__rpc_thread_num', None)
+
         sgx.setdefault('isvprodid', 0)
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")

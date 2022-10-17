@@ -663,15 +663,19 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
 
     int64_t thread_num_int64;
-    ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/0, &thread_num_int64);
+    ret = toml_int_in(manifest_root, "sgx.max_threads", /*defaultval=*/0, &thread_num_int64);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.thread_num'");
-        ret = -EINVAL;
-        goto out;
+        /* TODO: sgx.thread_num is deprecated in v1.4, remove two versions later */
+        ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/0, &thread_num_int64);
+        if (ret < 0) {
+            log_error("Cannot parse 'sgx.max_threads' (legacy name 'sgx.thread_num')");
+            ret = -EINVAL;
+            goto out;
+        }
     }
 
     if (thread_num_int64 < 0) {
-        log_error("Negative 'sgx.thread_num' is impossible");
+        log_error("Negative 'sgx.max_threads' (legacy name 'sgx.thread_num') is impossible");
         ret = -EINVAL;
         goto out;
     }
@@ -679,22 +683,30 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     enclave_info->thread_num = thread_num_int64 ?: 1;
 
     if (enclave_info->thread_num > MAX_DBG_THREADS) {
-        log_error("Too large 'sgx.thread_num', maximum allowed is %d", MAX_DBG_THREADS);
+        log_error("Too large 'sgx.max_threads' (legacy name 'sgx.thread_num'), maximum allowed is "
+                  "%d", MAX_DBG_THREADS);
         ret = -EINVAL;
         goto out;
     }
 
     int64_t rpc_thread_num_int64;
-    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/0,
+    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/0,
                       &rpc_thread_num_int64);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
-        ret = -EINVAL;
-        goto out;
+        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove two versions later */
+        ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/0,
+                          &rpc_thread_num_int64);
+        if (ret < 0) {
+            log_error("Cannot parse 'sgx.insecure__rpc_max_threads' (legacy name "
+                      "'sgx.insecure__rpc_thread_num')");
+            ret = -EINVAL;
+            goto out;
+        }
     }
 
     if (rpc_thread_num_int64 < 0) {
-        log_error("Negative 'sgx.insecure__rpc_thread_num' is impossible");
+        log_error("Negative 'sgx.insecure__rpc_max_threads' (legacy name "
+                  "'sgx.insecure__rpc_thread_num') is impossible");
         ret = -EINVAL;
         goto out;
     }
@@ -702,8 +714,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     enclave_info->rpc_thread_num = rpc_thread_num_int64;
 
     if (enclave_info->rpc_thread_num > MAX_RPC_THREADS) {
-        log_error("Too large 'sgx.insecure__rpc_thread_num', maximum allowed is %d",
-                  MAX_RPC_THREADS);
+        log_error("Too large 'sgx.insecure__rpc_max_threads' (legacy name "
+                  "'sgx.insecure__rpc_thread_num'), maximum allowed is %d", MAX_RPC_THREADS);
         ret = -EINVAL;
         goto out;
     }

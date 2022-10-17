@@ -78,7 +78,7 @@ sgx.enclave_size = "1024M"
 # and one for asynchronous events/alarms. Redis is technically single-threaded
 # but spawns couple additional threads to do background bookkeeping. Therefore,
 # specifying '8' allows to run a maximum of 6 Redis threads which is enough.
-sgx.thread_num = 8
+sgx.max_threads = 8
 
 # Redis executable is typically a PIE (Position Independent Executable) on most
 # modern OS distros (e.g., Ubuntu 18.04). However, on some OS distros (notably,

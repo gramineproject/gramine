@@ -29,7 +29,7 @@ sys.enable_extra_runtime_domain_names_conf = true
 sgx.debug = true
 sgx.nonpie_binary = true
 sgx.enclave_size = "512M"
-sgx.thread_num = 32
+sgx.max_threads = 32
 
 sgx.remote_attestation = "{{ ra_type }}"
 sgx.ra_client_spid = "{{ ra_client_spid }}"

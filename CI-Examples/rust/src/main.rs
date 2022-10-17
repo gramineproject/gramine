@@ -11,7 +11,7 @@ async fn hello_world(_req: Request<Body>) -> Result<Response<Body>, Infallible> 
 // because you need to specify in the Gramine manifest the maximal number of threads per
 // process, and ideally this wouldn't depend on your hardware.
 //
-// See sgx.thread_num in the manifest.
+// See sgx.max_threads in the manifest.
 #[tokio::main(worker_threads = 4)]
 async fn main() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

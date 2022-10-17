@@ -11,9 +11,9 @@
  * "Exitless" design alleviates expensive OCALLs/ECALLs. This was first proposed by SCONE (by
  * Arnautov et al at OSDI 2016) and by Eleos (by Orenbach et al at EuroSys 2017).
  *
- * Brief description: user must specify "sgx.insecure__rpc_thread_num = 2" in manifest to create two
- * RPC threads. If user specifies "0" or omits this directive, then no RPC threads are created and
- * all syscalls perform an enclave exit (as in previous versions of Gramine).
+ * Brief description: user must specify "sgx.insecure__rpc_max_threads = 2" in manifest to create
+ * two RPC threads. If user specifies "0" or omits this directive, then no RPC threads are created
+ * and all syscalls perform an enclave exit (as in previous versions of Gramine).
  *
  * All enclave and RPC threads work on a single shared RPC queue (global variable `g_rpc_queue`).
  * To issue a syscall, enclave thread enqueues syscall request in the queue and spins waiting for
