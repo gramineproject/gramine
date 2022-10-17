@@ -206,21 +206,29 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('child exited with status: 0', stdout)
         self.assertIn('test completed successfully', stdout)
 
-    def test_203_vfork_and_exec(self):
+    def test_203_fork_disallowed(self):
+        try:
+            self.run_binary(['fork_disallowed'])
+            self.fail('expected to return nonzero')
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode()
+            self.assertIn('The app tried to create a subprocess, but this is disabled', stderr)
+
+    def test_204_vfork_and_exec(self):
         stdout, _ = self.run_binary(['vfork_and_exec'], timeout=60)
 
         # vfork and exec 2 page child binary
         self.assertIn('child exited with status: 0', stdout)
         self.assertIn('test completed successfully', stdout)
 
-    def test_204_exec_fork(self):
+    def test_205_exec_fork(self):
         stdout, _ = self.run_binary(['exec_fork'], timeout=60)
         self.assertNotIn('Handled SIGCHLD', stdout)
         self.assertIn('Set up handler for SIGCHLD', stdout)
         self.assertIn('child exited with status: 0', stdout)
         self.assertIn('test completed successfully', stdout)
 
-    def test_205_double_fork(self):
+    def test_206_double_fork(self):
         stdout, stderr = self.run_binary(['double_fork'])
         self.assertIn('TEST OK', stdout)
         self.assertNotIn('grandchild', stderr)

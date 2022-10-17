@@ -17,6 +17,7 @@
 #include "libos_types.h"
 #include "libos_vma.h"
 #include "pal.h"
+#include "toml_utils.h"
 
 struct libos_clone_args {
     PAL_HANDLE create_event;
@@ -306,6 +307,25 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     }
 
     long ret = 0;
+
+    if (clone_new_process) {
+        assert(g_manifest_root);
+        bool disallow_subprocesses;
+        ret = toml_bool_in(g_manifest_root, "sys.disallow_subprocesses", /*defaultval=*/false,
+                           &disallow_subprocesses);
+        if (ret < 0) {
+            log_error("Cannot parse \'sys.disallow_subprocesses\' (the value must be `true` or "
+                      "`false`)");
+            return -ENOSYS;
+        }
+        if (disallow_subprocesses) {
+            if (FIRST_TIME()) {
+                log_warning("The app tried to create a subprocess, but this is disabled "
+                            "(sys.disallow_subprocesses = true)");
+            }
+            return -EAGAIN;
+        }
+    }
 
     struct libos_thread* thread = get_new_thread();
     if (!thread) {

@@ -337,6 +337,27 @@ Be careful! In SGX environment, the untrusted host could inject that signal in
 an arbitrary moment. Examine what your application's `SIGTERM` handler does and
 whether it poses any security threat.
 
+Disallowing subprocesses (fork)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.disallow_subprocesses = [true|false]
+    (Default: false)
+
+This specifies whether to block applications from creating child processes (e.g.
+via ``fork()`` or ``clone()`` system calls). The intuition is that many
+applications have fallbacks when they fail to spawn a child process (e.g.
+Python). Could be useful in SGX environments: child processes consume
+:term:`EPC` memory which is a limited resource.
+
+.. note ::
+   This option is *not* a security feature - Gramine by-design is only a one-way
+   sandbox, which doesn't protect the host from the enclave. Don't use this
+   option if you want to somehow mitigate running untrusted enclaves. Instead,
+   to achieve this, you need to run the whole Gramine inside a proper security
+   sandbox.
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
