@@ -257,14 +257,33 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         void* map_start = (void*)(c->start + base_diff);
         size_t map_size = c->map_end - c->start;
 
+        struct edmm_heap_request vma_ranges = {0};
         if ((ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
-                                    /*comment=*/NULL)) < 0) {
+                                    /*comment=*/NULL, &vma_ranges)) < 0) {
             log_debug("%s: failed to bookkeep address of segment", __func__);
             return ret;
         }
 
-        if ((ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags,
-                                          c->map_off)) < 0) {
+        if (g_pal_public_state->edmm_enable_heap && vma_ranges.range_cnt) {
+            for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
+                if (!vma_ranges.vma[cnt].is_allocated) {
+                    ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags,
+                                                 c->map_off, &vma_ranges);
+                } else {
+                    ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
+                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prev_prot, map_flags),
+                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, map_flags));
+                }
+
+                if (ret < 0)
+                    break;
+            }
+        } else {
+            ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags, c->map_off,
+                                         /*vma_range*/NULL);
+        }
+
+        if (ret < 0) {
             log_debug("%s: failed to map segment: %d", __func__, ret);
             return ret;
         }
@@ -278,7 +297,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         void* last_page_start = ALLOC_ALIGN_DOWN_PTR(zero_start);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot,
                                                pal_prot | PAL_PROT_WRITE) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
@@ -288,7 +307,8 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         memset(zero_start, 0, zero_size);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot) < 0)) {
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
+                                               pal_prot | PAL_PROT_WRITE, pal_prot) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
             }
@@ -302,13 +322,32 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         int zero_map_flags = MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS;
         pal_prot_flags_t zero_pal_prot = LINUX_PROT_TO_PAL(c->prot, zero_map_flags);
 
+        struct edmm_heap_request vma_ranges = {0};
         if ((ret = bkeep_mmap_fixed(zero_page_start, zero_page_size, c->prot, zero_map_flags,
-                                    /*file=*/NULL, /*offset=*/0, /*comment=*/NULL)) < 0) {
+                                    /*file=*/NULL, /*offset=*/0, /*comment=*/NULL, &vma_ranges))
+                                    < 0) {
             log_debug("%s: cannot bookkeep address of zero-fill pages", __func__);
             return ret;
         }
 
-        if ((ret = PalVirtualMemoryAlloc(zero_page_start, zero_page_size, zero_pal_prot)) < 0) {
+        if (g_pal_public_state->edmm_enable_heap && vma_ranges.range_cnt) {
+            for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
+                if (!vma_ranges.vma[cnt].is_allocated) {
+                    ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr,
+                        vma_ranges.vma[cnt].length, vma_ranges.vma[cnt].cur_prot);
+                } else {
+                    ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
+                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prev_prot, zero_map_flags),
+                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, zero_map_flags));
+                }
+                if (ret < 0)
+                    break;
+            }
+        } else {
+            ret = PalVirtualMemoryAlloc(zero_page_start, zero_page_size, zero_pal_prot);
+        }
+
+        if (ret < 0) {
             log_debug("%s: cannot map zero-fill pages", __func__);
             return pal_to_unix_errno(ret);
         }
@@ -993,7 +1032,7 @@ static int vdso_map_init(void) {
     memset(addr + vdso_so_size, 0, ALLOC_ALIGN_UP(vdso_so_size) - vdso_so_size);
 
     ret = PalVirtualMemoryProtect(addr, ALLOC_ALIGN_UP(vdso_so_size),
-                                  PAL_PROT_READ | PAL_PROT_EXEC);
+                                  PAL_PROT_READ | PAL_PROT_WRITE, PAL_PROT_READ | PAL_PROT_EXEC);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

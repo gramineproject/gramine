@@ -323,7 +323,8 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
 }
 
 static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                       uint64_t offset) {
+                       uint64_t offset, struct edmm_heap_request *vma_ranges) {
+    int ret;
     assert(hdl->type == TYPE_CHROOT);
     assert(addr);
 
@@ -332,7 +333,25 @@ static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int pr
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
 
-    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
+    if (g_pal_public_state->edmm_enable_heap && vma_ranges && vma_ranges->range_cnt) {
+        for (int cnt = 0; cnt < vma_ranges->range_cnt; cnt++) {
+            if (!vma_ranges->vma[cnt].is_allocated) {
+                ret = PalStreamMap(hdl->pal_handle, vma_ranges->vma[cnt].addr,
+                                   LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].cur_prot, flags), offset,
+                                   vma_ranges->vma[cnt].length);
+            } else {
+                ret = PalVirtualMemoryProtect(vma_ranges->vma[cnt].addr,
+                          vma_ranges->vma[cnt].length,
+                          LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].prev_prot, flags),
+                          LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].cur_prot, flags));
+            }
+            if (ret < 0)
+                break;
+        }
+    } else {
+        ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
+    }
+
     if (ret < 0)
         return pal_to_unix_errno(ret);
 

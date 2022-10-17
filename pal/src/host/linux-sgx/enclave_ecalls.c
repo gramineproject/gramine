@@ -100,7 +100,8 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
                        COPY_UNTRUSTED_VALUE(&start_args->rpc_queue),
                        COPY_UNTRUSTED_VALUE(&start_args->dns_host_conf),
                        COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges),
-                       COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges_size));
+                       COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges_size),
+                       COPY_UNTRUSTED_VALUE(&start_args->edmm_enable_heap));
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

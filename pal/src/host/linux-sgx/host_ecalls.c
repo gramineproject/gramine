@@ -9,7 +9,8 @@
 int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
                         struct pal_topo_info* topo_info, struct pal_dns_host_conf* dns_conf,
-                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
+                        bool edmm_enable_heap) {
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
@@ -34,6 +35,7 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
         .dns_host_conf            = dns_conf,
         .reserved_mem_ranges      = reserved_mem_ranges,
         .reserved_mem_ranges_size = reserved_mem_ranges_size,
+        .edmm_enable_heap         = edmm_enable_heap,
         .rpc_queue                = g_rpc_queue,
     };
     return sgx_ecall(ECALL_ENCLAVE_START, &start_args);

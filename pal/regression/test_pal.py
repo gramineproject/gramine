@@ -338,21 +338,11 @@ class TC_20_SingleProcess(RegressionTestCase):
         _, stderr = self.run_binary(['Event'])
         self.assertIn('TEST OK', stderr)
 
+    #Should we introduce HAS_SGX2 for such tests which fail with SGX1 but will pass with SGX2
     def test_300_memory(self):
-        if not HAS_SGX:
-            _, stderr = self.run_binary(['memory'])
-            self.assertIn('TEST OK', stderr)
-        else:
-            # SGX1 does not support unmapping a page or changing its permission after enclave init.
-            # Therefore the memory protection and deallocation tests will fail. By utilizing SGX2
-            # it's possible to fix this.
-            try:
-                self.run_binary(['memory'])
-                self.fail('expected to return nonzero')
-            except subprocess.CalledProcessError as e:
-                self.assertEqual(e.returncode, 1)
-                stderr = e.stderr.decode()
-                self.assertRegex(stderr, r'write to R mem at 0x[0-9a-f]+ unexpectedly succeeded')
+        _, stderr = self.run_binary(['memory'])
+        self.assertIn('TEST OK', stderr)
+
 
     def test_400_pipe(self):
         _, stderr = self.run_binary(['Pipe'])

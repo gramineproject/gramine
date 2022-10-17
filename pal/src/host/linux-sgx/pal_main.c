@@ -541,7 +541,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
                              void* uptr_rpc_queue, void* uptr_dns_conf,
-                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size) {
+                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size,
+                             bool edmm_enable_heap) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -583,6 +584,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         log_error("init_reserved_ranges failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    g_pal_public_state.edmm_enable_heap = edmm_enable_heap;
 
     if (libpal_uri_len < URI_PREFIX_FILE_LEN) {
         log_error("Invalid libpal_uri length (missing \"%s\" prefix?)", URI_PREFIX_FILE);
@@ -714,7 +717,10 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    if (preheat_enclave)
+
+    /* TODO: Skip touching enclave memory if EDMM is enabled. Will address this as part of
+     * Hybrid allocation optimization. */
+    if (!g_pal_public_state.edmm_enable_heap && preheat_enclave)
         do_preheat_enclave();
 
     if ((ret = init_seal_key_material()) < 0) {

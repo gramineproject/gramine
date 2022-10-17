@@ -172,8 +172,11 @@ struct pal_public_state {
     struct pal_cpu_info cpu_info;
     struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
 
+
     bool extra_runtime_domain_names_conf;
     struct pal_dns_host_conf dns_host;
+
+    bool edmm_enable_heap;
 };
 
 /* We cannot mark this as returning a pointer to `const` object, because LibOS can
@@ -230,13 +233,15 @@ int PalVirtualMemoryFree(void* addr, size_t size);
 /*!
  * \brief Modify the permissions of a previously allocated memory mapping.
  *
- * \param addr  The address.
- * \param size  The size.
- * \param prot  See #PalVirtualMemoryAlloc.
+ * \param addr      The address.
+ * \param size      The size.
+ * \param cur_prot  Current `PAL_PROT_*` flags set for the VMA region.
+ * \param req_prot  Requested `PAL_PROT_*` flags to be set for the VMA region.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
+int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t cur_prot,
+                            pal_prot_flags_t req_prot);
 
 /*!
  * \brief Set upcalls for memory bookkeeping

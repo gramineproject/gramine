@@ -125,3 +125,11 @@ int ocall_eventfd(int flags);
  */
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                     const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
+
+int ocall_trim_epc_pages(void* addr, size_t nr_pages, enum sgx_page_type type);
+
+int ocall_remove_trimmed_pages(void* addr, size_t nr_pages);
+
+int ocall_mprotect(void* addr, size_t size, uint32_t prot);
+
+int ocall_restrict_page_permissions(void* addr, size_t size, uint64_t restrict_permissions);

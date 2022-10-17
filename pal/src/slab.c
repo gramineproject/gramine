@@ -30,7 +30,7 @@ static inline void* system_mem_alloc(size_t size) {
 
     size = ALLOC_ALIGN_UP(size);
 
-    int ret = pal_internal_memory_alloc(size, &addr);
+    int ret = pal_internal_memory_alloc(size, &addr, /*initial_alloc*/true);
     if (ret < 0) {
         return NULL;
     }

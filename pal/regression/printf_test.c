@@ -89,7 +89,7 @@ int main(void) {
     if (ret < 0) {
         FAIL("memory_alloc failed: %d", ret);
     }
-    ret = PalVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
+    ret = PalVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, PAL_PROT_READ | PAL_PROT_WRITE, /*prot=*/0);
     if (ret < 0) {
         FAIL("PalVirtualMemoryProtect failed: %d", ret);
     }

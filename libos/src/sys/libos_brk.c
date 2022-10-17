@@ -80,7 +80,8 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         brk_start = (char*)brk_start + offset;
 
         ret = bkeep_mmap_fixed(brk_start, brk_max_size, PROT_NONE,
-                               MAP_FIXED_NOREPLACE | VMA_UNMAPPED, NULL, 0, "heap");
+                               MAP_FIXED_NOREPLACE | VMA_UNMAPPED, NULL, 0, "heap",
+                               /*out_vma_ranges*/NULL);
         if (ret == -EEXIST) {
             /* Let's try mapping brk anywhere. */
             brk_start = NULL;
@@ -155,7 +156,8 @@ void* libos_syscall_brk(void* _brk) {
 
         if (size) {
             if (bkeep_mmap_fixed(brk_aligned, brk_region.brk_end - brk_aligned, PROT_NONE,
-                                 MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap")) {
+                                 MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap",
+                                 /*out_vma_ranges*/NULL)) {
                 goto out;
             }
 
@@ -182,15 +184,33 @@ void* libos_syscall_brk(void* _brk) {
     /* brk_aligned >= brk > brk_current */
     assert(size);
 
+    struct edmm_heap_request vma_ranges = {0};
     if (bkeep_mmap_fixed(brk_current, size, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, NULL, 0, "heap") < 0) {
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, NULL, 0, "heap", &vma_ranges)
+                         < 0) {
         goto out;
     }
 
-    int ret = PalVirtualMemoryAlloc(brk_current, size, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret;
+    if (g_pal_public_state->edmm_enable_heap && vma_ranges.range_cnt) {
+        for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
+            if (!vma_ranges.vma[cnt].is_allocated) {
+                ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
+                                            vma_ranges.vma[cnt].cur_prot);
+            } else {
+                ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
+                    vma_ranges.vma[cnt].prev_prot, vma_ranges.vma[cnt].cur_prot);
+            }
+            if (ret < 0)
+                break;
+        }
+    } else {
+        ret = PalVirtualMemoryAlloc(brk_current, size, PAL_PROT_READ | PAL_PROT_WRITE);
+    }
     if (ret < 0) {
         if (bkeep_mmap_fixed(brk_current, brk_region.brk_end - brk_current, PROT_NONE,
-                             MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap") < 0) {
+                             MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap",
+                             /*out_vma_ranges*/NULL) < 0) {
             BUG();
         }
         goto out;

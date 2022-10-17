@@ -12,6 +12,7 @@
 #include "api.h"
 #include "asan.h"
 #include "enclave_tf.h"
+#include "enclave_dmm.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -275,6 +276,19 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
     asan_unpoison_region((uintptr_t)addr, size);
 #endif
 
+    /* For protected/trusted files, we copy and verify the contents but the application might have
+     * requested page permissions without write access.In such cases, relax the permission to
+     * have write permission and then revert it to original request. */
+    pal_prot_flags_t req_prot;
+    if (g_pal_public_state.edmm_enable_heap) {
+        req_prot = (prot & PAL_PROT_WRITE) ? prot : prot | PAL_PROT_READ | PAL_PROT_WRITE;
+        int ret = get_enclave_pages(addr, size, req_prot);
+        if (ret < 0)
+            return -PAL_ERROR_NOMEM;
+    } else {
+        req_prot = prot;
+    }
+
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
@@ -334,6 +348,15 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         if (size > bytes_read) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
             memset((char*)addr + bytes_read, 0, size - bytes_read);
+        }
+    }
+
+    /* If permissions were modified, revert it to original */
+    if (g_pal_public_state.edmm_enable_heap && (prot != req_prot)) {
+        ret = update_enclave_page_permissions(addr, size, req_prot, prot);
+        if (ret < 0) {
+            log_error("file_map - updating enclave page permissions returned %d", ret);
+            goto out;
         }
     }
 

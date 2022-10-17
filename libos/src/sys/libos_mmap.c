@@ -130,6 +130,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         flags &= ~MAP_32BIT;
 #endif
 
+    struct edmm_heap_request vma_ranges = {0};
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
         if (addr < g_pal_public_state->memory_address_start
@@ -144,7 +145,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                 goto out_handle;
             }
         }
-        ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+
+        ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL, &vma_ranges);
         if (ret < 0) {
             goto out_handle;
         }
@@ -172,7 +174,22 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
 
     if (!hdl) {
-        ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
+        if (g_pal_public_state->edmm_enable_heap && vma_ranges.range_cnt) {
+            for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
+                if (!vma_ranges.vma[cnt].is_allocated) {
+                    ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
+                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, flags));
+                } else {
+                    ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr,
+                              vma_ranges.vma[cnt].length, vma_ranges.vma[cnt].prev_prot,
+                              vma_ranges.vma[cnt].cur_prot);
+                }
+                if (ret < 0)
+                    break;
+            }
+        } else {
+            ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
+        }
         if (ret < 0) {
             if (ret == -PAL_ERROR_DENIED) {
                 ret = -EPERM;
@@ -181,7 +198,11 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             }
         }
     } else {
-        ret = hdl->fs->fs_ops->mmap(hdl, addr, length, prot, flags, offset);
+        if (g_pal_public_state->edmm_enable_heap && vma_ranges.range_cnt) {
+            ret = hdl->fs->fs_ops->mmap(hdl, addr, length, prot, flags, offset, &vma_ranges);
+        } else {
+            ret = hdl->fs->fs_ops->mmap(hdl, addr, length, prot, flags, offset, /*vma_range*/NULL);
+        }
     }
 
     if (ret < 0) {
@@ -260,9 +281,35 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         }
     }
 
-    ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
+    size_t vma_count;
+    struct libos_vma_info* vmas = NULL;
+    ret = dump_all_vmas_in_range(&vmas, &vma_count, (uintptr_t)addr,
+                                 (uintptr_t)((char*)addr + length), /*include_unmapped=*/false);
     if (ret < 0) {
-        return pal_to_unix_errno(ret);
+        return ret;
+    }
+
+    /* In case of EDMM, page permissions may cause an enclave exist esp. in case of restricting
+     * page permission. So try to merge VMAs on PROT before invoking ` PalVirtualMemoryProtect`. */
+    for (struct libos_vma_info* vma = vmas; vma < vmas + vma_count; vma++) {
+        void* start = vma->addr;
+        size_t len = vma->length;
+        int prev_prot = vma->prev_prot;
+        while (vma < vmas + vma_count - 1) {
+            struct libos_vma_info* next_vma = vma + 1;
+            if (vma->prev_prot == next_vma->prev_prot) {
+                len = len + next_vma->length;
+                vma = next_vma;
+                continue;
+            }
+            break;
+        }
+
+        ret = PalVirtualMemoryProtect(start, len, prev_prot,
+                                      LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
+        if (ret < 0) {
+            return pal_to_unix_errno(ret);
+        }
     }
 
     return 0;

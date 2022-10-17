@@ -28,12 +28,13 @@ int PalVirtualMemoryFree(void* addr, size_t size) {
     return _PalVirtualMemoryFree(addr, size);
 }
 
-int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
+int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t cur_prot,
+                            pal_prot_flags_t req_prot) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _PalVirtualMemoryProtect(addr, size, prot);
+    return _PalVirtualMemoryProtect(addr, size, cur_prot, req_prot);
 }
 
 /*
@@ -235,7 +236,7 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
 
 /* This function is called only in early init code which is single-threaded, hence it does not need
  * any locking. */
-static int initial_mem_alloc(size_t size, void** out_addr) {
+static int initial_mem_alloc(size_t size, void** out_addr, bool initial_alloc) {
     if (g_initial_mem_disabled) {
         return -PAL_ERROR_INVAL;
     }
@@ -268,10 +269,12 @@ static int initial_mem_alloc(size_t size, void** out_addr) {
         return ret;
     }
 
-    ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
-    if (ret < 0) {
-        log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
-        _PalProcessExit(1);
+    if (initial_alloc) {
+        ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
+        if (ret < 0) {
+            log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
+            _PalProcessExit(1);
+        }
     }
 
     *out_addr = (void*)addr;
@@ -297,11 +300,11 @@ static int initial_mem_free(uintptr_t addr, size_t size) {
     return 0;
 }
 
-int pal_internal_memory_alloc(size_t size, void** out_addr) {
+int pal_internal_memory_alloc(size_t size, void** out_addr, bool initial_alloc) {
     assert(IS_ALLOC_ALIGNED(size));
 
     if (!g_mem_bkeep_alloc_upcall) {
-        return initial_mem_alloc(size, out_addr);
+        return initial_mem_alloc(size, out_addr, initial_alloc);
     }
 
     uintptr_t addr;
@@ -310,6 +313,7 @@ int pal_internal_memory_alloc(size_t size, void** out_addr) {
         log_warning("%s: failed to bookkeep PAL internal memory: %d", __func__, ret);
         return -PAL_ERROR_NOMEM;
     }
+
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         log_warning("%s: failed to allocate PAL internal memory: %d", __func__, ret);
