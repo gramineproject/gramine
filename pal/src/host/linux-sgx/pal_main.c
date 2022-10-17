@@ -707,8 +707,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_max_threads",
-                      /*defaultval=*/0, &rpc_thread_num);
-    if (ret < 0) {
+                      /*defaultval=*/-1, &rpc_thread_num);
+    if (ret < 0 || rpc_thread_num < 0) {
         /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove two versions later */
         ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",
                           /*defaultval=*/0, &rpc_thread_num);
@@ -717,6 +717,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                       "'sgx.insecure__rpc_thread_num')");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
+        log_warning("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
+                    "switching to 'sgx.insecure__rpc_max_threads'.");
     }
     if (rpc_thread_num > 0) {
         if (!verify_and_init_rpc_queue(uptr_rpc_queue)) {

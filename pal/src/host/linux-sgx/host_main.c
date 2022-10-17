@@ -663,8 +663,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
 
     int64_t thread_num_int64;
-    ret = toml_int_in(manifest_root, "sgx.max_threads", /*defaultval=*/0, &thread_num_int64);
-    if (ret < 0) {
+    ret = toml_int_in(manifest_root, "sgx.max_threads", /*defaultval=*/-1, &thread_num_int64);
+    if (ret < 0 || thread_num_int64 < 0) {
         /* TODO: sgx.thread_num is deprecated in v1.4, remove two versions later */
         ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/0, &thread_num_int64);
         if (ret < 0) {
@@ -672,6 +672,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
             ret = -EINVAL;
             goto out;
         }
+        log_warning("Detected deprecated syntax: 'sgx.thread_num'. Consider switching to "
+                    "'sgx.max_threads'.");
     }
 
     if (thread_num_int64 < 0) {
@@ -690,9 +692,9 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
 
     int64_t rpc_thread_num_int64;
-    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/0,
+    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/-1,
                       &rpc_thread_num_int64);
-    if (ret < 0) {
+    if (ret < 0 || rpc_thread_num_int64 < 0) {
         /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove two versions later */
         ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/0,
                           &rpc_thread_num_int64);
@@ -702,6 +704,8 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
             ret = -EINVAL;
             goto out;
         }
+        log_warning("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
+                    "switching to 'sgx.insecure__rpc_max_threads'.");
     }
 
     if (rpc_thread_num_int64 < 0) {
