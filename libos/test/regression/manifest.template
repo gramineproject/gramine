@@ -21,7 +21,7 @@ fs.mounts = [
   { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
 ]
 
-sgx.thread_num = 16
+sgx.max_threads = 16
 sgx.nonpie_binary = true
 sgx.debug = true
 

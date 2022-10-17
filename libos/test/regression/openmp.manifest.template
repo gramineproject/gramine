@@ -21,7 +21,7 @@ fs.mounts = [
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
 ]
 
-sgx.thread_num = 32
+sgx.max_threads = 32
 sgx.nonpie_binary = true
 sgx.debug = true
 

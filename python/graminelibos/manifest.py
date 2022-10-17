@@ -87,7 +87,11 @@ class Manifest:
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
         sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE)
-        sgx.setdefault('thread_num', DEFAULT_THREAD_NUM)
+
+        # TODO: sgx.thread_num is deprecated in v1.4, simplify below logic in v1.5
+        if 'thread_num' not in sgx:
+            sgx.setdefault('max_threads', DEFAULT_THREAD_NUM)
+
         sgx.setdefault('isvprodid', 0)
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")

@@ -32,7 +32,7 @@ int toml_bool_in(const toml_table_t* root, const char* key, bool defaultval, boo
  * \brief Find an integer key-value in TOML manifest.
  *
  * \param root        Root table of the TOML manifest.
- * \param key         Dotted key (e.g. "sgx.thread_num").
+ * \param key         Dotted key (e.g. "sgx.max_threads").
  * \param defaultval  `retval` is set to this value if not found in the manifest.
  * \param retval      Pointer to output integer.
  *

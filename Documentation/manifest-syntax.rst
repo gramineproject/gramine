@@ -496,7 +496,7 @@ Number of threads
 
 ::
 
-    sgx.thread_num = [NUM]
+    sgx.max_threads = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -518,9 +518,9 @@ Note that Gramine uses several helper threads internally:
   each time a new pipe is created. It terminates itself immediately after the
   TLS handshake is performed.
 
-Given these internal threads, ``sgx.thread_num`` should be set to at least ``4``
-even for single-threaded applications (to accommodate for the main thread, the
-IPC thread, the Async thread and one TLS-handshake thread).
+Given these internal threads, ``sgx.max_threads`` should be set to at least
+``4`` even for single-threaded applications (to accommodate for the main thread,
+the IPC thread, the Async thread and one TLS-handshake thread).
 
 
 Number of RPC threads (Exitless feature)
@@ -983,3 +983,12 @@ This syntax specified how much additional memory Gramine used to reserve for its
 internal use (e.g., metadata for trusted files, internal handles,
 etc.). Currently Gramine correctly tracks all internal memory allocations and
 does not require this workaround.
+
+Number of threads (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.thread_num = [NUM]
+
+This name was ambiguous and was replaced with ``sgx.max_threads``.
