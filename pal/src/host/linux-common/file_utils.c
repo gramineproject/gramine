@@ -101,7 +101,6 @@ out:
     return (int)ret;
 }
 
-// TODO: what do we do about it? leave it as? create another function which would get the buffer and have 2 versions?
 /* This function is called by early init code and as such can't use dynamically allocated memory! */
 int read_text_file_iter_lines(const char* path, int (*callback)(const char* line, void* arg,
                                                                 bool* out_stop),

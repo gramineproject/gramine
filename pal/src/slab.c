@@ -18,14 +18,14 @@ static spinlock_t g_slab_mgr_lock = INIT_SPINLOCK_UNLOCKED;
 #define SYSTEM_UNLOCK() spinlock_unlock(&g_slab_mgr_lock)
 #define SYSTEM_LOCKED() spinlock_is_locked(&g_slab_mgr_lock)
 
-static inline void* __malloc(size_t size);
-static inline void __free(void* addr, size_t size);
-#define system_malloc(size) __malloc(size)
-#define system_free(addr, size) __free(addr, size)
+static inline void* system_mem_alloc(size_t size);
+static inline void system_mem_free(void* addr, size_t size);
+#define system_malloc(size) system_mem_alloc(size)
+#define system_free(addr, size) system_mem_free(addr, size)
 
 #include "slabmgr.h"
 
-static inline void* __malloc(size_t size) {
+static inline void* system_mem_alloc(size_t size) {
     void* addr = NULL;
 
     size = ALLOC_ALIGN_UP(size);
@@ -42,7 +42,7 @@ static inline void* __malloc(size_t size) {
     return addr;
 }
 
-static inline void __free(void* addr, size_t size) {
+static inline void system_mem_free(void* addr, size_t size) {
     if (!addr)
         return;
 

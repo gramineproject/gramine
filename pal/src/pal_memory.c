@@ -113,7 +113,7 @@ int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, co
 static void mark_range_free(size_t idx) {
     g_initial_mem_ranges[idx].is_free = true;
 
-    /* Remove `ranges_to_rm_count` ranges stating at `rm_start_idx`. */
+    /* Remove `ranges_to_rm_count` ranges starting at `rm_start_idx`. */
     size_t ranges_to_rm_count = 0;
     size_t rm_start_idx;
     if (idx + 1 < g_pal_public_state.initial_mem_ranges_len && g_initial_mem_ranges[idx + 1].is_free
