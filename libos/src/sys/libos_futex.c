@@ -694,7 +694,7 @@ out_unlock:
 
 #define FUTEX_CHECK_READ  false
 #define FUTEX_CHECK_WRITE true
-static int is_valid_futex_ptr(uint32_t* ptr, bool check_write) {
+static int check_futex_ptr(uint32_t* ptr, bool check_write) {
     if (!IS_ALIGNED_PTR(ptr, alignof(*ptr))) {
         return -EINVAL;
     }
@@ -758,11 +758,9 @@ static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* uti
         log_warning("Non-private futexes are not supported, assuming implicit FUTEX_PRIVATE_FLAG");
     }
 
-    int ret = 0;
-
     /* `uaddr` should be valid pointer in all cases. */
-    ret = is_valid_futex_ptr(uaddr, FUTEX_CHECK_READ);
-    if (ret) {
+    int ret = check_futex_ptr(uaddr, FUTEX_CHECK_READ);
+    if (ret < 0) {
         return ret;
     }
 
@@ -778,20 +776,20 @@ static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* uti
         case FUTEX_WAKE_BITSET:
             return futex_wake(uaddr, val, val3);
         case FUTEX_WAKE_OP:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_WRITE);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_WRITE);
+            if (ret < 0) {
                 return ret;
             }
             return futex_wake_op(uaddr, uaddr2, val, val2, val3);
         case FUTEX_REQUEUE:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_READ);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_READ);
+            if (ret < 0) {
                 return ret;
             }
             return futex_requeue(uaddr, uaddr2, val, val2, NULL);
         case FUTEX_CMP_REQUEUE:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_READ);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_READ);
+            if (ret < 0) {
                 return ret;
             }
             return futex_requeue(uaddr, uaddr2, val, val2, &val3);
@@ -862,8 +860,8 @@ static int handle_futex_death(uint32_t* uaddr) {
     if (!IS_ALIGNED_PTR(uaddr, alignof(*uaddr))) {
         return -EINVAL;
     }
-    int ret = is_valid_futex_ptr(uaddr, FUTEX_CHECK_WRITE);
-    if (ret) {
+    int ret = check_futex_ptr(uaddr, FUTEX_CHECK_WRITE);
+    if (ret < 0) {
         return ret;
     }
 
