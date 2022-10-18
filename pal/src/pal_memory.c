@@ -55,8 +55,8 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
  * not overlap any of reserved ranges.
  * Because reserved ranges can be arbitrarily long and due to the fact that we cannot really
  * allocate memory without first inspecting them (so we do not map on top of them), we go through
- * them only once. They are kept sorted, so we only have to hold the last seen reserved range and
- * the last address we allocated at.
+ * them only once (multiple passes might be too slow). The ranges are kept sorted, so we only have
+ * to hold the last seen reserved range and the last address we allocated at.
  */
 static int (*g_mem_bkeep_alloc_upcall)(size_t size, uintptr_t* out_addr) = NULL;
 static int (*g_mem_bkeep_free_upcall)(uintptr_t addr, size_t size) = NULL;
@@ -118,14 +118,16 @@ static void mark_range_free(size_t idx) {
     size_t rm_start_idx;
     if (idx + 1 < g_pal_public_state.initial_mem_ranges_len && g_initial_mem_ranges[idx + 1].is_free
             && g_initial_mem_ranges[idx].start == g_initial_mem_ranges[idx + 1].end) {
-        /* Next range is also free and aligned to the one being freed now, we can merge them. */
+        /* Next range is also free and aligned to the one being freed now, we can merge next to
+         * the current. */
         g_initial_mem_ranges[idx].start = g_initial_mem_ranges[idx + 1].start;
         rm_start_idx = idx + 1;
         ranges_to_rm_count++;
     }
     if (idx > 0 && g_initial_mem_ranges[idx - 1].is_free
             && g_initial_mem_ranges[idx - 1].start == g_initial_mem_ranges[idx].end) {
-        /* Previous range is also free and aligned to the one being freed now, we can merge them. */
+        /* Previous range is also free and aligned to the one being freed now, we can merge
+         * the current to the previous one. */
         g_initial_mem_ranges[idx - 1].start = g_initial_mem_ranges[idx].start;
         rm_start_idx = idx;
         ranges_to_rm_count++;
