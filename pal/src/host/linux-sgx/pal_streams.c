@@ -40,79 +40,87 @@ int _PalStreamUnmap(void* addr, uint64_t size) {
 }
 
 static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
-    int ret;
-    const void* d;
-    size_t dsz = 0;
-    bool free_d = false;
+    int ret = 0;
+    const void* field = NULL;
+    size_t field_size = 0;
+    bool free_field = false;
 
-    /* find a field to serialize (depends on the handle type) and assign it to d; note that
+    /* find a field to serialize (depends on the handle type); note that
      * no handle type has more than one such field, and some have none */
-    /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
-     * work? Probably unused. Or pure luck. */
     switch (handle->hdr.type) {
         case PAL_TYPE_FILE:
-            d   = handle->file.realpath;
-            dsz = strlen(handle->file.realpath) + 1;
+            field = handle->file.realpath;
+            field_size = strlen(handle->file.realpath) + 1;
+            /* no need to serialize chunk_hashes & umem */
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to serialize SSL context */
             if (handle->pipe.ssl_ctx) {
-                free_d = true;
-                ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&d, &dsz);
+                free_field = true;
+                ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&field, &field_size);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
+            /* no need to serialize handshake_helper_thread_hdl */
             break;
         case PAL_TYPE_PIPESRV:
+            /* no need to serialize ssl_ctx and handshake_helper_thread_hdl */
             break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
             break;
         case PAL_TYPE_DIR:
-            if (handle->dir.realpath) {
-                d   = handle->dir.realpath;
-                dsz = strlen(handle->dir.realpath) + 1;
-            }
+            field = handle->dir.realpath;
+            field_size = strlen(handle->dir.realpath) + 1;
+            /* no need to serialize buf/ptr/end */
             break;
         case PAL_TYPE_SOCKET:
+            /* sock.ops field will be fixed in deserialize */
             break;
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to serialize SSL context */
             if (handle->process.ssl_ctx) {
-                free_d = true;
-                ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&d, &dsz);
+                free_field = true;
+                ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&field, &field_size);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
             break;
+        case PAL_TYPE_THREAD:
+            /* no need to serialize thread fields */
+            break;
+        case PAL_TYPE_EVENT:
+            /* no need to serialize event fields */
+            break;
         case PAL_TYPE_EVENTFD:
+            /* eventfds have no fields to serialize */
             break;
         default:
             return -PAL_ERROR_INVAL;
     }
 
-    size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz);
+    size_t hdl_size = handle_size(handle);
+    size_t buffer_size = hdl_size + field_size;
+    void* buffer = malloc(buffer_size);
     if (!buffer) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
 
     /* copy into buffer all handle fields and then serialized fields */
-    memcpy(buffer, handle, hdlsz);
-    if (dsz)
-        memcpy(buffer + hdlsz, d, dsz);
+    memcpy(buffer, handle, hdl_size);
+    if (field_size)
+        memcpy(buffer + hdl_size, field, field_size);
 
-    ret = 0;
 out:
-    if (free_d)
-        free((void*)d);
+    if (free_field)
+        free((void*)field);
     if (ret < 0)
         return ret;
 
     *data = buffer;
-    return hdlsz + dsz;
+    return buffer_size;
 }
 
 static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int host_fd) {
@@ -187,6 +195,10 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_DENIED;
             }
+            break;
+        case PAL_TYPE_THREAD:
+            break;
+        case PAL_TYPE_EVENT:
             break;
         case PAL_TYPE_EVENTFD:
             break;
