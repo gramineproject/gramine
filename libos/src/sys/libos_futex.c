@@ -922,6 +922,10 @@ void release_robust_list(struct robust_list_head* head) {
     long futex_offset;
     unsigned long limit = ROBUST_LIST_LIMIT;
 
+    if (!head) {
+        return;
+    }
+
     /* `&head->list.next` does not dereference head, hence is safe. */
     if (fetch_robust_entry(&entry, &head->list.next) < 0) {
         return;
@@ -939,6 +943,11 @@ void release_robust_list(struct robust_list_head* head) {
     /* Last entry (or first, if the list is empty) points to the list head. */
     while (entry != &head->list) {
         struct robust_list* next_entry;
+
+        if (!entry) {
+            /* Apparently `&entry->next` is UB if `entry` is NULL. */
+            return;
+        }
 
         /* Fetch the next entry before waking the next thread. */
         int ret = fetch_robust_entry(&next_entry, &entry->next);
