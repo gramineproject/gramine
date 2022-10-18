@@ -662,64 +662,74 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+    const char* thread_num_option = "sgx.max_threads";
     int64_t thread_num_int64;
     ret = toml_int_in(manifest_root, "sgx.max_threads", /*defaultval=*/-1, &thread_num_int64);
-    if (ret < 0 || thread_num_int64 < 0) {
-        /* TODO: sgx.thread_num is deprecated in v1.4, remove two versions later */
-        ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/0, &thread_num_int64);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.max_threads' (legacy name 'sgx.thread_num')");
-            ret = -EINVAL;
-            goto out;
-        }
-        log_warning("Detected deprecated syntax: 'sgx.thread_num'. Consider switching to "
-                    "'sgx.max_threads'.");
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.max_threads'");
+        ret = -EINVAL;
+        goto out;
     }
 
     if (thread_num_int64 < 0) {
-        log_error("Negative 'sgx.max_threads' (legacy name 'sgx.thread_num') is impossible");
-        ret = -EINVAL;
-        goto out;
+        /* TODO: sgx.thread_num is deprecated in v1.4, remove in v1.5 */
+        ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/-1, &thread_num_int64);
+        if (ret < 0) {
+            log_error("Cannot parse 'sgx.thread_num'");
+            ret = -EINVAL;
+            goto out;
+        }
+        if (thread_num_int64 < 0) {
+            log_error("'sgx.max_threads' not found in the manifest");
+            ret = -EINVAL;
+            goto out;
+        }
+        thread_num_option = "sgx.thread_num";
+        log_error("Detected deprecated syntax: 'sgx.thread_num'. Consider switching to "
+                  "'sgx.max_threads'.");
     }
 
     enclave_info->thread_num = thread_num_int64 ?: 1;
 
     if (enclave_info->thread_num > MAX_DBG_THREADS) {
-        log_error("Too large 'sgx.max_threads' (legacy name 'sgx.thread_num'), maximum allowed is "
-                  "%d", MAX_DBG_THREADS);
+        log_error("Too large '%s', maximum allowed is %d", thread_num_option, MAX_DBG_THREADS);
         ret = -EINVAL;
         goto out;
     }
 
+    const char* rpc_thread_num_option = "sgx.insecure__rpc_max_threads";
     int64_t rpc_thread_num_int64;
     ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/-1,
                       &rpc_thread_num_int64);
-    if (ret < 0 || rpc_thread_num_int64 < 0) {
-        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove two versions later */
-        ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/0,
-                          &rpc_thread_num_int64);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.insecure__rpc_max_threads' (legacy name "
-                      "'sgx.insecure__rpc_thread_num')");
-            ret = -EINVAL;
-            goto out;
-        }
-        log_warning("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
-                    "switching to 'sgx.insecure__rpc_max_threads'.");
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.insecure__rpc_max_threads'");
+        ret = -EINVAL;
+        goto out;
     }
 
     if (rpc_thread_num_int64 < 0) {
-        log_error("Negative 'sgx.insecure__rpc_max_threads' (legacy name "
-                  "'sgx.insecure__rpc_thread_num') is impossible");
-        ret = -EINVAL;
-        goto out;
+        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove in v1.5 */
+        ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/-1,
+                          &rpc_thread_num_int64);
+        if (ret < 0) {
+            log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
+            ret = -EINVAL;
+            goto out;
+        }
+        if (rpc_thread_num_int64 < 0) {
+            log_error("'sgx.insecure__rpc_max_threads' not found in the manifest");
+            ret = -EINVAL;
+            goto out;
+        }
+        rpc_thread_num_option = "sgx.insecure__rpc_thread_num";
+        log_error("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
+                  "switching to 'sgx.insecure__rpc_max_threads'.");
     }
 
     enclave_info->rpc_thread_num = rpc_thread_num_int64;
 
     if (enclave_info->rpc_thread_num > MAX_RPC_THREADS) {
-        log_error("Too large 'sgx.insecure__rpc_max_threads' (legacy name "
-                  "'sgx.insecure__rpc_thread_num'), maximum allowed is %d", MAX_RPC_THREADS);
+        log_error("Too large '%s', maximum allowed is %d", rpc_thread_num_option, MAX_RPC_THREADS);
         ret = -EINVAL;
         goto out;
     }

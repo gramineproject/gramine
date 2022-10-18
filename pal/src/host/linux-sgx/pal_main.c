@@ -708,17 +708,24 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_max_threads",
                       /*defaultval=*/-1, &rpc_thread_num);
-    if (ret < 0 || rpc_thread_num < 0) {
-        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove two versions later */
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.insecure__rpc_max_threads'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    if (rpc_thread_num < 0) {
+        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove in v1.5 */
         ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",
-                          /*defaultval=*/0, &rpc_thread_num);
+                          /*defaultval=*/-1, &rpc_thread_num);
         if (ret < 0) {
-            log_error("Cannot parse 'sgx.insecure__rpc_max_threads' (legacy name "
-                      "'sgx.insecure__rpc_thread_num')");
+            log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
-        log_warning("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
-                    "switching to 'sgx.insecure__rpc_max_threads'.");
+        if (rpc_thread_num < 0) {
+            log_error("'sgx.insecure__rpc_max_threads' not found in the manifest");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+        log_error("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
+                  "switching to 'sgx.insecure__rpc_max_threads'.");
     }
     if (rpc_thread_num > 0) {
         if (!verify_and_init_rpc_queue(uptr_rpc_queue)) {

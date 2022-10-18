@@ -442,7 +442,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     manifest_sgx = manifest['sgx']
     attr = {
         'enclave_size': parse_size(manifest_sgx['enclave_size']),
-        'max_threads': manifest_sgx['max_threads'],
+        'max_threads': manifest_sgx.get('max_threads', manifest_sgx.get('thread_num')),
         'isv_prod_id': manifest_sgx['isvprodid'],
         'isv_svn': manifest_sgx['isvsvn'],
     }
