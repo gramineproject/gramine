@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+    stages {
+        stage('makedist') {
+            agent {
+                dockerfile {
+                    filename '.ci/almalinux9.dockerfile'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    ./scripts/makedist.sh
+                    mkdir -p rpmbuild/SOURCES
+                    mv gramine*.tar.* rpmbuild/SOURCES
+                '''
+            }
+        }
+        stage('build') {
+            agent {
+                dockerfile {
+                    filename '.ci/almalinux9.dockerfile'
+                    args '--network=none'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    rpmbuild \
+                        --define "_topdir $PWD/rpmbuild" \
+                        -ba gramine.spec
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts '''
+                rpmbuild/SRPMS/gramine*.src.rpm,
+                rpmbuild/RPMS/*/gramine*.rpm,
+            '''
+        }
+    }
+}
