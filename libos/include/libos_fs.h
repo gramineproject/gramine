@@ -890,6 +890,9 @@ struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t
 void get_inode(struct libos_inode* inode);
 void put_inode(struct libos_inode* inode);
 
+/* same as libos_syscall_openat() but filename can be in Gramine-private address space */
+long do_openat(int dfd, const char* filename, int flags, int mode);
+
 /*
  * Hashing utilities for paths.
  *

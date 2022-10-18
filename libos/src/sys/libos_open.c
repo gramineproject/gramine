@@ -100,7 +100,7 @@ long libos_syscall_creat(const char* path, mode_t mode) {
     return libos_syscall_open(path, O_CREAT | O_TRUNC | O_WRONLY, mode);
 }
 
-long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
+long do_openat(int dfd, const char* filename, int flags, int mode) {
     /* Clear invalid flags. */
     flags &= O_ACCMODE | O_APPEND |  O_CLOEXEC | O_CREAT | O_DIRECT | O_DIRECTORY | O_DSYNC | O_EXCL
              | O_LARGEFILE | O_NOATIME | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK | O_PATH | O_SYNC
@@ -111,9 +111,6 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
     if (flags & O_PATH) {
         flags &= O_PATH | O_CLOEXEC | O_DIRECTORY | O_NOFOLLOW;
     }
-
-    if (!is_user_string_readable(filename))
-        return -EFAULT;
 
     if (!(flags & O_CREAT)) {
         /* `mode` should be ignored if O_CREAT is not specified, according to man */
@@ -158,6 +155,13 @@ out:
     if (dir)
         put_dentry(dir);
     return ret;
+}
+
+long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
+    if (!is_user_string_readable(filename))
+        return -EFAULT;
+
+    return do_openat(dfd, filename, flags, mode);
 }
 
 long libos_syscall_close(int fd) {

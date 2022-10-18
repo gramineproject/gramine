@@ -127,6 +127,7 @@ tests = {
     'udp': {},
     'uid_gid': {},
     'unix': {},
+    'unix_subprocesses': {},
     'vfork_and_exec': {},
 }
 

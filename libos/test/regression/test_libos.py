@@ -1284,10 +1284,10 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('[parent] TEST OK', stdout)
 
     def test_100_socket_unix(self):
-        if os.path.exists("dummy"):
-            os.remove("dummy")
-        if os.path.exists("u"):
-            os.remove("u")
+        if os.path.exists("tmp/dummy"):
+            os.remove("tmp/dummy")
+        if os.path.exists("tmp/u"):
+            os.remove("tmp/u")
 
         stdout, _ = self.run_binary(['unix'])
         self.assertIn('Data: This is packet 0', stdout)
@@ -1300,6 +1300,13 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('Data: This is packet 7', stdout)
         self.assertIn('Data: This is packet 8', stdout)
         self.assertIn('Data: This is packet 9', stdout)
+
+    def test_101_socket_unix_subprocesses(self):
+        if os.path.exists("tmp/uds_subprocesses"):
+            os.remove("tmp/uds_subprocesses")
+
+        stdout, _ = self.run_binary(['unix_subprocesses'])
+        self.assertIn('TEST OK', stdout)
 
     def test_200_socket_udp(self):
         stdout, _ = self.run_binary(['udp'])

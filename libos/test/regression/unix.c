@@ -47,7 +47,7 @@ static int server_dummy_socket(void) {
         printf("Dummy socket was created\n");
 
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "dummy", sizeof(address.sun_path));
+    strncpy(address.sun_path, "tmp/dummy", sizeof(address.sun_path));
     socklen_t minimal_address_size = offsetof(struct sockaddr_un, sun_path) +
                                      strlen(address.sun_path) + 1;
 
@@ -78,7 +78,7 @@ static int server(void) {
         printf("The socket was created\n");
 
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
+    strncpy(address.sun_path, "tmp/u", sizeof(address.sun_path));
 
     if (bind(create_socket, (struct sockaddr*)&address, sizeof(address)) < 0) {
         perror("bind");
@@ -155,7 +155,7 @@ static int client(void) {
         printf("The socket was created\n");
 
     address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
+    strncpy(address.sun_path, "tmp/u", sizeof(address.sun_path));
 
     if (connect(create_socket, (struct sockaddr*)&address, sizeof(address)) == 0)
         printf("The connection was accepted with the server\n");

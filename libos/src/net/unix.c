@@ -9,9 +9,18 @@
  */
 
 /*
- * TODO: Currently pathname UNIX domain sockets are not visible on the Gramine filesystem (they
- * do not have a corresponding dentry). This shouldn't be hard to implement, but leaving this as
- * a todo for now - nothing seemed to require it, at least so far.
+ * FIXME: Currently named UNIX domain sockets are visible on the Gramine filesystem via a dummy file
+ *        (created on the host). Ideally, the file should be in-Gramine only and synchronized among
+ *        all processes of the Gramine instance, but we do not have such synchronization mechanism.
+ *
+ *        There are several issues with current approach of a dummy on-the-host file:
+ *          - If the file is created on a tmpfs mount, a sibling Gramine process won't be able to
+ *            connect to it anyway.
+ *          - Two independent Gramine instances may race on creating this dummy file on the host,
+ *            and one of them will fail (this wouldn't be the case with in-Gramine-only files).
+ *          - The dummy file is a regular file, it can be read/written but this won't affect the
+ *            behavior of the actual UNIX socket. On the other hand, real-world apps won't access
+ *            this file knowing that it is a UNIX socket.
  */
 
 #include "crypto.h"
@@ -19,7 +28,9 @@
 #include "libos_fs.h"
 #include "libos_internal.h"
 #include "libos_socket.h"
+#include "libos_table.h"
 #include "pal.h"
+#include "perm.h"
 
 /*!
  * \brief Verify UNIX socket address and convert it to a unique socket name.
@@ -72,6 +83,45 @@ static int unaddr_to_sockname(void* addr, size_t* addrlen, char* sock_name, size
     }
     assert(sock_name_size >= 2 * sizeof(hash) + 1);
     bytes2hex(hash, sizeof(hash), sock_name, sock_name_size);
+    return 0;
+}
+
+/*!
+ * \brief Extract UNIX socket address if it is a named UNIX socket.
+ *
+ * \param         addr           The socket address to convert.
+ * \param[in,out] addrlen        Pointer to the size of \p addr.
+ * \param[out]    named          Is it a named UNIX socket. If yes then \p pathname is updated.
+ * \param[out]    pathname       Buffer for the output pathname of the socket. On success
+ *                               contains a null terminated string.
+ * \param         pathname_size  Size of \p pathname.
+ *
+ * This function nust be called after unaddr_to_sockname() because it assumes \p addr to point to a
+ * correct sockaddr_un object.
+ */
+static int unaddr_to_pathname(void* addr, size_t addrlen, bool* named, char* pathname,
+                              size_t pathname_size) {
+    if (addrlen > sizeof(struct sockaddr_un)) {
+        addrlen = sizeof(struct sockaddr_un);
+    }
+
+    const char* path = (char*)addr + offsetof(struct sockaddr_un, sun_path);
+    size_t pathlen = addrlen - offsetof(struct sockaddr_un, sun_path);
+    assert(pathlen >= 1);
+    if (!path[0]) {
+        /* Unnamed UNIX socket. */
+        *named = false;
+        return 0;
+    }
+
+    /* Named UNIX socket. */
+    pathlen = strnlen(path, pathlen);
+    if (pathname_size < pathlen + 1) {
+        return -EINVAL;
+    }
+    memset(pathname, 0, pathname_size);
+    memcpy(pathname, path, pathlen);
+    *named = true;
     return 0;
 }
 
@@ -129,6 +179,27 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
     if (ret < 0) {
         return ret;
+    }
+
+    /* Named UNIX domain sockets are currently backed by a dummy file. This allows dir-specific
+     * operations like lookup, stat, and unlink. */
+    bool named;
+    size_t pathname_size = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path) + 1;
+    char pathname[pathname_size];
+    ret = unaddr_to_pathname(addr, addrlen, &named, pathname, pathname_size);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (named) {
+        int dummy_file_fd = do_openat(AT_FDCWD, pathname, O_CREAT | O_EXCL, PERM_rw_______);
+        if (dummy_file_fd < 0) {
+            return dummy_file_fd == -EEXIST ? -EADDRINUSE: dummy_file_fd;
+        }
+        ret = libos_syscall_close(dummy_file_fd);
+        if (ret < 0) {
+            return ret;
+        }
     }
 
     lock(&handle->lock);
@@ -226,6 +297,26 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
     if (ret < 0) {
         return ret;
+    }
+
+    /* Named UNIX domain sockets are currently backed by a dummy file. Check that file exists. */
+    bool named;
+    size_t pathname_size = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path) + 1;
+    char pathname[pathname_size];
+    ret = unaddr_to_pathname(addr, addrlen, &named, pathname, pathname_size);
+    if (ret < 0) {
+        return ret;
+    }
+
+    if (named) {
+        int dummy_file_fd = do_openat(AT_FDCWD, pathname, O_RDWR, /*mode=*/0);
+        if (dummy_file_fd < 0) {
+            return dummy_file_fd;
+        }
+        ret = libos_syscall_close(dummy_file_fd);
+        if (ret < 0) {
+            return ret;
+        }
     }
 
     lock(&handle->lock);
