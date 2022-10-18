@@ -164,7 +164,7 @@ int init_memory_bookkeeping(void) {
     }
 
 #ifdef __hppa__
-#error "Your arch grows stack upwards, this is not supported."
+#error "Your arch grows stack towards high addresses, this is not supported."
 #endif
     /* Allocate a guard page above the stack. We do not support further stack auto growth. */
     void* ptr = (void*)(proc_maps_info.stack_top - PAGE_SIZE);
@@ -183,7 +183,8 @@ int init_memory_bookkeeping(void) {
     uintptr_t start_addr = MMAP_MIN_ADDR;
     uintptr_t end_addr = MIN(proc_maps_info.highest_addr, ARCH_HIGHEST_ADDR);
 
-    /* Verify that the address is mappable. */
+    /* Verify that the address is mappable. `MMAP_MIN_ADDR` is hardcoded in Gramine and actual min
+     * mmap address could be different. */
     while (1) {
         if (start_addr >= end_addr) {
             return -PAL_ERROR_NOMEM;
@@ -193,7 +194,11 @@ int init_memory_bookkeeping(void) {
                                 MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if (!IS_PTR_ERR(ptr)) {
             DO_SYSCALL(munmap, ptr, g_pal_public_state.alloc_align);
-            break;
+            /* Check returned pointer in case of older kernels, which do not support
+             * `MAP_FIXED_NOREPLACE`. */
+            if (ptr == (void*)start_addr) {
+                break;
+            }
         } else if (PTR_TO_ERR(ptr) == -EEXIST) {
             break;
         }

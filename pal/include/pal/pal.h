@@ -146,7 +146,8 @@ struct pal_public_state {
     uintptr_t early_libos_mem_range_start;  /*!< start of memory usable before checkpoint restore */
     uintptr_t early_libos_mem_range_end;    /*!< end of memory usable before checkpoint restore */
 
-    struct pal_initial_mem_range* initial_mem_ranges; /*!< array of initial memory ranges */
+    struct pal_initial_mem_range* initial_mem_ranges; /*!< array of initial memory ranges, see
+                                                           `pal_memory.c` for more details */
     size_t initial_mem_ranges_len;
 
     /*
@@ -202,9 +203,9 @@ struct pal_initial_mem_range {
 /*!
  * \brief Allocate virtual memory and zero it out.
  *
- * \param  addr  Requested address. Must be aligned and non-NULL.
- * \param  size  Must be a positive number, aligned at the allocation alignment.
- * \param  prot  A combination of the `PAL_PROT_*` flags.
+ * \param addr  Requested address. Must be aligned and non-NULL.
+ * \param size  Must be a positive number, aligned at the allocation alignment.
+ * \param prot  A combination of the `PAL_PROT_*` flags.
  *
  * `addr` can be any valid address aligned at the allocation alignment. Any memory previously
  * allocated at the same address will be discarded. Overwriting any part of PAL memory is forbidden.
@@ -236,7 +237,7 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 /*!
  * \brief Set upcalls for memory bookkeeping
  *
- * \param alloc  Function to call to get a memmory range.
+ * \param alloc  Function to call to get a memory range.
  * \param free   Function to call to release the memory range.
  *
  * Both \p alloc and \p free must be thread-safe.
@@ -254,8 +255,8 @@ void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_add
  * \param      args                     An array of strings -- the arguments to be passed to the new
  *                                      process.
  * \param      reserved_mem_ranges      List of memory ranges that should not be used by the child
- *                                      process until app memory is checkpointed. Must be sorted in
- *                                      descending order.
+ *                                      process until app memory is restored from a checkpoint. Must
+ *                                      be sorted in descending order.
  * \param      reserved_mem_ranges_len  Length of \p reserved_mem_ranges.
  * \param[out] out_handle               On success contains the process handle.
  *

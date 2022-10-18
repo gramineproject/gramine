@@ -67,6 +67,8 @@ struct libos_mem_entry {
     void* addr;
     size_t size;
     pal_prot_flags_t prot; /* combination of PAL_PROT_* flags */
+    /* Dummy memory entry, used just for bookkeeping (i.e. no actual memory follows such entry).
+     * See `BEGIN_CP_FUNC(vma)` in `libos_vma.c` for more details. */
     bool dummy;
 };
 

@@ -64,7 +64,8 @@ int mem_bkeep_free(uintptr_t addr, size_t size) {
 
 void init_memory_management(void) {
     struct pal_public_state* pal_public_state = PalGetPalPublicState();
-    /* This dummy range is never freed. */
+    /* Because we are looking at free space between memory ranges, we need a VMA marking the end of
+     * available memory. This dummy VMA is never freed. */
     g_vmas[0] = (struct vma){
         .begin = (uintptr_t)pal_public_state->memory_address_end,
         .end = (uintptr_t)pal_public_state->memory_address_end,
@@ -90,7 +91,8 @@ void init_memory_management(void) {
             ignored_ranges++;
         }
     }
-    /* This dummy range is never freed. */
+    /* Because we are looking at free space between memory ranges, we need a VMA marking
+     * the beginning of available memory. This dummy VMA is never freed. */
     g_vmas[1 + pal_public_state->initial_mem_ranges_len] = (struct vma){
         .begin = (uintptr_t)pal_public_state->memory_address_start,
         .end = (uintptr_t)pal_public_state->memory_address_start,

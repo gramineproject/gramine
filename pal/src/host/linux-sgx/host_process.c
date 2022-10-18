@@ -199,6 +199,7 @@ int sgx_init_child_process(int parent_stream_fd, char** out_application_path, ch
 
     ret = DO_SYSCALL(close, proc_args.reserved_mem_ranges_fd);
     if (ret < 0) {
+        DO_SYSCALL(munmap, reserved_mem_ranges, proc_args.reserved_mem_ranges_size);
         goto out;
     }
 
