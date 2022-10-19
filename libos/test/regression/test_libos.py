@@ -8,6 +8,7 @@ import unittest
 
 from graminelibos.regression import (
     HAS_SGX,
+    IS_VM,
     ON_X86,
     USES_MUSL,
     RegressionTestCase,
@@ -993,6 +994,7 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_passthrough'])
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skipUnless(IS_VM, '/dev/gramine_test_dev is available only on some Jenkins machines')
     def test_003_device_ioctl(self):
         stdout, _ = self.run_binary(['device_ioctl'])
         self.assertIn('TEST OK', stdout)
