@@ -1523,6 +1523,7 @@ BEGIN_CP_FUNC(all_vmas) {
         return ret;
     }
     if (count == 0) {
+        free_vma_info_array(vmas, count);
         return -ENOMEM;
     }
 
