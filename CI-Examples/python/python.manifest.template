@@ -15,8 +15,9 @@ fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  { path = "{{ python.stdlib }}", uri = "file:{{ python.stdlib }}" },
-  { path = "{{ python.distlib }}", uri = "file:{{ python.distlib }}" },
+{% for path in python.get_sys_path(entrypoint) %}
+  { path = "{{ path }}", uri = "file:{{ path }}" },
+{% endfor %}
   { path = "{{ entrypoint }}", uri = "file:{{ entrypoint }}" },
   { path = "/etc/hosts", uri = "file:helper-files/hosts" },
 
@@ -41,8 +42,9 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
-  "file:{{ python.stdlib }}/",
-  "file:{{ python.distlib }}/",
+{% for path in python.get_sys_path(entrypoint) %}
+  "file:{{ path }}",
+{% endfor %}
   "file:scripts/",
   "file:helper-files/",
 ]
