@@ -721,8 +721,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
             ocall_exit(1, /*is_exitgroup=*/true);
         }
         if (rpc_thread_num < 0) {
-            log_error("'sgx.insecure__rpc_max_threads' not found in the manifest");
-            ocall_exit(1, /*is_exitgroup=*/true);
+            /* if neither new nor deprecated options are found in manifest, set to zero */
+            rpc_thread_num = 0;
         }
         log_error("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
                   "switching to 'sgx.insecure__rpc_max_threads'.");

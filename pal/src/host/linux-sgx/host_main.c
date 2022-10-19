@@ -662,7 +662,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
-    const char* thread_num_option = "sgx.max_threads";
     int64_t thread_num_int64;
     ret = toml_int_in(manifest_root, "sgx.max_threads", /*defaultval=*/-1, &thread_num_int64);
     if (ret < 0) {
@@ -684,20 +683,22 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
             ret = -EINVAL;
             goto out;
         }
-        thread_num_option = "sgx.thread_num";
         log_error("Detected deprecated syntax: 'sgx.thread_num'. Consider switching to "
                   "'sgx.max_threads'.");
     }
 
-    enclave_info->thread_num = thread_num_int64 ?: 1;
-
-    if (enclave_info->thread_num > MAX_DBG_THREADS) {
-        log_error("Too large '%s', maximum allowed is %d", thread_num_option, MAX_DBG_THREADS);
+    if (!thread_num_int64) {
+        log_error("'sgx.max_threads' must be a positive number");
         ret = -EINVAL;
         goto out;
     }
+    if (thread_num_int64 > MAX_DBG_THREADS) {
+        log_error("Too large 'sgx.max_threads', maximum allowed is %d", MAX_DBG_THREADS);
+        ret = -EINVAL;
+        goto out;
+    }
+    enclave_info->thread_num = thread_num_int64;
 
-    const char* rpc_thread_num_option = "sgx.insecure__rpc_max_threads";
     int64_t rpc_thread_num_int64;
     ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/-1,
                       &rpc_thread_num_int64);
@@ -717,22 +718,20 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
             goto out;
         }
         if (rpc_thread_num_int64 < 0) {
-            log_error("'sgx.insecure__rpc_max_threads' not found in the manifest");
-            ret = -EINVAL;
-            goto out;
+            /* if neither new nor deprecated options are found in manifest, set to zero */
+            rpc_thread_num_int64 = 0;
         }
-        rpc_thread_num_option = "sgx.insecure__rpc_thread_num";
         log_error("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
                   "switching to 'sgx.insecure__rpc_max_threads'.");
     }
 
-    enclave_info->rpc_thread_num = rpc_thread_num_int64;
-
-    if (enclave_info->rpc_thread_num > MAX_RPC_THREADS) {
-        log_error("Too large '%s', maximum allowed is %d", rpc_thread_num_option, MAX_RPC_THREADS);
+    if (rpc_thread_num_int64 > MAX_RPC_THREADS) {
+        log_error("Too large 'sgx.insecure__rpc_max_threads', maximum allowed is %d",
+                  MAX_RPC_THREADS);
         ret = -EINVAL;
         goto out;
     }
+    enclave_info->rpc_thread_num = rpc_thread_num_int64;
 
     if (enclave_info->rpc_thread_num && enclave_info->thread_num > RPC_QUEUE_SIZE) {
         log_error("Too many threads for exitless feature (more than capacity of RPC queue)");
