@@ -24,7 +24,7 @@ option('libgomp', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build patched libgomp (takes long time)')
 
 option('sgx_driver', type: 'combo',
-    choices: ['upstream', 'dcap1.6', 'dcap1.10', 'oot'],
+    choices: ['upstream', 'oot'],
     description: 'Flavour of the SGX driver')
 option('sgx_driver_include_path', type: 'string',
     description: 'Path to SGX driver headers (default value depends on sgx_driver)')

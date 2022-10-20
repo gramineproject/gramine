@@ -1,7 +1,7 @@
 #include <asm/errno.h>
 
 #include "generated_offsets_build.h"
-#include "host_gsgx.h"
+#include "host_sgx_driver.h"
 #include "pal.h"
 #include "pal_ecall_types.h"
 #include "pal_linux_defs.h"

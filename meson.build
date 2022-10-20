@@ -119,22 +119,6 @@ if sgx
         sgx_driver_header = 'sgx_user.h'
         sgx_driver_device_default = '/dev/isgx'
         sgx_driver_include_path_defaults = ['/opt/intel/linux-sgx-driver']
-    elif sgx_driver == 'dcap1.6'
-        # DCAP 1.6+ but below 1.10 (https://github.com/intel/SGXDataCenterAttestationPrimitives)
-        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_6', true)
-        sgx_driver_header = 'uapi/asm/sgx_oot.h'
-        sgx_driver_device_default = '/dev/sgx/enclave'
-        sgx_driver_include_path_defaults = [
-            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include',
-        ]
-    elif sgx_driver == 'dcap1.10'
-        # DCAP 1.10+ (https://github.com/intel/SGXDataCenterAttestationPrimitives)
-        conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
-        sgx_driver_header = 'sgx_user.h'
-        sgx_driver_device_default = '/dev/sgx/enclave'
-        sgx_driver_include_path_defaults = [
-            '/opt/intel/SGXDataCenterAttestationPrimitives/driver/linux/include',
-        ]
     else
         error('Unknown sgx_driver value')
     endif

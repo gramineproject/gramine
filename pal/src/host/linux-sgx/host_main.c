@@ -930,7 +930,7 @@ out:
 /* Warning: This function does not free up resources on failure - it assumes that the whole process
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd, bool need_gsgx,
+                        size_t env_size, int parent_stream_fd,
                         void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
     int ret;
     struct timeval tv;
@@ -952,7 +952,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
     log_debug("Gramine parsed TOML manifest file successfully");
 
-    ret = open_sgx_driver(need_gsgx);
+    ret = open_sgx_driver();
     if (ret < 0)
         return ret;
 
@@ -1101,7 +1101,6 @@ __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
     int ret = 0;
-    bool need_gsgx = true;
     char* manifest = NULL;
     void* reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = 0;
@@ -1132,10 +1131,11 @@ int main(int argc, char* argv[], char* envp[]) {
         return -ENOMEM;
     }
 
-    /* check whether host kernel supports FSGSBASE feature, otherwise we need the GSGX driver */
     uint64_t at_hwcap2;
-    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) == 0 && (at_hwcap2 & 0x2)) {
-        need_gsgx = false;
+    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) != 0 || !(at_hwcap2 & 0x2)) {
+        log_error("Gramine with Linux-SGX backend requires support for FSGSBASE CPU instructions "
+                  "in the host kernel. Please update your system.");
+        return -EINVAL;
     }
 
     g_libpal_path = strdup(argv[1]);
@@ -1208,7 +1208,7 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx,
+    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd,
                        reserved_mem_ranges, reserved_mem_ranges_size);
     if (ret < 0) {
         log_error("load_enclave() failed with error %d", ret);
