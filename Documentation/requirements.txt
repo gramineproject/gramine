@@ -1,7 +1,7 @@
 sphinx==1.8.0
 breathe<4.13.0
 sphinx_rtd_theme<1
-toml>=0.10
+tomli>=1.1.0
 
 # Work around Sphinx/docutils incompatibility, see https://github.com/sphinx-doc/sphinx/issues/9727.
 # TODO: This shouldn't be necessary once we upgrade to newer Sphinx (Sphinx 4.2.0 is not yet
