@@ -91,8 +91,6 @@ mbedtls_curl_libs = custom_target('mbedtls_curl',
         '@PRIVATE_DIR@',
         join_paths(meson.build_root(), 'subprojects'),
         '@OUTPUT@',
-        '--',
-        'SUFFIX=\'\'',
     ],
 
     input: ['mbedtls-mbedtls-3.2.1/Makefile', 'gramine.patch'],
@@ -122,13 +120,12 @@ mbedtls_pal_dep = declare_dependency(
     compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-pal.h"',
 )
 mbedtls_curl_dep = declare_dependency(
-    # HACK: Apparently Meson considers the `mbedtls_pal_libs` to be "not linkable", because it has
+    # HACK: Apparently Meson considers the `mbedtls_curl_libs` to be "not linkable", because it has
     # multiple outputs; however, it allows picking the outputs one by one.
     link_with: [mbedtls_curl_libs[0], mbedtls_curl_libs[1], mbedtls_curl_libs[2]],
-    # HACK: Meson treats ".h" as "sources", but not passed as command-line arguments to cc. This
-    # makes them suitable as sentries for enforcing compile order, at least the first time. We thus
-    # use the generated empty ".h" file and propagate it as part of the inter-subproject dependency
-    # to make sure `mbedtls_curl_libs` are ready before `libcurl` is compiling.
+    # HACK: Use the generated empty ".h" file and propagate it as part of the inter-subproject
+    # dependency to enforce compile order, i.e., to make sure `mbedtls_curl_libs` are ready before
+    # `libcurl` is compiling.
     sources: [mbedtls_curl_libs[3]],
     include_directories: mbedtls_inc,
     compile_args: '-DMBEDTLS_CONFIG_FILE="mbedtls/config-pal.h"',

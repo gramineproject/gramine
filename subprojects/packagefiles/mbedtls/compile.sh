@@ -1,7 +1,6 @@
 #!/bin/sh
 
-set -x
-set -e
+set -ex
 
 CURRENT_SOURCE_DIR="$1"
 VENDOR_SOURCE_DIR="$2"
