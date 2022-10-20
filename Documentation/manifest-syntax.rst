@@ -424,6 +424,9 @@ Gramine currently supports the following types of mount points:
 * ``encrypted``: Host-backed encrypted files. See :ref:`encrypted-files` for
   more information.
 
+* ``untrusted_shm``: Untrusted shared memory files. See :ref:`untrusted-shared-memory`
+  for more information.
+
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
   empty on Gramine instance startup) and are destroyed when a Gramine instance
@@ -1006,6 +1009,56 @@ Gramine:
    and using the same key obtained via ``/dev/attestation/keys/_sgx_mrenclave``
    in the application is insecure. If you need to derive encryption keys from
    such a "doubly-used" key, you must apply a KDF.
+
+.. _untrusted-shared-memory:
+
+Untrusted shared memory
+^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    fs.mounts = [
+      { type = "untrusted_shm", path = "[PATH]", uri = "[URI]" },
+    ]
+
+This syntax allows mounting shared memory objects that are accessible by both
+the application running inside Gramine and by other host software/hardware (host
+OS, other host processes, devices connected to the host). In Gramine, untrusted
+shared memory applies to files which must be mapped into application address
+space with the ``MAP_SHARED`` flag.
+
+URI can be a file or a directory. If a directory is mounted, all files under
+this directory are treated as shared memory objects (but sub-directories are
+inaccessible for security reasons). New files created in a shared memory mount
+are also automatically treated as shared memory objects. Creating
+sub-directories in a shared memory mount is not allowed, for security reasons.
+Files in a shared memory mount (or the mounted directory itself) need to be
+explicitly listed as ``allowed_files`` to be accessed. See :ref:`allowed_files`
+for more information.
+
+Typically, you should mount the directory ``/dev/shm/`` (it is used for sharing
+data between processes and devices) and allow specific files in it. When this
+directory is mounted, the Gramine application may create the files -- called
+"shared memory objects" in POSIX -- under this directory (for example, this is
+how ``shm_open()`` Glibc function works). It is not recommended to allow a
+directory unless the application creates shared memory objects with
+unpredictable names. Allowing a directory creates a risk of exposing unexpected
+data to the host.
+
+.. note ::
+   Adding shared memory mounts is insecure by itself in SGX environments:
+
+       - All data put in shared memory reside outside of the SGX enclave.
+       - Typically applications do not encrypt the data put in shared memory,
+         which may lead to leaks of enclave data.
+       - Untrusted host can modify data in shared memory as it wishes, so
+         applications could see or operate on maliciously modified data.
+
+   It is the responsibility of the app developer to correctly use shared memory,
+   with security implications in mind. In most cases, data in shared memory
+   should be preliminarily encrypted or integrity-protected by the user app
+   with a key pre-shared between all participating processes (and possibly
+   devices that use this shared memory).
 
 File check policy
 ^^^^^^^^^^^^^^^^^

@@ -22,6 +22,8 @@ fs.mounts = [
   { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
   { type = "encrypted", path = "/encrypted_file_mrenclave.dat", uri = "file:encrypted_file_mrenclave.dat", key_name = "_sgx_mrenclave" },
   { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
+  # for untrusted shared memory test (`shm.c`)
+  { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
 sgx.max_threads = 16
@@ -30,9 +32,10 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
   "file:tmp/",
-  "file:root",     # for getdents test
-  "file:testfile", # for mmap_file test
-  "file:scripts/", # for exec_script test
+  "file:root",              # for getdents test
+  "file:testfile",          # for mmap_file test
+  "file:scripts/",          # for exec_script test
+  "dev:/dev/shm/shm_test",  # for shm test
 ]
 
 sgx.trusted_files = [

@@ -152,10 +152,21 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         flags &= ~MAP_32BIT;
 #endif
 
+    void* memory_range_start = NULL;
+    void* memory_range_end   = NULL;
+
+    /* Shared mappings of files of "untrusted_shm" type use a different memory range.
+     * See "libos/src/fs/shm/fs.c" for more details. */
+    if ((flags & MAP_SHARED) && hdl && hdl->fs && !strcmp(hdl->fs->name, "untrusted_shm")) {
+        memory_range_start = g_pal_public_state->shared_address_start;
+        memory_range_end = g_pal_public_state->shared_address_end;
+    } else {
+        memory_range_start = g_pal_public_state->memory_address_start;
+        memory_range_end = g_pal_public_state->memory_address_end;
+    }
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < g_pal_public_state->memory_address_start
-                || (uintptr_t)g_pal_public_state->memory_address_end < (uintptr_t)addr + length) {
+        if (addr < memory_range_start || (uintptr_t)memory_range_end < (uintptr_t)addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
@@ -208,18 +219,23 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr && (uintptr_t)g_pal_public_state->memory_address_start <= (uintptr_t)addr
-                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->memory_address_end) {
-            ret = bkeep_mmap_any_in_range(g_pal_public_state->memory_address_start,
-                                          (char*)addr + length, length, prot, flags, hdl, offset,
-                                          NULL, &addr);
+        if (addr && (uintptr_t)memory_range_start <= (uintptr_t)addr
+                && (uintptr_t)addr + length <= (uintptr_t)memory_range_end) {
+            ret = bkeep_mmap_any_in_range(memory_range_start, (char*)addr + length, length, prot,
+                                          flags, hdl, offset, NULL, &addr);
         } else {
             /* Hacky way to mark we had no hit and need to search below. */
             ret = -1;
         }
         if (ret < 0) {
             /* We either had no hinted address or could not allocate memory at it. */
-            ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
+            if (memory_range_start == g_pal_public_state->memory_address_start) {
+                ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
+            } else {
+                /* Shared memory range does not have ASLR. */
+                ret = bkeep_mmap_any_in_range(memory_range_start, memory_range_end, length, prot,
+                                              flags, hdl, offset, NULL, &addr);
+            }
         }
         if (ret < 0) {
             ret = -ENOMEM;
