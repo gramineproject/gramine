@@ -23,9 +23,9 @@
 #include <unistd.h>
 
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/ecp.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/pk.h>
-#include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/x509_crt.h>
 
@@ -152,9 +152,9 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
     uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, PUB_KEY_SIZE_MAX);
-    if (pk_der_size_byte != RSA_PUB_3072_KEY_DER_LEN)
-        return MBEDTLS_ERR_PK_INVALID_PUBKEY;
+    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(pk, pk_der, sizeof(pk_der));
+    if (pk_der_size_byte < 0)
+        return pk_der_size_byte;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
@@ -225,14 +225,12 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
+    ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY));
     if (ret < 0)
         goto out;
 
-    mbedtls_rsa_init(mbedtls_pk_rsa(*key));
-
-    ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
-                              RSA_PUB_3072_KEY_LEN, RSA_PUB_EXPONENT);
+    ret = mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_SECP384R1, mbedtls_pk_ec(*key), mbedtls_ctr_drbg_random,
+                              &ctr_drbg);
     if (ret < 0)
         goto out;
 
