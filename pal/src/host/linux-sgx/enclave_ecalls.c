@@ -69,11 +69,12 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
             return;
         }
 
-        struct ecall_enclave_start* sargs;
-        if (!sgx_is_valid_untrusted_ptr(ecall_args, sizeof(*sargs), alignof(__typeof__(*sargs)))) {
+        struct ecall_enclave_start* start_args;
+        if (!sgx_is_valid_untrusted_ptr(ecall_args, sizeof(*start_args),
+                                        alignof(__typeof__(*start_args)))) {
             return;
         }
-        sargs = ecall_args;
+        start_args = ecall_args;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
         // TODO: This eats 1KB of a stack frame which lives for the whole lifespan of this enclave.
@@ -87,17 +88,19 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         init_xsave_size(report.body.attributes.xfrm);
 
         /* pal_linux_main is responsible for checking the passed arguments */
-        pal_linux_main(COPY_UNTRUSTED_VALUE(&sargs->libpal_uri),
-                       COPY_UNTRUSTED_VALUE(&sargs->libpal_uri_len),
-                       COPY_UNTRUSTED_VALUE(&sargs->args), COPY_UNTRUSTED_VALUE(&sargs->args_size),
-                       COPY_UNTRUSTED_VALUE(&sargs->env), COPY_UNTRUSTED_VALUE(&sargs->env_size),
-                       COPY_UNTRUSTED_VALUE(&sargs->parent_stream_fd),
-                       COPY_UNTRUSTED_VALUE(&sargs->qe_targetinfo),
-                       COPY_UNTRUSTED_VALUE(&sargs->topo_info),
-                       COPY_UNTRUSTED_VALUE(&sargs->rpc_queue),
-                       COPY_UNTRUSTED_VALUE(&sargs->dns_host_conf),
-                       COPY_UNTRUSTED_VALUE(&sargs->reserved_mem_ranges),
-                       COPY_UNTRUSTED_VALUE(&sargs->reserved_mem_ranges_size));
+        pal_linux_main(COPY_UNTRUSTED_VALUE(&start_args->libpal_uri),
+                       COPY_UNTRUSTED_VALUE(&start_args->libpal_uri_len),
+                       COPY_UNTRUSTED_VALUE(&start_args->args),
+                       COPY_UNTRUSTED_VALUE(&start_args->args_size),
+                       COPY_UNTRUSTED_VALUE(&start_args->env),
+                       COPY_UNTRUSTED_VALUE(&start_args->env_size),
+                       COPY_UNTRUSTED_VALUE(&start_args->parent_stream_fd),
+                       COPY_UNTRUSTED_VALUE(&start_args->qe_targetinfo),
+                       COPY_UNTRUSTED_VALUE(&start_args->topo_info),
+                       COPY_UNTRUSTED_VALUE(&start_args->rpc_queue),
+                       COPY_UNTRUSTED_VALUE(&start_args->dns_host_conf),
+                       COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges),
+                       COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges_size));
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.

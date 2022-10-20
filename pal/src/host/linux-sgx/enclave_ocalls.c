@@ -2105,16 +2105,16 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
     }
 
     if (retval >= 0) {
-        struct ocall_get_quote quota_copied;
-        if (!sgx_copy_to_enclave(&quota_copied, sizeof(quota_copied), ocall_quote_args,
+        struct ocall_get_quote quote_copied;
+        if (!sgx_copy_to_enclave(&quote_copied, sizeof(quote_copied), ocall_quote_args,
                                  sizeof(*ocall_quote_args))) {
             retval = -EACCES;
             goto out;
         }
 
         /* copy each field inside and free the out-of-enclave buffers */
-        if (quota_copied.quote) {
-            size_t len = quota_copied.quote_len;
+        if (quote_copied.quote) {
+            size_t len = quote_copied.quote_len;
             if (len > SGX_QUOTE_MAX_SIZE) {
                 retval = -EACCES;
                 goto out;
@@ -2126,12 +2126,12 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
                 goto out;
             }
 
-            if (!sgx_copy_to_enclave(buf, len, quota_copied.quote, len)) {
+            if (!sgx_copy_to_enclave(buf, len, quote_copied.quote, len)) {
                 retval = -EACCES;
                 goto out;
             }
 
-            retval = ocall_munmap_untrusted(quota_copied.quote, ALLOC_ALIGN_UP(len));
+            retval = ocall_munmap_untrusted(quote_copied.quote, ALLOC_ALIGN_UP(len));
             if (retval < 0) {
                 goto out;
             }

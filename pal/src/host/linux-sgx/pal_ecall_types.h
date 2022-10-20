@@ -31,5 +31,5 @@ struct ecall_enclave_start {
     void*                     reserved_mem_ranges;
     size_t                    reserved_mem_ranges_size;
 
-    struct rpc_queue*  rpc_queue; /* pointer to RPC queue in untrusted mem */
+    struct rpc_queue*         rpc_queue; /* pointer to RPC queue in untrusted mem */
 };

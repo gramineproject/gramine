@@ -32,8 +32,8 @@ extern bool g_vtune_profile_enabled;
 
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
-static long sgx_ocall_exit(void* pargs) {
-    struct ocall_exit* ocall_exit_args = (struct ocall_exit*)pargs;
+static long sgx_ocall_exit(void* args) {
+    struct ocall_exit* ocall_exit_args = (struct ocall_exit*)args;
 
     if (ocall_exit_args->exitcode != (int)((uint8_t)ocall_exit_args->exitcode)) {
         log_debug("Saturation error in exit code %d, getting rounded down to %u",

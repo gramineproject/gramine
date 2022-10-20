@@ -23,7 +23,7 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
 
     struct ecall_enclave_start start_args = {
         .libpal_uri               = libpal_uri,
-        .libpal_uri_len           = strlen(start_args.libpal_uri),
+        .libpal_uri_len           = strlen(libpal_uri),
         .args                     = args,
         .args_size                = args_size,
         .env                      = env,
