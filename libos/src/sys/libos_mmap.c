@@ -48,7 +48,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                          unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
-
+    void* user_address_start, *user_address_end = NULL;
+    
     if (!(flags & MAP_FIXED) && addr)
         addr = ALLOC_ALIGN_DOWN_PTR(addr);
 
@@ -130,10 +131,18 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         flags &= ~MAP_32BIT;
 #endif
 
+    if (flags & MAP_SHARED && hdl && !strcmp(hdl->fs->name, "shm")) {
+        user_address_start = g_pal_public_state->shared_address_start;
+        user_address_end = g_pal_public_state->shared_address_end;
+    }
+    else {
+        user_address_start = g_pal_public_state->memory_address_start;
+        user_address_end = g_pal_public_state->memory_address_end;
+    }
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < g_pal_public_state->memory_address_start
-                || (uintptr_t)g_pal_public_state->memory_address_end < (uintptr_t)addr + length) {
+        if (addr < user_address_start
+                || (uintptr_t)user_address_end < (uintptr_t)addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
@@ -150,18 +159,18 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr && (uintptr_t)g_pal_public_state->memory_address_start <= (uintptr_t)addr
-                && (uintptr_t)addr + length <= (uintptr_t)g_pal_public_state->memory_address_end) {
-            ret = bkeep_mmap_any_in_range(g_pal_public_state->memory_address_start,
-                                          (char*)addr + length, length, prot, flags, hdl, offset,
-                                          NULL, &addr);
+        if (addr && (uintptr_t)user_address_start <= (uintptr_t)addr
+                && (uintptr_t)addr + length <= (uintptr_t)user_address_end) {
+            ret = bkeep_mmap_any_in_range(user_address_start, (char*)addr + length, length, prot,
+                                          flags, hdl, offset, NULL, &addr);
         } else {
             /* Hacky way to mark we had no hit and need to search below. */
             ret = -1;
         }
         if (ret < 0) {
             /* We either had no hinted address or could not allocate memory at it. */
-            ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
+            ret = bkeep_mmap_any_in_range(user_address_start,user_address_end, length, prot, flags,
+                                          hdl, offset, NULL, &addr);
         }
         if (ret < 0) {
             ret = -ENOMEM;

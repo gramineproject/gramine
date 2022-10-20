@@ -573,6 +573,23 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
+    void* shared_memory_start = (void*)SHARED_ADDR_MIN;
+    while (1) {
+        int flags = MAP_NORESERVE | MAP_UNINITIALIZED | MAP_ANONYMOUS | MAP_FIXED | MAP_PRIVATE;
+        int ret = ocall_mmap_untrusted(&shared_memory_start, SHARED_MEM_SIZE, PROT_NONE, flags,
+                                       /*fd=*/-1, /*offset=*/0);
+        if (ret == 0) 
+            break;
+        if (shared_memory_start < (void*)((unsigned long)shared_memory_start >> 1)) {
+            log_error("Not enough shared memory.");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+        shared_memory_start = (void*)((unsigned long)shared_memory_start >> 1);
+    }
+
+    g_pal_public_state.shared_address_start = shared_memory_start;
+    g_pal_public_state.shared_address_end = shared_memory_start + SHARED_MEM_SIZE;
+
     if (parent_stream_fd < 0) {
         /* First process does not have reserved memory ranges. */
         urts_reserved_mem_ranges = NULL;

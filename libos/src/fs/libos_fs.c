@@ -31,6 +31,7 @@ static struct libos_fs* g_builtin_fs[] = {
     &pseudo_builtin_fs,
     &synthetic_builtin_fs,
     &path_builtin_fs,
+    &shm_builtin_fs,
 };
 
 static struct libos_lock g_mount_mgr_lock;
@@ -190,6 +191,31 @@ static int mount_sys(void) {
         .path = "/sys",
         .uri = "sys",
     });
+    
+    char*  shared_memory_str = NULL;
+    ret = toml_string_in(g_manifest_root,
+                         "sys.insecure__shared_memory", &shared_memory_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.insecure__shared_memory'");
+        return ret;
+    }
+
+    if (shared_memory_str) {
+        if (!strcmp(shared_memory_str, "none")) {
+            /* do nothing */
+        } else if (!strcmp(shared_memory_str, "passthrough")) {
+            ret = mount_fs(&(struct libos_mount_params){
+                .type = "shm",
+                .path = "/dev/shm",
+                .uri = URI_PREFIX_FILE "/dev/shm",
+            });
+        } else {
+            log_error("Unknown 'sys.insecure__shared_memory'");
+            ret = -EINVAL;
+        }
+        free(shared_memory_str);
+    }
+
     if (ret < 0)
         return ret;
 

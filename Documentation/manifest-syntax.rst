@@ -421,6 +421,20 @@ Start (current working) directory
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
 
+Allowing POSIX shared memory objects
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.insecure__shared_memory = "[none|passthrough]"
+    (Default: "none")
+
+If `passthrough` is specified, host-level path `/dev/shm` is mounted to `/dev/shm`
+in Gramine, which is folder contains shared memory file created by `shm_open()`.
+Shared memory object is created in untrusted memory, and accessible by its
+child, another graminized and native application. The memory regions also can
+be shared between graminized applications and an arbitrary host device.
+
 SGX syntax
 ----------
 

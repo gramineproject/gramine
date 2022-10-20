@@ -28,3 +28,11 @@
 
 #define MAX_ARGS_SIZE 10000000
 #define MAX_ENV_SIZE  10000000
+
+/*
+ * The address should be in untrusted memory (outside of enclave), and should not overlap with the
+ * ASan shadow memory area (see `asan.h`) or DBGINFO_ADDR (see `sgx_gdb.h`).
+ */
+#define SHARED_ADDR_MIN 0x40000000000ULL /* 4TB */
+#define SHARED_MEM_SIZE 0x10000000000ULL /* 1TB */
+
