@@ -8,7 +8,7 @@ import platform
 import subprocess
 import sys
 
-import toml
+import tomli
 
 from . import ninja_syntax, _CONFIG_SYSLIBDIR, _CONFIG_PKGLIBDIR
 
@@ -47,7 +47,8 @@ class TestConfig:
     def __init__(self, path):
         self.config_path = path
 
-        data = toml.load(path)
+        with open(path, "rb") as f:
+            data = tomli.load(f)
 
         self.manifests = self.get_manifests(data)
         arch = platform.machine()
