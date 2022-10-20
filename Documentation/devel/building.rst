@@ -38,11 +38,11 @@ Run the following command on Ubuntu LTS to install dependencies::
     sudo apt-get install -y build-essential \
         autoconf bison gawk nasm ninja-build pkg-config python3 python3-click \
         python3-jinja2 python3-pip python3-pyelftools wget
-    sudo python3 -m pip install 'meson>=0.56' 'toml>=0.10'
+    sudo python3 -m pip install 'meson>=0.56' 'tomli>=1.1.0' 'tomli-w>=0.4.0'
 
-You can also install Meson and python3-toml from apt instead of pip, but only if
-your distro is new enough to have Meson >= 0.56 and python3-toml >= 0.10 (Debian
-11, Ubuntu 20.10).
+You can also install Meson, python3-tomli and python3-tomli-w from apt instead
+of pip, but only if your distro is new enough to have Meson >= 0.56,
+python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04).
 
 For GDB support and to run all tests locally you also need to install::
 
