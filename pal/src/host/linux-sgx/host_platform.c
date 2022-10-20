@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 #include "aesm.pb-c.h"
-#include "host_gsgx.h"
+#include "host_sgx_driver.h"
 #include "host_internal.h"
 #include "host_log.h"
 #include "linux_utils.h"

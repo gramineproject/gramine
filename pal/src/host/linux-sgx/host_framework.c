@@ -1,42 +1,24 @@
 #include <asm/errno.h>
 
 #include "hex.h"
-#include "host_gsgx.h"
+#include "host_sgx_driver.h"
 #include "host_internal.h"
 #include "linux_utils.h"
 #include "sgx_arch.h"
 
-static int g_gsgx_device = -1;
 static int g_isgx_device = -1;
 
-static void* g_zero_pages       = NULL;
+static void*  g_zero_pages      = NULL;
 static size_t g_zero_pages_size = 0;
 
-int open_sgx_driver(bool need_gsgx) {
-    if (need_gsgx) {
-        g_gsgx_device = DO_SYSCALL(open, GSGX_FILE, O_RDWR | O_CLOEXEC, 0);
-        if (g_gsgx_device < 0) {
-            log_error(
-                "\n\tSystem does not support FSGSBASE instructions, which Gramine requires on SGX.\n\n"
-                "\tThe best option is to move to a newer Linux kernel with FSGSBASE support (5.9+), or\n"
-                "\ta kernel with a back-ported patch to support FSGSBASE.\n"
-                "\tOne may also load the Gramine SGX module, although this is insecure.\n"
-                "\tIf the Gramine SGX module is loaded, check permissions on the device "
-                GSGX_FILE ",\n\tas we cannot open this file.");
-            return g_gsgx_device;
-        }
-    }
-
-    g_isgx_device = DO_SYSCALL(open, ISGX_FILE, O_RDWR | O_CLOEXEC, 0);
-    if (g_isgx_device < 0) {
+int open_sgx_driver(void) {
+    int ret = DO_SYSCALL(open, ISGX_FILE, O_RDWR | O_CLOEXEC, 0);
+    if (ret < 0) {
         log_error("Cannot open device " ISGX_FILE ". "
                   "Please make sure the Intel SGX kernel module is loaded.");
-        if (need_gsgx) {
-            DO_SYSCALL(close, g_gsgx_device);
-            g_gsgx_device = -1;
-        }
-        return g_isgx_device;
+        return ret;
     }
+    g_isgx_device = ret;
 
     return 0;
 }
@@ -410,7 +392,6 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
 
     if (ret) {
         const char* error;
-        /* DEP 3/22/17: Try to improve error messages */
         switch (ret) {
             case SGX_INVALID_SIG_STRUCT:
                 error = "Invalid SIGSTRUCT";
@@ -424,7 +405,7 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
             case SGX_INVALID_SIGNATURE:
                 error = "Invalid signature";
                 break;
-            case SGX_INVALID_LICENSE:
+            case SGX_INVALID_EINITTOKEN:
                 error = "Invalid EINIT token";
                 break;
             case SGX_INVALID_CPUSVN:

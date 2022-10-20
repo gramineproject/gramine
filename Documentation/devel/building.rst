@@ -187,7 +187,6 @@ The ``-Dsgx_driver`` parameter controls which SGX driver to use:
 
 * ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
   5.11+),
-* ``dcap1.6`` for Intel DCAP version 1.6 or higher,  but below 1.10,
 * ``dcap1.10`` for Intel DCAP version 1.10 or higher,
 * ``oot`` for non-DCAP, out-of-tree version of the driver.
 

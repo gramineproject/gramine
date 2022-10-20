@@ -10,7 +10,7 @@ stage('build') {
         cd /opt/intel
         git clone https://github.com/intel/SGXDataCenterAttestationPrimitives.git
         cd SGXDataCenterAttestationPrimitives
-        git checkout DCAP_1.6
+        git checkout DCAP_1.14
         # no need to build, we only need the SGX header file (sgx_oot.h)
     '''
 
@@ -34,7 +34,7 @@ stage('build') {
                 -Ddirect=disabled \
                 -Dsgx=enabled \
                 -Dtests=enabled \
-                -Dsgx_driver=dcap1.6 \
+                -Dsgx_driver=dcap1.10 \
                 $MESON_OPTIONS
             ninja -vC build-dcap
         '''
