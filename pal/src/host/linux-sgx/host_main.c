@@ -1118,7 +1118,7 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     uint64_t at_hwcap2;
-    if (!get_aux_value(envp, AT_HWCAP2, &at_hwcap2) == 0 && (at_hwcap2 & 0x2)) {
+    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) != 0 || !(at_hwcap2 & 0x2)) {
         log_error("Gramine with Linux-SGX backend requires support for FSGSBASE CPU instruction "
                   "set in the host kernel. Please update your system.");
         return -EINVAL;
