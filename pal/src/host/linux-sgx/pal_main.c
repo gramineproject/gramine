@@ -16,7 +16,10 @@
 #include <stdnoreturn.h>
 
 #include "api.h"
+#include "asan.h"
+#include "assert.h"
 #include "enclave_tf.h"
+#include "gdb_integration/sgx_gdb.h"
 #include "init.h"
 #include "pal.h"
 #include "pal_internal.h"
@@ -602,6 +605,27 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
      * set below. */
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
+
+    static_assert(SHARED_ADDR_MIN >= DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
+                      || DBGINFO_ADDR >= SHARED_ADDR_MIN + SHARED_MEM_SIZE,
+                  "SHARED_ADDR overlaps with DBGINFO_ADDR");
+#ifdef ASAN
+    static_assert(SHARED_ADDR_MIN >= ASAN_SHADOW_START + ASAN_SHADOW_LENGTH
+                      || ASAN_SHADOW_START >= SHARED_ADDR_MIN + SHARED_MEM_SIZE,
+                  "SHARED_ADDR overlaps with ASAN_SHADOW");
+#endif
+    void* shared_memory_start = (void*)SHARED_ADDR_MIN;
+    ret = ocall_mmap_untrusted(&shared_memory_start, SHARED_MEM_SIZE, PROT_NONE,
+                               MAP_NORESERVE | MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE,
+                               /*fd=*/-1, /*offset=*/0);
+    if (ret < 0) {
+        log_error("Cannot allocate shared memory.");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    assert(shared_memory_start == (void*)SHARED_ADDR_MIN);
+
+    g_pal_public_state.shared_address_start = shared_memory_start;
+    g_pal_public_state.shared_address_end = shared_memory_start + SHARED_MEM_SIZE;
 
     if (parent_stream_fd < 0) {
         /* First process does not have reserved memory ranges. */

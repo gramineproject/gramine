@@ -201,12 +201,38 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
+static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+                   uint64_t size) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+    assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
+
+    uint64_t dummy;
+    if (__builtin_add_overflow(offset, size, &dummy)) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    if (addr < g_pal_public_state.shared_address_start
+            || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
+        log_warning("Could not map a device outside of the shared memory range at %p-%p", addr,
+                    addr + size);
+        return -PAL_ERROR_DENIED;
+    }
+
+    void* mem = addr;
+    /* MAP_FIXED is intentional to override a previous mapping */
+    int ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
+                                   handle->dev.fd, offset);
+    assert(mem == addr);
+    return ret < 0 ? unix_to_pal_error(ret) : ret;
+}
+
 struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
     .destroy        = &dev_destroy,
     .delete         = &dev_delete,
+    .map            = &dev_map,
     .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
