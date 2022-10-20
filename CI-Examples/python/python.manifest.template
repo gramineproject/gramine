@@ -43,7 +43,7 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/usr/{{ arch_libdir }}/",
 {% for path in python.get_sys_path(entrypoint) %}
-  "file:{{ path }}",
+  "file:{{ path }}{{ '/' if path.is_dir() else '' }}",
 {% endfor %}
   "file:scripts/",
   "file:helper-files/",
