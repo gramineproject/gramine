@@ -34,7 +34,7 @@ def python_get_sys_path(interpreter, nonexisting=False):
         '''import sys; print('\\0'.join(path for path in sys.path if path), end='')'''
     ]).split(b'\0'):
         path = pathlib.Path(os.fsdecode(path))
-        if nonexisting and not path.exists():
+        if not nonexisting and not path.exists():
             continue
         yield path
 
