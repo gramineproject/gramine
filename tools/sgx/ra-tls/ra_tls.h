@@ -27,7 +27,7 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
 #define SHA256_DIGEST_SIZE       32
-#define PUB_KEY_SIZE_MAX         512
+#define PUB_KEY_SIZE_MAX         128 /* enough for the only currently supported algo (ECDSA-384) */
 #define IAS_REQUEST_NONCE_LEN    32
 
 #define OID(N) \

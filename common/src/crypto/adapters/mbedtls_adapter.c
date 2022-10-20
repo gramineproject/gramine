@@ -12,6 +12,7 @@
 #include "crypto.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/cmac.h"
+#include "mbedtls/ecp.h"
 #include "mbedtls/gcm.h"
 #include "mbedtls/hkdf.h"
 #include "mbedtls/net_sockets.h"

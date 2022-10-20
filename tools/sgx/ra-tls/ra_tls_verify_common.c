@@ -164,8 +164,8 @@ int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oi
 
 /*! calculate sha256 over public key from \p crt and copy it into \p sha */
 static int sha256_over_crt_pk(mbedtls_x509_crt* crt, uint8_t* sha) {
-    /* TODO: Gramine now accepts only ECDSA key with P-384 curve. Remove below once the support for
-     * more than one cipher scheme is added. */
+    /* TODO: Gramine currently accepts only ECDSA key with P-384 curve. Remove below once the
+     * support for more than one cipher scheme is added. */
     if (mbedtls_pk_get_type(&crt->pk) != MBEDTLS_PK_ECKEY ||
             mbedtls_pk_ec(crt->pk)->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP384R1) {
         return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
