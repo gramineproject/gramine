@@ -1,13 +1,7 @@
-/* NOTE: Under Gramine, this test must be run only in fork mode.
- * This is due to Gramine restricting communication via Unix
- * domain sockets only for processes in same Gramine instance
- * (i.e. only between parent and its child in this test).
- */
-
+#define _GNU_SOURCE
 #include <err.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <stddef.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,206 +12,150 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-enum { SINGLE, PARALLEL } mode = PARALLEL;
-int do_fork                    = 0;
+#include "common.h"
+#include "rw_file.h"
 
-int pipefds[2];
+#define SRV_ADDR_NONEXISTING "/tmp/nonexisting/nonexisting"
+#define SRV_ADDR_DUMMY       "tmp/dummy"
+#define SRV_ADDR             "tmp/unix_socket"
 
-static void nonexisting_socket(void) {
-    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sock < 0) {
-        err(1, "nonexisting-socket creation failed");
-    }
+static const char g_buffer[] = "Hello from UDS server!";
 
-    struct sockaddr_un address;
-    address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "/var/lib/sss/nonexisting/nonexisting", sizeof(address.sun_path));
+static void check_nonexisting_socket(void) {
+    int s = CHECK(socket(AF_UNIX, SOCK_STREAM, 0));
 
-    int ret = connect(sock, (struct sockaddr*)&address, sizeof(address));
+    struct sockaddr_un sa = {
+        .sun_family = AF_UNIX,
+        .sun_path = SRV_ADDR_NONEXISTING,
+    };
+
+    int ret = connect(s, (void*)&sa, sizeof(sa));
     if (ret == 0 || errno != ENOENT) {
-        err(1, "nonexisting-socket connect didn't fail with ENOENT");
+        errx(1, "nonexisting-socket connect didn't fail with ENOENT");
     }
+
+    CHECK(close(s));
 }
 
-static int server_dummy_socket(void) {
-    int create_socket;
-    struct sockaddr_un address;
+static void create_dummy_socket(void) {
+    int s = CHECK(socket(AF_UNIX, SOCK_STREAM, 0));
 
-    if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) > 0)
-        printf("Dummy socket was created\n");
-
-    address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "dummy", sizeof(address.sun_path));
-    socklen_t minimal_address_size = offsetof(struct sockaddr_un, sun_path) +
-                                     strlen(address.sun_path) + 1;
-
-    if (bind(create_socket, (struct sockaddr*)&address, minimal_address_size) < 0) {
-        perror("bind");
-        close(create_socket);
-        exit(1);
-    }
-
-    if (listen(create_socket, 3) < 0) {
-        perror("listen");
-        close(create_socket);
-        exit(1);
-    }
-
+    struct sockaddr_un sa = {
+        .sun_family = AF_UNIX,
+        .sun_path = SRV_ADDR_DUMMY,
+    };
+    CHECK(bind(s, (void*)&sa, sizeof(sa)));
+    CHECK(listen(s, 5));
     /* do not close this socket to test two sockets in parallel */
-    return 0;
 }
 
-static int server(void) {
-    int create_socket, new_socket;
-    socklen_t addrlen;
-    int bufsize  = 1024;
-    char* buffer = malloc(bufsize);
-    struct sockaddr_un address;
+static void server(int pipefd) {
+    int s = CHECK(socket(AF_UNIX, SOCK_STREAM, 0));
 
-    if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) > 0)
-        printf("The socket was created\n");
+    struct sockaddr_un sa = {
+        .sun_family = AF_UNIX,
+        .sun_path = SRV_ADDR,
+    };
+    CHECK(bind(s, (void*)&sa, sizeof(sa)));
+    CHECK(listen(s, 5));
 
-    address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
+    char c = 0;
+    ssize_t x = CHECK(write(pipefd, &c, sizeof(c)));
+    if (x != sizeof(c)) {
+        errx(1, "client terminated unexpectedly");
+    }
+    CHECK(close(pipefd));
 
-    if (bind(create_socket, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        perror("bind");
-        close(create_socket);
-        exit(1);
+    int client = CHECK(accept(s, NULL, NULL));
+
+    CHECK(close(s));
+
+    x = CHECK(posix_fd_write(client, g_buffer, sizeof(g_buffer)));
+    if (x != sizeof(g_buffer)) {
+        errx(1, "partial write to client");
     }
 
-    if (listen(create_socket, 3) < 0) {
-        perror("listen");
-        close(create_socket);
-        exit(1);
-    }
-
-    if (mode == PARALLEL) {
-        close(pipefds[0]);
-        char byte = 0;
-        if (write(pipefds[1], &byte, 1) != 1) {
-            perror("write error");
-            exit(1);
-        }
-    }
-
-    addrlen    = sizeof(address);
-    new_socket = accept(create_socket, (struct sockaddr*)&address, &addrlen);
-
-    if (new_socket < 0) {
-        perror("accept");
-        close(create_socket);
-        exit(1);
-    }
-
-    close(create_socket);
-
-    printf("The client is connected...\n");
-
-    if (do_fork) {
-        if (fork() > 0) {
-            close(new_socket);
-            wait(NULL);
-            return 0;
-        }
-    }
-
-    for (int i = 0; i < 10; i++) {
-        sprintf(buffer, "Data: This is packet %d\n", i);
-        if (sendto(new_socket, buffer, strlen(buffer), 0, 0, 0) == -1) {
-            fprintf(stderr, "sendto() failed\n");
-            exit(1);
-        }
-    }
-
-    close(new_socket);
-    if (do_fork)
-        exit(0);
-    return 0;
+    CHECK(close(client));
 }
 
-static int client(void) {
-    int count, create_socket;
-    int bufsize  = 1024;
-    char* buffer = malloc(bufsize);
-    struct sockaddr_un address;
+static void client(int pipefd) {
+    char c = 0;
+    ssize_t x = CHECK(read(pipefd, &c, sizeof(c)));
+    if (x != sizeof(c)) {
+        errx(1, "server terminated unexpectedly");
+    }
+    CHECK(close(pipefd));
 
-    if (mode == PARALLEL) {
-        close(pipefds[1]);
-        char byte = 0;
-        if (read(pipefds[0], &byte, 1) != 1) {
-            perror("read error");
-            return 1;
-        }
+#if 0 /* FIXME: currently Gramine doesn't reflect named UNIX sockets in file system */
+    /* named UNIX domain sockets must create FS files, verify it */
+    struct stat statbuf;
+    CHECK(stat(SRV_ADDR, &statbuf));
+    if (statbuf.st_uid != getuid() || statbuf.st_gid != getgid()) {
+        errx(1, "unexpected UID/GID of file `%s`", SRV_ADDR);
+    }
+    if ((statbuf.st_mode & S_IFMT) != S_IFSOCK) {
+        errx(1, "file `%s` is not a UNIX domain socket", SRV_ADDR);
+    }
+#endif
+
+    int s = CHECK(socket(AF_UNIX, SOCK_STREAM, 0));
+
+    struct sockaddr_un sa = {
+        .sun_family = AF_UNIX,
+        .sun_path = SRV_ADDR,
+    };
+    CHECK(connect(s, (void*)&sa, sizeof(sa)));
+
+    char buf[sizeof(g_buffer) + 1] = { 0 };
+    x = CHECK(posix_fd_read(s, buf, sizeof(buf) - 1));
+    if (x != sizeof(g_buffer)) {
+        errx(1, "partial read from server");
     }
 
-    if ((create_socket = socket(AF_UNIX, SOCK_STREAM, 0)) >= 0)
-        printf("The socket was created\n");
-
-    address.sun_family = AF_UNIX;
-    strncpy(address.sun_path, "u", sizeof(address.sun_path));
-
-    if (connect(create_socket, (struct sockaddr*)&address, sizeof(address)) == 0)
-        printf("The connection was accepted with the server\n");
-    else {
-        printf("The connection was not accepted with the server\n");
-        exit(0);
+    if (strcmp(buf, g_buffer)) {
+        errx(1, "unexpected message from server: expected %s, got %s", g_buffer, buf);
     }
 
-    if (do_fork) {
-        if (fork() > 0) {
-            close(create_socket);
-            wait(NULL);
-            return 0;
-        }
-    }
-
-    puts("Receiving:");
-    while ((count = recv(create_socket, buffer, bufsize, 0)) > 0) {
-        fwrite(buffer, count, 1, stdout);
-    }
-    puts("Done");
-
-    close(create_socket);
-    if (do_fork)
-        exit(0);
-    return 0;
+    CHECK(close(s));
 }
 
-int main(int argc, char** argv) {
-    /* check that we cannot connect to a non-existing UNIX domain socket */
-    nonexisting_socket();
+int main(void) {
+    check_nonexisting_socket();
+    create_dummy_socket();
 
-    if (argc > 1) {
-        if (strcmp(argv[1], "client") == 0) {
-            mode = SINGLE;
-            return client();
-        } else if (strcmp(argv[1], "server") == 0) {
-            mode = SINGLE;
-            server_dummy_socket();
-            return server();
-        } else if (strcmp(argv[1], "fork") == 0) {
-            do_fork = 1;
-        } else {
-            printf("Invalid argument\n");
-            return 1;
+    int pipefds[2];
+    CHECK(pipe(pipefds));
+
+    pid_t p_s = CHECK(fork());
+    if (p_s == 0) {
+        CHECK(close(pipefds[0]));
+        server(pipefds[1]);
+        return 0;
+    }
+
+    pid_t p_c = CHECK(fork());
+    if (p_c == 0) {
+        CHECK(close(pipefds[1]));
+        client(pipefds[0]);
+        return 0;
+    }
+
+    CHECK(close(pipefds[0]));
+    CHECK(close(pipefds[1]));
+
+    for (size_t i = 0; i < 2; i++) {
+        int status = 0;
+        CHECK(wait(&status));
+        if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+            errx(1, "child wait status: %#x", status);
         }
     }
 
-    if (pipe(pipefds) < 0) {
-        perror("pipe error");
-        return 1;
-    }
+#if 0 /* FIXME: currently Gramine doesn't reflect named UNIX sockets in file system */
+    CHECK(unlink(SRV_ADDR_DUMMY));
+    CHECK(unlink(SRV_ADDR));
+#endif
 
-    int pid = fork();
-
-    if (pid < 0) {
-        perror("fork error");
-        return 1;
-    } else if (pid == 0) {
-        return client();
-    } else {
-        server_dummy_socket();
-        return server();
-    }
+    puts("TEST OK");
+    return 0;
 }
