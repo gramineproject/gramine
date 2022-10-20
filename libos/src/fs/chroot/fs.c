@@ -338,22 +338,6 @@ static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int pr
     return 0;
 }
 
-static int chroot_truncate(struct libos_handle* hdl, file_off_t size) {
-    assert(hdl->type == TYPE_CHROOT);
-
-    int ret;
-
-    lock(&hdl->inode->lock);
-    ret = PalStreamSetLength(hdl->pal_handle, size);
-    if (ret == 0) {
-        hdl->inode->size = size;
-    } else {
-        ret = pal_to_unix_errno(ret);
-    }
-    unlock(&hdl->inode->lock);
-    return ret;
-}
-
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     int ret;
     PAL_HANDLE palhdl;
@@ -503,7 +487,7 @@ struct libos_fs_ops chroot_fs_ops = {
      * breaks for such device-specific cases */
     .seek       = &generic_inode_seek,
     .hstat      = &generic_inode_hstat,
-    .truncate   = &chroot_truncate,
+    .truncate   = &generic_truncate,
     .poll       = &generic_inode_poll,
 };
 

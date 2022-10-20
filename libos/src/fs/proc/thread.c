@@ -285,6 +285,7 @@ static char* describe_handle(struct libos_handle* hdl) {
         case TYPE_SOCK:    str = "sock:[?]";    break;
         case TYPE_EPOLL:   str = "epoll:[?]";   break;
         case TYPE_EVENTFD: str = "eventfd:[?]"; break;
+        case TYPE_SHM:     str = "shm:[?]";     break;
         default:           str = "unknown:[?]"; break;
     }
     return strdup(str);

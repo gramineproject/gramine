@@ -29,6 +29,10 @@
 #include "sgx_arch.h"
 #include "sgx_attest.h"
 
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif
+
 /* Part of Linux-SGX PAL private state which is not shared with other PALs. */
 extern struct pal_linuxsgx_state {
     /* enclave information */

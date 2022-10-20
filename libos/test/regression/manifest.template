@@ -7,6 +7,9 @@ loader.insecure__use_cmdline_argv = true
 # for eventfd test
 sys.insecure__allow_eventfd = true
 
+# for untrusted shared memory test (`shm.c`)
+sys.insecure__shared_memory = "passthrough"
+
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },

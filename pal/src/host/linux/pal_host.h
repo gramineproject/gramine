@@ -51,6 +51,7 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
+            char* realpath;
             bool nonblocking;
         } dev;
 
