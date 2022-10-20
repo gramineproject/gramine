@@ -79,12 +79,6 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PROCESS:
             /* processes have no fields to serialize */
             break;
-        case PAL_TYPE_THREAD:
-            /* no need to serialize thread.stack */
-            break;
-        case PAL_TYPE_EVENT:
-            /* events have no fields to serialize */
-            break;
         case PAL_TYPE_EVENTFD:
             /* eventfds have no fields to serialize */
             break;
@@ -151,17 +145,13 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             memcpy(path, (const char*)data + hdl_size, path_size);
 
             hdl->dir.realpath = path;
+            hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
         }
         case PAL_TYPE_SOCKET:
             fixup_socket_handle_after_deserialization(hdl);
             break;
         case PAL_TYPE_PROCESS:
-            break;
-        case PAL_TYPE_THREAD:
-            break;
-        case PAL_TYPE_EVENT:
-            break;
         case PAL_TYPE_EVENTFD:
             break;
         default:

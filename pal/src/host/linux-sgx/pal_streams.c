@@ -40,7 +40,7 @@ int _PalStreamUnmap(void* addr, uint64_t size) {
 }
 
 static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
-    int ret = 0;
+    int ret;
     const void* field = NULL;
     size_t field_size = 0;
     bool free_field = false;
@@ -87,12 +87,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
                     return -PAL_ERROR_DENIED;
             }
             break;
-        case PAL_TYPE_THREAD:
-            /* no need to serialize thread fields */
-            break;
-        case PAL_TYPE_EVENT:
-            /* no need to serialize event fields */
-            break;
         case PAL_TYPE_EVENTFD:
             /* eventfds have no fields to serialize */
             break;
@@ -113,14 +107,14 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     if (field_size)
         memcpy(buffer + hdl_size, field, field_size);
 
+    *data = buffer;
+    ret = buffer_size;
+
 out:
     if (free_field)
         free((void*)field);
-    if (ret < 0)
-        return ret;
 
-    *data = buffer;
-    return buffer_size;
+    return ret;
 }
 
 static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int host_fd) {
@@ -149,6 +143,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
 
             hdl->file.realpath = path;
             hdl->file.chunk_hashes = NULL;
+            hdl->file.umem = NULL;
             break;
         }
         case PAL_TYPE_PIPE:
@@ -162,8 +157,11 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_DENIED;
             }
+            hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
         case PAL_TYPE_PIPESRV:
+            hdl->pipe.ssl_ctx = NULL;
+            hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
         case PAL_TYPE_DEV:
             break;
@@ -180,6 +178,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             memcpy(path, (const char*)data + hdl_size, path_size);
 
             hdl->dir.realpath = path;
+            hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
         }
         case PAL_TYPE_SOCKET:
@@ -195,10 +194,6 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_DENIED;
             }
-            break;
-        case PAL_TYPE_THREAD:
-            break;
-        case PAL_TYPE_EVENT:
             break;
         case PAL_TYPE_EVENTFD:
             break;
