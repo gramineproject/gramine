@@ -29,12 +29,12 @@ def ldd(*args):
             ret.add(line[0])
     return sorted(ret)
 
-def python_get_sys_path(interpreter, nonexisting=False):
+def python_get_sys_path(interpreter, include_nonexisting=False):
     for path in subprocess.check_output([interpreter, '-c',
         '''import sys; print('\\0'.join(path for path in sys.path if path), end='')'''
     ]).split(b'\0'):
         path = pathlib.Path(os.fsdecode(path))
-        if not nonexisting and not path.exists():
+        if not include_nonexisting and not path.exists():
             continue
         yield path
 
