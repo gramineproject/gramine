@@ -714,12 +714,14 @@ static long sgx_ocall_debug_map_remove(void* args) {
 }
 
 static long sgx_ocall_debug_describe_location(void* args) {
-    struct ocall_debug_describe_location* debug_args = (struct ocall_debug_describe_location*)args;
+    struct ocall_debug_describe_location* ocall_debug_args;
 
+    ocall_debug_args = (struct ocall_debug_describe_location*)args;
 #ifdef DEBUG
-    return debug_describe_location(debug_args->addr, debug_args->buf, debug_args->buf_size);
+    return debug_describe_location(ocall_debug_args->addr, ocall_debug_args->buf,
+                                   ocall_debug_args->buf_size);
 #else
-    __UNUSED(debug_args);
+    __UNUSED(ocall_debug_args);
     return -ENOSYS;
 #endif
 }
