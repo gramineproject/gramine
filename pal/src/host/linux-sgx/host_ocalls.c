@@ -33,7 +33,7 @@ extern bool g_vtune_profile_enabled;
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
 static long sgx_ocall_exit(void* args) {
-    struct ocall_exit* ocall_exit_args = (struct ocall_exit*)args;
+    struct ocall_exit* ocall_exit_args = args;
 
     if (ocall_exit_args->exitcode != (int)((uint8_t)ocall_exit_args->exitcode)) {
         log_debug("Saturation error in exit code %d, getting rounded down to %u",
@@ -85,7 +85,7 @@ static long sgx_ocall_exit(void* args) {
 }
 
 static long sgx_ocall_mmap_untrusted(void* args) {
-    struct ocall_mmap_untrusted* ocall_mmap_args = (struct ocall_mmap_untrusted*)args;
+    struct ocall_mmap_untrusted* ocall_mmap_args = args;
     void* addr;
 
     addr = (void*)DO_SYSCALL(mmap, ocall_mmap_args->addr, ocall_mmap_args->size,
@@ -99,13 +99,13 @@ static long sgx_ocall_mmap_untrusted(void* args) {
 }
 
 static long sgx_ocall_munmap_untrusted(void* args) {
-    struct ocall_munmap_untrusted* ocall_munmap_args = (struct ocall_munmap_untrusted*)args;
+    struct ocall_munmap_untrusted* ocall_munmap_args = args;
     DO_SYSCALL(munmap, ocall_munmap_args->addr, ocall_munmap_args->size);
     return 0;
 }
 
 static long sgx_ocall_cpuid(void* args) {
-    struct ocall_cpuid* ocall_cpuid_args = (struct ocall_cpuid*)args;
+    struct ocall_cpuid* ocall_cpuid_args = args;
     __asm__ volatile("cpuid"
                      : "=a"(ocall_cpuid_args->values[0]),
                        "=b"(ocall_cpuid_args->values[1]),
@@ -117,55 +117,55 @@ static long sgx_ocall_cpuid(void* args) {
 }
 
 static long sgx_ocall_open(void* args) {
-    struct ocall_open* ocall_open_args = (struct ocall_open*)args;
+    struct ocall_open* ocall_open_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(open, ocall_open_args->pathname, ocall_open_args->flags,
                                     ocall_open_args->mode);
 }
 
 static long sgx_ocall_close(void* args) {
-    struct ocall_close* ocall_close_args = (struct ocall_close*)args;
+    struct ocall_close* ocall_close_args = args;
     /* Callers cannot retry close on `-EINTR`, so we do not call `DO_SYSCALL_INTERRUPTIBLE`. */
     return DO_SYSCALL(close, ocall_close_args->fd);
 }
 
 static long sgx_ocall_read(void* args) {
-    struct ocall_read* ocall_read_args = (struct ocall_read*)args;
+    struct ocall_read* ocall_read_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(read, ocall_read_args->fd, ocall_read_args->buf,
                                     ocall_read_args->count);
 }
 
 static long sgx_ocall_write(void* args) {
-    struct ocall_write* ocall_write_args = (struct ocall_write*)args;
+    struct ocall_write* ocall_write_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(write, ocall_write_args->fd, ocall_write_args->buf,
                                     ocall_write_args->count);
 }
 
 static long sgx_ocall_pread(void* args) {
-    struct ocall_pread* ocall_pread_args = (struct ocall_pread*)args;
+    struct ocall_pread* ocall_pread_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(pread64, ocall_pread_args->fd, ocall_pread_args->buf,
                                     ocall_pread_args->count, ocall_pread_args->offset);
 }
 
 static long sgx_ocall_pwrite(void* args) {
-    struct ocall_pwrite* ocall_pwrite_args = (struct ocall_pwrite*)args;
+    struct ocall_pwrite* ocall_pwrite_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(pwrite64, ocall_pwrite_args->fd, ocall_pwrite_args->buf,
                                     ocall_pwrite_args->count, ocall_pwrite_args->offset);
 }
 
 static long sgx_ocall_fstat(void* args) {
-    struct ocall_fstat* ocall_fstat_args = (struct ocall_fstat*)args;
+    struct ocall_fstat* ocall_fstat_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(fstat, ocall_fstat_args->fd, &ocall_fstat_args->stat);
 }
 
 static long sgx_ocall_fionread(void* args) {
-    struct ocall_fionread* ocall_fionread_args = (struct ocall_fionread*)args;
+    struct ocall_fionread* ocall_fionread_args = args;
     int val;
     long ret = DO_SYSCALL_INTERRUPTIBLE(ioctl, ocall_fionread_args->fd, FIONREAD, &val);
     return ret < 0 ? ret : val;
 }
 
 static long sgx_ocall_fsetnonblock(void* args) {
-    struct ocall_fsetnonblock* ocall_fsetnonblock_args = (struct ocall_fsetnonblock*)args;
+    struct ocall_fsetnonblock* ocall_fsetnonblock_args = args;
     long ret;
     int flags;
 
@@ -186,27 +186,27 @@ static long sgx_ocall_fsetnonblock(void* args) {
 }
 
 static long sgx_ocall_fchmod(void* args) {
-    struct ocall_fchmod* ocall_fchmod_args = (struct ocall_fchmod*)args;
+    struct ocall_fchmod* ocall_fchmod_args = args;
     return DO_SYSCALL(fchmod, ocall_fchmod_args->fd, ocall_fchmod_args->mode);
 }
 
 static long sgx_ocall_fsync(void* args) {
-    struct ocall_fsync* ocall_fsync_args = (struct ocall_fsync*)args;
+    struct ocall_fsync* ocall_fsync_args = args;
     return DO_SYSCALL_INTERRUPTIBLE(fsync, ocall_fsync_args->fd);
 }
 
 static long sgx_ocall_ftruncate(void* args) {
-    struct ocall_ftruncate* ocall_ftruncate_args = (struct ocall_ftruncate*)args;
+    struct ocall_ftruncate* ocall_ftruncate_args = args;
     return DO_SYSCALL(ftruncate, ocall_ftruncate_args->fd, ocall_ftruncate_args->length);
 }
 
 static long sgx_ocall_mkdir(void* args) {
-    struct ocall_mkdir* ocall_mkdir_args = (struct ocall_mkdir*)args;
+    struct ocall_mkdir* ocall_mkdir_args = args;
     return DO_SYSCALL(mkdir, ocall_mkdir_args->pathname, ocall_mkdir_args->mode);
 }
 
 static long sgx_ocall_getdents(void* args) {
-    struct ocall_getdents* ocall_getdents_args = (struct ocall_getdents*)args;
+    struct ocall_getdents* ocall_getdents_args = args;
     unsigned int count;
     count = ocall_getdents_args->size <= UINT_MAX ? ocall_getdents_args->size : UINT_MAX;
     return DO_SYSCALL_INTERRUPTIBLE(getdents64, ocall_getdents_args->fd, ocall_getdents_args->dirp,
@@ -222,7 +222,7 @@ static long sgx_ocall_resume_thread(void* args) {
 }
 
 static long sgx_ocall_sched_setaffinity(void* args) {
-    struct ocall_sched_setaffinity* ocall_sched_args = (struct ocall_sched_setaffinity*)args;
+    struct ocall_sched_setaffinity* ocall_sched_args = args;
     int tid = get_tid_from_tcs(ocall_sched_args->tcs);
     if (tid < 0)
         return tid;
@@ -232,7 +232,7 @@ static long sgx_ocall_sched_setaffinity(void* args) {
 }
 
 static long sgx_ocall_sched_getaffinity(void* args) {
-    struct ocall_sched_getaffinity* ocall_sched_args = (struct ocall_sched_getaffinity*)args;
+    struct ocall_sched_getaffinity* ocall_sched_args = args;
     int tid = get_tid_from_tcs(ocall_sched_args->tcs);
     if (tid < 0)
         return tid;
@@ -247,7 +247,7 @@ static long sgx_ocall_clone_thread(void* args) {
 }
 
 static long sgx_ocall_create_process(void* args) {
-    struct ocall_create_process* ocall_cp_args = (struct ocall_create_process*)args;
+    struct ocall_create_process* ocall_cp_args = args;
 
     return sgx_create_process(ocall_cp_args->nargs, ocall_cp_args->args,
                               g_pal_enclave.raw_manifest_data, ocall_cp_args->reserved_mem_ranges,
@@ -255,7 +255,7 @@ static long sgx_ocall_create_process(void* args) {
 }
 
 static long sgx_ocall_futex(void* args) {
-    struct ocall_futex* ocall_futex_args = (struct ocall_futex*)args;
+    struct ocall_futex* ocall_futex_args = args;
     long ret;
 
     struct timespec timeout = { 0 };
@@ -343,7 +343,7 @@ static long sgx_ocall_listen_simple(void* args) {
 }
 
 static long sgx_ocall_listen(void* args) {
-    struct ocall_listen* ocall_listen_args = (struct ocall_listen*)args;
+    struct ocall_listen* ocall_listen_args = args;
     long ret;
     int fd;
 
@@ -401,7 +401,7 @@ err:
 }
 
 static long sgx_ocall_accept(void* args) {
-    struct ocall_accept* ocall_accept_args = (struct ocall_accept*)args;
+    struct ocall_accept* ocall_accept_args = args;
     long ret;
 
     if (ocall_accept_args->addrlen > INT_MAX || ocall_accept_args->local_addrlen > INT_MAX) {
@@ -435,7 +435,7 @@ err:
 }
 
 static long sgx_ocall_connect(void* args) {
-    struct ocall_connect* ocall_connect_args = (struct ocall_connect*)args;
+    struct ocall_connect* ocall_connect_args = args;
     long ret;
     int fd;
 
@@ -543,7 +543,7 @@ static long sgx_ocall_connect_simple(void* args) {
 }
 
 static long sgx_ocall_recv(void* args) {
-    struct ocall_recv* ocall_recv_args = (struct ocall_recv*)args;
+    struct ocall_recv* ocall_recv_args = args;
     long ret;
 
     if (ocall_recv_args->addr && ocall_recv_args->addrlen > INT_MAX) {
@@ -580,7 +580,7 @@ static long sgx_ocall_recv(void* args) {
 }
 
 static long sgx_ocall_send(void* args) {
-    struct ocall_send* ocall_send_args = (struct ocall_send*)args;
+    struct ocall_send* ocall_send_args = args;
 
     if (ocall_send_args->addr && ocall_send_args->addrlen > INT_MAX) {
         return -EINVAL;
@@ -605,7 +605,7 @@ static long sgx_ocall_send(void* args) {
 }
 
 static long sgx_ocall_setsockopt(void* args) {
-    struct ocall_setsockopt* ocall_setsockopt_args = (struct ocall_setsockopt*)args;
+    struct ocall_setsockopt* ocall_setsockopt_args = args;
     if (ocall_setsockopt_args->optlen > INT_MAX) {
         return -EINVAL;
     }
@@ -615,13 +615,13 @@ static long sgx_ocall_setsockopt(void* args) {
 }
 
 static long sgx_ocall_shutdown(void* args) {
-    struct ocall_shutdown* ocall_shutdown_args = (struct ocall_shutdown*)args;
+    struct ocall_shutdown* ocall_shutdown_args = args;
     DO_SYSCALL_INTERRUPTIBLE(shutdown, ocall_shutdown_args->sockfd, ocall_shutdown_args->how);
     return 0;
 }
 
 static long sgx_ocall_gettime(void* args) {
-    struct ocall_gettime* ocall_gettime_args = (struct ocall_gettime*)args;
+    struct ocall_gettime* ocall_gettime_args = args;
     struct timeval tv;
     DO_SYSCALL(gettimeofday, &tv, NULL);
     ocall_gettime_args->microsec = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
@@ -635,7 +635,7 @@ static long sgx_ocall_sched_yield(void* args) {
 }
 
 static long sgx_ocall_poll(void* args) {
-    struct ocall_poll* ocall_poll_args = (struct ocall_poll*)args;
+    struct ocall_poll* ocall_poll_args = args;
     long ret;
 
     struct timespec* timeout = NULL;
@@ -664,12 +664,12 @@ static long sgx_ocall_poll(void* args) {
 }
 
 static long sgx_ocall_rename(void* args) {
-    struct ocall_rename* ocall_rename_args = (struct ocall_rename*)args;
+    struct ocall_rename* ocall_rename_args = args;
     return DO_SYSCALL(rename, ocall_rename_args->oldpath, ocall_rename_args->newpath);
 }
 
 static long sgx_ocall_delete(void* args) {
-    struct ocall_delete* ocall_delete_args = (struct ocall_delete*)args;
+    struct ocall_delete* ocall_delete_args = args;
     long ret;
 
     ret = DO_SYSCALL(unlink, ocall_delete_args->pathname);
@@ -681,12 +681,12 @@ static long sgx_ocall_delete(void* args) {
 }
 
 static long sgx_ocall_eventfd(void* args) {
-    struct ocall_eventfd* ocall_eventfd_args = (struct ocall_eventfd*)args;
+    struct ocall_eventfd* ocall_eventfd_args = args;
     return DO_SYSCALL(eventfd2, 0, ocall_eventfd_args->flags);
 }
 
 static long sgx_ocall_debug_map_add(void* args) {
-    struct ocall_debug_map_add* ocall_debug_args = (struct ocall_debug_map_add*)args;
+    struct ocall_debug_map_add* ocall_debug_args = args;
 
 #ifdef DEBUG
     int ret = debug_map_add(ocall_debug_args->name, ocall_debug_args->addr);
@@ -701,7 +701,7 @@ static long sgx_ocall_debug_map_add(void* args) {
 }
 
 static long sgx_ocall_debug_map_remove(void* args) {
-    struct ocall_debug_map_remove* ocall_debug_args = (struct ocall_debug_map_remove*)args;
+    struct ocall_debug_map_remove* ocall_debug_args = args;
 
 #ifdef DEBUG
     int ret = debug_map_remove(ocall_debug_args->addr);
@@ -716,7 +716,7 @@ static long sgx_ocall_debug_map_remove(void* args) {
 static long sgx_ocall_debug_describe_location(void* args) {
     struct ocall_debug_describe_location* ocall_debug_args;
 
-    ocall_debug_args = (struct ocall_debug_describe_location*)args;
+    ocall_debug_args = args;
 #ifdef DEBUG
     return debug_describe_location(ocall_debug_args->addr, ocall_debug_args->buf,
                                    ocall_debug_args->buf_size);
@@ -727,7 +727,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
 }
 
 static long sgx_ocall_get_quote(void* args) {
-    struct ocall_get_quote* ocall_quote_args = (struct ocall_get_quote*)args;
+    struct ocall_get_quote* ocall_quote_args = args;
     return retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
                           ocall_quote_args->linkable, &ocall_quote_args->report,
                           &ocall_quote_args->nonce, &ocall_quote_args->quote,
