@@ -37,14 +37,15 @@ def uri2path(uri):
         raise ManifestError(f'Unsupported URI type: {uri}')
     return pathlib.Path(uri[len('file:'):])
 
-def append_tf(trusted_files, uri, hash_):
-    trusted_files.append({'uri': uri, 'sha256': hash_})
+def append_tf(trusted_files, path, hash_=None):
+    if path not in trusted_files:
+        trusted_files[path] = hash_ if hash_ is not None else hash_file_contents(path)
 
 def append_trusted_dir_or_file(trusted_files, val, expanded):
     if isinstance(val, dict):
         uri = val['uri']
         if val.get('sha256'):
-            append_tf(trusted_files, uri, val['sha256'])
+            append_tf(trusted_files, uri2path(uri), val['sha256'])
             return
     elif isinstance(val, str):
         uri = val
@@ -64,10 +65,10 @@ def append_trusted_dir_or_file(trusted_files, val, expanded):
             if sub_path.is_file():
                 # Skip inaccessible files
                 if os.access(sub_path, os.R_OK):
-                    append_tf(trusted_files, f'file:{sub_path}', hash_file_contents(sub_path))
+                    append_tf(trusted_files, sub_path)
     else:
         assert path.is_file()
-        append_tf(trusted_files, uri, hash_file_contents(path))
+        append_tf(trusted_files, path)
         expanded.append(path)
 
 class Manifest:
@@ -110,7 +111,7 @@ class Manifest:
             if isinstance(tf, dict) and 'uri' in tf:
                 trusted_files.append(tf)
             elif isinstance(tf, str):
-                append_tf(trusted_files, tf, None)
+                trusted_files.append({'uri': tf})
             else:
                 raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
@@ -169,12 +170,14 @@ class Manifest:
                 or some of them could not be loaded from the filesystem.
 
         """
-        trusted_files = []
+        trusted_files = {}
         expanded = []
         for tf in self['sgx']['trusted_files']:
             append_trusted_dir_or_file(trusted_files, tf, expanded)
 
-        self['sgx']['trusted_files'] = trusted_files
+        self['sgx']['trusted_files'] = [
+            {'uri': f'file:{k}', 'sha256': v} for k, v in trusted_files.items()
+        ]
         return expanded
 
     def get_dependencies(self):
