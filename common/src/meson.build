@@ -14,26 +14,26 @@ common_src_libc = files(
 )
 
 common_src_utils = files(
-    'avl_tree.c',
-    'location.c',
-    'network/hton.c',
-    'network/inet_pton.c',
     'path.c',
     'string.c',
-    'string/toml_utils.c',
 )
 
 common_src_internal = files(
+    'avl_tree.c',
     'init.c',
+    'location.c',
+    'network/hton.c',
+    'network/inet_pton.c',
     'socket_utils.c',
     'stack_protector.c',
+    'string/toml_utils.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
 #   - `common_src_arch` - a list of arch-specific sources.
 subdir('arch')
-# Current common arch-specific sources are for utils only.
-common_src_utils += common_src_arch
+# Current common arch-specific sources are for `common_src_internal` only.
+common_src_internal += common_src_arch
 
 common_dep_libc = declare_dependency(
     sources: common_src_libc,
@@ -44,17 +44,19 @@ common_dep_libc = declare_dependency(
 common_dep_utils = declare_dependency(
     sources: common_src_utils,
 
-    include_directories: common_inc,
-
-    dependencies: [
-        tomlc99_dep,
-    ],
+    include_directories: common_inc_utils,
 )
 
 common_dep_internal = declare_dependency(
     sources: common_src_internal,
 
     include_directories: common_inc,
+
+    dependencies: [
+        common_dep_libc,
+        common_dep_utils,
+        tomlc99_dep,
+    ],
 )
 
 common_src_san = files()
@@ -75,8 +77,6 @@ common_dep_san = declare_dependency(
 )
 
 common_dep = declare_dependency(
-    include_directories: common_inc,
-
     dependencies: [
         common_dep_libc,
         common_dep_utils,

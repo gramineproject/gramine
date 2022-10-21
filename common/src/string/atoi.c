@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "utils.h"
 
 static void begin_number(const char* str, int base, const char** out_s, int* out_base,
                          int* out_sign) {
@@ -41,23 +42,6 @@ static void begin_number(const char* str, int base, const char** out_s, int* out
     *out_s = s;
     *out_base = base;
     *out_sign = sign;
-}
-
-static int parse_digit(char c, int base) {
-    int digit;
-
-    if (c >= '0' && c <= '9') {
-        digit = c - '0';
-    } else if (c >= 'a' && c <= 'z') {
-        digit = c - 'a' + 10;
-    } else if (c >= 'A' && c <= 'Z') {
-        digit = c - 'A' + 10;
-    } else {
-        return -1;
-    }
-    if (digit >= base)
-        return -1;
-    return digit;
 }
 
 long strtol(const char* str, char** out_end, int base) {

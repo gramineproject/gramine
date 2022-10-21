@@ -13,6 +13,7 @@
 #include "libos_utils.h"
 #include "protected_files.h"
 #include "toml_utils.h"
+#include "utils.h"
 
 static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 
@@ -184,7 +185,6 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
 
     ret = get_norm_path(path, normpath, &normpath_size);
     if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
         goto out;
     }
 
@@ -665,7 +665,6 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
 
     ret = get_norm_path(new_path, new_normpath, &new_normpath_size);
     if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
         goto out;
     }
 

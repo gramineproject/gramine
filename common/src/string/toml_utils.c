@@ -10,6 +10,7 @@
 #include "assert.h"
 #include "toml.h"
 #include "toml_utils.h"
+#include "utils.h"
 
 /* returns a pointer to next occurrence of `ch` in `s`, or null byte ending the string if it wasn't
  * found */

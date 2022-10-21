@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "api.h"
+#include "utils.h"
 
 int parse_size_str(const char* str, uint64_t* out_val) {
     const char* endptr = NULL;
@@ -33,7 +33,8 @@ int parse_size_str(const char* str, uint64_t* out_val) {
     if (*endptr != '\0')
         return -1; /* garbage found after the size string */
 
-    if (OVERFLOWS(__typeof__(*out_val), size))
+    uint64_t value = 0;
+    if (__builtin_add_overflow(size, 0, &value))
         return -1;
 
     *out_val = size;
@@ -48,18 +49,8 @@ int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
     unsigned long value = 0;
     const char* s = str;
     while (*s != '\0') {
-        int digit;
-
-        if (*s >= '0' && *s <= '9') {
-            digit = *s - '0';
-        } else if (*s >= 'a' && *s <= 'z') {
-            digit = *s - 'a' + 10;
-        } else if (*s >= 'A' && *s <= 'Z') {
-            digit = *s - 'A' + 10;
-        } else {
-            break;
-        }
-        if (digit >= (int)base)
+        int digit = parse_digit(*s, base);
+        if (digit == -1)
             break;
 
         if (__builtin_mul_overflow(value, base, &value))
@@ -77,4 +68,21 @@ int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
     *out_value = value;
     *out_end = s;
     return 0;
+}
+
+int parse_digit(char c, int base) {
+    int digit;
+
+    if (c >= '0' && c <= '9') {
+        digit = c - '0';
+    } else if (c >= 'a' && c <= 'z') {
+        digit = c - 'a' + 10;
+    } else if (c >= 'A' && c <= 'Z') {
+        digit = c - 'A' + 10;
+    } else {
+        return -1;
+    }
+    if (digit >= base)
+        return -1;
+    return digit;
 }

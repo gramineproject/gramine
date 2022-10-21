@@ -14,6 +14,7 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "stat.h"
+#include "utils.h"
 
 /* 'open' operation for file streams */
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,

@@ -6,8 +6,17 @@
  * lookup / access config values.
  */
 
+#ifdef USE_STDLIB
+#include <assert.h>
+#include <string.h>
+#else
 #include "api.h"
-#include "pal_error.h"
+#endif
+
+#include <errno.h>
+#include <stddef.h>
+
+#include "utils.h"
 
 /*
  * Finds next '/' in `path`.
@@ -56,11 +65,11 @@ static inline bool find_prev_slash_offset(const char* path, size_t* offset) {
 int get_norm_path(const char* path, char* buf, size_t* inout_size) {
     assert(path && buf && inout_size);
     size_t path_size = strlen(path) + 1;
-    __UNUSED(path_size);  // used only for an assert at the end
+    (void)(path_size);  // used only for an assert at the end
 
     size_t size = *inout_size;
     if (!size) {
-        return -PAL_ERROR_INVAL;
+        return -EINVAL;
     }
     /* reserve 1 byte for ending '\0' */
     size--;
@@ -73,7 +82,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
     /* handle an absolute path */
     if (is_absolute_path) {
         if (size < 1) {
-            return -PAL_ERROR_TOOLONG;
+            return -ENAMETOOLONG;
         }
         *buf++ = '/';
         size--;
@@ -93,7 +102,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
                 /* append undiscardable ".." since there is no previous token
                  * but only if the path is not absolute */
                 if (need_slash + 2u > size) {
-                    return -PAL_ERROR_TOOLONG;
+                    return -ENAMETOOLONG;
                 }
                 if (need_slash) {
                     *buf++ = '/';
@@ -113,7 +122,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
         } else {
             size_t len = (size_t)(end - path);
             if (need_slash + len > size - offset) {
-                return -PAL_ERROR_TOOLONG;
+                return -ENAMETOOLONG;
             }
             if (need_slash) {
                 buf[offset++] = '/';
@@ -143,7 +152,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
  */
 int get_base_name(const char* path, char* buf, size_t* inout_size) {
     if (!path || !buf || !inout_size) {
-        return -PAL_ERROR_INVAL;
+        return -EINVAL;
     }
 
     const char* end;
@@ -153,7 +162,7 @@ int get_base_name(const char* path, char* buf, size_t* inout_size) {
 
     size_t result = (size_t)(end - path);
     if (result + 1 > *inout_size) {
-        return -PAL_ERROR_TOOLONG;
+        return -ENAMETOOLONG;
     }
 
     memcpy(buf, path, result);

@@ -8,6 +8,7 @@
 
 #include "api.h"
 #include "linux_utils.h"
+#include "utils.h"
 
 static int parse_proc_maps_line(const char* line, struct proc_maps_range* r) {
     const char* next = line;

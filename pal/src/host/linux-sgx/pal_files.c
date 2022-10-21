@@ -21,6 +21,7 @@
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
 #include "stat.h"
+#include "utils.h"
 
 /* this macro is used to emulate mmap() via pread() in chunks of 128MB (mmapped files may be many
  * GBs in size, and a pread OCALL could fail with -ENOMEM, so we cap to reasonably small size) */

@@ -13,6 +13,7 @@
 #include "spinlock.h"
 #include "toml.h"
 #include "toml_utils.h"
+#include "utils.h"
 
 #define LOCAL_ATTESTATION_TAG_PARENT_STR "GRAMINE_LOCAL_ATTESTATION_TAG_PARENT"
 #define LOCAL_ATTESTATION_TAG_CHILD_STR "GRAMINE_LOCAL_ATTESTATION_TAG_CHILD"

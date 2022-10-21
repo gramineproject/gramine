@@ -104,6 +104,7 @@ test_include_directories = [
         join_paths('../include/arch', host_machine.cpu_family(), 'linux'),
     ),
     common_inc,
+    common_inc_utils,
 ]
 
 common_lib = static_library('test_pal',
