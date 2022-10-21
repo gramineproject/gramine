@@ -1,13 +1,5 @@
-common_src = files(
-    'avl_tree.c',
-    'init.c',
-    'location.c',
-    'network/hton.c',
-    'network/inet_pton.c',
-    'path.c',
+common_src_libc = files(
     'printf.c',
-    'socket_utils.c',
-    'stack_protector.c',
     'string/atoi.c',
     'string/ctype.c',
     'string/memcmp.c',
@@ -18,28 +10,78 @@ common_src = files(
     'string/strlen.c',
     'string/strspn.c',
     'string/strstr.c',
-    'string/toml_utils.c',
     'string/utils.c',
+)
+
+common_src_utils = files(
+    'avl_tree.c',
+    'location.c',
+    'network/hton.c',
+    'network/inet_pton.c',
+    'path.c',
+    'string.c',
+    'string/toml_utils.c',
+)
+
+common_src_internal = files(
+    'init.c',
+    'socket_utils.c',
+    'stack_protector.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
 #   - `common_src_arch` - a list of arch-specific sources.
 subdir('arch')
-common_src += common_src_arch
+# Current common arch-specific sources are for utils only.
+common_src_utils += common_src_arch
 
-if asan
-    common_src += files('asan.c')
-endif
-if ubsan
-    common_src += files('ubsan.c')
-endif
+common_dep_libc = declare_dependency(
+    sources: common_src_libc,
 
-common_dep = declare_dependency(
-    sources: common_src,
+    include_directories: common_inc,
+)
+
+common_dep_utils = declare_dependency(
+    sources: common_src_utils,
 
     include_directories: common_inc,
 
     dependencies: [
+        tomlc99_dep,
+    ],
+)
+
+common_dep_internal = declare_dependency(
+    sources: common_src_internal,
+
+    include_directories: common_inc,
+)
+
+common_src_san = files()
+if asan
+    common_src_san += files('asan.c')
+endif
+if ubsan
+    common_src_san += files('ubsan.c')
+endif
+common_dep_san = declare_dependency(
+    sources: common_src_san,
+
+    include_directories: common_inc,
+
+    dependencies: [
+        common_dep_libc,
+    ],
+)
+
+common_dep = declare_dependency(
+    include_directories: common_inc,
+
+    dependencies: [
+        common_dep_libc,
+        common_dep_utils,
+        common_dep_san,
+        common_dep_internal,
         uthash_dep,
         tomlc99_dep,
     ],
