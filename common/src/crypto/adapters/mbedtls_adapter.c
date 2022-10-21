@@ -53,6 +53,7 @@ static int mbedtls_to_pal_error(int error) {
             return -PAL_ERROR_CRYPTO_BAD_INPUT_DATA;
 
         case MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE:
+        case MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL:
             return -PAL_ERROR_CRYPTO_INVALID_OUTPUT_LENGTH;
 
         case MBEDTLS_ERR_CIPHER_ALLOC_FAILED:
@@ -60,7 +61,6 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_MD_ALLOC_FAILED:
         case MBEDTLS_ERR_SSL_ALLOC_FAILED:
         case MBEDTLS_ERR_PK_ALLOC_FAILED:
-        case MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL:
         case MBEDTLS_ERR_ECP_ALLOC_FAILED:
             return -PAL_ERROR_NOMEM;
 
