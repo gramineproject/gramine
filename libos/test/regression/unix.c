@@ -33,6 +33,8 @@ static void check_nonexisting_socket(void) {
     if (ret == 0 || errno != ENOENT) {
         errx(1, "nonexisting-socket connect didn't fail with ENOENT");
     }
+
+    CHECK(close(s));
 }
 
 static void create_dummy_socket(void) {
@@ -138,7 +140,10 @@ int main(void) {
         return 0;
     }
 
-    for (int i = 0; i < 2; i++) {
+    CHECK(close(pipefds[0]));
+    CHECK(close(pipefds[1]));
+
+    for (size_t i = 0; i < 2; i++) {
         int status = 0;
         CHECK(wait(&status));
         if (!WIFEXITED(status) || WEXITSTATUS(status)) {

@@ -1289,11 +1289,6 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('[parent] TEST OK', stdout)
 
     def test_100_socket_unix(self):
-        if os.path.exists("tmp/dummy"):
-            os.remove("tmp/dummy")
-        if os.path.exists("tmp/unix_socket"):
-            os.remove("tmp/unix_socket")
-
         stdout, _ = self.run_binary(['unix'])
         self.assertIn('TEST OK', stdout)
 
