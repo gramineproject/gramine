@@ -119,7 +119,7 @@ if sgx
         sgx_driver_header = 'sgx_user.h'
         sgx_driver_device_default = '/dev/isgx'
         sgx_driver_include_path_defaults = ['/opt/intel/linux-sgx-driver']
-    elif sgx_driver == 'dcap1.10'
+    elif sgx_driver == 'dcap' or sgx_driver == 'dcap1.10'
         # DCAP 1.10+ (https://github.com/intel/SGXDataCenterAttestationPrimitives)
         conf_sgx.set('CONFIG_SGX_DRIVER_DCAP_1_10', true)
         sgx_driver_header = 'sgx_user.h'
