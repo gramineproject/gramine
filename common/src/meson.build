@@ -35,16 +35,20 @@ subdir('arch')
 # Current common arch-specific sources are for `common_src_internal` only.
 common_src_internal += common_src_arch
 
-common_dep_libc = declare_dependency(
-    sources: common_src_libc,
-
-    include_directories: common_inc,
-)
-
 common_dep_utils = declare_dependency(
     sources: common_src_utils,
 
     include_directories: common_inc_utils,
+)
+
+common_dep_libc = declare_dependency(
+    sources: common_src_libc,
+
+    include_directories: common_inc,
+
+    dependencies: [
+        common_dep_utils,
+    ],
 )
 
 common_dep_internal = declare_dependency(
