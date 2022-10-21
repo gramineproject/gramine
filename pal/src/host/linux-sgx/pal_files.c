@@ -20,6 +20,7 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
+#include "path_utils.h"
 #include "stat.h"
 
 /* this macro is used to emulate mmap() via pread() in chunks of 128MB (mmapped files may be many
@@ -48,9 +49,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     if (!normpath)
         return -PAL_ERROR_NOMEM;
 
-    ret = get_norm_path(uri, normpath, &normpath_size);
-    if (ret < 0) {
-        log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
+    if (!get_norm_path(uri, normpath, &normpath_size)) {
+        log_warning("Could not normalize path (%s)", uri);
         free(normpath);
         return -PAL_ERROR_DENIED;
     }
@@ -394,9 +394,9 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
-    ret = get_norm_path(uri, path, &path_size);
-    if (ret < 0) {
-        log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
+    if (!get_norm_path(uri, path, &path_size)) {
+        log_warning("Could not normalize path (%s)", uri);
+        ret = -PAL_ERROR_INVAL;
         goto out;
     }
 

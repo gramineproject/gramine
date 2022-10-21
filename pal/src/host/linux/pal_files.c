@@ -13,6 +13,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
+#include "path_utils.h"
 #include "stat.h"
 
 /* 'open' operation for file streams */
@@ -54,12 +55,11 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
         return -PAL_ERROR_NOMEM;
     }
 
-    ret = get_norm_path(uri, path, &uri_size);
-    if (ret < 0) {
+    if (!get_norm_path(uri, path, &uri_size)) {
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
         free(path);
-        return ret;
+        return -PAL_ERROR_INVAL;
     }
 
     hdl->file.realpath = path;

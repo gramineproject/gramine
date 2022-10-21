@@ -19,6 +19,7 @@
 #include "cpu.h"
 #include "list.h"
 #include "log.h"
+#include "string_utils.h"
 
 /* TODO: remove this once Gramine does not use host headers. */
 #ifndef ssize_t
@@ -219,23 +220,6 @@ int strcmp(const char* lhs, const char* rhs);
 long strtol(const char* s, char** endptr, int base);
 long long strtoll(const char* s, char** endptr, int base);
 
-/*!
- * \brief Convert a string to number.
- *
- * \param      str        Input string.
- * \param      base       Digit base, between 2 and 36.
- * \param[out] out_value  On success, set to the parsed number.
- * \param[out] out_end    On success, set to the rest of string.
- *
- * \returns 0 on success, negative on failure.
- *
- * Parses a number from the beginning of a string. The number should be non-empty, consist of digits
- * only (no `+`/`-` signs), and not overflow the `unsigned long` type. For base 16, the "0x" prefix
- * is allowed but not required.
- */
-int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
-                 const char** out_end);
-
 int atoi(const char* nptr);
 long int atol(const char* nptr);
 
@@ -283,8 +267,6 @@ void* _real_memmove(void* dest, const void* src, size_t count);
 void* _real_memset(void* dest, int ch, size_t count);
 int _real_memcmp(const void* lhs, const void* rhs, size_t count);
 
-bool strstartswith(const char* str, const char* prefix);
-bool strendswith(const char* str, const char* suffix);
 char* strdup(const char* str);
 char* alloc_substr(const char* start, size_t len);
 char* alloc_concat(const char* a, size_t a_len, const char* b, size_t b_len);
@@ -391,24 +373,6 @@ uint16_t __htons(uint16_t x);
 uint16_t __ntohs(uint16_t x);
 
 extern const char* const* sys_errlist_internal;
-
-/* Gramine functions */
-
-int get_norm_path(const char* path, char* buf, size_t* inout_size);
-int get_base_name(const char* path, char* buf, size_t* inout_size);
-
-bool is_dot_or_dotdot(const char* name);
-
-/*!
- * \brief Parse a size (number with optional "G"/"M"/"K" suffix) into an uint64_t.
- *
- * \param      str      A string containing a non-negative, decimal number. The string may end with
- *                      "G"/"g" suffix denoting value in GBs, "M"/"m" for MBs, or "K"/"k" for KBs.
- * \param[out] out_val  Parsed size (in bytes).
- *
- * \returns 0 on success, negative if string cannot be parsed into a size (e.g., suffix is wrong).
- */
-int parse_size_str(const char* str, uint64_t* out_val);
 
 #define URI_PREFIX_SEPARATOR ":"
 

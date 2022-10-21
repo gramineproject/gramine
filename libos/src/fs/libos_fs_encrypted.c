@@ -11,6 +11,7 @@
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_utils.h"
+#include "path_utils.h"
 #include "protected_files.h"
 #include "toml_utils.h"
 
@@ -182,9 +183,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         goto out;
     }
 
-    ret = get_norm_path(path, normpath, &normpath_size);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    if (!get_norm_path(path, normpath, &normpath_size)) {
+        ret = -EINVAL;
         goto out;
     }
 
@@ -663,9 +663,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         goto out;
     }
 
-    ret = get_norm_path(new_path, new_normpath, &new_normpath_size);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    if (!get_norm_path(new_path, new_normpath, &new_normpath_size)) {
+        ret = -EINVAL;
         goto out;
     }
 

@@ -9,6 +9,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
+#include "path_utils.h"
 #include "sgx_arch.h"
 #include "spinlock.h"
 #include "toml.h"
@@ -715,9 +716,10 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
 
     memcpy(norm_uri, URI_PREFIX_FILE, URI_PREFIX_FILE_LEN);
     size_t norm_path_size = norm_uri_size - URI_PREFIX_FILE_LEN;
-    ret = get_norm_path(uri + URI_PREFIX_FILE_LEN, norm_uri + URI_PREFIX_FILE_LEN, &norm_path_size);
-    if (ret < 0) {
-        log_error("Path (%s) normalization failed: %s", uri, pal_strerror(ret));
+    if (!get_norm_path(uri + URI_PREFIX_FILE_LEN, norm_uri + URI_PREFIX_FILE_LEN,
+                       &norm_path_size)) {
+        log_error("Path (%s) normalization failed", uri);
+        ret = -PAL_ERROR_INVAL;
         goto out;
     }
 

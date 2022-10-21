@@ -1,6 +1,7 @@
 #include "api.h"
 #include "pal_error.h"
 #include "pal_regression.h"
+#include "path_utils.h"
 
 static const char* get_norm_path_cases[][2] = {
     {"/", "/"},
@@ -39,7 +40,7 @@ static const char* get_base_name_cases[][2] = {
 
 static const char* (*cases)[2];
 static size_t cases_len;
-static int (*func_to_test)(const char*, char*, size_t*);
+static bool (*func_to_test)(const char*, char*, size_t*);
 static const char* func_name;
 
 char buf[4096] = {0};
@@ -47,10 +48,9 @@ char buf[4096] = {0};
 static int run_test(void) {
     for (size_t i = 0; i < cases_len; i++) {
         size_t size = sizeof(buf);
-        int ret = func_to_test(cases[i][0], buf, &size);
 
-        if (ret < 0) {
-            print_err(func_name, i, "failed with error: %d\n", ret);
+        if (!func_to_test(cases[i][0], buf, &size)) {
+            print_err(func_name, i, "failed\n");
             return 1;
         }
 

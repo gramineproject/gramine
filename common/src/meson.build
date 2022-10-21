@@ -1,10 +1,14 @@
-common_src = files(
+common_src_utils = files(
+    'path_utils.c',
+    'string_utils.c',
+)
+
+common_src_internal = files(
     'avl_tree.c',
     'init.c',
     'location.c',
     'network/hton.c',
     'network/inet_pton.c',
-    'path.c',
     'printf.c',
     'socket_utils.c',
     'stack_protector.c',
@@ -19,27 +23,35 @@ common_src = files(
     'string/strspn.c',
     'string/strstr.c',
     'string/toml_utils.c',
-    'string/utils.c',
+    'string/util.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
 #   - `common_src_arch` - a list of arch-specific sources.
 subdir('arch')
-common_src += common_src_arch
+# Current common arch-specific sources are for `common_src_internal` only.
+common_src_internal += common_src_arch
 
 if asan
-    common_src += files('asan.c')
+    common_src_internal += files('asan.c')
 endif
 if ubsan
-    common_src += files('ubsan.c')
+    common_src_internal += files('ubsan.c')
 endif
 
+common_utils_dep = declare_dependency(
+    sources: common_src_utils,
+
+    include_directories: common_inc,
+)
+
 common_dep = declare_dependency(
-    sources: common_src,
+    sources: common_src_internal,
 
     include_directories: common_inc,
 
     dependencies: [
+        common_utils_dep,
         uthash_dep,
         tomlc99_dep,
     ],
