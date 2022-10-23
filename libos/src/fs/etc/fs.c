@@ -132,7 +132,57 @@ out:
     return ret;
 }
 
+static int provide_etc_hosts(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    int ret = 0;
+    size_t size = 0;
+    const char* ipv4_hosts_value = "127.0.0.1 localhost\n";
+    const char* ipv4_hostname = "127.0.0.1 ";
+    const char* ipv6_hosts_value = "::1     ip6-localhost ip6-loopback\n" \
+                                   "fe00::0 ip6-localnet\n" \
+                                   "ff00::0 ip6-mcastprefix\n" \
+                                   "ff02::1 ip6-allnodes\n" \
+                                   "ff02::2 ip6-allrouters\n";
+
+    size += strlen(ipv4_hosts_value);
+
+    size += strlen(ipv4_hosts_value);
+    size += strlen(g_pal_public_state->dns_host.hostname);
+    size += 1; /* for a new line */
+
+    size += strlen(ipv6_hosts_value);
+
+    /* Use the string (without null terminator) as file data */
+    char* data = malloc(size);
+    if (!data)
+        return -ENOMEM;
+
+    size_t space_left = size;
+    char* ptr = data;
+
+    ret = put_string(&ptr, &space_left, "%s", ipv4_hosts_value);
+    if (ret < 0)
+        goto out;
+    ret = put_string(&ptr, &space_left, "%s%s\n", ipv4_hostname,
+                     g_pal_public_state->dns_host.hostname);
+    if (ret < 0)
+        goto out;
+    ret = put_string(&ptr, &space_left, "%s", ipv6_hosts_value);
+    if (ret < 0)
+        goto out;
+
+    *out_data = data;
+    *out_size = size;
+
+    return 0;
+out:
+    free(data);
+    return ret;
+}
+
 int init_etcfs(void) {
+    pseudo_add_str(NULL, "emulated-etc-hosts", &provide_etc_hosts);
     pseudo_add_str(NULL, "emulated-etc-resolv-conf", &provide_etc_resolv_conf);
     return 0;
 }
@@ -141,7 +191,15 @@ int mount_etcfs(void) {
     if (!g_pal_public_state->extra_runtime_domain_names_conf)
         return 0;
 
-    return mount_fs(&(struct libos_mount_params){
+    int ret = mount_fs(&(struct libos_mount_params){
+        .type = "pseudo",
+        .path = "/etc/hosts",
+        .uri = "emulated-etc-hosts",
+    });
+    if (ret < 0)
+        return ret;
+
+    return ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/etc/resolv.conf",
         .uri = "emulated-etc-resolv-conf",

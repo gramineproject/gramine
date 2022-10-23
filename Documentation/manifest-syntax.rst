@@ -157,6 +157,7 @@ This option will generate the following extra configuration:
 
 - Hostname (obtained by apps via `nodename` field in `uname` syscall),
   set to the host's hostname at initialization.
+- Pseudo-file ``/etc/hosts``, with defined `localhost` and IPv6 defaults.
 - Pseudo-file ``/etc/resolv.conf``, with keywords:
 
    - ``nameserver``
