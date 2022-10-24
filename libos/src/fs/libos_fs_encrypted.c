@@ -13,6 +13,7 @@
 #include "libos_utils.h"
 #include "path_utils.h"
 #include "protected_files.h"
+#include "string_utils.h"
 #include "toml_utils.h"
 
 static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
