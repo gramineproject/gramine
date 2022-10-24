@@ -4,6 +4,7 @@
  */
 
 #include "api.h"
+#include "libos_checkpoint.h"
 #include "libos_fs.h"
 #include "libos_lock.h"
 #include "libos_socket.h"
@@ -12,6 +13,49 @@
 #include "pal.h"
 #include "perm.h"
 #include "stat.h"
+
+/*
+ * FIXME: Hint to bind named UNIX domain sockets to FS pathnames, set to true if there is at least
+ *        one `type = "socket"` FS mount in the manifest. If not set, then the binding of named UNIX
+ *        sockets to FS pathnames is skipped (legacy logic).
+ */
+bool g_use_named_sockets_fs __attribute_migratable = false;
+
+int unix_socket_setup_dentry(struct libos_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
+
+    struct libos_inode* inode = get_new_inode(dent->mount, S_IFSOCK, PERM_rwxrwxrwx);
+    if (!inode)
+        return -ENOMEM;
+
+    inode->fs = &socket_builtin_fs;
+    dent->inode = inode;
+    return 0;
+}
+
+static void istat(struct libos_inode* inode, struct stat* buf) {
+    memset(buf, 0, sizeof(*buf));
+
+    lock(&inode->lock);
+    buf->st_uid  = inode->uid;
+    buf->st_gid  = inode->gid;
+    unlock(&inode->lock);
+
+    /* XXX: maybe we should put something meaningful in `dev` and `ino`? */
+    buf->st_dev = 0;
+    buf->st_ino = 0;
+    buf->st_mode = S_IFSOCK | PERM_rwxrwxrwx;
+    buf->st_nlink = 1;
+    buf->st_blksize = PAGE_SIZE;
+}
+
+static int mount(struct libos_mount_params* params, void** mount_data) {
+    __UNUSED(params);
+    __UNUSED(mount_data);
+    g_use_named_sockets_fs = true;
+    return 0;
+}
 
 static int close(struct libos_handle* handle) {
     if (lock_created(&handle->info.sock.lock)) {
@@ -64,19 +108,10 @@ static ssize_t writev(struct libos_handle* handle, struct iovec* iov, size_t iov
                       /*addr=*/NULL, /*addrlen=*/0, /*flags=*/0);
 }
 
-static int hstat(struct libos_handle* handle, struct stat* stat) {
-    __UNUSED(handle);
-    assert(stat);
-
-    memset(stat, 0, sizeof(*stat));
-
-    /* XXX: maybe we should put something meaningful in `dev` and `ino`? */
-    stat->st_dev = 0;
-    stat->st_ino = 0;
-    stat->st_mode = S_IFSOCK | PERM_rwxrwxrwx;
-    stat->st_nlink = 1;
-    stat->st_blksize = PAGE_SIZE;
-
+static int hstat(struct libos_handle* handle, struct stat* buf) {
+    assert(handle->inode);
+    assert(buf);
+    istat(handle->inode, buf);
     return 0;
 }
 
@@ -222,7 +257,50 @@ static int checkin(struct libos_handle* handle) {
     return 0;
 }
 
+static int lookup(struct libos_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
+
+    char* abs_path;
+    int ret = dentry_abs_path(dent, &abs_path, /*size=*/NULL);
+    if (ret < 0)
+        return ret;
+
+    char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
+    ret = path_to_sockname(abs_path, strlen(abs_path),
+                           pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
+                           sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
+    free(abs_path);
+    if (ret < 0) {
+        return ret;
+    }
+
+    PAL_HANDLE palhdl;
+    ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                        /*options=*/0, &palhdl);
+    if (ret == 0) {
+        /* were able to create server side of the UNIX socket with this name, this means that no
+         * UNIX socket existed on the host and thus lookup fails */
+        PalObjectClose(palhdl);
+        return -ENOENT;
+    } else if (ret != -PAL_ERROR_STREAMEXIST) {
+        /* failed for some reason other than that the UNIX socket already exists on the host */
+        return pal_to_unix_errno(ret);
+    }
+
+    assert(ret == -PAL_ERROR_STREAMEXIST);
+    return unix_socket_setup_dentry(dent);
+}
+
+static int stat(struct libos_dentry* dent, struct stat* buf) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+    assert(buf);
+    istat(dent->inode, buf);
+    return 0;
+}
 static struct libos_fs_ops socket_fs_ops = {
+    .mount    = mount,
     .close    = close,
     .read     = read,
     .write    = write,
@@ -235,7 +313,13 @@ static struct libos_fs_ops socket_fs_ops = {
     .checkin  = checkin,
 };
 
+static struct libos_d_ops socket_d_ops = {
+    .lookup  = lookup,
+    .stat    = stat,
+};
+
 struct libos_fs socket_builtin_fs = {
     .name   = "socket",
     .fs_ops = &socket_fs_ops,
+    .d_ops  = &socket_d_ops,
 };
