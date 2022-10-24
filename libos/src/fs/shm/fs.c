@@ -42,7 +42,7 @@ static ssize_t shm_read(struct libos_handle* hdl, void* buf, size_t count, file_
 }
 
 static ssize_t shm_write(struct libos_handle* hdl, const void* buf, size_t count,
-                            file_off_t* pos) {
+                         file_off_t* pos) {
     assert(hdl->type == TYPE_SHM);
 
     size_t actual_count = count;
@@ -63,7 +63,7 @@ static ssize_t shm_write(struct libos_handle* hdl, const void* buf, size_t count
 }
 
 static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                       uint64_t offset) {
+                    uint64_t offset) {
     assert(hdl->type == TYPE_SHM);
     assert(addr);
 
@@ -97,7 +97,7 @@ static int shm_truncate(struct libos_handle* hdl, file_off_t size) {
 
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
 static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode_t type,
-                          int flags, mode_t perm) {
+                       int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
     int ret;

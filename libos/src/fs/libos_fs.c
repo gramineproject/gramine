@@ -192,7 +192,7 @@ static int mount_sys(void) {
         .uri = "sys",
     });
     
-    char*  shared_memory_str = NULL;
+    char* shared_memory_str = NULL;
     ret = toml_string_in(g_manifest_root,
                          "sys.insecure__shared_memory", &shared_memory_str);
     if (ret < 0) {

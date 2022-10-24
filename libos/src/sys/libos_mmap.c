@@ -134,8 +134,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     if (flags & MAP_SHARED && hdl && !strcmp(hdl->fs->name, "shm")) {
         user_address_start = g_pal_public_state->shared_address_start;
         user_address_end = g_pal_public_state->shared_address_end;
-    }
-    else {
+    } else {
         user_address_start = g_pal_public_state->memory_address_start;
         user_address_end = g_pal_public_state->memory_address_end;
     }

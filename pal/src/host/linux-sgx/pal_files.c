@@ -258,9 +258,9 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
     }
 
     /* If the address is within shared address, map the file outside of enclave. */
-    if ((addr >= g_pal_public_state.shared_address_start && 
-                  addr + size <= g_pal_public_state.shared_address_end)) {
-            void* mem = addr;
+    if (addr >= g_pal_public_state.shared_address_start
+        && addr + size <= g_pal_public_state.shared_address_end) {
+        void* mem = addr;
         ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
                                    handle->file.fd, offset);
         if (ret >= 0 && addr != mem) {
