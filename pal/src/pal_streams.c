@@ -9,6 +9,7 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
+#include "string_utils.h"
 
 /* Stream handler table: this table corresponds to all the handle type supported by PAL. Threads
  * are not streams, so they need no handler. Sockets have their own table. */

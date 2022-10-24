@@ -17,6 +17,7 @@
 #include "list.h"
 #include "pal.h"
 #include "path_utils.h"
+#include "string_utils.h"
 #include "toml.h"
 #include "toml_utils.h"
 

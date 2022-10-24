@@ -60,7 +60,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
         DO_SYSCALL(close, hdl->file.fd);
         free(hdl);
         free(path);
-        return ret;
+        return unix_to_pal_error(ret);
     }
 
     hdl->file.realpath = path;

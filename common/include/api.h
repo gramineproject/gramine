@@ -266,8 +266,6 @@ void* _real_memmove(void* dest, const void* src, size_t count);
 void* _real_memset(void* dest, int ch, size_t count);
 int _real_memcmp(const void* lhs, const void* rhs, size_t count);
 
-bool strstartswith(const char* str, const char* prefix);
-bool strendswith(const char* str, const char* suffix);
 char* strdup(const char* str);
 char* alloc_substr(const char* start, size_t len);
 char* alloc_concat(const char* a, size_t a_len, const char* b, size_t b_len);

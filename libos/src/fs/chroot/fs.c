@@ -24,6 +24,7 @@
 #include "pal.h"
 #include "perm.h"
 #include "stat.h"
+#include "string_utils.h"
 
 /*
  * Always add a read permission to files created on host, because PAL requires opening the file even

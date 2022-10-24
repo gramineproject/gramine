@@ -3,6 +3,7 @@
  *                    Kailun Qin <kailun.qin@intel.com>
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /*!
@@ -32,5 +33,9 @@ int parse_size_str(const char* str, uint64_t* out_val);
  */
 int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
                  const char** out_end);
+
+bool strstartswith(const char* str, const char* prefix);
+
+bool strendswith(const char* str, const char* suffix);
 
 int parse_digit(char c, int base);

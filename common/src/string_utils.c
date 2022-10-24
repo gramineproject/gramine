@@ -3,6 +3,12 @@
  *                    Kailun Qin <kailun.qin@intel.com>
  */
 
+#ifdef USE_STDLIB
+#include <string.h>
+#else
+#include "api.h"
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -68,6 +74,28 @@ int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
     *out_value = value;
     *out_end = s;
     return 0;
+}
+
+bool strstartswith(const char* str, const char* prefix) {
+    size_t prefix_len = strlen(prefix);
+    size_t str_len = strnlen(str, prefix_len);
+
+    if (str_len < prefix_len) {
+        return false;
+    }
+
+    return !memcmp(str, prefix, prefix_len);
+}
+
+bool strendswith(const char* str, const char* suffix) {
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+
+    if (str_len < suffix_len) {
+        return false;
+    }
+
+    return !memcmp(&str[str_len - suffix_len], suffix, suffix_len);
 }
 
 int parse_digit(char c, int base) {

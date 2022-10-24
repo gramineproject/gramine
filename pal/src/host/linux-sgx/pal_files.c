@@ -51,6 +51,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     ret = get_norm_path(uri, normpath, &normpath_size);
     if (ret < 0) {
+        ret = unix_to_pal_error(ret);
         log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
         free(normpath);
         return -PAL_ERROR_DENIED;
@@ -397,6 +398,7 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
     }
     ret = get_norm_path(uri, path, &path_size);
     if (ret < 0) {
+        ret = unix_to_pal_error(ret);
         log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
         goto out;
     }

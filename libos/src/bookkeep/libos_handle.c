@@ -14,6 +14,7 @@
 #include "libos_thread.h"
 #include "pal.h"
 #include "stat.h"
+#include "string_utils.h"
 #include "toml_utils.h"
 
 static struct libos_lock handle_mgr_lock;

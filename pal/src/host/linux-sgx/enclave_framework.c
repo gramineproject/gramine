@@ -12,6 +12,7 @@
 #include "path_utils.h"
 #include "sgx_arch.h"
 #include "spinlock.h"
+#include "string_utils.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -718,6 +719,7 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
     size_t norm_path_size = norm_uri_size - URI_PREFIX_FILE_LEN;
     ret = get_norm_path(uri + URI_PREFIX_FILE_LEN, norm_uri + URI_PREFIX_FILE_LEN, &norm_path_size);
     if (ret < 0) {
+        ret = unix_to_pal_error(ret);
         log_error("Path (%s) normalization failed: %s", uri, pal_strerror(ret));
         goto out;
     }
