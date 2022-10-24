@@ -135,10 +135,10 @@ out:
 static int provide_etc_hosts(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    int ret = 0;
+    int ret;
     size_t size = 0;
     const char* ipv4_hosts_value = "127.0.0.1 localhost\n";
-    const char* ipv4_hostname = "127.0.0.1 ";
+    const char* ipv4_hostname = "127.0.1.1 ";
     const char* ipv6_hosts_value = "::1     ip6-localhost ip6-loopback\n" \
                                    "fe00::0 ip6-localnet\n" \
                                    "ff00::0 ip6-mcastprefix\n" \
@@ -147,7 +147,7 @@ static int provide_etc_hosts(struct libos_dentry* dent, char** out_data, size_t*
 
     size += strlen(ipv4_hosts_value);
 
-    size += strlen(ipv4_hosts_value);
+    size += strlen(ipv4_hostname);
     size += strlen(g_pal_public_state->dns_host.hostname);
     size += 1; /* for a new line */
 
