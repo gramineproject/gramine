@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include "api.h"
-#include "utils.h"
+#include "string_utils.h"
 
 static void begin_number(const char* str, int base, const char** out_s, int* out_base,
                          int* out_sign) {

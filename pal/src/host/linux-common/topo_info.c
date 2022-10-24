@@ -14,9 +14,9 @@
 
 #include "api.h"
 #include "pal_linux.h"
+#include "string_utils.h"
 #include "syscall.h"
 #include "topo_info.h"
-#include "utils.h"
 
 ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
     int fd = DO_SYSCALL(open, filename, O_RDONLY);

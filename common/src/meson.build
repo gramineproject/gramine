@@ -10,12 +10,12 @@ common_src_libc = files(
     'string/strlen.c',
     'string/strspn.c',
     'string/strstr.c',
-    'string/utils.c',
+    'string/util.c',
 )
 
 common_src_utils = files(
-    'path.c',
-    'string.c',
+    'path_utils.c',
+    'string_utils.c',
 )
 
 common_src_internal = files(
@@ -38,7 +38,7 @@ common_src_internal += common_src_arch
 common_dep_utils = declare_dependency(
     sources: common_src_utils,
 
-    include_directories: common_inc_utils,
+    include_directories: common_inc,
 )
 
 common_dep_libc = declare_dependency(

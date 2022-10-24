@@ -11,9 +11,9 @@
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_utils.h"
+#include "path_utils.h"
 #include "protected_files.h"
 #include "toml_utils.h"
-#include "utils.h"
 
 static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 

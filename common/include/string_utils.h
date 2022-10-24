@@ -3,7 +3,6 @@
  *                    Kailun Qin <kailun.qin@intel.com>
  */
 
-#include <stdbool.h>
 #include <stdint.h>
 
 /*!
@@ -35,8 +34,3 @@ int str_to_ulong(const char* str, unsigned int base, unsigned long* out_value,
                  const char** out_end);
 
 int parse_digit(char c, int base);
-
-int get_norm_path(const char* path, char* buf, size_t* inout_size);
-int get_base_name(const char* path, char* buf, size_t* inout_size);
-
-bool is_dot_or_dotdot(const char* name);

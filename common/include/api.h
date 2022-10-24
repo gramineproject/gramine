@@ -375,8 +375,6 @@ uint16_t __ntohs(uint16_t x);
 
 extern const char* const* sys_errlist_internal;
 
-/* Gramine functions */
-
 #define URI_PREFIX_SEPARATOR ":"
 
 #define URI_TYPE_DIR      "dir"

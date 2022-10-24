@@ -1,7 +1,7 @@
 #include "api.h"
 #include "pal_error.h"
 #include "pal_regression.h"
-#include "utils.h"
+#include "path_utils.h"
 
 static const char* get_norm_path_cases[][2] = {
     {"/", "/"},

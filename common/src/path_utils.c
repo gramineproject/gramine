@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <stddef.h>
 
-#include "utils.h"
+#include "path_utils.h"
 
 /*
  * Finds next '/' in `path`.

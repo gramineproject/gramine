@@ -16,9 +16,9 @@
 #include "libos_utils.h"
 #include "list.h"
 #include "pal.h"
+#include "path_utils.h"
 #include "toml.h"
 #include "toml_utils.h"
-#include "utils.h"
 
 static struct libos_fs* g_builtin_fs[] = {
     &chroot_builtin_fs,

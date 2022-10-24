@@ -13,7 +13,7 @@
 #include "libos_fs_pseudo.h"
 #include "libos_lock.h"
 #include "stat.h"
-#include "utils.h"
+#include "string_utils.h"
 
 LISTP_TYPE(pseudo_node) g_pseudo_roots = LISTP_INIT;
 
