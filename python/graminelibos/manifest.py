@@ -37,9 +37,9 @@ def uri2path(uri):
         raise ManifestError(f'Unsupported URI type: {uri}')
     return pathlib.Path(uri[len('file:'):])
 
-def append_tf(trusted_files, uri, hash_):
-    if uri not in trusted_files:
-        trusted_files[uri] = hash_
+def append_tf(trusted_files, path, hash_=None):
+    if path not in trusted_files:
+        trusted_files[path] = hash_ if hash_ is not None else hash_file_contents(path)
 
 def append_trusted_dir_or_file(trusted_files, val, expanded):
     if isinstance(val, dict):
@@ -65,10 +65,10 @@ def append_trusted_dir_or_file(trusted_files, val, expanded):
             if sub_path.is_file():
                 # Skip inaccessible files
                 if os.access(sub_path, os.R_OK):
-                    append_tf(trusted_files, sub_path, hash_file_contents(sub_path))
+                    append_tf(trusted_files, sub_path)
     else:
         assert path.is_file()
-        append_tf(trusted_files, path, hash_file_contents(path))
+        append_tf(trusted_files, path)
         expanded.append(path)
 
 class Manifest:
