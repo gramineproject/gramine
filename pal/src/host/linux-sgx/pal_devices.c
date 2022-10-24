@@ -780,6 +780,7 @@ static void copy_sub_regions_to_enclave(struct sub_region* sub_regions, size_t s
     }
 }
 
+/* may return `*out_toml_ioctl_struct = NULL` which means "no struct needed for this IOCTL" */
 static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) {
     int ret;
 
@@ -811,7 +812,7 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
         int64_t ioctl_request = 0x0;
         ret = toml_rtoi(toml_ioctl_request_raw, &ioctl_request);
         if (ret < 0 || ioctl_request == 0x0) {
-            log_error("Invalid request value of allowed ioctl '%s' in manifest",
+            log_error("Invalid request value of allowed IOCTL '%s' in manifest",
                       toml_allowed_ioctl_key);
             continue;
         }
@@ -820,30 +821,37 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
             /* found this IOCTL request in the manifest, now must find the corresponding struct */
             toml_raw_t toml_ioctl_struct_raw = toml_raw_in(toml_ioctl_table, "struct");
             if (!toml_ioctl_struct_raw) {
-                log_error("Cannot find struct value of allowed ioctl '%s' in manifest",
-                          toml_allowed_ioctl_key);
-                return -PAL_ERROR_NOTIMPLEMENTED;
+                /* no corresponding struct -> base-type or ignored IOCTL argument */
+                *out_toml_ioctl_struct = NULL;
+                return 0;
             }
 
             char* ioctl_struct_str = NULL;
             ret = toml_rtos(toml_ioctl_struct_raw, &ioctl_struct_str);
             if (ret < 0) {
-                log_error("Invalid struct value of allowed ioctl '%s' in manifest "
+                log_error("Invalid struct value of allowed IOCTL '%s' in manifest "
                           "(sgx.allowed_ioctls.[identifier].struct must be a TOML string)",
                           toml_allowed_ioctl_key);
                 return -PAL_ERROR_INVAL;
             }
 
+            if (strcmp(ioctl_struct_str, "") == 0) {
+                /* empty string instead of struct name -> base-type or ignored IOCTL argument */
+                *out_toml_ioctl_struct = NULL;
+                free(ioctl_struct_str);
+                return 0;
+            }
+
             toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sgx, "ioctl_structs");
             if (!toml_ioctl_structs) {
-                log_error("There are no ioctl structs found in manifest");
+                log_error("There are no IOCTL structs found in manifest");
                 free(ioctl_struct_str);
                 return -PAL_ERROR_INVAL;
             }
 
             toml_array_t* toml_ioctl_struct = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
             if (!toml_ioctl_struct) {
-                log_error("Cannot find struct value '%s' of allowed ioctl '%s' in "
+                log_error("Cannot find struct value '%s' of allowed IOCTL '%s' in "
                           "manifest (or it is not a correctly formatted TOML array)",
                           ioctl_struct_str, toml_allowed_ioctl_key);
                 free(ioctl_struct_str);
@@ -900,8 +908,8 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_
     if (ret < 0)
         return ret;
 
-    if (toml_array_nelem(toml_ioctl_struct) == 0) {
-        /* special case of an empty TOML array -> base-type or ignored IOCTL argument */
+    if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) == 0) {
+        /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
         ret = ocall_ioctl(handle->dev.fd, cmd, arg);
         if (ret < 0)
             return unix_to_pal_error(ret);

@@ -22,14 +22,14 @@ sgx.trusted_files = [
 # for IOCTLs without an argument (or with integer argument)
 sgx.ioctl_structs.gramine_test_dev_ioctl_dummy = [ ]
 
+# three IOCTLs below test different "no struct needed" syntaxes of the `struct` key
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REWIND.request = 0x8100
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REWIND.struct  = "gramine_test_dev_ioctl_dummy"
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.request = 0x8103
-sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.struct  = "gramine_test_dev_ioctl_dummy"
+sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.struct  = ""
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_CLEAR.request = 0x8104
-sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_CLEAR.struct  = "gramine_test_dev_ioctl_dummy"
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_write = [
     { size=8, type="out", name="buf_size" },     # buf_size

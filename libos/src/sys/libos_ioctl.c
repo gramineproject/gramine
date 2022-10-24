@@ -38,6 +38,11 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     if (!hdl)
         return -EBADF;
 
+    lock(&g_dcache_lock);
+    bool is_host_dev = hdl->type == TYPE_CHROOT && hdl->dentry->inode &&
+        hdl->dentry->inode->type == S_IFCHR;
+    unlock(&g_dcache_lock);
+
     int ret;
     switch (cmd) {
         case TIOCGPGRP:
@@ -133,11 +138,6 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             break;
         }
         default: {
-            lock(&g_dcache_lock);
-            bool is_host_dev = hdl->type == TYPE_CHROOT && hdl->dentry->inode &&
-                                   hdl->dentry->inode->type == S_IFCHR;
-            unlock(&g_dcache_lock);
-
             if (!is_host_dev) {
                 ret = -ENOSYS;
                 break;

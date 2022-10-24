@@ -771,16 +771,25 @@ By default, Gramine with SGX disables all device-backed IOCTLs. This syntax
 allows to explicitly allow a set of IOCTLs on devices (devices must be
 explicitly mounted via ``fs.mounts`` manifest syntax). Only IOCTLs with the
 ``request`` argument found among the manifest-listed IOCTLs are allowed to
-pass-through to the host. Each IOCTL entry must also contain a reference to an
-IOCTL struct in its ``struct`` field.
+pass-through to the host. Each IOCTL entry may also contain a reference to an
+IOCTL struct in the ``struct`` field.
 
 Available IOCTL structs are described via ``sgx.ioctl_structs``. Each IOCTL
-struct describes the memory layout of the ``arg`` argument (typically a pointer
-to a complex nested object passed to the device). Description of the memory
-layout is required for a deep copy of the argument. The memory layout is
-described using the TOML syntax of inline arrays (for each new separate memory
-region) and inline tables (for each sub-region in one memory region). Each
-sub-region is described via the following keys:
+struct describes the memory layout of the ``argp`` argument (the third argument
+to the ``ioctl`` system call; typically a pointer to a complex nested object
+passed to the device). Description of the memory layout is required for a deep
+copy of the ``argp`` object. We use the term *memory region* to denote a
+separate contiguous region of memory and the term *sub-region of a memory
+region* to denote a part of the memory region that has properties different from
+other sub-regions in the same memory region (e.g., should it be copied in or out
+of the SGX enclave, is it a pointer to another memory region, etc.). For
+example, a C struct can be considered one memory region, and fields of this C
+struct can be considered sub-regions of this memory region.
+
+Memory layout of the IOCTL struct is described using the TOML syntax of inline
+arrays (for each new separate memory region) and inline tables (for each
+sub-region in one memory region). Each sub-region is described via the following
+keys:
 
 - ``name`` is an optional name for this sub-region; mainly used to find
   length-specifying fields and nested memory regions.
@@ -801,9 +810,10 @@ sub-region is described via the following keys:
   default. Unit of measurement must be a constant integer. For example,
   ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
   character is 2B long) of a dynamically calculated length.
-- ``adjust`` is an optional integer adjustment for ``size``. It is 0 bytes by
-  default. This field must be a constant (possibly negative) integer. For
-  example, ``adjust = -8`` and ``size = 12`` results in a total size of 4B.
+- ``adjust`` is an optional integer adjustment for ``size`` (always specified in
+  bytes). It is 0 bytes by default. This field must be a constant (possibly
+  negative) integer. For example, ``size = 6``, ``unit = 2`` and ``adjust = -8``
+  results in a total size of 4B.
 - ``type = ["none" | "out" | "in" | "inout"]`` is an optional direction of copy
   for this sub-region. For example, ``type = "out"`` denotes a sub-region to be
   copied out of the enclave to untrusted memory, i.e., this sub-region is an
@@ -817,30 +827,54 @@ sub-region is described via the following keys:
   the implicit size of 8B, and the pointer value is always rewired to the memory
   region in untrusted memory (containing a copied-out nested memory region). If
   ``ptr`` is specified together with ``size``, it describes not just a pointer
-  but an array of these memory regions. A special keyword ``ptr = "this"``
-  specifies a pointer to the memory region of the IOCTL struct's root memory
-  layout.
+  but an array of these memory regions. (In other words, ``ptr`` is an array of
+  memory regions with ``size = 1`` by default.) A special keyword ``ptr =
+  "this"`` specifies a pointer to the memory region of the IOCTL struct's root
+  memory layout.
 
-Consider this simple example::
+Consider this simple C snippet::
 
-    sgx.ioctl_structs.st1 = [ { ptr=[ {name="nested_region", align=4096, size=4096, type="out"} ] } ]
+    struct st1 {
+        struct st2* nested_region;
+    };
+
+    struct st2 {
+        size_t buf_size;
+        char buf[0x1000];
+    } aligned(0x1000);
+
+This translates into the following manifest syntax::
+
+    sgx.ioctl_structs.st1 = [
+        {
+            name = "nested_region",
+            ptr = [
+                {
+                    align = 0x1000,
+                    name  = "buf_size",
+                    size  = 8,
+                    type  = "out"
+                },
+                {
+                    name  = "buf",
+                    size  = "buf_size",
+                    type  = "out"
+                }
+            ]
+        }
+    ]
 
 The above example specifies a root struct (first memory region) that consists
 of a single sub-region that contains an 8-byte pointer value. This pointer
 points to another memory region in enclave memory that contains a single
-sub-region of size 4KB and that must be 4KB-aligned. This nested sub-region has
-a name ``nested_region`` (not used, only for illustrative purposes). Also, this
-nested sub-region is copied out of the enclave. The pointer value of the first
-memory region is rewired to point to the copied-out second memory region in
-untrusted memory. No fields/memory regions are copied back from untrusted memory
-inside the enclave after an IOCTL with this struct executes.
+sub-region of size 4KB and that must be 4KB-aligned. This nested sub-region is
+copied out of the enclave (but only ``buf_size`` bytes of the buffer are copied
+out, to prevent memory leaks). The pointer value of the first memory region is
+rewired to point to the copied-out second memory region in untrusted memory. No
+fields/memory regions are copied back from untrusted memory inside the enclave
+after an IOCTL with this struct executes.
 
-If the IOCTL's third argument is simply an integer (or unused at all), then the
-syntax must specify the struct as an empty TOML array::
-
-    sgx.ioctl_structs.st2 = [ ]
-
-IOCTLs that use these structs are defined like this::
+IOCTLs that use the above struct in a third argument are defined like this::
 
     sgx.allowed_ioctls.io1.request = 0x12345678
     sgx.allowed_ioctls.io1.struct = "st1"
@@ -848,8 +882,13 @@ IOCTLs that use these structs are defined like this::
     sgx.allowed_ioctls.io2.request = 0x87654321
     sgx.allowed_ioctls.io2.struct = "st1"
 
+If the IOCTL's third argument is simply an integer (or unused at all), then the
+``struct`` key must be an empty string or not exist at all::
+
     sgx.allowed_ioctls.io3.request = 0x43218765  # this IOCTL's arg is passed as-is
-    sgx.allowed_ioctls.io3.struct = "st2"
+    sgx.allowed_ioctls.io3.struct = ""
+
+    sgx.allowed_ioctls.io4.request = 0x87654321  # this IOCTL's arg is passed as-is
 
 Attestation and quotes
 ^^^^^^^^^^^^^^^^^^^^^^
