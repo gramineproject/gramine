@@ -4,10 +4,16 @@ gsgx_h = configure_file(
     configuration: conf_sgx,
 )
 
-sgx_inc = [
-    includes_pal_common,
+pal_sgx_inc = [
     include_directories(
         '.',
+    ),
+]
+
+sgx_inc = [
+    includes_pal_common,
+    pal_sgx_inc,
+    include_directories(
         '../../../include/arch/@0@/linux'.format(host_machine.cpu_family()),
         '../../../include/host/linux-common',
     ),
