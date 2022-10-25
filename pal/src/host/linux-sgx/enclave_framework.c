@@ -12,7 +12,6 @@
 #include "path_utils.h"
 #include "sgx_arch.h"
 #include "spinlock.h"
-#include "string_utils.h"
 #include "toml.h"
 #include "toml_utils.h"
 

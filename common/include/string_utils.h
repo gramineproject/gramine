@@ -1,7 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Corporation
- *                    Kailun Qin <kailun.qin@intel.com>
- */
+/* Copyright (C) 2014 Stony Brook University */
 
 #include <stdbool.h>
 #include <stdint.h>

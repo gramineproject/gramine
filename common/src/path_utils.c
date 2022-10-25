@@ -6,17 +6,17 @@
  * lookup / access config values.
  */
 
+#include <asm/errno.h>
+#include <stddef.h>
+
+#include "path_utils.h"
+
 #ifdef USE_STDLIB
 #include <assert.h>
 #include <string.h>
 #else
 #include "api.h"
 #endif
-
-#include <errno.h>
-#include <stddef.h>
-
-#include "path_utils.h"
 
 /*
  * Finds next '/' in `path`.

@@ -19,6 +19,7 @@
 #include "cpu.h"
 #include "list.h"
 #include "log.h"
+#include "string_utils.h"
 
 /* TODO: remove this once Gramine does not use host headers. */
 #ifndef ssize_t

@@ -1,18 +1,23 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Corporation
- *                    Kailun Qin <kailun.qin@intel.com>
+/* Copyright (C) 2016 Stony Brook University
+ * Copyright (C) 2020 Invisible Things Lab
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
+ *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ * Copyright (C) 2020 Intel Corporation
+ *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
  */
+
+#include <stdint.h>
+#include <stddef.h>
+
+#include "string_utils.h"
 
 #ifdef USE_STDLIB
 #include <string.h>
 #else
 #include "api.h"
 #endif
-
-#include <stdint.h>
-#include <stddef.h>
-
-#include "string_utils.h"
 
 int parse_size_str(const char* str, uint64_t* out_val) {
     const char* endptr = NULL;

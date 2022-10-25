@@ -38,7 +38,6 @@
 #include "libos_vma.h"
 #include "perm.h"
 #include "stat.h"
-#include "string_utils.h"
 #include "toml_utils.h"
 
 /*

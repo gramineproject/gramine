@@ -33,7 +33,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_rtld.h"
-#include "string_utils.h"
 
 /* ELF header address (load address of the PAL binary); modern linkers define this magic symbol
  * unconditionally; see e.g. https://github.com/bminor/glibc/commit/302247c8.

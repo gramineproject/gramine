@@ -35,30 +35,30 @@ subdir('arch')
 # Current common arch-specific sources are for `common_src_internal` only.
 common_src_internal += common_src_arch
 
-common_dep_utils = declare_dependency(
+common_utils_dep = declare_dependency(
     sources: common_src_utils,
 
     include_directories: common_inc,
 )
 
-common_dep_libc = declare_dependency(
+common_libc_dep = declare_dependency(
     sources: common_src_libc,
 
     include_directories: common_inc,
 
     dependencies: [
-        common_dep_utils,
+        common_utils_dep,
     ],
 )
 
-common_dep_internal = declare_dependency(
+common_internal_dep = declare_dependency(
     sources: common_src_internal,
 
     include_directories: common_inc,
 
     dependencies: [
-        common_dep_libc,
-        common_dep_utils,
+        common_libc_dep,
+        common_utils_dep,
         tomlc99_dep,
     ],
 )
@@ -70,22 +70,22 @@ endif
 if ubsan
     common_src_san += files('ubsan.c')
 endif
-common_dep_san = declare_dependency(
+common_san_dep = declare_dependency(
     sources: common_src_san,
 
     include_directories: common_inc,
 
     dependencies: [
-        common_dep_libc,
+        common_libc_dep,
     ],
 )
 
 common_dep = declare_dependency(
     dependencies: [
-        common_dep_libc,
-        common_dep_utils,
-        common_dep_san,
-        common_dep_internal,
+        common_libc_dep,
+        common_utils_dep,
+        common_san_dep,
+        common_internal_dep,
         uthash_dep,
         tomlc99_dep,
     ],

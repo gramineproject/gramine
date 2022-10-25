@@ -14,7 +14,6 @@
 
 #include "api.h"
 #include "pal_linux.h"
-#include "string_utils.h"
 #include "syscall.h"
 #include "topo_info.h"
 

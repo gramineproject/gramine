@@ -13,7 +13,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_rtld.h"
-#include "string_utils.h"
 #include "toml.h"
 #include "toml_utils.h"
 
