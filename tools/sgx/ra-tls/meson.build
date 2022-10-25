@@ -11,7 +11,7 @@ ra_tls_args = [
 libra_tls_attest = shared_library('ra_tls_attest',
     'ra_tls_attest.c',
     c_args: ra_tls_args,
-    include_directories: pal_sgx_inc,
+    include_directories: pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
     dependencies: [
         mbedtls_static_dep,
     ],
