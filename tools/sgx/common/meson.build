@@ -13,7 +13,7 @@ sgx_util = shared_library('sgx_util',
     ],
 
     include_directories: [
-        sgx_inc,
+        pal_sgx_inc,
         common_inc,
     ],
     dependencies: [
@@ -31,7 +31,7 @@ sgx_util_dep = declare_dependency(
     link_with: sgx_util,
     include_directories: [
         include_directories('.'),
-        sgx_inc, # this is mostly for sgx_arch.h
+        pal_sgx_inc, # this is for `sgx_attest.h`
         protected_files_inc,
     ],
 )

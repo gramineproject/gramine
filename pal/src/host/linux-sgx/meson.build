@@ -13,6 +13,12 @@ sgx_inc = [
     ),
 ]
 
+pal_sgx_inc = [
+    include_directories(
+        '.',
+    ),
+]
+
 cflags_pal_sgx = [
     cflags_pal_common,
     '-DHOST_TYPE=Linux-SGX',
