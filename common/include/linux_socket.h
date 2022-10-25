@@ -101,6 +101,13 @@ struct cmsghdr {
 /* TCP options. */
 #define TCP_NODELAY 1
 #define TCP_CORK 3
+#define TCP_KEEPIDLE 4
+#define TCP_KEEPINTVL 5
+#define TCP_KEEPCNT 6
+
+#define MAX_TCP_KEEPIDLE 32767
+#define MAX_TCP_KEEPINTVL 32767
+#define MAX_TCP_KEEPCNT 127
 
 struct linger {
     int l_onoff;

@@ -78,6 +78,9 @@ typedef struct {
             bool broadcast;
             bool keepalive;
             bool tcp_cork;
+            unsigned int tcp_keepidle;
+            unsigned int tcp_keepintvl;
+            uint8_t tcp_keepcnt;
             bool tcp_nodelay;
             bool ipv6_v6only;
         } sock;

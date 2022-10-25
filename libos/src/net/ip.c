@@ -265,6 +265,15 @@ static int set_tcp_option(struct libos_handle* handle, int optname, void* optval
         case TCP_CORK:
             attr.socket.tcp_cork = *(int*)optval;
             break;
+        case TCP_KEEPIDLE:
+            attr.socket.tcp_keepidle = *(int*)optval;
+            break;
+        case TCP_KEEPINTVL:
+            attr.socket.tcp_keepintvl = *(int*)optval;
+            break;
+        case TCP_KEEPCNT:
+            attr.socket.tcp_keepcnt = *(int*)optval;
+            break;
         case TCP_NODELAY:
             attr.socket.tcp_nodelay = *(int*)optval;
             break;
@@ -500,6 +509,15 @@ static int get_tcp_option(struct libos_handle* handle, int optname, void* optval
     switch (optname) {
         case TCP_CORK:
             val = attr.socket.tcp_cork;
+            break;
+        case TCP_KEEPIDLE:
+            val = attr.socket.tcp_keepidle;
+            break;
+        case TCP_KEEPINTVL:
+            val = attr.socket.tcp_keepintvl;
+            break;
+        case TCP_KEEPCNT:
+            val = attr.socket.tcp_keepcnt;
             break;
         case TCP_NODELAY:
             val = attr.socket.tcp_nodelay;
