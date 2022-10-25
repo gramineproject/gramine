@@ -83,9 +83,9 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.keepalive = false;
     handle->sock.broadcast = false;
     handle->sock.tcp_cork = false;
-    handle->sock.tcp_keepidle = 0;
-    handle->sock.tcp_keepintvl = 0;
-    handle->sock.tcp_keepcnt = 0;
+    handle->sock.tcp_keepidle = DEFAULT_TCP_KEEPIDLE;
+    handle->sock.tcp_keepintvl = DEFAULT_TCP_KEEPINTVL;
+    handle->sock.tcp_keepcnt = DEFAULT_TCP_KEEPCNT;
     handle->sock.tcp_nodelay = false;
     handle->sock.ipv6_v6only = false;
 
@@ -443,9 +443,7 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     if (attr->socket.tcp_keepidle != handle->sock.tcp_keepidle) {
-        if (attr->socket.tcp_keepidle < 1 || attr->socket.tcp_keepidle > MAX_TCP_KEEPIDLE) {
-            return -PAL_ERROR_INVAL;
-        }
+        assert(attr->socket.tcp_keepidle >= 1 && attr->socket.tcp_keepidle <= MAX_TCP_KEEPIDLE);
         int val = attr->socket.tcp_keepidle;
         int ret = ocall_setsockopt(handle->sock.fd, SOL_TCP, TCP_KEEPIDLE, &val, sizeof(val));
         if (ret < 0) {
@@ -455,9 +453,7 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     if (attr->socket.tcp_keepintvl != handle->sock.tcp_keepintvl) {
-        if (attr->socket.tcp_keepintvl < 1 || attr->socket.tcp_keepintvl > MAX_TCP_KEEPINTVL) {
-            return -PAL_ERROR_INVAL;
-        }
+        assert(attr->socket.tcp_keepintvl >= 1 && attr->socket.tcp_keepintvl <= MAX_TCP_KEEPINTVL);
         int val = attr->socket.tcp_keepintvl;
         int ret = ocall_setsockopt(handle->sock.fd, SOL_TCP, TCP_KEEPINTVL, &val, sizeof(val));
         if (ret < 0) {
@@ -467,9 +463,7 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     }
 
     if (attr->socket.tcp_keepcnt != handle->sock.tcp_keepcnt) {
-        if (attr->socket.tcp_keepcnt < 1 || attr->socket.tcp_keepcnt > MAX_TCP_KEEPCNT) {
-            return -PAL_ERROR_INVAL;
-        }
+        assert(attr->socket.tcp_keepcnt >= 1 && attr->socket.tcp_keepcnt <= MAX_TCP_KEEPCNT);
         int val = attr->socket.tcp_keepcnt;
         int ret = ocall_setsockopt(handle->sock.fd, SOL_TCP, TCP_KEEPCNT, &val, sizeof(val));
         if (ret < 0) {

@@ -256,26 +256,41 @@ static int set_tcp_option(struct libos_handle* handle, int optname, void* optval
     }
     assert(attr.handle_type == PAL_TYPE_SOCKET);
 
-    if (len < sizeof(int)) {
-        /* All currently supported options use `int`. */
+    /* All currently supported options use `int`. */
+    size_t required_len = sizeof(int);
+    if (len < required_len) {
         return -EINVAL;
     }
 
+    union {
+        int i;
+    } value = { 0 };
+    memcpy(&value, optval, required_len);
+
     switch (optname) {
         case TCP_CORK:
-            attr.socket.tcp_cork = *(int*)optval;
+            attr.socket.tcp_cork = value.i;
             break;
         case TCP_KEEPIDLE:
-            attr.socket.tcp_keepidle = *(int*)optval;
+            if (value.i < 1 || value.i > MAX_TCP_KEEPIDLE) {
+                return -EINVAL;
+            }
+            attr.socket.tcp_keepidle = value.i;
             break;
         case TCP_KEEPINTVL:
-            attr.socket.tcp_keepintvl = *(int*)optval;
+            if (value.i < 1 || value.i > MAX_TCP_KEEPINTVL) {
+                return -EINVAL;
+            }
+            attr.socket.tcp_keepintvl = value.i;
             break;
         case TCP_KEEPCNT:
-            attr.socket.tcp_keepcnt = *(int*)optval;
+            if (value.i < 1 || value.i > MAX_TCP_KEEPCNT) {
+                return -EINVAL;
+            }
+            attr.socket.tcp_keepcnt = value.i;
             break;
         case TCP_NODELAY:
-            attr.socket.tcp_nodelay = *(int*)optval;
+            attr.socket.tcp_nodelay = value.i;
             break;
         default:
             return -ENOPROTOOPT;
