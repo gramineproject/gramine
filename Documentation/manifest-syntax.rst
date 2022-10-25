@@ -547,7 +547,7 @@ Number of RPC threads (Exitless feature)
 
 ::
 
-    sgx.insecure__rpc_max_threads = [NUM]
+    sgx.insecure__rpc_thread_num = [NUM]
     (Default: 0)
 
 This syntax specifies the number of RPC threads that are created outside of
@@ -990,13 +990,11 @@ syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
 explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
 ``true`` boolean value in the deprecated syntax.
 
-Number of threads/RPC threads (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Number of threads (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
     sgx.thread_num = [NUM]
-    sgx.insecure__rpc_thread_num = [NUM]
 
-These names were ambigious and were replaced with ``sgx.max_threads`` and
-``sgx.insecure__rpc_max_threads`` correspondingly.
+This name was ambigious and was replaced with ``sgx.max_threads``.

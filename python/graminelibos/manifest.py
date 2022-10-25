@@ -87,12 +87,9 @@ class Manifest:
         sgx.setdefault('trusted_files', [])
         sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE)
 
-        # TODO: sgx.thread_num and sgx.insecure__rpc_thread_num are deprecated in v1.4,
-        #       simplify below logic in v1.5
+        # TODO: sgx.thread_num is deprecated in v1.4, simplify below logic in v1.5
         if 'thread_num' not in sgx:
             sgx.setdefault('max_threads', DEFAULT_THREAD_NUM)
-        if 'insecure__rpc_thread_num' not in sgx:
-            sgx.setdefault('insecure__rpc_max_threads', 0)
 
         sgx.setdefault('isvprodid', 0)
         sgx.setdefault('isvsvn', 0)

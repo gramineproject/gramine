@@ -700,33 +700,22 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     enclave_info->thread_num = thread_num_int64;
 
     int64_t rpc_thread_num_int64;
-    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_max_threads", /*defaultval=*/-1,
+    ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/0,
                       &rpc_thread_num_int64);
     if (ret < 0) {
-        log_error("Cannot parse 'sgx.insecure__rpc_max_threads'");
+        log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
         ret = -EINVAL;
         goto out;
     }
 
     if (rpc_thread_num_int64 < 0) {
-        /* TODO: sgx.insecure__rpc_thread_num is deprecated in v1.4, remove in v1.5 */
-        ret = toml_int_in(manifest_root, "sgx.insecure__rpc_thread_num", /*defaultval=*/-1,
-                          &rpc_thread_num_int64);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.insecure__rpc_thread_num'");
-            ret = -EINVAL;
-            goto out;
-        }
-        if (rpc_thread_num_int64 < 0) {
-            /* if neither new nor deprecated options are found in manifest, set to zero */
-            rpc_thread_num_int64 = 0;
-        }
-        log_error("Detected deprecated syntax: 'sgx.insecure__rpc_thread_num'. Consider "
-                  "switching to 'sgx.insecure__rpc_max_threads'.");
+        log_error("Negative 'sgx.insecure__rpc_thread_num' is impossible");
+        ret = -EINVAL;
+        goto out;
     }
 
     if (rpc_thread_num_int64 > MAX_RPC_THREADS) {
-        log_error("Too large 'sgx.insecure__rpc_max_threads', maximum allowed is %d",
+        log_error("Too large 'sgx.insecure__rpc_thread_num', maximum allowed is %d",
                   MAX_RPC_THREADS);
         ret = -EINVAL;
         goto out;
