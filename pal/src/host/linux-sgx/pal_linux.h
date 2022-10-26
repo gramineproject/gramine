@@ -100,8 +100,6 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
  * its underlying type. */
 void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
 
-bool is_tsc_usable(void);
-uint64_t get_tsc_hz(void);
 void init_tsc(void);
 
 int init_cpuid(void);
