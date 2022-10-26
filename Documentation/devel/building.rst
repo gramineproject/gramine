@@ -187,14 +187,14 @@ The ``-Dsgx_driver`` parameter controls which SGX driver to use:
 
 * ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
   5.11+),
-* ``dcap`` for Intel DCAP version 1.10 or higher,
 * ``oot`` for non-DCAP, out-of-tree version of the driver.
 
 The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
 where the SGX driver was downloaded or installed in the previous step. For
-example, for the DCAP version 1.41 of the SGX driver, you must specify
-``-Dsgx_driver_include_path="/usr/src/sgx-1.41/include/"``. If this parameter is
-omitted, Gramine's build system will try to determine the right path.
+example, for the upstreamed driver, you must specify
+``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
+is omitted, Gramine's build system will try to determine the right path, so,
+it's usually not needed.
 
 .. note::
 

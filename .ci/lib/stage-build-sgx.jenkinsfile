@@ -6,14 +6,6 @@ stage('build') {
         git checkout 276c5c6a064d22358542f5e0aa96b1c0ace5d695
     '''
 
-    sh '''
-        cd /opt/intel
-        git clone https://github.com/intel/SGXDataCenterAttestationPrimitives.git
-        cd SGXDataCenterAttestationPrimitives
-        git checkout DCAP_1.14
-        # no need to build, we only need the SGX header file (sgx_oot.h)
-    '''
-
     env.MESON_OPTIONS = ''
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'
@@ -23,24 +15,6 @@ stage('build') {
     }
     if (env.CC == 'clang') {
         env.MESON_OPTIONS += ' -Dmusl=disabled'
-    }
-
-    try {
-        sh '''
-            meson setup build-dcap/ \
-                --werror \
-                --prefix="$PREFIX" \
-                --buildtype="$BUILDTYPE" \
-                -Ddirect=disabled \
-                -Dsgx=enabled \
-                -Dtests=enabled \
-                -Dsgx_driver=dcap \
-                $MESON_OPTIONS
-            ninja -vC build-dcap
-        '''
-    } finally {
-        archiveArtifacts 'build-dcap/meson-logs/**/*'
-        sh 'rm -rf build-dcap'
     }
 
     try {
