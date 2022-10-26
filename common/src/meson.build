@@ -1,18 +1,3 @@
-common_src_libc = files(
-    'printf.c',
-    'string/atoi.c',
-    'string/ctype.c',
-    'string/memcmp.c',
-    'string/memcpy.c',
-    'string/memset.c',
-    'string/strchr.c',
-    'string/strcmp.c',
-    'string/strlen.c',
-    'string/strspn.c',
-    'string/strstr.c',
-    'string/util.c',
-)
-
 common_src_utils = files(
     'path_utils.c',
     'string_utils.c',
@@ -23,10 +8,22 @@ common_src_internal = files(
     'init.c',
     'location.c',
     'network/hton.c',
+    'printf.c',
     'network/inet_pton.c',
     'socket_utils.c',
     'stack_protector.c',
+    'string/atoi.c',
+    'string/ctype.c',
+    'string/memcmp.c',
+    'string/memcpy.c',
+    'string/memset.c',
+    'string/strchr.c',
+    'string/strcmp.c',
+    'string/strlen.c',
+    'string/strspn.c',
+    'string/strstr.c',
     'string/toml_utils.c',
+    'string/util.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
@@ -35,20 +32,17 @@ subdir('arch')
 # Current common arch-specific sources are for `common_src_internal` only.
 common_src_internal += common_src_arch
 
+if asan
+    common_src_internal += files('asan.c')
+endif
+if ubsan
+    common_src_internal += files('ubsan.c')
+endif
+
 common_utils_dep = declare_dependency(
     sources: common_src_utils,
 
     include_directories: common_inc,
-)
-
-common_libc_dep = declare_dependency(
-    sources: common_src_libc,
-
-    include_directories: common_inc,
-
-    dependencies: [
-        common_utils_dep,
-    ],
 )
 
 common_internal_dep = declare_dependency(
@@ -57,34 +51,14 @@ common_internal_dep = declare_dependency(
     include_directories: common_inc,
 
     dependencies: [
-        common_libc_dep,
         common_utils_dep,
         tomlc99_dep,
     ],
 )
 
-common_src_san = files()
-if asan
-    common_src_san += files('asan.c')
-endif
-if ubsan
-    common_src_san += files('ubsan.c')
-endif
-common_san_dep = declare_dependency(
-    sources: common_src_san,
-
-    include_directories: common_inc,
-
-    dependencies: [
-        common_libc_dep,
-    ],
-)
-
 common_dep = declare_dependency(
     dependencies: [
-        common_libc_dep,
         common_utils_dep,
-        common_san_dep,
         common_internal_dep,
         uthash_dep,
         tomlc99_dep,

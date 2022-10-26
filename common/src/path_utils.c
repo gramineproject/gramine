@@ -6,7 +6,6 @@
  * lookup / access config values.
  */
 
-#include <asm/errno.h>
 #include <stddef.h>
 
 #include "path_utils.h"
@@ -62,14 +61,14 @@ static inline bool find_prev_slash_offset(const char* path, size_t* offset) {
  * After returning it holds number of bytes actually written to it (including the ending '\0'). This
  * number is never greater than the size of the input path.
  */
-int get_norm_path(const char* path, char* buf, size_t* inout_size) {
+bool get_norm_path(const char* path, char* buf, size_t* inout_size) {
     assert(path && buf && inout_size);
     size_t path_size = strlen(path) + 1;
     (void)(path_size);  // used only for an assert at the end
 
     size_t size = *inout_size;
     if (!size) {
-        return -EINVAL;
+        return false;
     }
     /* reserve 1 byte for ending '\0' */
     size--;
@@ -82,7 +81,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
     /* handle an absolute path */
     if (is_absolute_path) {
         if (size < 1) {
-            return -ENAMETOOLONG;
+            return false;
         }
         *buf++ = '/';
         size--;
@@ -102,7 +101,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
                 /* append undiscardable ".." since there is no previous token
                  * but only if the path is not absolute */
                 if (need_slash + 2u > size) {
-                    return -ENAMETOOLONG;
+                    return false;
                 }
                 if (need_slash) {
                     *buf++ = '/';
@@ -122,7 +121,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
         } else {
             size_t len = (size_t)(end - path);
             if (need_slash + len > size - offset) {
-                return -ENAMETOOLONG;
+                return false;
             }
             if (need_slash) {
                 buf[offset++] = '/';
@@ -142,7 +141,7 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
     *inout_size = ret_size + offset + 1;
     assert(*inout_size <= path_size);
 
-    return 0;
+    return true;
 }
 
 /*
@@ -150,9 +149,9 @@ int get_norm_path(const char* path, char* buf, size_t* inout_size) {
  * Before calling this function *size should hold the size of buf.
  * After returning it holds number of bytes actually written to it (including the trailing '\0').
  */
-int get_base_name(const char* path, char* buf, size_t* inout_size) {
+bool get_base_name(const char* path, char* buf, size_t* inout_size) {
     if (!path || !buf || !inout_size) {
-        return -EINVAL;
+        return false;
     }
 
     const char* end;
@@ -162,7 +161,7 @@ int get_base_name(const char* path, char* buf, size_t* inout_size) {
 
     size_t result = (size_t)(end - path);
     if (result + 1 > *inout_size) {
-        return -ENAMETOOLONG;
+        return false;
     }
 
     memcpy(buf, path, result);
@@ -170,7 +169,7 @@ int get_base_name(const char* path, char* buf, size_t* inout_size) {
 
     *inout_size = result + 1;
 
-    return 0;
+    return true;
 }
 
 bool is_dot_or_dotdot(const char* name) {

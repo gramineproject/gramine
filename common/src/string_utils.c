@@ -11,8 +11,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "string_utils.h"
-
 #ifdef USE_STDLIB
 #include <string.h>
 #else

@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-int get_norm_path(const char* path, char* buf, size_t* inout_size);
+bool get_norm_path(const char* path, char* buf, size_t* inout_size);
 
-int get_base_name(const char* path, char* buf, size_t* inout_size);
+bool get_base_name(const char* path, char* buf, size_t* inout_size);
 
 bool is_dot_or_dotdot(const char* name);
