@@ -44,6 +44,8 @@ enum extended_state_sub_leaf {
 #define PROC_FREQ_LEAF                         0x16
 #define AMX_TILE_INFO_LEAF                     0x1D
 #define AMX_TMUL_INFO_LEAF                     0x1E
+#define HYPERVISOR_INFO_LEAF             0x40000000
+#define HYPERVISOR_VMWARE_TIME_LEAF      0x40000010
 #define MAX_INPUT_EXT_VALUE_LEAF         0x80000000
 #define EXT_SIGNATURE_AND_FEATURES_LEAF  0x80000001
 #define CPU_BRAND_LEAF                   0x80000002
