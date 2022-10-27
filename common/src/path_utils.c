@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2019 Invisible Things Lab
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ */
 
 /*
  * This file contains functions to read app config (manifest) file and create a tree to

@@ -115,7 +115,7 @@ common_lib = static_library('test_pal',
     ],
     include_directories: test_include_directories,
     dependencies: [
-        common_dep,
+        common_internal_dep,
     ],
 )
 

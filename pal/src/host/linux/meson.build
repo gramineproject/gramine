@@ -72,7 +72,7 @@ libpal_direct = shared_library('pal',
     ],
 
     dependencies: [
-        common_dep,
+        common_internal_dep,
     ],
 
     install: true,

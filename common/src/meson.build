@@ -52,14 +52,6 @@ common_internal_dep = declare_dependency(
 
     dependencies: [
         common_utils_dep,
-        tomlc99_dep,
-    ],
-)
-
-common_dep = declare_dependency(
-    dependencies: [
-        common_utils_dep,
-        common_internal_dep,
         uthash_dep,
         tomlc99_dep,
     ],
