@@ -114,7 +114,7 @@ libpal_sgx = shared_library('pal',
     ],
 
     dependencies: [
-        common_internal_dep,
+        common_dep,
         cryptoadapter_dep,
     ],
 
@@ -159,7 +159,7 @@ libpal_sgx_host = executable('loader',
     pie: true,
 
     dependencies: [
-        common_internal_dep,
+        common_dep,
         protobuf_dep,
         vtune_dep,
         dl_dep,

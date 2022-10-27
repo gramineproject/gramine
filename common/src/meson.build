@@ -45,7 +45,7 @@ common_utils_dep = declare_dependency(
     include_directories: common_inc,
 )
 
-common_internal_dep = declare_dependency(
+common_dep = declare_dependency(
     sources: common_src_internal,
 
     include_directories: common_inc,
