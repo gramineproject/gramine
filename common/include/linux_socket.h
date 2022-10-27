@@ -109,9 +109,9 @@ struct cmsghdr {
 #define MAX_TCP_KEEPINTVL 32767
 #define MAX_TCP_KEEPCNT 127
 
-#define DEFAULT_TCP_KEEPIDLE (120 * 60) /* two hours */
+#define DEFAULT_TCP_KEEPIDLE (2 * 60 *60) /* two hours */
 #define DEFAULT_TCP_KEEPINTVL 75
-#define DEFAULT_TCP_KEEPCNT 9           /* Max of 9 keepalive probes */
+#define DEFAULT_TCP_KEEPCNT 9             /* Max of 9 keepalive probes */
 
 struct linger {
     int l_onoff;
