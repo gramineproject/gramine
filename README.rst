@@ -82,7 +82,7 @@ For any questions, please use `GitHub Discussions
 For bug reports and feature requests, `post an issue on our GitHub repository
 <https://github.com/gramineproject/gramine/issues>`__.
 
-If you really prefer emails, please send them to users@gramineproject.io
+If you prefer emails, please send them to users@gramineproject.io
 (`public archive <https://groups.google.com/g/gramine-users>`__).
 
 Reporting security issues
