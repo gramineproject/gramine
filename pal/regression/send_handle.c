@@ -104,7 +104,7 @@ static void do_parent(void) {
     PalObjectDestroy(handle);
 
     /* TCP socket */
-    CHECK(PalSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
+    CHECK(PalSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*protocol=*/0, /*options=*/0, &handle));
     struct pal_socket_addr addr = {
         .domain = PAL_IPV4,
         .ipv4 = {
@@ -119,13 +119,13 @@ static void do_parent(void) {
     PalObjectDestroy(handle);
 
     bool connect_inprogress_unused;
-    CHECK(PalSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
+    CHECK(PalSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*protocol=*/0, /*options=*/0, &handle));
     CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL, &connect_inprogress_unused));
     recv_and_check(handle, PAL_TYPE_SOCKET);
     PalObjectDestroy(handle);
 
     /* UDP IPv6 socket */
-    CHECK(PalSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
+    CHECK(PalSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*protocol=*/0, /*options=*/0, &handle));
     addr = (struct pal_socket_addr) {
         .domain = PAL_IPV6,
         .ipv6 = {
@@ -138,7 +138,7 @@ static void do_parent(void) {
     CHECK(PalSendHandle(child_process, handle));
     PalObjectDestroy(handle);
 
-    CHECK(PalSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
+    CHECK(PalSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*protocol=*/0, /*options=*/0, &handle));
     CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL, &connect_inprogress_unused));
     write_msg(handle, PAL_TYPE_SOCKET);
     PalObjectDestroy(handle);

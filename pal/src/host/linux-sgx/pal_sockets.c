@@ -15,8 +15,10 @@
 
 static struct handle_ops g_tcp_handle_ops;
 static struct handle_ops g_udp_handle_ops;
+static struct handle_ops g_nl_handle_ops;
 static struct socket_ops g_tcp_sock_ops;
 static struct socket_ops g_udp_sock_ops;
+static struct socket_ops g_nl_sock_ops;
 
 /* Default values on a modern Linux kernel. */
 static size_t g_default_recv_buf_size = 0x20000;
@@ -30,7 +32,7 @@ static size_t sanitize_size(size_t size) {
     return size;
 }
 
-static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage* addr,
+static int verify_sockaddr(enum pal_socket_domain domain, struct sockaddr_storage* addr,
                           size_t addrlen) {
     if (addrlen < offsetof(struct sockaddr_storage, ss_family) + sizeof(addr->ss_family)) {
         return -PAL_ERROR_DENIED;
@@ -49,6 +51,14 @@ static int verify_ip_addr(enum pal_socket_domain domain, struct sockaddr_storage
                 return -PAL_ERROR_DENIED;
             }
             if (addrlen != sizeof(struct sockaddr_in6)) {
+                return -PAL_ERROR_DENIED;
+            }
+            break;
+        case PAL_NL:
+            if (addr->ss_family != AF_NETLINK) {
+                return -PAL_ERROR_DENIED;
+            }
+            if (addrlen != sizeof(struct sockaddr_nl)) {
                 return -PAL_ERROR_DENIED;
             }
             break;
@@ -95,7 +105,8 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
 }
 
 int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                     pal_stream_options_t options, PAL_HANDLE* out_handle) {
+                     pal_socket_protocol protocol, pal_stream_options_t options,
+                     PAL_HANDLE* out_handle) {
     int linux_domain;
     int linux_type;
     switch (domain) {
@@ -104,6 +115,9 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
             break;
         case PAL_IPV6:
             linux_domain = AF_INET6;
+            break;
+        case PAL_NL:
+            linux_domain = AF_NETLINK;
             break;
         default:
             BUG();
@@ -121,6 +135,11 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
             handle_ops = &g_udp_handle_ops;
             sock_ops = &g_udp_sock_ops;
             break;
+        case PAL_SOCKET_NL:
+            linux_type = SOCK_RAW;
+            handle_ops = &g_nl_handle_ops;
+            sock_ops = &g_nl_sock_ops;
+            break;
         default:
             BUG();
     }
@@ -130,7 +149,7 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     }
     linux_type |= SOCK_CLOEXEC;
 
-    int fd = ocall_socket(linux_domain, linux_type, 0);
+    int fd = ocall_socket(linux_domain, linux_type, protocol);
     if (fd < 0) {
         return unix_to_pal_error(fd);
     }
@@ -172,8 +191,9 @@ static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
     pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
     assert(linux_addrlen <= INT_MAX);
     uint16_t new_port = 0;
+    uint32_t new_nl_pid = 0;
 
-    int ret = ocall_bind(handle->sock.fd, &sa_storage, linux_addrlen, &new_port);
+    int ret = ocall_bind(handle->sock.fd, &sa_storage, linux_addrlen, &new_port, &new_nl_pid);
     if (ret < 0) {
         return unix_to_pal_error(ret);
     }
@@ -187,6 +207,11 @@ static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
         case PAL_IPV6:
             if (!addr->ipv6.port) {
                 addr->ipv6.port = new_port;
+            }
+            break;
+        case PAL_NL:
+            if (!addr->nl.pid) {
+                addr->nl.pid = new_nl_pid;
             }
             break;
         default:
@@ -230,12 +255,12 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         return -PAL_ERROR_NOMEM;
     }
 
-    int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
+    int ret = verify_sockaddr(client->sock.domain, &client_addr, client_addrlen);
     if (ret < 0) {
         _PalObjectDestroy(client);
         return ret;
     }
-    ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
+    ret = verify_sockaddr(client->sock.domain, &local_addr, local_addrlen);
     if (ret < 0) {
         _PalObjectDestroy(client);
         return ret;
@@ -274,7 +299,7 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     }
 
     if (out_local_addr) {
-        int verify_ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
+        int verify_ret = verify_sockaddr(handle->sock.domain, &sa_storage, linux_addrlen);
         if (verify_ret < 0) {
             return verify_ret;
         }
@@ -519,6 +544,12 @@ static int attrsetbyhdl_udp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return attrsetbyhdl_common(handle, attr);
 }
 
+static int attrsetbyhdl_nl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->sock.type == PAL_SOCKET_NL);
+
+    return attrsetbyhdl_common(handle, attr);
+}
+
 static int send(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool force_nonblocking) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
@@ -563,7 +594,7 @@ static int recv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* ou
     }
     size_t size = ret;
     if (addr) {
-        ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
+        ret = verify_sockaddr(handle->sock.domain, &sa_storage, linux_addrlen);
         if (ret < 0) {
             return ret;
         }
@@ -600,6 +631,12 @@ static int delete_udp(PAL_HANDLE handle, enum pal_delete_mode mode) {
     return 0;
 }
 
+static int delete_nl(PAL_HANDLE handle, enum pal_delete_mode mode) {
+    __UNUSED(handle);
+    __UNUSED(mode);
+    return 0;
+}
+
 static struct socket_ops g_tcp_sock_ops = {
     .bind = bind,
     .listen = tcp_listen,
@@ -610,6 +647,13 @@ static struct socket_ops g_tcp_sock_ops = {
 };
 
 static struct socket_ops g_udp_sock_ops = {
+    .bind = bind,
+    .connect = connect,
+    .send = send,
+    .recv = recv,
+};
+
+static struct socket_ops g_nl_sock_ops = {
     .bind = bind,
     .connect = connect,
     .send = send,
@@ -627,6 +671,13 @@ static struct handle_ops g_udp_handle_ops = {
     .attrquerybyhdl = attrquerybyhdl,
     .attrsetbyhdl = attrsetbyhdl_udp,
     .delete = delete_udp,
+    .destroy = destroy,
+};
+
+static struct handle_ops g_nl_handle_ops = {
+    .attrquerybyhdl = attrquerybyhdl,
+    .attrsetbyhdl = attrsetbyhdl_nl,
+    .delete = delete_nl,
     .destroy = destroy,
 };
 

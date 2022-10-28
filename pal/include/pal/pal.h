@@ -47,12 +47,16 @@ enum pal_socket_domain {
     PAL_DISCONNECT,
     PAL_IPV4,
     PAL_IPV6,
+    PAL_NL,
 };
 
 enum pal_socket_type {
     PAL_SOCKET_TCP,
     PAL_SOCKET_UDP,
+    PAL_SOCKET_NL,
 };
+
+typedef int pal_socket_protocol;
 
 #ifdef IN_PAL
 
@@ -528,6 +532,10 @@ struct pal_socket_addr {
             uint8_t addr[16];
             uint16_t port;
         } ipv6;
+        struct {
+            uint32_t pid;
+            uint32_t groups;
+        } nl;
     };
 };
 
@@ -536,13 +544,15 @@ struct pal_socket_addr {
  *
  * \param      domain      Domain of the socket.
  * \param      type        Type of the socket.
+ * \param      protocol    Protocol of the socket.
  * \param      options     Flags to set on the handle.
  * \param[out] out_handle  On success contains the socket handle.
  *
  * \returns 0 on success, negative error code on failure.
  */
 int PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                    pal_stream_options_t options, PAL_HANDLE* out_handle);
+                    pal_socket_protocol protocol, pal_stream_options_t options,
+                    PAL_HANDLE* out_handle);
 
 /*!
  * \brief Bind a socket to a local address.

@@ -50,7 +50,7 @@ int ocall_getdents(int fd, struct linux_dirent64* dirp, size_t size);
 
 int ocall_socket(int family, int type, int protocol);
 
-int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* out_new_port);
+int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* out_new_port, uint32_t* new_nl_pid);
 
 int ocall_listen_simple(int fd, unsigned int backlog);
 
