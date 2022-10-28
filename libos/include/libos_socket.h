@@ -117,6 +117,7 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
 
 extern struct libos_sock_ops sock_unix_ops;
 extern struct libos_sock_ops sock_ip_ops;
+extern struct libos_sock_ops sock_nl_ops;
 
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
                    size_t* addrlen, unsigned int* flags);
