@@ -318,6 +318,55 @@ Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
 extension), the SIGSTRUCT signature file (``.sig`` extension), and the
 EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
 
+Advanced: building without network access
+-----------------------------------------
+
+First, before you cut your network access, you need to download (or otherwise
+obtain) a |~| checkout of Gramine repository and all wrapped subprojects'
+distfiles. The files :file:`subprojects/{*}.wrap` describe those downloads and
+their respective SHA-256 checksums. You can use :command:`meson subprojects
+download` to download and check them automatically. Otherwise, you should put
+all those distfiles into :file:`subprojects/packagecache` directory. Pay
+attention to expected filenames as specified in wrap files. (You don't need to
+checksum them separately, Meson will do that for you later if they're mismatched
+or corrupted).
+
+Alternatively, you can prepare a |~| "dist" tarball using :command:`meson dist`
+command, which apart from Gramine code will contain all wrapped subprojects and
+also git submodules. For this you need to create a |~| dummy builddir using
+:command:`meson setup` command::
+
+    meson setup build-dist/ \
+        -Ddirect=disabled -Dsgx=disabled -Dskeleton=enabled \
+        -Dglibc=enabled -Dmusl=enabled -Dlibgomp-enabled
+    meson dist -C build-dist/ --no-tests --include-subprojects --formats=gztar
+
+The options specified with ``-D`` (especially ``-Dglibc``, ``-Dmusl`` and
+``-Dlibgomp``) are important, because without them some subprojects will not be
+included in the tarball (if in doubt, you can consult
+:file:`scripts/makedist.sh` script). The command :command:`meson dist` still
+needs network access, because it downloads subprojects and checks out git
+submodules. The tarballs are located in :file:`build-dist/meson-dist`. You can
+adjust ``--formats`` option to your needs.
+
+You can now sever your network connection::
+
+    sudo unshare -n su "$USER"
+
+If you build from dist tarball, unpack it and :command:`cd` to the main
+directory. If not, go to the repository checkout where you've downloaded
+:file:`subproject/packagecache`. In either case, you can now :command:`meson
+setup` your build directory with the switch ``--wrap-mode=nodownload``, which
+prevents Meson from downloading subprojects. Those subprojects should already be
+downloaded and if you didn't :command:`unshare -n`, it prevents a |~| mistake.
+Proceed with compiling and installing as usual.
+
+::
+
+    meson setup build/ --prefix=/usr --wrap-mode=nodownload \
+        -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
+    meson compile -C build/
+    meson install -C build/
 
 Advanced: installing Linux kernel with FSGSBASE patches
 -------------------------------------------------------
