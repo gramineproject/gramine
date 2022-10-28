@@ -9,13 +9,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "string_utils.h"
-
 #ifdef USE_STDLIB
 #include <string.h>
 #else
 #include "api.h"
 #endif
+
+#include "string_utils.h"
 
 int parse_size_str(const char* str, uint64_t* out_val) {
     const char* endptr = NULL;

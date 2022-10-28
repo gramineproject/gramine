@@ -10,14 +10,14 @@
 
 #include <stddef.h>
 
-#include "path_utils.h"
-
 #ifdef USE_STDLIB
 #include <assert.h>
 #include <string.h>
 #else
 #include "api.h"
 #endif
+
+#include "path_utils.h"
 
 /*
  * Finds next '/' in `path`.
