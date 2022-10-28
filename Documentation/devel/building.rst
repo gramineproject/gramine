@@ -191,7 +191,7 @@ The ``-Dsgx_driver`` parameter controls which SGX driver to use:
 
 The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
 where the SGX driver was downloaded or installed in the previous step. For
-example, for the upstreamed driver, you must specify
+example, for the OOT driver installed at the default path, you can specify
 ``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
 is omitted, Gramine's build system will try to determine the right path, so,
 it's usually not needed.
