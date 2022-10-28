@@ -313,6 +313,52 @@ Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
 extension), the SIGSTRUCT signature file (``.sig`` extension), and the
 EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
 
+Advanced: building without network access
+-----------------------------------------
+
+First, before you cut your network access, you need to download (or otherwise
+obtain) a |~| checkout of Gramine repository and all wrapped subprojects'
+distfiles. The files :file:`subprojects/{*}.wrap` directory describe those
+downloads and their respective SHA-256 checksums. You can use :command:`meson
+subprojects download` to download and check them automatically. Otherwise, you
+should put all those distfiles into :file:`subprojects/packagecache` directory.
+(You don't need to checksum them separately, Meson will do that for you later if
+they're mismatched or corrupted).
+
+Alternatively, you can prepare a |~| "dist" tarball, which apart from Gramine
+code will contain all wrapped subprojects and also git submodules. You need to
+create a |~| dummy builddir for this, the chosen options don't matter as long as
+their combination is valid.
+
+::
+
+    meson setup build-dist/ \
+        -Ddirect=disabled -Dsgx=disabled -Dskeleton=enabled
+    meson dist -C build-dist/ --no-tests --include-subprojects --formats=gztar
+
+The command :command:`meson dist` needs network access as well, because it
+checks out git submodules. The tarballs are located in
+:file:`build-dist/meson-dist`. You can adjust ``--formats`` option to your
+needs.
+
+You can now sever your network connection::
+
+    sudo unshare -n su "$USER"
+
+If you build from dist tarball, unpack it and :command:`cd` to the main
+directory. If not, go to the repository checkout where you've downloaded
+:file:`subproject/packagecache`. In either case, you can now :command:`meson
+setup` your build directory with the switch ``--wrap-mode=nodownload``, which
+prevents Meson from downloading subprojects. Those subprojects should already be
+downloaded and if you didn't :command:`unshare -n`, it prevents a |~| mistake.
+Proceed with compiling and installing as usual.
+
+::
+
+    meson setup build/ --prefix=/usr --wrap-mode=nodownload \
+        -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
+    meson compile -C build/
+    meson install -C build/
 
 Advanced: installing Linux kernel with FSGSBASE patches
 -------------------------------------------------------
