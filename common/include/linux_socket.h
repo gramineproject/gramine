@@ -8,6 +8,7 @@
 #include <asm/fcntl.h>
 #include <linux/in.h>
 #include <linux/in6.h>
+#include <linux/netlink.h>
 #include <linux/un.h>
 #include <stddef.h>
 
@@ -68,6 +69,7 @@ struct cmsghdr {
 #define SOCK_TYPE_MASK 0xf
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
+#define SOCK_RAW 3
 
 #define SOCK_CLOEXEC O_CLOEXEC
 #define SOCK_NONBLOCK O_NONBLOCK
@@ -84,6 +86,7 @@ struct cmsghdr {
 /* Option levels. */
 #define SOL_SOCKET 1
 #define SOL_TCP 6
+#define SOL_NETLINK 270
 
 /* Socket options. */
 #define SO_REUSEADDR 2
