@@ -91,7 +91,8 @@ static void free_untrusted_futex_word(uint32_t* addr) {
 #endif
         int ret = ocall_munmap_untrusted(addr_to_munmap, PAGE_SIZE);
         if (ret < 0) {
-            log_error("Failed to free untrusted page at %p: %d", addr_to_munmap, ret);
+            log_error("Failed to free untrusted page at %p: %s", addr_to_munmap,
+                      unix_strerror(ret));
         }
     }
 }

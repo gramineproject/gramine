@@ -548,14 +548,14 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* Relocate PAL */
     ret = setup_pal_binary();
     if (ret < 0) {
-        log_error("Relocation of the PAL binary failed: %d", ret);
+        log_error("Relocation of the PAL binary failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);
     if (ret < 0) {
-        log_error("_PalSystemTimeQuery() failed: %d", ret);
+        log_error("_PalSystemTimeQuery() failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -580,7 +580,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     ret = init_reserved_ranges(urts_reserved_mem_ranges, urts_reserved_mem_ranges_size);
     if (ret < 0) {
-        log_error("init_reserved_ranges failed: %d", ret);
+        log_error("init_reserved_ranges failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -615,7 +615,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* initialize enclave properties */
     ret = init_enclave();
     if (ret) {
-        log_error("Failed to initialize enclave properties: %d", ret);
+        log_error("Failed to initialize enclave properties: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -646,7 +646,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     ret = init_cpuid();
     if (ret < 0) {
-        log_error("init_cpuid failed: %d", ret);
+        log_error("init_cpuid failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -655,7 +655,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
      * this enclave is child */
     ret = _PalRandomBitsRead(&g_master_key, sizeof(g_master_key));
     if (ret < 0) {
-        log_error("_PalRandomBitsRead failed: %d", ret);
+        log_error("_PalRandomBitsRead failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -664,7 +664,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     uint64_t instance_id = 0;
     if (parent_stream_fd != -1) {
         if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
-            log_error("Failed to initialize child process: %d", ret);
+            log_error("Failed to initialize child process: %s", pal_strerror(ret));
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }
@@ -702,7 +702,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         /* Parse, sanitize and store host topology info into g_pal_public_state struct */
         ret = import_and_sanitize_topo_info(uptr_topo_info);
         if (ret < 0) {
-            log_error("Failed to copy and sanitize topology information: %d", ret);
+            log_error("Failed to copy and sanitize topology information: %s", pal_strerror(ret));
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }
@@ -718,22 +718,22 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         do_preheat_enclave();
 
     if ((ret = init_seal_key_material()) < 0) {
-        log_error("Failed to initialize SGX sealing key material: %d", ret);
+        log_error("Failed to initialize SGX sealing key material: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_file_check_policy()) < 0) {
-        log_error("Failed to load the file check policy: %d", ret);
+        log_error("Failed to load the file check policy: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_allowed_files()) < 0) {
-        log_error("Failed to initialize allowed files: %d", ret);
+        log_error("Failed to initialize allowed files: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if ((ret = init_trusted_files()) < 0) {
-        log_error("Failed to initialize trusted files: %d", ret);
+        log_error("Failed to initialize trusted files: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
@@ -751,7 +751,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     if (parent_stream_fd < 0) {
         ret = import_and_init_extra_runtime_domain_names(uptr_dns_conf);
         if (ret < 0) {
-            log_error("Failed to initialize host info: %d", ret);
+            log_error("Failed to initialize host info: %s", unix_strerror(ret));
             ocall_exit(1, /*is_exitgroup=*/true);
         }
     }
@@ -759,7 +759,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     enum sgx_attestation_type attestation_type;
     ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
     if (ret < 0) {
-        log_error("Failed to parse attestation type: %d", unix_to_pal_error(ret));
+        log_error("Failed to parse attestation type: %s", unix_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
     g_pal_public_state.attestation_type = attestation_type_to_str(attestation_type);
@@ -785,7 +785,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     uint64_t stack_protector_canary;
     ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
     if (ret < 0) {
-        log_error("_PalRandomBitsRead failed: %d", ret);
+        log_error("_PalRandomBitsRead failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
     pal_set_tcb_stack_canary(stack_protector_canary);

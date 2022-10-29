@@ -737,7 +737,7 @@ static int mount_fs_at_dentry(struct libos_mount_params* params, struct libos_de
     if (strcmp(params->type, "encrypted") != 0) {
         struct libos_dentry* root;
         if ((ret = path_lookupat(g_dentry_root, params->path, LOOKUP_NO_FOLLOW, &root))) {
-            log_warning("error looking up mount root %s: %d", params->path, ret);
+            log_warning("error looking up mount root %s: %s", params->path, unix_strerror(ret));
             goto err;
         }
         assert(root == mount->root);
@@ -794,14 +794,14 @@ int mount_fs(struct libos_mount_params* params) {
         int lookup_flags = LOOKUP_NO_FOLLOW | LOOKUP_MAKE_SYNTHETIC;
         ret = path_lookupat(g_dentry_root, params->path, lookup_flags, &mount_point);
         if (ret < 0) {
-            log_error("error looking up mountpoint %s: %d", params->path, ret);
+            log_error("error looking up mountpoint %s: %s", params->path, unix_strerror(ret));
             goto out;
         }
     }
 
     if ((ret = mount_fs_at_dentry(params, mount_point)) < 0) {
-        log_error("error mounting \"%s\" (%s) under %s: %d", params->uri, params->type,
-                  params->path, ret);
+        log_error("error mounting \"%s\" (%s) under %s: %s", params->uri, params->type,
+                  params->path, unix_strerror(ret));
         goto out;
     }
 

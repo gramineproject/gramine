@@ -188,8 +188,8 @@ static int libos_async_worker(void* arg) {
         uint64_t now = 0;
         int ret = PalSystemTimeQuery(&now);
         if (ret < 0) {
+            log_error("PalSystemTimeQuery failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
-            log_error("PalSystemTimeQuery failed with: %d", ret);
             goto out_err;
         }
 
@@ -282,16 +282,16 @@ static int libos_async_worker(void* arg) {
         ret = PalStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
                                    inf_sleep ? NULL : &sleep_time);
         if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
+            log_error("PalStreamsWaitEvents failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
-            log_error("PalStreamsWaitEvents failed with: %d", ret);
             goto out_err;
         }
         bool polled = ret == 0;
 
         ret = PalSystemTimeQuery(&now);
         if (ret < 0) {
+            log_error("PalSystemTimeQuery failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
-            log_error("PalSystemTimeQuery failed with: %d", ret);
             goto out_err;
         }
 

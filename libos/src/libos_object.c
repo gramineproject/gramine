@@ -8,9 +8,8 @@ int event_wait_with_retry(PAL_HANDLE handle) {
     } while (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN);
 
     if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        log_error("waiting on an event with retry failed (%d)", ret);
-        return ret;
+        log_error("waiting on an event with retry failed: %s", pal_strerror(ret));
+        return pal_to_unix_errno(ret);
     }
     return 0;
 }

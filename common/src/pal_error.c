@@ -50,9 +50,11 @@ static const char* g_pal_error_list[] = {
 };
 
 const char* pal_strerror(int err) {
+    static char buf[512];
     unsigned err_idx = err >= 0 ? err : -err;
     if (err_idx >= ARRAY_SIZE(g_pal_error_list) || !g_pal_error_list[err_idx]) {
-        return "Unknown error";
+        snprintf(buf, sizeof(buf), "Unknown PAL error (errcode = %d)", err);
+        return buf;
     }
     return g_pal_error_list[err_idx];
 }

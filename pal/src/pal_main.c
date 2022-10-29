@@ -305,7 +305,7 @@ static void configure_logging(void) {
         ret = _PalInitDebugStream(log_file);
 
         if (ret < 0)
-            INIT_FAIL("Cannot open log file: %d", ret);
+            INIT_FAIL("Cannot open log file: %s", pal_strerror(ret));
     }
     free(log_file);
 
@@ -501,7 +501,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
         ret = load_cstring_array(argv_src_file, &arguments);
         if (ret < 0)
-            INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %ld", ret);
+            INIT_FAIL("Cannot load arguments from 'loader.argv_src_file': %s", pal_strerror(ret));
 
         free(argv_src_file);
     } else if (arguments[0] && arguments[1]) {
@@ -541,8 +541,10 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         /* Insert environment variables from a file. We trust the file contents (this can be
          * achieved using trusted files). */
         ret = load_cstring_array(env_src_file, &orig_environments);
-        if (ret < 0)
-            INIT_FAIL("Cannot load environment variables from 'loader.env_src_file': %ld", ret);
+        if (ret < 0) {
+            INIT_FAIL("Cannot load environment variables from 'loader.env_src_file': %s",
+                      pal_strerror(ret));
+        }
     } else {
         /* Environment variables are taken from the host. */
         orig_environments = environments;
@@ -552,9 +554,10 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     // code makes this hard to implement.
     ret = build_envs(orig_environments, /*propagate=*/use_host_env || env_src_file,
                      &final_environments);
-    if (ret < 0)
+    if (ret < 0) {
         INIT_FAIL("Building the final environment based on the original environment and the "
-                  "manifest failed: %ld", ret);
+                  "manifest failed: %s", pal_strerror(ret));
+    }
 
     if (orig_environments != environments) {
         free((char*)orig_environments[0]);

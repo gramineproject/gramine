@@ -77,7 +77,7 @@ IDTYPE get_new_id(IDTYPE move_ownership_to) {
         IDTYPE end;
         int ret = ipc_alloc_id_range(&start, &end);
         if (ret < 0) {
-            log_debug("Failed to allocate new id range: %d", ret);
+            log_debug("Failed to allocate new id range: %s", unix_strerror(ret));
             free(g_last_range);
             g_last_range = NULL;
             goto out;

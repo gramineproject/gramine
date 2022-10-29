@@ -152,7 +152,7 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
 static int setup_seccomp(uintptr_t vdso_start, uintptr_t vdso_end) {
     int ret = DO_SYSCALL(prctl, PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
     if (ret < 0) {
-        log_error("prctl(PR_SET_NO_NEW_PRIVS, 1) failed: %d", ret);
+        log_error("prctl(PR_SET_NO_NEW_PRIVS, 1) failed: %s", unix_strerror(ret));
         return -1;
     }
 
@@ -178,7 +178,7 @@ static int setup_seccomp(uintptr_t vdso_start, uintptr_t vdso_end) {
     };
     ret = DO_SYSCALL(prctl, PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &seccomp_filter);
     if (ret < 0) {
-        log_error("Setting seccomp filter failed: %d", ret);
+        log_error("Setting seccomp filter failed: %s", unix_strerror(ret));
         return -1;
     }
     return 0;
@@ -233,5 +233,5 @@ void signal_setup(bool is_first_process, uintptr_t vdso_start, uintptr_t vdso_en
 
     return;
 err:
-    INIT_FAIL("Cannot setup signal handlers!: %d", ret);
+    INIT_FAIL("Cannot setup signal handlers!: %s", pal_strerror(ret));
 }

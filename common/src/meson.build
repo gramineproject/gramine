@@ -5,6 +5,7 @@ common_src = files(
     'network/hton.c',
     'network/inet_pton.c',
     'path.c',
+    'pal_error.c',
     'printf.c',
     'socket_utils.c',
     'stack_protector.c',
@@ -20,6 +21,7 @@ common_src = files(
     'string/strstr.c',
     'string/toml_utils.c',
     'string/utils.c',
+    'unix_error.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:
