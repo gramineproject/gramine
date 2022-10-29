@@ -140,7 +140,8 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     if (!handle) {
         int ret = ocall_close(fd);
         if (ret < 0) {
-            log_error("%s:%d closing socket fd failed: %d", __func__, __LINE__, ret);
+            log_error("%s:%d closing socket fd failed: %s", __func__, __LINE__,
+                      unix_strerror(ret));
         }
         return -PAL_ERROR_NOMEM;
     }
@@ -152,7 +153,8 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
 static int close(PAL_HANDLE handle) {
     int ret = ocall_close(handle->sock.fd);
     if (ret < 0) {
-        log_error("%s: closing socket fd failed: %d", __func__, ret);
+        log_error("%s:%d closing socket fd failed: %s", __func__, __LINE__,
+                  unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
     return 0;
@@ -222,7 +224,8 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
     if (!client) {
         int ret = ocall_close(fd);
         if (ret < 0) {
-            log_error("%s:%d closing socket fd failed: %d", __func__, __LINE__, ret);
+            log_error("%s:%d closing socket fd failed: %s", __func__, __LINE__,
+                      unix_strerror(ret));
         }
         return -PAL_ERROR_NOMEM;
     }

@@ -9,6 +9,7 @@ common_src_internal = files(
     'location.c',
     'network/hton.c',
     'network/inet_pton.c',
+    'pal_error.c',
     'printf.c',
     'socket_utils.c',
     'stack_protector.c',
@@ -24,6 +25,7 @@ common_src_internal = files(
     'string/strstr.c',
     'string/toml_utils.c',
     'string/util.c',
+    'unix_error.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:

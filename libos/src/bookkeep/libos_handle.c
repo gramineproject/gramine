@@ -304,7 +304,7 @@ static int clear_posix_locks(struct libos_handle* handle) {
         };
         int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
         if (ret < 0) {
-            log_warning("error releasing locks: %d", ret);
+            log_warning("error releasing locks: %s", unix_strerror(ret));
             return ret;
         }
     }

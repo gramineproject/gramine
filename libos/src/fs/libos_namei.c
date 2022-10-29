@@ -599,7 +599,7 @@ static int populate_directory(struct libos_dentry* dent) {
     LISTP_TYPE(temp_dirent) ents = LISTP_INIT;
     int ret = fs->d_ops->readdir(dent, &add_name, &ents);
     if (ret < 0)
-        log_error("readdir error: %d", ret);
+        log_error("readdir error: %s", unix_strerror(ret));
 
     struct libos_dentry* child;
     LISTP_FOR_EACH_ENTRY(child, &dent->children, siblings) {

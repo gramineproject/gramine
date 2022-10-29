@@ -145,7 +145,7 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
 
     int fd = DO_SYSCALL(open, file_name, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, PERM_rw_r__r__);
     if (fd < 0) {
-        log_error("pd_open: cannot open %s for writing: %d", file_name, fd);
+        log_error("pd_open: cannot open %s for writing: %s", file_name, unix_strerror(fd));
         return NULL;
     }
 
@@ -176,7 +176,7 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
 fail:
     ret = DO_SYSCALL(close, fd);
     if (ret < 0)
-        log_error("pd_open: close failed: %d", ret);
+        log_error("pd_open: close failed: %s", unix_strerror(ret));
     return NULL;
 };
 
@@ -285,7 +285,7 @@ ssize_t pd_close(struct perf_data* pd) {
 out:
     close_ret = DO_SYSCALL(close, pd->fd);
     if (close_ret < 0)
-        log_error("pd_close: close failed: %d", close_ret);
+        log_error("pd_close: close failed: %s", unix_strerror(close_ret));
 
     free(pd);
     return ret;

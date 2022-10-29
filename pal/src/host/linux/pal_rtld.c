@@ -22,13 +22,13 @@
 void _PalDebugMapAdd(const char* name, void* addr) {
     int ret = debug_map_add(name, addr);
     if (ret < 0)
-        log_error("debug_map_add(%s, %p) failed: %d", name, addr, ret);
+        log_error("debug_map_add(%s, %p) failed: %s", name, addr, unix_strerror(ret));
 }
 
 void _PalDebugMapRemove(void* addr) {
     int ret = debug_map_remove(addr);
     if (ret < 0)
-        log_error("debug_map_remove(%p) failed: %d", addr, ret);
+        log_error("debug_map_remove(%p) failed: %s", addr, unix_strerror(ret));
 }
 
 /* populate g_pal_linux_state.vdso_clock_gettime based on vDSO */

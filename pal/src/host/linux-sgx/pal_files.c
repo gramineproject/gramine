@@ -311,7 +311,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
                                                aligned_offset, aligned_end, offset, end, chunk_hashes,
                                                handle->file.total);
             if (ret < 0) {
-                log_error("file_map - copy & verify on trusted file returned %d", ret);
+                log_error("file_map - copy & verify on trusted file: %s", pal_strerror(ret));
                 goto out;
             }
 
@@ -366,8 +366,8 @@ out:
         if (g_pal_linuxsgx_state.edmm_enabled) {
             int tmp_ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
             if (tmp_ret < 0) {
-                log_error("%s (ret: %d): removing previously allocated pages failed: %d",
-                          __func__, ret, tmp_ret);
+                log_error("%s (ret: %d): removing previously allocated pages failed: %s",
+                          __func__, ret, unix_strerror(tmp_ret));
                 die_or_inf_loop();
             }
         } else {

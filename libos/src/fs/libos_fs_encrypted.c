@@ -33,7 +33,7 @@ static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, si
             continue;
 
         if (ret < 0) {
-            log_warning("%s: PalStreamRead failed: %d", __func__, ret);
+            log_warning("%s: PalStreamRead failed: %s", __func__, pal_strerror(ret));
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -63,7 +63,7 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
             continue;
 
         if (ret < 0) {
-            log_warning("%s: PalStreamWrite failed: %d", __func__, ret);
+            log_warning("%s: PalStreamWrite failed: %s", __func__, pal_strerror(ret));
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -84,7 +84,7 @@ static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size) {
 
     int ret = PalStreamSetLength(pal_handle, size);
     if (ret < 0) {
-        log_warning("%s: PalStreamSetLength failed: %d", __func__, ret);
+        log_warning("%s: PalStreamSetLength failed: %s", __func__, pal_strerror(ret));
         return PF_STATUS_CALLBACK_FAILED;
     }
 
@@ -130,7 +130,7 @@ static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, co
 static pf_status_t cb_random(uint8_t* buffer, size_t size) {
     int ret = PalRandomBitsRead(buffer, size);
     if (ret < 0) {
-        log_warning("%s: PalRandomBitsRead failed: %d", __func__, ret);
+        log_warning("%s: PalRandomBitsRead failed: %s", __func__, pal_strerror(ret));
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -159,7 +159,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
                             PAL_OPTION_PASSTHROUGH, &pal_handle);
         if (ret < 0) {
-            log_warning("%s: PalStreamOpen failed: %d", __func__, ret);
+            log_warning("%s: PalStreamOpen failed: %s", __func__, pal_strerror(ret));
             return pal_to_unix_errno(ret);
         }
     }
@@ -167,7 +167,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     PAL_STREAM_ATTR pal_attr;
     ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
     if (ret < 0) {
-        log_warning("%s: PalStreamAttributesQueryByHandle failed: %d", __func__, ret);
+        log_warning("%s: PalStreamAttributesQueryByHandle failed: %s", __func__,
+                    pal_strerror(ret));
         ret = pal_to_unix_errno(ret);
         goto out;
     }
@@ -437,7 +438,7 @@ int get_or_create_encrypted_files_key(const char* name,
                       "will not work.", name);
             /* proceed without setting value */
         } else {
-            log_debug("PalGetSpecialKey(\"%s\") failed: %d", name, ret);
+            log_debug("PalGetSpecialKey(\"%s\") failed: %s", name, pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
             goto out;
         }
@@ -677,7 +678,7 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
 
     ret = PalStreamChangeName(enc->pal_handle, new_uri);
     if (ret < 0) {
-        log_warning("%s: PalStreamChangeName failed: %d", __func__, ret);
+        log_warning("%s: PalStreamChangeName failed: %s", __func__, pal_strerror(ret));
 
         /* We failed to rename the file. Try to restore the name in header. */
         pfs = pf_rename(enc->pf, old_path);

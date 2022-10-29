@@ -165,7 +165,7 @@ int init_memory_bookkeeping(void) {
                             MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (IS_PTR_ERR(ptr)) {
         ret = PTR_TO_ERR(ptr);
-        log_error("failed to map a stack guard page: %d", ret);
+        log_error("failed to map a stack guard page: %s", unix_strerror(ret));
         return unix_to_pal_error(ret);
     }
     ret = pal_add_initial_range((uintptr_t)ptr, PAGE_SIZE, /*prot=*/0, "stack guard");

@@ -151,12 +151,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     /* relocate PAL */
     ret = setup_pal_binary();
     if (ret < 0)
-        INIT_FAIL("Relocation of the PAL binary failed: %d", ret);
+        INIT_FAIL("Relocation of the PAL binary failed: %s", pal_strerror(ret));
 
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);
     if (ret < 0)
-        INIT_FAIL("_PalSystemTimeQuery() failed: %d", ret);
+        INIT_FAIL("_PalSystemTimeQuery() failed: %s", pal_strerror(ret));
 
     call_init_array();
 
@@ -171,12 +171,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     ret = init_memory_bookkeeping();
     if (ret < 0) {
-        INIT_FAIL("init_memory_bookkeeping failed: %d", ret);
+        INIT_FAIL("init_memory_bookkeeping failed: %s", pal_strerror(ret));
     }
 
     ret = init_random();
     if (ret < 0)
-        INIT_FAIL("init_random() failed: %d", ret);
+        INIT_FAIL("init_random() failed: %s", pal_strerror(ret));
 
     int argc;
     const char** argv;
@@ -201,7 +201,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (first_process) {
         ret = DO_SYSCALL(personality, 0xffffffffu);
         if (ret < 0) {
-            INIT_FAIL("retrieving personality failed: %d", unix_to_pal_error(ret));
+            INIT_FAIL("retrieving personality failed: %s", unix_strerror(ret));
         }
         if (!(ret & ADDR_NO_RANDOMIZE)) {
             /* Gramine fork() emulation does fork()+execve() on host and then sends all necessary
@@ -209,10 +209,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
              * colliding with PAL executable (as it would get a new random address in the child). */
             ret = DO_SYSCALL(personality, (unsigned int)ret | ADDR_NO_RANDOMIZE);
             if (ret < 0) {
-                INIT_FAIL("setting personality failed: %d", unix_to_pal_error(ret));
+                INIT_FAIL("setting personality failed: %s", unix_strerror(ret));
             }
             ret = DO_SYSCALL(execve, "/proc/self/exe", argv, envp);
-            INIT_FAIL("execve to disable ASLR failed: %d", unix_to_pal_error(ret));
+            INIT_FAIL("execve to disable ASLR failed: %s", unix_strerror(ret));
         }
 
 #ifdef __x86_64__
@@ -221,7 +221,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
          * unconditionally. For more details, see similar code in Linux-SGX PAL. */
         ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
         if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
-            INIT_FAIL("Requesting AMX permission failed: %d", unix_to_pal_error(ret));
+            INIT_FAIL("Requesting AMX permission failed: %s", unix_strerror(ret));
         }
 #endif
     } else {
@@ -231,7 +231,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         int reserved_mem_ranges_fd = atoi(argv[4]);
         ret = init_reserved_ranges(reserved_mem_ranges_fd);
         if (ret < 0) {
-            INIT_FAIL("init_reserved_ranges failed: %d", ret);
+            INIT_FAIL("init_reserved_ranges failed: %s", pal_strerror(ret));
         }
     }
 
@@ -240,7 +240,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();
     if (ret < 0)
-        INIT_FAIL("failed to init debug maps: %d", unix_to_pal_error(ret));
+        INIT_FAIL("failed to init debug maps: %s", unix_strerror(ret));
 #endif
 
     /* Get host topology information only for the first process. This information will be
@@ -248,7 +248,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (first_process) {
         ret = get_topology_info(&g_pal_public_state.topo_info);
         if (ret < 0)
-            INIT_FAIL("get_topology_info() failed: %d", ret);
+            INIT_FAIL("get_topology_info() failed: %s", unix_strerror(ret));
     }
 
     g_pal_loader_path = get_main_exec_path();
@@ -274,7 +274,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     pal_linux_tcb_init(tcb, first_thread, alt_stack, /*callback=*/NULL, /*param=*/NULL);
     ret = pal_thread_init(tcb);
     if (ret < 0)
-        INIT_FAIL("pal_thread_init() failed: %d", unix_to_pal_error(ret));
+        INIT_FAIL("pal_thread_init() failed: %s", unix_strerror(ret));
 
     bool disable_vdso = false;
 #ifdef __x86_64__
@@ -308,7 +308,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (sysinfo_ehdr && !disable_vdso) {
         ret = setup_vdso(sysinfo_ehdr);
         if (ret < 0)
-            INIT_FAIL("Setup of VDSO failed: %d", ret);
+            INIT_FAIL("Setup of VDSO failed: %s", pal_strerror(ret));
     }
 
     g_pal_linux_state.host_pid = DO_SYSCALL(getpid);
@@ -324,15 +324,15 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
         ret = read_text_file_to_cstr(manifest_path, &manifest);
         if (ret < 0) {
-            INIT_FAIL("Reading manifest failed: %d", unix_to_pal_error(ret));
+            INIT_FAIL("Reading manifest failed: %s", unix_strerror(ret));
         }
     } else {
         // Children receive their argv and config via IPC.
         int parent_stream_fd = atoi(argv[3]);
         ret = DO_SYSCALL(fcntl, parent_stream_fd, F_SETFD, FD_CLOEXEC);
         if (ret < 0) {
-            INIT_FAIL("Failed to set `CLOEXEC` flag on `parent_stream_fd`: %d",
-                      unix_to_pal_error(ret));
+            INIT_FAIL("Failed to set `CLOEXEC` flag on `parent_stream_fd`: %s",
+                      unix_strerror(ret));
         }
         init_child_process(parent_stream_fd, &parent, &manifest, &instance_id);
     }

@@ -382,7 +382,8 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
                     int ret = ipc_posix_lock_set_send_response(req->notify.vmid, req->notify.seq,
                                                                result);
                     if (ret < 0) {
-                        log_warning("posix lock: error sending result over IPC: %d", ret);
+                        log_warning("posix lock: error sending result over IPC: %s",
+                                    unix_strerror(ret));
                     }
                 }
                 free(req);
@@ -591,7 +592,8 @@ int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posi
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
     unlock(&g_dcache_lock);
     if (ret < 0) {
-        log_warning("posix_lock_get_from_ipc: error on dentry lookup for %s: %d", path, ret);
+        log_warning("posix_lock_get_from_ipc: error on dentry lookup for %s: %s", path,
+                    unix_strerror(ret));
         return ret;
     }
 

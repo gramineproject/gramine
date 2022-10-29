@@ -62,14 +62,14 @@ static noreturn int thread_handshake_func(void* param) {
     int ret = _PalStreamSecureInit(handle, handle->pipe.is_server, &handle->pipe.session_key,
                                    (LIB_SSL_CONTEXT**)&handle->pipe.ssl_ctx, NULL, 0);
     if (ret < 0) {
-        log_error("Failed to initialize secure pipe: %d", ret);
+        log_error("Failed to initialize secure pipe: %s", pal_strerror(ret));
         _PalProcessExit(1);
     }
 
     if (handle->pipe.nonblocking) {
         ret = ocall_fsetnonblock(handle->pipe.fd, /*nonblocking=*/1);
         if (ret < 0) {
-            log_error("Failed to set handle as non-blocking: %d", ret);
+            log_error("Failed to set handle as non-blocking: %s", unix_strerror(ret));
             _PalProcessExit(1);
         }
     }

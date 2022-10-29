@@ -141,10 +141,9 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
                 if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                     continue;
                 }
-                ret = pal_to_unix_errno(ret);
-                log_error(LOG_PREFIX "receiving message header from %u failed: %d", conn->vmid,
-                          ret);
-                return ret;
+                log_error(LOG_PREFIX "receiving message header from %u failed: %s", conn->vmid,
+                          pal_strerror(ret));
+                return pal_to_unix_errno(ret);
             }
             if (tmp_size == 0) {
                 if (size == 0) {
@@ -184,7 +183,8 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
                                  data_size - current_size);
             if (ret < 0) {
                 free(msg_data);
-                log_error(LOG_PREFIX "receiving message from %u failed: %d", conn->vmid, ret);
+                log_error(LOG_PREFIX "receiving message from %u failed: %s", conn->vmid,
+                          unix_strerror(ret));
                 return ret;
             }
             size = 0;
@@ -197,7 +197,8 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
         if (msg_code < ARRAY_SIZE(ipc_callbacks) && ipc_callbacks[msg_code]) {
             ret = ipc_callbacks[msg_code](conn->vmid, msg_data, msg_seq);
             if (ret < 0) {
-                log_error(LOG_PREFIX "error running IPC callback %u: %d", msg_code, ret);
+                log_error(LOG_PREFIX "error running IPC callback %u: %s", msg_code,
+                          unix_strerror(ret));
                 PalProcessExit(1);
             }
         } else {
@@ -270,8 +271,8 @@ static noreturn void ipc_worker_main(void) {
                  * SGX exitless feature. */
                 continue;
             }
+            log_error(LOG_PREFIX "PalStreamsWaitEvents failed: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
-            log_error(LOG_PREFIX "PalStreamsWaitEvents failed: %d", ret);
             goto out_die;
         }
 
@@ -311,19 +312,19 @@ static noreturn void ipc_worker_main(void) {
                 ret = PalStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
             } while (ret == -PAL_ERROR_INTERRUPTED);
             if (ret < 0) {
+                log_error(LOG_PREFIX "PalStreamWaitForClient failed: %s", pal_strerror(ret));
                 ret = pal_to_unix_errno(ret);
-                log_error(LOG_PREFIX "PalStreamWaitForClient failed: %d", ret);
                 goto out_die;
             }
             IDTYPE new_id = 0;
             ret = read_exact(new_handle, &new_id, sizeof(new_id));
             if (ret < 0) {
-                log_error(LOG_PREFIX "receiving id failed: %d", ret);
+                log_error(LOG_PREFIX "receiving id failed: %s", unix_strerror(ret));
                 PalObjectClose(new_handle);
             } else {
                 ret = add_ipc_connection(new_handle, new_id);
                 if (ret < 0) {
-                    log_error(LOG_PREFIX "add_ipc_connection failed: %d", ret);
+                    log_error(LOG_PREFIX "add_ipc_connection failed: %s", unix_strerror(ret));
                     goto out_die;
                 }
             }
@@ -340,8 +341,8 @@ static noreturn void ipc_worker_main(void) {
                     continue;
                 }
                 if (ret < 0) {
-                    log_error(LOG_PREFIX "failed to receive an IPC message from %u: %d",
-                              conn->vmid, ret);
+                    log_error(LOG_PREFIX "failed to receive an IPC message from %u: %s",
+                              conn->vmid, pal_strerror(ret));
                     /* Let the code below handle this error. */
                     ret_events[i] = PAL_WAIT_ERROR;
                 }

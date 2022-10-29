@@ -361,7 +361,8 @@ static int read_environs(const char* const* envp) {
     do {                                                                    \
         int _err = CALL_INIT(func, ##__VA_ARGS__);                          \
         if (_err < 0) {                                                     \
-            log_error("libos_init() failed in " #func " (%d)", _err);       \
+            log_error("libos_init() failed in " #func ": %s",               \
+                      unix_strerror(_err));                                 \
             PalProcessExit(1);                                              \
         }                                                                   \
     } while (0)
@@ -413,7 +414,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
 
         int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
-            log_error("libos_init: failed to read the whole checkpoint header: %d", ret);
+            log_error("libos_init: failed to read the whole checkpoint header: %s",
+                      unix_strerror(ret));
             PalProcessExit(1);
         }
 
@@ -456,7 +458,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     if (g_pal_public_state->parent_process) {
         int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
-            log_error("libos_init: failed to establish IPC connection to parent: %d", ret);
+            log_error("libos_init: failed to establish IPC connection to parent: %s",
+                      unix_strerror(ret));
             PalProcessExit(1);
         }
 
@@ -465,7 +468,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
         IDTYPE dummy = 0;
         ret = ipc_get_id_owner(/*id=*/0, /*out_owner=*/&dummy);
         if (ret < 0) {
-            log_debug("libos_init: failed to get a connection from IPC leader to us: %d", ret);
+            log_debug("libos_init: failed to get a connection from IPC leader to us: %s",
+                      unix_strerror(ret));
             PalProcessExit(1);
         }
         assert(dummy == 0); // Nobody should own ID `0`.
@@ -474,14 +478,16 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
         char dummy_c = 0;
         ret = write_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
-            log_error("libos_init: failed to write ready notification: %d", ret);
+            log_error("libos_init: failed to write ready notification: %s",
+                      unix_strerror(ret));
             PalProcessExit(1);
         }
 
         /* Wait for parent to settle its adult things. */
         ret = read_exact(g_pal_public_state->parent_process, &dummy_c, sizeof(dummy_c));
         if (ret < 0) {
-            log_error("libos_init: failed to read parent's confirmation: %d", ret);
+            log_error("libos_init: failed to read parent's confirmation: %s",
+                      unix_strerror(ret));
             PalProcessExit(1);
         }
     } else { /* !g_pal_public_state->parent_process */

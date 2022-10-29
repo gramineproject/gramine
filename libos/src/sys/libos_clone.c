@@ -362,14 +362,14 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
             /* The child process have already taken the ownership of `tid`, let's change it back. */
             int tmp_ret = ipc_change_id_owner(tid, g_process_ipc_ids.self_vmid);
             if (tmp_ret < 0) {
-                log_debug("Failed to change back ID %u owner: %d", tid, tmp_ret);
+                log_debug("Failed to change back ID %u owner: %s", tid, unix_strerror(tmp_ret));
                 /* No way to recover gracefully. */
                 PalProcessExit(1);
             }
             /* ... and release it. */
             tmp_ret = ipc_release_id_range(tid, tid);
             if (tmp_ret < 0) {
-                log_debug("Failed to release ID %u: %d", tid, tmp_ret);
+                log_debug("Failed to release ID %u: %s", tid, unix_strerror(tmp_ret));
                 /* No way to recover gracefully. */
                 PalProcessExit(1);
             }
@@ -443,7 +443,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     if (ret < 0) {
         /* XXX: Currently it doesn't seem possible to cleanly handle this error - the child thread
          * might be running correctly. */
-        log_error("event_wait_with_retry failed with: %ld", ret);
+        log_error("event_wait_with_retry failed with: %s", unix_strerror(ret));
         PalProcessExit(1);
     }
     /* Wait for the new thread to finish initialization. We need to make sure that it's done using

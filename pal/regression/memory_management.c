@@ -148,7 +148,8 @@ int memory_free(void* addr, size_t size) {
 
     ret = mem_bkeep_free((uintptr_t)addr, size);
     if (ret < 0) {
-        log_error("%s: mem_bkeep_free(%p, %#lx) failed: %d", __func__, addr, size, ret);
+        log_error("%s: mem_bkeep_free(%p, %#lx) failed: %s", __func__, addr, size,
+                  pal_strerror(ret));
     }
 
     return 0;

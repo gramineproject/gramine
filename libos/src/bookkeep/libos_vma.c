@@ -330,7 +330,7 @@ static void* _vma_malloc(size_t size) {
                                 &vmas_to_free);
         spinlock_unlock(&vma_tree_lock);
         if (ret < 0) {
-            log_error("Removing a vma we just created failed with %d!", ret);
+            log_error("Removing a vma we just created failed: %s", unix_strerror(ret));
             BUG();
         }
 

@@ -266,7 +266,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     ret = read_enclave_token(token_fd, &enclave_token);
     if (ret < 0) {
-        log_error("Reading enclave token failed: %d", ret);
+        log_error("Reading enclave token failed: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -293,7 +293,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
     if (ret < 0) {
-        log_error("Reading enclave sigstruct failed: %d", ret);
+        log_error("Reading enclave sigstruct failed: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -302,7 +302,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     enclave_secs.size = enclave->size;
     ret = create_enclave(&enclave_secs, &enclave_token);
     if (ret < 0) {
-        log_error("Creating enclave failed: %d", ret);
+        log_error("Creating enclave failed: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -342,7 +342,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     areas = (struct mem_area*)DO_SYSCALL(mmap, NULL, areas_size, PROT_READ | PROT_WRITE,
                                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (IS_PTR_ERR(areas)) {
-        log_error("Allocating memory failed (%ld)", PTR_TO_ERR(areas));
+        log_error("Allocating memory failed: %s", unix_strerror(PTR_TO_ERR(areas)));
         areas = NULL;
         ret = -ENOMEM;
         goto out;
@@ -429,7 +429,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     ret = scan_enclave_binary(enclave_image, &pal_area->addr, &pal_area->size, &enclave_entry_addr);
     if (ret < 0) {
-        log_error("Scanning PAL binary (%s) failed: %d", enclave->libpal_uri, ret);
+        log_error("Scanning PAL binary (%s) failed: %s", enclave->libpal_uri, unix_strerror(ret));
         goto out;
     }
 
@@ -460,7 +460,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         if (areas[i].data_src == ELF_FD) {
             ret = load_enclave_binary(&enclave_secs, areas[i].fd, areas[i].addr, areas[i].prot);
             if (ret < 0) {
-                log_error("Loading enclave binary failed: %d", ret);
+                log_error("Loading enclave binary failed: %s", unix_strerror(ret));
                 goto out;
             }
             continue;
@@ -532,7 +532,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             DO_SYSCALL(munmap, data, areas[i].size);
 
         if (ret < 0) {
-            log_error("Adding pages (%s) to enclave failed: %d", areas[i].desc, ret);
+            log_error("Adding pages (%s) to enclave failed: %s", areas[i].desc,
+                      unix_strerror(ret));
             goto out;
         }
     }
@@ -540,7 +541,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
     ret = init_enclave(&enclave_secs, &enclave_sigstruct, &enclave_token);
     if (ret < 0) {
-        log_error("Initializing enclave failed: %d", ret);
+        log_error("Initializing enclave failed: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -568,7 +569,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
         ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
         if (ret < 0) {
-            log_error("Setting TCS.FLAGS.DBGOPTIN failed: %d", ret);
+            log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
             goto out;
         }
         enclave_mem = ret;
@@ -580,7 +581,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
                              (off_t)tcs_flags_ptr);
             if (ret < 0) {
-                log_error("Reading TCS.FLAGS.DBGOPTIN failed: %d", ret);
+                log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
                 goto out;
             }
 
@@ -589,7 +590,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
                              (off_t)tcs_flags_ptr);
             if (ret < 0) {
-                log_error("Writing TCS.FLAGS.DBGOPTIN failed: %d", ret);
+                log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
                 goto out;
             }
         }
@@ -914,7 +915,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         ret = host_log_init(log_file);
 
         if (ret < 0) {
-            log_error("Cannot open log file: %d", ret);
+            log_error("Cannot open log file: %s", unix_strerror(ret));
             goto out;
         }
     }
@@ -1104,7 +1105,7 @@ static void setup_asan(void) {
                                    /*fd=*/-1, /*offset=*/0);
     if (IS_PTR_ERR(addr)) {
         int err = PTR_TO_ERR(addr);
-        log_error("asan: error setting up shadow memory: %d", err);
+        log_error("asan: error setting up shadow memory: %s", unix_strerror(err));
         DO_SYSCALL(exit_group, unix_to_pal_error(err));
         die_or_inf_loop();
     }
@@ -1225,7 +1226,7 @@ int main(int argc, char* argv[], char* envp[]) {
     ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd,
                        reserved_mem_ranges, reserved_mem_ranges_size);
     if (ret < 0) {
-        log_error("load_enclave() failed with error %d", ret);
+        log_error("load_enclave() failed with error: %s", unix_strerror(ret));
     }
     return 0;
 }
