@@ -160,7 +160,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
     ret = create_reserved_mem_ranges_fd(reserved_mem_ranges,
                                         reserved_mem_ranges_len * sizeof(*reserved_mem_ranges));
     if (ret < 0) {
-        log_error("creating reserved mem ranges fd failed: %d", ret);
+        log_error("creating reserved mem ranges fd failed: %s", unix_strerror(ret));
         goto out;
     }
     reserved_mem_ranges_fd = ret;
@@ -241,8 +241,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
 
     ret = read_all(parent_stream_fd, &proc_args, sizeof(proc_args));
     if (ret < 0) {
-        ret = unix_to_pal_error(ret);
-        INIT_FAIL("communication with parent failed: %d", ret);
+        INIT_FAIL("communication with parent failed: %s", unix_strerror(ret));
     }
 
     /* a child must have parent handle and an executable */
@@ -256,8 +255,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
 
     ret = read_all(parent_stream_fd, data, data_size);
     if (ret < 0) {
-        ret = unix_to_pal_error(ret);
-        INIT_FAIL("communication with parent failed: %d", ret);
+        INIT_FAIL("communication with parent failed: %s", unix_strerror(ret));
     }
 
     /* now deserialize the parent_handle */
@@ -265,7 +263,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     char* data_iter = data;
     ret = handle_deserialize(&parent, data_iter, proc_args.parent_data_size);
     if (ret < 0)
-        INIT_FAIL("cannot deserialize parent process handle: %d", ret);
+        INIT_FAIL("cannot deserialize parent process handle: %s", pal_strerror(ret));
     data_iter += proc_args.parent_data_size;
     *parent_handle = parent;
 

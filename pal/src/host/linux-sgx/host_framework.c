@@ -153,7 +153,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
                       "You may need to set sysctl vm.mmap_min_addr to zero");
         }
 
-        log_error("ECREATE failed in allocating EPC memory: %d", ret);
+        log_error("ECREATE failed in allocating EPC memory: %s", unix_strerror(ret));
         return ret;
     }
 
@@ -165,12 +165,12 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_CREATE, &param);
 
     if (ret < 0) {
-        log_error("ECREATE failed in enclave creation ioctl (errno = %d)", ret);
+        log_error("ECREATE failed in enclave creation ioctl: %s", unix_strerror(ret));
         return ret;
     }
 
     if (ret) {
-        log_error("ECREATE failed (errno = %d)", ret);
+        log_error("ECREATE failed: %s", unix_strerror(ret));
         return -EPERM;
     }
 
@@ -207,7 +207,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     if (secs->attributes.xfrm & (1 << AMX_TILEDATA)) {
         ret = DO_SYSCALL(arch_prctl, ARCH_REQ_XCOMP_PERM, AMX_TILEDATA);
         if (ret < 0 && ret != -EINVAL && ret != -EOPNOTSUPP && ret != -ENOSYS) {
-            log_error("Requesting AMX permission failed: %d", ret);
+            log_error("Requesting AMX permission failed: %s", unix_strerror(ret));
             return ret;
         }
     }
@@ -228,7 +228,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
                                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (IS_PTR_ERR(g_zero_pages)) {
             ret = PTR_TO_ERR(g_zero_pages);
-            log_error("Cannot mmap zero pages: %d", ret);
+            log_error("Cannot mmap zero pages: %s", unix_strerror(ret));
             return ret;
         }
         g_zero_pages_size = g_page_size;
@@ -309,7 +309,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         /* TODO: this logic can be removed if we introduce a size cap in ENCLAVE_ADD_PAGES ioctl */
         ret = DO_SYSCALL(munmap, g_zero_pages, g_zero_pages_size);
         if (ret < 0) {
-            log_error("Cannot unmap zero pages %d", ret);
+            log_error("Cannot unmap zero pages: %s", unix_strerror(ret));
             return ret;
         }
 
@@ -317,7 +317,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
                                          -1, 0);
         if (IS_PTR_ERR(g_zero_pages)) {
             ret = PTR_TO_ERR(g_zero_pages);
-            log_error("Cannot map zero pages: %d", ret);
+            log_error("Cannot map zero pages: %s", unix_strerror(ret));
             return ret;
         }
         g_zero_pages_size = size;
@@ -348,7 +348,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         if (ret < 0) {
             if (ret == -EINTR)
                 continue;
-            log_error("Enclave EADD returned %d", ret);
+            log_error("Enclave EADD failed: %s", unix_strerror(ret));
             return ret;
         }
 
@@ -369,7 +369,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     uint64_t mapped = DO_SYSCALL(mmap, addr, size, prot, MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
     if (IS_PTR_ERR(mapped)) {
         ret = PTR_TO_ERR(mapped);
-        log_error("Cannot map enclave pages %d", ret);
+        log_error("Cannot map enclave pages: %s", unix_strerror(ret));
         return ret;
     }
 #endif /* CONFIG_SGX_DRIVER_OOT */
@@ -438,7 +438,7 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
     /* all enclave pages were EADDed, don't need zero pages anymore */
     ret = DO_SYSCALL(munmap, g_zero_pages, g_zero_pages_size);
     if (ret < 0) {
-        log_error("Cannot unmap zero pages %d", ret);
+        log_error("Cannot unmap zero pages: %s", unix_strerror(ret));
         return ret;
     }
 

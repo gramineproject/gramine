@@ -221,7 +221,7 @@ static int ipc_send_message_to_conn(struct libos_ipc_connection* conn, struct li
 
     ret = write_exact(conn->handle, msg,  GET_UNALIGNED(msg->header.size));
     if (ret < 0) {
-        log_error("Failed to send IPC msg to %u: %d", conn->vmid, ret);
+        log_error("Failed to send IPC msg to %u: %s", conn->vmid, unix_strerror(ret));
         conn->seen_error = ret;
         goto out;
     }
@@ -248,11 +248,11 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
 
     int ret = 0;
     do {
-        ret = pal_to_unix_errno(PalEventWait(waiter->event, /*timeout=*/NULL));
-    } while (ret == -EINTR);
+        ret = PalEventWait(waiter->event, /*timeout=*/NULL);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
 
-    log_debug("Waiting finished: %d", ret);
-    return ret;
+    log_debug("Waiting finished: %s", pal_strerror(ret));
+    return pal_to_unix_errno(ret);
 }
 
 int ipc_send_msg_and_get_response(IDTYPE dest, struct libos_ipc_msg* msg, void** resp) {

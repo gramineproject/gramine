@@ -90,7 +90,8 @@ static void remove_qnode_from_wait_queue(struct libos_thread_queue* qnode) {
             int ret = thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/true);
             if (ret < 0 && ret != -EINTR) {
                 /* We cannot handle any errors here. */
-                log_error("remove_qnode_from_wait_queue: thread_wait failed with: %d", ret);
+                log_error("remove_qnode_from_wait_queue: thread_wait failed with: %s",
+                          unix_strerror(ret));
             }
         }
     } else {

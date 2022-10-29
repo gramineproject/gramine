@@ -79,7 +79,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
     /* NOTREACHED */
 
 error:
-    log_error("execve failed with errno=%d", ret);
+    log_error("execve failed with: %s", unix_strerror(ret));
     process_exit(/*error_code=*/0, /*term_signal=*/SIGKILL);
 }
 

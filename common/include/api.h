@@ -21,6 +21,9 @@
 #include "log.h"
 #include "string_utils.h"
 
+#include "pal_error.h"
+#include "unix_error.h"
+
 /* TODO: remove this once Gramine does not use host headers. */
 #ifndef ssize_t
 #ifndef __LP64__

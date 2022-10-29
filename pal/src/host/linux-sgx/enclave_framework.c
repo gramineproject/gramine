@@ -258,7 +258,7 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
                    sgx_report_t* report) {
     int ret = sgx_report(target_info, data, report);
     if (ret) {
-        log_error("sgx_report failed: ret = %d", ret);
+        log_error("sgx_report failed: ret = %d (%s)", ret, unix_strerror(ret));
         return -PAL_ERROR_DENIED;
     }
     return 0;
@@ -328,7 +328,7 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
 
     int ret = sgx_getkey(&key_request, out_seal_key);
     if (ret) {
-        log_error("Failed to generate sealing key using SGX EGETKEY\n");
+        log_error("Failed to generate sealing key using SGX EGETKEY");
         return -PAL_ERROR_DENIED;
     }
     return 0;
@@ -789,8 +789,8 @@ int init_trusted_files(void) {
 
         ret = normalize_and_register_file(toml_trusted_uri_str, toml_trusted_sha256_str);
         if (ret < 0) {
-            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code %d",
-                      toml_trusted_uri_str, toml_trusted_sha256_str, ret);
+            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code %d (%s)",
+                      toml_trusted_uri_str, toml_trusted_sha256_str, ret, pal_strerror(ret));
             goto out;
         }
 
@@ -850,8 +850,8 @@ int init_allowed_files(void) {
 
         ret = normalize_and_register_file(toml_allowed_file_str, /*hash_str=*/NULL);
         if (ret < 0) {
-            log_error("normalize_and_register_file(\"%s\", NULL) failed with error code %d",
-                      toml_allowed_file_str, ret);
+            log_error("normalize_and_register_file(\"%s\", NULL) failed with error: %s",
+                      toml_allowed_file_str, pal_strerror(ret));
             goto out;
         }
 
@@ -1121,7 +1121,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to send target info via RPC: %ld", ret);
+            log_error("Failed to send target info via RPC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1134,7 +1134,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to receive local report via RPC: %ld", ret);
+            log_error("Failed to receive local report via RPC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1144,7 +1144,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
     /* Verify report[B -> A] */
     ret = sgx_verify_report(&report);
     if (ret < 0) {
-        log_error("Failed to verify local report: %ld", ret);
+        log_error("Failed to verify local report: %s", pal_strerror(ret));
         goto out;
     }
 
@@ -1162,7 +1162,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
 
     ret = sgx_get_report(&target_info, my_report_data, &report);
     if (ret < 0) {
-        log_error("Failed to get local report from CPU: %ld", ret);
+        log_error("Failed to get local report from CPU: %s", pal_strerror(ret));
         goto out;
     }
 
@@ -1173,7 +1173,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to send local report via RPC: %ld", ret);
+            log_error("Failed to send local report via RPC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1211,7 +1211,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to receive target info via RPC: %ld", ret);
+            log_error("Failed to receive target info via RPC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1219,7 +1219,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
     /* B -> A: report[B -> A] */
     ret = sgx_get_report(&target_info, my_report_data, &report);
     if (ret < 0) {
-        log_error("Failed to get local report from CPU: %ld", ret);
+        log_error("Failed to get local report from CPU: %s", pal_strerror(ret));
         goto out;
     }
 
@@ -1230,7 +1230,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to send local report via PRC: %ld", ret);
+            log_error("Failed to send local report via PRC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1243,7 +1243,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
                 ret = 0;
                 continue;
             }
-            log_error("Failed to receive local report via RPC: %ld", ret);
+            log_error("Failed to receive local report via RPC: %s", pal_strerror(ret));
             goto out;
         }
     }
@@ -1253,7 +1253,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
     /* Verify report[A -> B] */
     ret = sgx_verify_report(&report);
     if (ret < 0) {
-        log_error("Failed to verify local report: %ld", ret);
+        log_error("Failed to verify local report: %s", pal_strerror(ret));
         goto out;
     }
 

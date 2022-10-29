@@ -558,7 +558,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     ret = (*migrate_func)(&cpstore, process_description, thread_description, &process_ipc_ids, ap);
     va_end(ap);
     if (ret < 0) {
-        log_error("failed creating checkpoint (ret = %d)", ret);
+        log_error("failed creating checkpoint: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -584,7 +584,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     size_t reserved_mem_ranges_len = 0;
     ret = create_mem_ranges_array(&cpstore, &reserved_mem_ranges, &reserved_mem_ranges_len);
     if (ret < 0) {
-        log_error("creating reserved memory ranges failed: %d", ret);
+        log_error("creating reserved memory ranges failed: %s", unix_strerror(ret));
         goto out;
     }
 
@@ -599,19 +599,20 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     /* send a checkpoint header to child process to notify it to start receiving checkpoint */
     ret = write_exact(pal_process, &hdr, sizeof(hdr));
     if (ret < 0) {
-        log_error("failed writing checkpoint header to child process (ret = %d)", ret);
+        log_error("failed writing checkpoint header to child process: %s", unix_strerror(ret));
         goto out;
     }
 
     ret = send_checkpoint_on_stream(pal_process, &cpstore);
     if (ret < 0) {
-        log_error("failed sending checkpoint (ret = %d)", ret);
+        log_error("failed sending checkpoint: %s", unix_strerror(ret));
         goto out;
     }
 
     ret = send_handles_on_stream(pal_process, &cpstore);
     if (ret < 0) {
-        log_error("failed sending PAL handles as part of checkpoint (ret = %d)", ret);
+        log_error("failed sending PAL handles as part of checkpoint: %s",
+                  unix_strerror(ret));
         goto out;
     }
 
@@ -636,7 +637,7 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
          * here and it should be indistinguishable form host OS killing the child process right
          * after we return from this function.
          */
-        log_error("failed to send process creation ack to the child: %d", ret);
+        log_error("failed to send process creation ack to the child: %s", unix_strerror(ret));
         (void)mark_child_exited_by_vmid(child_process->vmid, /*uid=*/0, /*exit_code=*/0, SIGPWR);
     }
 
@@ -648,7 +649,7 @@ out:
         int tmp_ret = bkeep_munmap((void*)cpstore.base, cpstore.bound, /*is_internal=*/true,
                                    &tmp_vma);
         if (tmp_ret < 0) {
-            log_error("failed unmaping checkpoint (ret = %d)", tmp_ret);
+            log_error("failed unmaping checkpoint: %s", unix_strerror(tmp_ret));
             PalProcessExit(1);
         }
         if (PalVirtualMemoryFree((void*)cpstore.base, cpstore.bound) < 0) {

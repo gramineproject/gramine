@@ -63,7 +63,7 @@ void pal_start_thread(void) {
     uint64_t stack_protector_canary;
     int ret = _PalRandomBitsRead(&stack_protector_canary, sizeof(stack_protector_canary));
     if (ret < 0) {
-        log_error("_PalRandomBitsRead() failed (%d)", ret);
+        log_error("_PalRandomBitsRead() failed: %s", pal_strerror(ret));
         _PalProcessExit(1);
     }
     pal_set_tcb_stack_canary(stack_protector_canary);
