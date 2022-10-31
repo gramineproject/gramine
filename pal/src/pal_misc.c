@@ -30,7 +30,7 @@ size_t PalMemoryAvailableQuota(void) {
     return _PalMemoryAvailableQuota();
 }
 
-int PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret) {
+int PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     return _PalDeviceIoControl(handle, cmd, arg, out_ret);
 }
 

@@ -1990,10 +1990,9 @@ int ocall_eventfd(int flags) {
 
 int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
     int retval;
-    ms_ocall_ioctl_t* ms;
 
     void* old_ustack = sgx_prepare_ustack();
-    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    ms_ocall_ioctl_t* ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
     if (!ms) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
@@ -2003,14 +2002,9 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
     WRITE_ONCE(ms->ms_cmd, cmd);
     WRITE_ONCE(ms->ms_arg, arg);
 
-    do {
-        retval = sgx_exitless_ocall(OCALL_IOCTL, ms);
-    } while (retval == -EINTR);
-
-    if (retval < 0 && retval != -EBADF && retval != -EFAULT && retval != -EINVAL &&
-            retval != -ENOTTY) {
-        retval = -EPERM;
-    }
+    retval = sgx_exitless_ocall(OCALL_IOCTL, ms);
+    /* in general case, IOCTL may return any error code (the list of possible error codes is not
+     * standardized and is up to the Linux driver/kernel module), so no check of `retval` here */
 
     sgx_reset_ustack(old_ustack);
     return retval;

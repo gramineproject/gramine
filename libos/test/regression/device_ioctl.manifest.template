@@ -32,40 +32,40 @@ sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_GETSIZE.struct = ""
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_CLEAR.request_code = 0x8104
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_write = [
-    { size=8, direction="out", name="buf_size" },     # buf_size
-    { ptr=[ {size="buf_size", direction="out"} ] },   # buf
-    { size=8, direction="inout" },                    # off
-    { adjust=-4, size=12, direction="in" },           # copied; adjust is just for testing
+    { size = 8, direction = "out", name = "buf_size" },    # buf_size
+    { ptr = [ {size = "buf_size", direction = "out"} ] },  # buf
+    { size = 8, direction = "inout" },                     # off
+    { size = 8, direction = "in" },                        # copied
 ]
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_WRITE.request_code = 0xc0208101
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_WRITE.struct = "gramine_test_dev_ioctl_write"
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_read = [
-    { size=8, direction="out", name="buf_size" },     # buf_size
-    { ptr=[ {size="buf_size", direction="in"} ] },    # buf
-    { size=8, direction="inout" },                    # off
-    { adjust=-4, size=12, direction="in" },           # copied; adjust is just for testing
+    { size = 8, direction = "out", name = "buf_size" },   # buf_size
+    { ptr = [ {size = "buf_size", direction = "in"} ] },  # buf
+    { size = 8, direction = "inout" },                    # off
+    { size = 8, direction = "in" },                       # copied
 ]
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_READ.request_code = 0xc0208102
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_READ.struct = "gramine_test_dev_ioctl_read"
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
-    { size=8, direction="out", name="replacements_cnt" },  # replacements_cnt
-    { size="replacements_cnt", ptr=[                       # replacements_arr
-                                     { size=2, units=1, direction="out" },  # src, dst
-                                     { size=6, units=1, direction="none" }, # pad
-                               ] },
+    { size = 8, direction = "out", name = "replacements_cnt" },  # replacements_cnt
+    { size = "replacements_cnt", ptr = [                         # replacements_arr
+                                   { size = 2, direction = "out" },   # src, dst
+                                   { size = 6, direction = "none" },  # pad
+                                 ] },
 ]
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_ARR.request_code = 0x40108105
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_ARR.struct = "gramine_test_dev_ioctl_replace_arr"
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
-    { size=2, units=1, direction="out" },  # src, dst
-    { size=6, units=1, direction="none" }, # pad
-    { ptr="this" },                        # next
+    { size = 2, units = 1, direction = "out" },    # src, dst; `units` is just for testing
+    { size = 3, adjust = 3, direction = "none" },  # 6-byte pad; `adjust` is just for testing
+    { ptr = "this" },                              # next
 ]
 
 sgx.allowed_ioctls.GRAMINE_TEST_DEV_IOCTL_REPLACE_LIST.request_code = 0x40108106

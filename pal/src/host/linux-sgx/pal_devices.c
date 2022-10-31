@@ -892,7 +892,7 @@ static int init_ioctl_scratch_space(void) {
     return 0;
 }
 
-int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_ret) {
+int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     int ret;
 
     if (handle->hdr.type != PAL_TYPE_DEV)
@@ -944,7 +944,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, uint64_t arg, int* out_
     assert(untrusted_addr);
     copy_sub_regions_to_untrusted(sub_regions, sub_regions_cnt, untrusted_addr);
 
-    ret = ocall_ioctl(handle->dev.fd, cmd, (uint64_t)untrusted_addr);
+    ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)untrusted_addr);
     if (ret < 0) {
         ocall_munmap_untrusted(untrusted_addr, ALLOC_ALIGN_UP(untrusted_size));
         return unix_to_pal_error(ret);

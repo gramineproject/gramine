@@ -731,9 +731,8 @@ static long sgx_ocall_debug_describe_location(void* pms) {
 }
 
 static long sgx_ocall_ioctl(void* pms) {
-    ms_ocall_ioctl_t* ms = (ms_ocall_ioctl_t*)pms;
-    long ret = DO_SYSCALL(ioctl, ms->ms_fd, ms->ms_cmd, ms->ms_arg);
-    return ret;
+    ms_ocall_ioctl_t* ms = pms;
+    return DO_SYSCALL(ioctl, ms->ms_fd, ms->ms_cmd, ms->ms_arg);
 }
 
 static long sgx_ocall_get_quote(void* pms) {
