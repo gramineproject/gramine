@@ -24,9 +24,18 @@ Command line arguments
 
    Path to the output manifest file (with Trusted Files expanded).
 
-.. option:: --key key_file, -k key_file
+.. option:: --keytype key_type, -t key_type
 
-    Path to the private key used for signing.
+    Type of signing key: `pem` for a local private key in .pem format or
+    `akv` for Azure Key Vault Managed HSM.
+
+.. option:: --key key_path, -k key_path
+
+    Path to .pem file for a local private key or
+    `vault_url:key_name` for Azure Key Vault Managed HSM. For example, if
+    we have a key named sgx_sign_key available in the Managed HSM with
+    URL  https://myakv-mhsm.managedhsm.azure.net, the key path will be
+    `https://myakv-mhsm.managedhsm.azure.net:sgx_sign_key`
 
 .. option:: --manifest manifest_file, -m manifest_file
 

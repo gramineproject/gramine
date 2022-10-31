@@ -187,15 +187,14 @@ The ``-Dsgx_driver`` parameter controls which SGX driver to use:
 
 * ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
   5.11+),
-* ``dcap1.6`` for Intel DCAP version 1.6 or higher,  but below 1.10,
-* ``dcap1.10`` for Intel DCAP version 1.10 or higher,
 * ``oot`` for non-DCAP, out-of-tree version of the driver.
 
 The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
 where the SGX driver was downloaded or installed in the previous step. For
-example, for the DCAP version 1.41 of the SGX driver, you must specify
-``-Dsgx_driver_include_path="/usr/src/sgx-1.41/include/"``. If this parameter is
-omitted, Gramine's build system will try to determine the right path.
+example, for the OOT driver installed at the default path, you can specify
+``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
+is omitted, Gramine's build system will try to determine the right path, so,
+it's usually not needed.
 
 .. note::
 
@@ -296,17 +295,32 @@ Additional build options
 
 .. _FSGSBASE:
 
-Prepare a signing key
----------------------
+Signing key
+-----------
 
-Only for SGX enclave development, and if you haven't already, run the following
-command::
+SGX enclaves need to build and signed using a 3072-bit RSA key. During development,
+and if you haven't already, you can run the following command::
 
    gramine-sgx-gen-private-key
 
 This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
 stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
-be protected and should not be disclosed to anyone.
+be protected and must not be disclosed to anyone. This is the default signing
+method, but since this key is available in the clear, it is **not suitable**
+for production deployments.
+
+For production deployments, you must use a key secured in a HSM. Gramine
+supports signing the enclave using a key from Azure Key Vault Managed HSM. You 
+must have Azure Subscription with access to Azure Key Vault's Managed HSM, and
+have a 3072-bit RSA private key with a public exponent 3 created in it. (Please
+note that only Managed HSM supports setting public exponent), and must have
+given access permissions to yourself or the one who will use the key created (as 
+'Managed HSM Crypto User' using `az keyvault role assignment`). You must also be
+logged in using Azure CLI before signing the enclave. Please see `create_rsa_key
+<https://azuresdkdocs.blob.core.windows.net/$web/python/azure-keyvault-keys/latest/azure.keyvault.keys.html#azure.keyvault.keys.KeyClient.create_rsa_key>`__ 
+for creating the key in Azure Key Vault Managed HSM,  and `gramine-sgx-sign
+<https://gramine.readthedocs.io/en/latest/manpages/gramine-sgx-sign.html>`__ for
+the options to sign with Azure Key Vault.
 
 After signing the application's manifest, users may ship the application and
 Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
@@ -320,7 +334,7 @@ Advanced: installing Linux kernel with FSGSBASE patches
 FSGSBASE patchset was merged in Linux kernel version 5.9. For older kernels it
 is available as `separate patches
 <https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
-(Note that Gramine was prevously called *Graphene* and was hosted under a
+(Note that Gramine was previously called *Graphene* and was hosted under a
 different organization, hence the name of the linked repository.)
 
 The following instructions to patch and compile a Linux kernel with FSGSBASE
