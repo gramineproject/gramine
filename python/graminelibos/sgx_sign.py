@@ -538,7 +538,7 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 
 
 def sign_with_akv(data, key):
-    """Signs *data* using *key* from Azure Key Vault's Managed HSM
+    """Signs *data* using *key* from Azure Key Vault's Managed HSM.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
     the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
@@ -549,43 +549,46 @@ def sign_with_akv(data, key):
 
     Args:
         data (bytes): Data to calculate the signature over.
-        key (str): The key name of RSA private key created in the AKV's Managed HSM
+        key (str): Details of RSA private key in the AKV's Managed HSM in vault_url:key_name format.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
     """
-    from azure.identity import AzureCliCredential
+
+    from azure.identity import DefaultAzureCredential
     from azure.keyvault.keys import KeyClient
     from azure.keyvault.keys.crypto import CryptographyClient, SignatureAlgorithm
 
-    print('Signing with key from Azure Key Vault')
+    key_details = key.rsplit(':', 1)
+    vault_url = key_details[0]
+    key_name = key_details[1]
 
-    # get credential from Azure CLI
-    credential = AzureCliCredential();
+    credential = DefaultAzureCredential(exclude_managed_identity_credential=True,
+                    exclude_visual_studio_code_credential=True,
+                    exclude_environment_credential=True, 
+                    exclude_shared_token_cache_credential=True, 
+                    exclude_powershell_credential=True)
 
-    vault_url = os.environ["VAULT_URL"]
     key_client = KeyClient(vault_url=vault_url, credential=credential)
 
-    rsaKey = key_client.get_key(key)
+    rsa_key = key_client.get_key(key_name)
 
-    crypto_client = CryptographyClient(rsaKey, credential=credential)
+    crypto_client = CryptographyClient(rsa_key, credential=credential)
 
-    # Digest the data for signing
     digest = hashlib.sha256(data).digest()
 
-    # Sign the data
     result = crypto_client.sign(SignatureAlgorithm.rs256, digest)
     signature = result.signature
 
-    exponent_int = int.from_bytes(rsaKey.key.e, byteorder='big')
-    modulus_int = int.from_bytes(rsaKey.key.n, byteorder='big')
+    exponent_int = int.from_bytes(rsa_key.key.e, byteorder='big')
+    modulus_int = int.from_bytes(rsa_key.key.n, byteorder='big')
     signature_int = int.from_bytes(signature, byteorder='big')
 
     return exponent_int, modulus_int, signature_int
 
 
 def sign_with_local_key(data, key):
-    """Signs *data* using *key*.
+    """Signs *data* using local *key* in .pem format.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
     the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
@@ -598,7 +601,6 @@ def sign_with_local_key(data, key):
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
     """
-    print('Signing with locally supplied key')
 
     proc = subprocess.Popen(
         ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],

@@ -43,7 +43,7 @@ helloworld.sig helloworld.manifest.sgx: sgx_sign
 sgx_sign: helloworld.manifest helloworld
 	gramine-sgx-sign \
 		--keytype akv \
-		--key svKeyPubExpoThree \
+		--key https://sv-akv-mhsm.managedhsm.azure.net:svKeyPubExpoThree \
 		--manifest $< \
 		--output $<.sgx
 
