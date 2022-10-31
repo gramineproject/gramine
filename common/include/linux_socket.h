@@ -11,6 +11,8 @@
 #include <linux/un.h>
 #include <stddef.h>
 
+#include "iovec.h"
+
 #define SOCKADDR_MAX_SIZE 128
 
 struct sockaddr_storage {
@@ -19,11 +21,6 @@ struct sockaddr_storage {
         char _size[SOCKADDR_MAX_SIZE];
         void* _align;
     };
-};
-
-struct iovec {
-    void* iov_base;
-    size_t iov_len;
 };
 
 struct msghdr {
@@ -40,6 +37,24 @@ struct mmsghdr {
     struct msghdr msg_hdr;
     unsigned int msg_len;
 };
+
+struct cmsghdr {
+    size_t cmsg_len;
+    int cmsg_level;
+    int cmsg_type;
+    unsigned char __cmsg_data[];
+};
+
+#define CMSG_DATA(cmsg) ((cmsg)->__cmsg_data)
+#define CMSG_FIRSTHDR(mhdr)                                   \
+    ((size_t)(mhdr)->msg_controllen >= sizeof(struct cmsghdr) \
+         ? (struct cmsghdr*)(mhdr)->msg_control               \
+         : (struct cmsghdr*)0)
+#define CMSG_ALIGN(len) ALIGN_UP(len, sizeof(size_t))
+#define CMSG_SPACE(len) (CMSG_ALIGN(sizeof(struct cmsghdr)) + CMSG_ALIGN(len))
+#define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
+
+#define SCM_RIGHTS 1
 
 #define AF_UNSPEC 0
 #define AF_UNIX 1
@@ -61,6 +76,7 @@ struct mmsghdr {
 #define MSG_TRUNC 0x20
 #define MSG_DONTWAIT 0x40
 #define MSG_NOSIGNAL 0x4000
+#define MSG_MORE 0x8000
 #define MSG_CMSG_CLOEXEC 0x40000000
 
 /* Option levels. */

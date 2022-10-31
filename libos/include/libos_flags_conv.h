@@ -17,8 +17,8 @@
 #include <linux/fcntl.h>
 #include <linux/mman.h>
 
+#include "api.h"
 #include "assert.h"
-#include "libos_internal.h"
 #include "pal.h"
 
 static inline pal_prot_flags_t LINUX_PROT_TO_PAL(int prot, int map_flags) {
@@ -28,6 +28,13 @@ static inline pal_prot_flags_t LINUX_PROT_TO_PAL(int prot, int map_flags) {
            (prot & PROT_WRITE ? PAL_PROT_WRITE : 0) |
            (prot & PROT_EXEC  ? PAL_PROT_EXEC  : 0) |
            (map_flags & MAP_PRIVATE ? PAL_PROT_WRITECOPY : 0);
+}
+
+static inline int PAL_PROT_TO_LINUX(pal_prot_flags_t prot) {
+    assert(WITHIN_MASK(prot, PAL_PROT_MASK));
+    return (prot & PAL_PROT_READ  ? PROT_READ  : 0) |
+           (prot & PAL_PROT_WRITE ? PROT_WRITE : 0) |
+           (prot & PAL_PROT_EXEC  ? PROT_EXEC  : 0);
 }
 
 static inline enum pal_access LINUX_OPEN_FLAGS_TO_PAL_ACCESS(int access) {

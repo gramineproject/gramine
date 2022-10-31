@@ -49,12 +49,13 @@ static int parse_proc_maps_line(const char* line, struct proc_maps_range* r) {
     /* perms (`rwxp`) */
     r->prot = 0;
     if (PARSE_CHAR('r', '-') == 'r')
-        r->prot |= PROT_READ;
+        r->prot |= PAL_PROT_READ;
     if (PARSE_CHAR('w', '-') == 'w')
-        r->prot |= PROT_WRITE;
+        r->prot |= PAL_PROT_WRITE;
     if (PARSE_CHAR('x', '-') == 'x')
-        r->prot |= PROT_EXEC;
-    PARSE_CHAR('p', 's'); // unused for now
+        r->prot |= PAL_PROT_EXEC;
+    if (PARSE_CHAR('p', 's') == 'p')
+        r->prot |= PAL_PROT_WRITECOPY;
     SKIP_CHAR(' ');
 
     /* offset */
@@ -101,6 +102,7 @@ static int parse_proc_maps_callback(const char* line, void* arg, bool* out_stop)
     return data->orig_callback(&r, data->arg);
 }
 
+/* This function is called by early init code and as such can't use dynamically allocated memory! */
 int parse_proc_maps(const char* path, int (*callback)(struct proc_maps_range* r, void* arg),
                     void* arg) {
     struct parse_proc_maps_data data = { .orig_callback = callback, .arg = arg };

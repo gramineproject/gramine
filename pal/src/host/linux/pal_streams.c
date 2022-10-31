@@ -6,12 +6,11 @@
  */
 
 #include <asm/fcntl.h>
-#include <netinet/in.h>
 #include <stdalign.h>
 #include <stdbool.h>
-#include <sys/socket.h>
 
 #include "api.h"
+#include "linux_socket.h"
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -51,17 +50,15 @@ int _PalStreamUnmap(void* addr, uint64_t size) {
 }
 
 int handle_serialize(PAL_HANDLE handle, void** data) {
-    const void* d;
-    size_t dsz = 0;
+    const void* field = NULL;
+    size_t field_size = 0;
 
-    /* find a field to serialize (depends on the handle type) and assign it to d; note that
+    /* find a field to serialize (depends on the handle type); note that
      * no handle type has more than one such field, and some have none */
-    /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
-     * work? Probably unused. Or pure luck. */
     switch (handle->hdr.type) {
         case PAL_TYPE_FILE:
-            d   = handle->file.realpath;
-            dsz = strlen(handle->file.realpath) + 1;
+            field = handle->file.realpath;
+            field_size = strlen(handle->file.realpath) + 1;
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
@@ -72,32 +69,36 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
             /* devices have no fields to serialize */
             break;
         case PAL_TYPE_DIR:
-            if (handle->dir.realpath) {
-                d   = handle->dir.realpath;
-                dsz = strlen(handle->dir.realpath) + 1;
-            }
+            field = handle->dir.realpath;
+            field_size = strlen(handle->dir.realpath) + 1;
+            /* no need to serialize buf/ptr/end */
             break;
         case PAL_TYPE_SOCKET:
+            /* sock.ops field will be fixed in deserialize */
             break;
         case PAL_TYPE_PROCESS:
+            /* processes have no fields to serialize */
+            break;
         case PAL_TYPE_EVENTFD:
+            /* eventfds have no fields to serialize */
             break;
         default:
             return -PAL_ERROR_INVAL;
     }
 
-    size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz);
+    size_t hdl_size = handle_size(handle);
+    size_t buffer_size = hdl_size + field_size;
+    void* buffer = malloc(buffer_size);
     if (!buffer)
         return -PAL_ERROR_NOMEM;
 
     /* copy into buffer all handle fields and then serialized fields */
-    memcpy(buffer, handle, hdlsz);
-    if (dsz)
-        memcpy(buffer + hdlsz, d, dsz);
+    memcpy(buffer, handle, hdl_size);
+    if (field_size)
+        memcpy(buffer + hdl_size, field, field_size);
 
     *data = buffer;
-    return hdlsz + dsz;
+    return buffer_size;
 }
 
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
@@ -144,6 +145,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             memcpy(path, (const char*)data + hdl_size, path_size);
 
             hdl->dir.realpath = path;
+            hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
         }
         case PAL_TYPE_SOCKET:

@@ -17,7 +17,7 @@ static void write_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                 CHECK(PalStreamWrite(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
-                struct pal_iovec iov = {
+                struct iovec iov = {
                     .iov_base = buf + i,
                     .iov_len = this_size,
                 };
@@ -45,7 +45,7 @@ static void read_all(PAL_HANDLE handle, int type, char* buf, size_t size) {
                 CHECK(PalStreamRead(handle, 0, &this_size, buf + i));
                 break;
             case PAL_TYPE_SOCKET:;
-                struct pal_iovec iov = {
+                struct iovec iov = {
                     .iov_base = buf + i,
                     .iov_len = this_size,
                 };
@@ -87,7 +87,7 @@ static void set_reuseaddr(PAL_HANDLE handle) {
 static void do_parent(void) {
     PAL_HANDLE child_process;
     const char* args[] = { "send_handle", "child", NULL };
-    CHECK(PalProcessCreate(args, &child_process));
+    CHECK(PalProcessCreate(args, NULL, 0, &child_process));
 
     PAL_HANDLE handle;
 

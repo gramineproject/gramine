@@ -238,9 +238,14 @@ class TC_01_Bootstrap(RegressionTestCase):
             'ALPHA BRAVO CHARLIE DELTA '
             'scripts/foo.sh STRING FROM EXECVE', stdout)
 
+    def test_212_exec_null(self):
+        stdout, _ = self.run_binary(['exec_null'])
+        self.assertIn('Hello World ((null))!', stdout)
+        self.assertIn('envp[\'IN_EXECVE\'] = (null)', stdout)
+
     @unittest.skipIf(USES_MUSL,
         'Test uses /bin/sh from the host which is usually built against glibc')
-    def test_212_shebang_test_script(self):
+    def test_213_shebang_test_script(self):
         stdout, _ = self.run_binary(['shebang_test_script'])
         self.assertRegex(stdout, r'Printing Args: '
             r'scripts/baz\.sh ECHO FOXTROT GOLF scripts/bar\.sh '
@@ -1284,22 +1289,8 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('[parent] TEST OK', stdout)
 
     def test_100_socket_unix(self):
-        if os.path.exists("dummy"):
-            os.remove("dummy")
-        if os.path.exists("u"):
-            os.remove("u")
-
         stdout, _ = self.run_binary(['unix'])
-        self.assertIn('Data: This is packet 0', stdout)
-        self.assertIn('Data: This is packet 1', stdout)
-        self.assertIn('Data: This is packet 2', stdout)
-        self.assertIn('Data: This is packet 3', stdout)
-        self.assertIn('Data: This is packet 4', stdout)
-        self.assertIn('Data: This is packet 5', stdout)
-        self.assertIn('Data: This is packet 6', stdout)
-        self.assertIn('Data: This is packet 7', stdout)
-        self.assertIn('Data: This is packet 8', stdout)
-        self.assertIn('Data: This is packet 9', stdout)
+        self.assertIn('TEST OK', stdout)
 
     def test_200_socket_udp(self):
         stdout, _ = self.run_binary(['udp'])

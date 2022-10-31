@@ -29,12 +29,12 @@ int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                    struct pal_socket_addr* addr, bool force_nonblocking) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                    struct pal_socket_addr* addr, bool force_nonblocking) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

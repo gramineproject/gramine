@@ -20,10 +20,19 @@
 #include "list.h"
 #include "log.h"
 
-/* WARNING: this declaration may conflict with some header files */
+/* TODO: remove this once Gramine does not use host headers. */
 #ifndef ssize_t
-typedef ptrdiff_t ssize_t;
-#endif
+#ifndef __LP64__
+#error "Unsupported data model"
+#endif // __LP64__
+
+typedef long ssize_t;
+
+#ifndef SSIZE_MAX
+#define SSIZE_MAX LONG_MAX
+#endif // SSIZE_MAX
+
+#endif // ssize_t
 
 /* Macros */
 

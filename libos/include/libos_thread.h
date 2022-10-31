@@ -72,7 +72,7 @@ struct libos_thread {
     IDTYPE tid;
 
     /* credentials */
-    IDTYPE uid, gid, euid, egid;
+    IDTYPE uid, gid, euid, egid, suid, sgid;
 
     struct {
         size_t count;

@@ -6,7 +6,7 @@ the Makefile and a template for generating the manifest.
 # Building lighttpd source
 
 For this example, we build lighttpd from source instead of using an existing
-binary. To build lighttpd on Ubuntu 18.04, please make sure that the following
+binary. To build lighttpd on Ubuntu 20.04, please make sure that the following
 packages are installed:
 
     sudo apt-get install -y build-essential libssl-dev zlib1g-dev
@@ -20,7 +20,7 @@ Run `make` (non-debug) or `make DEBUG=1` (debug) in the directory.
 Run `make SGX=1` (non-debug) or `make SGX=1 DEBUG=1` (debug) in the directory to
 prepare lighttpd to run on SGX.
 
-# Running lighttpd natively, under Gramine, and under Gramine-SGX
+# Running lighttpd
 
 Execute one of the following commands to start lighttpd either natively
 (non-Gramine), on Gramine or Gramine-SGX, respectively.
@@ -43,10 +43,3 @@ https://github.com/giltene/wrk2 for more information.
     ../common_tools/benchmark-http.sh http://127.0.0.1:8003
 
 Use Ctrl-C to terminate the server once you are finished testing lighttpd.
-
-# Clean up
-
-There are two commands to clean up the directory:
-
-* `make clean`: Remove manifest, signature, and token files.
-* `make distclean`: Remove the lighttpd source code and installation directory.

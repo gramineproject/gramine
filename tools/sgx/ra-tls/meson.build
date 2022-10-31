@@ -11,7 +11,7 @@ ra_tls_args = [
 libra_tls_attest = shared_library('ra_tls_attest',
     'ra_tls_attest.c',
     c_args: ra_tls_args,
-    include_directories: sgx_inc,
+    include_directories: pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
     dependencies: [
         mbedtls_static_dep,
     ],
@@ -29,7 +29,7 @@ libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
     'ra_tls.h',
 
     c_args: ra_tls_args,
-    include_directories: sgx_inc,
+    include_directories: pal_sgx_inc,
     dependencies: [
         sgx_util_dep,
         mbedtls_static_dep,
@@ -50,7 +50,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
     'secret_prov.h',
 
     c_args: ra_tls_args,
-    include_directories: sgx_inc,
+    include_directories: pal_sgx_inc,
     dependencies: [
         mbedtls_static_dep,
         sgx_util_dep,
@@ -72,7 +72,7 @@ libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
     'secret_prov.h',
 
     c_args: ra_tls_args,
-    include_directories: sgx_inc,
+    include_directories: pal_sgx_inc,
     dependencies: [
         threads_dep,
         sgx_util_dep,
@@ -93,7 +93,7 @@ if dcap
         'ra_tls.h',
 
         c_args: ra_tls_args,
-        include_directories: sgx_inc,
+        include_directories: pal_sgx_inc,
         dependencies: [
             sgx_dcap_quoteverify_dep,
             sgx_util_dep,
@@ -114,7 +114,7 @@ if dcap
         'ra_tls.h',
 
         c_args: ra_tls_args,
-        include_directories: sgx_inc,
+        include_directories: pal_sgx_inc,
         dependencies: [
             sgx_dcap_quoteverify_dep,
             sgx_util_dep,
@@ -137,7 +137,7 @@ if dcap
         'secret_prov.h',
 
         c_args: ra_tls_args,
-        include_directories: sgx_inc,
+        include_directories: pal_sgx_inc,
         dependencies: [
             threads_dep,
             sgx_dcap_quoteverify_dep,

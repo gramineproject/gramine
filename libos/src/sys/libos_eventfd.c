@@ -8,13 +8,13 @@
  */
 
 #include <asm/fcntl.h>
-#include <sys/eventfd.h>
 
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_utils.h"
+#include "linux_eventfd.h"
 #include "pal.h"
 #include "toml_utils.h"
 

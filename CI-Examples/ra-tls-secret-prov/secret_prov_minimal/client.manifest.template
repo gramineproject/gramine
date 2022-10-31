@@ -11,15 +11,13 @@ loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
 loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"
 loader.env.SECRET_PROVISION_SERVERS = "dummyserver:80;localhost:4433;anotherdummy:4433"
 
-loader.insecure__use_cmdline_argv = true
-
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
-  { path = "/etc", uri = "file:/etc" },
   { path = "/client", uri = "file:client" },
   { path = "/ca.crt", uri = "file:../ssl/ca.crt" },
+  { path = "/etc/hosts", uri = "file:../helper-files/hosts" },
 ]
 
 sys.enable_extra_runtime_domain_names_conf = true
@@ -38,14 +36,5 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
   "file:../ssl/ca.crt",
-]
-
-sgx.allowed_files = [
-  "file:/etc/nsswitch.conf",
-  "file:/etc/ethers",
-  "file:/etc/host.conf",
-  "file:/etc/hosts",
-  "file:/etc/group",
-  "file:/etc/passwd",
-  "file:/etc/gai.conf",
+  "file:../helper-files/",
 ]

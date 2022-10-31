@@ -10,12 +10,7 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-bool _PalCheckMemoryMappable(const void* addr, size_t size) {
-    return true;
-}
-
-int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                           pal_prot_flags_t prot) {
+int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -33,4 +28,10 @@ unsigned long _PalMemoryQuota(void) {
 
 unsigned long _PalMemoryAvailableQuota(void) {
     return 0;
+}
+
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end) {
+    *out_next_range_start = 0;
+    *out_next_range_end = 0;
 }

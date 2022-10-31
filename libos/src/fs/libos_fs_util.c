@@ -62,6 +62,9 @@ static int generic_istat(struct libos_inode* inode, struct stat* buf) {
     lock(&inode->lock);
     buf->st_mode = inode->type | inode->perm;
     buf->st_size = inode->size;
+    buf->st_uid  = inode->uid;
+    buf->st_gid  = inode->gid;
+
     /* Some programs (e.g. some tests from LTP) require this value. We've picked some random,
      * pretty looking constant - exact value should not affect anything (perhaps except
      * performance). */
@@ -146,12 +149,9 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
     pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
 
-    void* actual_addr = addr;
-    ret = PalVirtualMemoryAlloc(&actual_addr, size, /*alloc_type=*/0, pal_prot_writable);
+    ret = PalVirtualMemoryAlloc(addr, size, pal_prot_writable);
     if (ret < 0)
         return pal_to_unix_errno(ret);
-
-    assert(actual_addr == addr);
 
     size_t read_size = size;
     char* read_addr = addr;

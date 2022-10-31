@@ -1319,15 +1319,6 @@ static void parse_fcntlop(struct print_buf* buf, va_list* ap) {
         case F_GETSIG:
             buf_puts(buf, "F_GETSIG");
             break;
-        case F_GETLK64:
-            buf_puts(buf, "F_GETLK64");
-            break;
-        case F_SETLK64:
-            buf_puts(buf, "F_SETLK64");
-            break;
-        case F_SETLKW64:
-            buf_puts(buf, "F_SETLKW64");
-            break;
         case F_SETOWN_EX:
             buf_puts(buf, "F_SETOWN_EX");
             break;

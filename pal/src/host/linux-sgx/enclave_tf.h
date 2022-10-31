@@ -21,11 +21,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #include "api.h"
 #include "enclave_tf_structs.h"
 #include "pal.h"
+#include "pal_linux_types.h"
 
 int init_seal_key_material(void);
 

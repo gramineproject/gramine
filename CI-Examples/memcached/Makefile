@@ -8,8 +8,6 @@ MEMCACHED_MIRRORS ?= \
 
 MEMCACHED_SHA256 ?= e3d10c06db755b220f43d26d3b68d15ebf737a69c7663529b504ab047efe92f4
 
-UBUNTU_VER = $(shell lsb_release --short --id)$(shell lsb_release --short --release)
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
@@ -69,7 +67,7 @@ endif
 
 .PHONY: start-gramine-server
 start-gramine-server: all
-	$(GRAMINE) memcached -u nobody
+	$(GRAMINE) memcached
 
 .PHONY: clean
 clean:

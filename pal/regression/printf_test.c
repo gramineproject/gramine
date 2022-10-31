@@ -1,12 +1,6 @@
 #include "api.h"
 #include "pal_regression.h"
 
-#define FAIL(fmt...) ({ \
-    pal_printf(fmt);    \
-    pal_printf("\n");   \
-    PalProcessExit(1);  \
-})
-
 #define TEST(output_str, fmt...) ({                                                                \
     size_t output_len = strlen(output_str);                                                        \
     char buf[0x100];                                                                               \
@@ -91,10 +85,9 @@ int main(void) {
      * terminated at two pages boundary, where the second page has no read permission. If
      * the precision limit is not respected, `snprintf` will access data at the second page and
      * crash the process. */
-    int ret = PalVirtualMemoryAlloc((void**)&ptr, 2 * PAGE_SIZE, PAL_ALLOC_INTERNAL,
-                                    PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = memory_alloc(2 * PAGE_SIZE, PAL_PROT_READ | PAL_PROT_WRITE, (void**)&ptr);
     if (ret < 0) {
-        FAIL("PalVirtualMemoryAlloc failed: %d", ret);
+        FAIL("memory_alloc failed: %d", ret);
     }
     ret = PalVirtualMemoryProtect(ptr + PAGE_SIZE, PAGE_SIZE, /*prot=*/0);
     if (ret < 0) {

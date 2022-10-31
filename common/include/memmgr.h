@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <sys/mman.h>
-
 #include "api.h"
 #include "asan.h"
 #include "assert.h"

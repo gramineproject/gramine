@@ -6,9 +6,9 @@
  */
 
 #include <asm/poll.h>
-#include <sys/eventfd.h>
 
 #include "api.h"
+#include "linux_eventfd.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"

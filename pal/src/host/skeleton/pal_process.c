@@ -14,7 +14,8 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                      size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

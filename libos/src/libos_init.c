@@ -5,8 +5,6 @@
  * This file contains entry and exit functions of library OS.
  */
 
-#include <sys/mman.h>
-
 #include "api.h"
 #include "hex.h"
 #include "init.h"
@@ -83,6 +81,8 @@ long pal_to_unix_errno(long err) {
     return -pal_to_unix_errno_positive((unsigned long)-err);
 }
 
+bool g_received_user_memory = false;
+
 void* migrated_memory_start;
 void* migrated_memory_end;
 
@@ -93,7 +93,7 @@ const char* const* migrated_envp __attribute_migratable;
  * allocated, its memory is never freed or updated. */
 char** g_library_paths = NULL;
 
-void* allocate_stack(size_t size, size_t protect_size, bool user) {
+static void* allocate_stack(size_t size, size_t protect_size, bool user) {
     void* stack = NULL;
 
     size = ALLOC_ALIGN_UP(size);
@@ -118,7 +118,7 @@ void* allocate_stack(size_t size, size_t protect_size, bool user) {
     }
 
     bool need_mem_free = false;
-    ret = PalVirtualMemoryAlloc(&stack, size + protect_size, 0, /*prot=*/0);
+    ret = PalVirtualMemoryAlloc(stack, size + protect_size, /*prot=*/0);
     if (ret < 0) {
         goto out_fail;
     }
@@ -391,6 +391,11 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
 
     libos_xstate_init();
 
+    if (!g_pal_public_state->parent_process) {
+        /* No parent process - we never receive any memory. */
+        g_received_user_memory = true;
+    }
+
     RUN_INIT(init_vma);
     RUN_INIT(init_slab);
     RUN_INIT(read_environs, envp);
@@ -420,8 +425,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
 
     RUN_INIT(init_ipc);
     RUN_INIT(init_process);
-    RUN_INIT(init_mount_root);
     RUN_INIT(init_threading);
+    RUN_INIT(init_mount_root);
     RUN_INIT(init_mount);
     RUN_INIT(init_std_handles);
 

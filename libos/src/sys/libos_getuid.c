@@ -44,19 +44,43 @@ long libos_syscall_getegid(void) {
 }
 
 long libos_syscall_setuid(uid_t uid) {
+    int ret;
     struct libos_thread* current = get_cur_thread();
+
     lock(&current->lock);
+    if (current->uid == 0) {
+        /* if the user is root, the real UID and saved set-user-ID are also set */
+        current->uid  = uid;
+        current->suid = uid;
+    } else if (uid != current->uid && uid != current->suid) {
+        ret = -EPERM;
+        goto out;
+    }
     current->euid = uid;
+    ret = 0;
+out:
     unlock(&current->lock);
-    return 0;
+    return ret;
 }
 
 long libos_syscall_setgid(gid_t gid) {
+    int ret;
     struct libos_thread* current = get_cur_thread();
+
     lock(&current->lock);
+    if (current->uid == 0) {
+        /* if the user is root, the real GID and saved set-group-ID are also set */
+        current->gid  = gid;
+        current->sgid = gid;
+    } else if (gid != current->gid && gid != current->sgid) {
+        ret = -EPERM;
+        goto out;
+    }
     current->egid = gid;
+    ret = 0;
+out:
     unlock(&current->lock);
-    return 0;
+    return ret;
 }
 
 #define NGROUPS_MAX 65536 /* # of supplemental group IDs; has to be same as host OS */

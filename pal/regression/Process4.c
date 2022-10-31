@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         const char* newargs[4] = {"Process4", "0", time_arg, NULL};
 
         PAL_HANDLE proc = NULL;
-        ret = PalProcessCreate(newargs, &proc);
+        ret = PalProcessCreate(newargs, NULL, 0, &proc);
 
         if (ret < 0)
             pal_printf("Can't create process\n");
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
             const char* newargs[4] = {"Process4", count_arg, argv[2], NULL};
 
             PAL_HANDLE proc = NULL;
-            int ret = PalProcessCreate(newargs, &proc);
+            int ret = PalProcessCreate(newargs, NULL, 0, &proc);
 
             if (ret < 0)
                 pal_printf("Can't create process\n");

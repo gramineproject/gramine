@@ -15,7 +15,7 @@ manifests = [
   "Hex",
   "ipv4_parser",
   "ipv6_parser",
-  "Memory",
+  "memory",
   "Misc",
   "Pie",
   "Pipe",
@@ -27,6 +27,7 @@ manifests = [
   "normalize_path",
   "printf_test",
   "send_handle",
+  "strtoll_test",
 ]
 
 [arch.x86_64]

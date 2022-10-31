@@ -86,7 +86,7 @@ int alloc_thread_libos_stack(struct libos_thread* thread) {
     }
 
     bool need_mem_free = false;
-    ret = PalVirtualMemoryAlloc(&addr, LIBOS_THREAD_LIBOS_STACK_SIZE, 0,
+    ret = PalVirtualMemoryAlloc(addr, LIBOS_THREAD_LIBOS_STACK_SIZE,
                                 LINUX_PROT_TO_PAL(prot, flags));
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
@@ -180,8 +180,10 @@ static int init_main_thread(void) {
 
     cur_thread->uid = uid_int64;
     cur_thread->euid = uid_int64;
+    cur_thread->suid = uid_int64;
     cur_thread->gid = gid_int64;
     cur_thread->egid = gid_int64;
+    cur_thread->sgid = gid_int64;
 
     cur_thread->signal_dispositions = alloc_default_signal_dispositions();
     if (!cur_thread->signal_dispositions) {
@@ -293,6 +295,8 @@ struct libos_thread* get_new_thread(void) {
     thread->gid       = cur_thread->gid;
     thread->euid      = cur_thread->euid;
     thread->egid      = cur_thread->egid;
+    thread->suid      = cur_thread->suid;
+    thread->sgid      = cur_thread->sgid;
 
     thread->stack     = cur_thread->stack;
     thread->stack_top = cur_thread->stack_top;
@@ -389,10 +393,6 @@ void put_thread(struct libos_thread* thread) {
 
         /* `signal_altstack` is provided by the user, no need for a clean up. */
 
-        if (thread->robust_list) {
-            release_robust_list(thread->robust_list);
-        }
-
         if (thread->scheduler_event) {
             PalObjectClose(thread->scheduler_event);
         }
@@ -478,11 +478,6 @@ void cleanup_thread(IDTYPE caller, void* arg) {
     /* wait on clear_child_tid_pal; this signals that PAL layer exited child thread */
     while (__atomic_load_n(&thread->clear_child_tid_pal, __ATOMIC_ACQUIRE) != 0)
         CPU_RELAX();
-
-    if (thread->robust_list) {
-        release_robust_list(thread->robust_list);
-        thread->robust_list = NULL;
-    }
 
     /* notify parent if any */
     release_clear_child_tid(thread->clear_child_tid);

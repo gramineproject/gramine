@@ -7,8 +7,6 @@
  * Implementation of system call "brk".
  */
 
-#include <sys/mman.h>
-
 #include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
@@ -61,9 +59,9 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         return -EINVAL;
     }
 
-    if (brk_start && brk_start <= g_pal_public_state->user_address_end
-            && brk_max_size <= (uintptr_t)g_pal_public_state->user_address_end
-            && (uintptr_t)brk_start < (uintptr_t)g_pal_public_state->user_address_end - brk_max_size) {
+    if (brk_start && brk_start <= g_pal_public_state->memory_address_end
+            && brk_max_size <= (uintptr_t)g_pal_public_state->memory_address_end
+            && (uintptr_t)brk_start < (uintptr_t)g_pal_public_state->memory_address_end - brk_max_size) {
         int ret;
         size_t offset = 0;
 
@@ -74,8 +72,8 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
             }
             /* Linux randomizes brk at offset from 0 to 0x2000000 from main executable data section
              * https://elixir.bootlin.com/linux/v5.6.3/source/arch/x86/kernel/process.c#L914 */
-            offset %= MIN((size_t)0x2000000, (size_t)((char*)g_pal_public_state->user_address_end -
-                                                      brk_max_size - (char*)brk_start));
+            offset %= MIN((size_t)0x2000000, (size_t)((char*)g_pal_public_state->memory_address_end
+                                                      - brk_max_size - (char*)brk_start));
             offset = ALLOC_ALIGN_DOWN(offset);
         }
 
@@ -189,7 +187,7 @@ void* libos_syscall_brk(void* _brk) {
         goto out;
     }
 
-    int ret = PalVirtualMemoryAlloc((void**)&brk_current, size, 0, PAL_PROT_READ | PAL_PROT_WRITE);
+    int ret = PalVirtualMemoryAlloc(brk_current, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         if (bkeep_mmap_fixed(brk_current, brk_region.brk_end - brk_current, PROT_NONE,
                              MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap") < 0) {

@@ -257,6 +257,9 @@ struct libos_inode {
     /* File size */
     file_off_t size;
 
+    /* credentials */
+    IDTYPE uid, gid;
+
     /* Create/modify/access time */
     time_t ctime;
     time_t mtime;

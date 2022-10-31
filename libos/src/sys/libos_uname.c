@@ -9,7 +9,6 @@
  */
 
 #include <errno.h>
-#include <sys/utsname.h>
 
 #include "api.h"
 #include "libos_internal.h"

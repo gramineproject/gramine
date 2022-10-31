@@ -161,7 +161,7 @@ This option will generate the following extra configuration:
 
    - ``nameserver``
    - ``search``
-   - ``options`` (``inet6`` | ``rotate``)
+   - ``options`` [``edns0``] [``inet6``] [``rotate``] [``use-vc``]
 
   Unsupported keywords and malformed lines from ``/etc/resolv.conf`` are ignored.
 
@@ -282,25 +282,6 @@ points to an invalid memory region. Setting this manifest option to ``false``
 may improve performance for certain workloads but may also generate
 ``SIGSEGV/SIGBUS`` exceptions for some applications that specifically use
 invalid pointers (though this is not expected for most real-world applications).
-
-Gramine internal metadata size
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    loader.pal_internal_mem_size = "[SIZE]"
-    (default: "0")
-
-This syntax specifies how much additional memory Gramine reserves for its
-internal use (e.g., metadata for trusted files, internal handles,
-etc.). By default, Gramine pre-allocates 64MB of internal memory for this
-metadata, but for huge workloads this limit may be not enough. In this case,
-Gramine loudly fails with "out of PAL memory" error. To run huge workloads,
-increase this limit by setting this option to e.g. ``64M`` (this would result in
-a total of 128MB used by Gramine for internal metadata). Note that this limit
-is included in ``sgx.enclave_size``, so if your enclave size is e.g. 512MB and
-you specify ``loader.pal_internal_mem_size = "64M"``, then your application is
-left with 384MB of usable memory.
 
 Stack size
 ^^^^^^^^^^
@@ -515,7 +496,7 @@ Number of threads
 
 ::
 
-    sgx.thread_num = [NUM]
+    sgx.max_threads = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -537,9 +518,9 @@ Note that Gramine uses several helper threads internally:
   each time a new pipe is created. It terminates itself immediately after the
   TLS handshake is performed.
 
-Given these internal threads, ``sgx.thread_num`` should be set to at least ``4``
-even for single-threaded applications (to accommodate for the main thread, the
-IPC thread, the Async thread and one TLS-handshake thread).
+Given these internal threads, ``sgx.max_threads`` should be set to at least
+``4`` even for single-threaded applications (to accommodate for the main thread,
+the IPC thread, the Async thread and one TLS-handshake thread).
 
 
 Number of RPC threads (Exitless feature)
@@ -989,3 +970,25 @@ value has been replaced with the string value. The ``none`` value in the new
 syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
 explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
 ``true`` boolean value in the deprecated syntax.
+
+Gramine internal metadata size (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    loader.pal_internal_mem_size = "[SIZE]"
+    (default: "0")
+
+This syntax specified how much additional memory Gramine used to reserve for its
+internal use (e.g., metadata for trusted files, internal handles,
+etc.). Currently Gramine correctly tracks all internal memory allocations and
+does not require this workaround.
+
+Number of threads (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.thread_num = [NUM]
+
+This name was ambiguous and was replaced with ``sgx.max_threads``.

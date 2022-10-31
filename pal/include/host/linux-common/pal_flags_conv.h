@@ -15,17 +15,14 @@
 
 #include <asm/fcntl.h>
 #include <linux/mman.h>
-#include <sys/types.h>
 
 #include "assert.h"
 #include "pal.h"
 
-static inline int PAL_MEM_FLAGS_TO_LINUX(pal_alloc_flags_t alloc_type, pal_prot_flags_t prot) {
-    assert(WITHIN_MASK(alloc_type, PAL_ALLOC_MASK));
-    assert(WITHIN_MASK(prot,       PAL_PROT_MASK));
+static inline int PAL_MEM_FLAGS_TO_LINUX(pal_prot_flags_t prot) {
+    assert(WITHIN_MASK(prot, PAL_PROT_MASK));
 
-    return (alloc_type & PAL_ALLOC_RESERVE ? MAP_NORESERVE | MAP_UNINITIALIZED : 0) |
-           (prot & PAL_PROT_WRITECOPY      ? MAP_PRIVATE : MAP_SHARED);
+    return (prot & PAL_PROT_WRITECOPY ? MAP_PRIVATE : MAP_SHARED);
 }
 
 static inline int PAL_PROT_TO_LINUX(pal_prot_flags_t prot) {

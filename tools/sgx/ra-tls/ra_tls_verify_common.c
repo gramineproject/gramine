@@ -164,12 +164,17 @@ int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oi
 
 /*! calculate sha256 over public key from \p crt and copy it into \p sha */
 static int sha256_over_crt_pk(mbedtls_x509_crt* crt, uint8_t* sha) {
+    mbedtls_ecp_keypair* key = mbedtls_pk_ec(crt->pk);
+    if (key == NULL || key->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP384R1) {
+        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+    }
+
     uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, PUB_KEY_SIZE_MAX);
-    if (pk_der_size_byte != RSA_PUB_3072_KEY_DER_LEN)
-        return MBEDTLS_ERR_PK_INVALID_PUBKEY;
+    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, sizeof(pk_der));
+    if (pk_der_size_byte < 0)
+        return pk_der_size_byte;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
     memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);

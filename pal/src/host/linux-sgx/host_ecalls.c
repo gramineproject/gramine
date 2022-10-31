@@ -8,7 +8,8 @@
 
 int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd, sgx_target_info_t* qe_targetinfo,
-                        struct pal_topo_info* topo_info, struct pal_dns_host_conf* dns_conf) {
+                        struct pal_topo_info* topo_info, struct pal_dns_host_conf* dns_conf,
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
@@ -20,19 +21,22 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
         /* after this point, g_rpc_queue != NULL */
     }
 
-    ms_ecall_enclave_start_t ms;
-    ms.ms_libpal_uri       = libpal_uri;
-    ms.ms_libpal_uri_len   = strlen(ms.ms_libpal_uri);
-    ms.ms_args             = args;
-    ms.ms_args_size        = args_size;
-    ms.ms_env              = env;
-    ms.ms_env_size         = env_size;
-    ms.ms_parent_stream_fd = parent_stream_fd;
-    ms.ms_qe_targetinfo    = qe_targetinfo;
-    ms.ms_topo_info        = topo_info;
-    ms.ms_dns_host_conf    = dns_conf;
-    ms.rpc_queue           = g_rpc_queue;
-    return sgx_ecall(ECALL_ENCLAVE_START, &ms);
+    struct ecall_enclave_start start_args = {
+        .libpal_uri               = libpal_uri,
+        .libpal_uri_len           = strlen(libpal_uri),
+        .args                     = args,
+        .args_size                = args_size,
+        .env                      = env,
+        .env_size                 = env_size,
+        .parent_stream_fd         = parent_stream_fd,
+        .qe_targetinfo            = qe_targetinfo,
+        .topo_info                = topo_info,
+        .dns_host_conf            = dns_conf,
+        .reserved_mem_ranges      = reserved_mem_ranges,
+        .reserved_mem_ranges_size = reserved_mem_ranges_size,
+        .rpc_queue                = g_rpc_queue,
+    };
+    return sgx_ecall(ECALL_ENCLAVE_START, &start_args);
 }
 
 int ecall_thread_start(void) {

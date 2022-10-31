@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <sys/syscall.h>
-
 #include "api.h"
 #include "host_syscall.h"
 #include "pal_linux.h"
@@ -63,7 +61,7 @@ struct pal_enclave {
 
 extern struct pal_enclave g_pal_enclave;
 
-int open_sgx_driver(bool need_gsgx);
+int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
 
 int read_enclave_token(int token_file, sgx_arch_token_t* token);
@@ -121,7 +119,6 @@ void unmap_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
 
-int sgx_init_child_process(int parent_stream_fd, char** out_application_path, char** out_manifest);
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
 

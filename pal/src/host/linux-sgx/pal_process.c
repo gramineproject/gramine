@@ -126,15 +126,23 @@ bool is_peer_enclave_ok(sgx_report_body_t* peer_enclave_info,
     return true;
 }
 
-int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
+int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                      size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle) {
     int stream_fd;
-    int nargs = 0, ret;
+    int nargs = 0;
 
     if (args)
         for (const char** a = args; *a; a++)
             nargs++;
 
-    ret = ocall_create_process(nargs, args, &stream_fd);
+    /*
+     * `reserved_mem_ranges` contains virtual addresses of all user memory. We do not consider this
+     * a secret information (host OS can most likely learn it anyway), so we pass it directly to the
+     * host OS. It serves merely as a hint to the initial memory allocator in PAL, so any malicious
+     * host OS modifications are irrelevant (will be detected, if anything overlaps).
+     */
+    int ret = ocall_create_process(nargs, args, reserved_mem_ranges, reserved_mem_ranges_len,
+                                   &stream_fd);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -179,7 +187,7 @@ int _PalProcessCreate(PAL_HANDLE* handle, const char** args) {
         goto failed;
     }
 
-    *handle = child;
+    *out_handle = child;
     return 0;
 
 failed:

@@ -14,8 +14,9 @@
 #include <stdbool.h>
 
 #include "api.h"
+#include "asan.h"
 #include "crypto.h"
-#include "enclave_pages.h"
+#include "linux_socket.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
@@ -36,83 +37,93 @@ struct hdl_header {
 /* _PalStreamUnmap for internal use. Unmap stream at certain memory address. The memory is unmapped
  *  as a whole.*/
 int _PalStreamUnmap(void* addr, uint64_t size) {
-    return free_enclave_pages(addr, size);
+    __UNUSED(addr);
+    __UNUSED(size);
+    assert(sgx_is_completely_within_enclave(addr, size));
+#ifdef ASAN
+    asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
+#endif
+    return 0;
 }
 
 static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     int ret;
-    const void* d;
-    size_t dsz = 0;
-    bool free_d = false;
+    const void* field = NULL;
+    size_t field_size = 0;
+    bool free_field = false;
 
-    /* find a field to serialize (depends on the handle type) and assign it to d; note that
+    /* find a field to serialize (depends on the handle type); note that
      * no handle type has more than one such field, and some have none */
-    /* XXX: some of these have pointers inside, yet the content is not serialized. How does it even
-     * work? Probably unused. Or pure luck. */
     switch (handle->hdr.type) {
         case PAL_TYPE_FILE:
-            d   = handle->file.realpath;
-            dsz = strlen(handle->file.realpath) + 1;
+            field = handle->file.realpath;
+            field_size = strlen(handle->file.realpath) + 1;
+            /* no need to serialize chunk_hashes & umem */
             break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to serialize SSL context */
             if (handle->pipe.ssl_ctx) {
-                free_d = true;
-                ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&d, &dsz);
+                free_field = true;
+                ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&field,
+                                           &field_size);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
+            /* no need to serialize handshake_helper_thread_hdl */
             break;
         case PAL_TYPE_PIPESRV:
+            /* no need to serialize ssl_ctx and handshake_helper_thread_hdl */
             break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
             break;
         case PAL_TYPE_DIR:
-            if (handle->dir.realpath) {
-                d   = handle->dir.realpath;
-                dsz = strlen(handle->dir.realpath) + 1;
-            }
+            field = handle->dir.realpath;
+            field_size = strlen(handle->dir.realpath) + 1;
+            /* no need to serialize buf/ptr/end */
             break;
         case PAL_TYPE_SOCKET:
+            /* sock.ops field will be fixed in deserialize */
             break;
         case PAL_TYPE_PROCESS:
             /* session key is part of handle but need to serialize SSL context */
             if (handle->process.ssl_ctx) {
-                free_d = true;
-                ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&d, &dsz);
+                free_field = true;
+                ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&field,
+                                           &field_size);
                 if (ret < 0)
                     return -PAL_ERROR_DENIED;
             }
             break;
         case PAL_TYPE_EVENTFD:
+            /* eventfds have no fields to serialize */
             break;
         default:
             return -PAL_ERROR_INVAL;
     }
 
-    size_t hdlsz = handle_size(handle);
-    void* buffer = malloc(hdlsz + dsz);
+    size_t hdl_size = handle_size(handle);
+    size_t buffer_size = hdl_size + field_size;
+    void* buffer = malloc(buffer_size);
     if (!buffer) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
 
     /* copy into buffer all handle fields and then serialized fields */
-    memcpy(buffer, handle, hdlsz);
-    if (dsz)
-        memcpy(buffer + hdlsz, d, dsz);
-
-    ret = 0;
-out:
-    if (free_d)
-        free((void*)d);
-    if (ret < 0)
-        return ret;
+    memcpy(buffer, handle, hdl_size);
+    if (field_size)
+        memcpy(buffer + hdl_size, field, field_size);
 
     *data = buffer;
-    return hdlsz + dsz;
+    ret = buffer_size;
+
+out:
+    if (free_field)
+        free((void*)field);
+
+    return ret;
 }
 
 static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size, int host_fd) {
@@ -141,6 +152,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
 
             hdl->file.realpath = path;
             hdl->file.chunk_hashes = NULL;
+            hdl->file.umem = NULL;
             break;
         }
         case PAL_TYPE_PIPE:
@@ -154,8 +166,11 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_DENIED;
             }
+            hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
         case PAL_TYPE_PIPESRV:
+            hdl->pipe.ssl_ctx = NULL;
+            hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
         case PAL_TYPE_DEV:
             break;
@@ -172,6 +187,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             memcpy(path, (const char*)data + hdl_size, path_size);
 
             hdl->dir.realpath = path;
+            hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
         }
         case PAL_TYPE_SOCKET:
@@ -216,7 +232,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     };
     int fd = target_process->process.stream;
 
-    /* first send hdl_hdr so the recipient knows how many FDs were transferred + how large is cargo */
+    /* first send hdl_hdr so recipient knows how many FDs were transferred + how large is cargo */
     struct iovec iov = {
         .iov_base = &hdl_hdr,
         .iov_len = sizeof(struct hdl_header),

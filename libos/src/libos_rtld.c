@@ -308,8 +308,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
             return ret;
         }
 
-        if ((ret = PalVirtualMemoryAlloc(&zero_page_start, zero_page_size, /*alloc_type=*/0,
-                                         zero_pal_prot)) < 0) {
+        if ((ret = PalVirtualMemoryAlloc(zero_page_start, zero_page_size, zero_pal_prot)) < 0) {
             log_debug("%s: cannot map zero-fill pages", __func__);
             return pal_to_unix_errno(ret);
         }
@@ -985,8 +984,7 @@ static int vdso_map_init(void) {
         return ret;
     }
 
-    ret = PalVirtualMemoryAlloc(&addr, ALLOC_ALIGN_UP(vdso_so_size), /*alloc_type=*/0,
-                                PAL_PROT_READ | PAL_PROT_WRITE);
+    ret = PalVirtualMemoryAlloc(addr, ALLOC_ALIGN_UP(vdso_so_size), PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

@@ -267,13 +267,17 @@ long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid,
 
     lock(&g_dcache_lock);
     ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent);
-    unlock(&g_dcache_lock);
     if (ret < 0)
         goto out;
 
-    /* XXX: do nothing now */
+    lock(&dent->inode->lock);
+    dent->inode->uid = (uid == (uid_t)-1) ? dent->inode->uid : uid;
+    dent->inode->gid = (gid == (gid_t)-1) ? dent->inode->gid : gid;
+    unlock(&dent->inode->lock);
+
     put_dentry(dent);
 out:
+    unlock(&g_dcache_lock);
     if (dir)
         put_dentry(dir);
     return ret;
@@ -287,8 +291,25 @@ long libos_syscall_fchown(int fd, uid_t uid, gid_t gid) {
     if (!hdl)
         return -EBADF;
 
-    /* XXX: do nothing now */
-    return 0;
+    int ret;
+    struct libos_dentry* dent = hdl->dentry;
+
+    lock(&g_dcache_lock);
+    if (!dent || !dent->inode) {
+        ret = -ENOENT;
+        goto out;
+    }
+
+    lock(&dent->inode->lock);
+    dent->inode->uid = (uid == (uid_t)-1) ? dent->inode->uid : uid;
+    dent->inode->gid = (gid == (gid_t)-1) ? dent->inode->gid : gid;
+    unlock(&dent->inode->lock);
+
+    ret = 0;
+out:
+    unlock(&g_dcache_lock);
+    put_handle(hdl);
+    return ret;
 }
 
 static int do_rename(struct libos_dentry* old_dent, struct libos_dentry* new_dent) {

@@ -176,7 +176,7 @@ int pal_thread_init(void* tcbptr) {
     if (!tcb->tcs) {
         log_error(
             "There are no available TCS pages left for a new thread!\n"
-            "Please try to increase sgx.thread_num in the manifest.\n"
+            "Please try to increase sgx.max_threads in the manifest.\n"
             "The current value is %d",
             g_enclave_thread_num);
         ret = -ENOMEM;

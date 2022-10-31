@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <stdnoreturn.h>
 
+#include "iovec.h"
+
 // TODO: fix this (but see pal/include/arch/x86_64/pal_arch.h)
 #define INSIDE_PAL_H
 
@@ -116,8 +118,10 @@ struct pal_dns_host_conf {
     char dn_search[PAL_MAX_DN_SEARCH][PAL_HOSTNAME_MAX];
     size_t dn_search_count;
 
+    bool edns0;
     bool inet6;
     bool rotate;
+    bool use_vc;
 
     char hostname[PAL_HOSTNAME_MAX];
 };
@@ -140,16 +144,15 @@ struct pal_public_state {
     /*
      * Memory layout
      */
-    bool disable_aslr;        /*!< disable ASLR (may be necessary for restricted environments) */
-    void* user_address_start; /*!< User address range start */
-    void* user_address_end;   /*!< User address range end */
+    bool disable_aslr;                      /*!< disable ASLR */
+    void* memory_address_start;             /*!< usable memory start address */
+    void* memory_address_end;               /*!< usable memory end address */
+    uintptr_t early_libos_mem_range_start;  /*!< start of memory usable before checkpoint restore */
+    uintptr_t early_libos_mem_range_end;    /*!< end of memory usable before checkpoint restore */
 
-    struct {
-        uintptr_t start;
-        uintptr_t end;
-        const char* comment;
-    }* preloaded_ranges; /*!< array of memory ranges which are preoccupied */
-    size_t preloaded_ranges_cnt;
+    struct pal_initial_mem_range* initial_mem_ranges; /*!< array of initial memory ranges, see
+                                                           `pal_memory.c` for more details */
+    size_t initial_mem_ranges_len;
 
     /*
      * Host information
@@ -181,12 +184,6 @@ struct pal_public_state* PalGetPalPublicState(void);
  * MEMORY ALLOCATION
  */
 
-/*! memory allocation flags */
-typedef uint32_t pal_alloc_flags_t; /* bitfield */
-#define PAL_ALLOC_RESERVE  0x1 /*!< Only reserve the memory */
-#define PAL_ALLOC_INTERNAL 0x2 /*!< Allocate for PAL (valid only if #IN_PAL) */
-#define PAL_ALLOC_MASK     0x3
-
 /*! memory protection flags */
 typedef uint32_t pal_prot_flags_t; /* bitfield */
 #define PAL_PROT_READ      0x1
@@ -195,24 +192,30 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
 #define PAL_PROT_WRITECOPY 0x8
 #define PAL_PROT_MASK      0xF
 
+struct pal_initial_mem_range {
+    uintptr_t start;
+    uintptr_t end;
+    pal_prot_flags_t prot;
+    /* Denotes whether the range was present (was used at some point), but is now free (is not used
+     * anymore). */
+    bool is_free;
+    /* These structs are stored in a global array, so keep the total size of this struct aligned to
+     * it's alignment requirement. */
+    char comment[0x13];
+};
+
 /*!
- * \brief Allocate virtual memory for the library OS and zero it out.
+ * \brief Allocate virtual memory and zero it out.
  *
- * \param[in,out] addr_ptr    `*addr_ptr` should contain requested address or NULL. On success,
- *                            it will be set to the allocated address.
- * \param         size        Must be a positive number, aligned at the allocation alignment.
- * \param         alloc_type  A combination of any of the `PAL_ALLOC_*` flags.
- * \param         prot        A combination of the `PAL_PROT_*` flags.
+ * \param addr  Requested address. Must be aligned and non-NULL.
+ * \param size  Must be a positive number, aligned at the allocation alignment.
+ * \param prot  A combination of the `PAL_PROT_*` flags.
  *
- * `*addr_ptr` can be any valid address aligned at the allocation alignment or `NULL`, in which case
- * a suitable address will be picked automatically. Any memory previously allocated at the same
- * address will be discarded (only if `*addr_ptr` was provided). Overwriting any part of PAL memory
- * is forbidden. On successful return `*addr_ptr` will contain the allocated address (which can
- * differ only in the `NULL` case).
- *
+ * `addr` can be any valid address aligned at the allocation alignment. Any memory previously
+ * allocated at the same address will be discarded. Overwriting any part of PAL memory is forbidden.
+ * This function must not dynamically allocate any internal memory (must not use `malloc`)!
  */
-int PalVirtualMemoryAlloc(void** addr_ptr, size_t size, pal_alloc_flags_t alloc_type,
-                          pal_prot_flags_t prot);
+int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot);
 
 /*!
  * \brief Deallocate a previously allocated memory mapping.
@@ -235,6 +238,17 @@ int PalVirtualMemoryFree(void* addr, size_t size);
  */
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 
+/*!
+ * \brief Set upcalls for memory bookkeeping
+ *
+ * \param alloc  Function to call to get a memory range.
+ * \param free   Function to call to release the memory range.
+ *
+ * Both \p alloc and \p free must be thread-safe.
+ */
+void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_addr),
+                                    int (*free)(uintptr_t addr, size_t size));
+
 /*
  * PROCESS CREATION
  */
@@ -242,15 +256,21 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 /*!
  * \brief Create a new process.
  *
- * \param      args    An array of strings -- the arguments to be passed to the new process.
- * \param[out] handle  On success contains the process handle.
+ * \param      args                     An array of strings -- the arguments to be passed to the new
+ *                                      process.
+ * \param      reserved_mem_ranges      List of memory ranges that should not be used by the child
+ *                                      process until app memory is restored from a checkpoint. Must
+ *                                      be sorted in descending order.
+ * \param      reserved_mem_ranges_len  Length of \p reserved_mem_ranges.
+ * \param[out] out_handle               On success contains the process handle.
  *
  * Loads and executes the same binary as currently executed one (`loader.entrypoint`), and passes
  * the new arguments.
  *
  * TODO: `args` is only used by PAL regression tests, and should be removed at some point.
  */
-int PalProcessCreate(const char** args, PAL_HANDLE* handle);
+int PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                     size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle);
 
 /*!
  * \brief Terminate all threads in the process immediately.
@@ -386,15 +406,15 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 /*!
  * \brief Map a file to a virtual memory address in the current process.
  *
- * \param         handle    Handle to the stream to be mapped.
- * \param[in,out] addr_ptr  See #PalVirtualMemoryAlloc.
- * \param         prot      See #PalVirtualMemoryAlloc.
- * \param         offset    Offset in the stream to be mapped. Must be properly aligned.
- * \param         size      Size of the requested mapping. Must be non-zero and properly aligned.
+ * \param handle  Handle to the stream to be mapped.
+ * \param addr    See #PalVirtualMemoryAlloc.
+ * \param prot    See #PalVirtualMemoryAlloc.
+ * \param offset  Offset in the stream to be mapped. Must be properly aligned.
+ * \param size    Size of the requested mapping. Must be non-zero and properly aligned.
  *
  * \returns 0 on success, negative error code on failure.
  */
-int PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size);
 
 /*!
@@ -507,13 +527,6 @@ struct pal_socket_addr {
     };
 };
 
-/* This could be just `struct iovec` from Linux, but we don't want to set a precedent of using Linux
- * types in PAL API. */
-struct pal_iovec {
-    void* iov_base;
-    size_t iov_len;
-};
-
 /*!
  * \brief Create a socket handle.
  *
@@ -600,8 +613,12 @@ int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
  * \returns 0 on success, negative error code on failure.
  *
  * Data is sent atomically, i.e. data from two `PalSocketSend` calls will not be interleaved.
+ *
+ * We use Linux `struct iovec` as argument here, because the alternative is to use a custom
+ * structure, but it would contain exactly the same fields, which would achieve nothing, but could
+ * worsen performance in certain cases.
  */
-int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                   struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*!
@@ -620,8 +637,12 @@ int PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size
  * \returns 0 on success, negative error code on failure.
  *
  * Data is received atomically, i.e. data from two `PalSocketRecv` calls will not be interleaved.
+ *
+ * We use Linux `struct iovec` as argument here, because the alternative is to use a custom
+ * structure, but it would contain exactly the same fields, which would achieve nothing, but could
+ * worsen performance in certain cases.
  */
-int PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+int PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                   struct pal_socket_addr* addr, bool force_nonblocking);
 
 /*

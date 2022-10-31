@@ -380,15 +380,9 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
          *
          * Note that we allocate memory to cover LOAD segments starting from offset 0, not from the
          * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
-         *
-         * FIXME: We (ab)use _PalStreamMap() because _PalVirtualMemoryAlloc() cannot be used to
-         *        allocate memory at PAL-chosen address (it expects `map_addr` to be fixed). Note
-         *        that `PAL_PROT_WRITECOPY` is specified to prevent allocating memory in untrusted
-         *        memory in case of Linux-SGX PAL (see linux-sgx/pal_files.c:file_map).
          */
         void* map_addr = NULL;
-        ret = _PalStreamMap(handle, &map_addr, /*prot=*/PAL_PROT_WRITECOPY, /*offset=*/0,
-                            loadcmds[loadcmds_cnt - 1].alloc_end);
+        ret = pal_internal_memory_alloc(loadcmds[loadcmds_cnt - 1].alloc_end, &map_addr);
         if (ret < 0) {
             log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
             goto out;
@@ -408,7 +402,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
         size_t map_size = c->map_end - c->start;
 
-        ret = _PalStreamMap(handle, &map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
+        ret = _PalStreamMap(handle, map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
         if (ret < 0) {
             log_error("Failed to map segment from ELF file");
             goto out;
@@ -423,9 +417,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
         if (c->alloc_end == c->map_end)
             continue;
 
-        void* map_rest = (void*)c->map_end;
-        ret = _PalVirtualMemoryAlloc(&map_rest, c->alloc_end - c->map_end, /*alloc_type=*/0,
-                                     c->prot);
+        ret = _PalVirtualMemoryAlloc((void*)c->map_end, c->alloc_end - c->map_end, c->prot);
         if (ret < 0) {
             log_error("Failed to zero-fill the rest of segment from ELF file");
             goto out;

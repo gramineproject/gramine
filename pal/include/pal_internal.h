@@ -59,10 +59,10 @@ struct handle_ops {
      * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
      * by mmap, so unmap also needs 'handle' to deal with special cases.
      *
-     * Common PAL code will ensure that *address, offset, and size are page-aligned. 'address'
+     * Common PAL code will ensure that address, offset, and size are page-aligned. 'address'
      * should not be NULL.
      */
-    int (*map)(PAL_HANDLE handle, void** address, pal_prot_flags_t prot, uint64_t offset,
+    int (*map)(PAL_HANDLE handle, void* address, pal_prot_flags_t prot, uint64_t offset,
                uint64_t size);
 
     /* 'setlength' is used by PalStreamFlush. It truncate the stream to certain size. */
@@ -118,9 +118,9 @@ struct socket_ops {
                   struct pal_socket_addr* out_client_addr, struct pal_socket_addr* out_local_addr);
     int (*connect)(PAL_HANDLE handle, struct pal_socket_addr* addr,
                    struct pal_socket_addr* out_local_addr);
-    int (*send)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+    int (*send)(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool force_nonblocking);
-    int (*recv)(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+    int (*recv)(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                 struct pal_socket_addr* addr, bool force_nonblocking);
 };
 
@@ -131,8 +131,6 @@ struct socket_ops {
  * Ignoring PAL error code can be a possible optimization for LibOS.
  */
 void notify_failure(unsigned long error);
-
-int add_preloaded_range(uintptr_t start, uintptr_t end, const char* comment);
 
 #define IS_ALLOC_ALIGNED(addr)     IS_ALIGNED_POW2(addr, g_pal_public_state.alloc_align)
 #define IS_ALLOC_ALIGNED_PTR(addr) IS_ALIGNED_PTR_POW2(addr, g_pal_public_state.alloc_align)
@@ -158,8 +156,6 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 
 /* For initialization */
 
-void _PalGetAvailableUserAddressRange(void** out_start, void** out_end);
-bool _PalCheckMemoryMappable(const void* addr, size_t size);
 unsigned long _PalMemoryQuota(void);
 unsigned long _PalMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
@@ -174,7 +170,7 @@ int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void*
 int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _PalStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, uint64_t offset,
+int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size);
 int _PalStreamUnmap(void* addr, uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
@@ -191,9 +187,9 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
                      struct pal_socket_addr* out_local_addr);
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                       struct pal_socket_addr* out_local_addr);
-int _PalSocketSend(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_size,
+int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                    struct pal_socket_addr* addr, bool force_nonblocking);
-int _PalSocketRecv(PAL_HANDLE handle, struct pal_iovec* iov, size_t iov_len, size_t* out_total_size,
+int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                    struct pal_socket_addr* addr, bool force_nonblocking);
 
 /* PalProcess and PalThread calls */
@@ -201,7 +197,8 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);
 noreturn void _PalThreadExit(int* clear_child_tid);
 void _PalThreadYieldExecution(void);
 int _PalThreadResume(PAL_HANDLE thread_handle);
-int _PalProcessCreate(PAL_HANDLE* handle, const char** args);
+int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
+                      size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle);
 noreturn void _PalProcessExit(int exit_code);
 int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
 int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len);
@@ -213,8 +210,7 @@ void _PalEventClear(PAL_HANDLE handle);
 int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 
 /* PalVirtualMemory calls */
-int _PalVirtualMemoryAlloc(void** addr_ptr, uint64_t size, pal_alloc_flags_t alloc_type,
-                           pal_prot_flags_t prot);
+int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot);
 int _PalVirtualMemoryFree(void* addr, uint64_t size);
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
@@ -257,7 +253,35 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
         _PalProcessExit(1);                                             \
     } while (0)
 
-void init_slab_mgr(char* mem_pool, size_t mem_pool_size);
+/*!
+ * \brief Get the next reserved memory range.
+ *
+ * \param      last_range_start      The previous reserved memory range start.
+ * \param[out] out_next_range_start  Contains new range start at return.
+ * \param[out] out_next_range_end    Contains new range end at return.
+ *
+ * The next (returned) reserved memory range will be strictly below (at lower address) than
+ * the previous one.
+ */
+void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_next_range_start,
+                                  uintptr_t* out_next_range_end);
+
+/*!
+ * \brief Add initial memory range.
+ *
+ * \param addr     Address of the start of the range.
+ * \param size     Size of the range.
+ * \param prot     Memory protection of the range.
+ * \param comment  Comment associated with this memory range.
+ *
+ * Caller must make sure that the new range does not overlap any previously added range.
+ */
+int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment);
+int pal_internal_memory_alloc(size_t size, void** out_addr);
+int pal_internal_memory_free(void* addr, size_t size);
+void pal_disable_early_memory_bookkeeping(void);
+
+void init_slab_mgr(void);
 void* malloc(size_t size);
 void* malloc_copy(const void* mem, size_t size);
 void* calloc(size_t num, size_t size);
@@ -290,7 +314,3 @@ const char* pal_event_name(enum pal_event event);
         _PalProcessExit(1);                    \
     } while (0)
 #include "uthash.h"
-
-/* Size of PAL memory available before parsing the manifest; `loader.pal_internal_mem_size` does not
- * include this memory */
-#define PAL_INITIAL_MEM_SIZE (64 * 1024 * 1024)

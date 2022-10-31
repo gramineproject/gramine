@@ -47,7 +47,7 @@ tests = {
             join_paths('../include/host/linux-common'),
         ),
     },
-    'Memory': {},
+    'memory': {},
     'Misc': {},
     'Pie': {
         'pie': true,
@@ -61,6 +61,7 @@ tests = {
     'normalize_path': {},
     'printf_test': {},
     'send_handle': {},
+    'strtoll_test': {},
 }
 
 if host_machine.cpu_family() == 'x86_64'
@@ -88,7 +89,7 @@ install_dir = join_paths(pkglibdir, 'tests', 'pal')
 test_c_args = [
     cflags_sanitizers,
     cflags_custom_stack_protector,
-    '-fno-builtin',
+    '-ffreestanding',
     '-nostdlib',
 
     # TODO: Many files define `main` with parameters, but don't use them
@@ -106,6 +107,7 @@ test_include_directories = [
 ]
 
 common_lib = static_library('test_pal',
+    'memory_management.c',
     'utils.c',
     c_args: [
         test_c_args,
@@ -117,9 +119,7 @@ common_lib = static_library('test_pal',
     ],
 )
 
-# This file is needed to provide an entry point to the executable: GCC expects a symbol named
-# `_start` that prepares the stack layout (argc, argv, env) and jumps into `main`.
-user_start_src = files(join_paths('crt_init', 'arch', host_machine.cpu_family(), 'user_start.S'))
+subdir('crt_init')
 
 foreach name, params : tests
     # Note that we cannot use `pie: true/false`, because this doesn't properly disable PIE if the
@@ -135,7 +135,7 @@ foreach name, params : tests
 
     executable(name,
         filenames,
-        user_start_src,
+        pal_regression_user_start,
 
         include_directories: [
             test_include_directories,

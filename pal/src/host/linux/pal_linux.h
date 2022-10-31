@@ -9,8 +9,6 @@
 #include <sigset.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
 
 #include "list.h"
 #include "pal.h"
@@ -40,15 +38,13 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback);
 int init_random(void);
 
 extern const size_t g_page_size;
-extern char* g_pal_internal_mem_addr;
-extern size_t g_pal_internal_mem_size;
 
 extern uintptr_t g_vdso_start;
 extern uintptr_t g_vdso_end;
 bool is_in_vdso(uintptr_t addr);
-/* Parse "/proc/self/maps" and return address ranges for "vdso" and "vvar". */
-int get_vdso_and_vvar_ranges(uintptr_t* vdso_start, uintptr_t* vdso_end, uintptr_t* vvar_start,
-                             uintptr_t* vvar_end);
+/* Parse "/proc/self/maps" and bookkeep all found address ranges. */
+int init_memory_bookkeeping(void);
+int init_reserved_ranges(int reserved_ranges_fd);
 
 int setup_vdso(elf_addr_t base_addr);
 
@@ -126,3 +122,7 @@ struct linux_dirent64 {
 #define DT_WHT     14
 
 #define DIRBUF_SIZE 1024
+
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif // MAP_FIXED_NOREPLACE

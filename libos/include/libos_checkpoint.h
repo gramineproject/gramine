@@ -20,6 +20,17 @@
 extern char __migratable[];
 extern char __migratable_end;
 
+/*
+ * Marks whether we have bookkeeped all user memory that is received during checkpointing. If there
+ * is no parent process it's always `true`.
+ * While this is set to `false`, LibOS is allowed to allocate internal memory only in special range
+ * `[early_libos_mem_range_start, early_libos_mem_range_end)`, which is guaranteed not to overlap
+ * any user memory that is checkpointed. If for some reason this range overlaps user memory (e.g.
+ * a bug or a malicious host), Gramine will terminate the child process (because checkpointing will
+ * fail).
+ */
+extern bool g_received_user_memory;
+
 /* FIXME: Checkpointing must be de-macroed and simplified */
 
 /* TSAI 7/11/2012:
@@ -56,6 +67,9 @@ struct libos_mem_entry {
     void* addr;
     size_t size;
     pal_prot_flags_t prot; /* combination of PAL_PROT_* flags */
+    /* Dummy memory entry, used just for bookkeeping (i.e. no actual memory follows such entry).
+     * See `BEGIN_CP_FUNC(vma)` in `libos_vma.c` for more details. */
+    bool dummy;
 };
 
 struct libos_palhdl_entry {

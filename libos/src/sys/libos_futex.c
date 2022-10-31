@@ -694,7 +694,7 @@ out_unlock:
 
 #define FUTEX_CHECK_READ  false
 #define FUTEX_CHECK_WRITE true
-static int is_valid_futex_ptr(uint32_t* ptr, bool check_write) {
+static int check_futex_ptr(uint32_t* ptr, bool check_write) {
     if (!IS_ALIGNED_PTR(ptr, alignof(*ptr))) {
         return -EINVAL;
     }
@@ -758,11 +758,9 @@ static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* uti
         log_warning("Non-private futexes are not supported, assuming implicit FUTEX_PRIVATE_FLAG");
     }
 
-    int ret = 0;
-
     /* `uaddr` should be valid pointer in all cases. */
-    ret = is_valid_futex_ptr(uaddr, FUTEX_CHECK_READ);
-    if (ret) {
+    int ret = check_futex_ptr(uaddr, FUTEX_CHECK_READ);
+    if (ret < 0) {
         return ret;
     }
 
@@ -778,20 +776,20 @@ static int _libos_syscall_futex(uint32_t* uaddr, int op, uint32_t val, void* uti
         case FUTEX_WAKE_BITSET:
             return futex_wake(uaddr, val, val3);
         case FUTEX_WAKE_OP:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_WRITE);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_WRITE);
+            if (ret < 0) {
                 return ret;
             }
             return futex_wake_op(uaddr, uaddr2, val, val2, val3);
         case FUTEX_REQUEUE:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_READ);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_READ);
+            if (ret < 0) {
                 return ret;
             }
             return futex_requeue(uaddr, uaddr2, val, val2, NULL);
         case FUTEX_CMP_REQUEUE:
-            ret = is_valid_futex_ptr(uaddr2, FUTEX_CHECK_READ);
-            if (ret) {
+            ret = check_futex_ptr(uaddr2, FUTEX_CHECK_READ);
+            if (ret < 0) {
                 return ret;
             }
             return futex_requeue(uaddr, uaddr2, val, val2, &val3);
@@ -856,14 +854,15 @@ out:
  * Process one robust futex, waking a waiter if present.
  * Returns 0 on success, negative value otherwise.
  */
-static bool handle_futex_death(uint32_t* uaddr) {
+static int handle_futex_death(uint32_t* uaddr) {
     uint32_t val;
 
     if (!IS_ALIGNED_PTR(uaddr, alignof(*uaddr))) {
         return -EINVAL;
     }
-    if (!is_valid_futex_ptr(uaddr, FUTEX_CHECK_WRITE)) {
-        return -EFAULT;
+    int ret = check_futex_ptr(uaddr, FUTEX_CHECK_WRITE);
+    if (ret < 0) {
+        return ret;
     }
 
     /* Loop until we successfully set the futex word or see someone else taking this futex. */
@@ -897,7 +896,7 @@ static bool handle_futex_death(uint32_t* uaddr) {
  * Fetches robust list entry from user memory, checking invalid pointers.
  * Returns 0 on success, negative value on error.
  */
-static bool fetch_robust_entry(struct robust_list** entry, struct robust_list** head) {
+static int fetch_robust_entry(struct robust_list** entry, struct robust_list** head) {
     if (!is_user_memory_readable(head, sizeof(*head))) {
         return -EFAULT;
     }
@@ -921,8 +920,12 @@ void release_robust_list(struct robust_list_head* head) {
     long futex_offset;
     unsigned long limit = ROBUST_LIST_LIMIT;
 
+    if (!head) {
+        return;
+    }
+
     /* `&head->list.next` does not dereference head, hence is safe. */
-    if (fetch_robust_entry(&entry, &head->list.next)) {
+    if (fetch_robust_entry(&entry, &head->list.next) < 0) {
         return;
     }
 
@@ -931,7 +934,7 @@ void release_robust_list(struct robust_list_head* head) {
     }
     futex_offset = head->futex_offset;
 
-    if (fetch_robust_entry(&pending, &head->list_op_pending)) {
+    if (fetch_robust_entry(&pending, &head->list_op_pending) < 0) {
         return;
     }
 
@@ -939,16 +942,21 @@ void release_robust_list(struct robust_list_head* head) {
     while (entry != &head->list) {
         struct robust_list* next_entry;
 
+        if (!entry) {
+            /* Apparently `&entry->next` is UB if `entry` is NULL. */
+            return;
+        }
+
         /* Fetch the next entry before waking the next thread. */
-        bool ret = fetch_robust_entry(&next_entry, &entry->next);
+        int ret = fetch_robust_entry(&next_entry, &entry->next);
 
         if (entry != pending) {
-            if (handle_futex_death(entry_to_futex(entry, futex_offset))) {
+            if (handle_futex_death(entry_to_futex(entry, futex_offset)) < 0) {
                 return;
             }
         }
 
-        if (ret) {
+        if (ret < 0) {
             return;
         }
 
@@ -961,7 +969,7 @@ void release_robust_list(struct robust_list_head* head) {
     }
 
     if (pending) {
-        if (handle_futex_death(entry_to_futex(pending, futex_offset))) {
+        if (handle_futex_death(entry_to_futex(pending, futex_offset)) < 0) {
             return;
         }
     }
@@ -973,6 +981,6 @@ void release_clear_child_tid(int* clear_child_tid) {
         return;
 
     /* child thread exited, now parent can wake up */
-    __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELEASE);
     futex_wake((uint32_t*)clear_child_tid, 1, FUTEX_BITSET_MATCH_ANY);
 }

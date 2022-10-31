@@ -139,6 +139,9 @@ nitpick_ignore = [
     ('c:type', 'int32_t'),
     ('c:type', 'int64_t'),
     ('c:type', 'uintptr_t'),
+    # parsing of this seems to be broken - this is not even a type, yet it
+    # errors: "WARNING: c:type reference target not found: reserved_mem_ranges"
+    ('c:type', 'reserved_mem_ranges'),
     ('c:type', 'union'),
     ('c:type', 'enum'), # parsing of these seems to be broken:
                         #     WARNING: c:type reference target not found: enum
