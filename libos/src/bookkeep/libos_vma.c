@@ -1568,3 +1568,10 @@ void debug_print_all_vmas(void) {
 size_t get_peak_memory_usage(void) {
     return __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
 }
+
+size_t get_total_memory_usage(void) {
+    spinlock_lock(&vma_tree_lock);
+    size_t total_memory_size = g_total_memory_size;
+    spinlock_unlock(&vma_tree_lock);
+    return total_memory_size;
+}

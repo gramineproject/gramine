@@ -370,3 +370,255 @@ int proc_thread_status_load(struct libos_dentry* dent, char** out_data, size_t* 
     *out_size = size;
     return 0;
 }
+
+
+int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    size_t virtual_mem_size_in_pages = get_total_memory_usage() / PAGE_SIZE;
+
+    size_t size = 0, max = 64;
+    size_t i = 0;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
+
+    /*
+     * Fields of `/proc/[pid]/statm`. Only `VmSize` and `VmRSS` are supported currently.
+     */
+
+    struct {
+        const char* fmt;
+        unsigned long val;
+    } status[] = {
+        /* size */
+        { "%lu", virtual_mem_size_in_pages },
+        /* resident */
+        { " %lu", virtual_mem_size_in_pages },
+        /* shared */
+        { " %lu", /*dummy value=*/0 },
+        /* text */
+        { " %lu", /*dummy value=*/0 },
+        /* lib; always 0 */
+        { " %lu", 0 },
+        /* data */
+        { " %lu", /*dummy value=*/0 },
+        /* dt; always 0 */
+        { " %lu\n", 0 },
+
+    };
+
+    while (i < ARRAY_SIZE(status)) {
+        int ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
+        if (ret < 0) {
+            free(str);
+            return ret;
+        }
+
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            /* TODO: use `realloc()` once it's available. */
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
+
+        size += ret;
+        i++;
+    }
+
+    *out_data = str;
+    *out_size = size;
+    return 0;
+}
+
+static int thread_count(struct libos_thread* thread, void* arg) {
+    __UNUSED(thread);
+    (*(uint64_t*)arg)++;
+    return 1;
+}
+
+static uint64_t get_thread_num(void) {
+    uint64_t num = 0;
+    if (walk_thread_list(thread_count, &num, /*one_shot=*/false) < 0)
+        num = 1;
+    return num;
+}
+
+int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    char comm[16] = {0};
+    lock(&g_process.fs_lock);
+    size_t name_length = g_process.exec->dentry->name_len;
+    memcpy(comm, g_process.exec->dentry->name,
+           name_length > sizeof(comm) - 1 ? sizeof(comm) - 1 : name_length);
+    unlock(&g_process.fs_lock);
+    size_t virtual_mem_size = get_total_memory_usage();
+
+    size_t size = 0, max = 256;
+    char* str = malloc(max);
+    if (!str)
+        return -ENOMEM;
+
+    struct {
+        const char* fmt;
+        unsigned long val;
+    } status[] = {
+        /* 4-10 */
+        /* ppid */
+        { " %d", g_process.ppid },
+        /* pgrp */
+        { " %d", __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE) },
+        /* session */
+        { " %d", /*dummy value=*/0 },
+        /* tty_nr */
+        { " %d", /*dummy value=*/0 },
+        /* tpgid */
+        { " %d", /*dummy value=*/0 },
+        /* flags; PF_RANDOMIZE */
+        { " %u", g_pal_public_state->disable_aslr ? 0 : 0x00400000 },
+        /* minflt */
+        { " %lu", /*dummy value=*/0 },
+
+        /* 11-20 */
+        /* cminflt */
+        { " %lu", /*dummy value=*/0 },
+        /* majflt */
+        { " %lu", /*dummy value=*/0 },
+        /* cmajflt */
+        { " %lu", /*dummy value=*/0 },
+        /* utime */
+        { " %lu", /*dummy value=*/0 },
+        /* stime */
+        { " %lu", /*dummy value=*/0 },
+        /* cutime */
+        { " %ld", /*dummy value=*/0 },
+        /* cstime */
+        { " %ld", /*dummy value=*/0 },
+        /* priority */
+        { " %ld", /*dummy value=*/0 },
+        /* nice */
+        { " %ld", /*dummy value=*/0 },
+        /* num_threads */
+        { " %ld", get_thread_num() },
+
+        /* 21-30 */
+        /* itrealvalue; always zero in Linux */
+        { " %ld", 0 },
+        /* starttime */
+        { " %llu", /*dummy value=*/0 },
+        /* vsize */
+        { " %lu", virtual_mem_size },
+        /* rss */
+        { " %lu", virtual_mem_size / PAGE_SIZE },
+        /* rsslim */
+        { " %lu", /*dummy value=*/0 },
+        /* startcode */
+        { " %lu", /*dummy value=*/0 },
+        /* endcode */
+        { " %lu", /*dummy value=*/0 },
+        /* startstack */
+        { " %lu", /*dummy value=*/0 },
+        /* kstkesp */
+        { " %lu", /*dummy value=*/0 },
+        /* kstkeip */
+        { " %lu", /*dummy value=*/0 },
+
+        /* 31-40 */
+        /* signal */
+        { " %lu", /*dummy value=*/0 },
+        /* blocked */
+        { " %lu", /*dummy value=*/0 },
+        /* sigignore */
+        { " %lu", /*dummy value=*/0 },
+        /* sigcatch */
+        { " %lu", /*dummy value=*/0 },
+        /* wchan */
+        { " %lu", /*dummy value=*/0 },
+        /* nswap; always 0 */
+        { " %lu", 0 },
+        /* cnswap; always 0 */
+        { " %lu", 0 },
+        /* exit_signal */
+        { " %d", /*dummy value=*/0 },
+        /* processor */
+        { " %d", /*dummy value=*/0 },
+        /* rt_priority */
+        { " %u", /*dummy value=*/0 },
+
+        /* 41-50 */
+        /* policy */
+        { " %u", /*dummy value=*/0 },
+        /* delayacct_blkio_ticks */
+        { " %llu", /*dummy value=*/0 },
+        /* guest_time */
+        { " %lu", /*dummy value=*/0 },
+        /* cguest_time */
+        { " %ld", /*dummy value=*/0 },
+        /* start_data */
+        { " %lu", /*dummy value=*/0 },
+        /* end_data */
+        { " %lu", /*dummy value=*/0 },
+        /* start_brk */
+        { " %lu", /*dummy value=*/0 },
+        /* arg_start */
+        { " %lu", /*dummy value=*/0 },
+        /* arg_end */
+        { " %lu", /*dummy value=*/0 },
+        /* env_start */
+        { " %lu", /*dummy value=*/0 },
+
+        /* 51-52 */
+        /* env_end */
+        { " %lu", /*dummy value=*/0 },
+        /* exit_code */
+        { " %d\n", /*dummy value=*/0 },
+    };
+
+    size_t i = 0;
+    while (i < ARRAY_SIZE(status)) {
+        int ret;
+        if (i == 0) {
+            /* Print first 3 fields: pid, comm, state. */
+            ret = snprintf(str, max, "%d (%s) R", g_process.pid, comm);
+            if (ret < 0) {
+                free(str);
+                return ret;
+            }
+            assert((size_t)ret < max);
+            size += ret;
+        }
+
+        ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
+        if (ret < 0) {
+            free(str);
+            return ret;
+        }
+
+        if (size + ret >= max) {
+            max *= 2;
+            size = 0;
+            i = 0;
+            free(str);
+            /* TODO: use `realloc()` once it's available. */
+            str = malloc(max);
+            if (!str)
+                return -ENOMEM;
+
+            continue;
+        }
+
+        size += ret;
+        i++;
+    }
+
+    *out_data = str;
+    *out_size = size;
+    return 0;
+}
