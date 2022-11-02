@@ -12,15 +12,31 @@ static void*  g_zero_pages      = NULL;
 static size_t g_zero_pages_size = 0;
 
 int open_sgx_driver(void) {
-    int ret = DO_SYSCALL(open, ISGX_FILE, O_RDWR | O_CLOEXEC, 0);
-    if (ret < 0) {
-        log_error("Cannot open device " ISGX_FILE ". "
-                  "Please make sure the Intel SGX kernel module is loaded.");
-        return ret;
+    const char* paths_to_try[] = {
+#if defined(CONFIG_SGX_DRIVER_DEVICE)
+    /* The user explicitly specified the device path in build config. */
+    CONFIG_SGX_DRIVER_DEVICE,
+#elif defined(CONFIG_SGX_DRIVER_OOT)
+    "/dev/isgx",
+#elif defined(CONFIG_SGX_DRIVER_UPSTREAM)
+    /* DCAP and upstreamed version used different paths in the past. */
+    "/dev/sgx_enclave",
+    "/dev/sgx/enclave",
+#else
+    #error This config should be unreachable.
+#endif
+    };
+    int ret;
+    for (size_t i = 0; i < ARRAY_SIZE(paths_to_try); i++) {
+        ret = DO_SYSCALL(open, paths_to_try[i], O_RDWR | O_CLOEXEC, 0);
+        if (ret >= 0) {
+            g_isgx_device = ret;
+            return 0;
+        }
     }
-    g_isgx_device = ret;
-
-    return 0;
+    log_error("Cannot open SGX driver device. Please make sure you're using an up-to-date kernel "
+              "or the standalone Intel SGX kernel module is loaded.");
+    return ret;
 }
 
 int read_enclave_token(int token_file, sgx_arch_token_t* token) {
@@ -39,7 +55,7 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     if (bytes < 0)
         return bytes;
 
-#ifdef SGX_DCAP
+#ifndef CONFIG_SGX_DRIVER_OOT
     log_debug("Read dummy DCAP token");
 #else
     char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
@@ -112,7 +128,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     uint64_t request_mmap_addr = secs->base;
     uint64_t request_mmap_size = secs->size;
 
-#ifdef SGX_DCAP
+#ifndef CONFIG_SGX_DRIVER_OOT
     /* newer DCAP/in-kernel SGX drivers allow starting enclave address space with non-zero;
      * the below trick to start from MMAP_MIN_ADDR is to avoid vm.mmap_min_addr==0 issue */
     if (request_mmap_addr < MMAP_MIN_ADDR) {
@@ -123,10 +139,10 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
 
     uint64_t addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
                                PROT_NONE, /* newer DCAP driver requires such initial mmap */
-#ifdef SGX_DCAP
-                               MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#else
+#ifdef CONFIG_SGX_DRIVER_OOT
                                MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
+#else
+                               MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
 
     if (IS_PTR_ERR(addr)) {
@@ -255,7 +271,38 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         log_debug("Adding pages to enclave: %p-%p [%s:%s] (%s)%s", addr, addr + size, t, p,
                   comment, m);
 
-#ifdef SGX_DCAP
+#ifdef CONFIG_SGX_DRIVER_OOT
+    /* older drivers (DCAP v1.5- and old out-of-tree) only supports adding one page at a time */
+    struct sgx_enclave_add_page param = {
+        .addr    = (uint64_t)addr,
+        .src     = (uint64_t)(user_addr ?: g_zero_pages),
+        .secinfo = (uint64_t)&secinfo,
+        .mrmask  = skip_eextend ? 0 : (uint16_t)-1,
+    };
+
+    uint64_t added_size = 0;
+    while (added_size < size) {
+        ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_ADD_PAGE, &param);
+        if (ret < 0) {
+            if (ret == -EINTR)
+                continue;
+            log_error("Enclave EADD returned %d", ret);
+            return ret;
+        }
+
+        param.addr += g_page_size;
+        if (param.src != (uint64_t)g_zero_pages)
+            param.src += g_page_size;
+        added_size += g_page_size;
+    }
+
+    /* need to change permissions for EADDed pages since the initial mmap was with PROT_NONE */
+    ret = DO_SYSCALL(mprotect, addr, size, prot);
+    if (ret < 0) {
+        log_error("Changing protections of EADDed pages returned %d", ret);
+        return ret;
+    }
+#else
     if (!user_addr && g_zero_pages_size < size) {
         /* not enough contigious zero pages to back up enclave pages, allocate more */
         /* TODO: this logic can be removed if we introduce a size cap in ENCLAVE_ADD_PAGES ioctl */
@@ -325,45 +372,14 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         log_error("Cannot map enclave pages %d", ret);
         return ret;
     }
-#else
-    /* older drivers (DCAP v1.5- and old out-of-tree) only supports adding one page at a time */
-    struct sgx_enclave_add_page param = {
-        .addr    = (uint64_t)addr,
-        .src     = (uint64_t)(user_addr ?: g_zero_pages),
-        .secinfo = (uint64_t)&secinfo,
-        .mrmask  = skip_eextend ? 0 : (uint16_t)-1,
-    };
-
-    uint64_t added_size = 0;
-    while (added_size < size) {
-        ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_ADD_PAGE, &param);
-        if (ret < 0) {
-            if (ret == -EINTR)
-                continue;
-            log_error("Enclave EADD returned %d", ret);
-            return ret;
-        }
-
-        param.addr += g_page_size;
-        if (param.src != (uint64_t)g_zero_pages)
-            param.src += g_page_size;
-        added_size += g_page_size;
-    }
-
-    /* need to change permissions for EADDed pages since the initial mmap was with PROT_NONE */
-    ret = DO_SYSCALL(mprotect, addr, size, prot);
-    if (ret < 0) {
-        log_error("Changing protections of EADDed pages returned %d", ret);
-        return ret;
-    }
-#endif /* SGX_DCAP */
+#endif /* CONFIG_SGX_DRIVER_OOT */
 
     return 0;
 }
 
 int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
                  sgx_arch_token_t* token) {
-#ifdef SGX_DCAP
+#ifndef CONFIG_SGX_DRIVER_OOT
     __UNUSED(token);
 #endif
     unsigned long enclave_valid_addr = secs->base + secs->size - g_page_size;
@@ -376,11 +392,11 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
                                                 hex, sizeof(hex)));
 
     struct sgx_enclave_init param = {
-#ifndef SGX_DCAP
+#ifdef CONFIG_SGX_DRIVER_OOT
         .addr = enclave_valid_addr,
 #endif
         .sigstruct = (uint64_t)sigstruct,
-#ifndef SGX_DCAP
+#ifdef CONFIG_SGX_DRIVER_OOT
         .einittoken = (uint64_t)token,
 #endif
     };

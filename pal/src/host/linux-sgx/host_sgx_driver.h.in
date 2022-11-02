@@ -19,12 +19,6 @@
 
 #mesondefine CONFIG_SGX_DRIVER_DEVICE
 
-#if !defined(CONFIG_SGX_DRIVER_OOT)
-#define SGX_DCAP 1
-#endif
-
-#define ISGX_FILE CONFIG_SGX_DRIVER_DEVICE
-
 /* Gramine needs the below subset of SGX instructions' return values */
 #ifndef SGX_INVALID_SIG_STRUCT
 #define SGX_INVALID_SIG_STRUCT  1

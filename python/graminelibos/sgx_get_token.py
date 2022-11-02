@@ -41,9 +41,9 @@ def get_optional_sgx_features(sig):
 
     return new_xfrms
 
-def is_dcap():
-    '''Check if we're dealing with DCAP driver.'''
-    return hasattr(offs, 'SGX_DCAP')
+def is_oot():
+    '''Check if we're dealing with OOT driver.'''
+    return hasattr(offs, 'CONFIG_SGX_DRIVER_OOT')
 
 def p64(x):
     return x.to_bytes(8, byteorder='little')
@@ -145,9 +145,9 @@ def get_token(sig, verbose=False):
         print(f'    date:        {sig["date_year"]:04d}-{sig["date_month"]:02d}-'
               f'{sig["date_day"]:02d}')
 
-    if is_dcap():
-        token = create_dummy_token(sig['attribute_flags'], xfrms, sig['misc_select'])
-    else:
+    if is_oot():
         token = connect_aesmd(sig['enclave_hash'], sig['modulus'], sig['attribute_flags'], xfrms)
+    else:
+        token = create_dummy_token(sig['attribute_flags'], xfrms, sig['misc_select'])
 
     return token
