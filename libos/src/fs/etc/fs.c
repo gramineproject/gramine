@@ -156,7 +156,8 @@ BEGIN_CP_FUNC(etc_info) {
     /* Propagate DNS configuration */
     size_t off = ADD_CP_OFFSET(sizeof(g_pal_public_initial_state.dns_host));
     struct dns_host* new_dns_host = (struct dns_host*)(base + off);
-    memcpy(new_dns_host, &g_pal_public_initial_state.dns_host, sizeof(g_pal_public_initial_state.dns_host));
+    memcpy(new_dns_host, &g_pal_public_initial_state.dns_host,
+           sizeof(g_pal_public_initial_state.dns_host));
 
     ADD_CP_FUNC_ENTRY(off);
 }
@@ -167,6 +168,7 @@ BEGIN_RS_FUNC(etc_info) {
     __UNUSED(rebase);
 
     const struct dns_host* dns_host = (const struct dns_host*)(base + GET_CP_FUNC_ENTRY());
-    memcpy(&g_pal_public_initial_state.dns_host, dns_host, sizeof(g_pal_public_initial_state.dns_host));
+    memcpy(&g_pal_public_initial_state.dns_host, dns_host,
+           sizeof(g_pal_public_initial_state.dns_host));
 }
 END_RS_FUNC(etc_info)
