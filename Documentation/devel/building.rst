@@ -318,17 +318,18 @@ Advanced: building without network access
 
 First, before you cut your network access, you need to download (or otherwise
 obtain) a |~| checkout of Gramine repository and all wrapped subprojects'
-distfiles. The files :file:`subprojects/{*}.wrap` directory describe those
-downloads and their respective SHA-256 checksums. You can use :command:`meson
-subprojects download` to download and check them automatically. Otherwise, you
-should put all those distfiles into :file:`subprojects/packagecache` directory.
-(You don't need to checksum them separately, Meson will do that for you later if
-they're mismatched or corrupted).
+distfiles. The files :file:`subprojects/{*}.wrap` describe those downloads and
+their respective SHA-256 checksums. You can use :command:`meson subprojects
+download` to download and check them automatically. Otherwise, you should put
+all those distfiles into :file:`subprojects/packagecache` directory. (You don't
+need to checksum them separately, Meson will do that for you later if they're
+mismatched or corrupted).
 
-Alternatively, you can prepare a |~| "dist" tarball, which apart from Gramine
-code will contain all wrapped subprojects and also git submodules. You need to
-create a |~| dummy builddir for this, the chosen options don't matter as long as
-their combination is valid.
+Alternatively, you can prepare a |~| "dist" tarball using :command:`meson dist`
+command, which apart from Gramine code will contain all wrapped subprojects and
+also git submodules. For this you need to create a |~| dummy builddir using
+:command:`meson setup` command (the chosen options don't matter as long as their
+combination is valid).
 
 ::
 
