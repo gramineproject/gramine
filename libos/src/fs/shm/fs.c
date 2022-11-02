@@ -82,10 +82,8 @@ static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot,
 static int shm_truncate(struct libos_handle* hdl, file_off_t size) {
     assert(hdl->type == TYPE_SHM);
 
-    int ret;
-
     lock(&hdl->inode->lock);
-    ret = PalStreamSetLength(hdl->pal_handle, size);
+    int ret = PalStreamSetLength(hdl->pal_handle, size);
     if (ret == 0) {
         hdl->inode->size = size;
     } else {
@@ -100,10 +98,8 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
                        int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
 
-    int ret;
-
     char* uri;
-    ret = chroot_dentry_uri(dent, type, &uri);
+    int ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
 
@@ -137,7 +133,7 @@ out:
 
 
 static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
-                               file_off_t size) {
+                            file_off_t size) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -152,12 +148,9 @@ static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
 static int shm_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
-    int ret;
-
     /* shm file system url always has a "file:" prefix. */
     char* uri = NULL;
-    mode_t tmp_type = S_IFREG;
-    ret = chroot_dentry_uri(dent, tmp_type, &uri);
+    int ret = chroot_dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         goto out;
 
@@ -193,11 +186,9 @@ static int shm_lookup(struct libos_dentry* dent) {
             BUG();
     }
 
-    mode_t perm = pal_attr.share_flags;
-
     file_off_t size = (type == S_IFREG ? pal_attr.pending_size : 0);
 
-    ret = shm_setup_dentry(dent, type, perm, size);
+    ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size);
 out:
     free(uri);
     return ret;
@@ -213,11 +204,8 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    int ret;
-
     mode_t type = S_IFREG;
-
-    ret = shm_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
+    int ret = shm_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
     if (ret < 0)
         return ret;
 

@@ -159,6 +159,33 @@ out:
     return ret;
 }
 
+static int mount_dev_shm(void) {
+    char* shared_memory_str = NULL;
+    int ret = toml_string_in(g_manifest_root, "sys.insecure__shared_memory", &shared_memory_str);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.insecure__shared_memory'");
+        return ret;
+    }
+
+    if (shared_memory_str) {
+        if (!strcmp(shared_memory_str, "none")) {
+            /* do nothing */
+            ret = 0;
+        } else if (!strcmp(shared_memory_str, "passthrough")) {
+            ret = mount_fs(&(struct libos_mount_params){
+                .type = "shm",
+                .path = "/dev/shm",
+                .uri = URI_PREFIX_FILE "/dev/shm",
+            });
+        } else {
+            log_error("Unknown 'sys.insecure__shared_memory'");
+            ret = -EINVAL;
+        }
+        free(shared_memory_str);
+    }
+    return ret;
+}
+
 static int mount_sys(void) {
     int ret;
 
@@ -191,31 +218,10 @@ static int mount_sys(void) {
         .path = "/sys",
         .uri = "sys",
     });
-    
-    char* shared_memory_str = NULL;
-    ret = toml_string_in(g_manifest_root,
-                         "sys.insecure__shared_memory", &shared_memory_str);
-    if (ret < 0) {
-        log_error("Cannot parse 'sys.insecure__shared_memory'");
+    if (ret < 0)
         return ret;
-    }
 
-    if (shared_memory_str) {
-        if (!strcmp(shared_memory_str, "none")) {
-            /* do nothing */
-        } else if (!strcmp(shared_memory_str, "passthrough")) {
-            ret = mount_fs(&(struct libos_mount_params){
-                .type = "shm",
-                .path = "/dev/shm",
-                .uri = URI_PREFIX_FILE "/dev/shm",
-            });
-        } else {
-            log_error("Unknown 'sys.insecure__shared_memory'");
-            ret = -EINVAL;
-        }
-        free(shared_memory_str);
-    }
-
+    ret = mount_dev_shm();
     if (ret < 0)
         return ret;
 

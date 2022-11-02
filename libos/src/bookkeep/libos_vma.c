@@ -995,9 +995,9 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
                             void** ret_val_ptr) {
     assert(_bottom_addr < _top_addr);
     assert((g_pal_public_state->memory_address_start <= _bottom_addr
-           && _top_addr <= g_pal_public_state->memory_address_end)
-        || (g_pal_public_state->shared_address_start <= _bottom_addr
-           && _top_addr <= g_pal_public_state->shared_address_end));
+               && _top_addr <= g_pal_public_state->memory_address_end)
+           || (g_pal_public_state->shared_address_start <= _bottom_addr
+               && _top_addr <= g_pal_public_state->shared_address_end));
 
     if (!length || !IS_ALLOC_ALIGNED(length)) {
         return -EINVAL;

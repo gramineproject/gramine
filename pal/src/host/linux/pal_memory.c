@@ -213,7 +213,6 @@ int init_memory_bookkeeping(void) {
     g_pal_public_state.memory_address_start = (void*)start_addr;
     g_pal_public_state.memory_address_end = (void*)end_addr;
 
-    
     g_pal_public_state.shared_address_start = g_pal_public_state.memory_address_start;
     g_pal_public_state.shared_address_end = g_pal_public_state.memory_address_end;
 
