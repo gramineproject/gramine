@@ -30,7 +30,7 @@ struct pal_public_state g_pal_public_state = {
     .initial_mem_ranges_len = 0,
 };
 
-struct pal_public_state* PalGetPalPublicState(void) {
+const struct pal_public_state* PalGetPalPublicState(void) {
     return &g_pal_public_state;
 }
 

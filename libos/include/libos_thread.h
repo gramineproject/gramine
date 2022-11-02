@@ -57,7 +57,7 @@ struct libos_signal_queue {
     struct libos_rt_signal_queue rt_signal_queues[SIGS_CNT - SIGRTMIN + 1];
 };
 
-#define GET_CPU_MASK_LEN() (BITS_TO_LONGS(g_pal_public_state->topo_info.threads_cnt))
+#define GET_CPU_MASK_LEN() (BITS_TO_LONGS(g_pal_public_initial_state.topo_info.threads_cnt))
 
 DEFINE_LIST(libos_thread);
 DEFINE_LISTP(libos_thread);

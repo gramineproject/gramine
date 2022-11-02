@@ -176,9 +176,15 @@ struct pal_public_state {
     struct pal_dns_host_conf dns_host;
 };
 
-/* We cannot mark this as returning a pointer to `const` object, because LibOS can
- * change `pal_public_state.topo_info` during checkpoint restore in the child */
-struct pal_public_state* PalGetPalPublicState(void);
+/* Part of PAL initial state which is copied into the LibOS, only used by the parent Gramine process
+ * and later checkpointed to the child process. */
+struct pal_public_initial_state {
+    struct pal_topo_info topo_info; /* received from untrusted host, but sanitized */
+
+    struct pal_dns_host_conf dns_host;
+};
+
+const struct pal_public_state* PalGetPalPublicState(void);
 
 /*
  * MEMORY ALLOCATION

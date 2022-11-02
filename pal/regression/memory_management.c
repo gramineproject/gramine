@@ -63,7 +63,7 @@ int mem_bkeep_free(uintptr_t addr, size_t size) {
 }
 
 void init_memory_management(void) {
-    struct pal_public_state* pal_public_state = PalGetPalPublicState();
+    const struct pal_public_state* pal_public_state = PalGetPalPublicState();
     /* Because we are looking at free space between memory ranges, we need a VMA marking the end of
      * available memory. This dummy VMA is never freed. */
     g_vmas[0] = (struct vma){

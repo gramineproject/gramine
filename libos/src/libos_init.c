@@ -32,7 +32,8 @@ static_assert(sizeof(libos_tcb_t) <= PAL_LIBOS_TCB_SIZE,
               "libos_tcb_t does not fit into PAL_TCB; please increase PAL_LIBOS_TCB_SIZE");
 
 const toml_table_t* g_manifest_root = NULL;
-struct pal_public_state* g_pal_public_state = NULL;
+const struct pal_public_state* g_pal_public_state = NULL;
+struct pal_public_initial_state g_pal_public_initial_state = {0};
 
 /* This function is used by stack protector's __stack_chk_fail(), _FORTIFY_SOURCE's *_chk()
  * functions and by assert.h's assert() defined in the common library. Thus it might be called by
@@ -370,6 +371,11 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
+    memcpy(&g_pal_public_initial_state.topo_info, &g_pal_public_state->topo_info,
+           sizeof(g_pal_public_state->topo_info));
+    memcpy(&g_pal_public_initial_state.dns_host, &g_pal_public_state->dns_host,
+           sizeof(g_pal_public_state->dns_host));
+
     g_log_level = g_pal_public_state->log_level;
 
     /* create the initial TCB, libos can not be run without a tcb */
@@ -493,8 +499,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_sync_client);
 
     /* XXX: this will break uname checkpointing (if we implement it). */
-    RUN_INIT(set_hostname, g_pal_public_state->dns_host.hostname,
-             strlen(g_pal_public_state->dns_host.hostname));
+    RUN_INIT(set_hostname, g_pal_public_initial_state.dns_host.hostname,
+             strlen(g_pal_public_initial_state.dns_host.hostname));
 
     log_debug("LibOS initialized");
 

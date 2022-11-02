@@ -16,7 +16,7 @@
 
 static bool is_online(size_t ind, const void* arg) {
     __UNUSED(arg);
-    return g_pal_public_state->topo_info.numa_nodes[ind].is_online;
+    return g_pal_public_initial_state.topo_info.numa_nodes[ind].is_online;
 }
 
 static bool return_true(size_t ind, const void* arg) {
@@ -27,7 +27,7 @@ static bool return_true(size_t ind, const void* arg) {
 
 int sys_node_general_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
-    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo = &g_pal_public_initial_state.topo_info;
     const char* name = dent->name;
     char str[PAL_SYSFS_BUF_FILESZ];
     if (strcmp(name, "online") == 0) {
@@ -47,10 +47,10 @@ int sys_node_general_load(struct libos_dentry* dent, char** out_data, size_t* ou
 
 static bool is_in_same_node(size_t idx, const void* _arg) {
     unsigned int arg_node_id = *(const unsigned int*)_arg;
-    if (!g_pal_public_state->topo_info.threads[idx].is_online)
+    if (!g_pal_public_initial_state.topo_info.threads[idx].is_online)
         return false;
-    size_t core_id = g_pal_public_state->topo_info.threads[idx].core_id;
-    size_t node_id = g_pal_public_state->topo_info.cores[core_id].node_id;
+    size_t core_id = g_pal_public_initial_state.topo_info.threads[idx].core_id;
+    size_t node_id = g_pal_public_initial_state.topo_info.cores[core_id].node_id;
     return node_id == arg_node_id;
 }
 
@@ -62,7 +62,7 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
         return ret;
 
     const char* name = dent->name;
-    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo = &g_pal_public_initial_state.topo_info;
     const struct pal_numa_node_info* numa_node = &topo->numa_nodes[node_id];
     char str[PAL_SYSFS_MAP_FILESZ] = {0};
     if (strcmp(name, "cpumap") == 0) {
@@ -101,7 +101,7 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
 }
 
 int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
-    size_t numa_nodes_cnt = g_pal_public_state->topo_info.numa_nodes_cnt;
+    size_t numa_nodes_cnt = g_pal_public_initial_state.topo_info.numa_nodes_cnt;
     /* Simply "mimic" a typical environment: split memory evenly between each NUMA node */
     size_t node_mem_total = g_pal_public_state->mem_total / numa_nodes_cnt;
     size_t node_mem_free = PalMemoryAvailableQuota() / numa_nodes_cnt;

@@ -136,7 +136,7 @@ int proc_cpuinfo_load(struct libos_dentry* dent, char** out_data, size_t* out_si
     if (!str)
         return -ENOMEM;
 
-    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo = &g_pal_public_initial_state.topo_info;
     const struct pal_cpu_info* cpu = &g_pal_public_state->cpu_info;
     for (size_t i = 0; i < topo->threads_cnt; i++) {
         struct pal_cpu_thread_info* thread = &topo->threads[i];
@@ -203,8 +203,8 @@ int proc_stat_load(struct libos_dentry* dent, char** out_data, size_t* out_size)
      * (see Linux's fs/proc/stat.c) */
     ADD_INFO("cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", user, nice, system, idle, iowait,
              irq, softirq, steal, guest, guest_nice);
-    for (size_t i = 0; i < g_pal_public_state->topo_info.threads_cnt; i++) {
-        if (!g_pal_public_state->topo_info.threads[i].is_online)
+    for (size_t i = 0; i < g_pal_public_initial_state.topo_info.threads_cnt; i++) {
+        if (!g_pal_public_initial_state.topo_info.threads[i].is_online)
             continue;
         ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", i, user, nice, system, idle,
                  iowait, irq, softirq, steal, guest, guest_nice);

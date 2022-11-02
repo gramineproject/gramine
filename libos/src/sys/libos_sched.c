@@ -184,13 +184,13 @@ long libos_syscall_sched_setaffinity(pid_t pid, unsigned int user_mask_size,
     memcpy(cpu_mask, user_mask_ptr, MIN(user_mask_size, cpu_mask_size));
 
     bool seen_online = false;
-    size_t threads_count = g_pal_public_state->topo_info.threads_cnt;
+    size_t threads_count = g_pal_public_initial_state.topo_info.threads_cnt;
     /* Remove offline cores from mask. */
     for (size_t i = 0; i < GET_CPU_MASK_LEN(); i++) {
         for (size_t j = 0; j < BITS_IN_TYPE(__typeof__(*cpu_mask)); j++) {
             size_t thread_idx = i * BITS_IN_TYPE(__typeof__(*cpu_mask)) + j;
             if (thread_idx >= threads_count
-                    || !g_pal_public_state->topo_info.threads[thread_idx].is_online) {
+                    || !g_pal_public_initial_state.topo_info.threads[thread_idx].is_online) {
                 cpu_mask[i] &= ~(1ul << j);
             }
             if (cpu_mask[i] & (1ul << j)) {
@@ -305,14 +305,14 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
     unlock(&thread->lock);
 
     assert(cpu_current < GET_CPU_MASK_LEN() * BITS_IN_TYPE(__typeof__(*thread->cpu_affinity_mask)));
-    assert(g_pal_public_state->topo_info.threads[cpu_current].is_online);
+    assert(g_pal_public_initial_state.topo_info.threads[cpu_current].is_online);
 
     if (cpu)
         *cpu = cpu_current;
 
     if (node) {
-        size_t core_id = g_pal_public_state->topo_info.threads[cpu_current].core_id;
-        *node = g_pal_public_state->topo_info.cores[core_id].node_id;
+        size_t core_id = g_pal_public_initial_state.topo_info.threads[cpu_current].core_id;
+        *node = g_pal_public_initial_state.topo_info.cores[core_id].node_id;
     }
 
     return 0;

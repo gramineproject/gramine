@@ -85,7 +85,7 @@ int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
 }
 
 static int sys_resource_info(const char* parent_name, size_t* out_total, const char** out_prefix) {
-    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo = &g_pal_public_initial_state.topo_info;
     if (strcmp(parent_name, "node") == 0) {
         *out_total = topo->numa_nodes_cnt;
         *out_prefix = "node";
@@ -281,7 +281,7 @@ BEGIN_CP_FUNC(topo_info) {
     __UNUSED(obj);
     __UNUSED(objp);
 
-    struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
+    struct pal_topo_info* topo_info = &g_pal_public_initial_state.topo_info;
     size_t off = ADD_CP_OFFSET(sizeof(*topo_info));
     struct pal_topo_info* new_topo_info = (void*)(base + off);
     memset(new_topo_info, 0, sizeof(*new_topo_info));
@@ -331,6 +331,6 @@ BEGIN_RS_FUNC(topo_info) {
     CP_REBASE(topo_info->numa_nodes);
     CP_REBASE(topo_info->numa_distance_matrix);
 
-    memcpy(&g_pal_public_state->topo_info, topo_info, sizeof(*topo_info));
+    memcpy(&g_pal_public_initial_state.topo_info, topo_info, sizeof(*topo_info));
 }
 END_RS_FUNC(topo_info)

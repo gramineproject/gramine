@@ -23,7 +23,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp);
 
 extern int g_log_level;
 
-extern struct pal_public_state* g_pal_public_state;
+extern const struct pal_public_state* g_pal_public_state;
+extern struct pal_public_initial_state g_pal_public_initial_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
