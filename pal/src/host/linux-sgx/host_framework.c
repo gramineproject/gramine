@@ -13,10 +13,11 @@ static size_t g_zero_pages_size = 0;
 
 int open_sgx_driver(void) {
     const char* paths_to_try[] = {
-#if defined(CONFIG_SGX_DRIVER_DEVICE)
-    /* The user explicitly specified the device path in build config. */
+#ifdef CONFIG_SGX_DRIVER_DEVICE
+    /* Always try to use the device path specified in the build config first. */
     CONFIG_SGX_DRIVER_DEVICE,
-#elif defined(CONFIG_SGX_DRIVER_OOT)
+#endif
+#if defined(CONFIG_SGX_DRIVER_OOT)
     "/dev/isgx",
 #elif defined(CONFIG_SGX_DRIVER_UPSTREAM)
     /* DCAP and upstreamed version used different paths in the past. */
@@ -272,7 +273,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
                   comment, m);
 
 #ifdef CONFIG_SGX_DRIVER_OOT
-    /* older drivers (DCAP v1.5- and old out-of-tree) only supports adding one page at a time */
+    /* legacy out-of-tree driver only supports adding one page at a time */
     struct sgx_enclave_add_page param = {
         .addr    = (uint64_t)addr,
         .src     = (uint64_t)(user_addr ?: g_zero_pages),
@@ -322,7 +323,6 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         g_zero_pages_size = size;
     }
 
-    /* newer DCAP driver (version 1.6+) allows adding a range of pages for performance, use it */
     struct sgx_enclave_add_pages param = {
         .offset  = (uint64_t)addr - secs->base,
         .src     = (uint64_t)(user_addr ?: g_zero_pages),

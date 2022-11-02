@@ -112,19 +112,17 @@ if sgx
             '/usr/src/linux-headers-@0@/arch/x86/include/uapi'.format(
                 run_command('uname', '-r').stdout().strip()),
         ]
-        sgx_driver_device_default = '/dev/sgx_enclave'
     elif sgx_driver == 'oot'
         # old non-DCAP driver (https://github.com/intel/linux-sgx-driver)
         conf_sgx.set('CONFIG_SGX_DRIVER_OOT', true)
         sgx_driver_header = 'sgx_user.h'
-        sgx_driver_device_default = '/dev/isgx'
         sgx_driver_include_path_defaults = ['/opt/intel/linux-sgx-driver']
     else
         error('Unknown sgx_driver value')
     endif
 
-    if sgx_driver_device == ''
-        sgx_driver_device = sgx_driver_device_default
+    if sgx_driver_device != ''
+        conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
     endif
 
     if sgx_driver_include_path == ''
@@ -158,7 +156,6 @@ if sgx
   endif
 
     conf_sgx.set('CONFIG_SGX_DRIVER_HEADER_ABSPATH', sgx_driver_header_abspath)
-    conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
 endif
 
 gen_symbol_map_cmd = [
