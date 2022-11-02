@@ -197,6 +197,13 @@ it's usually not needed.
 
 .. note::
 
+   If you have a DCAP driver installed on the system (e.g. on 18.04 Azure),
+   then you can still use the upstream driver and specify the `upstream header
+   file <https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11>`__.
+   This is because the DCAP and the upstream drivers have compatible APIs.
+
+.. note::
+
    When installing from sources, Gramine executables are placed under
    ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
    for executables under this path. If your system reports that Gramine
