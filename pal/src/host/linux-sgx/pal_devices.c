@@ -483,9 +483,9 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
             toml_raw_t sub_region_name_raw      = toml_raw_in(sub_region_info, "name");
             toml_raw_t sub_region_direction_raw = toml_raw_in(sub_region_info, "direction");
             toml_raw_t sub_region_align_raw     = toml_raw_in(sub_region_info, "align");
-            toml_raw_t sub_region_size_raw      = toml_raw_in(sub_region_info, "size");
             toml_raw_t sub_region_unit_raw      = toml_raw_in(sub_region_info, "unit");
             toml_raw_t sub_region_adjust_raw    = toml_raw_in(sub_region_info, "adjust");
+            toml_raw_t sub_region_size_raw      = NULL; /* set up later depending on `ptr` */
 
             toml_array_t* sub_region_ptr_arr = toml_array_in(sub_region_info, "ptr");
             if (!sub_region_ptr_arr) {
@@ -538,6 +538,26 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
                           "a 'direction'; pointers are never copied directly but rewired)");
                 ret = -PAL_ERROR_INVAL;
                 goto out;
+            }
+
+            if (sub_region_ptr_arr) {
+                if (toml_raw_in(sub_region_info, "size")) {
+                    log_error("Invalid deep-copy syntax ('ptr' sub-entries cannot specify "
+                              "a 'size'; specify `array_len` if you mean an array)");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
+
+                sub_region_size_raw = toml_raw_in(sub_region_info, "array_len");
+            } else {
+                if (toml_raw_in(sub_region_info, "array_len")) {
+                    log_error("Invalid deep-copy syntax (non-ptr sub-entries cannot specify "
+                              "'array_len'; specify `size` for size of the object)");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
+
+                sub_region_size_raw = toml_raw_in(sub_region_info, "size");
             }
 
             cur_sub_region->name = NULL;
@@ -791,19 +811,16 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
     if (!manifest_sgx)
         return -PAL_ERROR_NOTIMPLEMENTED;
 
-    toml_table_t* toml_allowed_ioctls = toml_table_in(manifest_sgx, "allowed_ioctls");
+    toml_array_t* toml_allowed_ioctls = toml_array_in(manifest_sgx, "allowed_ioctls");
     if (!toml_allowed_ioctls)
         return -PAL_ERROR_NOTIMPLEMENTED;
 
-    ssize_t toml_allowed_ioctls_cnt = toml_table_ntab(toml_allowed_ioctls);
+    ssize_t toml_allowed_ioctls_cnt = toml_array_nelem(toml_allowed_ioctls);
     if (toml_allowed_ioctls_cnt <= 0)
         return -PAL_ERROR_NOTIMPLEMENTED;
 
-    for (ssize_t idx = 0; idx < toml_allowed_ioctls_cnt; idx++) {
-        const char* toml_allowed_ioctl_key = toml_key_in(toml_allowed_ioctls, idx);
-        assert(toml_allowed_ioctl_key);
-
-        toml_table_t* toml_ioctl_table = toml_table_in(toml_allowed_ioctls, toml_allowed_ioctl_key);
+    for (size_t idx = 0; idx < (size_t)toml_allowed_ioctls_cnt; idx++) {
+        toml_table_t* toml_ioctl_table = toml_table_at(toml_allowed_ioctls, idx);
         if (!toml_ioctl_table)
             continue;
 
@@ -814,8 +831,7 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
         int64_t ioctl_request_code = 0x0;
         ret = toml_rtoi(toml_ioctl_request_code_raw, &ioctl_request_code);
         if (ret < 0 || ioctl_request_code == 0x0) {
-            log_error("Invalid request code of allowed IOCTL '%s' in manifest",
-                      toml_allowed_ioctl_key);
+            log_error("Invalid request code of allowed IOCTL #%zu in manifest", idx + 1);
             continue;
         }
 
@@ -831,9 +847,8 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
             char* ioctl_struct_str = NULL;
             ret = toml_rtos(toml_ioctl_struct_raw, &ioctl_struct_str);
             if (ret < 0) {
-                log_error("Invalid struct value of allowed IOCTL '%s' in manifest "
-                          "(sgx.allowed_ioctls.[identifier].struct must be a TOML string)",
-                          toml_allowed_ioctl_key);
+                log_error("Invalid struct value of allowed IOCTL #%zu in manifest "
+                          "(struct field must be a TOML string)", idx + 1);
                 return -PAL_ERROR_INVAL;
             }
 
@@ -852,10 +867,10 @@ static int get_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) 
             }
 
             toml_array_t* toml_ioctl_struct = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
-            if (!toml_ioctl_struct) {
-                log_error("Cannot find struct value '%s' of allowed IOCTL '%s' in "
+            if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) == 0) {
+                log_error("Cannot find struct value '%s' of allowed IOCTL #%zu in "
                           "manifest (or it is not a correctly formatted TOML array)",
-                          ioctl_struct_str, toml_allowed_ioctl_key);
+                          ioctl_struct_str, idx + 1);
                 free(ioctl_struct_str);
                 return -PAL_ERROR_INVAL;
             }
@@ -910,7 +925,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     if (ret < 0)
         return ret;
 
-    if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) == 0) {
+    if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
         ret = ocall_ioctl(handle->dev.fd, cmd, arg);
         if (ret < 0)

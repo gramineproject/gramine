@@ -772,7 +772,8 @@ explicitly allow a set of IOCTLs on devices (devices must be explicitly mounted
 via ``fs.mounts`` manifest syntax). Only IOCTLs with the ``request_code``
 argument found among the manifest-listed IOCTLs are allowed to pass-through to
 the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
-the ``struct`` field.
+the ``struct`` field, in case the third IOCTL argument is intended to be
+translated by Gramine.
 
 Available IOCTL structs are described via ``sgx.ioctl_structs``. Each IOCTL
 struct describes the memory layout of the third argument to the ``ioctl`` system
@@ -809,7 +810,7 @@ keys:
 - ``unit`` is an optional unit of measurement for ``size``. It is 1 byte by
   default. Unit of measurement must be a constant integer. For example,
   ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
-  character is 2B long) of a dynamically calculated length.
+  character is 2B long) of a dynamically specified length.
 - ``adjust`` is an optional integer adjustment for ``size`` (always specified in
   bytes). It is 0 bytes by default. This field must be a constant (possibly
   negative) integer. For example, ``size = 6``, ``unit = 2`` and ``adjust = -8``
@@ -885,12 +886,12 @@ all), then the ``struct`` key must be an empty string or not exist at all::
    themselves in SGX environments:
 
        - IOCTL arguments are passed as-is from the app to the untrusted host,
-         without encryption; this may lead to leaks of enclave data.
+         which may lead to leaks of enclave data.
        - Untrusted host can change IOCTL arguments as it wishes when passing
          them from Gramine to the device and back.
 
    It is the responsibility of the app developer to correctly use IOCTLs, with
-   security implications in mind. In particular, IOCTL arguments should be
+   security implications in mind. In most cases, IOCTL arguments should be
    encrypted or integrity-protected with a key pre-shared between Gramine and
    the device.
 
