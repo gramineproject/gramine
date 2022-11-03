@@ -175,7 +175,7 @@ static int mount_dev_shm(void) {
             ret = mount_fs(&(struct libos_mount_params){
                 .type = "shm",
                 .path = "/dev/shm",
-                .uri = URI_PREFIX_FILE "/dev/shm",
+                .uri = URI_PREFIX_DEV "/dev/shm",
             });
         } else {
             log_error("Unknown 'sys.insecure__shared_memory'");

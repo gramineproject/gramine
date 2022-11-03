@@ -63,6 +63,10 @@ int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_s
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
 
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif // MAP_FIXED_NOREPLACE
+
 #ifdef IN_ENCLAVE
 
 extern const size_t g_page_size;

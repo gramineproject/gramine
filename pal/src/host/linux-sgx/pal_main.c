@@ -538,6 +538,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     ret = 0;
 out:
     free(log_level_str);
+    free(shared_memory_str);
     free(protected_files_key_str);
     return ret;
 }
@@ -589,7 +590,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
-    static_assert(SHARED_ADDR_MIN > DBGINFO_ADDR, "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
+    static_assert(SHARED_ADDR_MIN > DBGINFO_ADDR + sizeof(struct enclave_dbginfo),
+                  "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
 #ifdef ASAN
     static_assert(SHARED_ADDR_MIN > ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
                   "SHARED_ADDR_MIN overlaps with ASAN_SHADOW");
@@ -604,12 +606,14 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     if (shared_memory_start != (void*)SHARED_ADDR_MIN) {
         /* Older kernel which does not support MAP_FIXED_NOREPLACE. */
-        if(shared_memory_start < (void*)DBGINFO_ADDR) {
+        if (shared_memory_start < (void*)DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
+                && (void*)DBGINFO_ADDR < shared_memory_start + SHARED_MEM_SIZE) {
             log_error("Not enough shared memory.");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
 #ifdef ASAN
-        if(shared_memory_start < (void*)(ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)) {
+        if (shared_memory_start < (void*)(ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)
+                && (void*)ASAN_SHADOW_START < shared_memory_start + SHARED_MEM_SIZE) {
             log_error("Not enough shared memory.");
             ocall_exit(1, /*is_exitgroup=*/true);
         }

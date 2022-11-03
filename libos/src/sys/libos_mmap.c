@@ -133,7 +133,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     void* memory_range_start = NULL;
     void* memory_range_end   = NULL;
 
-    /* Allow a file of shared memory type to map with MAP_SHARED flag to shared memory range. */
+    /* Shared mapping of files of "shm" type use a different memory range.
+     * See "libos/src/fs/shm/fs.c" for more details. */
     if (flags & MAP_SHARED && hdl && !strcmp(hdl->fs->name, "shm")) {
         memory_range_start = g_pal_public_state->shared_address_start;
         memory_range_end = g_pal_public_state->shared_address_end;
@@ -173,6 +174,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             if (memory_range_start == g_pal_public_state->memory_address_start) {
                 ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
             } else {
+                /* Shared memory range does not have ASLR. */
                 ret = bkeep_mmap_any_in_range(memory_range_start, memory_range_end, length, prot,
                                               flags, hdl, offset, NULL, &addr);
             }

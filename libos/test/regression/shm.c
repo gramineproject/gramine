@@ -46,7 +46,6 @@ static void read_shm(void) {
 }
 
 int main(void) {
-
     pid_t p = CHECK(fork());
     if (p == 0) {
         write_shm();
