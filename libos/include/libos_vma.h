@@ -133,3 +133,6 @@ void debug_print_all_vmas(void);
 
 /* Returns the peak amount of memory usage */
 size_t get_peak_memory_usage(void);
+
+/* Returns total memory usage */
+size_t get_total_memory_usage(void);

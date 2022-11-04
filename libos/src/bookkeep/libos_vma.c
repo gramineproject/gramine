@@ -1568,3 +1568,7 @@ void debug_print_all_vmas(void) {
 size_t get_peak_memory_usage(void) {
     return __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
 }
+
+size_t get_total_memory_usage(void) {
+    return __atomic_load_n(&g_total_memory_size, __ATOMIC_RELAXED);
+}
