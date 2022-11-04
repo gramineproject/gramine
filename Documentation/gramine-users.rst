@@ -29,6 +29,21 @@ alphabetically).
 - `JD Cloud <https://www.jdcloud.com/>`__ is experimenting with Gramine for
   several solutions.
 
+- `Super Protocol <https://www.superprotocol.com/>`__ combines the benefits of
+  both Trusted Execution Environment (TEE) technology and blockchain to offer a
+  global, decentralized, unstoppable "super cloud". It enables easy deployment
+  of a wide range of workloads - a rich ecosystem of interoperable solutions and
+  services, including databases, web services, ready-to-use applications,
+  confidential data sources, and much more. Super Protocol takes advantage of
+  the open-source Gramine library OS, which works in conjunction with Intel SGX
+  to provide additional security benefits in Linux environments.
+
+  It is worth noting that Super Protocol enables software developers to offer
+  their products and services on an open platform, while better protecting their
+  code from unauthorized access and modification. With SP marketplace, software
+  developers gain a direct sales channel to consumers and can quickly scale
+  solutions to meet client needs.
+
 - `Tencent Cloud <https://intl.cloud.tencent.com/>`__ relies on Gramine to
   implement several SGX-based solutions by running unmodified Linux
   applications. One example is the recent launch of the Tencent Cloud
