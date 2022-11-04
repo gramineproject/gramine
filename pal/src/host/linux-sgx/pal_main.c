@@ -410,6 +410,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool encrypted_files_keys = false;
 
     char* log_level_str = NULL;
+    char* shared_memory_str = NULL;
     char* protected_files_key_str = NULL;
 
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
@@ -443,7 +444,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
-    char* shared_memory_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "sys.insecure__shared_memory",
                          &shared_memory_str);
     if (ret < 0)
@@ -590,10 +590,12 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
-    static_assert(SHARED_ADDR_MIN > DBGINFO_ADDR + sizeof(struct enclave_dbginfo),
+    static_assert(SHARED_ADDR_MIN > DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
+                      || DBGINFO_ADDR > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
 #ifdef ASAN
     static_assert(SHARED_ADDR_MIN > ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
+                      || ASAN_SHADOW_START > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with ASAN_SHADOW");
 #endif
     void* shared_memory_start = (void*)SHARED_ADDR_MIN;
@@ -608,13 +610,13 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         /* Older kernel which does not support MAP_FIXED_NOREPLACE. */
         if (shared_memory_start < (void*)DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
                 && (void*)DBGINFO_ADDR < shared_memory_start + SHARED_MEM_SIZE) {
-            log_error("Not enough shared memory.");
+            log_error("Shared memory range would overlap `struct enclave_dbginfo`.");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
 #ifdef ASAN
         if (shared_memory_start < (void*)(ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)
                 && (void*)ASAN_SHADOW_START < shared_memory_start + SHARED_MEM_SIZE) {
-            log_error("Not enough shared memory.");
+            log_error("Shared memory range would overlap ASAN memory range.");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
 #endif

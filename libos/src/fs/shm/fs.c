@@ -5,11 +5,11 @@
  */
 
 /*
- * This file contains code for implementation of 'shm' filesystem. The shm files `mmap` to shared
-   memory range, and accessible by its child, another Gramine or native process. 
+ * This file contains code for implementation of 'shm' filesystem.
+ * If enabled in manifest, files of this type are shared with the host OS, when mapped.
  */
 
-#include <errno.h>
+#include <asm/errno.h>
 
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
@@ -243,23 +243,23 @@ out:
     return ret;
 }
 struct libos_fs_ops shm_fs_ops = {
-    .mount      = &shm_mount,
-    .read       = &shm_read,
-    .write      = &shm_write,
-    .mmap       = &shm_mmap,
-    .seek       = &generic_inode_seek,
-    .hstat      = &generic_inode_hstat,
-    .truncate   = &shm_truncate,
-    .poll       = &generic_inode_poll,
+    .mount      = shm_mount,
+    .read       = shm_read,
+    .write      = shm_write,
+    .mmap       = shm_mmap,
+    .seek       = generic_inode_seek,
+    .hstat      = generic_inode_hstat,
+    .truncate   = shm_truncate,
+    .poll       = generic_inode_poll,
 };
 
 struct libos_d_ops shm_d_ops = {
-    .open    = &shm_open,
-    .lookup  = &shm_lookup,
-    .creat   = &shm_creat,
-    .stat    = &generic_inode_stat,
-    .readdir = &chroot_readdir,
-    .unlink  = &shm_unlink,
+    .open    = shm_open,
+    .lookup  = shm_lookup,
+    .creat   = shm_creat,
+    .stat    = generic_inode_stat,
+    .readdir = chroot_readdir,  /* same as in `chroot` filesystem */
+    .unlink  = shm_unlink,
 };
 
 struct libos_fs shm_builtin_fs = {
