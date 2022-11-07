@@ -77,6 +77,7 @@ typedef struct {
             bool reuseaddr;
             bool broadcast;
             bool keepalive;
+            bool reuseport;
             bool tcp_cork;
             uint32_t tcp_keepidle;
             uint32_t tcp_keepintvl;

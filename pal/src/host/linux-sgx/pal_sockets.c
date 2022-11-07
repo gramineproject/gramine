@@ -82,6 +82,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.reuseaddr = false;
     handle->sock.keepalive = false;
     handle->sock.broadcast = false;
+    handle->sock.reuseport = false;
     handle->sock.tcp_cork = false;
     handle->sock.tcp_keepidle = DEFAULT_TCP_KEEPIDLE;
     handle->sock.tcp_keepintvl = DEFAULT_TCP_KEEPINTVL;
@@ -295,6 +296,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->socket.reuseaddr = handle->sock.reuseaddr;
     attr->socket.keepalive = handle->sock.keepalive;
     attr->socket.broadcast = handle->sock.broadcast;
+    attr->socket.reuseport = handle->sock.reuseport;
     attr->socket.tcp_cork = handle->sock.tcp_cork;
     attr->socket.tcp_keepidle = handle->sock.tcp_keepidle;
     attr->socket.tcp_keepintvl = handle->sock.tcp_keepintvl;
@@ -411,6 +413,15 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
             return unix_to_pal_error(ret);
         }
         handle->sock.broadcast = attr->socket.broadcast;
+    }
+
+    if (attr->socket.reuseport != handle->sock.reuseport) {
+        int val = attr->socket.reuseport;
+        int ret = ocall_setsockopt(handle->sock.fd, SOL_SOCKET, SO_REUSEPORT, &val, sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.reuseport = attr->socket.reuseport;
     }
 
     if (attr->socket.ipv6_v6only != handle->sock.ipv6_v6only) {

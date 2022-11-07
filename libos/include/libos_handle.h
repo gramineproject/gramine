@@ -121,6 +121,7 @@ struct libos_sock_handle {
     bool can_be_written;
     bool reuseaddr;
     bool broadcast;
+    bool reuseport;
 };
 
 struct libos_dir_handle {

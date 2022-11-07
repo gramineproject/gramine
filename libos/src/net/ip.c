@@ -385,6 +385,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
         case SO_BROADCAST:
             required_len = sizeof(int);
             break;
+        case SO_REUSEPORT:
+            required_len = sizeof(int);
+            break;
         default:
             return -ENOPROTOOPT;
     }
@@ -457,6 +460,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
             }
             attr.socket.broadcast = value.i;
             break;
+        case SO_REUSEPORT:
+            attr.socket.reuseport = value.i;
+            break;
     }
 
     if (need_pal_set) {
@@ -473,6 +479,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
             break;
         case SO_BROADCAST:
             sock->broadcast = attr.socket.broadcast;
+            break;
+        case SO_REUSEPORT:
+            sock->reuseport = attr.socket.reuseport;
             break;
         case SO_RCVTIMEO:
             sock->receivetimeout_us = attr.socket.receivetimeout_us;
