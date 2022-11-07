@@ -279,15 +279,17 @@ struct handle_ops g_dev_ops = {
  *     memory regions that this pointer points to (i.e. the length of an array).
  *  4. Sub-regions can be fixed-size (like the last sub-region containing two bytes `x` and `y`) or
  *     can be flexible-size (like the two strings). In the latter case, the `size` field contains a
- *     name of a sub-region where the actual size is stored.
- *  5. Sub-regions that store the size of another sub-region must be less than 8 bytes in size.
+ *     name of a sub-region where the actual size is stored. Note that this referenced sub-region
+ *     must come *before* the sub-region with such flexible-size `size`.
+ *  5. Sub-regions that store the size of another sub-region must be less than or equal to 8 bytes
+ *     in size.
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
  *     "array_len" sub-regions but may be omitted for all other kinds of sub-regions.
  *  7. Sub-regions may have one of the four directions: "out" to copy contents of the sub-region out
  *     of the enclave to untrusted memory, "in" to copy from untrusted memory into the enclave,
  *     "inout" to copy in both directions, "none" to not copy at all (useful for e.g. padding).
  *     Note that pointer sub-regions do not have a direction (their values are unconditionally
- *     rewired so as to point to the copied-out region in untrusted memory).
+ *     rewired so as to point to the corresponding region in untrusted memory).
  *  8. The first sub-region (and only the first!) may specify the alignment of the memory region.
  *  9. The total size of a sub-region is calculated as `size * unit + adjust`. By default `unit` is
  *     1 byte and `adjust` is 0. Note that `adjust` may be a negative number.
@@ -335,31 +337,33 @@ enum mem_copy_direction {
 };
 
 struct mem_region {
-    toml_array_t* toml_array; /* describes contigious sub_regions in this mem_region */
-    void* encl_addr;          /* base address of this memory region in enclave memory */
-    bool adjacent;            /* memory region adjacent to previous one? (used for arrays) */
+    toml_array_t* toml_mem_region; /* describes contigious sub_regions in this mem_region */
+    void* enclave_addr;            /* base address of this memory region in enclave memory */
+    bool adjacent;                 /* memory region adjacent to previous one? (used for arrays) */
 };
 
 struct dynamic_value {
     bool is_determined;
-    /* actual value, use only if `is_determined == true` */
-    uint64_t value;
-    /* sub-region name that determines the value, use only if `is_determined == false` */
-    char* subregion_name;
-    /* FIXME: memorize name hash for quicker string comparison? */
+    union {
+        /* actual value, use only if `is_determined == true` */
+        uint64_t value;
+        /* sub-region name that determines the value, use only if `is_determined == false`;
+         * FIXME: memorize name hash for quicker string comparison? */
+        char* sub_region_name;
+    };
 };
 
 struct sub_region {
     enum mem_copy_direction direction; /* direction of copy during OCALL */
     char* name;                     /* may be NULL for unnamed regions */
     struct dynamic_value array_len; /* array length of the sub-region (only for `ptr` regions) */
-    uint64_t size;                  /* size of this sub-region */
+    size_t size;                    /* size of this sub-region */
     uint64_t align;                 /* alignment of this sub-region */
     uint64_t unit;                  /* total size in bytes calculated as `size * unit + adjust` */
     int64_t adjust;                 /* may be negative; used to adjust total size */
-    void* encl_addr;                /* base address of this sub region in enclave mem */
+    void* enclave_addr;             /* base address of this sub region in enclave mem */
     void* untrusted_addr;           /* base address of corresponding sub region in untrusted mem */
-    toml_array_t* mem_ptr;          /* for pointers/arrays, specifies pointed-to mem region */
+    toml_array_t* toml_mem_region;  /* for pointers/arrays, specifies pointed-to mem region */
 };
 
 static bool strings_equal(const char* s1, const char* s2) {
@@ -368,35 +372,24 @@ static bool strings_equal(const char* s1, const char* s2) {
     return !strcmp(s1, s2);
 }
 
-static int set_value(void* addr, size_t size, uint64_t* out_value) {
-    if (!addr)
+static int copy_value(void* addr, size_t size, uint64_t* out_value) {
+    if (!addr || size > sizeof(*out_value))
         return -PAL_ERROR_INVAL;
 
-    switch (size) {
-        case 1:
-            *out_value = (uint64_t)(*((uint8_t*)addr));
-            return 0;
-        case 2:
-            *out_value = (uint64_t)(*((uint16_t*)addr));
-            return 0;
-        case 4:
-            *out_value = (uint64_t)(*((uint32_t*)addr));
-            return 0;
-        case 8:
-            *out_value = (uint64_t)(*((uint64_t*)addr));
-            return 0;
-    }
-    return -PAL_ERROR_INVAL;
+    /* the copy below assumes little-endian machines (which x86 is) */
+    *out_value = 0;
+    memcpy(out_value, addr, size);
+    return 0;
 }
 
-/* finds a sub region with name `sub_region_name` among `sub_regions` and returns its index */
-static int get_sub_region_idx(struct sub_region* sub_regions, size_t sub_regions_cnt,
+/* finds a sub region with name `sub_region_name` among `all_sub_regions` and returns its index */
+static int get_sub_region_idx(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
                               const char* sub_region_name, size_t* out_idx) {
     /* it is important to iterate in reverse order because there may be an array of mem regions
      * with same-named sub regions, and we want to find the latest sub region */
-    for (size_t i = sub_regions_cnt; i > 0; i--) {
+    for (size_t i = all_sub_regions_cnt; i > 0; i--) {
         size_t idx = i - 1;
-        if (strings_equal(sub_regions[idx].name, sub_region_name)) {
+        if (strings_equal(all_sub_regions[idx].name, sub_region_name)) {
             *out_idx = idx;
             return 0;
         }
@@ -405,31 +398,23 @@ static int get_sub_region_idx(struct sub_region* sub_regions, size_t sub_regions
 }
 
 /* allocates a name string, it is responsibility of the caller to free it after use */
-static int get_sub_region_name(const toml_table_t* sub_region_info, char** out_name) {
-    toml_raw_t sub_region_name_raw = toml_raw_in(sub_region_info, "name");
-    if (!sub_region_name_raw) {
-        *out_name = NULL;
-        return 0;
-    }
-    int ret = toml_rtos(sub_region_name_raw, out_name);
-    return ret < 0 ? -PAL_ERROR_INVAL : 0;
+static int get_sub_region_name(const toml_table_t* toml_sub_region, char** out_name) {
+    return toml_string_in(toml_sub_region, "name", out_name) < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
-static int get_sub_region_direction(const toml_table_t* sub_region_info,
+static int get_sub_region_direction(const toml_table_t* toml_sub_region,
                                     enum mem_copy_direction* out_direction) {
-    toml_raw_t sub_region_direction_raw = toml_raw_in(sub_region_info, "direction");
-    if (!sub_region_direction_raw) {
+    char* direction_str;
+    int ret = toml_string_in(toml_sub_region, "direction", &direction_str);
+    if (ret < 0)
+        return -PAL_ERROR_INVAL;
+
+    if (!direction_str) {
         *out_direction = DIRECTION_NONE;
         return 0;
     }
 
-    char* direction_str;
-    int ret = toml_rtos(sub_region_direction_raw, &direction_str);
-    if (ret < 0) {
-        ret = -PAL_ERROR_INVAL;
-        goto out;
-    }
-
+    ret = 0;
     if (!strcmp(direction_str, "out")) {
         *out_direction = DIRECTION_OUT;
     } else if (!strcmp(direction_str, "in")) {
@@ -440,109 +425,82 @@ static int get_sub_region_direction(const toml_table_t* sub_region_info,
         *out_direction = DIRECTION_NONE;
     } else {
         ret = -PAL_ERROR_INVAL;
-        goto out;
     }
-
-    ret = 0;
-out:
     free(direction_str);
     return ret;
 }
 
-static int get_sub_region_align(const toml_table_t* sub_region_info, uint64_t* out_align) {
-    toml_raw_t sub_region_align_raw = toml_raw_in(sub_region_info, "align");
-    if (!sub_region_align_raw) {
-        *out_align = 0;
-        return 0;
-    }
-
+static int get_sub_region_align(const toml_table_t* toml_sub_region, uint64_t* out_align) {
     int64_t align;
-    int ret = toml_rtoi(sub_region_align_raw, &align);
-    if (ret < 0 || align <= 0) {
+    int ret = toml_int_in(toml_sub_region, "align", /*defaultval=*/0, &align);
+    if (ret < 0 || align < 0)
         return -PAL_ERROR_INVAL;
-    }
 
     *out_align = (uint64_t)align;
     return 0;
 }
 
-static int get_sub_region_unit(const toml_table_t* sub_region_info, uint64_t* out_unit) {
-    toml_raw_t sub_region_unit_raw = toml_raw_in(sub_region_info, "unit");
-    if (!sub_region_unit_raw) {
-        *out_unit = 1; /* 1-byte units by default */
-        return 0;
-    }
-
+static int get_sub_region_unit(const toml_table_t* toml_sub_region, uint64_t* out_unit) {
     int64_t unit;
-    int ret = toml_rtoi(sub_region_unit_raw, &unit);
-    if (ret < 0 || unit <= 0) {
+    int ret = toml_int_in(toml_sub_region, "unit", /*defaultval=*/1, &unit);
+    if (ret < 0 || unit <= 0)
         return -PAL_ERROR_INVAL;
-    }
 
     *out_unit = (uint64_t)unit;
     return 0;
 }
 
-static int get_sub_region_adjust(const toml_table_t* sub_region_info, int64_t* out_adjust) {
-    toml_raw_t sub_region_adjust_raw = toml_raw_in(sub_region_info, "adjust");
-    if (!sub_region_adjust_raw) {
-        *out_adjust = 0;
-        return 0;
-    }
-
-    int ret = toml_rtoi(sub_region_adjust_raw, out_adjust);
+static int get_sub_region_adjust(const toml_table_t* toml_sub_region, int64_t* out_adjust) {
+    int ret = toml_int_in(toml_sub_region, "adjust", /*defaultval=*/0, out_adjust);
     return ret < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
-static int get_sub_region_ptr(struct sub_region* sub_regions, size_t sub_regions_cnt,
-                              toml_array_t* root_toml_array, toml_table_t* sub_region_info,
-                              toml_array_t** out_ptr_arr) {
-    toml_array_t* sub_region_ptr_arr = toml_array_in(sub_region_info, "ptr");
-    if (sub_region_ptr_arr) {
-        *out_ptr_arr = sub_region_ptr_arr;
-        return 0;
-    }
-
-    toml_raw_t sub_region_ptr_raw = toml_raw_in(sub_region_info, "ptr");
-    if (!sub_region_ptr_raw) {
-        *out_ptr_arr = NULL;
+static int get_toml_mem_region(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
+                              toml_array_t* root_toml_mem_region, toml_table_t* toml_sub_region,
+                              toml_array_t** out_toml_mem_region) {
+    toml_array_t* toml_mem_region = toml_array_in(toml_sub_region, "ptr");
+    if (toml_mem_region) {
+        *out_toml_mem_region = toml_mem_region;
         return 0;
     }
 
     char* sub_region_name;
-    int ret = toml_rtos(sub_region_ptr_raw, &sub_region_name);
-    if (ret < 0) {
-        ret = -PAL_ERROR_INVAL;
-        goto out;
+    int ret = toml_string_in(toml_sub_region, "ptr", &sub_region_name);
+    if (ret < 0)
+        return -PAL_ERROR_INVAL;
+
+    if (!sub_region_name) {
+        *out_toml_mem_region = NULL;
+        return 0;
     }
 
-    if (!strcmp(sub_region_name, "this")) {
-        *out_ptr_arr = root_toml_array;
+    if (!strcmp(sub_region_name, "root")) {
+        *out_toml_mem_region = root_toml_mem_region;
         ret = 0;
         goto out;
     }
 
-    size_t idx;
-    ret = get_sub_region_idx(sub_regions, sub_regions_cnt, sub_region_name, &idx);
+    size_t found_idx;
+    ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
     if (ret < 0) {
         goto out;
     }
 
-    if (!sub_regions[idx].mem_ptr) {
+    if (!all_sub_regions[found_idx].toml_mem_region) {
         ret = -PAL_ERROR_DENIED;
         goto out;
     }
 
-    *out_ptr_arr = sub_regions[idx].mem_ptr;
+    *out_toml_mem_region = all_sub_regions[found_idx].toml_mem_region;
     ret = 0;
 out:
     free(sub_region_name);
     return ret;
 }
 
-static int get_sub_region_size(struct sub_region* sub_regions, size_t sub_regions_cnt,
-                               const toml_table_t* sub_region_info, uint64_t* out_size) {
-    toml_raw_t sub_region_size_raw = toml_raw_in(sub_region_info, "size");
+static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
+                               const toml_table_t* toml_sub_region, size_t* out_size) {
+    toml_raw_t sub_region_size_raw = toml_raw_in(toml_sub_region, "size");
     if (!sub_region_size_raw) {
         *out_size = 0;
         return 0;
@@ -555,7 +513,7 @@ static int get_sub_region_size(struct sub_region* sub_regions, size_t sub_region
         if (size <= 0)
             return -PAL_ERROR_INVAL;
 
-        *out_size = (uint64_t)size;
+        *out_size = (size_t)size;
         return 0;
     }
 
@@ -565,24 +523,26 @@ static int get_sub_region_size(struct sub_region* sub_regions, size_t sub_region
     if (ret < 0)
         return -PAL_ERROR_INVAL;
 
-    /* "sub_regions_cnt - 1" is to exclude myself */
-    size_t idx;
-    ret = get_sub_region_idx(sub_regions, sub_regions_cnt - 1, sub_region_name, &idx);
+    size_t found_idx;
+    ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
     free(sub_region_name);
     if (ret < 0)
         return ret;
 
-    return set_value(sub_regions[idx].encl_addr, sub_regions[idx].size, out_size);
+    void* addr_of_size_field  = all_sub_regions[found_idx].enclave_addr;
+    size_t size_of_size_field = all_sub_regions[found_idx].size;
+    return copy_value(addr_of_size_field, size_of_size_field, out_size);
 }
 
 /* may allocate an array-len-name string, it is responsibility of the caller to free it after use */
-static int get_sub_region_array_len(struct sub_region* sub_regions, size_t sub_regions_cnt,
-                                    const toml_table_t* sub_region_info,
+static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
                                     struct dynamic_value* out_array_len) {
-    toml_raw_t sub_region_array_len_raw = toml_raw_in(sub_region_info, "array_len");
+    toml_raw_t sub_region_array_len_raw = toml_raw_in(toml_sub_region, "array_len");
     if (!sub_region_array_len_raw) {
-        out_array_len->value = 1; /* 1 array item by default */
-        out_array_len->is_determined = true;
+        *out_array_len = (struct dynamic_value){
+            .is_determined = true,
+            .value = 1  /* 1 array item by default */
+        };
         return 0;
     }
 
@@ -593,8 +553,10 @@ static int get_sub_region_array_len(struct sub_region* sub_regions, size_t sub_r
         if (array_len <= 0)
             return -PAL_ERROR_INVAL;
 
-        out_array_len->value = (uint64_t)array_len;
-        out_array_len->is_determined = true;
+        *out_array_len = (struct dynamic_value){
+            .is_determined = true,
+            .value = (uint64_t)array_len
+        };
         return 0;
     }
 
@@ -604,34 +566,21 @@ static int get_sub_region_array_len(struct sub_region* sub_regions, size_t sub_r
     if (ret < 0)
         return -PAL_ERROR_INVAL;
 
-    /* "sub_regions_cnt - 1" is to exclude myself */
-    size_t idx;
-    ret = get_sub_region_idx(sub_regions, sub_regions_cnt - 1, sub_region_name, &idx);
-    if (ret < 0) {
-        /* do not fail if couldn't find now (we will try later one more time) */
-        out_array_len->subregion_name = sub_region_name;
-        out_array_len->is_determined = false;
-        return 0;
-    }
-
-    free(sub_region_name);
-
-    ret = set_value(sub_regions[idx].encl_addr, sub_regions[idx].size, &out_array_len->value);
-    if (ret < 0)
-        return ret;
-
-    out_array_len->is_determined = true;
+    *out_array_len = (struct dynamic_value){
+        .is_determined = false,
+        .sub_region_name = sub_region_name
+    };
     return 0;
 }
 
 /* Caller sets `mem_regions_cnt_ptr` to the length of `mem_regions` array; this variable is updated
  * to return the number of actually used `mem_regions`. Similarly with `sub_regions`. */
-static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_addr,
+static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_enclave_addr,
                                struct mem_region* mem_regions, size_t* mem_regions_cnt_ptr,
                                struct sub_region* sub_regions, size_t* sub_regions_cnt_ptr) {
     int ret;
 
-    assert(root_toml_array && toml_array_nelem(root_toml_array) > 0);
+    assert(root_toml_mem_region && toml_array_nelem(root_toml_mem_region) > 0);
 
     size_t max_sub_regions = *sub_regions_cnt_ptr;
     size_t sub_regions_cnt = 0;
@@ -639,34 +588,35 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
     size_t max_mem_regions = *mem_regions_cnt_ptr;
     size_t mem_regions_cnt = 0;
 
-    mem_regions[0].toml_array = root_toml_array;
-    mem_regions[0].encl_addr  = root_encl_addr;
-    mem_regions[0].adjacent   = false;
+    mem_regions[0].toml_mem_region = root_toml_mem_region;
+    mem_regions[0].enclave_addr    = root_enclave_addr;
+    mem_regions[0].adjacent        = false;
     mem_regions_cnt++;
 
     /* collecting memory regions and their sub-regions must use breadth-first search to dynamically
      * calculate sizes of sub-regions even if they are specified via another sub-region's "name" */
-    char* cur_encl_addr = NULL;
+    char* cur_enclave_addr = NULL;
     size_t mem_region_idx = 0;
     while (mem_region_idx < mem_regions_cnt) {
         struct mem_region* cur_mem_region = &mem_regions[mem_region_idx];
         mem_region_idx++;
 
         if (!cur_mem_region->adjacent)
-            cur_encl_addr = cur_mem_region->encl_addr;
+            cur_enclave_addr = cur_mem_region->enclave_addr;
 
         size_t cur_mem_region_first_sub_region_idx = sub_regions_cnt;
 
-        for (size_t i = 0; i < (size_t)toml_array_nelem(cur_mem_region->toml_array); i++) {
-            toml_table_t* sub_region_info = toml_table_at(cur_mem_region->toml_array, i);
-            if (!sub_region_info) {
-                log_error("IOCTL: each memory subregion must be a TOML table");
+        assert(toml_array_nelem(cur_mem_region->toml_mem_region) >= 0);
+        for (size_t i = 0; i < (size_t)toml_array_nelem(cur_mem_region->toml_mem_region); i++) {
+            toml_table_t* toml_sub_region = toml_table_at(cur_mem_region->toml_mem_region, i);
+            if (!toml_sub_region) {
+                log_error("IOCTL: each memory sub-region must be a TOML table");
                 ret = -PAL_ERROR_INVAL;
                 goto out;
             }
 
             if (sub_regions_cnt == max_sub_regions) {
-                log_error("IOCTL: too many memory subregions (max is %zu)", max_sub_regions);
+                log_error("IOCTL: too many memory sub-regions (max is %zu)", max_sub_regions);
                 ret = -PAL_ERROR_NOMEM;
                 goto out;
             }
@@ -676,121 +626,140 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
 
             memset(cur_sub_region, 0, sizeof(*cur_sub_region));
 
-            cur_sub_region->encl_addr = cur_encl_addr;
-            if (!cur_encl_addr) {
-                /* enclave address is invalid, user provided bad struct */
+            cur_sub_region->enclave_addr = cur_enclave_addr;
+            if (!cur_enclave_addr) {
+                /* FIXME: use `is_user_memory_readable()` to check invalid enclave addresses */
                 ret = -PAL_ERROR_INVAL;
                 goto out;
             }
 
-            if (toml_raw_in(sub_region_info, "align") && i != 0) {
+            if (toml_raw_in(toml_sub_region, "align") && i != 0) {
                 log_error("IOCTL: 'align' may be specified only at beginning of mem region");
                 ret = -PAL_ERROR_INVAL;
                 goto out;
             }
 
-            if (toml_array_in(sub_region_info, "ptr") || toml_raw_in(sub_region_info, "ptr")) {
-                if (toml_raw_in(sub_region_info, "direction")) {
+            if (toml_array_in(toml_sub_region, "ptr") || toml_raw_in(toml_sub_region, "ptr")) {
+                if (toml_raw_in(toml_sub_region, "direction")) {
                     log_error("IOCTL: 'ptr' cannot specify 'direction'");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
                 }
-                if (toml_raw_in(sub_region_info, "size")) {
+                if (toml_raw_in(toml_sub_region, "size")) {
                     log_error("IOCTL: 'ptr' cannot specify 'size' (did you mean 'array_len'?)");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
                 }
             }
 
-            ret = get_sub_region_name(sub_region_info, &cur_sub_region->name);
+            ret = get_sub_region_name(toml_sub_region, &cur_sub_region->name);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'name' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_direction(sub_region_info, &cur_sub_region->direction);
+            ret = get_sub_region_direction(toml_sub_region, &cur_sub_region->direction);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'direction' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_align(sub_region_info, &cur_sub_region->align);
+            ret = get_sub_region_align(toml_sub_region, &cur_sub_region->align);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'align' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_unit(sub_region_info, &cur_sub_region->unit);
+            ret = get_sub_region_unit(toml_sub_region, &cur_sub_region->unit);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'unit' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_adjust(sub_region_info, &cur_sub_region->adjust);
+            ret = get_sub_region_adjust(toml_sub_region, &cur_sub_region->adjust);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'adjust' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_size(sub_regions, sub_regions_cnt, sub_region_info,
+            ret = get_sub_region_size(sub_regions, sub_regions_cnt, toml_sub_region,
                                       &cur_sub_region->size);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'size' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_array_len(sub_regions, sub_regions_cnt, sub_region_info,
-                                           &cur_sub_region->array_len);
+            ret = get_sub_region_array_len(toml_sub_region, &cur_sub_region->array_len);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'array_len' field failed");
                 goto out;
             }
 
-            ret = get_sub_region_ptr(sub_regions, sub_regions_cnt, root_toml_array, sub_region_info,
-                                     &cur_sub_region->mem_ptr);
+            ret = get_toml_mem_region(sub_regions, sub_regions_cnt, root_toml_mem_region,
+                                      toml_sub_region, &cur_sub_region->toml_mem_region);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'ptr' field failed");
                 goto out;
             }
 
-            if (cur_sub_region->mem_ptr) {
+            if (cur_sub_region->toml_mem_region) {
                 /* only set size for now, we postpone pointer/array handling for later */
                 cur_sub_region->size = sizeof(void*);
             } else {
-                /* FIXME: overflow handling? */
-                cur_sub_region->size *= cur_sub_region->unit;
-                cur_sub_region->size += cur_sub_region->adjust;
+                if (__builtin_mul_overflow(cur_sub_region->size, cur_sub_region->unit,
+                                           &cur_sub_region->size)) {
+                    log_error("IOCTL: integer overflow while applying 'unit'");
+                    ret = -PAL_ERROR_OVERFLOW;
+                    goto out;
+                }
+                if (__builtin_add_overflow(cur_sub_region->size, cur_sub_region->adjust,
+                                           &cur_sub_region->size)) {
+                    log_error("IOCTL: integer overflow while applying 'adjust'");
+                    ret = -PAL_ERROR_OVERFLOW;
+                    goto out;
+                }
             }
 
-            cur_encl_addr += (uintptr_t)cur_sub_region->size;
+            if (!access_ok(cur_enclave_addr, cur_sub_region->size)) {
+                log_error("IOCTL: enclave address overflows");
+                ret = -PAL_ERROR_OVERFLOW;
+                goto out;
+            }
+            cur_enclave_addr += cur_sub_region->size;
         }
 
         /* iterate through collected pointer/array sub regions and add corresponding mem regions */
         for (size_t i = cur_mem_region_first_sub_region_idx; i < sub_regions_cnt; i++) {
-            if (!sub_regions[i].mem_ptr)
+            if (!sub_regions[i].toml_mem_region)
                 continue;
 
             if (!sub_regions[i].array_len.is_determined) {
-                /* array len was not found in the first swoop, try again */
-                assert(sub_regions[i].array_len.subregion_name);
+                /* array len was not hard-coded in struct definition, dynamically determine it */
+                assert(sub_regions[i].array_len.sub_region_name);
 
-                size_t idx;
+                size_t found_idx;
                 ret = get_sub_region_idx(sub_regions, sub_regions_cnt,
-                                         sub_regions[i].array_len.subregion_name, &idx);
+                                         sub_regions[i].array_len.sub_region_name, &found_idx);
                 if (ret < 0) {
-                    log_error("IOCTL: cannot find '%s'", sub_regions[i].array_len.subregion_name);
+                    log_error("IOCTL: cannot find '%s'", sub_regions[i].array_len.sub_region_name);
                     goto out;
                 }
 
-                ret = set_value(sub_regions[idx].encl_addr, sub_regions[idx].size,
-                                &sub_regions[i].array_len.value);
+                void* addr_of_array_len_field  = sub_regions[found_idx].enclave_addr;
+                size_t size_of_array_len_field = sub_regions[found_idx].size;
+                uint64_t array_len;
+                ret = copy_value(addr_of_array_len_field, size_of_array_len_field, &array_len);
                 if (ret < 0) {
                     log_error("IOCTL: cannot get array len from '%s'",
-                              sub_regions[i].array_len.subregion_name);
+                              sub_regions[i].array_len.sub_region_name);
                     goto out;
                 }
 
-                sub_regions[i].array_len.is_determined = true;
+                free(sub_regions[i].array_len.sub_region_name);
+                sub_regions[i].array_len = (struct dynamic_value){
+                    .is_determined = true,
+                    .value = array_len
+                };
             }
 
             for (size_t k = 0; k < sub_regions[i].array_len.value; k++) {
@@ -800,13 +769,13 @@ static int collect_sub_regions(toml_array_t* root_toml_array, void* root_encl_ad
                     goto out;
                 }
 
-                void* mem_region_addr = *((void**)sub_regions[i].encl_addr);
+                void* mem_region_addr = *((void**)sub_regions[i].enclave_addr);
                 if (!mem_region_addr)
                     continue;
 
-                mem_regions[mem_regions_cnt].toml_array = sub_regions[i].mem_ptr;
-                mem_regions[mem_regions_cnt].encl_addr  = mem_region_addr;
-                mem_regions[mem_regions_cnt].adjacent   = k > 0;
+                mem_regions[mem_regions_cnt].toml_mem_region = sub_regions[i].toml_mem_region;
+                mem_regions[mem_regions_cnt].enclave_addr    = mem_region_addr;
+                mem_regions[mem_regions_cnt].adjacent        = k > 0;
                 mem_regions_cnt++;
             }
         }
@@ -819,9 +788,8 @@ out:
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         /* "name" fields are not needed after we collected all sub_regions */
         free(sub_regions[i].name);
-        free(sub_regions[i].array_len.subregion_name);
-        sub_regions[i].name = NULL;
-        sub_regions[i].array_len.subregion_name = NULL;
+        if (!sub_regions[i].array_len.is_determined)
+            free(sub_regions[i].array_len.sub_region_name);
     }
     return ret;
 }
@@ -830,7 +798,7 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
                                          void* untrusted_addr) {
     char* cur_untrusted_addr = untrusted_addr;
     for (size_t i = 0; i < sub_regions_cnt; i++) {
-        if (!sub_regions[i].size || !sub_regions[i].encl_addr)
+        if (!sub_regions[i].size)
             continue;
 
         if (sub_regions[i].align > 0) {
@@ -839,14 +807,15 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
             cur_untrusted_addr = aligned_untrusted_addr;
         }
 
-        if (!sgx_is_completely_within_enclave(sub_regions[i].encl_addr, sub_regions[i].size)
+        if (!sgx_is_completely_within_enclave(sub_regions[i].enclave_addr, sub_regions[i].size)
                 || !sgx_is_valid_untrusted_ptr(cur_untrusted_addr, sub_regions[i].size, 1)) {
             return -PAL_ERROR_DENIED;
         }
 
         if (sub_regions[i].direction == DIRECTION_OUT
                 || sub_regions[i].direction == DIRECTION_INOUT) {
-            memcpy(cur_untrusted_addr, sub_regions[i].encl_addr, sub_regions[i].size);
+            /* FIXME: use sgx_copy_from_enclave() after rebase */
+            memcpy(cur_untrusted_addr, sub_regions[i].enclave_addr, sub_regions[i].size);
         } else {
             memset(cur_untrusted_addr, 0, sub_regions[i].size);
         }
@@ -856,15 +825,15 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
     }
 
     for (size_t i = 0; i < sub_regions_cnt; i++) {
-        if (!sub_regions[i].size || !sub_regions[i].encl_addr)
+        if (!sub_regions[i].size)
             continue;
 
-        if (sub_regions[i].mem_ptr) {
-            void* encl_ptr_value = *((void**)sub_regions[i].encl_addr);
+        if (sub_regions[i].toml_mem_region) {
+            void* enclave_ptr_value = *((void**)sub_regions[i].enclave_addr);
             /* rewire pointer value in untrusted memory to a corresponding untrusted sub-region */
             for (size_t j = 0; j < sub_regions_cnt; j++) {
-                if (sub_regions[j].encl_addr == encl_ptr_value) {
-                    /* note that we already verified correctness of enclave & outside addresses */
+                if (sub_regions[j].enclave_addr == enclave_ptr_value) {
+                    /* FIXME: use sgx_copy_from_enclave() after rebase */
                     memcpy(sub_regions[i].untrusted_addr, &sub_regions[j].untrusted_addr,
                            sizeof(void*));
                     break;
@@ -878,14 +847,14 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
 
 static int copy_sub_regions_to_enclave(struct sub_region* sub_regions, size_t sub_regions_cnt) {
     for (size_t i = 0; i < sub_regions_cnt; i++) {
-        if (!sub_regions[i].size || !sub_regions[i].encl_addr)
+        if (!sub_regions[i].size)
             continue;
 
         if (sub_regions[i].direction == DIRECTION_IN
                 || sub_regions[i].direction == DIRECTION_INOUT) {
-            int ret = sgx_copy_to_enclave(sub_regions[i].encl_addr, sub_regions[i].size,
-                                          sub_regions[i].untrusted_addr, sub_regions[i].size);
-            if (ret < 0)
+            bool ret = sgx_copy_to_enclave(sub_regions[i].enclave_addr, sub_regions[i].size,
+                                           sub_regions[i].untrusted_addr, sub_regions[i].size);
+            if (!ret)
                 return -PAL_ERROR_DENIED;
         }
     }
@@ -893,10 +862,8 @@ static int copy_sub_regions_to_enclave(struct sub_region* sub_regions, size_t su
 }
 
 /* may return `*out_toml_ioctl_struct = NULL` which means "no struct needed for this IOCTL" */
-static int get_ioctl_struct(toml_table_t* toml_ioctl_table, toml_array_t** out_toml_ioctl_struct) {
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
-    assert(manifest_sgx); /* this was verified by the caller of this func */
-
+static int get_ioctl_struct(toml_table_t* manifest_sgx, toml_table_t* toml_ioctl_table,
+                            toml_array_t** out_toml_ioctl_struct) {
     toml_raw_t toml_ioctl_struct_raw = toml_raw_in(toml_ioctl_table, "struct");
     if (!toml_ioctl_struct_raw) {
         /* no corresponding struct -> base-type or ignored IOCTL argument */
@@ -920,13 +887,13 @@ static int get_ioctl_struct(toml_table_t* toml_ioctl_table, toml_array_t** out_t
 
     toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sgx, "ioctl_structs");
     if (!toml_ioctl_structs) {
-        log_warning("There are no IOCTL structs found in manifest");
+        log_error("There are no IOCTL structs found in manifest");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     toml_array_t* toml_ioctl_struct = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
-    if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) == 0) {
+    if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) <= 0) {
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
@@ -952,26 +919,26 @@ static int get_allowed_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_
         return -PAL_ERROR_NOTIMPLEMENTED;
 
     ssize_t toml_allowed_ioctls_cnt = toml_array_nelem(toml_allowed_ioctls);
-    if (!toml_allowed_ioctls_cnt)
+    if (toml_allowed_ioctls_cnt <= 0)
         return -PAL_ERROR_NOTIMPLEMENTED;
 
     for (size_t idx = 0; idx < (size_t)toml_allowed_ioctls_cnt; idx++) {
         toml_table_t* toml_ioctl_table = toml_table_at(toml_allowed_ioctls, idx);
         if (!toml_ioctl_table) {
             log_error("Invalid allowed IOCTL #%zu in manifest (not a TOML table)", idx + 1);
-            continue;
+            return -PAL_ERROR_INVAL;
         }
 
         int64_t request_code;
         ret = toml_int_in(toml_ioctl_table, "request_code", /*default_val=*/-1, &request_code);
         if (ret < 0 || request_code < 0) {
             log_error("Invalid request code of allowed IOCTL #%zu in manifest", idx + 1);
-            continue;
+            return -PAL_ERROR_INVAL;
         }
 
         if (request_code == (int64_t)cmd) {
             /* found this IOCTL request in the manifest, now must find the corresponding struct */
-            ret = get_ioctl_struct(toml_ioctl_table, out_toml_ioctl_struct);
+            ret = get_ioctl_struct(manifest_sgx, toml_ioctl_table, out_toml_ioctl_struct);
             if (ret < 0) {
                 log_error("Invalid struct value of allowed IOCTL #%zu in manifest", idx + 1);
             }
@@ -1006,21 +973,13 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         return 0;
     }
 
-    void* untrusted_addr           = NULL;
-    struct mem_region* mem_regions = NULL;
-    struct sub_region* sub_regions = NULL;
+    void* untrusted_addr = NULL;
 
     size_t mem_regions_cnt = MAX_MEM_REGIONS;
     size_t sub_regions_cnt = MAX_SUB_REGIONS;
-
-    mem_regions = calloc(mem_regions_cnt, sizeof(*mem_regions));
-    if (!mem_regions) {
-        ret = -PAL_ERROR_NOMEM;
-        goto out;
-    }
-
-    sub_regions = calloc(sub_regions_cnt, sizeof(*sub_regions));
-    if (!sub_regions) {
+    struct mem_region* mem_regions = calloc(mem_regions_cnt, sizeof(*mem_regions));
+    struct sub_region* sub_regions = calloc(sub_regions_cnt, sizeof(*sub_regions));
+    if (!mem_regions || !sub_regions) {
         ret = -PAL_ERROR_NOMEM;
         goto out;
     }
@@ -1030,7 +989,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     ret = collect_sub_regions(toml_ioctl_struct, (void*)arg, mem_regions, &mem_regions_cnt,
                               sub_regions, &sub_regions_cnt);
     if (ret < 0) {
-        log_error("IOCTL: failed to parse ioctl struct (request code = %u)", cmd);
+        log_error("IOCTL: failed to parse ioctl struct (request code = 0x%x)", cmd);
         goto out;
     }
 
