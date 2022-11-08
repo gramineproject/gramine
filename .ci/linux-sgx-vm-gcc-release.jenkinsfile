@@ -1,0 +1,31 @@
+node('whatnots') {
+    checkout scm
+
+    env.SGX = '1'
+    env.IS_VM = '1'
+
+    load '.ci/lib/config-docker.jenkinsfile'
+
+    if (fileExists('/dev/kvm')) {
+        env.DOCKER_ARGS_COMMON += ' --device=/dev/kvm:/dev/kvm'
+    }
+
+    // Overwrite Gramine-specific seccomp policy because it conflicts with KVM requirements, see
+    // https://github.com/moby/moby/issues/42963 for details.
+    // FIXME: remove this line once seccomp policy is updated in core Gramine repo.
+    env.DOCKER_ARGS_COMMON += ' --security-opt seccomp=unconfined'
+
+    docker.build(
+        "local:${env.BUILD_TAG}",
+        '-f .ci/ubuntu22.04.dockerfile .'
+    ).inside("${env.DOCKER_ARGS_COMMON} ${env.DOCKER_ARGS_SGX}") {
+        load '.ci/lib/config.jenkinsfile'
+        load '.ci/lib/config-release.jenkinsfile'
+
+        load '.ci/lib/stage-lint.jenkinsfile'
+        load '.ci/lib/stage-clean-check-prepare.jenkinsfile'
+        load '.ci/lib/stage-build-sgx-vm.jenkinsfile'
+        load '.ci/lib/stage-test-vm.jenkinsfile'
+        load '.ci/lib/stage-clean-check.jenkinsfile'
+    }
+}
