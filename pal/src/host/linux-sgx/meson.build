@@ -122,6 +122,8 @@ libpal_sgx = shared_library('pal',
     dependencies: [
         common_dep,
         cryptoadapter_dep,
+        https_dep,
+        protected_files_dep,
     ],
 
     install: true,
