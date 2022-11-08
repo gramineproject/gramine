@@ -280,7 +280,10 @@ struct handle_ops g_dev_ops = {
  *  4. Sub-regions can be fixed-size (like the last sub-region containing two bytes `x` and `y`) or
  *     can be flexible-size (like the two strings). In the latter case, the `size` field contains a
  *     name of a sub-region where the actual size is stored. Note that this referenced sub-region
- *     must come *before* the sub-region with such flexible-size `size`.
+ *     must come *before* the sub-region with such flexible-size `size` -- real-world IOCTL structs
+ *     always put the size specifier before the buffer, either in the same memory region (e.g. as in
+ *     flexible array members in C) or in the "outer" memory region (e.g. a header struct with the
+ *     size specifier is the root memory region and the buffer is the nested memory region).
  *  5. Sub-regions that store the size of another sub-region must be less than or equal to 8 bytes
  *     in size.
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
@@ -358,9 +361,9 @@ struct sub_region {
     char* name;                     /* may be NULL for unnamed regions */
     struct dynamic_value array_len; /* array length of the sub-region (only for `ptr` regions) */
     size_t size;                    /* size of this sub-region */
-    uint64_t align;                 /* alignment of this sub-region */
-    uint64_t unit;                  /* total size in bytes calculated as `size * unit + adjust` */
+    size_t unit;                    /* total size in bytes calculated as `size * unit + adjust` */
     int64_t adjust;                 /* may be negative; used to adjust total size */
+    uint64_t align;                 /* alignment of this sub-region */
     void* enclave_addr;             /* base address of this sub region in enclave mem */
     void* untrusted_addr;           /* base address of corresponding sub region in untrusted mem */
     toml_array_t* toml_mem_region;  /* for pointers/arrays, specifies pointed-to mem region */
@@ -399,7 +402,15 @@ static int get_sub_region_idx(struct sub_region* all_sub_regions, size_t all_sub
 
 /* allocates a name string, it is responsibility of the caller to free it after use */
 static int get_sub_region_name(const toml_table_t* toml_sub_region, char** out_name) {
-    return toml_string_in(toml_sub_region, "name", out_name) < 0 ? -PAL_ERROR_INVAL : 0;
+    int ret = toml_string_in(toml_sub_region, "name", out_name);
+    if (ret < 0)
+        return -PAL_ERROR_INVAL;
+
+    if (*out_name && strcmp(*out_name, "root") == 0) {
+        log_error("IOCTL: memory sub-region cannot use name 'root' (it is reserved)");
+        return -PAL_ERROR_INVAL;
+    }
+    return 0;
 }
 
 static int get_sub_region_direction(const toml_table_t* toml_sub_region,
@@ -440,13 +451,13 @@ static int get_sub_region_align(const toml_table_t* toml_sub_region, uint64_t* o
     return 0;
 }
 
-static int get_sub_region_unit(const toml_table_t* toml_sub_region, uint64_t* out_unit) {
+static int get_sub_region_unit(const toml_table_t* toml_sub_region, size_t* out_unit) {
     int64_t unit;
     int ret = toml_int_in(toml_sub_region, "unit", /*defaultval=*/1, &unit);
     if (ret < 0 || unit <= 0)
         return -PAL_ERROR_INVAL;
 
-    *out_unit = (uint64_t)unit;
+    *out_unit = (size_t)unit;
     return 0;
 }
 
@@ -593,8 +604,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
     mem_regions[0].adjacent        = false;
     mem_regions_cnt++;
 
-    /* collecting memory regions and their sub-regions must use breadth-first search to dynamically
-     * calculate sizes of sub-regions even if they are specified via another sub-region's "name" */
+    /* collecting memory regions and their sub-regions must use top-to-bottom breadth-first search
+     * to dynamically calculate sizes of sub-regions even if they are specified via another
+     * sub-region's "name" */
     char* cur_enclave_addr = NULL;
     size_t mem_region_idx = 0;
     while (mem_region_idx < mem_regions_cnt) {
