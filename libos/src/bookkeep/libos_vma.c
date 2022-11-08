@@ -1570,5 +1570,8 @@ size_t get_peak_memory_usage(void) {
 }
 
 size_t get_total_memory_usage(void) {
-    return __atomic_load_n(&g_total_memory_size, __ATOMIC_RELAXED);
+    spinlock_lock(&vma_tree_lock);
+    size_t total_memory_size = g_total_memory_size;
+    spinlock_unlock(&vma_tree_lock);
+    return total_memory_size;
 }

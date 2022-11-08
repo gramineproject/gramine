@@ -451,19 +451,20 @@ static uint64_t get_thread_num(void) {
 int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    char comm[16] = "";
+    char comm[16] = {0};
     lock(&g_process.fs_lock);
     size_t name_length = g_process.exec->dentry->name_len;
     memcpy(comm, g_process.exec->dentry->name,
            name_length > sizeof(comm) - 1 ? sizeof(comm) - 1 : name_length);
     unlock(&g_process.fs_lock);
+    size_t vsize = get_total_memory_usage();
 
     size_t size = 0, max = 256;
     char* str = malloc(max);
     if (!str)
         return -ENOMEM;
 
-    /* print first 3 fields: pid, comm, state. */
+    /* Print first 3 fields: pid, comm, state. */
     int ret = snprintf(str, max, "%d (%s) R", g_process.pid, comm);
     if (ret < 0) {
         free(str);
@@ -514,14 +515,14 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         { " %ld", get_thread_num() },
 
         /* 21-30 */
-        /* itrealvalue */
-        { " %ld", /*dummy value=*/0 },
+        /* itrealvalue; always zero in Linux */
+        { " %ld", 0 },
         /* starttime */
         { " %llu", /*dummy value=*/0 },
         /* vsize */
-        { " %lu",  get_total_memory_usage() },
+        { " %lu", vsize },
         /* rss */
-        { " %ld", get_total_memory_usage() / PAGE_SIZE },
+        { " %lu", vsize / PAGE_SIZE },
         /* rsslim */
         { " %lu", /*dummy value=*/0 },
         /* startcode */
@@ -546,10 +547,10 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         { " %lu", /*dummy value=*/0 },
         /* wchan */
         { " %lu", /*dummy value=*/0 },
-        /* nswap */
-        { " %lu", /*dummy value=*/0 },
-        /* cnswap */
-        { " %lu", /*dummy value=*/0 },
+        /* nswap; always 0 */
+        { " %lu", 0 },
+        /* cnswap; always 0 */
+        { " %lu", 0 },
         /* exit_signal */
         { " %d", /*dummy value=*/0 },
         /* processor */
@@ -594,6 +595,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
             return ret;
         }
 
+        assert((size_t)ret < max);
         if (size + ret >= max) {
             max *= 2;
             size = 0;
