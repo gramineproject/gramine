@@ -69,4 +69,5 @@ cryptoadapter_dep = declare_dependency(
     ],
 )
 
+subdir('https')
 subdir('protected_files')
