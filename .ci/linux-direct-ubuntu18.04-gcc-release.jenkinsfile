@@ -7,7 +7,6 @@ node('nonsgx_slave') {
         '-f .ci/ubuntu18.04.dockerfile .'
     ).inside("${env.DOCKER_ARGS_COMMON}") {
         load '.ci/lib/config.jenkinsfile'
-        load '.ci/lib/config-ubuntu18.04.jenkinsfile'
         load '.ci/lib/config-release.jenkinsfile'
 
         load '.ci/lib/stage-lint.jenkinsfile'

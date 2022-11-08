@@ -7,7 +7,6 @@ node('nonsgx_slave') {
         '-f .ci/ubuntu20.04.dockerfile .'
     ).inside("${env.DOCKER_ARGS_COMMON}") {
         load '.ci/lib/config.jenkinsfile'
-        load '.ci/lib/config-ubuntu20.04.jenkinsfile'
         load '.ci/lib/config-clang.jenkinsfile'
         load '.ci/lib/config-debug.jenkinsfile'
         load '.ci/lib/config-ubsan.jenkinsfile'
