@@ -415,7 +415,6 @@ int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* o
             return ret;
         }
 
-        assert((size_t)ret < max);
         if (size + ret >= max) {
             max *= 2;
             size = 0;
@@ -473,6 +472,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         free(str);
         return ret;
     }
+    assert((size_t)ret < max);
     size += ret;
 
     struct {
@@ -525,7 +525,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         /* vsize */
         { " %lu", vsize },
         /* rss */
-        { " %lu", vsize / PAGE_SIZE },
+        { " %ld", vsize / PAGE_SIZE },
         /* rsslim */
         { " %lu", /*dummy value=*/0 },
         /* startcode */
@@ -598,7 +598,6 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
             return ret;
         }
 
-        assert((size_t)ret < max);
         if (size + ret >= max) {
             max *= 2;
             size = 0;
