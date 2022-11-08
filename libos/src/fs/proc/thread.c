@@ -375,6 +375,8 @@ int proc_thread_status_load(struct libos_dentry* dent, char** out_data, size_t* 
 int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
+    size_t vsize = get_total_memory_usage() / PAGE_SIZE;
+
     size_t size = 0, max = 64;
     size_t i = 0;
     char* str = malloc(max);
@@ -390,9 +392,9 @@ int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* o
         unsigned long val;
     } status[] = {
         /* size */
-        { "%lu", get_total_memory_usage() / PAGE_SIZE },
+        { "%lu", vsize },
         /* resident */
-        { " %lu", get_total_memory_usage() / PAGE_SIZE },
+        { " %lu", vsize },
         /* shared */
         { " %lu", /*dummy value=*/0 },
         /* text */
@@ -413,6 +415,7 @@ int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* o
             return ret;
         }
 
+        assert((size_t)ret < max);
         if (size + ret >= max) {
             max *= 2;
             size = 0;
