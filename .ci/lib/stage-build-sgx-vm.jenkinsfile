@@ -1,0 +1,93 @@
+stage('build') {
+    sh '''
+        # we add `/sbin` to PATH to find the `modprobe` program
+        export PATH="/sbin:$PATH"
+
+        git clone https://github.com/gramineproject/device-testing-tools.git
+        cd device-testing-tools
+        git checkout 096436b20eb5c314b6180e63eb6e6d4e7f31d1c8 # TODO: use `master` after PR merged
+
+        cd initramfs_builder
+        {
+           echo '#!/bin/sh'
+           echo 'if test -n $SGX; then GRAMINE=gramine-sgx; else GRAMINE=gramine-direct; fi'
+           echo 'cd $PWD_FOR_VM'
+           echo '( cd device-testing-tools/gramine-device-testing-module; insmod gramine-testing-dev.ko )'
+
+           # only couple tests -- executing in a VM with virtio-9p-pci FS passthrough is very slow
+           echo 'cd libos/test/regression'
+           echo 'gramine-test build helloworld; $GRAMINE helloworld'
+           echo 'gramine-test build device_ioctl; $GRAMINE device_ioctl'
+           echo 'echo "TESTS OK"'
+           echo 'poweroff -n -f'
+        } > new_init
+        make ${MAKEOPTS}
+
+        cd ../gramine-device-testing-module
+        make ${MAKEOPTS}
+    '''
+
+    env.MESON_OPTIONS = ''
+    if (env.UBSAN == '1') {
+        env.MESON_OPTIONS += ' -Dubsan=enabled'
+    }
+    if (env.ASAN == '1') {
+        env.MESON_OPTIONS += ' -Dasan=enabled'
+    }
+    if (env.CC == 'clang') {
+        env.MESON_OPTIONS += ' -Dmusl=disabled'
+    }
+
+    try {
+        // copy gramine_test_dev_ioctl.h device header for `device_ioctl` LibOS test
+        sh '''
+            cp -f device-testing-tools/gramine-device-testing-module/gramine_test_dev_ioctl.h \
+                libos/test/regression/
+        '''
+
+        sh '''
+            meson setup build/ \
+                --werror \
+                --prefix="$PREFIX" \
+                --buildtype="$BUILDTYPE" \
+                -Ddirect=disabled \
+                -Dsgx=enabled \
+                -Dtests=enabled \
+                -Dsgx_driver=upstream \
+                $MESON_OPTIONS
+            ninja -vC build/
+        '''
+
+        // install
+        sh '''
+            ninja -vC build/ install
+            gramine-sgx-gen-private-key
+        '''
+    } finally {
+        archiveArtifacts 'build/meson-logs/**/*'
+        archiveArtifacts 'build/subprojects/glibc-*/glibc-build.log'
+    }
+
+    // archive all installed files
+    // NOTE we can't use ${env.PREFIX} here, because path needs to be relative to workdir
+    archiveArtifacts "usr/**/*"
+
+    // Absolute path to libdir, as configured by Meson.
+    // For our current builds this should be "$WORKSPACE/usr/lib/x86_64-linux-gnu":
+    // --prefix is set from $PREFIX above (see config-docker.jenkinsfile) and should be "$WORKSPACE/usr";
+    // --libdir is distro-dependent, but on Debian and derivatives it's "lib/x86_64-linux-gnu"
+    libdir = sh(returnStdout: true, script: '''
+        meson introspect build/ --buildoptions \
+        | jq -r '(map(select(.name == "prefix")) + map(select(.name == "libdir"))) | map(.value) | join("/")'
+    ''').trim()
+
+    env.GRAMINE_PKGLIBDIR = libdir + '/gramine'
+
+    // In CI we install to non-standard --prefix (see above). This makes sure the libraries are
+    // available anyway (e.g. gramine-sgx-pf-crypt needs libsgx_util.so).
+    env.PKG_CONFIG_PATH = libdir + '/pkgconfig'
+
+    // prevent cheating and testing from repo
+    sh 'rm -rf build'
+    sh 'git clean -Xf subprojects'
+}

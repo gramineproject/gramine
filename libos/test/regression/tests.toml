@@ -137,3 +137,10 @@ manifests = [
 manifests = [
   "attestation",
 ]
+
+
+[vm]
+
+manifests = [
+  "device_ioctl",
+]

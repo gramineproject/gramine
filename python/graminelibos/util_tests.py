@@ -26,11 +26,12 @@ class TestConfig:
 
     `tests.toml` can have the following keys:
 
-    - `manifests`, `sgx.manifests`, `arch.[ARCH].manifests`: list of manifests to build
-      (for all hosts, SGX-only, [ARCH]-only)
+    - `manifests`, `sgx.manifests`, `vm.manifests`, `arch.[ARCH].manifests`: list of manifests to
+      build (for all hosts, SGX-only, VM-only (for device testing), [ARCH]-only)
 
-    - `manifests_cmd` (and same with `sgx.` and `arch.[ARCH].`): a shell command that prints out
-      manifests to build, in separate lines (used by LTP, where the list depends on enabled tests)
+    - `manifests_cmd` (and same with `sgx.`, `vm` and `arch.[ARCH].`): a shell command that prints
+      out manifests to build, in separate lines (used by LTP, where the list depends on enabled
+      tests)
 
     - `binary_dir`: path to test binaries, passed as `binary_dir` to manifest templates; expands
       @GRAMINE_PKGLIBDIR@ to library directory of Gramine's installation
@@ -57,6 +58,10 @@ class TestConfig:
 
         self.sgx_manifests = self.get_manifests(data.get('sgx', {}))
 
+        self.vm_manifests = []
+        if os.environ.get('IS_VM') == '1':
+            self.vm_manifests = self.get_manifests(data.get('vm', {}))
+
         self.binary_dir = data.get('binary_dir', '.').replace(
             '@GRAMINE_PKGLIBDIR@', _CONFIG_PKGLIBDIR)
 
@@ -79,7 +84,7 @@ class TestConfig:
         if not self.key:
             self.key = os.fspath(_SGX_RSA_KEY_PATH)
 
-        self.all_manifests = self.manifests + self.sgx_manifests
+        self.all_manifests = self.manifests + self.sgx_manifests + self.vm_manifests
 
     @staticmethod
     def get_manifests(data):
