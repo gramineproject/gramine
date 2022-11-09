@@ -280,10 +280,11 @@ struct handle_ops g_dev_ops = {
  *  4. Sub-regions can be fixed-size (like the last sub-region containing two bytes `x` and `y`) or
  *     can be flexible-size (like the two strings). In the latter case, the `size` field contains a
  *     name of a sub-region where the actual size is stored. Note that this referenced sub-region
- *     must come *before* the sub-region with such flexible-size `size` -- real-world IOCTL structs
- *     always put the size specifier before the buffer, either in the same memory region (e.g. as in
- *     flexible array members in C) or in the "outer" memory region (e.g. a header struct with the
- *     size specifier is the root memory region and the buffer is the nested memory region).
+ *     must come *before* the sub-region with such flexible-size `size` -- TOML representations of
+ *     typical IOCTL structs always have the size specifier in a sub-region found before the buffer
+ *     sub-region, either in the same memory region (e.g. as in flexible array members in C) or in
+ *     the "outer" memory region (e.g. the size specifier is located in the root memory region and
+ *     the buffer is located in the nested memory region).
  *  5. Sub-regions that store the size of another sub-region must be less than or equal to 8 bytes
  *     in size.
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
