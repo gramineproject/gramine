@@ -375,7 +375,7 @@ int proc_thread_status_load(struct libos_dentry* dent, char** out_data, size_t* 
 int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t vsize = get_total_memory_usage() / PAGE_SIZE;
+    size_t virtual_mem_size_in_pages = get_total_memory_usage() / PAGE_SIZE;
 
     size_t size = 0, max = 64;
     size_t i = 0;
@@ -392,9 +392,9 @@ int proc_thread_statm_load(struct libos_dentry* dent, char** out_data, size_t* o
         unsigned long val;
     } status[] = {
         /* size */
-        { "%lu", vsize },
+        { "%lu", virtual_mem_size_in_pages },
         /* resident */
-        { " %lu", vsize },
+        { " %lu", virtual_mem_size_in_pages },
         /* shared */
         { " %lu", /*dummy value=*/0 },
         /* text */
@@ -459,7 +459,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
     memcpy(comm, g_process.exec->dentry->name,
            name_length > sizeof(comm) - 1 ? sizeof(comm) - 1 : name_length);
     unlock(&g_process.fs_lock);
-    size_t vsize = get_total_memory_usage();
+    size_t virtual_mem_size = get_total_memory_usage();
 
     size_t size = 0, max = 256;
     char* str = malloc(max);
@@ -523,9 +523,9 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         /* starttime */
         { " %llu", /*dummy value=*/0 },
         /* vsize */
-        { " %lu", vsize },
+        { " %lu", virtual_mem_size },
         /* rss */
-        { " %ld", vsize / PAGE_SIZE },
+        { " %lu", virtual_mem_size / PAGE_SIZE },
         /* rsslim */
         { " %lu", /*dummy value=*/0 },
         /* startcode */
