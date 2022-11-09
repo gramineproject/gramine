@@ -733,6 +733,21 @@ static long sgx_ocall_get_quote(void* args) {
                           &ocall_quote_args->quote_len);
 }
 
+static long sgx_ocall_edmm_modify_pages_type(void* _args) {
+    struct ocall_edmm_modify_pages_type* args = _args;
+    return edmm_modify_pages_type(args->addr, args->count, args->type);
+}
+
+static long sgx_ocall_edmm_remove_pages(void* _args) {
+    struct ocall_edmm_remove_pages* args = _args;
+    return edmm_remove_pages(args->addr, args->count);
+}
+
+static long sgx_ocall_edmm_restrict_pages_perm(void* _args) {
+    struct ocall_edmm_restrict_pages_perm* args = _args;
+    return edmm_restrict_pages_perms(args->addr, args->count, args->prot);
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -779,6 +794,9 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_DEBUG_DESCRIBE_LOCATION]  = sgx_ocall_debug_describe_location,
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
+    [OCALL_EDMM_MODIFY_PAGES_TYPE]   = sgx_ocall_edmm_modify_pages_type,
+    [OCALL_EDMM_REMOVE_PAGES]        = sgx_ocall_edmm_remove_pages,
+    [OCALL_EDMM_RESTRICT_PAGES_PERM] = sgx_ocall_edmm_restrict_pages_perm,
 };
 
 static int rpc_thread_loop(void* arg) {

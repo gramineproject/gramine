@@ -28,6 +28,7 @@ struct ecall_enclave_start {
     sgx_target_info_t*        qe_targetinfo;
     struct pal_topo_info*     topo_info;
     struct pal_dns_host_conf* dns_host_conf;
+    unsigned char             edmm_enabled;
     void*                     reserved_mem_ranges;
     size_t                    reserved_mem_ranges_size;
 

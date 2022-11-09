@@ -174,7 +174,7 @@ static int load_enclave_binary(sgx_arch_secs_t* secs, int fd, unsigned long base
 
             ret = add_pages_to_enclave(secs, (void*)base + c->mapstart, addr,
                                        c->mapend - c->mapstart,
-                                       SGX_PAGE_REG, c->prot, /*skip_eextend=*/false,
+                                       SGX_PAGE_TYPE_REG, c->prot, /*skip_eextend=*/false,
                                        (c->prot & PROT_EXEC) ? "code" : "data");
 
             DO_SYSCALL(munmap, addr, c->mapend - c->mapstart);
@@ -185,7 +185,7 @@ static int load_enclave_binary(sgx_arch_secs_t* secs, int fd, unsigned long base
 
         if (zeroend > zeropage) {
             ret = add_pages_to_enclave(secs, (void*)base + zeropage, NULL, zeroend - zeropage,
-                                       SGX_PAGE_REG, c->prot, false, "bss");
+                                       SGX_PAGE_TYPE_REG, c->prot, false, "bss");
             if (ret < 0)
                 goto out;
         }
@@ -362,7 +362,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                         .addr         = 0,
                                         .size         = ALLOC_ALIGN_UP(manifest_size),
                                         .prot         = PROT_READ,
-                                        .type         = SGX_PAGE_REG};
+                                        .type         = SGX_PAGE_TYPE_REG};
     area_num++;
 
     areas[area_num] =
@@ -373,7 +373,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                           .size         = enclave->thread_num * enclave->ssa_frame_size *
                                               SSA_FRAME_NUM,
                           .prot         = PROT_READ | PROT_WRITE,
-                          .type         = SGX_PAGE_REG};
+                          .type         = SGX_PAGE_TYPE_REG};
     struct mem_area* ssa_area = &areas[area_num++];
 
     areas[area_num] = (struct mem_area){.desc = "tcs",
@@ -382,7 +382,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                         .addr         = 0,
                                         .size         = enclave->thread_num * g_page_size,
                                         .prot         = PROT_READ | PROT_WRITE,
-                                        .type         = SGX_PAGE_TCS};
+                                        .type         = SGX_PAGE_TYPE_TCS};
     struct mem_area* tcs_area = &areas[area_num++];
 
     areas[area_num] = (struct mem_area){.desc         = "tls",
@@ -391,7 +391,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                         .addr         = 0,
                                         .size         = enclave->thread_num * g_page_size,
                                         .prot         = PROT_READ | PROT_WRITE,
-                                        .type         = SGX_PAGE_REG};
+                                        .type         = SGX_PAGE_TYPE_REG};
     struct mem_area* tls_area = &areas[area_num++];
 
     struct mem_area* stack_areas = &areas[area_num]; /* memorize for later use */
@@ -402,7 +402,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                             .addr         = 0,
                                             .size         = ENCLAVE_STACK_SIZE,
                                             .prot         = PROT_READ | PROT_WRITE,
-                                            .type         = SGX_PAGE_REG};
+                                            .type         = SGX_PAGE_TYPE_REG};
         area_num++;
     }
 
@@ -414,7 +414,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                             .addr         = 0,
                                             .size         = ENCLAVE_SIG_STACK_SIZE,
                                             .prot         = PROT_READ | PROT_WRITE,
-                                            .type         = SGX_PAGE_REG};
+                                            .type         = SGX_PAGE_TYPE_REG};
         area_num++;
     }
 
@@ -424,7 +424,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                         .fd           = enclave_image,
                                         /* `addr` and `size` are set below */
                                         .prot         = 0,
-                                        .type         = SGX_PAGE_REG};
+                                        .type         = SGX_PAGE_TYPE_REG};
     struct mem_area* pal_area = &areas[area_num++];
 
     ret = scan_enclave_binary(enclave_image, &pal_area->addr, &pal_area->size, &enclave_entry_addr);
@@ -451,7 +451,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                             .addr         = enclave_heap_min,
                                             .size         = last_populated_addr - enclave_heap_min,
                                             .prot         = PROT_READ | PROT_WRITE | PROT_EXEC,
-                                            .type         = SGX_PAGE_REG};
+                                            .type         = SGX_PAGE_TYPE_REG};
         free_area = &areas[area_num++];
     }
 
@@ -463,6 +463,12 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 log_error("Loading enclave binary failed: %d", ret);
                 goto out;
             }
+            continue;
+        }
+
+        if (areas[i].skip_eextend && enclave->edmm_enabled) {
+            assert(areas[i].data_src == ZERO);
+            /* If EDMM is enabled, no need to add non-measured zero pages. */
             continue;
         }
 
@@ -603,7 +609,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 #endif
 
 #ifdef ASAN
-    if (free_area)
+    if (free_area && !enclave->edmm_enabled)
         asan_poison_region(free_area->addr, free_area->size, ASAN_POISON_USER);
 #else
     __UNUSED(free_area);
@@ -652,6 +658,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
                              &enclave_info->size);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.enclave_size'");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_bool_in(manifest_root, "sgx.edmm_enable", /*defaultval=*/false,
+                       &enclave_info->edmm_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.edmm_enable'");
         ret = -EINVAL;
         goto out;
     }
@@ -1037,8 +1051,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
-                        &qe_targetinfo, &topo_info, &dns_conf, reserved_mem_ranges,
-                        reserved_mem_ranges_size);
+                        &qe_targetinfo, &topo_info, &dns_conf, enclave->edmm_enabled,
+                        reserved_mem_ranges, reserved_mem_ranges_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
