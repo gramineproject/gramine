@@ -130,6 +130,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         flags &= ~MAP_32BIT;
 #endif
 
+    bool overwriting = false;
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
         if (addr < g_pal_public_state->memory_address_start
@@ -144,7 +145,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                 goto out_handle;
             }
         }
-        ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+        ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, /*comment=*/NULL,
+                               &overwriting);
         if (ret < 0) {
             goto out_handle;
         }
@@ -170,6 +172,15 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     }
 
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
+
+    if (overwriting) {
+        ret = PalVirtualMemoryFree(addr, length);
+        if (ret < 0) {
+            ret = pal_to_unix_errno(ret);
+            log_error("%s(MAP_FIXED): failed to free previous memory: %ld", __func__, ret);
+            die_or_inf_loop();
+        }
+    }
 
     if (!hdl) {
         ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
