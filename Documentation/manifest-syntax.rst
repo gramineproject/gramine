@@ -824,16 +824,14 @@ keys:
   ``ptr`` field is specified for this sub-region (pointer sub-regions contain
   the pointer value which will be unconditionally rewired to point to untrusted
   memory).
-- ``ptr = inlined-memory-region`` or ``ptr = "another-ptr-sub-region"``
+- ``ptr = inlined-memory-region`` or ``ptr = "another-ioctl-struct"``
   specifies a pointer to another, nested memory region. This field is required
   when describing complex IOCTL structs. Such pointer memory region always has
   the implicit size of 8B, and the pointer value is always rewired to the memory
   region in untrusted memory (containing a corresponding nested memory region).
   If ``ptr`` is specified together with ``array_len``, it describes an array of
   these memory regions. (In other words, ``ptr`` is an array of memory regions
-  with ``array_len = 1`` by default.) A special keyword ``ptr = "root"``
-  specifies a pointer to the memory region of the IOCTL struct's root memory
-  layout.
+  with ``array_len = 1`` by default.)
 
 Consider this simple C snippet::
 

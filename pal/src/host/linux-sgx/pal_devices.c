@@ -403,16 +403,7 @@ static int get_sub_region_idx(struct sub_region* all_sub_regions, size_t all_sub
 
 /* allocates a name string, it is responsibility of the caller to free it after use */
 static int get_sub_region_name(const toml_table_t* toml_sub_region, char** out_name) {
-    int ret = toml_string_in(toml_sub_region, "name", out_name);
-    if (ret < 0)
-        return -PAL_ERROR_INVAL;
-
-    if (*out_name && strcmp(*out_name, "root") == 0) {
-        log_error("IOCTL: memory sub-region cannot use name 'root' (it is reserved)");
-        free(*out_name);
-        return -PAL_ERROR_INVAL;
-    }
-    return 0;
+    return toml_string_in(toml_sub_region, "name", out_name) < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
 static int get_sub_region_direction(const toml_table_t* toml_sub_region,
@@ -468,46 +459,39 @@ static int get_sub_region_adjust(const toml_table_t* toml_sub_region, int64_t* o
     return ret < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
-static int get_toml_mem_region(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
-                              toml_array_t* root_toml_mem_region, toml_table_t* toml_sub_region,
-                              toml_array_t** out_toml_mem_region) {
+static int get_toml_mem_region(toml_table_t* toml_sub_region, toml_array_t** out_toml_mem_region) {
     toml_array_t* toml_mem_region = toml_array_in(toml_sub_region, "ptr");
     if (toml_mem_region) {
         *out_toml_mem_region = toml_mem_region;
         return 0;
     }
 
-    char* sub_region_name;
-    int ret = toml_string_in(toml_sub_region, "ptr", &sub_region_name);
+    char* ioctl_struct_str;
+    int ret = toml_string_in(toml_sub_region, "ptr", &ioctl_struct_str);
     if (ret < 0)
         return -PAL_ERROR_INVAL;
 
-    if (!sub_region_name) {
+    if (!ioctl_struct_str) {
         *out_toml_mem_region = NULL;
         return 0;
     }
 
-    if (!strcmp(sub_region_name, "root")) {
-        *out_toml_mem_region = root_toml_mem_region;
-        ret = 0;
+    /* since we're in this function, we are parsing sgx.ioctl_structs list, so we know it exists */
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
+    assert(manifest_sgx);
+    toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sgx, "ioctl_structs");
+    assert(toml_ioctl_structs);
+
+    toml_mem_region = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
+    if (!toml_mem_region || toml_array_nelem(toml_mem_region) <= 0) {
+        ret = -PAL_ERROR_NOTDEFINED;
         goto out;
     }
 
-    size_t found_idx;
-    ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
-    if (ret < 0) {
-        goto out;
-    }
-
-    if (!all_sub_regions[found_idx].toml_mem_region) {
-        ret = -PAL_ERROR_DENIED;
-        goto out;
-    }
-
-    *out_toml_mem_region = all_sub_regions[found_idx].toml_mem_region;
+    *out_toml_mem_region = toml_mem_region;
     ret = 0;
 out:
-    free(sub_region_name);
+    free(ioctl_struct_str);
     return ret;
 }
 
@@ -709,8 +693,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            ret = get_toml_mem_region(sub_regions, sub_regions_cnt, root_toml_mem_region,
-                                      toml_sub_region, &cur_sub_region->toml_mem_region);
+            ret = get_toml_mem_region(toml_sub_region, &cur_sub_region->toml_mem_region);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'ptr' field failed");
                 goto out;
