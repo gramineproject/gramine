@@ -9,6 +9,7 @@
 #define __packed __attribute__((packed))
 #endif
 
+#include <asm/ioctl.h>
 #include <linux/stddef.h>
 #include <linux/types.h>
 
@@ -49,3 +50,35 @@
 #ifndef SGX_INVALID_CPUSVN
 #define SGX_INVALID_CPUSVN      32
 #endif
+
+#ifndef SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS
+#define SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS \
+    _IOWR(SGX_MAGIC, 0x05, struct sgx_enclave_restrict_permissions)
+struct sgx_enclave_restrict_permissions {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t permissions;
+    uint64_t result;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS
+
+#ifndef SGX_IOC_ENCLAVE_MODIFY_TYPES
+#define SGX_IOC_ENCLAVE_MODIFY_TYPES _IOWR(SGX_MAGIC, 0x06, struct sgx_enclave_modify_types)
+struct sgx_enclave_modify_types {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t page_type;
+    uint64_t result;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_MODIFY_TYPES
+
+#ifndef SGX_IOC_ENCLAVE_REMOVE_PAGES
+#define SGX_IOC_ENCLAVE_REMOVE_PAGES _IOWR(SGX_MAGIC, 0x07, struct sgx_enclave_remove_pages)
+struct sgx_enclave_remove_pages {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_REMOVE_PAGES

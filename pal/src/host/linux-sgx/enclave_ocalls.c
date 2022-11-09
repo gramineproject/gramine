@@ -2261,3 +2261,98 @@ out:
     sgx_reset_ustack(old_ustack);
     return retval;
 }
+
+int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+
+    struct ocall_edmm_restrict_pages_perm* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ocall_args->addr, addr);
+    WRITE_ONCE(ocall_args->count, count);
+    WRITE_ONCE(ocall_args->prot, prot);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_EDMM_RESTRICT_PAGES_PERM, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0) {
+        if (ret != -EINVAL && ret != -EPERM && ret != -EFAULT) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+
+    ret = 0;
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+
+    struct ocall_edmm_modify_pages_type* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ocall_args->addr, addr);
+    WRITE_ONCE(ocall_args->count, count);
+    WRITE_ONCE(ocall_args->type, type);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_EDMM_MODIFY_PAGES_TYPE, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0) {
+        if (ret != -EINVAL && ret != -EPERM && ret != -EFAULT) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+
+    ret = 0;
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+int ocall_edmm_remove_pages(uint64_t addr, size_t count) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+
+    struct ocall_edmm_remove_pages* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ocall_args->addr, addr);
+    WRITE_ONCE(ocall_args->count, count);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_EDMM_REMOVE_PAGES, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0) {
+        if (ret != -EINVAL && ret != -EPERM && ret != -EFAULT) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+
+    ret = 0;
+
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
