@@ -27,7 +27,7 @@ int ipc_get_new_vmid(IDTYPE* vmid) {
     }
     init_ipc_msg(msg, IPC_MSG_GET_NEW_VMID, msg_size);
 
-    log_debug("%s: sending a request", __func__);
+    log_debug("sending a request");
 
     void* resp = NULL;
     int ret = ipc_send_msg_and_get_response(g_process_ipc_ids.leader_vmid, msg, &resp);
@@ -37,7 +37,7 @@ int ipc_get_new_vmid(IDTYPE* vmid) {
 
     *vmid = *(IDTYPE*)resp;
     ret = 0;
-    log_debug("%s: got a response: %u", __func__, *vmid);
+    log_debug("got a response: %u", *vmid);
 
 out:
     free(resp);
@@ -49,7 +49,7 @@ int ipc_get_new_vmid_callback(IDTYPE src, void* data, uint64_t seq) {
     __UNUSED(data);
     IDTYPE vmid = get_next_vmid();
 
-    log_debug("%s: %u", __func__, vmid);
+    log_debug("vmid: %u", vmid);
 
     size_t msg_size = get_ipc_msg_size(sizeof(vmid));
     struct libos_ipc_msg* msg = __alloca(msg_size);

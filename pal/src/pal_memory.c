@@ -285,8 +285,7 @@ static int initial_mem_free(uintptr_t addr, size_t size) {
     }
     ret = _PalVirtualMemoryFree((void*)addr, size);
     if (ret < 0) {
-        log_error("%s: failed to free initial PAL internal memory: %s", __func__,
-                  pal_strerror(ret));
+        log_error("failed to free initial PAL internal memory: %s", pal_strerror(ret));
         _PalProcessExit(1);
     }
     return 0;
@@ -299,8 +298,7 @@ int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr) {
 
     int ret = g_mem_bkeep_alloc_upcall(size, out_addr);
     if (ret < 0) {
-        log_warning("%s: failed to bookkeep PAL internal memory: %s", __func__,
-                    unix_strerror(ret));
+        log_warning("failed to bookkeep PAL internal memory: %s", unix_strerror(ret));
         return -PAL_ERROR_NOMEM;
     }
     return 0;
@@ -318,12 +316,11 @@ int pal_internal_memory_alloc(size_t size, void** out_addr) {
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         if (!g_mem_bkeep_alloc_upcall) {
-            log_error("%s: failed to allocate initial PAL internal memory: %s", __func__,
-                      pal_strerror(ret));
+            log_error("failed to allocate initial PAL internal memory: %s", pal_strerror(ret));
             _PalProcessExit(1);
         }
 
-        log_warning("%s: failed to allocate PAL internal memory: %s", __func__, pal_strerror(ret));
+        log_warning("failed to allocate PAL internal memory: %s", pal_strerror(ret));
         ret = g_mem_bkeep_free_upcall(addr, size);
         if (ret < 0) {
             BUG();
@@ -344,12 +341,12 @@ int pal_internal_memory_free(void* addr, size_t size) {
 
     int ret = _PalVirtualMemoryFree(addr, size);
     if (ret < 0) {
-        log_warning("%s: failed to free PAL internal memory: %s", __func__, pal_strerror(ret));
+        log_warning("failed to free PAL internal memory: %s", pal_strerror(ret));
         return ret;
     }
     ret = g_mem_bkeep_free_upcall((uintptr_t)addr, size);
     if (ret < 0) {
-        log_error("%s: failed to release PAL internal memory: %s", __func__, unix_strerror(ret));
+        log_error("failed to release PAL internal memory: %s", unix_strerror(ret));
         _PalProcessExit(1);
     }
     return 0;
