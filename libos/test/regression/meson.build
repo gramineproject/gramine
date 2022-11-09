@@ -1,3 +1,5 @@
+fs = import('fs')
+
 tests = {
     'abort': {},
     'abort_multithread': {},
@@ -140,6 +142,11 @@ if host_machine.cpu_family() == 'x86_64'
         'rdtsc': {},
         'sighandler_divbyzero': {},
     }
+endif
+
+# device_ioctl test may only be executed in a VM environment that prepares the below header file
+if fs.exists('gramine_test_dev_ioctl.h')
+    tests += { 'device_ioctl': {} }
 endif
 
 tests_musl = tests
