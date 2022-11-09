@@ -142,6 +142,12 @@ if host_machine.cpu_family() == 'x86_64'
     }
 endif
 
+# device_ioctl test may only be executed in a VM environment that prepares the below header file
+fs = import('fs')
+if fs.exists('gramine_test_dev_ioctl.h')
+    tests += { 'device_ioctl': {} }
+endif
+
 tests_musl = tests
 
 if host_machine.cpu_family() == 'x86_64'
