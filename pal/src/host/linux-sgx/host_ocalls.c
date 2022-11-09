@@ -329,7 +329,7 @@ static long sgx_ocall_bind(void* args) {
                    sizeof(ocall_bind_args->new_port));
             break;
         default:
-            log_error("%s: unknown address family: %d", __func__, addr.ss_family);
+            log_error("unknown address family: %d", addr.ss_family);
             DO_SYSCALL(exit_group, 1);
             die_or_inf_loop();
     }

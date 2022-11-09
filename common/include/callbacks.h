@@ -45,7 +45,8 @@
  *
  * Used by `log_*` macros in `log.h`.
  */
-void _log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+void _log(int level, const char* file, const char* func, uint64_t line,
+          const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
 /*
  * Terminate the process. Should perform an equivalent of `_exit(ENOTRECOVERABLE)`.

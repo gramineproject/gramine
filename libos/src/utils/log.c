@@ -81,9 +81,13 @@ static int buf_write_all(const char* str, size_t size, void* arg) {
     return 0;
 }
 
-void libos_log(int level, const char* fmt, ...) {
+void libos_log(int level, const char* file, const char* func, uint64_t line, const char* fmt, ...) {
     if (level <= g_log_level) {
         struct print_buf buf = INIT_PRINT_BUF(buf_write_all);
+
+        if (LOG_LEVEL_DEBUG <= g_log_level) {
+            buf_printf(&buf, "(%s:%lu:%s) ", file, line, func);
+        }
 
         buf_puts(&buf, libos_get_tcb()->log_prefix);
         buf_puts(&buf, log_level_to_prefix[level]);

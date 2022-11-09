@@ -381,8 +381,7 @@ again:
             int tmp_ret = PalStreamAttributesQueryByHandle(pal_handle, &attr);
             if (tmp_ret < 0) {
                 unlock(&handle->lock);
-                log_error("%s: nonblocking restore: failed to get handle attrs: %s", __func__,
-                          pal_strerror(tmp_ret));
+                log_error("nonblocking restore: failed to get handle attrs: %s", pal_strerror(tmp_ret));
                 PalProcessExit(1);
             }
             assert(attr.nonblocking);
@@ -390,8 +389,7 @@ again:
             tmp_ret = PalStreamAttributesSetByHandle(pal_handle, &attr);
             if (tmp_ret < 0) {
                 unlock(&handle->lock);
-                log_error("%s: nonblocking restore: failed to set handle attrs: %s", __func__,
-                          pal_strerror(tmp_ret));
+                log_error("nonblocking restore: failed to set handle attrs: %s", pal_strerror(tmp_ret));
                 PalProcessExit(1);
             }
         }

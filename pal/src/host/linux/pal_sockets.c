@@ -44,7 +44,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
         int len = sizeof(val);
         int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_RCVBUF, &val, &len);
         if (ret < 0) {
-            log_error("%s: getsockopt SO_RCVBUF failed: %s", __func__, unix_strerror(ret));
+            log_error("getsockopt SO_RCVBUF failed: %s", unix_strerror(ret));
             free(handle);
             return NULL;
         }
@@ -58,7 +58,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
         int len = sizeof(val);
         int ret = DO_SYSCALL(getsockopt, fd, SOL_SOCKET, SO_SNDBUF, &val, &len);
         if (ret < 0) {
-            log_error("%s: getsockopt SO_SNDBUF failed: %s", __func__, unix_strerror(ret));
+            log_error("getsockopt SO_SNDBUF failed: %s", unix_strerror(ret));
             free(handle);
             return NULL;
         }
@@ -131,7 +131,7 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     if (!handle) {
         int ret = DO_SYSCALL(close, fd);
         if (ret < 0) {
-            log_error("%s:%d closing socket fd failed: %s", __func__, __LINE__, unix_strerror(ret));
+            log_error("closing socket fd failed: %s", unix_strerror(ret));
         }
         return -PAL_ERROR_NOMEM;
     }
@@ -143,7 +143,7 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
 static int close(PAL_HANDLE handle) {
     int ret = DO_SYSCALL(close, handle->sock.fd);
     if (ret < 0) {
-        log_error("%s: closing socket fd failed: %s", __func__, unix_strerror(ret));
+        log_error("closing socket fd failed: %s", unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
     return 0;
@@ -233,7 +233,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
     if (!client) {
         int ret = DO_SYSCALL(close, fd);
         if (ret < 0) {
-            log_error("%s:%d closing socket fd failed: %s", __func__, __LINE__, unix_strerror(ret));
+            log_error("closing socket fd failed: %s", unix_strerror(ret));
         }
         return -PAL_ERROR_NOMEM;
     }

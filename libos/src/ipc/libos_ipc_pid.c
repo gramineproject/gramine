@@ -250,7 +250,7 @@ int ipc_alloc_id_range(IDTYPE* out_start, IDTYPE* out_end) {
     }
     init_ipc_msg(msg, IPC_MSG_ALLOC_ID_RANGE, msg_size);
 
-    log_debug("%s: sending a request", __func__);
+    log_debug("sending a request");
 
     void* resp = NULL;
     int ret = ipc_send_msg_and_get_response(g_process_ipc_ids.leader_vmid, msg, &resp);
@@ -267,7 +267,7 @@ int ipc_alloc_id_range(IDTYPE* out_start, IDTYPE* out_end) {
         ret = -EAGAIN;
     }
 
-    log_debug("%s: got a response: [%u..%u]", __func__, range->start, range->end);
+    log_debug("got a response: [%u..%u]", range->start, range->end);
 
 out:
     free(resp);
@@ -285,7 +285,7 @@ int ipc_alloc_id_range_callback(IDTYPE src, void* data, uint64_t seq) {
         end = 0;
     }
 
-    log_debug("%s: %d (%s)", __func__, ret, unix_strerror(ret));
+    log_debug("alloc_id_range: %s", unix_strerror(ret));
 
     struct ipc_id_range_msg range = {
         .start = start,
@@ -317,10 +317,10 @@ int ipc_release_id_range(IDTYPE start, IDTYPE end) {
     init_ipc_msg(msg, IPC_MSG_RELEASE_ID_RANGE, msg_size);
     memcpy(&msg->data, &range, sizeof(range));
 
-    log_debug("%s: sending a request: [%u..%u]", __func__, start, end);
+    log_debug("sending a request: [%u..%u]", start, end);
 
     int ret = ipc_send_message(g_process_ipc_ids.leader_vmid, msg);
-    log_debug("%s: ipc_send_message: %s", __func__, unix_strerror(ret));
+    log_debug("ipc_send_message: %s", unix_strerror(ret));
     free(msg);
     return ret;
 }
@@ -330,7 +330,7 @@ int ipc_release_id_range_callback(IDTYPE src, void* data, uint64_t seq) {
     __UNUSED(seq);
     struct ipc_id_range_msg* range = data;
     release_id_range(range->start, range->end);
-    log_debug("%s: release_id_range(%u..%u)", __func__, range->start, range->end);
+    log_debug("release_id_range(%u..%u)", range->start, range->end);
     return 0;
 }
 
@@ -351,10 +351,10 @@ int ipc_change_id_owner(IDTYPE id, IDTYPE new_owner) {
     init_ipc_msg(msg, IPC_MSG_CHANGE_ID_OWNER, msg_size);
     memcpy(&msg->data, &owner_msg, sizeof(owner_msg));
 
-    log_debug("%s: sending a request (%u, %u)", __func__, id, new_owner);
+    log_debug("sending a request (%u, %u)", id, new_owner);
 
     int ret = ipc_send_msg_and_get_response(g_process_ipc_ids.leader_vmid, msg, /*resp=*/NULL);
-    log_debug("%s: ipc_send_msg_and_get_response: %s", __func__, unix_strerror(ret));
+    log_debug("ipc_send_msg_and_get_response: %s", unix_strerror(ret));
     free(msg);
     return ret;
 }
@@ -362,8 +362,7 @@ int ipc_change_id_owner(IDTYPE id, IDTYPE new_owner) {
 int ipc_change_id_owner_callback(IDTYPE src, void* data, uint64_t seq) {
     struct ipc_id_owner_msg* owner_msg = data;
     int ret = change_id_owner(owner_msg->id, owner_msg->owner);
-    log_debug("%s: change_id_owner(%u, %u): %s", __func__, owner_msg->id, owner_msg->owner,
-              unix_strerror(ret));
+    log_debug("change_id_owner(%u, %u): %s", owner_msg->id, owner_msg->owner, unix_strerror(ret));
     if (ret < 0) {
         return ret;
     }
@@ -389,7 +388,7 @@ int ipc_get_id_owner(IDTYPE id, IDTYPE* out_owner) {
     init_ipc_msg(msg, IPC_MSG_GET_ID_OWNER, msg_size);
     memcpy(&msg->data, &id, sizeof(id));
 
-    log_debug("%s: sending a request: %u", __func__, id);
+    log_debug("sending a request: %u", id);
 
     void* resp = NULL;
     int ret = ipc_send_msg_and_get_response(g_process_ipc_ids.leader_vmid, msg, &resp);
@@ -400,7 +399,7 @@ int ipc_get_id_owner(IDTYPE id, IDTYPE* out_owner) {
     *out_owner = *(IDTYPE*)resp;
     ret = 0;
 
-    log_debug("%s: got a response: %u", __func__, *out_owner);
+    log_debug("got a response: %u", *out_owner);
 
 out:
     free(resp);
@@ -411,7 +410,7 @@ out:
 int ipc_get_id_owner_callback(IDTYPE src, void* data, uint64_t seq) {
     IDTYPE* id = data;
     IDTYPE owner = find_id_owner(*id);
-    log_debug("%s: find_id_owner(%u): %u", __func__, *id, owner);
+    log_debug("find_id_owner(%u): %u", *id, owner);
 
     size_t msg_size = get_ipc_msg_size(sizeof(owner));
     struct libos_ipc_msg* msg = __alloca(msg_size);

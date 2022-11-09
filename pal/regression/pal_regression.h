@@ -7,7 +7,6 @@
 #include "pal_error.h"
 
 void __attribute__((format(printf, 1, 2))) pal_printf(const char* fmt, ...);
-void __attribute__((format(printf, 2, 3))) _log(int level, const char* fmt, ...);
 
 #define CHECK(x) ({                                                     \
     __typeof__(x) _x = (x);                                             \
