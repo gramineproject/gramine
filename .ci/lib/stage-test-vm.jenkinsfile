@@ -1,0 +1,25 @@
+stage('test') {
+    // prepare files to pass current work dir and envvars into VM
+    sh '''
+        mkdir -p files_for_vm
+        echo $PWD > files_for_vm/pwd
+
+        touch files_for_vm/envs
+        echo "export SGX=$SGX" >> files_for_vm/envs
+        echo "export IS_VM=$IS_VM" >> files_for_vm/envs
+
+        echo "export PATH=\"$PATH\"" >> files_for_vm/envs
+        echo "export PKG_CONFIG_PATH=\"$PKG_CONFIG_PATH\"" >> files_for_vm/envs
+        echo "export PYTHONPATH=\"$PYTHONPATH\"" >> files_for_vm/envs
+        echo "export GRAMINE_PKGLIBDIR=\"$GRAMINE_PKGLIBDIR\"" >> files_for_vm/envs
+        echo "export XDG_CONFIG_HOME=\"$XDG_CONFIG_HOME\"" >> files_for_vm/envs
+    '''
+
+    timeout(time: 15, unit: 'MINUTES') {
+        sh '''
+            cd device-testing-tools/initramfs_builder
+            ./run.sh | tee OUTPUT
+            grep "TESTS OK" OUTPUT
+        '''
+    }
+}

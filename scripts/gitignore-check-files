@@ -5,7 +5,7 @@ set -eu -o pipefail
 # Intended to be run before a build. Returns 1 (i.e. failure) if there's at
 # least one file that should be ignored.
 
-files="$(git ls-files -i --exclude-standard)"
+files="$(git ls-files -i -o --exclude-standard)"
 if [ -z "${files}" ]; then
     exit 0
 fi
