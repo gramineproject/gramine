@@ -31,7 +31,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
 
     size_t count;
     struct libos_vma_info* vmas;
-    ret = dump_all_vmas(&vmas, &count, /*include_unmapped=*/true);
+    ret = dump_all_vmas(/*include_unmapped=*/true, &vmas, &count);
     if (ret < 0) {
         goto error;
     }

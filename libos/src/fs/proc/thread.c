@@ -54,7 +54,7 @@ int proc_thread_maps_load(struct libos_dentry* dent, char** out_data, size_t* ou
     int ret;
     size_t vma_count;
     struct libos_vma_info* vmas = NULL;
-    ret = dump_all_vmas(&vmas, &vma_count, /*include_unmapped=*/false);
+    ret = dump_all_vmas(/*include_unmapped=*/false, &vmas, &vma_count);
     if (ret < 0) {
         return ret;
     }
