@@ -80,7 +80,7 @@ int init_brk_region(void* brk_start, size_t data_segment_size) {
         brk_start = (char*)brk_start + offset;
 
         ret = bkeep_mmap_fixed(brk_start, brk_max_size, PROT_NONE,
-                               MAP_FIXED_NOREPLACE | VMA_UNMAPPED, NULL, 0, "heap");
+                               MAP_FIXED_NOREPLACE | VMA_UNMAPPED, NULL, 0, "heap", NULL);
         if (ret == -EEXIST) {
             /* Let's try mapping brk anywhere. */
             brk_start = NULL;
@@ -155,7 +155,7 @@ void* libos_syscall_brk(void* _brk) {
 
         if (size) {
             if (bkeep_mmap_fixed(brk_aligned, brk_region.brk_end - brk_aligned, PROT_NONE,
-                                 MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap")) {
+                                 MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap", NULL)) {
                 goto out;
             }
 
@@ -183,14 +183,14 @@ void* libos_syscall_brk(void* _brk) {
     assert(size);
 
     if (bkeep_mmap_fixed(brk_current, size, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, NULL, 0, "heap") < 0) {
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, NULL, 0, "heap", NULL) < 0) {
         goto out;
     }
 
     int ret = PalVirtualMemoryAlloc(brk_current, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
         if (bkeep_mmap_fixed(brk_current, brk_region.brk_end - brk_current, PROT_NONE,
-                             MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap") < 0) {
+                             MAP_FIXED | VMA_UNMAPPED, NULL, 0, "heap", NULL) < 0) {
             BUG();
         }
         goto out;
