@@ -466,15 +466,6 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
     if (!str)
         return -ENOMEM;
 
-    /* Print first 3 fields: pid, comm, state. */
-    int ret = snprintf(str, max, "%d (%s) R", g_process.pid, comm);
-    if (ret < 0) {
-        free(str);
-        return ret;
-    }
-    assert((size_t)ret < max);
-    size += ret;
-
     struct {
         const char* fmt;
         unsigned long val;
@@ -592,7 +583,19 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
 
     size_t i = 0;
     while (i < ARRAY_SIZE(status)) {
-        int ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
+        int ret = 0;
+        if (i == 0) {
+            /* Print first 3 fields: pid, comm, state. */
+            ret = snprintf(str, max, "%d (%s) R", g_process.pid, comm);
+            if (ret < 0) {
+                free(str);
+                return ret;
+            }
+            assert((size_t)ret < max);
+            size += ret;
+        }
+
+        ret = snprintf(str + size, max - size, status[i].fmt, status[i].val);
         if (ret < 0) {
             free(str);
             return ret;
