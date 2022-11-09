@@ -1,0 +1,6 @@
+stage('clean-vm') {
+    sh '''
+        rm -rf device-testing-tools driver
+        rm -rf libos/test/regression/gramine_test_dev_ioctl.h
+    '''
+}

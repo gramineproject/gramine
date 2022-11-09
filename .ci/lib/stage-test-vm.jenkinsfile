@@ -1,0 +1,15 @@
+stage('test') {
+    timeout(time: 15, unit: 'MINUTES') {
+        sh '''
+            export PWD_FOR_VM=$PWD
+
+            cd device-testing-tools/initramfs_builder
+
+            # we add `/sbin` to PATH to find insmod and poweroff programs
+            ./run.sh PWD_FOR_VM=$PWD_FOR_VM SGX=$SGX IS_VM=$IS_VM PATH=/sbin:$PATH \
+                PKG_CONFIG_PATH=$PKG_CONFIG_PATH PYTHONPATH=$PYTHONPATH \
+                XDG_CONFIG_HOME=$XDG_CONFIG_HOME GRAMINE_PKGLIBDIR=$GRAMINE_PKGLIBDIR | tee OUTPUT
+            grep "TESTS OK" OUTPUT
+        '''
+    }
+}

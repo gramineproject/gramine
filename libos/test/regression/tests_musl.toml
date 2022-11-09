@@ -131,3 +131,9 @@ manifests = [
   "rdtsc",
   "sighandler_divbyzero",
 ]
+
+[vm]
+
+manifests = [
+  "device_ioctl",
+]
