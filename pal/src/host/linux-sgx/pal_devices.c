@@ -363,7 +363,7 @@ struct sub_region {
     size_t size;                    /* size of this sub-region */
     size_t unit;                    /* total size in bytes calculated as `size * unit + adjust` */
     int64_t adjust;                 /* may be negative; used to adjust total size */
-    uint64_t align;                 /* alignment of this sub-region */
+    size_t align;                   /* alignment of this sub-region */
     void* enclave_addr;             /* base address of this sub region in enclave mem */
     void* untrusted_addr;           /* base address of corresponding sub region in untrusted mem */
     toml_array_t* toml_mem_region;  /* for pointers/arrays, specifies pointed-to mem region */
@@ -408,6 +408,7 @@ static int get_sub_region_name(const toml_table_t* toml_sub_region, char** out_n
 
     if (*out_name && strcmp(*out_name, "root") == 0) {
         log_error("IOCTL: memory sub-region cannot use name 'root' (it is reserved)");
+        free(*out_name);
         return -PAL_ERROR_INVAL;
     }
     return 0;
@@ -441,13 +442,13 @@ static int get_sub_region_direction(const toml_table_t* toml_sub_region,
     return ret;
 }
 
-static int get_sub_region_align(const toml_table_t* toml_sub_region, uint64_t* out_align) {
+static int get_sub_region_align(const toml_table_t* toml_sub_region, size_t* out_align) {
     int64_t align;
     int ret = toml_int_in(toml_sub_region, "align", /*defaultval=*/0, &align);
     if (ret < 0 || align < 0)
         return -PAL_ERROR_INVAL;
 
-    *out_align = (uint64_t)align;
+    *out_align = (size_t)align;
     return 0;
 }
 
