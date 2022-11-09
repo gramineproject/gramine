@@ -22,7 +22,7 @@ sgx_report:
     movq %rdi, %rbx
     movq %rsi, %rcx
 
-    ENCLU
+    enclu
 
     # return 0
     xorq %rax, %rax
@@ -48,7 +48,7 @@ sgx_getkey:
     movq %rdi, %rbx
     movq %rsi, %rcx
 
-    ENCLU
+    enclu
 
     # EGETKEY reports status in RAX, we return it
 

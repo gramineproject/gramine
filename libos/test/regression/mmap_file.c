@@ -1,3 +1,4 @@
+/* TODO: Hans, get ze flammenwerfer... */
 #define _GNU_SOURCE
 #include <signal.h>
 #include <stdio.h>
@@ -15,6 +16,8 @@ static void SIGBUS_handler(int sig) {
 }
 
 int main(int argc, const char** argv) {
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
     int rv;
 
     FILE* fp = fopen("testfile", "w+");

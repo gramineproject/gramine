@@ -186,7 +186,7 @@ enclave_entry:
     # there is no modified state to clear in this "thread-reset" code path.
     movq %gs:SGX_ECALL_RETURN_ADDR, %rbx
     movq $EEXIT, %rax
-    ENCLU
+    enclu
 
 .Lcssa1_exception:
     # PAL convention:
@@ -727,7 +727,7 @@ sgx_ocall:
     subq %r11, %r11  # use sub to set flags to a fixed value
 
     movq $EEXIT, %rax
-    ENCLU
+    enclu
 .Lcssa0_ocall_eexit_done:
     .cfi_endproc
 
