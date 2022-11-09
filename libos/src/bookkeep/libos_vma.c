@@ -26,9 +26,10 @@
 #include "spinlock.h"
 
 /* The amount of total memory usage, all accesses must be protected by `vma_tree_lock`. */
-size_t g_total_memory_size;
-/* The peak amount of total memory usage, all accesses must use atomics. */
-size_t g_peak_total_memory_size;
+static size_t g_total_memory_size = 0;
+/* The peak amount of total memory usage, all accesses must use atomics, writes must also hold
+ * `vma_tree_lock`. */
+static size_t g_peak_total_memory_size = 0;
 
 /* Filter flags that will be saved in `struct libos_vma`. For example there is no need for saving
  * MAP_FIXED or unsupported flags. */
@@ -107,14 +108,11 @@ static void total_memory_size_add(size_t length) {
 
     g_total_memory_size += length;
 
-    size_t peak_total_memory_size = __atomic_load_n(&g_peak_total_memory_size, __ATOMIC_RELAXED);
-    do {
-        if (peak_total_memory_size >= g_total_memory_size) {
-            break;
-        }
-    } while (!__atomic_compare_exchange_n(&g_peak_total_memory_size, &peak_total_memory_size,
-                                          g_total_memory_size, /*weak=*/true,
-                                          __ATOMIC_RELAXED, __ATOMIC_RELAXED));
+    /* We can read `g_peak_total_memory_size` non atomically, because writes are protected by
+     * `vma_tree_lock`, which we hold. Store needs to be atomic to synchronize with readers. */
+    if (g_peak_total_memory_size < g_total_memory_size) {
+        __atomic_store_n(&g_peak_total_memory_size, g_total_memory_size, __ATOMIC_RELAXED);
+    }
 }
 
 static void total_memory_size_sub(size_t length) {
@@ -268,11 +266,12 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
             vma->end = begin;
 
             avl_tree_insert(&vma_tree, &new_vma->tree_node);
-            total_memory_size_add(new_vma->end - new_vma->begin);
+            total_memory_size_sub(end - begin);
 
             return 0;
         }
 
+        total_memory_size_sub(vma->end - begin);
         vma->end = begin;
 
         vma = _get_next_vma(vma);
@@ -302,6 +301,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
         if (vma->file) {
             vma->offset += end - vma->begin;
         }
+        total_memory_size_sub(end - vma->begin);
         vma->begin = end;
     }
 
@@ -902,7 +902,6 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
         struct libos_vma* next = _get_next_vma(vma);
 
         avl_tree_insert(&vma_tree, &new_vma1->tree_node);
-        total_memory_size_add(new_vma1->end - new_vma1->begin);
 
         if (end < new_vma1->end) {
             struct libos_vma* new_vma2 = *new_vma_ptr2;
@@ -912,7 +911,6 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
             vma_update_prot(new_vma2, vma->prot);
 
             avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-            total_memory_size_add(new_vma2->end - new_vma2->begin);
 
             return 0;
         }
@@ -947,7 +945,6 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
     vma_update_prot(vma, prot);
 
     avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-    total_memory_size_add(new_vma2->end - new_vma2->begin);
 
     return 0;
 }
