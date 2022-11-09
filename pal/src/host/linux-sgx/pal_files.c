@@ -353,7 +353,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
                                             PAL_TO_SGX_PROT(prot));
         if (ret < 0) {
-            log_error("%s: failed to remove W bit from pages permissions at %p-%p", __func__,
+            log_error("failed to remove W bit from pages permissions at %p-%p",
                       (char*)addr, (char*)addr + size);
             goto out;
         }
@@ -366,8 +366,8 @@ out:
         if (g_pal_linuxsgx_state.edmm_enabled) {
             int tmp_ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
             if (tmp_ret < 0) {
-                log_error("%s (ret: %d): removing previously allocated pages failed: %s",
-                          __func__, ret, unix_strerror(tmp_ret));
+                log_error("removing previously allocated pages failed: %s (%d)",
+                          pal_strerror(tmp_ret), ret);
                 die_or_inf_loop();
             }
         } else {

@@ -38,4 +38,4 @@ static inline refcount_t _refcount_dec(refcount_t* ref, const char* fname, size_
     return new_count;
 }
 
-#define refcount_dec(ref) _refcount_dec((ref), __FILE__, __LINE__)
+#define refcount_dec(ref) _refcount_dec((ref), __FILE_NAME__, __LINE__)

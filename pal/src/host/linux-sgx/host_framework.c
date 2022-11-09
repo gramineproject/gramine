@@ -392,7 +392,7 @@ int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
             if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
                 continue;
             }
-            log_error("%s: SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS failed (%llu) %s", __func__,
+            log_error("SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS failed (%llu) %s",
                       (unsigned long long)params.result, unix_strerror(ret));
             return ret;
         }
@@ -418,7 +418,7 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
             if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
                 continue;
             }
-            log_error("%s: SGX_IOC_ENCLAVE_MODIFY_TYPES failed: (%llu) %s", __func__,
+            log_error("SGX_IOC_ENCLAVE_MODIFY_TYPES failed: (%llu) %s",
                       (unsigned long long)params.result, unix_strerror(ret));
             return ret;
         }

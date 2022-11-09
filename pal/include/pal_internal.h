@@ -240,10 +240,10 @@ int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_s
                          size_t* quote_size);
 int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 
-#define INIT_FAIL(msg, ...)                                                         \
-    do {                                                                            \
-        log_error("PAL failed at %s:%d: " msg, __FILE__, __LINE__, ##__VA_ARGS__);  \
-        _PalProcessExit(1);                                                         \
+#define INIT_FAIL(msg, ...)                                                              \
+    do {                                                                                 \
+        log_error("PAL failed " msg, ##__VA_ARGS__);                                     \
+        _PalProcessExit(1);                                                              \
     } while (0)
 
 #define INIT_FAIL_MANIFEST(reason)                                      \
@@ -301,7 +301,8 @@ int _PalDebugLog(const void* buf, size_t size);
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
-void pal_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+void pal_log(int level, const char* file, const char* func, uint64_t line,
+             const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
 #define PAL_LOG_DEFAULT_LEVEL  LOG_LEVEL_ERROR
 #define PAL_LOG_DEFAULT_FD     2

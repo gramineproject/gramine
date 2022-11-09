@@ -33,12 +33,12 @@ static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, si
             continue;
 
         if (ret < 0) {
-            log_warning("%s: PalStreamRead failed: %s", __func__, pal_strerror(ret));
+            log_warning("PalStreamRead failed: %s", pal_strerror(ret));
             return PF_STATUS_CALLBACK_FAILED;
         }
 
         if (count == 0) {
-            log_warning("%s: EOF", __func__);
+            log_warning("EOF");
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -63,12 +63,12 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
             continue;
 
         if (ret < 0) {
-            log_warning("%s: PalStreamWrite failed: %s", __func__, pal_strerror(ret));
+            log_warning("PalStreamWrite failed: %s", pal_strerror(ret));
             return PF_STATUS_CALLBACK_FAILED;
         }
 
         if (count == 0) {
-            log_warning("%s: EOF", __func__);
+            log_warning("EOF");
             return PF_STATUS_CALLBACK_FAILED;
         }
 
@@ -84,7 +84,7 @@ static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size) {
 
     int ret = PalStreamSetLength(pal_handle, size);
     if (ret < 0) {
-        log_warning("%s: PalStreamSetLength failed: %s", __func__, pal_strerror(ret));
+        log_warning("PalStreamSetLength failed: %s", pal_strerror(ret));
         return PF_STATUS_CALLBACK_FAILED;
     }
 
@@ -96,7 +96,7 @@ static pf_status_t cb_aes_cmac(const pf_key_t* key, const void* input, size_t in
     int ret = lib_AESCMAC((const uint8_t*)key, sizeof(*key), input, input_size, (uint8_t*)mac,
                           sizeof(*mac));
     if (ret != 0) {
-        log_warning("%s: lib_AESCMAC failed: %d", __func__, ret);
+        log_warning("lib_AESCMAC failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -108,7 +108,7 @@ static pf_status_t cb_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, co
     int ret = lib_AESGCMEncrypt((const uint8_t*)key, sizeof(*key), (const uint8_t*)iv, input,
                                 input_size, aad, aad_size, output, (uint8_t*)mac, sizeof(*mac));
     if (ret != 0) {
-        log_warning("%s: lib_AESGCMEncrypt failed: %d", __func__, ret);
+        log_warning("lib_AESGCMEncrypt failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -121,7 +121,7 @@ static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, co
                                 input_size, aad, aad_size, output, (const uint8_t*)mac,
                                 sizeof(*mac));
     if (ret != 0) {
-        log_warning("%s: lib_AESGCMDecrypt failed: %d", __func__, ret);
+        log_warning("lib_AESGCMDecrypt failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -130,7 +130,7 @@ static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, co
 static pf_status_t cb_random(uint8_t* buffer, size_t size) {
     int ret = PalRandomBitsRead(buffer, size);
     if (ret < 0) {
-        log_warning("%s: PalRandomBitsRead failed: %s", __func__, pal_strerror(ret));
+        log_warning("PalRandomBitsRead failed: %s", pal_strerror(ret));
         return PF_STATUS_CALLBACK_FAILED;
     }
     return PF_STATUS_SUCCESS;
@@ -159,7 +159,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
                             PAL_OPTION_PASSTHROUGH, &pal_handle);
         if (ret < 0) {
-            log_warning("%s: PalStreamOpen failed: %s", __func__, pal_strerror(ret));
+            log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
             return pal_to_unix_errno(ret);
         }
     }
@@ -167,8 +167,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     PAL_STREAM_ATTR pal_attr;
     ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
     if (ret < 0) {
-        log_warning("%s: PalStreamAttributesQueryByHandle failed: %s", __func__,
-                    pal_strerror(ret));
+        log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
         ret = pal_to_unix_errno(ret);
         goto out;
     }
@@ -192,7 +191,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     pf_context_t* pf;
     lock(&g_keys_lock);
     if (!enc->key->is_set) {
-        log_warning("%s: key '%s' is not set", __func__, enc->key->name);
+        log_warning("key '%s' is not set", enc->key->name);
         unlock(&g_keys_lock);
         ret = -EACCES;
         goto out;
@@ -201,7 +200,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
                               create, &enc->key->pf_key, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_open failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_open failed: %s", pf_strerror(pfs));
         ret = -EACCES;
         goto out;
     }
@@ -220,15 +219,14 @@ out:
 int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     size_t len = strlen(key_str);
     if (len != sizeof(*pf_key) * 2) {
-        log_warning("%s: wrong key length (%zu instead of %zu)", __func__, len,
-                    (size_t)(sizeof(*pf_key) * 2));
+        log_warning("wrong key length (%zu instead of %zu)", len, (size_t)(sizeof(*pf_key) * 2));
         return -EINVAL;
     }
 
     pf_key_t tmp_pf_key;
     char* bytes = hex2bytes(key_str, len, tmp_pf_key, sizeof(tmp_pf_key));
     if (!bytes) {
-        log_warning("%s: unexpected character encountered", __func__);
+        log_warning("unexpected character encountered");
         return -EINVAL;
     }
     memcpy(pf_key, &tmp_pf_key, sizeof(tmp_pf_key));
@@ -248,7 +246,7 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
 
     pf_status_t pfs = pf_close(enc->pf);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_close failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_close failed: %s", pf_strerror(pfs));
     }
 
     enc->pf = NULL;
@@ -473,7 +471,7 @@ static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_ke
     assert(strstartswith(uri, URI_PREFIX_FILE));
 
     if (!key) {
-        log_debug("%s: trying to open a file (%s) before key is set", __func__, uri);
+        log_debug("trying to open a file (%s) before key is set", uri);
         return -EACCES;
     }
 
@@ -566,7 +564,7 @@ int encrypted_file_flush(struct libos_encrypted_file* enc) {
 
     pf_status_t pfs = pf_flush(enc->pf);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_flush failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_flush failed: %s", pf_strerror(pfs));
         return -EACCES;
     }
     return 0;
@@ -584,7 +582,7 @@ int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_
     size_t count;
     pf_status_t pfs = pf_read(enc->pf, offset, buf_size, buf, &count);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_read failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_read failed: %s", pf_strerror(pfs));
         return -EACCES;
     }
     *out_count = count;
@@ -602,7 +600,7 @@ int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size
 
     pf_status_t pfs = pf_write(enc->pf, offset, buf_size, buf);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_write failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_write failed: %s", pf_strerror(pfs));
         return -EACCES;
     }
     /* We never write less than `buf_size` */
@@ -616,7 +614,7 @@ int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_si
     uint64_t size;
     pf_status_t pfs = pf_get_size(enc->pf, &size);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_get_size failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_get_size failed: %s", pf_strerror(pfs));
         return -EACCES;
     }
     if (OVERFLOWS(file_off_t, size))
@@ -635,7 +633,7 @@ int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
 
     pf_status_t pfs = pf_set_size(enc->pf, size);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_set_size failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_set_size failed: %s", pf_strerror(pfs));
         return -EACCES;
     }
     return 0;
@@ -671,20 +669,20 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
 
     pf_status_t pfs = pf_rename(enc->pf, new_normpath);
     if (PF_FAILURE(pfs)) {
-        log_warning("%s: pf_rename failed: %s", __func__, pf_strerror(pfs));
+        log_warning("pf_rename failed: %s", pf_strerror(pfs));
         ret = -EACCES;
         goto out;
     }
 
     ret = PalStreamChangeName(enc->pal_handle, new_uri);
     if (ret < 0) {
-        log_warning("%s: PalStreamChangeName failed: %s", __func__, pal_strerror(ret));
+        log_warning("PalStreamChangeName failed: %s", pal_strerror(ret));
 
         /* We failed to rename the file. Try to restore the name in header. */
         pfs = pf_rename(enc->pf, old_path);
         if (PF_FAILURE(pfs)) {
-            log_warning("%s: pf_rename (during cleanup) failed, the file might be unusable: %s",
-                        __func__, pf_strerror(pfs));
+            log_warning("pf_rename (during cleanup) failed, the file might be unusable: %s",
+                        pf_strerror(pfs));
         }
 
         ret = pal_to_unix_errno(ret);
