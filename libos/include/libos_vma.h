@@ -67,9 +67,13 @@ int init_vma(void);
  *
  * Such a way of freeing is needed, so that no other thread will map the same memory in the window
  * between `bkeep_munmap` and `PalVirtualMemoryFree`.
+ * `bkeep_convert_tmp_vma_to_user` can be called instead of `bkeep_remove_tmp_vma` to convert
+ * the VMA to unmapped user VMA, instead of removing it. See `MMAP_FIXED` implementation for example
+ * usage.
  */
 int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr);
 void bkeep_remove_tmp_vma(void* vma);
+void bkeep_convert_tmp_vma_to_user(void* vma);
 
 /* Bookkeeping a change to memory protections. */
 int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal);
@@ -118,6 +122,11 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot);
  * The returned array can be subsequently freed by `free_vma_info_array`.
  */
 int dump_all_vmas(struct libos_vma_info** vma_infos, size_t* count, bool include_unmapped);
+/*
+ * Same as `dump_all_vmas`, but dumps only in `[begin; end)` range.
+ */
+int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
+                       struct libos_vma_info** ret_infos, size_t* ret_count);
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count);
 
 /* Implementation of madvise(MADV_DONTNEED) syscall */
