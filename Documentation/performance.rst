@@ -410,7 +410,8 @@ workloads. The manifest options include:
 - ``sgx.preheat_enclave = true`` -- pre-fault all enclave pages during enclave
   initialization. This shifts the overhead of page faults on non-present enclave
   pages from runtime to enclave startup time. Using this option makes sense only
-  if the whole enclave memory fits into :term:`EPC`.
+  if the whole enclave memory fits into :term:`EPC` and if :term:`EDMM` is not
+  used (``sgx.edmm_enable = false``).
 
 If your application periodically fails and complains about seemingly irrelevant
 things, it may be due to insufficient enclave memory. Please try to increase

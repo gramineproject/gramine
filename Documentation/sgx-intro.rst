@@ -273,8 +273,9 @@ SGX terminology
 
    Enclave Dynamic Memory Management
    EDMM
-      A |~| hardware feature of :term:`SGX2`, allows dynamic memory allocation,
-      which in turn allows dynamic thread creation.
+      A |~| hardware feature of :term:`SGX2`, allows for dynamic (in enclave
+      runtime) addition, removal and change of enclave memory, which in turn
+      allows dynamic thread creation.
 
    Enclave Page Cache
    EPC
