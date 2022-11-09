@@ -138,8 +138,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             goto out_handle;
         }
         if (!(flags & MAP_FIXED_NOREPLACE)) {
-            /* Flush any file mappings we're about to replace */
-            ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+            ret = libos_syscall_munmap(addr, length);
             if (ret < 0) {
                 goto out_handle;
             }
@@ -270,15 +269,16 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
     return 0;
 }
 
-long libos_syscall_munmap(void* addr, size_t length) {
+long libos_syscall_munmap(void* _addr, size_t length) {
+    uintptr_t addr = (uintptr_t)_addr;
     /*
      * According to the manpage, addr has to be page-aligned, but not the
      * length. munmap() will automatically round up the length.
      */
-    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr))
+    if (!addr || !IS_ALLOC_ALIGNED(addr))
         return -EINVAL;
 
-    if (!length || !access_ok(addr, length))
+    if (!length || !access_ok(_addr, length))
         return -EINVAL;
 
     if (!IS_ALLOC_ALIGNED(length))
@@ -287,23 +287,38 @@ long libos_syscall_munmap(void* addr, size_t length) {
     int ret;
 
     /* Flush any file mappings we're about to remove */
-    ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+    ret = msync_range(addr, addr + length);
     if (ret < 0) {
         return ret;
     }
 
-    void* tmp_vma = NULL;
-    ret = bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma);
+    struct libos_vma_info* vmas;
+    size_t vmas_length;
+    ret = dump_vmas_in_range(addr, addr + length, /*include_unmapped=*/false, &vmas, &vmas_length);
     if (ret < 0) {
         return ret;
     }
 
-    if (PalVirtualMemoryFree(addr, length) < 0) {
-        BUG();
+    for (struct libos_vma_info* vma = vmas; vma < vmas + vmas_length; vma++) {
+        uintptr_t begin = MAX(addr, (uintptr_t)vma->addr);
+        uintptr_t end = MIN((uintptr_t)vma->addr + vma->length, addr + length);
+        /* `vma` contains at least one byte from `[addr; addr + length)` range, so: */
+        assert(begin < end);
+
+        void* tmp_vma = NULL;
+        ret = bkeep_munmap((void*)begin, end - begin, /*is_internal=*/false, &tmp_vma);
+        if (ret < 0) {
+            BUG();
+        }
+
+        if (PalVirtualMemoryFree((void*)begin, end - begin) < 0) {
+            BUG();
+        }
+
+        bkeep_remove_tmp_vma(tmp_vma);
     }
 
-    bkeep_remove_tmp_vma(tmp_vma);
-
+    free_vma_info_array(vmas, vmas_length);
     return 0;
 }
 

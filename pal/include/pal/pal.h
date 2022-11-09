@@ -211,8 +211,8 @@ struct pal_initial_mem_range {
  * \param size  Must be a positive number, aligned at the allocation alignment.
  * \param prot  A combination of the `PAL_PROT_*` flags.
  *
- * `addr` can be any valid address aligned at the allocation alignment. Any memory previously
- * allocated at the same address will be discarded. Overwriting any part of PAL memory is forbidden.
+ * `addr` can be any valid address aligned at the allocation alignment, but there must be no memory
+ * previously allocated at the same address.
  * This function must not dynamically allocate any internal memory (must not use `malloc`)!
  */
 int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot);
@@ -224,6 +224,7 @@ int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot);
  * \param size  The size.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
+ * `[addr; addr+size)` must a continuous memory range without any holes.
  */
 int PalVirtualMemoryFree(void* addr, size_t size);
 
@@ -235,6 +236,7 @@ int PalVirtualMemoryFree(void* addr, size_t size);
  * \param prot  See #PalVirtualMemoryAlloc.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
+ * `[addr; addr+size)` must a continuous memory range without any holes.
  */
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 

@@ -884,8 +884,8 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
     }
 
     if (!is_continuous) {
-        /* XXX: When Linux fails with such an error, it sill changes permissions of the first
-         * continuous fragment. Maybe we should emulate this weird behavior? */
+        /* When Linux fails with such an error, it sill changes permissions of the first
+         * continuous fragment, but we just return an error. */
         return -ENOMEM;
     }
 
@@ -1257,10 +1257,16 @@ static bool vma_filter_exclude_unmapped(struct libos_vma* vma, void* arg) {
     return !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
 }
 
-int dump_all_vmas(struct libos_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
-    return dump_vmas(ret_infos, ret_count, /*begin=*/0, /*end=*/UINTPTR_MAX,
+int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
+                       struct libos_vma_info** ret_infos, size_t* ret_count) {
+    return dump_vmas(ret_infos, ret_count, begin, end,
                      include_unmapped ? vma_filter_all : vma_filter_exclude_unmapped,
                      /*arg=*/NULL);
+}
+
+int dump_all_vmas(struct libos_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
+    return dump_vmas_in_range(/*begin=*/0, /*end=*/UINTPTR_MAX, include_unmapped, ret_infos,
+                              ret_count);
 }
 
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {

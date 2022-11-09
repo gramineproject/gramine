@@ -118,6 +118,11 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot);
  * The returned array can be subsequently freed by `free_vma_info_array`.
  */
 int dump_all_vmas(struct libos_vma_info** vma_infos, size_t* count, bool include_unmapped);
+/*
+ * Same as `dump_all_vmas`, but dumps only in `[begin; end)` range.
+ */
+int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
+                       struct libos_vma_info** ret_infos, size_t* ret_count);
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count);
 
 /* Implementation of madvise(MADV_DONTNEED) syscall */
