@@ -438,6 +438,27 @@ Debug/production enclave
 This syntax specifies whether the enclave can be debugged. Set it to ``true``
 for a |~| debug enclave and to ``false`` for a |~| production enclave.
 
+EDMM
+^^^^
+
+::
+
+    sgx.edmm_enable = [true|false]
+    (Default: false)
+
+This setting enables the :term:`EDMM` feature (after-enclave-creation memory
+management). If set to ``true``, Gramine will refuse to start on CPUs which do
+not support :term:`EDMM` feature.
+
+When this feature is enabled, Gramine does not add heap pages (uninitialized
+memory) to the enclave at creation time. Instead, memory is added to the enclave
+on demand. This can greatly reduce startup time for bigger enclaves, reduce
+the :term:`EPC` usage (as only actually allocated memory is used) and allow for
+changing memory permissions (without this Gramine allocates all dynamic memory
+as RWX). Unfortunately it can negatively impact performance, as adding a page
+to the enclave at runtime is a more expensive operation than adding the page
+before enclave creation (because it involves more enclave exits and syscalls).
+
 Enclave size
 ^^^^^^^^^^^^
 
@@ -447,13 +468,15 @@ Enclave size
     (default: "256M")
 
 This syntax specifies the size of the enclave set during enclave creation time
-(recall that SGX |~| v1 requires a predetermined maximum size of the enclave).
+if :term:`EDMM` is not enabled (``sgx.edmm_enable = false``) or the maximal
+size that the enclave can grow to if :term:`EDMM` is enabled
+(``sgx.edmm_enable = true``).
 The PAL and library OS code/data count towards this size value, as well as the
 application memory itself: application's code, stack, heap, loaded application
 libraries, etc. The application cannot allocate memory that exceeds this limit.
 
-Be careful when setting the enclave size to large values: on systems where the
-:term:`EDMM` feature is not enabled, Gramine not only reserves
+Be careful when setting the enclave size to large values: when creating enclaves
+which do not have the :term:`EDMM` feature enabled, Gramine not only reserves
 ``sgx.enclave_size`` bytes of virtual address space but also *commits* them to
 the backing store (EPC, RAM and/or swap file). For example, if
 ``sgx.enclave_size = "4G"``, then 4GB of EPC/RAM will be immediately allocated
@@ -478,7 +501,9 @@ runs in its own SGX enclave and thus requires an additional ``sgx.enclave_size``
 amount of RAM. For example, if you run ``bash -c ls`` and your manifest contains
 ``sgx.enclave_size = "4G"``, then two SGX enclaves (bash and ls processes) will
 consume 8GB of RAM in total. If there is less than 8GB of RAM (+ swap file) on
-your system, such ``bash -c ls`` SGX workload will fail.
+your system, such ``bash -c ls`` SGX workload will fail. Note this does not
+apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
+upfront and is allocated on demand.
 
 Non-PIE binaries
 ^^^^^^^^^^^^^^^^
@@ -783,6 +808,9 @@ predictable.
 
 Please note that using this option makes sense only when the :term:`EPC` is
 large enough to hold the whole heap area.
+
+This option is invalid (i.e. must be ``false``) if specified together with
+``sgx.edmm_enable``, as there are no heap pages to pre-fault.
 
 Enabling per-thread and process-wide SGX stats
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

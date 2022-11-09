@@ -41,7 +41,7 @@ sgx_ecall:
     leaq async_exit_pointer(%rip), %rcx
 
     movq $EENTER, %rax
-    ENCLU
+    enclu
 
     # currently only ECALL_THREAD_RESET returns
 .Lafter_resume:
@@ -112,7 +112,7 @@ async_exit_pointer:
     .type eresume_pointer, @function
 
 eresume_pointer:
-    ENCLU   # perform ERESUME
+    enclu   # perform ERESUME
 
     .global async_exit_pointer_end
     .type async_exit_pointer_end, @function

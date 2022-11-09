@@ -69,6 +69,9 @@ enum {
     OCALL_DEBUG_DESCRIBE_LOCATION,
     OCALL_EVENTFD,
     OCALL_GET_QUOTE,
+    OCALL_EDMM_RESTRICT_PAGES_PERM,
+    OCALL_EDMM_MODIFY_PAGES_TYPE,
+    OCALL_EDMM_REMOVE_PAGES,
     OCALL_NR,
 };
 
@@ -333,6 +336,23 @@ struct ocall_get_quote {
     sgx_quote_nonce_t nonce;
     char*             quote;
     size_t            quote_len;
+};
+
+struct ocall_edmm_restrict_pages_perm {
+    uint64_t addr;
+    size_t count;
+    uint64_t prot;
+};
+
+struct ocall_edmm_modify_pages_type {
+    uint64_t addr;
+    size_t count;
+    uint64_t type;
+};
+
+struct ocall_edmm_remove_pages {
+    uint64_t addr;
+    size_t count;
 };
 
 #pragma pack(pop)
