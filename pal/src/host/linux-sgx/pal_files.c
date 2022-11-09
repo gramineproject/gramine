@@ -20,6 +20,7 @@
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
 #include "pal_linux_error.h"
+#include "pal_sgx.h"
 #include "path_utils.h"
 #include "stat.h"
 
@@ -271,42 +272,52 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         return -PAL_ERROR_INVAL;
     }
 
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        /* Enclave pages will be written to below, so we must add W permission. */
+        ret = sgx_edmm_add_pages((uintptr_t)addr, size / PAGE_SIZE,
+                                 PAL_TO_SGX_PROT(prot | PAL_PROT_WRITE));
+        if (ret < 0) {
+            return ret;
+        }
+    } else {
 #ifdef ASAN
-    asan_unpoison_region((uintptr_t)addr, size);
+        asan_unpoison_region((uintptr_t)addr, size);
 #endif
+    }
 
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
         off_t end = MIN(offset + size, handle->file.total);
+        size_t bytes_filled;
         if ((off_t)offset >= end) {
             /* file is mmapped at offset beyond file size, there are no trusted-file contents to
              * back mmapped enclave pages; this is a legit case, so simply zero out these enclave
-             * pages (for sanity) and return success */
-            memset(addr, 0, size);
-            return 0;
+             * pages and return success */
+            bytes_filled = 0;
+        } else {
+            off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
+            off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
+            off_t total_size     = aligned_end - aligned_offset;
+
+            if ((uint64_t)total_size > SIZE_MAX) {
+                /* for compatibility with 32-bit systems */
+                ret = -PAL_ERROR_INVAL;
+                goto out;
+            }
+
+            ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
+                                               aligned_offset, aligned_end, offset, end, chunk_hashes,
+                                               handle->file.total);
+            if (ret < 0) {
+                log_error("file_map - copy & verify on trusted file returned %d", ret);
+                goto out;
+            }
+
+            bytes_filled = end - offset;
         }
 
-        off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
-        off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
-        off_t total_size     = aligned_end - aligned_offset;
-
-        if ((uint64_t)total_size > SIZE_MAX) {
-            /* for compatibility with 32-bit systems */
-            ret = -PAL_ERROR_INVAL;
-            goto out;
-        }
-
-        ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
-                                           aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                           handle->file.total);
-        if (ret < 0) {
-            log_error("file_map - copy & verify on trusted file returned %d", ret);
-            goto out;
-        }
-
-        size_t bytes_filled = end - offset;
         if (size > bytes_filled) {
             /* file ended before all mmapped memory was filled -- remaining memory must be zeroed */
             memset((char*)addr + bytes_filled, 0, size - bytes_filled);
@@ -337,14 +348,34 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         }
     }
 
+    if (g_pal_linuxsgx_state.edmm_enabled && !(prot & PAL_PROT_WRITE)) {
+        /* Clear W permission, in case we added it artificailly. */
+        ret = sgx_edmm_set_page_permissions((uintptr_t)addr, size / PAGE_SIZE,
+                                            PAL_TO_SGX_PROT(prot));
+        if (ret < 0) {
+            log_error("%s: failed to remove W bit from pages permissions at %p-%p", __func__,
+                      (char*)addr, (char*)addr + size);
+            goto out;
+        }
+    }
+
     ret = 0;
 
 out:
-#ifdef ASAN
     if (ret < 0) {
-        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
-    }
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            int tmp_ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
+            if (tmp_ret < 0) {
+                log_error("%s (ret: %d): removing previously allocated pages failed: %d",
+                          __func__, ret, tmp_ret);
+                die_or_inf_loop();
+            }
+        } else {
+#ifdef ASAN
+            asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
 #endif
+        }
+    }
     return ret;
 }
 

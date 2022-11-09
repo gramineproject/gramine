@@ -5,55 +5,68 @@
  */
 
 /*
- * This file contains APIs that allocate, free or protect virtual memory.
+ * This file contains APIs that allocate, free or change permissions of virtual memory.
  */
 
 #include <stdalign.h>
 
 #include "api.h"
 #include "asan.h"
+#include "cpu.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "pal_sgx.h"
 
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    __UNUSED(prot);
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
-    assert(IS_ALIGNED_PTR(addr, g_page_size) && IS_ALIGNED(size, g_page_size));
+    assert(IS_ALIGNED_PTR(addr, PAGE_SIZE) && IS_ALIGNED(size, PAGE_SIZE));
     assert(access_ok(addr, size));
     assert(sgx_is_completely_within_enclave(addr, size));
 
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        int ret = sgx_edmm_add_pages((uintptr_t)addr, size / PAGE_SIZE, PAL_TO_SGX_PROT(prot));
+        if (ret < 0) {
+            return ret;
+        }
+    } else {
 #ifdef ASAN
-    asan_unpoison_region((uintptr_t)addr, size);
+        asan_unpoison_region((uintptr_t)addr, size);
 #endif
-
-    /*
-     * This function doesn't have to do anything - in SGX1 the memory is already mapped (it happens
-     * at the enclave initialization). Just clear the (possible) previous memory content (this
-     * function must return zeroed memory).
-     */
-    memset(addr, 0, size);
+        /*
+         * This function doesn't have to do anything - in SGX1 the memory is already mapped (it
+         * happens at the enclave initialization). Just clear the (possible) previous memory content
+         * (this function must return zeroed memory).
+         */
+        memset(addr, 0, size);
+    }
 
     return 0;
 }
 
 int _PalVirtualMemoryFree(void* addr, uint64_t size) {
-    assert(IS_ALIGNED_PTR(addr, g_page_size) && IS_ALIGNED(size, g_page_size));
+    assert(IS_ALIGNED_PTR(addr, PAGE_SIZE) && IS_ALIGNED(size, PAGE_SIZE));
     assert(access_ok(addr, size));
 
     if (sgx_is_completely_within_enclave(addr, size)) {
         assert(g_pal_linuxsgx_state.heap_min <= addr
                && addr + size <= g_pal_linuxsgx_state.heap_max);
 
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            int ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
+            if (ret < 0) {
+                return ret;
+            }
+        } else {
 #ifdef ASAN
-        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
+            asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
 #endif
-
-        /*
-         * This function doesn't have to do anything - in SGX1 the memory is mapped only at
-         * the enclave initialization and cannot be unmapped.
-         */
+            /*
+             * This function doesn't have to do anything - in SGX1 the memory is mapped only at
+             * the enclave initialization and cannot be unmapped.
+             */
+        }
     } else {
         /* possible to have untrusted mapping, simply unmap memory outside the enclave */
         ocall_munmap_untrusted(addr, size);
@@ -63,25 +76,27 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
 }
 
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    __UNUSED(addr);
-    __UNUSED(size);
-    __UNUSED(prot);
-
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
+    assert(IS_ALIGNED_PTR(addr, PAGE_SIZE) && IS_ALIGNED(size, PAGE_SIZE));
+    assert(access_ok(addr, size));
+    assert(sgx_is_completely_within_enclave(addr, size));
 
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        int ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
+                                                PAL_TO_SGX_PROT(prot));
+        if (ret < 0) {
+            return ret;
+        }
+    } else {
 #ifdef ASAN
-    if (sgx_is_completely_within_enclave(addr, size)) {
         if (prot) {
             asan_unpoison_region((uintptr_t)addr, size);
         } else {
             asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
         }
-    }
 #endif
-
-    if (FIRST_TIME()) {
-        log_warning("PalVirtualMemoryProtect is unimplemented in Linux-SGX PAL");
     }
+
     return 0;
 }
 

@@ -275,6 +275,11 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
             raise Exception('Enclave size is not large enough')
         last_populated_addr = area.addr
 
+    gen_area_content(attr, areas, enclave_base, enclave_heap_min)
+
+    if attr['edmm_enable']:
+        return areas
+
     free_areas = []
     for area in areas:
         addr = area.addr + area.size
@@ -291,8 +296,6 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
             MemoryArea('free', addr=enclave_heap_min,
                        size=last_populated_addr - enclave_heap_min, flags=flags,
                        measure=False))
-
-    gen_area_content(attr, areas, enclave_base, enclave_heap_min)
 
     return areas + free_areas
 
@@ -442,6 +445,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     manifest_sgx = manifest['sgx']
     attr = {
         'enclave_size': parse_size(manifest_sgx['enclave_size']),
+        'edmm_enable': manifest_sgx.get('edmm_enable', False),
         'max_threads': manifest_sgx.get('max_threads', manifest_sgx.get('thread_num')),
         'isv_prod_id': manifest_sgx['isvprodid'],
         'isv_svn': manifest_sgx['isvsvn'],
@@ -451,6 +455,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     if verbose:
         print('Attributes:')
         print(f'    size:        {attr["enclave_size"]:#x}')
+        print(f'    edmm:        {attr["edmm_enable"]}')
         print(f'    max_threads: {attr["max_threads"]}')
         print(f'    isv_prod_id: {attr["isv_prod_id"]}')
         print(f'    isv_svn:     {attr["isv_svn"]}')

@@ -99,6 +99,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
                        COPY_UNTRUSTED_VALUE(&start_args->topo_info),
                        COPY_UNTRUSTED_VALUE(&start_args->rpc_queue),
                        COPY_UNTRUSTED_VALUE(&start_args->dns_host_conf),
+                       COPY_UNTRUSTED_VALUE(&start_args->edmm_enabled),
                        COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges),
                        COPY_UNTRUSTED_VALUE(&start_args->reserved_mem_ranges_size));
     } else {

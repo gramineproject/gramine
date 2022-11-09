@@ -10,6 +10,7 @@
 #include "api.h"
 #include "host_syscall.h"
 #include "pal_linux.h"
+#include "sgx_arch.h"
 #include "toml.h"
 
 extern const size_t g_page_size;
@@ -46,6 +47,7 @@ struct pal_enclave {
     unsigned long rpc_thread_num;
     unsigned long ssa_frame_size;
     bool nonpie_binary;
+    bool edmm_enabled;
     enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 
@@ -61,6 +63,38 @@ struct pal_enclave {
 
 extern struct pal_enclave g_pal_enclave;
 
+#ifndef SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS
+#define SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS \
+    _IOWR(SGX_MAGIC, 0x05, struct sgx_enclave_restrict_permissions)
+struct sgx_enclave_restrict_permissions {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t permissions;
+    uint64_t result;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS
+
+#ifndef SGX_IOC_ENCLAVE_MODIFY_TYPES
+#define SGX_IOC_ENCLAVE_MODIFY_TYPES _IOWR(SGX_MAGIC, 0x06, struct sgx_enclave_modify_types)
+struct sgx_enclave_modify_types {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t page_type;
+    uint64_t result;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_MODIFY_TYPES
+
+#ifndef SGX_IOC_ENCLAVE_REMOVE_PAGES
+#define SGX_IOC_ENCLAVE_REMOVE_PAGES _IOWR(SGX_MAGIC, 0x07, struct sgx_enclave_remove_pages)
+struct sgx_enclave_remove_pages {
+    uint64_t offset;
+    uint64_t length;
+    uint64_t count;
+};
+#endif // SGX_IOC_ENCLAVE_REMOVE_PAGES
+
 int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
 
@@ -69,9 +103,12 @@ int read_enclave_sigstruct(int sigfile, sgx_arch_enclave_css_t* sig);
 
 int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token);
 
-enum sgx_page_type { SGX_PAGE_SECS, SGX_PAGE_TCS, SGX_PAGE_REG };
 int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, unsigned long size,
                          enum sgx_page_type type, int prot, bool skip_eextend, const char* comment);
+
+int edmm_restrict_pages_perms(uint64_t addr, size_t count, uint64_t prot);
+int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
+int edmm_remove_pages(uint64_t addr, size_t count);
 
 /*!
  * \brief Retrieve Quoting Enclave's sgx_target_info_t by talking to AESMD.
