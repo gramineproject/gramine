@@ -583,7 +583,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
 
     size_t i = 0;
     while (i < ARRAY_SIZE(status)) {
-        int ret = 0;
+        int ret;
         if (i == 0) {
             /* Print first 3 fields: pid, comm, state. */
             ret = snprintf(str, max, "%d (%s) R", g_process.pid, comm);
