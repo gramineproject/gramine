@@ -91,7 +91,7 @@ void remove_r_debug(void* addr) {
         goto out;
     }
 
-    log_debug("%s: removing %s at %p", __func__, m->l_name, addr);
+    log_debug("removing %s at %p", m->l_name, addr);
     LISTP_DEL(m, &g_link_map_list, list);
     PalDebugMapRemove(addr);
     free(m);
@@ -105,20 +105,20 @@ void append_r_debug(const char* uri, void* addr) {
 
     struct gdb_link_map* new = malloc(sizeof(struct gdb_link_map));
     if (!new) {
-        log_warning("%s: couldn't allocate map", __func__);
+        log_warning("couldn't allocate map");
         goto out;
     }
 
     char* new_uri = strdup(uri);
     if (!new_uri) {
-        log_warning("%s: couldn't allocate uri", __func__);
+        log_warning("couldn't allocate uri");
         goto out;
     }
 
     new->l_addr = addr;
     new->l_name = new_uri;
 
-    log_debug("%s: adding %s at %p", __func__, uri, addr);
+    log_debug("adding %s at %p", uri, addr);
     LISTP_ADD_TAIL(new, &g_link_map_list, list);
     PalDebugMapAdd(uri, addr);
 

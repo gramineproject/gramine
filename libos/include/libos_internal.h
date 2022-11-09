@@ -27,12 +27,8 @@ extern struct pal_public_state* g_pal_public_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
-void libos_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-
-#define DEBUG_HERE()                                             \
-    do {                                                         \
-        log_debug("%s (" __FILE__ ":%d)", __func__, __LINE__);   \
-    } while (0)
+void libos_log(int level, const char* file, const char* func, uint64_t line,
+               const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
 /*!
  * \brief High-level syscall emulation entrypoint.

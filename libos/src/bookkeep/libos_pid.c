@@ -70,7 +70,7 @@ IDTYPE get_new_id(IDTYPE move_ownership_to) {
     if (!g_last_range) {
         g_last_range = malloc(sizeof(*g_last_range));
         if (!g_last_range) {
-            log_debug("OOM in %s:%d", __FILE__, __LINE__);
+            log_debug("OOM");
             goto out;
         }
         IDTYPE start;
@@ -113,7 +113,7 @@ IDTYPE get_new_id(IDTYPE move_ownership_to) {
         } else {
             struct id_range* range = malloc(sizeof(*range));
             if (!range) {
-                log_debug("OOM in %s:%d", __FILE__, __LINE__);
+                log_debug("OOM");
                 g_last_used_id--;
                 ret_id = 0;
                 goto out;
@@ -128,7 +128,7 @@ IDTYPE get_new_id(IDTYPE move_ownership_to) {
         }
         if (ipc_change_id_owner(ret_id, move_ownership_to) < 0) {
             /* Good luck unwinding all of above operations. Better just kill everything. */
-            log_error("Unrecoverable error in %s:%d", __FILE__, __LINE__);
+            log_error("Unrecoverable error");
             PalProcessExit(1);
         }
     } else {

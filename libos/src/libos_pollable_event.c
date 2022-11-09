@@ -16,7 +16,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
                           /*use_vmid_for_name=*/false);
     if (ret < 0) {
-        log_error("%s: create_pipe failed: %s", __func__, unix_strerror(ret));
+        log_error("create_pipe failed: %s", unix_strerror(ret));
         return ret;
     }
 
@@ -26,7 +26,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
                             PAL_OPTION_NONBLOCK, &write_handle);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
-        log_error("%s: PalStreamOpen failed: %s", __func__, pal_strerror(ret));
+        log_error("PalStreamOpen failed: %s", pal_strerror(ret));
         ret = pal_to_unix_errno(ret);
         goto out;
     }
@@ -36,7 +36,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
         ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
-        log_error("%s: PalStreamWaitForClient failed: %s", __func__, pal_strerror(ret));
+        log_error("PalStreamWaitForClient failed: %s", pal_strerror(ret));
         PalObjectClose(write_handle);
         ret = pal_to_unix_errno(ret);
         goto out;

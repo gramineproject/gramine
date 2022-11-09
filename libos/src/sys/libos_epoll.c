@@ -137,7 +137,7 @@ void interrupt_epolls(struct libos_handle* handle) {
         items = malloc(items_count * sizeof(*items));
         if (!items) {
             unlock(&handle->lock);
-            log_error("%s: failed to allocate memory for the epoll items array", __func__);
+            log_error("failed to allocate memory for the epoll items array");
             /* No way to handle this cleanly. */
             PalProcessExit(1);
         }

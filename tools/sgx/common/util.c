@@ -239,8 +239,11 @@ int parse_hex(const char* hex, void* buffer, size_t buffer_size, const char* mas
 }
 
 /* _log() and abort() are needed for our <assert.h>; see also: common/include/callbacks.h */
-void _log(int level, const char* fmt, ...) {
+void _log(int level, const char* file, const char* func, uint64_t line, const char* fmt, ...) {
     (void)level;
+    (void)file;
+    (void)line;
+    (void)func;
     va_list ap;
     va_start(ap, fmt);
     vdprintf(g_stderr_fd, fmt, ap);

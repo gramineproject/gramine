@@ -36,9 +36,12 @@ static int buf_write_all(const char* str, size_t size, void* arg) {
     return write_all(fd, str, size);
 }
 
-static void print_to_fd(int fd, const char* prefix, const char* fmt, va_list ap) {
+static void print_to_fd(int fd, const char* prefix, const char* file, const char* func,
+                        uint64_t line, const char* fmt, va_list ap) {
     struct print_buf buf = INIT_PRINT_BUF_ARG(buf_write_all, &fd);
 
+    if (LOG_LEVEL_DEBUG <= g_host_log_level)
+        buf_printf(&buf, "(%s:%lu:%s) ", file, line, func);
     if (prefix)
         buf_puts(&buf, prefix);
     buf_vprintf(&buf, fmt, ap);
@@ -47,7 +50,7 @@ static void print_to_fd(int fd, const char* prefix, const char* fmt, va_list ap)
     // No error handling, as `pal_log` doesn't return errors anyways.
 }
 
-void pal_log(int level, const char* fmt, ...) {
+void pal_log(int level, const char* file, const char* func, uint64_t line, const char* fmt, ...) {
     if (level <= g_host_log_level) {
         va_list ap;
         va_start(ap, fmt);
@@ -64,7 +67,7 @@ void pal_log(int level, const char* fmt, ...) {
             case LOG_LEVEL_TRACE:   prefix = "trace: "; break;
         }
 
-        print_to_fd(g_host_log_fd, prefix, fmt, ap);
+        print_to_fd(g_host_log_fd, prefix, file, func, line, fmt, ap);
         va_end(ap);
     }
 }
