@@ -224,16 +224,19 @@ static void split_vma(struct libos_vma* old_vma, struct libos_vma* new_vma, uint
  * It returns a list of vmas that need to be freed in `vmas_to_free`.
  * Range [begin, end) can consist of multiple vmas even with holes in between, but they all must be
  * either internal or non-internal.
+ * If `out_removed` is not NULL, it is set to `true` iff any memory range was actually removed.
  */
 static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
-                             struct libos_vma** new_vma_ptr, struct libos_vma** vmas_to_free) {
+                             struct libos_vma** new_vma_ptr, struct libos_vma** vmas_to_free,
+                             bool* out_removed) {
     assert(spinlock_is_locked(&vma_tree_lock));
     assert(!new_vma_ptr || *new_vma_ptr);
     assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
+    bool removed = false;
 
     struct libos_vma* vma = _lookup_vma(begin);
     if (!vma) {
-        return 0;
+        goto out_success;
     }
 
     struct libos_vma* first_vma = vma;
@@ -254,6 +257,8 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
     vma = first_vma;
 
     if (vma->begin < begin) {
+        removed = true;
+
         if (end < vma->end) {
             if (!new_vma_ptr) {
                 log_warning("need an additional vma to free this range!");
@@ -268,7 +273,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
             avl_tree_insert(&vma_tree, &new_vma->tree_node);
             total_memory_size_sub(end - begin);
 
-            return 0;
+            goto out_success;
         }
 
         total_memory_size_sub(vma->end - begin);
@@ -276,7 +281,7 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
 
         vma = _get_next_vma(vma);
         if (!vma) {
-            return 0;
+            goto out_success;
         }
     }
 
@@ -291,8 +296,10 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
         *vmas_to_free = vma;
         vmas_to_free = &vma->next_free;
 
+        removed = true;
+
         if (!next) {
-            return 0;
+            goto out_success;
         }
         vma = next;
     }
@@ -303,8 +310,14 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
         }
         total_memory_size_sub(end - vma->begin);
         vma->begin = end;
+
+        removed = true;
     }
 
+out_success:
+    if (out_removed) {
+        *out_removed = removed;
+    }
     return 0;
 }
 
@@ -326,8 +339,8 @@ static void* _vma_malloc(size_t size) {
 
         spinlock_lock(&vma_tree_lock);
         /* Since we are freeing a range we just created, additional vma is not needed. */
-        ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + size, /*is_internal=*/true, NULL,
-                                &vmas_to_free);
+        ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + size, /*is_internal=*/true,
+                                /*new_vma_ptr=*/NULL, &vmas_to_free, /*out_removed=*/NULL);
         spinlock_unlock(&vma_tree_lock);
         if (ret < 0) {
             log_error("Removing a vma we just created failed with %d!", ret);
@@ -728,7 +741,7 @@ int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr
 
     spinlock_lock(&vma_tree_lock);
     int ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + length, is_internal,
-                                vma2 ? &vma2 : NULL, &vmas_to_free);
+                                vma2 ? &vma2 : NULL, &vmas_to_free, /*out_removed=*/NULL);
     if (ret >= 0) {
         _add_unmapped_vma((uintptr_t)addr, (uintptr_t)addr + length, vma1);
         *tmp_vma_ptr = (void*)vma1;
@@ -771,7 +784,7 @@ static bool is_file_prot_matching(struct libos_handle* file_hdl, int prot) {
 }
 
 int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libos_handle* file,
-                     uint64_t offset, const char* comment) {
+                     uint64_t offset, const char* comment, bool* overwriting) {
     assert(flags & (MAP_FIXED | MAP_FIXED_NOREPLACE));
 
     if (!length || !IS_ALLOC_ALIGNED(length) || !IS_ALLOC_ALIGNED_PTR(addr)) {
@@ -807,7 +820,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
         }
     } else {
         ret = _vma_bkeep_remove(new_vma->begin, new_vma->end, !!(flags & VMA_INTERNAL),
-                                vma1 ? &vma1 : NULL, &vmas_to_free);
+                                vma1 ? &vma1 : NULL, &vmas_to_free, overwriting);
     }
     if (ret >= 0) {
         avl_tree_insert(&vma_tree, &new_vma->tree_node);
@@ -884,8 +897,8 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
     }
 
     if (!is_continuous) {
-        /* XXX: When Linux fails with such an error, it sill changes permissions of the first
-         * continuous fragment. Maybe we should emulate this weird behavior? */
+        /* When Linux fails with such an error, it sill changes permissions of the first
+         * continuous fragment, but we just return an error. */
         return -ENOMEM;
     }
 
@@ -1487,7 +1500,7 @@ BEGIN_RS_FUNC(vma) {
     CP_REBASE(vma->file);
 
     int ret = bkeep_mmap_fixed(vma->addr, vma->length, vma->prot, vma->flags | MAP_FIXED, vma->file,
-                               vma->file_offset, vma->comment);
+                               vma->file_offset, vma->comment, /*overwriting=*/NULL);
     if (ret < 0)
         return ret;
 
