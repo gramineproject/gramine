@@ -15,8 +15,9 @@ enum {
 };
 
 /* All of them implicitly append a newline at the end of the message. */
-#define log_always(fmt...)   _log(LOG_LEVEL_NONE, fmt)
-#define log_error(fmt...)    _log(LOG_LEVEL_ERROR, fmt)
-#define log_warning(fmt...)  _log(LOG_LEVEL_WARNING, fmt)
-#define log_debug(fmt...)    _log(LOG_LEVEL_DEBUG, fmt)
-#define log_trace(fmt...)    _log(LOG_LEVEL_TRACE, fmt)
+#define log_always(fmt...)   _log(LOG_LEVEL_NONE, __FILE__, __func__, __LINE__, fmt)
+#define log_error(fmt...)    _log(LOG_LEVEL_ERROR, __FILE__, __func__, __LINE__, fmt)
+#define log_warning(fmt...)  _log(LOG_LEVEL_WARNING, __FILE__, __func__, __LINE__, fmt)
+#define log_debug(fmt...)    _log(LOG_LEVEL_DEBUG, __FILE__, __func__, __LINE__, fmt)
+
+#define log_trace(fmt...)    _log(LOG_LEVEL_TRACE, __FILE__, __func__, __LINE__, fmt)

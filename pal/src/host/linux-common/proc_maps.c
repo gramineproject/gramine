@@ -96,7 +96,7 @@ static int parse_proc_maps_callback(const char* line, void* arg, bool* out_stop)
 
     struct proc_maps_range r;
     if (parse_proc_maps_line(line, &r) < 0) {
-        log_warning("%s: failed to parse /proc/[pid]/maps line \"%s\"", __func__, line);
+        log_warning("failed to parse /proc/[pid]/maps line \"%s\"", line);
         return -EINVAL;
     }
     return data->orig_callback(&r, data->arg);

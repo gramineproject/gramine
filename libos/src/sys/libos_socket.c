@@ -89,7 +89,7 @@ long libos_syscall_socket(int family, int type, int protocol) {
         case AF_INET6:
             break;
         default:
-            log_warning("%s: unsupported socket domain %d", __func__, family);
+            log_warning("unsupported socket domain %d", family);
             return -EAFNOSUPPORT;
     }
 
@@ -106,7 +106,7 @@ long libos_syscall_socket(int family, int type, int protocol) {
         case SOCK_DGRAM:
             break;
         default:
-            log_warning("%s: unsupported socket type %d", __func__, type);
+            log_warning("unsupported socket type %d", type);
             return -EPROTONOSUPPORT;
     }
 
@@ -137,7 +137,7 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
 
     type &= SOCK_TYPE_MASK;
     if (type != SOCK_STREAM) {
-        log_warning("%s: unsupported socket type %d", __func__, type);
+        log_warning("unsupported socket type %d", type);
         return -EPROTONOSUPPORT;
     }
 
@@ -624,11 +624,11 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
 
     if (flags & MSG_MORE) {
         if (sock->type != SOCK_STREAM) {
-            log_warning("%s: MSG_MORE on non-TCP sockets is not supported", __func__);
+            log_warning("MSG_MORE on non-TCP sockets is not supported");
             return -EOPNOTSUPP;
         }
         if (FIRST_TIME())
-            log_debug("%s: MSG_MORE on TCP sockets is ignored", __func__);
+            log_debug("MSG_MORE on TCP sockets is ignored");
     }
 
     lock(&sock->lock);
@@ -667,7 +667,7 @@ out:
             .si_code = SI_USER,
         };
         if (kill_current_proc(&info) < 0) {
-            log_error("%s: failed to deliver a signal", __func__);
+            log_error("failed to deliver a signal");
         }
     }
     if (ret == -EINTR) {
@@ -825,7 +825,7 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
 
     if (*flags & MSG_PEEK) {
         if (sock->type != SOCK_STREAM) {
-            log_warning("%s: MSG_PEEK on non stream sockets is not supported", __func__);
+            log_warning("MSG_PEEK on non stream sockets is not supported");
             ret = -EOPNOTSUPP;
             goto out;
         }

@@ -138,22 +138,22 @@ static int read_loadcmd(const elf_phdr_t* ph, struct loadcmd* c) {
 
     if (ph->p_align > 1) {
         if (!IS_POWER_OF_2(ph->p_align)) {
-            log_debug("%s: ELF load command alignment value is not a power of 2", __func__);
+            log_debug("ELF load command alignment value is not a power of 2");
             return -EINVAL;
         }
         if (!IS_ALIGNED_POW2(ph->p_vaddr - ph->p_offset, ph->p_align)) {
-            log_debug("%s: ELF load command address/offset not properly aligned", __func__);
+            log_debug("ELF load command address/offset not properly aligned");
             return -EINVAL;
         }
     }
 
     if (!IS_ALLOC_ALIGNED(ph->p_vaddr - ph->p_offset)) {
-        log_debug("%s: ELF load command address/offset not page-aligned", __func__);
+        log_debug("ELF load command address/offset not page-aligned");
         return -EINVAL;
     }
 
     if (ph->p_filesz > ph->p_memsz) {
-        log_debug("%s: file size larger than memory size", __func__);
+        log_debug("file size larger than memory size");
         return -EINVAL;
     }
 
@@ -190,7 +190,7 @@ static int read_all_loadcmds(const elf_phdr_t* phdr, size_t phnum, size_t* n_loa
     }
 
     if ((*loadcmds = malloc(n * sizeof(**loadcmds))) == NULL) {
-        log_debug("%s: failed to allocate memory", __func__);
+        log_debug("failed to allocate memory");
         return -ENOMEM;
     }
 
@@ -199,7 +199,7 @@ static int read_all_loadcmds(const elf_phdr_t* phdr, size_t phnum, size_t* n_loa
     for (ph = phdr; ph < &phdr[phnum]; ph++) {
         if (ph->p_type == PT_LOAD) {
             if (ph_prev && !(ph_prev->p_vaddr < ph->p_vaddr)) {
-                log_debug("%s: PT_LOAD segments are not in ascending order", __func__);
+                log_debug("PT_LOAD segments are not in ascending order");
                 ret = -EINVAL;
                 goto err;
             }
@@ -259,13 +259,13 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
 
         if ((ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
                                     /*comment=*/NULL)) < 0) {
-            log_debug("%s: failed to bookkeep address of segment", __func__);
+            log_debug("failed to bookkeep address of segment");
             return ret;
         }
 
         if ((ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags,
                                           c->map_off)) < 0) {
-            log_debug("%s: failed to map segment: %d", __func__, ret);
+            log_debug("failed to map segment: %d", ret);
             return ret;
         }
     }
@@ -280,7 +280,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         if ((c->prot & PROT_WRITE) == 0) {
             if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
                                                pal_prot | PAL_PROT_WRITE) < 0)) {
-                log_debug("%s: cannot change memory protections", __func__);
+                log_debug("cannot change memory protections");
                 return pal_to_unix_errno(ret);
             }
         }
@@ -289,7 +289,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
 
         if ((c->prot & PROT_WRITE) == 0) {
             if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot) < 0)) {
-                log_debug("%s: cannot change memory protections", __func__);
+                log_debug("cannot change memory protections");
                 return pal_to_unix_errno(ret);
             }
         }
@@ -304,12 +304,12 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
 
         if ((ret = bkeep_mmap_fixed(zero_page_start, zero_page_size, c->prot, zero_map_flags,
                                     /*file=*/NULL, /*offset=*/0, /*comment=*/NULL)) < 0) {
-            log_debug("%s: cannot bookkeep address of zero-fill pages", __func__);
+            log_debug("cannot bookkeep address of zero-fill pages");
             return ret;
         }
 
         if ((ret = PalVirtualMemoryAlloc(zero_page_start, zero_page_size, zero_pal_prot)) < 0) {
-            log_debug("%s: cannot map zero-fill pages", __func__);
+            log_debug("cannot map zero-fill pages");
             return pal_to_unix_errno(ret);
         }
     }
@@ -894,11 +894,11 @@ static int find_interp(const char* interp_name, struct libos_dentry** out_dent) 
         size_t path_len = strlen(*path);
         char* interp_path = alloc_concat3(*path, path_len, "/", 1, filename, filename_len);
         if (!interp_path) {
-            log_warning("%s: couldn't allocate path: %s/%s", __func__, *path, filename);
+            log_warning("couldn't allocate path: %s/%s", *path, filename);
             return -ENOMEM;
         }
 
-        log_debug("%s: searching for interpreter: %s", __func__, interp_path);
+        log_debug("searching for interpreter: %s", interp_path);
         struct libos_dentry* dent;
         int ret = path_lookupat(/*start=*/NULL, interp_path, LOOKUP_FOLLOW, &dent);
         if (ret == 0) {

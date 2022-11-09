@@ -186,7 +186,7 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
 err:;
     int free_ret = PalVirtualMemoryFree(addr, size);
     if (free_ret < 0) {
-        log_debug("%s: PalVirtualMemoryFree failed on cleanup: %d", __func__, free_ret);
+        log_debug("PalVirtualMemoryFree failed on cleanup: %d", free_ret);
         BUG();
     }
     return ret;
@@ -223,7 +223,7 @@ int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, in
         }
 
         if (count == 0) {
-            log_debug("%s: Failed to write back the whole mapping", __func__);
+            log_debug("Failed to write back the whole mapping");
             ret = -EIO;
             goto out;
         }
@@ -239,7 +239,7 @@ out:
     if (pal_prot != pal_prot_readable) {
         int protect_ret = PalVirtualMemoryProtect(addr, size, pal_prot);
         if (protect_ret < 0) {
-            log_debug("%s: PalVirtualMemoryProtect failed on cleanup: %d", __func__, protect_ret);
+            log_debug("PalVirtualMemoryProtect failed on cleanup: %d", protect_ret);
             BUG();
         }
     }

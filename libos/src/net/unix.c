@@ -382,8 +382,7 @@ again:
             if (tmp_ret < 0) {
                 unlock(&handle->lock);
                 tmp_ret = pal_to_unix_errno(tmp_ret);
-                log_error("%s: nonblocking restore: failed to get handle attrs: %d", __func__,
-                          tmp_ret);
+                log_error("nonblocking restore: failed to get handle attrs: %d", tmp_ret);
                 PalProcessExit(1);
             }
             assert(attr.nonblocking);
@@ -392,8 +391,7 @@ again:
             if (tmp_ret < 0) {
                 unlock(&handle->lock);
                 tmp_ret = pal_to_unix_errno(tmp_ret);
-                log_error("%s: nonblocking restore: failed to set handle attrs: %d", __func__,
-                          tmp_ret);
+                log_error("nonblocking restore: failed to set handle attrs: %d", tmp_ret);
                 PalProcessExit(1);
             }
         }

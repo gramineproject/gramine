@@ -270,7 +270,7 @@ static int initial_mem_alloc(size_t size, void** out_addr) {
 
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
-        log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
+        log_error("failed to allocate initial PAL internal memory: %d", ret);
         _PalProcessExit(1);
     }
 
@@ -291,7 +291,7 @@ static int initial_mem_free(uintptr_t addr, size_t size) {
     }
     ret = _PalVirtualMemoryFree((void*)addr, size);
     if (ret < 0) {
-        log_error("%s: failed to free initial PAL internal memory: %d", __func__, ret);
+        log_error("failed to free initial PAL internal memory: %d", ret);
         _PalProcessExit(1);
     }
     return 0;
@@ -307,12 +307,12 @@ int pal_internal_memory_alloc(size_t size, void** out_addr) {
     uintptr_t addr;
     int ret = g_mem_bkeep_alloc_upcall(size, &addr);
     if (ret < 0) {
-        log_warning("%s: failed to bookkeep PAL internal memory: %d", __func__, ret);
+        log_warning("failed to bookkeep PAL internal memory: %d", ret);
         return -PAL_ERROR_NOMEM;
     }
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
-        log_warning("%s: failed to allocate PAL internal memory: %d", __func__, ret);
+        log_warning("failed to allocate PAL internal memory: %d", ret);
         ret = g_mem_bkeep_free_upcall(addr, size);
         if (ret < 0) {
             BUG();
@@ -333,12 +333,12 @@ int pal_internal_memory_free(void* addr, size_t size) {
 
     int ret = _PalVirtualMemoryFree(addr, size);
     if (ret < 0) {
-        log_warning("%s: failed to free PAL internal memory: %d", __func__, ret);
+        log_warning("failed to free PAL internal memory: %d", ret);
         return ret;
     }
     ret = g_mem_bkeep_free_upcall((uintptr_t)addr, size);
     if (ret < 0) {
-        log_error("%s: failed to release PAL internal memory: %d", __func__, ret);
+        log_error("failed to release PAL internal memory: %d", ret);
         _PalProcessExit(1);
     }
     return 0;

@@ -55,7 +55,7 @@ static inline void system_mem_free(void* addr, size_t size) {
 
     int ret = pal_internal_memory_free(addr, size);
     if (ret < 0) {
-        log_error("%s:%d freeing memory failed: %d", __FILE__, __LINE__, ret);
+        log_error("freeing memory failed: %d", ret);
         _PalProcessExit(1);
     }
 }

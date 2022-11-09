@@ -215,7 +215,7 @@ static int ipc_send_message_to_conn(struct libos_ipc_connection* conn, struct li
     lock(&conn->lock);
     if (conn->seen_error) {
         ret = conn->seen_error;
-        log_debug("%s: returning previously seen error: %d", __func__, ret);
+        log_debug("returning previously seen error: %d", ret);
         goto out;
     }
 
