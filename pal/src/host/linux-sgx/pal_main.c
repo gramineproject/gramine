@@ -540,7 +540,7 @@ __attribute_no_stack_protector
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
-                             void* uptr_rpc_queue, void* uptr_dns_conf,
+                             void* uptr_rpc_queue, void* uptr_dns_conf, bool edmm_enabled,
                              void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
@@ -567,6 +567,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     g_pal_linuxsgx_state.heap_min = GET_ENCLAVE_TCB(heap_min);
     g_pal_linuxsgx_state.heap_max = GET_ENCLAVE_TCB(heap_max);
+    g_pal_linuxsgx_state.edmm_enabled = edmm_enabled;
 
     /* No need for adding any initial memory ranges - they are all outside of the available memory
      * set below. */
@@ -682,6 +683,19 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
 
+    bool edmm_enabled_manifest;
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.edmm_enable", /*defaultval=*/false,
+                       &edmm_enabled_manifest);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.edmm_enable'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    if (edmm_enabled_manifest != edmm_enabled) {
+        log_error("edmm_enabled_manifest(=%d) != edmm_enabled(=%d)", edmm_enabled_manifest,
+                  edmm_enabled);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",
                       /*defaultval=*/0, &rpc_thread_num);
@@ -714,8 +728,13 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         log_error("Cannot parse 'sgx.preheat_enclave' (the value must be `true` or `false`)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    if (preheat_enclave)
+    if (preheat_enclave) {
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            log_error("'sgx.preheat_enclave' manifest option makes no sense with EDMM enabled!");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
         do_preheat_enclave();
+    }
 
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %d", ret);

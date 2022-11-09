@@ -33,6 +33,7 @@
 extern struct pal_linuxsgx_state {
     /* enclave information */
     bool enclave_initialized;        /* thread creation ECALL is allowed only after this is set */
+    bool edmm_enabled;
     sgx_target_info_t qe_targetinfo; /* received from untrusted host, use carefully */
     sgx_report_body_t enclave_info;  /* cached self-report result, trusted */
 
@@ -70,7 +71,7 @@ extern const size_t g_page_size;
 noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void* uptr_args,
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
-                             void* uptr_rpc_queue, void* uptr_dns_conf,
+                             void* uptr_rpc_queue, void* uptr_dns_conf, bool edmm_enabled,
                              void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size);
 void pal_start_thread(void);
 

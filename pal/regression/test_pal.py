@@ -9,6 +9,7 @@ import subprocess
 import unittest
 
 from graminelibos.regression import (
+    HAS_EDMM,
     HAS_SGX,
     ON_X86,
     RegressionTestCase,
@@ -338,13 +339,12 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertIn('TEST OK', stderr)
 
     def test_300_memory(self):
-        if not HAS_SGX:
+        if not HAS_SGX or HAS_EDMM:
             _, stderr = self.run_binary(['memory'])
             self.assertIn('TEST OK', stderr)
         else:
             # SGX1 does not support unmapping a page or changing its permission after enclave init.
-            # Therefore the memory protection and deallocation tests will fail. By utilizing SGX2
-            # it's possible to fix this.
+            # Therefore the memory protection and deallocation tests will fail.
             try:
                 self.run_binary(['memory'])
                 self.fail('expected to return nonzero')

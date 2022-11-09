@@ -4,6 +4,7 @@
 #include "host_sgx_driver.h"
 #include "host_internal.h"
 #include "linux_utils.h"
+#include "pal_sgx.h"
 #include "sgx_arch.h"
 
 static int g_isgx_device = -1;
@@ -139,13 +140,8 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
 #endif
 
     uint64_t addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
-                               PROT_NONE, /* newer DCAP driver requires such initial mmap */
-#ifdef CONFIG_SGX_DRIVER_OOT
-                               MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
-#else
-                               MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-
+                               PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_SHARED,
+                               g_isgx_device, 0);
     if (IS_PTR_ERR(addr)) {
         int ret = PTR_TO_ERR(addr);
         if (ret == -EPERM) {
@@ -219,7 +215,6 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
                          enum sgx_page_type type, int prot, bool skip_eextend,
                          const char* comment) {
     __UNUSED(secs); /* Used only under DCAP ifdefs */
-    sgx_arch_sec_info_t secinfo;
     int ret;
 
     if (!g_zero_pages) {
@@ -234,30 +229,26 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         g_zero_pages_size = g_page_size;
     }
 
-    memset(&secinfo, 0, sizeof(sgx_arch_sec_info_t));
-
+    sgx_arch_sec_info_t secinfo = { 0 };
     switch (type) {
-        case SGX_PAGE_SECS:
+        case SGX_PAGE_TYPE_SECS:
             return -EPERM;
-        case SGX_PAGE_TCS:
-            secinfo.flags |= SGX_SECINFO_FLAGS_TCS;
+        case SGX_PAGE_TYPE_TCS:
+            secinfo.flags = SGX_PAGE_TYPE_TCS << SGX_SECINFO_FLAGS_TYPE_SHIFT;
             break;
-        case SGX_PAGE_REG:
-            secinfo.flags |= SGX_SECINFO_FLAGS_REG;
-            if (prot & PROT_READ)
-                secinfo.flags |= SGX_SECINFO_FLAGS_R;
-            if (prot & PROT_WRITE)
-                secinfo.flags |= SGX_SECINFO_FLAGS_W;
-            if (prot & PROT_EXEC)
-                secinfo.flags |= SGX_SECINFO_FLAGS_X;
+        case SGX_PAGE_TYPE_REG:
+            secinfo.flags = SGX_PAGE_TYPE_REG << SGX_SECINFO_FLAGS_TYPE_SHIFT
+                            | PAL_TO_SGX_PROT(prot);
             break;
+        default:
+            return -EINVAL;
     }
 
     char p[4] = "---";
-    const char* t = (type == SGX_PAGE_TCS) ? "TCS" : "REG";
+    const char* t = (type == SGX_PAGE_TYPE_TCS) ? "TCS" : "REG";
     const char* m = skip_eextend ? "" : " measured";
 
-    if (type == SGX_PAGE_REG) {
+    if (type == SGX_PAGE_TYPE_REG) {
         if (prot & PROT_READ)
             p[0] = 'R';
         if (prot & PROT_WRITE)
@@ -373,6 +364,91 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         return ret;
     }
 #endif /* CONFIG_SGX_DRIVER_OOT */
+
+    return 0;
+}
+
+int edmm_restrict_pages_perms(uint64_t addr, size_t count, uint64_t prot) {
+    assert(addr >= g_pal_enclave.baseaddr);
+    size_t offset = 0;
+    size_t size = count * PAGE_SIZE;
+
+    while (offset < size) {
+        struct sgx_enclave_restrict_permissions params = {
+            .offset = addr + offset - g_pal_enclave.baseaddr,
+            .length = size - offset,
+            .permissions = prot,
+        };
+        int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS, &params);
+        assert(params.count % PAGE_SIZE == 0);
+        offset += params.count;
+        if (ret < 0) {
+            if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
+                continue;
+            }
+            if (ret == -EFAULT) {
+                /* Skip inaccessible pages in case `[addr; addr + size)` range is not continuous. */
+                offset += PAGE_SIZE;
+                continue;
+            }
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
+int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
+    assert(addr >= g_pal_enclave.baseaddr);
+
+    size_t i = 0;
+    while (i < count) {
+        struct sgx_enclave_modify_types params = {
+            .offset = addr + i * PAGE_SIZE - g_pal_enclave.baseaddr,
+            .length = (count - i) * PAGE_SIZE,
+            .page_type = type,
+        };
+        int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_MODIFY_TYPES, &params);
+        assert(params.count % PAGE_SIZE == 0);
+        i += params.count / PAGE_SIZE;
+        if (ret < 0) {
+            if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
+                continue;
+            }
+            if (ret == -EFAULT) {
+                i += 1;
+                continue;
+            }
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
+int edmm_remove_pages(uint64_t addr, size_t count) {
+    assert(addr >= g_pal_enclave.baseaddr);
+
+    size_t i = 0;
+    while (i < count) {
+        struct sgx_enclave_remove_pages params = {
+            .offset = addr + i * PAGE_SIZE - g_pal_enclave.baseaddr,
+            .length = (count - i) * PAGE_SIZE,
+        };
+        int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_REMOVE_PAGES, &params);
+        assert(params.count % PAGE_SIZE == 0);
+        i += params.count / PAGE_SIZE;
+        if (ret < 0) {
+            if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
+                continue;
+            }
+            if (ret == -EPERM) {
+                i += 1;
+                continue;
+            }
+            return ret;
+        }
+    }
 
     return 0;
 }

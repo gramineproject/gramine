@@ -247,12 +247,20 @@ typedef struct {
     uint64_t reserved[7];
 } sgx_arch_sec_info_t;
 
-#define SGX_SECINFO_FLAGS_R    0x001
-#define SGX_SECINFO_FLAGS_W    0x002
-#define SGX_SECINFO_FLAGS_X    0x004
-#define SGX_SECINFO_FLAGS_SECS 0x000
-#define SGX_SECINFO_FLAGS_TCS  0x100
-#define SGX_SECINFO_FLAGS_REG  0x200
+enum sgx_page_type {
+    SGX_PAGE_TYPE_SECS,
+    SGX_PAGE_TYPE_TCS,
+    SGX_PAGE_TYPE_REG,
+    SGX_PAGE_TYPE_VA,
+    SGX_PAGE_TYPE_TRIM,
+};
+
+#define SGX_SECINFO_FLAGS_R         (1 << 0)
+#define SGX_SECINFO_FLAGS_W         (1 << 1)
+#define SGX_SECINFO_FLAGS_X         (1 << 2)
+#define SGX_SECINFO_FLAGS_PENDING   (1 << 3)
+#define SGX_SECINFO_FLAGS_MODIFIED  (1 << 4)
+#define SGX_SECINFO_FLAGS_TYPE_SHIFT 8
 
 typedef struct _css_header_t {
     uint8_t  header[12];
@@ -404,14 +412,14 @@ typedef uint8_t sgx_key_128bit_t[16];
 
 #endif
 
-#define EENTER  2
-#define ERESUME 3
-#define EDBGRD  4
-#define EDBGWR  5
-
-#define EREPORT 0
-#define EGETKEY 1
-#define EEXIT   4
+#define EREPORT     0
+#define EGETKEY     1
+#define EENTER      2
+#define ERESUME     3
+#define EEXIT       4
+#define EACCEPT     5
+#define EMODPE      6
+#define EACCEPTCOPY 7
 
 #define SGX_LAUNCH_KEY         0
 #define SGX_PROVISION_KEY      1
