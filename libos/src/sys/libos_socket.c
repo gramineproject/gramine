@@ -64,6 +64,7 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     sock->can_be_written = false;
     sock->reuseaddr = false;
     sock->broadcast = false;
+    sock->reuseport = false;
     switch (family) {
         case AF_UNIX:
             sock->ops = &sock_unix_ops;
@@ -1310,6 +1311,9 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
             break;
         case SO_BROADCAST:
             value.i = sock->broadcast;
+            break;
+        case SO_REUSEPORT:
+            value.i = sock->reuseport;
             break;
         default:
             return -ENOPROTOOPT;
