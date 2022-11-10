@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -118,6 +119,20 @@ int main(int argc, char** argv) {
     if (ret != -1 || errno != EADDRINUSE) {
         fprintf(stderr,
                 "bind(ipv4) was successful even though there is no IPV6_V6ONLY on same port\n");
+        return 1;
+    }
+
+    if (setsockopt(socket_ipv6, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable)) < 0) {
+        perror("setsockopt(ipv6, SO_REUSEPORT = 1)");
+        return 1;
+    }
+    if (setsockopt(socket_ipv4, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(enable)) < 0) {
+        perror("setsockopt(ipv4, SO_REUSEPORT = 1)");
+        return 1;
+    }
+
+    if (bind(socket_ipv4, (struct sockaddr*)&address_ipv4, sizeof(address_ipv4)) < 0) {
+        perror("bind(ipv4) failed even though SO_REUSEPORT has been called on both sockets");
         return 1;
     }
 

@@ -76,8 +76,8 @@ enum libos_sock_state {
 
 /*
  * Access to `state`, `remote_addr`, `remote_addrlen`, `local_addr`, `local_addrlen, `last_error`,
- * `sendtimeout_us`, `receivetimeout_us`, `can_be_read`, `can_be_written` and `was_bound` are
- * protected by `lock`.
+ * `sendtimeout_us`, `receivetimeout_us`, `can_be_read`, `can_be_written`, `was_bound`, `reuseaddr`,
+ * `reuseport` and `broadcast` are protected by `lock`.
  * `ops`, `domain`, `type` and `protocol` are read-only and do not need any locking.
  * Access to `peek` struct is protected by `recv_lock`. This lock also ensures proper ordering of
  * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/libos_socket.c").
@@ -120,6 +120,7 @@ struct libos_sock_handle {
     /* Same as above but for `send`/`write`. */
     bool can_be_written;
     bool reuseaddr;
+    bool reuseport;
     bool broadcast;
 };
 

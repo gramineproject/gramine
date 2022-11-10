@@ -75,6 +75,7 @@ typedef struct {
             uint64_t sendtimeout_us;
             bool is_nonblocking;
             bool reuseaddr;
+            bool reuseport;
             bool broadcast;
             bool keepalive;
             bool tcp_cork;

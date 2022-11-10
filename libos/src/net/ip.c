@@ -388,6 +388,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
         case SO_REUSEADDR:
             required_len = sizeof(int);
             break;
+        case SO_REUSEPORT:
+            required_len = sizeof(int);
+            break;
         case SO_BROADCAST:
             required_len = sizeof(int);
             break;
@@ -456,6 +459,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
         case SO_REUSEADDR:
             attr.socket.reuseaddr = value.i;
             break;
+        case SO_REUSEPORT:
+            attr.socket.reuseport = value.i;
+            break;
         case SO_BROADCAST:
             if (sock->type == SOCK_STREAM) {
                 /* This option has no effect on stream-oriented sockets. */
@@ -476,6 +482,9 @@ static int set_socket_option(struct libos_handle* handle, int optname, void* opt
     switch (optname) {
         case SO_REUSEADDR:
             sock->reuseaddr = attr.socket.reuseaddr;
+            break;
+        case SO_REUSEPORT:
+            sock->reuseport = attr.socket.reuseport;
             break;
         case SO_BROADCAST:
             sock->broadcast = attr.socket.broadcast;
