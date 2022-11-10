@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 /* use the same loopback address and port for both IPV6 and IPV4 */
 #define SRV_IPV6 "::1/128"
 #define SRV_IPV4 "127.0.0.1"
@@ -133,7 +132,8 @@ int main(int argc, char** argv) {
     }
 
     if (bind(socket_ipv4, (struct sockaddr*)&address_ipv4, sizeof(address_ipv4)) < 0) {
-        perror("bind(ipv4) failed even though SO_REUSEPORT has been called on both sockets\n");
+        perror("bind(ipv4) failed even though SO_REUSEPORT has been called on both sockets");
+        return 1;
     }
 
     puts("test completed successfully");

@@ -120,8 +120,8 @@ struct libos_sock_handle {
     /* Same as above but for `send`/`write`. */
     bool can_be_written;
     bool reuseaddr;
-    bool broadcast;
     bool reuseport;
+    bool broadcast;
 };
 
 struct libos_dir_handle {

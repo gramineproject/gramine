@@ -475,9 +475,9 @@ typedef struct _PAL_STREAM_ATTR {
             size_t send_buf_size;
             uint64_t receivetimeout_us, sendtimeout_us;
             bool reuseaddr;
+            bool reuseport;
             bool keepalive;
             bool broadcast;
-            bool reuseport;
             bool tcp_cork;
             uint32_t tcp_keepidle;
             uint32_t tcp_keepintvl;
