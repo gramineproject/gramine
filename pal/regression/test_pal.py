@@ -171,7 +171,6 @@ class TC_02_Symbols(RegressionTestCase):
         'PalObjectClose',
         'PalSystemTimeQuery',
         'PalRandomBitsRead',
-        'PalMemoryAvailableQuota',
     ]
     if ON_X86:
         ALL_SYMBOLS.append('PalSegmentBaseGet')

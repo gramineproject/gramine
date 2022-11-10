@@ -56,7 +56,6 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalSegmentBaseGet);
     PRINT_SYMBOL(PalSegmentBaseSet);
 #endif
-    PRINT_SYMBOL(PalMemoryAvailableQuota);
 
     return 0;
 }

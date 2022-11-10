@@ -883,11 +883,6 @@ int PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr);
 int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
- * \brief Return the amount of currently available memory for LibOS/application usage.
- */
-size_t PalMemoryAvailableQuota(void);
-
-/*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
  * \param         user_report_data       Report data with arbitrary contents (typically uniquely

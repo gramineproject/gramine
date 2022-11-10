@@ -13,6 +13,7 @@
 #include "api.h"
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
+#include "libos_vma.h"
 
 static bool is_online(size_t ind, const void* arg) {
     __UNUSED(arg);
@@ -104,7 +105,8 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
     size_t numa_nodes_cnt = g_pal_public_state->topo_info.numa_nodes_cnt;
     /* Simply "mimic" a typical environment: split memory evenly between each NUMA node */
     size_t node_mem_total = g_pal_public_state->mem_total / numa_nodes_cnt;
-    size_t node_mem_free = PalMemoryAvailableQuota() / numa_nodes_cnt;
+    size_t node_mem_free = (g_pal_public_state->mem_total - get_total_memory_usage())
+                           / numa_nodes_cnt;
 
     assert(node_mem_total >= node_mem_free);
 

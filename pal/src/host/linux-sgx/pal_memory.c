@@ -17,9 +17,6 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 
-/* Tracks only anonymous memory - file mappings are not included. */
-static size_t g_allocated_pages = 0;
-
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     __UNUSED(prot);
     assert(WITHIN_MASK(prot, PAL_PROT_MASK));
@@ -37,8 +34,6 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
      * function must return zeroed memory).
      */
     memset(addr, 0, size);
-
-    __atomic_add_fetch(&g_allocated_pages, size / g_page_size, __ATOMIC_RELAXED);
 
     return 0;
 }
@@ -59,8 +54,6 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
          * This function doesn't have to do anything - in SGX1 the memory is mapped only at
          * the enclave initialization and cannot be unmapped.
          */
-
-        __atomic_sub_fetch(&g_allocated_pages, size / g_page_size, __ATOMIC_RELAXED);
     } else {
         /* possible to have untrusted mapping, simply unmap memory outside the enclave */
         ocall_munmap_untrusted(addr, size);
@@ -94,11 +87,6 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
 
 uint64_t _PalMemoryQuota(void) {
     return g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min;
-}
-
-uint64_t _PalMemoryAvailableQuota(void) {
-    return (g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min) -
-           __atomic_load_n(&g_allocated_pages, __ATOMIC_RELAXED) * g_page_size;
 }
 
 static uintptr_t (*g_urts_next_reserved_range)[2] = NULL;

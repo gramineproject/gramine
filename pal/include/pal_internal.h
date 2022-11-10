@@ -157,7 +157,6 @@ noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HAND
 /* For initialization */
 
 unsigned long _PalMemoryQuota(void);
-unsigned long _PalMemoryAvailableQuota(void);
 // Returns 0 on success, negative PAL code on failure
 int _PalGetCPUInfo(struct pal_cpu_info* info);
 
