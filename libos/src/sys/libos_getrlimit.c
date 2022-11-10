@@ -14,6 +14,7 @@
 #include "libos_process.h"
 #include "libos_table.h"
 #include "libos_thread.h"
+#include "libos_vma.h"
 
 /*
  * TODO: implement actual limitation on each resource.
@@ -165,11 +166,12 @@ long libos_syscall_sysinfo(struct sysinfo* info) {
     if (!is_user_memory_writable(info, sizeof(*info)))
         return -EFAULT;
 
+    size_t free_mem = g_pal_public_state->mem_total - get_total_memory_usage();
     memset(info, 0, sizeof(*info));
     info->totalram  = g_pal_public_state->mem_total;
     info->totalhigh = g_pal_public_state->mem_total;
-    info->freeram   = PalMemoryAvailableQuota();
-    info->freehigh  = PalMemoryAvailableQuota();
+    info->freeram   = free_mem;
+    info->freehigh  = free_mem;
     info->mem_unit  = 1;
     info->procs     = 1; /* report only this Gramine process */
     return 0;

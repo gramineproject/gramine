@@ -80,12 +80,6 @@ int main(void) {
     }
     pal_printf("Total Memory: %#lx\n", total_mem);
 
-    size_t available_mem = PalMemoryAvailableQuota();
-    if (available_mem == 0 || available_mem >= total_mem) {
-        log_error("wrong available memory: %#lx (total mem: %#lx)", available_mem, total_mem);
-        PalProcessExit(1);
-    }
-
     PalSetExceptionHandler(memfault_handler, PAL_EVENT_MEMFAULT);
 
     void* addr1 = NULL;

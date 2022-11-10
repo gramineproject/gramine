@@ -360,9 +360,6 @@ and to obtain an attestation report and quote.
 .. doxygenenum:: pal_segment_reg
    :project: pal
 
-.. doxygenfunction:: PalMemoryAvailableQuota
-   :project: pal
-
 .. doxygenfunction:: PalCpuIdRetrieve
    :project: pal
 

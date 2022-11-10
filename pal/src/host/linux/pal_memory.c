@@ -118,13 +118,6 @@ unsigned long _PalMemoryQuota(void) {
     return (g_pal_linux_state.memory_quota = quota * 1024);
 }
 
-unsigned long _PalMemoryAvailableQuota(void) {
-    unsigned long quota = 0;
-    if (read_proc_meminfo("MemFree", &quota) < 0)
-        return 0;
-    return quota * 1024;
-}
-
 struct proc_maps_info {
     uintptr_t vdso_start;
     uintptr_t vdso_end;

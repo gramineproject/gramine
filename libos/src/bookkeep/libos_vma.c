@@ -1570,5 +1570,7 @@ size_t get_total_memory_usage(void) {
     spinlock_lock(&vma_tree_lock);
     size_t total_memory_size = g_total_memory_size;
     spinlock_unlock(&vma_tree_lock);
-    return total_memory_size;
+    /* This memory accounting is just a simple heuristic, which does not account swap, reserved
+     * memory, unmapped VMAs etc. */
+    return MIN(total_memory_size, g_pal_public_state->mem_total);
 }
