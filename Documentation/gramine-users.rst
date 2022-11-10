@@ -39,12 +39,6 @@ alphabetically).
   conjunction with Intel SGX to provide additional security benefits in Linux
   environments.
 
-  It is worth noting that Super Protocol enables software developers to offer
-  their products and services on an open platform, while better protecting their
-  code from unauthorized access and modification. With SP marketplace, software
-  developers gain a direct sales channel to consumers and can quickly scale
-  solutions to meet client needs.
-
 - `Tencent Cloud <https://intl.cloud.tencent.com/>`__ relies on Gramine to
   implement several SGX-based solutions by running unmodified Linux
   applications. One example is the recent launch of the Tencent Cloud
