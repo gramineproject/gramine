@@ -12,6 +12,7 @@ BuildArch: x86_64
 Source0: %{name}-%{version}.tar.gz
 
 BuildRequires: bison
+BuildRequires: cmake
 BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: jq

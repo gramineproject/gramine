@@ -231,6 +231,7 @@ mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
 curl_proj = subproject('curl-8.4.0')
 cjson_proj = subproject('cJSON-1.7.12')
+libcbor_proj = subproject('libcbor-0.10.2')
 
 if sgx
     # XXX: do not call subproject() from under "if sgx" conditional, because it
@@ -252,6 +253,8 @@ if sgx
     cjson_dep = cjson_proj.get_variable('cjson_dep')
 
     protobuf_dep = dependency('libprotobuf-c')
+
+    libcbor_dep = libcbor_proj.get_variable('libcbor_dep')
 
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
