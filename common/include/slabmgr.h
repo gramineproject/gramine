@@ -98,7 +98,7 @@ static_assert(IS_ALIGNED(offsetof(struct slab_area, raw), 16),
 #define SLAB_LEVELS_SUM (4080 - SLAB_HDR_SIZE * 5)
 #else
 #ifndef SLAB_LEVELS_SUM
-#error "SALB_LEVELS_SUM not defined"
+#error "SLAB_LEVELS_SUM not defined"
 #endif
 #endif
 
