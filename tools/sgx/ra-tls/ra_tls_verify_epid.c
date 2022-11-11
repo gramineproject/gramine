@@ -121,6 +121,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     (void)data;
 
     int ret;
+    sgx_quote_t* quote = NULL;
+
     struct ias_context_t* ias = NULL;
     char* ias_pub_key_pem     = NULL;
 
@@ -160,9 +162,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
 
     /* extract SGX quote from "quote" OID extension from crt */
-    sgx_quote_t* quote;
     size_t quote_size;
-    ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
+    ret = extract_quote_and_verify_claims(crt, &quote, &quote_size);
     if (ret < 0)
         goto out;
 
@@ -256,6 +257,7 @@ out:
     if (ias)
         ias_cleanup(ias);
 
+    free(quote);
     free(ias_pub_key_pem);
     free(quote_from_ias);
     free(report_data);

@@ -1,0 +1,7 @@
+[wrap-file]
+directory = libcbor-0.9.0
+source_url = https://github.com/PJK/libcbor/archive/refs/tags/v0.9.0.tar.gz
+source_fallback_url = https://packages.gramineproject.io/distfiles/libcbor-v0.9.0.tar.gz
+source_filename = libcbor-0.9.0.tar.gz
+source_hash = da81e4f9333e0086d4e2745183c7052f04ecc4dbcffcf910029df24f103c15d1
+patch_directory = libcbor
