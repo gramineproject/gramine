@@ -30,10 +30,29 @@
 #define PUB_KEY_SIZE_MAX         128 /* enough for the only currently supported algo (ECDSA-384) */
 #define IAS_REQUEST_NONCE_LEN    32
 
-#define OID(N) \
-    { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
-static const uint8_t g_quote_oid[] = OID(0x06);
+/* below OID is actually wrong: it shouldn't have the first two bytes (0x06 0x09) because they
+ * represent the ASN.1 Type (6 = OBJECT IDENTIFIER) and ASN.1 Length (9 bytes); we don't modify it
+ * because it is non-standard anyway and we don't want to break backwards-compatibility */
+#define NON_STANDARD_INTEL_SGX_QUOTE_OID \
+    { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, 0x06 }
+static const uint8_t g_quote_oid[] = NON_STANDARD_INTEL_SGX_QUOTE_OID;
 static const size_t g_quote_oid_size = sizeof(g_quote_oid);
+
+/* standard TCG DICE "tagged evidence" OID (2.23.133.5.4.9) */
+#define TCG_DICE_TAGGED_EVIDENCE_OID { 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
+#define TCG_DICE_TAGGED_EVIDENCE_OID_RAW { 0x06, 0x06, 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
+static const uint8_t g_evidence_oid[] = TCG_DICE_TAGGED_EVIDENCE_OID;
+static const size_t g_evidence_oid_size = sizeof(g_evidence_oid);
+static const uint8_t g_evidence_oid_raw[] = TCG_DICE_TAGGED_EVIDENCE_OID_RAW;
+static const size_t g_evidence_oid_raw_size = sizeof(g_evidence_oid_raw);
+
+#define TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG 0x1A75 /* FIXME: proper IANA tag once registered */
+
+/* hash IDs per IANA: https://www.iana.org/assignments/named-information/named-information.xhtml */
+#define IANA_NAMED_INFO_HASH_ALG_REGISTRY_RESERVED 0
+#define IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA256   1
+#define IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA384   7
+#define IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA512   8
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
@@ -49,7 +68,7 @@ __attribute__ ((visibility("hidden")))
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
-int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
                                     size_t* out_quote_size);
 
 __attribute__ ((visibility("hidden")))

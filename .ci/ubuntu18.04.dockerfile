@@ -8,6 +8,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     bison \
     build-essential \
     cargo \
+    cmake \
     curl \
     flex \
     gawk \

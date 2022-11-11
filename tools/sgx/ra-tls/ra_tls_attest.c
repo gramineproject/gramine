@@ -22,6 +22,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <cbor.h>
+
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ecp.h>
 #include <mbedtls/entropy.h>
@@ -67,8 +69,10 @@ static ssize_t rw_file(const char* path, uint8_t* buf, size_t len, bool do_write
     return ret < 0 ? ret : bytes;
 }
 
-/*! given public key \p pk, generate an RA-TLS certificate \p writecrt with \p quote embedded */
+/*! given public key \p pk, generate an RA-TLS certificate \p writecrt with \p quote (legacy format)
+ *  and \p evidence (new standard format) embedded */
 static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t quote_size,
+                         const uint8_t* evidence, size_t evidence_size,
                          mbedtls_x509write_cert* writecrt) {
     int ret;
     char* cert_timestamp_not_before = NULL;
@@ -133,9 +137,18 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
     if (ret < 0)
         goto out;
 
-    /* finally, embed the quote into the generated certificate (as X.509 extension) */
+    /* embed the SGX quote into the generated certificate (as X.509 extension) in two formats:
+     *   - legacy non-standard "SGX quote" OID (used from Gramine v1.0)
+     *   - new standard TCG DICE "tagged evidence" OID (2.23.133.5.4.9)
+     */
     ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid, g_quote_oid_size,
                                               /*critical=*/0, quote, quote_size);
+    if (ret < 0)
+        goto out;
+
+    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_evidence_oid,
+                                              g_evidence_oid_size, /*critical=*/0, evidence,
+                                              evidence_size);
     if (ret < 0)
         goto out;
 
@@ -162,8 +175,9 @@ static int sha256_over_pk(mbedtls_pk_context* pk, uint8_t* sha) {
     return mbedtls_sha256(pk_der, pk_der_size_byte, sha, /*is224=*/0);
 }
 
-/*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
-static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt) {
+/*! generate SGX quote with user_report_data equal to SHA256 hash over \p pk (legacy format) */
+static int generate_quote_with_pk_hash(mbedtls_pk_context* pk, uint8_t** out_quote,
+                                       size_t* out_quote_size) {
     sgx_report_data_t user_report_data = {0};
     int ret = sha256_over_pk(pk, user_report_data.d);
     if (ret < 0)
@@ -185,9 +199,310 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
         return MBEDTLS_ERR_X509_FILE_IO_ERROR;
     }
 
-    ret = generate_x509(pk, quote, quote_size, writecrt);
+    *out_quote = quote;
+    *out_quote_size = (size_t)quote_size;
+    return 0;
+}
 
+/*! create CBOR bstr from SHA256 hash of public key \p pk and copy it into \p out_cbor_bstr */
+static int cbor_bstr_from_pk_sha256(mbedtls_pk_context* pk, cbor_item_t** out_cbor_bstr) {
+    uint8_t sha256[SHA256_DIGEST_SIZE] = {0};
+    int ret = sha256_over_pk(pk, sha256);
+    if (ret < 0)
+        return ret;
+
+    cbor_item_t* cbor_bstr = cbor_build_bytestring(sha256, sizeof(sha256));
+    if (!cbor_bstr)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    *out_cbor_bstr = cbor_bstr;
+    return 0;
+}
+
+/*! generate hash-entry -- CBOR array with [ hash-alg-id, hash-value -- hash of pubkey ] */
+static int generate_serialized_hash_entry(mbedtls_pk_context* pk, uint8_t** out_hash_entry_buf,
+                                      size_t* out_hash_entry_buf_size) {
+    /* the hash-entry array as defined in Concise Software Identification Tags (CoSWID) */
+    cbor_item_t* cbor_hash_entry = cbor_new_definite_array(2);
+    if (!cbor_hash_entry)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    /* RA-TLS always generates SHA256 hash over pubkey */
+    cbor_item_t* cbor_hash_alg_id = cbor_build_uint8(IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA256);
+    if (!cbor_hash_alg_id) {
+        cbor_decref(&cbor_hash_entry);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    cbor_item_t* cbor_hash_value;
+    int ret = cbor_bstr_from_pk_sha256(pk, &cbor_hash_value);
+    if (ret < 0) {
+        cbor_decref(&cbor_hash_alg_id);
+        cbor_decref(&cbor_hash_entry);
+        return ret;
+    }
+
+    int bool_ret = cbor_array_push(cbor_hash_entry, cbor_hash_alg_id);
+    if (!bool_ret) {
+        cbor_decref(&cbor_hash_value);
+        cbor_decref(&cbor_hash_alg_id);
+        cbor_decref(&cbor_hash_entry);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    bool_ret = cbor_array_push(cbor_hash_entry, cbor_hash_value);
+    if (!bool_ret) {
+        cbor_decref(&cbor_hash_value);
+        cbor_decref(&cbor_hash_alg_id);
+        cbor_decref(&cbor_hash_entry);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    /* cbor_hash_entry took ownership of hash_alg_id and hash_value cbor items */
+    cbor_decref(&cbor_hash_alg_id);
+    cbor_decref(&cbor_hash_value);
+
+    uint8_t* hash_entry_buf;
+    size_t hash_entry_buf_size;
+    cbor_serialize_alloc(cbor_hash_entry, &hash_entry_buf, &hash_entry_buf_size);
+
+    cbor_decref(&cbor_hash_entry);
+
+    if (!hash_entry_buf)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    *out_hash_entry_buf = hash_entry_buf;
+    *out_hash_entry_buf_size = hash_entry_buf_size;
+    return 0;
+}
+
+/*! generate claims -- CBOR map with { "pubkey-hash" = <serialized CBOR array hash-entry> } */
+static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_claims_buf,
+                                      size_t* out_claims_buf_size) {
+    cbor_item_t* cbor_claims = cbor_new_definite_map(1);
+    if (!cbor_claims)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    cbor_item_t* cbor_pubkey_hash_key = cbor_build_string("pubkey-hash");
+    if (!cbor_pubkey_hash_key) {
+        cbor_decref(&cbor_claims);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    uint8_t* hash_entry_buf;
+    size_t hash_entry_buf_size;
+    int ret = generate_serialized_hash_entry(pk, &hash_entry_buf, &hash_entry_buf_size);
+    if (ret < 0) {
+        cbor_decref(&cbor_pubkey_hash_key);
+        cbor_decref(&cbor_claims);
+        return ret;
+    }
+
+    cbor_item_t* cbor_pubkey_hash_val = cbor_build_bytestring(hash_entry_buf, hash_entry_buf_size);
+
+    free(hash_entry_buf);
+
+    if (!cbor_pubkey_hash_val) {
+        cbor_decref(&cbor_pubkey_hash_key);
+        cbor_decref(&cbor_claims);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    struct cbor_pair cbor_pubkey_hash_pair = { .key = cbor_pubkey_hash_key,
+                                               .value = cbor_pubkey_hash_val };
+    bool bool_ret = cbor_map_add(cbor_claims, cbor_pubkey_hash_pair);
+    if (!bool_ret) {
+        cbor_decref(&cbor_pubkey_hash_val);
+        cbor_decref(&cbor_pubkey_hash_key);
+        cbor_decref(&cbor_claims);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    uint8_t* claims_buf;
+    size_t claims_buf_size;
+    cbor_serialize_alloc(cbor_claims, &claims_buf, &claims_buf_size);
+
+    cbor_decref(&cbor_pubkey_hash_val);
+    cbor_decref(&cbor_pubkey_hash_key);
+    cbor_decref(&cbor_claims);
+
+    if (!claims_buf)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    *out_claims_buf = claims_buf;
+    *out_claims_buf_size = claims_buf_size;
+    return 0;
+}
+
+/*! generate evidence -- CBOR tag with CBOR array of CBOR bstrs: [ quote, claims ] */
+static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8_t* claims,
+                                        size_t claims_size, uint8_t** out_evidence_buf,
+                                        size_t* out_evidence_buf_size) {
+    cbor_item_t* cbor_evidence = cbor_new_definite_array(2);
+    if (!cbor_evidence)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    cbor_item_t* cbor_quote = cbor_build_bytestring(quote, quote_size);
+    if (!cbor_quote) {
+        cbor_decref(&cbor_evidence);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    cbor_item_t* cbor_claims = cbor_build_bytestring(claims, claims_size);
+    if (!cbor_claims) {
+        cbor_decref(&cbor_quote);
+        cbor_decref(&cbor_evidence);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    int bool_ret = cbor_array_push(cbor_evidence, cbor_quote);
+    if (!bool_ret) {
+        cbor_decref(&cbor_claims);
+        cbor_decref(&cbor_quote);
+        cbor_decref(&cbor_evidence);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    bool_ret = cbor_array_push(cbor_evidence, cbor_claims);
+    if (!bool_ret) {
+        cbor_decref(&cbor_claims);
+        cbor_decref(&cbor_quote);
+        cbor_decref(&cbor_evidence);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    /* cbor_evidence took ownership of quote and claims cbor bstrs */
+    cbor_decref(&cbor_claims);
+    cbor_decref(&cbor_quote);
+
+    cbor_item_t* cbor_tagged_evidence = cbor_new_tag(TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG);
+    if (!cbor_tagged_evidence) {
+        cbor_decref(&cbor_evidence);
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    }
+
+    cbor_tag_set_item(cbor_tagged_evidence, cbor_evidence);
+
+    uint8_t* evidence_buf;
+    size_t evidence_buf_size;
+    cbor_serialize_alloc(cbor_tagged_evidence, &evidence_buf, &evidence_buf_size);
+
+    cbor_decref(&cbor_evidence);
+    cbor_decref(&cbor_tagged_evidence);
+
+    if (!evidence_buf)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+
+    *out_evidence_buf = evidence_buf;
+    *out_evidence_buf_size = evidence_buf_size;
+    return 0;
+}
+
+/*! generate SGX-quote evidence with \p pk as one of the embedded claims (standard format) */
+static int generate_evidence_with_claims(mbedtls_pk_context* pk, uint8_t** out_evidence,
+                                         size_t* out_evidence_size) {
+    /*
+     * SGX-quote evidence has the following serialized-CBOR format:
+     *
+     * CBOR object (major type 6, new CBOR tag for "ECDSA SGX Quotes") ->
+     *   CBOR array ->
+     *      [
+     *        0: CBOR bstr (SGX quote with user_report_data = hash(serialized-cbor-map of claims)),
+     *        1: CBOR bstr (serialized-cbor-map of claims)
+     *      ]
+     *
+     * where "serialized-cbor-map of claims" is as follows:
+     *
+     *   CBOR map ->
+     *      {
+     *        "pubkey-hash" (req) : CBOR bstr (serialized-cbor-array hash-entry),
+     *        "nonce"       (opt) : CBOR bstr (arbitrary-sized nonce for per-session freshness)
+     *      }
+     *
+     * where "serialized-cbor-array hash-entry" is as follows:
+     *
+     *   CBOR array ->
+     *      [
+     *        0: CBOR uint (hash-alg-id),
+     *        1: CBOR bstr (hash of DER-formatted "SubjectPublicKeyInfo" field as CBOR bstr)
+     *      ]
+     *
+     * For hash-alg-id values, see
+     * https://www.iana.org/assignments/named-information/named-information.xhtml
+     */
+    uint8_t* claims   = NULL;
+    uint8_t* quote    = NULL;
+    uint8_t* evidence = NULL;
+
+    size_t claims_size;
+    int ret = generate_serialized_claims(pk, &claims, &claims_size);
+    if (ret < 0)
+        goto out;
+
+    sgx_report_data_t user_report_data = {0};
+    ret = mbedtls_sha256(claims, claims_size, user_report_data.d, /*is224=*/0);
+    if (ret < 0)
+        goto out;
+
+    ssize_t written = rw_file("/dev/attestation/user_report_data", user_report_data.d,
+                              sizeof(user_report_data.d), /*do_write=*/true);
+    if (written != sizeof(user_report_data)) {
+        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
+        goto out;
+    }
+
+    quote = malloc(SGX_QUOTE_MAX_SIZE);
+    if (!quote) {
+        ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
+        goto out;
+    }
+
+    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
+                                    /*do_write=*/false);
+    if (quote_size < 0) {
+        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
+        goto out;
+    }
+
+    size_t evidence_size;
+    ret = generate_serialized_evidence(quote, quote_size, claims, claims_size, &evidence,
+                                       &evidence_size);
+    if (ret < 0)
+        goto out;
+
+    *out_evidence = evidence;
+    *out_evidence_size = (size_t)evidence_size;
+    ret = 0;
+out:
     free(quote);
+    free(claims);
+    return ret;
+}
+
+/*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
+static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt) {
+    int ret;
+
+    /* put both "legacy Gramine" OID with plain SGX quote as well as standardized TCG DICE "tagged
+     * evidence" OID with CBOR-formatted SGX quote into RA-TLS X.509 cert */
+    uint8_t* quote = NULL;
+    uint8_t* evidence = NULL;
+
+    /* TODO: this legacy OID with plain SGX quote should be removed at some point */
+    size_t quote_size;
+    ret = generate_quote_with_pk_hash(pk, &quote, &quote_size);
+    if (ret < 0)
+        goto out;
+
+    size_t evidence_size;
+    ret = generate_evidence_with_claims(pk, &evidence, &evidence_size);
+    if (ret < 0)
+        goto out;
+
+    ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt);
+out:
+    free(quote);
+    free(evidence);
     return ret;
 }
 

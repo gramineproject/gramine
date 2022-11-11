@@ -99,6 +99,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     (void)data;
 
     int ret;
+    sgx_quote_t* quote = NULL;
 
     uint8_t* supplemental_data      = NULL;
     uint32_t supplemental_data_size = 0;
@@ -116,9 +117,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     /* extract SGX quote from "quote" OID extension from crt */
-    sgx_quote_t* quote;
     size_t quote_size;
-    ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
+    ret = extract_quote_and_verify_claims(crt, &quote, &quote_size);
     if (ret < 0)
         goto out;
 
@@ -212,6 +212,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
 
     ret = 0;
 out:
+    free(quote);
     free(supplemental_data);
     return ret;
 }
