@@ -40,6 +40,7 @@ RUN apt-get update && apt-get satisfy -y \
 # nginx: CI-Examples/ra-tls-nginx
 # shellcheck: .ci/run-shellcheck
 RUN apt-get update && apt-get install -y \
+    cmake \
     git \
     libunwind8 \
     nginx \

@@ -4,6 +4,7 @@ Maintainer: Wojtek Porczyk <woju@invisiblethingslab.com>
 Build-Depends: debhelper-compat (= 13),
  autoconf,
  bison,
+ cmake,
  jq,
  gawk,
  libcurl4-openssl-dev (>= 7.58),
