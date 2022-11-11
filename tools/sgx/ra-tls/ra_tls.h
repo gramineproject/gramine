@@ -32,8 +32,8 @@
 
 #define OID(N) \
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
-static const uint8_t quote_oid[] = OID(0x06);
-static const size_t quote_oid_len = sizeof(quote_oid);
+static const uint8_t g_quote_oid[] = OID(0x06);
+static const size_t g_quote_oid_size = sizeof(g_quote_oid);
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
@@ -46,11 +46,11 @@ __attribute__ ((visibility("hidden")))
 bool getenv_allow_debug_enclave(void);
 
 __attribute__ ((visibility("hidden")))
-int find_oid(const uint8_t* exts, size_t exts_len, const uint8_t* oid, size_t oid_len,
-             uint8_t** val, size_t* len);
+int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
-int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
+int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+                                    size_t* out_quote_size);
 
 __attribute__ ((visibility("hidden")))
 int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
