@@ -11,6 +11,16 @@
 
 #include <stdint.h>
 
+/* below OID is actually wrong: it shouldn't have the first two bytes (0x06 0x09) because they
+ * represent the ASN.1 Type (6 = OBJECT IDENTIFIER) and ASN.1 Length (9 bytes); we don't modify it
+ * because it is non-standard anyway and we don't want to break backwards-compatibility */
+#define NON_STANDARD_INTEL_SGX_QUOTE_OID \
+    { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, 0x06 }
+
+/* standard TCG DICE "tagged evidence" OID (2.23.133.5.4.9) */
+#define TCG_DICE_TAGGED_EVIDENCE_OID { 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
+#define TCG_DICE_TAGGED_EVIDENCE_OID_RAW { 0x06, 0x06, 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
+
 #define RA_TLS_EPID_API_KEY "RA_TLS_EPID_API_KEY"
 
 #define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE  "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"

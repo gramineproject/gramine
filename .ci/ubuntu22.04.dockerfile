@@ -46,6 +46,7 @@ RUN apt-get update && apt-get satisfy -y \
 RUN apt-get update && apt-get install -y \
     cargo \
     clang \
+    cmake \
     cpio \
     dwarves \
     g++-12 \
