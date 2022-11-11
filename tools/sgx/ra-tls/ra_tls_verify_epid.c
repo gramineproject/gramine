@@ -162,7 +162,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     /* extract SGX quote from "quote" OID extension from crt */
     sgx_quote_t* quote;
     size_t quote_size;
-    ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
+    ret = extract_quote_and_verify_claims(crt, &quote, &quote_size);
     if (ret < 0)
         goto out;
 

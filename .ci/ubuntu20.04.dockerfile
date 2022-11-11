@@ -8,6 +8,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     cargo \
     clang \
+    cmake \
     curl \
     flex \
     gawk \
