@@ -3,6 +3,7 @@
 /cJSON-*/
 /gcc-*/
 /glibc-*/
+/libcbor-*/
 /mbedtls-*/
 /musl-*/
 /tomlc99-*/

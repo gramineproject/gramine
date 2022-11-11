@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cbor.h>
+
 #include <mbedtls/pk.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/x509_crt.h>
@@ -164,32 +166,34 @@ static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, s
     return 0;
 }
 
-/*! calculate sha256 over public key from \p crt and copy it into \p sha */
-static int sha256_over_crt_pk(mbedtls_x509_crt* crt, uint8_t* sha) {
+/*! fill buffer \p pk_der with DER-formatted public key from \p crt */
+static int fill_crt_pk_der(mbedtls_x509_crt* crt, uint8_t* pk_der, size_t* pk_der_size) {
     mbedtls_ecp_keypair* key = mbedtls_pk_ec(crt->pk);
     if (key == NULL || key->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP384R1) {
         return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
     }
 
-    uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
-
     /* below function writes data at the end of the buffer */
-    int pk_der_size_byte = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, sizeof(pk_der));
-    if (pk_der_size_byte < 0)
-        return pk_der_size_byte;
+    int pk_der_size_int = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, *pk_der_size);
+    if (pk_der_size_int < 0)
+        return pk_der_size_int;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
-    memmove(pk_der, pk_der + PUB_KEY_SIZE_MAX - pk_der_size_byte, pk_der_size_byte);
-
-    return mbedtls_sha256(pk_der, pk_der_size_byte, sha, /*is224=*/0);
+    memmove(pk_der, pk_der + *pk_der_size - pk_der_size_int, pk_der_size_int);
+    *pk_der_size = (size_t)pk_der_size_int;
+    return 0;
 }
 
-/*! compares if report_data from \quote corresponds to sha256 of public key in \p crt */
+/*! compares if report_data from \p quote corresponds to sha256 of public key in \p crt */
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote) {
-    int ret;
+    uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
+    size_t pk_der_size = sizeof(pk_der);
+    int ret = fill_crt_pk_der(crt, pk_der, &pk_der_size);
+    if (ret < 0)
+        return ret;
 
     uint8_t sha[SHA256_DIGEST_SIZE];
-    ret = sha256_over_crt_pk(crt, sha);
+    ret = mbedtls_sha256(pk_der, pk_der_size, sha, /*is224=*/0);
     if (ret < 0)
         return ret;
 
@@ -200,10 +204,177 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
     return 0;
 }
 
-int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
-                                    size_t* out_quote_size) {
+/*! compares if CBOR "pubkey" \p pubkey_value from claims corresponds to public key in \p crt */
+static int cmp_crt_pk_against_cbor_claim_pubkey(mbedtls_x509_crt* crt, cbor_item_t* pubkey_value) {
+    uint8_t pk_der[PUB_KEY_SIZE_MAX] = {0};
+    size_t pk_der_size = sizeof(pk_der);
+    int ret = fill_crt_pk_der(crt, pk_der, &pk_der_size);
+    if (ret < 0)
+        return ret;
+
+    if (cbor_bytestring_length(pubkey_value) > pk_der_size)
+        return MBEDTLS_ERR_X509_SIG_MISMATCH;
+
+    ret = memcmp(pk_der, cbor_bytestring_handle(pubkey_value),
+                 cbor_bytestring_length(pubkey_value));
+    if (ret)
+        return MBEDTLS_ERR_X509_SIG_MISMATCH;
+
+    return 0;
+}
+
+static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+                                                    size_t* out_quote_size) {
+    /* for description of evidence format, see ra_tls_attest.c:generate_evidence_with_claims() */
+    cbor_item_t* cbor_tagged_evidence = NULL;
+    cbor_item_t* cbor_evidence = NULL;
+    cbor_item_t* cbor_quote = NULL;
+    cbor_item_t* cbor_claims = NULL; /* serialized CBOR map of claims (as bytestring) */
+    cbor_item_t* cbor_claims_map = NULL;
+    sgx_quote_t* quote = NULL;
+
+    uint8_t* evidence_buf;
+    size_t evidence_buf_size;
+    int ret = find_oid(crt->v3_ext.p, crt->v3_ext.len, g_evidence_oid_raw, g_evidence_oid_raw_size,
+                       &evidence_buf, &evidence_buf_size);
+    if (ret < 0)
+        return ret;
+
+    struct cbor_load_result cbor_result;
+    cbor_tagged_evidence = cbor_load(evidence_buf, evidence_buf_size, &cbor_result);
+    if (cbor_result.error.code != CBOR_ERR_NONE) {
+        ERROR("Certificate: cannot parse 'tagged evidence' OID in CBOR format (error %d)\n",
+              cbor_result.error.code);
+        ret = (cbor_result.error.code == CBOR_ERR_MEMERROR) ? MBEDTLS_ERR_X509_ALLOC_FAILED
+                                                            : MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    if (!cbor_isa_tag(cbor_tagged_evidence)
+            || cbor_tag_value(cbor_tagged_evidence) != TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    cbor_evidence = cbor_tag_item(cbor_tagged_evidence);
+    if (!cbor_evidence || !cbor_isa_array(cbor_evidence) || !cbor_array_is_definite(cbor_evidence)
+            || cbor_array_size(cbor_evidence) != 2) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    cbor_quote = cbor_array_get(cbor_evidence, /*index=*/0);
+    if (!cbor_quote || !cbor_isa_bytestring(cbor_quote) || !cbor_bytestring_is_definite(cbor_quote)
+            || cbor_bytestring_length(cbor_quote) == 0) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    /* FIXME: quote is allocated here, but not freed in the callers */
+    size_t quote_size = cbor_bytestring_length(cbor_quote);
+    if (quote_size < sizeof(*quote)) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+    quote = malloc(quote_size);
+    if (!quote) {
+        ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
+        goto out;
+    }
+    memcpy(quote, cbor_bytestring_handle(cbor_quote), quote_size);
+
+    cbor_claims = cbor_array_get(cbor_evidence, /*index=*/1);
+    if (!cbor_claims || !cbor_isa_bytestring(cbor_claims)
+            || !cbor_bytestring_is_definite(cbor_claims)
+            || cbor_bytestring_length(cbor_claims) == 0) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    /* claims object is borrowed, no need to free separately */
+    uint8_t* claims_buf    = cbor_bytestring_handle(cbor_claims);
+    size_t claims_buf_size = cbor_bytestring_length(cbor_claims);
+    assert(claims_buf && claims_buf_size);
+
+    /* verify that SGX quote corresponds to the attached serialized claims */
+    uint8_t sha[SHA256_DIGEST_SIZE];
+    ret = mbedtls_sha256(claims_buf, claims_buf_size, sha, /*is224=*/0);
+    if (ret < 0) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    ret = memcmp(quote->body.report_body.report_data.d, sha, SHA256_DIGEST_SIZE);
+    if (ret) {
+        ret = MBEDTLS_ERR_X509_SIG_MISMATCH;
+        goto out;
+    }
+
+    /* parse and verify CBOR claims */
+    cbor_claims_map = cbor_load(claims_buf, claims_buf_size, &cbor_result);
+    if (cbor_result.error.code != CBOR_ERR_NONE) {
+        ERROR("Certificate: cannot parse serialized CBOR map of claims (error %d)\n",
+              cbor_result.error.code);
+        ret = (cbor_result.error.code == CBOR_ERR_MEMERROR) ? MBEDTLS_ERR_X509_ALLOC_FAILED
+                                                            : MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    if (!cbor_isa_map(cbor_claims_map) || !cbor_map_is_definite(cbor_claims_map)
+            || cbor_map_size(cbor_claims_map) < 1) {
+        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+        goto out;
+    }
+
+    struct cbor_pair* claims_pairs = cbor_map_handle(cbor_claims_map);
+    for (size_t i = 0; i < cbor_map_size(cbor_claims_map); i++) {
+        if (!claims_pairs[i].key || !cbor_isa_string(claims_pairs[i].key)
+                || !cbor_string_is_definite(claims_pairs[i].key)
+                || cbor_string_length(claims_pairs[i].key) == 0) {
+            ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+            goto out;
+        }
+
+        if (strncmp((char*)cbor_string_handle(claims_pairs[i].key), "pubkey",
+                    cbor_string_length(claims_pairs[i].key)) == 0) {
+            /* claim { "pubkey" : <DER-formatted pubkey as CBOR bstr> } */
+            if (!claims_pairs[i].value || !cbor_isa_bytestring(claims_pairs[i].value)
+                    || !cbor_bytestring_is_definite(claims_pairs[i].value)
+                    || cbor_bytestring_length(claims_pairs[i].value) == 0) {
+                ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
+                goto out;
+            }
+
+            ret = cmp_crt_pk_against_cbor_claim_pubkey(crt, claims_pairs[i].value);
+            if (ret < 0)
+                goto out;
+        }
+    }
+
+    *out_quote = quote;
+    *out_quote_size = quote_size;
+    ret = 0;
+out:
+    if (ret < 0)
+        free(quote);
+    if (cbor_claims_map)
+        cbor_decref(&cbor_claims_map);
+    if (cbor_claims)
+        cbor_decref(&cbor_claims);
+    if (cbor_quote)
+        cbor_decref(&cbor_quote);
+    if (cbor_evidence)
+        cbor_decref(&cbor_evidence);
+    if (cbor_tagged_evidence)
+        cbor_decref(&cbor_tagged_evidence);
+    return ret;
+}
+
+static int extract_legacy_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+                                                  size_t* out_quote_size) {
     sgx_quote_t* quote;
     size_t quote_size;
+
     int ret = find_oid(crt->v3_ext.p, crt->v3_ext.len, g_quote_oid, g_quote_oid_size,
                        (uint8_t**)&quote, &quote_size);
     if (ret < 0)
@@ -212,8 +383,7 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     if (quote_size < sizeof(*quote))
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
-    /* currently single claim verified: must compare public key's hash from cert against SGX quote's
-     * report_data */
+    /* single claim verified: compare public key's hash from cert against SGX quote's report_data */
     ret = cmp_crt_pk_against_quote_report_data(crt, quote);
     if (ret < 0)
         return ret;
@@ -221,6 +391,17 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     *out_quote = quote;
     *out_quote_size = quote_size;
     return 0;
+}
+
+int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+                                    size_t* out_quote_size) {
+    int ret = extract_standard_quote_and_verify_claims(crt, out_quote, out_quote_size);
+    if (!ret)
+        return 0;
+
+    INFO("WARNING: TCG DICE 'tagged evidence' OID was not found. Checking non-standard legacy "
+         "Gramine OID. This will be deprecated in the future.\n");
+    return extract_legacy_quote_and_verify_claims(crt, out_quote, out_quote_size);
 }
 
 void ra_tls_set_measurement_callback(int (*f_cb)(const char* mrenclave, const char* mrsigner,
