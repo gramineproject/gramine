@@ -99,6 +99,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     struct ra_tls_verify_callback_results* results = (struct ra_tls_verify_callback_results*)data;
 
     int ret;
+    sgx_quote_t* quote = NULL;
 
     uint8_t* supplemental_data      = NULL;
     uint32_t supplemental_data_size = 0;
@@ -124,11 +125,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         results->err_loc = AT_EXTRACT_QUOTE;
 
     /* extract SGX quote from "quote" OID extension from crt */
-    sgx_quote_t* quote;
     size_t quote_size;
-    ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
+    ret = extract_quote_and_verify_claims(crt, &quote, &quote_size);
     if (ret < 0) {
-        ERROR("extract_quote_and_verify_pubkey failed: %d\n", ret);
+        ERROR("extract_quote_and_verify_claims failed: %d\n", ret);
         goto out;
     }
 
@@ -263,6 +263,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         results->err_loc = AT_NONE;
     ret = 0;
 out:
+    free(quote);
     free(supplemental_data);
     return ret;
 }

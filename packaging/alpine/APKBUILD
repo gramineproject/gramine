@@ -15,6 +15,7 @@ makedepends="
     autoconf
     binutils-dev
     bison
+    cmake
     coreutils
     findutils
     gawk
