@@ -9,6 +9,9 @@ loader.env.LD_LIBRARY_PATH = "{{ python.stdlib }}/lib:/lib:{{ arch_libdir }}:/us
 
 loader.insecure__use_cmdline_argv = true
 
+# Python's NumPy spawns as many threads as there are CPU cores, and each thread
+# of memory, so on large machines 1G enclave size may be not enough.
+# We limit the number of spawned threads via OMP_NUM_THREADS env variable.
 loader.env.OMP_NUM_THREADS = "4"
 
 sys.enable_sigterm_injection = true
