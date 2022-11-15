@@ -152,9 +152,9 @@ static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, s
     if (p + 2 >= exts_end)
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
-    *out_size   = *p++;
+    *out_size = *p++;
     *out_size <<= 8;
-    *out_size  += *p++;
+    *out_size += *p++;
 
     *out_val = p;
 
