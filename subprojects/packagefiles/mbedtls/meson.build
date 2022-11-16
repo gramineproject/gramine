@@ -46,9 +46,11 @@ pkgconfig.generate(
     libraries: [
         '-L${libdir}',
         '-Wl,-rpath,${libdir}',
+        '-Wl,--start-group',
         '-lmbedcrypto_gramine',
         '-lmbedtls_gramine',
         '-lmbedx509_gramine',
+        '-Wl,--end-group',
     ],
 )
 
