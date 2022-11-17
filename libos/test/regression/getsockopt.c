@@ -9,6 +9,7 @@
 #define DEFAULT_TCP_KEEPIDLE (120 * 60)
 #define DEFAULT_TCP_KEEPINTVL 75
 #define DEFAULT_TCP_KEEPCNT 9
+#define DEFAULT_TCP_USER_TIMEOUT 0
 
 int main(void) {
     socklen_t optlen; /* Option length */
@@ -53,6 +54,14 @@ int main(void) {
 
     if (optlen != sizeof(tcp_keepcnt) || tcp_keepcnt != DEFAULT_TCP_KEEPCNT) {
         errx(1, "getsockopt(IPPROTO_TCP, TCP_KEEPCNT) returned unexpected value");
+    }
+
+    int tcp_user_timeout;
+    optlen = sizeof(tcp_user_timeout);
+    CHECK(getsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &tcp_user_timeout, &optlen));
+
+    if (optlen != sizeof(tcp_user_timeout) || tcp_user_timeout != DEFAULT_TCP_USER_TIMEOUT) {
+        errx(1, "getsockopt(IPPROTO_TCP, TCP_USER_TIMEOUT) returned unexpected value");
     }
 
     puts("TEST OK");

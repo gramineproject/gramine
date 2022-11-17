@@ -481,6 +481,7 @@ typedef struct _PAL_STREAM_ATTR {
             uint32_t tcp_keepidle;
             uint32_t tcp_keepintvl;
             uint8_t tcp_keepcnt;
+            uint32_t tcp_user_timeout;
             bool tcp_nodelay;
             bool ipv6_v6only;
         } socket;

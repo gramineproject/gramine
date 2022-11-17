@@ -99,11 +99,12 @@ struct cmsghdr {
 #define SO_DOMAIN 39
 
 /* TCP options. */
-#define TCP_NODELAY 1   /* Turn off Nagle's algorithm */
-#define TCP_CORK 3      /* Never send partially complete segments */
-#define TCP_KEEPIDLE 4  /* Start keeplives after this period */
-#define TCP_KEEPINTVL 5 /* Interval between keepalives */
-#define TCP_KEEPCNT 6   /* Number of keepalives before death */
+#define TCP_NODELAY 1       /* Turn off Nagle's algorithm */
+#define TCP_CORK 3          /* Never send partially complete segments */
+#define TCP_KEEPIDLE 4      /* Start keeplives after this period */
+#define TCP_KEEPINTVL 5     /* Interval between keepalives */
+#define TCP_KEEPCNT 6       /* Number of keepalives before death */
+#define TCP_USER_TIMEOUT 18 /* How long for loss retry before timeout (0 to use system default) */
 
 #define MAX_TCP_KEEPIDLE 32767
 #define MAX_TCP_KEEPINTVL 32767

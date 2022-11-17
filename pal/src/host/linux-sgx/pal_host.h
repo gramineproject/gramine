@@ -104,6 +104,7 @@ typedef struct {
             uint32_t tcp_keepidle;
             uint32_t tcp_keepintvl;
             uint8_t tcp_keepcnt;
+            uint32_t tcp_user_timeout;
             bool tcp_nodelay;
             bool ipv6_v6only;
         } sock;
