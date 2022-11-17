@@ -13,12 +13,26 @@
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 
+/* To avoid expensive malloc/free (due to locking), use stack if the required space is small
+ * enough. */
+#define NFDS_LIMIT_TO_USE_STACK 16
+
 int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                           pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
-    struct pollfd* fds = calloc(count, sizeof(*fds));
-    if (!fds) {
-        return -PAL_ERROR_NOMEM;
+    struct pollfd* fds = NULL;
+    bool allocate_on_stack = count <= NFDS_LIMIT_TO_USE_STACK;
+
+    if (allocate_on_stack) {
+        static_assert(sizeof(*fds) * NFDS_LIMIT_TO_USE_STACK <= 128,
+                      "Would use too much space on stack, reduce the limit");
+        fds = __builtin_alloca(count * sizeof(*fds));
+    } else {
+        fds = malloc(count * sizeof(*fds));
+        if (!fds) {
+            return -PAL_ERROR_NOMEM;
+        }
     }
+    memset(fds, 0, count * sizeof(*fds));
 
     for (size_t i = 0; i < count; i++) {
         PAL_HANDLE handle = handle_array[i];
@@ -81,6 +95,8 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     ret = 0;
 
 out:
-    free(fds);
+    if (!allocate_on_stack) {
+        free(fds);
+    }
     return ret;
 }

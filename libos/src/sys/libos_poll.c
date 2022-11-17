@@ -44,18 +44,38 @@ typedef unsigned long __fd_mask;
 #define POLLIN_SET (POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR)
 #define POLLOUT_SET (POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR)
 #define POLLEX_SET (POLLPRI)
+/* To avoid expensive malloc/free (due to locking), use stack if the required space is small
+ * enough. */
+#define NFDS_LIMIT_TO_USE_STACK 16
 
 static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
-    struct libos_handle** libos_handles = calloc(fds_len, sizeof(*libos_handles));
-    PAL_HANDLE* pal_handles = calloc(fds_len, sizeof(*pal_handles));
+    struct libos_handle** libos_handles = NULL;
+    PAL_HANDLE* pal_handles = NULL;
     /* Double the amount of PAL events - one part are input events, the other - output. */
-    pal_wait_flags_t* pal_events = calloc(2 * fds_len, sizeof(*pal_events));
-    if (!libos_handles || !pal_handles || !pal_events) {
-        free(libos_handles);
-        free(pal_handles);
-        free(pal_events);
-        return -ENOMEM;
+    pal_wait_flags_t* pal_events = NULL;
+    bool allocate_on_stack = fds_len <= NFDS_LIMIT_TO_USE_STACK;
+
+    if (allocate_on_stack) {
+        static_assert((sizeof(*libos_handles) + sizeof(*pal_handles) + sizeof(*pal_events) * 2) *
+                      NFDS_LIMIT_TO_USE_STACK <= 384,
+                      "Would use too much space on stack, reduce the limit");
+        libos_handles = __builtin_alloca(fds_len * sizeof(*libos_handles));
+        pal_handles = __builtin_alloca(fds_len * sizeof(*pal_handles));
+        pal_events = __builtin_alloca(fds_len * sizeof(*pal_events) * 2);
+    } else {
+        libos_handles = malloc(fds_len * sizeof(*libos_handles));
+        pal_handles = malloc(fds_len * sizeof(*pal_handles));
+        pal_events = malloc(fds_len * sizeof(*pal_events) * 2);
+        if (!libos_handles || !pal_handles || !pal_events) {
+            free(libos_handles);
+            free(pal_handles);
+            free(pal_events);
+            return -ENOMEM;
+        }
     }
+    memset(libos_handles, 0, fds_len * sizeof(*libos_handles));
+    memset(pal_handles, 0, fds_len * sizeof(*pal_handles));
+    memset(pal_events, 0, fds_len * sizeof(*pal_events) * 2);
 
     long ret;
     size_t ret_events_count = 0;
@@ -189,9 +209,11 @@ out:
             put_handle(libos_handles[i]);
         }
     }
-    free(libos_handles);
-    free(pal_handles);
-    free(pal_events);
+    if (!allocate_on_stack) {
+        free(libos_handles);
+        free(pal_handles);
+        free(pal_events);
+    }
 
     if (ret == -EINTR) {
         /* `poll`, `ppoll`, `select` and `pselect` are not restarted after being interrupted by
@@ -260,9 +282,18 @@ static long do_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* exc
         }
     }
 
-    struct pollfd* poll_fds = malloc(total_fds * sizeof(*poll_fds));
-    if (!poll_fds)
-        return -ENOMEM;
+    struct pollfd* poll_fds = NULL;
+    bool allocate_on_stack = total_fds <= NFDS_LIMIT_TO_USE_STACK;
+
+    if (allocate_on_stack) {
+        static_assert(sizeof(*poll_fds) * NFDS_LIMIT_TO_USE_STACK <= 128,
+                      "Would use too much space on stack, reduce the limit");
+        poll_fds = __builtin_alloca(total_fds * sizeof(*poll_fds));
+    } else {
+        poll_fds = malloc(total_fds * sizeof(*poll_fds));
+        if (!poll_fds)
+            return -ENOMEM;
+    }
 
     long ret;
     size_t poll_fds_idx = 0;
@@ -325,7 +356,9 @@ static long do_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* exc
     }
 
 out:
-    free(poll_fds);
+    if (!allocate_on_stack) {
+        free(poll_fds);
+    }
     return ret;
 }
 
