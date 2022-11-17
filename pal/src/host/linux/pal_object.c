@@ -20,7 +20,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     if (count == 0)
         return 0;
 
-    struct pollfd* fds = calloc(count, sizeof(*fds));
+    CALLOC_STACK(struct pollfd, fds, count);
     if (!fds) {
         return -PAL_ERROR_NOMEM;
     }
@@ -101,6 +101,6 @@ out:
     if (timeout_us) {
         *timeout_us = remaining_time_us;
     }
-    free(fds);
+    FREE_STACK(fds);
     return ret;
 }
