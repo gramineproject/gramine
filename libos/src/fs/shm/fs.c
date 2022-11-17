@@ -35,7 +35,7 @@ static ssize_t shm_read(struct libos_handle* hdl, void* buf, size_t count, file_
         return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
-    if (hdl->inode->type == S_IFREG) {
+    if (hdl->inode->type == S_IFREG || hdl->inode->type == S_IFCHR) {
         *pos += actual_count;
     }
     return actual_count;
@@ -51,7 +51,7 @@ static ssize_t shm_write(struct libos_handle* hdl, const void* buf, size_t count
         return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
-    if (hdl->inode->type == S_IFREG) {
+    if (hdl->inode->type == S_IFREG || hdl->inode->type == S_IFCHR) {
         *pos += actual_count;
         /* Update file size if we just wrote past the end of file */
         lock(&hdl->inode->lock);
@@ -148,9 +148,9 @@ static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
 static int shm_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
-    /* shm file system url always has a "file:" prefix. */
+    /* shm file system url always has a "dev:" prefix. */
     char* uri = NULL;
-    int ret = chroot_dentry_uri(dent, S_IFREG, &uri);
+    int ret = chroot_dentry_uri(dent, S_IFCHR, &uri);
     if (ret < 0)
         goto out;
 
@@ -170,11 +170,8 @@ static int shm_lookup(struct libos_dentry* dent) {
             type = S_IFDIR;
             break;
         case PAL_TYPE_DEV:
-            log_warning("trying to access '%s' which is a device; "
-                        "device is not supported in shm file system",
-                        uri);
-            ret = -EACCES;
-            goto out;
+            type = S_IFCHR;
+            break;
         case PAL_TYPE_PIPE:
             log_warning("trying to access '%s' which is a host-level FIFO (named pipe); "
                         "Gramine supports only named pipes created by Gramine processes",
@@ -186,7 +183,7 @@ static int shm_lookup(struct libos_dentry* dent) {
             BUG();
     }
 
-    file_off_t size = (type == S_IFREG ? pal_attr.pending_size : 0);
+    file_off_t size = (type == S_IFCHR ? pal_attr.pending_size : 0);
 
     ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size);
 out:
@@ -204,12 +201,79 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    mode_t type = S_IFREG;
+    mode_t type = S_IFCHR;
     int ret = shm_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
     if (ret < 0)
         return ret;
 
     return shm_setup_dentry(dent, type, perm, /*size=*/0);
+}
+
+
+static int shm_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
+    PAL_HANDLE palhdl;
+    char* buf = NULL;
+    size_t buf_size = READDIR_BUF_SIZE;
+
+    char* uri;
+    int ret = chroot_dentry_uri(dent, S_IFDIR, &uri);
+    if (ret < 0)
+        return ret;
+
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0, &palhdl);
+    free(uri);
+    if (ret < 0)
+        return ret;
+
+    buf = malloc(buf_size);
+    if (!buf) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    while (true) {
+        size_t read_size = buf_size;
+        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf);
+        if (ret < 0) {
+            ret = pal_to_unix_errno(ret);
+            goto out;
+        }
+        if (read_size == 0) {
+            /* End of directory listing */
+            break;
+        }
+
+        /* Last entry must be null-terminated */
+        assert(buf[read_size - 1] == '\0');
+
+        /* Read all entries (separated by null bytes) and invoke `callback` on each */
+        size_t start = 0;
+        while (start < read_size - 1) {
+            size_t end = start + strlen(&buf[start]);
+
+            if (end == start) {
+                log_error("chroot_readdir: empty name returned from PAL");
+                BUG();
+            }
+
+            /* By the PAL convention, if a name ends with '/', it is a directory. However, we ignore
+             * that distinction here and pass the name without '/' to the callback. */
+            if (buf[end - 1] == '/')
+                buf[end - 1] = '\0';
+
+            if ((ret = callback(&buf[start], arg)) < 0)
+                goto out;
+
+            start = end + 1;
+        }
+    }
+    ret = 0;
+
+out:
+    free(buf);
+    PalObjectClose(palhdl);
+    return ret;
 }
 
 /* NOTE: this function is different from generic `chroot_unlink` only to add PAL_OPTION_PASSTHROUGH.
@@ -258,7 +322,7 @@ struct libos_d_ops shm_d_ops = {
     .lookup  = shm_lookup,
     .creat   = shm_creat,
     .stat    = generic_inode_stat,
-    .readdir = chroot_readdir,  /* same as in `chroot` filesystem */
+    .readdir = shm_readdir,
     .unlink  = shm_unlink,
 };
 

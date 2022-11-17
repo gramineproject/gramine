@@ -18,6 +18,7 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "perm.h"
+#include "stat.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -65,7 +66,15 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             ret = unix_to_pal_error(ret);
             goto fail;
         }
-        hdl->dev.fd = ret;
+        
+        char* path = strdup(uri);
+        if (!path) {
+            ocall_close(ret);
+            free(hdl);
+            return -PAL_ERROR_NOMEM;
+        }
+        hdl->dev.realpath = path;
+        hdl->dev.fd       = ret;
 
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
@@ -122,6 +131,7 @@ static int dev_close(PAL_HANDLE handle) {
         ret = ocall_close(handle->dev.fd);
     }
     handle->dev.fd = PAL_IDX_POISON;
+    free(handle->dev.realpath);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
@@ -147,6 +157,7 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = PERM_rw_rw_rw_;
         attr->pending_size = 0;
+        attr->handle_type  = PAL_TYPE_DEV;
     } else {
         /* other devices must query the host */
         int fd = ocall_open(uri, O_RDONLY | O_CLOEXEC, 0);
@@ -162,11 +173,11 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
+        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
 
         ocall_close(fd);
     }
 
-    attr->handle_type  = PAL_TYPE_DEV;
     attr->nonblocking  = false;
     return 0;
 }
@@ -179,6 +190,8 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = 0;
         attr->pending_size = 0;
+        attr->handle_type  = PAL_TYPE_DEV;
+
     } else {
         /* other devices must query the host */
         struct stat stat_buf;
@@ -188,25 +201,66 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
+        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
     }
-
-    attr->handle_type  = PAL_TYPE_DEV;
-    attr->nonblocking  = handle->dev.nonblocking;
+    attr->nonblocking = handle->dev.nonblocking;
     return 0;
 }
 
-/* this dummy function is implemented to support opening TTY devices with O_TRUNC flag */
+static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    if (delete_mode != PAL_DELETE_ALL)
+        return -PAL_ERROR_INVAL;
+
+    if (handle->dev.realpath) {
+        int ret = ocall_delete(handle->dev.realpath);
+        return ret < 0 ? unix_to_pal_error(ret) : ret;
+    }
+    return 0;
+}
+
+static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+                    uint64_t size) {
+    assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
+    int ret;
+
+    uint64_t dummy;
+    if (__builtin_add_overflow(offset, size, &dummy)) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    if (size > SIZE_MAX) {
+        /* for compatibility with 32-bit systems */
+        return -PAL_ERROR_INVAL;
+    }
+
+    /* If the address is within shared address, map the file outside of enclave. */
+    if (addr >= g_pal_public_state.shared_address_start
+            && addr + size <= g_pal_public_state.shared_address_end) {
+        void* mem = addr;
+        ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
+                                   handle->dev.fd, offset);
+        return ret < 0 ? unix_to_pal_error(ret) : ret;
+    } else {
+        log_warning("dev_map does not currently support mapping devices to enclave.");
+        return -PAL_ERROR_DENIED;
+    }
+}
+
 static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->dev.fd == 0 || handle->dev.fd == 1))
-        return -PAL_ERROR_NOTSUPPORT;
+    if (handle->dev.fd == 0 || handle->dev.fd == 1) {
+        /* TTY devices opened with O_TRUNC flag*/
+        if (length != 0)
+            return -PAL_ERROR_INVAL;
+        return 0;
+    }
 
-    if (length != 0)
-        return -PAL_ERROR_INVAL;
-
-    return 0;
+    int ret = ocall_ftruncate(handle->dev.fd, length);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+    return (int64_t)length;
 }
 
 struct handle_ops g_dev_ops = {
@@ -214,6 +268,8 @@ struct handle_ops g_dev_ops = {
     .read           = &dev_read,
     .write          = &dev_write,
     .close          = &dev_close,
+    .delete         = &dev_delete,
+    .map            = &dev_map,
     .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,

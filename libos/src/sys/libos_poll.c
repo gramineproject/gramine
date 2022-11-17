@@ -97,7 +97,7 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
         }
 
         if (hdl->type == TYPE_CHROOT || hdl->type == TYPE_DEV || hdl->type == TYPE_STR ||
-                hdl->type == TYPE_TMPFS) {
+                hdl->type == TYPE_TMPFS || hdl->type == TYPE_SHM) {
             /* Files, devs and strings are special cases: their poll is emulated at LibOS level; do
              * not include them in handles-to-poll array but instead use handle-specific
              * callback.

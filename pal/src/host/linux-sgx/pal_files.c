@@ -257,15 +257,6 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         return -PAL_ERROR_INVAL;
     }
 
-    /* If the address is within shared address, map the file outside of enclave. */
-    if (addr >= g_pal_public_state.shared_address_start
-            && addr + size <= g_pal_public_state.shared_address_end) {
-        void* mem = addr;
-        ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
-                                   handle->file.fd, offset);
-        return ret < 0 ? unix_to_pal_error(ret) : ret;
-    }
-
     if (!(prot & PAL_PROT_WRITECOPY) && (prot & PAL_PROT_WRITE)) {
         log_warning(
             "file_map does not currently support writable pass-through mappings on SGX. You "

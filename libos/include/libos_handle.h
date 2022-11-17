@@ -57,7 +57,6 @@ enum libos_file_type {
     FILE_REGULAR,
     FILE_DIR,
     FILE_DEV,
-    FILE_TTY,
 };
 
 #define FILE_HANDLE_DATA(hdl)  ((hdl)->info.file.data)

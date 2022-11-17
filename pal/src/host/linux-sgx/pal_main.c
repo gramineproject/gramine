@@ -410,7 +410,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool encrypted_files_keys = false;
 
     char* log_level_str = NULL;
-    char* shared_memory_str = NULL;
     char* protected_files_key_str = NULL;
 
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
@@ -444,12 +443,14 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
+    char* shared_memory_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "sys.insecure__shared_memory",
                          &shared_memory_str);
     if (ret < 0)
         goto out;
     if (shared_memory_str && strcmp(shared_memory_str, "none"))
         allow_shared_memory = true;
+    free(shared_memory_str);
 
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
@@ -538,7 +539,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     ret = 0;
 out:
     free(log_level_str);
-    free(shared_memory_str);
     free(protected_files_key_str);
     return ret;
 }
@@ -590,11 +590,11 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
-    static_assert(SHARED_ADDR_MIN > DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
+    static_assert(SHARED_ADDR_MIN >= DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
                       || DBGINFO_ADDR > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
 #ifdef ASAN
-    static_assert(SHARED_ADDR_MIN > ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
+    static_assert(SHARED_ADDR_MIN >= ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
                       || ASAN_SHADOW_START > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with ASAN_SHADOW");
 #endif

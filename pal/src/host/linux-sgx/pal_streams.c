@@ -74,13 +74,14 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PIPESRV:
             break;
         case PAL_TYPE_DEV:
-            /* devices have no fields to serialize */
+            if (handle->dev.realpath) {
+                d   = handle->dev.realpath;
+                dsz = strlen(handle->dev.realpath) + 1;
+            }
             break;
         case PAL_TYPE_DIR:
-            if (handle->dir.realpath) {
-                d   = handle->dir.realpath;
-                dsz = strlen(handle->dir.realpath) + 1;
-            }
+            d   = handle->dir.realpath;
+            dsz = strlen(handle->dir.realpath) + 1;
             break;
         case PAL_TYPE_SOCKET:
             break;
@@ -165,6 +166,18 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PIPESRV:
             break;
         case PAL_TYPE_DEV:
+            assert(hdl_size <= size);
+
+            size_t path_size = size - hdl_size;
+            if (path_size) {
+                char* path = malloc(path_size);
+                if (!path) {
+                    free(hdl);
+                    return -PAL_ERROR_NOMEM;
+                }
+                memcpy(path, (const char*)data + hdl_size, path_size);
+                hdl->dir.realpath = path;
+            }
             break;
         case PAL_TYPE_DIR: {
             assert(hdl_size < size);
