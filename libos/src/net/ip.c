@@ -292,6 +292,12 @@ static int set_tcp_option(struct libos_handle* handle, int optname, void* optval
         case TCP_NODELAY:
             attr.socket.tcp_nodelay = value.i;
             break;
+        case TCP_USER_TIMEOUT:
+            if (value.i < 0) {
+                return -EINVAL;
+            }
+            attr.socket.tcp_user_timeout = value.i;
+            break;
         default:
             return -ENOPROTOOPT;
     }
@@ -536,6 +542,9 @@ static int get_tcp_option(struct libos_handle* handle, int optname, void* optval
             break;
         case TCP_NODELAY:
             val = attr.socket.tcp_nodelay;
+            break;
+        case TCP_USER_TIMEOUT:
+            val = attr.socket.tcp_user_timeout;
             break;
         default:
             return -ENOPROTOOPT;

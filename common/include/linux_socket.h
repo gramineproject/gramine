@@ -99,11 +99,12 @@ struct cmsghdr {
 #define SO_DOMAIN 39
 
 /* TCP options. */
-#define TCP_NODELAY 1   /* Turn off Nagle's algorithm */
-#define TCP_CORK 3      /* Never send partially complete segments */
-#define TCP_KEEPIDLE 4  /* Start keeplives after this period */
-#define TCP_KEEPINTVL 5 /* Interval between keepalives */
-#define TCP_KEEPCNT 6   /* Number of keepalives before death */
+#define TCP_NODELAY 1       /* Turn off Nagle's algorithm */
+#define TCP_CORK 3          /* Never send partially complete segments */
+#define TCP_KEEPIDLE 4      /* Start keeplives after this period */
+#define TCP_KEEPINTVL 5     /* Interval between keepalives */
+#define TCP_KEEPCNT 6       /* Number of keepalives before death */
+#define TCP_USER_TIMEOUT 18 /* How long for loss retry before timeout */
 
 #define MAX_TCP_KEEPIDLE 32767
 #define MAX_TCP_KEEPINTVL 32767
@@ -112,6 +113,7 @@ struct cmsghdr {
 #define DEFAULT_TCP_KEEPIDLE (2 * 60 * 60) /* 2 hours */
 #define DEFAULT_TCP_KEEPINTVL 75           /* 75 seconds */
 #define DEFAULT_TCP_KEEPCNT 9              /* 9 keepalive probes */
+#define DEFAULT_TCP_USER_TIMEOUT 0         /* use system default */
 
 struct linger {
     int l_onoff;

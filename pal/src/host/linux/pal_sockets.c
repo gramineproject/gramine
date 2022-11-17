@@ -77,6 +77,7 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.tcp_keepidle = DEFAULT_TCP_KEEPIDLE;
     handle->sock.tcp_keepintvl = DEFAULT_TCP_KEEPINTVL;
     handle->sock.tcp_keepcnt = DEFAULT_TCP_KEEPCNT;
+    handle->sock.tcp_user_timeout = DEFAULT_TCP_USER_TIMEOUT;
     handle->sock.tcp_nodelay = false;
     handle->sock.ipv6_v6only = false;
 
@@ -332,6 +333,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->socket.tcp_keepintvl = handle->sock.tcp_keepintvl;
     attr->socket.tcp_keepcnt = handle->sock.tcp_keepcnt;
     attr->socket.tcp_nodelay = handle->sock.tcp_nodelay;
+    attr->socket.tcp_user_timeout = handle->sock.tcp_user_timeout;
     attr->socket.ipv6_v6only = handle->sock.ipv6_v6only;
 
     return 0;
@@ -526,6 +528,17 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
             return unix_to_pal_error(ret);
         }
         handle->sock.tcp_nodelay = attr->socket.tcp_nodelay;
+    }
+
+    if (attr->socket.tcp_user_timeout != handle->sock.tcp_user_timeout) {
+        assert(attr->socket.tcp_user_timeout <= INT_MAX);
+        int val = attr->socket.tcp_user_timeout;
+        int ret = DO_SYSCALL(setsockopt, handle->sock.fd, SOL_TCP, TCP_USER_TIMEOUT, &val,
+                             sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.tcp_user_timeout = attr->socket.tcp_user_timeout;
     }
 
     return 0;
