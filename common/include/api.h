@@ -436,27 +436,4 @@ static inline bool access_ok(const volatile void* addr, size_t size) {
 # include "api_fortified.h"
 #endif
 
-/* Allocate small buffers on stack to reduce malloc() lock contention. */
-#define STACK_BUF_MAX   256
-#define CALLOC_STACK(typ, name, count)          \
-    bool name##__on_stack;                      \
-    typ* name;                                  \
-    do {                                        \
-        size_t sz = (count) * sizeof(typ);      \
-        if (sz > STACK_BUF_MAX) {               \
-            name##__on_stack = false;           \
-            name = malloc(sz);                  \
-        } else {                                \
-            name##__on_stack = true;            \
-            name = __builtin_alloca(sz);        \
-        }                                       \
-    } while (0)
-
-#define FREE_STACK(name)                \
-    do {                                \
-        if (!name##__on_stack) {        \
-            free(name);                 \
-        }                               \
-    } while (0)
-
 #undef INSIDE_API_H

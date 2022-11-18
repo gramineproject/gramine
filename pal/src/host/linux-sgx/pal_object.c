@@ -13,14 +13,29 @@
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 
+/* To avoid lock contention in the global memory allocator, use stack if the
+ * required space is small enough.
+ * Each fd will use 48 bytes in libos_syscall_select, _libos_syscall_poll and
+ * _PalStreamsWaitEvents, therefore 16 fd will use less than 1K stack space. */
+#define MAX_FD_TO_USE_STACK     16
+
 int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                           pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
     if (count == 0)
         return 0;
 
-    CALLOC_STACK(struct pollfd, fds, count);
-    if (!fds) {
-        return -PAL_ERROR_NOMEM;
+    struct pollfd* fds = NULL;
+    bool allocated_on_stack = false;
+    
+    if (count <= MAX_FD_TO_USE_STACK) {
+        allocated_on_stack = true;
+        fds = __builtin_alloca(count * sizeof(*fds));
+        memset(fds, 0, count * sizeof(*fds));
+    } else {
+        fds = calloc(count, sizeof(*fds));
+        if (!fds) {
+            return -PAL_ERROR_NOMEM;
+        }
     }
 
     for (size_t i = 0; i < count; i++) {
@@ -83,6 +98,8 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     ret = 0;
 
 out:
-    FREE_STACK(fds);
+    if (!allocated_on_stack) {
+        free(fds);
+    }
     return ret;
 }

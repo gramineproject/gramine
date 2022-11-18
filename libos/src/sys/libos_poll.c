@@ -41,6 +41,12 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
+/* To avoid lock contention in the global memory allocator, use stack if the
+ * required space is small enough.
+ * Each fd will use 48 bytes in libos_syscall_select, _libos_syscall_poll and
+ * _PalStreamsWaitEvents, therefore 16 fd will use less than 1K stack space. */
+#define MAX_FD_TO_USE_STACK     16
+
 static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
@@ -48,28 +54,41 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
     struct libos_handle_map* map = get_cur_thread()->handle_map;
 
     /* nfds is the upper limit for actual number of handles */
-    CALLOC_STACK(PAL_HANDLE, pals, nfds);
-    if (!pals)
-        return -ENOMEM;
-
+    PAL_HANDLE* pals = NULL;
     /* for bookkeeping, need to have a mapping FD -> {libos handle, index-in-pals} */
     struct fds_mapping_t {
         struct libos_handle* hdl; /* NULL if no mapping (handle is not used in polling) */
         nfds_t idx;               /* index from fds array to pals array */
     };
-    CALLOC_STACK(struct fds_mapping_t, fds_mapping, nfds);
-    if (!fds_mapping) {
-        FREE_STACK(pals);
-        return -ENOMEM;
+    struct fds_mapping_t* fds_mapping = NULL;
+    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
+    pal_wait_flags_t* pal_events = NULL;
+    bool allocated_on_stack = false;
+
+    if (nfds <= MAX_FD_TO_USE_STACK) {
+        allocated_on_stack = true;
+        pals = __builtin_alloca(nfds * sizeof(PAL_HANDLE));
+        fds_mapping = __builtin_alloca(nfds * sizeof(struct fds_mapping_t));
+        pal_events = __builtin_alloca(nfds * sizeof(*pal_events) * 2);
+    } else {
+        pals = malloc(nfds * sizeof(PAL_HANDLE));
+        if (!pals)
+            return -ENOMEM;
+
+        fds_mapping = malloc(nfds * sizeof(struct fds_mapping_t));
+        if (!fds_mapping) {
+            free(pals);
+            return -ENOMEM;
+        }
+
+        pal_events = malloc(nfds * sizeof(*pal_events) * 2);
+        if (!pal_events) {
+            free(pals);
+            free(fds_mapping);
+            return -ENOMEM;
+        }
     }
 
-    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
-    CALLOC_STACK(pal_wait_flags_t, pal_events, nfds * 2);
-    if (!pal_events) {
-        FREE_STACK(pals);
-        FREE_STACK(fds_mapping);
-        return -ENOMEM;
-    }
     pal_wait_flags_t* ret_events = pal_events + nfds;
 
     nfds_t pal_cnt  = 0;
@@ -188,9 +207,11 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
         put_handle(fds_mapping[i].hdl);
     }
 
-    FREE_STACK(pals);
-    FREE_STACK(pal_events);
-    FREE_STACK(fds_mapping);
+    if (!allocated_on_stack) {
+        free(pals);
+        free(pal_events);
+        free(fds_mapping);
+    }
 
     if (error == -EAGAIN) {
         /* `poll` returns 0 on timeout. */
@@ -248,9 +269,17 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
     }
 
     /* nfds is the upper limit for actual number of fds for poll */
-    CALLOC_STACK(struct pollfd, fds_poll, nfds);
-    if (!fds_poll)
-        return -ENOMEM;
+    struct pollfd* fds_poll = NULL;
+    bool allocated_on_stack = false;
+
+    if (nfds <= MAX_FD_TO_USE_STACK) {
+        allocated_on_stack = true;
+        fds_poll = __builtin_alloca(nfds * sizeof(struct pollfd));
+    } else {
+        fds_poll = malloc(nfds * sizeof(struct pollfd));
+        if (!fds_poll)
+            return -ENOMEM;
+    }
 
     /* populate array of pollfd's based on user-supplied readfds & writefds */
     nfds_t nfds_poll = 0;
@@ -278,7 +307,9 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
         struct libos_handle* hdl = __get_fd_handle(fds_poll[i].fd, NULL, map);
         if (!hdl || !hdl->fs || !hdl->fs->fs_ops) {
             /* the corresponding handle doesn't exist or doesn't provide FS-like semantics */
-            FREE_STACK(fds_poll);
+            if (!allocated_on_stack) {
+                free(fds_poll);
+            }
             unlock(&map->lock);
             return -EBADF;
         }
@@ -289,7 +320,9 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
     long ret = _libos_syscall_poll(fds_poll, nfds_poll, tsv ? &timeout_us : NULL);
 
     if (ret < 0) {
-        FREE_STACK(fds_poll);
+        if (!allocated_on_stack) {
+            free(fds_poll);
+        }
         return ret;
     }
 
@@ -317,7 +350,9 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
         }
     }
 
-    FREE_STACK(fds_poll);
+    if (!allocated_on_stack) {
+        free(fds_poll);
+    }
     return ret;
 }
 
