@@ -20,13 +20,16 @@ node('whatnots') {
     // FIXME: either move to Ubuntu 22.04 (which seems to not require this hack) or ditch Docker
     env.DOCKER_ARGS_COMMON += ' --volume=/usr/lib/linux-kbuild-5.18:/usr/lib/linux-kbuild-5.18:ro'
 
+    // Required by QEMU to run Linux kernel in VM
+    env.DOCKER_ARGS_COMMON += ' --volume=/boot:/boot:ro'
+
     // only root and `kvm` group can access /dev/kvm, so add `kvm` GID to the in-Docker user
     kvm_gid = sh(returnStdout: true, script: 'getent group kvm | cut -d: -f3').trim()
     env.DOCKER_ARGS_COMMON += ' --group-add ' + kvm_gid
 
     // only root and `sgx` group can access /dev/sgx_vepc, so add `sgx` GID to the in-Docker user
     sgx_gid = sh(returnStdout: true, script: 'getent group sgx | cut -d: -f3').trim()
-    env.DOCKER_ARGS_COMMON += ' --group-add ' + sgx_gid
+    env.DOCKER_ARGS_SGX += ' --group-add ' + sgx_gid
 
     docker.build(
         "local:${env.BUILD_TAG}",
