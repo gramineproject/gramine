@@ -14,16 +14,18 @@
 static int proc_pid_max_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
-    size_t buffer_size = 64;
+    size_t buffer_size = 16; /* enough to hold PID_MAX_LIMIT */
     char* buffer = malloc(buffer_size);
     if (!buffer)
         return -ENOMEM;
 
-    int ret = snprintf(buffer, buffer_size, "%u", IDTYPE_MAX);
+    static_assert(PID_MAX_LIMIT <= UINT_MAX, "wrong types");
+    int ret = snprintf(buffer, buffer_size, "%u", PID_MAX_LIMIT);
     if (ret < 0) {
         free(buffer);
         return ret;
     }
+    assert((size_t)ret < buffer_size);
 
     *out_data = buffer;
     *out_size = buffer_size;

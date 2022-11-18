@@ -159,6 +159,8 @@ typedef Elf64_auxv_t elf_auxv_t;
 /* typedef for LibOS internal types */
 typedef uint32_t IDTYPE;
 #define IDTYPE_MAX UINT32_MAX
+#define PID_MAX_LIMIT 4194304 /* Linux limit 2^22 */
+
 typedef uint64_t HASHTYPE;
 
 #define FILE_OFF_MAX INT64_MAX
