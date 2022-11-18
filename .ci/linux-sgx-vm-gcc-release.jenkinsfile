@@ -24,6 +24,10 @@ node('whatnots') {
     kvm_gid = sh(returnStdout: true, script: 'getent group kvm | cut -d: -f3').trim()
     env.DOCKER_ARGS_COMMON += ' --group-add ' + kvm_gid
 
+    // only root and `sgx` group can access /dev/sgx_vepc, so add `sgx` GID to the in-Docker user
+    sgx_gid = sh(returnStdout: true, script: 'getent group sgx | cut -d: -f3').trim()
+    env.DOCKER_ARGS_COMMON += ' --group-add ' + sgx_gid
+
     docker.build(
         "local:${env.BUILD_TAG}",
         '-f .ci/ubuntu22.04.dockerfile .'
