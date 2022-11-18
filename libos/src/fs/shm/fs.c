@@ -35,9 +35,7 @@ static ssize_t shm_read(struct libos_handle* hdl, void* buf, size_t count, file_
         return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
-    if (hdl->inode->type == S_IFREG || hdl->inode->type == S_IFCHR) {
-        *pos += actual_count;
-    }
+    *pos += actual_count;
     return actual_count;
 }
 
@@ -51,14 +49,14 @@ static ssize_t shm_write(struct libos_handle* hdl, const void* buf, size_t count
         return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
-    if (hdl->inode->type == S_IFREG || hdl->inode->type == S_IFCHR) {
-        *pos += actual_count;
-        /* Update file size if we just wrote past the end of file */
-        lock(&hdl->inode->lock);
-        if (hdl->inode->size < *pos)
-            hdl->inode->size = *pos;
-        unlock(&hdl->inode->lock);
-    }
+
+    *pos += actual_count;
+    /* Update file size if we just wrote past the end of file */
+    lock(&hdl->inode->lock);
+    if (hdl->inode->size < *pos)
+        hdl->inode->size = *pos;
+    unlock(&hdl->inode->lock);
+
     return actual_count;
 }
 
@@ -148,9 +146,13 @@ static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
 static int shm_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
-    /* shm file system url always has a "dev:" prefix. */
     char* uri = NULL;
-    int ret = chroot_dentry_uri(dent, S_IFCHR, &uri);
+    /*
+     * We don't know the file type yet, so we can't construct a PAL URI with the right prefix.
+     * However, "file:" prefix is good enough here: `PalStreamAttributesQuery` will access the file
+     * and report the right file type.
+     */
+    int ret = chroot_dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         goto out;
 
@@ -164,7 +166,8 @@ static int shm_lookup(struct libos_dentry* dent) {
     mode_t type;
     switch (pal_attr.handle_type) {
         case PAL_TYPE_FILE:
-            type = S_IFREG;
+            /* Regular files in shm file system are device files. */
+            type = S_IFCHR;
             break;
         case PAL_TYPE_DIR:
             type = S_IFDIR;

@@ -448,7 +448,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
                          &shared_memory_str);
     if (ret < 0)
         goto out;
-    if (shared_memory_str && strcmp(shared_memory_str, "none"))
+    if (shared_memory_str && !strcmp(shared_memory_str, "passthrough"))
         allow_shared_memory = true;
     free(shared_memory_str);
 

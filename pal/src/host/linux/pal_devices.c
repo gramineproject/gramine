@@ -51,6 +51,22 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
     } else {
+        /* normalize uri into normpath */
+        size_t normpath_size = strlen(uri) + 1;
+        char* normpath = malloc(normpath_size);
+        if (!normpath){
+            ret = -PAL_ERROR_NOMEM;
+            goto fail;
+        }
+
+        ret = get_norm_path(uri, normpath, &normpath_size);
+        if (ret < 0) {
+            log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
+            free(normpath);
+            ret = -PAL_ERROR_DENIED;
+            goto fail;
+        }
+
         /* other devices must be opened through the host */
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -64,13 +80,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
 
-        char* path = strdup(uri);
-        if (!path) {
-            DO_SYSCALL(close, ret);
-            free(hdl);
-            return -PAL_ERROR_NOMEM;
-        }
-        hdl->dev.realpath = path;
+        hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
         if (access == PAL_ACCESS_RDONLY) {
@@ -91,7 +101,7 @@ fail:
 }
 
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
-    if (offset || handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
@@ -100,12 +110,13 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
+    int64_t bytes = offset ? DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset)
+                           : DO_SYSCALL(read, handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
 static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
-    if (offset || handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
@@ -114,7 +125,8 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
+    int64_t bytes = offset ? DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset)
+                           : DO_SYSCALL(write, handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -122,9 +134,11 @@ static int dev_close(PAL_HANDLE handle) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
+    /* currently we just assign `0`/`1` FDs without duplicating, so close is a no-op for them */
    int ret = 0;
     if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
         ret = DO_SYSCALL(close, handle->dev.fd);
+        free(handle->file.realpath);
     }
     handle->dev.fd = PAL_IDX_POISON;
     return ret < 0 ? unix_to_pal_error(ret) : 0;
@@ -142,16 +156,22 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 }
 
 static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                    uint64_t size) {
+                   uint64_t size) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED : 0);
-    int linux_prot = PAL_PROT_TO_LINUX(prot);
+    assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
+
+    uint64_t dummy;
+    if (__builtin_add_overflow(offset, size, &dummy)) {
+        return -PAL_ERROR_INVAL;
+    }
+
     if (handle->dev.fd == PAL_IDX_POISON || handle->dev.fd == 0 || handle->dev.fd == 1)
         return -PAL_ERROR_INVAL;
 
-    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, handle->dev.fd, offset);
+    addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
+                             handle->dev.fd, offset);
     if (IS_PTR_ERR(addr))
         return unix_to_pal_error(PTR_TO_ERR(addr));
 
@@ -180,7 +200,6 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = PERM_rw_rw_rw_;
         attr->pending_size = 0;
-        attr->handle_type  = PAL_TYPE_DEV;
     } else {
         /* other devices must query the host */
         struct stat stat_buf;
@@ -190,9 +209,9 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
-        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
     }
 
+    attr->handle_type = PAL_TYPE_DEV;
     attr->nonblocking = false;
     return 0;
 }
@@ -205,7 +224,6 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = 0;
         attr->pending_size = 0;
-        attr->handle_type  = PAL_TYPE_DEV;
     } else {
         /* other devices must query the host */
         struct stat stat_buf;
@@ -215,10 +233,10 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
-        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
     }
 
-    attr->nonblocking  = handle->dev.nonblocking;
+    attr->handle_type = PAL_TYPE_DEV;
+    attr->nonblocking = handle->dev.nonblocking;
     return 0;
 }
 
@@ -233,11 +251,8 @@ static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
         return 0;
     }
     int ret = DO_SYSCALL(ftruncate, handle->dev.fd, length);
-
     if (ret < 0)
-        return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
-                                                 : -PAL_ERROR_DENIED;
-
+        return unix_to_pal_error(ret);
     return (int64_t)length;
 }
 

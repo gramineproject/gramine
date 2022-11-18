@@ -18,7 +18,6 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "perm.h"
-#include "stat.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -54,6 +53,22 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
     } else {
+        /* normalize uri into normpath */
+        size_t normpath_size = strlen(uri) + 1;
+        char* normpath = malloc(normpath_size);
+        if (!normpath){
+            ret = -PAL_ERROR_NOMEM;
+            goto fail;
+        }
+
+        ret = get_norm_path(uri, normpath, &normpath_size);
+        if (ret < 0) {
+            log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
+            free(normpath);
+            ret = -PAL_ERROR_DENIED;
+            goto fail;
+        }
+
         /* other devices must be opened through the host */
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
@@ -66,14 +81,8 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             ret = unix_to_pal_error(ret);
             goto fail;
         }
-        
-        char* path = strdup(uri);
-        if (!path) {
-            ocall_close(ret);
-            free(hdl);
-            return -PAL_ERROR_NOMEM;
-        }
-        hdl->dev.realpath = path;
+
+        hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
         if (access == PAL_ACCESS_RDONLY) {
@@ -94,7 +103,7 @@ fail:
 }
 
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
-    if (offset || handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
@@ -103,12 +112,13 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    ssize_t bytes = ocall_read(handle->dev.fd, buffer, size);
+    ssize_t bytes = offset ? ocall_pread(handle->dev.fd, buffer, size, offset)
+                           : ocall_read(handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
 static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
-    if (offset || handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
@@ -116,8 +126,8 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
 
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
-
-    ssize_t bytes = ocall_write(handle->dev.fd, buffer, size);
+    ssize_t bytes = offset ? ocall_pwrite(handle->dev.fd, buffer, size, offset)
+                           : ocall_write(handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -157,7 +167,6 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = PERM_rw_rw_rw_;
         attr->pending_size = 0;
-        attr->handle_type  = PAL_TYPE_DEV;
     } else {
         /* other devices must query the host */
         int fd = ocall_open(uri, O_RDONLY | O_CLOEXEC, 0);
@@ -173,12 +182,12 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
-        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
 
         ocall_close(fd);
     }
 
-    attr->nonblocking  = false;
+    attr->handle_type = PAL_TYPE_DEV;
+    attr->nonblocking = false;
     return 0;
 }
 
@@ -190,7 +199,6 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = 0;
         attr->pending_size = 0;
-        attr->handle_type  = PAL_TYPE_DEV;
 
     } else {
         /* other devices must query the host */
@@ -201,8 +209,9 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
         attr->share_flags  = stat_buf.st_mode & PAL_SHARE_MASK;
         attr->pending_size = stat_buf.st_size;
-        attr->handle_type  = S_ISDIR(stat_buf.st_mode) ? PAL_TYPE_DIR : PAL_TYPE_DEV;
     }
+
+    attr->handle_type = PAL_TYPE_DEV;
     attr->nonblocking = handle->dev.nonblocking;
     return 0;
 }
@@ -219,31 +228,29 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 }
 
 static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                    uint64_t size) {
+                   uint64_t size) {
+
+    if (handle->hdr.type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
-    int ret;
 
     uint64_t dummy;
     if (__builtin_add_overflow(offset, size, &dummy)) {
         return -PAL_ERROR_INVAL;
     }
 
-    if (size > SIZE_MAX) {
-        /* for compatibility with 32-bit systems */
-        return -PAL_ERROR_INVAL;
-    }
-
     /* If the address is within shared address, map the file outside of enclave. */
     if (addr >= g_pal_public_state.shared_address_start
-            && addr + size <= g_pal_public_state.shared_address_end) {
+            && (uintptr_t)addr + size <= (uintptr_t)g_pal_public_state.shared_address_end) {
         void* mem = addr;
-        ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
+        int ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
                                    handle->dev.fd, offset);
         return ret < 0 ? unix_to_pal_error(ret) : ret;
-    } else {
-        log_warning("dev_map does not currently support mapping devices to enclave.");
-        return -PAL_ERROR_DENIED;
     }
+
+    log_warning("dev_map does not currently support mapping devices to enclave.");
+    return -PAL_ERROR_DENIED;
 }
 
 static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
