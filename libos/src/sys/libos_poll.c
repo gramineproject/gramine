@@ -43,9 +43,8 @@ typedef unsigned long __fd_mask;
 
 /* To avoid lock contention in the global memory allocator, use stack if the
  * required space is small enough.
- * Each fd will use 48 bytes in libos_syscall_select, _libos_syscall_poll and
- * _PalStreamsWaitEvents, therefore 16 fd will use less than 1K stack space. */
-#define MAX_FD_TO_USE_STACK     16
+ * Each FD uses 48B of space, so 16 FDs use less than 1K stack space. */
+#define NFDS_LIMIT_TO_USE_STACK 16
 
 static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
     if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
@@ -65,26 +64,20 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
     pal_wait_flags_t* pal_events = NULL;
     bool allocated_on_stack = false;
 
-    if (nfds <= MAX_FD_TO_USE_STACK) {
+    if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
+        /* Here, each FD uses 8+16+4*2=32 bytes on stack */
         allocated_on_stack = true;
-        pals = __builtin_alloca(nfds * sizeof(PAL_HANDLE));
-        fds_mapping = __builtin_alloca(nfds * sizeof(struct fds_mapping_t));
+        pals = __builtin_alloca(nfds * sizeof(*pals));
+        fds_mapping = __builtin_alloca(nfds * sizeof(*fds_mapping));
         pal_events = __builtin_alloca(nfds * sizeof(*pal_events) * 2);
     } else {
-        pals = malloc(nfds * sizeof(PAL_HANDLE));
-        if (!pals)
-            return -ENOMEM;
-
-        fds_mapping = malloc(nfds * sizeof(struct fds_mapping_t));
-        if (!fds_mapping) {
-            free(pals);
-            return -ENOMEM;
-        }
-
+        pals = malloc(nfds * sizeof(*pals));
+        fds_mapping = malloc(nfds * sizeof(*fds_mapping));
         pal_events = malloc(nfds * sizeof(*pal_events) * 2);
-        if (!pal_events) {
+        if (!pals || !fds_mapping || !pal_events) {
             free(pals);
             free(fds_mapping);
+            free(pal_events);
             return -ENOMEM;
         }
     }
@@ -272,11 +265,12 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
     struct pollfd* fds_poll = NULL;
     bool allocated_on_stack = false;
 
-    if (nfds <= MAX_FD_TO_USE_STACK) {
+    if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
+        /* Here, each FD uses 8 bytes on stack */
         allocated_on_stack = true;
-        fds_poll = __builtin_alloca(nfds * sizeof(struct pollfd));
+        fds_poll = __builtin_alloca(nfds * sizeof(*fds_poll));
     } else {
-        fds_poll = malloc(nfds * sizeof(struct pollfd));
+        fds_poll = malloc(nfds * sizeof(*fds_poll));
         if (!fds_poll)
             return -ENOMEM;
     }
