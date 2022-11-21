@@ -12,9 +12,8 @@
 #include "pal_internal.h"
 #include "pal_linux_error.h"
 
-/* To avoid lock contention in the global memory allocator, use stack if the
- * required space is small enough.
-  * Each FD uses 48B of space, so 16 FDs use less than 1K stack space. */
+/* To avoid expensive malloc/free (due to locking), use stack if the required
+ * space is small enough. */
 #define NFDS_LIMIT_TO_USE_STACK 16
 
 int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
@@ -27,7 +26,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
 
     struct pollfd* fds = NULL;
     bool allocated_on_stack = false;
-    
+
     if (count <= NFDS_LIMIT_TO_USE_STACK) {
         /* Here, each FD uses 8 bytes on stack */
         allocated_on_stack = true;

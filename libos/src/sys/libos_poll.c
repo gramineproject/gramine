@@ -41,9 +41,8 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
-/* To avoid lock contention in the global memory allocator, use stack if the
- * required space is small enough.
- * Each FD uses 48B of space, so 16 FDs use less than 1K stack space. */
+/* To avoid expensive malloc/free (due to locking), use stack if the required
+ * space is small enough. */
 #define NFDS_LIMIT_TO_USE_STACK 16
 
 static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
