@@ -52,6 +52,7 @@ Here's an example of running Python scripts under Gramine:
 gramine-sgx ./python scripts/helloworld.py
 gramine-sgx ./python scripts/test-numpy.py
 gramine-sgx ./python scripts/test-scipy.py
+gramine-sgx ./python scripts/sgx-report.py
 gramine-sgx ./python scripts/sgx-quote.py
 ```
 
