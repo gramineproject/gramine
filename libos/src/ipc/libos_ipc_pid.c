@@ -60,8 +60,10 @@ int init_ipc_ids(void) {
  * returns `false`. If a range was returned, it is not larger than `MAX_RANGE_SIZE`. */
 static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
     assert(locked(&g_id_owners_tree_lock));
-    static_assert(!IS_SIGNED(IDTYPE), "IDTYPE must be unsigned");
-    IDTYPE next_id = g_last_id + 1 ?: 1;
+
+    /* note that PID_MAX_LIMIT is a value *one greater* than max PID; see man proc, `pid_max` */
+    static_assert(PID_MAX_LIMIT < IDTYPE_MAX - MAX_RANGE_SIZE, "int overflow may happen");
+    IDTYPE next_id = (g_last_id + 1 >= PID_MAX_LIMIT) ? 1 : g_last_id + 1;
 
     struct id_range dummy = {
         .start = next_id,
@@ -73,17 +75,18 @@ static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
         if (next_id < range->start) {
             /* `next_id` does not overlap any existing range. */
             *start = next_id;
-            if (__builtin_add_overflow(next_id, MAX_RANGE_SIZE - 1, end)) {
-                *end = IDTYPE_MAX;
+            *end   = next_id + MAX_RANGE_SIZE - 1;
+            if (*end >= PID_MAX_LIMIT) {
+                *end = PID_MAX_LIMIT - 1;
             }
             *end = MIN(*end, range->start - 1);
             return true;
         }
         /* `next_id` overlaps `range`. */
         assert(next_id <= range->end);
-        if (range->end == IDTYPE_MAX) {
-            /* No ids available in range `[g_last_id + 1, IDTYPE_MAX]`. If wrapping is needed, set
-             * `g_last_id` and call this function again. */
+        if (range->end == PID_MAX_LIMIT - 1) {
+            /* No ids available in range `[g_last_id + 1, PID_MAX_LIMIT)`. If wrapping is needed,
+             * set `g_last_id` and call this function again. */
             return false;
         }
         next_id = range->end + 1;
@@ -91,8 +94,9 @@ static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
     }
     /* There are no ids greater or equal to `next_id`. */
     *start = next_id;
-    if (__builtin_add_overflow(next_id, MAX_RANGE_SIZE - 1, end)) {
-        *end = IDTYPE_MAX;
+    *end   = next_id + MAX_RANGE_SIZE - 1;
+    if (*end >= PID_MAX_LIMIT) {
+        *end = PID_MAX_LIMIT - 1;
     }
     return true;
 }

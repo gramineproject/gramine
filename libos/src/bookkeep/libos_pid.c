@@ -67,10 +67,6 @@ int init_id_ranges(IDTYPE preload_tid) {
 IDTYPE get_new_id(IDTYPE move_ownership_to) {
     IDTYPE ret_id = 0;
     lock(&g_ranges_lock);
-    if (g_last_used_id >= PID_MAX_LIMIT - 1) {
-        log_debug("Limit of ids reached (limit is %u)", PID_MAX_LIMIT);
-        goto out;
-    }
     if (!g_last_range) {
         g_last_range = malloc(sizeof(*g_last_range));
         if (!g_last_range) {
