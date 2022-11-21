@@ -48,6 +48,7 @@ check: all
 	@grep -q "Success 3/4" TEST_STDOUT
 	@grep -q "Success 4/4" TEST_STDOUT
 ifeq ($(SGX),1)
+	@grep -q "Success SGX report" TEST_STDOUT
 	@grep -q "Success SGX quote" TEST_STDOUT
 endif
 

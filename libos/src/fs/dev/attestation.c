@@ -393,17 +393,10 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
         return -EINVAL;
     }
 
-    /* always add /dev/attestation/attestation_type file, even if it is "none" */
+    /* always add the following SGX-specific files, even if remote attestation type is "none" */
     pseudo_add_str(attestation, "attestation_type", attestation_type_load);
-
-    if (!strcmp(g_pal_public_state->attestation_type, "none")) {
-        log_debug("host is Linux-SGX but remote attestation type is 'none', adding only "
-                  "/dev/attestation/attestation_type file and skipping others (report, etc.)");
-        return 0;
-    }
-
-    log_debug("host is Linux-SGX and remote attestation type is '%s', adding SGX-specific "
-              "/dev/attestation/ files: report, quote, etc.", g_pal_public_state->attestation_type);
+    pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
+    pseudo_add_str(attestation, "report", &report_load);
 
     struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
     user_report_data->perm = PSEUDO_PERM_FILE_RW;
@@ -413,16 +406,15 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     target_info->perm = PSEUDO_PERM_FILE_RW;
     target_info->str.save = &target_info_save;
 
-    pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
-    pseudo_add_str(attestation, "report", &report_load);
+    if (!strcmp(g_pal_public_state->attestation_type, "none")) {
+        log_debug("host is Linux-SGX and remote attestation type is 'none', skipping "
+                  "/dev/attestation/quote file");
+        return 0;
+    }
+
+    log_debug("host is Linux-SGX and remote attestation type is '%s', adding "
+              "/dev/attestation/quote file", g_pal_public_state->attestation_type);
     pseudo_add_str(attestation, "quote", &quote_load);
-
-    /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
-    struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
-                                                          &deprecated_pfkey_load);
-    deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
-    deprecated_pfkey->str.save = &deprecated_pfkey_save;
-
     return 0;
 }
 
@@ -439,6 +431,12 @@ int init_attestation(struct pseudo_node* dev) {
     key->list_names = &key_list_names;
     key->perm = PSEUDO_PERM_FILE_RW;
     key->str.save = &key_save;
+
+    /* TODO: This file is deprecated in v1.2, remove 2 versions later. */
+    struct pseudo_node* deprecated_pfkey = pseudo_add_str(attestation, "protected_files_key",
+                                                          &deprecated_pfkey_load);
+    deprecated_pfkey->perm = PSEUDO_PERM_FILE_RW;
+    deprecated_pfkey->str.save = &deprecated_pfkey_save;
 
     return 0;
 }
