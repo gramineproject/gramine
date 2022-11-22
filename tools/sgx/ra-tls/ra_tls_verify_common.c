@@ -148,19 +148,24 @@ static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, s
          * lengths of 128 to 65535 bytes, so length must be encoded in exactly two bytes */
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
     }
+    static_assert(sizeof(sgx_quote_t) >= 128, "need to change ASN.1 length-of-octet-string limit");
+    static_assert(SGX_QUOTE_MAX_SIZE <= 65535, "need to change ASN.1 length-of-octet-string limit");
 
-    if (p + 2 >= exts_end)
+    if (p + 2 > exts_end)
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
-    *out_size = *p++;
-    *out_size <<= 8;
-    *out_size += *p++;
+    size_t val_size;
+    val_size = *p++;
+    val_size <<= 8;
+    val_size += *p++;
 
-    *out_val = p;
+    uint8_t* val = p;
 
-    if (*out_size > SGX_QUOTE_MAX_SIZE || *out_val + *out_size > exts_end)
+    if (val_size < 128 || val_size > SGX_QUOTE_MAX_SIZE || val + val_size > exts_end)
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
+    *out_size = val_size;
+    *out_val  = val;
     return 0;
 }
 
@@ -212,7 +217,7 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     if (quote_size < sizeof(*quote))
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
-    /* currently single claim verified: must compare public key's hash from cert against SGX quote's
+    /* currently only a single claim is verified: public key's hash from cert must match SGX quote's
      * report_data */
     ret = cmp_crt_pk_against_quote_report_data(crt, quote);
     if (ret < 0)
