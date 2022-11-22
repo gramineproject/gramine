@@ -1,0 +1,51 @@
+# This test contains tricky/legacy TOML syntax, just to test TOML parsing and have some coverage
+
+{% set entrypoint = "helloworld" -%}
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+# keep the deprecated `fs.mount` syntax for test purposes
+# TODO: this syntax is deprecated in v1.2 and will be removed two versions after it.
+
+fs.mount.lib.type = "chroot"
+fs.mount.lib.path = "/lib"
+fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
+
+fs.mount.entrypoint.type = "chroot"
+fs.mount.entrypoint.path = "{{ entrypoint }}"
+fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
+# the manifest option below added only so that this feature has any test coverage
+libos.check_invalid_pointers = false
+
+sgx.nonpie_binary = true
+sgx.debug = true
+
+# the manifest options below added only so that they have any test coverage
+sgx.seal_key.flags_mask = "0xffffffffffffffff"
+sgx.seal_key.xfrm_mask  = "0xfffffffffff9ff1b"
+sgx.seal_key.misc_mask  = "0xffffffff"
+
+# below format of sgx.trusted_files is to test TOML-table syntax without `sha256`
+[[sgx.trusted_files]]
+uri = "file:{{ gramine.libos }}"
+
+[[sgx.trusted_files]]
+uri = "file:{{ gramine.runtimedir(libc) }}/"
+
+[[sgx.trusted_files]]
+uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+
+# below entry is to test TOML-table syntax with `sha256` (trusted_testfile has hard-coded contents,
+# so we can use pre-calculated SHA256 hash)
+[[sgx.trusted_files]]
+uri = "file:trusted_testfile"
+sha256 = "41dacdf1e6d0481d3b1ab1a91f93139db02b96f29cfdd3fb0b819ba1e33cafc4"
+
+# below entry is to test parsing of `\\x2d` sequence (previously-used `toml` Python parser had bug)
+[[sgx.trusted_files]]
+uri = "file:nonexisting\\x2dfile"
+sha256 = "0123456789012345678901234567890123456789012345678901234567890123"
