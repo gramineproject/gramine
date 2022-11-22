@@ -61,6 +61,7 @@ int init_ipc_ids(void) {
 static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
     assert(locked(&g_id_owners_tree_lock));
 
+    static_assert(!IS_SIGNED(IDTYPE), "IDTYPE must be unsigned");
     static_assert(PID_MAX <= IDTYPE_MAX - (MAX_RANGE_SIZE - 1), "int overflow may happen");
     IDTYPE next_id = (g_last_id + 1 > PID_MAX) ? 1 : g_last_id + 1;
 
@@ -74,7 +75,7 @@ static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
         if (next_id < range->start) {
             /* `next_id` does not overlap any existing range. */
             *start = next_id;
-            *end   = next_id + (MAX_RANGE_SIZE - 1);
+            *end   = next_id + MAX_RANGE_SIZE - 1;
             if (*end > PID_MAX) {
                 *end = PID_MAX;
             }
@@ -93,7 +94,7 @@ static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
     }
     /* There are no ids greater or equal to `next_id`. */
     *start = next_id;
-    *end   = next_id + (MAX_RANGE_SIZE - 1);
+    *end   = next_id + MAX_RANGE_SIZE - 1;
     if (*end > PID_MAX) {
         *end = PID_MAX;
     }
