@@ -9,6 +9,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cargo \
     clang \
     curl \
+    dwarves \
     flex \
     gawk \
     gdb \
