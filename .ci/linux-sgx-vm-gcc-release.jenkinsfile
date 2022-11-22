@@ -15,11 +15,6 @@ node('whatnots') {
     // FIXME: remove this line once seccomp policy is updated in core Gramine repo.
     env.DOCKER_ARGS_COMMON += ' --security-opt seccomp=unconfined'
 
-    // Required by `make` of gramine-device-testing-module because
-    // `/usr/src/linux-headers-.../scripts` is a symlink to smth like `../../lib/linux-kbuild-...`
-    // FIXME: either move to Ubuntu 22.04 (which seems to not require this hack) or ditch Docker
-    env.DOCKER_ARGS_COMMON += ' --volume=/usr/lib/linux-kbuild-5.18:/usr/lib/linux-kbuild-5.18:ro'
-
     // Required by QEMU to run Linux kernel in VM
     env.DOCKER_ARGS_COMMON += ' --volume=/boot:/boot:ro'
 
