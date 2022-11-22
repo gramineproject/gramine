@@ -3,9 +3,6 @@
 import os
 import sys
 
-def tohex(b):
-    return ''.join(format(x, '02x') for x in b)
-
 if not os.path.exists("/dev/attestation/report"):
     print("Cannot find `/dev/attestation/report`; are you running under SGX?")
     sys.exit(1)
