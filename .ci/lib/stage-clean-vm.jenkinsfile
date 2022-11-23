@@ -1,0 +1,5 @@
+stage('clean-vm') {
+    sh '''
+        rm -rf device-testing-tools driver files_for_vm
+    '''
+}
