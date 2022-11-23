@@ -4,8 +4,6 @@
 export DH_VERBOSE = 1
 
 # see FEATURE AREAS in dpkg-buildflags(1)
-#
-# we need to completely disable LDFLAGS until completely retiring makefiles
 export DEB_BUILD_MAINT_OPTIONS = hardening=-all reproducible=-all
 export DEB_CFLAGS_MAINT_SET =
 export DEB_CPPFLAGS_MAINT_SET =

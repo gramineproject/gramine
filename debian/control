@@ -29,7 +29,7 @@ Vcs-Git: https://github.com/gramineproject/gramine.git
 
 Package: gramine
 Architecture: amd64
-Description: A lightweight guest OS designed to run a single application
+Description: A lightweight usermode guest OS designed to run a single Linux application
 Depends:
  libcjson1 (>= 1.7),
  libcurl4 (>= 7.58),
