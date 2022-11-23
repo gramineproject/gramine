@@ -37,6 +37,7 @@ node('whatnots') {
         load '.ci/lib/stage-clean-check-prepare.jenkinsfile'
         load '.ci/lib/stage-build-sgx-vm.jenkinsfile'
         load '.ci/lib/stage-test-vm.jenkinsfile'
+        load '.ci/lib/stage-clean-vm.jenkinsfile'
         load '.ci/lib/stage-clean-check.jenkinsfile'
     }
 }
