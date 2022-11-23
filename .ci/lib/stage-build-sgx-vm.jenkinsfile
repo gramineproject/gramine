@@ -5,7 +5,7 @@ stage('build') {
 
         git clone https://github.com/gramineproject/device-testing-tools.git
         cd device-testing-tools
-        git checkout d3183959fdb8ebe61673e701c2d8f3e26cdc18ab
+        git checkout 64e3f29304bad948d8a0533ca05348d6a24fcdfb
 
         cd initramfs_builder
         cp -f new_init_jenkins new_init
