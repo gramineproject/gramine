@@ -249,6 +249,8 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
     if (prot & PROT_GROWSDOWN) {
         struct libos_vma_info vma_info = {0};
         if (lookup_vma(addr, &vma_info) >= 0) {
+            assert(vma_info.addr <= addr);
+            length += addr - vma_info.addr;
             addr = vma_info.addr;
             if (vma_info.file) {
                 put_handle(vma_info.file);
