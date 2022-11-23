@@ -161,7 +161,7 @@ static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, s
 
     uint8_t* val = p;
 
-    if (val_size < 128 || val_size > SGX_QUOTE_MAX_SIZE || val + val_size > exts_end)
+    if (val_size < 128 || val_size > SGX_QUOTE_MAX_SIZE || val_size > exts_end - val)
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
     *out_size = val_size;
@@ -205,7 +205,7 @@ int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quo
     return 0;
 }
 
-int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
                                     size_t* out_quote_size) {
     sgx_quote_t* quote;
     size_t quote_size;
@@ -217,8 +217,7 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     if (quote_size < sizeof(*quote))
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
-    /* currently only a single claim is verified: public key's hash from cert must match SGX quote's
-     * report_data */
+    /* currently only one check: public key's hash from cert must match SGX quote's report_data */
     ret = cmp_crt_pk_against_quote_report_data(crt, quote);
     if (ret < 0)
         return ret;

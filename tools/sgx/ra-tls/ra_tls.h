@@ -49,7 +49,7 @@ __attribute__ ((visibility("hidden")))
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
 
 __attribute__ ((visibility("hidden")))
-int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
+int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
                                     size_t* out_quote_size);
 
 __attribute__ ((visibility("hidden")))
