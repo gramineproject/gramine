@@ -321,9 +321,10 @@ obtain) a |~| checkout of Gramine repository and all wrapped subprojects'
 distfiles. The files :file:`subprojects/{*}.wrap` describe those downloads and
 their respective SHA-256 checksums. You can use :command:`meson subprojects
 download` to download and check them automatically. Otherwise, you should put
-all those distfiles into :file:`subprojects/packagecache` directory. (You don't
-need to checksum them separately, Meson will do that for you later if they're
-mismatched or corrupted).
+all those distfiles into :file:`subprojects/packagecache` directory. Pay
+attention to expected filenames as specified in wrap files. (You don't need to
+checksum them separately, Meson will do that for you later if they're mismatched
+or corrupted).
 
 Alternatively, you can prepare a |~| "dist" tarball using :command:`meson dist`
 command, which apart from Gramine code will contain all wrapped subprojects and
