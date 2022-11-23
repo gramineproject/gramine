@@ -161,7 +161,8 @@ static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, s
 
     uint8_t* val = p;
 
-    if (val_size < 128 || val_size > SGX_QUOTE_MAX_SIZE || val_size > exts_end - val)
+    assert(val <= exts_end);
+    if (val_size < 128 || val_size > SGX_QUOTE_MAX_SIZE || val_size > (size_t)(exts_end - val))
         return MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
 
     *out_size = val_size;
