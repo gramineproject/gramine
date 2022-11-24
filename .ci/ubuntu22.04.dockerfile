@@ -9,7 +9,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cargo \
     clang \
     curl \
-    dwarves \
     flex \
     gawk \
     gdb \
@@ -85,6 +84,7 @@ RUN python3 -m pip install -U \
 # Dependencies required for building kernel modules and running VMs
 RUN env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cpio \
+    dwarves \
     g++-10 \
     gcc-10 \
     kmod \
