@@ -1,5 +1,5 @@
 stage('clean-vm') {
     sh '''
-        rm -rf device-testing-tools driver
+        rm -rf device-testing-tools driver envs
     '''
 }
