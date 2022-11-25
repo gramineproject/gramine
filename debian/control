@@ -54,11 +54,11 @@ Description: DCAP-based Remote Attestation TLS (RA-TLS) library for Gramine
 Depends:
  gramine (= ${binary:Version}),
  libsgx-dcap-quote-verify,
-#libc6 (>= 2.28),
+# TODO add appropriate dependency against libc6, possibly (>= 2.28)
 
 Package: gramine-ratls-epid
 Architecture: amd64
 Description: EPID-based Remote Attestation TLS (RA-TLS) library for Gramine
 Depends:
  gramine (= ${binary:Version}),
-#libc6 (>= 2.28),
+# TODO libc6
