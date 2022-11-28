@@ -819,6 +819,8 @@ typedef uint32_t pal_wait_flags_t; /* bitfield */
  * \returns 0 if there was an event on at least one handle, negative error code otherwise.
  *
  * \p timeout_us contains remaining timeout both on successful and failed calls.
+ *
+ * \p handle_array can contain empty elements (NULL) which are ignored.
  */
 int PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                          pal_wait_flags_t* ret_events, uint64_t* timeout_us);
