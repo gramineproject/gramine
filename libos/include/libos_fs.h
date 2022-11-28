@@ -21,10 +21,6 @@
 
 struct libos_handle;
 
-#define FS_POLL_RD 0x01
-#define FS_POLL_WR 0x02
-#define FS_POLL_ER 0x04
-
 /* Describes mount parameters. Passed to `mount_fs`, and to the `mount` callback. */
 struct libos_mount_params {
     /* Filesystem type (corresponds to `name` field of `libos_fs` */
@@ -182,8 +178,8 @@ struct libos_fs_ops {
     int (*checkout)(struct libos_handle* hdl);
     int (*checkin)(struct libos_handle* hdl);
 
-    /* poll a single handle */
-    int (*poll)(struct libos_handle* hdl, int poll_type);
+    /* Poll a single handle. Must not block. */
+    int (*poll)(struct libos_handle* hdl, int in_events, int* out_events);
 
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
@@ -950,7 +946,7 @@ int generic_readdir(struct libos_dentry* dent, readdir_callback_t callback, void
 int generic_inode_stat(struct libos_dentry* dent, struct stat* buf);
 int generic_inode_hstat(struct libos_handle* hdl, struct stat* buf);
 file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int origin);
-int generic_inode_poll(struct libos_handle* hdl, int poll_type);
+int generic_inode_poll(struct libos_handle* hdl, int events, int* out_events);
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset);
