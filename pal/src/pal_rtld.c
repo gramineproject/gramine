@@ -376,18 +376,18 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
 
     if (ehdr->e_type == ET_DYN) {
         /*
-         * This is a position-independent shared object, allocate a dummy memory area to determine
-         * load address. This area will be populated (overwritten) with LOAD segments in the below
-         * loop.
+         * This is a position-independent shared object, bookkeep a memory area to determine
+         * load address. This area will be populated (possibly partially) with LOAD segments in
+         * the below loop. We never free this memory, so we don't bother with removing parts that
+         * are bookkept, but not allocated
          *
-         * Note that we allocate memory to cover LOAD segments starting from offset 0, not from the
+         * Note that we bookkeep memory to cover LOAD segments starting from offset 0, not from the
          * first segment's p_vaddr. This is to ensure that l_base_diff will not be less than 0.
          */
-        void* map_addr = NULL;
-        ret = pal_internal_memory_alloc(loadcmds[loadcmds_cnt - 1].alloc_end, &map_addr,
-                                        /*initial_alloc*/false);
+        uintptr_t map_addr;
+        ret = pal_internal_memory_bkeep(loadcmds[loadcmds_cnt - 1].alloc_end, &map_addr);
         if (ret < 0) {
-            log_error("Failed to allocate memory for all LOAD segments of DYN ELF file");
+            log_error("Failed to bookkeep memory for all LOAD segments of DYN ELF file");
             goto out;
         }
 

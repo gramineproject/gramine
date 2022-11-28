@@ -236,7 +236,7 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
 
 /* This function is called only in early init code which is single-threaded, hence it does not need
  * any locking. */
-static int initial_mem_alloc(size_t size, void** out_addr, bool initial_alloc) {
+static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
     if (g_initial_mem_disabled) {
         return -PAL_ERROR_INVAL;
     }
@@ -269,15 +269,7 @@ static int initial_mem_alloc(size_t size, void** out_addr, bool initial_alloc) {
         return ret;
     }
 
-    if (initial_alloc) {
-        ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
-        if (ret < 0) {
-            log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
-            _PalProcessExit(1);
-        }
-    }
-
-    *out_addr = (void*)addr;
+    *out_addr = addr;
     return 0;
 }
 
@@ -300,22 +292,35 @@ static int initial_mem_free(uintptr_t addr, size_t size) {
     return 0;
 }
 
-int pal_internal_memory_alloc(size_t size, void** out_addr, bool initial_alloc) {
-    assert(IS_ALLOC_ALIGNED(size));
-
+int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr) {
     if (!g_mem_bkeep_alloc_upcall) {
-        return initial_mem_alloc(size, out_addr, initial_alloc);
+        return initial_mem_bkeep(size, out_addr);
     }
 
-    uintptr_t addr;
-    int ret = g_mem_bkeep_alloc_upcall(size, &addr);
+    int ret = g_mem_bkeep_alloc_upcall(size, out_addr);
     if (ret < 0) {
         log_warning("%s: failed to bookkeep PAL internal memory: %d", __func__, ret);
         return -PAL_ERROR_NOMEM;
     }
 
+    return 0;
+}
+
+int pal_internal_memory_alloc(size_t size, void** out_addr) {
+    assert(IS_ALLOC_ALIGNED(size));
+
+    uintptr_t addr;
+    int ret = pal_internal_memory_bkeep(size, &addr);
+    if (ret < 0) {
+        return ret;
+    }
+
     ret = _PalVirtualMemoryAlloc((void*)addr, size, PAL_PROT_READ | PAL_PROT_WRITE);
     if (ret < 0) {
+        if (!g_mem_bkeep_alloc_upcall) {
+            log_error("%s: failed to allocate initial PAL internal memory: %d", __func__, ret);
+            _PalProcessExit(1);
+        }
         log_warning("%s: failed to allocate PAL internal memory: %d", __func__, ret);
         ret = g_mem_bkeep_free_upcall(addr, size);
         if (ret < 0) {

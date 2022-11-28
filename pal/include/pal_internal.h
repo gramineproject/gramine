@@ -277,7 +277,8 @@ void pal_read_next_reserved_range(uintptr_t last_range_start, uintptr_t* out_nex
  * Caller must make sure that the new range does not overlap any previously added range.
  */
 int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment);
-int pal_internal_memory_alloc(size_t size, void** out_addr, bool initial_alloc);
+int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr);
+int pal_internal_memory_alloc(size_t size, void** out_addr);
 int pal_internal_memory_free(void* addr, size_t size);
 void pal_disable_early_memory_bookkeeping(void);
 
