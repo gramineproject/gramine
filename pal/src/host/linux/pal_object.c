@@ -17,20 +17,15 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     int ret;
     uint64_t remaining_time_us = timeout_us ? *timeout_us : 0;
 
-    if (count == 0)
-        return 0;
-
     struct pollfd* fds = calloc(count, sizeof(*fds));
     if (!fds) {
         return -PAL_ERROR_NOMEM;
     }
 
     for (size_t i = 0; i < count; i++) {
-        ret_events[i] = 0;
-
         PAL_HANDLE handle = handle_array[i];
         /* If `handle` does not have a host fd, just ignore it. */
-        if ((handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
+        if (handle && (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
                 && handle->generic.fd != PAL_IDX_POISON) {
             short fdevents = 0;
             if (events[i] & PAL_WAIT_READ) {
@@ -77,6 +72,8 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     }
 
     for (size_t i = 0; i < count; i++) {
+        ret_events[i] = 0;
+
         if (fds[i].fd == -1) {
             /* We skipped this fd. */
             continue;
