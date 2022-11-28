@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ */
 
 /*
  * Implementation of system calls "poll", "ppoll", "select" and "pselect6".
  */
-
-#include <errno.h>
 
 #include "libos_fs.h"
 #include "libos_handle.h"
@@ -41,283 +41,314 @@ typedef unsigned long __fd_mask;
 #define __FD_CLR(d, set)   ((void)(__FDS_BITS(set)[__FD_ELT(d)] &= ~__FD_MASK(d)))
 #define __FD_ISSET(d, set) ((__FDS_BITS(set)[__FD_ELT(d)] & __FD_MASK(d)) != 0)
 
-static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeout_us) {
-    if ((uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
-        return -EINVAL;
+#define POLLIN_SET (POLLRDNORM | POLLRDBAND | POLLIN | POLLHUP | POLLERR)
+#define POLLOUT_SET (POLLWRBAND | POLLWRNORM | POLLOUT | POLLERR)
+#define POLLEX_SET (POLLPRI)
 
+static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
+    struct libos_handle** libos_handles = calloc(fds_len, sizeof(*libos_handles));
+    PAL_HANDLE* pal_handles = calloc(fds_len, sizeof(*pal_handles));
+    /* Double the amount of PAL events - one part are input events, the other - output. */
+    pal_wait_flags_t* pal_events = calloc(2 * fds_len, sizeof(*pal_events));
+    if (!libos_handles || !pal_handles || !pal_events) {
+        free(libos_handles);
+        free(pal_handles);
+        free(pal_events);
+        return -ENOMEM;
+    }
+
+    long ret;
+    size_t ret_events_count = 0;
     struct libos_handle_map* map = get_cur_thread()->handle_map;
-
-    /* nfds is the upper limit for actual number of handles */
-    PAL_HANDLE* pals = malloc(nfds * sizeof(PAL_HANDLE));
-    if (!pals)
-        return -ENOMEM;
-
-    /* for bookkeeping, need to have a mapping FD -> {libos handle, index-in-pals} */
-    struct fds_mapping_t {
-        struct libos_handle* hdl; /* NULL if no mapping (handle is not used in polling) */
-        nfds_t idx;               /* index from fds array to pals array */
-    };
-    struct fds_mapping_t* fds_mapping = malloc(nfds * sizeof(struct fds_mapping_t));
-    if (!fds_mapping) {
-        free(pals);
-        return -ENOMEM;
-    }
-
-    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
-    pal_wait_flags_t* pal_events = malloc(nfds * sizeof(*pal_events) * 2);
-    if (!pal_events) {
-        free(pals);
-        free(fds_mapping);
-        return -ENOMEM;
-    }
-    pal_wait_flags_t* ret_events = pal_events + nfds;
-
-    nfds_t pal_cnt  = 0;
-    nfds_t nrevents = 0;
 
     lock(&map->lock);
 
-    /* collect PAL handles that correspond to user-supplied FDs (only those that can be polled) */
-    for (nfds_t i = 0; i < nfds; i++) {
-        fds[i].revents = 0;
-        fds_mapping[i].hdl = NULL;
-
+    /*
+     * After each iteration of this loop either:
+     * - `fds[i].revents` is set to its final value (possibly 0)
+     * - `libos_handles[i]` and `pal_events[i]` are set to non-NULL values
+     */
+    for (size_t i = 0; i < fds_len; i++) {
         if (fds[i].fd < 0) {
-            /* FD is negative, must be ignored */
-            continue;
-        }
-
-        struct libos_handle* hdl = __get_fd_handle(fds[i].fd, NULL, map);
-        if (!hdl || !hdl->fs || !hdl->fs->fs_ops) {
-            /* The corresponding handle doesn't exist or doesn't provide FS-like semantics; do not
-             * include it in handles-to-poll array but notify user about invalid request. */
-            fds[i].revents = POLLNVAL;
-            nrevents++;
-            continue;
-        }
-
-        if (hdl->type == TYPE_CHROOT || hdl->type == TYPE_DEV || hdl->type == TYPE_STR ||
-                hdl->type == TYPE_TMPFS) {
-            /* Files, devs and strings are special cases: their poll is emulated at LibOS level; do
-             * not include them in handles-to-poll array but instead use handle-specific
-             * callback.
-             *
-             * TODO: we probably should use the poll() callback in all cases. */
-            int libos_events = 0;
-            if ((fds[i].events & (POLLIN | POLLRDNORM)) && (hdl->acc_mode & MAY_READ))
-                libos_events |= FS_POLL_RD;
-            if ((fds[i].events & (POLLOUT | POLLWRNORM)) && (hdl->acc_mode & MAY_WRITE))
-                libos_events |= FS_POLL_WR;
-
-            int libos_revents = hdl->fs->fs_ops->poll(hdl, libos_events);
-
+            /* Negative file descriptors are ignored. */
             fds[i].revents = 0;
-            if (libos_revents & FS_POLL_RD)
-                fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
-            if (libos_revents & FS_POLL_WR)
-                fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
-
-            if (fds[i].revents)
-                nrevents++;
             continue;
+        }
+
+        struct libos_handle* handle = __get_fd_handle(fds[i].fd, NULL, map);
+        if (!handle) {
+            fds[i].revents = POLLNVAL;
+            ret_events_count++;
+            continue;
+        }
+
+        int events = fds[i].events;
+        if (!(handle->acc_mode & MAY_READ)) {
+            events &= ~(POLLIN | POLLRDNORM);
+        }
+        if (!(handle->acc_mode & MAY_WRITE)) {
+            events &= ~(POLLOUT | POLLWRNORM);
+        }
+
+        if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->poll) {
+            ret = handle->fs->fs_ops->poll(handle, events, &events);
+            /*
+             * FIXME: remove this hack.
+             * Initial 0,1,2 fds in Gramine are represented by "/dev/tty" (whatever that means)
+             * and have `generic_inode_poll` set as poll callback, which returns `-EAGAIN` on
+             * non-regular-file handles. In such case we let PAL do the actual polling.
+             */
+            if (ret == -EAGAIN && handle->uri && !strcmp(handle->uri, "dev:tty")) {
+                goto dev_tty_hack;
+            }
+
+            if (ret < 0) {
+                unlock(&map->lock);
+                goto out;
+            }
+
+            fds[i].revents = events;
+            if (events) {
+                ret_events_count++;
+            }
+
+            continue;
+
+            dev_tty_hack:;
         }
 
         PAL_HANDLE pal_handle;
-        if (hdl->type == TYPE_SOCK) {
-            pal_handle = __atomic_load_n(&hdl->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+        if (handle->type == TYPE_SOCK) {
+            pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            if (!pal_handle) {
+                /* UNIX sockets that are still not connected have no `pal_handle`. */
+                fds[i].revents = POLLHUP;
+                ret_events_count++;
+                continue;
+            }
         } else {
-            pal_handle = hdl->pal_handle;
+            pal_handle = handle->pal_handle;
+            if (!pal_handle) {
+                fds[i].revents = POLLNVAL;
+                ret_events_count++;
+                continue;
+            }
         }
 
-        if (!pal_handle) {
-            fds[i].revents = POLLNVAL;
-            nrevents++;
-            continue;
-        }
+        if (events & (POLLIN | POLLRDNORM))
+            pal_events[i] |= PAL_WAIT_READ;
+        if (events & (POLLOUT | POLLWRNORM))
+            pal_events[i] |= PAL_WAIT_WRITE;
 
-        pal_wait_flags_t allowed_events = 0;
-        if ((fds[i].events & (POLLIN | POLLRDNORM)) && (hdl->acc_mode & MAY_READ))
-            allowed_events |= PAL_WAIT_READ;
-        if ((fds[i].events & (POLLOUT | POLLWRNORM)) && (hdl->acc_mode & MAY_WRITE))
-            allowed_events |= PAL_WAIT_WRITE;
-
-        if ((fds[i].events & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM)) && !allowed_events) {
-            /* If user requested read/write events but they are not allowed on this handle, ignore
-             * this handle (but note that user may only be interested in errors, and this is a valid
-             * request). */
-            continue;
-        }
-
-        get_handle(hdl);
-        fds_mapping[i].hdl = hdl;
-        fds_mapping[i].idx = pal_cnt;
-        pals[pal_cnt] = pal_handle;
-        pal_events[pal_cnt] = allowed_events;
-        ret_events[pal_cnt] = 0;
-        pal_cnt++;
+        libos_handles[i] = handle;
+        get_handle(handle);
+        pal_handles[i] = pal_handle;
     }
 
     unlock(&map->lock);
 
-    bool polled = false;
-    long error = 0;
-    if (pal_cnt) {
-        error = PalStreamsWaitEvents(pal_cnt, pals, pal_events, ret_events, timeout_us);
-        polled = error == 0;
-        error = pal_to_unix_errno(error);
+    uint64_t tmp_timeout_us = 0;
+    if (ret_events_count) {
+        /* If we already have events to return, we should not sleep below. */
+        timeout_us = &tmp_timeout_us;
     }
 
-    for (nfds_t i = 0; i < nfds; i++) {
-        if (!fds_mapping[i].hdl)
+    pal_wait_flags_t* ret_events = pal_events + fds_len;
+    ret = PalStreamsWaitEvents(fds_len, pal_handles, pal_events, ret_events, timeout_us);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        if (ret == -EAGAIN) {
+            /* Timeout - return number of already seen events, which might be 0. */
+            ret = ret_events_count;
+        }
+        goto out;
+    }
+
+    for (size_t i = 0; i < fds_len; i++) {
+        if (!libos_handles[i]) {
             continue;
-
-        /* update fds.revents, but only if something was actually polled */
-        if (polled) {
-            fds[i].revents = 0;
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_ERROR)
-                fds[i].revents |= POLLERR | POLLHUP;
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_READ)
-                fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_WRITE)
-                fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
-
-            if (fds[i].revents)
-                nrevents++;
         }
 
-        put_handle(fds_mapping[i].hdl);
+        fds[i].revents = 0;
+        if (ret_events[i] & PAL_WAIT_ERROR)
+            fds[i].revents |= POLLERR | POLLHUP;
+        if (ret_events[i] & PAL_WAIT_READ)
+            fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
+        if (ret_events[i] & PAL_WAIT_WRITE)
+            fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
+
+        if (fds[i].revents)
+            ret_events_count++;
     }
 
-    free(pals);
-    free(pal_events);
-    free(fds_mapping);
+    ret = ret_events_count;
 
-    if (error == -EAGAIN) {
-        /* `poll` returns 0 on timeout. */
-        error = 0;
-    } else if (error == -EINTR) {
+out:
+    for (size_t i = 0; i < fds_len; i++) {
+        if (libos_handles[i]) {
+            put_handle(libos_handles[i]);
+        }
+    }
+    free(libos_handles);
+    free(pal_handles);
+    free(pal_events);
+
+    if (ret == -EINTR) {
         /* `poll`, `ppoll`, `select` and `pselect` are not restarted after being interrupted by
          * a signal handler. */
-        error = -ERESTARTNOHAND;
+        ret = -ERESTARTNOHAND;
     }
-    return nrevents ? (long)nrevents : error;
+    return ret;
 }
 
 long libos_syscall_poll(struct pollfd* fds, unsigned int nfds, int timeout_ms) {
+    if (nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+        return -EINVAL;
+
     if (!is_user_memory_writable(fds, nfds * sizeof(*fds)))
         return -EFAULT;
 
     uint64_t timeout_us = (unsigned int)timeout_ms * TIME_US_IN_MS;
-    return _libos_syscall_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
+    return do_poll(fds, nfds, timeout_ms < 0 ? NULL : &timeout_us);
 }
 
 long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
                          const __sigset_t* sigmask_ptr, size_t sigsetsize) {
+    if (nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+        return -EINVAL;
+
     if (!is_user_memory_writable(fds, nfds * sizeof(*fds))) {
         return -EFAULT;
     }
 
-    int ret = set_user_sigmask(sigmask_ptr, sigsetsize);
+    long ret = set_user_sigmask(sigmask_ptr, sigsetsize);
     if (ret < 0) {
         return ret;
     }
 
-    uint64_t timeout_us = tsp ? tsp->tv_sec * TIME_US_IN_S + tsp->tv_nsec / TIME_NS_IN_US : 0;
-    return _libos_syscall_poll(fds, nfds, tsp ? &timeout_us : NULL);
+    uint64_t timeout_us = 0;
+    if (tsp) {
+        if (!is_user_memory_readable(tsp, sizeof(*tsp))) {
+            return -EFAULT;
+        }
+        if (tsp->tv_sec < 0 || tsp->tv_nsec < 0 || (unsigned long)tsp->tv_nsec >= TIME_NS_IN_S) {
+            return -EINVAL;
+        }
+        timeout_us = tsp->tv_sec * TIME_US_IN_S + tsp->tv_nsec / TIME_NS_IN_US;
+    }
+
+    ret = do_poll(fds, nfds, tsp ? &timeout_us : NULL);
+
+    /* If `tsp` is in read-only memory, skip the update. */
+    if (tsp && is_user_memory_writable_no_skip(tsp, sizeof(*tsp))) {
+        tsp->tv_sec = timeout_us / TIME_US_IN_S;
+        tsp->tv_nsec = (timeout_us % TIME_US_IN_S) * TIME_NS_IN_US;
+    }
+    return ret;
 }
 
-long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
-                          struct __kernel_timeval* tsv) {
-    if (tsv && (tsv->tv_sec < 0 || tsv->tv_usec < 0))
+static long do_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
+                      uint64_t* timeout_us) {
+    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
         return -EINVAL;
 
-    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
-        return -EINVAL;
-
-    if (!nfds) {
-        if (!tsv)
-            return libos_syscall_pause();
-
-        /* special case of select(0, ..., tsv) used for sleep */
-        return do_nanosleep(tsv->tv_sec * TIME_US_IN_S + tsv->tv_usec, NULL);
+    size_t total_fds = 0;
+    for (size_t i = 0; i < (size_t)nfds; i++) {
+        if ((read_set && __FD_ISSET(i, read_set)) || (write_set && __FD_ISSET(i, write_set))
+                || (except_set && __FD_ISSET(i, except_set))) {
+            total_fds++;
+        }
     }
 
-    if (nfds < __NFDBITS) {
-        /* interesting corner case: Linux always checks at least 64 first FDs */
-        nfds = __NFDBITS;
-    }
-
-    /* nfds is the upper limit for actual number of fds for poll */
-    struct pollfd* fds_poll = malloc(nfds * sizeof(struct pollfd));
-    if (!fds_poll)
+    struct pollfd* poll_fds = malloc(total_fds * sizeof(*poll_fds));
+    if (!poll_fds)
         return -ENOMEM;
 
-    /* populate array of pollfd's based on user-supplied readfds & writefds */
-    nfds_t nfds_poll = 0;
-    for (int fd = 0; fd < nfds; fd++) {
+    long ret;
+    size_t poll_fds_idx = 0;
+    for (size_t i = 0; i < (size_t)nfds; i++) {
         short events = 0;
-        if (readfds && __FD_ISSET(fd, readfds))
-            events |= POLLIN;
-        if (writefds && __FD_ISSET(fd, writefds))
-            events |= POLLOUT;
+        if (read_set && __FD_ISSET(i, read_set)) {
+            events |= POLLIN_SET;
+        }
+        if (write_set && __FD_ISSET(i, write_set)) {
+            events |= POLLOUT_SET;
+        }
+        if (except_set && __FD_ISSET(i, except_set)) {
+            events |= POLLEX_SET;
+        }
 
         if (!events)
             continue;
 
-        fds_poll[nfds_poll].fd      = fd;
-        fds_poll[nfds_poll].events  = events;
-        fds_poll[nfds_poll].revents = 0;
-        nfds_poll++;
-    }
-
-    /* select()/pselect() return -EBADF if invalid FD was given by user in readfds/writefds;
-     * note that poll()/ppoll() don't have this error code, so we return this code only here */
-    struct libos_handle_map* map = get_cur_thread()->handle_map;
-    lock(&map->lock);
-    for (nfds_t i = 0; i < nfds_poll; i++) {
-        struct libos_handle* hdl = __get_fd_handle(fds_poll[i].fd, NULL, map);
-        if (!hdl || !hdl->fs || !hdl->fs->fs_ops) {
-            /* the corresponding handle doesn't exist or doesn't provide FS-like semantics */
-            free(fds_poll);
-            unlock(&map->lock);
-            return -EBADF;
+        if (poll_fds_idx == total_fds) {
+            log_error("User app is buggy and changed `select` fds sets concurrently!");
+            ret = -EAGAIN;
+            goto out;
         }
+
+        poll_fds[poll_fds_idx] = (struct pollfd){
+            .fd = i,
+            .events = events,
+        };
+        poll_fds_idx++;
     }
-    unlock(&map->lock);
 
-    uint64_t timeout_us = tsv ? tsv->tv_sec * TIME_US_IN_S + tsv->tv_usec : 0;
-    long ret = _libos_syscall_poll(fds_poll, nfds_poll, tsv ? &timeout_us : NULL);
+    if (poll_fds_idx != total_fds) {
+        log_error("User app is buggy and changed `select` fds sets concurrently!");
+        ret = -EAGAIN;
+        goto out;
+    }
 
+    ret = do_poll(poll_fds, total_fds, timeout_us);
     if (ret < 0) {
-        free(fds_poll);
-        return ret;
+        goto out;
     }
 
-    /* modify readfds, writefds, and errorfds in-place with returned events */
-    if (readfds)
-        __FD_ZERO(readfds);
-    if (writefds)
-        __FD_ZERO(writefds);
-    if (errorfds)
-        __FD_ZERO(errorfds);
+    /* `select` modifies read_set, write_set and except_set in-place. */
+    for (size_t i = 0; i < total_fds; i++) {
+        if (poll_fds[i].revents & POLLNVAL) {
+            /* `select` returns error on invalid fds, but also fills sets. */
+            ret = -EBADF;
+            continue;
+        }
 
-    ret = 0;
-    for (nfds_t i = 0; i < nfds_poll; i++) {
-        if (readfds && (fds_poll[i].revents & POLLIN)) {
-            __FD_SET(fds_poll[i].fd, readfds);
-            ret++;
+        if (read_set && !(poll_fds[i].revents & POLLIN_SET)) {
+            __FD_CLR(poll_fds[i].fd, read_set);
         }
-        if (writefds && (fds_poll[i].revents & POLLOUT)) {
-            __FD_SET(fds_poll[i].fd, writefds);
-            ret++;
+        if (write_set && !(poll_fds[i].revents & POLLOUT_SET)) {
+            __FD_CLR(poll_fds[i].fd, write_set);
         }
-        if (errorfds && (fds_poll[i].revents & POLLERR)) {
-            __FD_SET(fds_poll[i].fd, errorfds);
-            ret++;
+        if (except_set && !(poll_fds[i].revents & POLLEX_SET)) {
+            __FD_CLR(poll_fds[i].fd, except_set);
         }
     }
 
-    free(fds_poll);
+out:
+    free(poll_fds);
+    return ret;
+}
+
+long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
+                          struct __kernel_timeval* tv) {
+    uint64_t timeout_us = 0;
+    if (tv) {
+        if (!is_user_memory_readable(tv, sizeof(*tv))) {
+            return -EFAULT;
+        }
+        if (tv->tv_sec < 0 || tv->tv_usec < 0 || (unsigned long)tv->tv_usec >= TIME_US_IN_S) {
+            return -EINVAL;
+        }
+        timeout_us = tv->tv_sec * TIME_US_IN_S + tv->tv_usec;
+    }
+
+    long ret = do_select(nfds, read_set, write_set, except_set, tv ? &timeout_us : NULL);
+
+    /* If `tv` is in read-only memory, skip the update. */
+    if (tv && is_user_memory_writable_no_skip(tv, sizeof(*tv))) {
+        tv->tv_sec = timeout_us / TIME_US_IN_S;
+        tv->tv_usec = timeout_us % TIME_US_IN_S;
+    }
     return ret;
 }
 
@@ -326,8 +357,8 @@ struct sigset_argpack {
     size_t size;
 };
 
-long libos_syscall_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* errorfds,
-                            const struct __kernel_timespec* tsp, void* _sigmask_argpack) {
+long libos_syscall_pselect6(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
+                            struct __kernel_timespec* tsp, void* _sigmask_argpack) {
     struct sigset_argpack* sigmask_argpack = _sigmask_argpack;
     if (sigmask_argpack) {
         if (!is_user_memory_readable(sigmask_argpack, sizeof(*sigmask_argpack))) {
@@ -339,12 +370,23 @@ long libos_syscall_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set*
         }
     }
 
+    uint64_t timeout_us = 0;
     if (tsp) {
-        struct __kernel_timeval tsv;
-        tsv.tv_sec  = tsp->tv_sec;
-        tsv.tv_usec = tsp->tv_nsec / 1000;
-        return libos_syscall_select(nfds, readfds, writefds, errorfds, &tsv);
+        if (!is_user_memory_readable(tsp, sizeof(*tsp))) {
+            return -EFAULT;
+        }
+        if (tsp->tv_sec < 0 || tsp->tv_nsec < 0 || (unsigned long)tsp->tv_nsec >= TIME_NS_IN_S) {
+            return -EINVAL;
+        }
+        timeout_us = tsp->tv_sec * TIME_US_IN_S + tsp->tv_nsec / TIME_NS_IN_US;
     }
 
-    return libos_syscall_select(nfds, readfds, writefds, errorfds, NULL);
+    long ret = do_select(nfds, read_set, write_set, except_set, tsp ? &timeout_us : NULL);
+
+    /* If `tsp` is in read-only memory, skip the update. */
+    if (tsp && is_user_memory_writable_no_skip(tsp, sizeof(*tsp))) {
+        tsp->tv_sec = timeout_us / TIME_US_IN_S;
+        tsp->tv_nsec = (timeout_us % TIME_US_IN_S) * TIME_NS_IN_US;
+    }
+    return ret;
 }

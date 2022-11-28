@@ -116,27 +116,16 @@ file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int o
     return ret;
 }
 
-int generic_inode_poll(struct libos_handle* hdl, int poll_type) {
+int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events) {
     int ret;
-
-    lock(&hdl->pos_lock);
-    lock(&hdl->inode->lock);
 
     if (hdl->inode->type == S_IFREG) {
         ret = 0;
-        if (poll_type & FS_POLL_WR)
-            ret |= FS_POLL_WR;
-        /* TODO: The `hdl->pos < hdl->inode->size` condition is wrong, the `poll` syscall treats
-         * end-of-file as readable. Check if removing this condition doesn't break anything
-         * in our `poll` implementation. */
-        if ((poll_type & FS_POLL_RD) && hdl->pos < hdl->inode->size)
-            ret |= FS_POLL_RD;
+        *out_events = in_events & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM);
     } else {
         ret = -EAGAIN;
     }
 
-    unlock(&hdl->inode->lock);
-    unlock(&hdl->pos_lock);
     return ret;
 }
 

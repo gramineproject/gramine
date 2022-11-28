@@ -112,11 +112,9 @@ int mem_file_truncate(struct libos_mem_file* mem, file_off_t size) {
     return 0;
 }
 
-int mem_file_poll(struct libos_mem_file* mem, file_off_t pos, int poll_type) {
-    int ret = 0;
-    if ((poll_type & FS_POLL_RD) && (pos < mem->size))
-        ret |= FS_POLL_RD;
-    if (poll_type & FS_POLL_WR)
-        ret |= FS_POLL_WR;
-    return ret;
+int mem_file_poll(struct libos_mem_file* mem, file_off_t pos, int events, int* out_events) {
+    *out_events = events & (POLLOUT | POLLWRNORM);
+    if (pos < mem->size)
+        *out_events |= events & (POLLIN | POLLRDNORM);
+    return 0;
 }
