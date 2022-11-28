@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     test_file(argv[0], O_RDONLY, POLLIN, POLLIN, 0, 0);
 
     /* Host file (empty) */
-    test_file("tmp/host_file", O_RDWR | O_CREAT | O_TRUNC, POLLIN, 0, POLLOUT, POLLOUT);
+    test_file("tmp/host_file", O_RDWR | O_CREAT | O_TRUNC, POLLIN, POLLIN, POLLOUT, POLLOUT);
 
     printf("TEST OK\n");
     return 0;

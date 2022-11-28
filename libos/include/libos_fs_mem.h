@@ -30,4 +30,4 @@ ssize_t mem_file_read(struct libos_mem_file* mem, file_off_t pos_start, void* bu
 ssize_t mem_file_write(struct libos_mem_file* mem, file_off_t pos_start, const void* buf,
                        size_t size);
 int mem_file_truncate(struct libos_mem_file* mem, file_off_t size);
-int mem_file_poll(struct libos_mem_file* mem, file_off_t pos, int poll_type);
+int mem_file_poll(struct libos_mem_file* mem, file_off_t pos, int events, int* out_events);

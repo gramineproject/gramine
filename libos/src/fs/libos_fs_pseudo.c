@@ -468,26 +468,26 @@ static int pseudo_close(struct libos_handle* hdl) {
     }
 }
 
-static int pseudo_poll(struct libos_handle* hdl, int poll_type) {
+static int pseudo_poll(struct libos_handle* hdl, int events, int* out_events) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
             lock(&hdl->pos_lock);
             lock(&hdl->lock);
-            int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, poll_type);
+            int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, events, out_events);
             unlock(&hdl->lock);
             unlock(&hdl->pos_lock);
             return ret;
         }
 
         case PSEUDO_DEV: {
-            int ret = 0;
-            if ((poll_type & FS_POLL_RD) && node->dev.dev_ops.read)
-                ret |= FS_POLL_RD;
-            if ((poll_type & FS_POLL_WR) && node->dev.dev_ops.write)
-                ret |= FS_POLL_WR;
-            return ret;
+            *out_events = 0;
+            if ((events & POLLIN) && node->dev.dev_ops.read)
+                *out_events |= POLLIN;
+            if ((events & POLLOUT) && node->dev.dev_ops.write)
+                *out_events |= POLLOUT;
+            return 0;
         }
 
         default:

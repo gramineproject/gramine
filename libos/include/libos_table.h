@@ -182,7 +182,7 @@ long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode);
 long libos_syscall_fchownat(int dfd, const char* filename, uid_t user, gid_t group, int flags);
 long libos_syscall_faccessat(int dfd, const char* filename, mode_t mode);
 long libos_syscall_pselect6(int nfds, fd_set* readfds, fd_set* writefds, fd_set* exceptfds,
-                            const struct __kernel_timespec* tsp, void* sigmask_argpack);
+                            struct __kernel_timespec* tsp, void* sigmask_argpack);
 long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec* tsp,
                          const __sigset_t* sigmask_ptr, size_t sigsetsize);
 long libos_syscall_set_robust_list(struct robust_list_head* head, size_t len);
