@@ -77,21 +77,7 @@ static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot,
     return 0;
 }
 
-static int shm_truncate(struct libos_handle* hdl, file_off_t size) {
-    assert(hdl->type == TYPE_SHM);
-
-    lock(&hdl->inode->lock);
-    int ret = PalStreamSetLength(hdl->pal_handle, size);
-    if (ret == 0) {
-        hdl->inode->size = size;
-    } else {
-        ret = pal_to_unix_errno(ret);
-    }
-    unlock(&hdl->inode->lock);
-    return ret;
-}
-
-/* Open a PAL handle, and associate it with a LibOS handle (if provided). */
+/* Open a PAL handle, and associate it with a LibOS handle. */
 static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode_t type,
                        int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
@@ -112,16 +98,12 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
         goto out;
     }
 
-    if (hdl) {
-        hdl->uri = uri;
-        uri = NULL;
+    hdl->uri = uri;
+    uri = NULL;
 
-        hdl->type = TYPE_SHM;
-        hdl->pos = 0;
-        hdl->pal_handle = palhdl;
-    } else {
-        PalObjectClose(palhdl);
-    }
+    hdl->type = TYPE_SHM;
+    hdl->pos = 0;
+    hdl->pal_handle = palhdl;
     ret = 0;
 
 out:
@@ -176,9 +158,6 @@ static int shm_lookup(struct libos_dentry* dent) {
             type = S_IFCHR;
             break;
         case PAL_TYPE_PIPE:
-            log_warning("trying to access '%s' which is a host-level FIFO (named pipe); "
-                        "Gramine supports only named pipes created by Gramine processes",
-                        uri);
             ret = -EACCES;
             goto out;
         default:
@@ -186,7 +165,7 @@ static int shm_lookup(struct libos_dentry* dent) {
             BUG();
     }
 
-    file_off_t size = (type == S_IFCHR ? pal_attr.pending_size : 0);
+    file_off_t size = pal_attr.pending_size;
 
     ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size);
 out:
@@ -200,6 +179,7 @@ static int shm_open(struct libos_handle* hdl, struct libos_dentry* dent, int fla
 
     return shm_do_open(hdl, dent, dent->inode->type, flags, /*perm=*/0);
 }
+
 static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
@@ -212,75 +192,6 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     return shm_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
-
-static int shm_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
-    PAL_HANDLE palhdl;
-    char* buf = NULL;
-    size_t buf_size = READDIR_BUF_SIZE;
-
-    char* uri;
-    int ret = chroot_dentry_uri(dent, S_IFDIR, &uri);
-    if (ret < 0)
-        return ret;
-
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, &palhdl);
-    free(uri);
-    if (ret < 0)
-        return ret;
-
-    buf = malloc(buf_size);
-    if (!buf) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    while (true) {
-        size_t read_size = buf_size;
-        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-            goto out;
-        }
-        if (read_size == 0) {
-            /* End of directory listing */
-            break;
-        }
-
-        /* Last entry must be null-terminated */
-        assert(buf[read_size - 1] == '\0');
-
-        /* Read all entries (separated by null bytes) and invoke `callback` on each */
-        size_t start = 0;
-        while (start < read_size - 1) {
-            size_t end = start + strlen(&buf[start]);
-
-            if (end == start) {
-                log_error("chroot_readdir: empty name returned from PAL");
-                BUG();
-            }
-
-            /* By the PAL convention, if a name ends with '/', it is a directory. However, we ignore
-             * that distinction here and pass the name without '/' to the callback. */
-            if (buf[end - 1] == '/')
-                buf[end - 1] = '\0';
-
-            if ((ret = callback(&buf[start], arg)) < 0)
-                goto out;
-
-            start = end + 1;
-        }
-    }
-    ret = 0;
-
-out:
-    free(buf);
-    PalObjectClose(palhdl);
-    return ret;
-}
-
-/* NOTE: this function is different from generic `chroot_unlink` only to add PAL_OPTION_PASSTHROUGH.
- * Once that option is removed, we can safely go back to using `chroot_unlink`. */
 static int shm_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
@@ -316,7 +227,7 @@ struct libos_fs_ops shm_fs_ops = {
     .mmap       = shm_mmap,
     .seek       = generic_inode_seek,
     .hstat      = generic_inode_hstat,
-    .truncate   = shm_truncate,
+    .truncate   = generic_truncate,
     .poll       = generic_inode_poll,
 };
 
@@ -325,7 +236,6 @@ struct libos_d_ops shm_d_ops = {
     .lookup  = shm_lookup,
     .creat   = shm_creat,
     .stat    = generic_inode_stat,
-    .readdir = shm_readdir,
     .unlink  = shm_unlink,
 };
 

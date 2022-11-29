@@ -65,7 +65,7 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* o
 
 #ifndef MAP_FIXED_NOREPLACE
 #define MAP_FIXED_NOREPLACE 0x100000
-#endif // MAP_FIXED_NOREPLACE
+#endif
 
 #ifdef IN_ENCLAVE
 

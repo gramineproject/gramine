@@ -421,7 +421,7 @@ Start (current working) directory
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
 
-Allowing POSIX shared memory objects
+Untrusted shared memory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
@@ -429,11 +429,30 @@ Allowing POSIX shared memory objects
     sys.insecure__shared_memory = "[none|passthrough]"
     (Default: "none")
 
-If `passthrough` is specified, host-level path `/dev/shm` is mounted to `/dev/shm`
-in Gramine, which is folder contains shared memory file created by `shm_open()`.
-Shared memory object is created in untrusted memory, and accessible by its
-child, another graminized and native application. The memory regions also can
-be shared between graminized applications and an arbitrary host device.
+By default, Gramine disables shared memory (i.e., accessing files under `/dev/shm/`).
+This behavior is particularly important for the SGX environment, where all data put
+in shared memory must be preliminarily encrypted or at least integrity-protected.
+Unmodified applications almost never have such "protect data in shared memory"
+logic, so enabling shared memory in Gramine by default would be insecure.
+
+Specifying `"passthrough"` explicitly allows shared memory. To be more precise,
+the `/dev/shm/` host directory (used for sharing data between processes and devices)
+is mounted inside Gramine, so that the application may create files -- called "shared
+memory objects" in POSIX -- under this directory (for example, this is how `shm_open()`
+Glibc function works).
+
+.. note ::
+   Shared memory is insecure by itself in SGX environments:
+
+       - Typically applications do not encrypt the data put in shared memory,
+         which may lead to leaks of enclave data.
+       - Untrusted host can modify data in shared memory as it wishes, so
+         applications could see or operate on maliciously modified data.
+
+   It is the responsibility of the app developer to correctly use shared memory, with
+   security implications in mind. In most cases, data in shared memory should be
+   preliminarily encrypted or integrity-protected with a key pre-shared between all
+   participating processes (and possibly devices that use this shared memory).
 
 SGX syntax
 ----------

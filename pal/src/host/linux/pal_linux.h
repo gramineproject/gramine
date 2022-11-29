@@ -125,4 +125,4 @@ struct linux_dirent64 {
 
 #ifndef MAP_FIXED_NOREPLACE
 #define MAP_FIXED_NOREPLACE 0x100000
-#endif // MAP_FIXED_NOREPLACE
+#endif

@@ -512,7 +512,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
                    "(host-based eventfd is enabled)");
 
     if (allow_shared_memory)
-        log_always("  - sys.insecure__shared_memory = \"...\"        "
+        log_always("  - sys.insecure__shared_memory = passthrough  "
                    "(untrusted shared memory is enabled)");
 
     if (allow_all_files)
@@ -603,23 +603,12 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                                MAP_NORESERVE | MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED_NOREPLACE,
                                /*fd=*/-1, /*offset=*/0);
     if (ret < 0) {
-        log_error("Not enough shared memory.");
+        log_error("Cannot allocate shared memory.");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
     if (shared_memory_start != (void*)SHARED_ADDR_MIN) {
-        /* Older kernel which does not support MAP_FIXED_NOREPLACE. */
-        if (shared_memory_start < (void*)DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
-                && (void*)DBGINFO_ADDR < shared_memory_start + SHARED_MEM_SIZE) {
-            log_error("Shared memory range would overlap `struct enclave_dbginfo`.");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-#ifdef ASAN
-        if (shared_memory_start < (void*)(ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)
-                && (void*)ASAN_SHADOW_START < shared_memory_start + SHARED_MEM_SIZE) {
-            log_error("Shared memory range would overlap ASAN memory range.");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-#endif
+        log_error("Kernel doesn't support MAP_FIXED_NOREPLACE. Update kernel to at least 4.17.");
+        ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     g_pal_public_state.shared_address_start = shared_memory_start;

@@ -7,7 +7,7 @@ loader.insecure__use_cmdline_argv = true
 # for eventfd test
 sys.insecure__allow_eventfd = true
 
-# for untrusted shared memory test
+# for untrusted shared memory test (`shm.c`)
 sys.insecure__shared_memory = "passthrough"
 
 fs.mounts = [

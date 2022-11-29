@@ -39,7 +39,7 @@ static void read_shm(void) {
     }
 
     if (memcmp(addr, g_shared_text, sizeof(g_shared_text))) {
-        errx(1, "memcmp failed\n");
+        errx(1, "memcmp failed");
     }
     CHECK(munmap(addr, FILE_SIZE));
     CHECK(shm_unlink(SHMNAME));

@@ -245,3 +245,15 @@ out:
     }
     return ret;
 }
+
+int generic_truncate(struct libos_handle* hdl, file_off_t size) {
+    lock(&hdl->inode->lock);
+    int ret = PalStreamSetLength(hdl->pal_handle, size);
+    if (ret == 0) {
+        hdl->inode->size = size;
+    } else {
+        ret = pal_to_unix_errno(ret);
+    }
+    unlock(&hdl->inode->lock);
+    return ret;
+}

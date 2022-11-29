@@ -51,6 +51,8 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
     } else {
+        /* other devices must be opened through the host */
+
         /* normalize uri into normpath */
         size_t normpath_size = strlen(uri) + 1;
         char* normpath = malloc(normpath_size);
@@ -67,7 +69,6 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
 
-        /* other devices must be opened through the host */
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
         ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
@@ -76,6 +77,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                                     O_CLOEXEC,
                          share);
         if (ret < 0) {
+            free(normpath);
             ret = unix_to_pal_error(ret);
             goto fail;
         }
@@ -110,8 +112,17 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes = offset ? DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset)
-                           : DO_SYSCALL(read, handle->dev.fd, buffer, size);
+    if (!handle->dev.realpath) {
+        /* tty doesn't have offsets */
+        if (offset)
+            return -PAL_ERROR_INVAL;
+
+        int64_t bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
+        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+    }
+
+    /* host devices use offset */
+    int64_t bytes = DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -125,8 +136,17 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes = offset ? DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset)
-                           : DO_SYSCALL(write, handle->dev.fd, buffer, size);
+    if (!handle->dev.realpath) {
+        /* tty doesn't have offsets */
+        if (offset)
+            return -PAL_ERROR_INVAL;
+
+        int64_t bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
+        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+    }
+
+    /* host devices use offset */
+    int64_t bytes = DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -136,15 +156,18 @@ static int dev_close(PAL_HANDLE handle) {
 
     /* currently we just assign `0`/`1` FDs without duplicating, so close is a no-op for them */
    int ret = 0;
-    if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
+    if (handle->dev.realpath) {
         ret = DO_SYSCALL(close, handle->dev.fd);
-        free(handle->file.realpath);
+        free(handle->dev.realpath);
     }
     handle->dev.fd = PAL_IDX_POISON;
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    if (handle->hdr.type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
@@ -167,7 +190,7 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
-    if (handle->dev.fd == PAL_IDX_POISON || handle->dev.fd == 0 || handle->dev.fd == 1)
+    if (!handle->dev.realpath)
         return -PAL_ERROR_INVAL;
 
     addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
@@ -217,10 +240,10 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 }
 
 static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV || handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.fd == 0 || handle->dev.fd == 1) {
+    if (!handle->dev.realpath) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = 0;
         attr->pending_size = 0;
@@ -241,11 +264,11 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    if (handle->hdr.type != PAL_TYPE_DEV || handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.fd == 0 || handle->dev.fd == 1) {
-        /* TTY devices opened with O_TRUNC flag*/
+    if (!handle->dev.realpath) {
+        /* TTY devices opened with O_TRUNC flag */
         if (length != 0)
             return -PAL_ERROR_INVAL;
         return 0;
