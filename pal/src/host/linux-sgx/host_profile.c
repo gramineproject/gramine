@@ -189,7 +189,7 @@ static void sample_simple(uint64_t rip) {
     spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0) {
-        log_error("recording sample: %d", ret);
+        log_error("recording sample failed: %d", ret);
     }
 }
 
@@ -200,7 +200,7 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     size_t stack_size;
     ret = debug_read(stack, (void*)gpr->rsp, sizeof(stack));
     if (ret < 0) {
-        log_error("reading stack: %d", ret);
+        log_error("reading stack failed: %d", ret);
         return;
     }
     stack_size = ret;
@@ -212,7 +212,7 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0) {
-        log_error("recording sample: %d", ret);
+        log_error("recording sample failed: %d", ret);
     }
 }
 
