@@ -438,8 +438,10 @@ static int mount_nonroot_from_toml_array(void) {
  * This function is used for interpreting legacy `sgx.protected_files` syntax as mounts.
  */
 static int find_host_file_mount_path(const char* uri, char** out_file_path) {
-    if (!strstartswith(uri, URI_PREFIX_FILE))
+    if (!strstartswith(uri, URI_PREFIX_FILE)) {
+        log_error("Invalid file URI");
         return -EINVAL;
+    }
 
     size_t uri_len = strlen(uri);
 
