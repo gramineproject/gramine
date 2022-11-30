@@ -196,6 +196,7 @@ int init_rlimit(void);
 bool is_user_memory_readable(const void* addr, size_t size);
 bool is_user_memory_writable(const void* addr, size_t size);
 bool is_user_string_readable(const char* addr);
+bool is_user_memory_writable_no_skip(const void* addr, size_t size);
 
 uint64_t get_rlimit_cur(int resource);
 void set_rlimit_cur(int resource, uint64_t rlim);

@@ -393,10 +393,6 @@ static void memfault_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context
  * invalid syscall arguments (e.g. LTP test suite checks syscall arguments validation).
  */
 static bool test_user_memory(const void* addr, size_t size, bool writable) {
-    if (!g_check_invalid_ptrs) {
-        return true;
-    }
-
     if (!access_ok(addr, size)) {
         return false;
     }
@@ -405,10 +401,22 @@ static bool test_user_memory(const void* addr, size_t size, bool writable) {
 }
 
 bool is_user_memory_readable(const void* addr, size_t size) {
+    if (!g_check_invalid_ptrs) {
+        return true;
+    }
+
     return test_user_memory(addr, size, /*writable=*/false);
 }
 
 bool is_user_memory_writable(const void* addr, size_t size) {
+    if (!g_check_invalid_ptrs) {
+        return true;
+    }
+
+    return test_user_memory(addr, size, /*writable=*/true);
+}
+
+bool is_user_memory_writable_no_skip(const void* addr, size_t size) {
     return test_user_memory(addr, size, /*writable=*/true);
 }
 
