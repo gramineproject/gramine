@@ -48,8 +48,14 @@
 #define HOST_PERM(perm) ((perm) | PERM_rw_______)
 
 static int chroot_encrypted_mount(struct libos_mount_params* params, void** mount_data) {
-    if (!params->uri || !strstartswith(params->uri, URI_PREFIX_FILE))
+    if (!params->uri) {
+        log_error("Missing file URI");
         return -EINVAL;
+    }
+    if (!strstartswith(params->uri, URI_PREFIX_FILE)) {
+        log_error("'%s' is invalid file URI", params->uri);
+        return -EINVAL;
+    }
 
     const char* key_name = params->key_name ?: "default";
 
