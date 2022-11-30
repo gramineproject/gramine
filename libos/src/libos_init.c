@@ -361,7 +361,7 @@ static int read_environs(const char* const* envp) {
     do {                                                                    \
         int _err = CALL_INIT(func, ##__VA_ARGS__);                          \
         if (_err < 0) {                                                     \
-            log_error("Error during libos_init() in " #func " (%d)", _err); \
+            log_error("libos_init() failed in " #func " (%d)", _err);       \
             PalProcessExit(1);                                              \
         }                                                                   \
     } while (0)
@@ -383,7 +383,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     log_debug("Host: %s", g_pal_public_state->host_type);
 
     if (!IS_POWER_OF_2(ALLOC_ALIGNMENT)) {
-        log_error("Error during libos_init(): PAL allocation alignment not a power of 2");
+        log_error("PAL allocation alignment not a power of 2");
         PalProcessExit(1);
     }
 
