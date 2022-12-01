@@ -162,18 +162,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     /* extract SGX quote from "quote" OID extension from crt */
     sgx_quote_t* quote;
     size_t quote_size;
-    ret = find_oid(crt->v3_ext.p, crt->v3_ext.len, quote_oid, quote_oid_len, (uint8_t**)&quote,
-                   &quote_size);
-    if (ret < 0)
-        goto out;
-
-    if (quote_size < sizeof(*quote)) {
-        ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
-        goto out;
-    }
-
-    /* compare public key's hash from cert against quote's report_data */
-    ret = cmp_crt_pk_against_quote_report_data(crt, quote);
+    ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
     if (ret < 0)
         goto out;
 

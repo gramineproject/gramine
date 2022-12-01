@@ -6,16 +6,10 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 loader.insecure__use_cmdline_argv = true
 
-# Keep the deprecated `fs.mount` syntax for test purposes
-# TODO: this syntax is deprecated in v1.2 and will be removed two versions after it.
-
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:{{ gramine.runtimedir(libc) }}"
-
-fs.mount.entrypoint.type = "chroot"
-fs.mount.entrypoint.path = "{{ entrypoint }}"
-fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
 
 sgx.insecure__protected_files_key = "ffeeddccbbaa99887766554433221100"
 

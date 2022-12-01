@@ -68,6 +68,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(['helloworld'])
         self.assertIn('Hello world!', stdout)
 
+    def test_002_toml_parsing(self):
+        stdout, _ = self.run_binary(['toml_parsing'])
+        self.assertIn('Hello world!', stdout)
+
     def test_100_basic_bootstrapping(self):
         stdout, _ = self.run_binary(['bootstrap'])
 

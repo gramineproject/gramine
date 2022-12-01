@@ -63,6 +63,7 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     sock->can_be_read = false;
     sock->can_be_written = false;
     sock->reuseaddr = false;
+    sock->reuseport = false;
     sock->broadcast = false;
     switch (family) {
         case AF_UNIX:
@@ -1307,6 +1308,9 @@ static int get_socket_option(struct libos_handle* handle, int optname, char* opt
             break;
         case SO_REUSEADDR:
             value.i = sock->reuseaddr;
+            break;
+        case SO_REUSEPORT:
+            value.i = sock->reuseport;
             break;
         case SO_BROADCAST:
             value.i = sock->broadcast;

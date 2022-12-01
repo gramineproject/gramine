@@ -17,7 +17,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     jq \
     libapr1-dev \
     libaprutil1-dev \
-    libcurl4-openssl-dev \
     libelf-dev \
     libevent-dev \
     libexpat1 \
@@ -86,7 +85,8 @@ RUN git clone https://github.com/giltene/wrk2.git \
 RUN python3 -m pip install -U \
     'Sphinx==1.8' \
     'sphinx_rtd_theme<1' \
-    'toml>=0.10' \
+    'tomli>=1.1.0' \
+    'tomli-w>=0.4.0' \
     'meson>=0.56,<0.57' \
     'docutils>=0.17,<0.18'
 

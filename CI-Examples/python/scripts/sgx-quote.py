@@ -3,11 +3,8 @@
 import os
 import sys
 
-def tohex(b):
-    return ''.join(format(x, '02x') for x in b)
-
-if not os.path.exists("/dev/attestation/user_report_data"):
-    print("Cannot find `/dev/attestation/user_report_data`; "
+if not os.path.exists("/dev/attestation/quote"):
+    print("Cannot find `/dev/attestation/quote`; "
           "are you running under SGX, with remote attestation enabled?")
     sys.exit(1)
 

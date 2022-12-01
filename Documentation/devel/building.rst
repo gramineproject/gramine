@@ -38,11 +38,11 @@ Run the following command on Ubuntu LTS to install dependencies::
     sudo apt-get install -y build-essential \
         autoconf bison gawk nasm ninja-build pkg-config python3 python3-click \
         python3-jinja2 python3-pip python3-pyelftools wget
-    sudo python3 -m pip install 'meson>=0.56' 'toml>=0.10'
+    sudo python3 -m pip install 'meson>=0.56' 'tomli>=1.1.0' 'tomli-w>=0.4.0'
 
-You can also install Meson and python3-toml from apt instead of pip, but only if
-your distro is new enough to have Meson >= 0.56 and python3-toml >= 0.10 (Debian
-11, Ubuntu 20.10).
+You can also install Meson, python3-tomli and python3-tomli-w from apt instead
+of pip, but only if your distro is new enough to have Meson >= 0.56,
+python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04).
 
 For GDB support and to run all tests locally you also need to install::
 
@@ -71,9 +71,8 @@ running, and Intel SGX SDK/PSW/DCAP must be installed.
 """"""""""""""""""""
 Run the following commands on Ubuntu to install SGX-related dependencies::
 
-    sudo apt-get install -y libcurl4-openssl-dev \
-        libprotobuf-c-dev protobuf-c-compiler protobuf-compiler \
-        python3-cryptography python3-pip python3-protobuf
+    sudo apt-get install -y libprotobuf-c-dev protobuf-c-compiler \
+        protobuf-compiler python3-cryptography python3-pip python3-protobuf
 
 2. Install Linux kernel with patched FSGSBASE
 """""""""""""""""""""""""""""""""""""""""""""
@@ -195,6 +194,13 @@ example, for the OOT driver installed at the default path, you can specify
 ``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
 is omitted, Gramine's build system will try to determine the right path, so,
 it's usually not needed.
+
+.. note::
+
+   If you have a DCAP driver installed on the system (e.g. on 18.04 Azure),
+   then you can still use the upstream driver and specify the `upstream header
+   file <https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11>`__.
+   This is because the DCAP and the upstream drivers have compatible APIs.
 
 .. note::
 

@@ -36,15 +36,17 @@ int main(void) {
         err(1, "mmap");
     }
 
-    if (mprotect(ptr + page_size, page_size, PROT_READ | PROT_WRITE | PROT_GROWSDOWN) < 0) {
+    if (mprotect(ptr + 2 * page_size, page_size, PROT_READ | PROT_WRITE | PROT_GROWSDOWN) < 0) {
         err(1, "mprotect");
     }
 
     *(volatile char*)ptr = 'a';
+    *(volatile char*)(ptr + page_size) = 'b';
+    *(volatile char*)(ptr + 2 * page_size) = 'c';
 
-    if (*(volatile char*)ptr != 'a') {
-        printf("Value was not written to memory!\n");
-        return 1;
+    if (*(volatile char*)ptr != 'a' || *(volatile char*)(ptr + page_size) != 'b'
+            || *(volatile char*)(ptr + 2 * page_size) != 'c') {
+        errx(1, "Value was not written to memory!");
     }
 
     puts("TEST OK");

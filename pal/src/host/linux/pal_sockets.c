@@ -71,12 +71,14 @@ static PAL_HANDLE create_sock_handle(int fd, enum pal_socket_domain domain,
     handle->sock.sendtimeout_us = 0;
     handle->sock.is_nonblocking = is_nonblocking;
     handle->sock.reuseaddr = false;
+    handle->sock.reuseport = false;
     handle->sock.broadcast = false;
     handle->sock.keepalive = false;
     handle->sock.tcp_cork = false;
     handle->sock.tcp_keepidle = DEFAULT_TCP_KEEPIDLE;
     handle->sock.tcp_keepintvl = DEFAULT_TCP_KEEPINTVL;
     handle->sock.tcp_keepcnt = DEFAULT_TCP_KEEPCNT;
+    handle->sock.tcp_user_timeout = DEFAULT_TCP_USER_TIMEOUT;
     handle->sock.tcp_nodelay = false;
     handle->sock.ipv6_v6only = false;
 
@@ -325,6 +327,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->socket.receivetimeout_us = handle->sock.recvtimeout_us;
     attr->socket.sendtimeout_us = handle->sock.sendtimeout_us;
     attr->socket.reuseaddr = handle->sock.reuseaddr;
+    attr->socket.reuseport = handle->sock.reuseport;
     attr->socket.broadcast = handle->sock.broadcast;
     attr->socket.keepalive = handle->sock.keepalive;
     attr->socket.tcp_cork = handle->sock.tcp_cork;
@@ -332,6 +335,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     attr->socket.tcp_keepintvl = handle->sock.tcp_keepintvl;
     attr->socket.tcp_keepcnt = handle->sock.tcp_keepcnt;
     attr->socket.tcp_nodelay = handle->sock.tcp_nodelay;
+    attr->socket.tcp_user_timeout = handle->sock.tcp_user_timeout;
     attr->socket.ipv6_v6only = handle->sock.ipv6_v6only;
 
     return 0;
@@ -449,6 +453,16 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         handle->sock.reuseaddr = attr->socket.reuseaddr;
     }
 
+    if (attr->socket.reuseport != handle->sock.reuseport) {
+        int val = attr->socket.reuseport;
+        int ret = DO_SYSCALL(setsockopt, handle->sock.fd, SOL_SOCKET, SO_REUSEPORT, &val,
+                             sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.reuseport = attr->socket.reuseport;
+    }
+
     if (attr->socket.broadcast != handle->sock.broadcast) {
         int val = attr->socket.broadcast;
         int ret = DO_SYSCALL(setsockopt, handle->sock.fd, SOL_SOCKET, SO_BROADCAST, &val,
@@ -526,6 +540,17 @@ static int attrsetbyhdl_tcp(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
             return unix_to_pal_error(ret);
         }
         handle->sock.tcp_nodelay = attr->socket.tcp_nodelay;
+    }
+
+    if (attr->socket.tcp_user_timeout != handle->sock.tcp_user_timeout) {
+        assert(attr->socket.tcp_user_timeout <= INT_MAX);
+        int val = attr->socket.tcp_user_timeout;
+        int ret = DO_SYSCALL(setsockopt, handle->sock.fd, SOL_TCP, TCP_USER_TIMEOUT, &val,
+                             sizeof(val));
+        if (ret < 0) {
+            return unix_to_pal_error(ret);
+        }
+        handle->sock.tcp_user_timeout = attr->socket.tcp_user_timeout;
     }
 
     return 0;

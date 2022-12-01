@@ -44,6 +44,10 @@ rm OUTPUT
 # === SGX quote ===
 if test -n "$SGX"
 then
+    $GRAMINE ./python scripts/sgx-report.py > OUTPUT
+    grep -q "Generated SGX report" OUTPUT && echo "[ Success SGX report ]"
+    rm OUTPUT
+
     $GRAMINE ./python scripts/sgx-quote.py > OUTPUT
     grep -q "Extracted SGX quote" OUTPUT && echo "[ Success SGX quote ]"
     rm OUTPUT

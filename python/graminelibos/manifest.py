@@ -12,7 +12,8 @@ import hashlib
 import os
 import pathlib
 
-import toml
+import tomli
+import tomli_w
 
 from . import _env
 
@@ -82,7 +83,7 @@ class Manifest:
     """
 
     def __init__(self, manifest_str):
-        manifest = toml.loads(manifest_str)
+        manifest = tomli.loads(manifest_str)
 
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
@@ -109,7 +110,6 @@ class Manifest:
             raise ValueError("Unsupported trusted files syntax, more info: " +
                   "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
 
-        # Current toml versions (< 1.0) do not support non-homogeneous arrays
         trusted_files = []
         for tf in sgx['trusted_files']:
             if isinstance(tf, dict) and 'uri' in tf:
@@ -155,10 +155,10 @@ class Manifest:
         return cls.loads(f.read())
 
     def dumps(self):
-        return toml.dumps(self._manifest)
+        return tomli_w.dumps(self._manifest)
 
     def dump(self, f):
-        toml.dump(self._manifest, f)
+        tomli_w.dump(self._manifest, f)
 
     def expand_all_trusted_files(self):
         """Expand all trusted files entries.

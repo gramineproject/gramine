@@ -32,8 +32,8 @@ struct option g_options[] = {
     { 0, 0, 0, 0 }
 };
 
-static void usage(void) {
-    INFO("\nUsage: pf_tamper [options]\n");
+static void usage(const char* argv0) {
+    INFO("\nUsage: %s [options]\n", argv0);
     INFO("\nAvailable options:\n");
     INFO("  --help, -h           Display this help\n");
     INFO("  --verbose, -v        Enable verbose output\n");
@@ -415,29 +415,29 @@ int main(int argc, char* argv[]) {
                 set_verbose(true);
                 break;
             case 'h':
-                usage();
+                usage(argv[0]);
                 return 0;
             default:
                 ERROR("Unknown option: %c\n", option);
-                usage();
+                usage(argv[0]);
         }
     }
 
     if (!input_path) {
         ERROR("Input path not specified\n");
-        usage();
+        usage(argv[0]);
         goto out;
     }
 
     if (!g_output_dir) {
         ERROR("Output path not specified\n");
-        usage();
+        usage(argv[0]);
         goto out;
     }
 
     if (!wrap_key_path) {
         ERROR("Wrap key path not specified\n");
-        usage();
+        usage(argv[0]);
         goto out;
     }
 
