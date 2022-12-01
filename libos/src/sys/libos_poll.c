@@ -92,7 +92,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
              * FIXME: remove this hack.
              * Initial 0,1,2 fds in Gramine are represented by "/dev/tty" (whatever that means)
              * and have `generic_inode_poll` set as poll callback, which returns `-EAGAIN` on
-             * non-regular-file handles. In such case we let PAL do the actuall polling.
+             * non-regular-file handles. In such case we let PAL do the actual polling.
              */
             if (ret == -EAGAIN && handle->uri && !strcmp(handle->uri, "dev:tty")) {
                 goto dev_tty_hack;
@@ -235,11 +235,10 @@ long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec*
 
     ret = do_poll(fds, nfds, tsp ? &timeout_us : NULL);
 
-    if (tsp) {
-        if (is_user_memory_writable_no_skip(tsp, sizeof(*tsp))) {
-            tsp->tv_sec = timeout_us / TIME_US_IN_S;
-            tsp->tv_nsec = (timeout_us % TIME_US_IN_S) * TIME_NS_IN_US;
-        }
+    /* If `tsp` is in read-only memory, skip the update. */
+    if (tsp && is_user_memory_writable_no_skip(tsp, sizeof(*tsp))) {
+        tsp->tv_sec = timeout_us / TIME_US_IN_S;
+        tsp->tv_nsec = (timeout_us % TIME_US_IN_S) * TIME_NS_IN_US;
     }
     return ret;
 }
@@ -341,6 +340,7 @@ long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set*
 
     long ret = do_select(nfds, read_set, write_set, except_set, tv ? &timeout_us : NULL);
 
+    /* If `tv` is in read-only memory, skip the update. */
     if (tv && is_user_memory_writable_no_skip(tv, sizeof(*tv))) {
         tv->tv_sec = timeout_us / TIME_US_IN_S;
         tv->tv_usec = timeout_us % TIME_US_IN_S;
@@ -379,6 +379,7 @@ long libos_syscall_pselect6(int nfds, fd_set* read_set, fd_set* write_set, fd_se
 
     long ret = do_select(nfds, read_set, write_set, except_set, tsp ? &timeout_us : NULL);
 
+    /* If `tsp` is in read-only memory, skip the update. */
     if (tsp && is_user_memory_writable_no_skip(tsp, sizeof(*tsp))) {
         tsp->tv_sec = timeout_us / TIME_US_IN_S;
         tsp->tv_nsec = (timeout_us % TIME_US_IN_S) * TIME_NS_IN_US;

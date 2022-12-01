@@ -483,10 +483,10 @@ static int pseudo_poll(struct libos_handle* hdl, int events, int* out_events) {
 
         case PSEUDO_DEV: {
             *out_events = 0;
-            if ((events & POLLIN) && node->dev.dev_ops.read)
-                *out_events |= POLLIN;
-            if ((events & POLLOUT) && node->dev.dev_ops.write)
-                *out_events |= POLLOUT;
+            if (node->dev.dev_ops.read)
+                *out_events |= events & (POLLIN | POLLRDNORM);
+            if (node->dev.dev_ops.write)
+                *out_events |= events & (POLLOUT | POLLWRNORM);
             return 0;
         }
 
