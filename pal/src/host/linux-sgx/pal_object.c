@@ -26,7 +26,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     bool allocated_on_stack = false;
 
     if (count <= NFDS_LIMIT_TO_USE_STACK) {
-        /* Here, each FD uses 8 bytes on stack */
+        /* Each FD uses 8 bytes on stack */
         allocated_on_stack = true;
         fds = __builtin_alloca(count * sizeof(*fds));
     } else {

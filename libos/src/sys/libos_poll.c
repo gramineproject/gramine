@@ -51,20 +51,19 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
 
     struct libos_handle_map* map = get_cur_thread()->handle_map;
 
-    /* nfds is the upper limit for actual number of handles */
-    PAL_HANDLE* pals = NULL;
     /* for bookkeeping, need to have a mapping FD -> {libos handle, index-in-pals} */
     struct fds_mapping_t {
         struct libos_handle* hdl; /* NULL if no mapping (handle is not used in polling) */
         nfds_t idx;               /* index from fds array to pals array */
     };
+    /* nfds is the upper limit for actual number of handles */
+    PAL_HANDLE* pals = NULL;
     struct fds_mapping_t* fds_mapping = NULL;
-    /* allocate one memory region to hold two pal_wait_flags_t arrays: events and revents */
-    pal_wait_flags_t* pal_events = NULL;
+    pal_wait_flags_t* pal_events = NULL; /* holds two arrays: events and revents */
     bool allocated_on_stack = false;
 
     if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
-        /* Here, each FD uses 8+16+4*2=32 bytes on stack */
+        /* Each FD uses 8+16+4*2=32 bytes on stack */
         allocated_on_stack = true;
         pals = __builtin_alloca(nfds * sizeof(*pals));
         fds_mapping = __builtin_alloca(nfds * sizeof(*fds_mapping));
@@ -265,7 +264,7 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
     bool allocated_on_stack = false;
 
     if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
-        /* Here, each FD uses 8 bytes on stack */
+        /* Each FD uses 8 bytes on stack */
         allocated_on_stack = true;
         fds_poll = __builtin_alloca(nfds * sizeof(*fds_poll));
     } else {
