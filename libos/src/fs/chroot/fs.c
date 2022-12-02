@@ -339,11 +339,10 @@ static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int pr
             if (vma_ranges->vma[cnt].is_allocated) {
                 ret = PalVirtualMemoryProtect(vma_ranges->vma[cnt].addr,
                           vma_ranges->vma[cnt].length,
-                          LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].prev_prot, flags),
-                          LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].cur_prot, flags));
+                          LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].prot, flags));
             } else {
                 ret = PalVirtualMemoryAlloc(vma_ranges->vma[cnt].addr, vma_ranges->vma[cnt].length,
-                                            LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].cur_prot, flags));
+                                            LINUX_PROT_TO_PAL(vma_ranges->vma[cnt].prot, flags));
             }
             if (ret < 0)
                 break;

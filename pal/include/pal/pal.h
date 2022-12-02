@@ -235,13 +235,11 @@ int PalVirtualMemoryFree(void* addr, size_t size);
  *
  * \param addr      The address.
  * \param size      The size.
- * \param cur_prot  Current `PAL_PROT_*` flags set for the VMA region.
- * \param req_prot  Requested `PAL_PROT_*` flags to be set for the VMA region.
+ * \param prot  See #PalVirtualMemoryAlloc.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  */
-int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t cur_prot,
-                            pal_prot_flags_t req_prot);
+int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 
 /*!
  * \brief Set upcalls for memory bookkeeping

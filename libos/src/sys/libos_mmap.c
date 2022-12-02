@@ -179,12 +179,11 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
                 if (!vma_ranges.vma[cnt].is_allocated) {
                     ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
-                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, flags));
+                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prot, flags));
                 } else {
                     ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr,
                               vma_ranges.vma[cnt].length,
-                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prev_prot, flags),
-                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, flags));
+                              LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prot, flags));
                     allocated_anon_req = true;
                 }
                 if (ret < 0)
@@ -195,7 +194,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                 log_debug("%s: PREALLOCATED MEM, CLEAR IT. addr = %p, size = 0x%lx", __func__,
                            addr, length);
                 if (!(prot & PROT_WRITE)) {
-                    ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, flags),
+                    ret = PalVirtualMemoryProtect(addr, length,
                                                   LINUX_PROT_TO_PAL(prot | PROT_WRITE, flags));
                 }
 
@@ -203,7 +202,6 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
                 if (!(prot & PROT_WRITE)) {
                     ret = PalVirtualMemoryProtect(addr, length,
-                                                  LINUX_PROT_TO_PAL(prot | PROT_WRITE, flags),
                                                   LINUX_PROT_TO_PAL(prot, flags));
                 }
             }
@@ -302,35 +300,9 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         }
     }
 
-    size_t vma_count;
-    struct libos_vma_info* vmas = NULL;
-    ret = dump_all_vmas_in_range(&vmas, &vma_count, (uintptr_t)addr,
-                                 (uintptr_t)((char*)addr + length), /*include_unmapped=*/false);
+    ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
     if (ret < 0) {
-        return ret;
-    }
-
-    /* In case of EDMM, page permissions may cause an enclave exist esp. in case of restricting
-     * page permission. So try to merge VMAs on PROT before invoking ` PalVirtualMemoryProtect`. */
-    for (struct libos_vma_info* vma = vmas; vma < vmas + vma_count; vma++) {
-        void* start = vma->addr;
-        size_t len = vma->length;
-        int prev_prot = vma->prev_prot;
-        while (vma < vmas + vma_count - 1) {
-            struct libos_vma_info* next_vma = vma + 1;
-            if (vma->prev_prot == next_vma->prev_prot) {
-                len = len + next_vma->length;
-                vma = next_vma;
-                continue;
-            }
-            break;
-        }
-
-        ret = PalVirtualMemoryProtect(start, len, prev_prot,
-                                      LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
-        if (ret < 0) {
-            return pal_to_unix_errno(ret);
-        }
+        return pal_to_unix_errno(ret);
     }
 
     return 0;

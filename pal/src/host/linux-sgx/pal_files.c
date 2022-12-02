@@ -284,7 +284,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         req_prot = (prot & PAL_PROT_WRITE) ? prot : prot | PAL_PROT_READ | PAL_PROT_WRITE;
         if (vma_allocated) {
             if (req_prot != prot) {
-                ret = update_enclave_page_permissions(addr, size, prot, req_prot);
+                ret = update_enclave_page_permissions(addr, size, req_prot);
                 if (ret < 0) {
                     return -PAL_ERROR_INVAL;
                 }
@@ -363,7 +363,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 
     /* If permissions were modified, revert it to original */
     if (g_pal_public_state.edmm_enable_heap && (prot != req_prot)) {
-        ret = update_enclave_page_permissions(addr, size, req_prot, prot);
+        ret = update_enclave_page_permissions(addr, size, prot);
         if (ret < 0) {
             log_error("file_map - updating enclave page permissions returned %d", ret);
             goto out;

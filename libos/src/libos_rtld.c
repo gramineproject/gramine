@@ -286,7 +286,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         void* last_page_start = ALLOC_ALIGN_DOWN_PTR(zero_start);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot,
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
                                                pal_prot | PAL_PROT_WRITE) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
@@ -296,8 +296,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         memset(zero_start, 0, zero_size);
 
         if ((c->prot & PROT_WRITE) == 0) {
-            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT,
-                                               pal_prot | PAL_PROT_WRITE, pal_prot) < 0)) {
+            if ((ret = PalVirtualMemoryProtect(last_page_start, ALLOC_ALIGNMENT, pal_prot) < 0)) {
                 log_debug("%s: cannot change memory protections", __func__);
                 return pal_to_unix_errno(ret);
             }
@@ -323,11 +322,10 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
             for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
                 if (!vma_ranges.vma[cnt].is_allocated) {
                     ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr,
-                        vma_ranges.vma[cnt].length, vma_ranges.vma[cnt].cur_prot);
+                        vma_ranges.vma[cnt].length, vma_ranges.vma[cnt].prot);
                 } else {
                     ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
-                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prev_prot, zero_map_flags),
-                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].cur_prot, zero_map_flags));
+                            LINUX_PROT_TO_PAL(vma_ranges.vma[cnt].prot, zero_map_flags));
                 }
                 if (ret < 0)
                     break;
@@ -1021,7 +1019,7 @@ static int vdso_map_init(void) {
     memset(addr + vdso_so_size, 0, ALLOC_ALIGN_UP(vdso_so_size) - vdso_so_size);
 
     ret = PalVirtualMemoryProtect(addr, ALLOC_ALIGN_UP(vdso_so_size),
-                                  PAL_PROT_READ | PAL_PROT_WRITE, PAL_PROT_READ | PAL_PROT_EXEC);
+                                  PAL_PROT_READ | PAL_PROT_EXEC);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }

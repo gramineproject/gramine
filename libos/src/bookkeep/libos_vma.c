@@ -44,8 +44,7 @@ static int filter_saved_flags(int flags) {
 struct libos_vma {
     uintptr_t begin;
     uintptr_t end;
-    int prev_prot;
-    int cur_prot;
+    int prot;
     int flags;
     struct libos_handle* file;
     uint64_t offset; // offset inside `file`, where `begin` starts
@@ -68,8 +67,7 @@ static void copy_comment(struct libos_vma* vma, const char* comment) {
 static void copy_vma(struct libos_vma* old_vma, struct libos_vma* new_vma) {
     new_vma->begin = old_vma->begin;
     new_vma->end   = old_vma->end;
-    new_vma->prev_prot  = old_vma->prev_prot;
-    new_vma->cur_prot = old_vma->cur_prot;
+    new_vma->prot  = old_vma->prot;
     new_vma->flags = old_vma->flags;
     new_vma->file  = old_vma->file;
     if (new_vma->file) {
@@ -559,12 +557,11 @@ static void free_vmas_freelist(struct libos_vma* vma) {
     }
 }
 
-static void set_vma(struct edmm_heap_vma* vma, void* addr, size_t length, int cur_prot,
-                    int prev_prot, bool is_allocated) {
+static void set_vma(struct edmm_heap_vma* vma, void* addr, size_t length, int prot,
+                    bool is_allocated) {
     vma->addr         = addr;
     vma->length       = length;
-    vma->cur_prot     = cur_prot;
-    vma->prev_prot    = prev_prot;
+    vma->prot         = prot;
     vma->is_allocated = is_allocated;
 }
 
@@ -577,11 +574,11 @@ static void merge_vmas(uintptr_t begin, uintptr_t end, int req_prot,
         if (begin < adj_vma_bottom->begin) {
             /* This is a hole in the VMA range and it is unallocated */
             set_vma(&out_vma_ranges->vma[vma_cnt], (void*)begin, adj_vma_bottom->begin - begin,
-                    req_prot, req_prot, false);
+                    req_prot, false);
             vma_cnt++;
         }
         set_vma(&out_vma_ranges->vma[vma_cnt], (void*)adj_vma_bottom->begin,
-                adj_vma_bottom->end - adj_vma_bottom->begin, req_prot, adj_vma_bottom->cur_prot,
+                adj_vma_bottom->end - adj_vma_bottom->begin, req_prot,
                 !(adj_vma_bottom->flags & VMA_UNMAPPED));
         vma_cnt++;
     }
@@ -591,28 +588,27 @@ static void merge_vmas(uintptr_t begin, uintptr_t end, int req_prot,
         struct libos_vma* next = vma->next_free;
         if (!vma_cnt) {
             set_vma(&out_vma_ranges->vma[vma_cnt], (void*)vma->begin, vma->end - vma->begin,
-                    req_prot, vma->cur_prot, !(vma->flags & VMA_UNMAPPED));
+                    req_prot, !(vma->flags & VMA_UNMAPPED));
             vma_cnt++;
         } else {
             void* prev_addr_end = out_vma_ranges->vma[vma_cnt - 1].addr +
                                       out_vma_ranges->vma[vma_cnt - 1].length;
             if (prev_addr_end == (void*)vma->begin) {
-                if (out_vma_ranges->vma[vma_cnt].prev_prot == vma->cur_prot &&
-                        out_vma_ranges->vma[vma_cnt].is_allocated == !!(vma->flags & VMA_UNMAPPED)) {
+                if (out_vma_ranges->vma[vma_cnt].is_allocated == !!(vma->flags & VMA_UNMAPPED)) {
                     out_vma_ranges->vma[vma_cnt].length += vma->end - vma->begin;
                 } else {
                     set_vma(&out_vma_ranges->vma[vma_cnt], (void*)vma->begin, vma->end - vma->begin,
-                            req_prot, vma->cur_prot, !(vma->flags & VMA_UNMAPPED));
+                            req_prot, !(vma->flags & VMA_UNMAPPED));
                     vma_cnt++;
                 }
             } else {
                 /* This is a hole in the VMA range and it is unallocated */
                 set_vma(&out_vma_ranges->vma[vma_cnt], prev_addr_end,
-                        vma->begin - (uintptr_t)prev_addr_end, req_prot, req_prot, false);
+                        vma->begin - (uintptr_t)prev_addr_end, req_prot, false);
                 vma_cnt++;
 
                 set_vma(&out_vma_ranges->vma[vma_cnt], (void*)vma->begin, vma->end - vma->begin,
-                        req_prot, vma->cur_prot, !(vma->flags & VMA_UNMAPPED));
+                        req_prot, !(vma->flags & VMA_UNMAPPED));
                 vma_cnt++;
             }
         }
@@ -623,31 +619,30 @@ static void merge_vmas(uintptr_t begin, uintptr_t end, int req_prot,
         (adj_vma_top->begin != adj_vma_top->end)) {
         if (!vma_cnt) {
             set_vma(&out_vma_ranges->vma[vma_cnt], (void*)adj_vma_top->begin,
-                    adj_vma_top->end - adj_vma_top->begin, req_prot, adj_vma_top->cur_prot,
+                    adj_vma_top->end - adj_vma_top->begin, req_prot,
                     !(adj_vma_top->flags & VMA_UNMAPPED));
             vma_cnt++;
         } else {
             void* prev_addr_end = out_vma_ranges->vma[vma_cnt - 1].addr +
                                       out_vma_ranges->vma[vma_cnt - 1].length;
             if (prev_addr_end == (void*)adj_vma_top->begin) {
-                if (out_vma_ranges->vma[vma_cnt].prev_prot == adj_vma_top->cur_prot &&
-                        (out_vma_ranges->vma[vma_cnt].is_allocated ==
-                            !!(adj_vma_top->flags & VMA_UNMAPPED))) {
+                if (out_vma_ranges->vma[vma_cnt].is_allocated ==
+                        !!(adj_vma_top->flags & VMA_UNMAPPED)) {
                     out_vma_ranges->vma[vma_cnt].length += adj_vma_top->end - adj_vma_top->begin;
                 } else {
                     set_vma(&out_vma_ranges->vma[vma_cnt], (void*)adj_vma_top->begin,
-                            adj_vma_top->end - adj_vma_top->begin, req_prot, adj_vma_top->cur_prot,
+                            adj_vma_top->end - adj_vma_top->begin, req_prot,
                             !(adj_vma_top->flags & VMA_UNMAPPED));
                     vma_cnt++;
                 }
             } else {
                 /* This is a hole in the VMA range and it is unallocated */
                 set_vma(&out_vma_ranges->vma[vma_cnt], prev_addr_end,
-                        adj_vma_top->begin - (uintptr_t)prev_addr_end, req_prot, req_prot, false);
+                        adj_vma_top->begin - (uintptr_t)prev_addr_end, req_prot, false);
                 vma_cnt++;
 
                 set_vma(&out_vma_ranges->vma[vma_cnt], (void*)adj_vma_top->begin,
-                        adj_vma_top->end - adj_vma_top->begin, req_prot, adj_vma_top->cur_prot,
+                        adj_vma_top->end - adj_vma_top->begin, req_prot,
                         !(adj_vma_top->flags & VMA_UNMAPPED));
                 vma_cnt++;
             }
@@ -660,7 +655,7 @@ static void merge_vmas(uintptr_t begin, uintptr_t end, int req_prot,
         if ((void*)end > prev_addr_end) {
             /* This is a hole in the VMA range and it is unallocated */
             set_vma(&out_vma_ranges->vma[vma_cnt], prev_addr_end, end - (uintptr_t)prev_addr_end,
-                    req_prot, req_prot, false);
+                    req_prot, false);
             vma_cnt++;
         }
     }
@@ -711,15 +706,12 @@ int init_vma(void) {
             continue;
         }
 
-        init_vmas[1 + idx].begin     = g_pal_public_state->initial_mem_ranges[i].start;
-        init_vmas[1 + idx].end       = g_pal_public_state->initial_mem_ranges[i].end;
-        init_vmas[1 + idx].cur_prot  =
-            PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
-        init_vmas[1 + idx].prev_prot =
-            PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
-        init_vmas[1 + idx].flags     = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
-        init_vmas[1 + idx].file      = NULL;
-        init_vmas[1 + idx].offset    = 0;
+        init_vmas[1 + idx].begin  = g_pal_public_state->initial_mem_ranges[i].start;
+        init_vmas[1 + idx].end    = g_pal_public_state->initial_mem_ranges[i].end;
+        init_vmas[1 + idx].prot   = PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
+        init_vmas[1 + idx].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
+        init_vmas[1 + idx].file   = NULL;
+        init_vmas[1 + idx].offset = 0;
         copy_comment(&init_vmas[1 + idx], g_pal_public_state->initial_mem_ranges[i].comment);
 
         assert(IS_ALLOC_ALIGNED(init_vmas[1 + idx].begin)
@@ -836,13 +828,12 @@ int init_vma(void) {
 static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
-    vma->begin     = begin;
-    vma->end       = end;
-    vma->prev_prot = PROT_NONE;
-    vma->cur_prot  = PROT_NONE;
-    vma->flags     = VMA_INTERNAL | VMA_UNMAPPED;
-    vma->file      = NULL;
-    vma->offset    = 0;
+    vma->begin  = begin;
+    vma->end    = end;
+    vma->prot   = PROT_NONE;
+    vma->flags  = VMA_INTERNAL | VMA_UNMAPPED;
+    vma->file   = NULL;
+    vma->offset = 0;
     copy_comment(vma, "");
 
     avl_tree_insert(&vma_tree, &vma->tree_node);
@@ -926,13 +917,11 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     /* Unmapping may succeed even without this vma, so if this allocation fails we move on. */
     struct libos_vma* vma1 = alloc_vma();
 
-    new_vma->begin     = (uintptr_t)addr;
-    new_vma->end       = new_vma->begin + length;
-    new_vma->prev_prot = prot;
-    new_vma->cur_prot  = prot;
-    new_vma->flags     = filter_saved_flags(flags) |
-                         ((file && (prot & PROT_WRITE)) ? VMA_TAINTED : 0);
-    new_vma->file      = file;
+    new_vma->begin = (uintptr_t)addr;
+    new_vma->end   = new_vma->begin + length;
+    new_vma->prot  = prot;
+    new_vma->flags = filter_saved_flags(flags) | ((file && (prot & PROT_WRITE)) ? VMA_TAINTED : 0);
+    new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
     }
@@ -972,7 +961,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
         /* Consolidate overlapping VMAs to be consumed by `PalVirtualMemoryAlloc` and
          * `PalStreamMap`. */
         if (ret >= 0 && out_vma_ranges) {
-            merge_vmas(new_vma->begin, new_vma->end, new_vma->cur_prot, adj_vma_bottom, adj_vma_top,
+            merge_vmas(new_vma->begin, new_vma->end, new_vma->prot, adj_vma_bottom, adj_vma_top,
                        vmas_to_free, out_vma_ranges);
         }
     }
@@ -996,8 +985,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
 }
 
 static void vma_update_prot(struct libos_vma* vma, int prot) {
-    vma->prev_prot = vma->cur_prot;
-    vma->cur_prot = prot & (PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC);
+    vma->prot = prot & (PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC);
     if (vma->file && (prot & PROT_WRITE)) {
         vma->flags |= VMA_TAINTED;
     }
@@ -1078,12 +1066,7 @@ static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_i
             *new_vma_ptr2 = NULL;
 
             split_vma(new_vma1, new_vma2, end);
-            /* We are here because the vma is split into [vma->begin, new_vma1),
-             * [new_vma1, new_vma2) and [new_vma2, vma->end). Here new_vma2 has same prot as the
-             * original vma but during split, gets the prot of new_vma1, so update both cur_prot
-             * and prev_prot of new_vma2 to reflect original vma. */
-            vma_update_prot(new_vma2, vma->cur_prot);
-            new_vma2->prev_prot = vma->prev_prot;
+            vma_update_prot(new_vma2, vma->prot);
 
             avl_tree_insert(&vma_tree, &new_vma2->tree_node);
 
@@ -1209,8 +1192,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     if (!new_vma) {
         return -ENOMEM;
     }
-    new_vma->prev_prot = prot;
-    new_vma->cur_prot  = prot;
+    new_vma->prot = prot;
     new_vma->flags = filter_saved_flags(flags) | ((file && (prot & PROT_WRITE)) ? VMA_TAINTED : 0);
     new_vma->file  = file;
     if (new_vma->file) {
@@ -1313,8 +1295,7 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     vma_info->addr        = (void*)vma->begin;
     vma_info->length      = vma->end - vma->begin;
-    vma_info->cur_prot    = vma->cur_prot;
-    vma_info->prev_prot   = vma->prev_prot;
+    vma_info->prot        = vma->prot;
     vma_info->flags       = vma->flags;
     vma_info->file_offset = vma->offset;
     vma_info->file        = vma->file;
@@ -1351,7 +1332,7 @@ struct adj_visitor_ctx {
 static bool adj_visitor(struct libos_vma* vma, void* visitor_arg) {
     struct adj_visitor_ctx* ctx = visitor_arg;
     bool is_ok = !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
-    is_ok &= (vma->cur_prot & ctx->prot) == ctx->prot;
+    is_ok &= (vma->prot & ctx->prot) == ctx->prot;
     ctx->is_ok &= is_ok;
     return is_ok;
 }
@@ -1482,7 +1463,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         return true;
     }
 
-    if (!(vma->cur_prot & PROT_WRITE)) {
+    if (!(vma->prot & PROT_WRITE)) {
         ctx->error = -ENOSYS; // Zeroing non-writable mappings is not yet implemented.
         return false;
     }
@@ -1554,7 +1535,7 @@ static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
         assert(IS_ALLOC_ALIGNED(msync_end));
 
         ret = file->fs->fs_ops->msync(file, (void*)msync_begin, msync_end - msync_begin,
-                                      vma_info->cur_prot, vma_info->flags, vma_info->file_offset);
+                                      vma_info->prot, vma_info->flags, vma_info->file_offset);
         if (ret < 0)
             goto out;
     }
@@ -1611,7 +1592,7 @@ BEGIN_CP_FUNC(vma) {
                 /* Send anonymous memory region. */
                 struct libos_mem_entry* mem;
                 DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
-                mem->prot = LINUX_PROT_TO_PAL(vma->cur_prot, /*map_flags=*/0);
+                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
             } else {
                 /* Send file-backed memory region. */
                 uint64_t file_size = 0;
@@ -1635,7 +1616,7 @@ BEGIN_CP_FUNC(vma) {
                 if (send_size > 0) {
                     struct libos_mem_entry* mem;
                     DO_CP_SIZE(memory, vma->addr, send_size, &mem);
-                    mem->prot = LINUX_PROT_TO_PAL(vma->cur_prot, /*map_flags=*/0);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                 }
             }
         }
@@ -1671,7 +1652,7 @@ BEGIN_RS_FUNC(vma) {
     CP_REBASE(vma->file);
 
     /* Skip getting `out_vma_ranges` ranges as this is a new allocation. */
-    int ret = bkeep_mmap_fixed(vma->addr, vma->length, vma->cur_prot, vma->flags | MAP_FIXED, vma->file,
+    int ret = bkeep_mmap_fixed(vma->addr, vma->length, vma->prot, vma->flags | MAP_FIXED, vma->file,
                                vma->file_offset, vma->comment, /*out_vma_ranges*/NULL);
     if (ret < 0)
         return ret;
@@ -1685,7 +1666,7 @@ BEGIN_RS_FUNC(vma) {
             if (!fs || !fs->fs_ops || !fs->fs_ops->mmap)
                 return -EINVAL;
 
-            ret = fs->fs_ops->mmap(vma->file, vma->addr, vma->length, vma->cur_prot,
+            ret = fs->fs_ops->mmap(vma->file, vma->addr, vma->length, vma->prot,
                                    vma->flags | MAP_FIXED, vma->file_offset, /*vma_ranges*/NULL);
             if (ret < 0)
                 return ret;
@@ -1723,10 +1704,9 @@ END_CP_FUNC_NO_RS(all_vmas)
 
 
 static void debug_print_vma(struct libos_vma* vma) {
-    log_always("[0x%lx-0x%lx] cur_prot=0x%x prev_prot=0x%x flags=0x%x%s%s file=%p (offset=%ld)%s%s",
+    log_always("[0x%lx-0x%lx] prot=0x%x flags=0x%x%s%s file=%p (offset=%ld)%s%s",
                vma->begin, vma->end,
-               vma->cur_prot,
-               vma->prev_prot,
+               vma->prot,
                vma->flags & ~(VMA_INTERNAL | VMA_UNMAPPED),
                vma->flags & VMA_INTERNAL ? "(INTERNAL " : "(",
                vma->flags & VMA_UNMAPPED ? "UNMAPPED)" : ")",

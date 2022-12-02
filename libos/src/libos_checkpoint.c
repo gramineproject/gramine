@@ -225,7 +225,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store
 
         if (!(mem_prot & PAL_PROT_READ) && mem_size > 0) {
             /* make the area readable */
-            ret = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot, mem_prot | PAL_PROT_READ);
+            ret = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot | PAL_PROT_READ);
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
@@ -235,8 +235,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store
 
         if (!(mem_prot & PAL_PROT_READ) && mem_size > 0) {
             /* the area was made readable above; revert to original permissions */
-            int ret2 = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot | PAL_PROT_READ,
-                                               mem_prot);
+            int ret2 = PalVirtualMemoryProtect(mem_addr, mem_size, mem_prot);
             if (ret2 < 0 && !ret) {
                 ret = pal_to_unix_errno(ret2);
             }
@@ -341,7 +340,7 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
             }
 
             if (!(prot & PAL_PROT_WRITE)) {
-                ret = PalVirtualMemoryProtect(addr, size, prot | PAL_PROT_WRITE, prot);
+                ret = PalVirtualMemoryProtect(addr, size, prot);
                 if (ret < 0) {
                     log_error("failed protecting %p-%p", addr, addr + size);
                     return pal_to_unix_errno(ret);

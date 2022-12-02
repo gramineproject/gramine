@@ -26,8 +26,7 @@
 struct libos_vma_info {
     void* addr;
     size_t length;
-    int cur_prot;  // current memory protection flags: PROT_*
-    int prev_prot;
+    int prot;  // memory protection flags: PROT_*
     int flags; // MAP_* and VMA_*
     struct libos_handle* file;
     uint64_t file_offset;
@@ -37,8 +36,7 @@ struct libos_vma_info {
 struct edmm_heap_vma {
     void* addr;
     size_t length;
-    int cur_prot;  // current memory protection flags: PROT_*
-    int prev_prot;
+    int prot;
     bool is_allocated;
 };
 

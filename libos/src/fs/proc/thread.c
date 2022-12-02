@@ -74,9 +74,9 @@ int proc_thread_maps_load(struct libos_dentry* dent, char** out_data, size_t* ou
         uintptr_t start   = (uintptr_t)vma->addr;
         uintptr_t end     = (uintptr_t)vma->addr + vma->length;
         char pt[3]        = {
-            (vma->cur_prot & PROT_READ) ? 'r' : '-',
-            (vma->cur_prot & PROT_WRITE) ? 'w' : '-',
-            (vma->cur_prot & PROT_EXEC) ? 'x' : '-',
+            (vma->prot & PROT_READ) ? 'r' : '-',
+            (vma->prot & PROT_WRITE) ? 'w' : '-',
+            (vma->prot & PROT_EXEC) ? 'x' : '-',
         };
         char pr = (vma->flags & MAP_PRIVATE) ? 'p' : 's';
 

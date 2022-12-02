@@ -109,7 +109,7 @@ int main(void) {
 
     uint8_t* addr2 = (uint8_t*)addr1 + PAGE_SIZE;
     *addr2 = 43;
-    CHECK(PalVirtualMemoryProtect(addr2, PAGE_SIZE, PAL_PROT_READ | PAL_PROT_WRITE, PAL_PROT_READ));
+    CHECK(PalVirtualMemoryProtect(addr2, PAGE_SIZE, PAL_PROT_READ));
 
     g_write_failed = false;
     COMPILER_BARRIER();
@@ -135,7 +135,7 @@ int main(void) {
 
     uint8_t* addr3 = (uint8_t*)addr2 + PAGE_SIZE;
     *addr3 = 44;
-    CHECK(PalVirtualMemoryProtect(addr3, PAGE_SIZE, PAL_PROT_READ | PAL_PROT_WRITE, /*prot=*/0));
+    CHECK(PalVirtualMemoryProtect(addr3, PAGE_SIZE, /*prot=*/0));
 
     g_write_failed = false;
     COMPILER_BARRIER();

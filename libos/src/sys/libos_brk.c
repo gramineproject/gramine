@@ -196,10 +196,10 @@ void* libos_syscall_brk(void* _brk) {
         for (int cnt = 0; cnt < vma_ranges.range_cnt; cnt++) {
             if (!vma_ranges.vma[cnt].is_allocated) {
                 ret = PalVirtualMemoryAlloc(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
-                                            vma_ranges.vma[cnt].cur_prot);
+                                            vma_ranges.vma[cnt].prot);
             } else {
                 ret = PalVirtualMemoryProtect(vma_ranges.vma[cnt].addr, vma_ranges.vma[cnt].length,
-                    vma_ranges.vma[cnt].prev_prot, vma_ranges.vma[cnt].cur_prot);
+                                              vma_ranges.vma[cnt].prot);
             }
             if (ret < 0)
                 break;

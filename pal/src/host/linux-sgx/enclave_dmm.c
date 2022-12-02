@@ -64,18 +64,9 @@ int get_enclave_pages(void* addr, size_t size, pal_prot_flags_t prot) {
      * when allocating EPC pages. So, if the requested permissions is not R | W then we need
      * to update the page permissions. */
     if (req_prot != (PAL_PROT_READ | PAL_PROT_WRITE)) {
-        ret = update_enclave_page_permissions(addr, size, PAL_PROT_READ | PAL_PROT_WRITE, req_prot);
+        ret = update_enclave_page_permissions(addr, size, req_prot);
         if (ret < 0) {
             log_error("%s: update_enclave_page_permissions failed, ret = %d", __func__, ret);
-            return ret;
-        }
-    } else {
-        /* This is to handle special case where EPC memory is maped, freed and re-maped but OS
-         * still remembers the old permission in the PTEs. So explicitly update OS page tables to
-         * match new EPCM permission */
-        ret = ocall_mprotect(addr, size, prot);
-        if (ret < 0) {
-            log_error("%s: Updating the enclave page permission failed (%d)\n", __func__, ret);
             return ret;
         }
     }
@@ -162,13 +153,6 @@ static int relax_enclave_page_permission(void* addr, size_t size, pal_prot_flags
        start = (void*)((char*)start + g_pal_public_state.alloc_align);
     }
 
-    /* Update OS page tables to match new EPCM permission */
-    int ret = ocall_mprotect(addr, size, prot);
-    if (ret < 0) {
-        log_error("mprotect for relax enclave %p page permission failed (%d)\n", addr, ret);
-        return ret;
-    }
-
     return 0;
 }
 
@@ -204,8 +188,7 @@ static int restrict_enclave_page_permission(void* addr, size_t size, pal_prot_fl
     return 0;
 }
 
-int update_enclave_page_permissions(void* addr, size_t size, pal_prot_flags_t cur_prot,
-                                    pal_prot_flags_t req_prot) {
+int update_enclave_page_permissions(void* addr, size_t size, pal_prot_flags_t prot) {
     int ret;
 
     if (!size)
@@ -219,32 +202,24 @@ int update_enclave_page_permissions(void* addr, size_t size, pal_prot_flags_t cu
         return -PAL_ERROR_INVAL;
     }
 
-    log_debug("%s: addr = %p, size = 0x%lx, cur_prot= 0x%x, req_prot = 0x%x", __func__, addr, size,
-               cur_prot, req_prot);
+    log_debug("%s: addr = %p, size = 0x%lx, prot= 0x%x", __func__, addr, size, prot);
     spinlock_lock(&g_edmm_heap_prot_lock);
 
-    req_prot = (PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_EXEC) & req_prot;
-    cur_prot = (PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_EXEC) & cur_prot;
     /* With EDMM an EPC page is allocated with RW permission and then the desired permission is
      * is set. Restrict permission from RW -> W is architecturally not permitted and the driver will
      * returns -EINVAL error. So adding READ permission if the page permission is only WRITE. */
-    if (req_prot == PAL_PROT_WRITE) {
-        req_prot = PAL_PROT_READ | PAL_PROT_WRITE;
+    prot = (PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_EXEC) & prot;
+    if (prot == PAL_PROT_WRITE) {
+        prot = PAL_PROT_READ | PAL_PROT_WRITE;
     }
 
-    if ((req_prot & cur_prot) != cur_prot) {
-        ret = restrict_enclave_page_permission(addr, size, req_prot & cur_prot);
-        if (ret < 0)
-            goto out;
-    }
+    ret = relax_enclave_page_permission(addr, size, prot);
+    if (ret < 0)
+        goto out;
 
-    if (req_prot & ~cur_prot) {
-        pal_prot_flags_t missing_prot = req_prot & ~cur_prot;
-        req_prot = (req_prot & cur_prot) | missing_prot;
-        ret = relax_enclave_page_permission(addr, size, req_prot);
-        if (ret < 0)
-            goto out;
-    }
+    ret = restrict_enclave_page_permission(addr, size, prot);
+    if (ret < 0)
+        goto out;
 
     ret = 0;
 out:

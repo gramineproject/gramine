@@ -18,8 +18,7 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t cur_prot,
-                             pal_prot_flags_t req_prot) {
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

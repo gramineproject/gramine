@@ -211,8 +211,7 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 /* PalVirtualMemory calls */
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot);
 int _PalVirtualMemoryFree(void* addr, uint64_t size);
-int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t cur_prot,
-                             pal_prot_flags_t req_prot);
+int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
 /* PalObject calls */
 int _PalObjectClose(PAL_HANDLE object_handle);
