@@ -29,6 +29,10 @@
 #include "sgx_arch.h"
 #include "sgx_attest.h"
 
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif
+
 /* Part of Linux-SGX PAL private state which is not shared with other PALs. */
 extern struct pal_linuxsgx_state {
     /* enclave information */
@@ -62,10 +66,6 @@ int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_s
                                   bool* out_linkable);
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
-
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE 0x100000
-#endif
 
 #ifdef IN_ENCLAVE
 
