@@ -157,15 +157,12 @@ static int shm_lookup(struct libos_dentry* dent) {
         case PAL_TYPE_DEV:
             type = S_IFCHR;
             break;
-        case PAL_TYPE_PIPE:
-            ret = -EACCES;
-            goto out;
         default:
             log_error("unexpected handle type returned by PAL: %d", pal_attr.handle_type);
             BUG();
     }
 
-    file_off_t size = pal_attr.pending_size;
+    file_off_t size = (type == S_IFCHR ? pal_attr.pending_size : 0);
 
     ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size);
 out:
@@ -192,6 +189,8 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     return shm_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
+/* NOTE: this function is different from generic `chroot_unlink` only to add
+ * PAL_OPTION_PASSTHROUGH. */
 static int shm_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
