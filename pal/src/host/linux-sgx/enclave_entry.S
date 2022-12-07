@@ -421,6 +421,7 @@ enclave_entry:
     #
     # Stack layout:
     #     8-bytes padding:    (8 mod 16) bytes aligned for x86 ABI
+    #     EXINFO:             16 bytes
     #     sgx_cpu_context_t:  144 bytes
     #     XSAVE area:         PAL_XSTATE_ALIGN=64 bytes aligned
     #     padding:            (if necessary)
@@ -504,7 +505,19 @@ enclave_entry:
     movq %rsi, SGX_GPR_RDX(%rbx)
     addq $SGX_CPU_CONTEXT_SIZE, SGX_GPR_RDX(%rbx)
 
-    # TODO: save EXINFO in MISC region
+    # Rewire SSA0 (args to _PalExceptionHandler()):
+    #    - pointer to EXINFO            (SSA[0].GPRSGX.RCX, 4rd arg)
+    sub $16, %rsi
+    mov %rsi, SGX_GPR_RCX(%rbx)
+
+    # Save EXINFO - it's always at offset -16 from GPR in SSA.
+    # If EXINFO MISC component is not enabled, it will contain all 0.
+    mov %gs:SGX_GPR, %rdi
+    sub $16, %rdi
+    mov 0(%rdi), %rax
+    mov %rax, 0(%rsi)
+    mov 8(%rdi), %rax
+    mov %rax, 8(%rsi)
 
     # Rewire SSA0: SSA[0].GPRSGX.RSP points to SGX PAL signal stack
     #
@@ -535,7 +548,7 @@ enclave_entry:
     leaq 1f(%rip), %r11
     jmp __restore_xregs
 1:
-    leaq SGX_CPU_CONTEXT_SIZE + 8(%rsi), %rdi
+    leaq SGX_CPU_CONTEXT_SIZE + 16 + 8(%rsi), %rdi
     leaq 2f(%rip), %r11
     jmp __save_xregs
 2:

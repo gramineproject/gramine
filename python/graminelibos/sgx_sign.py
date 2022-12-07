@@ -92,7 +92,7 @@ def get_enclave_attributes(manifest_sgx):
     }
 
     miscs_dict = {
-        'support_exinfo': offs.SGX_MISCSELECT_EXINFO,
+        'require_exinfo': offs.SGX_MISCSELECT_EXINFO,
     }
 
     flags = collect_bits(manifest_sgx, flags_dict)

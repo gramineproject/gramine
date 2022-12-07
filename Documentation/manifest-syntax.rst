@@ -573,6 +573,22 @@ on the platform, enclave initialization will fail. If the options are unset,
 enclave initialization will succeed even if these features are unavailable on
 the platform.
 
+Optional MISCSELECT features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.require_exinfo = [true|false]
+    (Default: false)
+
+This syntax ensures that the CPU features are available and enabled for the
+enclave. If the options are set in the manifest but the features are unavailable
+on the platform, enclave initialization will fail. If the options are unset,
+enclave initialization will succeed even if these features are unavailable on
+the platform.
+If ``require_exinfo`` is set, user application can retrieve faulting address in
+signal handler in case of a page fault.
+
 ISV Product ID and SVN
 ^^^^^^^^^^^^^^^^^^^^^^
 

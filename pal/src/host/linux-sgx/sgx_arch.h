@@ -218,24 +218,51 @@ static_assert(offsetof(sgx_cpu_context_t, rip) - offsetof(sgx_cpu_context_t, r15
 static_assert(offsetof(sgx_cpu_context_t, rip) - offsetof(sgx_cpu_context_t, rsp) <= RED_ZONE_SIZE,
               "rsp needs to be within red zone distance from rip");
 
+/* These numbers match x86 trap numbers. */
+enum sgx_arch_exception_vector {
+    SGX_EXCEPTION_VECTOR_DE = 0,    /* DIV and IDIV instructions */
+    SGX_EXCEPTION_VECTOR_DB = 1,    /* For Intel use only */
+    SGX_EXCEPTION_VECTOR_BP = 3,    /* INT 3 instruction */
+    SGX_EXCEPTION_VECTOR_BR = 5,    /* BOUND instruction */
+    SGX_EXCEPTION_VECTOR_UD = 6,    /* UD2 instruction or reserved opcodes */
+    SGX_EXCEPTION_VECTOR_GP = 13,   /* #GP exception. Only reported if SECS.MISCSELECT.EXINFO = 1 */
+    SGX_EXCEPTION_VECTOR_PF = 14,   /* #PF exception. Only reported if SECS.MISCSELECT.EXINFO = 1 */
+    SGX_EXCEPTION_VECTOR_MF = 16,   /* x87 FPU floating-point or WAIT/FWAIT instruction */
+    SGX_EXCEPTION_VECTOR_AC = 17,   /* Any data reference in memory */
+    SGX_EXCEPTION_VECTOR_XM = 19,   /* Any SIMD floating-point exceptions */
+    SGX_EXCEPTION_VECTOR_CP = 21,   /* #CP exception. Only reported if SECS.MISCSELECT.CPINFO = 1 */
+};
+
 typedef struct {
-    uint32_t vector : 8;
+    enum sgx_arch_exception_vector vector : 8;
     uint32_t exit_type : 3;
     uint32_t reserved : 20;
     uint32_t valid : 1;
 } sgx_arch_exit_info_t;
+static_assert(sizeof(sgx_arch_exit_info_t) == 4, "invalid size");
 
 #define SGX_EXCEPTION_HARDWARE 3UL
 #define SGX_EXCEPTION_SOFTWARE 6UL
 
-#define SGX_EXCEPTION_VECTOR_DE 0UL  /* DIV and IDIV instructions */
-#define SGX_EXCEPTION_VECTOR_DB 1UL  /* For Intel use only */
-#define SGX_EXCEPTION_VECTOR_BP 3UL  /* INT 3 instruction */
-#define SGX_EXCEPTION_VECTOR_BR 5UL  /* BOUND instruction */
-#define SGX_EXCEPTION_VECTOR_UD 6UL  /* UD2 instruction or reserved opcodes */
-#define SGX_EXCEPTION_VECTOR_MF 16UL /* x87 FPU floating-point or WAIT/FWAIT instruction */
-#define SGX_EXCEPTION_VECTOR_AC 17UL /* Any data reference in memory */
-#define SGX_EXCEPTION_VECTOR_XM 19UL /* Any SIMD floating-point exceptions */
+typedef struct {
+    uint64_t maddr;
+    union {
+        struct {
+            uint32_t p:1;
+            uint32_t w:1;
+            uint32_t u:1;
+            uint32_t rsvd:1;
+            uint32_t i:1;
+            uint32_t pk:1;
+            uint32_t reserved1:9;
+            uint32_t sgx:1;
+            uint32_t reserved2:16;
+        } errcd;
+        uint32_t error_code_val;
+    };
+    uint32_t reserved;
+} sgx_arch_exinfo_t;
+static_assert(sizeof(sgx_arch_exinfo_t) == 16, "invalid size");
 
 typedef struct {
     uint64_t lin_addr;
