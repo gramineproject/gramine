@@ -73,8 +73,10 @@ class SgxCpuChecker {
     bool sgx_mem_concurrency_supported_ = false;
     bool cet_supported_ = false;
     bool kss_supported_ = false;
-    uint64_t maximum_enclave_size_x86_ = false;
-    uint64_t maximum_enclave_size_x64_ = false;
+    bool miscselect_exinfo_pfgp_supported_ = false;
+    bool miscselect_exinfo_cp_supported_ = false;
+    uint64_t maximum_enclave_size_x86_ = 0;
+    uint64_t maximum_enclave_size_x64_ = 0;
     uint64_t epc_region_size_ = 0;
 
 public:
@@ -119,6 +121,8 @@ public:
         sgx2_supported_ = cpuid_12_0_eax & (1 << 1);
         sgx_virt_supported_ = cpuid_12_0_eax & (1 << 5);
         sgx_mem_concurrency_supported_ = cpuid_12_0_eax & (1 << 6);
+        miscselect_exinfo_pfgp_supported_ = cpuid_12_0_ebx & (1 << 0);
+        miscselect_exinfo_cp_supported_ = cpuid_12_0_ebx & (1 << 1);
         cet_supported_ = cpuid_12_1_eax & (1 << 6);
         kss_supported_ = cpuid_12_1_eax & (1 << 7);
         maximum_enclave_size_x86_ = saturating_exp2<uint64_t>(cpuid_12_0_edx & 0xFF);
@@ -157,6 +161,9 @@ public:
     bool cet_supported() const { return cet_supported_; }
     // Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, ISVFAMILYID report fields)
     bool kss_supported() const { return kss_supported_; }
+    // Fields of MISC region of State Save Area (see Table 34-12 in the SMD).
+    bool miscselect_exinfo_pfgp_supported() const { return miscselect_exinfo_pfgp_supported_; }
+    bool miscselect_exinfo_cp_supported() const { return miscselect_exinfo_cp_supported_; }
     uint64_t maximum_enclave_size_x86() const { return maximum_enclave_size_x86_; }
     uint64_t maximum_enclave_size_x64() const { return maximum_enclave_size_x64_; }
     uint64_t epc_region_size() const { return epc_region_size_; }
@@ -209,6 +216,10 @@ void print_detailed_info(const SgxCpuChecker& cpu_checker) {
     printf("SGX driver loaded: %s\n", bool2str(sgx_driver_loaded()));
     printf("AESMD installed: %s\n", bool2str(aesmd_installed()));
     printf("SGX PSW/libsgx installed: %s\n", bool2str(psw_installed()));
+    printf("#PF/#GP information in EXINFO in MISC region of SSA supported: %s\n",
+           bool2str(cpu_checker.miscselect_exinfo_pfgp_supported()));
+    printf("#CP information in EXINFO in MISC region of SSA supported: %s\n",
+           bool2str(cpu_checker.miscselect_exinfo_cp_supported()));
 }
 
 int main(int argc, char* argv[]) {
