@@ -242,6 +242,7 @@ static void print_report(sgx_report_t* r) {
 
 #define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
     log_debug("  cpu_svn:     %s",     BYTES2HEX(r->body.cpu_svn.svn));
+    log_debug("  misc_select: %08x",   r->body.misc_select);
     log_debug("  mr_enclave:  %s",     BYTES2HEX(r->body.mr_enclave.m));
     log_debug("  mr_signer:   %s",     BYTES2HEX(r->body.mr_signer.m));
     log_debug("  attr.flags:  %016lx", r->body.attributes.flags);

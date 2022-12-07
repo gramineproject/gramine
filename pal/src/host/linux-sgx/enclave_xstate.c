@@ -96,6 +96,7 @@ void init_xsave_size(uint64_t xfrm) {
                               g_cpu_extension_sizes[AMX_TILECFG] +
                               g_cpu_extension_sizes[AMX_TILEDATA]},
     };
+    assert(xsave_size_table[ARRAY_SIZE(xsave_size_table) - 1].size == SSA_XSAVE_SIZE_MAX);
 
     /* fxsave/fxrstore as fallback */
     g_xsave_enabled = 0;

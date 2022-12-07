@@ -1,4 +1,4 @@
-/* This Hello World simply print out "Hello World" */
+/* TODO: Hans, get ze flammenwerfer */
 
 #include <inttypes.h>
 #include <stdatomic.h>

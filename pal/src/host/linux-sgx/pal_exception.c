@@ -180,7 +180,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
 
 /* perform exception handling inside the enclave */
 void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
-                          PAL_XREGS_STATE* xregs_state) {
+                          PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
 
     union {
@@ -214,6 +214,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             case SGX_EXCEPTION_VECTOR_XM:
                 event_num = PAL_EVENT_ARITHMETIC_ERROR;
                 break;
+            case SGX_EXCEPTION_VECTOR_GP:
+            case SGX_EXCEPTION_VECTOR_PF:
             case SGX_EXCEPTION_VECTOR_AC:
                 event_num = PAL_EVENT_MEMFAULT;
                 break;
@@ -244,14 +246,20 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         _PalProcessExit(1);
     }
 
-    PAL_CONTEXT ctx;
+    PAL_CONTEXT ctx = { 0 };
     save_pal_context(&ctx, uc, xregs_state);
 
-    /* TODO: save EXINFO from MISC region and populate below fields */
-    ctx.err     = 0;
-    ctx.trapno  = ei.info.valid ? ei.info.vector : 0;
-    ctx.oldmask = 0;
-    ctx.cr2     = 0;
+    if (ei.info.valid) {
+        ctx.trapno = ei.info.vector;
+        /* Only these two exceptions save information in EXINFO. */
+        if (ei.info.vector == SGX_EXCEPTION_VECTOR_GP
+                || ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
+            ctx.err = exinfo->error_code_val;
+        }
+        if (ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
+            ctx.cr2 = exinfo->maddr;
+        }
+    }
 
     uintptr_t addr = 0;
     switch (event_num) {
@@ -259,7 +267,7 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
-            /* TODO: SGX1 doesn't provide fault address but SGX2 does (with lower bits masked) */
+            addr = ctx.cr2;
             break;
         default:
             break;
