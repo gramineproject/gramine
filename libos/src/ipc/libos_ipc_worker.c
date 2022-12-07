@@ -343,12 +343,12 @@ static noreturn void ipc_worker_main(void) {
                     log_error(LOG_PREFIX "failed to receive an IPC message from %u: %d",
                               conn->vmid, ret);
                     /* Let the code below handle this error. */
-                    ret_events[i] = PAL_WAIT_ERROR;
+                    ret_events[i] = PAL_WAIT_ERR;
                 }
             }
             /* If there was something else other than error reported, let the loop spin at least one
              * more time - in case there are messages left to be read. */
-            if (ret_events[i] == PAL_WAIT_ERROR) {
+            if (ret_events[i] == PAL_WAIT_ERR) {
                 disconnect_callbacks(conn);
                 del_ipc_connection(conn);
             }

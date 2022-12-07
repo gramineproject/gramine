@@ -805,7 +805,10 @@ int PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
 typedef uint32_t pal_wait_flags_t; /* bitfield */
 #define PAL_WAIT_READ   1
 #define PAL_WAIT_WRITE  2
-#define PAL_WAIT_ERROR  4 /*!< ignored in events */
+#define PAL_WAIT_ERR    4
+#define PAL_WAIT_HUP    8
+#define PAL_WAIT_NVAL   16
+#define PAL_WAIT_RDHUP  32
 
 /*!
  * \brief Poll - wait for an event to happen on at least one handle.
