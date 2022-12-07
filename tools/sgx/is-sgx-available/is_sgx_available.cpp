@@ -73,8 +73,9 @@ class SgxCpuChecker {
     bool sgx_mem_concurrency_supported_ = false;
     bool cet_supported_ = false;
     bool kss_supported_ = false;
-    uint64_t maximum_enclave_size_x86_ = false;
-    uint64_t maximum_enclave_size_x64_ = false;
+    uint32_t supported_miscselect_ = 0;
+    uint64_t maximum_enclave_size_x86_ = 0;
+    uint64_t maximum_enclave_size_x64_ = 0;
     uint64_t epc_region_size_ = 0;
 
 public:
@@ -119,6 +120,7 @@ public:
         sgx2_supported_ = cpuid_12_0_eax & (1 << 1);
         sgx_virt_supported_ = cpuid_12_0_eax & (1 << 5);
         sgx_mem_concurrency_supported_ = cpuid_12_0_eax & (1 << 6);
+        supported_miscselect_ = cpuid_12_0_ebx;
         cet_supported_ = cpuid_12_1_eax & (1 << 6);
         kss_supported_ = cpuid_12_1_eax & (1 << 7);
         maximum_enclave_size_x86_ = saturating_exp2<uint64_t>(cpuid_12_0_edx & 0xFF);
@@ -160,6 +162,7 @@ public:
     uint64_t maximum_enclave_size_x86() const { return maximum_enclave_size_x86_; }
     uint64_t maximum_enclave_size_x64() const { return maximum_enclave_size_x64_; }
     uint64_t epc_region_size() const { return epc_region_size_; }
+    uint32_t supported_miscselect() const { return supported_miscselect_; }
 };
 
 bool sgx_driver_loaded() {
@@ -209,6 +212,7 @@ void print_detailed_info(const SgxCpuChecker& cpu_checker) {
     printf("SGX driver loaded: %s\n", bool2str(sgx_driver_loaded()));
     printf("AESMD installed: %s\n", bool2str(aesmd_installed()));
     printf("SGX PSW/libsgx installed: %s\n", bool2str(psw_installed()));
+    printf("Supporetd MISCSELECT: 0x%" PRIx32 "\n", cpu_checker.supported_miscselect());
 }
 
 int main(int argc, char* argv[]) {
