@@ -79,19 +79,19 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     return 0;
 }
 
-int read_enclave_sigstruct(int sigfile, sgx_arch_enclave_css_t* sig) {
+int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
     struct stat stat;
     int ret;
     ret = DO_SYSCALL(fstat, sigfile, &stat);
     if (ret < 0)
         return ret;
 
-    if ((size_t)stat.st_size != sizeof(sgx_arch_enclave_css_t)) {
+    if ((size_t)stat.st_size != sizeof(sgx_sigstruct_t)) {
         log_error("size of sigstruct size does not match");
         return -EINVAL;
     }
 
-    ret = read_all(sigfile, sig, sizeof(sgx_arch_enclave_css_t));
+    ret = read_all(sigfile, sig, sizeof(sgx_sigstruct_t));
     if (ret < 0)
         return ret;
 
@@ -377,18 +377,17 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     return 0;
 }
 
-int init_enclave(sgx_arch_secs_t* secs, sgx_arch_enclave_css_t* sigstruct,
-                 sgx_arch_token_t* token) {
+int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_token_t* token) {
 #ifndef CONFIG_SGX_DRIVER_OOT
     __UNUSED(token);
 #endif
     unsigned long enclave_valid_addr = secs->base + secs->size - g_page_size;
 
-    char hex[sizeof(sigstruct->body.enclave_hash.m) * 2 + 1];
+    char hex[sizeof(sigstruct->enclave_hash.m) * 2 + 1];
     log_debug("Enclave initializing:");
     log_debug("    enclave id:   0x%016lx", enclave_valid_addr);
-    log_debug("    mr_enclave:   %s", bytes2hex(sigstruct->body.enclave_hash.m,
-                                                sizeof(sigstruct->body.enclave_hash.m),
+    log_debug("    mr_enclave:   %s", bytes2hex(sigstruct->enclave_hash.m,
+                                                sizeof(sigstruct->enclave_hash.m),
                                                 hex, sizeof(hex)));
 
     struct sgx_enclave_init param = {
