@@ -201,7 +201,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     int ret = 0;
     int enclave_image = -1;
     sgx_arch_token_t enclave_token;
-    sgx_arch_enclave_css_t enclave_sigstruct;
+    sgx_sigstruct_t enclave_sigstruct;
     sgx_arch_secs_t enclave_secs;
     unsigned long enclave_entry_addr;
     unsigned long enclave_heap_min;

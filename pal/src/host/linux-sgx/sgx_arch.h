@@ -254,53 +254,34 @@ typedef struct {
 #define SGX_SECINFO_FLAGS_TCS  0x100
 #define SGX_SECINFO_FLAGS_REG  0x200
 
-typedef struct _css_header_t {
-    uint8_t  header[12];
-    uint32_t type;
-    uint32_t module_vendor;
-    uint32_t date;
-    uint8_t  header2[16];
-    uint32_t hw_version;
-    uint8_t  reserved[84];
-} css_header_t;
-static_assert(sizeof(css_header_t) == 128, "incorrect struct size");
-
-typedef struct _css_key_t {
-    uint8_t modulus[SE_KEY_SIZE];
-    uint8_t exponent[SE_EXPONENT_SIZE];
-    uint8_t signature[SE_KEY_SIZE];
-} css_key_t;
-static_assert(sizeof(css_key_t) == 772, "incorrect struct size");
-
-typedef struct _css_body_t {
-    sgx_misc_select_t    misc_select;
-    sgx_misc_select_t    misc_mask;
-    uint8_t              reserved[4];
+typedef struct {
+    uint8_t              header[16];
+    uint32_t             vendor;
+    uint32_t             date;
+    uint8_t              header2[16];
+    uint32_t             swdefined;
+    uint8_t              reserved1[84];
+    uint8_t              modulus[SE_KEY_SIZE];
+    uint8_t              exponent[SE_EXPONENT_SIZE];
+    uint8_t              signature[SE_KEY_SIZE];
+    uint32_t             misc_select;
+    uint32_t             misc_mask;
+    uint8_t              cet_attributes;
+    uint8_t              cet_attributes_mask;
+    uint8_t              reserved2[2];
     sgx_isvfamily_id_t   isv_family_id;
     sgx_attributes_t     attributes;
     sgx_attributes_t     attribute_mask;
     sgx_measurement_t    enclave_hash;
-    uint8_t              reserved2[16];
+    uint8_t              reserved3[16];
     sgx_isvext_prod_id_t isvext_prod_id;
     uint16_t             isv_prod_id;
     uint16_t             isv_svn;
-} css_body_t;
-static_assert(sizeof(css_body_t) == 128, "incorrect struct size");
-
-typedef struct _css_buffer_t {
-    uint8_t reserved[12];
-    uint8_t q1[SE_KEY_SIZE];
-    uint8_t q2[SE_KEY_SIZE];
-} css_buffer_t;
-static_assert(sizeof(css_buffer_t) == 780, "incorrect struct size");
-
-typedef struct _enclave_css_t {
-    css_header_t header;
-    css_key_t    key;
-    css_body_t   body;
-    css_buffer_t buffer;
-} sgx_arch_enclave_css_t;
-static_assert(sizeof(sgx_arch_enclave_css_t) == 1808, "incorrect struct size");
+    uint8_t              reserved4[12];
+    uint8_t              q1[SE_KEY_SIZE];
+    uint8_t              q2[SE_KEY_SIZE];
+} sgx_sigstruct_t;
+static_assert(sizeof(sgx_sigstruct_t) == 1808, "incorrect struct size");
 
 typedef struct _sgx_key_id_t {
     uint8_t id[SGX_KEYID_SIZE];

@@ -16,35 +16,35 @@ class Sigstruct:
     """
 
     fields = {
-        'header': (offs.SGX_ARCH_ENCLAVE_CSS_HEADER, '16s'),
-        'module_vendor': (offs.SGX_ARCH_ENCLAVE_CSS_MODULE_VENDOR, '<L'),
-        'date_year': (offs.SGX_ARCH_ENCLAVE_CSS_DATE, '<H'),
-        'date_month': (offs.SGX_ARCH_ENCLAVE_CSS_DATE + 2, '<B'),
-        'date_day': (offs.SGX_ARCH_ENCLAVE_CSS_DATE + 3, '<B'),
-        'header2': (offs.SGX_ARCH_ENCLAVE_CSS_HEADER2, '16s'),
-        'hw_version': (offs.SGX_ARCH_ENCLAVE_CSS_HW_VERSION, '<L'),
-        'modulus': (offs.SGX_ARCH_ENCLAVE_CSS_MODULUS, '384s'),
-        'exponent': (offs.SGX_ARCH_ENCLAVE_CSS_EXPONENT, '<L'),
-        'signature': (offs.SGX_ARCH_ENCLAVE_CSS_SIGNATURE, '384s'),
-        'misc_select': (offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT, '<L'),
-        'misc_mask': (offs.SGX_ARCH_ENCLAVE_CSS_MISC_MASK, '<L'),
-        'attribute_flags': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTES, '<Q'),
-        'attribute_xfrms': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTES + 8, '<Q'),
-        'attribute_flags_mask': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTE_MASK, '<Q'),
-        'attribute_xfrm_mask': (offs.SGX_ARCH_ENCLAVE_CSS_ATTRIBUTE_MASK + 8, '<Q'),
-        'enclave_hash': (offs.SGX_ARCH_ENCLAVE_CSS_ENCLAVE_HASH, '32s'),
-        'isv_prod_id': (offs.SGX_ARCH_ENCLAVE_CSS_ISV_PROD_ID, '<H'),
-        'isv_svn': (offs.SGX_ARCH_ENCLAVE_CSS_ISV_SVN, '<H'),
-        'q1': (offs.SGX_ARCH_ENCLAVE_CSS_Q1, '384s'),
-        'q2': (offs.SGX_ARCH_ENCLAVE_CSS_Q2, '384s'),
+        'header': (offs.SGX_ARCH_SIGSTRUCT_HEADER, '16s'),
+        'vendor': (offs.SGX_ARCH_SIGSTRUCT_VENDOR, '<L'),
+        'date_year': (offs.SGX_ARCH_SIGSTRUCT_DATE, '<H'),
+        'date_month': (offs.SGX_ARCH_SIGSTRUCT_DATE + 2, '<B'),
+        'date_day': (offs.SGX_ARCH_SIGSTRUCT_DATE + 3, '<B'),
+        'header2': (offs.SGX_ARCH_SIGSTRUCT_HEADER2, '16s'),
+        'swdefined': (offs.SGX_ARCH_SIGSTRUCT_SWDEFINED, '<L'),
+        'modulus': (offs.SGX_ARCH_SIGSTRUCT_MODULUS, '384s'),
+        'exponent': (offs.SGX_ARCH_SIGSTRUCT_EXPONENT, '<L'),
+        'signature': (offs.SGX_ARCH_SIGSTRUCT_SIGNATURE, '384s'),
+        'misc_select': (offs.SGX_ARCH_SIGSTRUCT_MISC_SELECT, '<L'),
+        'misc_mask': (offs.SGX_ARCH_SIGSTRUCT_MISC_MASK, '<L'),
+        'attribute_flags': (offs.SGX_ARCH_SIGSTRUCT_ATTRIBUTES, '<Q'),
+        'attribute_xfrms': (offs.SGX_ARCH_SIGSTRUCT_ATTRIBUTES + 8, '<Q'),
+        'attribute_flags_mask': (offs.SGX_ARCH_SIGSTRUCT_ATTRIBUTE_MASK, '<Q'),
+        'attribute_xfrm_mask': (offs.SGX_ARCH_SIGSTRUCT_ATTRIBUTE_MASK + 8, '<Q'),
+        'enclave_hash': (offs.SGX_ARCH_SIGSTRUCT_ENCLAVE_HASH, '32s'),
+        'isv_prod_id': (offs.SGX_ARCH_SIGSTRUCT_ISV_PROD_ID, '<H'),
+        'isv_svn': (offs.SGX_ARCH_SIGSTRUCT_ISV_SVN, '<H'),
+        'q1': (offs.SGX_ARCH_SIGSTRUCT_Q1, '384s'),
+        'q2': (offs.SGX_ARCH_SIGSTRUCT_Q2, '384s'),
     }
 
 
     defaults = {
         'header': b'\x06\x00\x00\x00\xe1\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00',
-        'module_vendor': 0,
-        'header2': b'\x01\x01\x00\x00`\x00\x00\x00`\x00\x00\x00\x01\x00\x00\x00',
-        'hw_version': 0,
+        'vendor': 0,
+        'header2': b'\x01\x01\x00\x00\x60\x00\x00\x00\x60\x00\x00\x00\x01\x00\x00\x00',
+        'swdefined': 0,
         'misc_mask': offs.SGX_MISCSELECT_MASK_CONST,
         'attribute_flags_mask': offs.SGX_FLAGS_MASK_CONST,
         'attribute_xfrm_mask': offs.SGX_XFRM_MASK_CONST,
@@ -95,7 +95,7 @@ class Sigstruct:
         Raises:
             KeyError: some SIGSTRUCT fields were not set.
         """
-        buffer = bytearray(offs.SGX_ARCH_ENCLAVE_CSS_SIZE)
+        buffer = bytearray(offs.SGX_ARCH_SIGSTRUCT_SIZE)
         for key, (offset, fmt) in self.fields.items():
             if key not in self:
                 if verify and (key not in ['modulus', 'exponent', 'signature', 'q1', 'q2']
@@ -124,8 +124,8 @@ class Sigstruct:
         """
         if not isinstance(buffer, bytes) and not isinstance(buffer, bytearray):
             raise TypeError(f'a bytes-like object is required, not {type(buffer).__name__}')
-        if len(buffer) != offs.SGX_ARCH_ENCLAVE_CSS_SIZE:
-            raise ValueError(f'buffer len does not equal {offs.SGX_ARCH_ENCLAVE_CSS_SIZE}')
+        if len(buffer) != offs.SGX_ARCH_SIGSTRUCT_SIZE:
+            raise ValueError(f'buffer len does not equal {offs.SGX_ARCH_SIGSTRUCT_SIZE}')
 
         sig = cls()
 
@@ -142,7 +142,8 @@ class Sigstruct:
 
     def get_signing_data(self):
         data = self.to_bytes()
-        after_sig_offset = offs.SGX_ARCH_ENCLAVE_CSS_MISC_SELECT
+        assert len(data) == offs.SGX_ARCH_SIGSTRUCT_SIZE
+        after_sig_offset = offs.SGX_ARCH_SIGSTRUCT_MISC_SELECT
         return data[:128] + data[after_sig_offset:after_sig_offset+128]
 
 
