@@ -51,7 +51,9 @@ typedef uint32_t sgx_misc_select_t;
 typedef uint16_t sgx_prod_id_t;
 typedef uint16_t sgx_isv_svn_t;
 typedef uint16_t sgx_config_svn_t;
-typedef uint8_t sgx_config_id_t[SGX_CONFIGID_SIZE];
+typedef struct {
+    uint8_t data[SGX_CONFIGID_SIZE];
+} sgx_config_id_t;
 
 #define SGX_ISVEXT_PROD_ID_SIZE 16
 #define SGX_ISV_FAMILY_ID_SIZE  16
@@ -318,7 +320,8 @@ typedef struct _sgx_report_data_t {
 typedef struct _report_body_t {
     sgx_cpu_svn_t        cpu_svn;
     sgx_misc_select_t    misc_select;
-    uint8_t              reserved1[12];
+    uint8_t              cet_attributes;
+    uint8_t              reserved1[11];
     sgx_isvext_prod_id_t isv_ext_prod_id;
     sgx_attributes_t     attributes;
     sgx_measurement_t    mr_enclave;
@@ -343,10 +346,11 @@ typedef struct _report_t {
 #define SGX_REPORT_SIGNED_SIZE 384
 #define SGX_REPORT_ACTUAL_SIZE 432
 
-typedef struct _target_info_t {
+typedef struct {
     sgx_measurement_t mr_enclave;
     sgx_attributes_t  attributes;
-    uint8_t           reserved1[2];
+    uint8_t           cet_attributes;
+    uint8_t           reserved1;
     sgx_config_svn_t  config_svn;
     sgx_misc_select_t misc_select;
     uint8_t           reserved2[8];

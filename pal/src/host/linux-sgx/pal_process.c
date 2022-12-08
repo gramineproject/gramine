@@ -84,12 +84,12 @@
  *       and can be sent on an unencrypted channel.
  *
  *       The flow of local attestation is as follows:
- *         - Parent: Send targetinfo(Parent) to Child
  *         - Child:  Generate report(Child -> Parent) and send to Parent
  *         - Parent: Verify report(Child -> Parent)
- *         - Parent: Extract targetinfo(Child) from report(Child -> Parent)
- *                   and then generate report(Parent -> Child)
+ *         - Parent: Generate report(Parent -> Child)
  *         - Child:  Verify report(Parent -> Child)
+*
+*       Note that both Parent and Child have the same SGX target info.
  *
  * (3) Both the parent and child enclaves need to have matching measurements.
  *
@@ -191,7 +191,8 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
     return 0;
 
 failed:
-    free(child);
+    _PalStreamDelete(child, PAL_DELETE_ALL);
+    _PalObjectClose(child);
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
@@ -246,7 +247,8 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
     return 0;
 
 out_error:
-    free(parent);
+    _PalStreamDelete(parent, PAL_DELETE_ALL);
+    _PalObjectClose(parent);
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
