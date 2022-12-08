@@ -45,7 +45,7 @@ static void display_report_body(const sgx_report_body_t* body) {
     INFO(" reserved3        : ");
     HEXDUMP(body->reserved3);
     INFO(" config_id        : ");
-    HEXDUMP(body->config_id);
+    HEXDUMP(body->config_id.data);
     INFO(" isv_prod_id      : ");
     HEXDUMP(body->isv_prod_id);
     INFO(" isv_svn          : ");
