@@ -11,6 +11,15 @@ extern uintptr_t g_enclave_top;
 
 static int64_t g_enclave_start_called = 0;
 
+/* This eats 1KB of a stack, so prevent inlining. */
+__attribute__((noinline)) static void init_xsave_size_from_report(void) {
+    __sgx_mem_aligned sgx_target_info_t target_info = { 0 };
+    alignas(128) char report_data[64] = { 0 };
+    __sgx_mem_aligned sgx_report_t report = { 0 };
+    sgx_report(&target_info, &report_data, &report);
+    init_xsave_size(report.body.attributes.xfrm);
+}
+
 /*
  * Called from enclave_entry.S to execute ecalls.
  *
@@ -77,15 +86,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         start_args = ecall_args;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
-        // TODO: This eats 1KB of a stack frame which lives for the whole lifespan of this enclave.
-        //       We should move it somewhere else and deallocate right after use.
-        __sgx_mem_aligned sgx_target_info_t target_info;
-        alignas(128) char report_data[64] = {0};
-        __sgx_mem_aligned sgx_report_t report;
-        memset(&report, 0, sizeof(report));
-        memset(&target_info, 0, sizeof(target_info));
-        sgx_report(&target_info, &report_data, &report);
-        init_xsave_size(report.body.attributes.xfrm);
+        init_xsave_size_from_report();
 
         /* pal_linux_main is responsible for checking the passed arguments */
         pal_linux_main(COPY_UNTRUSTED_VALUE(&start_args->libpal_uri),

@@ -546,12 +546,7 @@ int _PalAttestationReport(const void* user_report_data, size_t* user_report_data
     }
 
     if (populate_target_info) {
-        sgx_target_info_t* ti = (sgx_target_info_t*)target_info;
-        memcpy(&ti->attributes, &stack_report.body.attributes, sizeof(ti->attributes));
-        memcpy(&ti->config_id, &stack_report.body.config_id, sizeof(ti->config_id));
-        memcpy(&ti->config_svn, &stack_report.body.config_svn, sizeof(ti->config_svn));
-        memcpy(&ti->misc_select, &stack_report.body.misc_select, sizeof(ti->misc_select));
-        memcpy(&ti->mr_enclave, &stack_report.body.mr_enclave, sizeof(ti->mr_enclave));
+        sgx_report_body_to_target_info(&stack_report.body, target_info);
     }
 
     if (report) {
