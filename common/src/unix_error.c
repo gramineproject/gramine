@@ -459,7 +459,7 @@ const char* unix_strerror(int err) {
     static char buf[512];
     unsigned err_idx = err >= 0 ? err : -err;
     if (err_idx >= ARRAY_SIZE(g_unix_error_list) || !g_unix_error_list[err_idx]) {
-        snprintf(buf, sizeof(buf), "Unknown UNIX error (errcode = %d)", err);
+        snprintf(buf, sizeof(buf), "Unknown UNIX error (errno = %d)", err);
         return buf;
     }
     return g_unix_error_list[err_idx];
