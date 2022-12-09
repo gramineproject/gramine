@@ -13,28 +13,20 @@
 #include "pal_sgx.h"
 #include "sgx_arch.h"
 
-static int enclu(uint32_t eax, uint64_t rbx, uint64_t rcx) {
-    __asm__ volatile (
-        "enclu"
-        : "+a"(eax)
-        : "b"(rbx), "c"(rcx)
-        : "memory", "cc"
-    );
-    return (int)eax;
-}
-
 static int sgx_eaccept(uint64_t addr, uint64_t flags) {
     alignas(64) sgx_arch_sec_info_t secinfo = {
         .flags = flags,
     };
-    return enclu(EACCEPT, (uint64_t)&secinfo, addr);
+    /* ENCLU returns 0 or positive error code, but Gramine expect negative values on errors.
+     * You can check the code values in Intel SDM vol 3. */
+    return -enclu(EACCEPT, (uint64_t)&secinfo, addr, 0);
 }
 
 static void sgx_emodpe(uint64_t addr, uint64_t prot) {
     alignas(64) sgx_arch_sec_info_t secinfo = {
         .flags = prot,
     };
-    enclu(EMODPE, (uint64_t)&secinfo, addr);
+    enclu(EMODPE, (uint64_t)&secinfo, addr, 0);
     /* `EMODPE` does not return errors, it can only fault. */
 }
 

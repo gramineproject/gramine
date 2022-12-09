@@ -350,7 +350,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 
     if (g_pal_linuxsgx_state.edmm_enabled && !(prot & PAL_PROT_WRITE)) {
         /* Clear W permission, in case we added it artificially. */
-        ret = sgx_edmm_set_page_permissions((uintptr_t)addr, size / PAGE_SIZE,
+        ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
                                             PAL_TO_SGX_PROT(prot));
         if (ret < 0) {
             log_error("%s: failed to remove W bit from pages permissions at %p-%p", __func__,

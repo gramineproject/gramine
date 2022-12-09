@@ -401,16 +401,17 @@ static_assert(sizeof(sgx_key_request_t) == 512, "incorrect struct size");
 
 typedef uint8_t sgx_key_128bit_t[16];
 
-#define ENCLU ".byte 0x0f, 0x01, 0xd7"
+static inline int enclu(uint32_t eax, uint64_t rbx, uint64_t rcx, uint64_t rdx) {
+    __asm__ volatile (
+        "enclu"
+        : "+a"(eax)
+        : "b"(rbx), "c"(rcx), "d"(rdx)
+        : "memory", "cc"
+    );
+    return (int)eax;
+}
 
-#else /* !__ASSEMBLER__ */
-
-/* microcode to call ENCLU */
-.macro ENCLU
-    .byte 0x0f, 0x01, 0xd7
-.endm
-
-#endif
+#endif /* !__ASSEMBLER__ */
 
 #define EREPORT     0
 #define EGETKEY     1
