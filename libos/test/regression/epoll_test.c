@@ -14,7 +14,7 @@
     errx(1, "%d: " msg, __LINE__, ##args)
 
 #define SRV_IP "127.0.0.1"
-#define PORT   11111
+#define PORT   11113
 
 static uint64_t wait_event(int epfd, struct epoll_event* possible_events,
                            size_t possible_events_len) {
@@ -155,6 +155,9 @@ static void server(int pipefd) {
     int epfd = CHECK(epoll_create1(EPOLL_CLOEXEC));
 
     int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
+
+    int enable = 1;
+    CHECK(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)));
 
     struct sockaddr_in sa = {
         .sin_family = AF_INET,
