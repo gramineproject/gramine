@@ -32,21 +32,12 @@
  * local attestation threat model (malicious host knows identities of all running SGX enclaves
  * anyway). The ISO KE protocol is proven to be secure and minimal.
  *
- * One superficial difference of the below protocol from the original ISO KE protocol is the number
- * of steps involved. Our protocol uses 5 steps (send DH's g_x, receive DH's g_y, send SGX target
- * info with identity of enclave A, receive SGX report of enclave B, send SGX report of enclave A).
- * Note here that SGX report of an enclave contains also the identity of the enclave. The original
- * ISO KE protocol uses 3 steps (send DH's g_x and identity of A, receive DH's g_y and identity of B
- * and signature of B over {g_x, g_y, A}, send signature of A over {g_y, g_x, B}). Looking at the
- * steps, it is clear that our protocol could be optimized to send 3 messages instead of 5 messages
- * and would result in the original ISO KE protocol. We implement our protocol in 5 steps purely for
- * readability.
- *
- * Another difference of the below protocol from the original ISO KE protocol is the notion of
+ * One difference of the below protocol from the original ISO KE protocol is the notion of
  * "identity". In SGX local attestation, identity of an enclave is a combination of its
  * measurements: mrenclave, attributes, configsvn, etc. This enclave identity is enclosed in the SGX
  * targetinfo struct as well as in the SGX report. Thus, we use SGX targetinfo and SGX report as
- * identities.
+ * identities. Note that in Gramine all child enclaves spawned from one parent enclave have the same
+ * SGX targetinfo (same as the parent).
  *
  * One more difference is that instead of calculating SHA256(g_x || g_y) for enclave A and
  * SHA256(g_y || g_x) for enclave B, our protocol calculates SHA256(K_e || tag1) for enclave A and
