@@ -507,13 +507,14 @@ enclave_entry:
 
     # Rewire SSA0 (args to _PalExceptionHandler()):
     #    - pointer to EXINFO            (SSA[0].GPRSGX.RCX, 4rd arg)
-    sub $16, %rsi
+    sub $SSA_MISC_EXINFO_SIZE, %rsi
     mov %rsi, SGX_GPR_RCX(%rbx)
 
-    # Save EXINFO - it's always at offset -16 from GPR in SSA.
-    # If EXINFO MISC component is not enabled, it will contain all 0.
+    # Save EXINFO - it's always immediately before GPR in SSA.
+    # If EXINFO MISC component is not enabled, it will contain padding with all 0.
     mov %gs:SGX_GPR, %rdi
-    sub $16, %rdi
+    sub $SSA_MISC_EXINFO_SIZE, %rdi
+    # SSA_MISC_EXINFO_SIZE=16, so we can inline this copy.
     mov 0(%rdi), %rax
     mov %rax, 0(%rsi)
     mov 8(%rdi), %rax
@@ -548,7 +549,7 @@ enclave_entry:
     leaq 1f(%rip), %r11
     jmp __restore_xregs
 1:
-    leaq SGX_CPU_CONTEXT_SIZE + 16 + 8(%rsi), %rdi
+    leaq SGX_CPU_CONTEXT_SIZE + SSA_MISC_EXINFO_SIZE + 8(%rsi), %rdi
     leaq 2f(%rip), %r11
     jmp __save_xregs
 2:

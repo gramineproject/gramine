@@ -587,7 +587,8 @@ on the platform, enclave initialization will fail. If the options are unset,
 enclave initialization will succeed even if these features are unavailable on
 the platform.
 If ``require_exinfo`` is set, user application can retrieve faulting address in
-signal handler in case of a page fault.
+signal handler in case of a page fault. Otherwise (set to ``false``),
+the faulting address will always be provided as ``0``.
 
 ISV Product ID and SVN
 ^^^^^^^^^^^^^^^^^^^^^^
