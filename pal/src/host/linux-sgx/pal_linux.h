@@ -117,7 +117,8 @@ extern PAL_SESSION_KEY g_master_key;
 /*!
  * \brief Fill sgx_target_info_t with information from sgx_report_body_t
  */
-void sgx_report_body_to_target_info(sgx_report_body_t* report_body, sgx_target_info_t* target_info);
+void sgx_report_body_to_target_info(const sgx_report_body_t* report_body,
+                                    sgx_target_info_t* out_target_info);
 
 /*
  * sgx_verify_report: verify a CPU-signed report from another local enclave

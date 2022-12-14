@@ -12,7 +12,7 @@ extern uintptr_t g_enclave_top;
 static int64_t g_enclave_start_called = 0;
 
 /* This eats 1KB of a stack, so prevent inlining. */
-__attribute__ ((noinline)) static void init_xsave_size_from_report(void) {
+__attribute__((noinline)) static void init_xsave_size_from_report(void) {
     __sgx_mem_aligned sgx_target_info_t target_info = { 0 };
     alignas(128) char report_data[64] = { 0 };
     __sgx_mem_aligned sgx_report_t report = { 0 };

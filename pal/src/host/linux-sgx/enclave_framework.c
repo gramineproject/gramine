@@ -1091,9 +1091,9 @@ out:
     return ret;
 }
 
-void sgx_report_body_to_target_info(sgx_report_body_t* report_body,
-                                    sgx_target_info_t* target_info) {
-    *target_info = (sgx_target_info_t){
+void sgx_report_body_to_target_info(const sgx_report_body_t* report_body,
+                                    sgx_target_info_t* out_target_info) {
+    *out_target_info = (sgx_target_info_t){
         .mr_enclave = report_body->mr_enclave,
         .attributes = report_body->attributes,
         .cet_attributes = report_body->cet_attributes,
