@@ -224,7 +224,7 @@ int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot);
  * \param size  The size.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
- * Memory range `[addr; addr+size)` does not have to be continuous, i.e. it can have holes.
+ * `[addr; addr+size)` must a continuous memory range without any holes.
  */
 int PalVirtualMemoryFree(void* addr, size_t size);
 
@@ -236,6 +236,7 @@ int PalVirtualMemoryFree(void* addr, size_t size);
  * \param prot  See #PalVirtualMemoryAlloc.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
+ * `[addr; addr+size)` must a continuous memory range without any holes.
  */
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 

@@ -258,7 +258,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         size_t map_size = c->map_end - c->start;
 
         if ((ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
-                                    /*comment=*/NULL, /*overwriting=*/NULL)) < 0) {
+                                    /*comment=*/NULL)) < 0) {
             log_debug("%s: failed to bookkeep address of segment", __func__);
             return ret;
         }
@@ -303,8 +303,7 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         pal_prot_flags_t zero_pal_prot = LINUX_PROT_TO_PAL(c->prot, zero_map_flags);
 
         if ((ret = bkeep_mmap_fixed(zero_page_start, zero_page_size, c->prot, zero_map_flags,
-                                    /*file=*/NULL, /*offset=*/0, /*comment=*/NULL,
-                                    /*overwriting=*/NULL)) < 0) {
+                                    /*file=*/NULL, /*offset=*/0, /*comment=*/NULL)) < 0) {
             log_debug("%s: cannot bookkeep address of zero-fill pages", __func__);
             return ret;
         }

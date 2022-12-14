@@ -78,11 +78,9 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal);
  * Bookkeeping an allocation of memory at a fixed address. `flags` must contain either MAP_FIXED or
  * MAP_FIXED_NOREPLACE - the former forces bookkeeping and removes any overlapping VMAs, the latter
  * atomically checks for overlaps and fails if one is found.
- * If `overwriting` is not NULL, its content will be set to true iff this request overlapped
- * an existing memory area. Obviously not meaningful with MAP_FIXED_NOREPLACE.
  */
 int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libos_handle* file,
-                     uint64_t offset, const char* comment, bool* overwriting);
+                     uint64_t offset, const char* comment);
 
 /*
  * Bookkeeping an allocation of memory at any address in the range [`bottom_addr`, `top_addr`).
@@ -120,6 +118,11 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot);
  * The returned array can be subsequently freed by `free_vma_info_array`.
  */
 int dump_all_vmas(struct libos_vma_info** vma_infos, size_t* count, bool include_unmapped);
+/*
+ * Same as `dump_all_vmas`, but dumps only in `[begin; end)` range.
+ */
+int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
+                       struct libos_vma_info** ret_infos, size_t* ret_count);
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count);
 
 /* Implementation of madvise(MADV_DONTNEED) syscall */
