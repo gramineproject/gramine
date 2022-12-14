@@ -73,8 +73,8 @@ class SgxCpuChecker {
     bool sgx_mem_concurrency_supported_ = false;
     bool cet_supported_ = false;
     bool kss_supported_ = false;
-    bool miscselect_exinfo_pfgp_supported_ = 0;
-    bool miscselect_exinfo_cp_supported_ = 0;
+    bool miscselect_exinfo_pfgp_supported_ = false;
+    bool miscselect_exinfo_cp_supported_ = false;
     uint64_t maximum_enclave_size_x86_ = 0;
     uint64_t maximum_enclave_size_x64_ = 0;
     uint64_t epc_region_size_ = 0;
