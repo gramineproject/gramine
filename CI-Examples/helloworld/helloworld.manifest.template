@@ -12,6 +12,7 @@ fs.mounts = [
 ]
 
 sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.nonpie_binary = true
 
 sgx.trusted_files = [

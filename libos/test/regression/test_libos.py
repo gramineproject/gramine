@@ -7,6 +7,7 @@ import subprocess
 import unittest
 
 from graminelibos.regression import (
+    HAS_EDMM,
     HAS_SGX,
     ON_X86,
     USES_MUSL,
@@ -535,12 +536,14 @@ class TC_04_Attestation(RegressionTestCase):
         self.assertIn("Test local attestation... SUCCESS", stdout)
         self.assertIn("Test quote interface... SUCCESS", stdout)
 
+    @unittest.skipIf(HAS_EDMM, 'EDMM machines use DCAP attestation')
     def test_002_attestation_deprecated(self):
         stdout, _ = self.run_binary(['attestation_deprecated_syntax'], timeout=60)
         self.assertIn("Test resource leaks in attestation filesystem... SUCCESS", stdout)
         self.assertIn("Test local attestation... SUCCESS", stdout)
         self.assertIn("Test quote interface... SUCCESS", stdout)
 
+    @unittest.skipIf(HAS_EDMM, 'EDMM machines use DCAP attestation')
     def test_003_attestation_deprecated_stdio(self):
         stdout, _ = self.run_binary(['attestation_deprecated_syntax', 'test_stdio'], timeout=60)
         self.assertIn("Test resource leaks in attestation filesystem... SUCCESS", stdout)
