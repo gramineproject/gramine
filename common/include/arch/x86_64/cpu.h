@@ -34,10 +34,24 @@ enum extended_state_sub_leaf {
     EXTENDED_STATE_SUBLEAF_EXTENSIONS = 1,
 };
 
-#define INTEL_SGX_LEAF 0x12 /* Intel SGX Capabilities: CPUID Leaf 12H */
-#define EXTENDED_STATE_LEAF 0xD /* Extended state (XSTATE): CPUID leaf 0DH */
+#define CPU_VENDOR_LEAF                         0x0
+#define FEATURE_FLAGS_LEAF                      0x1
+#define THERMAL_AND_POWER_INFO_LEAF             0x6
+#define EXTENDED_FEATURE_FLAGS_LEAF             0x7
+#define EXTENDED_STATE_LEAF                     0xD /* Extended state (XSTATE) */
+#define INTEL_SGX_LEAF                         0x12 /* Intel SGX Capabilities */
+#define TSC_FREQ_LEAF                          0x15
+#define PROC_FREQ_LEAF                         0x16
+#define AMX_TILE_INFO_LEAF                     0x1D
+#define AMX_TMUL_INFO_LEAF                     0x1E
+#define MAX_INPUT_EXT_VALUE_LEAF         0x80000000
+#define EXT_SIGNATURE_AND_FEATURES_LEAF  0x80000001
+#define CPU_BRAND_LEAF                   0x80000002
+#define CPU_BRAND_CNTD_LEAF              0x80000003
+#define CPU_BRAND_CNTD2_LEAF             0x80000004
+#define INVARIANT_TSC_LEAF               0x80000007
 
-static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[]) {
+static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]) {
     __asm__("cpuid"
             : "=a"(words[CPUID_WORD_EAX]),
               "=b"(words[CPUID_WORD_EBX]),

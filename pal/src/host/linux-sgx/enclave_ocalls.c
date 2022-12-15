@@ -346,7 +346,7 @@ static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munm
     }
 }
 
-int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
+int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[static 4]) {
     int retval = 0;
     struct ocall_cpuid* ocall_cpuid_args;
 

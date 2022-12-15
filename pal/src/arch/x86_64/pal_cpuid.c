@@ -31,7 +31,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     if (!vendor_id)
         return -PAL_ERROR_NOMEM;
 
-    _PalCpuIdRetrieve(0, 0, words);
+    _PalCpuIdRetrieve(CPU_VENDOR_LEAF, 0, words);
     FOUR_CHARS_VALUE(&vendor_id[0], words[CPUID_WORD_EBX]);
     FOUR_CHARS_VALUE(&vendor_id[4], words[CPUID_WORD_EDX]);
     FOUR_CHARS_VALUE(&vendor_id[8], words[CPUID_WORD_ECX]);
@@ -44,16 +44,16 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
         rv = -PAL_ERROR_NOMEM;
         goto out_err;
     }
-    _PalCpuIdRetrieve(0x80000002, 0, words);
+    _PalCpuIdRetrieve(CPU_BRAND_LEAF, 0, words);
     memcpy(&brand[ 0], words, sizeof(unsigned int) * CPUID_WORD_NUM);
-    _PalCpuIdRetrieve(0x80000003, 0, words);
+    _PalCpuIdRetrieve(CPU_BRAND_CNTD_LEAF, 0, words);
     memcpy(&brand[16], words, sizeof(unsigned int) * CPUID_WORD_NUM);
-    _PalCpuIdRetrieve(0x80000004, 0, words);
+    _PalCpuIdRetrieve(CPU_BRAND_CNTD2_LEAF, 0, words);
     memcpy(&brand[32], words, sizeof(unsigned int) * CPUID_WORD_NUM);
     brand[BRAND_SIZE - 1] = '\0';
     ci->cpu_brand = brand;
 
-    _PalCpuIdRetrieve(1, 0, words);
+    _PalCpuIdRetrieve(FEATURE_FLAGS_LEAF, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 8, 12);
     ci->cpu_model    = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 4, 8);
     ci->cpu_stepping = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 0, 4);

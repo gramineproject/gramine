@@ -1321,6 +1321,9 @@ class TC_90_CpuidSGX(RegressionTestCase):
     def test_000_cpuid(self):
         stdout, _ = self.run_binary(['cpuid'])
         self.assertIn('CPUID test passed.', stdout)
+        self.assertIn('AESNI support: true', stdout)
+        self.assertIn('XSAVE support: true', stdout)
+        self.assertIn('RDRAND support: true', stdout)
 
 # note that `rdtsc` also correctly runs on non-SGX PAL, but non-SGX CPU may not have rdtscp
 @unittest.skipUnless(HAS_SGX,

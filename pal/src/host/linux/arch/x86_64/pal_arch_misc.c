@@ -34,7 +34,7 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     }
 }
 
-int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+int _PalCpuIdRetrieve(uint32_t leaf, uint32_t subleaf, uint32_t values[static 4]) {
     cpuid(leaf, subleaf, values);
     return 0;
 }

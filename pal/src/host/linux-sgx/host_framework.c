@@ -97,11 +97,11 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
         } cpuid;
     } xfrm_flags[] = {
         /* for mapping of CPUID leaves to CPU features, see libos/src/arch/x86_64/libos_cpuid.c */
-        {SGX_XFRM_AVX,    { .leaf = 1, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
-        {SGX_XFRM_MPX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
-        {SGX_XFRM_AVX512, { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
-        {SGX_XFRM_PKRU,   { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
-        {SGX_XFRM_AMX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
+        {SGX_XFRM_AVX,    { .leaf = FEATURE_FLAGS_LEAF,          .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
+        {SGX_XFRM_MPX,    { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
+        {SGX_XFRM_AVX512, { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
+        {SGX_XFRM_PKRU,   { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
+        {SGX_XFRM_AMX,    { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
     };
 
     *out_xfrm = xfrm;
@@ -150,7 +150,7 @@ int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
 
 bool is_wrfsbase_supported(void) {
     uint32_t cpuinfo[4];
-    cpuid(7, 0, cpuinfo);
+    cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0, cpuinfo);
 
     if (!(cpuinfo[1] & 0x1)) {
         log_error(

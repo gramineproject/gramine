@@ -29,11 +29,6 @@
  */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
 
-#define CPU_VENDOR_LEAF             0x0
-#define EXTENDED_FEATURE_FLAGS_LEAF 0x7
-#define AMX_TILE_INFO_LEAF          0x1D
-#define AMX_TMUL_INFO_LEAF          0x1E
-
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
 static uint64_t g_start_usec = 0;
@@ -186,7 +181,7 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
  * store each extension's state. Use this to sanitize host's untrusted cpuid output. We also know
  * through xfrm what extensions are enabled inside the enclave.
  */
-static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
+static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[static 4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
     if (leaf == CPU_VENDOR_LEAF) {
@@ -194,11 +189,21 @@ static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) 
         values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */
         values[CPUID_WORD_EDX] = 0x49656e69; /* 'ineI' */
         values[CPUID_WORD_ECX] = 0x6c65746e; /* 'ntel' */
+    } else if (leaf == FEATURE_FLAGS_LEAF) {
+        /* We have to enforce these feature bits, otherwise some crypto libraries (e.g. mbedtls)
+         * silently switch to side-channel-prone software implementations of crypto algorithms.
+         *
+         * On hosts which really don't support these, the untrusted PAL should emit an error and
+         * refuse to start.
+         */
+        values[CPUID_WORD_ECX] |= 1 << 25; // AESNI
+        values[CPUID_WORD_ECX] |= 1 << 26; // XSAVE (this one is for Gramine code, it relies on it)
+        values[CPUID_WORD_ECX] |= 1 << 30; // RDRAND
     } else if (leaf == EXTENDED_FEATURE_FLAGS_LEAF) {
         if (subleaf == 0x0) {
             values[CPUID_WORD_EAX] = g_extended_feature_flags_max_supported_sub_leaves;
-            values[CPUID_WORD_EBX] |= 1U << 0; /* SGX-enabled CPUs always support FSGSBASE */
-            values[CPUID_WORD_EBX] |= 1U << 2; /* SGX-enabled CPUs always report the SGX bit */
+            values[CPUID_WORD_EBX] |= 1U << 0; /* CPUs with SGX always support FSGSBASE */
+            values[CPUID_WORD_EBX] |= 1U << 2; /* CPUs with SGX always report the SGX bit */
         }
     } else if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
@@ -637,10 +642,6 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return 0;
 }
 
-#define CPUID_LEAF_INVARIANT_TSC 0x80000007
-#define CPUID_LEAF_TSC_FREQ 0x15
-#define CPUID_LEAF_PROC_FREQ 0x16
-
 ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
     int fd;
 
@@ -656,7 +657,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
 
 bool is_tsc_usable(void) {
     uint32_t words[CPUID_WORD_NUM];
-    _PalCpuIdRetrieve(CPUID_LEAF_INVARIANT_TSC, 0, words);
+    _PalCpuIdRetrieve(INVARIANT_TSC_LEAF, 0, words);
     return words[CPUID_WORD_EDX] & 1 << 8;
 }
 
@@ -664,7 +665,7 @@ bool is_tsc_usable(void) {
 uint64_t get_tsc_hz(void) {
     uint32_t words[CPUID_WORD_NUM];
 
-    _PalCpuIdRetrieve(CPUID_LEAF_TSC_FREQ, 0, words);
+    _PalCpuIdRetrieve(TSC_FREQ_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX] || !words[CPUID_WORD_EBX]) {
         /* TSC/core crystal clock ratio is not enumerated, can't use RDTSC for accurate time */
         return 0;
@@ -680,7 +681,7 @@ uint64_t get_tsc_hz(void) {
     /* some Intel CPUs do not report nominal frequency of crystal clock, let's calculate it
      * based on Processor Frequency Information Leaf (CPUID 16H); this leaf always exists if
      * TSC Frequency Leaf exists; logic is taken from Linux 5.11's arch/x86/kernel/tsc.c */
-    _PalCpuIdRetrieve(CPUID_LEAF_PROC_FREQ, 0, words);
+    _PalCpuIdRetrieve(PROC_FREQ_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX]) {
         /* processor base frequency (in MHz) is not enumerated, can't calculate frequency */
         return 0;

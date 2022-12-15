@@ -11,6 +11,7 @@
 #include <linux/fs.h>
 
 #include "asan.h"
+#include "cpu.h"
 #include "debug_map.h"
 #include "etc_host_info.h"
 #include "gdb_integration/sgx_gdb.h"
@@ -1137,6 +1138,31 @@ static void setup_asan(void) {
 }
 #endif
 
+static int verify_hw_requirements(char* envp[]) {
+    uint64_t at_hwcap2;
+    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) != 0 || !(at_hwcap2 & 0x2)) {
+        log_error("Gramine with Linux-SGX backend requires support for FSGSBASE CPU instructions "
+                  "in the host kernel. Please update your system.");
+        return -EINVAL;
+    }
+
+    unsigned int values[4];
+    cpuid(FEATURE_FLAGS_LEAF, /*unused*/0, values);
+    const char* missing = NULL;
+    if (!(values[CPUID_WORD_ECX] & (1 << 25)))
+        missing = "AES-NI";
+    else if (!(values[CPUID_WORD_ECX] & (1 << 26)))
+        missing = "XSAVE";
+    else if (!(values[CPUID_WORD_ECX] & (1 << 30)))
+        missing = "RDRAND";
+    if (missing) {
+        log_error("Gramine with Linux-SGX backend requires %s CPU instruction(s). "
+                  "Please upgrade your hardware.", missing);
+        return -EINVAL;
+    }
+    return 0;
+}
+
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
@@ -1160,7 +1186,6 @@ int main(int argc, char* argv[], char* envp[]) {
     static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
     probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
 
-
     if (argc < 4)
         print_usage_and_exit(argv[0]);
 
@@ -1171,12 +1196,9 @@ int main(int argc, char* argv[], char* envp[]) {
         return -ENOMEM;
     }
 
-    uint64_t at_hwcap2;
-    if (get_aux_value(envp, AT_HWCAP2, &at_hwcap2) != 0 || !(at_hwcap2 & 0x2)) {
-        log_error("Gramine with Linux-SGX backend requires support for FSGSBASE CPU instructions "
-                  "in the host kernel. Please update your system.");
-        return -EINVAL;
-    }
+    ret = verify_hw_requirements(envp);
+    if (ret < 0)
+        return ret;
 
     g_libpal_path = strdup(argv[1]);
     if (!g_libpal_path) {
@@ -1252,6 +1274,7 @@ int main(int argc, char* argv[], char* envp[]) {
                        reserved_mem_ranges, reserved_mem_ranges_size);
     if (ret < 0) {
         log_error("load_enclave() failed with error: %s", unix_strerror(ret));
+        return ret;
     }
     return 0;
 }
