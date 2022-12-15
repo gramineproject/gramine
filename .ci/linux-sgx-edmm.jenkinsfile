@@ -6,6 +6,11 @@ node('sgx-edmm') {
     env.EDMM = '1'
 
     load '.ci/lib/config-docker.jenkinsfile'
+
+    env.DOCKER_ARGS_SGX += '''
+        --volume=/usr/include/x86_64-linux-gnu/asm/sgx.h:/usr/include/asm/sgx.h:ro
+    '''
+
     docker.build(
         "local:${env.BUILD_TAG}",
         '-f .ci/ubuntu20.04.dockerfile .'
