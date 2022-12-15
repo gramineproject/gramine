@@ -119,8 +119,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     sgx_quote_t* quote;
     size_t quote_size;
     ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
-    if (ret < 0)
+    if (ret < 0) {
+        ERROR("extract_quote_and_verify_pubkey failed: %d\n", ret);
         goto out;
+    }
 
     /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
     bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
@@ -129,6 +131,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     /* call into libsgx_dcap_quoteverify to get supplemental data size */
     ret = sgx_qv_get_quote_supplemental_data_size(&supplemental_data_size);
     if (ret) {
+        ERROR("sgx_qv_get_quote_supplemental_data_size failed: %d\n", ret);
         ret = MBEDTLS_ERR_X509_FATAL_ERROR;
         goto out;
     }
@@ -154,6 +157,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
                               /*p_qve_report_info=*/NULL, supplemental_data_size,
                               supplemental_data);
     if (ret) {
+        ERROR("sgx_qv_verify_quote failed: %d\n", ret);
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
     }
