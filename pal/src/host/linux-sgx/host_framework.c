@@ -108,7 +108,7 @@ int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
 
 bool is_wrfsbase_supported(void) {
     uint32_t cpuinfo[4];
-    cpuid(7, 0, cpuinfo);
+    cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0, cpuinfo);
 
     if (!(cpuinfo[1] & 0x1)) {
         log_error(

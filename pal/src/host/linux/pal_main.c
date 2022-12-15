@@ -123,6 +123,25 @@ static void setup_asan(void) {
 }
 #endif
 
+static int verify_hw_requirements(void) {
+    unsigned int values[4];
+    cpuid(FEATURE_FLAGS_LEAF, /*unused*/0, values);
+    const char* missing = NULL;
+    if (!(values[CPUID_WORD_ECX] & (1 << 25)))
+        /* Technically we could change Gramine to require it only on PAL/Linux-SGX, but then we'd
+         * need to ship two different builds of mbedtls (the one for SGX has to have software AES
+         * implementation removed). */
+        missing = "AES-NI";
+    else if (!(values[CPUID_WORD_ECX] & (1 << 26)))
+        missing = "XSAVE";
+    if (missing) {
+        log_error("Gramine with Linux backend requires %s CPU instruction(s). "
+                  "Please upgrade your hardware.", missing);
+        return -EINVAL;
+    }
+    return 0;
+}
+
 /* Gramine uses GCC's stack protector that looks for a canary at gs:[0x8], but this function starts
  * with no TCB in the GS register, so we disable stack protector here */
 __attribute_no_stack_protector
@@ -189,6 +208,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* Now that we have `argv`, set name for PAL map */
     set_pal_binary_name(argv[0]);
+
+    ret = verify_hw_requirements();
+    if (ret < 0)
+        INIT_FAIL("verify_hw_requirements() failed");
 
     // Are we the first in this Gramine's namespace?
     bool first_process = !strcmp(argv[2], "init");
@@ -290,7 +313,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * allows us to catch "syscall" instructions. See "pal_exception.c" for more details.
      */
     uint32_t cpuid_7_0_values[4] = { 0 };
-    cpuid(7, 0, cpuid_7_0_values);
+    cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0, cpuid_7_0_values);
     if (cpuid_7_0_values[CPUID_WORD_ECX] & (1u << 16)) {
         /*
          * `LA57` bit is set - CPU supports 5-level paging - we cannot use VDSO.

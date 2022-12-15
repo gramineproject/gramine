@@ -59,7 +59,7 @@ void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
 void init_child_process(int parent_stream_fd, PAL_HANDLE* parent, char** manifest_out,
                         uint64_t* instance_id);
 
-void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[]);
+void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]);
 int block_async_signals(bool block);
 void signal_setup(bool is_first_process, uintptr_t vdso_start, uintptr_t vdso_end);
 

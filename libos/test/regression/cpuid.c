@@ -37,6 +37,19 @@ static void cpuid(uint32_t leaf, uint32_t subleaf, struct regs* r) {
                      : "0"(leaf), "2"(subleaf));
 }
 
+static const char* bool_to_str(bool x) {
+    return x ? "true" : "false";
+}
+
+static void print_features_status(void) {
+    struct regs r = {0};
+
+    cpuid(/*leaf=*/1, /*ignored*/0, &r);
+    printf("AESNI support: %s\n", bool_to_str((r.ecx >> 25) & 1));
+    printf("XSAVE support: %s\n", bool_to_str((r.ecx >> 26) & 1));
+    printf("RDRAND support: %s\n", bool_to_str((r.ecx >> 30) & 1));
+}
+
 static void test_cpuid_leaf_0xd(void) {
     struct regs r = {0, };
 
@@ -153,6 +166,7 @@ static void test_cpuid_leaf_not_recognized(void) {
 }
 
 int main(int argc, char** argv, char** envp) {
+    print_features_status();
     test_cpuid_leaf_0xd();
     test_cpuid_leaf_reserved();
     test_cpuid_leaf_not_recognized();

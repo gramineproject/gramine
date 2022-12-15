@@ -294,25 +294,25 @@ int libos_get_cpu_flags(char** out_cpu_flags) {
         goto out_err;
     }
 
-    RETRIEVE_CPUID(0, 0);
+    RETRIEVE_CPUID(CPU_VENDOR_LEAF, 0);
     unsigned int max_supported_cpuid_leaf = words[CPUID_WORD_EAX];
 
     /* Intel-defined flags: level 0x1 */
-    RETRIEVE_CPUID(1, 0);
+    RETRIEVE_CPUID(FEATURE_FLAGS_LEAF, 0);
 
     EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_ecx, CPUID_WORD_ECX);
     EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_1_edx, CPUID_WORD_EDX);
 
     /* Thermal and Power Management Leaf: level 0x6 (eax) */
     if (max_supported_cpuid_leaf >= 6) {
-        RETRIEVE_CPUID(6, 0);
+        RETRIEVE_CPUID(THERMAL_AND_POWER_INFO_LEAF, 0);
 
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_6_eax, CPUID_WORD_EAX);
     }
 
     /* Additional Intel-defined flags: level 0x7 */
     if (max_supported_cpuid_leaf >= 7) {
-        RETRIEVE_CPUID(7, 0);
+        RETRIEVE_CPUID(EXTENDED_FEATURE_FLAGS_LEAF, 0);
 
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_0_ebx, CPUID_WORD_EBX);
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_0_ecx, CPUID_WORD_ECX);
@@ -320,25 +320,25 @@ int libos_get_cpu_flags(char** out_cpu_flags) {
 
         /* `words[CPUID_WORD_EAX]` holds the max supported subleaf */
         if (words[CPUID_WORD_EAX] >= 1) {
-            RETRIEVE_CPUID(7, 1);
+            RETRIEVE_CPUID(EXTENDED_FEATURE_FLAGS_LEAF, 1);
 
             EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_7_1_eax, CPUID_WORD_EAX);
         }
     }
 
     /* Extended state features: level 0xd */
-    if (max_supported_cpuid_leaf >= 0xd) {
-        RETRIEVE_CPUID(0xd, 1);
+    if (max_supported_cpuid_leaf >= EXTENDED_STATE_LEAF) {
+        RETRIEVE_CPUID(EXTENDED_STATE_LEAF, 1);
 
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_d_1_eax, CPUID_WORD_EAX);
     }
 
-    RETRIEVE_CPUID(0x80000000, 0);
+    RETRIEVE_CPUID(MAX_INPUT_EXT_VALUE_LEAF, 0);
     unsigned int max_supported_extended_cpuid_leaf = words[CPUID_WORD_EAX];
 
     /* Extended processor info and feature flags: level 0x80000001 */
-    if (max_supported_extended_cpuid_leaf >= 0x80000001) {
-        RETRIEVE_CPUID(0x80000001, 0);
+    if (max_supported_extended_cpuid_leaf >= EXT_SIGNATURE_AND_FEATURES_LEAF) {
+        RETRIEVE_CPUID(EXT_SIGNATURE_AND_FEATURES_LEAF, 0);
 
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_ecx, CPUID_WORD_ECX);
         EXTEND_CAP_FLAGS(g_cpu_flags_cpuid_8000_0001_edx, CPUID_WORD_EDX);
