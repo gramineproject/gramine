@@ -15,6 +15,7 @@ cp -ar "$VENDOR_SOURCE_DIR" "$PRIVATE_DIR"
 cp "$CURRENT_SOURCE_DIR"/include/mbedtls/*.h "$PRIVATE_DIR"/include/mbedtls/
 patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/gramine.patch
 patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/fcntl.patch
+patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/enforce-aes-ni.patch
 
 make -C "$PRIVATE_DIR" lib SUFFIX="''" install DESTDIR="$SUBPROJ_ROOT"/mbedtls-curl
 
