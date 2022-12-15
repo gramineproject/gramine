@@ -20,6 +20,7 @@ fs.mounts = [
 ]
 
 sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.remote_attestation = "{{ ra_type }}"
 sgx.ra_client_spid = "{{ ra_client_spid }}"

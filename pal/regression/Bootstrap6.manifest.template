@@ -6,5 +6,6 @@ loader.log_level = "debug"
 sgx.enclave_size = "8192M"
 sgx.nonpie_binary = true
 sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [ "file:{{ binary_dir }}/{{ entrypoint }}" ]
