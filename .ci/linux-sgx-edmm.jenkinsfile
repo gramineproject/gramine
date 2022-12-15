@@ -2,6 +2,7 @@ node('sgx-edmm') {
     checkout scm
 
     env.SGX = '1'
+    env.SGX_DRIVER = 'upstream'
     env.EDMM = '1'
 
     load '.ci/lib/config-docker.jenkinsfile'
