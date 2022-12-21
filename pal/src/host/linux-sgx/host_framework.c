@@ -387,7 +387,7 @@ int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
                 continue;
             }
             log_error("%s: SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS failed: %d(%llu)", __func__, ret,
-                      params.result);
+                      (unsigned long long)params.result);
             return ret;
         }
     }
@@ -413,7 +413,7 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
                 continue;
             }
             log_error("%s: SGX_IOC_ENCLAVE_MODIFY_TYPES failed: %d(%llu)", __func__, ret,
-                      params.result);
+                      (unsigned long long)params.result);
             return ret;
         }
     }
