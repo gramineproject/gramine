@@ -368,7 +368,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     return 0;
 }
 
-int edmm_restrict_pages_perms(uint64_t addr, size_t count, uint64_t prot) {
+int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
     assert(addr >= g_pal_enclave.baseaddr);
     size_t offset = 0;
     size_t size = count * PAGE_SIZE;
@@ -386,11 +386,8 @@ int edmm_restrict_pages_perms(uint64_t addr, size_t count, uint64_t prot) {
             if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
                 continue;
             }
-            if (ret == -EFAULT) {
-                /* Skip inaccessible pages in case `[addr; addr + size)` range is not continuous. */
-                offset += PAGE_SIZE;
-                continue;
-            }
+            log_error("%s: SGX_IOC_ENCLAVE_RESTRICT_PERMISSIONS failed: %d(%llu)", __func__, ret,
+                      params.result);
             return ret;
         }
     }
@@ -415,10 +412,8 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
             if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
                 continue;
             }
-            if (ret == -EFAULT) {
-                i += 1;
-                continue;
-            }
+            log_error("%s: SGX_IOC_ENCLAVE_MODIFY_TYPES failed: %d(%llu)", __func__, ret,
+                      params.result);
             return ret;
         }
     }
@@ -440,10 +435,6 @@ int edmm_remove_pages(uint64_t addr, size_t count) {
         i += params.count / PAGE_SIZE;
         if (ret < 0) {
             if (ret == -EBUSY || ret == -EAGAIN || ret == -EINTR) {
-                continue;
-            }
-            if (ret == -EPERM) {
-                i += 1;
                 continue;
             }
             return ret;

@@ -26,7 +26,7 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_add_pages((uintptr_t)addr, size / PAGE_SIZE, PAL_TO_SGX_PROT(prot));
+        int ret = sgx_edmm_add_pages((uint64_t)addr, size / PAGE_SIZE, PAL_TO_SGX_PROT(prot));
         if (ret < 0) {
             return ret;
         }

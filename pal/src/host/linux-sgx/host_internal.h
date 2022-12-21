@@ -74,7 +74,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token);
 int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, unsigned long size,
                          enum sgx_page_type type, int prot, bool skip_eextend, const char* comment);
 
-int edmm_restrict_pages_perms(uint64_t addr, size_t count, uint64_t prot);
+int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int edmm_remove_pages(uint64_t addr, size_t count);
 

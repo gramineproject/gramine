@@ -745,7 +745,7 @@ static long sgx_ocall_edmm_remove_pages(void* _args) {
 
 static long sgx_ocall_edmm_restrict_pages_perm(void* _args) {
     struct ocall_edmm_restrict_pages_perm* args = _args;
-    return edmm_restrict_pages_perms(args->addr, args->count, args->prot);
+    return edmm_restrict_pages_perm(args->addr, args->count, args->prot);
 }
 
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {

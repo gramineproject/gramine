@@ -422,9 +422,10 @@ int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t 
 /*!
  * \brief Unmap virtual memory that is backed by a file stream.
  *
- * `addr` and `size` must be aligned at the allocation alignment.
- *
  * \returns 0 on success, negative error code on failure.
+ *
+ * `addr` and `size` must be aligned at the allocation alignment.
+ * `[addr; addr+size)` must a continuous memory range without any holes.
  */
 int PalStreamUnmap(void* addr, size_t size);
 
