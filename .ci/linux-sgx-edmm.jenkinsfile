@@ -4,6 +4,7 @@ node('sgx-edmm') {
     env.SGX = '1'
     env.SGX_DRIVER = 'upstream'
     env.EDMM = '1'
+    env.RA_TYPE = 'dcap'
 
     load '.ci/lib/config-docker.jenkinsfile'
 
