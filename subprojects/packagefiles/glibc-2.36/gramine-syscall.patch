@@ -1,8 +1,8 @@
 diff --git a/Makerules b/Makerules
-index 5de2cec6be472729135c4d415fa4111cdcbea5d8..65dc72a8c4b06dfc2e489901b6f577a51fb541c2 100644
+index d1e139d03c1c448e14aee35af3e54ee7abe2180c..3f3d8739d3419804b35d00a69cab5538ec60f74e 100644
 --- a/Makerules
 +++ b/Makerules
-@@ -826,7 +826,7 @@ verbose	:=
+@@ -818,7 +818,7 @@ verbose	:=
  endif						# not -s
  
  ARFLAGS := r$(verbose)
@@ -12,10 +12,10 @@ index 5de2cec6be472729135c4d415fa4111cdcbea5d8..65dc72a8c4b06dfc2e489901b6f577a5
  # This makes all the object files in the parent library archive.
  
 diff --git a/elf/Makefile b/elf/Makefile
-index 5bdf0a383d6b957a7f2db67fb9b54b53797889cd..abda6dd1e50722adbe150c7426ad029030e50ad1 100644
+index fd77d0c7c8799c336c65278f6f8e939ed8707633..6fc16b46d041f2c80f3995be183644d276e8a294 100644
 --- a/elf/Makefile
 +++ b/elf/Makefile
-@@ -1198,7 +1198,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
+@@ -1310,7 +1310,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
  # For lld, skip preceding addresses and values before matching the archive and the member.
  $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
  	LC_ALL=C \
@@ -24,8 +24,8 @@ index 5bdf0a383d6b957a7f2db67fb9b54b53797889cd..abda6dd1e50722adbe150c7426ad0290
  	    $< | \
  	while read lib file; do \
  	  case $$lib in \
-@@ -1206,7 +1206,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
- 	    LC_ALL=C fgrep -l /$$file \
+@@ -1318,7 +1318,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
+ 	    LC_ALL=C grep -F -l /$$file \
  		  $(common-objpfx)stamp.os $(common-objpfx)*/stamp.os | \
  	    LC_ALL=C \
 -	    sed 's@^$(common-objpfx)\([^/]*\)/stamp\.os$$@rtld-\1'" +=$$file@"\
@@ -34,7 +34,7 @@ index 5bdf0a383d6b957a7f2db67fb9b54b53797889cd..abda6dd1e50722adbe150c7426ad0290
  	  */*.a) \
  	    echo rtld-$${lib%%/*} += $$file ;; \
 diff --git a/elf/dl-load.c b/elf/dl-load.c
-index 5b0ff41ee13c9295db55af8ac55306bc97118788..e113a01d33e17d693c0e54c4b67dd6f56b98a31a 100644
+index 1ad0868dad809d56c7ecced65ce482af4982abc9..8c4eae155754d7d9b140fcb838b8b74df6db0368 100644
 --- a/elf/dl-load.c
 +++ b/elf/dl-load.c
 @@ -76,6 +76,8 @@ struct filebuf
@@ -46,7 +46,7 @@ index 5b0ff41ee13c9295db55af8ac55306bc97118788..e113a01d33e17d693c0e54c4b67dd6f5
  #include <endian.h>
  #if BYTE_ORDER == BIG_ENDIAN
  # define byteorder ELFDATA2MSB
-@@ -1480,6 +1482,8 @@ cannot enable executable stack as shared object requires");
+@@ -1490,6 +1492,8 @@ cannot enable executable stack as shared object requires");
    DL_AFTER_LOAD (l);
  #endif
  
@@ -209,7 +209,7 @@ index 192455a89883fc815ecb58677c0da6a7bb4583fa..4041fb7d9b73fc9743666f19ed33bb74
  	jae SYSCALL_ERROR_LABEL	/* Jump to error handler if error.  */
  	ret			/* Return to caller.  */
 diff --git a/sysdeps/unix/sysv/linux/x86_64/sysdep.h b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
-index e1ce3b62eb21acb9dafdf668fbdbefb1258f4a55..1676db8bffc3c90a2f8e5992fed939becdcaf14d 100644
+index 740abefcfd3612928bdd42c605ebdcf341d76667..4a675bd1ed886fa0b0c585356a4fb6194c07d2ed 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 +++ b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 @@ -26,6 +26,8 @@
