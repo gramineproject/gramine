@@ -72,7 +72,7 @@ sgx.enclave_size = "1024M"
 
 # Enable Enclave Dynamic Memory Management (EDMM) feature based on EDMM
 # environment variable. This allows for addition of pages to enclave in runtime,
-# instead of alocating them upfront at startup. If this is enabled,
+# instead of allocating them upfront at startup. If this is enabled,
 # `sgx.enclave_size` above describes a maximal enclave size and can usually be
 # increased without negative consequences.
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
