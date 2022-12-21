@@ -299,7 +299,7 @@ subdir('python')
 subdir('tools')
 
 if enable_glibc
-    subproject('glibc-2.35-1')
+    subproject('glibc-2.36-1')
 endif
 if enable_musl
     subproject('musl-1.2.2')
