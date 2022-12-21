@@ -1,4 +1,8 @@
 stage('test-sgx') {
+    if (env.RA_TYPE == null) {
+        env.RA_TYPE = 'epid'
+    }
+
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/helloworld
@@ -9,7 +13,7 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/python
-            make ${MAKEOPTS} RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid}
+            make ${MAKEOPTS} RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid}
             make ${MAKEOPTS} check
         '''
     }
@@ -100,28 +104,43 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/ra-tls-mbedtls
-            if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
-            then \
-                make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
-                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
-                make check_epid_fail RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
-                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
-            else \
-                echo "Failure: no ra_client_spid and/or ra_client_key!"; \
-                exit 1; \
+            if [ "${RA_TYPE}" == "epid" ]; then
+                if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
+                then \
+                    make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                    make check_epid_fail RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                else \
+                    echo "Failure: no ra_client_spid and/or ra_client_key!"; \
+                    exit 1; \
+                fi
+            elif [ "${RA_TYPE}" == "dcap" ]; then
+                make check_dcap RA_TYPE=dcap;
+                make check_dcap_fail RA_TYPE=dcap;
+            else
+                echo "Invalid RA_TYPE env varible: ${RA_TYPE}";
+                exit 1;
             fi
         '''
     }
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/ra-tls-secret-prov
-            if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
-            then \
-                make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
-                    RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
-            else \
-                echo "Failure: no ra_client_spid and/or ra_client_key!"; \
-                exit 1; \
+            if [ "${RA_TYPE}" == "epid" ]; then
+                if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
+                then \
+                    make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                else \
+                    echo "Failure: no ra_client_spid and/or ra_client_key!"; \
+                    exit 1; \
+                fi
+            elif [ "${RA_TYPE}" == "dcap" ]; then
+                make check_dcap RA_TYPE=dcap;
+            else
+                echo "Invalid RA_TYPE env varible: ${RA_TYPE}";
+                exit 1;
             fi
         '''
     }

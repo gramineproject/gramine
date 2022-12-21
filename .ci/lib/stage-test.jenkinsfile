@@ -1,4 +1,8 @@
 stage('test') {
+    if (env.RA_TYPE == null) {
+        env.RA_TYPE = 'epid'
+    }
+
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
@@ -15,7 +19,7 @@ stage('test') {
         try {
             sh '''
                 cd libos/test/regression
-                RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
+                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {
@@ -31,7 +35,7 @@ stage('test') {
                     cd libos/test/regression
                     # For some unknown reason it fails without this clean on sgx-18.04 pipeline
                     gramine-test clean
-                    RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                    RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
                         gramine-test -n tests_musl.toml build -v
                     python3 -m pytest -v --junit-xml libos-regression-musl.xml
                 '''
