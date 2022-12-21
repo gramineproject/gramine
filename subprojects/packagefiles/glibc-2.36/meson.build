@@ -1,4 +1,4 @@
-project('glibc', 'c', version: '2.35')
+project('glibc', 'c', version: '2.36')
 
 fs = import('fs')
 
@@ -60,7 +60,7 @@ glibc = custom_target('glibc',
         find_program('compile.sh'),
         host_machine.cpu_family(),
         '@CURRENT_SOURCE_DIR@',
-        '@CURRENT_SOURCE_DIR@/glibc-2.35',
+        '@CURRENT_SOURCE_DIR@/glibc-2.36',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         get_option('prefix'),
@@ -70,9 +70,9 @@ glibc = custom_target('glibc',
     ],
 
     input: [
-        'glibc-2.35/configure',
-        'glibc-2.35.patch',
-        'hp-timing-2.35.patch',
+        'glibc-2.36/configure',
+        'gramine-syscall.patch',
+        'hp-timing.patch',
     ],
 
     output: glibc_output,
