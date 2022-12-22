@@ -1,5 +1,9 @@
 FROM ubuntu:20.04
 
+# Needed by "CI-Examples/ra-tls-mbedtls"
+RUN curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
+
 # Add steps here to set up dependencies
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     autoconf \
@@ -29,6 +33,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libpcre2-dev \
     libpcre3-dev \
     libprotobuf-c-dev \
+    libsgx-urts \
     libssl-dev \
     libunwind8 \
     libxfixes3 \
