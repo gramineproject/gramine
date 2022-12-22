@@ -658,14 +658,11 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             }
 
             uint32_t this_item_events = 0;
-            if (pal_ret_events[i] & PAL_WAIT_ERR) {
+            if (pal_ret_events[i] & PAL_WAIT_ERROR) {
                 this_item_events |= EPOLLERR;
             }
             if (pal_ret_events[i] & PAL_WAIT_HUP) {
                 this_item_events |= EPOLLHUP;
-            }
-            if (pal_ret_events[i] & PAL_WAIT_NVAL) {
-                this_item_events |= EPOLLNVAL;
             }
             if (pal_ret_events[i] & PAL_WAIT_RDHUP) {
                 this_item_events |= EPOLLRDHUP;

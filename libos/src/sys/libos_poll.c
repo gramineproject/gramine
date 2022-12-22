@@ -177,12 +177,10 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
         /* update fds.revents, but only if something was actually polled */
         if (polled) {
             fds[i].revents = 0;
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_ERR)
+            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_ERROR)
                 fds[i].revents |= POLLERR;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_HUP)
                 fds[i].revents |= POLLHUP;
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_NVAL)
-                fds[i].revents |= POLLNVAL;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_RDHUP)
                 fds[i].revents |= POLLRDHUP;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_READ)

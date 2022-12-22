@@ -95,11 +95,9 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
         if (fds[i].revents & (POLLERR | POLLHUP | POLLNVAL | POLLRDHUP))
             handle->flags |= PAL_HANDLE_FD_ERROR;
         if (fds[i].revents & POLLERR)
-            ret_events[i] |= PAL_WAIT_ERR;
+            ret_events[i] |= PAL_WAIT_ERROR;
         if (fds[i].revents & POLLHUP)
             ret_events[i] |= PAL_WAIT_HUP;
-        if (fds[i].revents & POLLNVAL)
-            ret_events[i] |= PAL_WAIT_NVAL;
         if ((fds[i].revents & POLLRDHUP) && handle->hdr.type == PAL_TYPE_SOCKET)
             ret_events[i] |= PAL_WAIT_RDHUP;
     }

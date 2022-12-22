@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -151,7 +152,7 @@ static void test_epoll_empty(void) {
     CHECK(close(epfd));
 }
 
-static void server(int pipefd) {
+static void server(int sockfd) {
     int epfd = CHECK(epoll_create1(EPOLL_CLOEXEC));
 
     int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
@@ -169,7 +170,7 @@ static void server(int pipefd) {
     CHECK(listen(s, 5));
 
     char c = 0;
-    ssize_t x = CHECK(write(pipefd, &c, sizeof(c)));
+    ssize_t x = CHECK(write(sockfd, &c, sizeof(c)));
     if (x != 1) {
         CHECK(-1);
     }
@@ -184,20 +185,14 @@ static void server(int pipefd) {
     };
     CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, client, &event));
 
-    memset(&event, 0, sizeof(event));
-    int r = CHECK(epoll_wait(epfd, &event, 1, 1));
-    if (r != 0) {
-        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
-    }
-
-    x = CHECK(write(pipefd, &c, sizeof(c)));
+    x = CHECK(read(sockfd, &c, sizeof(c)));
     if (x != 1) {
         CHECK(-1);
     }
-    CHECK(close(pipefd));
+    CHECK(close(sockfd));
 
     memset(&event, 0, sizeof(event));
-    r = CHECK(epoll_wait(epfd, &event, 1, 1));
+    int r = CHECK(epoll_wait(epfd, &event, 1, 0));
     if (r != 1 || event.events != (EPOLLIN | EPOLLRDHUP) || event.data.fd != client) {
         ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
     }
@@ -206,9 +201,9 @@ static void server(int pipefd) {
     CHECK(close(epfd));
 }
 
-static void client(int pipefd) {
+static void client(int sockfd) {
     char c = 0;
-    ssize_t x = CHECK(read(pipefd, &c, sizeof(c)));
+    ssize_t x = CHECK(read(sockfd, &c, sizeof(c)));
     if (x != 1) {
         CHECK(-1);
     }
@@ -229,28 +224,28 @@ static void client(int pipefd) {
 
     CHECK(connect(s, (void*)&sa, sizeof(sa)));
 
-    x = CHECK(read(pipefd, &c, sizeof(c)));
+    CHECK(close(s));
+
+    x = CHECK(write(sockfd, &c, sizeof(c)));
     if (x != 1) {
         CHECK(-1);
     }
-    CHECK(close(pipefd));
-
-    CHECK(close(s));
+    CHECK(close(sockfd));
 }
 
 static void test_epoll_wait_rdhup(void) {
-    int pipefds[2];
-    CHECK(pipe(pipefds));
+    int sockfds[2];
+    CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, sockfds));
 
     pid_t p = CHECK(fork());
     if (p == 0) {
-        CHECK(close(pipefds[1]));
-        client(pipefds[0]);
-        return;
+        CHECK(close(sockfds[1]));
+        client(sockfds[0]);
+        exit(0);
     }
 
-    CHECK(close(pipefds[0]));
-    server(pipefds[1]);
+    CHECK(close(sockfds[0]));
+    server(sockfds[1]);
 
     int status = 0;
     CHECK(wait(&status));
