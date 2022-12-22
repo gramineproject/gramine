@@ -3,7 +3,7 @@
  * Copyright (C) 2021 Intel Corp.
  */
 
-/* This mbedTLS config is for v3.2.1 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
+/* This mbedTLS config is for v3.3.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
 #pragma once
 
@@ -32,7 +32,6 @@
 #define MBEDTLS_NO_PLATFORM_ENTROPY
 #define MBEDTLS_NO_UDBL_DIVISION
 #define MBEDTLS_OID_C
-#define MBEDTLS_PKCS1
 #define MBEDTLS_PKCS1_V15
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_RSA_C

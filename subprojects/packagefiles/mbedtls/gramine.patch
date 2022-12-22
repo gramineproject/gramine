@@ -2,15 +2,15 @@
 # progress via issue https://github.com/ARMmbed/mbedtls/issues/3141.
 
 diff --git a/library/ssl_tls.c b/library/ssl_tls.c
-index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1ce0b527d5 100644
+index 9bb9dc23cde94a23bb71a2d421410a7cea039816..6e7926a99220e79935396cbc2b7d3f22720bf906 100644
 --- a/library/ssl_tls.c
 +++ b/library/ssl_tls.c
-@@ -3532,12 +3532,14 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
+@@ -4250,12 +4250,14 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
          MBEDTLS_SSL_DEBUG_MSG( 1, ( "There is pending outgoing data" ) );
          return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
      }
 +#if 0
-     /* Protocol must be DLTS, not TLS */
+     /* Protocol must be DTLS, not TLS */
      if( ssl->conf->transport != MBEDTLS_SSL_TRANSPORT_DATAGRAM )
      {
          MBEDTLS_SSL_DEBUG_MSG( 1, ( "Only DTLS is supported" ) );
@@ -20,7 +20,7 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
      /* Version must be 1.2 */
      if( ssl->tls_version != MBEDTLS_SSL_VERSION_TLS1_2 )
      {
-@@ -3683,6 +3685,16 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
+@@ -4401,6 +4403,16 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
      }
  #endif /* MBEDTLS_SSL_ALPN */
  
@@ -37,7 +37,7 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
      /*
       * Done
       */
-@@ -3693,7 +3705,19 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
+@@ -4411,7 +4423,19 @@ int mbedtls_ssl_context_save( mbedtls_ssl_context *ssl,
  
      MBEDTLS_SSL_DEBUG_BUF( 4, "saved context", buf, used );
  
@@ -57,7 +57,7 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
  }
  
  /*
-@@ -3728,7 +3752,10 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
+@@ -4449,7 +4473,10 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
       * We can't check that the config matches the initial one, but we can at
       * least check it matches the requirements for serializing.
       */
@@ -68,7 +68,7 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
          ssl->conf->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2 ||
          ssl->conf->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2 ||
  #if defined(MBEDTLS_SSL_RENEGOTIATION)
-@@ -3738,6 +3765,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
+@@ -4459,6 +4486,7 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
      {
          return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
      }
@@ -76,7 +76,7 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
  
      MBEDTLS_SSL_DEBUG_BUF( 4, "context to load", buf, len );
  
-@@ -3944,6 +3972,15 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
+@@ -4670,6 +4698,15 @@ static int ssl_context_load( mbedtls_ssl_context *ssl,
      ssl->in_epoch = 1;
  #endif
  
@@ -93,24 +93,25 @@ index e60b82fa5f7728203432664ba62c18630952d8bd..964e05d7a58141a4cf8e0f37974afe1c
       * which we don't want - otherwise we'd end up freeing the wrong transform
       * by calling mbedtls_ssl_handshake_wrapup_free_hs_transform()
 diff --git a/library/Makefile b/library/Makefile
-index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b073523878 100644
+index dd16d061588321952a74944a9a0e17427cd7544e..680b67b52cfe4acf686e77eb83ddfc58bcfac05e 100644
 --- a/library/Makefile
 +++ b/library/Makefile
-@@ -51,6 +51,8 @@ SOEXT_TLS=so.18
- SOEXT_X509=so.4
- SOEXT_CRYPTO=so.12
+@@ -51,6 +51,8 @@ SOEXT_TLS?=so.19
+ SOEXT_X509?=so.4
+ SOEXT_CRYPTO?=so.13
  
 +SUFFIX ?=
 +
  # Set AR_DASH= (empty string) to use an ar implementation that does not accept
  # the - prefix for command line options (e.g. llvm-ar)
  AR_DASH ?= -
-@@ -191,9 +193,10 @@ else
+@@ -199,10 +201,11 @@ else
  all: shared static
  endif
  
 -static: libmbedcrypto.a libmbedx509.a libmbedtls.a
 +static: libmbedcrypto$(SUFFIX).a libmbedx509$(SUFFIX).a libmbedtls$(SUFFIX).a
+ 	cd ../tests && echo "This is a seedfile that contains 64 bytes (65 on Windows)......" > seedfile
  
 -shared: libmbedcrypto.$(DLEXT) libmbedx509.$(DLEXT) libmbedtls.$(DLEXT)
 +shared: libmbedcrypto$(SUFFIX).$(DLEXT) libmbedx509$(SUFFIX).$(DLEXT) libmbedtls$(SUFFIX).$(DLEXT) \
@@ -118,7 +119,7 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  
  # Windows builds under Mingw can fail if make tries to create archives in the same
  # directory at the same time - see https://bugs.launchpad.net/gcc-arm-embedded/+bug/1848002.
-@@ -204,7 +207,7 @@ libmbedx509.a: | libmbedcrypto.a
+@@ -213,7 +216,7 @@ libmbedx509.a: | libmbedcrypto.a
  endif
  
  # tls
@@ -127,7 +128,7 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  	echo "  AR    $@"
  	$(AR) $(ARFLAGS) $@ $(OBJS_TLS)
  ifdef APPLE_BUILD
-@@ -214,11 +217,11 @@ ifneq ($(APPLE_BUILD),0)
+@@ -223,12 +226,12 @@ ifneq ($(APPLE_BUILD),0)
  endif
  endif
  
@@ -137,12 +138,13 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
 -	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509 -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS)
 +	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_TLS) -L. -lmbedx509$(SUFFIX) -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
+ ifneq ($(SOEXT_TLS),so)
 -libmbedtls.so: libmbedtls.$(SOEXT_TLS)
 +libmbedtls%.so: libmbedtls%.$(SOEXT_TLS)
  	echo "  LN    $@ -> $<"
  	ln -sf $< $@
- 
-@@ -231,7 +234,7 @@ libmbedtls.dll: $(OBJS_TLS) libmbedx509.dll
+ endif
+@@ -242,7 +245,7 @@ libmbedtls.dll: $(OBJS_TLS) libmbedx509.dll
  	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_TLS) -lws2_32 -lwinmm -lgdi32 -L. -lmbedx509 -lmbedcrypto -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
  
  # x509
@@ -151,7 +153,7 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  	echo "  AR    $@"
  	$(AR) $(ARFLAGS) $@ $(OBJS_X509)
  ifdef APPLE_BUILD
-@@ -241,11 +244,11 @@ ifneq ($(APPLE_BUILD),0)
+@@ -252,12 +255,12 @@ ifneq ($(APPLE_BUILD),0)
  endif
  endif
  
@@ -161,12 +163,13 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
 -	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_X509) -L. -lmbedcrypto $(LOCAL_LDFLAGS) $(LDFLAGS)
 +	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_X509) -L. -lmbedcrypto$(SUFFIX) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
+ ifneq ($(SOEXT_X509),so)
 -libmbedx509.so: libmbedx509.$(SOEXT_X509)
 +libmbedx509%.so: libmbedx509%.$(SOEXT_X509)
  	echo "  LN    $@ -> $<"
  	ln -sf $< $@
- 
-@@ -258,7 +261,7 @@ libmbedx509.dll: $(OBJS_X509) libmbedcrypto.dll
+ endif
+@@ -271,7 +274,7 @@ libmbedx509.dll: $(OBJS_X509) libmbedcrypto.dll
  	$(CC) -shared -Wl,-soname,$@ -Wl,--out-implib,$@.a -o $@ $(OBJS_X509) -lws2_32 -lwinmm -lgdi32 -L. -lmbedcrypto -static-libgcc $(LOCAL_LDFLAGS) $(LDFLAGS)
  
  # crypto
@@ -175,7 +178,7 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  	echo "  AR    $@"
  	$(AR) $(ARFLAGS) $@ $(OBJS_CRYPTO)
  ifdef APPLE_BUILD
-@@ -268,11 +271,11 @@ ifneq ($(APPLE_BUILD),0)
+@@ -281,12 +284,12 @@ ifneq ($(APPLE_BUILD),0)
  endif
  endif
  
@@ -184,8 +187,10 @@ index f5ff474ecce8c4cb89ac5c82a200b827e5690c15..051a841d493a6d20439b1613db8d76b0
  	echo "  LD    $@"
  	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJS_CRYPTO) $(LOCAL_LDFLAGS) $(LDFLAGS)
  
+ ifneq ($(SOEXT_CRYPTO),so)
 -libmbedcrypto.so: libmbedcrypto.$(SOEXT_CRYPTO)
 +libmbedcrypto%.so: libmbedcrypto%.$(SOEXT_CRYPTO)
  	echo "  LN    $@ -> $<"
  	ln -sf $< $@
+ endif
  
