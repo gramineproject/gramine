@@ -5,13 +5,9 @@
 
 /*
  * This is the configuration for Gramine's userspace build of mbedtls. It overrides the default
- * `mbedtls/config.h`.
+ * `mbedtls/mbedtls_config.h`.
  */
 
 #pragma once
 
 #include "mbedtls/mbedtls_config.h"
-
-#define MBEDTLS_CMAC_C
-
-#include "mbedtls/check_config.h"

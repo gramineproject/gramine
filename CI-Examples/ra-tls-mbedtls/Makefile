@@ -43,12 +43,12 @@ ssl/server.crt: ssl/ca_config.conf
 # (`pkg-config --cflags mbedtls_gramine` in the below CFLAGS line returns a non-existing directory).
 # TODO: install mbedtls_gramine headers during Gramine install, and use them in below CFLAGS line.
 
-MBEDTLS_VERSION ?= 3.2.1
+MBEDTLS_VERSION ?= 3.3.0
 MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
 MBEDTLS_URI ?= \
 	https://github.com/ARMmbed/mbedtls/archive \
 	https://packages.gramineproject.io/distfiles
-MBEDTLS_HASH ?= 5850089672560eeaca03dc36678ee8573bb48ef6e38c94f5ce349af60c16da33
+MBEDTLS_HASH ?= a22ff38512697b9cd8472faa2ea2d35e320657f6d268def3a64765548b81c3ec
 
 ifeq ($(DEBUG),1)
 MBED_BUILD_TYPE=Debug
