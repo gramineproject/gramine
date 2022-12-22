@@ -632,16 +632,14 @@ int init_vma(void) {
                                - g_pal_public_state->memory_address_start) / 6 * 5;
         /* We do address space randomization only if we have at least ASLR_BITS to randomize. */
         if (gap_max_size / ALLOC_ALIGNMENT >= (1ul << ASLR_BITS)) {
-            size_t gap = 0;
+            size_t rnd = 0;
 
-            int ret = PalRandomBitsRead(&gap, sizeof(gap));
+            int ret = PalRandomBitsRead(&rnd, sizeof(rnd));
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
-
-            /* Resulting distribution is not ideal, but it should not be an issue here. */
-            gap = ALLOC_ALIGN_DOWN(gap % gap_max_size);
-            g_aslr_addr_top = (char*)g_aslr_addr_top - gap;
+            rnd = (rnd & ((1UL << ASLR_BITS) - 1)) * ALLOC_ALIGNMENT;
+            g_aslr_addr_top = (char*)g_aslr_addr_top - rnd;
 
             log_debug("ASLR top address adjusted to %p", g_aslr_addr_top);
         } else {
