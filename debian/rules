@@ -22,8 +22,7 @@ override_dh_clean:
 	dh_clean
 	$(MAKE) -C Documentation clean
 	rm -rf \
-		python/graminelibos/__pycache__ \
-		subprojects/packagecache
+		python/graminelibos/__pycache__
 
 SGX_DRIVER_INCLUDE_PATH_UPSTREAM = $(shell debian/get-linux-src-path.sh)/arch/x86/include/uapi
 
