@@ -23,6 +23,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     int ret;
+    char* normpath = NULL;
     assert(create != PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_DEV))
@@ -57,7 +58,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
         /* normalize uri into normpath */
         size_t normpath_size = strlen(uri) + 1;
-        char* normpath = malloc(normpath_size);
+        normpath = malloc(normpath_size);
         if (!normpath){
             ret = -PAL_ERROR_NOMEM;
             goto fail;
@@ -66,7 +67,6 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         ret = get_norm_path(uri, normpath, &normpath_size);
         if (ret < 0) {
             log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
-            free(normpath);
             ret = -PAL_ERROR_DENIED;
             goto fail;
         }
@@ -79,7 +79,6 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                               O_CLOEXEC,
                          share);
         if (ret < 0) {
-            free(normpath);
             ret = unix_to_pal_error(ret);
             goto fail;
         }
@@ -101,6 +100,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     return 0;
 fail:
     free(hdl);
+    free(normpath);
     return ret;
 }
 
