@@ -16,6 +16,9 @@ stage('build') {
     if (env.CC == 'clang') {
         env.MESON_OPTIONS += ' -Dmusl=disabled'
     }
+    if (env.RA_TYPE == 'dcap') {
+        env.MESON_OPTIONS += ' -Ddcap=enabled'
+    }
 
     if (env.SGX_DRIVER == null) {
         env.SGX_DRIVER = 'oot'

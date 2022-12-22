@@ -72,6 +72,13 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     zlib1g \
     zlib1g-dev
 
+# Needed by "CI-Examples/ra-tls-mbedtls"
+RUN curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
+RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    libsgx-dcap-quote-verify-dev \
+    libsgx-urts
+
 # Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
 RUN git clone https://github.com/giltene/wrk2.git \
     && cd wrk2 \
