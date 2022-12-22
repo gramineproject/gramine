@@ -107,7 +107,8 @@ if sgx
         conf_sgx.set('CONFIG_SGX_DRIVER_UPSTREAM', true)
         sgx_driver_header = 'asm/sgx.h'
         sgx_driver_include_path_defaults = [
-            '/usr/include/',
+            # standard /usr/include[/x86_64-linux-gnu] from linux-libc-dev
+            '',
             # Ubuntu `linux-headers` package
             '/usr/src/linux-headers-@0@/arch/x86/include/uapi'.format(
                 run_command('uname', '-r').stdout().strip()),
@@ -127,24 +128,16 @@ if sgx
 
     if sgx_driver_include_path == ''
         foreach path : sgx_driver_include_path_defaults
-            sgx_driver_header_abspath = ''
             if cc.has_header(join_paths(path, sgx_driver_header))
                 sgx_driver_include_path = path
                 break
             endif
         endforeach
-
-        if sgx_driver_include_path == ''
-            error('Invalid SGX driver configuration (-Dsgx_driver and/or ' +
-                  '-Dsgx_driver_include_path); searched for "@0@" under directories: @1@'.format(
-                      sgx_driver_header, sgx_driver_include_path_defaults))
-        endif
     endif
 
+    sgx_driver_include = join_paths(sgx_driver_include_path, sgx_driver_header)
 
-    sgx_driver_header_abspath = join_paths(sgx_driver_include_path, sgx_driver_header)
-
-    if not cc.has_header(sgx_driver_header_abspath)
+    if not cc.has_header(sgx_driver_include)
         error('Invalid SGX driver configuration (-Dsgx_driver and/or -Dsgx_driver_include_path); ' +
               'expected "@0@" to exist under "@1@"'.format(
                   sgx_driver_header, sgx_driver_include_path))
@@ -155,7 +148,7 @@ if sgx
     vtune_sdk_path = get_option('vtune_sdk_path')
   endif
 
-    conf_sgx.set('CONFIG_SGX_DRIVER_HEADER_ABSPATH', sgx_driver_header_abspath)
+    conf_sgx.set('CONFIG_SGX_DRIVER_INCLUDE', sgx_driver_include)
 endif
 
 gen_symbol_map_cmd = [

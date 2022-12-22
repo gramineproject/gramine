@@ -12,7 +12,7 @@
 #include <linux/stddef.h>
 #include <linux/types.h>
 
-#include <@CONFIG_SGX_DRIVER_HEADER_ABSPATH@>
+#include <@CONFIG_SGX_DRIVER_INCLUDE@>
 
 #mesondefine CONFIG_SGX_DRIVER_UPSTREAM
 #mesondefine CONFIG_SGX_DRIVER_OOT
