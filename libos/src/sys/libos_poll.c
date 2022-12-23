@@ -149,7 +149,7 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
         }
 
         if (fds[i].events & POLLRDHUP)
-            allowed_events |= PAL_WAIT_RDHUP;
+            allowed_events |= PAL_WAIT_HUP;
 
         get_handle(hdl);
         fds_mapping[i].hdl = hdl;
@@ -181,8 +181,6 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
                 fds[i].revents |= POLLERR;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_HUP)
                 fds[i].revents |= POLLHUP;
-            if (ret_events[fds_mapping[i].idx] & PAL_WAIT_RDHUP)
-                fds[i].revents |= POLLRDHUP;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_READ)
                 fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_WRITE)

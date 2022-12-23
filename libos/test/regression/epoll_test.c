@@ -185,6 +185,17 @@ static void server(int sockfd) {
     };
     CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, client, &event));
 
+    memset(&event, 0, sizeof(event));
+    int r = CHECK(epoll_wait(epfd, &event, 1, 0));
+    if (r != 0) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
+    }
+
+    x = CHECK(write(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+
     x = CHECK(read(sockfd, &c, sizeof(c)));
     if (x != 1) {
         CHECK(-1);
@@ -192,8 +203,8 @@ static void server(int sockfd) {
     CHECK(close(sockfd));
 
     memset(&event, 0, sizeof(event));
-    int r = CHECK(epoll_wait(epfd, &event, 1, 0));
-    if (r != 1 || event.events != (EPOLLIN | EPOLLRDHUP) || event.data.fd != client) {
+    r = CHECK(epoll_wait(epfd, &event, 1, 0));
+    if (r != 1 || event.events != (EPOLLIN | EPOLLHUP) || event.data.fd != client) {
         ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
     }
 
@@ -223,6 +234,11 @@ static void client(int sockfd) {
     }
 
     CHECK(connect(s, (void*)&sa, sizeof(sa)));
+
+    x = CHECK(read(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
 
     CHECK(close(s));
 
