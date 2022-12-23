@@ -138,14 +138,51 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             goto out_handle;
         }
         if (!(flags & MAP_FIXED_NOREPLACE)) {
-            ret = libos_syscall_munmap(addr, length);
+            /* Flush any file mappings we're about to replace */
+            ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
             if (ret < 0) {
                 goto out_handle;
             }
-        }
-        ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
-        if (ret < 0) {
-            goto out_handle;
+
+            struct libos_vma_info* vmas;
+            size_t vmas_length;
+            ret = dump_vmas_in_range((uintptr_t)addr, (uintptr_t)addr + length,
+                                     /*include_unmapped=*/false, &vmas, &vmas_length);
+            if (ret < 0) {
+                goto out_handle;
+            }
+
+            void* tmp_vma = NULL;
+            ret = bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma);
+            if (ret < 0) {
+                free_vma_info_array(vmas, vmas_length);
+                goto out_handle;
+            }
+
+            for (struct libos_vma_info* vma = vmas; vma < vmas + vmas_length; vma++) {
+                uintptr_t begin = MAX((uintptr_t)addr, (uintptr_t)vma->addr);
+                uintptr_t end = MIN((uintptr_t)vma->addr + vma->length, (uintptr_t)addr + length);
+                /* `vma` contains at least one byte from `[addr; addr + length)` range, so: */
+                assert(begin < end);
+
+                if (PalVirtualMemoryFree((void*)begin, end - begin) < 0) {
+                    BUG();
+                }
+            }
+
+            free_vma_info_array(vmas, vmas_length);
+
+            bkeep_convert_tmp_vma_to_user(tmp_vma);
+
+            ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+            if (ret < 0) {
+                BUG();
+            }
+        } else {
+            ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+            if (ret < 0) {
+                goto out_handle;
+            }
         }
     } else {
         /* We know that `addr + length` does not overflow (`access_ok` above). */

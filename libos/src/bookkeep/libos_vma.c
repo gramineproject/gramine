@@ -766,6 +766,15 @@ void bkeep_remove_tmp_vma(void* _vma) {
     free_vma(vma);
 }
 
+void bkeep_convert_tmp_vma_to_user(void* _vma) {
+    struct libos_vma* vma = (struct libos_vma*)_vma;
+
+    spinlock_lock(&vma_tree_lock);
+    assert(vma->flags == (VMA_INTERNAL | VMA_UNMAPPED));
+    vma->flags &= ~VMA_INTERNAL;
+    spinlock_unlock(&vma_tree_lock);
+}
+
 static bool is_file_prot_matching(struct libos_handle* file_hdl, int prot) {
     return !(prot & PROT_WRITE) || (file_hdl->flags & O_RDWR);
 }

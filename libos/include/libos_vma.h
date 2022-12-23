@@ -67,9 +67,13 @@ int init_vma(void);
  *
  * Such a way of freeing is needed, so that no other thread will map the same memory in the window
  * between `bkeep_munmap` and `PalVirtualMemoryFree`.
+ * `bkeep_convert_tmp_vma_to_user` can be called instead of `bkeep_remove_tmp_vma` to convert
+ * the VMA to unmapped user VMA, instead of removing it. See `MMAP_FIXED` implementation for example
+ * usage.
  */
 int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr);
 void bkeep_remove_tmp_vma(void* vma);
+void bkeep_convert_tmp_vma_to_user(void* vma);
 
 /* Bookkeeping a change to memory protections. */
 int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal);
