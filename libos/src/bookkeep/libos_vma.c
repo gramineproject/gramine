@@ -551,6 +551,7 @@ static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
 static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
 
 #define ASLR_BITS 12
+#define ASLR_SHIFT_BITS 4
 /* This variable is written to only once, during initialization, so it does not need to
  * be atomic. */
 static void* g_aslr_addr_top = NULL;
@@ -638,7 +639,12 @@ int init_vma(void) {
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
-            rnd = (rnd & ((1UL << ASLR_BITS) - 1)) * ALLOC_ALIGNMENT;
+            size_t range = MAX(((g_pal_public_state->memory_address_end
+                                - g_pal_public_state->memory_address_start) / ALLOC_ALIGNMENT)
+                               >> ASLR_SHIFT_BITS,
+                               1UL << ASLR_BITS);
+            rnd = (rnd % range) * ALLOC_ALIGNMENT;
+            assert(rnd <= gap_max_size);
             g_aslr_addr_top = (char*)g_aslr_addr_top - rnd;
 
             log_debug("ASLR top address adjusted to %p", g_aslr_addr_top);
