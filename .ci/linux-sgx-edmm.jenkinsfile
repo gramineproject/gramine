@@ -19,6 +19,12 @@ node('sgx-edmm') {
         load '.ci/lib/config.jenkinsfile'
         load '.ci/lib/config-release.jenkinsfile'
 
+        // set up PCCS connection configuration
+        sh '''
+            sed -i -e "s/localhost/`route | grep -oP -e 'default *\K[^ ]*'`/g" /etc/sgx_default_qcnl.conf
+            sed -i -e 's/"use_secure_cert": true/"use_secure_cert": false/' /etc/sgx_default_qcnl.conf
+        '''
+
         load '.ci/lib/stage-lint.jenkinsfile'
         load '.ci/lib/stage-clean-check-prepare.jenkinsfile'
         load '.ci/lib/stage-build-sgx.jenkinsfile'

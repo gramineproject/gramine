@@ -76,6 +76,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    libsgx-dcap-default-qpl \
     libsgx-dcap-quote-verify-dev \
     libsgx-urts
 
