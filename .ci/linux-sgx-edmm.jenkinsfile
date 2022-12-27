@@ -21,7 +21,7 @@ node('sgx-edmm') {
 
         // set up PCCS connection configuration
         sh '''
-            sed -i -e "s/localhost/`route | grep -oP -e 'default *\\K[^ ]*'`/g" /etc/sgx_default_qcnl.conf
+            sed -i -e "s/localhost/`/usr/sbin/route | grep -oP -e 'default *\\K[^ ]*'`/g" /etc/sgx_default_qcnl.conf
             sed -i -e 's/"use_secure_cert": true/"use_secure_cert": false/' /etc/sgx_default_qcnl.conf
         '''
 
