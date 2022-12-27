@@ -80,6 +80,10 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libsgx-dcap-quote-verify-dev \
     libsgx-urts
 
+# set up PCCS connection configuration
+RUN sed -i -e 's/localhost/host.docker.internal/g' /etc/sgx_default_qcnl.conf \
+    && sed -i -e 's/"use_secure_cert": true/"use_secure_cert": false/' /etc/sgx_default_qcnl.conf
+
 # Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
 RUN git clone https://github.com/giltene/wrk2.git \
     && cd wrk2 \
