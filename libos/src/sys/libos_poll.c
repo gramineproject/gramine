@@ -64,6 +64,9 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
 
     if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
         /* Each FD uses 8+16+4*2=32 bytes on stack */
+        static_assert((sizeof(*pals) + sizeof(*fds_mapping) + sizeof(*pal_events) * 2) * 
+                      NFDS_LIMIT_TO_USE_STACK <= 512,
+                      "use too much space on stack, reduce the limit");
         allocated_on_stack = true;
         pals = __builtin_alloca(nfds * sizeof(*pals));
         fds_mapping = __builtin_alloca(nfds * sizeof(*fds_mapping));
@@ -265,6 +268,8 @@ long libos_syscall_select(int nfds, fd_set* readfds, fd_set* writefds, fd_set* e
 
     if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
         /* Each FD uses 8 bytes on stack */
+        static_assert(sizeof(*fds_poll) * NFDS_LIMIT_TO_USE_STACK <= 128,
+                      "use too much space on stack, reduce the limit");
         allocated_on_stack = true;
         fds_poll = __builtin_alloca(nfds * sizeof(*fds_poll));
     } else {
