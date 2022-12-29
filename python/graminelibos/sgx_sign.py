@@ -277,6 +277,7 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
 
     gen_area_content(attr, areas, enclave_base, enclave_heap_min)
 
+    # Enclaves with EDMM do not add "free" memory at startup.
     if attr['edmm_enable']:
         return areas
 

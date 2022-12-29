@@ -452,8 +452,8 @@ not support :term:`EDMM` feature.
 
 When this feature is enabled, Gramine does not add heap pages (uninitialized
 memory) to the enclave at creation time. Instead, memory is added to the enclave
-on demand. This can greatly reduce startup time for bigger enclave, reduces
-the :term:`EPC` usage (as only actually allocated memory is used) and allows for
+on demand. This can greatly reduce startup time for bigger enclaves, reduce
+the :term:`EPC` usage (as only actually allocated memory is used) and allow for
 changing memory permissions (without this Gramine allocates all dynamic memory
 as RWX). Unfortunately it can negatively impact performance, as adding a page
 to the enclave is more expensive operation in runtime than before enclave
@@ -501,9 +501,9 @@ runs in its own SGX enclave and thus requires an additional ``sgx.enclave_size``
 amount of RAM. For example, if you run ``bash -c ls`` and your manifest contains
 ``sgx.enclave_size = "4G"``, then two SGX enclaves (bash and ls processes) will
 consume 8GB of RAM in total. If there is less than 8GB of RAM (+ swap file) on
-your system, such ``bash -c ls`` SGX workload will fail. Note this not apply to
-the enclaves with :term:`EDMM` enabled, where memory is not reserved upfront and
-is allocated on demand.
+your system, such ``bash -c ls`` SGX workload will fail. Note this does not
+apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
+upfront and is allocated on demand.
 
 Non-PIE binaries
 ^^^^^^^^^^^^^^^^
