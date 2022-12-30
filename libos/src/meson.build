@@ -63,6 +63,7 @@ libos_sources = files(
     'libos_parser.c',
     'libos_pollable_event.c',
     'libos_rtld.c',
+    'libos_rwlock.c',
     'libos_syscalls.c',
     'libos_utils.c',
     'net/ip.c',
