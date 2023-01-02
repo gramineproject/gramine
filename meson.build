@@ -242,7 +242,10 @@ if sgx
     # in <asm/sgx.h> so we won't have to mess with the paths anymore
 
     protoc_c_prog = find_program('protoc-c')
-    protoc_prog = find_program('protoc')
+
+    if sgx_driver == 'oot'
+        protoc_prog = find_program('protoc')
+    endif
 
     threads_dep = dependency('threads')
 
