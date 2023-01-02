@@ -1273,7 +1273,7 @@ int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
                      /*arg=*/NULL);
 }
 
-int dump_all_vmas(struct libos_vma_info** ret_infos, size_t* ret_count, bool include_unmapped) {
+int dump_all_vmas(bool include_unmapped, struct libos_vma_info** ret_infos, size_t* ret_count) {
     return dump_vmas_in_range(/*begin=*/0, /*end=*/UINTPTR_MAX, include_unmapped, ret_infos,
                               ret_count);
 }
@@ -1530,7 +1530,7 @@ BEGIN_CP_FUNC(all_vmas) {
     __UNUSED(objp);
     size_t count;
     struct libos_vma_info* vmas;
-    int ret = dump_all_vmas(&vmas, &count, /*include_unmapped=*/true);
+    int ret = dump_all_vmas(/*include_unmapped=*/true, &vmas, &count);
     if (ret < 0) {
         return ret;
     }
