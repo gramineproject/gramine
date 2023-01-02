@@ -456,8 +456,8 @@ on demand. This can greatly reduce startup time for bigger enclaves, reduce
 the :term:`EPC` usage (as only actually allocated memory is used) and allow for
 changing memory permissions (without this Gramine allocates all dynamic memory
 as RWX). Unfortunately it can negatively impact performance, as adding a page
-to the enclave is more expensive operation in runtime than before enclave
-creation (more enclave exits and syscalls).
+to the enclave at runtime is a more expensive operation than adding the page
+before enclave creation (because it involves more enclave exits and syscalls).
 
 Enclave size
 ^^^^^^^^^^^^
@@ -809,7 +809,7 @@ predictable.
 Please note that using this option makes sense only when the :term:`EPC` is
 large enough to hold the whole heap area.
 
-This option is invalid (i.e. must be ``false``) together with
+This option is invalid (i.e. must be ``false``) if specified together with
 ``sgx.edmm_enable``, as there are no heap pages to pre-fault.
 
 Enabling per-thread and process-wide SGX stats

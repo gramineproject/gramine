@@ -44,7 +44,7 @@ int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
                                                 | SGX_SECINFO_FLAGS_R | SGX_SECINFO_FLAGS_W
                                                 | SGX_SECINFO_FLAGS_PENDING);
         if (ret < 0) {
-            log_error("%s: failed to accept page at addres %#lx: %d", __func__,
+            log_error("%s: failed to accept page at address %#lx: %d", __func__,
                       addr + i * PAGE_SIZE, ret);
             /* Since these errors do not happen in legitimate cases and restoring already accepted
              * pages would be cumbersome, we just kill the whole process. */
@@ -82,7 +82,7 @@ int sgx_edmm_remove_pages(uint64_t addr, size_t count) {
         ret = sgx_eaccept(addr + i * PAGE_SIZE, (SGX_PAGE_TYPE_TRIM << SGX_SECINFO_FLAGS_TYPE_SHIFT)
                                                 | SGX_SECINFO_FLAGS_MODIFIED);
         if (ret < 0) {
-            log_error("%s: failed to accept page removal at addres %#lx: %d", __func__,
+            log_error("%s: failed to accept page removal at address %#lx: %d", __func__,
                       addr + i * PAGE_SIZE, ret);
             /* Since these errors do not happen in legitimate cases and restoring already accepted
              * pages would be cumbersome, we just kill the whole process. */
