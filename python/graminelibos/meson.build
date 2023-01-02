@@ -26,13 +26,15 @@ if enable_tests
 endif
 
 if sgx
-    aesm_pb2 = custom_target('aesm_pb2.py',
-        input: 'aesm.proto',
-        output: 'aesm_pb2.py',
-        command: [protoc_prog, '@INPUT@', '--python_out=@OUTDIR@', '--proto_path=@CURRENT_SOURCE_DIR@'],
-        install: true,
-        install_dir: python3_pkgdir,
-    )
+    if sgx_driver == 'oot'
+        aesm_pb2 = custom_target('aesm_pb2.py',
+            input: 'aesm.proto',
+            output: 'aesm_pb2.py',
+            command: [protoc_prog, '@INPUT@', '--python_out=@OUTDIR@', '--proto_path=@CURRENT_SOURCE_DIR@'],
+            install: true,
+            install_dir: python3_pkgdir,
+        )
+    endif
 
     python_src += [
         'sgx_get_token.py',

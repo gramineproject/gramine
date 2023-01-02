@@ -6,7 +6,6 @@ import hashlib
 import socket
 import struct
 
-from . import aesm_pb2 # pylint: disable=import-error,no-name-in-module
 from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 
 def get_optional_sgx_features(sig):
@@ -50,6 +49,8 @@ def p64(x):
 
 def connect_aesmd(mrenclave, modulus, flags, xfrms):
     '''Connect with AESMD.'''
+
+    from . import aesm_pb2 # pylint: disable=import-error,no-name-in-module
 
     req_msg = aesm_pb2.GetTokenReq()
     req_msg.req.signature = mrenclave
