@@ -119,7 +119,7 @@ stage('test-sgx') {
                 make check_dcap RA_TYPE=dcap; \
                 make check_dcap_fail RA_TYPE=dcap; \
             else \
-                echo "Invalid RA_TYPE env varible: ${RA_TYPE}"; \
+                echo "Invalid RA_TYPE env variable: ${RA_TYPE}"; \
                 exit 1; \
             fi
         '''
@@ -139,7 +139,7 @@ stage('test-sgx') {
             elif [ "${RA_TYPE}" = "dcap" ]; then \
                 make check_dcap RA_TYPE=dcap; \
             else \
-                echo "Invalid RA_TYPE env varible: ${RA_TYPE}"; \
+                echo "Invalid RA_TYPE env variable: ${RA_TYPE}"; \
                 exit 1; \
             fi
         '''
