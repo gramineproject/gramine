@@ -5,13 +5,21 @@
 
 import click
 
-from graminelibos import Sigstruct, get_token
+from graminelibos import Sigstruct, get_token, is_oot
 
 @click.command()
 @click.option('--sig', '-s', type=click.File('rb'), required=True, help='sigstruct file')
 @click.option('--output', '-o', type=click.File('wb'), required=True, help='Output token file')
 @click.option('--verbose/--quiet', '-v/-q', default=True, help='Display details (on by default)')
 def main(sig, output, verbose):
+    if not is_oot():
+        import warnings
+        warnings.warn(
+            'gramine-sgx-get-token is deprecated on upstream SGX driver, '
+            'and calling it will be a hard error in the future',
+            DeprecationWarning)
+        return
+
     sig = Sigstruct.from_bytes(sig.read())
     token = get_token(sig, verbose=verbose)
     output.write(token)
