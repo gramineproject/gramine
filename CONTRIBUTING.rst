@@ -254,22 +254,32 @@ For more information on how to run the ltp tests, please refer to
 :file:`libos/test/ltp/README.rst`.
 
 
-Management Team
-===============
+Management Team (Maintainers)
+=============================
 
-The current members of the management team are:
+The currently active members of the management team are:
 
 * Michał Kowalczyk (Invisible Things Lab/Intel)
 * Dmitrii Kuvaiskii (Intel)
-* Paweł Marczewski (Invisible Things Lab/Intel)
 * Borys Popławski (Invisible Things Lab/Intel)
+* Wojtek Porczyk (Invisible Things Lab/Intel)
 * Don Porter (UNC)
 * Chia-Che Tsai (Texas A&M University)
-* Rafał Wojdyła (Invisible Things Lab/Golem)
 * Mona Vij (Intel)
-* Isaku Yamahata (Intel)
 
-The procedure for adding and removing maintainers
+The past (inactive) members of the management team are:
+
+* Paweł Marczewski
+* Rafał Wojdyła
+* Isaku Yamahata
+
+The active members have the review and voting rights. The past (inactive)
+members have only the review rights.
+
+The active members are also the TSC voting members as described in the Technical
+Charter for Gramine project.
+
+The Procedure for Adding and Removing Maintainers
 -------------------------------------------------
 
 + Joining: # of PRs submitted & merged + # of PRs reviewed + # of issues closed
@@ -277,5 +287,5 @@ The procedure for adding and removing maintainers
   and thorough reviews count.
 + Leaving: a member may be removed if not active or notoriously breaking rules
   from this document.
-+ Additionally, at least 60% (rounded up) of current members have to agree to
-  make any change to the team membership.
++ Additionally, at least 60% (rounded up) of currently active members have to
+  agree to make any change to the team membership.
