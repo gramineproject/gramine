@@ -1,5 +1,7 @@
 conf = configuration_data()
 conf.set_quoted('IN_GIT', '')
+conf.set_quoted('PREFIX', prefix)
+conf.set_quoted('BINDIR', get_option('bindir'))
 
 if direct
     hostpalpath_direct = join_paths(prefix, pkglibdir, 'direct')
