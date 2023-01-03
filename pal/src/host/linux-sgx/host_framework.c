@@ -49,17 +49,18 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
         return ret;
 
     if (stat.st_size != sizeof(sgx_arch_token_t)) {
-        log_error("size of token size does not match");
+        log_error("Token size does not match.");
         return -EINVAL;
     }
 
     int bytes = DO_SYSCALL(read, token_file, token, sizeof(sgx_arch_token_t));
-    if (bytes < 0)
+    if (bytes < 0) {
         return bytes;
+    } else if (bytes != sizeof(sgx_arch_token_t)) {
+        log_error("Short read while reading token file.");
+        return -EINVAL;
+    }
 
-#ifndef CONFIG_SGX_DRIVER_OOT
-    log_debug("Read dummy DCAP token");
-#else
     char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
 #define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
     log_debug("Read token:");
@@ -75,8 +76,14 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     log_debug("    LE attr.flags:         0x%016lx", token->attributes_le.flags);
     log_debug("    LE attr.xfrm:          0x%016lx", token->attributes_le.xfrm);
 #undef BYTES2HEX
-#endif
 
+    return 0;
+}
+
+int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* token) {
+    memset(token, 0, sizeof(*token));
+    memcpy(&token->body.attributes, &sig->attributes, sizeof(sgx_attributes_t));
+    token->masked_misc_select_le = sig->misc_select;
     return 0;
 }
 

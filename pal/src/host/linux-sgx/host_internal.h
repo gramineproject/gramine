@@ -67,6 +67,7 @@ int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
 
 int read_enclave_token(int token_file, sgx_arch_token_t* token);
+int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* token);
 int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig);
 
 int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token);
