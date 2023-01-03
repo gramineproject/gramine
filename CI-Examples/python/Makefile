@@ -9,7 +9,7 @@ endif
 .PHONY: all
 all: python.manifest
 ifeq ($(SGX),1)
-all: python.manifest.sgx python.sig python.token
+all: python.manifest.sgx python.sig
 endif
 
 RA_TYPE ?= none
@@ -36,9 +36,6 @@ sgx_sign: python.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-python.token: python.sig
-	gramine-sgx-get-token --output $@ --sig $<
 
 .PHONY: check
 check: all
