@@ -26,7 +26,7 @@ endif
 .PHONY: all
 all: $(BLENDER_DIR)/blender blender.manifest | $(DATA_DIR)/images
 ifeq ($(SGX),1)
-all: blender.manifest.sgx blender.sig blender.token
+all: blender.manifest.sgx blender.sig
 endif
 
 $(BLENDER_DIR)/blender:
@@ -57,9 +57,6 @@ sgx_outputs: $(BLENDER_DIR)/blender blender.manifest | $(RUN_DIR)
 	gramine-sgx-sign \
 		--output blender.manifest.sgx \
 		--manifest blender.manifest
-
-blender.token: blender.sig
-	gramine-sgx-get-token --output $@ --sig $<
 
 $(DATA_DIR)/images:
 	mkdir -p $@

@@ -17,7 +17,7 @@ endif
 .PHONY: all
 all: memcached memcached.manifest
 ifeq ($(SGX),1)
-all: memcached.manifest.sgx memcached.sig memcached.token
+all: memcached.manifest.sgx memcached.sig
 endif
 
 $(SRCDIR)/configure:
@@ -46,10 +46,6 @@ sgx_sign: memcached.manifest memcached
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-memcached.token: memcached.sig
-	gramine-sgx-get-token \
-		--output memcached.token --sig memcached.sig
 
 # for simplicity, copy memcached executable into our root directory
 memcached: $(SRCDIR)/memcached
