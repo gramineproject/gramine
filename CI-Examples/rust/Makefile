@@ -5,7 +5,7 @@ SELF_EXE = target/release/rust-hyper-http-server
 .PHONY: all
 all: $(SELF_EXE) rust-hyper-http-server.manifest
 ifeq ($(SGX),1)
-all: rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig rust-hyper-http-server.token
+all: rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig
 endif
 
 ifeq ($(DEBUG),1)
@@ -39,10 +39,6 @@ sgx_sign: rust-hyper-http-server.manifest $(SELF_EXE)
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-rust-hyper-http-server.token: rust-hyper-http-server.sig
-	gramine-sgx-get-token \
-		--output $@ --sig $<
 
 ifeq ($(SGX),)
 GRAMINE = gramine-direct

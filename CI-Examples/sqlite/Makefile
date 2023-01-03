@@ -9,7 +9,7 @@ endif
 .PHONY: all
 all: sqlite3.manifest
 ifeq ($(SGX),1)
-all: sqlite3.manifest.sgx sqlite3.sig sqlite3.token
+all: sqlite3.manifest.sgx sqlite3.sig
 endif
 
 sqlite3.manifest: manifest.template
@@ -29,9 +29,6 @@ sgx_sign: sqlite3.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-sqlite3.token: sqlite3.sig
-	gramine-sgx-get-token --output sqlite3.token --sig sqlite3.sig
 
 ifeq ($(SGX),)
 GRAMINE = gramine-direct

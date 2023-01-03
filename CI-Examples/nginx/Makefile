@@ -23,7 +23,7 @@ endif
 .PHONY: all
 all: $(INSTALL_DIR)/sbin/nginx nginx.manifest config testdata ssldata nginx_args
 ifeq ($(SGX),1)
-all: nginx.manifest.sgx nginx.sig nginx.token
+all: nginx.manifest.sgx nginx.sig
 endif
 
 # Note that Gramine doesn't support eventfd() and PR_SET_DUMPABLE, so we manually
@@ -66,9 +66,6 @@ sgx_sign: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-nginx.token: nginx.sig
-	gramine-sgx-get-token --output $@ --sig $<
 
 # Nginx configuration and test data
 .PHONY: config
