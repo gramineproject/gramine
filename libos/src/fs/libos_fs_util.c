@@ -116,12 +116,12 @@ file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int o
     return ret;
 }
 
-int generic_inode_poll(struct libos_handle* hdl, int events, int* out_events) {
+int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events) {
     int ret;
 
     if (hdl->inode->type == S_IFREG) {
         ret = 0;
-        *out_events = events & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM);
+        *out_events = in_events & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM);
     } else {
         ret = -EAGAIN;
     }

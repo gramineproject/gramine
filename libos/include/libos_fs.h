@@ -946,7 +946,7 @@ int generic_readdir(struct libos_dentry* dent, readdir_callback_t callback, void
 int generic_inode_stat(struct libos_dentry* dent, struct stat* buf);
 int generic_inode_hstat(struct libos_handle* hdl, struct stat* buf);
 file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int origin);
-int generic_inode_poll(struct libos_handle* hdl, int events, int* out_events);
+int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events);
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset);

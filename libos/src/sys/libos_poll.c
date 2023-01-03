@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University
- * Copyright (C) 2022 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
@@ -64,6 +63,11 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
 
     lock(&map->lock);
 
+    /*
+     * After each iteration of this loop either:
+     * - `fds[i].revents` is set to its final value (possibly 0)
+     * - `libos_handles[i]` and `pal_events[i]` are set to non-NULL values
+     */
     for (size_t i = 0; i < fds_len; i++) {
         if (fds[i].fd < 0) {
             /* Negative file descriptors are ignored. */
