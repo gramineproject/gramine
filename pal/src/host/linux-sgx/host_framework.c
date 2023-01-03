@@ -41,7 +41,7 @@ int open_sgx_driver(void) {
     return ret;
 }
 
-int read_enclave_token(int token_file, sgx_arch_token_t* token) {
+int read_enclave_token(int token_file, sgx_arch_token_t* out_token) {
     struct stat stat;
     int ret;
     ret = DO_SYSCALL(fstat, token_file, &stat);
@@ -49,34 +49,41 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
         return ret;
 
     if (stat.st_size != sizeof(sgx_arch_token_t)) {
-        log_error("size of token size does not match");
+        log_error("Token size does not match.");
         return -EINVAL;
     }
 
-    int bytes = DO_SYSCALL(read, token_file, token, sizeof(sgx_arch_token_t));
-    if (bytes < 0)
+    int bytes = DO_SYSCALL(read, token_file, out_token, sizeof(sgx_arch_token_t));
+    if (bytes < 0) {
         return bytes;
+    } else if (bytes != sizeof(sgx_arch_token_t)) {
+        log_error("Short read while reading token file.");
+        return -EINVAL;
+    }
 
-#ifndef CONFIG_SGX_DRIVER_OOT
-    log_debug("Read dummy DCAP token");
-#else
     char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
 #define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
     log_debug("Read token:");
-    log_debug("    valid:                 0x%08x",   token->body.valid);
-    log_debug("    attr.flags:            0x%016lx", token->body.attributes.flags);
-    log_debug("    attr.xfrm:             0x%016lx", token->body.attributes.xfrm);
-    log_debug("    mr_enclave:            %s",       BYTES2HEX(token->body.mr_enclave.m));
-    log_debug("    mr_signer:             %s",       BYTES2HEX(token->body.mr_signer.m));
-    log_debug("    LE cpu_svn:            %s",       BYTES2HEX(token->cpu_svn_le.svn));
-    log_debug("    LE isv_prod_id:        %02x",     token->isv_prod_id_le);
-    log_debug("    LE isv_svn:            %02x",     token->isv_svn_le);
-    log_debug("    LE masked_misc_select: 0x%08x",   token->masked_misc_select_le);
-    log_debug("    LE attr.flags:         0x%016lx", token->attributes_le.flags);
-    log_debug("    LE attr.xfrm:          0x%016lx", token->attributes_le.xfrm);
+    log_debug("    valid:                 0x%08x",   out_token->body.valid);
+    log_debug("    attr.flags:            0x%016lx", out_token->body.attributes.flags);
+    log_debug("    attr.xfrm:             0x%016lx", out_token->body.attributes.xfrm);
+    log_debug("    mr_enclave:            %s",       BYTES2HEX(out_token->body.mr_enclave.m));
+    log_debug("    mr_signer:             %s",       BYTES2HEX(out_token->body.mr_signer.m));
+    log_debug("    LE cpu_svn:            %s",       BYTES2HEX(out_token->cpu_svn_le.svn));
+    log_debug("    LE isv_prod_id:        %02x",     out_token->isv_prod_id_le);
+    log_debug("    LE isv_svn:            %02x",     out_token->isv_svn_le);
+    log_debug("    LE masked_misc_select: 0x%08x",   out_token->masked_misc_select_le);
+    log_debug("    LE attr.flags:         0x%016lx", out_token->attributes_le.flags);
+    log_debug("    LE attr.xfrm:          0x%016lx", out_token->attributes_le.xfrm);
 #undef BYTES2HEX
-#endif
 
+    return 0;
+}
+
+int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token) {
+    memset(out_token, 0, sizeof(*out_token));
+    memcpy(&out_token->body.attributes, &sig->attributes, sizeof(sgx_attributes_t));
+    out_token->masked_misc_select_le = sig->misc_select;
     return 0;
 }
 

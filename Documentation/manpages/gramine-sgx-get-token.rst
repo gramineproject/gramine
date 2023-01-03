@@ -20,6 +20,9 @@ given SIGSTRUCT (".sig" file).
 Using this command is not necessary (it was previously), since the token is
 fetched automatically if needed during the first enclave start.
 
+On upstream/DCAP driver this command does nothing and is deprecated. In
+the future, it will be removed altogether.
+
 Command line arguments
 ======================
 
