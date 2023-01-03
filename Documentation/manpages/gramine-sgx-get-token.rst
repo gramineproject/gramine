@@ -11,6 +11,9 @@ Synopsis
 :command:`gramine-sgx-get-token` [*OPTION*]... --sig sigstruct_file
 --output token_file
 
+Using this command is not necessary (it was previously), since the token is
+fetched automatically if needed during first enclave start.
+
 Description
 ===========
 
