@@ -40,6 +40,7 @@ int open_sgx_driver(void) {
     return ret;
 }
 
+#ifdef CONFIG_SGX_DRIVER_OOT
 int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     struct stat stat;
     int ret;
@@ -56,9 +57,6 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     if (bytes < 0)
         return bytes;
 
-#ifndef CONFIG_SGX_DRIVER_OOT
-    log_debug("Read dummy DCAP token");
-#else
     char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
 #define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
     log_debug("Read token:");
@@ -74,10 +72,10 @@ int read_enclave_token(int token_file, sgx_arch_token_t* token) {
     log_debug("    LE attr.flags:         0x%016lx", token->attributes_le.flags);
     log_debug("    LE attr.xfrm:          0x%016lx", token->attributes_le.xfrm);
 #undef BYTES2HEX
-#endif
 
     return 0;
 }
+#endif /* CONFIG_SGX_DRIVER_OOT */
 
 int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
     struct stat stat;

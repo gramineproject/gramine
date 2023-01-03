@@ -30,6 +30,7 @@ if sgx
     conf_gramine_sgx.set_quoted('HOST_PAL_PATH', hostpalpath_linux_sgx)
     conf_gramine_sgx.set_quoted('LIBPAL_PATH', join_paths(hostpalpath_linux_sgx, 'libpal.so'))
     conf_gramine_sgx.set_quoted('PAL_CMD', join_paths(prefix, pkglibdir, 'sgx', 'loader'))
+    conf_gramine_sgx.set_quoted('CONFIG_SGX_DRIVER', sgx_driver)
 
     configure_file(
         input: 'gramine.in',

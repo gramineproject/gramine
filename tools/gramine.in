@@ -89,6 +89,7 @@ if [ ! -f "$PAL_CMD" ]; then
 fi
 
 if [ "$SGX" == "1" ] \
+&& [ "@CONFIG_SGX_DRIVER@" = oot ] \
 && [ ! -e "$APPLICATION".token ] \
 && [ -f "$APPLICATION".sig ] \
 && [ -z "$GRAMINE_NO_AUTO_GET_TOKEN" ]

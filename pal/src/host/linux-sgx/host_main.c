@@ -15,6 +15,7 @@
 #include "etc_host_info.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "host_ecalls.h"
+#include "host_sgx_driver.h"
 #include "host_internal.h"
 #include "host_log.h"
 #include "host_process.h"
@@ -206,7 +207,9 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     unsigned long enclave_entry_addr;
     unsigned long enclave_heap_min;
     char* sig_path = NULL;
+#ifdef CONFIG_SGX_DRIVER_OOT
     char* token_path = NULL;
+#endif
     int sigfile_fd = -1, token_fd = -1;
     int enclave_mem = -1;
     size_t areas_size = 0;
@@ -249,6 +252,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
+    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
+    if (ret < 0) {
+        log_error("Reading enclave sigstruct failed: %d", ret);
+        goto out;
+    }
+
+#if defined(CONFIG_SGX_DRIVER_OOT)
     token_path = alloc_concat(g_pal_enclave.application_path, -1, ".token", -1);
     if (!token_path) {
         ret = -ENOMEM;
@@ -269,6 +279,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         log_error("Reading enclave token failed: %d", ret);
         goto out;
     }
+#elif defined(CONFIG_SGX_DRIVER_UPSTREAM)
+    memset(&enclave_token, 0, sizeof(enclave_token));
+    memcpy(&enclave_token.body.attributes, &enclave_sigstruct.attributes, sizeof(sgx_attributes_t));
+    enclave_token.masked_misc_select_le = enclave_sigstruct.misc_select;
+#else
+    #error This config should be unreachable.
+#endif
 
 #ifdef DEBUG
     if (enclave->profile_enable) {
@@ -290,12 +307,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         }
     }
 #endif
-
-    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
-    if (ret < 0) {
-        log_error("Reading enclave sigstruct failed: %d", ret);
-        goto out;
-    }
 
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
@@ -623,7 +634,9 @@ out:
     if (areas)
         DO_SYSCALL(munmap, areas, areas_size);
     free(sig_path);
+#ifdef CONFIG_SGX_DRIVER_OOT
     free(token_path);
+#endif
     return ret;
 }
 
