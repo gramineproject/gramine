@@ -25,7 +25,7 @@ CONF_FILES = lighttpd-server.conf lighttpd.conf
 .PHONY: all
 all: $(INSTALL_DIR)/sbin/lighttpd lighttpd.manifest $(CONF_FILES) testdata
 ifeq ($(SGX),1)
-all: lighttpd.manifest.sgx lighttpd.sig lighttpd.token
+all: lighttpd.manifest.sgx lighttpd.sig
 endif
 
 $(INSTALL_DIR)/sbin/lighttpd: $(LIGHTTPD_SRC)/configure
@@ -61,9 +61,6 @@ sgx_sign: lighttpd.manifest $(INSTALL_DIR)/sbin/lighttpd
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-lighttpd.token: lighttpd.sig
-	gramine-sgx-get-token --output $@ --sig $^
 
 # lighttpd configuration and test data
 lighttpd-server.conf:

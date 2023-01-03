@@ -9,7 +9,7 @@ endif
 .PHONY: all
 all: bash.manifest
 ifeq ($(SGX),1)
-all: bash.manifest.sgx bash.sig bash.token
+all: bash.manifest.sgx bash.sig
 endif
 
 bash.manifest: manifest.template
@@ -25,9 +25,6 @@ bash.manifest.sgx: bash.manifest
 		--output $@
 
 bash.sig: bash.manifest.sgx
-
-bash.token: bash.sig
-	gramine-sgx-get-token --output bash.token --sig bash.sig
 
 ifeq ($(SGX),)
 GRAMINE = gramine-direct

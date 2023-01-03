@@ -34,7 +34,7 @@ endif
 .PHONY: all
 all: redis-server redis-server.manifest
 ifeq ($(SGX),1)
-all: redis-server.manifest.sgx redis-server.sig redis-server.token
+all: redis-server.manifest.sgx redis-server.sig
 endif
 
 ############################## REDIS EXECUTABLE ###############################
@@ -78,13 +78,6 @@ redis-server.manifest: redis-server.manifest.template
 # procedure measures all Redis trusted files, adds the measurement to the
 # resulting manifest.sgx file (among other, less important SGX options) and
 # creates redis-server.sig (SIGSTRUCT object).
-#
-# Gramine-SGX requires EINITTOKEN and SIGSTRUCT objects (see SGX hardware ABI,
-# in particular EINIT instruction). The "gramine-sgx-get-token" script
-# generates EINITTOKEN based on a SIGSTRUCT and puts it in .token file. Note
-# that filenames must be the same as the manifest name (i.e., "redis-server").
-# EINITTOKEN must be generated on the machine where the application will run,
-# not where it was built.
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
@@ -96,9 +89,6 @@ sgx_outputs: redis-server.manifest $(SRCDIR)/src/redis-server
 	gramine-sgx-sign \
 		--manifest redis-server.manifest \
 		--output redis-server.manifest.sgx
-
-redis-server.token: redis-server.sig
-	gramine-sgx-get-token --output $@ --sig $<
 
 ########################### COPIES OF EXECUTABLES #############################
 
