@@ -88,6 +88,17 @@ if [ ! -f "$PAL_CMD" ]; then
 	exit 1
 fi
 
+if [ "$SGX" == "1" ] \
+&& [ ! -e "$APPLICATION".token ] \
+&& [ -f "$APPLICATION".sig ] \
+&& [ -z "$GRAMINE_NO_AUTO_GET_TOKEN" ]
+then
+    @PREFIX@/@BINDIR@/gramine-sgx-get-token \
+        --output "$APPLICATION".token \
+        --sig "$APPLICATION".sig
+fi
+
+
 CMD=("${ENVS[@]}")
 CMD+=("${PREFIX[@]}")
 CMD+=("$PAL_CMD" "$LIBPAL_PATH" init "$APPLICATION" "$@")
