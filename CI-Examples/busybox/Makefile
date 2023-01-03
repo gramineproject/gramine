@@ -20,7 +20,7 @@ RA_CLIENT_LINKABLE ?= 0
 .PHONY: all
 all: busybox busybox.manifest
 ifeq ($(SGX),1)
-all: busybox.manifest.sgx busybox.sig busybox.token
+all: busybox.manifest.sgx busybox.sig
 endif
 
 $(SRCDIR)/Makefile:
@@ -58,10 +58,6 @@ sgx_sign: busybox.manifest busybox
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
-
-busybox.token: busybox.sig
-	gramine-sgx-get-token \
-		--output $@ --sig $<
 
 # Copy Busybox binary to our root directory for simplicity.
 busybox: $(SRCDIR)/busybox
