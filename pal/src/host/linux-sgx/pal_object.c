@@ -37,9 +37,9 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
             if (events[i] & PAL_WAIT_WRITE) {
                 fdevents |= POLLOUT;
             }
-            if (events[i] & PAL_WAIT_HUP) {
-                fdevents |= POLLRDHUP;
-            }
+            /* Set `POLLRDHUP` unconditionally here, so that the host `ppoll()` always reports
+             * `POLLRDHUP` if it happened. */
+            fdevents |= POLLRDHUP;
             fds[i].fd = handle->generic.fd;
             fds[i].events = fdevents;
         } else {
@@ -77,12 +77,17 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
 
         /* FIXME: something is wrong here, it reads and writes to flags without any locks... */
         PAL_HANDLE handle = handle_array[i];
-        if (fds[i].revents & (POLLERR | POLLHUP | POLLNVAL | POLLRDHUP))
+
+        /* report error events on this FD */
+        if (fds[i].revents & (POLLERR | POLLNVAL))
             handle->flags |= PAL_HANDLE_FD_ERROR;
-        if (fds[i].revents & POLLERR)
+        if (handle->flags & PAL_HANDLE_FD_ERROR)
             ret_events[i] |= PAL_WAIT_ERROR;
-        if (fds[i].revents & POLLHUP ||
-                (fds[i].revents & POLLRDHUP && handle->hdr.type == PAL_TYPE_SOCKET))
+
+        /* report hup events on this FD */
+        if (fds[i].revents & (POLLHUP | POLLRDHUP))
+            handle->flags |= PAL_HANDLE_FD_HUP;
+        if (handle->flags & PAL_HANDLE_FD_HUP)
             ret_events[i] |= PAL_WAIT_HUP;
     }
 

@@ -204,7 +204,7 @@ static void server(int sockfd) {
 
     memset(&event, 0, sizeof(event));
     r = CHECK(epoll_wait(epfd, &event, 1, 0));
-    if (r != 1 || event.events != (EPOLLIN | EPOLLHUP) || event.data.fd != client) {
+    if (r != 1 || event.events != (EPOLLIN | EPOLLHUP | EPOLLRDHUP) || event.data.fd != client) {
         ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
     }
 

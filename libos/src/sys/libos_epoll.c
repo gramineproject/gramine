@@ -586,9 +586,6 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             if (item->events & (EPOLLOUT | EPOLLWRNORM)) {
                 pal_events[items_count] |= PAL_WAIT_WRITE;
             }
-            if (item->events & EPOLLRDHUP) {
-                pal_events[items_count] |= PAL_WAIT_HUP;
-            }
             if (item->events & EPOLLET) {
                 if (!__atomic_load_n(&item->handle->needs_et_poll_in, __ATOMIC_ACQUIRE)) {
                     pal_events[items_count] &= ~PAL_WAIT_READ;
@@ -665,6 +662,10 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             }
             if (pal_ret_events[i] & PAL_WAIT_HUP) {
                 this_item_events |= EPOLLHUP;
+                if (items[i]->events & EPOLLRDHUP) {
+                    /* add RDHUP event only if user requested for it to be reported */
+                    this_item_events |= EPOLLRDHUP;
+                }
             }
             if (pal_ret_events[i] & PAL_WAIT_READ) {
                 this_item_events |= items[i]->events & (EPOLLIN | EPOLLRDNORM);
