@@ -7,7 +7,7 @@ exec qemu-system-x86_64 \
     -kernel /boot/vmlinuz-$(uname -r) \
     -initrd initramfs.cpio.gz \
     -nographic \
-    -monitor /dev/null \
+    -monitor none \
     -cpu host \
     -smp 2 \
     -m 1G \

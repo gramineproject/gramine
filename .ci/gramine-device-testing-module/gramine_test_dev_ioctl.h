@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ *                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
+ */
+
 #pragma once
 
 #ifdef __KERNEL__

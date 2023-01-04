@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/* Copyright (C) 2022 Intel Corporation
+ *                    Borys Popławski <borysp@invisiblethingslab.com>
+ *                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
+ */
+
 /* These must come before includes. */
 #define GRAMINE_TEST_DEV_NAME "gramine_test_dev"
 #define pr_fmt(fmt) GRAMINE_TEST_DEV_NAME ": " fmt
