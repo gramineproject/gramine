@@ -209,6 +209,7 @@ Indices and tables
    devel/setup
    devel/coding-style
    devel/howto-doc
+   devel/charter
    devel/DCO/index
 
 .. toctree::
