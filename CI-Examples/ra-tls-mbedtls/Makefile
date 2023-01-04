@@ -39,7 +39,10 @@ ssl/server.crt: ssl/ca_config.conf
 
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-CFLAGS += $(shell pkg-config --cflags mbedtls_gramine)
+CFLAGS += $(shell pkg-config --cflags mbedtls_gramine) \
+          $(shell pkg-config --cflags ra_tls_gramine)
+
+# no need for `pkg-config --libs ra_tls_gramine` because programs use dlopen
 LDFLAGS += -ldl -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
 
 server: src/server.c

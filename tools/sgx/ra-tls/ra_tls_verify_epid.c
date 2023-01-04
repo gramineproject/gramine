@@ -24,10 +24,10 @@
 
 #include "ias.h"
 #include "quote.h"
-#include "ra_tls.h"
-#include "sgx_arch.h"
-#include "sgx_attest.h"
 #include "util.h"
+
+#include "ra_tls.h"
+#include "ra_tls_common.h"
 
 extern verify_measurements_cb_t g_verify_measurements_cb;
 
