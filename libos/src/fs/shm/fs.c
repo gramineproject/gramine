@@ -152,7 +152,7 @@ static int shm_lookup(struct libos_dentry* dent) {
             type = S_IFCHR;
             break;
         case PAL_TYPE_DIR:
-            /* Direcotories in shm file system are not allowed to access, except for root. */
+            /* Subdirectories (e.g. /dev/shm/subdir/) are not allowed in shm file system. */
             if (dent != dent->mount->root) {
                 ret = -EACCES;
                 goto out;

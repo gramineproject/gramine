@@ -429,11 +429,15 @@ Untrusted shared memory
     sys.insecure__shared_memory = "[none|passthrough]"
     (Default: "none")
 
-By default, Gramine disables shared memory (i.e., accessing files under `/dev/shm/`).
-This behavior is particularly important for the SGX environment, where all data put
-in shared memory must be preliminarily encrypted or at least integrity-protected.
-Unmodified applications almost never have such "protect data in shared memory"
-logic, so enabling shared memory in Gramine by default would be insecure.
+By default, Gramine disables shared memory (i.e., memory shared with the host).
+In Gramine, shared memory applies to pseudo-files located under `/dev/shm/` and
+mapped into application address space with the `MAP_SHARED` flag.
+
+This disablement by default is particularly important for the SGX environment, where
+all data put in shared memory (i.e. memory residing outside of the SGX enclave)
+must be preliminarily encrypted or at least integrity-protected. Unmodified
+applications almost never have such "protect data in shared memory" logic, so
+enabling shared memory in Gramine by default would be insecure.
 
 Specifying `"passthrough"` explicitly allows shared memory. To be more precise,
 the `/dev/shm/` host directory (used for sharing data between processes and devices)
