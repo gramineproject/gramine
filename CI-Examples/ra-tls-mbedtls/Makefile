@@ -19,7 +19,7 @@ RA_CLIENT_LINKABLE ?= 0
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
 
 .PHONY: app
-app: ssl/server.crt mbedtls/.mbedtls_configured server.manifest.sgx server.sig server.token client
+app: ssl/server.crt mbedtls/.mbedtls_downloaded server.manifest.sgx server.sig server.token client
 
 .PHONY: epid
 epid: client_epid.manifest.sgx client_epid.sig client_epid.token
@@ -65,21 +65,16 @@ mbedtls/.mbedtls_downloaded: $(MBEDTLS_SRC)
 	mv mbedtls-mbedtls-$(MBEDTLS_VERSION) mbedtls
 	touch $@
 
-.SECONDARY: mbedtls/.mbedtls_configured
-mbedtls/.mbedtls_configured: mbedtls/.mbedtls_downloaded
-	cd mbedtls && ./scripts/config.pl set MBEDTLS_CMAC_C MBEDTLS_ERROR_C
-	touch $@
-
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
 # TODO: use `$(shell pkg-config --cflags mbedtls_gramine)` instead of local mbedtls includes
 CFLAGS += -I./mbedtls/include
 LDFLAGS += -ldl -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
 
-server: src/server.c mbedtls/.mbedtls_configured
+server: src/server.c mbedtls/.mbedtls_downloaded
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
-client: src/client.c mbedtls/.mbedtls_configured
+client: src/client.c mbedtls/.mbedtls_downloaded
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 ############################### SERVER MANIFEST ###############################
