@@ -30,8 +30,7 @@
 #include <mbedtls/x509_crt.h>
 
 #include "ra_tls.h"
-#include "sgx_arch.h"
-#include "sgx_attest.h"
+#include "ra_tls_common.h"
 
 #define CERT_SUBJECT_NAME_VALUES  "CN=RATLS,O=GramineDevelopers,C=US"
 #define CERT_TIMESTAMP_NOT_BEFORE_DEFAULT "20010101000000"

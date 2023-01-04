@@ -31,9 +31,7 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 
-/* RA-TLS: on server, only need ra_tls_create_key_and_crt_der() to create keypair and X.509 cert */
-int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
-                                       size_t* der_crt_size);
+#include "ra_tls.h"
 
 #define HTTP_RESPONSE                                    \
     "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n" \
@@ -81,7 +79,10 @@ int main(int argc, char** argv) {
     mbedtls_net_context client_fd;
     unsigned char buf[1024];
     const char* pers = "ssl_server";
+
     void* ra_tls_attest_lib;
+    int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
+                                           size_t* der_crt_size);
 
     uint8_t* der_key = NULL;
     uint8_t* der_crt = NULL;

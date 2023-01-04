@@ -16,6 +16,7 @@
 #define STDC_WANT_LIB_EXT1 1
 #define _XOPEN_SOURCE 700
 #include <arpa/inet.h>
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -30,6 +31,7 @@
 #include "mbedtls/ssl.h"
 
 #include "ra_tls.h"
+#include "ra_tls_common.h"
 #include "secret_prov.h"
 #include "secret_prov_common.h"
 #include "util.h"

@@ -34,6 +34,8 @@
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
 
+#include "ra_tls.h"
+
 /* RA-TLS: on client, only need to register ra_tls_verify_callback_der() for cert verification */
 int (*ra_tls_verify_callback_der_f)(uint8_t* der_crt, size_t der_crt_size);
 

@@ -5,10 +5,11 @@
  * \file
  *
  * This file contains the common code of verification callbacks for TLS libraries. All functions
- * here have hidden visibility (not accessible from outside the shared library).
+ * here are internal (not accessible from outside the shared library).
  */
 
 #define _GNU_SOURCE
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,8 +19,10 @@
 #include <mbedtls/x509_crt.h>
 
 #include "quote.h"
-#include "ra_tls.h"
 #include "util.h"
+
+#include "ra_tls.h"
+#include "ra_tls_common.h"
 
 verify_measurements_cb_t g_verify_measurements_cb = NULL;
 

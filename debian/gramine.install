@@ -15,3 +15,9 @@ usr/lib/${DEB_HOST_MULTIARCH}/libsgx_util.a*
 usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/*.pc
 usr/include/gramine/mbedtls/*.h
 usr/include/gramine/psa/*.h
+usr/include/gramine/psa/ra_tls.h
+usr/include/gramine/psa/ra_tls_common.h
+usr/include/gramine/psa/secret_prov.h
+usr/include/gramine/psa/secret_prov_common.h
+usr/include/gramine/psa/sgx_arch.h
+usr/include/gramine/psa/sgx_attest.h
