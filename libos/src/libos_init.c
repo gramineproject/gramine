@@ -361,7 +361,7 @@ static int read_environs(const char* const* envp) {
     do {                                                                    \
         int _err = CALL_INIT(func, ##__VA_ARGS__);                          \
         if (_err < 0) {                                                     \
-            log_error("Error during libos_init() in " #func " (%s)",        \
+            log_error("Error during libos_init() in " #func ": %s",         \
                       unix_strerror(_err));                                 \
             PalProcessExit(1);                                              \
         }                                                                   \
