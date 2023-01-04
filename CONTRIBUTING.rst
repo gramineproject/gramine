@@ -268,10 +268,10 @@ The currently active members of the management team are:
 
 The past (inactive) members of the management team are:
 
-* Paweł Marczewski (Invisible Things Lab/Intel)
-* Borys Popławski (Invisible Things Lab/Intel)
-* Rafał Wojdyła (Invisible Things Lab/Golem)
-* Isaku Yamahata (Intel)
+* Paweł Marczewski
+* Borys Popławski
+* Rafał Wojdyła
+* Isaku Yamahata
 
 The active members have the review and voting rights. The past (inactive)
 members have only the review rights.
