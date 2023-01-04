@@ -64,7 +64,7 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
 
     if (nfds <= NFDS_LIMIT_TO_USE_STACK) {
         /* Each FD uses 8+16+4*2=32 bytes on stack */
-        static_assert((sizeof(*pals) + sizeof(*fds_mapping) + sizeof(*pal_events) * 2) * 
+        static_assert((sizeof(*pals) + sizeof(*fds_mapping) + sizeof(*pal_events) * 2) *
                       NFDS_LIMIT_TO_USE_STACK <= 512,
                       "use too much space on stack, reduce the limit");
         allocated_on_stack = true;
