@@ -412,7 +412,7 @@ static const char* g_unix_error_list[] = {
     [EPROCUNAVAIL] = "RPC bad procedure for program (EPROCUNAVAIL)",
 #endif
 #ifdef EAUTH
-    [EAUTH] = "Authentication error (#)",
+    [EAUTH] = "Authentication error (EAUTH)",
 #endif
 #ifdef EDIED
     [EDIED] = "Translator died (EDIED)",
@@ -430,7 +430,7 @@ static const char* g_unix_error_list[] = {
     [EGRATUITOUS] = "Gratuitous error (EGRATUITOUS)",
 #endif
 #if defined(ENOTSUP) && ENOTSUP != EOPNOTSUPP
-    [ENOTSUP] = "Not supported (defined)",
+    [ENOTSUP] = "Not supported (ENOTSUP)",
 #endif
 #ifdef EPROGMISMATCH
     [EPROGMISMATCH] = "RPC program version wrong (EPROGMISMATCH)",
@@ -458,7 +458,7 @@ static const char* g_unix_error_list[] = {
 const char* unix_strerror(int err) {
     unsigned err_idx = err >= 0 ? err : -err;
     if (err_idx >= ARRAY_SIZE(g_unix_error_list) || !g_unix_error_list[err_idx]) {
-        log_error("Unknown PAL error (errcode = %d)", err);
+        log_error("Unknown UNIX error (errno = %d)", err);
         abort();
     }
     return g_unix_error_list[err_idx];
