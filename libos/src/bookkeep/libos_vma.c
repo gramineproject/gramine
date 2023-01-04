@@ -551,7 +551,6 @@ static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
 static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
 
 #define ASLR_BITS 12
-#define ASLR_SHIFT_BITS 4
 /* This variable is written to only once, during initialization, so it does not need to
  * be atomic. */
 static void* g_aslr_addr_top = NULL;
@@ -628,24 +627,20 @@ int init_vma(void) {
     g_aslr_addr_top = g_pal_public_state->memory_address_end;
 
     if (!g_pal_public_state->disable_aslr) {
-        /* Inspired by: https://elixir.bootlin.com/linux/v5.6.3/source/arch/x86/mm/mmap.c#L80 */
         size_t gap_max_size = (g_pal_public_state->memory_address_end
-                               - g_pal_public_state->memory_address_start) / 6 * 5;
+                               - g_pal_public_state->memory_address_start) / 3;
         /* We do address space randomization only if we have at least ASLR_BITS to randomize. */
         if (gap_max_size / ALLOC_ALIGNMENT >= (1ul << ASLR_BITS)) {
-            size_t rnd = 0;
+            size_t gap = 0;
 
-            int ret = PalRandomBitsRead(&rnd, sizeof(rnd));
+            int ret = PalRandomBitsRead(&gap, sizeof(gap));
             if (ret < 0) {
                 return pal_to_unix_errno(ret);
             }
-            size_t range = MAX(((g_pal_public_state->memory_address_end
-                                - g_pal_public_state->memory_address_start) / ALLOC_ALIGNMENT)
-                               >> ASLR_SHIFT_BITS,
-                               1UL << ASLR_BITS);
-            rnd = (rnd % range) * ALLOC_ALIGNMENT;
-            assert(rnd <= gap_max_size);
-            g_aslr_addr_top = (char*)g_aslr_addr_top - rnd;
+
+            /* Resulting distribution is not ideal, but it should not be an issue here. */
+            gap = ALLOC_ALIGN_DOWN(gap % gap_max_size);
+            g_aslr_addr_top = (char*)g_aslr_addr_top - gap;
 
             log_debug("ASLR top address adjusted to %p", g_aslr_addr_top);
         } else {
