@@ -19,6 +19,9 @@ sgx_inc = [
     ),
 ]
 
+# below headers are SGX-infrastructure generic and required by e.g. RA-TLS libs
+install_headers('sgx_arch.h', 'sgx_attest.h', subdir : 'gramine')
+
 cflags_pal_sgx = [
     cflags_pal_common,
     '-DHOST_TYPE=Linux-SGX',

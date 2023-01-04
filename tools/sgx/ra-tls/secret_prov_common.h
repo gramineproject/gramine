@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Labs */
+/* Copyright (C) 2023 Intel Labs */
+
+/* Internal Secret Prov details, not intended for external use. */
 
 #pragma once
 

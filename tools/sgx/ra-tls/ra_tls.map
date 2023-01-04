@@ -1,0 +1,5 @@
+RA_TLS {
+    global: ra_tls_set_measurement_callback; ra_tls_verify_callback_der; ra_tls_create_key_and_crt_der;
+    local: *;
+};
+

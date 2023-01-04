@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2020 Intel Labs */
+/* Copyright (C) 2023 Intel Labs */
+
+/*
+ * RA-TLS user API:
+ *   - ra_tls_set_measurement_callback() and ra_tls_verify_callback_der() for verifier side,
+ *   - ra_tls_create_key_and_crt_der() for attester (SGX enclave) side.
+ */
 
 #pragma once
 
-#include <mbedtls/x509_crt.h>
 #include <stdint.h>
-
-#include "sgx_arch.h"
-#include "sgx_attest.h"
 
 #define RA_TLS_EPID_API_KEY "RA_TLS_EPID_API_KEY"
 
@@ -26,40 +28,8 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
-#define SHA256_DIGEST_SIZE       32
-#define PUB_KEY_SIZE_MAX         128 /* enough for the only currently supported algo (ECDSA-384) */
-#define IAS_REQUEST_NONCE_LEN    32
-
-#define OID(N) \
-    { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
-static const uint8_t g_quote_oid[] = OID(0x06);
-static const size_t g_quote_oid_size = sizeof(g_quote_oid);
-
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
                                         const char* isv_prod_id, const char* isv_svn);
-
-/* internally used functions, not exported */
-__attribute__ ((visibility("hidden")))
-bool getenv_allow_outdated_tcb(void);
-
-__attribute__ ((visibility("hidden")))
-bool getenv_allow_debug_enclave(void);
-
-__attribute__ ((visibility("hidden")))
-int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);
-
-__attribute__ ((visibility("hidden")))
-int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
-                                    size_t* out_quote_size);
-
-__attribute__ ((visibility("hidden")))
-int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
-
-__attribute__ ((visibility("hidden")))
-int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);
-
-__attribute__ ((visibility("hidden")))
-int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
 
 /*!
  * \brief Callback for user-specific verification of measurements in SGX quote.
@@ -75,7 +45,6 @@ int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
  * callback is registered (or registered as NULL), then RA-TLS defaults to verifying SGX
  * measurements against `RA_TLS_*` environment variables (if any).
  */
-__attribute__ ((visibility("default")))
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
@@ -92,7 +61,6 @@ void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
  * quote, IAS attestation report verification, and/or DCAP quote verification must be passed in the
  * corresponding RA-TLS environment variables.
  */
-__attribute__ ((visibility("default")))
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 
 /*!
@@ -112,6 +80,5 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
  * embedded. The function allocates memory for key and certificate; user is expected to free them
  * after use.
  */
-__attribute__ ((visibility("default")))
 int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
                                   size_t* der_crt_size);

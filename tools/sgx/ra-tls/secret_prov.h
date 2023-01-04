@@ -1,5 +1,14 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2020 Intel Labs */
+/* Copyright (C) 2023 Intel Labs */
+
+/*
+ * Secret Prov user API:
+ *   - secret_provision_start() and secret_provision_get() for attester (SGX enclave, also called
+ *     "client") side,
+ *   - secret_provision_start_server() for verifier (also called "server") side,
+ *   - secret_provision_write(), secret_provision_read() and secret_provision_close() for both
+ *     sides.
+ */
 
 #pragma once
 
@@ -44,7 +53,6 @@ typedef int (*secret_provision_cb_t)(struct ra_tls_ctx* ctx);
  *
  * This function always writes all \p size bytes on success (partial writes are not possible).
  */
-__attribute__ ((visibility("default")))
 int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t size);
 
 /*!
@@ -62,7 +70,6 @@ int secret_provision_write(struct ra_tls_ctx* ctx, const uint8_t* buf, size_t si
  *
  * This function always reads all \p size bytes on success (partial reads are not possible).
  */
-__attribute__ ((visibility("default")))
 int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
 
 /*!
@@ -81,7 +88,6 @@ int secret_provision_read(struct ra_tls_ctx* ctx, uint8_t* buf, size_t size);
  *
  * This function must not be called again even if it returned an error. \p ctx is always freed.
  */
-__attribute__ ((visibility("default")))
 int secret_provision_close(struct ra_tls_ctx* ctx);
 
 /*!
@@ -99,7 +105,6 @@ int secret_provision_close(struct ra_tls_ctx* ctx);
  * copy of the secret from memory. Content of \p out_secret is dynamically allocated and should be
  * released using `free(*out_secret)`.
  */
-__attribute__ ((visibility("default")))
 int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* out_secret_size);
 
 /*!
@@ -126,7 +131,6 @@ int secret_provision_get(struct ra_tls_ctx* ctx, uint8_t** out_secret, size_t* o
  * The first secret can be retrieved via secret_provision_get(). The secret is destroyed together
  * with the session during secret_provision_close().
  */
-__attribute__ ((visibility("default")))
 int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
                            struct ra_tls_ctx** out_ctx);
 
@@ -159,7 +163,6 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
  *
  * This function is thread-safe and requires pthread library.
  */
-__attribute__ ((visibility("default")))
 int secret_provision_start_server(uint8_t* secret, size_t secret_size, const char* port,
                                   const char* cert_path, const char* key_path,
                                   verify_measurements_cb_t m_cb, secret_provision_cb_t f_cb);

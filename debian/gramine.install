@@ -9,11 +9,19 @@ usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/libpal.so
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/loader
 usr/lib/${DEB_HOST_MULTIARCH}/libmbed*_gramine.*
 usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_verify.a
 usr/lib/${DEB_HOST_MULTIARCH}/libsecret_prov_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/libsecret_prov_verify.a
 usr/lib/${DEB_HOST_MULTIARCH}/libsgx_util.a*
 usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/*.pc
+
 usr/include/gramine/mbedtls/*.h
 usr/include/gramine/psa/*.h
+usr/include/gramine/ra_tls.h
+usr/include/gramine/ra_tls_common.h
+usr/include/gramine/secret_prov.h
+usr/include/gramine/sgx_arch.h
+usr/include/gramine/sgx_attest.h
 
 # careful here not to install lib{ra_tls,secret_prov}_verify_*,
 # because that would cause file conflicts with gramine-ratls-* packages
@@ -41,6 +49,8 @@ usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libutil.so*
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libmbed*
 
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libra_tls_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libra_tls_verify.a
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libsecret_prov_attest.so*
+usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libsecret_prov_verify.a
 
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/musl/
