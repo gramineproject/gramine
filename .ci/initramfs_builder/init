@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+export HOME=/root
+
+mkdir -p /dev
+mount -t devtmpfs devtmpfs /dev
+
+sh /insert_modules.sh
+
+mkdir /hostfs
+mount -t 9p -o trans=virtio hostfs /hostfs -o version=9p2000.L -o msize=1048576
+
+mkdir /overlay
+mount -t tmpfs tmpfs /overlay
+mkdir /overlay/upper /overlay/work
+
+mkdir /newroot
+mount -t overlay -o "lowerdir=/hostfs,upperdir=/overlay/upper,workdir=/overlay/work" overlay /newroot
+
+cp /new_init /newroot/init
+mkdir -p /newroot/proc /newroot/sys /newroot/dev /newroot/tmp
+mount -t proc proc /newroot/proc
+mount -t sysfs sysfs /newroot/sys
+mount -t devtmpfs devtmpfs /newroot/dev
+mount -t tmpfs tmpfs /newroot/tmp
+
+umount -l /dev
+cd /newroot
+mount --move . /
+exec /bin/busybox chroot . /init

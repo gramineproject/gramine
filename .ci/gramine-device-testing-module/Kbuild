@@ -1,0 +1,2 @@
+gramine-testing-dev-objs := main.o
+obj-m := gramine-testing-dev.o
