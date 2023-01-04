@@ -15,7 +15,7 @@ enum {
 };
 
 /*
- * __FILE_NAME__ was introduced in GCC11 and clang9.
+ * __FILE_NAME__ was introduced in GCC12 and clang9.
  * If it's not defined we have to do our own magic.
  */
 #ifndef __FILE_NAME__
