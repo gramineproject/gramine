@@ -27,7 +27,7 @@ extern struct pal_public_state* g_pal_public_state;
 
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
-void libos_log(int level, const char *file, const char *func, uint64_t line,
+void libos_log(int level, const char* file, const char* func, uint64_t line,
                const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
 /*!

@@ -12,12 +12,12 @@ static int buf_write_all(const char* str, size_t size, void* arg) {
     return 0;
 }
 
-static void log_vprintf(const char* prefix, const char *file, const char *func, uint64_t line,
+static void log_vprintf(const char* prefix, const char* file, const char* func, uint64_t line,
                         const char* fmt, va_list ap) {
     struct print_buf buf = INIT_PRINT_BUF(buf_write_all);
 
     if (LOG_LEVEL_DEBUG <= g_pal_public_state.log_level)
-        buf_printf(&buf, "(%s:%ld:%s) ", file, line, func);
+        buf_printf(&buf, "(%s:%lu:%s) ", file, line, func);
     if (prefix)
         buf_puts(&buf, prefix);
 
@@ -26,7 +26,7 @@ static void log_vprintf(const char* prefix, const char *file, const char *func, 
     buf_flush(&buf);
 }
 
-void pal_log(int level, const char *file, const char *func, uint64_t line, const char* fmt, ...) {
+void pal_log(int level, const char* file, const char* func, uint64_t line, const char* fmt, ...) {
     if (level <= g_pal_public_state.log_level) {
         va_list ap;
         va_start(ap, fmt);

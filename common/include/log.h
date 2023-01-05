@@ -19,8 +19,8 @@ enum {
  * If it's not defined we have to do our own magic.
  */
 #ifndef __FILE_NAME__
-static inline const char* truncate_file_name(const char *filename) {
-    const char *ret = filename;
+static inline const char* truncate_file_name(const char* filename) {
+    const char* ret = filename;
 
     while (*filename != '\0') {
         if (*filename == '/') {

@@ -45,7 +45,7 @@
  *
  * Used by `log_*` macros in `log.h`.
  */
-void _log(int level, const char *file, const char *func, uint64_t line,
+void _log(int level, const char* file, const char* func, uint64_t line,
           const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
 /*
