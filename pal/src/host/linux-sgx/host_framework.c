@@ -153,7 +153,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
                       "You may need to set sysctl vm.mmap_min_addr to zero");
         }
 
-        log_error("ECREATE failed in allocating EPC memory: %s", unix_strerror(ret));
+        log_error("Allocation of EPC memory failed: %s", unix_strerror(ret));
         return ret;
     }
 
@@ -165,12 +165,12 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_CREATE, &param);
 
     if (ret < 0) {
-        log_error("ECREATE failed in enclave creation ioctl: %s", unix_strerror(ret));
+        log_error("Enclave creation IOCTL failed: %s", unix_strerror(ret));
         return ret;
     }
 
     if (ret) {
-        log_error("ECREATE failed: %s", unix_strerror(ret));
+        log_error("Enclave creation IOCTL failed: %s", unix_strerror(ret));
         return -EPERM;
     }
 
@@ -287,7 +287,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         if (ret < 0) {
             if (ret == -EINTR)
                 continue;
-            log_error("Enclave EADD returned %d", ret);
+            log_error("Enclave add-pages IOCTL failed: %s", unix_strerror(ret));
             return ret;
         }
 
@@ -348,7 +348,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         if (ret < 0) {
             if (ret == -EINTR)
                 continue;
-            log_error("Enclave EADD failed: %s", unix_strerror(ret));
+            log_error("Enclave add-pages IOCTL failed: %s", unix_strerror(ret));
             return ret;
         }
 

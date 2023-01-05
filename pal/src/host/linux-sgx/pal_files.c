@@ -302,7 +302,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
                                            aligned_offset, aligned_end, offset, end, chunk_hashes,
                                            handle->file.total);
         if (ret < 0) {
-            log_error("file_map - copy & verify on trusted file: %s", pal_strerror(ret));
+            log_error("file_map - copy & verify failed on trusted file: %s", pal_strerror(ret));
             goto out;
         }
 

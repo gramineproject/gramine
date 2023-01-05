@@ -789,8 +789,8 @@ int init_trusted_files(void) {
 
         ret = normalize_and_register_file(toml_trusted_uri_str, toml_trusted_sha256_str);
         if (ret < 0) {
-            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code %d (%s)",
-                      toml_trusted_uri_str, toml_trusted_sha256_str, ret, pal_strerror(ret));
+            log_error("normalize_and_register_file(\"%s\", \"%s\") failed with error code: %s",
+                      toml_trusted_uri_str, toml_trusted_sha256_str, pal_strerror(ret));
             goto out;
         }
 

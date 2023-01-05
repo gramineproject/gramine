@@ -691,8 +691,8 @@ static long sgx_ocall_debug_map_add(void* args) {
 #ifdef DEBUG
     int ret = debug_map_add(ocall_debug_args->name, ocall_debug_args->addr);
     if (ret < 0) {
-        log_error("debug_map_add(%s, %p): %s", ocall_debug_args->name, ocall_debug_args->addr,
-                  unix_strerror(ret));
+        log_error("debug_map_add(%s, %p) failed: %s", ocall_debug_args->name,
+                  ocall_debug_args->addr, unix_strerror(ret));
     }
 
     sgx_profile_report_elf(ocall_debug_args->name, ocall_debug_args->addr);
@@ -708,7 +708,7 @@ static long sgx_ocall_debug_map_remove(void* args) {
 #ifdef DEBUG
     int ret = debug_map_remove(ocall_debug_args->addr);
     if (ret < 0) {
-        log_error("debug_map_remove(%p): %s", ocall_debug_args->addr,
+        log_error("debug_map_remove(%p) failed: %s", ocall_debug_args->addr,
                   unix_strerror(ret));
     }
 #else
