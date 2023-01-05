@@ -12,10 +12,10 @@ other technical positions) and other participants in the Project (collectively,
 1. Mission and Scope of the Project
 -----------------------------------
 
-a. The mission of the Project is to develop a lightweight guest OS, designed to
+1. The mission of the Project is to develop a lightweight guest OS, designed to
    run a single application with minimal host requirements.
 
-b. The scope of the Project includes collaborative development under the Project
+2. The scope of the Project includes collaborative development under the Project
    License (as defined herein) supporting the mission, including documentation,
    testing, integration and the creation of other artifacts that aid the
    development, deployment, operation or adoption of the open source project.
@@ -23,10 +23,10 @@ b. The scope of the Project includes collaborative development under the Project
 2. Technical Steering Committee
 -------------------------------
 
-a. The Technical Steering Committee (the "TSC") will be responsible for all
+1. The Technical Steering Committee (the "TSC") will be responsible for all
    technical oversight of the open source Project.
 
-b. The TSC voting members are initially the Project’s Committers. At the
+2. The TSC voting members are initially the Project’s Committers. At the
    inception of the project, the Committers of the Project will be as set forth
    within the "CONTRIBUTING" file within the Project’s code repository.  The TSC
    may choose an alternative approach for determining the voting members of the
@@ -35,7 +35,7 @@ b. The TSC voting members are initially the Project’s Committers. At the
    open to the public, and can be conducted electronically, via teleconference,
    or in person.
 
-c. TSC projects generally will involve Contributors and Committers. The TSC may
+3. TSC projects generally will involve Contributors and Committers. The TSC may
    adopt or modify roles so long as the roles are documented in the CONTRIBUTING
    file. Unless otherwise documented:
 
@@ -50,22 +50,22 @@ c. TSC projects generally will involve Contributors and Committers. The TSC may
         existing Committers. A Committer may be removed by a majority approval
         of the other existing Committers.
 
-d. Participation in the Project through becoming a Contributor and Committer is
+4. Participation in the Project through becoming a Contributor and Committer is
    open to anyone so long as they abide by the terms of this Charter.
 
-e. The TSC may (1) establish work flow procedures for the submission, approval,
+5. The TSC may (1) establish work flow procedures for the submission, approval,
    and closure/archiving of projects, (2) set requirements for the promotion of
    Contributors to Committer status, as applicable, and (3) amend, adjust,
    refine and/or eliminate the roles of Contributors, and Committers, and create
    new roles, and publicly document any TSC roles, as it sees fit.
 
-f. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and
+6. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and
    will serve until their resignation or replacement by the TSC. The TSC Chair,
    or any other TSC member so designated by the TSC, will serve as the primary
    communication contact between the Project and the Confidential Computing
    Consortium Fund of The Linux Foundation.
 
-g. Responsibilities: The TSC will be responsible for all aspects of oversight
+7. Responsibilities: The TSC will be responsible for all aspects of oversight
    relating to the Project, which may include:
 
    i. coordinating the technical direction of the Project;
@@ -100,44 +100,44 @@ g. Responsibilities: The TSC will be responsible for all aspects of oversight
 3. TSC Voting
 -------------
 
-a. While the Project aims to operate as a consensus-based community, if any TSC
+1. While the Project aims to operate as a consensus-based community, if any TSC
    decision requires a vote to move the Project forward, the voting members of
    the TSC will vote on a one vote per voting member basis.
 
-b. Quorum for TSC meetings requires at least fifty percent of all voting members
+2. Quorum for TSC meetings requires at least fifty percent of all voting members
    of the TSC to be present. The TSC may continue to meet if quorum is not met
    but will be prevented from making any decisions at the meeting.
 
-c. Except as provided in Section 7.c. and 8.a, decisions by vote require a
+3. Except as provided in Section 7.3. and 8.1, decisions by vote require a
    majority vote of all voting members of the TSC.
 
-d. In the event a vote cannot be resolved by the TSC, any voting member of the
+4. In the event a vote cannot be resolved by the TSC, any voting member of the
    TSC may refer the matter to the Series Manager for assistance in reaching a
    resolution.
 
 4. Compliance with Policies
 ---------------------------
 
-a. This Charter is subject to the Series Agreement for the Project and the
+1. This Charter is subject to the Series Agreement for the Project and the
    Operating Agreement of LF Projects. Contributors will comply with the
    policies of LF Projects as may be adopted and amended by LF Projects,
    including, without limitation the policies listed at
    https://lfprojects.org/policies/.
 
-b. The TSC may adopt a code of conduct ("CoC") for the Project, which is subject
+2. The TSC may adopt a code of conduct ("CoC") for the Project, which is subject
    to approval by the Series Manager. In the event that a Project-specific CoC
    has not been approved, the LF Projects Code of Conduct listed at
    https://lfprojects.org/policies will apply for all Collaborators in the
    Project.
 
-c. When amending or adopting any policy applicable to the Project, LF Projects
+3. When amending or adopting any policy applicable to the Project, LF Projects
    will publish such policy, as to be amended or adopted, on its web site at
    least 30 days prior to such policy taking effect; provided, however, that in
    the case of any amendment of the Trademark Policy or Terms of Use of LF
    Projects, any such amendment is effective upon publication on LF Project’s
    web site.
 
-d. All Collaborators must allow open participation from any individual or
+4. All Collaborators must allow open participation from any individual or
    organization meeting the requirements for contributing under this Charter and
    any policies adopted for all Collaborators by the TSC, regardless of
    competitive interests. Put another way, the Project community must not seek
@@ -145,7 +145,7 @@ d. All Collaborators must allow open participation from any individual or
    other than those that are reasonable and applied on a non-discriminatory
    basis to all Collaborators in the Project community.
 
-e. The Project will operate in a transparent, open, collaborative, and ethical
+5. The Project will operate in a transparent, open, collaborative, and ethical
    manner at all times. The output of all Project discussions, proposals,
    timelines, decisions, and status should be made open and easily visible to
    all. Any potential violations of this requirement should be reported
@@ -154,18 +154,18 @@ e. The Project will operate in a transparent, open, collaborative, and ethical
 5. Community Assets
 -------------------
 
-a. LF Projects will hold title to all trade or service marks used by the Project
+1. LF Projects will hold title to all trade or service marks used by the Project
    ("Project Trademarks"), whether based on common law or registered rights.
    Project Trademarks will be transferred and assigned to LF Projects to hold on
    behalf of the Project. Any use of any Project Trademarks by Collaborators in
    the Project will be in accordance with the license from LF Projects and inure
    to the benefit of LF Projects.
 
-b. The Project will, as permitted and in accordance with such license from LF
+2. The Project will, as permitted and in accordance with such license from LF
    Projects, develop and own all Project GitHub and social media accounts, and
    domain name registrations created by the Project community.
 
-c. Under no circumstances will LF Projects be expected or required to undertake
+3. Under no circumstances will LF Projects be expected or required to undertake
    any action on behalf of the Project that is inconsistent with the tax-exempt
    status or purpose, as applicable, of the Joint Development Foundation or LF
    Projects, LLC.
@@ -173,7 +173,7 @@ c. Under no circumstances will LF Projects be expected or required to undertake
 6. General Rules and Operations
 -------------------------------
 
-a. The Project will:
+1. The Project will:
 
    i. engage in the work of the Project in a professional manner consistent with
       maintaining a cohesive community, while also maintaining the goodwill and
@@ -186,12 +186,12 @@ a. The Project will:
 7. Intellectual Property Policy
 -------------------------------
 
-a. Collaborators acknowledge that the copyright in all new contributions will be
+1. Collaborators acknowledge that the copyright in all new contributions will be
    retained by the copyright holder as independent works of authorship and that
    no contributor or copyright holder will be required to assign copyrights to
    the Project.
 
-b. Except as described in Section 7.c., all contributions to the Project are
+2. Except as described in Section 7.3., all contributions to the Project are
    subject to the following:
 
    i. All new inbound code contributions to the Project must be made using the
@@ -219,19 +219,19 @@ b. Except as described in Section 7.c., all contributions to the Project are
       contribution process and license terms for the applicable Upstream
       Project.
 
-c. The TSC may approve the use of an alternative license or licenses for inbound
+3. The TSC may approve the use of an alternative license or licenses for inbound
    or outbound contributions on an exception basis. To request an exception,
    please describe the contribution, the alternative open source license(s), and
    the justification for using an alternative open source license for the
    Project. License exceptions must be approved by a two-thirds vote of the
    entire TSC.
 
-d. Contributed files should contain license information, such as SPDX short form
+4. Contributed files should contain license information, such as SPDX short form
    identifiers, indicating the open source license or licenses pertaining to the
    file.
 
 8. Amendments
 -------------
 
-a. This charter may be amended by a two-thirds vote of the entire TSC and is
+1. This charter may be amended by a two-thirds vote of the entire TSC and is
    subject to approval by LF Projects.
