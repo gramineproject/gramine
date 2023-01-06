@@ -43,6 +43,7 @@ pkgconfig.generate(
     name: 'mbedtls_gramine',
     filebase: 'mbedtls_gramine',
     description: 'A version of mbedtls patched for Gramine',
+    subdirs: 'gramine',
     libraries: [
         '-L${libdir}',
         '-Wl,-rpath,${libdir}',
@@ -60,6 +61,11 @@ foreach output : mbedtls_libs_output
         '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
             output, get_option('libdir')))
 endforeach
+
+# We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
+# mbedTLS headers
+install_subdir('mbedtls-mbedtls-3.3.0/include/mbedtls', install_dir: get_option('includedir') / 'gramine')
+install_subdir('mbedtls-mbedtls-3.3.0/include/psa', install_dir: get_option('includedir') / 'gramine')
 
 mbedtls_pal_libs = custom_target('mbedtls_pal',
     command: [
