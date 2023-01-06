@@ -61,6 +61,11 @@ foreach output : mbedtls_libs_output
             output, get_option('libdir')))
 endforeach
 
+# We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
+# mbedTLS headers
+install_subdir('mbedtls-mbedtls-3.3.0/include/mbedtls', install_dir: 'include')
+install_subdir('mbedtls-mbedtls-3.3.0/include/psa', install_dir: 'include')
+
 mbedtls_pal_libs = custom_target('mbedtls_pal',
     command: [
         find_program('compile-pal.sh'),
