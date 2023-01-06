@@ -19,7 +19,7 @@ RA_CLIENT_LINKABLE ?= 0
 all: app epid  # by default, only build EPID because it doesn't rely on additional (DCAP) libs
 
 .PHONY: app
-app: ssl/server.crt mbedtls/.mbedtls_downloaded server.manifest.sgx server.sig server.token client
+app: ssl/server.crt server.manifest.sgx server.sig server.token client
 
 .PHONY: epid
 epid: client_epid.manifest.sgx client_epid.sig client_epid.token
@@ -37,44 +37,15 @@ ssl/server.crt: ssl/ca_config.conf
 	openssl req -new -key ssl/server.key -out ssl/server.csr -config ssl/ca_config.conf
 	openssl x509 -req -days 360 -in ssl/server.csr -CA ssl/ca.crt -CAkey ssl/ca.key -CAcreateserial -out ssl/server.crt
 
-############################# MBEDTLS DEPENDENCY ##############################
-
-# This download is done to get headers in include/, because we currently fail to provide the headers
-# (`pkg-config --cflags mbedtls_gramine` in the below CFLAGS line returns a non-existing directory).
-# TODO: install mbedtls_gramine headers during Gramine install, and use them in below CFLAGS line.
-
-MBEDTLS_VERSION ?= 3.3.0
-MBEDTLS_SRC ?= mbedtls-$(MBEDTLS_VERSION).tar.gz
-MBEDTLS_URI ?= \
-	https://github.com/ARMmbed/mbedtls/archive \
-	https://packages.gramineproject.io/distfiles
-MBEDTLS_HASH ?= a22ff38512697b9cd8472faa2ea2d35e320657f6d268def3a64765548b81c3ec
-
-ifeq ($(DEBUG),1)
-MBED_BUILD_TYPE=Debug
-else
-MBED_BUILD_TYPE=Release
-endif
-
-$(MBEDTLS_SRC):
-	../common_tools/download --output $@ $(foreach mirror,$(MBEDTLS_URI),--url $(mirror)/$(MBEDTLS_SRC)) --sha256 $(MBEDTLS_HASH)
-
-.SECONDARY: mbedtls/.mbedtls_downloaded
-mbedtls/.mbedtls_downloaded: $(MBEDTLS_SRC)
-	tar --touch -xzf $(MBEDTLS_SRC)
-	mv mbedtls-mbedtls-$(MBEDTLS_VERSION) mbedtls
-	touch $@
-
 ######################### CLIENT/SERVER EXECUTABLES ###########################
 
-# TODO: use `$(shell pkg-config --cflags mbedtls_gramine)` instead of local mbedtls includes
-CFLAGS += -I./mbedtls/include
+CFLAGS += $(shell pkg-config --cflags mbedtls_gramine)
 LDFLAGS += -ldl -Wl,--enable-new-dtags $(shell pkg-config --libs mbedtls_gramine)
 
-server: src/server.c mbedtls/.mbedtls_downloaded
+server: src/server.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
-client: src/client.c mbedtls/.mbedtls_downloaded
+client: src/client.c
 	$(CC) $< $(CFLAGS) $(LDFLAGS) -o $@
 
 ############################### SERVER MANIFEST ###############################
@@ -193,4 +164,4 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) -r mbedtls/ *.tar.gz ssl/ca.* ssl/server.*
+	$(RM) -r ssl/ca.* ssl/server.*
