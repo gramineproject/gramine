@@ -164,10 +164,10 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
 
         /* F_SETFD (int) */
         case F_SETFD:
-            lock(&handle_map->lock);
+            rwlock_write_lock(&handle_map->lock);
             if (HANDLE_ALLOCATED(handle_map->map[fd]))
                 handle_map->map[fd]->flags = arg & FD_CLOEXEC;
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             ret = 0;
             break;
 
