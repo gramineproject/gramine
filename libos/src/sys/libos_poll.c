@@ -81,7 +81,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
     size_t ret_events_count = 0;
     struct libos_handle_map* map = get_cur_thread()->handle_map;
 
-    lock(&map->lock);
+    rwlock_read_lock(&map->lock);
 
     /*
      * After each iteration of this loop either:
@@ -123,7 +123,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
             }
 
             if (ret < 0) {
-                unlock(&map->lock);
+                rwlock_read_unlock(&map->lock);
                 goto out;
             }
 
@@ -165,7 +165,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
         pal_handles[i] = pal_handle;
     }
 
-    unlock(&map->lock);
+    rwlock_read_unlock(&map->lock);
 
     uint64_t tmp_timeout_us = 0;
     if (ret_events_count) {

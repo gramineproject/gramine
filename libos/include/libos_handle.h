@@ -18,6 +18,7 @@
 #include "libos_lock.h"
 #include "libos_pollable_event.h"
 #include "libos_refcount.h"
+#include "libos_rwlock.h"
 #include "libos_sync.h"
 #include "libos_types.h"
 #include "linux_socket.h"
@@ -224,7 +225,7 @@ struct libos_handle_map {
 
     /* refrence count and lock */
     refcount_t ref_count;
-    struct libos_lock lock;
+    struct libos_rwlock lock;
 
     /* An array of file descriptor belong to this mapping */
     struct libos_fd_handle** map;
@@ -252,8 +253,6 @@ int set_new_fd_handle_by_fd(uint32_t fd, struct libos_handle* hdl, int fd_flags,
                             struct libos_handle_map* map);
 int set_new_fd_handle_above_fd(uint32_t fd, struct libos_handle* hdl, int fd_flags,
                                struct libos_handle_map* map);
-struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
-                                        struct libos_handle_map* map);
 struct libos_handle* detach_fd_handle(uint32_t fd, int* flags, struct libos_handle_map* map);
 void detach_all_fds(void);
 void close_cloexec_handles(struct libos_handle_map* map);
