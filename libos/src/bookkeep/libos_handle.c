@@ -168,12 +168,12 @@ int init_std_handles(void) {
 
     /* `handle_map` is set in current thread, no need to increase ref-count. */
 
-    lock(&handle_map->lock);
+    rwlock_write_lock(&handle_map->lock);
 
     if (handle_map->fd_size < 3) {
         ret = __enlarge_handle_map(handle_map, INIT_HANDLE_MAP_SIZE);
         if (ret < 0) {
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             return ret;
         }
     }
@@ -182,12 +182,12 @@ int init_std_handles(void) {
     if (!HANDLE_ALLOCATED(handle_map->map[0])) {
         struct libos_handle* stdin_hdl = get_new_handle();
         if (!stdin_hdl) {
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             return -ENOMEM;
         }
 
         if ((ret = init_tty_handle(stdin_hdl, /*write=*/false)) < 0) {
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             put_handle(stdin_hdl);
             return ret;
         }
@@ -200,12 +200,12 @@ int init_std_handles(void) {
     if (!HANDLE_ALLOCATED(handle_map->map[1])) {
         struct libos_handle* stdout_hdl = get_new_handle();
         if (!stdout_hdl) {
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             return -ENOMEM;
         }
 
         if ((ret = init_tty_handle(stdout_hdl, /*write=*/true)) < 0) {
-            unlock(&handle_map->lock);
+            rwlock_write_unlock(&handle_map->lock);
             put_handle(stdout_hdl);
             return ret;
         }
@@ -223,13 +223,13 @@ int init_std_handles(void) {
     if (handle_map->fd_top == FD_NULL || handle_map->fd_top < 2)
         handle_map->fd_top = 2;
 
-    unlock(&handle_map->lock);
+    rwlock_write_unlock(&handle_map->lock);
     return 0;
 }
 
 struct libos_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct libos_handle_map* map) {
     assert(map);
-    assert(locked(&map->lock));
+    assert(rwlock_is_read_locked(&map->lock) || rwlock_is_write_locked(&map->lock));
 
     struct libos_fd_handle* fd_handle = NULL;
 
@@ -251,16 +251,16 @@ struct libos_handle* get_fd_handle(uint32_t fd, int* fd_flags, struct libos_hand
     assert(map);
 
     struct libos_handle* hdl = NULL;
-    lock(&map->lock);
+    rwlock_read_lock(&map->lock);
     if ((hdl = __get_fd_handle(fd, fd_flags, map)))
         get_handle(hdl);
-    unlock(&map->lock);
+    rwlock_read_unlock(&map->lock);
     return hdl;
 }
 
-struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
-                                        struct libos_handle_map* map) {
-    assert(locked(&map->lock));
+static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
+                                               struct libos_handle_map* map) {
+    assert(rwlock_is_write_locked(&map->lock));
 
     struct libos_handle* handle = NULL;
 
@@ -319,29 +319,16 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
     if (!handle_map && !(handle_map = get_thread_handle_map(NULL)))
         return NULL;
 
-    lock(&handle_map->lock);
+    rwlock_write_lock(&handle_map->lock);
 
     if (fd < handle_map->fd_size)
         handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
 
-    unlock(&handle_map->lock);
+    rwlock_write_unlock(&handle_map->lock);
 
     (void)clear_posix_locks(handle);
 
     return handle;
-}
-
-static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
-    struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
-    put_handle(hdl);
-    return 0;
-}
-
-void detach_all_fds(void) {
-    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
-    assert(handle_map);
-
-    walk_handle_map(&detach_fd, handle_map);
 }
 
 struct libos_handle* get_new_handle(void) {
@@ -396,7 +383,7 @@ static int __set_new_fd_handle(uint32_t fd, struct libos_handle* hdl, int fd_fla
     if (!handle_map && !(handle_map = get_thread_handle_map(NULL)))
         return -EBADF;
 
-    lock(&handle_map->lock);
+    rwlock_write_lock(&handle_map->lock);
 
     if (handle_map->fd_top != FD_NULL) {
         assert(handle_map->map);
@@ -449,7 +436,7 @@ static int __set_new_fd_handle(uint32_t fd, struct libos_handle* hdl, int fd_fla
     ret = fd;
 
 out:
-    unlock(&handle_map->lock);
+    rwlock_write_unlock(&handle_map->lock);
     return ret;
 }
 
@@ -555,7 +542,7 @@ static struct libos_handle_map* get_new_handle_map(uint32_t size) {
 
     handle_map->fd_top  = FD_NULL;
     handle_map->fd_size = size;
-    if (!create_lock(&handle_map->lock)) {
+    if (!rwlock_create(&handle_map->lock)) {
         free(handle_map->map);
         free(handle_map);
         return NULL;
@@ -567,7 +554,7 @@ static struct libos_handle_map* get_new_handle_map(uint32_t size) {
 }
 
 static int __enlarge_handle_map(struct libos_handle_map* map, uint32_t size) {
-    assert(locked(&map->lock));
+    assert(rwlock_is_write_locked(&map->lock));
 
     if (size <= map->fd_size)
         return 0;
@@ -584,7 +571,7 @@ static int __enlarge_handle_map(struct libos_handle_map* map, uint32_t size) {
 }
 
 int dup_handle_map(struct libos_handle_map** new, struct libos_handle_map* old_map) {
-    lock(&old_map->lock);
+    rwlock_read_lock(&old_map->lock);
 
     /* allocate a new handle mapping with the same size as
        the old one */
@@ -615,7 +602,7 @@ int dup_handle_map(struct libos_handle_map** new, struct libos_handle_map* old_m
                     put_handle(new_map->map[j]->handle);
                     free(new_map->map[j]);
                 }
-                unlock(&old_map->lock);
+                rwlock_read_unlock(&old_map->lock);
                 *new = NULL;
                 free(new_map);
                 return -ENOMEM;
@@ -630,7 +617,7 @@ int dup_handle_map(struct libos_handle_map** new, struct libos_handle_map* old_m
     }
 
 done:
-    unlock(&old_map->lock);
+    rwlock_read_unlock(&old_map->lock);
     *new = new_map;
     return 0;
 }
@@ -661,16 +648,17 @@ void put_handle_map(struct libos_handle_map* map) {
         }
 
     done:
-        destroy_lock(&map->lock);
+        rwlock_destroy(&map->lock);
         free(map->map);
         free(map);
     }
 }
 
-int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle_map*),
-                    struct libos_handle_map* map) {
+static int walk_handle_map_writable(int (*callback)(struct libos_fd_handle*,
+                                                    struct libos_handle_map*),
+                                    struct libos_handle_map* map) {
     int ret = 0;
-    lock(&map->lock);
+    rwlock_write_lock(&map->lock);
 
     for (uint32_t i = 0; map->fd_top != FD_NULL && i <= map->fd_top; i++) {
         if (!HANDLE_ALLOCATED(map->map[i]))
@@ -680,12 +668,27 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
             break;
     }
 
-    unlock(&map->lock);
+    rwlock_write_unlock(&map->lock);
     return ret;
 }
 
+static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
+    struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+    put_handle(hdl);
+    return 0;
+}
+
+void detach_all_fds(void) {
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    /* TODO: either this should check the return value or the iterator function should not halt on
+     *       errors. */
+    walk_handle_map_writable(&detach_fd, handle_map);
+}
+
 void close_cloexec_handles(struct libos_handle_map* map) {
-    lock(&map->lock);
+    rwlock_write_lock(&map->lock);
 
     for (uint32_t i = 0; map->fd_top != FD_NULL && i <= map->fd_top; i++) {
         struct libos_fd_handle* fd_hdl = map->map[i];
@@ -696,15 +699,15 @@ void close_cloexec_handles(struct libos_handle_map* map) {
         if (fd_hdl->flags & FD_CLOEXEC) {
             struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
 
-            unlock(&map->lock);
+            rwlock_write_unlock(&map->lock);
             (void)clear_posix_locks(hdl);
 
             put_handle(hdl);
-            lock(&map->lock);
+            rwlock_write_lock(&map->lock);
         }
     }
 
-    unlock(&map->lock);
+    rwlock_write_unlock(&map->lock);
 }
 
 BEGIN_CP_FUNC(handle) {
@@ -891,7 +894,7 @@ BEGIN_CP_FUNC(handle_map) {
     struct libos_handle_map* new_handle_map = NULL;
     struct libos_fd_handle** ptr_array;
 
-    lock(&handle_map->lock);
+    rwlock_read_lock(&handle_map->lock);
 
     int fd_size = handle_map->fd_top != FD_NULL ? handle_map->fd_top + 1 : 0;
 
@@ -911,7 +914,7 @@ BEGIN_CP_FUNC(handle_map) {
         new_handle_map->map     = fd_size ? ptr_array : NULL;
 
         refcount_set(&new_handle_map->ref_count, 0);
-        clear_lock(&new_handle_map->lock);
+        new_handle_map->lock = (struct libos_rwlock){0};
 
         for (int i = 0; i < fd_size; i++) {
             if (HANDLE_ALLOCATED(handle_map->map[i]))
@@ -925,7 +928,7 @@ BEGIN_CP_FUNC(handle_map) {
         new_handle_map = (struct libos_handle_map*)(base + off);
     }
 
-    unlock(&handle_map->lock);
+    rwlock_read_unlock(&handle_map->lock);
 
     if (objp)
         *objp = (void*)new_handle_map;
@@ -941,10 +944,10 @@ BEGIN_RS_FUNC(handle_map) {
 
     DEBUG_RS("size=%d,top=%d", handle_map->fd_size, handle_map->fd_top);
 
-    if (!create_lock(&handle_map->lock)) {
+    if (!rwlock_create(&handle_map->lock)) {
         return -ENOMEM;
     }
-    lock(&handle_map->lock);
+    rwlock_write_lock(&handle_map->lock);
 
     if (handle_map->fd_top != FD_NULL)
         for (uint32_t i = 0; i <= handle_map->fd_top; i++) {
@@ -958,6 +961,6 @@ BEGIN_RS_FUNC(handle_map) {
             }
         }
 
-    unlock(&handle_map->lock);
+    rwlock_write_unlock(&handle_map->lock);
 }
 END_RS_FUNC(handle_map)

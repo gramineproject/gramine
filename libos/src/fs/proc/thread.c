@@ -236,15 +236,15 @@ bool proc_thread_fd_name_exists(struct libos_dentry* parent, const char* name) {
 
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
-    lock(&handle_map->lock);
+    rwlock_read_lock(&handle_map->lock);
 
     if (fd > handle_map->fd_top || handle_map->map[fd] == NULL ||
             handle_map->map[fd]->handle == NULL) {
-        unlock(&handle_map->lock);
+        rwlock_read_unlock(&handle_map->lock);
         return false;
     }
 
-    unlock(&handle_map->lock);
+    rwlock_read_unlock(&handle_map->lock);
     return true;
 }
 
@@ -253,7 +253,7 @@ int proc_thread_fd_list_names(struct libos_dentry* parent, readdir_callback_t ca
 
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
-    lock(&handle_map->lock);
+    rwlock_read_lock(&handle_map->lock);
 
     int ret = 0;
     for (uint32_t i = 0; i <= handle_map->fd_top; i++)
@@ -264,7 +264,7 @@ int proc_thread_fd_list_names(struct libos_dentry* parent, readdir_callback_t ca
                 break;
         }
 
-    unlock(&handle_map->lock);
+    rwlock_read_unlock(&handle_map->lock);
     return ret;
 }
 
@@ -297,11 +297,11 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
 
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
     assert(handle_map);
-    lock(&handle_map->lock);
+    rwlock_read_lock(&handle_map->lock);
 
     if (fd > handle_map->fd_top || handle_map->map[fd] == NULL ||
             handle_map->map[fd]->handle == NULL) {
-        unlock(&handle_map->lock);
+        rwlock_read_unlock(&handle_map->lock);
         return -ENOENT;
     }
 
@@ -317,7 +317,7 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
         ret = *out_target ? 0 : -ENOMEM;
     }
 
-    unlock(&handle_map->lock);
+    rwlock_read_unlock(&handle_map->lock);
 
     return ret;
 }
