@@ -662,10 +662,8 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             }
             if (pal_ret_events[i] & PAL_WAIT_HUP) {
                 this_item_events |= EPOLLHUP;
-                if (items[i]->events & EPOLLRDHUP) {
-                    /* add RDHUP event only if user requested for it to be reported */
-                    this_item_events |= EPOLLRDHUP;
-                }
+                /* add RDHUP event only if user requested for it to be reported */
+                this_item_events |= items[i]->events & EPOLLRDHUP;
             }
             if (pal_ret_events[i] & PAL_WAIT_READ) {
                 this_item_events |= items[i]->events & (EPOLLIN | EPOLLRDNORM);

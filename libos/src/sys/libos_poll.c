@@ -178,10 +178,8 @@ static long _libos_syscall_poll(struct pollfd* fds, nfds_t nfds, uint64_t* timeo
                 fds[i].revents |= POLLERR;
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_HUP) {
                 fds[i].revents |= POLLHUP;
-                if (fds[i].events & POLLRDHUP) {
-                    /* add RDHUP event only if user requested for it to be reported */
-                    fds[i].revents |= POLLRDHUP;
-                }
+                /* add RDHUP event only if user requested for it to be reported */
+                fds[i].revents |= fds[i].events & POLLRDHUP;
             }
             if (ret_events[fds_mapping[i].idx] & PAL_WAIT_READ)
                 fds[i].revents |= fds[i].events & (POLLIN | POLLRDNORM);
