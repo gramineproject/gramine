@@ -64,8 +64,8 @@ endforeach
 
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
 # mbedTLS headers
-install_subdir('mbedtls-mbedtls-3.3.0/include/mbedtls', install_dir: 'include/gramine')
-install_subdir('mbedtls-mbedtls-3.3.0/include/psa', install_dir: 'include/gramine')
+install_subdir('mbedtls-mbedtls-3.3.0/include/mbedtls', install_dir: get_option('includedir') / 'gramine')
+install_subdir('mbedtls-mbedtls-3.3.0/include/psa', install_dir: get_option('includedir') / 'gramine')
 
 mbedtls_pal_libs = custom_target('mbedtls_pal',
     command: [
