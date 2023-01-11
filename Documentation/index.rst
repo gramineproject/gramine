@@ -118,6 +118,7 @@ Table of Contents
    :maxdepth: 1
 
    python/api
+   python/writing-sgx-sign-plugins
 
 Indices and tables
 ==================

@@ -1,6 +1,7 @@
 usr/bin/gramine-*
 usr/bin/is-sgx-available
 usr/lib/python3/dist-packages/graminelibos/
+usr/lib/python3/dist-packages/graminelibos.dist-info/
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/direct/libpal.so
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/direct/loader
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/libsysdb.so
