@@ -1,4 +1,5 @@
 subdir('graminelibos')
+subdir('graminelibos.dist-info')
 
 install_data([
     'gramine-gen-depend',

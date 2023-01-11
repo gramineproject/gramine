@@ -6,11 +6,14 @@
 #                    Wojtek Porczyk <woju@invisiblethingslab.com>
 #
 
+import functools
 import hashlib
 import os
 import pathlib
 import struct
 import subprocess
+
+import click
 
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
@@ -542,6 +545,15 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 
     return sig
 
+
+@click.command(add_help_option=False)
+@click.help_option('--help-file')
+@click.option('--key', '-k', metavar='FILE',
+    type=click.Path(exists=True, dir_okay=False),
+    default=os.fspath(SGX_RSA_KEY_PATH),
+    help='specify signing key (.pem) file')
+def sign_with_file(key):
+    return functools.partial(sign_with_local_key, key=key), [key]
 
 def sign_with_local_key(data, key):
     """Signs *data* using *key*.
