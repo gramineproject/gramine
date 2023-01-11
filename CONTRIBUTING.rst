@@ -261,6 +261,7 @@ The currently active members of the management team are:
 
 * Michał Kowalczyk (Invisible Things Lab/Intel)
 * Dmitrii Kuvaiskii (Intel)
+* Borys Popławski (Invisible Things Lab/Intel)
 * Wojtek Porczyk (Invisible Things Lab/Intel)
 * Don Porter (UNC)
 * Chia-Che Tsai (Texas A&M University)
@@ -269,7 +270,6 @@ The currently active members of the management team are:
 The past (inactive) members of the management team are:
 
 * Paweł Marczewski
-* Borys Popławski
 * Rafał Wojdyła
 * Isaku Yamahata
 
