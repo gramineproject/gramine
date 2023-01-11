@@ -249,9 +249,6 @@ long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec*
 
 static long do_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
                       uint64_t* timeout_us) {
-    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
-        return -EINVAL;
-
     size_t total_fds = 0;
     for (size_t i = 0; i < (size_t)nfds; i++) {
         if ((read_set && __FD_ISSET(i, read_set)) || (write_set && __FD_ISSET(i, write_set))
@@ -331,14 +328,18 @@ out:
 
 long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
                           struct __kernel_timeval* tv) {
-    size_t set_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(fd_set));
-    if (read_set && !is_user_memory_writable(read_set, set_len * sizeof(*read_set))) {
+    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+        return -EINVAL;
+
+    static_assert(sizeof(((fd_set*)0)->fds_bits) == sizeof(fd_set), "unexpected fd_set struct");
+    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((fd_set*)0)->fds_bits));
+    if (read_set && !is_user_memory_writable(read_set, fd_set_arr_len * sizeof(*read_set))) {
             return -EFAULT;
     }
-    if (write_set && !is_user_memory_writable(write_set, set_len * sizeof(*write_set))) {
+    if (write_set && !is_user_memory_writable(write_set, fd_set_arr_len * sizeof(*write_set))) {
             return -EFAULT;
     }
-    if (except_set && !is_user_memory_writable(except_set, set_len * sizeof(*except_set))) {
+    if (except_set && !is_user_memory_writable(except_set, fd_set_arr_len * sizeof(*except_set))) {
             return -EFAULT;
     }
 
@@ -370,14 +371,18 @@ struct sigset_argpack {
 
 long libos_syscall_pselect6(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
                             struct __kernel_timespec* tsp, void* _sigmask_argpack) {
-    size_t set_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(fd_set));
-    if (read_set && !is_user_memory_writable(read_set, set_len * sizeof(*read_set))) {
+    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+        return -EINVAL;
+
+    static_assert(sizeof(((fd_set*)0)->fds_bits) == sizeof(fd_set), "unexpected fd_set struct");
+    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((fd_set*)0)->fds_bits));
+    if (read_set && !is_user_memory_writable(read_set, fd_set_arr_len * sizeof(*read_set))) {
             return -EFAULT;
     }
-    if (write_set && !is_user_memory_writable(write_set, set_len * sizeof(*write_set))) {
+    if (write_set && !is_user_memory_writable(write_set, fd_set_arr_len * sizeof(*write_set))) {
             return -EFAULT;
     }
-    if (except_set && !is_user_memory_writable(except_set, set_len * sizeof(*except_set))) {
+    if (except_set && !is_user_memory_writable(except_set, fd_set_arr_len * sizeof(*except_set))) {
             return -EFAULT;
     }
 
