@@ -1,0 +1,2 @@
+[gramine.sgx_sign]
+file = graminelibos.sgx_sign:sign_with_file

@@ -191,6 +191,7 @@ Indices and tables
    devel/debugging
    devel/packaging
    python/api
+   python/writing-sgx-sign-plugins
    devel/new-syscall
    libos/libos-init
    pal/host-abi
