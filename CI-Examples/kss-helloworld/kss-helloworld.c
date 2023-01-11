@@ -27,7 +27,7 @@ int main(void) {
         fprintf(stderr, "Failed to open attestation type handle\n");
         return 1;
     }
-    if(fread(print_buffer, 1, sizeof(print_buffer), attestation_type_fd) < 0) {
+    if(fread(print_buffer, 1, sizeof(print_buffer), attestation_type_fd) <= 0) {
         fprintf(stderr, "Failed to read attestation type\n");
         return 2;
     }
