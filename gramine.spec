@@ -112,6 +112,9 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 %dir %{python3_sitearch}/%{name}libos
 %{python3_sitearch}/%{name}libos/*.py
 %{python3_sitearch}/%{name}libos/__pycache__
+%dir %{python3_sitearch}/%{name}libos.dist-info
+%{python3_sitearch}/%{name}libos.dist-info/METADATA
+%{python3_sitearch}/%{name}libos.dist-info/entry_points.txt
 %{python3_sitearch}/_%{name}libos_offsets.py
 %{python3_sitearch}/__pycache__
 

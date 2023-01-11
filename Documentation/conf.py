@@ -156,7 +156,10 @@ nitpick_ignore = [
 
 manpages_url = 'https://manpages.debian.org/{path}'
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'click': ('https://click.palletsprojects.com/en/latest', None),
+}
 
 # -- Options for HTML output -------------------------------------------------
 
