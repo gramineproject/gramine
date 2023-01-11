@@ -20,9 +20,13 @@ signature file for given input manifest and libpal file (main Gramine binary).
 Command line arguments
 ======================
 
+.. option:: --help, -h
+
+    Show help and exit.
+
 .. option:: --output output_manifest, -o output_manifest
 
-   Path to the output manifest file (with Trusted Files expanded).
+    Path to the output manifest file (with Trusted Files expanded).
 
 .. option:: --key key_file, -k key_file
 
@@ -56,3 +60,14 @@ Command line arguments
 .. option:: --quiet, -q
 
     Don't print details to standard output.
+
+.. option:: --with <plugin>
+
+    Use plugin to perform actual signing. The default plugin is ``file``, which
+    signs the SIGSTRUCT using PEM-encoded local file. The list of available
+    plugins is at the end of :option:`--help` output.
+
+    Each plugin may add its own set of options (usually in the form of
+    ``--<plugin>-<option>``). To get help about those, use
+    :command:`gramine-sgx-sign --with=<plugin> --help-<plugin>` and/or consult
+    the documentation of the respective plugin.
