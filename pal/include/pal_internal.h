@@ -241,10 +241,10 @@ int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_s
                          size_t* quote_size);
 int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 
-#define INIT_FAIL(msg, ...)                                                         \
-    do {                                                                            \
-        log_error("PAL failed at %s:%d: " msg, __FILE__, __LINE__, ##__VA_ARGS__);  \
-        _PalProcessExit(1);                                                         \
+#define INIT_FAIL(msg, ...)                                                              \
+    do {                                                                                 \
+        log_error("PAL failed at %s:%d: " msg, __FILE_NAME__, __LINE__, ##__VA_ARGS__);  \
+        _PalProcessExit(1);                                                              \
     } while (0)
 
 #define INIT_FAIL_MANIFEST(reason)                                      \

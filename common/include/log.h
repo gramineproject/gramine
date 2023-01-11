@@ -32,7 +32,7 @@ static inline const char* truncate_file_name(const char* filename) {
     return ret;
 }
 
-#define __FILE_NAME__ truncate_file_name(__FILE__)
+#define __FILE_NAME__ (truncate_file_name(__FILE__))
 #endif
 
 /* All of them implicitly append a newline at the end of the message. */
