@@ -331,6 +331,17 @@ out:
 
 long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
                           struct __kernel_timeval* tv) {
+    size_t set_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(fd_set));
+    if (read_set && !is_user_memory_writable(read_set, set_len * sizeof(*read_set))) {
+            return -EFAULT;
+    }
+    if (write_set && !is_user_memory_writable(write_set, set_len * sizeof(*write_set))) {
+            return -EFAULT;
+    }
+    if (except_set && !is_user_memory_writable(except_set, set_len * sizeof(*except_set))) {
+            return -EFAULT;
+    }
+
     uint64_t timeout_us = 0;
     if (tv) {
         if (!is_user_memory_readable(tv, sizeof(*tv))) {
@@ -359,6 +370,17 @@ struct sigset_argpack {
 
 long libos_syscall_pselect6(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
                             struct __kernel_timespec* tsp, void* _sigmask_argpack) {
+    size_t set_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(fd_set));
+    if (read_set && !is_user_memory_writable(read_set, set_len * sizeof(*read_set))) {
+            return -EFAULT;
+    }
+    if (write_set && !is_user_memory_writable(write_set, set_len * sizeof(*write_set))) {
+            return -EFAULT;
+    }
+    if (except_set && !is_user_memory_writable(except_set, set_len * sizeof(*except_set))) {
+            return -EFAULT;
+    }
+
     struct sigset_argpack* sigmask_argpack = _sigmask_argpack;
     if (sigmask_argpack) {
         if (!is_user_memory_readable(sigmask_argpack, sizeof(*sigmask_argpack))) {
