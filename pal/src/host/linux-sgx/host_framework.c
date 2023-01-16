@@ -80,11 +80,48 @@ int read_enclave_token(int token_file, sgx_arch_token_t* out_token) {
     return 0;
 }
 
+static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
+    /* see also sgx_get_token.py:get_optional_sgx_features(), used for legacy non-FLC machines */
+    const struct {
+        uint64_t bits;
+        const struct {
+            uint32_t leaf;
+            uint32_t subleaf;
+            uint32_t reg;
+            uint32_t bit;
+        } cpuid;
+    } xfrm_flags[] = {
+        /* for mapping of CPUID leaves to CPU features, see libos/src/arch/x86_64/libos_cpuid.c */
+        {SGX_XFRM_AVX,    { .leaf = 1, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
+        {SGX_XFRM_MPX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
+        {SGX_XFRM_AVX512, { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
+        {SGX_XFRM_PKRU,   { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
+        {SGX_XFRM_AMX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
+    };
+
+    *out_xfrm = xfrm;
+    for (size_t i = 0; i < ARRAY_SIZE(xfrm_flags); i++) {
+        /* check if SIGSTRUCT.ATTRIBUTEMASK.XFRM doesn't care whether an optional CPU feature is
+         * enabled or not (XFRM mask should completely unset these bits) */
+        if ((xfrm_flags[i].bits & xfrm_mask) == 0) {
+            /* set CPU feature if current system supports it (for performance) */
+            uint32_t values[4];
+            cpuid(xfrm_flags[i].cpuid.leaf, xfrm_flags[i].cpuid.subleaf, values);
+            if (values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit))
+                *out_xfrm |= xfrm_flags[i].bits;
+        }
+    }
+
+    return 0;
+}
+
 int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token) {
     memset(out_token, 0, sizeof(*out_token));
     memcpy(&out_token->body.attributes, &sig->attributes, sizeof(sgx_attributes_t));
     out_token->masked_misc_select_le = sig->misc_select;
-    return 0;
+
+    return get_optional_sgx_features(sig->attributes.xfrm, sig->attribute_mask.xfrm,
+                                     &out_token->body.attributes.xfrm);
 }
 
 int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
