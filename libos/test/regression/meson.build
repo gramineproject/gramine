@@ -134,6 +134,9 @@ tests = {
 
 if host_machine.cpu_family() == 'x86_64'
     tests += {
+        'avx': {
+            'c_args': '-mavx',
+        },
         'cpuid': {},
         'debug_regs_x86_64': {
             'c_args': '-g3',
