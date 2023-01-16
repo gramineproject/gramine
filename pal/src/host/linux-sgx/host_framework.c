@@ -1,11 +1,12 @@
 #include <asm/errno.h>
 
 #include "hex.h"
-#include "host_sgx_driver.h"
 #include "host_internal.h"
+#include "host_sgx_driver.h"
 #include "linux_utils.h"
 #include "pal_sgx.h"
 #include "sgx_arch.h"
+#include "topo_info.h"  /* for read_file_buffer(); this func should be moved to a common header */
 
 static int g_isgx_device = -1;
 
@@ -80,11 +81,72 @@ int read_enclave_token(int token_file, sgx_arch_token_t* out_token) {
     return 0;
 }
 
+static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
+    /* Must find CPU features in "flags:" of /proc/cpuinfo. Although the whole file might not fit in
+     * this size, the first cpu description should. */
+    char buf[2048];
+    ssize_t len;
+
+    len = read_file_buffer("/proc/cpuinfo", buf, sizeof(buf) - 1);
+    if (len < 0)
+        return len;
+    buf[len] = 0;
+
+    /* to find line that starts with "flags", we assume it's never the first line (thus has `\n`) */
+    char* flags_line = strstr(buf, "\nflags");
+    if (!flags_line)
+        return -EPERM;
+
+    char* ptr = flags_line + strlen("\nflags");
+    while (ptr[0] && (ptr[0] == '\t' || ptr[0] == ' '))
+        ptr++;
+
+    if (ptr[0] != ':')
+        return -EPERM;
+    ptr++;
+
+    /* make the end of "flags" line in the form of " \0" (space + end-of-string), for easy search */
+    char* end_of_flags_line = strchr(ptr, '\n');
+    if (!end_of_flags_line)
+        return -EPERM;
+
+    end_of_flags_line[0] = ' ';
+    end_of_flags_line[1] = '\0';
+
+    /* see also sgx_get_token.py:get_optional_sgx_features(), used for legacy non-FLC machines */
+    const struct {
+        uint64_t bits;
+        const char* flag;
+    } xfrm_flags[] = {
+        {SGX_XFRM_AVX,    " avx "},
+        {SGX_XFRM_MPX,    " mpx "},
+        {SGX_XFRM_AVX512, " avx512f "},
+        {SGX_XFRM_PKRU,   " pku "},  /* "pku" is not a typo, that's how cpuinfo reports it */
+        {SGX_XFRM_AMX,    " amx_tile "},
+    };
+
+    *out_xfrm = xfrm;
+    for (size_t i = 0; i < ARRAY_SIZE(xfrm_flags); i++) {
+        /* check if SIGSTRUCT.ATTRIBUTEMASK.XFRM doesn't care whether an optional CPU feature is
+         * enabled or not (XFRM mask should completely unset these bits) */
+        if ((xfrm_flags[i].bits & xfrm_mask) == 0) {
+            /* set CPU feature if current system supports it (for performance) */
+            char* found_flag = strstr(flags_line, xfrm_flags[i].flag);
+            if (found_flag)
+                *out_xfrm |= xfrm_flags[i].bits;
+        }
+    }
+
+    return 0;
+}
+
 int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token) {
     memset(out_token, 0, sizeof(*out_token));
     memcpy(&out_token->body.attributes, &sig->attributes, sizeof(sgx_attributes_t));
     out_token->masked_misc_select_le = sig->misc_select;
-    return 0;
+
+    return get_optional_sgx_features(sig->attributes.xfrm, sig->attribute_mask.xfrm,
+                                     &out_token->body.attributes.xfrm);
 }
 
 int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
