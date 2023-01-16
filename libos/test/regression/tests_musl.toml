@@ -121,6 +121,7 @@ manifests = [
 [arch.x86_64]
 
 manifests = [
+  "avx",
   "cpuid",
   "debug_regs_x86_64",
   "rdtsc",

@@ -16,6 +16,7 @@ fspath = getattr(os, 'fspath', str) # pylint: disable=invalid-name
 
 # pylint: disable=subprocess-popen-preexec-fn,subprocess-run-check
 
+HAS_AVX = os.environ.get('AVX') == '1'
 HAS_EDMM = os.environ.get('EDMM') == '1'
 HAS_SGX = os.environ.get('SGX') == '1'
 ON_X86 = os.uname().machine in ['x86_64']
