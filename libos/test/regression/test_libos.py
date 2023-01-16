@@ -7,6 +7,7 @@ import subprocess
 import unittest
 
 from graminelibos.regression import (
+    HAS_AVX,
     HAS_EDMM,
     HAS_SGX,
     ON_X86,
@@ -1327,4 +1328,11 @@ class TC_90_CpuidSGX(RegressionTestCase):
 class TC_91_RdtscSGX(RegressionTestCase):
     def test_000_rdtsc(self):
         stdout, _ = self.run_binary(['rdtsc'])
+        self.assertIn('TEST OK', stdout)
+
+@unittest.skipUnless(HAS_AVX,
+    'This test checks if SIGSTRUCT.ATTRIBUTES.XFRM enables optional CPU features in SGX.')
+class TC_92_avx(RegressionTestCase):
+    def test_000_avx(self):
+        stdout, _ = self.run_binary(['avx'])
         self.assertIn('TEST OK', stdout)
