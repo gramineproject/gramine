@@ -9,7 +9,7 @@ else
     GRAMINE=gramine-direct
 fi
 
-# === hellworld ===
+# === helloworld ===
 echo -e "\n\nRunning helloworld.py:"
 $GRAMINE ./python scripts/helloworld.py > OUTPUT
 grep -q "Hello World" OUTPUT && echo "[ Success 1/4 ]"
