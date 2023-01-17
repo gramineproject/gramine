@@ -1,12 +1,11 @@
 #include <asm/errno.h>
 
 #include "hex.h"
-#include "host_internal.h"
 #include "host_sgx_driver.h"
+#include "host_internal.h"
 #include "linux_utils.h"
 #include "pal_sgx.h"
 #include "sgx_arch.h"
-#include "topo_info.h"  /* for read_file_buffer(); this func should be moved to a common header */
 
 static int g_isgx_device = -1;
 
@@ -82,47 +81,22 @@ int read_enclave_token(int token_file, sgx_arch_token_t* out_token) {
 }
 
 static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
-    /* Must find CPU features in "flags:" of /proc/cpuinfo. Although the whole file might not fit in
-     * this size, the first cpu description should. */
-    char buf[2048];
-    ssize_t len;
-
-    len = read_file_buffer("/proc/cpuinfo", buf, sizeof(buf) - 1);
-    if (len < 0)
-        return len;
-    buf[len] = 0;
-
-    /* to find line that starts with "flags", we assume it's never the first line (thus has `\n`) */
-    char* flags_line = strstr(buf, "\nflags");
-    if (!flags_line)
-        return -EPERM;
-
-    char* ptr = flags_line + strlen("\nflags");
-    while (ptr[0] && (ptr[0] == '\t' || ptr[0] == ' '))
-        ptr++;
-
-    if (ptr[0] != ':')
-        return -EPERM;
-    ptr++;
-
-    /* make the end of "flags" line in the form of " \0" (space + end-of-string), for easy search */
-    char* end_of_flags_line = strchr(ptr, '\n');
-    if (!end_of_flags_line)
-        return -EPERM;
-
-    end_of_flags_line[0] = ' ';
-    end_of_flags_line[1] = '\0';
-
     /* see also sgx_get_token.py:get_optional_sgx_features(), used for legacy non-FLC machines */
     const struct {
         uint64_t bits;
-        const char* flag;
+        const struct {
+            uint32_t leaf;
+            uint32_t subleaf;
+            uint32_t reg;
+            uint32_t bit;
+        } cpuid;
     } xfrm_flags[] = {
-        {SGX_XFRM_AVX,    " avx "},
-        {SGX_XFRM_MPX,    " mpx "},
-        {SGX_XFRM_AVX512, " avx512f "},
-        {SGX_XFRM_PKRU,   " pku "},  /* "pku" is not a typo, that's how cpuinfo reports it */
-        {SGX_XFRM_AMX,    " amx_tile "},
+        /* for mapping of CPUID leaves to CPU features, see libos/src/arch/x86_64/libos_cpuid.c */
+        {SGX_XFRM_AVX,    { .leaf = 1, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
+        {SGX_XFRM_MPX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
+        {SGX_XFRM_AVX512, { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
+        {SGX_XFRM_PKRU,   { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
+        {SGX_XFRM_AMX,    { .leaf = 7, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
     };
 
     *out_xfrm = xfrm;
@@ -131,8 +105,9 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
          * enabled or not (XFRM mask should completely unset these bits) */
         if ((xfrm_flags[i].bits & xfrm_mask) == 0) {
             /* set CPU feature if current system supports it (for performance) */
-            char* found_flag = strstr(flags_line, xfrm_flags[i].flag);
-            if (found_flag)
+            uint32_t values[4];
+            cpuid(xfrm_flags[i].cpuid.leaf, xfrm_flags[i].cpuid.subleaf, values);
+            if (values[xfrm_flags[i].cpuid.reg] & (1 << xfrm_flags[i].cpuid.bit))
                 *out_xfrm |= xfrm_flags[i].bits;
         }
     }
