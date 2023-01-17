@@ -1145,6 +1145,7 @@ static int verify_hw_requirements(char* envp[]) {
                   "in the host kernel. Please update your system.");
         return -EINVAL;
     }
+
     unsigned int values[4];
     cpuid(FEATURE_FLAGS_LEAF, /*unused*/0, values);
     const char* missing = NULL;
@@ -1184,7 +1185,6 @@ int main(int argc, char* argv[], char* envp[]) {
      * non-main threads do not have growing stacks and thus do not need this hack. */
     static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
     probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
-
 
     if (argc < 4)
         print_usage_and_exit(argv[0]);

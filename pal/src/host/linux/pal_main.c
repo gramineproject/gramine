@@ -290,7 +290,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * allows us to catch "syscall" instructions. See "pal_exception.c" for more details.
      */
     uint32_t cpuid_7_0_values[4] = { 0 };
-    cpuid(7, 0, cpuid_7_0_values);
+    cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0, cpuid_7_0_values);
     if (cpuid_7_0_values[CPUID_WORD_ECX] & (1u << 16)) {
         /*
          * `LA57` bit is set - CPU supports 5-level paging - we cannot use VDSO.

@@ -642,10 +642,6 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return 0;
 }
 
-#define CPUID_LEAF_INVARIANT_TSC 0x80000007
-#define CPUID_LEAF_TSC_FREQ 0x15
-#define CPUID_LEAF_PROC_FREQ 0x16
-
 ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
     int fd;
 
@@ -661,7 +657,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
 
 bool is_tsc_usable(void) {
     uint32_t words[CPUID_WORD_NUM];
-    _PalCpuIdRetrieve(CPUID_LEAF_INVARIANT_TSC, 0, words);
+    _PalCpuIdRetrieve(INVARIANT_TSC_LEAF, 0, words);
     return words[CPUID_WORD_EDX] & 1 << 8;
 }
 
@@ -669,7 +665,7 @@ bool is_tsc_usable(void) {
 uint64_t get_tsc_hz(void) {
     uint32_t words[CPUID_WORD_NUM];
 
-    _PalCpuIdRetrieve(CPUID_LEAF_TSC_FREQ, 0, words);
+    _PalCpuIdRetrieve(TSC_FREQ_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX] || !words[CPUID_WORD_EBX]) {
         /* TSC/core crystal clock ratio is not enumerated, can't use RDTSC for accurate time */
         return 0;
@@ -685,7 +681,7 @@ uint64_t get_tsc_hz(void) {
     /* some Intel CPUs do not report nominal frequency of crystal clock, let's calculate it
      * based on Processor Frequency Information Leaf (CPUID 16H); this leaf always exists if
      * TSC Frequency Leaf exists; logic is taken from Linux 5.11's arch/x86/kernel/tsc.c */
-    _PalCpuIdRetrieve(CPUID_LEAF_PROC_FREQ, 0, words);
+    _PalCpuIdRetrieve(PROC_FREQ_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX]) {
         /* processor base frequency (in MHz) is not enumerated, can't calculate frequency */
         return 0;
