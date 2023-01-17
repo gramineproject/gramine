@@ -89,11 +89,3 @@ Reporting security issues
 =========================
 
 Please report security issues to security@gramineproject.io.
-
-
-Acknowledgments
-===============
-
-Gramine Project benefits from generous help of `fosshost.org
-<https://fosshost.org>`__: they lend us a VPS, which we use as toolserver and
-package hosting.
