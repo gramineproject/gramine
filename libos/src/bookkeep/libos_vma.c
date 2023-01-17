@@ -1229,7 +1229,7 @@ static size_t dump_vmas_with_buf(struct libos_vma_info* infos, size_t max_count,
     return size;
 }
 
-static int dump_vmas(struct libos_vma_info** ret_infos, size_t* ret_count,
+static int dump_vmas(struct libos_vma_info** out_infos, size_t* out_count,
                      uintptr_t begin, uintptr_t end,
                      bool (*vma_filter)(struct libos_vma* vma, void* arg), void* arg) {
     size_t count = DEFAULT_VMA_COUNT;
@@ -1242,8 +1242,8 @@ static int dump_vmas(struct libos_vma_info** ret_infos, size_t* ret_count,
 
         size_t needed_count = dump_vmas_with_buf(vmas, count, begin, end, vma_filter, arg);
         if (needed_count <= count) {
-            *ret_infos = vmas;
-            *ret_count = needed_count;
+            *out_infos = vmas;
+            *out_count = needed_count;
             return 0;
         }
 
@@ -1267,15 +1267,15 @@ static bool vma_filter_exclude_unmapped(struct libos_vma* vma, void* arg) {
 }
 
 int dump_vmas_in_range(uintptr_t begin, uintptr_t end, bool include_unmapped,
-                       struct libos_vma_info** ret_infos, size_t* ret_count) {
-    return dump_vmas(ret_infos, ret_count, begin, end,
+                       struct libos_vma_info** out_infos, size_t* out_count) {
+    return dump_vmas(out_infos, out_count, begin, end,
                      include_unmapped ? vma_filter_all : vma_filter_exclude_unmapped,
                      /*arg=*/NULL);
 }
 
-int dump_all_vmas(bool include_unmapped, struct libos_vma_info** ret_infos, size_t* ret_count) {
-    return dump_vmas_in_range(/*begin=*/0, /*end=*/UINTPTR_MAX, include_unmapped, ret_infos,
-                              ret_count);
+int dump_all_vmas(bool include_unmapped, struct libos_vma_info** out_infos, size_t* out_count) {
+    return dump_vmas_in_range(/*begin=*/0, /*end=*/UINTPTR_MAX, include_unmapped, out_infos,
+                              out_count);
 }
 
 void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
