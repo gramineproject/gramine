@@ -338,7 +338,7 @@ out:
 
 static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
-    assert(!dent->inode);
+    assert(dent->inode);
 
     char* uri = NULL;
     lock(&dent->inode->lock);
