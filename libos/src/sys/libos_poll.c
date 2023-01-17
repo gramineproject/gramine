@@ -332,10 +332,10 @@ long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set*
         return -EINVAL;
 
     /* Each of `read_set`, `write_set` and `except_set` is an array of fd_set items; each fd_set
-     * item has a single field `fd_set::fds_bits` that typically has a size of 128B (which allows to
-     * accommodate 1024 bits, i.e. 1024 file descriptors). Therefore we calculate how many fd_set
-     * items are required to accommodate `nfds` number of file descriptors, i.e., we calculate the
-     * length of each of `read_set`, `write_set` and `except_set` arrays. */
+     * item has a single inline array `fd_set::fds_bits` of constant size (typically 128B, which
+     * allows to accommodate 1024 bits, i.e. 1024 file descriptors). Therefore we calculate how many
+     * fd_set items are required to accommodate `nfds` number of file descriptors, i.e., we
+     * calculate the length of each of `read_set`, `write_set` and `except_set` arrays. */
     static_assert(sizeof(((fd_set*)0)->fds_bits) == sizeof(fd_set), "unexpected fd_set struct");
     size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((fd_set*)0)->fds_bits));
     if (read_set && !is_user_memory_writable(read_set, fd_set_arr_len * sizeof(*read_set))) {
