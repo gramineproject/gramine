@@ -1330,14 +1330,9 @@ class TC_91_RdtscSGX(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
 @unittest.skipUnless(not HAS_SGX or HAS_EDMM,
-    'On SGX, SIGSEGV isn\'t always implemented correctly, for lack '
-    'of memory protection. So run only in case of direct or if EDMM is enabled.')
+    'On SGX v1, SIGSEGV handler cannot be implemented correctly, for lack of enclave page '
+    'permissions (all pages are RWX). So run only on gramine-direct and on gramine-sgx with EDMM.')
 class TC_92_SGX2_edmm(RegressionTestCase):
-    def test_000_edmm_negative(self):
-            stdout, _ = self.run_binary(['edmm_tests'])
-
-            self.assertIn("edmm test 1 passed: Segfault writing to code(RX) section!", stdout)
-            self.assertIn("edmm test 2 passed: Segfault executing in data(RW) section!", stdout)
-            self.assertIn("edmm test 3 passed: Segfault writing to RO section!", stdout)
-
+    def test_000_edmm(self):
+            stdout, _ = self.run_binary(['edmm'])
             self.assertIn("TEST OK", stdout)

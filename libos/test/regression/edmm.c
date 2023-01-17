@@ -7,10 +7,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-static const char* message;
-static void  SIGSEGV_handler(int sig) {
-    puts(message);
-    exit(0);
+static void sigsegv_handler(int sig) {
+    _exit(0);
 }
 
 static void wait_for_child(int pid) {
@@ -31,64 +29,80 @@ static void wait_for_child(int pid) {
     }
 }
 
-static void foo (void) {
+static void foo(void) {
     puts("I am foo");
 }
 
-static int test_case1(void) {
+static int test_segfault_on_write_to_rx_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
-        message = "edmm test 1 passed: Segfault writing to code(RX) section!";
-        *(int*)foo = 0;
+        int* ptr = (int*)foo;
+
+        /* *ptr = 0;*/
+        __asm__ volatile(
+            "mov $0, %0\n"
+            : "=r"(*ptr)
+            :
+            : "memory"
+        );
+
+        exit(1); /* child must not survive the write to RX page above */
     }
 
     return child_pid;
 }
 
-static int test_case2(void) {
+static int test_segfault_on_exec_to_rw_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
-        message = "edmm test 2 passed: Segfault executing in data(RW) section!";
         int on_stack_var = 5;
-        int *rw_addr = &on_stack_var;
+        int* rw_addr = &on_stack_var;
 
         __asm__ volatile("jmp *%0" : : "r" (rw_addr));
+
+        exit(1); /* child must not survive exec attempt of RW page above */
     }
 
     return child_pid;
 }
 
-static int test_case3(void) {
+static int test_segfault_on_write_to_ro_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
-        message = "edmm test 3 passed: Segfault writing to RO section!";
-        char *str = (char*)"Hello World!"; //Suppress warning by casting to char*
+        char* str = (char*)"Hello World!"; /* suppress const warning by casting to char* */
 
-        str[3] = 'L';
+        /* str[3] = 'L'; */
+        __asm__ volatile(
+            "mov $76, %0\n"
+            : "=r"(str[3])
+            :
+            : "memory"
+        );
+
+        exit(1); /* child must not survive the write to RO page above */
     }
 
     return child_pid;
 }
 
-int main(int argc, const char** argv) {
-
-    if (signal(SIGSEGV, SIGSEGV_handler) == SIG_ERR) {
+int main(void) {
+    if (signal(SIGSEGV, sigsegv_handler) == SIG_ERR) {
         err(1, "setting signal handler failed");
     }
 
-    pid_t child_pid = test_case1();
+    pid_t child_pid = test_segfault_on_write_to_rx_page();
     if (child_pid < 0) {
         err(1, "fork");
     }
     wait_for_child(child_pid);
 
-    child_pid = test_case2();
+    child_pid = test_segfault_on_exec_to_rw_page();
     if (child_pid < 0) {
         err(1, "fork");
     }
     wait_for_child(child_pid);
 
-    child_pid = test_case3();
+    child_pid = test_segfault_on_write_to_ro_page();
     if (child_pid < 0) {
         err(1, "fork");
     }

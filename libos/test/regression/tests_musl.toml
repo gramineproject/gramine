@@ -16,7 +16,7 @@ manifests = [
   "devfs",
   "device_passthrough",
   "double_fork",
-  "edmm_tests",
+  "edmm",
   "env_from_file",
   "env_from_host",
   "env_passthrough",
