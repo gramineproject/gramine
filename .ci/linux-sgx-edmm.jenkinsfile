@@ -1,7 +1,7 @@
 node('sgx-edmm') {
     checkout scm
 
-    env.AVX = '1'  // EDMM-capable machines in our CI always have Intel AVX
+    env.AVX = '1'  // EDMM-capable machines in our CI always have AVX
     env.SGX = '1'
     env.SGX_DRIVER = 'upstream'
     env.EDMM = '1'
