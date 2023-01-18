@@ -107,7 +107,7 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
             /* set CPU feature if current system supports it (for performance) */
             uint32_t values[4];
             cpuid(xfrm_flags[i].cpuid.leaf, xfrm_flags[i].cpuid.subleaf, values);
-            if (values[xfrm_flags[i].cpuid.reg] & (1 << xfrm_flags[i].cpuid.bit))
+            if (values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit))
                 *out_xfrm |= xfrm_flags[i].bits;
         }
     }
