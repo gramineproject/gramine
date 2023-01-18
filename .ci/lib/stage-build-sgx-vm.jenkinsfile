@@ -1,15 +1,25 @@
 stage('build') {
-    // we add `/sbin` to PATH to find the `modprobe` program
     sh '''
-        echo "========= $PATH ==========="
+        # we add `/sbin` to PATH to find the `modprobe` program
         export PATH="/sbin:$PATH"
 
         git clone https://github.com/gramineproject/device-testing-tools.git
         cd device-testing-tools
-        git checkout acd650a350439a9b12ef973cff125a94f581694f // TODO: use `master` after PR merged
+        git checkout 9be491e45f4f9faffd2d110a9c4ffedda5fd6cd5 # TODO: use `master` after PR merged
 
         cd initramfs_builder
-        cp -f new_init_jenkins new_init
+        {
+           echo '#!/bin/sh'
+           echo 'if test -n $SGX; then GRAMINE=gramine-sgx; else GRAMINE=gramine-direct; fi'
+           echo 'cd $PWD_FOR_VM'
+           echo '( cd device-testing-tools/gramine-device-testing-module; insmod gramine-testing-dev.ko )'
+
+           # only couple tests -- executing in a VM with virtio-9p-pci FS passthrough is very slow
+           echo 'cd libos/test/regression'
+           echo 'gramine-test build helloworld; $GRAMINE helloworld'
+           echo 'gramine-test build device_ioctl; $GRAMINE device_ioctl'
+           echo 'poweroff -n -f'
+        } > new_init
         make ${MAKEOPTS}
 
         cd ../gramine-device-testing-module
