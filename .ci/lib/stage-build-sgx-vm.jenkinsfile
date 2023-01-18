@@ -1,6 +1,7 @@
 stage('build') {
     // we add `/sbin` to PATH to find the `modprobe` program
     sh '''
+        echo "========= $PATH ==========="
         export PATH="/sbin:$PATH"
 
         git clone https://github.com/gramineproject/device-testing-tools.git
