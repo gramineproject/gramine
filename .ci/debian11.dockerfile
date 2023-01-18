@@ -24,5 +24,4 @@ RUN mkdir /debian
 COPY debian/control /debian
 RUN apt-get update && apt-get -y build-dep -t bullseye-backports --no-install-recommends --no-install-suggests /
 
-# Define default command.
 CMD ["bash"]
