@@ -38,13 +38,8 @@ static int test_segfault_on_write_to_rx_page(void) {
     if (child_pid == 0) {
         int* ptr = (int*)foo;
 
-        /* *ptr = 0;*/
-        __asm__ volatile(
-            "mov $0, %0\n"
-            : "=r"(*ptr)
-            :
-            : "memory"
-        );
+        /* *ptr = 0; */
+        __asm__ volatile("movq $0, (%0)\n" : "=r"(ptr) : : "memory");
 
         exit(1); /* child must not survive the write to RX page above */
     }
@@ -72,12 +67,7 @@ static int test_segfault_on_write_to_ro_page(void) {
         char* str = (char*)"Hello World!"; /* suppress const warning by casting to char* */
 
         /* str[3] = 'L'; */
-        __asm__ volatile(
-            "mov $76, %0\n"
-            : "=r"(str[3])
-            :
-            : "memory"
-        );
+        __asm__ volatile("movq $104, (%0)\n" : "=r"(str) : : "memory");
 
         exit(1); /* child must not survive the write to RO page above */
     }
