@@ -1,19 +1,14 @@
 stage('test') {
     timeout(time: 15, unit: 'MINUTES') {
         sh '''
-            touch envs
-            echo "export SGX=$SGX" >> envs
-            echo "export IS_VM=$IS_VM" >> envs
-            echo "export PATH=\"$PATH\"" >> envs
-            echo "export PKG_CONFIG_PATH=\"$PKG_CONFIG_PATH\"" >> envs
-            echo "export PYTHONPATH=\"$PYTHONPATH\"" >> envs
-            echo "export GRAMINE_PKGLIBDIR=\"$GRAMINE_PKGLIBDIR\"" >> envs
-            echo "export XDG_CONFIG_HOME=\"$XDG_CONFIG_HOME\"" >> envs
+            export PWD_FOR_VM=$PWD
 
-            PWD_FOR_VM=$PWD
             cd device-testing-tools/initramfs_builder
 
-            ./run.sh initramfs.cpio.gz $PWD_FOR_VM | tee OUTPUT
+            # we add `/sbin` to PATH to find insmod and poweroff programs
+            ./run.sh PWD_FOR_VM=$PWD_FOR_VM SGX=$SGX IS_VM=$IS_VM PATH=/sbin:$PATH \
+                PKG_CONFIG_PATH=$PKG_CONFIG_PATH PYTHONPATH=$PYTHONPATH \
+                XDG_CONFIG_HOME=$XDG_CONFIG_HOME GRAMINE_PKGLIBDIR=$GRAMINE_PKGLIBDIR | tee OUTPUT
             grep "TESTS OK" OUTPUT
         '''
     }

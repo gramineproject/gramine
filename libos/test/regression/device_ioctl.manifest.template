@@ -10,6 +10,7 @@ fs.mounts = [
   { path = "/dev/gramine_test_dev", uri = "dev:/dev/gramine_test_dev" },
 ]
 
+sgx.nonpie_binary = true
 sgx.debug = true
 
 sgx.trusted_files = [

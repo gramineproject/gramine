@@ -6,6 +6,10 @@ node('whatnots') {
 
     load '.ci/lib/config-docker.jenkinsfile'
 
+    env.DOCKER_ARGS_SGX += '''
+        --volume=/usr/include/x86_64-linux-gnu/asm/sgx.h:/usr/include/asm/sgx.h:ro
+    '''
+
     // Overwrite Gramine-specific seccomp policy because it conflicts with KVM requirements, see
     // https://github.com/moby/moby/issues/42963 for details.
     env.DOCKER_ARGS_COMMON +=

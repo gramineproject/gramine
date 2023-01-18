@@ -1,27 +1,30 @@
 stage('build') {
-    // we add `/sbin` to PATH to find the `modprobe` program
     sh '''
-        echo "========= $PATH ==========="
+        # we add `/sbin` to PATH to find the `modprobe` program
         export PATH="/sbin:$PATH"
 
         git clone https://github.com/gramineproject/device-testing-tools.git
         cd device-testing-tools
-        git checkout acd650a350439a9b12ef973cff125a94f581694f // TODO: use `master` after PR merged
+        git checkout 096436b20eb5c314b6180e63eb6e6d4e7f31d1c8 # TODO: use `master` after PR merged
 
         cd initramfs_builder
-        cp -f new_init_jenkins new_init
+        {
+           echo '#!/bin/sh'
+           echo 'if test -n $SGX; then GRAMINE=gramine-sgx; else GRAMINE=gramine-direct; fi'
+           echo 'cd $PWD_FOR_VM'
+           echo '( cd device-testing-tools/gramine-device-testing-module; insmod gramine-testing-dev.ko )'
+
+           # only couple tests -- executing in a VM with virtio-9p-pci FS passthrough is very slow
+           echo 'cd libos/test/regression'
+           echo 'gramine-test build helloworld; $GRAMINE helloworld'
+           echo 'gramine-test build device_ioctl; $GRAMINE device_ioctl'
+           echo 'echo "TESTS OK"'
+           echo 'poweroff -n -f'
+        } > new_init
         make ${MAKEOPTS}
 
         cd ../gramine-device-testing-module
         make ${MAKEOPTS}
-    '''
-
-    sh '''
-        mkdir -p driver/asm
-        cd driver/asm
-        wget --timeout=10 -O sgx.h \
-          https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11
-        sha256sum sgx.h | grep -q a34a997ade42b61376b1c5d3d50f839fd28f2253fa047cb9c0e68a1b00477956
     '''
 
     env.MESON_OPTIONS = ''
@@ -50,7 +53,7 @@ stage('build') {
                 -Ddirect=disabled \
                 -Dsgx=enabled \
                 -Dtests=enabled \
-                -Dsgx_driver_include_path="$PWD/driver" \
+                -Dsgx_driver=upstream \
                 $MESON_OPTIONS
             ninja -vC build/
         '''
