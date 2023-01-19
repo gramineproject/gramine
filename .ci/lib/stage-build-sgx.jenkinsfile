@@ -23,7 +23,7 @@ stage('build') {
         env.SGX_DRIVER = 'oot'
     }
     if (env.SGX_DRIVER == 'oot') {
-        env.MESON_OPTIONS += ' -Dsgx_driver_include_path="$PWD/linux-sgx-driver"'
+        env.MESON_OPTIONS += ' -Dsgx_driver_include_path="' + env.PWD + '/linux-sgx-driver"'
     }
 
     try {
