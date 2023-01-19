@@ -651,25 +651,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    /* initialize master key (used for pipes' encryption for all enclaves of an application); it
-     * will be overwritten below in init_child_process() with inherited-from-parent master key if
-     * this enclave is child */
-    ret = _PalRandomBitsRead(&g_master_key, sizeof(g_master_key));
-    if (ret < 0) {
-        log_error("_PalRandomBitsRead failed: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    /* if there is a parent, create parent handle */
-    PAL_HANDLE parent = NULL;
-    uint64_t instance_id = 0;
-    if (parent_stream_fd != -1) {
-        if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
-            log_error("Failed to initialize child process: %s", pal_strerror(ret));
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-    }
-
     uint64_t manifest_size = GET_ENCLAVE_TCB(manifest_size);
     void* manifest_addr = (void*)(g_enclave_top - ALIGN_UP_POW2(manifest_size, g_page_size));
 
@@ -682,7 +663,49 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     g_pal_common_state.raw_manifest_data = manifest_addr;
     g_pal_public_state.manifest_root = manifest_root;
+    
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.use_seal_key",
+                       /*defaultval=*/false, &g_pal_public_state.use_seal_key);
+    if (ret < 0) {
+        log_error("can not parse sgx.use_seal_key");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
 
+    /* initialize master key (used for pipes' encryption for all enclaves of an application); it
++     * will be overwritten below in init_child_process() with inherited-from-parent master key if
++     * this enclave is child */
+    if (g_pal_public_state.use_seal_key) {
+        sgx_key_128bit_t seal_key;
+        ret = sgx_get_seal_key(SGX_KEYPOLICY_MRSIGNER, &seal_key);
+        if (ret < 0) {
+            log_error("sgx_get_seal_key failed: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+        ret = lib_HKDF_SHA256((uint8_t*)&seal_key, sizeof(seal_key), /*salt=*/NULL,
+                               /*salt_size=*/0, NULL, 0,
+                               (uint8_t*)&g_master_key, sizeof(g_master_key));
+        if (ret < 0) {
+            log_error("lib_HKDF_SHA256 failed: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    } else {
+        ret = _PalRandomBitsRead(&g_master_key, sizeof(g_master_key));
+        if (ret < 0) {
+            log_error("_PalRandomBitsRead failed: %d", ret);
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    }
+
+    /* if there is a parent, create parent handle */
+    PAL_HANDLE parent = NULL;
+    uint64_t instance_id = 0;
+    if (parent_stream_fd != -1) {
+        if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
+            log_error("Failed to initialize child process: %s", pal_strerror(ret));
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    }
+    
     bool edmm_enabled_manifest;
     ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.edmm_enable", /*defaultval=*/false,
                        &edmm_enabled_manifest);

@@ -28,7 +28,6 @@
  * PAL.
  */
 struct pal_common_state {
-    uint64_t instance_id;
     PAL_HANDLE parent_process;
     const char* raw_manifest_data;
 };
