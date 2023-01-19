@@ -662,9 +662,9 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     /* if there is a parent, create parent handle */
     PAL_HANDLE parent = NULL;
-    uint64_t instance_id = 0;
+    uint64_t namespace_id = 0;
     if (parent_stream_fd != -1) {
-        if ((ret = init_child_process(parent_stream_fd, &parent, &instance_id)) < 0) {
+        if ((ret = init_child_process(parent_stream_fd, &parent, &namespace_id)) < 0) {
             log_error("Failed to initialize child process: %s", pal_strerror(ret));
             ocall_exit(1, /*is_exitgroup=*/true);
         }
@@ -813,5 +813,5 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_linuxsgx_state.enclave_initialized = true;
 
     /* call main function */
-    pal_main(instance_id, parent, first_thread, arguments, environments);
+    pal_main(namespace_id, parent, first_thread, arguments, environments);
 }
