@@ -11,7 +11,7 @@ Gramine without SGX has no special requirements.
 Gramine with SGX support requires several features from your system:
 
 - the FSGSBASE feature of recent processors must be enabled in the Linux kernel;
-- the Intel SGX driver must be built in the Linux kernel;
+- Linux kernel version at least 5.11 (with SGX driver enabled);
 - Intel SGX SDK/PSW and (optionally) Intel DCAP must be installed.
 
 If your system doesn't meet these requirements, please refer to more detailed
@@ -24,19 +24,27 @@ package (see below).
 Install Gramine
 ---------------
 
-On Ubuntu 22.04 and Debian 11::
+On Debian 11::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bullseye main' | sudo tee /etc/apt/sources.list.d/gramine.list
 
    curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
+   sudo apt-get install gramine
 
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
+On Ubuntu 22.04::
+
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ jammy main' | sudo tee /etc/apt/sources.list.d/gramine.list
+
+   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
+   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+
+   sudo apt-get update
+   sudo apt-get install gramine
 
 On Ubuntu 20.04::
 
@@ -47,10 +55,7 @@ On Ubuntu 20.04::
    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
-
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
+   sudo apt-get install gramine
 
 On Ubuntu 18.04::
 
@@ -61,15 +66,13 @@ On Ubuntu 18.04::
    echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
+   sudo apt-get install gramine
 
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
+On RHEL-like distributions versions 9 and 8 (like AlmaLinux, Rocky Linux, ...)::
 
-On RHEL-8-like distribution (like AlmaLinux 8, CentOS 8, Rocky Linux 8, ...)::
-
+   sudo dnf install epel-release
    sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
-   sudo dnf install gramine          # only the default, distro-provided kernel is supported
+   sudo dnf install gramine
 
 Prepare a signing key
 ---------------------
@@ -97,7 +100,7 @@ we want to build and run the HelloWorld example. To build the HelloWorld
 application, we need the ``gcc`` compiler and the ``make`` build system::
 
    sudo apt-get install gcc make  # for Ubuntu distribution
-   sudo dnf install gcc make      # for RHEL-8-like distribution
+   sudo dnf install gcc make      # for RHEL-like distribution
 
 Go to the HelloWorld example directory::
 
