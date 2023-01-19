@@ -289,6 +289,7 @@ enum sgx_page_type {
 #define SGX_SECINFO_FLAGS_X         (1 << 2)
 #define SGX_SECINFO_FLAGS_PENDING   (1 << 3)
 #define SGX_SECINFO_FLAGS_MODIFIED  (1 << 4)
+#define SGX_SECINFO_FLAGS_PR        (1 << 5)
 #define SGX_SECINFO_FLAGS_TYPE_SHIFT 8
 
 typedef struct {
