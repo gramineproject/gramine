@@ -338,7 +338,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     PAL_HANDLE parent = NULL;
     char* manifest = NULL;
-    uint64_t instance_id = 0;
+    uint64_t namespace_id = 0;
     if (first_process) {
         const char* application_path = argv[3];
         char* manifest_path = alloc_concat(application_path, -1, ".manifest", -1);
@@ -357,7 +357,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
             INIT_FAIL("Failed to set `CLOEXEC` flag on `parent_stream_fd`: %s",
                       unix_strerror(ret));
         }
-        init_child_process(parent_stream_fd, &parent, &manifest, &instance_id);
+        init_child_process(parent_stream_fd, &parent, &manifest, &namespace_id);
     }
     assert(manifest);
 
@@ -386,5 +386,5 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     /* call to main function */
-    pal_main(instance_id, parent, first_thread, first_process ? argv + 3 : argv + 5, envp);
+    pal_main(namespace_id, parent, first_thread, first_process ? argv + 3 : argv + 5, envp);
 }

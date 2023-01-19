@@ -170,11 +170,11 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
     if (ret != sizeof(g_master_key))
         goto failed;
 
-    /* Send this Gramine instance ID. */
-    uint64_t instance_id = g_pal_common_state.instance_id;
-    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+    /* Send this Gramine namespace ID. */
+    uint64_t namespace_id = g_pal_public_state.namespace_id;
+    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&namespace_id, sizeof(namespace_id),
                                 /*is_blocking=*/!child->process.nonblocking);
-    if (ret != sizeof(instance_id)) {
+    if (ret != sizeof(namespace_id)) {
         goto failed;
     }
 
@@ -188,7 +188,7 @@ failed:
 }
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
-                       uint64_t* out_instance_id) {
+                       uint64_t* out_namespace_id) {
     if (g_pal_linuxsgx_state.enclave_initialized)
         return -PAL_ERROR_DENIED;
 
@@ -226,15 +226,15 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
     if (ret != sizeof(g_master_key))
         goto out_error;
 
-    uint64_t instance_id;
-    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+    uint64_t namespace_id;
+    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&namespace_id, sizeof(namespace_id),
                                /*is_blocking=*/!parent->process.nonblocking);
-    if (ret != sizeof(instance_id)) {
+    if (ret != sizeof(namespace_id)) {
         goto out_error;
     }
 
     *out_parent_handle = parent;
-    *out_instance_id = instance_id;
+    *out_namespace_id = namespace_id;
     return 0;
 
 out_error:
