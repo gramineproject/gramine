@@ -22,6 +22,9 @@ stage('build') {
     if (env.SGX_DRIVER == null) {
         env.SGX_DRIVER = 'oot'
     }
+    if (env.SGX_DRIVER == 'oot') {
+        env.MESON_OPTIONS += ' -Dsgx_driver_include_path=linux-sgx-driver'
+    }
 
     try {
         sh '''
@@ -33,7 +36,6 @@ stage('build') {
                 -Dsgx=enabled \
                 -Dtests=enabled \
                 -Dsgx_driver="$SGX_DRIVER" \
-                -Dsgx_driver_include_path="$PWD/linux-sgx-driver" \
                 $MESON_OPTIONS
             ninja -vC build/
         '''
