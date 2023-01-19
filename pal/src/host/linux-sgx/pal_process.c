@@ -87,7 +87,7 @@
  *       All Gramine enclaves with the same configuration (manifest) and same Gramine (LibOS, PAL)
  *       binaries should have the same measurement. During initialization, it's decided based on
  *       input from untrusted PAL, whether a particular enclave will become a leader of a new
- *       Gramine namespace, or will wait on a pipe for some parent enclave connection.
+ *       Gramine instance, or will wait on a pipe for some parent enclave connection.
  *
  * (4) The two parties who create the session key need to be the ones proven by the CPU
  *     (for preventing man-in-the-middle attacks).
@@ -171,7 +171,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
         goto failed;
 
     /* Send this Gramine instance ID. */
-    uint64_t instance_id = g_pal_common_state.instance_id;
+    uint64_t instance_id = g_pal_public_state.instance_id;
     ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
                                 /*is_blocking=*/!child->process.nonblocking);
     if (ret != sizeof(instance_id)) {

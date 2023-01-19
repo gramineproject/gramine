@@ -385,7 +385,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
             INIT_FAIL("Could not generate random instance_id");
         }
     }
-    g_pal_common_state.instance_id = instance_id;
+    g_pal_public_state.instance_id = instance_id;
     g_pal_common_state.parent_process = parent_process;
 
     ssize_t ret;

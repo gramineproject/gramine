@@ -144,7 +144,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
         goto out;
     }
 
-    proc_args->instance_id = g_pal_common_state.instance_id;
+    proc_args->instance_id = g_pal_public_state.instance_id;
     proc_args->memory_quota = g_pal_linux_state.memory_quota;
 
     char* data = (char*)(proc_args + 1);

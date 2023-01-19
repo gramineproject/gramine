@@ -213,7 +213,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0)
         INIT_FAIL("verify_hw_requirements() failed");
 
-    // Are we the first in this Gramine's namespace?
+    // Are we the first in this Gramine's instance?
     bool first_process = !strcmp(argv[2], "init");
     if (!first_process && strcmp(argv[2], "child")) {
         print_usage_and_exit(argv[0]);
