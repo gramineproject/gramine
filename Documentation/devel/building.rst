@@ -42,7 +42,8 @@ Run the following command on Ubuntu LTS to install dependencies::
 
 You can also install Meson, python3-tomli and python3-tomli-w from apt instead
 of pip, but only if your distro is new enough to have Meson >= 0.56,
-python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04).
+python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04 or Debian
+11 with ``bullseye-backports`` repo enabled).
 
 For GDB support and to run all tests locally you also need to install::
 
@@ -299,8 +300,6 @@ Additional build options
   take a long time: unfortunately, the only supported way of building
   ``libgomp`` is as part of a complete GCC build.
 
-.. _FSGSBASE:
-
 Prepare a signing key
 ---------------------
 
@@ -367,6 +366,8 @@ Proceed with compiling and installing as usual.
         -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
     meson compile -C build/
     meson install -C build/
+
+.. _FSGSBASE:
 
 Advanced: installing Linux kernel with FSGSBASE patches
 -------------------------------------------------------
