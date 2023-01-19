@@ -18,5 +18,6 @@ tarball_orig=$(meson introspect --projectinfo "$BUILDDIR" | jq -r '.descriptive_
     sha256sum -c "$tarball".sha256sum
 ) >&2
 
-mv "$BUILDDIR"/meson-dist/"$tarball" "$tarball_orig"
+cp "$BUILDDIR"/meson-dist/"$tarball" "$tarball"
+cp "$BUILDDIR"/meson-dist/"$tarball" "$tarball_orig"
 printf %s\\n "$tarball_orig"
