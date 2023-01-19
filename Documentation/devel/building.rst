@@ -42,7 +42,8 @@ Run the following command on Ubuntu LTS to install dependencies::
 
 You can also install Meson, python3-tomli and python3-tomli-w from apt instead
 of pip, but only if your distro is new enough to have Meson >= 0.56,
-python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04).
+python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04 or Debian
+11 with ``bullseye-backports`` repo enabled).
 
 For GDB support and to run all tests locally you also need to install::
 
@@ -57,15 +58,25 @@ Dependencies for SGX
 ^^^^^^^^^^^^^^^^^^^^
 
 The build of Gramine with SGX support requires the corresponding SGX software
-infrastructure to be installed on the system. In particular, the FSGSBASE
-functionality must be enabled in the Linux kernel, the Intel SGX driver must be
-running, and Intel SGX SDK/PSW/DCAP must be installed.
+infrastructure to be installed on the system. We require Linux kernel with SGX
+driver built in (``CONFIG_X86_SGX=y``, which is the case for most of available
+distribution kernels), which is available since version 5.11 (and also as
+backported patches to older kernels in certain distros). Note this requires CPU
+with :term:`FLC`.
 
-.. note::
+Kernel version can be checked using the following command::
 
-   We recommend to use Linux kernel version 5.11 or higher: starting from this
-   version, Linux has the FSGSBASE functionality as well as the Intel SGX driver
-   built-in. If you have Linux 5.11+, skip steps 2 and 3.
+       uname -r
+
+If your current kernel version is lower than 5.11, then you have two options:
+
+- Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,
+  you can follow e.g. `this tutorial
+  <https://itsfoss.com/upgrade-linux-kernel-ubuntu/>`__.
+
+- Install out-of-tree driver and use our provided patches to the Linux kernel
+  version 5.4. See section :ref:`legacy-kernel-and-hardware` for the exact
+  steps.
 
 1. Required packages
 """"""""""""""""""""
@@ -74,53 +85,7 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
     sudo apt-get install -y libprotobuf-c-dev protobuf-c-compiler \
         protobuf-compiler python3-cryptography python3-pip python3-protobuf
 
-2. Install Linux kernel with patched FSGSBASE
-"""""""""""""""""""""""""""""""""""""""""""""
-
-FSGSBASE is a feature in recent processors which allows direct access to the FS
-and GS segment base addresses. For more information about FSGSBASE and its
-benefits, see `this discussion <https://lwn.net/Articles/821719>`__. Note that
-if your kernel version is 5.9 or higher, then the FSGSBASE feature is already
-supported and you can skip this step. Kernel version can be checked using the
-following command::
-
-       uname -r
-
-If your current kernel version is lower than 5.9, then you have two options:
-
-- Update the Linux kernel to at least 5.9 in your OS distro. If you use Ubuntu,
-  you can follow e.g. `this tutorial
-  <https://itsfoss.com/upgrade-linux-kernel-ubuntu/>`__.
-
-- Use our provided patches to the Linux kernel version 5.4. See section
-  :ref:`FSGSBASE` for the exact steps.
-
-3. Install the Intel SGX driver
-"""""""""""""""""""""""""""""""
-
-This step depends on your hardware and kernel version. Note that if your kernel
-version is 5.11 or higher, then the Intel SGX driver is already installed and
-you can skip this step.
-
-If you have an older CPU without :term:`FLC` support, you need to download and
-install the the following out-of-tree (OOT) Intel SGX driver:
-
-- https://github.com/intel/linux-sgx-driver
-
-For this driver, you need to set ``vm.mmap_min_addr=0`` in the system (*only
-required for the legacy SGX driver and not needed for newer DCAP/in-kernel
-drivers*)::
-
-   sudo sysctl vm.mmap_min_addr=0
-
-Note that this is an inadvisable configuration for production systems.
-
-Alternatively, if your CPU supports :term:`FLC`, you can choose to install the
-DCAP version of the Intel SGX driver from:
-
-- https://github.com/intel/SGXDataCenterAttestationPrimitives
-
-4. Install Intel SGX SDK/PSW
+2. Install Intel SGX SDK/PSW
 """"""""""""""""""""""""""""
 
 Follow the installation instructions from the "Intel SGX Software Installation
@@ -137,7 +102,7 @@ Additional information, package descriptions, etc. can be found in the official
 
 - https://github.com/intel/linux-sgx
 
-5. Install dependencies for DCAP
+3. Install dependencies for DCAP
 """"""""""""""""""""""""""""""""
 
 If you plan on enabling ``-Ddcap`` option, you need to install
@@ -299,8 +264,6 @@ Additional build options
   take a long time: unfortunately, the only supported way of building
   ``libgomp`` is as part of a complete GCC build.
 
-.. _FSGSBASE:
-
 Prepare a signing key
 ---------------------
 
@@ -368,14 +331,37 @@ Proceed with compiling and installing as usual.
     meson compile -C build/
     meson install -C build/
 
-Advanced: installing Linux kernel with FSGSBASE patches
--------------------------------------------------------
 
-FSGSBASE patchset was merged in Linux kernel version 5.9. For older kernels it
-is available as `separate patches
+.. _legacy-kernel-and-hardware:
+
+Legacy kernel and hardware
+--------------------------
+
+Although we recommend kernel version 5.11 or later, Gramine can be run on older
+kernels with out-of-tree SGX driver. OOT driver is also the only possibility to
+run Gramine on non-FLC hardware. In this configuration, we require kernel at
+least 5.4, and for kernels between 5.4 (inclusive) and 5.9 (exclusive) we
+additionally require FSGSBASE patchset (see below).
+
+Beware that some enterprise distributions provide kernels that report some old
+version, but actually provide upstream SGX driver that has been backported (like
+RHEL and derivatives since version 8, which has nominally kernel 4.18). If you
+have one of those enterprise kernels, this section does not apply. If in doubt,
+check kernel's ``.config`` and consult your distro documentation.
+
+1. Install Linux kernel with patched FSGSBASE
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FSGSBASE is a feature in recent processors which allows direct access to the FS
+and GS segment base addresses. For more information about FSGSBASE and its
+benefits, see `this discussion <https://lwn.net/Articles/821719>`__.
+
+FSGSBASE patchset was merged in Linux kernel version 5.9, so if your kernel
+version is 5.9 or higher, then the FSGSBASE feature is already supported and you
+can skip this step. For older kernels it is available as `separate patches
 <https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
-(Note that Gramine was prevously called *Graphene* and was hosted under a
-different organization, hence the name of the linked repository.)
+(Note that Gramine was prevously called *Graphene* and was hosted under
+a different organization, hence the name of the linked repository.)
 
 The following instructions to patch and compile a Linux kernel with FSGSBASE
 support below are written around Ubuntu 18.04 LTS (Bionic Beaver) with a Linux
@@ -424,3 +410,28 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
 SDK/PSW, and Gramine itself.
+
+2. Install the Intel SGX driver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This step depends on your hardware and kernel version. Note that if your kernel
+version is 5.11 or higher, then the Intel SGX driver is already installed and
+you can skip this step.
+
+If you have an older CPU without :term:`FLC` support, you need to download and
+install the following out-of-tree (OOT) Intel SGX driver:
+
+- https://github.com/intel/linux-sgx-driver
+
+For this driver, you need to set ``vm.mmap_min_addr=0`` in the system (*only
+required for the legacy SGX driver and not needed for newer DCAP/in-kernel
+drivers*)::
+
+   sudo sysctl vm.mmap_min_addr=0
+
+Note that this is an inadvisable configuration for production systems.
+
+Alternatively, if your CPU supports :term:`FLC`, you can choose to install the
+DCAP version of the Intel SGX driver from:
+
+- https://github.com/intel/SGXDataCenterAttestationPrimitives

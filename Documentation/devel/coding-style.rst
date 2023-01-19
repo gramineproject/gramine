@@ -169,7 +169,7 @@ Python
    python3`` shebang, Gramine would not be able to locate system-wide-installed
    Python packages.
 
-   Since Gramine currently supports only Debian/Ubuntu and CentOS/RHEL/Fedora
+   Since Gramine currently supports only Debian/Ubuntu and RHEL/AlmaLinux/Fedora
    distros, the shebang must always be ``#!/usr/bin/python3``.
 
 Meson

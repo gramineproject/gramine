@@ -10,9 +10,8 @@ Gramine without SGX has no special requirements.
 
 Gramine with SGX support requires several features from your system:
 
-- the FSGSBASE feature of recent processors must be enabled in the Linux kernel;
-- the Intel SGX driver must be built in the Linux kernel;
-- Intel SGX SDK/PSW and (optionally) Intel DCAP must be installed.
+- Linux kernel version at least 5.11 (with SGX driver enabled);
+- Intel SGX PSW and (optionally) Intel DCAP must be installed and configured.
 
 If your system doesn't meet these requirements, please refer to more detailed
 descriptions in :doc:`devel/building`.
@@ -24,52 +23,50 @@ package (see below).
 Install Gramine
 ---------------
 
-On Ubuntu 22.04 and Debian 11::
+Debian 11
+^^^^^^^^^
+
+::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' | sudo tee /etc/apt/sources.list.d/gramine.list
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   | sudo tee /etc/apt/sources.list.d/gramine.list
 
-   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+   sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" \
+   | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
+   sudo apt-get install gramine
 
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
+Ubuntu 22.04LTS, 20.04LTS or 18.04LTS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On Ubuntu 20.04::
+::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ focal main' | sudo tee /etc/apt/sources.list.d/gramine.list
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   | sudo tee /etc/apt/sources.list.d/gramine.list
 
-   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-
-   sudo apt-get update
-
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
-
-On Ubuntu 18.04::
-
-   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ bionic main' | sudo tee /etc/apt/sources.list.d/gramine.list
-
-   curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | sudo apt-key add -
-   echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu bionic main' | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+   sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -sc) main" \
+   | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
    sudo apt-get update
+   sudo apt-get install gramine
 
-   sudo apt-get install gramine      # for 5.11+ upstream, in-kernel driver
-   sudo apt-get install gramine-oot  # for out-of-tree SDK driver
-   sudo apt-get install gramine-dcap # for out-of-tree DCAP driver
+RHEL-like distributions version 8 (and experimentally also version 9)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On RHEL-8-like distribution (like AlmaLinux 8, CentOS 8, Rocky Linux 8, ...)::
+(like AlmaLinux, Rocky Linux, ...)
 
-   sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
-   sudo dnf install gramine          # only the default, distro-provided kernel is supported
+1. Install EPEL repository as described here:
+   https://docs.fedoraproject.org/en-US/epel/
+
+2. Install Gramine::
+
+      sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
+      sudo dnf install gramine
 
 Prepare a signing key
 ---------------------
@@ -97,7 +94,7 @@ we want to build and run the HelloWorld example. To build the HelloWorld
 application, we need the ``gcc`` compiler and the ``make`` build system::
 
    sudo apt-get install gcc make  # for Ubuntu distribution
-   sudo dnf install gcc make      # for RHEL-8-like distribution
+   sudo dnf install gcc make      # for RHEL-like distribution
 
 Go to the HelloWorld example directory::
 
@@ -125,12 +122,12 @@ understand manifest options and features of Gramine.
 Additional sample configurations for applications enabled in Gramine can be
 found in a separate repository https://github.com/gramineproject/examples.
 
-Please note that these sample applications are tested on Ubuntu 18.04 and 20.04.
-Most of these applications are also known to run correctly on
-Fedora/RHEL/CentOS, but with caveats. One caveat is that Makefiles should be
-invoked with ``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications
-that rely on specific versions/builds of Glibc may break (our GCC example is
-known to work only on Ubuntu).
+Please note that these sample applications are tested on Ubuntu. Most of these
+applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
+Linux, but with caveats. One caveat is that Makefiles should be invoked with
+``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications that rely on
+specific versions/builds of Glibc may break (our GCC example is known to work
+only on Ubuntu).
 
 glibc vs musl
 -------------
