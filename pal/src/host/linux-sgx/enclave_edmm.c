@@ -44,8 +44,8 @@ int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
                                                 | SGX_SECINFO_FLAGS_R | SGX_SECINFO_FLAGS_W
                                                 | SGX_SECINFO_FLAGS_PENDING);
         if (ret < 0) {
-            log_error("%s: failed to accept page at address %#lx: %s", __func__,
-                      addr + i * PAGE_SIZE, unix_strerror(ret));
+            log_error("%s: failed to accept page at address %#lx: %d", __func__,
+                      addr + i * PAGE_SIZE, ret);
             /* Since these errors do not happen in legitimate cases and restoring already accepted
              * pages would be cumbersome, we just kill the whole process. */
             die_or_inf_loop();
@@ -67,6 +67,18 @@ int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
              * pages would be cumbersome, we just kill the whole process. */
             die_or_inf_loop();
         }
+        for (size_t i = 0; i < count; i++) {
+            ret = sgx_eaccept(addr + i * PAGE_SIZE,
+                              (SGX_PAGE_TYPE_REG << SGX_SECINFO_FLAGS_TYPE_SHIFT)
+                              | SGX_SECINFO_FLAGS_PR | prot);
+            if (ret < 0) {
+                log_error("%s: failed to accept restricted pages permissions at %#lx: %d", __func__,
+                          addr + i * PAGE_SIZE, ret);
+                /* Since these errors do not happen in legitimate cases and restoring already
+                 * allocated pages would be cumbersome, we just kill the whole process. */
+                die_or_inf_loop();
+            }
+        }
     }
 
     return 0;
@@ -82,8 +94,8 @@ int sgx_edmm_remove_pages(uint64_t addr, size_t count) {
         ret = sgx_eaccept(addr + i * PAGE_SIZE, (SGX_PAGE_TYPE_TRIM << SGX_SECINFO_FLAGS_TYPE_SHIFT)
                                                 | SGX_SECINFO_FLAGS_MODIFIED);
         if (ret < 0) {
-            log_error("%s: failed to accept page removal at address %#lx: %s", __func__,
-                      addr + i * PAGE_SIZE, unix_strerror(ret));
+            log_error("%s: failed to accept page removal at address %#lx: %d", __func__,
+                      addr + i * PAGE_SIZE, ret);
             /* Since these errors do not happen in legitimate cases and restoring already accepted
              * pages would be cumbersome, we just kill the whole process. */
             die_or_inf_loop();
@@ -119,6 +131,18 @@ int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
         /* Since these errors do not happen in legitimate cases and restoring old permissions would
          * be cumbersome, we just kill the whole process. */
         die_or_inf_loop();
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        ret = sgx_eaccept(addr + i * PAGE_SIZE, (SGX_PAGE_TYPE_REG << SGX_SECINFO_FLAGS_TYPE_SHIFT)
+                                                | SGX_SECINFO_FLAGS_PR | prot);
+        if (ret < 0) {
+            log_error("%s: failed to accept restricted pages permissions at %#lx: %d", __func__,
+                      addr + i * PAGE_SIZE, ret);
+            /* Since these errors do not happen in legitimate cases and restoring old permissions
+             * would be cumbersome, we just kill the whole process. */
+            die_or_inf_loop();
+        }
     }
 
     return 0;
