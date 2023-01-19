@@ -374,19 +374,19 @@ out_fail:
  * At this point the manifest is assumed to be already parsed, because some PAL loaders use manifest
  * configuration for early initialization.
  */
-noreturn void pal_main(uint64_t instance_id,       /* current instance id */
+noreturn void pal_main(uint64_t namespace_id,      /* current namespace id */
                        PAL_HANDLE parent_process,  /* parent process if it's a child */
                        PAL_HANDLE first_thread,    /* first thread handle */
                        const char** arguments,     /* application arguments */
                        const char** environments   /* environment variables */) {
-    if (!instance_id) {
+    if (!namespace_id) {
         assert(!parent_process);
-        if (_PalRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {
-            INIT_FAIL("Could not generate random instance_id");
+        if (_PalRandomBitsRead(&namespace_id, sizeof(namespace_id)) < 0) {
+            INIT_FAIL("Could not generate random namespace_id");
         }
     }
-    g_pal_common_state.instance_id = instance_id;
     g_pal_common_state.parent_process = parent_process;
+    g_pal_public_state.namespace_id = namespace_id;
 
     ssize_t ret;
 

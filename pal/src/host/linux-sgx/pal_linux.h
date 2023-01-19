@@ -62,7 +62,7 @@ int parse_attestation_type(toml_table_t* manifest_root,
 int parse_attestation_epid_params(toml_table_t* manifest_root, sgx_spid_t* out_spid,
                                   bool* out_linkable);
 
-int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
+int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_namespace_id);
 
 #ifdef IN_ENCLAVE
 

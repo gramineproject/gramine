@@ -534,14 +534,6 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
     return 0;
 }
 
-int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_len) {
-    int ret = snprintf(uri, uri_len, URI_PREFIX_PIPE "%u", vmid);
-    if (ret < 0 || (size_t)ret >= uri_len) {
-        return -ERANGE;
-    }
-    return 0;
-}
-
 int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name) {
     int ret;
     size_t len;
@@ -554,7 +546,8 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     while (true) {
         if (use_vmid_for_name) {
-            len = snprintf(pipename, sizeof(pipename), "%u", g_process_ipc_ids.self_vmid);
+            len = snprintf(pipename, sizeof(pipename), "%lu/%u", g_pal_public_state->namespace_id,
+                           g_process_ipc_ids.self_vmid);
             if (len >= sizeof(pipename))
                 return -ERANGE;
         } else {

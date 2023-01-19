@@ -28,7 +28,6 @@
  * PAL.
  */
 struct pal_common_state {
-    uint64_t instance_id;
     PAL_HANDLE parent_process;
     const char* raw_manifest_data;
 };
@@ -142,7 +141,7 @@ void notify_failure(unsigned long error);
 /*!
  * \brief Main initialization function.
  *
- * \param instance_id     Current instance ID.
+ * \param namespace_id    Current namespace ID.
  * \param exec_uri        Executable URI.
  * \param parent_process  Parent process if it's a child.
  * \param first_thread    First thread handle.
@@ -151,7 +150,7 @@ void notify_failure(unsigned long error);
  *
  * This function must be called by the host-specific loader.
  */
-noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
+noreturn void pal_main(uint64_t namespace_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
                        const char** arguments, const char** environments);
 
 /* For initialization */
