@@ -113,12 +113,19 @@ static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
         }
 
         char uri[PIPE_URI_SIZE];
+        char  uri_new[PIPE_URI_SIZE];
         if (vmid_to_uri(dest, uri, sizeof(uri)) < 0) {
             log_error("buffer for IPC pipe URI too small");
             BUG();
         }
+
+        uint64_t len = snprintf(uri_new, sizeof(uri_new), "%s/%lu", uri, g_pal_public_state->instance_id);
+        if (len >= sizeof(uri_new)) {
+                return -ERANGE;
+        }
+
         do {
-            ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
+            ret = PalStreamOpen(uri_new, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
                                 /*options=*/0, &conn->handle);
         } while (ret == -PAL_ERROR_INTERRUPTED);
         if (ret < 0) {

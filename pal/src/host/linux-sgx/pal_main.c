@@ -544,6 +544,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                              void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
+    sgx_key_128bit_t seal_key;
 
     /* Relocate PAL */
     ret = setup_pal_binary();
@@ -654,9 +655,16 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* initialize master key (used for pipes' encryption for all enclaves of an application); it
      * will be overwritten below in init_child_process() with inherited-from-parent master key if
      * this enclave is child */
-    ret = _PalRandomBitsRead(&g_master_key, sizeof(g_master_key));
+    ret = sgx_get_seal_key(SGX_KEYPOLICY_MRSIGNER, &seal_key);
     if (ret < 0) {
-        log_error("_PalRandomBitsRead failed: %s", pal_strerror(ret));
+        log_error("sgx_get_seal_key failed: %d", ret);
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    ret = lib_HKDF_SHA256((uint8_t*)&seal_key, sizeof(seal_key), /*salt=*/NULL,
+                           /*salt_size=*/0, NULL, 0,
+                           (uint8_t*)&g_master_key, sizeof(g_master_key));
+    if (ret < 0) {
+        log_error("lib_HKDF_SHA256 failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
