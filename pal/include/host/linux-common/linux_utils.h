@@ -45,8 +45,7 @@ void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns);
  * can be negative! */
 int64_t time_ns_diff_from_now(struct timespec* ts);
 
-int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
-                                 struct sockaddr_un* out_addr);
+int get_gramine_unix_socket_addr(const char* name, struct sockaddr_un* out_addr);
 
 int file_stat_type(struct stat* stat);
 
