@@ -20,6 +20,9 @@ stage('clean-check') {
         # root, and keeps cache there
         rm -rf .pytest_cache
 
+        # We downloaded the OOT SGX driver during build stage
+        rm -rf linux-sgx-driver
+
         make -C libos/test/regression clean
         make -C libos/test/fs clean
 
