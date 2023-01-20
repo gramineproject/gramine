@@ -7,11 +7,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-static void sigsegv_handler(int sig) {
-    _exit(0);
-}
-
-static void wait_for_child(int pid) {
+static void wait_for_failing_child(int pid) {
     int status;
 
     pid_t child_pid = waitpid(pid, &status, 0);
@@ -21,8 +17,11 @@ static void wait_for_child(int pid) {
         errx(1, "wrong child pid %d\n", child_pid);
     }
 
-    if (!WIFEXITED(status)) {
-        errx(1, "child died in an unknown manner: %d\n", status);
+    if (!WIFSIGNALED(status)) {
+        errx(1, "child %d not killed (%d)\n", child_pid, status);
+    }
+    if ((status & 0x7f) != SIGSEGV) {
+         errx(1, "child died in an unknown manner: %d\n", status);
     }
     if (WEXITSTATUS(status) != 0) {
         errx(1, "child returned wrong error code: %d\n", status);
@@ -53,7 +52,7 @@ static int test_segfault_on_exec_to_rw_page(void) {
         int on_stack_var = 5;
         int* rw_addr = &on_stack_var;
 
-        __asm__ volatile("jmp *%0" : : "r" (rw_addr));
+        __asm__ volatile("jmp *(%0)" : : "r" (rw_addr));
 
         exit(1); /* child must not survive exec attempt of RW page above */
     }
@@ -66,7 +65,7 @@ static int test_segfault_on_write_to_ro_page(void) {
     if (child_pid == 0) {
         char* str = (char*)"Hello World!"; /* suppress const warning by casting to char* */
 
-        /* str[3] = 'L'; */
+        /* str[0] = 'h'; */
         __asm__ volatile("movb $104, (%0)\n" : "=r"(str) : : "memory");
 
         exit(1); /* child must not survive the write to RO page above */
@@ -76,31 +75,23 @@ static int test_segfault_on_write_to_ro_page(void) {
 }
 
 int main(void) {
-    if (signal(SIGSEGV, sigsegv_handler) == SIG_ERR) {
-        err(1, "setting signal handler failed");
-    }
-
     pid_t child_pid = test_segfault_on_write_to_rx_page();
     if (child_pid < 0) {
         err(1, "fork");
     }
-    wait_for_child(child_pid);
+    wait_for_failing_child(child_pid);
 
     child_pid = test_segfault_on_exec_to_rw_page();
     if (child_pid < 0) {
         err(1, "fork");
     }
-    wait_for_child(child_pid);
+    wait_for_failing_child(child_pid);
 
     child_pid = test_segfault_on_write_to_ro_page();
     if (child_pid < 0) {
         err(1, "fork");
     }
-    wait_for_child(child_pid);
-
-    if (signal(SIGSEGV, SIG_DFL) == SIG_ERR) {
-        err(1, "Restoring signal handler failed");
-    }
+    wait_for_failing_child(child_pid);
 
     puts("TEST OK");
     return 0;
