@@ -31,6 +31,11 @@ int open_sgx_driver(void) {
     int ret;
     for (size_t i = 0; i < ARRAY_SIZE(paths_to_try); i++) {
         ret = DO_SYSCALL(open, paths_to_try[i], O_RDWR | O_CLOEXEC, 0);
+        if (ret == -EACCES) {
+            log_error("Cannot open %s (permission denied). This may happen because this device "
+                      "has insufficient permissions for the current user.", paths_to_try[i]);
+            return ret;
+        }
         if (ret >= 0) {
             g_isgx_device = ret;
             return 0;
