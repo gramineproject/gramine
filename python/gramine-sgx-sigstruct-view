@@ -1,0 +1,58 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2023 Intel Corporation
+#                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
+
+import hashlib
+import io
+import json
+
+import click
+import tomli_w
+
+from graminelibos import Sigstruct
+
+@click.command()
+@click.argument('sigfile', type=click.File('rb'), required=True)
+@click.option('--verbose/--quiet', '-v/-q', help='Display detailed information')
+@click.option('--output-format', default='text', type=click.Choice(['text', 'toml', 'json']),
+              help='Output format: plain text (unstable, should not be parsed), toml or json')
+@click.argument('output', metavar='[FILE]', type=click.File('wb'), default='-')
+def main(sigfile, verbose, output_format, output):
+    output_txt = io.TextIOWrapper(output)
+
+    sig = Sigstruct.from_bytes(sigfile.read())
+
+    sig_readable = {
+        'mr_signer': hashlib.sha256(sig['modulus']).hexdigest(),
+        'mr_enclave': sig['enclave_hash'].hex(),
+        'isv_prod_id': sig['isv_prod_id'],
+        'isv_svn': sig['isv_svn'],
+        'attribute_flags': hex(sig['attribute_flags']),
+        'attribute_xfrms': hex(sig['attribute_xfrms']),
+        'misc_select': hex(sig['misc_select']),
+        'attribute_flags_mask': hex(sig['attribute_flags_mask']),
+        'attribute_xfrm_mask': hex(sig['attribute_xfrm_mask']),
+        'misc_mask': hex(sig['misc_mask']),
+        'date': '%d-%02d-%02d' % (sig['date_year'], sig['date_month'], sig['date_day']),
+        'debug_enclave': bool(sig['attribute_flags'] & 0b10),
+    }
+
+    if not verbose:
+        keys_to_remove = ('attribute_flags', 'attribute_xfrms', 'misc_select',
+                          'attribute_flags_mask', 'attribute_xfrm_mask', 'misc_mask', 'date')
+        for key in keys_to_remove:
+            del sig_readable[key]
+
+    if output_format == "toml":
+        tomli_w.dump(sig_readable, output)
+    elif output_format == "json":
+        json.dump(sig_readable, output_txt, indent=4)
+    else:
+        # plaintext format imitates the legacy output of `gramine-sgx-get-token` tool
+        print('Attributes:', file=output_txt)
+        for key, value in sig_readable.items():
+            print(f'    {key}: {value}', file=output_txt)
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter
