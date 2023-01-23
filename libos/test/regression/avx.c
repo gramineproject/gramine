@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2023 Intel Corporation
+ *                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
+ */
+
 /*
  * This tests that optional CPU features are enabled inside of Gramine.
  *
