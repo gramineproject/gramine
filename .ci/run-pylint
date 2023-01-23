@@ -22,5 +22,6 @@ find . -name \*.py \
     python/gramine-gen-depend \
     python/gramine-manifest \
     python/gramine-sgx-get-token \
+    python/gramine-sgx-show \
     python/gramine-sgx-sign \
     python/gramine-test
