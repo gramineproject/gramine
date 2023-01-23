@@ -23,4 +23,5 @@ find . -name \*.py \
     python/gramine-manifest \
     python/gramine-sgx-get-token \
     python/gramine-sgx-sign \
+    python/gramine-sgx-sigstruct-view \
     python/gramine-test

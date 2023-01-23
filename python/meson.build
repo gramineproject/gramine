@@ -16,5 +16,6 @@ if sgx
         'gramine-sgx-gen-private-key',
         'gramine-sgx-get-token',
         'gramine-sgx-sign',
+        'gramine-sgx-sigstruct-view',
     ], install_dir: get_option('bindir'))
 endif
