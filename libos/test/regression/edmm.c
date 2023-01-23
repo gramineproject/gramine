@@ -1,7 +1,5 @@
 #define _GNU_SOURCE
 #include <err.h>
-#include <errno.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -14,28 +12,21 @@ static void wait_for_failing_child(int pid) {
     if (child_pid < 0) {
         err(1, "waitpid");
     } else if (child_pid != pid) {
-        errx(1, "wrong child pid %d\n", child_pid);
+        errx(1, "wrong child pid %d", child_pid);
     }
 
     if (!WIFSIGNALED(status)) {
-        errx(1, "child %d not killed (%d)\n", child_pid, status);
+        errx(1, "child %d not killed (%d)", child_pid, status);
     }
-    if ((status & 0x7f) != SIGSEGV) {
-         errx(1, "child died in an unknown manner: %d\n", status);
+    if (WTERMSIG(status) != SIGSEGV) {
+         errx(1, "child died in an unknown manner: %d", status);
     }
-    if (WEXITSTATUS(status) != 0) {
-        errx(1, "child returned wrong error code: %d\n", status);
-    }
-}
-
-static void foo(void) {
-    puts("I am foo");
 }
 
 static int test_segfault_on_write_to_rx_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
-        int* ptr = (int*)foo;
+        int* ptr = (int*)test_segfault_on_write_to_rx_page;
 
         /* *ptr = 0; */
         __asm__ volatile("movl $0, (%0)\n" : "=r"(ptr) : : "memory");
