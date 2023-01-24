@@ -206,6 +206,7 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
+int libos_syscall_utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
 
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM   0x0002

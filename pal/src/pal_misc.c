@@ -47,3 +47,7 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
+
+int PalSystemUtimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags) {
+    return _PalSystemUtimensat(dirfd, pathname, times, flags);
+}

@@ -79,3 +79,14 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(key_size);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
+
+int _PalSystemUtimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags)
+{
+    int ret;
+
+    ret = DO_SYSCALL(utimensat, dirfd, pathname, times, flags);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return ret;
+}

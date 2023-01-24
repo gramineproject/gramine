@@ -129,3 +129,4 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int ocall_edmm_remove_pages(uint64_t addr, size_t count);
+int ocall_utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flag);

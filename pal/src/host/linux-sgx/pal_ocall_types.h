@@ -72,6 +72,7 @@ enum {
     OCALL_EDMM_RESTRICT_PAGES_PERM,
     OCALL_EDMM_MODIFY_PAGES_TYPE,
     OCALL_EDMM_REMOVE_PAGES,
+    OCALL_UTIMENSAT,
     OCALL_NR,
 };
 
@@ -355,4 +356,10 @@ struct ocall_edmm_remove_pages {
     size_t count;
 };
 
+struct ocall_utimensat_t {
+    int dirfd;
+    char *pathname;
+    struct timespec times[2];
+    int flag;
+};
 #pragma pack(pop)

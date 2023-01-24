@@ -2356,3 +2356,46 @@ out:
     sgx_reset_ustack(old_ustack);
     return ret;
 }
+
+int ocall_utimensat(int dirfd, const char *pathname,
+              const struct timespec times[2], int flag) {
+    int retval = 0;
+    size_t path_size = pathname ? strlen(pathname) + 1 : 0;
+    struct ocall_utimensat_t* ms;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ms = sgx_alloc_on_ustack_aligned(sizeof(*ms), alignof(*ms));
+    if (!ms) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    WRITE_ONCE(ms->dirfd, dirfd);
+    void* untrusted_pathname = sgx_copy_to_ustack(pathname, path_size);
+    if (!untrusted_pathname) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    WRITE_ONCE(ms->pathname, untrusted_pathname);
+    struct timespec* untrusted_timespec = sgx_copy_to_ustack(times, 2 * sizeof(struct timespec));
+    if (!untrusted_timespec) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    WRITE_ONCE(ms->times[0], untrusted_timespec[0]);
+    WRITE_ONCE(ms->times[1], untrusted_timespec[1]);
+    WRITE_ONCE(ms->flag, flag);
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_UTIMENSAT, ms);
+    } while (retval == -EINTR);
+
+    if (retval < 0 && retval != -EINVAL && retval != -EPERM) {
+        retval = -EPERM;
+    }
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}

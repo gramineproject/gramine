@@ -239,6 +239,7 @@ int _PalAttestationReport(const void* user_report_data, size_t* user_report_data
 int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
                          size_t* quote_size);
 int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
+int _PalSystemUtimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
 
 #define INIT_FAIL(msg, ...)                                                              \
     do {                                                                                 \

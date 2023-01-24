@@ -727,3 +727,15 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
             return -PAL_ERROR_INVAL;
     }
 }
+
+int _PalSystemUtimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags)
+{
+    int ret;
+
+    ret = ocall_utimensat(dirfd, pathname, times, flags);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return ret;
+}
+

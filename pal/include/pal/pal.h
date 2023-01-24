@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <linux/time.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -978,5 +979,6 @@ void PalDebugMapRemove(void* start_addr);
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without
  * DEBUG, falls back to raw value ("0x1234"). */
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+int PalSystemUtimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
 
 #undef INSIDE_PAL_H

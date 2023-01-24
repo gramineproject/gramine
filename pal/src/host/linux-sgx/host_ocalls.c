@@ -752,6 +752,14 @@ static long sgx_ocall_edmm_restrict_pages_perm(void* _args) {
     return edmm_restrict_pages_perm(args->addr, args->count, args->prot);
 }
 
+static long sgx_ocall_utimensat(void* pms)
+{
+    struct ocall_utimensat_t* ms = (struct ocall_utimensat_t*)pms;
+    long ret;
+    ret = DO_SYSCALL(utimensat, ms->dirfd, ms->pathname, ms->times, ms->flag);
+    return ret;
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -801,6 +809,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EDMM_MODIFY_PAGES_TYPE]   = sgx_ocall_edmm_modify_pages_type,
     [OCALL_EDMM_REMOVE_PAGES]        = sgx_ocall_edmm_remove_pages,
     [OCALL_EDMM_RESTRICT_PAGES_PERM] = sgx_ocall_edmm_restrict_pages_perm,
+    [OCALL_UTIMENSAT]                = sgx_ocall_utimensat,
 };
 
 static int rpc_thread_loop(void* arg) {

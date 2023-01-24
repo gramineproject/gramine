@@ -52,3 +52,4 @@ PalAttestationQuote
 PalGetSpecialKey
 PalDebugLog
 PalGetPalPublicState
+PalSystemUtimensat
