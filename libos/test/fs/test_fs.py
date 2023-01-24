@@ -174,6 +174,11 @@ class TC_00_FileSystem(RegressionTestCase):
             stdout, stderr = self.run_binary(['stat', input_path, output_path])
             self.verify_stat(stdout, stderr, input_path, output_path, size)
 
+    def test_131_file_chmod_stat(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_131') # new file to be created
+        stdout, _ = self.run_binary(['chmod_stat', file_path])
+        self.assertIn('TEST OK', stdout)
+
     def verify_size(self, file, size):
         self.assertEqual(os.stat(file).st_size, size)
 

@@ -1,6 +1,7 @@
 binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/fs"
 
 manifests = [
+  "chmod_stat",
   "copy_mmap_rev",
   "copy_mmap_seq",
   "copy_mmap_whole",
