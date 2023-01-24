@@ -190,12 +190,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
         /* OOT DCAP driver (e.g. v1.33.2 found on MS Azure VMs with Ubuntu 18.04) requires
          * different mmap flags */
         addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
-                          PROT_NONE,
-#ifdef CONFIG_SGX_DRIVER_OOT
-                          MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
-#else
-                          MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
+                          PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     }
 
     if (IS_PTR_ERR(addr)) {
