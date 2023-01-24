@@ -45,6 +45,7 @@ tests = {
     'seek_tell': {},
     'seek_tell_truncate': {},
     'stat': {},
+    'chmod_stat': {},
     'truncate': {},
 }
 
