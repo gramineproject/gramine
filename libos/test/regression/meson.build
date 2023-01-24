@@ -14,7 +14,6 @@ tests = {
     'devfs': {},
     'device_passthrough': {},
     'double_fork': {},
-    'edmm': {},
     'epoll_epollet': {},
     'epoll_test': {},
     'eventfd': {},
@@ -168,6 +167,7 @@ if sgx
 
             'dependencies': mbedtls_static_dep,
         },
+        'edmm': {},
     }
 endif
 

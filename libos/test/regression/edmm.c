@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2023 Intel Corporation
+ *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
+ */
+
 #define _GNU_SOURCE
 #include <err.h>
 #include <stdio.h>
@@ -23,21 +28,24 @@ static void wait_for_failing_child(int pid) {
     }
 }
 
-static int test_segfault_on_write_to_rx_page(void) {
+static void test_segfault_on_write_to_x_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
-        int* ptr = (int*)test_segfault_on_write_to_rx_page;
+        void (*ptr)(void) = test_segfault_on_write_to_x_page;
 
         /* *ptr = 0; */
         __asm__ volatile("movl $0, (%0)\n" : "=r"(ptr) : : "memory");
 
         exit(1); /* child must not survive the write to RX page above */
+    } else if (child_pid < 0) {
+        err(1, "fork");
+    } else {
+        /* Parent waits for SIGSEGV termination */
+        wait_for_failing_child(child_pid);
     }
-
-    return child_pid;
 }
 
-static int test_segfault_on_exec_to_rw_page(void) {
+static void test_segfault_on_exec_to_rw_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
         int on_stack_var = 5;
@@ -46,12 +54,15 @@ static int test_segfault_on_exec_to_rw_page(void) {
         __asm__ volatile("jmp *(%0)" : : "r" (rw_addr));
 
         exit(1); /* child must not survive exec attempt of RW page above */
+    } else if (child_pid < 0) {
+        err(1, "fork");
+    } else {
+        /* Parent waits for SIGSEGV termination */
+        wait_for_failing_child(child_pid);
     }
-
-    return child_pid;
 }
 
-static int test_segfault_on_write_to_ro_page(void) {
+static void test_segfault_on_write_to_ro_page(void) {
     pid_t child_pid = fork();
     if (child_pid == 0) {
         char* str = (char*)"Hello World!"; /* suppress const warning by casting to char* */
@@ -60,29 +71,20 @@ static int test_segfault_on_write_to_ro_page(void) {
         __asm__ volatile("movb $104, (%0)\n" : "=r"(str) : : "memory");
 
         exit(1); /* child must not survive the write to RO page above */
+    } else if (child_pid < 0) {
+        err(1, "fork");
+    } else {
+        /* Parent waits for SIGSEGV termination */
+        wait_for_failing_child(child_pid);
     }
-
-    return child_pid;
 }
 
 int main(void) {
-    pid_t child_pid = test_segfault_on_write_to_rx_page();
-    if (child_pid < 0) {
-        err(1, "fork");
-    }
-    wait_for_failing_child(child_pid);
+    test_segfault_on_write_to_x_page();
 
-    child_pid = test_segfault_on_exec_to_rw_page();
-    if (child_pid < 0) {
-        err(1, "fork");
-    }
-    wait_for_failing_child(child_pid);
+    test_segfault_on_exec_to_rw_page();
 
-    child_pid = test_segfault_on_write_to_ro_page();
-    if (child_pid < 0) {
-        err(1, "fork");
-    }
-    wait_for_failing_child(child_pid);
+    test_segfault_on_write_to_ro_page();
 
     puts("TEST OK");
     return 0;

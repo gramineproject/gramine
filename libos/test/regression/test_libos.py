@@ -1329,9 +1329,9 @@ class TC_91_RdtscSGX(RegressionTestCase):
         stdout, _ = self.run_binary(['rdtsc'])
         self.assertIn('TEST OK', stdout)
 
-@unittest.skipUnless(not HAS_SGX or HAS_EDMM,
+@unittest.skipUnless(HAS_EDMM,
     'On SGX v1, SIGSEGV handler cannot be implemented correctly, for lack of enclave page '
-    'permissions (all pages are RWX). So run only on gramine-direct and on gramine-sgx with EDMM.')
+    'permissions (all pages are RWX). So run only on gramine-sgx with EDMM.')
 class TC_92_SGX2_edmm(RegressionTestCase):
     def test_000_edmm(self):
             stdout, _ = self.run_binary(['edmm'])

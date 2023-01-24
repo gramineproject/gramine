@@ -127,3 +127,9 @@ manifests = [
   "rdtsc",
   "sighandler_divbyzero",
 ]
+
+[sgx]
+
+manifests = [
+  "edmm",
+]
