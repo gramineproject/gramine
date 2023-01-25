@@ -10,9 +10,12 @@
 #include "pal.h"
 #include "pal_regression.h"
 
+static void* g_exec_addr;
+static bool g_exec_failed;
 static bool g_write_failed;
 static bool g_read_failed;
 
+void mem_exec(void* addr) __attribute__((visibility("internal")));
 void mem_write(void* addr, uint8_t val) __attribute__((visibility("internal")));
 uint8_t mem_read(void* addr) __attribute__((visibility("internal")));
 static bool is_pc_at_func(uintptr_t pc, void (*func)(void));
@@ -21,23 +24,35 @@ static void fixup_context_after_read(PAL_CONTEXT* context);
 
 #ifdef __x86_64__
 void ret(void) __attribute__((visibility("internal")));
+void end_of_ret(void) __attribute__((visibility("internal")));
 __asm__ (
 ".pushsection .text\n"
 ".type mem_write, @function\n"
 ".type mem_read, @function\n"
+".type mem_exec, @function\n"
 ".type ret, @function\n"
+".type end_of_ret, @function\n"
 "mem_write:\n"
     "movb %sil, (%rdi)\n"
-"ret:\n"
     "ret\n"
 "mem_read:\n"
     "movb (%rdi), %al\n"
     "ret\n"
+"mem_exec:\n"
+    "call *(%rdi)\n"
+    "ret\n"
+"ret:\n"
+    "ret\n"
+"end_of_ret:\n"
 ".popsection\n"
 );
 
 static bool is_pc_at_func(uintptr_t pc, void (*func)(void)) {
     return pc == (uintptr_t)func;
+}
+
+static void fixup_context_after_exec(PAL_CONTEXT* context) {
+    pal_context_set_ip(context, (uintptr_t)ret);
 }
 
 static void fixup_context_after_write(PAL_CONTEXT* context) {
@@ -55,7 +70,11 @@ static void fixup_context_after_read(PAL_CONTEXT* context) {
 
 static void memfault_handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     uintptr_t pc = pal_context_get_ip(context);
-    if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
+    if (pc == (uintptr_t)g_exec_addr) {
+        fixup_context_after_exec(context);
+        g_exec_failed = true;
+        return;
+    } else if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
         fixup_context_after_write(context);
         g_write_failed = true;
         return;
@@ -83,7 +102,33 @@ int main(void) {
     PalSetExceptionHandler(memfault_handler, PAL_EVENT_MEMFAULT);
 
     void* addr1 = NULL;
-    CHECK(memory_alloc(PAGE_SIZE * 3, PAL_PROT_READ | PAL_PROT_WRITE, &addr1));
+    CHECK(memory_alloc(PAGE_SIZE * 3, PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_EXEC, &addr1));
+
+    memcpy(addr1, ret, (uintptr_t)end_of_ret - (uintptr_t)ret);
+    g_exec_addr = addr1;
+
+    g_exec_failed = false;
+    COMPILER_BARRIER();
+    mem_exec(&addr1);
+    COMPILER_BARRIER();
+    if (g_exec_failed) {
+        log_error("exec on RWX mem at %p failed", addr1);
+        PalProcessExit(1);
+    }
+
+    CHECK(PalVirtualMemoryProtect(addr1, PAGE_SIZE * 3, PAL_PROT_READ | PAL_PROT_WRITE));
+
+    g_exec_failed = false;
+    COMPILER_BARRIER();
+    mem_exec(&addr1);
+    COMPILER_BARRIER();
+    if (!g_exec_failed) {
+        log_error("exec on RW mem at %p unexpectedly succeeded", addr1);
+        PalProcessExit(1);
+    }
+
+    memset(addr1, 0, (uintptr_t)end_of_ret - (uintptr_t)ret);
+    g_exec_addr = NULL;
 
     g_write_failed = false;
     COMPILER_BARRIER();
