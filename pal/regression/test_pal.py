@@ -351,7 +351,7 @@ class TC_20_SingleProcess(RegressionTestCase):
             except subprocess.CalledProcessError as e:
                 self.assertEqual(e.returncode, 1)
                 stderr = e.stderr.decode()
-                self.assertRegex(stderr, r'write to R mem at 0x[0-9a-f]+ unexpectedly succeeded')
+                self.assertRegex(stderr, r'exec on RW mem at 0x[0-9a-f]+ unexpectedly succeeded')
 
     def test_400_pipe(self):
         _, stderr = self.run_binary(['Pipe'])
