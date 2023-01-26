@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
+
+include /usr/share/dpkg/default.mk
+
 # See debhelper(7) (uncomment to enable)
 # output every command that modifies files on the build system.
 export DH_VERBOSE = 1
@@ -38,6 +41,13 @@ override_dh_auto_configure:
 		-Ddcap=enabled \
 		$(SGX_DRIVER_INCLUDE_PATH)
 	
+	# assert correct version
+	if ! dpkg --compare-versions "$$(meson introspect --projectinfo obj-$(DEB_HOST_MULTIARCH) | jq -r .version)" = "$(DEB_VERSION)"; \
+	then \
+		echo mismatched version: make sure that version in debian/changelog matches meson.build >&2; \
+		exit 1; \
+	fi
+
 override_dh_auto_build:
 	dh_auto_build
 	$(MAKE) -C Documentation man
