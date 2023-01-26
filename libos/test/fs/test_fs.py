@@ -174,20 +174,10 @@ class TC_00_FileSystem(RegressionTestCase):
             stdout, stderr = self.run_binary(['stat', input_path, output_path])
             self.verify_stat(stdout, stderr, input_path, output_path, size)
 
-    def verify_chmod_stat(self, stdout, stderr, file_path):
-        initial_perm = '-rw-r--r--'
-        modified_perm = '-r--r--r--'
-
-        self.assertNotIn('ERROR: ', stderr)
-        self.assertIn('open(' + file_path + ') RW OK', stdout)
-        self.assertIn('read_perm(' + file_path + ') ' + initial_perm + ' OK', stdout)
-        self.assertIn('read_perm(' + file_path + ') ' + modified_perm + ' OK', stdout)
-        self.assertIn('close(' + file_path + ') RW OK', stdout)
-
     def test_131_file_chmod_stat(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_131') # new file to be created
-        stdout, stderr = self.run_binary(['chmod_stat', file_path])
-        self.verify_chmod_stat(stdout, stderr, file_path)
+        stdout, _ = self.run_binary(['chmod_stat', file_path])
+        self.assertIn('TEST OK', stdout)
 
     def verify_size(self, file, size):
         self.assertEqual(os.stat(file).st_size, size)
