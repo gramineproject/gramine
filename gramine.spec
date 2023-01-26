@@ -1,9 +1,7 @@
 # Copyright (c) 2021-2022 Wojtek Porczyk <woju@invisiblethingslab.com>
 
-%global vnt %{lua: ver = rpm.expand('%{version}'):gsub('~', '-') print(ver)}
-
 Name: gramine
-Version: 1.3.1post~UNRELEASED
+Version: 1.4
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
@@ -11,7 +9,7 @@ License: LGPLv3+
 URL: https://gramineproject.io
 BuildArch: x86_64
 
-Source0: %{name}-%{vnt}.tar.gz
+Source0: %{name}-%{version}.tar.gz
 
 BuildRequires: bison
 BuildRequires: cjson-devel
@@ -52,7 +50,7 @@ Requires: python3-tomli-w >= 0.4.0
 A lightweight usermode guest OS designed to run a single Linux application
 
 %prep
-%setup -q -n %{name}-%{vnt}
+%setup -q
 
 %build
 unset PKG_CONFIG_PATH
