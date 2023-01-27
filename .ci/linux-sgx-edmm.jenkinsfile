@@ -1,4 +1,4 @@
-node('sgx-edmm') {
+node('sgx-edmm && aesni') {
     checkout scm
 
     env.AVX = '1'  // EDMM-capable machines in our CI always have AVX
