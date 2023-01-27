@@ -1,4 +1,4 @@
-node('sgx-edmm') {
+node('sgx-edmm && aesni') {
     checkout scm
 
     env.SGX = '1'

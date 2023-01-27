@@ -1,4 +1,4 @@
-node('sgx_slave_2.6') {
+node('sgx_slave_2.6 && aesni') {
     checkout scm
 
     env.SGX = '1'
