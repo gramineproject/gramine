@@ -1032,6 +1032,26 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         return -EINVAL;
     }
 
+    if (enclave->edmm_enabled) {
+        uint32_t values[4];
+        cpuid(INTEL_SGX_LEAF, 0, values);
+        if (!(values[CPUID_WORD_EAX] & (1u << 1))) {
+            log_error("EDMM feature was requested in manifest, but CPU doesn't support it");
+            return -EPERM;
+        }
+
+        bool edmm_supported;
+        ret = edmm_supported_by_driver(&edmm_supported);
+        if (ret < 0) {
+            log_error("Failed to check support for EDMM feature: %s", unix_strerror(ret));
+            return ret;
+        }
+        if (!edmm_supported) {
+            log_error("EDMM feature was requested in manifest, but SGX driver doesn't support it");
+            return -EPERM;
+        }
+    }
+
     ret = initialize_enclave(enclave, enclave->raw_manifest_data);
     if (ret < 0)
         return ret;
