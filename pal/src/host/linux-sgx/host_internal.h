@@ -78,6 +78,7 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
 int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int edmm_remove_pages(uint64_t addr, size_t count);
+bool edmm_supported_by_driver(void);
 
 /*!
  * \brief Retrieve Quoting Enclave's sgx_target_info_t by talking to AESMD.
