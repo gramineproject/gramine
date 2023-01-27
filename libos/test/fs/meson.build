@@ -14,6 +14,7 @@ common_lib_copy_mmap = static_library('test_fs_copy_mmap',
 )
 
 tests = {
+    'chmod_stat': {},
     'copy_mmap_rev': {
         'link_with': common_lib_copy_mmap,
     },
@@ -45,7 +46,6 @@ tests = {
     'seek_tell': {},
     'seek_tell_truncate': {},
     'stat': {},
-    'chmod_stat': {},
     'truncate': {},
 }
 
