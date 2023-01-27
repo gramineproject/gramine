@@ -17,6 +17,7 @@ BuildRequires: bison
 BuildRequires: cjson-devel
 BuildRequires: gcc
 BuildRequires: gcc-c++
+BuildRequires: jq
 BuildRequires: make
 BuildRequires: meson >= 0.56
 BuildRequires: ninja-build >= 1.8
@@ -61,6 +62,14 @@ unset PKG_CONFIG_PATH
     -Ddirect=enabled \
     -Dsgx=enabled \
     -Dsgx_driver=upstream
+
+# assert correct version
+if ! test "$(meson introspect --projectinfo "%{_vpath_builddir}" | jq -r .version)" = %{version}
+then
+    echo mismatched version: make sure that version in gramine.spec matches meson.build >&2
+    exit 1
+fi
+
 %meson_build
 
 %__make -C Documentation man
