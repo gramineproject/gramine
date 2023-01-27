@@ -22,6 +22,7 @@ BuildRequires: meson >= 0.56
 BuildRequires: ninja-build >= 1.8
 BuildRequires: nasm
 BuildRequires: patch
+BuildRequires: perl
 BuildRequires: protobuf-c-compiler
 BuildRequires: protobuf-c-devel
 BuildRequires: python3-devel
