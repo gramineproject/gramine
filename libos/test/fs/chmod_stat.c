@@ -41,10 +41,12 @@ static void chmod_stat(const char* file_path) {
 }
 
 int main(int argc, char* argv[]) {
+
+    setup();
     if (argc < 2)
         fatal_error("Usage: %s <file_path>\n", argv[0]);
 
-    setup();
-
     chmod_stat(argv[1]);
+
+    return 0;
 }
