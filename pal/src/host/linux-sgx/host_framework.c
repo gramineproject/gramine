@@ -504,12 +504,12 @@ int edmm_remove_pages(uint64_t addr, size_t count) {
 int edmm_supported_by_driver(bool* out_supported) {
     struct sgx_enclave_remove_pages params = { .offset = 0, .length = 0 }; /* dummy */
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_REMOVE_PAGES, &params);
-    if (ret == -EBADF) {
-        /* g_isgx_device is invalid, can't even talk to the driver */
-        return ret;
+    if (ret != -EINVAL && ret != -ENOTTY) {
+        /* we expect either -EINVAL (REMOVE_PAGES ioctl exists but fails due to params.length == 0)
+         * or -ENOTTY (REMOVE_PAGES ioctl doesn't exist) */
+        return ret >= 0 ? -EPERM : ret;
     }
-
-    *out_supported = ret != -ENOTTY; /* other errors mean that this IOCTL is supported */
+    *out_supported = ret == -EINVAL;
     return 0;
 }
 
