@@ -501,10 +501,16 @@ int edmm_remove_pages(uint64_t addr, size_t count) {
 }
 
 /* must be called after open_sgx_driver() */
-bool edmm_supported_by_driver(void) {
-    struct sgx_enclave_remove_pages params = { 0 };
+int edmm_supported_by_driver(bool *out_supported) {
+    struct sgx_enclave_remove_pages params = { .offset = 0, .length = 0 }; /* dummy */
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_REMOVE_PAGES, &params);
-    return ret != -ENOTTY;
+    if (ret == -EBADF) {
+        /* g_isgx_device is invalid, can't even talk to the driver */
+        return ret;
+    }
+
+    *out_supported = ret != -ENOTTY; /* other errors mean that this IOCTL is supported */
+    return 0;
 }
 
 int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_token_t* token) {
