@@ -501,7 +501,7 @@ int edmm_remove_pages(uint64_t addr, size_t count) {
 }
 
 /* must be called after open_sgx_driver() */
-int edmm_supported_by_driver(bool *out_supported) {
+int edmm_supported_by_driver(bool* out_supported) {
     struct sgx_enclave_remove_pages params = { .offset = 0, .length = 0 }; /* dummy */
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_REMOVE_PAGES, &params);
     if (ret == -EBADF) {
