@@ -48,6 +48,7 @@ struct pal_enclave {
     unsigned long ssa_frame_size;
     bool nonpie_binary;
     bool edmm_enabled;
+    bool kss_enabled;
     enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 

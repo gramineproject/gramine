@@ -670,6 +670,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+    ret = toml_bool_in(manifest_root, "sgx.kss", /*defaultval=*/false,
+                       &enclave_info->kss_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.kss'");
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
         log_error("Enclave size not a power of two (an SGX-imposed requirement)");
         ret = -EINVAL;
@@ -1003,6 +1011,15 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (enclave->libpal_uri[URI_PREFIX_FILE_LEN] != '/') {
         log_error("Path to in-enclave PAL (%s) must be absolute", enclave->libpal_uri);
         return -EINVAL;
+    }
+
+    if (enclave->kss_enabled) {
+        uint32_t cpuid_values[4];
+        cpuid(INTEL_SGX_LEAF, 1, cpuid_values);
+        if (!(cpuid_values[0] & (1u << 7))) {
+            log_error("KSS feature was requested in manifest, but the platform doesn't support it");
+            return -EPERM;
+        }
     }
 
     ret = initialize_enclave(enclave, enclave->raw_manifest_data);
