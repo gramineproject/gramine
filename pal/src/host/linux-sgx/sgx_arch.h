@@ -66,6 +66,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 #define SGX_FLAGS_MODE64BIT     0x04ULL
 #define SGX_FLAGS_PROVISION_KEY 0x10ULL
 #define SGX_FLAGS_LICENSE_KEY   0x20ULL
+#define SGX_FLAGS_KSS           0x80ULL
 
 /* EINIT must verify *all* SECS.ATTRIBUTES[63..0] bits (FLAGS bits) against
  * SIGSTRUCT.ATTRIBUTES[63..0].

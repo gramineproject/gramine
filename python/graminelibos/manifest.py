@@ -95,6 +95,9 @@ class Manifest:
 
         sgx.setdefault('isvprodid', 0)
         sgx.setdefault('isvsvn', 0)
+        sgx.setdefault('kss', False)
+        sgx.setdefault('isvextprodid', 0)
+        sgx.setdefault('isvfamilyid', 0)
         sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
         sgx.setdefault('require_avx', False)
