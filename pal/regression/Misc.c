@@ -33,7 +33,7 @@ int main(int argc, const char** argv, const char** envp) {
         return 1;
     }
 
-    uint64_t timeout = 10000;
+    uint64_t timeout = 200000;
     int ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
@@ -48,8 +48,8 @@ int main(int argc, const char** argv, const char** envp) {
 
     pal_printf("Sleeped %ld Microseconds\n", time4 - time3);
 
-    if (time3 < time4 && time4 - time3 > 10000)
-        pal_printf("Delay Execution for 10000 Microseconds OK\n");
+    if (time3 < time4 && time4 - time3 > 200000)
+        pal_printf("Delay Execution for 200000 Microseconds OK\n");
 
     uint64_t time5 = 0;
     if (PalSystemTimeQuery(&time5) < 0) {

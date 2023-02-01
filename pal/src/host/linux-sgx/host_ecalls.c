@@ -11,16 +11,23 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
                         struct pal_topo_info* topo_info, struct pal_dns_host_conf* dns_conf,
                         bool edmm_enabled, void* reserved_mem_ranges,
                         size_t reserved_mem_ranges_size) {
+    int ret;
+
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
-        int ret = start_rpc(g_pal_enclave.rpc_thread_num);
+        ret = start_rpc(g_pal_enclave.rpc_thread_num);
         if (ret < 0) {
             /* failed to create RPC threads */
             return ret;
         }
         /* after this point, g_rpc_queue != NULL */
     }
+
+    uint64_t* time_addr;
+    ret = start_gettime_helper(&time_addr);
+    if (ret < 0)
+        return ret;
 
     struct ecall_enclave_start start_args = {
         .libpal_uri               = libpal_uri,
@@ -36,6 +43,7 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
         .edmm_enabled             = edmm_enabled,
         .reserved_mem_ranges      = reserved_mem_ranges,
         .reserved_mem_ranges_size = reserved_mem_ranges_size,
+        .time_addr                = time_addr,
         .rpc_queue                = g_rpc_queue,
     };
     return sgx_ecall(ECALL_ENCLAVE_START, &start_args);

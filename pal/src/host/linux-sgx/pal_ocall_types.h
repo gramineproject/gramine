@@ -59,7 +59,6 @@ enum {
     OCALL_SEND,
     OCALL_SETSOCKOPT,
     OCALL_SHUTDOWN,
-    OCALL_GETTIME,
     OCALL_SCHED_YIELD,
     OCALL_POLL,
     OCALL_RENAME,
@@ -288,10 +287,6 @@ struct ocall_setsockopt {
 struct ocall_shutdown {
     int sockfd;
     int how;
-};
-
-struct ocall_gettime {
-    uint64_t microsec;
 };
 
 struct ocall_poll {

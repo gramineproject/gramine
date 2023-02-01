@@ -4,6 +4,10 @@ cflags_pal_common = [
     '-fPIC',
 ]
 
+pal_elf_common_sources = files(
+    'pal_elf.c',
+)
+
 pal_common_sources = files(
     'pal_events.c',
     'pal_exception.c',

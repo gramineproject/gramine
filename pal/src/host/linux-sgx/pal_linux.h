@@ -40,6 +40,9 @@ extern struct pal_linuxsgx_state {
     /* remaining heap usable by application */
     void* heap_min;
     void* heap_max;
+
+    /* address of the `uint64_t time` variable in untrusted memory, see gettime_helper_loop() */
+    uint64_t* time_addr;
 } g_pal_linuxsgx_state;
 
 enum sgx_attestation_type {
@@ -72,7 +75,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
                              void* uptr_rpc_queue, void* uptr_dns_conf, bool edmm_enabled,
-                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size);
+                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size,
+                             void* uptr_time_addr);
 void pal_start_thread(void);
 
 extern char __text_start, __text_end, __data_start, __data_end;
@@ -100,10 +104,6 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 /* `event_` is actually of `enum pal_event` type, but we call it from assembly, so we need to know
  * its underlying type. */
 void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
-
-bool is_tsc_usable(void);
-uint64_t get_tsc_hz(void);
-void init_tsc(void);
 
 int init_cpuid(void);
 

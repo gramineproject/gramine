@@ -30,6 +30,7 @@ pal_direct_map = custom_target('pal.map[direct]',
 
 libpal_direct = shared_library('pal',
     pal_common_sources,
+    pal_elf_common_sources,
     pal_linux_common_sources,
     pal_direct_sources,
 

@@ -421,8 +421,8 @@ class TC_20_SingleProcess(RegressionTestCase):
         # Query System Time
         self.assertIn('Query System Time OK', stderr)
 
-        # Delay Execution for 10000 Microseconds
-        self.assertIn('Delay Execution for 10000 Microseconds OK', stderr)
+        # Delay Execution for 200000 Microseconds
+        self.assertIn('Delay Execution for 200000 Microseconds OK', stderr)
 
         # Delay Execution for 3 Seconds
         self.assertIn('Delay Execution for 3 Seconds OK', stderr)

@@ -25,6 +25,7 @@ libpal_skeleton = shared_library('pal',
     'pal_streams.c',
     'pal_threading.c',
     pal_common_sources,
+    pal_elf_common_sources,
 
     include_directories: [
         includes_pal_common,

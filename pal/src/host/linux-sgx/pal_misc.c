@@ -23,88 +23,27 @@
 #include "toml_utils.h"
 #include "topo_info.h"
 
-/* The timeout of 50ms was found to be a safe TSC drift correction periodicity based on results
- * from multiple systems. Any higher or lower could pose risks of negative time drift or
- * performance hit respectively.
- */
-#define TSC_REFINE_INIT_TIMEOUT_USECS 50000
-
-uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
-static uint64_t g_start_tsc = 0;
-static uint64_t g_start_usec = 0;
-static seqlock_t g_tsc_lock = INIT_SEQLOCK_UNLOCKED;
-
-/**
- * Initialize the data structures used for date/time emulation using TSC
- */
-void init_tsc(void) {
-    if (is_tsc_usable()) {
-        g_tsc_hz = get_tsc_hz();
-    }
-}
-
-/* TODO: result comes from the untrusted host, introduce some schielding */
 int _PalSystemTimeQuery(uint64_t* out_usec) {
-    int ret;
+    /* Last seen time value. This guards against time rewinding. */
+    static uint64_t last_usec = 0;
+    uint64_t last_usec_before_fetch = __atomic_load_n(&last_usec, __ATOMIC_ACQUIRE);
 
-    if (!g_tsc_hz) {
-        /* RDTSC is not allowed or no Invariant TSC feature -- fallback to the slow ocall */
-        return ocall_gettime(out_usec);
+    uint64_t usec = __atomic_load_n(g_pal_linuxsgx_state.time_addr,  __ATOMIC_ACQUIRE);
+
+    if (usec < last_usec_before_fetch) {
+        /* Probably a malicious host. */
+        log_error("Retrieved time value smaller than in the previous call");
+        _PalProcessExit(1);
     }
 
-    uint32_t seq;
-    uint64_t start_tsc;
-    uint64_t start_usec;
-    do {
-        seq = read_seqbegin(&g_tsc_lock);
-        start_tsc  = g_start_tsc;
-        start_usec = g_start_usec;
-    } while (read_seqretry(&g_tsc_lock, seq));
-
-    uint64_t usec = 0;
-    if (start_tsc > 0 && start_usec > 0) {
-        /* baseline TSC/usec pair was initialized, can calculate time via RDTSC (but should be
-         * careful with integer overflow during calculations) */
-        uint64_t diff_tsc = get_tsc() - start_tsc;
-        if (diff_tsc < UINT64_MAX / 1000000) {
-            uint64_t diff_usec = diff_tsc * 1000000 / g_tsc_hz;
-            if (diff_usec < TSC_REFINE_INIT_TIMEOUT_USECS) {
-                /* less than TSC_REFINE_INIT_TIMEOUT_USECS passed from the previous update of
-                 * TSC/usec pair (time drift is contained), use the RDTSC-calculated time */
-                usec = start_usec + diff_usec;
-                if (usec < start_usec)
-                    return -PAL_ERROR_OVERFLOW;
-            }
+    /* Update `last_usec`. */
+    uint64_t expected_usec = last_usec_before_fetch;
+    while (expected_usec < usec) {
+        if (__atomic_compare_exchange_n(&last_usec, &expected_usec, usec,
+                                        /*weak=*/true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+            break;
         }
     }
-
-    if (usec) {
-        *out_usec = usec;
-        return 0;
-    }
-
-    /* if we are here, either the baseline TSC/usec pair was not yet initialized or too much time
-     * passed since the previous TSC/usec update, so let's refresh them to contain the time drift */
-    uint64_t tsc_cyc1 = get_tsc();
-    ret = ocall_gettime(&usec);
-    if (ret < 0)
-        return -PAL_ERROR_DENIED;
-    uint64_t tsc_cyc2 = get_tsc();
-
-    /* we need to match the OCALL-obtained timestamp (`usec`) with the RDTSC-obtained number of
-     * cycles (`tsc_cyc`); since OCALL is a time-consuming operation, we estimate `tsc_cyc` as a
-     * mid-point between the RDTSC values obtained right-before and right-after the OCALL. */
-    uint64_t tsc_cyc = tsc_cyc1 + (tsc_cyc2 - tsc_cyc1) / 2;
-    if (tsc_cyc < tsc_cyc1)
-        return -PAL_ERROR_OVERFLOW;
-
-    /* refresh the baseline data if no other thread updated g_start_tsc */
-    write_seqbegin(&g_tsc_lock);
-    if (g_start_tsc < tsc_cyc) {
-        g_start_tsc  = tsc_cyc;
-        g_start_usec = usec;
-    }
-    write_seqend(&g_tsc_lock);
 
     *out_usec = usec;
     return 0;
@@ -653,44 +592,6 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t buf_size) {
     ocall_close(fd);
 
     return n;
-}
-
-bool is_tsc_usable(void) {
-    uint32_t words[CPUID_WORD_NUM];
-    _PalCpuIdRetrieve(INVARIANT_TSC_LEAF, 0, words);
-    return words[CPUID_WORD_EDX] & 1 << 8;
-}
-
-/* return TSC frequency or 0 if invariant TSC is not supported */
-uint64_t get_tsc_hz(void) {
-    uint32_t words[CPUID_WORD_NUM];
-
-    _PalCpuIdRetrieve(TSC_FREQ_LEAF, 0, words);
-    if (!words[CPUID_WORD_EAX] || !words[CPUID_WORD_EBX]) {
-        /* TSC/core crystal clock ratio is not enumerated, can't use RDTSC for accurate time */
-        return 0;
-    }
-
-    if (words[CPUID_WORD_ECX] > 0) {
-        /* calculate TSC frequency as core crystal clock frequency (EAX) * EBX / EAX; cast to 64-bit
-         * first to prevent integer overflow */
-        uint64_t ecx_hz = words[CPUID_WORD_ECX];
-        return ecx_hz * words[CPUID_WORD_EBX] / words[CPUID_WORD_EAX];
-    }
-
-    /* some Intel CPUs do not report nominal frequency of crystal clock, let's calculate it
-     * based on Processor Frequency Information Leaf (CPUID 16H); this leaf always exists if
-     * TSC Frequency Leaf exists; logic is taken from Linux 5.11's arch/x86/kernel/tsc.c */
-    _PalCpuIdRetrieve(PROC_FREQ_LEAF, 0, words);
-    if (!words[CPUID_WORD_EAX]) {
-        /* processor base frequency (in MHz) is not enumerated, can't calculate frequency */
-        return 0;
-    }
-
-    /* processor base frequency is in MHz but we need to return TSC frequency in Hz; cast to 64-bit
-     * first to prevent integer overflow */
-    uint64_t base_frequency_mhz = words[CPUID_WORD_EAX];
-    return base_frequency_mhz * 1000000;
 }
 
 int _PalRandomBitsRead(void* buffer, size_t size) {

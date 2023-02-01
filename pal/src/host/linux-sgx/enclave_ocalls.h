@@ -88,8 +88,6 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
 
 int ocall_futex(uint32_t* uaddr, int op, int val, uint64_t* timeout_us);
 
-int ocall_gettime(uint64_t* microsec);
-
 void ocall_sched_yield(void);
 
 int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us);

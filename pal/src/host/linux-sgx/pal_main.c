@@ -541,7 +541,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                              size_t args_size, void* uptr_env, size_t env_size,
                              int parent_stream_fd, void* uptr_qe_targetinfo, void* uptr_topo_info,
                              void* uptr_rpc_queue, void* uptr_dns_conf, bool edmm_enabled,
-                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size) {
+                             void* urts_reserved_mem_ranges, size_t urts_reserved_mem_ranges_size,
+                             void* uptr_time_addr) {
     /* All our arguments are coming directly from the host. We are responsible to check them. */
     int ret;
 
@@ -551,6 +552,13 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         log_error("Relocation of the PAL binary failed: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    if (!sgx_is_valid_untrusted_ptr(uptr_time_addr, sizeof(*uptr_time_addr),
+                                    alignof(__typeof__(*uptr_time_addr)))) {
+        log_error("Time variable is not located in untrusted memory");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    g_pal_linuxsgx_state.time_addr = uptr_time_addr;
 
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);
@@ -636,14 +644,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     SET_ENCLAVE_TCB(ready_for_exceptions, 1UL);
-
-    /* initialize "Invariant TSC" HW feature for fast and accurate gettime and immediately probe
-     * RDTSC instruction inside SGX enclave (via dummy get_tsc) -- it is possible that
-     * the CPU supports invariant TSC but doesn't support executing RDTSC inside SGX enclave, in
-     * this case the SIGILL exception is generated and leads to emulate_rdtsc_and_print_warning()
-     * which unsets invariant TSC, and we end up falling back to the slower ocall_gettime() */
-    init_tsc();
-    (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
     ret = init_cpuid();
     if (ret < 0) {

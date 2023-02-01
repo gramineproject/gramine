@@ -31,6 +31,7 @@ struct ecall_enclave_start {
     unsigned char             edmm_enabled;
     void*                     reserved_mem_ranges;
     size_t                    reserved_mem_ranges_size;
+    uint64_t*                 time_addr;
 
     struct rpc_queue*         rpc_queue; /* pointer to RPC queue in untrusted mem */
 };

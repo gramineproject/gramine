@@ -51,6 +51,8 @@ struct pal_enclave {
     enum sgx_attestation_type attestation_type;
     char* libpal_uri; /* Path to the PAL binary */
 
+    long int (*vdso_clock_gettime)(long int clk, struct timespec* tp);
+
 #ifdef DEBUG
     /* profiling */
     bool profile_enable;
@@ -125,6 +127,8 @@ void map_tcs(unsigned int tid);
 void unmap_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
+
+int start_gettime_helper(uint64_t** out_time_addr);
 
 int sgx_signal_setup(void);
 int block_async_signals(bool block);

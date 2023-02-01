@@ -1183,6 +1183,38 @@ static int verify_hw_requirements(char* envp[]) {
     return 0;
 }
 
+static int setup_vdso(char* envp[]) {
+    int ret;
+
+    uint64_t sysinfo_ehdr = 0;
+    if (get_aux_value(envp, AT_SYSINFO_EHDR, &sysinfo_ehdr) != 0) {
+        log_error("Cannot find VDSO.");
+        return -EPERM;
+    }
+
+    const char* string_table  = NULL;
+    elf_sym_t* symbol_table   = NULL;
+    uint32_t symbol_table_cnt = 0;
+
+    ret = find_string_and_symbol_tables(sysinfo_ehdr, sysinfo_ehdr, &string_table, &symbol_table,
+                                        &symbol_table_cnt);
+    if (ret < 0) {
+        log_error("The VDSO unexpectedly doesn't have string table or symbol table.");
+        return -EPERM;
+    }
+
+    /* iterate through the symbol table and find where clock_gettime vDSO func is located */
+    for (uint32_t i = 0; i < symbol_table_cnt; i++) {
+        const char* symbol_name = string_table + symbol_table[i].st_name;
+        if (!strcmp("__vdso_clock_gettime", symbol_name)) {
+            g_pal_enclave.vdso_clock_gettime = (void*)(sysinfo_ehdr + symbol_table[i].st_value);
+            break;
+        }
+    }
+
+    return 0;
+}
+
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
@@ -1217,6 +1249,10 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     ret = verify_hw_requirements(envp);
+    if (ret < 0)
+        return ret;
+
+    ret = setup_vdso(envp);
     if (ret < 0)
         return ret;
 
