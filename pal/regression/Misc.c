@@ -33,6 +33,7 @@ int main(int argc, const char** argv, const char** envp) {
         return 1;
     }
 
+    /* Note that time value may have jitter of ~100ms, so must sleep with a safe margin */
     uint64_t timeout = 200000;
     int ret = PalEventWait(sleep_handle, &timeout);
     if (ret != -PAL_ERROR_TRYAGAIN) {

@@ -57,10 +57,11 @@ int main(void) {
     uint64_t end = 0;
     CHECK(PalSystemTimeQuery(&end));
 
+    /* Note that time value may have jitter of ~100ms, so must check with safe margins */
     if (end < start) {
         CHECK(-1);
     }
-    if (end - start < TIME_US_IN_S) {
+    if (end - start < TIME_US_IN_S / 2) {
         CHECK(-1);
     }
     if (end - start > TIME_US_IN_S * 3 / 2) {
@@ -77,10 +78,11 @@ int main(void) {
     CHECK(PalEventWait(event, /*timeout=*/NULL));
     CHECK(PalSystemTimeQuery(&end));
 
+    /* Note that time value may have jitter of ~100ms, so must check with safe margins */
     if (end < start) {
         CHECK(-1);
     }
-    if (end - start < TIME_US_IN_S) {
+    if (end - start < TIME_US_IN_S / 2) {
         CHECK(-1);
     }
     if (end - start > TIME_US_IN_S * 3 / 2) {
