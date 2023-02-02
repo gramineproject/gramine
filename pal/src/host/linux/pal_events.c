@@ -14,6 +14,7 @@
 #include "linux_utils.h"
 #include "pal.h"
 #include "pal_internal.h"
+#include "pal_linux.h"
 #include "pal_linux_error.h"
 
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
@@ -59,7 +60,8 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     int ret;
     struct timespec timeout = { 0 };
     if (timeout_us) {
-        time_get_now_plus_ns(&timeout, *timeout_us * TIME_NS_IN_US);
+        time_get_now_plus_ns(&timeout, *timeout_us * TIME_NS_IN_US,
+                             g_pal_linux_state.vdso_clock_gettime);
     }
 
     spinlock_lock(&handle->event.lock);
@@ -94,7 +96,7 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     spinlock_unlock(&handle->event.lock);
 
     if (timeout_us) {
-        int64_t diff = time_ns_diff_from_now(&timeout);
+        int64_t diff = time_ns_diff_from_now(&timeout, g_pal_linux_state.vdso_clock_gettime);
         if (diff < 0) {
             /* We might have slept a bit too long. */
             diff = 0;

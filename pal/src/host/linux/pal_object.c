@@ -10,6 +10,7 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
+#include "pal_linux.h"
 #include "pal_linux_error.h"
 
 /* To avoid expensive malloc/free (due to locking), use stack if the required space is small
@@ -62,13 +63,13 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
         timeout = __alloca(sizeof(*timeout));
         timeout->tv_sec = timeout_ns / TIME_NS_IN_S;
         timeout->tv_nsec = timeout_ns % TIME_NS_IN_S;
-        time_get_now_plus_ns(&end_time, timeout_ns);
+        time_get_now_plus_ns(&end_time, timeout_ns, g_pal_linux_state.vdso_clock_gettime);
     }
 
     ret = DO_SYSCALL(ppoll, fds, count, timeout, NULL, 0);
 
     if (timeout_us) {
-        int64_t diff = time_ns_diff_from_now(&end_time);
+        int64_t diff = time_ns_diff_from_now(&end_time, g_pal_linux_state.vdso_clock_gettime);
         if (diff < 0) {
             /* We might have slept a bit too long. */
             diff = 0;

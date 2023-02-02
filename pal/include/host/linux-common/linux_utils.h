@@ -40,10 +40,12 @@ int parse_proc_maps(const char* path, int (*callback)(struct proc_maps_range* r,
                     void* arg);
 
 /* Returns current time + `addend_ns` nanoseconds in `ts`. */
-void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns);
+void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns,
+                          long int (*clock_gettime_f)(long int clk, struct timespec* tp));
 /* Returns time difference (in nanoseconds) between current time and `ts`. Note that the difference
  * can be negative! */
-int64_t time_ns_diff_from_now(struct timespec* ts);
+int64_t time_ns_diff_from_now(struct timespec* ts,
+                              long int (*clock_gettime_f)(long int clk, struct timespec* tp));
 
 int get_gramine_unix_socket_addr(uint64_t instance_id, const char* name,
                                  struct sockaddr_un* out_addr);

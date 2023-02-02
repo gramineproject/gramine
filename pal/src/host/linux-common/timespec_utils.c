@@ -9,9 +9,15 @@
 #include "linux_utils.h"
 #include "syscall.h"
 
-void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns) {
+void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns,
+                          long int (*clock_gettime_f)(long int clk, struct timespec* tp)) {
+    int ret;
     /* This can only fail if arguments are invalid. */
-    int ret = DO_SYSCALL(clock_gettime, CLOCK_MONOTONIC, ts);
+    if (clock_gettime_f) {
+        ret = clock_gettime_f(CLOCK_MONOTONIC, ts);
+    } else {
+        ret = DO_SYSCALL(clock_gettime, CLOCK_MONOTONIC, ts);
+    }
     if (ret < 0) {
         die_or_inf_loop();
     }
@@ -24,10 +30,16 @@ void time_get_now_plus_ns(struct timespec* ts, uint64_t addend_ns) {
     }
 }
 
-int64_t time_ns_diff_from_now(struct timespec* ts) {
+int64_t time_ns_diff_from_now(struct timespec* ts,
+                              long int (*clock_gettime_f)(long int clk, struct timespec* tp)) {
+    int ret;
     struct timespec time_now;
     /* This can only fail if arguments are invalid. */
-    int ret = DO_SYSCALL(clock_gettime, CLOCK_MONOTONIC, &time_now);
+    if (clock_gettime_f) {
+        ret = clock_gettime_f(CLOCK_MONOTONIC, &time_now);
+    } else {
+        ret = DO_SYSCALL(clock_gettime, CLOCK_MONOTONIC, &time_now);
+    }
     if (ret < 0) {
         die_or_inf_loop();
     }

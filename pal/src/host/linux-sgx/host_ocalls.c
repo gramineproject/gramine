@@ -261,7 +261,8 @@ static long sgx_ocall_futex(void* args) {
     struct timespec timeout = { 0 };
     bool have_timeout = ocall_futex_args->timeout_us != (uint64_t)-1;
     if (have_timeout) {
-        time_get_now_plus_ns(&timeout, ocall_futex_args->timeout_us * TIME_NS_IN_US);
+        time_get_now_plus_ns(&timeout, ocall_futex_args->timeout_us * TIME_NS_IN_US,
+                             g_pal_enclave.vdso_clock_gettime);
     }
 
     /* `FUTEX_WAIT` treats timeout parameter as a relative value. We want to have an absolute one
@@ -286,7 +287,7 @@ static long sgx_ocall_futex(void* args) {
                                    have_timeout ? &timeout : NULL, NULL, val3);
 
     if (have_timeout) {
-        int64_t diff = time_ns_diff_from_now(&timeout);
+        int64_t diff = time_ns_diff_from_now(&timeout, g_pal_enclave.vdso_clock_gettime);
         if (diff < 0) {
             /* We might have slept a bit too long. */
             diff = 0;
@@ -638,13 +639,13 @@ static long sgx_ocall_poll(void* args) {
         timeout = __alloca(sizeof(*timeout));
         timeout->tv_sec = timeout_ns / TIME_NS_IN_S;
         timeout->tv_nsec = timeout_ns % TIME_NS_IN_S;
-        time_get_now_plus_ns(&end_time, timeout_ns);
+        time_get_now_plus_ns(&end_time, timeout_ns, g_pal_enclave.vdso_clock_gettime);
     }
 
     ret = DO_SYSCALL_INTERRUPTIBLE(ppoll, ocall_poll_args->fds, ocall_poll_args->nfds, timeout, NULL);
 
     if (have_timeout) {
-        int64_t diff = time_ns_diff_from_now(&end_time);
+        int64_t diff = time_ns_diff_from_now(&end_time, g_pal_enclave.vdso_clock_gettime);
         if (diff < 0) {
             /* We might have slept a bit too long. */
             diff = 0;
