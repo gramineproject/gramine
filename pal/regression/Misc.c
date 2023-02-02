@@ -49,7 +49,8 @@ int main(int argc, const char** argv, const char** envp) {
 
     pal_printf("Sleeped %ld Microseconds\n", time4 - time3);
 
-    if (time3 < time4 && time4 - time3 > 200000)
+    /* Note that time value may have jitter of ~100ms, so must check with safe margins */
+    if (time3 < time4 && time4 - time3 > 200000 * 2 / 3)
         pal_printf("Delay Execution for 200000 Microseconds OK\n");
 
     uint64_t time5 = 0;
@@ -73,7 +74,8 @@ int main(int argc, const char** argv, const char** envp) {
 
     pal_printf("Sleeped %ld Microseconds\n", time6 - time5);
 
-    if (time5 < time6 && time6 - time5 > 3000000)
+    /* Note that time value may have jitter of ~100ms, so must check with safe margins */
+    if (time5 < time6 && time6 - time5 > 3000000 * 2 / 3)
         pal_printf("Delay Execution for 3 Seconds OK\n");
 
     unsigned long data[100];
