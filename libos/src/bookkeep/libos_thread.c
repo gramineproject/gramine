@@ -178,6 +178,12 @@ static int init_main_thread(void) {
         return -EINVAL;
     }
 
+    if (uid_int64 == 0 || gid_int64 == 0) {
+        log_warning("Application starts as root (UID and/or GID are equal to 0). Running as root "
+                    "brings some risks. Consider specifying a non-root user in the manifest (use "
+                    "'loader.uid' and 'loader.gid' options).");
+    }
+
     cur_thread->uid = uid_int64;
     cur_thread->euid = uid_int64;
     cur_thread->suid = uid_int64;
