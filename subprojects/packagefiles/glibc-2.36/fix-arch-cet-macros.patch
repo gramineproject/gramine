@@ -1,0 +1,23 @@
+diff --git a/sysdeps/unix/sysv/linux/x86/include/asm/prctl.h b/sysdeps/unix/sysv/linux/x86/include/asm/prctl.h
+index 45ad0b052f528f2a1653b0b12bedaa58ab4b9620..75b88034c225c0f131c5b03e0d64ecb724827a1d 100644
+--- a/sysdeps/unix/sysv/linux/x86/include/asm/prctl.h
++++ b/sysdeps/unix/sysv/linux/x86/include/asm/prctl.h
+@@ -14,14 +14,14 @@
+      shadow stack base address: addr[1].
+      shadow stack size: addr[2].
+  */
+-# define ARCH_CET_STATUS	0x3001
++# define ARCH_CET_STATUS	0x4001
+ /* Disable CET features in unsigned int features.  */
+-# define ARCH_CET_DISABLE	0x3002
++# define ARCH_CET_DISABLE	0x4002
+ /* Lock all CET features.  */
+-# define ARCH_CET_LOCK		0x3003
++# define ARCH_CET_LOCK		0x4003
+ /* Allocate a new shadow stack with unsigned long long *addr:
+      IN: requested shadow stack size: *addr.
+      OUT: allocated shadow stack address: *addr.
+  */
+-# define ARCH_CET_ALLOC_SHSTK	0x3004
++# define ARCH_CET_ALLOC_SHSTK	0x4004
+ #endif /* ARCH_CET_STATUS */

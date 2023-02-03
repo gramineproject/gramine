@@ -73,6 +73,7 @@ glibc = custom_target('glibc',
         'glibc-2.36/configure',
         'gramine-syscall.patch',
         'hp-timing.patch',
+        'fix-arch-cet-macros.patch',
     ],
 
     output: glibc_output,
