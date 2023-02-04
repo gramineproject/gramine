@@ -4,7 +4,7 @@ static void chmod_stat(const char* file_path) {
     struct stat st;
     uint32_t perm, expected_perm = (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
-    int fd = open_output_fd(file_path, /*rdwr*/true);
+    int fd = open_output_fd(file_path, /*rdwr=*/true);
 
     if (stat(file_path, &st) != 0)
         fatal_error("Failed to stat file %s: %s\n", file_path, strerror(errno));
@@ -41,7 +41,6 @@ static void chmod_stat(const char* file_path) {
 }
 
 int main(int argc, char* argv[]) {
-
     setup();
     if (argc < 2)
         fatal_error("Usage: %s <file_path>\n", argv[0]);
