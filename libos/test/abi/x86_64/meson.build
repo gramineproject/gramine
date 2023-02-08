@@ -1,6 +1,6 @@
 common_lib = static_library('common_lib',
     '../common/common.c',
-    nasm_gen.process('exit.nasm')
+    nasm_gen.process('../../common/x86_64/exit.nasm')
 )
 
 tests = {

@@ -130,6 +130,51 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
     uc->rax = (uint32_t)usec;
 }
 
+static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
+#ifndef __x86_64__
+    #error "The iret emulation is unsupported on other platforms."
+#endif
+
+    if (FIRST_TIME()) {
+        log_warning("Emulating a raw iret instruction. This degrades performance.");
+    }
+
+    uc->rip = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
+
+    /* Assume that cs register doesn't change. */
+#ifdef DEBUG
+    uint64_t cs = *(uint64_t*)(intptr_t)uc->rsp;
+    uint64_t cur_cs = 0;
+    __asm__ volatile (
+        "movq %%cs, %0\n"
+        : "=r"(cur_cs)
+    );
+    assert(cs == cur_cs);
+#endif
+    uc->rsp += 8;
+
+    uc->rflags = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
+
+    uint64_t tmprsp = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
+
+    /* Assume that ss register doesn't change. */
+#ifdef DEBUG
+    uint64_t ss = *(uint64_t*)(intptr_t)uc->rsp;
+    uint64_t cur_ss = 0;
+    __asm__ volatile (
+        "movq %%ss, %0\n"
+        : "=r"(cur_ss)
+    );
+    assert(ss == cur_ss);
+#endif
+    uc->rsp += 8;
+
+    uc->rsp = tmprsp;
+}
+
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
  *               false if #UD was not handled and exception needs to be raised up to LibOS/app */
 static bool handle_ud(sgx_cpu_context_t* uc) {
@@ -155,6 +200,15 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         emulate_rdtsc_and_print_warning(uc);
         uc->rip += 3;
         uc->rcx = 0; /* dummy IA32_TSC_AUX; Linux encodes it as (numa_id << 12) | cpu_id */
+        return true;
+    } else if (0x48 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
+        /*
+         * The IRETQ (interrupt return, 64-bit operand size) is prefixed with REX.W (bit 3).
+         * From Intel manual:
+         * REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy
+         * entries 40H to 4FH.
+         */
+        emulate_iret_and_print_warning(uc);
         return true;
     } else if (instr[0] == 0xf3 && (instr[1] & ~1) == 0x48 && instr[2] == 0x0f &&
                instr[3] == 0xae && instr[4] >> 6 == 0b11 && ((instr[4] >> 3) & 0b111) < 4) {

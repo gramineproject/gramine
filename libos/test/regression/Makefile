@@ -16,5 +16,6 @@ clean:
 		*.xml \
 		testfile \
 		trusted_testfile \
+		asm/x86_64/__pycache__ \
 		tmp/* \
 		tmp_enc/*
