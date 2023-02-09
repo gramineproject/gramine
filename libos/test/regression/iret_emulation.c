@@ -27,24 +27,24 @@ static void sigfpe_handler(int sig, siginfo_t* info, void* arg) {
           "r" (context->uc_mcontext.gregs[REG_CSGSFS] & 0xFF),
           "r" (context->uc_mcontext.gregs[REG_RIP] + 3),
           "r" (context->uc_mcontext.gregs[REG_RBP])
-        : "rax"
+        : "rax", "memory"
     );
 }
 
 int main(void) {
-    struct sigaction action = { 0 };
-
-    action.sa_sigaction = &sigfpe_handler;
-    action.sa_flags = SA_SIGINFO;
+    struct sigaction action = { .sa_sigaction = &sigfpe_handler, .sa_flags = SA_SIGINFO };
 
     if (sigaction(SIGFPE, &action, NULL) < 0) {
         err(1, "unable to set singal handler");
     }
 
-    __asm__ inline volatile (
+    __asm__ volatile (
         "mov $0, %rax\n"
         "mov $0, %rdx\n"
         "idiv %rdx"
+        :
+        :
+        : "rax", "rdx"
     );
 
     printf("TEST OK\n");
