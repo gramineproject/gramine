@@ -39,9 +39,9 @@ int main(void) {
     }
 
     __asm__ volatile (
-        "mov $0, %rax\n"
-        "mov $0, %rdx\n"
-        "idiv %rdx"
+        "mov $0, %%rax\n"
+        "mov $0, %%rdx\n"
+        "idiv %%rdx"
         :
         :
         : "rax", "rdx"
