@@ -28,6 +28,7 @@ static void sigfpe_handler(int sig, siginfo_t* info, void* arg) {
           "r" (context->uc_mcontext.gregs[REG_CSGSFS] & 0xFF),
           "r" (context->uc_mcontext.gregs[REG_RIP] + 3),
           "r" (context->uc_mcontext.gregs[REG_RBP])
+        : "rax"
     );
 }
 
@@ -44,7 +45,7 @@ int main(void) {
         "idiv %%rdx"
         :
         :
-        : "rax", "rdx"
+        : "rax", "rcx", "rdx", "rbx", "rsi", "rdi"
     );
 
     printf("TEST OK\n");
