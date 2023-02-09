@@ -17,17 +17,17 @@ static void sigfpe_handler(int sig, siginfo_t* info, void* arg) {
         "mov %%ss, %%rax\n"
         "pushq %%rax\n"
         "pushq %0\n"
-        "pushq $0x00\n"
         "pushq %1\n"
         "pushq %2\n"
-        "movq %3, %%rbp\n"
+        "pushq %3\n"
+        "movq %4, %%rbp\n"
         "iretq\n"
         :
         : "r" (context->uc_mcontext.gregs[REG_RSP]),
+          "r" (context->uc_mcontext.gregs[REG_EFL]),
           "r" (context->uc_mcontext.gregs[REG_CSGSFS] & 0xFF),
           "r" (context->uc_mcontext.gregs[REG_RIP] + 3),
           "r" (context->uc_mcontext.gregs[REG_RBP])
-        : "rax", "memory"
     );
 }
 
