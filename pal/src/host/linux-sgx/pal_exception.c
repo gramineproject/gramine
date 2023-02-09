@@ -130,51 +130,50 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
     uc->rax = (uint32_t)usec;
 }
 
-static void
-emulate_iret(sgx_cpu_context_t* uc)
-{
-        uc->rip = *(uint64_t*)(intptr_t)uc->rsp;
-        uc->rsp += 8;
-
-        /* Assume that cs register doesn't change. */
-#ifdef __x86_64__
-        #ifdef DEBUG
-            uint64_t cs = *(uint64_t*)(intptr_t)uc->rsp;
-            uint64_t curcs = 0;
-            __asm__ volatile inline (
-                "movq %%cs, %0\n"
-                : "=r" (curcs)
-            );
-            assert(cs == curcs);
-        #endif
-#else
-        #error "cs might change. Currently this is unsupported."
+static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
+#ifndef __x86_64__
+    #error "cs and ss regs might change on this arch. Currently this is unsupported."
 #endif
-        uc->rsp += 8;
 
-        uc->rflags = *(uint64_t*)(intptr_t)uc->rsp;
-        uc->rsp += 8;
+    if (FIRST_TIME()) {
+        log_warning("Emulating a raw iret instruction. This degrades performance, consider"
+                    " patching your application to use Gramine syscall API.");
+    }
 
-        uint64_t tmprsp = *(uint64_t*)(intptr_t)uc->rsp;
-        uc->rsp += 8;
+    uc->rip = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
 
-        /* Assume that ss register doesn't change. */
-#ifdef __x86_64__
-        #ifdef DEBUG
-            uint64_t ss = *(uint64_t*)(intptr_t)uc->rsp;
-            uint64_t curss = 0;
-            __asm__ volatile inline (
-                "movq %%ss, %0\n"
-                : "=r" (curss)
-            );
-            assert(ss == curss);
-        #endif
-#else
-        #error "ss might change. Currently this is unsupported."
+    /* Assume that cs register doesn't change. */
+#ifdef DEBUG
+    uint64_t cs = *(uint64_t*)(intptr_t)uc->rsp;
+    uint64_t curcs = 0;
+    __asm__ volatile (
+        "movq %%cs, %0\n"
+        : "=r" (curcs)
+    );
+    assert(cs == curcs);
 #endif
-        uc->rsp += 8;
+    uc->rsp += 8;
 
-        uc->rsp = tmprsp;
+    uc->rflags = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
+
+    uint64_t tmprsp = *(uint64_t*)(intptr_t)uc->rsp;
+    uc->rsp += 8;
+
+    /* Assume that ss register doesn't change. */
+#ifdef DEBUG
+    uint64_t ss = *(uint64_t*)(intptr_t)uc->rsp;
+    uint64_t curss = 0;
+    __asm__ volatile (
+        "movq %%ss, %0\n"
+        : "=r" (curss)
+    );
+    assert(ss == curss);
+#endif
+    uc->rsp += 8;
+
+    uc->rsp = tmprsp;
 }
 
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
@@ -210,7 +209,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
          * REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy
          * entries 40H to 4FH.
          */
-        emulate_iret(uc);
+        emulate_iret_and_print_warning(uc);
         return true;
     } else if (instr[0] == 0xf3 && (instr[1] & ~1) == 0x48 && instr[2] == 0x0f &&
                instr[3] == 0xae && instr[4] >> 6 == 0b11 && ((instr[4] >> 3) & 0b111) < 4) {
