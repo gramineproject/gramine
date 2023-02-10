@@ -193,7 +193,7 @@ man_pages = [
     ('manpages/gramine-sgx-get-token', 'gramine-sgx-get-token', 'Gramine SGX Token generator', [author], 1),
     ('manpages/gramine-sgx-ias-request', 'gramine-sgx-ias-request', 'Submit Intel Attestation Service request', [author], 1),
     ('manpages/gramine-sgx-ias-verify-report', 'gramine-sgx-ias-verify-report', 'Verify Intel Attestation Service report', [author], 1),
-    ('manpages/gramine-sgx-quote-dump', 'gramine-sgx-quote-dump', 'Display SGX quote', [author], 1),
+    ('manpages/gramine-sgx-quote-view', 'gramine-sgx-quote-view', 'Display SGX quote', [author], 1),
     ('manpages/gramine-sgx-sigstruct-view', 'gramine-sgx-sigstruct-view', 'Display SGX SIGSTRUCT', [author], 1),
     ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),
     ('manpages/is-sgx-available', 'is-sgx-available', 'Check SGX compatibility', [author], 1),
