@@ -45,7 +45,8 @@ int main(void) {
         "idiv %%rdx"
         :
         :
-        : "rax", "rcx", "rdx", "rbx", "rsi", "rdi"
+        : "rax", "rcx", "rdx", "rbx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14",
+          "r15"
     );
 
     printf("TEST OK\n");
