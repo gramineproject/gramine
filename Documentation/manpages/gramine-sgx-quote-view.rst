@@ -1,18 +1,18 @@
-.. program:: gramine-sgx-quote-dump
+.. program:: gramine-sgx-quote-view
 
 ================================================================
-:program:`gramine-sgx-quote-dump` -- Display SGX quote structure
+:program:`gramine-sgx-quote-view` -- Display SGX quote structure
 ================================================================
 
 Synopsis
 ========
 
-:command:`gramine-sgx-quote-dump` [*OPTION*]... *FILE*
+:command:`gramine-sgx-quote-view` [*OPTION*]... *FILE*
 
 Description
 ===========
 
-`gramine-sgx-quote-dump` displays internal structure of an :term:`SGX` quote
+`gramine-sgx-quote-view` displays internal structure of an :term:`SGX` quote
 contained in *FILE*.
 
 Command line arguments
@@ -31,7 +31,7 @@ Example
 
 .. code-block:: sh
 
-    $ gramine-sgx-quote-dump -m gr.quote
+    $ gramine-sgx-quote-view -m gr.quote
     version           : 0002
     sign_type         : 0001
     epid_group_id     : 00000aef
