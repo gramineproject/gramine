@@ -78,7 +78,7 @@ def add_globals_from_gramine(env):
     }
 
     try:
-        from . import _offsets as offsets # pylint: disable=import-outside-toplevel
+        import _graminelibos_offsets as offsets # pylint: disable=import-outside-toplevel
     except ImportError: # no SGX gramine installed, skipping
         pass
     else:

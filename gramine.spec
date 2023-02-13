@@ -109,6 +109,8 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 %dir %{python3_sitearch}/%{name}libos
 %{python3_sitearch}/%{name}libos/*.py
 %{python3_sitearch}/%{name}libos/__pycache__
+%{python3_sitearch}/_%{name}libos_offsets.py
+%{python3_sitearch}/__pycache__
 
 %{_includedir}/gramine/mbedtls/*.h
 %{_includedir}/gramine/psa/*.h
