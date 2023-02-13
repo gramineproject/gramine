@@ -55,7 +55,7 @@ pal_sgx_map = custom_target('pal.map',
     output: 'pal.map',
 )
 
-pal_sgx_lds = join_paths(meson.current_source_dir(), 'enclave.lds')
+pal_sgx_lds = meson.current_source_dir() / 'enclave.lds'
 
 libpal_sgx = shared_library('pal',
     'common_manifest_sgx_parser.c',
@@ -126,7 +126,7 @@ libpal_sgx = shared_library('pal',
     ],
 
     install: true,
-    install_dir: join_paths(pkglibdir, 'sgx'),
+    install_dir: pkglibdir / 'sgx',
 )
 
 # host (untrusted runtime)
@@ -173,7 +173,7 @@ libpal_sgx_host = executable('loader',
     ],
 
     install: true,
-    install_dir: join_paths(pkglibdir, 'sgx'),
+    install_dir: pkglibdir / 'sgx',
 )
 
 libpal_sgx_dep = declare_dependency(
@@ -189,7 +189,7 @@ if debug
         output: 'libpal.so.map',
 
         install: true,
-        install_dir: join_paths(pkglibdir, 'sgx'),
+        install_dir: pkglibdir / 'sgx',
     )
 
     custom_target('loader.map',
@@ -199,7 +199,7 @@ if debug
         output: 'loader.map',
 
         install: true,
-        install_dir: join_paths(pkglibdir, 'sgx'),
+        install_dir: pkglibdir / 'sgx',
     )
 
     shared_library('sgx_gdb',
@@ -214,12 +214,12 @@ if debug
         ],
 
         install: true,
-        install_dir: join_paths(pkglibdir, 'sgx/gdb_integration'),
+        install_dir: pkglibdir / 'sgx/gdb_integration',
     )
 
     install_data(
         'gdb_integration/gramine_sgx.gdb',
         'gdb_integration/gramine_sgx_gdb.py',
-        install_dir: join_paths(pkglibdir, 'sgx/gdb_integration'),
+        install_dir: pkglibdir / 'sgx/gdb_integration',
     )
 endif

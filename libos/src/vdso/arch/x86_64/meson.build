@@ -16,7 +16,7 @@ vdso_so_dbg = shared_library('vdso',
     ],
     link_args: [
         '-nostdlib',
-        '-Wl,-T@0@'.format(join_paths(meson.current_source_dir(), 'vdso.lds')),
+        '-Wl,-T@0@'.format(meson.current_source_dir() / 'vdso.lds'),
         '-Wl,--hash-style=both',
         '-Wl,-Bsymbolic',
         '-Wl,--no-undefined',

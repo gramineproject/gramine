@@ -97,7 +97,7 @@ mbedtls_curl_libs = custom_target('mbedtls_curl',
         '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.3.0',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
-        join_paths(meson.build_root(), 'subprojects'),
+        meson.build_root() / 'subprojects',
         '@OUTPUT@',
     ],
 

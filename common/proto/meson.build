@@ -26,7 +26,7 @@ aesm_proto_ch = custom_target('aesm.pb-c.[ch]',
         # check for that is dumb, notably fails when one path is absolute and one is relative, so we
         # have to generate -I and input the same way
         '-I@0@'.format(meson.current_source_dir()),
-        join_paths(meson.current_source_dir(), 'aesm.proto'),
+        meson.current_source_dir() / 'aesm.proto',
     ],
 )
 

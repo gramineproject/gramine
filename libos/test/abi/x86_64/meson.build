@@ -19,7 +19,7 @@ tests = {
     },
 }
 
-install_dir = join_paths(pkglibdir, 'tests', 'libos', 'entrypoint')
+install_dir = pkglibdir / 'tests' / 'libos' / 'entrypoint'
 
 foreach name, params : tests
     filenames = ''
