@@ -25,7 +25,7 @@ sgx_util = static_library('sgx_util',
     ],
 
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 
 sgx_util_dep = declare_dependency(

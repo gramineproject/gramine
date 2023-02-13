@@ -16,7 +16,7 @@ libra_tls_attest = shared_library('ra_tls_attest',
         mbedtls_static_dep,
     ],
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_attest.so ' +
@@ -35,7 +35,7 @@ libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
         mbedtls_static_dep,
     ],
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_verify_epid.so ' +
@@ -56,7 +56,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
         sgx_util_dep,
     ],
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_attest.so ' +
@@ -79,7 +79,7 @@ libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
         mbedtls_static_dep,
     ],
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_verify_epid.so ' +
@@ -100,7 +100,7 @@ if dcap
             mbedtls_static_dep,
         ],
         install: true,
-        install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libra_tls_verify_dcap.so ' +
@@ -121,7 +121,7 @@ if dcap
             mbedtls_static_dep,
         ],
         install: true,
-        install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libra_tls_verify_dcap_gramine.so ' +
@@ -145,7 +145,7 @@ if dcap
             mbedtls_static_dep,
         ],
         install: true,
-        install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libsecret_prov_verify_dcap.so ' +
