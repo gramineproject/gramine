@@ -30,12 +30,12 @@ endif
 
 direct = get_option('direct') == 'enabled'
 sgx = get_option('sgx') == 'enabled'
-vtune = get_option('vtune') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'
 
 dcap = get_option('dcap') == 'enabled'
 ubsan = get_option('ubsan') == 'enabled'
 asan = get_option('asan') == 'enabled'
+vtune = get_option('vtune') == 'enabled'
 
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
@@ -143,10 +143,10 @@ if sgx
                   sgx_driver_header, sgx_driver_include_path))
     endif
 
-  if vtune
-    add_project_arguments('-DSGX_VTUNE_PROFILE', language: 'c')
-    vtune_sdk_path = get_option('vtune_sdk_path')
-  endif
+    if vtune
+        add_project_arguments('-DSGX_VTUNE_PROFILE', language: 'c')
+        vtune_sdk_path = get_option('vtune_sdk_path')
+    endif
 
     conf_sgx.set('CONFIG_SGX_DRIVER_INCLUDE', sgx_driver_include)
 endif
@@ -268,20 +268,19 @@ if sgx
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
     endif
 
-  vtune_dep = []
-  dl_dep = []
+    vtune_dep = []
+    dl_dep = []
 
-  if vtune
-      dl_dep = cc.find_library('dl', required: true)
-      vtune_dep = declare_dependency(
-          dependencies: [
-              cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
-              dl_dep,
-          ],
-          include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
-      )
-  endif
-
+    if vtune
+        dl_dep = cc.find_library('dl', required: true)
+        vtune_dep = declare_dependency(
+            dependencies: [
+                cc.find_library('ittnotify', dirs: join_paths(vtune_sdk_path, 'lib64'), required: true),
+                dl_dep,
+            ],
+            include_directories: include_directories(join_paths(vtune_sdk_path, 'include')),
+        )
+    endif
 endif
 
 #
