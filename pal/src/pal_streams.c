@@ -388,6 +388,25 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     return 0;
 }
 
+int _PalStreamFlock(PAL_HANDLE handle, int operation) {
+    const struct handle_ops* ops = HANDLE_OPS(handle);
+
+    if (!ops)
+        return -PAL_ERROR_BADHANDLE;
+
+    if (!ops->flock)
+        return -PAL_ERROR_NOTSUPPORT;
+
+    return ops->flock(handle, operation);
+}
+
+int PalStreamFlock(PAL_HANDLE handle, int operation) {
+    if (!handle)
+        return -PAL_ERROR_INVAL;
+
+    return _PalStreamFlock(handle, operation);
+}
+
 /* _PalStreamFlush for internal use. This function sync up the handle with devices. Some streams may
  *  not support this operations. */
 int _PalStreamFlush(PAL_HANDLE handle) {

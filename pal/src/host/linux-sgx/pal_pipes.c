@@ -434,6 +434,22 @@ static int pipe_close(PAL_HANDLE handle) {
 }
 
 /*!
+ * \brief Close pipe.
+ *
+ * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ *
+ * \param operation type of `LOCK_EX`, `LOCK_SH`, `LOCK_NB`, or `LOCK_UN'.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
+ */
+static int pipe_flock(PAL_HANDLE handle, int operation) {
+    if (handle->pipe.fd == PAL_IDX_POISON)
+        return PAL_ERROR_INVAL;
+
+    return  ocall_flock(handle->pipe.fd, operation);
+}
+
+/*!
  * \brief Shut down pipe.
  *
  * \param handle       PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
@@ -543,4 +559,5 @@ struct handle_ops g_pipe_ops = {
     .delete         = &pipe_delete,
     .attrquerybyhdl = &pipe_attrquerybyhdl,
     .attrsetbyhdl   = &pipe_attrsetbyhdl,
+    .flock          = &pipe_flock,
 };

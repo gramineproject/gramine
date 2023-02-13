@@ -87,6 +87,9 @@ struct handle_ops {
 
     /* 'rename' is used to change name of a stream, or reset its share option */
     int (*rename)(PAL_HANDLE handle, const char* type, const char* uri);
+
+    /*'flock' is used to apply or remove an advisory lock on the open file specified by fd */
+    int (*flock)(PAL_HANDLE handle, int operation);
 };
 
 extern const struct handle_ops* g_pal_handle_ops[];
@@ -174,6 +177,7 @@ int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t
 int _PalStreamUnmap(void* addr, uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _PalStreamFlush(PAL_HANDLE handle);
+int _PalStreamFlock(PAL_HANDLE handle, int operation);
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 

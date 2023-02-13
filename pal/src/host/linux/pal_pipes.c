@@ -362,6 +362,25 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return 0;
 }
 
+/*!
+ * \brief Set attributes of PAL handle.
+ *
+ * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
+ * \param operation   operation type of `LOCK_SH`, `LOCK_EX`, `LOCK_NB `,or `LOCK_UN`.
+ *
+ * \returns 0 on success, negative PAL error code otherwise.
+ */
+static int pipe_flock(PAL_HANDLE handle, int operation) {
+    if (handle->pipe.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_BADHANDLE;
+
+    int ret = DO_SYSCALL(flock, handle->pipe.fd, operation);
+    if (ret != 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
 struct handle_ops g_pipe_ops = {
     .open           = &pipe_open,
     .waitforclient  = &pipe_waitforclient,
@@ -371,4 +390,5 @@ struct handle_ops g_pipe_ops = {
     .delete         = &pipe_delete,
     .attrquerybyhdl = &pipe_attrquerybyhdl,
     .attrsetbyhdl   = &pipe_attrsetbyhdl,
+    .flock          = &pipe_flock,
 };

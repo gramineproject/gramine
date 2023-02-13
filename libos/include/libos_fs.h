@@ -184,6 +184,9 @@ struct libos_fs_ops {
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
     int (*migrate)(void* checkpoint, void** mount_data);
+
+    /*Apply or remove an advisory lock on the open file */
+    int (*flock)(struct libos_handle* hdl, int operation);
 };
 
 /* Limit for the number of dentry children. This is mostly to prevent overflow if (untrusted) host

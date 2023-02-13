@@ -435,6 +435,19 @@ static int pseudo_truncate(struct libos_handle* hdl, file_off_t size) {
     }
 }
 
+static int pseudo_flock(struct libos_handle* hdl, int operation) {
+    struct pseudo_node* node = hdl->inode->data;
+    switch (node->type) {
+        case PSEUDO_DEV:
+            if (!node->dev.dev_ops.flock)
+                return -EINVAL;
+            return node->dev.dev_ops.flock(hdl, operation);
+
+        default:
+            return -ENOSYS;
+    }
+}
+
 static int pseudo_flush(struct libos_handle* hdl) {
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
@@ -581,6 +594,7 @@ struct libos_fs_ops pseudo_fs_ops = {
     .close    = &pseudo_close,
     .flush    = &pseudo_flush,
     .poll     = &pseudo_poll,
+    .flock    = &pseudo_flock,
 };
 
 struct libos_d_ops pseudo_d_ops = {

@@ -371,6 +371,21 @@ out:
     return ret;
 }
 
+static int chroot_encrypted_flock(struct libos_handle* hdl, int operation) {
+    assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
+    if (hdl->inode->type != S_IFREG)
+        return 0;
+
+    struct libos_encrypted_file* enc = hdl->inode->data;
+
+    int ret;
+    lock(&hdl->inode->lock);
+    ret = encrypted_file_flock(enc, operation);
+    unlock(&hdl->inode->lock);
+
+    return ret;
+}
+
 static int chroot_encrypted_flush(struct libos_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT_ENCRYPTED);
     if (hdl->inode->type != S_IFREG)
@@ -486,6 +501,7 @@ struct libos_fs_ops chroot_encrypted_fs_ops = {
     .migrate    = &chroot_encrypted_migrate,
     .mmap       = &generic_emulated_mmap,
     .msync      = &generic_emulated_msync,
+    .flock      = &chroot_encrypted_flock,
 };
 
 struct libos_d_ops chroot_encrypted_d_ops = {

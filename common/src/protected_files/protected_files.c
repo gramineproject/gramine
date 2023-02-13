@@ -1352,6 +1352,18 @@ pf_status_t pf_flush(pf_context_t* pf) {
     return PF_STATUS_SUCCESS;
 }
 
+pf_status_t pf_flock(pf_context_t* pf) {
+    if (!g_initialized)
+        return PF_STATUS_UNINITIALIZED;
+
+    if (PF_FAILURE(pf->file_status)) {
+        pf->last_error = pf->file_status;
+        return pf->last_error;
+    }
+    return PF_STATUS_SUCCESS;
+
+}
+
 pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;

@@ -47,6 +47,7 @@ enum {
     OCALL_SCHED_GETAFFINITY,
     OCALL_CLONE_THREAD,
     OCALL_CREATE_PROCESS,
+    OCALL_FLOCK,
     OCALL_FUTEX,
     OCALL_SOCKET,
     OCALL_BIND,
@@ -353,6 +354,11 @@ struct ocall_edmm_modify_pages_type {
 struct ocall_edmm_remove_pages {
     uint64_t addr;
     size_t count;
+};
+
+struct ocall_flock {
+    int fd;
+    int operation;
 };
 
 #pragma pack(pop)

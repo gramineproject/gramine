@@ -40,6 +40,8 @@ int ocall_fsetnonblock(int fd, int nonblocking);
 
 int ocall_fchmod(int fd, unsigned short mode);
 
+int ocall_flock(int fd, int operation);
+
 int ocall_fsync(int fd);
 
 int ocall_ftruncate(int fd, uint64_t length);

@@ -19,6 +19,7 @@ PalStreamWrite
 PalStreamMap
 PalStreamUnmap
 PalStreamSetLength
+PalStreamFlock
 PalStreamFlush
 PalStreamDelete
 PalSocketCreate

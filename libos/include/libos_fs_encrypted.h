@@ -166,6 +166,7 @@ int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_
 int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
                          file_off_t offset, size_t* out_count);
 int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri);
+int encrypted_file_flock(struct libos_encrypted_file* enc, int operation);
 
 int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size);
 int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);

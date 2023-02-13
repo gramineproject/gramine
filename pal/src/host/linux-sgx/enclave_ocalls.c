@@ -2356,3 +2356,31 @@ out:
     sgx_reset_ustack(old_ustack);
     return ret;
 }
+
+int ocall_flock(int fd, int operation) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+
+    struct ocall_flock* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    WRITE_ONCE(ocall_args->fd, fd);
+    WRITE_ONCE(ocall_args->operation, operation);
+
+    do {
+        ret = sgx_exitless_ocall(OCALL_FLOCK, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0) {
+        if (ret != -EINVAL && ret != -EPERM && ret != -EFAULT) {
+            ret = -EPERM;
+        }
+        goto out;
+    }
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}

@@ -519,6 +519,11 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
  */
 int PalStreamChangeName(PAL_HANDLE handle, const char* uri);
 
+/*!
+ * \brief This API applies or remove an advisory lock on the open file specified by fd.
+ */
+int PalStreamFlock(PAL_HANDLE handle, int operation);
+
 struct pal_socket_addr {
     enum pal_socket_domain domain;
     union {

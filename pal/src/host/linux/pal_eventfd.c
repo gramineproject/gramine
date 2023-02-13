@@ -132,10 +132,24 @@ static int eventfd_pal_close(PAL_HANDLE handle) {
     return 0;
 }
 
+static int eventfd_pal_flock(PAL_HANDLE handle, int operation) {
+    int ret;
+
+    if (handle->eventfd.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_BADHANDLE;
+
+    ret = DO_SYSCALL(flock, handle->eventfd.fd, operation);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
 struct handle_ops g_eventfd_ops = {
     .open           = &eventfd_pal_open,
     .read           = &eventfd_pal_read,
     .write          = &eventfd_pal_write,
     .close          = &eventfd_pal_close,
     .attrquerybyhdl = &eventfd_pal_attrquerybyhdl,
+    .flock          = &eventfd_pal_flock,
 };

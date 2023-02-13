@@ -304,3 +304,12 @@ pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle);
  * \returns PF status.
  */
 pf_status_t pf_flush(pf_context_t* pf);
+
+/*!
+ * \brief Check the pf file status for further flock operation
+ *
+ * \param pf  PF context.
+ *
+ * \returns PF status.
+ */
+pf_status_t pf_flock(pf_context_t* pf);

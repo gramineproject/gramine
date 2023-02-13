@@ -233,6 +233,16 @@ static int file_close(PAL_HANDLE handle) {
     return 0;
 }
 
+/* 'flock' operation for file streams */
+static int file_flock(PAL_HANDLE handle, int operation) {
+    int fd = handle->file.fd;
+    int ret = ocall_flock(fd, operation);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
 /* 'delete' operation for file streams */
 static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
@@ -494,6 +504,7 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .flock          = &file_flock,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a

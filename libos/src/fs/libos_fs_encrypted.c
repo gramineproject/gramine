@@ -559,6 +559,18 @@ void encrypted_file_put(struct libos_encrypted_file* enc) {
     }
 }
 
+int encrypted_file_flock(struct libos_encrypted_file* enc, int operation) {
+    assert(enc->pf);
+    assert(enc->pal_handle);
+
+    pf_status_t pfs = pf_flock(enc->pf);
+    if (PF_FAILURE(pfs)) {
+        log_warning("pf_flock failed: %s", pf_strerror(pfs));
+        return -EACCES;
+    }
+    return PalStreamFlock(enc->pal_handle, operation);
+}
+
 int encrypted_file_flush(struct libos_encrypted_file* enc) {
     assert(enc->pf);
 

@@ -137,6 +137,18 @@ static int dev_flush(PAL_HANDLE handle) {
     return 0;
 }
 
+static int dev_flock(PAL_HANDLE handle, int operation) {
+    if (handle->hdr.type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (handle->dev.fd != PAL_IDX_POISON) {
+        int ret = ocall_flock(handle->dev.fd, operation);
+        if (ret < 0)
+            return unix_to_pal_error(ret);
+    }
+    return 0;
+}
+
 static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     __UNUSED(uri);
 
@@ -218,4 +230,5 @@ struct handle_ops g_dev_ops = {
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
+    .flock          = &dev_flock,
 };

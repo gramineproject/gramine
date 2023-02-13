@@ -207,6 +207,10 @@ static int checkin(struct libos_handle* handle) {
     return 0;
 }
 
+static int flock(struct libos_handle* handle, int operation) {
+    return PalStreamFlock(handle->info.sock.pal_handle, operation);
+}
+
 static struct libos_fs_ops socket_fs_ops = {
     .close    = close,
     .read     = read,
@@ -218,6 +222,7 @@ static struct libos_fs_ops socket_fs_ops = {
     .ioctl    = ioctl,
     .checkout = checkout,
     .checkin  = checkin,
+    .flock    = flock,
 };
 
 struct libos_fs socket_builtin_fs = {

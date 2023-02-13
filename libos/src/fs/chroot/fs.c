@@ -279,6 +279,13 @@ static int chroot_mkdir(struct libos_dentry* dent, mode_t perm) {
     return chroot_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
+static int chroot_flock(struct libos_handle* hdl, int operation) {
+    assert(hdl->type == TYPE_CHROOT);
+
+    int ret = PalStreamFlock(hdl->pal_handle, operation);
+    return pal_to_unix_errno(ret);
+}
+
 static int chroot_flush(struct libos_handle* hdl) {
     assert(hdl->type == TYPE_CHROOT);
 
@@ -506,6 +513,7 @@ struct libos_fs_ops chroot_fs_ops = {
     .hstat      = &generic_inode_hstat,
     .truncate   = &chroot_truncate,
     .poll       = &generic_inode_poll,
+    .flock      = &chroot_flock,
 };
 
 struct libos_d_ops chroot_d_ops = {

@@ -232,6 +232,16 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
+static int file_flock(PAL_HANDLE handle, int operation) {
+    int ret = DO_SYSCALL(flock, handle->file.fd, operation);
+
+    if (ret < 0)
+        return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
+                                                 : -PAL_ERROR_DENIED;
+
+    return ret;
+}
+
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -245,6 +255,7 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .flock          = &file_flock,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a
