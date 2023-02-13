@@ -16,10 +16,10 @@ from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+import _graminelibos_offsets as offs # pylint: disable=import-error
 import elftools.elf.elffile
 
 from . import _CONFIG_PKGLIBDIR
-from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 from .manifest import Manifest
 from .sigstruct import Sigstruct
 

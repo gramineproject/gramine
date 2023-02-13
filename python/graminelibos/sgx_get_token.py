@@ -6,7 +6,7 @@ import hashlib
 import socket
 import struct
 
-from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
+import _graminelibos_offsets as offs # pylint: disable=import-error
 
 def get_optional_sgx_features(sig):
     '''Set optional SGX features if they are available on this machine.'''
