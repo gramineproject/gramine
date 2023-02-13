@@ -46,9 +46,10 @@ enable_musl = get_option('musl') == 'enabled'
 cc = meson.get_compiler('c')
 objcopy = find_program('objcopy')
 
-# TODO: after deprecating 18.04/bionic, update this to import('python')
-python3mod = import('python3')
-python3 = python3mod.find_python()
+pythonmod = import('python')
+python3 = pythonmod.find_installation('python3')
+# TODO: after meson 0.60 (already in Debian, Ubuntu from jammy, not yet in RHEL), use
+# -Dpython.platlibdir
 python3_platlib = run_command(
     python3, get_python_platlib_prog, get_option('prefix')).stdout()
 python3_pkgdir = python3_platlib / 'graminelibos'
