@@ -39,6 +39,7 @@ manifests = [
   "file_size",
   "fopen_cornercases",
   "fork_and_exec",
+  "fork_disallowed",
   "fp_multithread",
   "fstat_cwd",
   "futex_bitset",

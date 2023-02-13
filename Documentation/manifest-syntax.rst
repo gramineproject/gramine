@@ -337,6 +337,20 @@ Be careful! In SGX environment, the untrusted host could inject that signal in
 an arbitrary moment. Examine what your application's `SIGTERM` handler does and
 whether it poses any security threat.
 
+Disallowing subprocesses (fork)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.disallow_subprocesses = [true|false]
+    (Default: false)
+
+This specifies whether to block applications from creating child processes (e.g.
+via ``fork()`` or ``clone()`` system calls). The intuition is that many
+applications have fallbacks when they fail to spawn a child process (e.g.
+Python). Could be useful in SGX environments: child processes consume
+:term:`EPC` memory which is a limited resource.
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
