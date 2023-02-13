@@ -19,10 +19,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 import elftools.elf.elffile
 
 from . import _CONFIG_PKGLIBDIR
-from . import _offsets as offs # pylint: disable=import-error,no-name-in-module
 from .manifest import Manifest
 from .sigstruct import Sigstruct
 
+import _graminelibos_offsets as offs # pylint: disable=import-error,wrong-import-order
 
 _cryptography_backend = backends.default_backend()
 

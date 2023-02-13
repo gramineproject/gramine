@@ -40,13 +40,13 @@ pal_sgx_asm_offsets_h = custom_target('asm-offsets.h[pal-sgx]',
     output: 'asm-offsets.h',
 )
 
-pal_sgx_offsets_py = custom_target('_offsets.py',
+pal_sgx_offsets_py = custom_target('_graminelibos_offsets.py',
     command: [pal_sgx_generated_offsets_print, '--py'],
     capture: true,
-    output: '_offsets.py',
+    output: '_graminelibos_offsets.py',
 
     install: true,
-    install_dir: python3_pkgdir,
+    install_dir: python3_platlib,
 )
 
 pal_sgx_map = custom_target('pal.map',
