@@ -82,3 +82,7 @@ glibc = custom_target('glibc',
     install: true,
     install_dir: get_option('libdir') / 'gramine/runtime/glibc',
 )
+
+meson.add_devenv({
+    'MESON_DEVENV_GRAMINE_RUNTIME_glibc': meson.current_build_dir(),
+})

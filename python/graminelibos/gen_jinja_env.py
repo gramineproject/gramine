@@ -6,7 +6,7 @@ import sysconfig
 
 import jinja2
 
-from . import _CONFIG_PKGLIBDIR
+from . import _CONFIG_PKGLIBDIR, _MESON_DEVENV
 
 def ldd(*args):
     '''
@@ -64,18 +64,27 @@ def add_globals_from_python(env):
 class Runtimedir:
     @staticmethod
     def __call__(libc='glibc'):
-        return (pathlib.Path(_CONFIG_PKGLIBDIR) / 'runtime' / libc).resolve()
+        if not _MESON_DEVENV:
+            return (pathlib.Path(_CONFIG_PKGLIBDIR) / 'runtime' / libc).resolve()
+        else:
+            return pathlib.Path(os.getenv(f'MESON_DEVENV_GRAMINE_RUNTIME_{libc}'))
     def __str__(self):
         return str(self())
     def __truediv__(self, other):
         return self() / other
 
 def add_globals_from_gramine(env):
-    env.globals['gramine'] = {
-        'libos': pathlib.Path(_CONFIG_PKGLIBDIR) / 'libsysdb.so',
-        'pkglibdir': pathlib.Path(_CONFIG_PKGLIBDIR),
-        'runtimedir': Runtimedir(),
-    }
+    if not _MESON_DEVENV:
+        env.globals['gramine'] = {
+            'libos': pathlib.Path(_CONFIG_PKGLIBDIR) / 'libsysdb.so',
+            'pkglibdir': pathlib.Path(_CONFIG_PKGLIBDIR),
+            'runtimedir': Runtimedir(),
+        }
+    else:
+        env.globals['gramine'] = {
+            'libos': os.getenv('MESON_DEVENV_GRAMINE_LIBOS'),
+            'runtimedir': Runtimedir(),
+        }
 
     try:
         import _graminelibos_offsets as offsets # pylint: disable=import-outside-toplevel
