@@ -1,5 +1,12 @@
 subdir('graminelibos')
 
+if meson.version().version_compare('>=0.62')
+    meson.add_devenv({
+        'PATH': meson.current_source_dir(),
+        'PYTHONPATH': meson.current_source_dir(),
+    }, method: 'append')
+endif
+
 install_data([
     'gramine-gen-depend',
     'gramine-manifest',

@@ -179,6 +179,12 @@ libos = shared_library('sysdb',
     install_dir: pkglibdir,
 )
 
+if meson.version().version_compare('>=0.62')
+    meson.add_devenv({
+        'MESON_DEVENV_GRAMINE_LIBOS': libos.full_path(),
+    })
+endif
+
 if debug
     custom_target('libsysdb.so.map',
         input: libos,

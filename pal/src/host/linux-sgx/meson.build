@@ -49,6 +49,10 @@ pal_sgx_offsets_py = custom_target('_graminelibos_offsets.py',
     install_dir: python3_platlib,
 )
 
+if meson.version().version_compare('>=0.62')
+    meson.add_devenv({'PYTHONPATH': meson.current_build_dir()}, method: 'append')
+endif
+
 pal_sgx_map = custom_target('pal.map',
     command: [gen_pal_map_prog, '@INPUT@', '@OUTPUT@'],
     input: ['../../pal_symbols', 'pal.map.template'],

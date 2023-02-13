@@ -79,6 +79,13 @@ libpal_direct = shared_library('pal',
     install_dir: pkglibdir / 'direct',
 )
 
+if meson.version().version_compare('>=0.62')
+    meson.add_devenv({
+        'MESON_DEVENV_GRAMINE_DIRECT_LIBPAL_PATH': libpal_direct.full_path(),
+        'MESON_DEVENV_GRAMINE_DIRECT_PAL_CMD': libpal_direct.full_path(),
+    })
+endif
+
 libpal_direct_dep = declare_dependency(
     link_with: libpal_direct,
 )
