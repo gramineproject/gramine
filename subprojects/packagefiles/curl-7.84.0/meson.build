@@ -10,7 +10,7 @@ curl = custom_target('curl',
         '@CURRENT_SOURCE_DIR@',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
-        join_paths(meson.build_root(), 'subprojects'),
+        meson.build_root() / 'subprojects',
     ],
 
     depends: subproject('mbedtls-mbedtls-3.3.0').get_variable('mbedtls_curl_libs'),

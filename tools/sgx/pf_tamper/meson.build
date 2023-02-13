@@ -8,5 +8,5 @@ executable('gramine-sgx-pf-tamper',
     include_directories: common_inc, # for api.h
 
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
+    install_rpath: get_option('prefix') / get_option('libdir'),
 )

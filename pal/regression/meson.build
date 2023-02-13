@@ -30,7 +30,7 @@ tests = {
         ],
         'include_directories': include_directories(
             # for `etc_host_info_internal.h`
-            join_paths('../include/host/linux-common'),
+            '../include/host/linux-common',
         ),
     },
     'ipv6_parser': {
@@ -44,7 +44,7 @@ tests = {
         ],
         'include_directories': include_directories(
             # for `etc_host_info_internal.h`
-            join_paths('../include/host/linux-common'),
+            '../include/host/linux-common',
         ),
     },
     'memory': {},
@@ -78,13 +78,13 @@ if sgx
        'AttestationReport': {
             'include_directories': include_directories(
                 # for `sgx_arch.h`
-                join_paths('../src/host/linux-sgx'),
+                '../src/host/linux-sgx',
             ),
         },
    }
 endif
 
-install_dir = join_paths(pkglibdir, 'tests', 'pal')
+install_dir = pkglibdir / 'tests' / 'pal'
 
 test_c_args = [
     cflags_sanitizers,
@@ -100,8 +100,8 @@ test_include_directories = [
     include_directories(
         # for `pal.h`
         '../include/pal',
-        join_paths('../include/arch', host_machine.cpu_family()),
-        join_paths('../include/arch', host_machine.cpu_family(), 'linux'),
+        '../include/arch' / host_machine.cpu_family(),
+        '../include/arch' / host_machine.cpu_family() / 'linux',
     ),
     common_inc,
 ]
