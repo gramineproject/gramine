@@ -65,8 +65,7 @@ be used in production.
 
 In most of the examples below, you need to tell the client what values it should
 expect for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID` and `ISV_SVN`. One way to
-obtain them is to note them down when they get printed by `gramine-sgx-get-token`
-when generating `server.token`.
+obtain them is to run `gramine-sgx-sigstruct-view server.sig`.
 
 Moreover, for EPID-based (IAS) attestation, you will need to provide
 an [SPID and the corresponding IAS API keys][spid].
