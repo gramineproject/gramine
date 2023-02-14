@@ -63,6 +63,11 @@ def clean(ctx):
         if os.path.exists(name):
             print(f'deleting {name}')
             os.unlink(name)
+    for name in os.listdir(os.getcwd()):
+        # token files are created by Gramine itself, not known to Ninja build system
+        if name.endswith('.token'):
+            print(f'deleting {name}')
+            os.unlink(name)
 
 
 @main.command(
