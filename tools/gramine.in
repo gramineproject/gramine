@@ -6,22 +6,6 @@
 #                    Michał Kowalczyk <mkow@invisiblethingslab.com>
 #                    Wojtek Porczyk <woju@invisiblethingslab.com>
 
-
-# This is how we detect whether we're installed or running from inside git repo.
-# If unchanged (i.e., if this reads IN_GIT between "at" characters), this is an
-# ordinary string and test -n "$IN_GIT" is true. But when installing, this is
-# rewritten using meson's configure_file() function to an empty string and the
-# else branch is taken. See also: ./meson.build and
-# https://mesonbuild.com/Reference-manual.html#configure_file.
-IN_GIT=@IN_GIT@
-
-if test -n "$IN_GIT"
-then
-    echo "Running from repository is broken. Please install Gramine using Meson." >&2
-    echo "See https://gramine.readthedocs.io/en/latest/devel/building.html for details." >&2
-    exit 1
-fi
-
 PAL_CMD=@PAL_CMD@
 LIBPAL_PATH=@LIBPAL_PATH@
 HOST_PAL_PATH=@HOST_PAL_PATH@
