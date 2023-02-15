@@ -45,6 +45,10 @@ libra_tls_verify = static_library('ra_tls_verify',
     install: true,
     install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
 )
+meson.add_install_script('/bin/sh', '-c',
+    'ln -sf ../../../libra_tls_verify.a ' +
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
+        get_option('libdir')))
 
 libra_tls_verify_dep = declare_dependency(
     link_with: libra_tls_verify,
@@ -99,6 +103,10 @@ libsecret_prov_verify = static_library('secret_prov_verify',
     install: true,
     install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
 )
+meson.add_install_script('/bin/sh', '-c',
+    'ln -sf ../../../libsecret_prov_verify.a ' +
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
+        get_option('libdir')))
 
 libsecret_prov_verify_dep = declare_dependency(
     link_with: libsecret_prov_verify,
