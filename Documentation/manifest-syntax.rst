@@ -459,6 +459,10 @@ as RWX). Unfortunately it can negatively impact performance, as adding a page
 to the enclave at runtime is a more expensive operation than adding the page
 before enclave creation (because it involves more enclave exits and syscalls).
 
+Even when EDMM is enabled, it is still necessary to specify ``sgx.enclave_size``
+-- it specifies the *maximal* size that the enclave can grow to. In case of
+doubt, set this size to some large value like ``128G``.
+
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
