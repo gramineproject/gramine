@@ -32,41 +32,41 @@ ENVS=()
 PREFIX=()
 
 if [ "$GDB" == "1" ]; then
-	PREFIX=("gdb" "-q")
-	if [ -n "$INSIDE_EMACS" ]; then
-		PREFIX+=("-i=mi")
-	fi
-	if [ 0"$SGX" -gt 0 ]; then
-		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_sgx_gdb.py")
-		ENVS+=("LD_PRELOAD=$HOST_PAL_PATH/gdb_integration/sgx_gdb.so:$LD_PRELOAD")
-	else
-		PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_linux_gdb.py")
-	fi
-	if [ "$GDB_SCRIPT" != "" ]; then
+    PREFIX=("gdb" "-q")
+    if [ -n "$INSIDE_EMACS" ]; then
+        PREFIX+=("-i=mi")
+    fi
+    if [ 0"$SGX" -gt 0 ]; then
+        PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_sgx_gdb.py")
+        ENVS+=("LD_PRELOAD=$HOST_PAL_PATH/gdb_integration/sgx_gdb.so:$LD_PRELOAD")
+    else
+        PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_linux_gdb.py")
+    fi
+    if [ "$GDB_SCRIPT" != "" ]; then
         # Run a script in batch mode, and without TTY (so that it can be piped, redirected etc.)
-		PREFIX+=("-x" "$GDB_SCRIPT" "-batch" "-tty=/dev/null")
-	fi
-	PREFIX+=("--args")
+        PREFIX+=("-x" "$GDB_SCRIPT" "-batch" "-tty=/dev/null")
+    fi
+    PREFIX+=("--args")
 fi
 
 if [ "$PERF" == "1" ]; then
-	PREFIX=(perf stat)
+    PREFIX=(perf stat)
 fi
 
 while [ "$1" != "" ];
 do
-	if [ "$APPLICATION" == "" ]; then
-		APPLICATION=$1
-		shift
-		continue
-	fi
+    if [ "$APPLICATION" == "" ]; then
+        APPLICATION=$1
+        shift
+        continue
+    fi
 
-	break
+    break
 done
 
 if [ "$APPLICATION" == "" ]; then
-	echo "Usage: $0 [<application>] <args>..."
-	exit 2
+    echo "Usage: $0 [<application>] <args>..."
+    exit 2
 fi
 
 if [ "$SGX" == "1" ] && [ ! -e "$APPLICATION.manifest.sgx" ]; then
@@ -84,8 +84,8 @@ if [ ! "$SGX" == "1" ] && [ ! -e "$APPLICATION.manifest" ]; then
 fi
 
 if [ ! -f "$PAL_CMD" ]; then
-	echo "$PAL_CMD not found"
-	exit 1
+    echo "$PAL_CMD not found"
+    exit 1
 fi
 
 # shellcheck disable=SC2050
