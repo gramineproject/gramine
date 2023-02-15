@@ -120,6 +120,70 @@ static uint64_t get_tsc_hz_hypervisor(void) {
     return tsc_frequency_khz * 1000;
 }
 
+/* return TSC frequency or 0 if cannot parse CPU model name */
+static uint64_t get_tsc_hz_cpu_model_name(void) {
+    uint32_t words[CPUID_WORD_NUM];
+
+    char model_name[48 + 1] = {0};
+    static_assert(sizeof(model_name) == sizeof(uint32_t) * CPUID_WORD_NUM * 3 + 1,
+                  "wrong sizeof(model_name)");
+
+    _PalCpuIdRetrieve(CPU_BRAND_LEAF, 0, words);
+    memcpy(&model_name[ 0], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    _PalCpuIdRetrieve(CPU_BRAND_CNTD_LEAF, 0, words);
+    memcpy(&model_name[16], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    _PalCpuIdRetrieve(CPU_BRAND_CNTD2_LEAF, 0, words);
+    memcpy(&model_name[32], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    model_name[sizeof(model_name) - 1] = '\0';
+
+    const char* s = strchr(model_name, '@');
+    if (!s) {
+        /* model name string is malformed; should have been smth like "CPU @ 3.0GHz" */
+        return 0;
+    }
+    s++;
+
+    char* end = NULL;
+    long base = 0, fractional = 0;
+
+    base = strtol(s, &end, 10);
+    if (end == s) {
+        /* no frequency specified at all (no base digits found) after "@" sign */
+        return 0;
+    }
+    if (base <= 0 || base >= 1000) {
+        /* unsupported format of smth like "-3GHz" or "1000GHz" */
+        return 0;
+    }
+    s = end;
+
+    if (*s == '.') {
+        s++;
+        fractional = strtol(s, &end, 10);
+        if (fractional <= 0 || end - s > 3) {
+            /* don't support non-positive fractional or more than 3 digits after dot */
+            return 0;
+        }
+        for (int i = 0; i < 3 - (end - s); i++)
+            fractional *= 10;
+        s = end;
+    }
+
+    /* base and fractional are less than 1000, so no danger of int overflow */
+    assert(base < 1000 && fractional < 1000);
+    if (*s == 'G') {
+        base *= 1000 * 1000 * 1000;
+        fractional *= 1000 * 1000;
+    } else if (*s == 'M') {
+        base *= 1000 * 1000;
+        fractional *= 1000;
+    } else {
+        /* don't support any other formats other than "3.0GHz" and "3.0MHz" */
+        return 0;
+    }
+    return base + fractional;
+}
+
 /* initialize the data structures used for date/time emulation using TSC */
 void init_tsc(void) {
     if (!is_tsc_usable())
@@ -132,6 +196,12 @@ void init_tsc(void) {
     /* hypervisors may not expose crystal-clock frequency CPUID leaves, so instead try
      * hypervisor-special synthetic CPUID leaf 0x40000010 (Timing Information) */
     g_tsc_hz = get_tsc_hz_hypervisor();
+    if (g_tsc_hz)
+        return;
+
+    /* final fallback -- parse "Processor Brand String" CPUID leaves (guaranteed to exist on CPUs
+     * with SGX), extract the CPU frequency from there and assume it reflects TSC frequency */
+    g_tsc_hz = get_tsc_hz_cpu_model_name();
     if (g_tsc_hz)
         return;
 
