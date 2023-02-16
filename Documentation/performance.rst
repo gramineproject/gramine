@@ -561,6 +561,9 @@ use it:
    (optimizations enabled) makes Gramine performance more similar to release
    build.
 
+#. Profiling the code inside the SGX enclave can be done on debug enclave.
+   Add ``sgx.debug = true`` to manifest to specify debug enclave.
+
 #. Add ``sgx.profile.enable = "main"`` to manifest (to collect data for the main
    process), or ``sgx.profile.enable = "all"`` (to collect data for all
    processes).
@@ -572,6 +575,12 @@ use it:
    multiple files will be written).
 
 #. Run ``perf report -i <data file>`` (see :ref:`perf` above).
+
+Some applications might run for long time or run always (e.g. redis) generating
+huge perf data. In such cases, user may want to exit the application in between
+of execution. Hard killing the application will mess up perf data. Instead add
+``sys.enable_sigterm_injection = true`` in application manifest file and
+terminate application using command ``kill <pid>``.
 
 *Note*: The accuracy of this tool is unclear (though we had positive experiences
 using the tool so far). The SGX profiling works by measuring the value of
