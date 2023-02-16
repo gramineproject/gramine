@@ -100,16 +100,22 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 %{_libdir}/%{name}/runtime/musl
 
 %{_libdir}/pkgconfig/mbedtls_%{name}.pc
+%{_libdir}/pkgconfig/ra_tls_%{name}.pc
+%{_libdir}/pkgconfig/secret_prov_%{name}.pc
+
 %{_libdir}/libmbed{crypto,tls,x509}_%{name}.{so*,a}
 
 %{_libdir}/libra_tls*.so*
+%{_libdir}/libra_tls_verify.a
 %{_libdir}/libsecret_prov*.so*
+%{_libdir}/libsecret_prov_verify.a
 %{_libdir}/libsgx_util.a
 
 %dir %{python3_sitearch}/%{name}libos
 %{python3_sitearch}/%{name}libos/*.py
 %{python3_sitearch}/%{name}libos/__pycache__
 
+%{_includedir}/gramine/*.h
 %{_includedir}/gramine/mbedtls/*.h
 %{_includedir}/gramine/psa/*.h
 
