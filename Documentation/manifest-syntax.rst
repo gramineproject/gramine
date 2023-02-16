@@ -855,7 +855,7 @@ SGX profiling
 This syntax specifies whether to enable SGX profiling. Gramine must be compiled
 with ``--buildtype=debug`` or ``--buildtype=debugoptimized`` for this option to
 work (the latter is advised). In addition, the manifest must contain
- ``sgx.debug = true``.
+``sgx.debug = true``.
 
 If this option is set to ``main``, the main process will collect IP samples and
 save them as ``sgx-perf.data``. If it is set to ``all``, all processes will
