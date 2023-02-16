@@ -898,7 +898,7 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
 #else
     if (profile_str && strcmp(profile_str, "none")) {
         log_error("Invalid 'sgx.profile.enable' "
-                  "(SGX profiling works only when Gramine is compiled with DEBUG=1)");
+                  "(SGX profiling works only when Gramine is compiled in debug mode)");
         ret = -EINVAL;
         goto out;
     }
