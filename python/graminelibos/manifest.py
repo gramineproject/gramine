@@ -17,7 +17,8 @@ import tomli_w
 
 from . import _env
 
-DEFAULT_ENCLAVE_SIZE = '256M'
+DEFAULT_ENCLAVE_SIZE_NO_EDMM = '256M'
+DEFAULT_ENCLAVE_SIZE_WITH_EDMM = '1024G'  # 1TB; note that DebugInfo is at 1TB and ASan at 1.5TB
 DEFAULT_THREAD_NUM = 4
 
 class ManifestError(Exception):
@@ -87,7 +88,6 @@ class Manifest:
 
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
-        sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE)
 
         # TODO: sgx.thread_num is deprecated in v1.4, simplify below logic in v1.5
         if 'thread_num' not in sgx:
@@ -104,6 +104,12 @@ class Manifest:
         sgx.setdefault('require_amx', False)
         sgx.setdefault('require_exinfo', False)
         sgx.setdefault('enable_stats', False)
+        sgx.setdefault('edmm_enable', False)
+
+        if sgx['edmm_enable']:
+            sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_WITH_EDMM)
+        else:
+            sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_NO_EDMM)
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
