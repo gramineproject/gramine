@@ -508,17 +508,6 @@ your system, such ``bash -c ls`` SGX workload will fail. Note this does not
 apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
 upfront and is allocated on demand.
 
-Non-PIE binaries
-^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.nonpie_binary = [true|false]
-    (Default: false)
-
-This setting tells Gramine whether to use a specially crafted memory layout,
-which is required to support non-relocatable binaries (non-PIE).
-
 Number of threads
 ^^^^^^^^^^^^^^^^^
 

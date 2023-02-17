@@ -9,7 +9,6 @@ fs.mounts = [
   { path = "/dev/host-zero", uri = "dev:/dev/zero" },
 ]
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

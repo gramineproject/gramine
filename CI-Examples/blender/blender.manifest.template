@@ -22,7 +22,6 @@ fs.mounts = [
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.nonpie_binary = true
 sys.stack.size = "8M"
 sgx.enclave_size = "2048M"
 sgx.max_threads = 64

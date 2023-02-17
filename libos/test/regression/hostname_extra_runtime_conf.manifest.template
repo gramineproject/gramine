@@ -12,7 +12,6 @@ fs.mounts = [
 sys.enable_extra_runtime_domain_names_conf = true
 
 sgx.debug = true
-sgx.nonpie_binary = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [
