@@ -11,7 +11,6 @@ fs.mounts = [
 
 fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

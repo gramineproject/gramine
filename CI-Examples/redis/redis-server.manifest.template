@@ -87,15 +87,6 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 # specifying '8' allows to run a maximum of 6 Redis threads which is enough.
 sgx.max_threads = 8
 
-# Redis executable is typically a PIE (Position Independent Executable) on most
-# modern OS distros (e.g., Ubuntu 18.04). However, on some OS distros (notably,
-# CentOS), Redis executable is built as non-PIE. We mark Redis as a non-PIE
-# binary unconditionally -- this makes it work on CentOS and doesn't hurt on
-# Ubuntu. (Note that non-SGX Gramine correctly distinguishes between PIE and
-# non-PIE binaries, but for SGX we need to prearrange enclave memory layout,
-# hence the below option.)
-sgx.nonpie_binary = true
-
 ############################# SGX: TRUSTED FILES ###############################
 
 # Specify all files used by Redis and its dependencies (including all libraries

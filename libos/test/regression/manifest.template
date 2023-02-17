@@ -22,7 +22,6 @@ fs.mounts = [
 ]
 
 sgx.max_threads = 16
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

@@ -267,18 +267,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
-    if (enclave->nonpie_binary) {
-        /* executable is non-PIE: enclave base address must cover code segment loaded at some
-         * hardcoded address (usually 0x400000), and heap cannot start at zero (modern OSes do not
-         * allow this) */
-        enclave->baseaddr = DEFAULT_ENCLAVE_BASE;
-        enclave_heap_min  = MMAP_MIN_ADDR;
-    } else {
-        /* executable is PIE: enclave base address can be arbitrary (we choose it same as
-         * enclave_size), and heap can start immediately at this base address */
-        enclave->baseaddr = enclave->size;
-        enclave_heap_min  = enclave->baseaddr;
-    }
+    /* set up enclave address space so that it works also for non-PIE binaries: enclave base address
+     * must cover code segment loaded at some hardcoded address (usually 0x400000), and heap cannot
+     * start at zero (modern OSes do not allow this) */
+    enclave->baseaddr = DEFAULT_ENCLAVE_BASE;
+    enclave_heap_min  = MMAP_MIN_ADDR;
 
     sig_path = alloc_concat(g_pal_enclave.application_path, -1, ".sig", -1);
     if (!sig_path) {
@@ -768,15 +761,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         ret = -EINVAL;
         goto out;
     }
-
-    bool nonpie_binary;
-    ret = toml_bool_in(manifest_root, "sgx.nonpie_binary", /*defaultval=*/false, &nonpie_binary);
-    if (ret < 0) {
-        log_error("Cannot parse 'sgx.nonpie_binary' (the value must be `true` or `false`)");
-        ret = -EINVAL;
-        goto out;
-    }
-    enclave_info->nonpie_binary = nonpie_binary;
 
     ret = toml_bool_in(manifest_root, "sgx.enable_stats", /*defaultval=*/false,
                        &g_sgx_enable_stats);

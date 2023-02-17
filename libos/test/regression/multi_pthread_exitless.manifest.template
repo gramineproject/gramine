@@ -13,7 +13,6 @@ fs.mounts = [
 sgx.thread_num = 8
 sgx.insecure__rpc_thread_num = 8
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enable_stats = true

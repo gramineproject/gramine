@@ -11,7 +11,6 @@ fs.mounts = [
   { type = "tmpfs", path = "/etc" },
 ]
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

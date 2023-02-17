@@ -103,7 +103,6 @@ class Manifest:
         sgx.setdefault('require_pkru', False)
         sgx.setdefault('require_amx', False)
         sgx.setdefault('require_exinfo', False)
-        sgx.setdefault('nonpie_binary', False)
         sgx.setdefault('enable_stats', False)
 
         if not isinstance(sgx['trusted_files'], list):

@@ -21,7 +21,6 @@ fs.mount.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 # the manifest option below added only so that this feature has any test coverage
 libos.check_invalid_pointers = false
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

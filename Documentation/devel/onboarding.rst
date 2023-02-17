@@ -261,13 +261,11 @@ fine on native Linux but fails under Gramine::
      Try to identify the system call in Gramine that goes wrong (e.g., returns
      an error code whereas it was supposed to finish successfully).
 
-   - Analyze the manifest file carefully. If at least one of the binaries
-     spawned during app execution is non-PIE, then set ``sgx.nonpie_binary =
-     true``. If you suspect problems with environment variables, see if it works
-     with ``loader.insecure__use_host_env = true``. If you observe that memory
-     addresses change constantly and hinder your debugging, set
-     ``loader.insecure__disable_aslr = true``. But don't use the last two
-     options in production; use them only for debugging and analysis!
+   - Analyze the manifest file carefully. If you suspect problems with
+     environment variables, see if it works with ``loader.insecure__use_host_env
+     = true``. If you observe that memory addresses change constantly and hinder
+     your debugging, set ``loader.insecure__disable_aslr = true``. But don't use
+     these two options in production; use them only for debugging and analysis!
 
    - Analyze FS mount points (``fs.mounts``) in the manifest file carefully.
      Check for duplicate mount points -- remember that a duplicate mount point's

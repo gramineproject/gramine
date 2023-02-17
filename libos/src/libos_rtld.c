@@ -849,10 +849,7 @@ int load_elf_object(struct libos_handle* file, struct link_map** out_map) {
 
     struct link_map* map = map_elf_object(file, &ehdr);
     if (!map) {
-        log_error("Failed to map %s. This may be caused by the binary being non-PIE, in which "
-                  "case Gramine requires a specially-crafted memory layout. You can enable it "
-                  "by adding 'sgx.nonpie_binary = true' to the manifest.",
-                  fname);
+        log_error("Failed to map %s.", fname);
         return -EINVAL;
     }
 

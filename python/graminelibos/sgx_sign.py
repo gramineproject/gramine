@@ -480,12 +480,8 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     # Populate memory areas
     memory_areas = get_memory_areas(attr, libpal)
 
-    if manifest_sgx['nonpie_binary']:
-        enclave_base = offs.DEFAULT_ENCLAVE_BASE
-        enclave_heap_min = offs.MMAP_MIN_ADDR
-    else:
-        enclave_base = attr['enclave_size']
-        enclave_heap_min = enclave_base
+    enclave_base = offs.DEFAULT_ENCLAVE_BASE
+    enclave_heap_min = offs.MMAP_MIN_ADDR
 
     manifest_data += b'\0' # in-memory manifest needs NULL-termination
 
