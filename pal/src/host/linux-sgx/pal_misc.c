@@ -136,19 +136,35 @@ static uint64_t get_tsc_hz_cpu_model_name(void) {
     memcpy(&model_name[32], words, sizeof(uint32_t) * CPUID_WORD_NUM);
     model_name[sizeof(model_name) - 1] = '\0';
 
-    const char* s = strchr(model_name, '@');
-    if (!s) {
-        /* model name string is malformed; should have been smth like "CPU @ 3.0GHz" */
+    /* we roughly follow the algo suggested in the Intel SDM (specifically "Algorithm for Extracting
+     * Processor Frequency" in Section 3.2 CPUID, Volume. 2A) */
+    const char* hz_str = &model_name[sizeof(model_name) - 1];
+    while (hz_str > model_name && *hz_str == '\0')
+        hz_str--;
+    if (hz_str - model_name < 3 || *hz_str-- != 'z' || *hz_str-- != 'H')
         return 0;
-    }
-    s++;
+
+    uint64_t multiplier = 0;
+    if (*hz_str == 'T')
+        multiplier = 1000UL * 1000 * 1000 * 1000;
+    else if (*hz_str == 'G')
+        multiplier = 1000UL * 1000 * 1000;
+    else if (*hz_str == 'M')
+        multiplier = 1000UL * 1000;
+    else
+        return 0;
+
+    /* scan digits in reverse order until we hit space/tab or beginning of string */
+    const char* s = hz_str;
+    while (s > model_name && *s != ' ' && *s != '\t')
+        s--;
 
     char* end = NULL;
     long base = 0, fractional = 0;
 
     base = strtol(s, &end, 10);
     if (end == s) {
-        /* no frequency specified at all (no base digits found) after "@" sign */
+        /* no frequency specified at all (no base digits found) */
         return 0;
     }
     if (base <= 0 || base >= 1000) {
@@ -169,19 +185,14 @@ static uint64_t get_tsc_hz_cpu_model_name(void) {
         s = end;
     }
 
-    /* base and fractional are less than 1000, so no danger of int overflow */
-    assert(base < 1000 && fractional < 1000);
-    if (*s == 'G') {
-        base *= 1000 * 1000 * 1000;
-        fractional *= 1000 * 1000;
-    } else if (*s == 'M') {
-        base *= 1000 * 1000;
-        fractional *= 1000;
-    } else {
-        /* don't support any other formats other than "3.0GHz" and "3.0MHz" */
+    if (s != hz_str) {
+        /* frequency number is not immediately followed by "MHz", "GHz", "THz" suffix */
         return 0;
     }
-    return base + fractional;
+
+    /* base and fractional are less than 1000, so no danger of int overflow */
+    assert(base < 1000 && fractional < 1000 && multiplier > 0);
+    return base * multiplier + fractional * multiplier / 1000;
 }
 
 /* initialize the data structures used for date/time emulation using TSC */
