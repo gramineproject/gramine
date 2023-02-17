@@ -8,9 +8,11 @@ if direct
     conf_gramine_direct = configuration_data()
     conf_gramine_direct.merge_from(conf)
     conf_gramine_direct.set('SGX', 0)
-    conf_gramine_direct.set_quoted('HOST_PAL_PATH', hostpalpath_direct)
     conf_gramine_direct.set_quoted('LIBPAL_PATH', hostpalpath_direct / 'libpal.so')
     conf_gramine_direct.set_quoted('PAL_CMD', hostpalpath_direct / 'loader')
+    conf_gramine_direct.set_quoted('GRAMINE_GDB_PY',
+        hostpalpath_direct / 'gdb_integration/gramine_linux_gdb.py')
+    conf_gramine_direct.set_quoted('GRAMINE_GDB_SO', '')
     conf_gramine_direct.set_quoted('CONFIG_SGX_DRIVER', '')
 
     configure_file(
@@ -31,6 +33,10 @@ if sgx
     conf_gramine_sgx.set_quoted('HOST_PAL_PATH', hostpalpath_linux_sgx)
     conf_gramine_sgx.set_quoted('LIBPAL_PATH', hostpalpath_linux_sgx / 'libpal.so')
     conf_gramine_sgx.set_quoted('PAL_CMD', prefix / pkglibdir / 'sgx' / 'loader')
+    conf_gramine_sgx.set_quoted('GRAMINE_GDB_PY',
+        hostpalpath_linux_sgx / 'gdb_integration/gramine_sgx_gdb.py')
+    conf_gramine_sgx.set_quoted('GRAMINE_GDB_SO',
+        hostpalpath_linux_sgx / 'gdb_integration/sgx_gdb.so')
     conf_gramine_sgx.set_quoted('CONFIG_SGX_DRIVER', sgx_driver)
 
     configure_file(

@@ -47,3 +47,7 @@ meson.add_install_script(
     'ln -sf libc.so "${MESON_INSTALL_DESTDIR_PREFIX}/@0@"'.format(
         get_option('libdir') / 'gramine/runtime/musl' / 'ld-musl-x86_64.so.1'),
 )
+
+meson.add_devenv({
+    'MESON_DEVENV_GRAMINE_RUNTIME_musl': meson.current_build_dir(),
+})
