@@ -12,7 +12,8 @@ from graminelibos import Sigstruct
 
 @click.command()
 @click.argument('sigfile', type=click.File('rb'), required=True)
-def main(sigfile):
+@click.option('--verbose/--quiet', '-v/-q', help='Display detailed information')
+def main(sigfile, verbose):
     sig = Sigstruct.from_bytes(sigfile.read())
 
     sig_readable = {
@@ -29,6 +30,12 @@ def main(sigfile):
         'date': '%d-%02d-%02d' % (sig['date_year'], sig['date_month'], sig['date_day']),
         'debug_enclave': bool(sig['attribute_flags'] & 0b10),
     }
+
+    if not verbose:
+        keys_to_remove = ('attribute_flags', 'attribute_xfrms', 'misc_select',
+                          'attribute_flags_mask', 'attribute_xfrm_mask', 'misc_mask', 'date')
+        for key in keys_to_remove:
+            del sig_readable[key]
 
     print(tomli_w.dumps(sig_readable))
 
