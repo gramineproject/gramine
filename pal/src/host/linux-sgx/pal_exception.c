@@ -202,7 +202,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         uc->rip += 3;
         uc->rcx = 0; /* dummy IA32_TSC_AUX; Linux encodes it as (numa_id << 12) | cpu_id */
         return true;
-    } else if (0x40 <= instr[0] && instr[0] <= 0x48 && instr[1] == 0xcf) {
+    } else if (0x40 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
         /*
          * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.
          * From Intel manual:
