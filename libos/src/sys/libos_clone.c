@@ -323,7 +323,7 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
                 log_warning("The app tried to create a subprocess, but this is disabled "
                             "(sys.disallow_subprocesses = true)");
             }
-            return -ENOSYS;
+            return -EAGAIN;
         }
     }
 

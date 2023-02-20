@@ -11,7 +11,7 @@ fs.mounts = [
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
-# must print a warning `The app tried to create a subprocess, but this is disabled`
+# must print a warning: "The app tried to create a subprocess, but this is disabled"
 sys.disallow_subprocesses = true
 
 sgx.nonpie_binary = true
