@@ -202,9 +202,10 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         uc->rip += 3;
         uc->rcx = 0; /* dummy IA32_TSC_AUX; Linux encodes it as (numa_id << 12) | cpu_id */
         return true;
-    } else if (0x40 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
+    } else if (0x48 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
         /*
-         * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.
+         * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.W.
+         * The REX.W is the 3th bit (counting from 0).
          * From Intel manual:
          * REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy
          * entries 40H to 4FH.
