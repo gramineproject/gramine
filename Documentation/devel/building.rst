@@ -209,8 +209,8 @@ Additional build options
   .. note::
      This is generally *not* recommended, because optimized builds lose some
      debugging information, and may cause GDB to display confusing tracebacks or
-     garbage data. You should use ``DEBUGOPT=1`` only if you have a good reason
-     (e.g. for profiling).
+     garbage data. You should use ``--buildtype=debugoptimized`` only if you
+     have a good reason (e.g. for profiling).
 
 - To compile with undefined behavior sanitization (UBSan), run
   :command:`meson -Dubsan=enabled`. This causes Gramine to abort when undefined
