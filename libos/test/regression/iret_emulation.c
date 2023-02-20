@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <ucontext.h>
 
+#include "common.h"
+
 static void sigfpe_handler(int sig, siginfo_t* info, void* arg) {
     ucontext_t* context = (ucontext_t*)arg;
 
@@ -35,9 +37,7 @@ static void sigfpe_handler(int sig, siginfo_t* info, void* arg) {
 int main(void) {
     struct sigaction action = { .sa_sigaction = &sigfpe_handler, .sa_flags = SA_SIGINFO };
 
-    if (sigaction(SIGFPE, &action, NULL) < 0) {
-        err(1, "unable to set singal handler");
-    }
+    CHECK(sigaction(SIGFPE, &action, NULL));
 
     __asm__ volatile (
         "mov $0, %%rax\n"
@@ -49,6 +49,6 @@ int main(void) {
           "r15"
     );
 
-    printf("TEST OK\n");
+    puts("TEST OK");
     return 0;
 }
