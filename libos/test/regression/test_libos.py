@@ -426,7 +426,6 @@ class TC_01_Bootstrap(RegressionTestCase):
         result = subprocess.run(['gramine-sgx-sigstruct-view', 'debug_log_inline.sig'],
                                 stdout=subprocess.PIPE, check=True)
         toml_dict = tomli.loads(result.stdout.decode())
-        print(toml_dict["mr_enclave"])
 
         _, stderr = self.run_binary(['debug_log_inline'])
         self.assertIn(f'debug:     mr_enclave:   {toml_dict["mr_enclave"]}', stderr)

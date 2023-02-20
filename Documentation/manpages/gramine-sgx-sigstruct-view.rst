@@ -16,6 +16,8 @@ Description
 :program:`gramine-sgx-sigstruct-view` is used to display SIGSTRUCT fields of the
 SGX enclave (MRENCLAVE, MRSIGNER, etc.), extracted from the ``.sig`` file.
 
+The output of the tool is in TOML format, so it can be parsed by a TOML parser.
+
 Command line arguments
 ======================
 
