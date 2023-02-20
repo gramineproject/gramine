@@ -95,6 +95,7 @@ Table of Contents
    devel/building
    devel/onboarding
    devel/contributing
+   devel/charter
    devel/DCO/index
    devel/howto-doc
    devel/coding-style
