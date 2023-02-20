@@ -1160,7 +1160,7 @@ class TC_40_FileSystem(RegressionTestCase):
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
         if not self.has_debug():
-            self.skipTest('test runs only when Gramine is compiled with debug mode')
+            self.skipTest('test runs only when Gramine is compiled in debug mode')
 
     def find(self, name, stdout):
         match = re.search('<{0} start>(.*)<{0} end>'.format(name), stdout, re.DOTALL)
