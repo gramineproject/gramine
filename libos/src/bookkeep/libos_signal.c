@@ -459,6 +459,20 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
+static bool is_in_out(PAL_CONTEXT* context)
+{
+    unsigned char opcodes[] = {0xe4, 0xe5, 0xec, 0xed, 0xe6, 0xe7,
+                               0xee, 0xef, 0x6c, 0x6d, 0x6e, 0x6f};
+    int num_opcodes = sizeof(opcodes)/sizeof(opcodes[0]);
+    uint8_t* rip = (uint8_t*)context->rip;
+    for(int i=0;i<num_opcodes;i++) {
+        if (rip[0] == opcodes[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
@@ -476,13 +490,45 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
 
     /* Emulate syscall instruction, which is prohibited in Linux-SGX PAL and raises a SIGILL. */
     if (!maybe_emulate_syscall(context)) {
+        /* IN/OUT instruction aren't allowed in SGX enclaves. Usually #GP hardware exception
+         * causes SIGSEGV and not SIGILL. This is required for lscpu to run. lscpu
+         * executes in/out and expects SIGSEGV. lscpu is sometimes required in applications
+         * that tries to get various information about cpus. This was required 
+         * in some tensorflow application and that made it necessary to support
+         * lscpu.
+         * 
+         * https://c9x.me/x86/html/file_module_x86_id_139.html (for IN instruction)
+         * https://c9x.me/x86/html/file_module_x86_id_222.html (for OUT instruction)
+         * 
+         * Some other releavant links 
+         * 
+         * https://c9x.me/x86/html/file_module_x86_id_139.html
+         * 
+         * https://stackoverflow.com/questions/3215878/what-are-in-out-instructions-in-x86-used-for
+         * 
+         * https://stackoverflow.com/questions/46642384/how-to-run-code-that-uses-x86-in-and-out-i-o-instructions
+         * 
+         */
+        int signo;
+        int si_code;
+        if (is_in_out(context)) {
+            signo = SIGSEGV;
+            si_code = SEGV_MAPERR;
+        } else {
+            signo = SIGILL;
+            si_code = ILL_ILLOPC;
+        }
+
         void* rip = (void*)pal_context_get_ip(context);
-        log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
+        log_debug("Illegal instruction (or legal but unsupported instruction "\
+                  "inside enclave) during app execution at %p; delivering to app", rip);
+        
         siginfo_t info = {
-            .si_signo = SIGILL,
-            .si_code = ILL_ILLOPC,
+            .si_signo = signo,
+            .si_code = si_code,
             .si_addr = (void*)addr,
         };
+        
         force_signal(&info);
         handle_signal(context);
     }
