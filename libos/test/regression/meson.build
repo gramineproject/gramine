@@ -167,6 +167,7 @@ if host_machine.cpu_family() == 'x86_64'
         'debug_regs_x86_64': {
             'c_args': '-g3',
         },
+        'in_out_instruction' : {},
         'rdtsc': {},
         'sighandler_divbyzero': {},
     }

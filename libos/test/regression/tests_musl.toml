@@ -144,6 +144,7 @@ manifests = [
   "avx",
   "cpuid",
   "debug_regs_x86_64",
+  "in_out_instruction",
   "rdtsc",
   "sighandler_divbyzero",
 ]
