@@ -47,6 +47,7 @@ tests = {
     'seek_tell_truncate': {},
     'stat': {},
     'truncate': {},
+    'lscpu-test': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'fs')
