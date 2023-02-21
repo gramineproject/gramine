@@ -204,8 +204,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         return true;
     } else if (0x48 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
         /*
-         * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.W.
-         * The REX.W is the 3th bit (counting from 0).
+         * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.W (bit 3).
          * From Intel manual:
          * REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy
          * entries 40H to 4FH.
