@@ -311,8 +311,8 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     if (clone_new_process) {
         assert(g_manifest_root);
         bool disallow_subprocesses;
-        ret = toml_bool_in(g_manifest_root, "sys.disallow_subprocesses",
-                           /*defaultval=*/false, &disallow_subprocesses);
+        ret = toml_bool_in(g_manifest_root, "sys.disallow_subprocesses", /*defaultval=*/false,
+                           &disallow_subprocesses);
         if (ret < 0) {
             log_error("Cannot parse \'sys.disallow_subprocesses\' (the value must be `true` or "
                       "`false`)");
