@@ -47,6 +47,7 @@ tests = {
     'seek_tell_truncate': {},
     'stat': {},
     'truncate': {},
+    'in_out_instruction_test': {},
 }
 
 install_dir = pkglibdir / 'tests' / 'libos' / 'fs'
