@@ -23,11 +23,15 @@
 #include "toml_utils.h"
 #include "topo_info.h"
 
-/* The timeout of 50ms was found to be a safe TSC drift correction periodicity based on results
- * from multiple systems. Any higher or lower could pose risks of negative time drift or
- * performance hit respectively.
- */
+/* The timeout of 50ms was found to be a safe TSC drift correction periodicity based on results from
+ * multiple systems. Any higher or lower could pose risks of negative time drift or performance hit
+ * respectively. */
 #define TSC_REFINE_INIT_TIMEOUT_USECS 50000
+
+#define KHZ_TO_HZ(x) (x * 1000)
+#define MHZ_TO_HZ(x) (KHZ_TO_HZ(x) * 1000)
+#define GHZ_TO_HZ(x) (MHZ_TO_HZ(x) * 1000)
+#define THZ_TO_HZ(x) (GHZ_TO_HZ(x) * 1000)
 
 uint64_t g_tsc_hz = 0; /* TSC frequency for fast and accurate time ("invariant TSC" HW feature) */
 static uint64_t g_start_tsc = 0;
@@ -69,7 +73,7 @@ static uint64_t get_tsc_hz_baremetal(void) {
     /* processor base frequency is in MHz but we need to return TSC frequency in Hz; cast to 64-bit
      * first to prevent integer overflow */
     uint64_t base_frequency_mhz = words[CPUID_WORD_EAX];
-    return base_frequency_mhz * 1000000;
+    return MHZ_TO_HZ(base_frequency_mhz);
 }
 
 /* return TSC frequency or 0 if invariant TSC is not supported */
@@ -117,46 +121,46 @@ static uint64_t get_tsc_hz_hypervisor(void) {
     /* TSC frequency is in kHz but we need to return TSC frequency in Hz; cast to 64-bit first to
      * prevent integer overflow */
     uint64_t tsc_frequency_khz = words[CPUID_WORD_EAX];
-    return tsc_frequency_khz * 1000;
+    return KHZ_TO_HZ(tsc_frequency_khz);
 }
 
-/* return TSC frequency or 0 if cannot parse CPU model name */
+/* return TSC frequency or 0 if cannot parse CPU brand string */
 static uint64_t get_tsc_hz_cpu_model_name(void) {
     uint32_t words[CPUID_WORD_NUM];
 
-    char model_name[48 + 1] = {0};
-    static_assert(sizeof(model_name) == sizeof(uint32_t) * CPUID_WORD_NUM * 3 + 1,
-                  "wrong sizeof(model_name)");
+    char brand_string[48 + 1] = {0};
+    static_assert(sizeof(brand_string) == sizeof(uint32_t) * CPUID_WORD_NUM * 3 + 1,
+                  "wrong sizeof(brand_string)");
 
     _PalCpuIdRetrieve(CPU_BRAND_LEAF, 0, words);
-    memcpy(&model_name[ 0], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    memcpy(&brand_string[ 0], words, sizeof(uint32_t) * CPUID_WORD_NUM);
     _PalCpuIdRetrieve(CPU_BRAND_CNTD_LEAF, 0, words);
-    memcpy(&model_name[16], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    memcpy(&brand_string[16], words, sizeof(uint32_t) * CPUID_WORD_NUM);
     _PalCpuIdRetrieve(CPU_BRAND_CNTD2_LEAF, 0, words);
-    memcpy(&model_name[32], words, sizeof(uint32_t) * CPUID_WORD_NUM);
-    model_name[sizeof(model_name) - 1] = '\0';
+    memcpy(&brand_string[32], words, sizeof(uint32_t) * CPUID_WORD_NUM);
+    brand_string[sizeof(brand_string) - 1] = '\0';
 
     /* we roughly follow the algo suggested in the Intel SDM (specifically "Algorithm for Extracting
      * Processor Frequency" in Section 3.2 CPUID, Volume. 2A) */
-    const char* hz_str = &model_name[sizeof(model_name) - 1];
-    while (hz_str > model_name && *hz_str == '\0')
+    const char* hz_str = &brand_string[sizeof(brand_string) - 1];
+    while (hz_str > brand_string && *hz_str == '\0')
         hz_str--;
-    if (hz_str - model_name < 3 || *hz_str-- != 'z' || *hz_str-- != 'H')
+    if (hz_str - brand_string < 3 || *hz_str-- != 'z' || *hz_str-- != 'H')
         return 0;
 
     uint64_t multiplier = 0;
     if (*hz_str == 'T')
-        multiplier = 1000UL * 1000 * 1000 * 1000;
+        multiplier = THZ_TO_HZ(1UL);
     else if (*hz_str == 'G')
-        multiplier = 1000UL * 1000 * 1000;
+        multiplier = GHZ_TO_HZ(1UL);
     else if (*hz_str == 'M')
-        multiplier = 1000UL * 1000;
+        multiplier = MHZ_TO_HZ(1UL);
     else
         return 0;
 
     /* scan digits in reverse order until we hit space/tab or beginning of string */
     const char* s = hz_str;
-    while (s > model_name && *s != ' ' && *s != '\t')
+    while (s > brand_string && *s != ' ' && *s != '\t')
         s--;
 
     char* end = NULL;
@@ -167,8 +171,8 @@ static uint64_t get_tsc_hz_cpu_model_name(void) {
         /* no frequency specified at all (no base digits found) */
         return 0;
     }
-    if (base <= 0 || base >= 1000) {
-        /* unsupported format of smth like "-3GHz" or "1000GHz" */
+    if (base < 0 || base >= 1000) {
+        /* unsupported format of smth like "-3GHz" or "1000GHz" (but "0.8GHz" is supported) */
         return 0;
     }
     s = end;
@@ -176,8 +180,8 @@ static uint64_t get_tsc_hz_cpu_model_name(void) {
     if (*s == '.') {
         s++;
         fractional = strtol(s, &end, 10);
-        if (fractional <= 0 || end - s > 3) {
-            /* don't support non-positive fractional or more than 3 digits after dot */
+        if (fractional < 0 || end - s > 3) {
+            /* don't support negative fractional or more than 3 digits after dot */
             return 0;
         }
         for (int i = 0; i < 3 - (end - s); i++)
