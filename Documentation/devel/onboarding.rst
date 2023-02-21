@@ -265,8 +265,7 @@ fine on native Linux but fails under Gramine::
      environment variables, see if it works with ``loader.insecure__use_host_env
      = true``. If you observe that memory addresses change constantly and hinder
      your debugging, set ``loader.insecure__disable_aslr = true``. But don't use
-     the last two options in production; use them only for debugging and
-     analysis!
+     these two options in production; use them only for debugging and analysis!
 
    - Analyze FS mount points (``fs.mounts``) in the manifest file carefully.
      Check for duplicate mount points -- remember that a duplicate mount point's
