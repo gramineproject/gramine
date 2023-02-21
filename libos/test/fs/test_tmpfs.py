@@ -81,3 +81,7 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
     @unittest.skip("not applicable for tmpfs")
     def test_210_copy_dir_mounted(self):
         test_fs.TC_00_FileSystem.test_210_copy_dir_mounted(self)
+    
+    def test_211_copy_in_out_ins_test(self):
+        stdout, stderr = self.run_binary(['in_out_instruction_test'])
+        self.assertIn('In/Out instruction generating SIGSEGV OK', stdout)

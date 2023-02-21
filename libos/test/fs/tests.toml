@@ -18,4 +18,5 @@ manifests = [
   "seek_tell_truncate",
   "stat",
   "truncate",
+  "in_out_instruction_test"
 ]
