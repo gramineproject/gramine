@@ -16,6 +16,12 @@ from graminelibos import Sigstruct
 @click.option('--output-format', default='toml', type=click.Choice(['toml', 'json', 'text']),
               help='Output format: toml, json or plaintext')
 def main(sigfile, verbose, output_format):
+    if output_format == "json":
+        try:
+            import json  # local import to allow Gramine installation without JSON installation
+        except ImportError:
+            raise ImportError('Cannot import json Python package')
+
     sig = Sigstruct.from_bytes(sigfile.read())
 
     sig_readable = {
@@ -42,7 +48,6 @@ def main(sigfile, verbose, output_format):
     if output_format == "toml":
         print(tomli_w.dumps(sig_readable))
     elif output_format == "json":
-        import json  # local import to allow Gramine installation without JSON installation
         print(json.dumps(sig_readable, indent=4))
     else:
         # plaintext format imitates the legacy output of `gramine-sgx-get-token` tool
