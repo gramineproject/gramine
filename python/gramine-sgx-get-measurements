@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2021 Intel Corporation
+#                    Borys Popławski <borysp@invisiblethingslab.com>
+#                    Frieder Paape <frieder@konvera.io>
+
+import click
+import hashlib
+import json
+import toml
+
+from graminelibos import Sigstruct
+
+@click.command()
+@click.option('--sig', '-s', type=click.File('rb'),  required=True, help='sigstruct file')
+@click.option('--out', '-o', default="text", help='output format - text, json, toml')
+def main(sig, out):
+    sig = Sigstruct.from_bytes(sig.read())
+
+    # calculate MRSIGNER as sha256 hash over RSA public key's modulus
+    mrsigner = hashlib.sha256()
+    mrsigner.update(sig['modulus'])
+    mrsigner = mrsigner.hexdigest()
+
+    attributes = {
+        "attributes": {
+            "mr_enclave": sig["enclave_hash"].hex(),
+            "mr_signer": mrsigner,
+            "isv_prod_id": sig["isv_prod_id"],
+            "isv_svn": sig["isv_svn"],
+            "date": f'{sig["date_year"]:04d}-{sig["date_month"]:02d}-{sig["date_day"]:02d}'
+        }
+    }
+
+    if out == "toml":
+        print(toml.dumps(attributes))
+    elif out == "json":
+        print(json.dumps(attributes, indent=4))
+    elif out == "text":
+        print('Attributes:')
+        print(f'    mr_enclave:  {sig["enclave_hash"].hex()}')
+        print(f'    mr_signer:   {mrsigner}')
+        print(f'    isv_prod_id: {sig["isv_prod_id"]}')
+        print(f'    isv_svn:     {sig["isv_svn"]}')
+        print(f'    date:        {sig["date_year"]:04d}-{sig["date_month"]:02d}-'
+              f'{sig["date_day"]:02d}')
+    else:
+        print(f'Error: unknown output format: "{out}"')
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter
