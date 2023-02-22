@@ -550,9 +550,11 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
-def sign_with_file(ctx, key):
+@click.option('--passphrase', '--password', '-p', metavar='PASSPHRASE',
+    help='optional passphrase to decrypt the key')
+def sign_with_file(ctx, key, passphrase):
     try:
-        private_key = load_private_key_from_pem_file(key)
+        private_key = load_private_key_from_pem_file(key, passphrase)
     except InvalidKeyError as e:
         ctx.fail(str(e))
 
@@ -624,7 +626,7 @@ def sign_with_private_key(data, private_key):
     return public_numbers.e, public_numbers.n, int.from_bytes(signature, byteorder='big')
 
 
-def sign_with_private_key_from_pem_file(data, file):
+def sign_with_private_key_from_pem_file(data, file, passphrase=None):
     """Signs *data* using key loaded from *file*.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
@@ -634,6 +636,7 @@ def sign_with_private_key_from_pem_file(data, file):
     Args:
         data (bytes): Data to calculate the signature over.
         file (file-like): File-like object, from which one can read RSA private key.
+        passphrase (str or None): Optional passphrase.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
@@ -646,10 +649,10 @@ def sign_with_private_key_from_pem_file(data, file):
             This function also signs *data*, but the key argument is path to a file, not a file-like
             object.
     """
-    return sign_with_private_key(data, load_pem_private_key_from_file(file))
+    return sign_with_private_key(data, load_pem_private_key_from_file(file, passphrase))
 
 
-def sign_with_private_key_from_pem_path(data, path):
+def sign_with_private_key_from_pem_path(data, path, passphrase=None):
     """Signs *data* using key loaded from *path*.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
@@ -659,6 +662,7 @@ def sign_with_private_key_from_pem_path(data, path):
     Args:
         data (bytes): Data to calculate the signature over.
         path (path-like): Path to a file with RSA private key.
+        passphrase (str or None): Optional passphrase.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
@@ -673,7 +677,7 @@ def sign_with_private_key_from_pem_path(data, path):
     """
 
     with open(key, 'rb') as file:
-        return sign_with_private_key_from_pem_file(data, file)
+        return sign_with_private_key_from_pem_file(data, file, passphrase)
 
 
 # NOTE: the name and argument name of this function is kept for compatibility, *key* is path to
