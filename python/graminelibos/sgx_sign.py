@@ -12,12 +12,13 @@ import os
 import pathlib
 import struct
 import subprocess
+import sys
 
 import click
 
 from cryptography.hazmat import backends
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 import elftools.elf.elffile
 
@@ -549,7 +550,7 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 @click.command(add_help_option=False)
 @click.help_option('--help-file')
 @click.option('--key', '-k', metavar='FILE',
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
 def sign_with_file(key):
@@ -569,22 +570,19 @@ def sign_with_local_key(data, key):
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
     """
-    proc = subprocess.Popen(
-        ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],
-        stdout=subprocess.PIPE)
-    modulus_out, _ = proc.communicate()
-    modulus = bytes.fromhex(modulus_out[8:8+offs.SE_KEY_SIZE*2].decode())
 
-    proc = subprocess.Popen(
-        ['openssl', 'sha256', '-binary', '-sign', key],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    signature, _ = proc.communicate(data)
+    with key:
+        private_key = serialization.load_pem_private_key(key.read(), password=None)
 
-    exponent_int = 3
-    modulus_int = int.from_bytes(modulus, byteorder='big')
-    signature_int = int.from_bytes(signature, byteorder='big')
+    public_numbers = private_key.public_key().public_numbers()
 
-    return exponent_int, modulus_int, signature_int
+    if public_numbers.e != 3:
+        print(f'invalid RSA key: expected exponent 3, got {public_numbers.e}', file=sys.stderr)
+        sys.exit(1)
+
+    signature = private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())
+
+    return public_numbers.e, public_numbers.n, int.from_bytes(signature, byteorder='big')
 
 
 def generate_private_key():
