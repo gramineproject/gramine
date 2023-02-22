@@ -263,7 +263,7 @@ if sgx
 
     protobuf_dep = dependency('libprotobuf-c')
 
-    libcbor_dep = subproject('libcbor-0.9.0').get_variable('libcbor_dep')
+    libcbor_dep = subproject('libcbor-0.10.2').get_variable('libcbor_dep')
 
     if dcap
         sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')

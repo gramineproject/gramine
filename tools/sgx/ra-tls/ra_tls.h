@@ -49,7 +49,8 @@ static const size_t g_evidence_oid_size = sizeof(g_evidence_oid);
 static const uint8_t g_evidence_oid_raw[] = TCG_DICE_TAGGED_EVIDENCE_OID_RAW;
 static const size_t g_evidence_oid_raw_size = sizeof(g_evidence_oid_raw);
 
-#define TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG 0x1A7501 /* FIXME: proper IANA tag once registered */
+/* attestation evidence data tags, https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml */
+#define TCG_DICE_TAGGED_EVIDENCE_TEE_QUOTE_CBOR_TAG 60000
 
 /* hash IDs per IANA: https://www.iana.org/assignments/named-information/named-information.xhtml */
 #define IANA_NAMED_INFO_HASH_ALG_REGISTRY_RESERVED 0

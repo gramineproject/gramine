@@ -1,4 +1,4 @@
-project('libcbor', 'c', version: '0.9.0')
+project('libcbor', 'c', version: '0.10.2')
 
 fs = import('fs')
 

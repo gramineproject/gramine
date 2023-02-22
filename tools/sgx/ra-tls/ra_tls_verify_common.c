@@ -337,7 +337,7 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_q
     }
 
     if (!cbor_isa_tag(cbor_tagged_evidence)
-            || cbor_tag_value(cbor_tagged_evidence) != TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG) {
+            || cbor_tag_value(cbor_tagged_evidence) != TCG_DICE_TAGGED_EVIDENCE_TEE_QUOTE_CBOR_TAG) {
         ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
         goto out;
     }

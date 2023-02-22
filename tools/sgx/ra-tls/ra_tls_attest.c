@@ -220,8 +220,8 @@ static int cbor_bstr_from_pk_sha256(mbedtls_pk_context* pk, cbor_item_t** out_cb
 }
 
 /*! generate hash-entry -- CBOR array with [ hash-alg-id, hash-value -- hash of pubkey ] */
-static int generate_serialized_hash_entry(mbedtls_pk_context* pk, uint8_t** out_hash_entry_buf,
-                                      size_t* out_hash_entry_buf_size) {
+static int generate_serialized_pk_hash_entry(mbedtls_pk_context* pk, uint8_t** out_hash_entry_buf,
+                                             size_t* out_hash_entry_buf_size) {
     /* the hash-entry array as defined in Concise Software Identification Tags (CoSWID) */
     cbor_item_t* cbor_hash_entry = cbor_new_definite_array(2);
     if (!cbor_hash_entry)
@@ -279,6 +279,7 @@ static int generate_serialized_hash_entry(mbedtls_pk_context* pk, uint8_t** out_
 /*! generate claims -- CBOR map with { "pubkey-hash" = <serialized CBOR array hash-entry> } */
 static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_claims_buf,
                                       size_t* out_claims_buf_size) {
+    /* TODO: currently implement only claim "pubkey-hash", but there may be more (e.g. "nonce") */
     cbor_item_t* cbor_claims = cbor_new_definite_map(1);
     if (!cbor_claims)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
@@ -291,7 +292,7 @@ static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_clai
 
     uint8_t* hash_entry_buf;
     size_t hash_entry_buf_size;
-    int ret = generate_serialized_hash_entry(pk, &hash_entry_buf, &hash_entry_buf_size);
+    int ret = generate_serialized_pk_hash_entry(pk, &hash_entry_buf, &hash_entry_buf_size);
     if (ret < 0) {
         cbor_decref(&cbor_pubkey_hash_key);
         cbor_decref(&cbor_claims);
@@ -375,7 +376,7 @@ static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8
     cbor_decref(&cbor_claims);
     cbor_decref(&cbor_quote);
 
-    cbor_item_t* cbor_tagged_evidence = cbor_new_tag(TCG_DICE_TAGGED_EVIDENCE_CBOR_TAG);
+    cbor_item_t* cbor_tagged_evidence = cbor_new_tag(TCG_DICE_TAGGED_EVIDENCE_TEE_QUOTE_CBOR_TAG);
     if (!cbor_tagged_evidence) {
         cbor_decref(&cbor_evidence);
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
@@ -458,7 +459,7 @@ static int generate_evidence_with_claims(mbedtls_pk_context* pk, uint8_t** out_e
     }
 
     ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
-                                    /*do_write=*/false);
+                                 /*do_write=*/false);
     if (quote_size < 0) {
         ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
         goto out;
@@ -483,8 +484,10 @@ out:
 static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt) {
     int ret;
 
-    /* put both "legacy Gramine" OID with plain SGX quote as well as standardized TCG DICE "tagged
-     * evidence" OID with CBOR-formatted SGX quote into RA-TLS X.509 cert */
+    /*
+     * We put both "legacy Gramine" OID with plain SGX quote as well as standardized TCG DICE "tagged
+     * evidence" OID with CBOR-formatted SGX quote into the RA-TLS X.509 cert. This is for keeping
+     * backward compatibility at the price of a larger size of the resulting cert. */
     uint8_t* quote = NULL;
     uint8_t* evidence = NULL;
 
@@ -498,6 +501,8 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
     ret = generate_evidence_with_claims(pk, &evidence, &evidence_size);
     if (ret < 0)
         goto out;
+
+    /* TODO: currently don't implement the Endorsement extension (contains TCB info, CRL, etc.) */
 
     ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt);
 out:
