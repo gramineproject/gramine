@@ -465,8 +465,18 @@ bool is_user_string_readable(const char* addr) {
  * opcode for in or out instruction.
  */
 static bool is_in_out(PAL_CONTEXT* context) {
-    unsigned char opcodes[] = {0xe4, 0xe5, 0xec, 0xed, 0xe6, 0xe7,
-                               0xee, 0xef, 0x6c, 0x6d, 0x6e, 0x6f};
+    unsigned char opcodes[] = {
+                               /*imm8 is an immediate value denoting port address */
+                               0xe4, /* IN AL,imm8 */ 
+                               0xe5, /* IN AX/EAX,imm8 */
+                               0xec, /* IN AL,DX */
+                               0xed, /*	IN AX/EAX,DX */
+                               
+                               0xe6, /* OUT imm8, AL */
+                               0xe7, /* OUT imm8, AX/EAX */
+                               0xee, /* OUT DX, AL */
+                               0xef, /* OUT DX, AX */
+                              };
     int num_opcodes = sizeof(opcodes)/sizeof(opcodes[0]);
     uint8_t* rip = (uint8_t*)context->rip;
     for(int i=0;i<num_opcodes;i++) {
