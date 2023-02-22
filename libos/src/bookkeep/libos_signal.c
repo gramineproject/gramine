@@ -459,6 +459,37 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
+static bool is_byte_prefix(uint8_t op) {
+    uint8_t prefix_list[] = {
+                             /* Group 0 */ 
+                             0xf0, /* LOCK prefix */
+                             0xf2, /* REPNE/REPNZ prefix */
+                             0xf3, /* REP or REPE/REPZ prefix */
+                             /* Group 1 */
+                             0x2e, /* CS segment override */
+                             0x36, /* SS segment override */
+                             0x3e, /* DS segment override */
+                             0x26, /* ES segment override */
+                             0x64, /* FS segment override */
+                             0x65, /* GS segment override */
+                             0x2e, /* Branch not taken */
+                             0x3e, /* Branch taken */
+                             /* Group 2 */ 
+                             0x66, /*  Operand-size override prefix */
+                             /* Group 3 */
+                             0x67, /* Address-size override prefix  */
+                             /* The rest of the prefixes aren't really applicable 
+                              * for the instruction(s) we are checking.
+                              */
+                            };
+    size_t num_prefixes = sizeof(prefix_list)/sizeof(*prefix_list);
+    for(int i = 0; i < num_prefixes; i++) {
+        if (op == prefix_list[i])
+            return true;
+    }
+    return false;
+}
+
 /* input: 
  *     context --> This holds the context for the exception that has occurred.
  * This function checks if the rip on which the exception is occuring is a valid 
@@ -471,16 +502,27 @@ static bool is_in_out(PAL_CONTEXT* context) {
                                0xe5, /* IN AX/EAX,imm8 */
                                0xec, /* IN AL,DX */
                                0xed, /*	IN AX/EAX,DX */
-                               
+                               /* Out instruction opcodes */
                                0xe6, /* OUT imm8, AL */
                                0xe7, /* OUT imm8, AX/EAX */
                                0xee, /* OUT DX, AL */
                                0xef, /* OUT DX, AX */
                               };
-    int num_opcodes = sizeof(opcodes)/sizeof(opcodes[0]);
+    int num_opcodes = sizeof(opcodes)/sizeof(*opcodes);
     uint8_t* rip = (uint8_t*)context->rip;
+    size_t num_prefixes_to_check = 4;
+    /* num_prefixes_found will store the actual opcode index in rip */
+    size_t num_prefixes_found = 0;
+    size_t c = 0; 
+    for(int i = 0; i < num_prefixes_to_check; i++) {
+        bool is_prefix = is_byte_prefix(rip[i]);
+        num_prefixes_found += (is_prefix ? 1 : 0);
+        if (!is_prefix) 
+            break;
+    }
+    assert(num_prefixes_found <= num_prefixes_to_check);
     for(int i = 0; i < num_opcodes; i++) {
-        if (rip[0] == opcodes[i]) {
+        if (rip[num_prefixes_found] == opcodes[i]) {
             return true;
         }
     }
