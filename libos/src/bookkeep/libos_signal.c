@@ -513,7 +513,6 @@ static bool is_in_out(PAL_CONTEXT* context) {
     size_t num_prefixes_to_check = 4;
     /* num_prefixes_found will store the actual opcode index in rip */
     size_t num_prefixes_found = 0;
-    size_t c = 0; 
     for(int i = 0; i < num_prefixes_to_check; i++) {
         bool is_prefix = is_byte_prefix(rip[i]);
         num_prefixes_found += (is_prefix ? 1 : 0);
