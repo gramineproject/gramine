@@ -553,10 +553,12 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
+@click.option('--passphrase', '--password', '-p', metavar='PASSPHRASE',
+    help='optional passphrase to decrypt the key')
 def sign_with_file(key):
-    return functools.partial(sign_with_local_key, key=key), [key]
+    return functools.partial(sign_with_local_key, key=key, passphrase=passphrase), [key]
 
-def sign_with_local_key(data, key):
+def sign_with_local_key(data, key, passphrase=None):
     """Signs *data* using *key*.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
@@ -572,7 +574,7 @@ def sign_with_local_key(data, key):
     """
 
     with key:
-        private_key = serialization.load_pem_private_key(key.read(), password=None)
+        private_key = serialization.load_pem_private_key(key.read(), password=passphrase)
 
     public_numbers = private_key.public_key().public_numbers()
 
