@@ -13,7 +13,9 @@ from graminelibos import Sigstruct
 @click.command()
 @click.argument('sigfile', type=click.File('rb'), required=True)
 @click.option('--verbose/--quiet', '-v/-q', help='Display detailed information')
-def main(sigfile, verbose):
+@click.option('--output-format', default='toml', type=click.Choice(['toml', 'json', 'text']),
+              help='Output format: toml, json or plaintext')
+def main(sigfile, verbose, output_format):
     sig = Sigstruct.from_bytes(sigfile.read())
 
     sig_readable = {
@@ -37,7 +39,16 @@ def main(sigfile, verbose):
         for key in keys_to_remove:
             del sig_readable[key]
 
-    print(tomli_w.dumps(sig_readable))
+    if output_format == "toml":
+        print(tomli_w.dumps(sig_readable))
+    elif output_format == "json":
+        import json  # local import to allow Gramine installation without JSON installation
+        print(json.dumps(sig_readable, indent=4))
+    else:
+        # plaintext format imitates the legacy output of `gramine-sgx-get-token` tool
+        print('Attributes:')
+        for key, value in sig_readable.items():
+            print(f'    {key}: {value}')
 
 if __name__ == '__main__':
     main() # pylint: disable=no-value-for-parameter
