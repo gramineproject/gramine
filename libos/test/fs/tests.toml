@@ -10,6 +10,7 @@ manifests = [
   "copy_seq",
   "copy_whole",
   "delete",
+  "in_out_instruction_test",
   "multiple_writers",
   "open_close",
   "open_flags",
@@ -18,5 +19,4 @@ manifests = [
   "seek_tell_truncate",
   "stat",
   "truncate",
-  "in_out_instruction_test"
 ]
