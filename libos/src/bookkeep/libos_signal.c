@@ -479,7 +479,7 @@ static bool is_in_out(PAL_CONTEXT* context) {
                               };
     int num_opcodes = sizeof(opcodes)/sizeof(opcodes[0]);
     uint8_t* rip = (uint8_t*)context->rip;
-    for(int i=0;i<num_opcodes;i++) {
+    for(int i = 0; i < num_opcodes; i++) {
         if (rip[0] == opcodes[i]) {
             return true;
         }
