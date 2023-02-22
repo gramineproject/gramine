@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'clone3'
+    }
     stages {
         stage('makedist') {
             agent {
