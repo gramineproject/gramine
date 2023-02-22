@@ -11,13 +11,12 @@ import hashlib
 import os
 import pathlib
 import struct
-import subprocess
 
 import click
 
 from cryptography.hazmat import backends
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 import elftools.elf.elffile
 
@@ -27,6 +26,8 @@ from .sigstruct import Sigstruct
 
 import _graminelibos_offsets as offs # pylint: disable=import-error,wrong-import-order
 
+# TODO after deprecating 20.04: remove backend wrt
+# https://cryptography.io/en/latest/faq/#what-happened-to-the-backend-argument
 _cryptography_backend = backends.default_backend()
 
 # Default / Architectural Options
@@ -543,16 +544,49 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 
 
 @click.command(add_help_option=False)
+@click.pass_context
 @click.help_option('--help-file')
 @click.option('--key', '-k', metavar='FILE',
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
-def sign_with_file(key):
-    return functools.partial(sign_with_local_key, key=key), [key]
+def sign_with_file(ctx, key):
+    try:
+        private_key = load_private_key_from_pem_file(key)
+    except InvalidKeyError as e:
+        ctx.fail(str(e))
 
-def sign_with_local_key(data, key):
-    """Signs *data* using *key*.
+    return functools.partial(sign_with_private_key, private_key=private_key), [key.name]
+
+
+class InvalidKeyError(Exception):
+    pass
+
+
+def load_private_key_from_pem_file(file, passphrase=None):
+    with file:
+        private_key = serialization.load_pem_private_key(
+            file.read(), password=passphrase, backend=_cryptography_backend)
+
+    if not isinstance(private_key, rsa.RSAPrivateKey):
+        raise InvalidKeyError(
+            f'Invalid key: expected RSA private key, found {type(private_key).__name__} instance')
+
+    if not private_key.key_size != SGX_RSA_KEY_SIZE:
+        raise InvalidKeyError(
+            f'Invalid RSA key: expected key size {SGX_RSA_KEY_SIZE}, got {private_key.key_size}')
+
+    exponent = private_key.public_key().public_numbers().e
+
+    if exponent != SGX_RSA_PUBLIC_EXPONENT:
+        raise InvalidKeyError(
+            f'Invalid RSA key: expected exponent {SGX_RSA_PUBLIC_EXPONENT}, got {exponent}')
+
+    return private_key
+
+
+def sign_with_private_key(data, private_key):
+    """Signs *data* using *private_key*.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
     the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
@@ -560,27 +594,92 @@ def sign_with_local_key(data, key):
 
     Args:
         data (bytes): Data to calculate the signature over.
-        key (str): Path to a file with RSA private key.
+        private_key (cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey): RSA private key.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
+
+    See Also:
+        :func:`sign_with_private_key_from_pem_file`
+            This function also signs *data*, but the key argument is an already
+            opened file
+        :func:`sign_with_private_key_from_pem_path`
+            This function also signs *data*, but the key argument is path to a file, not a file-like
+            object
     """
-    proc = subprocess.Popen(
-        ['openssl', 'rsa', '-modulus', '-in', key, '-noout'],
-        stdout=subprocess.PIPE)
-    modulus_out, _ = proc.communicate()
-    modulus = bytes.fromhex(modulus_out[8:8+offs.SE_KEY_SIZE*2].decode())
 
-    proc = subprocess.Popen(
-        ['openssl', 'sha256', '-binary', '-sign', key],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    signature, _ = proc.communicate(data)
+    assert private_key.key_size == SGX_RSA_KEY_SIZE
+    public_numbers = private_key.public_key().public_numbers()
+    assert public_numbers.e == SGX_RSA_PUBLIC_EXPONENT
 
-    exponent_int = 3
-    modulus_int = int.from_bytes(modulus, byteorder='big')
-    signature_int = int.from_bytes(signature, byteorder='big')
+    # SDM vol. 3D pt. 4 38.13, description of SIGNATURE field:
+    #   The (3072-bit integer) SIGNATURE should be an RSA signature, where:
+    #   a) the RSA modulus (MODULUS) is a 3072- bit integer;
+    #   b) the public exponent is set to 3;
+    #   c) the signing procedure uses the EMSA-PKCS1-v1.5 format with DER encoding of the
+    #      “DigestInfo” value as specified in of PKCS#1 v2.1/RFC 3447.
+    # also see IACR 2016/086: section 6.5 and figure 76
+    signature = private_key.sign(data, padding.PKCS1v15(), hashes.SHA256())
 
-    return exponent_int, modulus_int, signature_int
+    return public_numbers.e, public_numbers.n, int.from_bytes(signature, byteorder='big')
+
+
+def sign_with_private_key_from_pem_file(data, file):
+    """Signs *data* using key loaded from *path*.
+
+    Function used to generate an RSA signature over provided data using a 3072-bit private key with
+    the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
+    Suitable to be used as a callback to :py:func:`graminelibos.Sigstruct.sign()`.
+
+    Args:
+        data (bytes): Data to calculate the signature over.
+        file (file-like): Path to a file with RSA private key.
+
+    Returns:
+        (int, int, int): Tuple of exponent, modulus and signature respectively.
+
+    See Also:
+        :func:`sign_with_private_key`
+            This function also signs *data*, but the key argument is
+            :class:`cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey` instance
+        :func:`sign_with_private_key_from_pem_path`
+            This function also signs *data*, but the key argument is path to a file, not a file-like
+            object
+    """
+    return sign_with_private_key(data, load_pem_private_key_from_file(file))
+
+
+def sign_with_private_key_from_pem_path(data, path):
+    """Signs *data* using key loaded from *path*.
+
+    Function used to generate an RSA signature over provided data using a 3072-bit private key with
+    the public exponent of 3 (hard Intel SGX requirement on the key size and the exponent).
+    Suitable to be used as a callback to :py:func:`graminelibos.Sigstruct.sign()`.
+
+    Args:
+        data (bytes): Data to calculate the signature over.
+        path (path-like): Path to a file with RSA private key.
+
+    Returns:
+        (int, int, int): Tuple of exponent, modulus and signature respectively.
+
+    See Also:
+        :func:`sign_with_private_key`
+            This function also signs *data*, but the key argument is
+            :class:`cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey` instance
+        :func:`sign_with_private_key_from_pem_file`
+            This function also signs *data*, but the key argument is an already
+            opened file
+    """
+
+    with open(key, 'rb') as file:
+        return sign_with_private_key_from_pem_file(data, file)
+
+
+# NOTE: the name and argument name of this function is kept for compatibility, *key* is path to
+# a PEM-encoded file, not a key object from cryptography module
+def sign_with_local_key(data, key):
+    return sign_with_private_key_from_pem_path(data, key)
 
 
 def generate_private_key():
@@ -593,6 +692,7 @@ def generate_private_key():
         public_exponent=SGX_RSA_PUBLIC_EXPONENT,
         key_size=SGX_RSA_KEY_SIZE,
         backend=_cryptography_backend)
+
 
 def generate_private_key_pem():
     """Generate PEM-encoded RSA key suitable for use with SGX
