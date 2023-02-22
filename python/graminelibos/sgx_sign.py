@@ -552,9 +552,11 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
-def sign_with_file(ctx, key):
+@click.option('--passphrase', '--password', '-p', metavar='PASSPHRASE',
+    help='optional passphrase to decrypt the key')
+def sign_with_file(ctx, key, passphrase):
     try:
-        private_key = load_pem_private_key_from_file(key)
+        private_key = load_pem_private_key_from_file(key, passphrase)
     except InvalidKeyError as e:
         ctx.fail(str(e))
 
@@ -589,7 +591,7 @@ def load_pem_private_key_from_file(file, passphrase=None):
 
 # NOTE: the name and argument name of this function is kept for compatibility, *key* is path to
 # a PEM-encoded file, not a key object from cryptography module
-def sign_with_local_key(data, key):
+def sign_with_local_key(data, key, passphrase=None):
     """Signs *data* using *key* loaded from file.
 
     Function used to generate an RSA signature over provided data using a 3072-bit private key with
@@ -599,6 +601,7 @@ def sign_with_local_key(data, key):
     Args:
         data (bytes): Data to calculate the signature over.
         key (str): Path to a file with RSA private key.
+        passphrase (str or None): Optional passphrase.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
@@ -610,7 +613,7 @@ def sign_with_local_key(data, key):
     """
 
     with open(key, 'rb') as file:
-        private_key = load_pem_private_key_from_file(file)
+        private_key = load_pem_private_key_from_file(file, passphrase)
 
     return sign_with_rsa_key(data, private_key)
 
