@@ -256,8 +256,6 @@ static int cmp_crt_pk_against_cbor_claim_hash_entry(mbedtls_x509_crt* crt,
     }
 
     switch (hash_alg_id) {
-        /* assume that RESERVED (ID = 0) means SHA256 */
-        case IANA_NAMED_INFO_HASH_ALG_REGISTRY_RESERVED:
         case IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA256:
             sha_size = SHA256_DIGEST_SIZE;
             break;
