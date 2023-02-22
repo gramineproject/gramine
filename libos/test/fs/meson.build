@@ -40,6 +40,7 @@ tests = {
     'multiple_writers': {
         'link_args': '-lpthread',
     },
+    'in_out_instruction_test': {},
     'open_close': {},
     'open_flags': {},
     'read_write': {},
@@ -47,7 +48,6 @@ tests = {
     'seek_tell_truncate': {},
     'stat': {},
     'truncate': {},
-    'in_out_instruction_test': {},
 }
 
 install_dir = join_paths(pkglibdir, 'tests', 'libos', 'fs')
