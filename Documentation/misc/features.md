@@ -2,24 +2,25 @@
 
 > :construction: This is a living document. The last major update happened in **Feb 2023**.
 
-Gramine strives to **support native, unmodified Linux applications**. The SGX backend additionally
-strives to **provide security guarantees**, in particular, protect against a malicious host OS.
+Gramine strives to **support native, unmodified Linux applications** on any platform. The SGX
+backend additionally strives to **provide security guarantees**, in particular, protect against a
+malicious host OS.
 
 Gramine **intercepts all application requests** to the host OS. Some of these requests are processed
 entirely inside Gramine, and some are forwarded to the host OS. Either way, each application's
-request and each host's reply is verified for correctness and consistency (for these verifications,
-Gramine maintains internal, "shadow" state).
+request and each host's reply is verified for correctness and consistency. For these verifications,
+Gramine maintains internal, "shadow" state.
 
 Gramine strives to be **100% compatible with the Linux kernel**, even when it deviates from
-standards like POSIX ("bug compatibility"). At the same time, Gramine is minimalistic, and
+standards like POSIX ("bug-for-bug compatibility"). At the same time, Gramine is minimalistic, and
 implements **only the most important subset of Linux functionality**, enough to run typical
 cloud-native applications.
 
 Features implemented in Gramine can be classified as:
 
-- **Linux features**: features can be supported, generally supported, with limited support, or not
-  supported at all in Gramine. If the feature is not supported, we also specify whether there are
-  plans to support it in the future (and if not, the rationale why not).
+- **Linux features**: features can be (1) supported, (2) generally supported, (3) with limited
+  support, or (4) not supported at all in Gramine. If the feature is not supported, we also specify
+  whether there are plans to support it in the future (and if not, the rationale why not).
 
   - Some features are **not supported by design**: either they increase the Trusted Computing Base
     (TCB) of Gramine disproportionately, or they cannot be implemented securely.
@@ -1450,8 +1451,10 @@ in the entrypoint of the manifest. The first process can spawn child processes, 
 same Gramine instance.
 
 Gramine can execute ELF binaries (executables and libraries) and scripts (aka shebangs). Gramine
-supports executing them as entrypoints and via `execve()` system call. In case of SGX backend,
-`execve()` execution replaces a calling program with a new program *in the same SGX enclave*.
+supports executing them as
+[entrypoints](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#libos-entrypoint) and
+via `execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program
+with a new program *in the same SGX enclave*.
 
 Gramine supports creating child processes using `fork()`, `vfork()` and `clone(..no CLONE_VM..)`
 system calls. `vfork()` is emulated via `fork()`. `clone(..no CLONE_VM..)` always means a separate
@@ -1467,8 +1470,9 @@ multiple threads) system calls. If there are child processes executing and the f
 Gramine currently does *not* kill child processes; this is however not a problem in practice because
 the host OS cleans up these orphaned children.
 
-All aforementioned system calls follow Linux semantics, bar the mentioned peculiarities. However,
-properties of processes not supported by Gramine (e.g. namespaces, pidfd, etc.) are ignored.
+All aforementioned system calls follow Linux semantics, barring the mentioned peculiarities.
+However, properties of processes not supported by Gramine (e.g. namespaces, pidfd, etc.) are
+ignored.
 
 Gramine does *not* support disassociating parts of the process execution context (via `unshare()`
 system call). Gramine does *not* support comparing two processes (via `kcmp()`).
