@@ -40,7 +40,6 @@ tests = {
     'multiple_writers': {
         'link_args': '-lpthread',
     },
-    'in_out_instruction_test': {},
     'open_close': {},
     'open_flags': {},
     'read_write': {},

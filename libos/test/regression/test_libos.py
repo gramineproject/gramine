@@ -73,6 +73,10 @@ class TC_01_Bootstrap(RegressionTestCase):
     def test_002_toml_parsing(self):
         stdout, _ = self.run_binary(['toml_parsing'])
         self.assertIn('Hello world!', stdout)
+    
+    def test_003_copy_in_out_ins_test(self):
+        stdout, stderr = self.run_binary(['in_out_instruction_test'])
+        self.assertIn('SIGSEGV TEST OK', stdout)
 
     def test_100_basic_bootstrapping(self):
         stdout, _ = self.run_binary(['bootstrap'])
@@ -518,7 +522,6 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
                 self.fail('test did not create a file')
         finally:
             os.remove('nonexisting_testfile')
-
 
 @unittest.skipUnless(HAS_SGX,
     'These tests are only meaningful on SGX PAL because only SGX supports attestation.')
