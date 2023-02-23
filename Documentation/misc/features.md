@@ -629,7 +629,7 @@ The below list is generated from the [syscall table of Linux
 - :x: `pivot_root()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x:`_sysctl()`
+- :x: `_sysctl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
 - :x: `prctl()`
@@ -1548,7 +1548,7 @@ option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size
 
 ### Process and thread identifiers
 
-Gramine fully supports the following indentifiers: Process IDs (PIDs), Parent Process IDs (PPIDs),
+Gramine fully supports the following identifiers: Process IDs (PIDs), Parent Process IDs (PPIDs),
 Thread IDs (TIDs). The corresponding system calls are `getpid()`, `getppid()`, `gettid()`,
 `set_tid_address()`.
 
@@ -1898,7 +1898,7 @@ pseudo-files" in the ["Process and thread identifiers" section](#process-and-thr
 
 ### User and group identifiers
 
-Gramine has dummy support for the following indentifiers:
+Gramine has dummy support for the following identifiers:
 - Real user ID (UID) and Real group ID (GID),
 - Effective user ID (EUID) and Effective group ID (EGID),
 - Saved set-user-ID (SUID) and Saved set-group-ID (SGID).
@@ -2063,7 +2063,7 @@ Gramine supports file flushes (via `fsync()` and `fdatasync()`). However, flushi
 metadata (`sync()` and `syncfs()`) is not supported. Similarly, `sync_file_range()` system call is
 currently not supported.
 
-Gramine support file truncation (via `truncate()` and `ftruncate()`). There is one exception
+Gramine supports file truncation (via `truncate()` and `ftruncate()`). There is one exception
 currently: shrinking encrypted files to arbitrary size is not supported (only shrink-to-zero is
 supported).
 
