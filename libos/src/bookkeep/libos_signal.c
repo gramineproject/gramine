@@ -459,7 +459,7 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
-static bool is_byte_prefix(uint8_t op) {
+static bool is_legacy_prefix(uint8_t op) {
     uint8_t prefix_list[] = {
                              /* Group 0 */ 
                              0xf0, /* LOCK prefix */
@@ -482,51 +482,58 @@ static bool is_byte_prefix(uint8_t op) {
                               * for the instruction(s) we are checking.
                               */
                             };
-    size_t num_prefixes = sizeof(prefix_list)/sizeof(*prefix_list);
-    for(int i = 0; i < num_prefixes; i++) {
+    size_t num_prefixes = ARRAY_SIZE(prefix_list);
+    for (size_t i = 0; i < num_prefixes; i++) {
         if (op == prefix_list[i])
             return true;
     }
     return false;
 }
 
-/* input: 
- *     context --> This holds the context for the exception that has occurred.
- * This function checks if the rip on which the exception is occuring is a valid 
- * opcode for in or out instruction.
- */
 static bool is_in_out(PAL_CONTEXT* context) {
-    unsigned char opcodes[] = {
-                               /*imm8 is an immediate value denoting port address */
-                               0xe4, /* IN AL,imm8 */ 
-                               0xe5, /* IN AX/EAX,imm8 */
-                               0xec, /* IN AL,DX */
-                               0xed, /*	IN AX/EAX,DX */
-                               /* Out instruction opcodes */
-                               0xe6, /* OUT imm8, AL */
-                               0xe7, /* OUT imm8, AX/EAX */
-                               0xee, /* OUT DX, AL */
-                               0xef, /* OUT DX, AX */
-                              };
-    int num_opcodes = sizeof(opcodes)/sizeof(*opcodes);
+    uint8_t opcodes[] = {
+                        /* INS opcodes */
+                        0x6c,
+                        0x6d,
+                        /* OUTS opcodes */
+                        0x6e,
+                        0x6f,
+                        /* IN immediate opcodes */
+                        0xe4,
+                        0xe5,
+                        /* OUT immediate opcodes */
+                        0xe6,
+                        0xe7,
+                        /* IN register opcodes */
+                        0xec,
+                        0xed,
+                        /* OUT register opcodes */
+                        0xee,
+                        0xef,                        
+                        };
+    size_t num_opcodes = ARRAY_SIZE(opcodes);
     uint8_t* rip = (uint8_t*)context->rip;
     size_t num_prefixes_to_check = 4;
     /* num_prefixes_found will store the actual opcode index in rip */
     size_t num_prefixes_found = 0;
-    for(int i = 0; i < num_prefixes_to_check; i++) {
-        bool is_prefix = is_byte_prefix(rip[i]);
+    for (size_t i = 0; i < num_prefixes_to_check; i++) {
+        bool is_prefix = is_legacy_prefix(rip[i]);
         num_prefixes_found += (is_prefix ? 1 : 0);
         if (!is_prefix) 
             break;
     }
-    assert(num_prefixes_found <= num_prefixes_to_check);
-    for(int i = 0; i < num_opcodes; i++) {
+    for (size_t i = 0; i < num_opcodes; i++) {
         if (rip[num_prefixes_found] == opcodes[i]) {
             return true;
         }
     }
     return false;
 }
+
+static bool maybe_raise_sigsegv(PAL_CONTEXT* context) {
+    return is_in_out(context);
+}
+
 
 static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
@@ -545,30 +552,28 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
 
     /* Emulate syscall instruction, which is prohibited in Linux-SGX PAL and raises a SIGILL. */
     if (!maybe_emulate_syscall(context)) {
-        /* IN/OUT instruction aren't allowed in SGX enclaves. Usually #GP hardware exception
-         * causes SIGSEGV and not SIGILL. This is required for lscpu to run. lscpu
-         * executes in/out and expects SIGSEGV. lscpu is sometimes required in applications
-         * that tries to get various information about cpus. This was required 
-         * in some tensorflow application and that made it necessary to support
-         * lscpu.
-         */
-        int signo;
-        int si_code;
-        if (is_in_out(context)) {
-            signo = SIGSEGV;
-            si_code = SEGV_MAPERR;
-        } else {
-            signo = SIGILL;
-            si_code = ILL_ILLOPC;
-        }
         void* rip = (void*)pal_context_get_ip(context);
-        log_debug("Illegal instruction (or legal but unsupported instruction "\
-                  "inside enclave) during app execution at %p; delivering to app", rip);
         siginfo_t info = {
-            .si_signo = signo,
-            .si_code = si_code,
+           .si_signo = SIGILL,
+           .si_code = ILL_ILLOPC,
             .si_addr = (void*)addr,
         };
+        if (maybe_raise_sigsegv(context)) {
+            /* Executing I/O instructions (e.g., in/out) inside an SGX enclave 
+             * generates a #UD fault. Gramine's PAL tries to handle this exception and
+             *  propogates it to LibOS/app as a SIGILL signal.
+             * 
+             * However, I/O instructions result in a #GP fault (which raises a SIGSEGV
+             * signal) if I/O is not permitted. Let Gramine emulate these instructions as
+             * if they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+             */ 
+            info.si_signo = SIGSEGV;
+            info.si_code = SEGV_MAPERR;
+            log_debug("Illegal instruction during app execution at %p, emulated as if throwing SIGSEGV;"
+                      " delivering to app", rip);
+        } else {
+            log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
+        }
         force_signal(&info);
         handle_signal(context);
     }
