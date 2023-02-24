@@ -98,8 +98,9 @@ static uint64_t get_tsc_hz_hypervisor(void) {
     hypervisor_id[0] = words[CPUID_WORD_EBX];
     hypervisor_id[1] = words[CPUID_WORD_ECX];
     hypervisor_id[2] = words[CPUID_WORD_EDX];
-    if (memcmp(hypervisor_id, "KVMKVMKVM\0\0\0", 12) && memcmp(hypervisor_id, "VMWareVMWare", 12)) {
-        /* QEMU/KVM, Cloud Hypervisor/KVM and VMWare expose TSC frequency in leaf 0x40000010 */
+    if (memcmp(hypervisor_id, "KVMKVMKVM\0\0\0", 12) != 0 &&
+            memcmp(hypervisor_id, "VMWareVMWare", 12) != 0) {
+        /* not a hypervisor that contains "virtual TSC frequency" in leaf 0x40000010 */
         return 0;
     }
 
