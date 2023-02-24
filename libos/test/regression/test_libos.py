@@ -6,6 +6,7 @@ import socket
 import subprocess
 import unittest
 
+import json
 import tomli
 
 from graminelibos.regression import (
@@ -423,9 +424,15 @@ class TC_01_Bootstrap(RegressionTestCase):
 
     @unittest.skipUnless(HAS_SGX, 'MRENCLAVE check is possible only with SGX')
     def test_703_debug_log_cmp_mrenclaves(self):
-        result = subprocess.run(['gramine-sgx-sigstruct-view', 'debug_log_inline.sig'],
-                                stdout=subprocess.PIPE, check=True)
+        result = subprocess.run(['gramine-sgx-sigstruct-view', '--output-format=toml',
+                                 'debug_log_inline.sig'], stdout=subprocess.PIPE, check=True)
         toml_dict = tomli.loads(result.stdout.decode())
+
+        result = subprocess.run(['gramine-sgx-sigstruct-view', '--output-format=json',
+                                 'debug_log_inline.sig'], stdout=subprocess.PIPE, check=True)
+        json_dict = json.loads(result.stdout.decode())
+
+        self.assertEqual(toml_dict, json_dict)
 
         _, stderr = self.run_binary(['debug_log_inline'])
         self.assertIn(f'debug:     mr_enclave:   {toml_dict["mr_enclave"]}', stderr)

@@ -6,6 +6,8 @@
 import hashlib
 
 import click
+import io
+import json
 import tomli_w
 
 from graminelibos import Sigstruct
@@ -13,14 +15,11 @@ from graminelibos import Sigstruct
 @click.command()
 @click.argument('sigfile', type=click.File('rb'), required=True)
 @click.option('--verbose/--quiet', '-v/-q', help='Display detailed information')
-@click.option('--output-format', default='toml', type=click.Choice(['toml', 'json', 'text']),
-              help='Output format: toml, json or plaintext')
-def main(sigfile, verbose, output_format):
-    if output_format == "json":
-        try:
-            import json  # local import to allow Gramine installation without JSON installation
-        except ImportError:
-            raise ImportError('Cannot import json Python package')
+@click.option('--output-format', default='text', type=click.Choice(['text', 'toml', 'json']),
+              help='Output format: plain text, toml or json')
+@click.argument('output', metavar='[FILE]', type=click.File('wb'), default='-')
+def main(sigfile, verbose, output_format, output):
+    output_txt = io.TextIOWrapper(output)
 
     sig = Sigstruct.from_bytes(sigfile.read())
 
@@ -46,14 +45,14 @@ def main(sigfile, verbose, output_format):
             del sig_readable[key]
 
     if output_format == "toml":
-        print(tomli_w.dumps(sig_readable))
+        tomli_w.dump(sig_readable, output)
     elif output_format == "json":
-        print(json.dumps(sig_readable, indent=4))
+        json.dump(sig_readable, output_txt, indent=4)
     else:
         # plaintext format imitates the legacy output of `gramine-sgx-get-token` tool
-        print('Attributes:')
+        print('Attributes:', file=output_txt)
         for key, value in sig_readable.items():
-            print(f'    {key}: {value}')
+            print(f'    {key}: {value}', file=output_txt)
 
 if __name__ == '__main__':
     main() # pylint: disable=no-value-for-parameter
