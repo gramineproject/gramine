@@ -4,10 +4,10 @@
 #                    Dmitrii Kuvaiskii <dmitrii.kuvaiskii@intel.com>
 
 import hashlib
-
-import click
 import io
 import json
+
+import click
 import tomli_w
 
 from graminelibos import Sigstruct
@@ -16,7 +16,7 @@ from graminelibos import Sigstruct
 @click.argument('sigfile', type=click.File('rb'), required=True)
 @click.option('--verbose/--quiet', '-v/-q', help='Display detailed information')
 @click.option('--output-format', default='text', type=click.Choice(['text', 'toml', 'json']),
-              help='Output format: plain text, toml or json')
+              help='Output format: plain text (unstable, should not be parsed), toml or json')
 @click.argument('output', metavar='[FILE]', type=click.File('wb'), default='-')
 def main(sigfile, verbose, output_format, output):
     output_txt = io.TextIOWrapper(output)
