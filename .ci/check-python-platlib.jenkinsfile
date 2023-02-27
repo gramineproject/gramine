@@ -1,0 +1,20 @@
+node() {
+    checkout scm
+
+    [
+        'debian11',
+        'ubuntu22.04',
+        'ubuntu20.04',
+        'ubuntu18.04',
+        'almalinux9',
+        'almalinux8',
+    ].each { distro ->
+        docker.build(
+            "local:${env.BUILD_TAG}", "-f .ci/check-python-platlib-${distro}.dockerfile ."
+        ).inside() {
+            sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            '''
+        }
+    }
+}
