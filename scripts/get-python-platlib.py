@@ -58,16 +58,24 @@ import distutils.sysconfig
 import distutils.util
 import pathlib
 import sys
+import sysconfig
 
 
 def get_platlib(prefix):
-    is_debian = 'deb_system' in distutils.command.install.INSTALL_SCHEMES
+    is_debian = (
+        'deb_system' in sysconfig.get_scheme_names() or
+        'deb_system' in distutils.command.install.INSTALL_SCHEMES)
 
     # this takes care of `/` at the end, though not `/usr/../usr/local`
     is_usr_local = pathlib.PurePosixPath(prefix).as_posix() == '/usr/local'
 
     if is_debian and is_usr_local:
-        # we have to compensate for Debian
+        # 1) try sysconfig; it works on bookworm and jammy
+        platlib1 = sysconfig.get_path('platlib')
+        if platlib1 in sys.path:
+            return platlib1
+
+        # 2) if system is too old for sysconfig, then distutils should work
         return distutils.util.subst_vars(
             distutils.command.install.INSTALL_SCHEMES['unix_local']['platlib'],
             {
