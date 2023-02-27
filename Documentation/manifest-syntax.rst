@@ -480,6 +480,11 @@ as RWX). Unfortunately it can negatively impact performance, as adding a page
 to the enclave at runtime is a more expensive operation than adding the page
 before enclave creation (because it involves more enclave exits and syscalls).
 
+When this feature is enabled, it is not necessary to specify
+``sgx.enclave_size`` (Gramine will automatically set it to 1TB which should be
+enough for any application). However if ``sgx.enclave_size`` is specified, this
+explicit value will take precedence.
+
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
@@ -489,12 +494,13 @@ Enclave size
 ::
 
     sgx.enclave_size = "[SIZE]"
-    (default: "256M")
+    (default: "256M" without EDMM, "1024G" with EDMM)
 
 This syntax specifies the size of the enclave set during enclave creation time
 if :term:`EDMM` is not enabled (``sgx.edmm_enable = false``) or the maximal
 size that the enclave can grow to if :term:`EDMM` is enabled
 (``sgx.edmm_enable = true``).
+
 The PAL and library OS code/data count towards this size value, as well as the
 application memory itself: application's code, stack, heap, loaded application
 libraries, etc. The application cannot allocate memory that exceeds this limit.
