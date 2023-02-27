@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    stages {
+        stage('debian11') {
+            agent { dockerfile { filename '.ci/check-python-platlib-debian11.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+        stage('ubuntu22.04') {
+            agent { dockerfile { filename '.ci/check-python-platlib-ubuntu22.04.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+        stage('ubuntu20.04') {
+            agent { dockerfile { filename '.ci/check-python-platlib-ubuntu20.04.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+        stage('ubuntu18.04') {
+            agent { dockerfile { filename '.ci/check-python-platlib-ubuntu18.04.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+        stage('almalinux9') {
+            agent { dockerfile { filename '.ci/check-python-platlib-almalinux9.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+        stage('almalinux8') {
+            agent { dockerfile { filename '.ci/check-python-platlib-almalinux8.dockerfile' } }
+            steps { sh '''
+                python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
+            ''' }
+        }
+    }
+}
