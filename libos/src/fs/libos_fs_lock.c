@@ -155,8 +155,13 @@ static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, stru
 
     struct posix_lock* cur;
     LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
-        if (cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
+        /* Resolve conflicts for `fcntl` locks */
+        if (pl->handle_id == 0 && cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
                && (cur->type == F_WRLCK || pl->type == F_WRLCK))
+            return cur;
+
+        /* Resolve conflicts for `flock` locks */
+        if (cur->handle_id != pl->handle_id && (cur->type == F_WRLCK || pl->type == F_WRLCK))
             return cur;
     }
     return NULL;
