@@ -1,13 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2023 Intel Labs */
 
-/*
- * Internal Secret Prov details, to be used by external Secret Prov implementations:
- *   - external implementation can call all funcs declared here.
- *
- * Note that external implementations must use static mbedTLS libraries (shipped together with
- * Gramine).
- */
+/* Internal Secret Prov details, not intended for external use. */
+
 #pragma once
 
 #include <stdint.h>

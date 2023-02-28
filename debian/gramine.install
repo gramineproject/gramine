@@ -19,7 +19,6 @@ usr/include/gramine/psa/*.h
 usr/include/gramine/ra_tls.h
 usr/include/gramine/ra_tls_common.h
 usr/include/gramine/secret_prov.h
-usr/include/gramine/secret_prov_common.h
 usr/include/gramine/sgx_arch.h
 usr/include/gramine/sgx_attest.h
 

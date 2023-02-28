@@ -4,8 +4,7 @@
 
 pkgconfig = import('pkgconfig')
 
-install_headers('ra_tls.h', 'ra_tls_common.h', 'secret_prov.h', 'secret_prov_common.h',
-                subdir : 'gramine')
+install_headers('ra_tls.h', 'ra_tls_common.h', 'secret_prov.h', subdir : 'gramine')
 
 libra_tls_inc = include_directories('.')
 
