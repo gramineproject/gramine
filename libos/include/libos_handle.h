@@ -47,21 +47,6 @@ enum libos_handle_type {
     TYPE_EVENTFD,    /* eventfd handles, used by `eventfd` filesystem */
 };
 
-struct libos_handle;
-struct libos_thread;
-struct libos_vma;
-
-enum libos_file_type {
-    FILE_UNKNOWN,
-    FILE_REGULAR,
-    FILE_DIR,
-    FILE_DEV,
-    FILE_TTY,
-};
-
-#define FILE_HANDLE_DATA(hdl)  ((hdl)->info.file.data)
-#define FILE_DENTRY_DATA(dent) ((struct libos_file_data*)(dent)->data)
-
 struct libos_pipe_handle {
     bool ready_for_ops; /* true for pipes, false for FIFOs that were mknod'ed but not open'ed */
     char name[PIPE_URI_SIZE];
@@ -144,9 +129,6 @@ struct libos_epoll_handle {
     size_t items_count;
     size_t last_returned_index;
 };
-
-struct libos_fs;
-struct libos_dentry;
 
 struct libos_handle {
     enum libos_handle_type type;
