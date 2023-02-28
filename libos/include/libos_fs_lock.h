@@ -42,6 +42,9 @@ struct posix_lock {
     /* Lock type: F_RDLCK, F_WRLCK, F_UNLCK */
     int type;
 
+    /* Handle to differentiate between `flock` and `fcntl` */
+    int handle_id;
+
     /* First byte of range */
     uint64_t start;
 

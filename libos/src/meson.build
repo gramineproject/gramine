@@ -80,6 +80,7 @@ libos_sources = files(
     'sys/libos_exit.c',
     'sys/libos_fcntl.c',
     'sys/libos_file.c',
+    'sys/libos_flock.c',
     'sys/libos_fork.c',
     'sys/libos_futex.c',
     'sys/libos_getcwd.c',
