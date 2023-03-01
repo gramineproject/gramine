@@ -2,6 +2,9 @@
 
 # Gramine features
 
+> :warning: This is a highly technical document, intended for software engineers with knowledge of
+> OS kernels.
+
 > :construction: This is a living document. The last major update happened in **Feb 2023**.
 
 Gramine strives to **support native, unmodified Linux applications** on any platform. The SGX
@@ -11,27 +14,36 @@ malicious host OS.
 Gramine **intercepts all application requests** to the host OS. Some of these requests are processed
 entirely inside Gramine, and some are forwarded to the host OS. Either way, each application's
 request and each host's reply is verified for correctness and consistency. For these verifications,
-Gramine maintains internal, "shadow" state.
+Gramine maintains internal, "shadow" state. Thus, Gramine defends against [Iago
+attacks](https://dl.acm.org/doi/10.1145/2490301.2451145).
 
 Gramine strives to be **100% compatible with the Linux kernel**, even when it deviates from
 standards like POSIX ("bug-for-bug compatibility"). At the same time, Gramine is minimalistic, and
-implements **only the most important subset of Linux functionality**, enough to run typical
-cloud-native applications.
+implements **only the most important subset of Linux functionality**, enough to run portable,
+hardware-independent applications.
+
+Gramine currently has two backends: direct execution on the host Linux OS (called `gramine-direct`)
+and execution inside an Intel SGX enclave (called `gramine-sgx`). If some feature has quirks and
+pecularities in some backend, we describe it explicitly. More backends are possible in the future.
 
 Features implemented in Gramine can be classified as:
 
-- **Linux features**: features can be (1) supported, (2) generally supported, (3) with limited
-  support, or (4) not supported at all in Gramine. If the feature is not supported, we also specify
-  whether there are plans to support it in the future (and if not, the rationale why not).
+- **Linux features**: features can be (1) implemented, (2) partially implemented, or (3) not
+  implemented at all in Gramine. If the feature is partially implemented, then we also document the
+  parts that are implemented and the parts that are implemented. If the feature is not implemented
+  at all, we also specify whether there are plans to implement it in the future (and if not, the
+  rationale why not).
 
-  - Some features are **not supported by design**: either they increase the Trusted Computing Base
+  - Some features are **not implemented by design**: either they increase the Trusted Computing Base
     (TCB) of Gramine disproportionately, or they cannot be implemented securely.
 
-  - Other features are **not supported because they are unused**: some Linux features are deprecated
-    or ill-conceived, and applications do not use them (or have fallbacks when these features are
-    not detected).
+  - Other features are **not implemented because they are unused**: some Linux features are
+    deprecated or ill-conceived, and applications do not use them (or have fallbacks when these
+    features are not detected).
 
-- **Gramine-specific features**: additional features, e.g., attestation primitives.
+- **Gramine-specific features**: additional features, e.g., attestation primitives. Note that this
+  document covers only APIs exposed to applications (like additional system calls and pseudo-files)
+  and doesn't cover Gramine features transparent to the app (exitless, ASLR, debugging, etc.).
 
 Each feature has a list of related system calls and pseudo-files, for cross-reference.
 
@@ -59,30 +71,14 @@ Similarly to Linux, Gramine provides two interfaces to user applications:
 
 - **Linux kernel-to-userspace ABI**, in particular, two standards:
 
-  - **System V ABI**: defines how applications invoke system calls and receive signals,
+  - **System V ABI**: defines how applications invoke system calls and receive signals.
   - **Executable and Linking Format (ELF)**: defines how applications are loaded from binary files.
-
-<details><summary>Gramine also has internal APIs, used by Gramine developers</summary>
-
-- Common routines (a subset of the C standard library) for string manipulation, filename resolution,
-  memory management. Examples: `strcmp()`, `malloc()`, `log_error()`, `get_base_name()`.
-
-- Crypto routines for hashing, encryption, key derivation, SSL/TLS session establishment. To
-  implement these crypto routines, Gramine statically links against mbedTLS. Examples:
-  `lib_SHA256Init()`, `lib_AESGCMEncrypt()`, `lib_SSLRead()`, `lib_HKDF_SHA256()`.
-
-- Data structures: doubly-linked lists, AVL trees, hash tables. Implemenations of lists and AVL
-  trees are home-grown. Implementation of hash tables is the `uthash` library.
-
-- Parsing of text files: TOML. Gramine statically links against the `tomlc99` library.
-
-</details>
 
 ---
 
 Legend:
 
-- :white_check_mark: fully implemented (no serious limitations)
+- :white_check_mark: implemented (no serious limitations)
 - :ballot_box_with_check: partially implemented (serious limitations or quirks)
 - :x: not implemented
 
@@ -100,7 +96,7 @@ world workloads.
 The below list is generated from the [syscall table of Linux
 6.0](https://github.com/torvalds/linux/blob/v6.0/arch/x86/entry/syscalls/syscall_64.tbl).
 
-<details><summary>:blue_book: List of all system calls in Gramine</summary>
+<details><summary>:blue_book: Status of system call support in Gramine</summary>
 
 - :white_check_mark: `read()`
   <sup>[1](#file-system-operations)</sup>
@@ -1503,10 +1499,10 @@ system call). Gramine does *not* support comparing two processes (via `kcmp()`).
 
 ### Threads
 
-Gramine supports multi-threading. In case of SGX backend, all threads of one Gramine process run in
-the same SGX enclave.
+Gramine implements multi-threading. In case of SGX backend, all threads of one Gramine process run
+in the same SGX enclave.
 
-Gramine supports per-thread:
+Gramine implements per-thread:
 - stack and signal (alternate) stack,
 - user/group IDs,
 - thread groups info,
@@ -1550,7 +1546,7 @@ option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size
 
 ### Process and thread identifiers
 
-Gramine fully supports the following identifiers: Process IDs (PIDs), Parent Process IDs (PPIDs),
+Gramine supports the following identifiers: Process IDs (PIDs), Parent Process IDs (PPIDs),
 Thread IDs (TIDs). The corresponding system calls are `getpid()`, `getppid()`, `gettid()`,
 `set_tid_address()`.
 
@@ -1561,7 +1557,7 @@ calls are `getpgid()`, `getpgrp()`, `setpgid()`.
 Gramine virtualizes process/thread identifiers. In other words, in-Gramine PIDs and TIDs have no
 correlation with host-OS PIDs and TIDs. Each Gramine instance starts a main process with PID 1.
 
-Gramine supports a subset of pseudo-files under `/proc/[pid]`: more pseudo-files for the current
+Gramine implements a subset of pseudo-files under `/proc/[pid]`: more pseudo-files for the current
 process (aka `/proc/self`) and its threads, less pseudo-files for remote processes (e.g. children),
 and no pseudo-files for remote threads. See the list under "Related pseudo-files".
 
@@ -1663,7 +1659,7 @@ To support CPU affinity masks and expose NUMA/CPU topology, Gramine implements
 
 ### Memory synchronization (futexes)
 
-Gramine largely implements futexes.
+Gramine partially implements futexes.
 
 Current implementation is limited to one process, i.e., threads calling the `futex()` system call on
 the same futex word must reside in the same process. Gramine does *not* support non-private futexes,
@@ -1707,8 +1703,7 @@ mappings, it depends on the type of file:
   `msync()` and `close()`).
 
 `MAP_LOCKED`, `MAP_NORESERVE`, `MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`,
-`MAP_HUGE_1GB` flags are ignored (allowed but have no effect).
-`MAP_SYNC` flag is not supported.
+`MAP_HUGE_1GB` flags are ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
@@ -1740,7 +1735,7 @@ Quick summary of other memory-management system calls:
   success).
 
 As can be seen from above, many performance-improving system calls, flags and features are currently
-*not* supported by Gramine. Keep it in mind when you observe application performance degradation.
+*not* implemented by Gramine. Keep it in mind when you observe application performance degradation.
 
 <details><summary>:blue_book: Related system calls</summary>
 
@@ -1778,14 +1773,14 @@ As can be seen from above, many performance-improving system calls, flags and fe
 
 Gramine implements most of the Linux IPC mechanisms. In particular:
 
-- :white_check_mark: Signals and process state changes: implemented
-- :white_check_mark: Pipes: implemented
-- :white_check_mark: FIFOs (named pipes): implemented
-- :ballot_box_with_check: UNIX domain sockets: implemented, with some limitations
-- :ballot_box_with_check: File locking: partially implemented
-- :x: Message queues: not implemented
-- :x: Semaphores: not implemented
-- :x: Shared memory: not implemented
+- :white_check_mark: Signals and process state changes
+- :white_check_mark: Pipes
+- :white_check_mark: FIFOs (named pipes)
+- :ballot_box_with_check: UNIX domain sockets
+- :ballot_box_with_check: File locking
+- :x: Message queues
+- :x: Semaphores
+- :x: Shared memory
 
 Gramine implements pipes, FIFOs and UNIX domain sockets (UDSes) via host-OS pipes. In case of SGX
 backend, all pipe, FIFO and UDS communication is transparently encrypted.
@@ -1825,7 +1820,7 @@ sections below.
 
 ### Signals and process state changes
 
-Gramine largely implements signals (see below for some limitations). For local signals (Gramine
+Gramine partially implements signals (see below for some limitations). For local signals (Gramine
 process signals itself, e.g. SIGABRT) and signals from the host OS (e.g. host sends SIGTERM),
 message passing is not involved. For process-to-process signals (e.g. child process sends SIGCHLD to
 the parent), message passing is used.
@@ -1964,7 +1959,7 @@ Gramine does *not* currently implement user/group ID fields in the `/proc/[pid]/
 
 ### File systems
 
-Gramine largely implements file system operations, but with several peculiarities and limitations.
+Gramine implements file system operations, but with several peculiarities and limitations.
 
 The most important peculiarity is that Gramine does *not* simply mirror the host OS's directory
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
@@ -2015,7 +2010,7 @@ General FS limitations in Gramine include:
 - no operations across mounts (e.g. no rename of file located in one mount to another one);
 - no synchronization of file offsets, file sizes, etc. between Gramine processes;
 - tmpfs mounts (in-memory file systems) are not shared by Gramine processes;
-- File timestamps (access, modified, change timestamps) are generally not set/updated.
+- File timestamps (access, modified, change timestamps) are not set/updated.
 
 <details><summary>:speech_balloon: Additional materials</summary>
 
@@ -2029,11 +2024,11 @@ task Gramine will tackle in the future. Below are some discussions and RFCs:
 
 </details>
 
-### File system operations
+#### File system operations
 
-Gramine supports all classic file system operations, but with limitations described below.
+Gramine implements all classic file system operations, but with limitations described below.
 
-Gramine generally supports opening files and directories (via `open()` and `openat()` system calls).
+Gramine supports opening files and directories (via `open()` and `openat()` system calls).
 `O_CLOEXEC`, `O_CREAT`, `O_DIRECTORY`, `O_EXCL`, `O_NOFOLLOW`, `O_PATH`, `O_TRUNC` flags are
 supported. Other flags are ignored. Notable ignored flags are `O_APPEND` (not yet implemented in
 Gramine) and `O_TMPFILE` (bug in Gramine: should not be silently ignored).
@@ -2088,13 +2083,13 @@ Gramine supports checking permissions on the file via `access()` and `faccessat(
 Recall however that users and groups are dummy in Gramine, thus the checks are also largely
 irrelevant.
 
-Gramine supports `sendfile()` system call. However, this system call is emulated in an inefficient
+Gramine implements `sendfile()` system call. However, this system call is emulated in an inefficient
 way (for simplicity). Pay attention to this if your application relies heavily on `sendfile()`.
 
 Gramine supports directory operations: `chdir()` and `fchdir()` to change the working directory, and
 `getcwd()` to get the current working directory.
 
-Gramine largely supports getting file status (information about files), via `stat()`, `lstat()`,
+Gramine partially supports getting file status (information about files), via `stat()`, `lstat()`,
 `fstat()`, `newfstatat()` system calls. The only fields populated in the output buffer are
 `st_mode`, `st_size`, `st_uid`, `st_gid`, `st_blksize` (with hard-coded value), `st_nlink` (with
 hard-coded value), `st_dev`, `st_ino`. Note that Gramine currently doesn't support links, so
@@ -2203,7 +2198,7 @@ Gramine currently does *not* support changing file access/modification times, vi
 
 </details>
 
-### File locking
+#### File locking
 
 File locking operations can be considered one of the IPC mechanisms, as discussed in ["Overview of
 Inter-Process Communication (IPC)" section](#overview-of-inter-process-communication-ipc). Thus,
@@ -2236,7 +2231,7 @@ Gramine does *not* currently implement the `flock()` system call.
 
 </details>
 
-### Monitoring filesystem events (inotify, fanotify)
+#### Monitoring filesystem events (inotify, fanotify)
 
 Gramine does *not* currently implement inotify and fanotify APIs. Gramine could implement them in
 the future, if need arises.
@@ -2252,7 +2247,7 @@ the future, if need arises.
 
 </details>
 
-### Hard links and soft links (symbolic links)
+#### Hard links and soft links (symbolic links)
 
 There are two notions that must be discussed separately:
 
@@ -2261,7 +2256,7 @@ There are two notions that must be discussed separately:
 2. In-Gramine links: Gramine has no support for links (i.e., applications cannot create links).
    - There is one exception: some pseudo-files like `/proc/[pid]/cwd` and `/proc/self`.
 
-The above means that Gramine does not support `link()` and `symlink()` system calls. Support for
+The above means that Gramine does not implement `link()` and `symlink()` system calls. Support for
 `readlink()` system call is limited to only pseudo-files' links mentioned above.
 
 Gramine may implement hard and soft links in the future.
@@ -2553,7 +2548,7 @@ UDSes support the following socket options:
 
 ### I/O multiplexing
 
-Gramine supports I/O multiplexing system calls: `select()`, `pselect6()`, `poll()`, `ppoll()`, as
+Gramine implements I/O multiplexing system calls: `select()`, `pselect6()`, `poll()`, `ppoll()`, as
 well as the epoll family of system calls (`epoll_*()`). All these system calls are emulated via the
 `ppoll()` Linux-host system call.
 
@@ -2567,7 +2562,7 @@ Edge-triggered and level-triggered events in epoll are supported (the `EPOLLET` 
 `EPOLLONESHOT`, `EPOLL_NEEDS_REARM` flags are supported. `EPOLLWAKEUP` flag is ignored because
 Gramine does not implement autosleep.
 
-Select and poll families of system calls are fully implemented in Gramine.
+Select and poll families of system calls are implemented in Gramine.
 
 Epoll family of system calls has the following limitations:
 - No sharing of an epoll instance between processes; updates in one process (e.g. adding an fd to be
@@ -2779,7 +2774,7 @@ hardware accelerators (e.g. GPUs):
 
 ### Date and time
 
-Gramine largely implements getting date/time: `gettimeofday()`, `time()`, `clock_gettime()`,
+Gramine partially implements getting date/time: `gettimeofday()`, `time()`, `clock_gettime()`,
 `clock_getres()` system calls.
 
 Gramine does *not* distinguish between different clocks available for `clock_gettime()` and
@@ -2792,8 +2787,8 @@ Gramine does *not* currently support getting process times (like user time, syst
 
 <details><summary>:warning: Note on trustworthiness of date/time on SGX</summary>
 
-In case of SGX backend, date/time cannot be generally trusted because it is queried from
-the possibly malicious host OS. There is currently no solution to this limitation.
+In case of SGX backend, date/time cannot be trusted because it is queried from the possibly
+malicious host OS. There is currently no solution to this limitation.
 
 </details>
 
@@ -2887,7 +2882,7 @@ these, only `nodename` is populated with host-provided name. The rest fields are
 Gramine has dummy support for setting hostname and domain name via `sethostname()` and
 `setdomainname()`. The set names are *not* propagated to the host OS or other Gramine processes.
 
-Gramine has minimal and largely dummy support for getting and setting resource limits, via
+Gramine has minimal and mostly dummy support for getting and setting resource limits, via
 `getrlimit()`, `setrlimit()`, `prlimit64()`. The `prlimit64()` syscall can be issued only on the
 current process. The following resources are supported:
 - `RLIMIT_CPU` -- dummy, no limit by default
@@ -3183,10 +3178,10 @@ Gramine](https://gramine.readthedocs.io/en/stable/attestation.html#low-level-dev
 
 > :warning: Below description assumes x86-64 architecture.
 
-Gramine fully implements the system-call entry point (analogous to the `SYSCALL` x86 instruction).
+Gramine implements the system-call entry point (analogous to the `SYSCALL` x86 instruction).
 Instead of performing a context switch from userland (ring-3) to kernelspace (ring-0), Gramine
 relies on the system call being routed directly into Gramine process. There are two paths how the
-application's system call requests ends up in Gramine emulation:
+application's system call requests end up in Gramine emulation:
 
 1. Fast path, through patched C standard library (e.g. Glibc or musl): Gramine ships patched Glibc
    and musl where raw `SYSCALL` instructions are replaced with function calls into Gramine's syscall
@@ -3214,7 +3209,7 @@ the System V ABI, and we assume that no sane application issues syscalls in a no
 manner. See [System V ABI docs, "Register Usage"](https://uclibc.org/docs/psABI-x86_64.pdf) for more
 information.
 
-Gramine fully supports Linux x86-64 signal frames.
+Gramine supports Linux x86-64 signal frames.
 
 ## Notes on application loading
 
