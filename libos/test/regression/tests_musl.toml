@@ -127,4 +127,5 @@ manifests = [
   "debug_regs_x86_64",
   "rdtsc",
   "sighandler_divbyzero",
+  "x86_64/iret_emulation",
 ]
