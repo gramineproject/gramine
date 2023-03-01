@@ -127,6 +127,7 @@ manifests = [
   "rdtsc",
   "bootstrap_cpp",
   "sighandler_divbyzero",
+  "x86_64/iret_emulation",
 ]
 
 [sgx]
