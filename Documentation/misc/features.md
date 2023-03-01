@@ -1,3 +1,5 @@
+<!-- Cannot render this doc in RestructedText as it has no support for nested inline markup. -->
+
 # Gramine features
 
 > :construction: This is a living document. The last major update happened in **Feb 2023**.
