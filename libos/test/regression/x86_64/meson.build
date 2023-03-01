@@ -31,7 +31,7 @@ endforeach
 if enable_musl
     meson.add_install_script(
         find_program('../install_musl_tests.sh'),
-        prefix / install_dir / 'musl' / 'x86_64',
+        prefix / pkglibdir / 'tests' / 'libos' / 'regression' / 'musl' / 'x86_64',
         musl_execs,
     )
 endif
