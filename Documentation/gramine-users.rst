@@ -34,10 +34,9 @@ alphabetically).
   universal, decentralized, confidential cloud computing platform. It enables
   easy deployment of a wide range of workloads - a rich ecosystem of
   interoperable solutions and services, including databases, web services,
-  ready-to-use applications, confidential data sources, and much more. Super
-  Protocol takes advantage of the open-source Gramine library OS, which works in
-  conjunction with Intel SGX to provide additional security benefits in Linux
-  environments.
+  confidential data sources, and much more. Super Protocol takes advantage of
+  the open-source Gramine library OS, which works in conjunction with Intel SGX
+  to provide additional security benefits in Linux environments.
 
 - `Tencent Cloud <https://intl.cloud.tencent.com/>`__ relies on Gramine to
   implement several SGX-based solutions by running unmodified Linux
