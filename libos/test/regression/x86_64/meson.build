@@ -8,6 +8,7 @@ tests = {
 
 install_dir = pkglibdir / 'tests' / 'libos' / 'regression' / 'x86_64'
 
+musl_execs = []
 foreach name, params : tests
     filenames = nasm_gen.process('@0@.nasm'.format(name))
 
@@ -24,4 +25,13 @@ foreach name, params : tests
         install: true,
         install_dir: install_dir,
     )
+    musl_execs += exe
 endforeach
+
+if enable_musl
+    meson.add_install_script(
+        find_program('../install_musl_tests.sh'),
+        prefix / install_dir / 'musl' / 'x86_64',
+        musl_execs,
+    )
+endif
