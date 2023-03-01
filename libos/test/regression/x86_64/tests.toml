@@ -1,0 +1,5 @@
+binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/entrypoint"
+
+manifests = [
+    'iret_emulation'
+]

@@ -24,6 +24,7 @@ stage('clean-check') {
         rm -rf linux-sgx-driver
 
         make -C libos/test/regression clean
+        make -C libos/test/regression/x86_64 clean
         make -C libos/test/fs clean
 
         gramine-test -C libos/test/abi/x86_64 clean

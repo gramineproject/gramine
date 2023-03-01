@@ -294,3 +294,5 @@ if enable_musl
         musl_execs,
     )
 endif
+
+subdir(host_machine.cpu_family())
