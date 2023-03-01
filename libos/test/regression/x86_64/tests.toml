@@ -1,4 +1,4 @@
-binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/entrypoint"
+binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/regression/x86_64"
 
 manifests = [
     'iret_emulation'
