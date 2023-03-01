@@ -17,4 +17,5 @@ clean:
 		testfile \
 		trusted_testfile \
 		tmp/* \
-		tmp_enc/*
+		tmp_enc/* \
+		x86_64/__pycache__
