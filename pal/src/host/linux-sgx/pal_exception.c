@@ -136,8 +136,7 @@ static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
 #endif
 
     if (FIRST_TIME()) {
-        log_warning("Emulating a raw iret instruction. This degrades performance, consider patching"
-                    " your application to use Gramine syscall API.");
+        log_warning("Emulating a raw iret instruction. This degrades performance.");
     }
 
     uc->rip = *(uint64_t*)(intptr_t)uc->rsp;
@@ -146,12 +145,12 @@ static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
     /* Assume that cs register doesn't change. */
 #ifdef DEBUG
     uint64_t cs = *(uint64_t*)(intptr_t)uc->rsp;
-    uint64_t curcs = 0;
+    uint64_t cur_cs = 0;
     __asm__ volatile (
         "movq %%cs, %0\n"
-        : "=r" (curcs)
+        : "=r"(cur_cs)
     );
-    assert(cs == curcs);
+    assert(cs == cur_cs);
 #endif
     uc->rsp += 8;
 
@@ -164,12 +163,12 @@ static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
     /* Assume that ss register doesn't change. */
 #ifdef DEBUG
     uint64_t ss = *(uint64_t*)(intptr_t)uc->rsp;
-    uint64_t curss = 0;
+    uint64_t cur_ss = 0;
     __asm__ volatile (
         "movq %%ss, %0\n"
-        : "=r" (curss)
+        : "=r"(cur_ss)
     );
-    assert(ss == curss);
+    assert(ss == cur_ss);
 #endif
     uc->rsp += 8;
 
@@ -204,7 +203,7 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
         return true;
     } else if (0x48 <= instr[0] && instr[0] <= 0x4F && instr[1] == 0xcf) {
         /*
-         * The IRETQ (interrupt return, 64-bit operand size), is prefixed with REX.W (bit 3).
+         * The IRETQ (interrupt return, 64-bit operand size) is prefixed with REX.W (bit 3).
          * From Intel manual:
          * REX prefixes are a set of 16 opcodes that span one row of the opcode map and occupy
          * entries 40H to 4FH.

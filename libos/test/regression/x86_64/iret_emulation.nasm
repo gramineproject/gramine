@@ -21,11 +21,11 @@ check_rflags:
 
 test_rflags:
     mov     rax, rsp
-    mov     rdx, ss            ; new ss, can't change
+    mov     rdx, ss            ; ss register can't change
     push    rdx
     push    rax                ; new rsp
     push    NEW_RFLAGS         ; new rflags
-    mov     rdx, cs            ; new cs, can't change
+    mov     rdx, cs            ; cs register can't change
     push    rdx
     push    check_rflags       ; new rip
     iretq
@@ -41,11 +41,11 @@ check_rsp:
 test_rsp:
     mov     rax, rsp
     mov     rdx, ss
-    push    rdx                ; new ss, can't change
+    push    rdx                ; ss register can't change
     mov     rdx, NEW_RSP_VALUE ; new rsp
     push    rdx
     push    0x00               ; new rflags
-    mov     rdx, cs            ; new cs, can't change
+    mov     rdx, cs            ; cs register can't change
     push    rdx
     push    check_rsp          ; new rip
     iretq

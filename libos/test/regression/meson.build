@@ -52,7 +52,6 @@ tests = {
     'host_root_fs': {},
     'hostname': {},
     'init_fail': {},
-    'iret_emulation': {},
     'keys': {},
     'kill_all': {},
     'large_dir_read': {},
