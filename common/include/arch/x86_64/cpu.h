@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 
@@ -50,6 +51,8 @@ enum extended_state_sub_leaf {
 #define CPU_BRAND_CNTD_LEAF              0x80000003
 #define CPU_BRAND_CNTD2_LEAF             0x80000004
 #define INVARIANT_TSC_LEAF               0x80000007
+
+bool is_x86_instr_legacy_prefix(uint8_t op);
 
 static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]) {
     __asm__("cpuid"

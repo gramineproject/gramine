@@ -73,10 +73,6 @@ class TC_01_Bootstrap(RegressionTestCase):
     def test_002_toml_parsing(self):
         stdout, _ = self.run_binary(['toml_parsing'])
         self.assertIn('Hello world!', stdout)
-    
-    def test_003_copy_in_out_ins_test(self):
-        stdout, stderr = self.run_binary(['in_out_instruction_test'])
-        self.assertIn('SIGSEGV TEST OK', stdout)
 
     def test_100_basic_bootstrapping(self):
         stdout, _ = self.run_binary(['bootstrap'])
@@ -1342,3 +1338,8 @@ class TC_92_avx(RegressionTestCase):
     def test_000_avx(self):
         stdout, _ = self.run_binary(['avx'])
         self.assertIn('TEST OK', stdout)
+
+class TC_93_In_Out(RegressionTestCase):
+    def test_000_in_out(self):
+        stdout, stderr = self.run_binary(['in_out_instruction_test'])
+        self.assertIn('SIGSEGV TEST OK', stdout)

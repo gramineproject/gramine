@@ -459,81 +459,36 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
-static bool is_legacy_prefix(uint8_t op) {
-    uint8_t prefix_list[] = {
-                             /* Group 0 */ 
-                             0xf0, /* LOCK prefix */
-                             0xf2, /* REPNE/REPNZ prefix */
-                             0xf3, /* REP or REPE/REPZ prefix */
-                             /* Group 1 */
-                             0x2e, /* CS segment override */
-                             0x36, /* SS segment override */
-                             0x3e, /* DS segment override */
-                             0x26, /* ES segment override */
-                             0x64, /* FS segment override */
-                             0x65, /* GS segment override */
-                             0x2e, /* Branch not taken */
-                             0x3e, /* Branch taken */
-                             /* Group 2 */ 
-                             0x66, /*  Operand-size override prefix */
-                             /* Group 3 */
-                             0x67, /* Address-size override prefix  */
-                             /* The rest of the prefixes aren't really applicable 
-                              * for the instruction(s) we are checking.
-                              */
-                            };
-    size_t num_prefixes = ARRAY_SIZE(prefix_list);
-    for (size_t i = 0; i < num_prefixes; i++) {
-        if (op == prefix_list[i])
-            return true;
-    }
-    return false;
-}
-
 static bool is_in_out(PAL_CONTEXT* context) {
     uint8_t opcodes[] = {
-                        /* INS opcodes */
-                        0x6c,
-                        0x6d,
-                        /* OUTS opcodes */
-                        0x6e,
-                        0x6f,
-                        /* IN immediate opcodes */
-                        0xe4,
-                        0xe5,
-                        /* OUT immediate opcodes */
-                        0xe6,
-                        0xe7,
-                        /* IN register opcodes */
-                        0xec,
-                        0xed,
-                        /* OUT register opcodes */
-                        0xee,
-                        0xef,                        
+                        0x6c, 0x6d, /* INS opcodes */
+                        0x6e, 0x6f, /* OUTS opcodes */
+                        0xe4, 0xe5, /* IN immediate opcodes */
+                        0xe6, 0xe7, /* OUT immediate opcodes */
+                        0xec, 0xed, /* IN register opcodes */
+                        0xee, 0xef, /* OUT register opcodes */
                         };
-    size_t num_opcodes = ARRAY_SIZE(opcodes);
     uint8_t* rip = (uint8_t*)context->rip;
-    size_t num_prefixes_to_check = 4;
-    /* num_prefixes_found will store the actual opcode index in rip */
-    size_t num_prefixes_found = 0;
-    for (size_t i = 0; i < num_prefixes_to_check; i++) {
-        bool is_prefix = is_legacy_prefix(rip[i]);
-        num_prefixes_found += (is_prefix ? 1 : 0);
-        if (!is_prefix) 
-            break;
-    }
-    for (size_t i = 0; i < num_opcodes; i++) {
-        if (rip[num_prefixes_found] == opcodes[i]) {
+    size_t idx = 0;
+    while (is_x86_instr_legacy_prefix(rip[idx]) && idx < 4)
+        idx++;
+    for (size_t i = 0; i < ARRAY_SIZE(opcodes); i++)
+        if (rip[idx] == opcodes[i])
             return true;
-        }
-    }
     return false;
 }
 
 static bool maybe_raise_sigsegv(PAL_CONTEXT* context) {
+    /* Executing I/O instructions (e.g., in/out) inside an SGX enclave
+     * generates a #UD fault. Gramine's PAL tries to handle this exception and
+     * propogates it to LibOS/app as a SIGILL signal.
+     *
+     * However, I/O instructions result in a #GP fault (which raises a SIGSEGV
+     * signal) if I/O is not permitted. Let Gramine emulate these instructions
+     * as if they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+     */
     return is_in_out(context);
 }
-
 
 static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
@@ -559,18 +514,10 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
             .si_addr = (void*)addr,
         };
         if (maybe_raise_sigsegv(context)) {
-            /* Executing I/O instructions (e.g., in/out) inside an SGX enclave 
-             * generates a #UD fault. Gramine's PAL tries to handle this exception and
-             *  propogates it to LibOS/app as a SIGILL signal.
-             * 
-             * However, I/O instructions result in a #GP fault (which raises a SIGSEGV
-             * signal) if I/O is not permitted. Let Gramine emulate these instructions as
-             * if they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
-             */ 
             info.si_signo = SIGSEGV;
             info.si_code = SEGV_MAPERR;
-            log_debug("Illegal instruction during app execution at %p, emulated as if throwing SIGSEGV;"
-                      " delivering to app", rip);
+            log_debug("Illegal instruction during app execution at %p, emulated as if "
+                      "throwing SIGSEGV; delivering to app", rip);
         } else {
             log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
         }
