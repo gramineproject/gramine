@@ -19,6 +19,7 @@
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_process.h"
+#include "libos_rwlock.h"
 #include "libos_signal.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
@@ -148,7 +149,9 @@ static int init_main_thread(void) {
         return -ESRCH;
     }
     g_process.pid = cur_thread->tid;
-    __atomic_store_n(&g_process.pgid, g_process.pid, __ATOMIC_RELEASE);
+    rwlock_write_lock(&g_process_id_lock);
+    g_process.pgid = g_process.pid;
+    rwlock_write_unlock(&g_process_id_lock);
 
     int64_t uid_int64;
     ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/0, &uid_int64);

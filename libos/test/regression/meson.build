@@ -115,6 +115,7 @@ tests = {
     'shared_object': {
         'pie': true,
     },
+    'sid': {},
     'sigaction_per_process': {},
     'sigaltstack': {},
     'sighandler_reset': {},

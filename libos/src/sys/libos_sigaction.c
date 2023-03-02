@@ -15,6 +15,7 @@
 #include "libos_ipc.h"
 #include "libos_lock.h"
 #include "libos_process.h"
+#include "libos_rwlock.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_utils.h"
@@ -373,7 +374,9 @@ int do_kill_proc(IDTYPE sender, IDTYPE pid, int sig) {
 }
 
 int do_kill_pgroup(IDTYPE sender, IDTYPE pgid, int sig) {
-    IDTYPE current_pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
+    rwlock_read_lock(&g_process_id_lock);
+    IDTYPE current_pgid = g_process.pgid;
+    rwlock_read_unlock(&g_process_id_lock);
     if (!pgid) {
         pgid = current_pgid;
     }

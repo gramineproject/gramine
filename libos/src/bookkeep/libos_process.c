@@ -9,6 +9,7 @@
 #include "libos_handle.h"
 #include "libos_lock.h"
 #include "libos_process.h"
+#include "libos_rwlock.h"
 #include "libos_signal.h"
 #include "libos_thread.h"
 #include "list.h"
@@ -16,15 +17,20 @@
 typedef bool (*child_cmp_t)(const struct libos_child_process*, unsigned long);
 
 struct libos_process g_process = { .pid = 0 };
+struct libos_rwlock g_process_id_lock;
 
 int init_process(void) {
+    /* If init_* function fails, then the whole process should die, so we do not need to clean-up
+     * on errors. */
+    if (!rwlock_create(&g_process_id_lock)) {
+        return -ENOMEM;
+    }
+
     if (g_process.pid) {
         /* `g_process` is already initialized, e.g. via checkpointing code. */
         return 0;
     }
 
-    /* If init_* function fails, then the whole process should die, so we do not need to clean-up
-     * on errors. */
     if (!create_lock(&g_process.children_lock)) {
         return -ENOMEM;
     }
@@ -34,6 +40,8 @@ int init_process(void) {
 
     /* `pid` and `pgid` are initialized together with the first thread. */
     g_process.ppid = 0;
+
+    g_process.sid = 0;
 
     INIT_LISTP(&g_process.children);
     INIT_LISTP(&g_process.zombies);
@@ -242,6 +250,7 @@ BEGIN_CP_FUNC(process_description) {
     new_process->pid = process->pid;
     new_process->ppid = process->ppid;
     new_process->pgid = process->pgid;
+    new_process->sid = process->sid;
 
     /* copy cmdline (used by /proc/[pid]/cmdline) from the current process */
     char* new_cmdline = (char*)(base + ADD_CP_OFFSET(g_process.cmdline_size));

@@ -101,6 +101,7 @@ manifests = [
   "send_handle",
   "shadow_pseudo_fs",
   "shared_object",
+  "sid",
   "sigaction_per_process",
   "sigaltstack",
   "sighandler_reset",

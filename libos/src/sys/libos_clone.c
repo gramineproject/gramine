@@ -9,6 +9,7 @@
 #include "libos_internal.h"
 #include "libos_ipc.h"
 #include "libos_lock.h"
+#include "libos_rwlock.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
@@ -163,15 +164,18 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct libos
     }
 
     lock(&g_process.fs_lock);
+    rwlock_read_lock(&g_process_id_lock);
     struct libos_process process_description = {
         .pid = thread->tid,
         .ppid = g_process.pid,
-        .pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE),
+        .pgid = g_process.pgid,
+        .sid = g_process.sid,
         .root = g_process.root,
         .cwd = g_process.cwd,
         .umask = g_process.umask,
         .exec = g_process.exec,
     };
+    rwlock_read_unlock(&g_process_id_lock);
 
     get_dentry(process_description.root);
     get_dentry(process_description.cwd);

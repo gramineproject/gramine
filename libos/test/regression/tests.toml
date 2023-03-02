@@ -100,6 +100,7 @@ manifests = [
   "shared_object",
   "shadow_pseudo_fs",
   "shebang_test_script",
+  "sid",
   "sigaction_per_process",
   "sigaltstack",
   "sighandler_reset",
