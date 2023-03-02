@@ -2,10 +2,9 @@
 
 # Gramine features
 
-> :warning: This is a highly technical document, intended for software engineers with knowledge of
-> OS kernels.
+> ⚠ Highly technical document intended for software engineers with knowledge of OS kernels.
 
-> :construction: This is a living document. The last major update happened in **Feb 2023**.
+> ⛏ This is a living document. The last major update happened in **Feb 2023**.
 
 Gramine strives to **support native, unmodified Linux applications** on any platform. The SGX
 backend additionally strives to **provide security guarantees**, in particular, protect against a
@@ -78,9 +77,9 @@ Similarly to Linux, Gramine provides two interfaces to user applications:
 
 Legend:
 
-- :white_check_mark: implemented (no serious limitations)
-- :ballot_box_with_check: partially implemented (serious limitations or quirks)
-- :x: not implemented
+- ☑ implemented (no serious limitations)
+- ☐ partially implemented (serious limitations or quirks)
+- ☒ not implemented
 
 ## List of system calls
 
@@ -96,45 +95,45 @@ world workloads.
 The below list is generated from the [syscall table of Linux
 6.0](https://github.com/torvalds/linux/blob/v6.0/arch/x86/entry/syscalls/syscall_64.tbl).
 
-<details><summary>:blue_book: Status of system call support in Gramine</summary>
+<details><summary>Status of system call support in Gramine</summary>
 
-- :white_check_mark: `read()`
+- ☑ `read()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `write()`
+- ☑ `write()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
-- :ballot_box_with_check: `open()`
+- ☐ `open()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `close()`
+- ☑ `close()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
-- :ballot_box_with_check: `stat()`
+- ☐ `stat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `fstat()`
+- ☐ `fstat()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `lstat()`
+- ☐ `lstat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `poll()`
+- ☐ `poll()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -142,63 +141,63 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :ballot_box_with_check: `lseek()`
+- ☐ `lseek()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `mmap()`
+- ☐ `mmap()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `mprotect()`
+- ☐ `mprotect()`
   <sup>[1](#memory-management)</sup>
 
-- :white_check_mark: `munmap()`
+- ☑ `munmap()`
   <sup>[1](#memory-management)</sup>
 
-- :white_check_mark: `brk()`
+- ☑ `brk()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#system-information-and-resource-accounting)</sup>
 
-- :white_check_mark: `rt_sigaction()`
+- ☑ `rt_sigaction()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `rt_sigprocmask()`
+- ☑ `rt_sigprocmask()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `rt_sigreturn()`
+- ☑ `rt_sigreturn()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :ballot_box_with_check: `ioctl()`
+- ☐ `ioctl()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
   <sup>[2](#tcpip-and-udpip-sockets)</sup>
   <sup>[3](#unix-domain-sockets)</sup>
   <sup>[4](#ioctls)</sup>
 
-- :white_check_mark: `pread64()`
+- ☑ `pread64()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `pwrite64()`
+- ☑ `pwrite64()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `readv()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-
-- :white_check_mark: `writev()`
+- ☑ `readv()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `access()`
+- ☑ `writev()`
+  <sup>[1](#file-system-operations)</sup>
+  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[4](#unix-domain-sockets)</sup>
+
+- ☐ `access()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `pipe()`
+- ☑ `pipe()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- :ballot_box_with_check: `select()`
+- ☐ `select()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -206,599 +205,599 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `sched_yield()`
+- ☑ `sched_yield()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `mremap()`
+- ☒ `mremap()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `msync()`
+- ☐ `msync()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `mincore()`
+- ☐ `mincore()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `madvise()`
+- ☐ `madvise()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `shmget()`
+- ☒ `shmget()`
   <sup>[1](#shared-memory)</sup>
 
-- :x: `shmat()`
+- ☒ `shmat()`
   <sup>[1](#shared-memory)</sup>
 
-- :x: `shmctl()`
+- ☒ `shmctl()`
   <sup>[1](#shared-memory)</sup>
 
-- :white_check_mark: `dup()`
+- ☑ `dup()`
   <sup>[1](#misc)</sup>
 
-- :white_check_mark: `dup2()`
+- ☑ `dup2()`
   <sup>[1](#misc)</sup>
 
-- :white_check_mark: `pause()`
+- ☑ `pause()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `nanosleep()`
+- ☑ `nanosleep()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :ballot_box_with_check: `getitimer()`
+- ☐ `getitimer()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :white_check_mark: `alarm()`
+- ☑ `alarm()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :ballot_box_with_check: `setitimer()`
+- ☐ `setitimer()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :white_check_mark: `getpid()`
+- ☑ `getpid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :ballot_box_with_check: `sendfile()`
+- ☐ `sendfile()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `socket()`
+- ☐ `socket()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `connect()`
+- ☑ `connect()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `accept()`
+- ☑ `accept()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `sendto()`
+- ☐ `sendto()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `recvfrom()`
+- ☐ `recvfrom()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `sendmsg()`
+- ☐ `sendmsg()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `recvmsg()`
+- ☐ `recvmsg()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `shutdown()`
+- ☑ `shutdown()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `bind()`
+- ☑ `bind()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `listen()`
+- ☑ `listen()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `getsockname()`
+- ☑ `getsockname()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `getpeername()`
+- ☑ `getpeername()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `socketpair()`
+- ☑ `socketpair()`
   <sup>[1](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `setsockopt()`
+- ☑ `setsockopt()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `getsockopt()`
+- ☑ `getsockopt()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :white_check_mark: `clone()`
+- ☑ `clone()`
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
-- :white_check_mark: `fork()`
+- ☑ `fork()`
   <sup>[1](#processes)</sup>
 
-- :white_check_mark: `vfork()`
+- ☑ `vfork()`
   <sup>[1](#processes)</sup>
 
-- :white_check_mark: `execve()`
+- ☑ `execve()`
   <sup>[1](#processes)</sup>
 
-- :white_check_mark: `exit()`
+- ☑ `exit()`
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
-- :ballot_box_with_check: `wait4()`
+- ☐ `wait4()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :ballot_box_with_check: `kill()`
+- ☐ `kill()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :ballot_box_with_check: `uname()`
+- ☐ `uname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :x: `semget()`
+- ☒ `semget()`
   <sup>[1](#semaphores)</sup>
 
-- :x: `semop()`
+- ☒ `semop()`
   <sup>[1](#semaphores)</sup>
 
-- :x: `semctl()`
+- ☒ `semctl()`
   <sup>[1](#semaphores)</sup>
 
-- :x: `shmdt()`
+- ☒ `shmdt()`
   <sup>[1](#shared-memory)</sup>
 
-- :x: `msgget()`
+- ☒ `msgget()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `msgsnd()`
+- ☒ `msgsnd()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `msgrcv()`
+- ☒ `msgrcv()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `msgctl()`
+- ☒ `msgctl()`
   <sup>[1](#message-queues)</sup>
 
-- :ballot_box_with_check: `fcntl()`
+- ☐ `fcntl()`
   <sup>[1](#file-locking)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#misc)</sup>
 
-- :x: `flock()`
+- ☒ `flock()`
   <sup>[1](#file-locking)</sup>
 
-- :white_check_mark: `fsync()`
+- ☑ `fsync()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `fdatasync()`
+- ☑ `fdatasync()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `truncate()`
+- ☐ `truncate()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `ftruncate()`
+- ☐ `ftruncate()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `getdents()`
+- ☑ `getdents()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `getcwd()`
+- ☑ `getcwd()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `chdir()`
+- ☑ `chdir()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `fchdir()`
+- ☑ `fchdir()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `rename()`
+- ☐ `rename()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `mkdir()`
+- ☑ `mkdir()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `rmdir()`
+- ☑ `rmdir()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `creat()`
+- ☑ `creat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `link()`
+- ☒ `link()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :white_check_mark: `unlink()`
+- ☑ `unlink()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `symlink()`
+- ☒ `symlink()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :ballot_box_with_check: `readlink()`
+- ☐ `readlink()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :white_check_mark: `chmod()`
+- ☑ `chmod()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `fchmod()`
+- ☑ `fchmod()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `chown()`
+- ☐ `chown()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `fchown()`
+- ☐ `fchown()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `lchown()`
+- ☒ `lchown()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :white_check_mark: `umask()`
+- ☑ `umask()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `gettimeofday()`
+- ☑ `gettimeofday()`
   <sup>[1](#date-and-time)</sup>
   <sup>[2](#misc)</sup>
 
-- :ballot_box_with_check: `getrlimit()`
+- ☐ `getrlimit()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :x: `getrusage()`
+- ☒ `getrusage()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :ballot_box_with_check: `sysinfo()`
+- ☐ `sysinfo()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :x: `times()`
+- ☒ `times()`
   <sup>[1](#date-and-time)</sup>
 
-- :x: `ptrace()`
+- ☒ `ptrace()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `getuid()`
+- ☐ `getuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `syslog()`
+- ☒ `syslog()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `getgid()`
+- ☐ `getgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `setuid()`
+- ☐ `setuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `setgid()`
+- ☐ `setgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `geteuid()`
+- ☐ `geteuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `getegid()`
+- ☐ `getegid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `setpgid()`
+- ☐ `setpgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :white_check_mark: `getppid()`
+- ☑ `getppid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :ballot_box_with_check: `getpgrp()`
+- ☐ `getpgrp()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :x: `setsid()`
+- ☒ `setsid()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `setreuid()`
+- ☒ `setreuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `setregid()`
+- ☒ `setregid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `getgroups()`
+- ☐ `getgroups()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `setgroups()`
+- ☐ `setgroups()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `setresuid()`
+- ☒ `setresuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `getresuid()`
+- ☒ `getresuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `setresgid()`
+- ☒ `setresgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `getresgid()`
+- ☒ `getresgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :ballot_box_with_check: `getpgid()`
+- ☐ `getpgid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :x: `setfsuid()`
+- ☒ `setfsuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `setfsgid()`
+- ☒ `setfsgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- :x: `getsid()`
+- ☒ `getsid()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `capget()`
+- ☒ `capget()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `capset()`
+- ☒ `capset()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :white_check_mark: `rt_sigpending()`
+- ☑ `rt_sigpending()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `rt_sigtimedwait()`
+- ☑ `rt_sigtimedwait()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `rt_sigqueueinfo()`
+- ☒ `rt_sigqueueinfo()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `rt_sigsuspend()`
+- ☑ `rt_sigsuspend()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `sigaltstack()`
+- ☑ `sigaltstack()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `utime()`
+- ☒ `utime()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `mknod()`
+- ☐ `mknod()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- :x: `uselib()`
+- ☒ `uselib()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `personality()`
+- ☒ `personality()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `ustat()`
+- ☒ `ustat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `statfs()`
+- ☐ `statfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `fstatfs()`
+- ☐ `fstatfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `sysfs()`
+- ☒ `sysfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `getpriority()`
+- ☐ `getpriority()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `setpriority()`
+- ☐ `setpriority()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_setparam()`
+- ☐ `sched_setparam()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_getparam()`
+- ☐ `sched_getparam()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_setscheduler()`
+- ☐ `sched_setscheduler()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_getscheduler()`
+- ☐ `sched_getscheduler()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_get_priority_max()`
+- ☐ `sched_get_priority_max()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_get_priority_min()`
+- ☐ `sched_get_priority_min()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `sched_rr_get_interval()`
+- ☐ `sched_rr_get_interval()`
   <sup>[1](#scheduling)</sup>
 
-- :ballot_box_with_check: `mlock()`
+- ☐ `mlock()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `munlock()`
+- ☐ `munlock()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `mlockall()`
+- ☐ `mlockall()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `munlockall()`
+- ☐ `munlockall()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `vhangup()`
+- ☒ `vhangup()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `modify_ldt()`
+- ☒ `modify_ldt()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `pivot_root()`
+- ☒ `pivot_root()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `_sysctl()`
+- ☒ `_sysctl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `prctl()`
+- ☒ `prctl()`
   <sup>[1](#threads)</sup>
 
-- :ballot_box_with_check: `arch_prctl()`
+- ☐ `arch_prctl()`
   <sup>[1](#threads)</sup>
 
-- :x: `adjtimex()`
+- ☒ `adjtimex()`
   <sup>[1](#date-and-time)</sup>
 
-- :ballot_box_with_check: `setrlimit()`
+- ☐ `setrlimit()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :white_check_mark: `chroot()`
+- ☑ `chroot()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `sync()`
+- ☒ `sync()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `acct()`
+- ☒ `acct()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `settimeofday()`
+- ☒ `settimeofday()`
   <sup>[1](#date-and-time)</sup>
 
-- :x: `mount()`
+- ☒ `mount()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `umount2()`
+- ☒ `umount2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `swapon()`
+- ☒ `swapon()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `swapoff()`
+- ☒ `swapoff()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `reboot()`
+- ☒ `reboot()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `sethostname()`
+- ☐ `sethostname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :ballot_box_with_check: `setdomainname()`
+- ☐ `setdomainname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :x: `iopl()`
+- ☒ `iopl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `ioperm()`
+- ☒ `ioperm()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `create_module()`
+- ☒ `create_module()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `init_module()`
+- ☒ `init_module()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `delete_module()`
+- ☒ `delete_module()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `get_kernel_syms()`
+- ☒ `get_kernel_syms()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `query_module()`
+- ☒ `query_module()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x:`quotactl()`
+- ☒`quotactl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `nfsservctl()`
+- ☒ `nfsservctl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `getpmsg()`
+- ☒ `getpmsg()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `putpmsg()`
+- ☒ `putpmsg()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `afs_syscall()`
+- ☒ `afs_syscall()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `tuxcall()`
+- ☒ `tuxcall()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `security()`
+- ☒ `security()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :white_check_mark: `gettid()`
+- ☑ `gettid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :x: `readahead()`
+- ☒ `readahead()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `setxattr()`
+- ☒ `setxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `lsetxattr()`
+- ☒ `lsetxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fsetxattr()`
+- ☒ `fsetxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `getxattr()`
+- ☒ `getxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `lgetxattr()`
+- ☒ `lgetxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fgetxattr()`
+- ☒ `fgetxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `listxattr()`
+- ☒ `listxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `llistxattr()`
+- ☒ `llistxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `flistxattr()`
+- ☒ `flistxattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `removexattr()`
+- ☒ `removexattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `lremovexattr()`
+- ☒ `lremovexattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fremovexattr()`
+- ☒ `fremovexattr()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `tkill()`
+- ☐ `tkill()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :white_check_mark: `time()`
+- ☑ `time()`
   <sup>[1](#date-and-time)</sup>
 
-- :ballot_box_with_check: `futex()`
+- ☐ `futex()`
   <sup>[1](#memory-synchronization-futexes)</sup>
 
-- :white_check_mark: `sched_setaffinity()`
+- ☑ `sched_setaffinity()`
   <sup>[1](#scheduling)</sup>
 
-- :white_check_mark: `sched_getaffinity()`
+- ☑ `sched_getaffinity()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `set_thread_area()`
+- ☒ `set_thread_area()`
   <sup>[1](#threads)</sup>
 
-- :x: `io_setup()`
+- ☒ `io_setup()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_destroy()`
+- ☒ `io_destroy()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_getevents()`
+- ☒ `io_getevents()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_submit()`
+- ☒ `io_submit()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_cancel()`
+- ☒ `io_cancel()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `get_thread_area()`
+- ☒ `get_thread_area()`
   <sup>[1](#threads)</sup>
 
-- :x: `lookup_dcookie()`
+- ☒ `lookup_dcookie()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :white_check_mark: `epoll_create()`
+- ☑ `epoll_create()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -806,55 +805,55 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :x: `remap_file_pages()`
+- ☒ `remap_file_pages()`
   <sup>[1](#memory-management)</sup>
 
-- :white_check_mark: `getdents64()`
+- ☑ `getdents64()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `set_tid_address()`
+- ☑ `set_tid_address()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- :x: `restart_syscall()`
+- ☒ `restart_syscall()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `semtimedop()`
+- ☒ `semtimedop()`
   <sup>[1](#semaphores)</sup>
 
-- :ballot_box_with_check: `fadvise64()`
+- ☐ `fadvise64()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `timer_create()`
+- ☒ `timer_create()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `timer_settime()`
+- ☒ `timer_settime()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `timer_gettime()`
+- ☒ `timer_gettime()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `timer_getoverrun()`
+- ☒ `timer_getoverrun()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `timer_delete()`
+- ☒ `timer_delete()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `clock_settime()`
+- ☒ `clock_settime()`
   <sup>[1](#date-and-time)</sup>
 
-- :ballot_box_with_check: `clock_gettime()`
+- ☐ `clock_gettime()`
   <sup>[1](#date-and-time)</sup>
 
-- :ballot_box_with_check: `clock_getres()`
+- ☐ `clock_getres()`
   <sup>[1](#date-and-time)</sup>
 
-- :ballot_box_with_check: `clock_nanosleep()`
+- ☐ `clock_nanosleep()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :white_check_mark: `exit_group()`
+- ☑ `exit_group()`
   <sup>[1](#processes)</sup>
 
-- :white_check_mark: `epoll_wait()`
+- ☑ `epoll_wait()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -862,7 +861,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `epoll_ctl()`
+- ☑ `epoll_ctl()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -870,115 +869,115 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `tgkill()`
+- ☑ `tgkill()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `utimes()`
+- ☒ `utimes()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `vserver()`
+- ☒ `vserver()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `mbind()`
+- ☐ `mbind()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `set_mempolicy()`
+- ☒ `set_mempolicy()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `get_mempolicy()`
+- ☒ `get_mempolicy()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `mq_open()`
+- ☒ `mq_open()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `mq_unlink()`
+- ☒ `mq_unlink()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `mq_timedsend()`
+- ☒ `mq_timedsend()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `mq_timedreceive()`
+- ☒ `mq_timedreceive()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `mq_notify()`
+- ☒ `mq_notify()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `mq_getsetattr()`
+- ☒ `mq_getsetattr()`
   <sup>[1](#message-queues)</sup>
 
-- :x: `kexec_load()`
+- ☒ `kexec_load()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `waitid()`
+- ☐ `waitid()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `add_key()`
+- ☒ `add_key()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `request_key()`
+- ☒ `request_key()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `keyctl()`
+- ☒ `keyctl()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `ioprio_set()`
+- ☒ `ioprio_set()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `ioprio_get()`
+- ☒ `ioprio_get()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `inotify_init()`
+- ☒ `inotify_init()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :x: `inotify_add_watch()`
+- ☒ `inotify_add_watch()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :x: `inotify_rm_watch()`
+- ☒ `inotify_rm_watch()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :x: `migrate_pages()`
+- ☒ `migrate_pages()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `openat()`
+- ☐ `openat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `mkdirat()`
+- ☑ `mkdirat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `mknodat()`
+- ☐ `mknodat()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- :ballot_box_with_check: `fchownat()`
+- ☐ `fchownat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `futimesat()`
+- ☒ `futimesat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `newfstatat()`
+- ☐ `newfstatat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `unlinkat()`
+- ☑ `unlinkat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `renameat()`
+- ☐ `renameat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `linkat()`
+- ☒ `linkat()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :x: `symlinkat()`
+- ☒ `symlinkat()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :ballot_box_with_check: `readlinkat()`
+- ☐ `readlinkat()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :white_check_mark: `fchmodat()`
+- ☑ `fchmodat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `faccessat()`
+- ☐ `faccessat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `pselect6()`
+- ☐ `pselect6()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -986,7 +985,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :ballot_box_with_check: `ppoll()`
+- ☐ `ppoll()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -994,35 +993,35 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :x: `unshare()`
+- ☒ `unshare()`
   <sup>[1](#processes)</sup>
   <sup>[2](#advanced-unimplemented-features)</sup>
 
-- :white_check_mark: `set_robust_list()`
+- ☑ `set_robust_list()`
   <sup>[1](#memory-synchronization-futexes)</sup>
 
-- :white_check_mark: `get_robust_list()`
+- ☑ `get_robust_list()`
   <sup>[1](#memory-synchronization-futexes)</sup>
 
-- :x: `splice()`
+- ☒ `splice()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `tee()`
+- ☒ `tee()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `sync_file_range()`
+- ☒ `sync_file_range()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `vmsplice()`
+- ☒ `vmsplice()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `move_pages()`
+- ☒ `move_pages()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `utimensat()`
+- ☒ `utimensat()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `epoll_pwait()`
+- ☐ `epoll_pwait()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -1030,35 +1029,35 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :x: `signalfd()`
+- ☒ `signalfd()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `timerfd_create()`
+- ☒ `timerfd_create()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :ballot_box_with_check: `eventfd()`
+- ☐ `eventfd()`
   <sup>[1](#event-notifications-eventfd)</sup>
 
-- :ballot_box_with_check: `fallocate()`
+- ☐ `fallocate()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `timerfd_settime()`
+- ☒ `timerfd_settime()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :x: `timerfd_gettime()`
+- ☒ `timerfd_gettime()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- :white_check_mark: `accept4()`
+- ☑ `accept4()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :x: `signalfd4()`
+- ☒ `signalfd4()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :ballot_box_with_check: `eventfd2()`
+- ☐ `eventfd2()`
   <sup>[1](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `epoll_create1()`
+- ☑ `epoll_create1()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -1066,192 +1065,192 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :white_check_mark: `dup3()`
+- ☑ `dup3()`
   <sup>[1](#misc)</sup>
 
-- :ballot_box_with_check: `pipe2()`
+- ☐ `pipe2()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- :x: `inotify_init1()`
+- ☒ `inotify_init1()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :white_check_mark: `preadv()`
+- ☑ `preadv()`
   <sup>[1](#file-system-operations)</sup>
 
-- :white_check_mark: `pwritev()`
+- ☑ `pwritev()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `rt_tgsigqueueinfo()`
+- ☒ `rt_tgsigqueueinfo()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `perf_event_open()`
+- ☒ `perf_event_open()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `recvmmsg()`
+- ☐ `recvmmsg()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :x: `fanotify_init()`
+- ☒ `fanotify_init()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :x: `fanotify_mark()`
+- ☒ `fanotify_mark()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- :ballot_box_with_check: `prlimit64()`
+- ☐ `prlimit64()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- :x: `name_to_handle_at()`
+- ☒ `name_to_handle_at()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `open_by_handle_at()`
+- ☒ `open_by_handle_at()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `clock_adjtime()`
+- ☒ `clock_adjtime()`
   <sup>[1](#date-and-time)</sup>
 
-- :x: `syncfs()`
+- ☒ `syncfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- :ballot_box_with_check: `sendmmsg()`
+- ☐ `sendmmsg()`
   <sup>[1](#tcpip-and-udpip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- :x: `setns()`
+- ☒ `setns()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :ballot_box_with_check: `getcpu()`
+- ☐ `getcpu()`
   <sup>[1](#scheduling)</sup>
   <sup>[2](#misc)</sup>
 
-- :x: `process_vm_readv()`
+- ☒ `process_vm_readv()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `process_vm_writev()`
+- ☒ `process_vm_writev()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `kcmp()`
+- ☒ `kcmp()`
   <sup>[1](#processes)</sup>
 
-- :x: `finit_module()`
+- ☒ `finit_module()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `sched_setattr()`
+- ☒ `sched_setattr()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `sched_getattr()`
+- ☒ `sched_getattr()`
   <sup>[1](#scheduling)</sup>
 
-- :x: `renameat2()`
+- ☒ `renameat2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `seccomp()`
+- ☒ `seccomp()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :white_check_mark: `getrandom()`
+- ☑ `getrandom()`
   <sup>[1](#randomness)</sup>
 
-- :x: `memfd_create()`
+- ☒ `memfd_create()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `kexec_file_load()`
+- ☒ `kexec_file_load()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `bpf()`
+- ☒ `bpf()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `execveat()`
+- ☒ `execveat()`
   <sup>[1](#processes)</sup>
 
-- :x: `userfaultfd()`
+- ☒ `userfaultfd()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `membarrier()`
+- ☒ `membarrier()`
   <sup>[1](#memory-management)</sup>
 
-- :ballot_box_with_check: `mlock2()`
+- ☐ `mlock2()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `copy_file_range()`
+- ☒ `copy_file_range()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `preadv2()`
+- ☒ `preadv2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `pwritev2()`
+- ☒ `pwritev2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `pkey_mprotect()`
+- ☒ `pkey_mprotect()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `pkey_alloc()`
+- ☒ `pkey_alloc()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `pkey_free()`
+- ☒ `pkey_free()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `statx()`
+- ☒ `statx()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `io_pgetevents()`
+- ☒ `io_pgetevents()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `rseq()`
+- ☒ `rseq()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `pidfd_send_signal()`
+- ☒ `pidfd_send_signal()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `io_uring_setup()`
+- ☒ `io_uring_setup()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_uring_enter()`
+- ☒ `io_uring_enter()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `io_uring_register()`
+- ☒ `io_uring_register()`
   <sup>[1](#asynchronous-io)</sup>
 
-- :x: `open_tree()`
+- ☒ `open_tree()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `move_mount()`
+- ☒ `move_mount()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `fsopen()`
+- ☒ `fsopen()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fsconfig()`
+- ☒ `fsconfig()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fsmount()`
+- ☒ `fsmount()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `fspick()`
+- ☒ `fspick()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `pidfd_open()`
+- ☒ `pidfd_open()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `clone3()`
+- ☒ `clone3()`
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
-- :x: `close_range()`
+- ☒ `close_range()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `openat2()`
+- ☒ `openat2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `pidfd_getfd()`
+- ☒ `pidfd_getfd()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- :x: `faccessat2()`
+- ☒ `faccessat2()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `process_madvise()`
+- ☒ `process_madvise()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#signals-and-process-state-changes)</sup>
 
-- :x: `epoll_pwait2()`
+- ☒ `epoll_pwait2()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
   <sup>[3](#tcpip-and-udpip-sockets)</sup>
@@ -1259,35 +1258,35 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#io-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- :x: `mount_setattr()`
+- ☒ `mount_setattr()`
   <sup>[1](#file-system-operations)</sup>
 
-- :x: `quotactl_fd()`
+- ☒ `quotactl_fd()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `landlock_create_ruleset()`
+- ☒ `landlock_create_ruleset()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `landlock_add_rule()`
+- ☒ `landlock_add_rule()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `landlock_restrict_self()`
+- ☒ `landlock_restrict_self()`
   <sup>[1](#advanced-unimplemented-features)</sup>
 
-- :x: `memfd_secret()`
+- ☒ `memfd_secret()`
   <sup>[1](#memory-management)</sup>
 
-- :x: `process_mrelease()`
+- ☒ `process_mrelease()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#signals-and-process-state-changes)</sup>
 
-- :x: `futex_waitv()`
+- ☒ `futex_waitv()`
   <sup>[1](#memory-synchronization-futexes)</sup>
 
-- :x: `set_mempolicy_home_node()`
+- ☒ `set_mempolicy_home_node()`
   <sup>[1](#memory-management)</sup>
 
-</details>
+</details><br />
 
 ## List of pseudo-files
 
@@ -1296,149 +1295,149 @@ Gramine partially emulates Linux pseudo-filesystems: `/dev`, `/proc` and `/sys`.
 Only a subset of most widely used pseudo-files is implemented. The list of implemented pseudo-files
 grows with time, as Gramine adds functionality required by real world workloads.
 
-<details><summary>:page_facing_up: List of all pseudo-files in Gramine</summary>
+<details><summary>List of all pseudo-files in Gramine</summary>
 
-- :white_check_mark: `/dev/` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+- ☑ `/dev/` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[2](#semaphores)</sup> <sup>[3](#shared-memory)</sup> <sup>[4](#attestation)</sup>
 
-  - :white_check_mark: `/dev/attestation/` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/attestation_type` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/user_report_data` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/target_info` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/my_target_info` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/report` <sup>[1](#attestation)</sup>
-    - :white_check_mark: `/dev/attestation/keys` <sup>[1](#attestation)</sup>
-      - :white_check_mark: `/dev/attestation/keys/<key_name>` <sup>[1](#attestation)</sup>
-    - :ballot_box_with_check: `/dev/attestation/protected_files_key`
+  - ☑ `/dev/attestation/` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/attestation_type` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/user_report_data` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/target_info` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/my_target_info` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/report` <sup>[1](#attestation)</sup>
+    - ☑ `/dev/attestation/keys` <sup>[1](#attestation)</sup>
+      - ☑ `/dev/attestation/keys/<key_name>` <sup>[1](#attestation)</sup>
+    - ☐ `/dev/attestation/protected_files_key`
       <sup>[1](#attestation)</sup>
-  - :white_check_mark: `/dev/null` <sup>[1](#misc)</sup>
-  - :white_check_mark: `/dev/zero` <sup>[1](#misc)</sup>
-  - :white_check_mark: `/dev/random` <sup>[1](#randomness)</sup>
-  - :white_check_mark: `/dev/urandom` <sup>[1](#randomness)</sup>
-  - :x: `/dev/shm` <sup>[1](#semaphores)</sup> <sup>[2](#shared-memory)</sup>
-  - :white_check_mark: `/dev/stdin` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
-  - :white_check_mark: `/dev/stdout` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
-  - :white_check_mark: `/dev/stderr` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/null` <sup>[1](#misc)</sup>
+  - ☑ `/dev/zero` <sup>[1](#misc)</sup>
+  - ☑ `/dev/random` <sup>[1](#randomness)</sup>
+  - ☑ `/dev/urandom` <sup>[1](#randomness)</sup>
+  - ☒ `/dev/shm` <sup>[1](#semaphores)</sup> <sup>[2](#shared-memory)</sup>
+  - ☑ `/dev/stdin` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stdout` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stderr` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- :ballot_box_with_check: `/proc/`
+- ☐ `/proc/`
   <sup>[1](#process-and-thread-identifiers)</sup>
   <sup>[2](#user-and-group-identifiers)</sup>
   <sup>[3](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[4](#system-information-and-resource-accounting)</sup>
   <sup>[5](#tcpip-and-udpip-sockets)</sup> <sup>[6](#unix-domain-sockets)</sup>
-  - :ballot_box_with_check: `/proc/[this-pid]/` (aka `/proc/self/`)
+  - ☐ `/proc/[this-pid]/` (aka `/proc/self/`)
     <sup>[1](#process-and-thread-identifiers)</sup>
     <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[this-pid]/cmdline` <sup>[1](#process-and-thread-identifiers)</sup>
-    - :white_check_mark: `/proc/[this-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/cmdline` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[this-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[this-pid]/fd` <sup>[1](#process-and-thread-identifiers)</sup>
-    - :white_check_mark: `/proc/[this-pid]/maps` <sup>[1](#process-and-thread-identifiers)</sup>
-    - :white_check_mark: `/proc/[this-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/fd` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/maps` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :ballot_box_with_check: `/proc/[this-pid]/stat`
+    - ☐ `/proc/[this-pid]/stat`
       <sup>[1](#process-and-thread-identifiers)</sup>
-    - :ballot_box_with_check: `/proc/[this-pid]/statm`
+    - ☐ `/proc/[this-pid]/statm`
       <sup>[1](#process-and-thread-identifiers)</sup>
-    - :ballot_box_with_check: `/proc/[this-pid]/status`
+    - ☐ `/proc/[this-pid]/status`
       <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#user-and-group-identifiers)</sup>
-    - :white_check_mark: `/proc/[this-pid]/task` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/task` <sup>[1](#process-and-thread-identifiers)</sup>
 
-  - :ballot_box_with_check: `/proc/[remote-pid]/`
+  - ☐ `/proc/[remote-pid]/`
     <sup>[1](#process-and-thread-identifiers)</sup>
     <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[remote-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[remote-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[remote-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[remote-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - :white_check_mark: `/proc/[remote-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[remote-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
 
-  - :ballot_box_with_check: `/proc/[local-tid]/`
+  - ☐ `/proc/[local-tid]/`
     <sup>[1](#process-and-thread-identifiers)</sup>
 
-  - :x: `/proc/[remote-tid]/` <sup>[1](#process-and-thread-identifiers)</sup>
+  - ☒ `/proc/[remote-tid]/` <sup>[1](#process-and-thread-identifiers)</sup>
 
-  - :ballot_box_with_check: `/proc/cpuinfo`
+  - ☐ `/proc/cpuinfo`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-  - :ballot_box_with_check: `/proc/meminfo`
+  - ☐ `/proc/meminfo`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-  - :ballot_box_with_check: `/proc/stat`
+  - ☐ `/proc/stat`
     <sup>[1](#system-information-and-resource-accounting)</sup>
 
-  - :ballot_box_with_check: `/proc/sys/`
+  - ☐ `/proc/sys/`
     <sup>[1](#process-and-thread-identifiers)</sup>
     <sup>[2](#tcpip-and-udpip-sockets)</sup> <sup>[3](#unix-domain-sockets)</sup>
-    - :ballot_box_with_check: `/proc/sys/kernel/`
+    - ☐ `/proc/sys/kernel/`
       <sup>[1](#process-and-thread-identifiers)</sup>
-      - :white_check_mark: `/proc/sys/kernel/pid_max`
+      - ☑ `/proc/sys/kernel/pid_max`
         <sup>[1](#process-and-thread-identifiers)</sup>
-    - :x: `/proc/sys/net/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+    - ☒ `/proc/sys/net/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
       <sup>[2](#unix-domain-sockets)</sup>
-      - :x: `/proc/sys/net/core/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
-      - :x: `/proc/sys/net/ipv4/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
-      - :x: `/proc/sys/net/ipv6/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
-      - :x: `/proc/sys/net/unix/` <sup>[1](#unix-domain-sockets)</sup>
+      - ☒ `/proc/sys/net/core/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv4/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv6/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/unix/` <sup>[1](#unix-domain-sockets)</sup>
 
-- :ballot_box_with_check: `/sys/devices/system/`
+- ☐ `/sys/devices/system/`
   <sup>[1](#system-information-and-resource-accounting)</sup>
-  - :ballot_box_with_check: `/sys/devices/system/cpu/`
+  - ☐ `/sys/devices/system/cpu/`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-    - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/`
+    - ☐ `/sys/devices/system/cpu/cpu[x]/`
       <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
+      - ☐ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/physical_line_partition`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/physical_line_partition`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/shared_cpu_map`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/shared_cpu_map`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/online`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/online`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/topology/`
+      - ☐ `/sys/devices/system/cpu/cpu[x]/topology/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/core_id`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_id`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
+        - ☑ `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-    - :white_check_mark: `/sys/devices/system/cpu/online`
+    - ☑ `/sys/devices/system/cpu/online`
       <sup>[1](#system-information-and-resource-accounting)</sup>
-    - :white_check_mark: `/sys/devices/system/cpu/possible`
+    - ☑ `/sys/devices/system/cpu/possible`
       <sup>[1](#system-information-and-resource-accounting)</sup>
 
-  - :ballot_box_with_check: `/sys/devices/system/node/`
+  - ☐ `/sys/devices/system/node/`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-    - :ballot_box_with_check: `/sys/devices/system/node/node[x]/`
+    - ☐ `/sys/devices/system/node/node[x]/`
       <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :white_check_mark: `/sys/devices/system/node/node[x]/cpumap`
+      - ☑ `/sys/devices/system/node/node[x]/cpumap`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :white_check_mark: `/sys/devices/system/node/node[x]/distance`
+      - ☑ `/sys/devices/system/node/node[x]/distance`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :white_check_mark: `/sys/devices/system/node/node[x]/hugepages/`
+      - ☑ `/sys/devices/system/node/node[x]/hugepages/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-        - :ballot_box_with_check:
+        - ☐
           `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-      - :ballot_box_with_check: `/sys/devices/system/node/node[x]/meminfo`
+      - ☐ `/sys/devices/system/node/node[x]/meminfo`
         <sup>[1](#system-information-and-resource-accounting)</sup>
 
-</details>
+</details><br />
 
 ## Linux features
 
@@ -1475,27 +1474,27 @@ ignored.
 Gramine does *not* support disassociating parts of the process execution context (via `unshare()`
 system call). Gramine does *not* support comparing two processes (via `kcmp()`).
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `execve()`
-- :x: `execveat()`: not used by applications
-- :white_check_mark: `clone()`: except exotic combination `CLONE_VM & !CLONE_THREAD`
-- :white_check_mark: `fork()`
-- :white_check_mark: `vfork()`: with the same semantics as `fork()`
-- :white_check_mark: `exit()`
-- :white_check_mark: `exit_group()`
-- :x: `clone3()`: not used by applications
-- :x: `unshare()`: not used by applications
-- :x: `kcmp()`: not used by applications
+- ☑ `execve()`
+- ☒ `execveat()`: not used by applications
+- ☑ `clone()`: except exotic combination `CLONE_VM & !CLONE_THREAD`
+- ☑ `fork()`
+- ☑ `vfork()`: with the same semantics as `fork()`
+- ☑ `exit()`
+- ☑ `exit_group()`
+- ☒ `clone3()`: not used by applications
+- ☒ `unshare()`: not used by applications
+- ☒ `kcmp()`: not used by applications
 
 </details>
 
-<details><summary>:speech_balloon: Additional materials</summary>
+<details><summary>Additional materials</summary>
 
 - `LD_LIBRARY_PATH` environment variable is always propagated into new process, see
   https://github.com/gramineproject/graphene/issues/2081.
 
-</details>
+</details><br />
 
 ### Threads
 
@@ -1519,7 +1518,7 @@ arch-specific (x86-specific) thread state via `arch_prctl(ARCH_GET_FS)` and
 `arch_prctl(ARCH_SET_FS)`. Note that Gramine does *not* allow `arch_prctl(ARCH_GET_GS)` and
 `arch_prctl(ARCH_SET_GS)` -- the GS register is reserved for Gramine internal usage.
 
-<details><summary>:warning: Note on thread's stack size</summary>
+<details><summary>Note on thread's stack size</summary>
 
 Gramine sets the same stack size for each thread. In other words, Gramine does *not* support
 dynamically-growing stacks (as Linux does). The stack size in Gramine can be configured via the
@@ -1528,21 +1527,21 @@ option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `clone()`: must have combination `CLONE_VM | CLONE_THREAD`
-- :white_check_mark: `exit()`
-- :x: `get_thread_area()`: not used by applications
-- :x: `set_thread_area()`: not used by applications
-- :x: `prctl()`: not used by applications
-- :ballot_box_with_check: `arch_prctl()`: only x86-specific subset of flags
-  - :white_check_mark: `ARCH_GET_FS`
-  - :white_check_mark: `ARCH_SET_FS`
-  - :x: `ARCH_GET_GS`
-  - :x: `ARCH_SET_GS`
-- :x: `clone3()`: not used by applications
+- ☑ `clone()`: must have combination `CLONE_VM | CLONE_THREAD`
+- ☑ `exit()`
+- ☒ `get_thread_area()`: not used by applications
+- ☒ `set_thread_area()`: not used by applications
+- ☒ `prctl()`: not used by applications
+- ☐ `arch_prctl()`: only x86-specific subset of flags
+  - ☑ `ARCH_GET_FS`
+  - ☑ `ARCH_SET_FS`
+  - ☒ `ARCH_GET_GS`
+  - ☒ `ARCH_SET_GS`
+- ☒ `clone3()`: not used by applications
 
-</details>
+</details><br />
 
 ### Process and thread identifiers
 
@@ -1561,54 +1560,54 @@ Gramine implements a subset of pseudo-files under `/proc/[pid]`: more pseudo-fil
 process (aka `/proc/self`) and its threads, less pseudo-files for remote processes (e.g. children),
 and no pseudo-files for remote threads. See the list under "Related pseudo-files".
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `getpid()`
-- :white_check_mark: `getppid()`
-- :white_check_mark: `gettid()`
-- :white_check_mark: `set_tid_address()`
+- ☑ `getpid()`
+- ☑ `getppid()`
+- ☑ `gettid()`
+- ☑ `set_tid_address()`
 
-- :ballot_box_with_check: `getpgid()`: dummy, see above
-- :ballot_box_with_check: `setpgid()`: dummy, see above
-- :ballot_box_with_check: `getpgrp()`: dummy, see above
+- ☐ `getpgid()`: dummy, see above
+- ☐ `setpgid()`: dummy, see above
+- ☐ `getpgrp()`: dummy, see above
 
 </details>
 
-<details><summary>:page_facing_up: Related pseudo-files</summary>
+<details><summary>Related pseudo-files</summary>
 
-- :ballot_box_with_check: `/proc/[this-pid]/` (aka `/proc/self/`):
+- ☐ `/proc/[this-pid]/` (aka `/proc/self/`):
   only most important files implemented
-  - :white_check_mark: `/proc/[this-pid]/cmdline`
-  - :white_check_mark: `/proc/[this-pid]/cwd`
-  - :white_check_mark: `/proc/[this-pid]/exe`
-  - :white_check_mark: `/proc/[this-pid]/fd`
-  - :white_check_mark: `/proc/[this-pid]/maps`
-  - :white_check_mark: `/proc/[this-pid]/root`
-  - :ballot_box_with_check: `/proc/[this-pid]/stat`: partially implemented
-    - :white_check_mark: `pid`, `comm`, `ppid`, `pgrp`, `num_threads`, `vsize`, `rss`
-    - :ballot_box_with_check: `state`: always indicates "R" (running)
-    - :ballot_box_with_check: `flags`: indicates only `PF_RANDOMIZE`
-    - :x: rest fields: always zero
-  - :ballot_box_with_check: `/proc/[this-pid]/statm`: partially implemented
-    - :white_check_mark: `size`/`VmSize`, `resident`/`VmRSS`
-    - :x: rest fields: always zero
-  - :ballot_box_with_check: `/proc/[this-pid]/status`: partially implemented
-    - :white_check_mark: `VmPeak`
-    - :x: rest fields: not printed
-  - :white_check_mark: `/proc/[this-pid]/task`
+  - ☑ `/proc/[this-pid]/cmdline`
+  - ☑ `/proc/[this-pid]/cwd`
+  - ☑ `/proc/[this-pid]/exe`
+  - ☑ `/proc/[this-pid]/fd`
+  - ☑ `/proc/[this-pid]/maps`
+  - ☑ `/proc/[this-pid]/root`
+  - ☐ `/proc/[this-pid]/stat`: partially implemented
+    - ☑ `pid`, `comm`, `ppid`, `pgrp`, `num_threads`, `vsize`, `rss`
+    - ☐ `state`: always indicates "R" (running)
+    - ☐ `flags`: indicates only `PF_RANDOMIZE`
+    - ☒ rest fields: always zero
+  - ☐ `/proc/[this-pid]/statm`: partially implemented
+    - ☑ `size`/`VmSize`, `resident`/`VmRSS`
+    - ☒ rest fields: always zero
+  - ☐ `/proc/[this-pid]/status`: partially implemented
+    - ☑ `VmPeak`
+    - ☒ rest fields: not printed
+  - ☑ `/proc/[this-pid]/task`
 
-- :ballot_box_with_check: `/proc/[remote-pid]/`: minimally implemented
-  - :white_check_mark: `/proc/[remote-pid]/cwd`
-  - :white_check_mark: `/proc/[remote-pid]/exe`
-  - :white_check_mark: `/proc/[remote-pid]/root`
+- ☐ `/proc/[remote-pid]/`: minimally implemented
+  - ☑ `/proc/[remote-pid]/cwd`
+  - ☑ `/proc/[remote-pid]/exe`
+  - ☑ `/proc/[remote-pid]/root`
 
-- :ballot_box_with_check: `/proc/[local-tid]/`: same as `/proc/[this-pid]`
+- ☐ `/proc/[local-tid]/`: same as `/proc/[this-pid]`
 
-- :x: `/proc/[remote-tid]/`: not used by applications
+- ☒ `/proc/[remote-tid]/`: not used by applications
 
-- :white_check_mark: `/proc/sys/kernel/pid_max`
+- ☑ `/proc/sys/kernel/pid_max`
 
-</details>
+</details><br />
 
 ### Scheduling
 
@@ -1631,31 +1630,31 @@ To support CPU affinity masks and expose NUMA/CPU topology, Gramine implements
 `/sys/devices/system/cpu/` and `/sys/devices/system/node/` pseudo-files. See the list in the
 ["System information and resource accounting" section](#system-information-and-resource-accounting).
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `sched_yield()`
-- :white_check_mark: `sched_getaffinity()`
-- :white_check_mark: `sched_setaffinity()`
+- ☑ `sched_yield()`
+- ☑ `sched_getaffinity()`
+- ☑ `sched_setaffinity()`
 
-- :ballot_box_with_check: `getcpu()`: dummy, returns a random allowed CPU
-- :ballot_box_with_check: `getpriority()`: dummy, returns default value
-- :ballot_box_with_check: `setpriority()`: dummy, does nothing
-- :ballot_box_with_check: `sched_getparam()`: dummy, returns default values
-- :ballot_box_with_check: `sched_setparam()`: dummy, does nothing
-- :ballot_box_with_check: `sched_getscheduler()`: dummy, returns default value
-- :ballot_box_with_check: `sched_setscheduler()`: dummy, does nothing
-- :ballot_box_with_check: `sched_get_priority_max()`: dummy, returns default
+- ☐ `getcpu()`: dummy, returns a random allowed CPU
+- ☐ `getpriority()`: dummy, returns default value
+- ☐ `setpriority()`: dummy, does nothing
+- ☐ `sched_getparam()`: dummy, returns default values
+- ☐ `sched_setparam()`: dummy, does nothing
+- ☐ `sched_getscheduler()`: dummy, returns default value
+- ☐ `sched_setscheduler()`: dummy, does nothing
+- ☐ `sched_get_priority_max()`: dummy, returns default
   value
-- :ballot_box_with_check: `sched_get_priority_min()`: dummy, returns default
-- :ballot_box_with_check: `sched_rr_get_interval()`: dummy, returns default
+- ☐ `sched_get_priority_min()`: dummy, returns default
+- ☐ `sched_rr_get_interval()`: dummy, returns default
   value
 
-- :x: `sched_getattr()`: not used by applications
-- :x: `sched_setattr()`: not used by applications
-- :x: `ioprio_get()`: not used by applications
-- :x: `ioprio_set()`: not used by applications
+- ☒ `sched_getattr()`: not used by applications
+- ☒ `sched_setattr()`: not used by applications
+- ☒ `ioprio_get()`: not used by applications
+- ☒ `ioprio_set()`: not used by applications
 
-</details>
+</details><br />
 
 ### Memory synchronization (futexes)
 
@@ -1675,15 +1674,15 @@ Gramine supports the following futex operations: `FUTEX_WAIT`, `FUTEX_WAIT_BITSE
 Gramine implements getting/setting the list of robust futexes, via `get_robust_list()` and
 `set_robust_list()` system calls.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `futex()`: see notes above
-- :white_check_mark: `get_robust_list()`
-- :white_check_mark: `set_robust_list()`
+- ☐ `futex()`: see notes above
+- ☑ `get_robust_list()`
+- ☑ `set_robust_list()`
 
-- :x: `futex_waitv()`: not used by applications
+- ☒ `futex_waitv()`: not used by applications
 
-</details>
+</details><br />
 
 ### Memory management
 
@@ -1737,50 +1736,50 @@ Quick summary of other memory-management system calls:
 As can be seen from above, many performance-improving system calls, flags and features are currently
 *not* implemented by Gramine. Keep it in mind when you observe application performance degradation.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `brk()`
-- :ballot_box_with_check: `mmap()`: see above for notes
-- :ballot_box_with_check: `mprotect()`: see above for notes
-- :white_check_mark: `munmap()`
+- ☑ `brk()`
+- ☐ `mmap()`: see above for notes
+- ☐ `mprotect()`: see above for notes
+- ☑ `munmap()`
 
-- :ballot_box_with_check: `msync()`: does not implement `MS_INVALIDATE`
-- :ballot_box_with_check: `madvise()`: see above for notes
-- :ballot_box_with_check: `mbind()`: dummy
-- :ballot_box_with_check: `mincore()`: dummy
-- :ballot_box_with_check: `mlock()`: dummy
-- :ballot_box_with_check: `munlock()`: dummy
-- :ballot_box_with_check: `mlockall()`: dummy
-- :ballot_box_with_check: `munlockall()`: dummy
-- :ballot_box_with_check: `mlock2()`: dummy
+- ☐ `msync()`: does not implement `MS_INVALIDATE`
+- ☐ `madvise()`: see above for notes
+- ☐ `mbind()`: dummy
+- ☐ `mincore()`: dummy
+- ☐ `mlock()`: dummy
+- ☐ `munlock()`: dummy
+- ☐ `mlockall()`: dummy
+- ☐ `munlockall()`: dummy
+- ☐ `mlock2()`: dummy
 
-- :x: `mremap()`: not used by applications
-- :x: `remap_file_pages()`: not used by applications
-- :x: `set_mempolicy()`: may be implemented in future
-- :x: `get_mempolicy()`: may be implemented in future
-- :x: `memfd_create()`: may be implemented in future
-- :x: `memfd_secret()`: not used by applications
-- :x: `membarrier()`: may be implemented in future
-- :x: `move_pages()`: not used by applications
-- :x: `migrate_pages()`: not used by applications
-- :x: `process_madvise()`: not used by applications
-- :x: `process_mrelease()`: not used by applications
-- :x: `set_mempolicy_home_node()`: not used by applications
+- ☒ `mremap()`: not used by applications
+- ☒ `remap_file_pages()`: not used by applications
+- ☒ `set_mempolicy()`: may be implemented in future
+- ☒ `get_mempolicy()`: may be implemented in future
+- ☒ `memfd_create()`: may be implemented in future
+- ☒ `memfd_secret()`: not used by applications
+- ☒ `membarrier()`: may be implemented in future
+- ☒ `move_pages()`: not used by applications
+- ☒ `migrate_pages()`: not used by applications
+- ☒ `process_madvise()`: not used by applications
+- ☒ `process_mrelease()`: not used by applications
+- ☒ `set_mempolicy_home_node()`: not used by applications
 
-</details>
+</details><br />
 
 ### Overview of Inter-Process Communication (IPC)
 
 Gramine implements most of the Linux IPC mechanisms. In particular:
 
-- :white_check_mark: Signals and process state changes
-- :white_check_mark: Pipes
-- :white_check_mark: FIFOs (named pipes)
-- :ballot_box_with_check: UNIX domain sockets
-- :ballot_box_with_check: File locking
-- :x: Message queues
-- :x: Semaphores
-- :x: Shared memory
+- ☑ Signals and process state changes
+- ☑ Pipes
+- ☑ FIFOs (named pipes)
+- ☐ UNIX domain sockets
+- ☐ File locking
+- ☒ Message queues
+- ☒ Semaphores
+- ☒ Shared memory
 
 Gramine implements pipes, FIFOs and UNIX domain sockets (UDSes) via host-OS pipes. In case of SGX
 backend, all pipe, FIFO and UDS communication is transparently encrypted.
@@ -1806,7 +1805,7 @@ to the complexity of message-passing implementation.
 To learn more about Gramine support for each of the Linux IPC mechanisms, refer to corresponding
 sections below.
 
-<details><summary>:speech_balloon: Additional materials</summary>
+<details><summary>Additional materials</summary>
 
 - For Linux IPC overview, we recommend reading [Beej's Guide to Unix
   IPC](https://beej.us/guide/bgipc/html/single/bgipc.html).
@@ -1816,7 +1815,7 @@ sections below.
   new Gramine instance. Before establishing any pipe/IPC communication, two Gramine processes (e.g.,
   parent and child) verify each other's trustworthiness using SGX local attestation.
 
-</details>
+</details><br />
 
 ### Signals and process state changes
 
@@ -1862,36 +1861,36 @@ Gramine has limited support for pseudo-files that describe the state of remote p
 (files under `/proc/[remote-pid]/` and `/proc/[remote-tid]/`). For details, refer to "Related
 pseudo-files" in the ["Process and thread identifiers" section](#process-and-thread-identifiers).
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `pause()`
-- :white_check_mark: `rt_sigaction()`
-- :white_check_mark: `rt_sigpending()`
-- :white_check_mark: `rt_sigprocmask()`
-- :white_check_mark: `rt_sigreturn()`
-- :white_check_mark: `rt_sigsuspend()`
-- :white_check_mark: `rt_sigtimedwait()`
-- :white_check_mark: `sigaltstack()`
+- ☑ `pause()`
+- ☑ `rt_sigaction()`
+- ☑ `rt_sigpending()`
+- ☑ `rt_sigprocmask()`
+- ☑ `rt_sigreturn()`
+- ☑ `rt_sigsuspend()`
+- ☑ `rt_sigtimedwait()`
+- ☑ `sigaltstack()`
 
-- :x: `rt_sigqueueinfo()`: not used by applications
-- :x: `rt_tgsigqueueinfo()`: not used by applications
-- :x: `signalfd()`: not used by applications
-- :x: `signalfd4()`: not used by applications
-- :x: `pidfd_open()`: not used by applications
-- :x: `pidfd_getfd()`: not used by applications
-- :x: `pidfd_send_signal()`: not used by applications
-- :x: `process_madvise()`: not used by applications
-- :x: `process_mrelease()`: not used by applications
-- :x: `userfaultfd()`: not used by applications
+- ☒ `rt_sigqueueinfo()`: not used by applications
+- ☒ `rt_tgsigqueueinfo()`: not used by applications
+- ☒ `signalfd()`: not used by applications
+- ☒ `signalfd4()`: not used by applications
+- ☒ `pidfd_open()`: not used by applications
+- ☒ `pidfd_getfd()`: not used by applications
+- ☒ `pidfd_send_signal()`: not used by applications
+- ☒ `process_madvise()`: not used by applications
+- ☒ `process_mrelease()`: not used by applications
+- ☒ `userfaultfd()`: not used by applications
 
-- :ballot_box_with_check: `kill()`: process groups not supported
-- :ballot_box_with_check: `tkill()`: remote threads not supported
-- :white_check_mark: `tgkill()`
+- ☐ `kill()`: process groups not supported
+- ☐ `tkill()`: remote threads not supported
+- ☑ `tgkill()`
 
-- :ballot_box_with_check: `wait4()`: `WSTOPPED` and `WCONTINUED` not supported
-- :ballot_box_with_check: `waitid()`: `WSTOPPED` and `WCONTINUED` not supported
+- ☐ `wait4()`: `WSTOPPED` and `WCONTINUED` not supported
+- ☐ `waitid()`: `WSTOPPED` and `WCONTINUED` not supported
 
-</details>
+</details><br />
 
 ### User and group identifiers
 
@@ -1929,33 +1928,33 @@ Currently, there are only two usages of user/group IDs in Gramine:
 
 Gramine does *not* currently implement user/group ID fields in the `/proc/[pid]/status` pseudo-file.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `getuid()`: dummy
-- :ballot_box_with_check: `getgid()`: dummy
-- :ballot_box_with_check: `setuid()`: dummy
-- :ballot_box_with_check: `setgid()`: dummy
-- :ballot_box_with_check: `geteuid()`: dummy
-- :ballot_box_with_check: `getegid()`: dummy
-- :ballot_box_with_check: `getgroups()`: dummy
-- :ballot_box_with_check: `setgroups()`: dummy
+- ☐ `getuid()`: dummy
+- ☐ `getgid()`: dummy
+- ☐ `setuid()`: dummy
+- ☐ `setgid()`: dummy
+- ☐ `geteuid()`: dummy
+- ☐ `getegid()`: dummy
+- ☐ `getgroups()`: dummy
+- ☐ `setgroups()`: dummy
 
-- :x: `setreuid()`: not used by applications, may be implemented in future
-- :x: `setregid()`: not used by applications, may be implemented in future
-- :x: `getresuid()`: not used by applications, may be implemented in future
-- :x: `setresuid()`: not used by applications, may be implemented in future
-- :x: `getresgid()`: not used by applications, may be implemented in future
-- :x: `setresgid()`: not used by applications, may be implemented in future
-- :x: `setfsuid()`: not used by applications
-- :x: `setfsgid()`: not used by applications
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :x: `/proc/[this-pid]/status`: fields `Uid`, `Gid`, `Groups` are not implemented
+- ☒ `setreuid()`: not used by applications, may be implemented in future
+- ☒ `setregid()`: not used by applications, may be implemented in future
+- ☒ `getresuid()`: not used by applications, may be implemented in future
+- ☒ `setresuid()`: not used by applications, may be implemented in future
+- ☒ `getresgid()`: not used by applications, may be implemented in future
+- ☒ `setresgid()`: not used by applications, may be implemented in future
+- ☒ `setfsuid()`: not used by applications
+- ☒ `setfsgid()`: not used by applications
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☒ `/proc/[this-pid]/status`: fields `Uid`, `Gid`, `Groups` are not implemented
+
+</details><br />
 
 ### File systems
 
@@ -1963,9 +1962,10 @@ Gramine implements file system operations, but with several peculiarities and li
 
 The most important peculiarity is that Gramine does *not* simply mirror the host OS's directory
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
-files: this is controlled by the manifest's [FS mount points (`fs.mounts`)](
-). This feature is similar to the *chroot* concept on Linux and *jail* concept on FreeBSD. This
-Gramine feature is introduced for security.
+files: this is controlled by the manifest's [FS mount points
+(`fs.mounts`)](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#fs-mount-points). This
+feature is similar to the *chroot* concept on Linux and *jail* concept on FreeBSD. This Gramine
+feature is introduced for security.
 
 Another peculiarity is that Gramine provides several types of files:
 - plain files (unencrypted files, see below),
@@ -2012,7 +2012,7 @@ General FS limitations in Gramine include:
 - tmpfs mounts (in-memory file systems) are not shared by Gramine processes;
 - File timestamps (access, modified, change timestamps) are not set/updated.
 
-<details><summary>:speech_balloon: Additional materials</summary>
+<details><summary>Additional materials</summary>
 
 A mechanism for FS synchronization, as well as a general redesign of certain FS components, is a
 task Gramine will tackle in the future. Below are some discussions and RFCs:
@@ -2022,7 +2022,7 @@ task Gramine will tackle in the future. Below are some discussions and RFCs:
 - https://github.com/gramineproject/gramine/issues/584
 - https://github.com/gramineproject/gramine/issues/578
 
-</details>
+</details><br />
 
 #### File system operations
 
@@ -2102,101 +2102,101 @@ all have hard-coded values.
 Gramine currently does *not* support changing file access/modification times, via `utime()`,
 `utimes()`, `futimesat()`, `utimensat()` system calls.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `open()`: implemented, with limitations
-- :ballot_box_with_check: `openat()`: implemented, with limitations
-- :white_check_mark: `close()`
-- :white_check_mark: `creat()`
-- :white_check_mark: `mkdir()`
-- :white_check_mark: `mkdirat()`
-- :white_check_mark: `getdents()`
-- :white_check_mark: `getdents64()`
-- :white_check_mark: `unlink()`
-- :white_check_mark: `unlinkat()`
-- :white_check_mark: `rmdir()`
-- :ballot_box_with_check: `rename()`: cannot rename across mounts
-- :ballot_box_with_check: `renameat()`: cannot rename across mounts
+- ☐ `open()`: implemented, with limitations
+- ☐ `openat()`: implemented, with limitations
+- ☑ `close()`
+- ☑ `creat()`
+- ☑ `mkdir()`
+- ☑ `mkdirat()`
+- ☑ `getdents()`
+- ☑ `getdents64()`
+- ☑ `unlink()`
+- ☑ `unlinkat()`
+- ☑ `rmdir()`
+- ☐ `rename()`: cannot rename across mounts
+- ☐ `renameat()`: cannot rename across mounts
 
-- :white_check_mark: `read()`
-- :white_check_mark: `pread64()`
-- :white_check_mark: `readv()`
-- :white_check_mark: `preadv()`
-- :white_check_mark: `write()`
-- :white_check_mark: `pwrite64()`
-- :white_check_mark: `writev()`
-- :white_check_mark: `pwritev()`
+- ☑ `read()`
+- ☑ `pread64()`
+- ☑ `readv()`
+- ☑ `preadv()`
+- ☑ `write()`
+- ☑ `pwrite64()`
+- ☑ `writev()`
+- ☑ `pwritev()`
 
-- :ballot_box_with_check: `lseek()`: see note above
-- :ballot_box_with_check: `mmap()`: see notes above
-- :ballot_box_with_check: `msync()`: see notes above
-- :ballot_box_with_check: `select()`: dummy
-- :ballot_box_with_check: `pselect6()`: dummy
-- :ballot_box_with_check: `poll()`: dummy
-- :ballot_box_with_check: `ppoll()`: dummy
-- :white_check_mark: `fsync()`
-- :white_check_mark: `fdatasync()`
-- :ballot_box_with_check: `truncate()`: see note above
-- :ballot_box_with_check: `ftruncate()`: see note above
-- :ballot_box_with_check: `fallocate()`: dummy
-- :ballot_box_with_check: `fadvise64()`: dummy
+- ☐ `lseek()`: see note above
+- ☐ `mmap()`: see notes above
+- ☐ `msync()`: see notes above
+- ☐ `select()`: dummy
+- ☐ `pselect6()`: dummy
+- ☐ `poll()`: dummy
+- ☐ `ppoll()`: dummy
+- ☑ `fsync()`
+- ☑ `fdatasync()`
+- ☐ `truncate()`: see note above
+- ☐ `ftruncate()`: see note above
+- ☐ `fallocate()`: dummy
+- ☐ `fadvise64()`: dummy
 
-- :white_check_mark: `chmod()`
-- :white_check_mark: `fchmod()`
-- :white_check_mark: `fchmodat()`
-- :ballot_box_with_check: `chown()`: dummy
-- :ballot_box_with_check: `fchown()`: dummy
-- :ballot_box_with_check: `fchownat()`: dummy
-- :ballot_box_with_check: `access()`: dummy
-- :ballot_box_with_check: `faccessat()`: dummy
-- :white_check_mark: `umask()`
+- ☑ `chmod()`
+- ☑ `fchmod()`
+- ☑ `fchmodat()`
+- ☐ `chown()`: dummy
+- ☐ `fchown()`: dummy
+- ☐ `fchownat()`: dummy
+- ☐ `access()`: dummy
+- ☐ `faccessat()`: dummy
+- ☑ `umask()`
 
-- :ballot_box_with_check: `sendfile()`: unoptimized
+- ☐ `sendfile()`: unoptimized
 
-- :white_check_mark: `chdir()`
-- :white_check_mark: `fchdir()`
-- :white_check_mark: `getcwd()`
+- ☑ `chdir()`
+- ☑ `fchdir()`
+- ☑ `getcwd()`
 
-- :ballot_box_with_check: `stat()`: partially dummy
-- :ballot_box_with_check: `fstat()`: partially dummy
-- :ballot_box_with_check: `lstat()`: partially dummy, always resolves to actual
+- ☐ `stat()`: partially dummy
+- ☐ `fstat()`: partially dummy
+- ☐ `lstat()`: partially dummy, always resolves to actual
   file
-- :ballot_box_with_check: `newfstatat()`: partially dummy
-- :ballot_box_with_check: `statfs()`: partially dummy
-- :ballot_box_with_check: `fstatfs()`: partially dummy
+- ☐ `newfstatat()`: partially dummy
+- ☐ `statfs()`: partially dummy
+- ☐ `fstatfs()`: partially dummy
 
-- :white_check_mark: `chroot()`
+- ☑ `chroot()`
 
-- :x: `name_to_handle_at()`: not used by applications
-- :x: `open_by_handle_at()`: not used by applications
-- :x: `openat2()`: not used by applications
-- :x: `renameat2()`: not used by applications
-- :x: `preadv2()`: not used by applications
-- :x: `pwritev2()`: not used by applications
-- :x: `epoll_create()`: not used by applications
-- :x: `epoll_create1()`: not used by applications
-- :x: `epoll_wait()`: not used by applications
-- :x: `epoll_pwait()`: not used by applications
-- :x: `epoll_pwait2()`: not used by applications
-- :x: `epoll_ctl()`: not used by applications
-- :x: `sync()`: not used by applications
-- :x: `syncfs()`: not used by applications
-- :x: `sync_file_range()`: not used by applications
-- :x: `faccessat2()`: not used by applications
-- :x: `statx()`: not used by applications
-- :x: `sysfs()`: not used by applications
-- :x: `ustat()`: not used by applications
-- :x: `mount()`: not used by applications
-- :x: `move_mount()`: not used by applications
-- :x: `umount2()`: not used by applications
-- :x: `mount_setattr()`: not used by applications
-- :x: `pivot_root()`: not used by applications
-- :x: `utime()`: may be implemented in future
-- :x: `utimes()`: may be implemented in future
-- :x: `futimesat()`: may be implemented in future
-- :x: `utimensat()`: may be implemented in future
+- ☒ `name_to_handle_at()`: not used by applications
+- ☒ `open_by_handle_at()`: not used by applications
+- ☒ `openat2()`: not used by applications
+- ☒ `renameat2()`: not used by applications
+- ☒ `preadv2()`: not used by applications
+- ☒ `pwritev2()`: not used by applications
+- ☒ `epoll_create()`: not used by applications
+- ☒ `epoll_create1()`: not used by applications
+- ☒ `epoll_wait()`: not used by applications
+- ☒ `epoll_pwait()`: not used by applications
+- ☒ `epoll_pwait2()`: not used by applications
+- ☒ `epoll_ctl()`: not used by applications
+- ☒ `sync()`: not used by applications
+- ☒ `syncfs()`: not used by applications
+- ☒ `sync_file_range()`: not used by applications
+- ☒ `faccessat2()`: not used by applications
+- ☒ `statx()`: not used by applications
+- ☒ `sysfs()`: not used by applications
+- ☒ `ustat()`: not used by applications
+- ☒ `mount()`: not used by applications
+- ☒ `move_mount()`: not used by applications
+- ☒ `umount2()`: not used by applications
+- ☒ `mount_setattr()`: not used by applications
+- ☒ `pivot_root()`: not used by applications
+- ☒ `utime()`: may be implemented in future
+- ☒ `utimes()`: may be implemented in future
+- ☒ `futimesat()`: may be implemented in future
+- ☒ `utimensat()`: may be implemented in future
 
-</details>
+</details><br />
 
 #### File locking
 
@@ -2220,32 +2220,32 @@ The current implementation has the following caveats:
 
 Gramine does *not* currently implement the `flock()` system call.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `fcntl()`
-  - :ballot_box_with_check: `F_SETLK`: see notes above
-  - :ballot_box_with_check: `F_SETLKW`: see notes above
-  - :ballot_box_with_check: `F_GETLK`: see notes above
+- ☐ `fcntl()`
+  - ☐ `F_SETLK`: see notes above
+  - ☐ `F_SETLKW`: see notes above
+  - ☐ `F_GETLK`: see notes above
 
-- :x: `flock()`: may be implemented in future
+- ☒ `flock()`: may be implemented in future
 
-</details>
+</details><br />
 
 #### Monitoring filesystem events (inotify, fanotify)
 
 Gramine does *not* currently implement inotify and fanotify APIs. Gramine could implement them in
 the future, if need arises.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `inotify_init()`
-- :x: `inotify_init1()`
-- :x: `inotify_add_watch()`
-- :x: `inotify_rm_watch()`
-- :x: `fanotify_init()`
-- :x: `fanotify_mark()`
+- ☒ `inotify_init()`
+- ☒ `inotify_init1()`
+- ☒ `inotify_add_watch()`
+- ☒ `inotify_rm_watch()`
+- ☒ `fanotify_init()`
+- ☒ `fanotify_mark()`
 
-</details>
+</details><br />
 
 #### Hard links and soft links (symbolic links)
 
@@ -2261,36 +2261,36 @@ The above means that Gramine does not implement `link()` and `symlink()` system 
 
 Gramine may implement hard and soft links in the future.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `link()`
-- :x: `symlink()`
-- :ballot_box_with_check: `readlink()`: see note above
-- :x: `linkat()`
-- :x: `symlinkat()`
-- :ballot_box_with_check: `readlinkat()`: see note above
-- :x: `lchown()`
+- ☒ `link()`
+- ☒ `symlink()`
+- ☐ `readlink()`: see note above
+- ☒ `linkat()`
+- ☒ `symlinkat()`
+- ☐ `readlinkat()`: see note above
+- ☒ `lchown()`
 
 </details>
 
-<details><summary>:page_facing_up: Related pseudo-files</summary>
+<details><summary>Related pseudo-files</summary>
 
 The following pseudo-files are symlinks. See also "Related pseudo-files" in the ["Process and thread
 identifiers" section](#process-and-thread-identifiers).
 
-- :white_check_mark: `/dev/`
-  - :white_check_mark: `/dev/stdin`
-  - :white_check_mark: `/dev/stdout`
-  - :white_check_mark: `/dev/stderr`
+- ☑ `/dev/`
+  - ☑ `/dev/stdin`
+  - ☑ `/dev/stdout`
+  - ☑ `/dev/stderr`
 
-- :white_check_mark: `/proc/self/`
+- ☑ `/proc/self/`
 
-- :white_check_mark: `/proc/[pid]/`
-  - :white_check_mark: `/proc/[pid]/cwd`
-  - :white_check_mark: `/proc/[pid]/exe`
-  - :white_check_mark: `/proc/[pid]/root`
+- ☑ `/proc/[pid]/`
+  - ☑ `/proc/[pid]/cwd`
+  - ☑ `/proc/[pid]/exe`
+  - ☑ `/proc/[pid]/root`
 
-</details>
+</details><br />
 
 ### Pipes and FIFOs (named pipes)
 
@@ -2324,45 +2324,45 @@ Gramine supports getting and setting pipe/FIFO status flags via `fcntl(F_GETFL)`
 `fcntl(F_SETFL)`. The only currently supported flag is `O_NONBLOCK`; `O_ASYNC` is not supported.
 Gramine also supports setting blocking/non-blocking mode via `ioctl(FIONBIO)`.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `pipe()`
-- :ballot_box_with_check: `pipe2()`: `O_DIRECT` flag is ignored
-- :ballot_box_with_check: `mknod()`: `S_ISFIFO` type is supported
-- :ballot_box_with_check: `mknodat()`: `S_ISFIFO` type is supported
-- :white_check_mark: `close()`
+- ☑ `pipe()`
+- ☐ `pipe2()`: `O_DIRECT` flag is ignored
+- ☐ `mknod()`: `S_ISFIFO` type is supported
+- ☐ `mknodat()`: `S_ISFIFO` type is supported
+- ☑ `close()`
 
-- :white_check_mark: `fstat()`
+- ☑ `fstat()`
 
-- :white_check_mark: `read()`
-- :white_check_mark: `readv()`
-- :white_check_mark: `write()`
-- :white_check_mark: `writev()`
+- ☑ `read()`
+- ☑ `readv()`
+- ☑ `write()`
+- ☑ `writev()`
 
-- :white_check_mark: `select()`
-- :white_check_mark: `pselect6()`
-- :white_check_mark: `poll()`
-- :white_check_mark: `ppoll()`
-- :white_check_mark: `epoll_create()`
-- :white_check_mark: `epoll_create1()`
-- :white_check_mark: `epoll_wait()`
-- :white_check_mark: `epoll_pwait()`
-- :white_check_mark: `epoll_ctl()`
-- :x: `epoll_pwait2()`: not used by applications
+- ☑ `select()`
+- ☑ `pselect6()`
+- ☑ `poll()`
+- ☑ `ppoll()`
+- ☑ `epoll_create()`
+- ☑ `epoll_create1()`
+- ☑ `epoll_wait()`
+- ☑ `epoll_pwait()`
+- ☑ `epoll_ctl()`
+- ☒ `epoll_pwait2()`: not used by applications
 
-- :ballot_box_with_check: `sendfile()`: unoptimized
+- ☐ `sendfile()`: unoptimized
 
-- :ballot_box_with_check: `fcntl()`
-  - :ballot_box_with_check: `F_GETFL`: only `O_NONBLOCK`
-  - :ballot_box_with_check: `F_SETFL`: only `O_NONBLOCK`
-  - :x: `F_GETPIPE_SZ`: not used by applications
-  - :x: `F_SETPIPE_SZ`: not used by applications
+- ☐ `fcntl()`
+  - ☐ `F_GETFL`: only `O_NONBLOCK`
+  - ☐ `F_SETFL`: only `O_NONBLOCK`
+  - ☒ `F_GETPIPE_SZ`: not used by applications
+  - ☒ `F_SETPIPE_SZ`: not used by applications
 
-- :ballot_box_with_check: `ioctl()`
-  - :white_check_mark: `FIONREAD`
-  - :white_check_mark: `FIONBIO`
+- ☐ `ioctl()`
+  - ☑ `FIONREAD`
+  - ☑ `FIONBIO`
 
-</details>
+</details><br />
 
 ### Networking (sockets)
 
@@ -2416,7 +2416,7 @@ TCP and UDP sockets support the following socket options:
 TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_KEEPIDLE`,
 `TCP_KEEPINTVL`, `TCP_KEEPCNT`, `TCP_NODELAY` and `TCP_USER_TIMEOUT`.
 
-<details><summary>:speech_balloon: Note on domain names configuration</summary>
+<details><summary>Note on domain names configuration</summary>
 
 - To use name-resolving Berkeley socket APIs like `gethostbyname()`, `gethostbyaddr()`,
   `getaddrinfo`, one must enable the [`sys.enable_extra_runtime_domain_names_conf` manifest
@@ -2424,68 +2424,68 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `socket()`: see notes above
-- :white_check_mark: `bind()`
-- :white_check_mark: `listen()`
-- :white_check_mark: `accept()`
-- :white_check_mark: `accept4()`
-- :white_check_mark: `connect()`
-- :white_check_mark: `close()`
-- :white_check_mark: `shutdown()`
+- ☐ `socket()`: see notes above
+- ☑ `bind()`
+- ☑ `listen()`
+- ☑ `accept()`
+- ☑ `accept4()`
+- ☑ `connect()`
+- ☑ `close()`
+- ☑ `shutdown()`
 
-- :white_check_mark: `getsockname()`
-- :white_check_mark: `getpeername()`
-- :white_check_mark: `getsockopt()`
-- :white_check_mark: `setsockopt()`
+- ☑ `getsockname()`
+- ☑ `getpeername()`
+- ☑ `getsockopt()`
+- ☑ `setsockopt()`
 
-- :white_check_mark: `fstat()`
+- ☑ `fstat()`
 
-- :white_check_mark: `read()`
-- :white_check_mark: `readv()`
-- :white_check_mark: `write()`
-- :white_check_mark: `writev()`
+- ☑ `read()`
+- ☑ `readv()`
+- ☑ `write()`
+- ☑ `writev()`
 
-- :ballot_box_with_check: `recv()`: see supported flags above
-- :ballot_box_with_check: `recvfrom()`: see supported flags above
-- :ballot_box_with_check: `recvmsg()`: see supported flags above
-- :ballot_box_with_check: `recvmmsg()`: see supported flags above
-- :ballot_box_with_check: `send()`: see supported flags above
-- :ballot_box_with_check: `sendto()`: see supported flags above
-- :ballot_box_with_check: `sendmsg()`: see supported flags above
-- :ballot_box_with_check: `sendmmsg()`: see supported flags above
+- ☐ `recv()`: see supported flags above
+- ☐ `recvfrom()`: see supported flags above
+- ☐ `recvmsg()`: see supported flags above
+- ☐ `recvmmsg()`: see supported flags above
+- ☐ `send()`: see supported flags above
+- ☐ `sendto()`: see supported flags above
+- ☐ `sendmsg()`: see supported flags above
+- ☐ `sendmmsg()`: see supported flags above
 
-- :white_check_mark: `select()`
-- :white_check_mark: `pselect6()`
-- :white_check_mark: `poll()`
-- :white_check_mark: `ppoll()`
-- :white_check_mark: `epoll_create()`
-- :white_check_mark: `epoll_create1()`
-- :white_check_mark: `epoll_wait()`
-- :white_check_mark: `epoll_pwait()`
-- :white_check_mark: `epoll_ctl()`
-- :x: `epoll_pwait2()`: not used by applications
+- ☑ `select()`
+- ☑ `pselect6()`
+- ☑ `poll()`
+- ☑ `ppoll()`
+- ☑ `epoll_create()`
+- ☑ `epoll_create1()`
+- ☑ `epoll_wait()`
+- ☑ `epoll_pwait()`
+- ☑ `epoll_ctl()`
+- ☒ `epoll_pwait2()`: not used by applications
 
-- :ballot_box_with_check: `sendfile()`: unoptimized
+- ☐ `sendfile()`: unoptimized
 
-- :ballot_box_with_check: `fcntl()`
-  - :ballot_box_with_check: `F_GETFL`: only `O_NONBLOCK`
-  - :ballot_box_with_check: `F_SETFL`: only `O_NONBLOCK`
+- ☐ `fcntl()`
+  - ☐ `F_GETFL`: only `O_NONBLOCK`
+  - ☐ `F_SETFL`: only `O_NONBLOCK`
 
-- :ballot_box_with_check: `ioctl()`
-  - :white_check_mark: `FIONREAD`
-  - :white_check_mark: `FIONBIO`
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :x: `/proc/sys/net/core/`
-- :x: `/proc/sys/net/ipv4/`
-- :x: `/proc/sys/net/ipv6/`
+- ☐ `ioctl()`
+  - ☑ `FIONREAD`
+  - ☑ `FIONBIO`
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☒ `/proc/sys/net/core/`
+- ☒ `/proc/sys/net/ipv4/`
+- ☒ `/proc/sys/net/ipv6/`
+
+</details><br />
 
 #### UNIX domain sockets
 
@@ -2523,28 +2523,28 @@ UDSes support the following socket options:
 - `SO_ACCEPTCONN`, `SO_DOMAIN`, `SO_TYPE`, `SO_PROTOCOL`, `SO_ERROR` (all read-only),
 - `SO_REUSEADDR` (ignored, same as in Linux).
 
-<details><summary>:speech_balloon: Note on named UDSes</summary>
+<details><summary>Note on named UDSes</summary>
 
 - There is an effort to make named UDSes visible on the Gramine filesystem, see
   https://github.com/gramineproject/gramine/pull/1021.
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `socketpair()`
+- ☑ `socketpair()`
 - For other system calls, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
   above.
 
 </details>
 
-<details><summary>:page_facing_up: Related pseudo-files</summary>
+<details><summary>Related pseudo-files</summary>
 
-- :x: `/proc/sys/net/unix/`
+- ☒ `/proc/sys/net/unix/`
 - For other pseudo-files, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
   above.
 
-</details>
+</details><br />
 
 ### I/O multiplexing
 
@@ -2572,27 +2572,27 @@ Epoll family of system calls has the following limitations:
 - Adding an epoll to another epoll instance is not currently supported.
 - `EPOLLRDHUP` is not reported and `EPOLLHUP` is always reported together with `EPOLLERR`.
 
-<details><summary>:construction: Note on EPOLLERR/EPOLLHUP/EPOLLRDHUP</summary>
+<details><summary>Note on EPOLLERR/EPOLLHUP/EPOLLRDHUP</summary>
 
 There is a pending [GitHub pull request](https://github.com/gramineproject/gramine/pull/1073) to
 distinguish between the three error conditions.
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `select()`
-- :white_check_mark: `pselect6()`
-- :white_check_mark: `poll()`
-- :white_check_mark: `ppoll()`
-- :ballot_box_with_check: `epoll_create()`: see notes above
-- :ballot_box_with_check: `epoll_create1()`: see notes above
-- :ballot_box_with_check: `epoll_wait()`: see notes above
-- :ballot_box_with_check: `epoll_pwait()`: see notes above
-- :ballot_box_with_check: `epoll_ctl()`: see notes above
-- :x: `epoll_pwait2()`: not used by applications
+- ☑ `select()`
+- ☑ `pselect6()`
+- ☑ `poll()`
+- ☑ `ppoll()`
+- ☐ `epoll_create()`: see notes above
+- ☐ `epoll_create1()`: see notes above
+- ☐ `epoll_wait()`: see notes above
+- ☐ `epoll_pwait()`: see notes above
+- ☐ `epoll_ctl()`: see notes above
+- ☒ `epoll_pwait2()`: not used by applications
 
-</details>
+</details><br />
 
 ### Asynchronous I/O
 
@@ -2606,19 +2606,19 @@ future, if need arises.
 Note that AIO provided in userspace by glibc (`aio_read()`, `aio_write()`, etc.) does not depend on
 Gramine and is supported.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `io_setup()`
-- :x: `io_destroy()`
-- :x: `io_getevents()`
-- :x: `io_submit()`
-- :x: `io_cancel()`
+- ☒ `io_setup()`
+- ☒ `io_destroy()`
+- ☒ `io_getevents()`
+- ☒ `io_submit()`
+- ☒ `io_cancel()`
 
-- :x: `io_uring_setup()`
-- :x: `io_uring_enter()`
-- :x: `io_uring_register()`
+- ☒ `io_uring_setup()`
+- ☒ `io_uring_enter()`
+- ☒ `io_uring_register()`
 
-</details>
+</details><br />
 
 ### Event notifications (eventfd)
 
@@ -2633,27 +2633,27 @@ Gramine supports polling on eventfd via `poll()`, `ppoll()`, `select()`, `epoll_
 Gramine may implement a secure version of `eventfd()` for communication between Gramine processes in
 the future. Such secure version will *not* be able to receive events from the host OS.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `eventfd()`: insecure implementation
-- :ballot_box_with_check: `eventfd2()`: insecure implementation
-- :white_check_mark: `close()`
+- ☐ `eventfd()`: insecure implementation
+- ☐ `eventfd2()`: insecure implementation
+- ☑ `close()`
 
-- :white_check_mark: `read()`
-- :white_check_mark: `write()`
+- ☑ `read()`
+- ☑ `write()`
 
-- :white_check_mark: `select()`
-- :white_check_mark: `pselect6()`
-- :white_check_mark: `poll()`
-- :white_check_mark: `ppoll()`
-- :white_check_mark: `epoll_create()`
-- :white_check_mark: `epoll_create1()`
-- :white_check_mark: `epoll_wait()`
-- :white_check_mark: `epoll_pwait()`
-- :white_check_mark: `epoll_ctl()`
-- :x: `epoll_pwait2()`: not used by applications
+- ☑ `select()`
+- ☑ `pselect6()`
+- ☑ `poll()`
+- ☑ `ppoll()`
+- ☑ `epoll_create()`
+- ☑ `epoll_create1()`
+- ☑ `epoll_wait()`
+- ☑ `epoll_pwait()`
+- ☑ `epoll_ctl()`
+- ☒ `epoll_pwait2()`: not used by applications
 
-</details>
+</details><br />
 
 ### Semaphores
 
@@ -2667,20 +2667,20 @@ POSIX shared memory functionality of Linux (i.e., via `/dev/shm` pseudo-filesyst
 Gramine does *not* currently implement either of these APIs. Gramine could implement them in
 the future, if need arises.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `semget()`
-- :x: `semop()`
-- :x: `semtimedop()`
-- :x: `semctl()`
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :x: `/dev/shm`
+- ☒ `semget()`
+- ☒ `semop()`
+- ☒ `semtimedop()`
+- ☒ `semctl()`
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☒ `/dev/shm`
+
+</details><br />
 
 ### Message queues
 
@@ -2691,21 +2691,21 @@ There are two message-queue APIs in Linux kernel:
 Gramine does *not* currently implement either of these APIs. Gramine could implement them in
 the future, if need arises.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `msgget()`
-- :x: `msgctl()`
-- :x: `msgrcv()`
-- :x: `msgsnd()`
+- ☒ `msgget()`
+- ☒ `msgctl()`
+- ☒ `msgrcv()`
+- ☒ `msgsnd()`
 
-- :x: `mq_open()`
-- :x: `mq_getsetattr()`
-- :x: `mq_notify()`
-- :x: `mq_timedreceive()`
-- :x: `mq_timedsend()`
-- :x: `mq_unlink()`
+- ☒ `mq_open()`
+- ☒ `mq_getsetattr()`
+- ☒ `mq_notify()`
+- ☒ `mq_timedreceive()`
+- ☒ `mq_timedsend()`
+- ☒ `mq_unlink()`
 
-</details>
+</details><br />
 
 ### Shared memory
 
@@ -2719,7 +2719,7 @@ In case of SGX backend, implementation of shared memory would be *insecure*, as 
 design would be allocated in untrusted non-enclave memory, and there is no way for Gramine to
 intercept memory accesses to shared memory regions (to provide some security guarantees).
 
-<details><summary>:construction: Adding limited POSIX shared memory support</summary>
+<details><summary>Adding limited POSIX shared memory support</summary>
 
 There is an effort to add limited support for POSIX shared memory, targeted for special use cases
 like communication with hardware accelerators (e.g. GPUs):
@@ -2729,27 +2729,27 @@ like communication with hardware accelerators (e.g. GPUs):
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `shmget()`
-- :x: `shmat()`
-- :x: `shmctl()`
-- :x: `shmdt()`
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :x: `/dev/shm`: may be implemented in future (in a limited insecure way, see note above)
+- ☒ `shmget()`
+- ☒ `shmat()`
+- ☒ `shmctl()`
+- ☒ `shmdt()`
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☒ `/dev/shm`: may be implemented in future (in a limited insecure way, see note above)
+
+</details><br />
 
 ### IOCTLs
 
 Gramine currently implements only a minimal set of IOCTL request codes. See the list under
 "Related system calls".
 
-<details><summary>:construction: Adding support for arbitrary IOCTLs </summary>
+<details><summary>Adding support for arbitrary IOCTLs </summary>
 
 There is an effort to add support for specifying arbitrary IOCTLs (with arbitrary request codes and
 corresponding IOCTL data structures), targeted for special use cases like communication with
@@ -2760,17 +2760,17 @@ hardware accelerators (e.g. GPUs):
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :ballot_box_with_check: `ioctl()`
-  - :ballot_box_with_check: `TIOCGPGRP`: dummy
-  - :white_check_mark: `FIONBIO`
-  - :white_check_mark: `FIONCLEX`
-  - :white_check_mark: `FIOCLEX`
-  - :white_check_mark: `FIOASYNC`
-  - :white_check_mark: `FIONREAD`
+- ☐ `ioctl()`
+  - ☐ `TIOCGPGRP`: dummy
+  - ☑ `FIONBIO`
+  - ☑ `FIONCLEX`
+  - ☑ `FIOCLEX`
+  - ☑ `FIOASYNC`
+  - ☑ `FIONREAD`
 
-</details>
+</details><br />
 
 ### Date and time
 
@@ -2785,29 +2785,29 @@ Gramine does *not* support setting or adjusting date/time: `settimeofday()`, `cl
 
 Gramine does *not* currently support getting process times (like user time, system time): `times()`.
 
-<details><summary>:warning: Note on trustworthiness of date/time on SGX</summary>
+<details><summary>Note on trustworthiness of date/time on SGX</summary>
 
 In case of SGX backend, date/time cannot be trusted because it is queried from the possibly
 malicious host OS. There is currently no solution to this limitation.
 
 </details>
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `gettimeofday()`
-- :white_check_mark: `time()`
-- :ballot_box_with_check: `clock_gettime()`: all clocks emulated via
+- ☑ `gettimeofday()`
+- ☑ `time()`
+- ☐ `clock_gettime()`: all clocks emulated via
   `CLOCK_REALTIME`
-- :ballot_box_with_check: `clock_getres()`: all clocks emulated via
+- ☐ `clock_getres()`: all clocks emulated via
   `CLOCK_REALTIME`
 
-- :x: `settimeofday()`: not used by applications
-- :x: `clock_settime()`: not used by applications
-- :x: `adjtimex()`: not used by applications
-- :x: `clock_adjtime()`: not used by applications
-- :x: `times()`: may be implemented in future
+- ☒ `settimeofday()`: not used by applications
+- ☒ `clock_settime()`: not used by applications
+- ☒ `adjtimex()`: not used by applications
+- ☒ `clock_adjtime()`: not used by applications
+- ☒ `times()`: may be implemented in future
 
-</details>
+</details><br />
 
 ### Sleeps, timers and alarms
 
@@ -2824,26 +2824,26 @@ Gramine does *not* currently implement the POSIX per-process timer: `timer_creat
 also does not currently implement timers that notify via file descriptors. Gramine could implement
 these timers in the future, if need arises.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `nanosleep()`
-- :ballot_box_with_check: `clock_nanosleep()`: all clocks emulated via
+- ☑ `nanosleep()`
+- ☐ `clock_nanosleep()`: all clocks emulated via
   `CLOCK_REALTIME`
-- :ballot_box_with_check: `getitimer()`: only `ITIMER_REAL`
-- :ballot_box_with_check: `setitimer()`: only `ITIMER_REAL`
-- :white_check_mark: `alarm()`
+- ☐ `getitimer()`: only `ITIMER_REAL`
+- ☐ `setitimer()`: only `ITIMER_REAL`
+- ☑ `alarm()`
 
-- :x: `timer_create()`: may be implemented in future
-- :x: `timer_settime()`: may be implemented in future
-- :x: `timer_gettime()`: may be implemented in future
-- :x: `timer_getoverrun()`: may be implemented in future
-- :x: `timer_delete()`: may be implemented in future
+- ☒ `timer_create()`: may be implemented in future
+- ☒ `timer_settime()`: may be implemented in future
+- ☒ `timer_gettime()`: may be implemented in future
+- ☒ `timer_getoverrun()`: may be implemented in future
+- ☒ `timer_delete()`: may be implemented in future
 
-- :x: `timerfd_create()`: may be implemented in future
-- :x: `timerfd_settime()`: may be implemented in future
-- :x: `timerfd_gettime()`: may be implemented in future
+- ☒ `timerfd_create()`: may be implemented in future
+- ☒ `timerfd_settime()`: may be implemented in future
+- ☒ `timerfd_gettime()`: may be implemented in future
 
-</details>
+</details><br />
 
 ### Randomness
 
@@ -2854,18 +2854,18 @@ Gramine implements obtaining random bytes via two Linux APIs:
 In case of SGX backend, Gramine always uses only one source of random bytes: the RDRAND x86
 instruction. This is a secure source of randomness.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `getrandom()`
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :white_check_mark: `/dev/random`
-- :white_check_mark: `/dev/urandom`
+- ☑ `getrandom()`
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☑ `/dev/random`
+- ☑ `/dev/urandom`
+
+</details><br />
 
 ### System information and resource accounting
 
@@ -2910,77 +2910,77 @@ information. In addition, Gramine supports CPU- and NUMA-node-specific pseudo-fi
 pseudo-files". For additional pseudo-files containing process-specific information, see the
 ["Process and thread identifiers" section](#process-and-thread-identifiers).
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `getrusage()`
-- :ballot_box_with_check: `sysinfo()`: only `totalram`, `totalhigh`, `freeram`
+- ☒ `getrusage()`
+- ☐ `sysinfo()`: only `totalram`, `totalhigh`, `freeram`
   and `freehigh`
-- :ballot_box_with_check: `uname()`: only `sysname`, `nodename`, `release`,
+- ☐ `uname()`: only `sysname`, `nodename`, `release`,
   `version`, `machine` and `domainname`
-- :ballot_box_with_check: `sethostname()`: dummy
-- :ballot_box_with_check: `setdomainname()`: dummy
-- :ballot_box_with_check: `getrlimit()`: see notes above
-- :ballot_box_with_check: `setrlimit()`: see notes above
-- :ballot_box_with_check: `prlimit64()`: see notes above
+- ☐ `sethostname()`: dummy
+- ☐ `setdomainname()`: dummy
+- ☐ `getrlimit()`: see notes above
+- ☐ `setrlimit()`: see notes above
+- ☐ `prlimit64()`: see notes above
 
 </details>
 
-<details><summary>:page_facing_up: Related pseudo-files</summary>
+<details><summary>Related pseudo-files</summary>
 
-- :ballot_box_with_check: `/proc/cpuinfo`: partially implemented
-    - :white_check_mark: `processor`, `vendor_id`, `cpu family`, `model`, `model name`, `stepping`,
+- ☐ `/proc/cpuinfo`: partially implemented
+    - ☑ `processor`, `vendor_id`, `cpu family`, `model`, `model name`, `stepping`,
       `physical id`, `core id`, `cpu cores`, `bogomips`
-    - :white_check_mark: `flags`: all known CPU flags
+    - ☑ `flags`: all known CPU flags
 
-- :ballot_box_with_check: `/proc/meminfo`: partially implemented
-    - :white_check_mark: `MemTotal`, `MemFree`, `MemAvailable`, `Committed_AS`, `VmallocTotal`
-    - :x: rest fields: always zero
+- ☐ `/proc/meminfo`: partially implemented
+    - ☑ `MemTotal`, `MemFree`, `MemAvailable`, `Committed_AS`, `VmallocTotal`
+    - ☒ rest fields: always zero
 
-- :ballot_box_with_check: `/proc/stat`: dummy
-    - :ballot_box_with_check: `cpu` line: all fields are zeros
-    - :ballot_box_with_check: `cpuX` lines: all fields are zeros
-    - :ballot_box_with_check: `ctxt` line: always zero
-    - :ballot_box_with_check: `btime` line: always zero
-    - :ballot_box_with_check: `processes` line: always one
-    - :ballot_box_with_check: `procs_running` line: always one
-    - :ballot_box_with_check: `procs_blocked` line: always zero
-    - :x: `intr` line
-    - :x: `softirq` line
+- ☐ `/proc/stat`: dummy
+    - ☐ `cpu` line: all fields are zeros
+    - ☐ `cpuX` lines: all fields are zeros
+    - ☐ `ctxt` line: always zero
+    - ☐ `btime` line: always zero
+    - ☐ `processes` line: always one
+    - ☐ `procs_running` line: always one
+    - ☐ `procs_blocked` line: always zero
+    - ☒ `intr` line
+    - ☒ `softirq` line
 
-- :ballot_box_with_check: `/sys/devices/system/cpu/`: only most important files
+- ☐ `/sys/devices/system/cpu/`: only most important files
   implemented
-  - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/`
-    - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/physical_line_partition`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/shared_cpu_map`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
-    - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/online`
-    - :ballot_box_with_check: `/sys/devices/system/cpu/cpu[x]/topology/`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/core_id`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
-      - :white_check_mark: `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
-  - :white_check_mark: `/sys/devices/system/cpu/online`
-  - :white_check_mark: `/sys/devices/system/cpu/possible`
+  - ☐ `/sys/devices/system/cpu/cpu[x]/`
+    - ☐ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/physical_line_partition`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/shared_cpu_map`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
+    - ☑ `/sys/devices/system/cpu/cpu[x]/online`
+    - ☐ `/sys/devices/system/cpu/cpu[x]/topology/`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_id`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
+      - ☑ `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
+  - ☑ `/sys/devices/system/cpu/online`
+  - ☑ `/sys/devices/system/cpu/possible`
 
-- :ballot_box_with_check: `/sys/devices/system/node/`: only most important files
+- ☐ `/sys/devices/system/node/`: only most important files
   implemented
-  - :ballot_box_with_check: `/sys/devices/system/node/node[x]/`
-    - :white_check_mark: `/sys/devices/system/node/node[x]/cpumap`
-    - :white_check_mark: `/sys/devices/system/node/node[x]/distance`
-    - :white_check_mark: `/sys/devices/system/node/node[x]/hugepages/`
-      - :ballot_box_with_check:
+  - ☐ `/sys/devices/system/node/node[x]/`
+    - ☑ `/sys/devices/system/node/node[x]/cpumap`
+    - ☑ `/sys/devices/system/node/node[x]/distance`
+    - ☑ `/sys/devices/system/node/node[x]/hugepages/`
+      - ☐
         `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`: always zero
-    - :ballot_box_with_check: `/sys/devices/system/node/node[x]/meminfo`:
+    - ☐ `/sys/devices/system/node/node[x]/meminfo`:
       partially implemented
-      - :white_check_mark: `MemTotal`, `MemFree`, `MemUsed`
-      - :x: rest fields: always zero
+      - ☑ `MemTotal`, `MemFree`, `MemUsed`
+      - ☒ rest fields: always zero
 
-</details>
+</details><br />
 
 ### Misc
 
@@ -3000,37 +3000,37 @@ Gramine implements several arch-specific (x86-64) operations:
 
 Gramine implements the `/dev/null` and `/dev/zero` pseudo-files.
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :white_check_mark: `gettimeofday()`: implemented in vDSO
-- :ballot_box_with_check: `clock_gettime()`: implemented in vDSO
-- :white_check_mark: `time()`: implemented in vDSO
-- :ballot_box_with_check: `getcpu()`: implemented in vDSO
+- ☑ `gettimeofday()`: implemented in vDSO
+- ☐ `clock_gettime()`: implemented in vDSO
+- ☑ `time()`: implemented in vDSO
+- ☐ `getcpu()`: implemented in vDSO
 
-- :white_check_mark: `dup()`
-- :white_check_mark: `dup2()`
-- :white_check_mark: `dup3()`
+- ☑ `dup()`
+- ☑ `dup2()`
+- ☑ `dup3()`
 
-- :ballot_box_with_check: `fcntl()`
-  - :white_check_mark: `F_DUPFD`
-  - :white_check_mark: `F_DUPFD_CLOEXEC`
-  - :white_check_mark: `F_GETFD`
-  - :white_check_mark: `F_SETFD`
+- ☐ `fcntl()`
+  - ☑ `F_DUPFD`
+  - ☑ `F_DUPFD_CLOEXEC`
+  - ☑ `F_GETFD`
+  - ☑ `F_SETFD`
 
-- :ballot_box_with_check: `arch_prctl()`
-  - :white_check_mark: `ARCH_GET_XCOMP_SUPP`
-  - :white_check_mark: `ARCH_GET_XCOMP_PERM`
-  - :white_check_mark: `ARCH_REQ_XCOMP_PERM`
-
-</details>
-
-<details><summary>:page_facing_up: Related pseudo-files</summary>
-
-- :white_check_mark: `/dev/`
-  - :white_check_mark: `/dev/null`
-  - :white_check_mark: `/dev/zero`
+- ☐ `arch_prctl()`
+  - ☑ `ARCH_GET_XCOMP_SUPP`
+  - ☑ `ARCH_GET_XCOMP_PERM`
+  - ☑ `ARCH_REQ_XCOMP_PERM`
 
 </details>
+
+<details><summary>Related pseudo-files</summary>
+
+- ☑ `/dev/`
+  - ☑ `/dev/null`
+  - ☑ `/dev/zero`
+
+</details><br />
 
 ### Advanced (unimplemented) features
 
@@ -3062,88 +3062,88 @@ codebase of Gramine minimal.
   `putpmsg()`, `afs_syscall()`, `tuxcall()`, `security()`, `lookup_dcookie()`, `restart_syscall()`,
   `vserver()`, `io_pgetevents()`, `rseq()`, `open_tree()`, `close_range()`
 
-<details><summary>:blue_book: Related system calls</summary>
+<details><summary>Related system calls</summary>
 
-- :x: `_sysctl()`
-- :x: `acct()`
-- :x: `add_key()`
-- :x: `afs_syscall()`
-- :x: `bpf()`
-- :x: `capget()`
-- :x: `capset()`
-- :x: `close_range()`
-- :x: `copy_file_range()`
-- :x: `create_module()`
-- :x: `delete_module()`
-- :x: `fgetxattr()`
-- :x: `finit_module()`
-- :x: `flistxattr()`
-- :x: `fremovexattr()`
-- :x: `fsconfig()`
-- :x: `fsetxattr()`
-- :x: `fsmount()`
-- :x: `fsopen()`
-- :x: `fspick()`
-- :x: `get_kernel_syms()`
-- :x: `getpmsg()`
-- :x: `getsid()`
-- :x: `getxattr()`
-- :x: `init_module()`
-- :x: `io_pgetevents()`
-- :x: `ioperm()`
-- :x: `iopl()`
-- :x: `kexec_file_load()`
-- :x: `kexec_load()`
-- :x: `keyctl()`
-- :x: `landlock_add_rule()`
-- :x: `landlock_create_ruleset()`
-- :x: `landlock_restrict_self()`
-- :x: `lgetxattr()`
-- :x: `listxattr()`
-- :x: `llistxattr()`
-- :x: `lookup_dcookie()`
-- :x: `lremovexattr()`
-- :x: `lsetxattr()`
-- :x: `modify_ldt()`
-- :x: `nfsservctl()`
-- :x: `nfsservctl()`
-- :x: `open_tree()`
-- :x: `perf_event_open()`
-- :x: `personality()`
-- :x: `pkey_alloc()`
-- :x: `pkey_free()`
-- :x: `pkey_mprotect()`
-- :x: `process_vm_readv()`
-- :x: `process_vm_writev()`
-- :x: `ptrace()`
-- :x: `putpmsg()`
-- :x: `query_module()`
-- :x: `quotactl()`
-- :x: `quotactl_fd()`
-- :x: `readahead()`
-- :x: `reboot()`
-- :x: `removexattr()`
-- :x: `request_key()`
-- :x: `restart_syscall()`
-- :x: `rseq()`
-- :x: `seccomp()`
-- :x: `security()`
-- :x: `setns()`
-- :x: `setsid()`
-- :x: `setxattr()`
-- :x: `splice()`
-- :x: `swapoff()`
-- :x: `swapon()`
-- :x: `syslog()`
-- :x: `tee()`
-- :x: `tuxcall()`
-- :x: `unshare()`
-- :x: `uselib()`
-- :x: `vhangup()`
-- :x: `vmsplice()`
-- :x: `vserver()`
+- ☒ `_sysctl()`
+- ☒ `acct()`
+- ☒ `add_key()`
+- ☒ `afs_syscall()`
+- ☒ `bpf()`
+- ☒ `capget()`
+- ☒ `capset()`
+- ☒ `close_range()`
+- ☒ `copy_file_range()`
+- ☒ `create_module()`
+- ☒ `delete_module()`
+- ☒ `fgetxattr()`
+- ☒ `finit_module()`
+- ☒ `flistxattr()`
+- ☒ `fremovexattr()`
+- ☒ `fsconfig()`
+- ☒ `fsetxattr()`
+- ☒ `fsmount()`
+- ☒ `fsopen()`
+- ☒ `fspick()`
+- ☒ `get_kernel_syms()`
+- ☒ `getpmsg()`
+- ☒ `getsid()`
+- ☒ `getxattr()`
+- ☒ `init_module()`
+- ☒ `io_pgetevents()`
+- ☒ `ioperm()`
+- ☒ `iopl()`
+- ☒ `kexec_file_load()`
+- ☒ `kexec_load()`
+- ☒ `keyctl()`
+- ☒ `landlock_add_rule()`
+- ☒ `landlock_create_ruleset()`
+- ☒ `landlock_restrict_self()`
+- ☒ `lgetxattr()`
+- ☒ `listxattr()`
+- ☒ `llistxattr()`
+- ☒ `lookup_dcookie()`
+- ☒ `lremovexattr()`
+- ☒ `lsetxattr()`
+- ☒ `modify_ldt()`
+- ☒ `nfsservctl()`
+- ☒ `nfsservctl()`
+- ☒ `open_tree()`
+- ☒ `perf_event_open()`
+- ☒ `personality()`
+- ☒ `pkey_alloc()`
+- ☒ `pkey_free()`
+- ☒ `pkey_mprotect()`
+- ☒ `process_vm_readv()`
+- ☒ `process_vm_writev()`
+- ☒ `ptrace()`
+- ☒ `putpmsg()`
+- ☒ `query_module()`
+- ☒ `quotactl()`
+- ☒ `quotactl_fd()`
+- ☒ `readahead()`
+- ☒ `reboot()`
+- ☒ `removexattr()`
+- ☒ `request_key()`
+- ☒ `restart_syscall()`
+- ☒ `rseq()`
+- ☒ `seccomp()`
+- ☒ `security()`
+- ☒ `setns()`
+- ☒ `setsid()`
+- ☒ `setxattr()`
+- ☒ `splice()`
+- ☒ `swapoff()`
+- ☒ `swapon()`
+- ☒ `syslog()`
+- ☒ `tee()`
+- ☒ `tuxcall()`
+- ☒ `unshare()`
+- ☒ `uselib()`
+- ☒ `vhangup()`
+- ☒ `vmsplice()`
+- ☒ `vserver()`
 
-</details>
+</details><br />
 
 ## Gramine-specific features
 
@@ -3158,25 +3158,25 @@ exposes pseudo-files to set encryption keys (in particular, for encrypted files)
 For detailed information, refer to the ["Attestation and Secret Provisioning" documentation of
 Gramine](https://gramine.readthedocs.io/en/stable/attestation.html#low-level-dev-attestation-interface).
 
-<details><summary>:page_facing_up: Related pseudo-files</summary>
+<details><summary>Related pseudo-files</summary>
 
-- :white_check_mark: `/dev/attestation/`
-  - :white_check_mark: `/dev/attestation/attestation_type`
-  - :white_check_mark: `/dev/attestation/user_report_data`
-  - :white_check_mark: `/dev/attestation/target_info`
-  - :white_check_mark: `/dev/attestation/my_target_info`
-  - :white_check_mark: `/dev/attestation/report`
-  - :white_check_mark: `/dev/attestation/quote`
+- ☑ `/dev/attestation/`
+  - ☑ `/dev/attestation/attestation_type`
+  - ☑ `/dev/attestation/user_report_data`
+  - ☑ `/dev/attestation/target_info`
+  - ☑ `/dev/attestation/my_target_info`
+  - ☑ `/dev/attestation/report`
+  - ☑ `/dev/attestation/quote`
 
-  - :white_check_mark: `/dev/attestation/keys`
-    - :white_check_mark: `/dev/attestation/keys/<key_name>`
-  - :ballot_box_with_check: `/dev/attestation/protected_files_key`: deprecated
+  - ☑ `/dev/attestation/keys`
+    - ☑ `/dev/attestation/keys/<key_name>`
+  - ☐ `/dev/attestation/protected_files_key`: deprecated
 
-</details>
+</details><br />
 
 ## Notes on System V ABI
 
-> :warning: Below description assumes x86-64 architecture.
+> ⚠ Below description assumes x86-64 architecture.
 
 Gramine implements the system-call entry point (analogous to the `SYSCALL` x86 instruction).
 Instead of performing a context switch from userland (ring-3) to kernelspace (ring-0), Gramine

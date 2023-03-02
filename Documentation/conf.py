@@ -20,10 +20,12 @@ os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 import pathlib
 import subprocess
 
+import recommonmark.parser
+
 # -- Project information -----------------------------------------------------
 
 project = 'Gramine'
-copyright = '2022, Gramine Contributors'
+copyright = '2023, Gramine Contributors'
 author = 'Gramine Contributors'
 
 # The short X.Y version
@@ -42,6 +44,7 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'recommonmark',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
@@ -55,6 +58,8 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': 'restructuredtext',
+    '.md': 'markdown',
+    '.markdown': 'markdown',
 }
 
 # The master toctree document.

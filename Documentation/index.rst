@@ -92,6 +92,7 @@ Table of Contents
    :caption: Developing Gramine
    :maxdepth: 1
 
+   devel/features
    devel/building
    devel/onboarding
    devel/contributing
