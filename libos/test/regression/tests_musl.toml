@@ -98,6 +98,7 @@ manifests = [
   "select",
   "send_handle",
   "shared_object",
+  "sid",
   "sigaction_per_process",
   "sigaltstack",
   "sighandler_reset",

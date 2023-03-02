@@ -163,15 +163,19 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct libos
     }
 
     lock(&g_process.fs_lock);
+    lock(&g_process_id_lock);
     struct libos_process process_description = {
         .pid = thread->tid,
         .ppid = g_process.pid,
-        .pgid = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE),
+        .pgid = g_process.pgid,
+        .attached_to_other_pg = false,
+        .sid = g_process.sid,
         .root = g_process.root,
         .cwd = g_process.cwd,
         .umask = g_process.umask,
         .exec = g_process.exec,
     };
+    unlock(&g_process_id_lock);
 
     get_dentry(process_description.root);
     get_dentry(process_description.cwd);

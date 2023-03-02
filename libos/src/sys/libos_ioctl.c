@@ -49,7 +49,9 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
                 ret = -EFAULT;
                 break;
             }
-            *(int*)arg = __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE);
+            lock(&g_process_id_lock);
+            *(int*)arg = g_process.pgid;
+            unlock(&g_process_id_lock);
             ret = 0;
             break;
         case FIONBIO:

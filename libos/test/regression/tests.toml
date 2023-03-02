@@ -97,6 +97,7 @@ manifests = [
   "send_handle",
   "shared_object",
   "shebang_test_script",
+  "sid",
   "sigaction_per_process",
   "sigaltstack",
   "sighandler_reset",

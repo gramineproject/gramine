@@ -466,6 +466,8 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
     if (!str)
         return -ENOMEM;
 
+    /* This lock is needed for accessing `pgid` and `sid`. */
+    lock(&g_process_id_lock);
     struct {
         const char* fmt;
         unsigned long val;
@@ -474,9 +476,9 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         /* ppid */
         { " %d", g_process.ppid },
         /* pgrp */
-        { " %d", __atomic_load_n(&g_process.pgid, __ATOMIC_ACQUIRE) },
+        { " %d", g_process.pgid },
         /* session */
-        { " %d", /*dummy value=*/0 },
+        { " %d", g_process.sid },
         /* tty_nr */
         { " %d", /*dummy value=*/0 },
         /* tpgid */
@@ -580,6 +582,7 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
         /* exit_code */
         { " %d\n", /*dummy value=*/0 },
     };
+    unlock(&g_process_id_lock);
 
     size_t i = 0;
     while (i < ARRAY_SIZE(status)) {
