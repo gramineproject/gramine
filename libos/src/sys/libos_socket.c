@@ -582,8 +582,13 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
         }
     }
     if (user_msg->msg_control && user_msg->msg_controllen) {
-        log_warning("\"struct msghdr\" ancillary data is not supported");
-        return -ENOSYS;
+        if (is_recv) {
+            log_warning("\"struct msghdr\" ancillary data is ignored during recv");
+            user_msg->msg_controllen = 0; /* forces apps to ignore control message */
+        } else {
+            log_warning("\"struct msghdr\" ancillary data is not supported during send");
+            return -ENOSYS;
+        }
     }
     if (user_msg->msg_name) {
         if (user_msg->msg_namelen < 0) {
