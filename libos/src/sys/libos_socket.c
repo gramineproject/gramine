@@ -563,7 +563,7 @@ out:
     return ret;
 }
 
-static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
+static int check_msghdr(struct msghdr* user_msg, int socket_domain, int socket_type, bool is_recv) {
     if (!is_user_memory_readable(user_msg, sizeof(*user_msg))) {
         return -EFAULT;
     }
@@ -582,8 +582,12 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
         }
     }
     if (user_msg->msg_control && user_msg->msg_controllen) {
-        log_warning("\"struct msghdr\" ancillary data is not supported");
-        return -ENOSYS;
+        if ((socket_domain == AF_INET || socket_domain == AF_INET6) && socket_type == SOCK_STREAM) {
+            log_warning("\"struct msghdr\" ancillary data is ignored on TCP/IP sockets");
+        } else {
+            log_warning("\"struct msghdr\" ancillary data is not supported");
+            return -ENOSYS;
+        }
     }
     if (user_msg->msg_name) {
         if (user_msg->msg_namelen < 0) {
@@ -713,39 +717,43 @@ long libos_syscall_sendto(int fd, void* buf, size_t len, unsigned int flags, voi
 }
 
 long libos_syscall_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
-    ssize_t ret = check_msghdr(msg, /*is_recv=*/false);
-    if (ret < 0) {
-        return ret;
-    }
-
     struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
 
+    ssize_t ret = check_msghdr(msg, handle->info.sock.domain, handle->info.sock.type,
+                               /*is_recv=*/false);
+    if (ret < 0) {
+        goto out;
+    }
+
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
     ret = do_sendmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_name, addrlen, flags);
+out:
     put_handle(handle);
     return ret;
 }
 
 long libos_syscall_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags) {
-    for (size_t i = 0; i < vlen; i++) {
-        int ret = check_msghdr(&msg[i].msg_hdr, /*is_recv=*/false);
-        if (ret < 0) {
-            return ret;
-        }
-        if (!is_user_memory_writable(&msg[i].msg_len, sizeof(msg[i].msg_len))) {
-            return -EFAULT;
-        }
-    }
-
     struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
 
     ssize_t ret;
+    for (size_t i = 0; i < vlen; i++) {
+        ret = check_msghdr(&msg[i].msg_hdr, handle->info.sock.domain, handle->info.sock.type,
+                               /*is_recv=*/false);
+        if (ret < 0) {
+            goto out;
+        }
+        if (!is_user_memory_writable(&msg[i].msg_len, sizeof(msg[i].msg_len))) {
+            ret = -EFAULT;
+            goto out;
+        }
+    }
+
     for (size_t i = 0; i < vlen; i++) {
         struct msghdr* hdr = &msg[i].msg_hdr;
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
@@ -958,14 +966,15 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
 }
 
 long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
-    ssize_t ret = check_msghdr(msg, /*is_recv=*/true);
-    if (ret < 0) {
-        return ret;
-    }
-
     struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
+    }
+
+    ssize_t ret = check_msghdr(msg, handle->info.sock.domain, handle->info.sock.type,
+                               /*is_recv=*/true);
+    if (ret < 0) {
+        goto out;
     }
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
@@ -976,6 +985,7 @@ long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
         }
         msg->msg_flags = flags;
     }
+out:
     put_handle(handle);
     return ret;
 }
@@ -994,22 +1004,24 @@ long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         return -EINVAL;
     }
 
-    for (size_t i = 0; i < vlen; i++) {
-        int ret = check_msghdr(&msg[i].msg_hdr, /*is_recv=*/true);
-        if (ret < 0) {
-            return ret;
-        }
-        if (!is_user_memory_writable(&msg[i].msg_len, sizeof(msg[i].msg_len))) {
-            return -EFAULT;
-        }
-    }
-
     struct libos_handle* handle = get_fd_handle(fd, NULL, NULL);
     if (!handle) {
         return -EBADF;
     }
 
     ssize_t ret;
+    for (size_t i = 0; i < vlen; i++) {
+        ret = check_msghdr(&msg[i].msg_hdr, handle->info.sock.domain, handle->info.sock.type,
+                           /*is_recv=*/true);
+        if (ret < 0) {
+            goto out;
+        }
+        if (!is_user_memory_writable(&msg[i].msg_len, sizeof(msg[i].msg_len))) {
+            ret = -EFAULT;
+            goto out;
+        }
+    }
+
     for (size_t i = 0; i < vlen; i++) {
         struct msghdr* hdr = &msg[i].msg_hdr;
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
