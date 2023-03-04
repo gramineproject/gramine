@@ -106,6 +106,11 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
              | O_LARGEFILE | O_NOATIME | O_NOCTTY | O_NOFOLLOW | O_NONBLOCK | O_PATH | O_SYNC
              | O_TMPFILE | O_TRUNC;
 
+    if (   (flags & O_ACCMODE) != O_RDONLY
+        && (flags & O_ACCMODE) != O_WRONLY
+        && (flags & O_ACCMODE) != O_RDWR)
+        return -EINVAL;
+
     /* TODO: fail explicitly on valid but unsupported flags. */
 
     if (flags & O_PATH) {
