@@ -209,6 +209,11 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
 
     int ret;
 
+    if (   (flags & O_ACCMODE) != PAL_ACCESS_RDONLY
+        && (flags & O_ACCMODE) != PAL_ACCESS_WRONLY
+        && (flags & O_ACCMODE) != PAL_ACCESS_RDWR)
+        return -EINVAL;
+
     char* uri;
     ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
