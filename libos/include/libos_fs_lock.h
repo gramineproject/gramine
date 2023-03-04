@@ -43,7 +43,7 @@ struct posix_lock {
     int type;
 
     /* Handle to differentiate between `flock` and `fcntl` */
-    int handle_id;
+    uint64_t handle_id;
 
     /* First byte of range */
     uint64_t start;

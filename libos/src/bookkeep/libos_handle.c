@@ -17,6 +17,7 @@
 #include "toml_utils.h"
 
 static struct libos_lock handle_mgr_lock;
+static uint64_t g_handle_counter = 1;
 
 #define HANDLE_MGR_ALLOC 32
 
@@ -301,6 +302,7 @@ static int clear_posix_locks(struct libos_handle* handle) {
             .start = 0,
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
+            .handle_id = handle->id,
         };
         int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
         if (ret < 0) {
@@ -326,7 +328,9 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
 
     unlock(&handle_map->lock);
 
-    (void)clear_posix_locks(handle);
+    if (handle->id == 0 || (handle->ref_count == 1 && handle->id != 0)) {
+        clear_posix_locks(handle);
+    }
 
     return handle;
 }
@@ -495,12 +499,16 @@ void put_handle(struct libos_handle* hdl) {
         assert(hdl->epoll_items_count == 0);
         assert(LISTP_EMPTY(&hdl->epoll_items));
 
+        hdl->id = ((uint64_t)g_process.pid << 32) | g_handle_counter++;
+
         if (hdl->is_dir) {
             clear_directory_handle(hdl);
         }
 
-        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->close)
+        if (hdl->fs && hdl->fs->fs_ops && hdl->fs->fs_ops->close) {
+            clear_posix_locks(hdl);
             hdl->fs->fs_ops->close(hdl);
+        }
 
         free(hdl->uri);
 

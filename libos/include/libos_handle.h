@@ -131,6 +131,7 @@ struct libos_epoll_handle {
 };
 
 struct libos_handle {
+    uint64_t id;
     enum libos_handle_type type;
     bool is_dir;
 

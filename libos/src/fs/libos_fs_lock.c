@@ -154,16 +154,21 @@ static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, stru
     assert(pl->type != F_UNLCK);
 
     struct posix_lock* cur;
-    LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
+    if (pl->handle_id == 0) {
         /* Resolve conflicts for `fcntl` locks */
-        if (pl->handle_id == 0 && cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
-               && (cur->type == F_WRLCK || pl->type == F_WRLCK))
-            return cur;
-
+        LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
+            if (cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
+                    && (cur->type == F_WRLCK || pl->type == F_WRLCK))
+                return cur;
+        }
+    } else {
         /* Resolve conflicts for `flock` locks */
-        if (cur->handle_id != pl->handle_id && (cur->type == F_WRLCK || pl->type == F_WRLCK))
-            return cur;
+        LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
+            if (cur->handle_id != pl->handle_id && (cur->type == F_WRLCK || pl->type == F_WRLCK))
+                return cur;
+        }
     }
+
     return NULL;
 }
 
@@ -222,101 +227,126 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
 
     struct posix_lock* cur;
     struct posix_lock* tmp;
-    LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
-        if (cur->pid < pl->pid) {
-            prev = cur;
-            continue;
-        }
-        if (pl->pid < cur->pid) {
-            break;
-        }
 
-        if (cur->type == pl->type) {
-            /* Same lock type: we can possibly merge the locks. */
+    struct posix_lock_request* req;
+    struct posix_lock_request* req_tmp;
 
-            if (start > 0 && cur->end < start - 1) {
-                /* `cur` ends before target range begins, and is not even adjacent */
+    if (pl->handle_id == 0) {
+        /* Handle `fcntl` locks */
+        LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
+            if (cur->pid < pl->pid) {
                 prev = cur;
-            } else if (end < FS_LOCK_EOF && end + 1 < cur->start) {
-                /* `cur` begins after target range ends, and is not even adjacent - we're
-                 * done */
-                break;
-            } else {
-                /* `cur` is either adjacent to target range, or overlaps with it. Delete it, and
-                 * expand the target range. */
-                start = MIN(start, cur->start);
-                end = MAX(end, cur->end);
-                LISTP_DEL(cur, &fs_lock->posix_locks, list);
-                free(cur);
+                continue;
             }
-        } else {
-            /* Different lock types: if they overlap, we delete the target range. */
-
-            if (cur->end < start) {
-                /* `cur` ends before target range begins */
-                prev = cur;
-            } else if (end < cur->start) {
-                /* `cur` begins after target range ends - we're done */
+            if (pl->pid < cur->pid) {
                 break;
-            } else if (cur->start < start && cur->end <= end) {
-                /*
-                 * `cur` overlaps with beginning of target range. Shorten `cur`.
-                 *
-                 * cur:  =======
-                 * tgt:    -------
-                 *
-                 * cur:  ==
-                 */
-                assert(start > 0);
-                cur->end = start - 1;
-                prev = cur;
-            } else if (cur->start < start && cur->end > end) {
-                /*
-                 * The target range is inside `cur`. Split `cur` and finish.
-                 *
-                 * cur:    ========
-                 * tgt:      ----
-                 *
-                 * cur:    ==
-                 * extra:        ==
-                 */
+            }
 
-                /* We'll need `extra` only once, because we exit the loop afterwards. */
-                assert(extra);
+            if (cur->type == pl->type) {
+                /* Same lock type: we can possibly merge the locks. */
 
-                assert(start > 0);
-                extra->type = cur->type;
-                extra->start = end + 1;
-                extra->end = cur->end;
-                extra->pid = cur->pid;
-                cur->end = start - 1;
-                LISTP_ADD_AFTER(extra, cur, &fs_lock->posix_locks, list);
-                extra = NULL;
-                /* We're done: the new lock, if any, will be added after `cur`. */
-                prev = cur;
-                break;
-            } else if (start <= cur->start && cur->end <= end) {
-                /*
-                 * `cur` is completely covered by target range. Delete `cur`.
-                 *
-                 * cur:    ====
-                 * tgt:  --------
-                 */
-                LISTP_DEL(cur, &fs_lock->posix_locks, list);
-                free(cur);
+                if (start > 0 && cur->end < start - 1) {
+                    /* `cur` ends before target range begins, and is not even adjacent */
+                    prev = cur;
+                } else if (end < FS_LOCK_EOF && end + 1 < cur->start) {
+                    /* `cur` begins after target range ends, and is not even adjacent - we're
+                    * done */
+                    break;
+                } else {
+                    /* `cur` is either adjacent to target range, or overlaps with it. Delete it, and
+                    * expand the target range. */
+                    start = MIN(start, cur->start);
+                    end = MAX(end, cur->end);
+                    LISTP_DEL(cur, &fs_lock->posix_locks, list);
+                    free(cur);
+                }
             } else {
-                /*
-                 * `cur` overlaps with end of target range. Shorten `cur` and finish.
-                 *
-                 * cur:    ====
-                 * tgt: -----
-                 *
-                 * cur:      ==
-                 */
-                assert(start <= cur->start && end < cur->end);
-                assert(end < FS_LOCK_EOF);
-                cur->start = end + 1;
-                break;
+                /* Different lock types: if they overlap, we delete the target range. */
+
+                if (cur->end < start) {
+                    /* `cur` ends before target range begins */
+                    prev = cur;
+                } else if (end < cur->start) {
+                    /* `cur` begins after target range ends - we're done */
+                    break;
+                } else if (cur->start < start && cur->end <= end) {
+                    /*
+                    * `cur` overlaps with beginning of target range. Shorten `cur`.
+                    *
+                    * cur:  =======
+                    * tgt:    -------
+                    *
+                    * cur:  ==
+                    */
+                    assert(start > 0);
+                    cur->end = start - 1;
+                    prev = cur;
+                } else if (cur->start < start && cur->end > end) {
+                    /*
+                    * The target range is inside `cur`. Split `cur` and finish.
+                    *
+                    * cur:    ========
+                    * tgt:      ----
+                    *
+                    * cur:    ==
+                    * extra:        ==
+                    */
+
+                    /* We'll need `extra` only once, because we exit the loop afterwards. */
+                    assert(extra);
+
+                    assert(start > 0);
+                    extra->type = cur->type;
+                    extra->start = end + 1;
+                    extra->end = cur->end;
+                    extra->pid = cur->pid;
+                    cur->end = start - 1;
+                    LISTP_ADD_AFTER(extra, cur, &fs_lock->posix_locks, list);
+                    extra = NULL;
+                    /* We're done: the new lock, if any, will be added after `cur`. */
+                    prev = cur;
+                    break;
+                } else if (start <= cur->start && cur->end <= end) {
+                    /*
+                    * `cur` is completely covered by target range. Delete `cur`.
+                    *
+                    * cur:    ====
+                    * tgt:  --------
+                    */
+                    LISTP_DEL(cur, &fs_lock->posix_locks, list);
+                    free(cur);
+                } else {
+                    /*
+                    * `cur` overlaps with end of target range. Shorten `cur` and finish.
+                    *
+                    * cur:    ====
+                    * tgt: -----
+                    *
+                    * cur:      ==
+                    */
+                    assert(start <= cur->start && end < cur->end);
+                    assert(end < FS_LOCK_EOF);
+                    cur->start = end + 1;
+                    break;
+                }
+            }
+        }
+    } else {
+        /* Safely remove `flock` locks based on `handle_id` */
+        if (pl->type == F_UNLCK) {
+            LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
+                if (cur->handle_id == pl->handle_id) {
+                    LISTP_DEL(cur, &fs_lock->posix_locks, list);
+                    free(cur);
+                    break;
+                }
+            }
+            LISTP_FOR_EACH_ENTRY_SAFE(req, req_tmp, &fs_lock->posix_lock_requests, list) {
+                if (req->pl.handle_id == pl->handle_id) {
+                    LISTP_DEL(req, &fs_lock->posix_lock_requests, list);
+                    free(req);
+                    break;
+                }
             }
         }
     }
@@ -324,7 +354,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     if (new) {
         assert(pl->type != F_UNLCK);
 
-
+        new->handle_id = pl->handle_id;
         new->type = pl->type;
         new->start = start;
         new->end = end;

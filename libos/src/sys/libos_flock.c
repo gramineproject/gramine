@@ -24,7 +24,7 @@ long libos_syscall_flock(int fd, int operation) {
         .start = 0,
         .end = FS_LOCK_EOF,
         .pid = g_process.pid,
-        .handle_id = ((uint64_t)g_process.pid << 32) | ((uint64_t)dentry_ino(hdl->dentry))
+        .handle_id = hdl->id,
     };
 
     /* Set the type of the lock based on the requested operation */
@@ -46,7 +46,7 @@ long libos_syscall_flock(int fd, int operation) {
         /* Unlock */
         case LOCK_UN:
             pl.type = F_UNLCK;
-            ret = posix_lock_set(hdl->dentry, &pl, /*block=*/true);
+            ret = posix_lock_set(hdl->dentry, &pl, /*block=*/false);
             break;
 
         /* Invalid operation */
