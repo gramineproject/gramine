@@ -44,10 +44,32 @@
                        | MAP_HUGE_2MB           \
                        | MAP_HUGE_1GB)
 
+static int check_prot(int prot) {
+    if (prot & ~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC | PROT_GROWSDOWN | PROT_GROWSUP |
+                 PROT_SEM)) {
+        return -EINVAL;
+    }
+
+    if ((prot & (PROT_GROWSDOWN | PROT_GROWSUP)) == (PROT_GROWSDOWN | PROT_GROWSUP)) {
+        return -EINVAL;
+    }
+
+    /* We do not support these flags (at least yet). */
+    if (prot & (PROT_GROWSUP | PROT_SEM)) {
+        return -EOPNOTSUPP;
+    }
+
+    return 0;
+}
+
 void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                          unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
+
+    ret = check_prot(prot);
+    if (ret < 0)
+        return (void*)ret;
 
     if (!(flags & MAP_FIXED) && addr)
         addr = ALLOC_ALIGN_DOWN_PTR(addr);
@@ -242,19 +264,9 @@ out_handle:
 }
 
 long libos_syscall_mprotect(void* addr, size_t length, int prot) {
-    if (prot & ~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC | PROT_GROWSDOWN | PROT_GROWSUP |
-                 PROT_SEM)) {
-        return -EINVAL;
-    }
-
-    if ((prot & (PROT_GROWSDOWN | PROT_GROWSUP)) == (PROT_GROWSDOWN | PROT_GROWSUP)) {
-        return -EINVAL;
-    }
-
-    /* We do not support these flags (at least yet). */
-    if (prot & (PROT_GROWSUP | PROT_SEM)) {
-        return -EOPNOTSUPP;
-    }
+    int ret = check_prot(prot);
+    if (ret < 0)
+        return ret;
 
     /*
      * According to the manpage, addr has to be page-aligned, but not the
@@ -277,7 +289,7 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
     /* `bkeep_mprotect` and then `PalVirtualMemoryProtect` is racy, but it's hard to do it properly.
      * On the other hand if this race happens, it means user app is buggy, so not a huge problem. */
 
-    int ret = bkeep_mprotect(addr, length, prot, /*is_internal=*/false);
+    ret = bkeep_mprotect(addr, length, prot, /*is_internal=*/false);
     if (ret < 0) {
         return ret;
     }
