@@ -49,7 +49,10 @@ long libos_syscall_getpriority(int which, int who) {
 
 /* dummy implementation: ignore user-supplied param and return success */
 long libos_syscall_sched_setparam(pid_t pid, struct __kernel_sched_param* param) {
-    if (pid < 0 || param == NULL)
+    if (!is_user_memory_readable(param, sizeof(*param)))
+        return -EFAULT;
+
+    if (pid < 0)
         return -EINVAL;
 
     return 0;
@@ -57,7 +60,10 @@ long libos_syscall_sched_setparam(pid_t pid, struct __kernel_sched_param* param)
 
 /* dummy implementation: always return sched_priority of 0 (implies non-real-time sched policy) */
 long libos_syscall_sched_getparam(pid_t pid, struct __kernel_sched_param* param) {
-    if (pid < 0 || param == NULL)
+    if (!is_user_memory_writable(param, sizeof(*param)))
+        return -EFAULT;
+
+    if (pid < 0)
         return -EINVAL;
 
     param->__sched_priority = 0;
@@ -68,7 +74,10 @@ long libos_syscall_sched_getparam(pid_t pid, struct __kernel_sched_param* param)
 long libos_syscall_sched_setscheduler(pid_t pid, int policy, struct __kernel_sched_param* param) {
     policy &= ~SCHED_RESET_ON_FORK; /* ignore reset-on-fork flag */
 
-    if (pid < 0 || param == NULL)
+    if (!is_user_memory_readable(param, sizeof(*param)))
+        return -EFAULT;
+
+    if (pid < 0)
         return -EINVAL;
 
     /* fail on unrecognized policies */
