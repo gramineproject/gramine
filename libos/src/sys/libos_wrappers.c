@@ -17,7 +17,10 @@
  * notably affects pipes. */
 
 long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
-    if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
+    size_t arr_size;
+    if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size))
+        return -EINVAL;
+    if (!is_user_memory_readable(vec, arr_size))
         return -EINVAL;
 
     for (size_t i = 0; i < vlen; i++) {
@@ -82,7 +85,10 @@ out:
 }
 
 long libos_syscall_writev(unsigned long fd, struct iovec* vec, unsigned long vlen) {
-    if (!is_user_memory_readable(vec, sizeof(*vec) * vlen))
+    size_t arr_size;
+    if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size))
+        return -EINVAL;
+    if (!is_user_memory_readable(vec, arr_size))
         return -EINVAL;
 
     for (size_t i = 0; i < vlen; i++) {
