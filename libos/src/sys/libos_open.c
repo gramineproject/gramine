@@ -142,10 +142,7 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
         ret = -ENOMEM;
         goto out;
     }
-
-    lock(&hdl->lock);
     hdl->id=  ((uint64_t)g_process.pid << 32) | local_counter++;
-    unlock(&hdl->lock);
     
     ret = open_namei(hdl, dir, filename, flags, mode, NULL);
     if (ret < 0) {
