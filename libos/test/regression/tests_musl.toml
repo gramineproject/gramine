@@ -38,6 +38,7 @@ manifests = [
   "file_check_policy_allow_all_but_log",
   "file_check_policy_strict",
   "file_size",
+  "flock_lock",
   "fopen_cornercases",
   "fork_and_exec",
   "fork_disallowed",

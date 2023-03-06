@@ -21,6 +21,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "common.h"
+
 #define TEST_FILE "tmp/lock_file"
 
 static int g_fd;
@@ -220,24 +222,18 @@ static void close_pipes(int pipes[2][2]) {
 
 static void write_pipe(int pipe[2]) {
     char c = 0;
-    int ret;
-    do {
-        ret = write(pipe[1], &c, sizeof(c));
-    } while (ret == -1 && errno == EINTR);
-    if (ret == -1)
-        err(1, "write");
+    ssize_t x = CHECK(write(pipe[1], &c, sizeof(c)));
+    if (x != sizeof(c)) {
+        errx(1, "pipe write: %zd", x);
+    }
 }
 
 static void read_pipe(int pipe[2]) {
-    char c;
-    int ret;
-    do {
-        ret = read(pipe[0], &c, sizeof(c));
-    } while (ret == -1 && errno == EINTR);
-    if (ret == -1)
-        err(1, "read");
-    if (ret == 0)
-        errx(1, "pipe closed");
+    char c = 0;
+    ssize_t x = CHECK(read(pipe[0], &c, sizeof(c)));
+    if (x != sizeof(c)) {
+        errx(1, "pipe read: %zd", x);
+    }
 }
 
 /* Test: child takes a lock and then exits. The lock should be released. */

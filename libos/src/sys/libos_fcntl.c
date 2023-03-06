@@ -5,7 +5,9 @@
  */
 
 /*
- * Implementation of system call "fcntl":
+ * Implementation of system calls "fcntl" and "flock".
+ *
+ * The "fcntl" syscall supports:
  *
  * - F_DUPFD, F_DUPFD_CLOEXEC (duplicate a file descriptor)
  * - F_GETFD, F_SETFD (file descriptor flags)
@@ -24,6 +26,7 @@
 #include "libos_thread.h"
 #include "linux_abi/errors.h"
 #include "linux_abi/fs.h"
+#include "toml_utils.h"
 
 #define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 
@@ -51,9 +54,9 @@ int set_handle_nonblocking(struct libos_handle* handle, bool on) {
 }
 
 /*
- * Convert user-mode `struct flock` into our `struct libos_file_lock`. This mostly means converting
- * the position parameters (l_whence, l_start, l_len) to an absolute inclusive range [start .. end].
- * See `man fcntl` for details.
+ * Convert user-mode `struct flock` into our `struct libos_file_lock` (for POSIX locks only). This
+ * mostly means converting the position parameters (l_whence, l_start, l_len) to an absolute
+ * inclusive range [start .. end]. See `man fcntl` for details.
  *
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
@@ -124,10 +127,12 @@ static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl,
         end = FS_LOCK_EOF;
     }
 
+    file_lock->family = FILE_LOCK_POSIX;
     file_lock->type = fl->l_type;
     file_lock->start = start;
     file_lock->end = end;
     file_lock->pid = g_process.pid;
+    file_lock->handle_id = 0; /* unused in POSIX (fcntl) locks, unset for sanity */
     return 0;
 }
 
@@ -290,22 +295,54 @@ long libos_syscall_flock(unsigned int fd, unsigned int cmd) {
         return 0;
     }
 
+    /* TODO: temporary measure, remove it once flock implementation is thoroughly validated and
+     * works on multi-process apps; see comments at `created_by_process` in `libos_handle.h` */
+    assert(g_manifest_root);
+    bool enable_flock;
+    ret = toml_bool_in(g_manifest_root, "sys.experimental__enable_flock", /*defaultval=*/false,
+                       &enable_flock);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.experimental__enable_flock' (the value must be `true` or "
+                  "`false`)");
+        return -ENOSYS;
+    }
+    if (!enable_flock) {
+        /* flock is not explicitly allowed in manifest */
+        if (FIRST_TIME()) {
+            log_warning("The app tried to use flock, but it's turned off "
+                        "(sys.experimental__enable_flock = false)");
+        }
+
+        return -ENOSYS;
+    }
+
+
     struct libos_handle* hdl = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!hdl)
         return -EBADF;
 
+    int lock_type;
     switch (cmd & ~LOCK_NB) {
         case LOCK_EX:
+            lock_type = F_WRLCK;
+            break;
         case LOCK_SH:
+            lock_type = F_RDLCK;
+            break;
         case LOCK_UN:
+            lock_type = F_UNLCK;
             break;
         default:
             ret = -EINVAL;
             goto out;
     }
 
-    /* TODO: add implementation */
-    ret = -ENOSYS;
+    struct libos_file_lock file_lock = {
+        .family = FILE_LOCK_FLOCK,
+        .type = lock_type,
+        .handle_id = hdl->id,
+    };
+    ret = file_lock_set(hdl->dentry, &file_lock, !(cmd & LOCK_NB));
 out:
     put_handle(hdl);
     return ret;
