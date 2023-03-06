@@ -623,8 +623,8 @@ out:
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
                                     uint8_t* ias_sig_b64, size_t ias_sig_b64_size,
                                     bool allow_outdated_tcb, const char* nonce,
-                                    const char* ias_pub_key_pem, uint8_t** out_quote,
-                                    size_t* out_quote_size) {
+                                    const char* ias_pub_key_pem, char (*enclave_quote_status)[128],
+                                    uint8_t** out_quote, size_t* out_quote_size) {
     mbedtls_pk_context ias_pub_key;
     int ret = -1;
     uint8_t* ias_sig = NULL;
@@ -724,6 +724,11 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
     if (node->type != cJSON_String) {
         ERROR("IAS report: quote status is not a string\n");
         goto out;
+    }
+
+    if (enclave_quote_status) {
+        strncpy(*enclave_quote_status, node->valuestring, sizeof(*enclave_quote_status));
+        (*enclave_quote_status)[sizeof(*enclave_quote_status) - 1] = '\0';
     }
 
     if (strcmp("OK", node->valuestring) == 0) {

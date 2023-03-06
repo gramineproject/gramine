@@ -167,13 +167,20 @@ int main(int argc, char* argv[]) {
 
     uint8_t* report_quote_body = NULL;
     size_t quote_body_size = 0;
+    char enclave_quote_status[128] = {0};
 
     /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
     ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
                                           allow_outdated_tcb, nonce, ias_pubkey,
-                                          &report_quote_body, &quote_body_size);
-    if (ret < 0)
+                                          &enclave_quote_status, &report_quote_body,
+                                          &quote_body_size);
+    if (ret < 0) {
+        if (get_verbose()) {
+            ERROR("Failed to verify IAS attestation report or extract the SGX quote from it, "
+                  "enclave quote status: %s\n", enclave_quote_status);
+        }
         return ret;
+    }
 
     /* verify that obtained SGX quote (extracted from IAS report) has reasonable size */
     if (quote_body_size < sizeof(sgx_quote_body_t) || quote_body_size > SGX_QUOTE_MAX_SIZE) {
