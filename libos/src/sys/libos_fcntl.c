@@ -128,6 +128,7 @@ static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struc
     pl->start = start;
     pl->end = end;
     pl->pid = g_process.pid;
+    pl->handle_id = 0;
     return 0;
 }
 
@@ -141,6 +142,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     struct libos_handle* hdl = get_fd_handle(fd, &flags, handle_map);
     if (!hdl)
         return -EBADF;
+    hdl->id = 0;
 
     switch (cmd) {
         /* See `man fcntl` for the expected semantics of these commands. */
@@ -278,4 +280,53 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
 
     put_handle(hdl);
     return ret;
+}
+
+long libos_syscall_flock(int fd, int operation) {
+    int ret;
+
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, handle_map);
+    if (!hdl)
+        return -EBADF;
+
+    struct flock fl;
+
+    switch (operation & ~LOCK_NB) {
+        case LOCK_EX:
+            fl.l_type = F_WRLCK;
+            break;
+        case LOCK_SH:
+            fl.l_type = F_RDLCK;
+            break;
+        case LOCK_UN:
+            fl.l_type = F_UNLCK;
+            break;
+        default:
+            ret = -EINVAL;
+            goto out;
+    }
+
+    fl.l_whence = SEEK_SET;
+    fl.l_start = fl.l_len = 0L;/* Lock the whold file. */
+
+    struct posix_lock pl;
+    ret = flock_to_posix_lock(&fl, hdl, &pl);
+    if (ret < 0)
+        goto out;
+
+    pl.handle_id = hdl->id;
+    if (fl.l_type == F_UNLCK) {
+        ret = posix_lock_clear_hid(pl.handle_id);
+        goto out;
+    }
+
+    ret = posix_lock_set(hdl->dentry, &pl, !(operation&LOCK_NB));
+
+out:
+    put_handle(hdl);
+    return ret;
+
 }
