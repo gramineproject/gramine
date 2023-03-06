@@ -110,23 +110,6 @@ int ipc_posix_lock_clear_pid(IDTYPE pid) {
     return result;
 }
 
-int ipc_posix_lock_clear_hid(uint64_t hid) {
-    assert(g_process_ipc_ids.leader_vmid);
-
-    size_t total_msg_size = get_ipc_msg_size(sizeof(hid));
-    struct libos_ipc_msg* msg = __alloca(total_msg_size);
-    init_ipc_msg(msg, IPC_MSG_POSIX_LOCK_CLEAR_HID, total_msg_size);
-    memcpy(msg->data, &hid, sizeof(hid));
-
-    void* data;
-    int ret = ipc_send_msg_and_get_response(g_process_ipc_ids.leader_vmid, msg, &data);
-    if (ret < 0)
-        return ret;
-    int result = *(int*)data;
-    free(data);
-    return result;
-}
-
 int ipc_posix_lock_set_callback(IDTYPE src, void* data, unsigned long seq) {
     struct libos_ipc_posix_lock* msgin = data;
     struct posix_lock pl = {
@@ -171,17 +154,6 @@ int ipc_posix_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
 int ipc_posix_lock_clear_pid_callback(IDTYPE src, void* data, unsigned long seq) {
     IDTYPE* pid = data;
     int result = posix_lock_clear_pid(*pid);
-
-    size_t total_msg_size = get_ipc_msg_size(sizeof(result));
-    struct libos_ipc_msg* msg = __alloca(total_msg_size);
-    init_ipc_response(msg, seq, total_msg_size);
-    memcpy(msg->data, &result, sizeof(result));
-    return ipc_send_message(src, msg);
-}
-
-int ipc_posix_lock_clear_hid_callback(IDTYPE src, void* data, unsigned long seq) {
-    uint64_t* hid = data;
-    int result = posix_lock_clear_hid(*hid);
 
     size_t total_msg_size = get_ipc_msg_size(sizeof(result));
     struct libos_ipc_msg* msg = __alloca(total_msg_size);
