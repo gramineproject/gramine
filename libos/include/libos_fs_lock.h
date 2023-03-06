@@ -4,7 +4,8 @@
  */
 
 /*
- * File locks. Currently only POSIX locks are implemented.
+ * File locks. Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented via
+ * a common struct `posix_lock` (the name is historic). See `man fcntl` and `man flock` for details.
  */
 
 #pragma once
@@ -22,8 +23,8 @@ struct libos_dentry;
 int init_fs_lock(void);
 
 /*
- * File locks. Currently describes only POSIX locks (also known as advisory record locks). See `man
- * fcntl` for details.
+ * File locks. Describes both POSIX locks aka advisory record locks (fcntl syscall) and BSD locks
+ * (flock syscall). See `man fcntl` and `man flock` for details.
  *
  * The current implementation works over IPC and handles all requests in the main process. It has
  * the following caveats:
@@ -34,7 +35,7 @@ int init_fs_lock(void);
  *   local-process-only filesystems (tmpfs).
  * - There is no deadlock detection (EDEADLK).
  * - The lock requests cannot be interrupted (EINTR).
- * - The locks work only on files that have a dentry (no pipes, sockets etc.)
+ * - The locks work only on files that have a dentry (no pipes, sockets etc.).
  */
 
 DEFINE_LISTP(libos_file_lock);
@@ -54,6 +55,9 @@ struct libos_file_lock {
 
     /* List node, used internally */
     LIST_TYPE(libos_file_lock) list;
+
+    /* Unique handle id, works as an identifier for `flock` syscall */
+    uint64_t handle_id;
 };
 
 /*!
@@ -125,3 +129,14 @@ int file_lock_set_from_ipc(const char* path, struct libos_file_lock* file_lock, 
  */
 int file_lock_get_from_ipc(const char* path, struct libos_file_lock* file_lock,
                            struct libos_file_lock* out_file_lock);
+
+/*!
+ * \brief Determine whether dentry has flock-typed locks.
+ *
+ * \param dent The dentry for a file.
+ *
+ * Returns true if at least one associated lock is flock-typed. Otherwise returns false. Note that
+ * if a dentry has a mix of fcntl and flock locks, then this function returns true (and the
+ * subsequent behavior is undefined).
+ */
+bool has_flock_locks(struct libos_dentry* dent);

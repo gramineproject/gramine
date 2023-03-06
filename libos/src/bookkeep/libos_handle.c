@@ -292,7 +292,7 @@ static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* 
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry) {
+    if (handle && handle->dentry && (!has_flock_locks(handle->dentry))) {
         /* Clear file (POSIX) locks for a file. We are required to do that every time a FD is
          * closed, even if the process holds other handles for that file, or duplicated FDs for the
          * same handle. */
@@ -301,6 +301,7 @@ static int clear_posix_locks(struct libos_handle* handle) {
             .start = 0,
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
+            .handle_id = 0,
         };
         int ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
         if (ret < 0) {
@@ -350,6 +351,10 @@ struct libos_handle* get_new_handle(void) {
     }
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
+
+    static uint64_t local_counter = 0;
+    new_handle->id = ((uint64_t)g_process.pid << 32)
+                      | __atomic_add_fetch(&local_counter, 1, __ATOMIC_RELAXED);
     return new_handle;
 }
 
@@ -475,6 +480,26 @@ static void destroy_handle(struct libos_handle* hdl) {
     free_mem_obj_to_mgr(handle_mgr, hdl);
 }
 
+static int clear_flock_locks(struct libos_handle* hdl) {
+    /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
+    if (hdl && hdl->dentry && has_flock_locks(hdl->dentry)) {
+        assert(hdl->ref_count == 0);
+        struct libos_file_lock file_lock = {
+            .type = F_UNLCK,
+            .start = 0,
+            .end = FS_LOCK_EOF,
+            .pid = g_process.pid,
+            .handle_id = hdl->id,
+        };
+        int ret = file_lock_set(hdl->dentry, &file_lock, /*block=*/false);
+        if (ret < 0) {
+            log_warning("error releasing locks: %s", unix_strerror(ret));
+            return ret;
+        }
+    }
+    return 0;
+}
+
 void put_handle(struct libos_handle* hdl) {
     refcount_t ref_count = refcount_dec(&hdl->ref_count);
 
@@ -496,8 +521,10 @@ void put_handle(struct libos_handle* hdl) {
             hdl->pal_handle = NULL;
         }
 
-        if (hdl->dentry)
+        if (hdl->dentry) {
+            (void)clear_flock_locks(hdl);
             put_dentry(hdl->dentry);
+        }
 
         if (hdl->inode)
             put_inode(hdl->inode);

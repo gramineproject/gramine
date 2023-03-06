@@ -281,6 +281,7 @@ struct libos_ipc_file_lock {
     int type;
     uint64_t start;
     uint64_t end;
+    uint64_t handle_id;
     IDTYPE pid;
 
     bool wait;
@@ -294,6 +295,7 @@ struct libos_ipc_file_lock_resp {
     int type;
     uint64_t start;
     uint64_t end;
+    uint64_t handle_id;
     IDTYPE pid;
 };
 

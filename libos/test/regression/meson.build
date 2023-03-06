@@ -33,6 +33,7 @@ tests = {
     'fdleak': {},
     'file_check_policy': {},
     'file_size': {},
+    'flock_lock': {},
     'fopen_cornercases': {},
     'fork_and_exec': {},
     'fp_multithread': {

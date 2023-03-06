@@ -17,6 +17,7 @@ int ipc_file_lock_set(const char* path, struct libos_file_lock* file_lock, bool 
         .type = file_lock->type,
         .start = file_lock->start,
         .end = file_lock->end,
+        .handle_id = file_lock->handle_id,
         .pid = file_lock->pid,
 
         .wait = wait,
@@ -60,6 +61,7 @@ int ipc_file_lock_get(const char* path, struct libos_file_lock* file_lock,
         .type = file_lock->type,
         .start = file_lock->start,
         .end = file_lock->end,
+        .handle_id = file_lock->handle_id,
         .pid = file_lock->pid,
     };
 
@@ -85,6 +87,7 @@ int ipc_file_lock_get(const char* path, struct libos_file_lock* file_lock,
         out_file_lock->type = resp->type;
         out_file_lock->start = resp->start;
         out_file_lock->end = resp->end;
+        out_file_lock->handle_id = resp->handle_id;
         out_file_lock->pid = resp->pid;
     }
     free(data);
@@ -115,6 +118,7 @@ int ipc_file_lock_set_callback(IDTYPE src, void* data, unsigned long seq) {
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     return file_lock_set_from_ipc(msgin->path, &file_lock, msgin->wait, src, seq);
@@ -127,6 +131,7 @@ int ipc_file_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     struct libos_file_lock file_lock2 = {0};
@@ -136,6 +141,7 @@ int ipc_file_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
         .type = file_lock2.type,
         .start = file_lock2.start,
         .end = file_lock2.end,
+        .handle_id = file_lock2.handle_id,
         .pid = file_lock2.pid,
     };
 
