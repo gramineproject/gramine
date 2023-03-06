@@ -19,6 +19,7 @@
 #include "libos_fs.h"
 #include "libos_internal.h"
 #include "libos_socket.h"
+#include "linux_socket.h"
 #include "pal.h"
 
 /*!
@@ -399,14 +400,39 @@ again:
     return ret;
 }
 
-static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t msg_controllen, size_t* out_size, void* addr, size_t addrlen,
+                bool force_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
 
     if (handle->info.sock.type == SOCK_DGRAM) {
         /* We do not support datagram UNIX sockets. */
         BUG();
+    }
+
+    struct cmsghdr* cmsg = (struct cmsghdr*)msg_control;
+    size_t rest_msg_controllen = msg_controllen;
+    while (cmsg && rest_msg_controllen >= sizeof(struct cmsghdr)) {
+        if (cmsg->cmsg_len < sizeof(struct cmsghdr) || cmsg->cmsg_len > rest_msg_controllen)
+            return -EINVAL;
+
+        if (cmsg->cmsg_level != SOL_SOCKET) {
+            /* Linux ignores non-SOL-SOCKET cmsgs instead of erroring out, let's do the same */
+            continue;
+        }
+
+        switch (cmsg->cmsg_type) {
+            /* TODO: implement SCM_RIGHTS and SCM_CREDENTIALS */
+            case SCM_RIGHTS:
+            case SCM_CREDENTIALS:
+                return -ENOSYS;
+            default:
+                return -EINVAL;
+        }
+
+        rest_msg_controllen -= CMSG_ALIGN(cmsg->cmsg_len);
+        cmsg = (struct cmsghdr*)((char*)cmsg + CMSG_ALIGN(cmsg->cmsg_len));
     }
 
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
@@ -449,8 +475,9 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     return 0;
 }
 
-static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t* addrlen, bool force_nonblocking) {
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t* msg_controllen, size_t* out_size, void* addr, size_t* addrlen,
+                bool force_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
 
@@ -500,6 +527,12 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         *out_size = size;
     }
     free(backing_buf);
+
+    if (msg_control && msg_controllen) {
+        /* TODO: implement SCM_RIGHTS and SCM_CREDENTIALS (if sent by app) */
+        *msg_controllen = 0;
+    }
+
     return ret;
 }
 
