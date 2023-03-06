@@ -18,6 +18,7 @@ int ipc_posix_lock_set(const char* path, struct posix_lock* pl, bool wait) {
         .start = pl->start,
         .end = pl->end,
         .pid = pl->pid,
+        .handle_id = pl->handle_id,
 
         .wait = wait,
     };
@@ -60,6 +61,7 @@ int ipc_posix_lock_get(const char* path, struct posix_lock* pl, struct posix_loc
         .start = pl->start,
         .end = pl->end,
         .pid = pl->pid,
+        .handle_id = pl->handle_id,
     };
 
     size_t path_len = strlen(path);
@@ -85,6 +87,7 @@ int ipc_posix_lock_get(const char* path, struct posix_lock* pl, struct posix_loc
         out_pl->start = resp->start;
         out_pl->end = resp->end;
         out_pl->pid = resp->pid;
+        out_pl->handle_id = resp->handle_id;
     }
     free(data);
     return result;
@@ -114,6 +117,7 @@ int ipc_posix_lock_set_callback(IDTYPE src, void* data, unsigned long seq) {
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     return posix_lock_set_from_ipc(msgin->path, &pl, msgin->wait, src, seq);
@@ -126,6 +130,7 @@ int ipc_posix_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     struct posix_lock pl2 = {0};
@@ -136,6 +141,7 @@ int ipc_posix_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
         .start = pl2.start,
         .end = pl2.end,
         .pid = pl2.pid,
+        .handle_id = pl2.handle_id,
     };
 
     size_t total_msg_size = get_ipc_msg_size(sizeof(msgout));

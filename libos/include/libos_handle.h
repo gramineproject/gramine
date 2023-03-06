@@ -199,6 +199,9 @@ struct libos_handle {
      * `read`, `seek` but not `pread`). This lock should be taken *before* `libos_handle.lock` and
      * `libos_inode.lock`. */
     struct libos_lock pos_lock;
+
+    /* Unique id, works as an identifier for `flock` syscall */
+    uint64_t id;
 };
 
 /* allocating / manage handle */

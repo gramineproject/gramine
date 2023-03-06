@@ -18,6 +18,8 @@
 
 static struct libos_lock handle_mgr_lock;
 
+static uint64_t local_counter = 0;
+
 #define HANDLE_MGR_ALLOC 32
 
 #define SYSTEM_LOCK()   lock(&handle_mgr_lock)
@@ -292,15 +294,17 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry) {
-        /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
-         * if the process holds other handles for that file, or duplicated FDs for the same
-         * handle. */
+    if (handle && handle->dentry && (handle->id == 0 || handle->ref_count == 1)) {
+        /* Clear POSIX locks for a file. In `fcntl` case, we are required to do that every time
+         * a FD is closed, even if the process holds other handles for that file, or duplicated 
+         * FDs for the same handle. In `flock` case, we should do that only when a fd's related
+         * `handle->ref_count == 1`. */
         struct posix_lock pl = {
             .type = F_UNLCK,
             .start = 0,
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
+            .handle_id = handle->id,
         };
         int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
         if (ret < 0) {
@@ -363,6 +367,8 @@ struct libos_handle* get_new_handle(void) {
     }
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
+    new_handle->id= ((uint64_t)g_process.pid << 32) 
+                     | __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
     return new_handle;
 }
 
