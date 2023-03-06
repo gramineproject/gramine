@@ -323,5 +323,4 @@ long libos_syscall_flock(int fd, int operation) {
 out:
     put_handle(hdl);
     return ret;
-
 }
