@@ -27,6 +27,7 @@ tests = {
     'exit': {},
     'exit_group': {},
     'fcntl_lock': {},
+    'flock_lock': {},
     'fdleak': {},
     'file_check_policy': {},
     'file_size': {},
