@@ -18,4 +18,4 @@ clean:
 		trusted_testfile \
 		tmp/* \
 		tmp_enc/*
-    make -C asm/x86_64 clean
+	$(MAKE) -C asm/x86_64 clean

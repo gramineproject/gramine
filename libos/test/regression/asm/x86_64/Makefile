@@ -8,6 +8,5 @@ all:
 # TODO: Python tests should not produce leftovers
 .PHONY: clean
 clean:
-	gramine-test clean
 	$(RM) -r \
 		__pycache__
