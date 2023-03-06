@@ -11,13 +11,17 @@
 #include "libos_ipc.h"
 
 int ipc_file_lock_set(const char* path, struct libos_file_lock* file_lock, bool wait) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
     assert(g_process_ipc_ids.leader_vmid);
 
     struct libos_ipc_file_lock msgin = {
+        .family = file_lock->family,
         .type = file_lock->type,
         .start = file_lock->start,
         .end = file_lock->end,
         .pid = file_lock->pid,
+        .handle_id = file_lock->handle_id,
 
         .wait = wait,
     };
@@ -54,13 +58,17 @@ int ipc_file_lock_set_send_response(IDTYPE vmid, unsigned long seq, int result) 
 
 int ipc_file_lock_get(const char* path, struct libos_file_lock* file_lock,
                       struct libos_file_lock* out_file_lock) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
     assert(g_process_ipc_ids.leader_vmid);
 
     struct libos_ipc_file_lock msgin = {
+        .family = file_lock->family,
         .type = file_lock->type,
         .start = file_lock->start,
         .end = file_lock->end,
         .pid = file_lock->pid,
+        .handle_id = file_lock->handle_id,
     };
 
     size_t path_len = strlen(path);
@@ -82,10 +90,12 @@ int ipc_file_lock_get(const char* path, struct libos_file_lock* file_lock,
     struct libos_ipc_file_lock_resp* resp = data;
     int result = resp->result;
     if (resp->result == 0) {
+        out_file_lock->family = resp->family,
         out_file_lock->type = resp->type;
         out_file_lock->start = resp->start;
         out_file_lock->end = resp->end;
         out_file_lock->pid = resp->pid;
+        out_file_lock->handle_id = resp->handle_id;
     }
     free(data);
     return result;
@@ -111,10 +121,12 @@ int ipc_file_lock_clear_pid(IDTYPE pid) {
 int ipc_file_lock_set_callback(IDTYPE src, void* data, unsigned long seq) {
     struct libos_ipc_file_lock* msgin = data;
     struct libos_file_lock file_lock = {
+        .family = msgin->family,
         .type = msgin->type,
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     return file_lock_set_from_ipc(msgin->path, &file_lock, msgin->wait, src, seq);
@@ -123,20 +135,24 @@ int ipc_file_lock_set_callback(IDTYPE src, void* data, unsigned long seq) {
 int ipc_file_lock_get_callback(IDTYPE src, void* data, unsigned long seq) {
     struct libos_ipc_file_lock* msgin = data;
     struct libos_file_lock file_lock = {
+        .family = msgin->family,
         .type = msgin->type,
         .start = msgin->start,
         .end = msgin->end,
         .pid = msgin->pid,
+        .handle_id = msgin->handle_id,
     };
 
     struct libos_file_lock file_lock2 = {0};
     int result = file_lock_get_from_ipc(msgin->path, &file_lock, &file_lock2);
     struct libos_ipc_file_lock_resp msgout = {
         .result = result,
+        .family = file_lock2.family,
         .type = file_lock2.type,
         .start = file_lock2.start,
         .end = file_lock2.end,
         .pid = file_lock2.pid,
+        .handle_id = file_lock2.handle_id,
     };
 
     size_t total_msg_size = get_ipc_msg_size(sizeof(msgout));

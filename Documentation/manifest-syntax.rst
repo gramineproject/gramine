@@ -592,6 +592,21 @@ all), then the ``struct`` key must be an empty string or not exist at all::
    encrypted or integrity-protected with a key pre-shared between Gramine and
    the device.
 
+Experimental flock (BSD-style locks) support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.experimental__enable_flock = [true|false]
+    (Default: false)
+
+This syntax enables the ``flock`` system call in Gramine.
+
+.. warning::
+   This syscall is still under development and may contain security
+   vulnerabilities. This is temporary; the syscall will be enabled by default in
+   the future after thorough validation and this syntax will be removed then.
+
 SGX syntax
 ----------
 
