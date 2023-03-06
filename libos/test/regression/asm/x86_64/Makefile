@@ -10,12 +10,4 @@ all:
 clean:
 	gramine-test clean
 	$(RM) -r \
-		*.dat \
-		.pytest_cache \
-		__pycache__ \
-		*.xml \
-		testfile \
-		trusted_testfile \
-		tmp/* \
-		tmp_enc/*
-    make -C asm/x86_64 clean
+		__pycache__

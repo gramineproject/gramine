@@ -14,8 +14,9 @@ section .text
 ; Turn on all EFLAGS.
 ; ABI x86_64 defines which are set and which are not.
 ; Please refer to x86_64 abi test for more details.
-; In this test we set all of them.
-%define NEW_RFLAGS      0xFDF
+; In this test we set all of them, besides TF (trap flag),
+; which can throw exception.
+%define NEW_RFLAGS      0xED7
 
 check_rflags:
     pushfq
@@ -47,7 +48,7 @@ check_rsp:
 
 test_rsp:
     mov     rax, rsp           ; store current rsp in rax,
-                               ; this tests sets rsp to garbage value
+                               ; this test sets rsp to garbage value
     mov     rdx, ss
     push    rdx                ; ss register can't change
     mov     rdx, NEW_RSP_VALUE ; new rsp

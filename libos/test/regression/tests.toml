@@ -121,13 +121,13 @@ manifests = [
 [arch.x86_64]
 
 manifests = [
+  "asm/x86_64/iret_emulation",
   "avx",
   "cpuid",
   "debug_regs_x86_64",
   "rdtsc",
   "bootstrap_cpp",
   "sighandler_divbyzero",
-  "x86_64/iret_emulation",
 ]
 
 [sgx]

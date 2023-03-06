@@ -294,4 +294,4 @@ if enable_musl
     )
 endif
 
-subdir(host_machine.cpu_family())
+subdir('asm')
