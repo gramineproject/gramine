@@ -237,6 +237,11 @@ void ra_tls_set_measurement_callback(int (*f_cb)(const char* mrenclave, const ch
 }
 
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size) {
+    return ra_tls_verify_callback_extended_der(der_crt, der_crt_size, /*unused args=*/NULL);
+}
+
+int ra_tls_verify_callback_extended_der(uint8_t* der_crt, size_t der_crt_size,
+                                        struct ra_tls_verify_callback_args* args) {
     int ret;
     mbedtls_x509_crt crt;
     mbedtls_x509_crt_init(&crt);
@@ -245,7 +250,7 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size) {
     if (ret < 0)
         goto out;
 
-    ret = ra_tls_verify_callback(/*unused data=*/NULL, &crt, /*depth=*/0, /*flags=*/NULL);
+    ret = ra_tls_verify_callback(args, &crt, /*depth=*/0, /*flags=*/NULL);
     if (ret < 0)
         goto out;
 

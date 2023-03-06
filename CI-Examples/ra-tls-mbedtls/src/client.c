@@ -36,8 +36,11 @@
 
 #include "ra_tls.h"
 
-/* RA-TLS: on client, only need to register ra_tls_verify_callback_der() for cert verification */
-int (*ra_tls_verify_callback_der_f)(uint8_t* der_crt, size_t der_crt_size);
+/* RA-TLS: on client, only need to register ra_tls_verify_callback_der() or
+ * ra_tls_verify_callback_extended_der() for cert verification.
+ * In this example, we use ra_tls_verify_callback_extended_der() for demonstration. */
+int (*ra_tls_verify_callback_extended_der_f)(uint8_t* der_crt, size_t der_crt_size,
+                                             struct ra_tls_verify_callback_args* args);
 
 /* RA-TLS: if specified in command-line options, use our own callback to verify SGX measurements */
 void (*ra_tls_set_measurement_callback_f)(int (*f_cb)(const char* mrenclave, const char* mrsigner,
@@ -108,8 +111,6 @@ static int my_verify_measurements(const char* mrenclave, const char* mrsigner,
 
 /* RA-TLS: mbedTLS-specific callback to verify the x509 certificate */
 static int my_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags) {
-    (void)data;
-
     if (depth != 0) {
         /* the cert chain in RA-TLS consists of single self-signed cert, so we expect depth 0 */
         return MBEDTLS_ERR_X509_INVALID_FORMAT;
@@ -120,7 +121,8 @@ static int my_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint
          * what mbedTLS thinks and ignore internal cert verification logic of mbedTLS */
         *flags = 0;
     }
-    return ra_tls_verify_callback_der_f(crt->raw.p, crt->raw.len);
+    return ra_tls_verify_callback_extended_der_f(crt->raw.p, crt->raw.len,
+                                                 (struct ra_tls_verify_callback_args*)data);
 }
 
 static bool getenv_client_inside_sgx() {
@@ -142,9 +144,10 @@ int main(int argc, char** argv) {
     bool in_sgx = getenv_client_inside_sgx();
 
     char* error;
-    void* ra_tls_verify_lib           = NULL;
-    ra_tls_verify_callback_der_f      = NULL;
-    ra_tls_set_measurement_callback_f = NULL;
+    void* ra_tls_verify_lib                                    = NULL;
+    ra_tls_verify_callback_extended_der_f                      = NULL;
+    ra_tls_set_measurement_callback_f                          = NULL;
+    struct ra_tls_verify_callback_args my_verify_callback_args = {0};
 
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -211,7 +214,8 @@ int main(int argc, char** argv) {
     }
 
     if (ra_tls_verify_lib) {
-        ra_tls_verify_callback_der_f = dlsym(ra_tls_verify_lib, "ra_tls_verify_callback_der");
+        ra_tls_verify_callback_extended_der_f = dlsym(ra_tls_verify_lib,
+                                                      "ra_tls_verify_callback_extended_der");
         if ((error = dlerror()) != NULL) {
             mbedtls_printf("%s\n", error);
             return 1;
@@ -343,7 +347,7 @@ int main(int argc, char** argv) {
     if (ra_tls_verify_lib) {
         /* use RA-TLS verification callback; this will overwrite CA chain set up above */
         mbedtls_printf("  . Installing RA-TLS callback ...");
-        mbedtls_ssl_conf_verify(&conf, &my_verify_callback, NULL);
+        mbedtls_ssl_conf_verify(&conf, &my_verify_callback, &my_verify_callback_args);
         mbedtls_printf(" ok\n");
     }
 
@@ -444,6 +448,7 @@ exit:
         mbedtls_printf("Last error was: %d - %s\n\n", ret, error_buf);
     }
 #endif
+    free(my_verify_callback_args.ias_enclave_quote_status);
 
     if (ra_tls_verify_lib)
         dlclose(ra_tls_verify_lib);

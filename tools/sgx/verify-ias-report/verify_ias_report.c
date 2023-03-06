@@ -167,11 +167,12 @@ int main(int argc, char* argv[]) {
 
     uint8_t* report_quote_body = NULL;
     size_t quote_body_size = 0;
+    char* quote_status = NULL;
 
     /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
     ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
                                           allow_outdated_tcb, nonce, ias_pubkey,
-                                          &report_quote_body, &quote_body_size);
+                                          &report_quote_body, &quote_body_size, &quote_status);
     if (ret < 0)
         return ret;
 
@@ -192,5 +193,6 @@ int main(int argc, char* argv[]) {
     ret = verify_quote_body_enclave_attributes((sgx_quote_body_t*)report_quote_body,
                                                allow_debug_enclave);
     free(report_quote_body);
+    free(quote_status);
     return ret;
 }
