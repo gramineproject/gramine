@@ -318,11 +318,6 @@ long libos_syscall_flock(int fd, int operation) {
         goto out;
 
     pl.handle_id = hdl->id;
-    if (fl.l_type == F_UNLCK) {
-        ret = posix_lock_clear_hid(pl.handle_id);
-        goto out;
-    }
-
     ret = posix_lock_set(hdl->dentry, &pl, !(operation&LOCK_NB));
 
 out:
