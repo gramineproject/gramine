@@ -63,7 +63,6 @@ static ipc_callback ipc_callbacks[] = {
     [IPC_MSG_POSIX_LOCK_SET]       = ipc_posix_lock_set_callback,
     [IPC_MSG_POSIX_LOCK_GET]       = ipc_posix_lock_get_callback,
     [IPC_MSG_POSIX_LOCK_CLEAR_PID] = ipc_posix_lock_clear_pid_callback,
-    [IPC_MSG_POSIX_LOCK_CLEAR_HID] = ipc_posix_lock_clear_hid_callback,
 };
 
 static void ipc_leader_died_callback(void) {

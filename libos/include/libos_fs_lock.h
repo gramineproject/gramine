@@ -95,9 +95,6 @@ int posix_lock_get(struct libos_dentry* dent, struct posix_lock* pl, struct posi
 /* Removes all locks for a given PID. Should be called before process exit. */
 int posix_lock_clear_pid(IDTYPE pid);
 
-/* Removes all locks for a given handle ID. Should be called before process exit. */
-int posix_lock_clear_hid(uint64_t hid);
-
 /*!
  * \brief Set or remove a lock on a file (IPC handler).
  *
