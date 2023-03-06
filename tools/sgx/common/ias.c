@@ -628,13 +628,14 @@ out:
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
                                     uint8_t* ias_sig_b64, size_t ias_sig_b64_size,
                                     bool allow_outdated_tcb, const char* nonce,
-                                    const char* ias_pub_key_pem, uint8_t** out_quote,
-                                    size_t* out_quote_size) {
+                                    const char* ias_pub_key_pem, char** enclave_quote_status,
+                                    uint8_t** out_quote, size_t* out_quote_size) {
     mbedtls_pk_context ias_pub_key;
     int ret = -1;
     uint8_t* ias_sig = NULL;
     uint8_t* report_quote = NULL;
     cJSON* json = NULL;
+    char* quote_status = NULL;
 
     // Load the IAS public key
     mbedtls_pk_init(&ias_pub_key);
@@ -731,17 +732,23 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
         goto out;
     }
 
-    if (strcmp("OK", node->valuestring) == 0) {
+    quote_status = strdup(node->valuestring);
+    if (!quote_status) {
+        ERROR("No memory\n");
+        goto out;
+    }
+
+    if (strcmp("OK", quote_status) == 0) {
         ret = 0;
         INFO("IAS report: quote status OK\n");
     } else if (allow_outdated_tcb && (
-               strcmp("GROUP_OUT_OF_DATE", node->valuestring) == 0
-            || strcmp("CONFIGURATION_NEEDED", node->valuestring) == 0
-            || strcmp("SW_HARDENING_NEEDED", node->valuestring) == 0
-            || strcmp("CONFIGURATION_AND_SW_HARDENING_NEEDED", node->valuestring) == 0
+               strcmp("GROUP_OUT_OF_DATE", quote_status) == 0
+            || strcmp("CONFIGURATION_NEEDED", quote_status) == 0
+            || strcmp("SW_HARDENING_NEEDED", quote_status) == 0
+            || strcmp("CONFIGURATION_AND_SW_HARDENING_NEEDED", quote_status) == 0
             )) {
         ret = 0;
-        INFO("IAS report: allowing quote status %s\n", node->valuestring);
+        INFO("IAS report: allowing quote status %s\n", quote_status);
 
         cJSON* url_node = cJSON_GetObjectItem(json, "advisoryURL");
         if (url_node && url_node->type == cJSON_String)
@@ -761,7 +768,7 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
     }
 
     if (ret != 0) {
-        ERROR("IAS report: quote status is not OK (%s)\n", node->valuestring);
+        ERROR("IAS report: quote status is not OK (%s)\n", quote_status);
         goto out;
     }
 
@@ -826,6 +833,11 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
     *out_quote_size = quote_size;
     ret = 0;
 out:
+    if (enclave_quote_status) {
+        *enclave_quote_status = quote_status;
+    } else {
+        free(quote_status);
+    }
     if (ret) {
         free(report_quote);
     }

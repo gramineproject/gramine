@@ -171,7 +171,8 @@ int main(int argc, char* argv[]) {
     /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
     ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
                                           allow_outdated_tcb, nonce, ias_pubkey,
-                                          &report_quote_body, &quote_body_size);
+                                          /*enclave_quote_status=*/NULL, &report_quote_body,
+                                          &quote_body_size);
     if (ret < 0)
         return ret;
 

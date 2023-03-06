@@ -118,7 +118,7 @@ static int getenv_ias_pub_key_pem(char** ias_pub_key_pem) {
 }
 
 int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags) {
-    (void)data;
+    struct ra_tls_verify_callback_args* args = (struct ra_tls_verify_callback_args*)data;
 
     int ret;
     struct ias_context_t* ias = NULL;
@@ -134,6 +134,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
 
     uint8_t* quote_from_ias    = NULL;
     size_t quote_from_ias_size = 0;
+
+    if (args)
+        args->err_loc = AT_INIT;
 
     if (depth != 0) {
         /* the cert chain in RA-TLS consists of single self-signed cert, so we expect depth 0 */
@@ -159,12 +162,20 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (ret < 0)
         goto out;
 
+    if (args)
+        args->err_loc = AT_EXTRACT_QUOTE;
+
     /* extract SGX quote from "quote" OID extension from crt */
     sgx_quote_t* quote;
     size_t quote_size;
     ret = extract_quote_and_verify_pubkey(crt, &quote, &quote_size);
-    if (ret < 0)
+    if (ret < 0) {
+        ERROR("extract_quote_and_verify_pubkey failed: %d\n", ret);
         goto out;
+    }
+
+    if (args)
+        args->err_loc = AT_IAS_VERIFY;
 
     /* initialize the IAS context, send the quote to the IAS and receive IAS attestation report */
     ias = ias_init(g_api_key, g_report_url, g_sigrl_url);
@@ -213,7 +224,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     ret = ias_verify_report_extract_quote((uint8_t*)report_data, report_data_size,
                                           (uint8_t*)sig_data, sig_data_size,
                                           allow_outdated_tcb, nonce,
-                                          ias_pub_key_pem, &quote_from_ias, &quote_from_ias_size);
+                                          ias_pub_key_pem,
+                                          (args) ? &args->ias_enclave_quote_status : NULL,
+                                          &quote_from_ias, &quote_from_ias_size);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
@@ -226,6 +239,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
+    if (args)
+        args->err_loc = AT_VERIFY_ENCLAVE_ATTRS;
+
     sgx_quote_body_t* quote_body = (sgx_quote_body_t*)quote_from_ias;
 
     /* verify enclave attributes from the SGX quote body */
@@ -234,6 +250,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
         goto out;
     }
+
+    if (args)
+        args->err_loc = AT_VERIFY_ENCLAVE_MEASUREMENTS;
 
     /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
@@ -251,6 +270,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
+    if (args)
+        args->err_loc = AT_NONE;
     ret = 0;
 out:
     if (ias)
