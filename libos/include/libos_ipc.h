@@ -35,6 +35,7 @@ enum {
     IPC_MSG_POSIX_LOCK_SET,
     IPC_MSG_POSIX_LOCK_GET,
     IPC_MSG_POSIX_LOCK_CLEAR_PID,
+    IPC_MSG_POSIX_LOCK_CLEAR_HID,
     IPC_MSG_CODE_BOUND,
 };
 
@@ -282,6 +283,7 @@ struct libos_ipc_posix_lock {
     uint64_t start;
     uint64_t end;
     IDTYPE pid;
+    uint64_t handle_id;
 
     bool wait;
     char path[]; /* null-terminated */
@@ -294,6 +296,7 @@ struct libos_ipc_posix_lock_resp {
     int type;
     uint64_t start;
     uint64_t end;
+    uint64_t handle_id;
     IDTYPE pid;
 };
 
@@ -303,6 +306,8 @@ int ipc_posix_lock_set(const char* path, struct posix_lock* pl, bool wait);
 int ipc_posix_lock_set_send_response(IDTYPE vmid, unsigned long seq, int result);
 int ipc_posix_lock_get(const char* path, struct posix_lock* pl, struct posix_lock* out_pl);
 int ipc_posix_lock_clear_pid(IDTYPE pid);
+int ipc_posix_lock_clear_hid(uint64_t hid);
 int ipc_posix_lock_set_callback(IDTYPE src, void* data, unsigned long seq);
 int ipc_posix_lock_get_callback(IDTYPE src, void* data, unsigned long seq);
 int ipc_posix_lock_clear_pid_callback(IDTYPE src, void* data, unsigned long seq);
+int ipc_posix_lock_clear_hid_callback(IDTYPE src, void* data, unsigned long seq);

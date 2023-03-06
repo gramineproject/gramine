@@ -45,6 +45,7 @@ static void parse_socktype(struct print_buf*, va_list*);
 static void parse_futexop(struct print_buf*, va_list*);
 static void parse_ioctlop(struct print_buf*, va_list*);
 static void parse_fcntlop(struct print_buf*, va_list*);
+static void parse_flockop(struct print_buf*, va_list*);
 static void parse_seek(struct print_buf*, va_list*);
 static void parse_at_fdcwd(struct print_buf*, va_list*);
 static void parse_wait_options(struct print_buf*, va_list*);
@@ -202,7 +203,8 @@ struct parser_table {
                      parse_integer_arg, parse_pointer_arg}},
     [__NR_fcntl] = {.slow = false, .name = "fcntl", .parser = {parse_long_arg, parse_integer_arg,
                     parse_fcntlop, parse_pointer_arg}},
-    [__NR_flock] = {.slow = false, .name = "flock", .parser = {NULL}},
+    [__NR_flock] = {.slow = true, .name = "flock", .parser = {parse_long_arg, parse_integer_arg,
+                    parse_flockop}},
     [__NR_fsync] = {.slow = false, .name = "fsync", .parser = {parse_long_arg, parse_integer_arg}},
     [__NR_fdatasync] = {.slow = false, .name = "fdatasync", .parser = {parse_long_arg,
                         parse_integer_arg}},
@@ -1327,6 +1329,34 @@ static void parse_fcntlop(struct print_buf* buf, va_list* ap) {
             break;
         case F_GETOWNER_UIDS:
             buf_puts(buf, "F_GETOWNER_UIDS");
+            break;
+        default:
+            buf_printf(buf, "OP %d", op);
+            break;
+    }
+}
+
+static void parse_flockop(struct print_buf* buf, va_list* ap) {
+    int op = va_arg(*ap, int);
+
+    switch (op) {
+        case LOCK_SH:
+            buf_puts(buf, "LOCK_SH");
+            break;
+        case LOCK_EX:
+            buf_puts(buf, "LOCK_EX");
+            break;
+        case LOCK_UN:
+            buf_puts(buf, "LOCK_UN");
+            break;
+        case LOCK_NB:
+            buf_puts(buf, "LOCK_NB");
+            break;
+        case LOCK_EX | LOCK_NB:
+            buf_puts(buf, "LOCK_EX | LOCK_NB");
+            break;
+        case LOCK_SH | LOCK_NB:
+            buf_puts(buf, "LOCK_SH | LOCK_NB");
             break;
         default:
             buf_printf(buf, "OP %d", op);
