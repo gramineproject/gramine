@@ -55,6 +55,8 @@ struct cmsghdr {
 #define CMSG_LEN(len)   (CMSG_ALIGN(sizeof(struct cmsghdr)) + (len))
 
 #define SCM_RIGHTS 1
+#define SCM_CREDENTIALS 2
+#define SCM_SECURITY 3
 
 #define AF_UNSPEC 0
 #define AF_UNIX 1
@@ -96,8 +98,13 @@ struct cmsghdr {
 #define SO_RCVTIMEO 20
 #define SO_SNDTIMEO 21
 #define SO_ACCEPTCONN 30
+#define SO_MARK 36
+#define SO_TIMESTAMPING_OLD 37
 #define SO_PROTOCOL 38
 #define SO_DOMAIN 39
+
+#define SO_TXTIME 61
+#define SCM_TXTIME SO_TXTIME
 
 /* TCP options. */
 #define TCP_NODELAY 1       /* Turn off Nagle's algorithm */
