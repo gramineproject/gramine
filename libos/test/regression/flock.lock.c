@@ -24,8 +24,6 @@
 #define TEST_DIR "tmp/"
 #define TEST_FILE "tmp/lock_file"
 
-static int g_fd;
-
 static const char* str_type(int type) {
     switch (type) {
         case LOCK_SH: return "LOCK_SH";
@@ -37,52 +35,135 @@ static const char* str_type(int type) {
     }
 }
 
-static const char* str_err(int err) {
-    switch (err) {
-        case EACCES: return "EACCES";
-        case EAGAIN: return "EAGAIN";
-        default: return "???";
+static void try_flock(int fd,int operation, int expect_ret) {
+    int ret = flock(fd, operation);
+    if (ret != expect_ret) {
+        fprintf(stderr, "flock(%d, %s) error return value = %d\n", fd, str_type(operation), ret);
     }
-}
-
-static int try_flock(int operation) {
-    int ret = flock(g_fd, operation);
-    fprintf(stderr, "%d: flock(fd, %s) = %d", getpid(), str_type(operation), ret);
-    if (ret == -1)
-        fprintf(stderr, " (%s) ", str_err(errno));
     
     fflush(stderr);
-
-    if (ret != -1 && ret !=0)
-        errx(1, "flock returned unexpected value");
-    if (ret == -1 && (errno == EACCES || errno == EAGAIN)) 
-        err(1, "fcntl");
-
-    return ret;
 }
 
 /* Test: lock file with various lock type  */
 static void test_lock(void) {
     printf("testing various locks...\n");
-    try_flock(LOCK_EX);
-    try_flock(LOCK_SH);
-    try_flock(LOCK_EX | LOCK_NB);
-    try_flock(LOCK_SH | LOCK_NB);
-    try_flock(LOCK_UN | LOCK_NB);
-    try_flock(LOCK_EX | LOCK_SH);
+    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
+        err(1, "open");
+    
+    try_flock(fd, LOCK_EX, 0);
+    try_flock(fd, LOCK_SH, 0);
+    try_flock(fd, LOCK_EX | LOCK_NB, 0);
+    try_flock(fd, LOCK_SH | LOCK_NB, 0);
+    try_flock(fd, LOCK_UN | LOCK_NB, 0);
+    try_flock(fd, LOCK_EX | LOCK_SH, -1);
+    
+    close(fd);
+}
+
+static void test_flock_open() {
+    printf("test locks with the same file's different fd\n");
+    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
+        err(1, "open");
+
+    try_flock(fd, LOCK_EX, 0);
+
+    int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd2 < 0)
+        err(1, "open");
+    
+    try_flock(fd2, LOCK_EX|LOCK_NB, -1);
+    try_flock(fd2, LOCK_SH|LOCK_NB, -1);
+    try_flock(fd, LOCK_UN, 0);
+    try_flock(fd2, LOCK_EX|LOCK_NB, 0);
+    
+    close(fd);
+    close(fd2);
+}
+
+static void test_flock_dup() {
+    printf("test locks with the same fd's different fd\n");
+    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
+        err(1, "open");
+
+    try_flock(fd, LOCK_EX, 0);
+
+    int fd2 = dup(fd);
+    if (fd2 < 0)
+        err(1, "dup");
+    
+    try_flock(fd2, LOCK_EX, 0);
+    try_flock(fd, LOCK_UN, 0);
+    try_flock(fd2, LOCK_EX, 0);
+    close(fd);
+    close(fd2);
+}
+
+static void test_flock_dup_open() {
+    printf("test locks with the dup and open\n");
+    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
+        err(1, "open");
+
+    try_flock(fd, LOCK_EX, 0);
+
+    int fd2 = dup(fd);
+    if (fd2 < 0)
+        err(1, "dup");
+    
+    try_flock(fd2, LOCK_EX, 0);
+    try_flock(fd, LOCK_UN, 0);
+    try_flock(fd2, LOCK_EX, 0);
+
+    int fd3 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd3 < 0)
+        err(1, "open");
+    
+    close(fd);
+    try_flock(fd3, LOCK_EX|LOCK_NB, -1);
+    close(fd2);
+    try_flock(fd3, LOCK_EX|LOCK_NB, 0);
+    close(fd3);
+}
+
+static void child_func(int fd) {
+    sleep(1);
+    try_flock(fd, LOCK_EX, 0);
+    int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd2 < 0)
+        err(1, "open");
+    
+    try_flock(fd2, LOCK_EX|LOCK_NB, -1);
+    try_flock(fd2, LOCK_SH|LOCK_NB, -1);
 }
 
 static void test_flock_fork() {
-    
+    printf("test flock with fork\n");
+
+    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    if (fd < 0)
+        err(1, "open");
+    pid_t pid = fork();
+    if (pid == 0) {
+        child_func(fd);
+    } else if (pid > 0) {
+        try_flock(fd, LOCK_EX, 0);
+        
+        int status;
+        wait(&status);
+    } else {
+        err(1, "fork");
+    }
 }
 
 int main(void) {
     setbuf(stdout, NULL);
 
-    g_fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
-    if (g_fd < 0)
-        err(1, "open");
-    
     test_lock();
-
+    test_flock_open();
+    test_flock_dup();
+    test_flock_dup_open();
+    test_flock_fork();
 }
