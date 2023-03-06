@@ -11,14 +11,15 @@
 
 #include "libos_fs.h"
 #include "libos_socket.h"
+#include "linux_socket.h"
 #include "pal.h"
 #include "socket_utils.h"
 
-static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
+static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen_ptr) {
     unsigned short family;
     switch (expected_family) {
         case AF_INET:
-            if (*addrlen < sizeof(struct sockaddr_in)) {
+            if (*addrlen_ptr < sizeof(struct sockaddr_in)) {
                 return -EINVAL;
             }
             memcpy(&family, (char*)addr + offsetof(struct sockaddr_in, sin_family), sizeof(family));
@@ -27,10 +28,10 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             }
             /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
              * ignored. */
-            *addrlen = sizeof(struct sockaddr_in);
+            *addrlen_ptr = sizeof(struct sockaddr_in);
             break;
         case AF_INET6:
-            if (*addrlen < sizeof(struct sockaddr_in6)) {
+            if (*addrlen_ptr < sizeof(struct sockaddr_in6)) {
                 return -EINVAL;
             }
             memcpy(&family, (char*)addr + offsetof(struct sockaddr_in6, sin6_family),
@@ -40,7 +41,7 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             }
             /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
              * ignored. */
-            *addrlen = sizeof(struct sockaddr_in6);
+            *addrlen_ptr = sizeof(struct sockaddr_in6);
             break;
         default:
             BUG();
@@ -662,12 +663,53 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
     }
 }
 
-static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t msg_controllen, size_t* out_size, void* addr, size_t addrlen,
+                bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     struct libos_sock_handle* sock = &handle->info.sock;
     struct sockaddr_storage sock_addr;
+
+    struct cmsghdr* cmsg = (struct cmsghdr*)msg_control;
+    size_t rest_msg_controllen = msg_controllen;
+    while (cmsg && rest_msg_controllen >= sizeof(struct cmsghdr)) {
+        if (cmsg->cmsg_len < sizeof(struct cmsghdr) ||
+                CMSG_ALIGN(cmsg->cmsg_len) > rest_msg_controllen) {
+            return -EINVAL;
+        }
+
+        if (cmsg->cmsg_level != SOL_SOCKET) {
+            /*
+             * We currently don't support:
+             * - SOL_UDP:  UDP_SEGMENT
+             * - SOL_IPV6: IPV6_PKTINFO
+             * - SOL_IP:   IP_RETOPTS, IP_PKTINFO, IP_TTL, IP_TOS
+             *
+             * Note that there are no cmsgs for TCP (SOL_TCP) in Linux (as of v6.0).
+             */
+            return -EINVAL;
+        }
+
+        switch (cmsg->cmsg_type) {
+            /* We currently don't support below SOL_SOCKET types. */
+            case SO_MARK:
+            case SO_TIMESTAMPING_OLD:
+            case SCM_TXTIME:
+                return -EINVAL;
+
+            /* SCM_RIGHTS and SCM_CREDENTIALS are semantically in SOL_UNIX, simply ignored */
+            case SCM_RIGHTS:
+            case SCM_CREDENTIALS:
+                break;
+
+            default:
+                return -EINVAL;
+        }
+
+        rest_msg_controllen -= CMSG_ALIGN(cmsg->cmsg_len);
+        cmsg = (struct cmsghdr*)((char*)cmsg + CMSG_ALIGN(cmsg->cmsg_len));
+    }
 
     switch (sock->type) {
         case SOCK_STREAM:
@@ -709,15 +751,16 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     return ret;
 }
 
-static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
-                size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking) {
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t* msg_controllen_ptr, size_t* out_total_size, void* addr, size_t* addrlen_ptr,
+                bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
     switch (handle->info.sock.type) {
         case SOCK_STREAM:
             /* TCP - not interested in remote address (we know it already). */
             addr = NULL;
-            addrlen = NULL;
+            addrlen_ptr = NULL;
             break;
         case SOCK_DGRAM:
             break;
@@ -731,14 +774,29 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
+
+    if (msg_control && msg_controllen_ptr) {
+        /*
+         * We currently don't support:
+         * - SOL_TCP:    TCP_CM_INQ
+         * - SOL_SOCKET: SO_TIMESTAMPNS_NEW, SO_TIMESTAMPNS_OLD, SO_TIMESTAMP_NEW, SO_TIMESTAMP_OLD
+         * - SOL_IPV6:   IPV6_PKTINFO
+         * - SOL_IP:     IP_RETOPTS, IP_RECVOPTS, IP_PKTINFO, IP_TTL, IP_TOS, IP_RECVFRAGSIZE,
+         *               IP_CHECKSUM, SCM_SECURITY, IP_ORIGDSTADDR, IP_RECVERR
+         *
+         *  Note that SCM_RIGHTS and SCM_CREDENTIALS are not possible on TCP/UDP sockets.
+         */
+        *msg_controllen_ptr = 0;
+    }
+
     if (addr) {
         struct sockaddr_storage linux_addr;
         size_t linux_addr_len = sizeof(linux_addr);
         pal_to_linux_sockaddr(&pal_ip_addr, &linux_addr, &linux_addr_len);
         /* If the user provided buffer is too small, the address is truncated, but we report
-         * the actual address size in `addrlen`. */
-        memcpy(addr, &linux_addr, MIN(*addrlen, linux_addr_len));
-        *addrlen = linux_addr_len;
+         * the actual address size in `addrlen_ptr`. */
+        memcpy(addr, &linux_addr, MIN(*addrlen_ptr, linux_addr_len));
+        *addrlen_ptr = linux_addr_len;
     }
     return 0;
 }

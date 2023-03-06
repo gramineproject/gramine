@@ -582,8 +582,9 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
         }
     }
     if (user_msg->msg_control && user_msg->msg_controllen) {
-        log_warning("\"struct msghdr\" ancillary data is not supported");
-        return -ENOSYS;
+        if (!check_access_func(user_msg->msg_control, user_msg->msg_controllen)) {
+            return -EFAULT;
+        }
     }
     if (user_msg->msg_name) {
         if (user_msg->msg_namelen < 0) {
@@ -608,8 +609,9 @@ static int check_msghdr(struct msghdr* user_msg, bool is_recv) {
 
 /* We return the size directly (contrary to the usual out argument) for simplicity - this function
  * is called directly from syscall handlers, which return values in such a way. */
-ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
-                   size_t addrlen, unsigned int flags) {
+ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
+                   void* msg_control, size_t msg_controllen, void* addr, size_t addrlen,
+                   unsigned int flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
@@ -654,7 +656,8 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     size_t size = 0;
-    ret = sock->ops->send(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking);
+    ret = sock->ops->send(handle, iov, iov_len, msg_control, msg_controllen, &size, addr, addrlen,
+                          force_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, !ret ? size < total_size : false);
     if (!ret) {
         ret = size;
@@ -707,7 +710,8 @@ long libos_syscall_sendto(int fd, void* buf, size_t len, unsigned int flags, voi
         .iov_base = buf,
         .iov_len = len,
     };
-    ssize_t ret = do_sendmsg(handle, &iov, 1, addr, addr ? addrlen : 0, flags);
+    ssize_t ret = do_sendmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen=*/0, addr,
+                             addr ? addrlen : 0, flags);
     put_handle(handle);
     return ret;
 }
@@ -724,7 +728,8 @@ long libos_syscall_sendmsg(int fd, struct msghdr* msg, unsigned int flags) {
     }
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
-    ret = do_sendmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_name, addrlen, flags);
+    ret = do_sendmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_control, msg->msg_controllen,
+                     msg->msg_name, addrlen, flags);
     put_handle(handle);
     return ret;
 }
@@ -749,7 +754,8 @@ long libos_syscall_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
     for (size_t i = 0; i < vlen; i++) {
         struct msghdr* hdr = &msg[i].msg_hdr;
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
-        ret = do_sendmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_name, addrlen, flags);
+        ret = do_sendmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_control,
+                         hdr->msg_controllen, hdr->msg_name, addrlen, flags);
         if (ret < 0) {
             if (i == 0) {
                 /* Return error directly. */
@@ -776,8 +782,9 @@ out:
 
 /* We return the size directly (contrary to the usual out argument) for simplicity - this function
  * is called directly from syscall handlers, which return values in such a way. */
-ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* addr,
-                   size_t* addrlen, unsigned int* flags) {
+ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
+                   void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,
+                   unsigned int* flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
@@ -855,8 +862,9 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
                 force_nonblocking = true;
             }
 
-            ret = sock->ops->recv(handle, &tmp_iov, 1, &tmp_iov.iov_len, /*addr=*/NULL,
-                                  /*addrlen=*/NULL, force_nonblocking);
+            ret = sock->ops->recv(handle, &tmp_iov, 1, /*msg_control=*/NULL,
+                                  /*msg_controllen_ptr=*/NULL, &tmp_iov.iov_len, /*addr=*/NULL,
+                                  /*addrlen_ptr=*/NULL, force_nonblocking);
             if (ret == -EAGAIN && sock->peek.data_size) {
                 /* We will just return what we have already. */
                 ret = 0;
@@ -899,7 +907,8 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     assert(!(*flags & MSG_PEEK));
 
     size_t size = 0;
-    ret = sock->ops->recv(handle, iov, iov_len, &size, addr, addrlen, force_nonblocking);
+    ret = sock->ops->recv(handle, iov, iov_len, msg_control, msg_controllen_ptr, &size, addr,
+                          addrlen_ptr, force_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/true, !ret ? size < total_size : false);
     if (!ret) {
         ret = *flags & MSG_TRUNC ? size : MIN(size, total_size);
@@ -949,7 +958,8 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
         .iov_base = buf,
         .iov_len = len,
     };
-    ssize_t ret = do_recvmsg(handle, &iov, 1, addr, &addrlen, &flags);
+    ssize_t ret = do_recvmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen_ptr=*/NULL,
+                             addr, &addrlen, &flags);
     if (ret >= 0 && addr) {
         *_addrlen = addrlen;
     }
@@ -969,7 +979,8 @@ long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
     }
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
-    ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_name, &addrlen, &flags);
+    ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_control, &msg->msg_controllen,
+                     msg->msg_name, &addrlen, &flags);
     if (ret >= 0) {
         if (msg->msg_name) {
             msg->msg_namelen = addrlen;
@@ -1014,8 +1025,8 @@ long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         struct msghdr* hdr = &msg[i].msg_hdr;
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
         unsigned int this_flags = flags;
-        ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_name, &addrlen,
-                         &this_flags);
+        ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_control,
+                         &hdr->msg_controllen, hdr->msg_name, &addrlen, &this_flags);
         if (ret < 0) {
             if (i == 0) {
                 /* Return error directly. */

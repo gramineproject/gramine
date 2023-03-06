@@ -19,25 +19,27 @@
 #include "libos_fs.h"
 #include "libos_internal.h"
 #include "libos_socket.h"
+#include "linux_socket.h"
 #include "pal.h"
 
 /*!
  * \brief Verify UNIX socket address and convert it to a unique socket name.
  *
  * \param         addr            The socket address to convert.
- * \param[in,out] addrlen         Pointer to the size of \p addr. Always updated to the actual size
+ * \param[in,out] addrlen_ptr     Pointer to the size of \p addr. Always updated to the actual size
  *                                of the address (but it's never extended).
  * \param[out]    sock_name       Buffer for the output socket name. On success contains a null
  *                                terminated string.
  * \param         sock_name_size  Size of \p sock_name.
  */
-static int unaddr_to_sockname(void* addr, size_t* addrlen, char* sock_name, size_t sock_name_size) {
-    if (*addrlen > sizeof(struct sockaddr_un)) {
+static int unaddr_to_sockname(void* addr, size_t* addrlen_ptr, char* sock_name,
+                              size_t sock_name_size) {
+    if (*addrlen_ptr > sizeof(struct sockaddr_un)) {
         /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
          * ignored. */
-        *addrlen = sizeof(struct sockaddr_un);
+        *addrlen_ptr = sizeof(struct sockaddr_un);
     }
-    if (*addrlen < offsetof(struct sockaddr_un, sun_path) + 1) {
+    if (*addrlen_ptr < offsetof(struct sockaddr_un, sun_path) + 1) {
         return -EINVAL;
     }
     static_assert(offsetof(struct sockaddr_un, sun_family) < offsetof(struct sockaddr_un, sun_path),
@@ -49,7 +51,7 @@ static int unaddr_to_sockname(void* addr, size_t* addrlen, char* sock_name, size
     }
 
     const char* path = (char*)addr + offsetof(struct sockaddr_un, sun_path);
-    size_t pathlen = *addrlen - offsetof(struct sockaddr_un, sun_path);
+    size_t pathlen = *addrlen_ptr - offsetof(struct sockaddr_un, sun_path);
     assert(pathlen >= 1);
     if (path[0]) {
         /* Named UNIX socket. */
@@ -75,16 +77,16 @@ static int unaddr_to_sockname(void* addr, size_t* addrlen, char* sock_name, size
     return 0;
 }
 
-static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* addrlen) {
+static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* addrlen_ptr) {
     /* We know the addr is valid, but it might not contain the ending nullbyte or contain some
      * unnecessary garbage after it. */
-    assert(*addrlen <= sizeof(struct sockaddr_un));
-    assert(offsetof(struct sockaddr_un, sun_path) < *addrlen);
+    assert(*addrlen_ptr <= sizeof(struct sockaddr_un));
+    assert(offsetof(struct sockaddr_un, sun_path) < *addrlen_ptr);
     assert(sizeof(struct sockaddr_un) < sizeof(*ss_addr));
-    assert(*addrlen < sizeof(*ss_addr));
+    assert(*addrlen_ptr < sizeof(*ss_addr));
 
     char* path = (char*)ss_addr + offsetof(struct sockaddr_un, sun_path);
-    size_t pathlen = *addrlen - offsetof(struct sockaddr_un, sun_path);
+    size_t pathlen = *addrlen_ptr - offsetof(struct sockaddr_un, sun_path);
     assert(pathlen >= 1);
     if (!path[0]) {
         /* Abstract UNIX socket - nothing to do. */
@@ -97,8 +99,8 @@ static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* add
     assert(sizeof(*ss_addr) - offsetof(struct sockaddr_un, sun_path) - pathlen > 0);
     memset(path + pathlen, 0, sizeof(*ss_addr) - offsetof(struct sockaddr_un, sun_path) - pathlen);
 
-    *addrlen = offsetof(struct sockaddr_un, sun_path) + pathlen + 1;
-    assert(*addrlen <= sizeof(*ss_addr));
+    *addrlen_ptr = offsetof(struct sockaddr_un, sun_path) + pathlen + 1;
+    assert(*addrlen_ptr <= sizeof(*ss_addr));
 }
 
 static int create(struct libos_handle* handle) {
@@ -399,14 +401,41 @@ again:
     return ret;
 }
 
-static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t msg_controllen, size_t* out_size, void* addr, size_t addrlen,
+                bool force_nonblocking) {
     __UNUSED(addr);
     __UNUSED(addrlen);
 
     if (handle->info.sock.type == SOCK_DGRAM) {
         /* We do not support datagram UNIX sockets. */
         BUG();
+    }
+
+    struct cmsghdr* cmsg = (struct cmsghdr*)msg_control;
+    size_t rest_msg_controllen = msg_controllen;
+    while (cmsg && rest_msg_controllen >= sizeof(struct cmsghdr)) {
+        if (cmsg->cmsg_len < sizeof(struct cmsghdr) ||
+                CMSG_ALIGN(cmsg->cmsg_len) > rest_msg_controllen) {
+            return -EINVAL;
+        }
+
+        if (cmsg->cmsg_level != SOL_SOCKET) {
+            /* Linux ignores non-SOL-SOCKET cmsgs instead of erroring out, let's do the same */
+            continue;
+        }
+
+        switch (cmsg->cmsg_type) {
+            /* TODO: implement SCM_RIGHTS and SCM_CREDENTIALS */
+            case SCM_RIGHTS:
+            case SCM_CREDENTIALS:
+                return -ENOSYS;
+            default:
+                return -EINVAL;
+        }
+
+        rest_msg_controllen -= CMSG_ALIGN(cmsg->cmsg_len);
+        cmsg = (struct cmsghdr*)((char*)cmsg + CMSG_ALIGN(cmsg->cmsg_len));
     }
 
     PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
@@ -449,10 +478,11 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     return 0;
 }
 
-static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t* addrlen, bool force_nonblocking) {
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t* msg_controllen_ptr, size_t* out_size, void* addr, size_t* addrlen_ptr,
+                bool force_nonblocking) {
     __UNUSED(addr);
-    __UNUSED(addrlen);
+    __UNUSED(addrlen_ptr);
 
     if (handle->info.sock.type == SOCK_DGRAM) {
         /* We do not support datagram UNIX sockets. */
@@ -500,6 +530,12 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         *out_size = size;
     }
     free(backing_buf);
+
+    if (msg_control && msg_controllen_ptr) {
+        /* TODO: implement SCM_RIGHTS and SCM_CREDENTIALS (if sent by app) */
+        *msg_controllen_ptr = 0;
+    }
+
     return ret;
 }
 
