@@ -5,7 +5,9 @@
  */
 
 /*
- * Implementation of system call "fcntl":
+ * Implementation of system calls "fcntl" and "flock".
+ *
+ * The "fcntl" syscall supports:
  *
  * - F_DUPFD, F_DUPFD_CLOEXEC (duplicate a file descriptor)
  * - F_GETFD, F_SETFD (file descriptor flags)
@@ -58,7 +60,7 @@ int set_handle_nonblocking(struct libos_handle* handle, bool on) {
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
  */
-static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl,
+static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl, uint64_t handle_id,
                               struct libos_file_lock* file_lock) {
     if (!(fl->l_type == F_RDLCK || fl->l_type == F_WRLCK || fl->l_type == F_UNLCK))
         return -EINVAL;
@@ -128,6 +130,7 @@ static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl,
     file_lock->start = start;
     file_lock->end = end;
     file_lock->pid = g_process.pid;
+    file_lock->handle_id = handle_id;
     return 0;
 }
 
@@ -212,7 +215,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct libos_file_lock file_lock;
-            ret = flock_to_file_lock(fl, hdl, &file_lock);
+            ret = flock_to_file_lock(fl, hdl, /*handle_id=*/0, &file_lock);
             if (ret < 0)
                 break;
 
@@ -235,7 +238,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct libos_file_lock file_lock;
-            ret = flock_to_file_lock(fl, hdl, &file_lock);
+            ret = flock_to_file_lock(fl, hdl, /*handle_id=*/0, &file_lock);
             if (ret < 0)
                 break;
 
@@ -294,18 +297,29 @@ long libos_syscall_flock(unsigned int fd, unsigned int cmd) {
     if (!hdl)
         return -EBADF;
 
+    struct flock fl = { .l_whence = SEEK_SET };
+
     switch (cmd & ~LOCK_NB) {
         case LOCK_EX:
+            fl.l_type = F_WRLCK;
+            break;
         case LOCK_SH:
+            fl.l_type = F_RDLCK;
+            break;
         case LOCK_UN:
+            fl.l_type = F_UNLCK;
             break;
         default:
             ret = -EINVAL;
             goto out;
     }
 
-    /* TODO: add implementation */
-    ret = -ENOSYS;
+    struct libos_file_lock file_lock;
+    ret = flock_to_file_lock(&fl, hdl, hdl->id, &file_lock);
+    if (ret < 0)
+        goto out;
+
+    ret = file_lock_set(hdl->dentry, &file_lock, !(cmd & LOCK_NB));
 out:
     put_handle(hdl);
     return ret;
