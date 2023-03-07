@@ -109,8 +109,8 @@ bool getenv_allow_debug_enclave(void) {
 
 /*! searches for specific \p oid among \p exts and returns pointer to its value in \p out_val;
  *  tailored for SGX quotes with size strictly from 128 to 65535 bytes (fails on other sizes) */
-static int find_oid(const uint8_t* exts, size_t exts_size, const uint8_t* oid, size_t oid_size,
-                    uint8_t** out_val, size_t* out_size) {
+int find_oid_in_cert_extensions(const uint8_t* exts, size_t exts_size, const uint8_t* oid,
+                                size_t oid_size, uint8_t** out_val, size_t* out_size) {
     /* TODO: searching with memmem is not robust (what if some extension contains exactly these
      *       chars?), but mbedTLS has nothing generic enough for our purposes; this is still
      *       secure because this func is used for extracting the SGX quote which is verified
@@ -213,8 +213,8 @@ int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
                                     size_t* out_quote_size) {
     sgx_quote_t* quote;
     size_t quote_size;
-    int ret = find_oid(crt->v3_ext.p, crt->v3_ext.len, g_quote_oid, g_quote_oid_size,
-                       (uint8_t**)&quote, &quote_size);
+    int ret = find_oid_in_cert_extensions(crt->v3_ext.p, crt->v3_ext.len, g_quote_oid,
+                                          g_quote_oid_size, (uint8_t**)&quote, &quote_size);
     if (ret < 0)
         return ret;
 
