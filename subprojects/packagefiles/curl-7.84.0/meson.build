@@ -15,7 +15,12 @@ curl = custom_target('curl',
 
     depends: subproject('mbedtls-mbedtls-3.3.0').get_variable('mbedtls_curl_libs'),
     output: curl_libs_output,
+
+    install: true,
+    install_dir: get_option('libdir'),
 )
+
+install_subdir('include/curl', install_dir: get_option('includedir') / 'gramine')
 
 curl_minimal_dep = declare_dependency(
     link_with: curl,

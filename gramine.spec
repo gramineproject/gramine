@@ -108,6 +108,7 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 %{_libdir}/libsecret_prov*.so*
 %{_libdir}/libsecret_prov_verify.a
 %{_libdir}/libsgx_util.a
+%{_libdir}/libcurl.a
 
 %dir %{python3_sitearch}/%{name}libos
 %{python3_sitearch}/%{name}libos/*.py
@@ -116,6 +117,7 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 %{python3_sitearch}/__pycache__
 
 %{_includedir}/gramine/*.h
+%{_includedir}/gramine/curl/*.h
 %{_includedir}/gramine/mbedtls/*.h
 %{_includedir}/gramine/psa/*.h
 
