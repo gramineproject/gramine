@@ -103,8 +103,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     uint8_t* supplemental_data      = NULL;
     uint32_t supplemental_data_size = 0;
 
-    if (args)
+    if (args) {
+        args->attestation_scheme = RA_TLS_ATTESTATION_SCHEME_DCAP;
         args->err_loc = AT_INIT;
+    }
 
     if (depth != 0) {
         /* the cert chain in RA-TLS consists of single self-signed cert, so we expect depth 0 */
@@ -131,7 +133,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     if (args)
-        args->err_loc = AT_DCAP_VERIFY;
+        args->err_loc = AT_VERIFY_EXTERNAL;
 
     /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
     bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
@@ -166,8 +168,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
                               /*p_qve_report_info=*/NULL, supplemental_data_size,
                               supplemental_data);
     if (args) {
-        args->dcap_func_verify_quote_result = ret;
-        args->dcap_quote_verification_result = verification_result;
+        args->dcap.func_verify_quote_result = ret;
+        args->dcap.quote_verification_result = verification_result;
     }
     if (ret) {
         ERROR("sgx_qv_verify_quote failed: %d\n", ret);

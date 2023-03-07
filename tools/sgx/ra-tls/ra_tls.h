@@ -28,32 +28,37 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
+#define RA_TLS_ATTESTATION_SCHEME_INVALID 0
+#define RA_TLS_ATTESTATION_SCHEME_EPID 1
+#define RA_TLS_ATTESTATION_SCHEME_DCAP 2
+
 typedef enum {
     AT_NONE                        = 0,
     AT_INIT                        = 1,
     AT_EXTRACT_QUOTE               = 2,
-    AT_IAS_VERIFY                  = 3,
-    AT_DCAP_VERIFY                 = 4,
-    AT_VERIFY_ENCLAVE_ATTRS        = 5,
-    AT_VERIFY_ENCLAVE_MEASUREMENTS = 6,
-
-    /* AT_UNKNOWN */
+    AT_VERIFY_EXTERNAL             = 3,
+    AT_VERIFY_ENCLAVE_ATTRS        = 4,
+    AT_VERIFY_ENCLAVE_MEASUREMENTS = 5,
 } ra_tls_err_loc_t;
 
-/* Verification callback arguments for retrieving detailed error information from RA-TLS */
+/* Verification callback arguments for retrieving additional information from RA-TLS */
 struct ra_tls_verify_callback_args {
+    int attestation_scheme;   /* see macros RA_TLS_ATTESTATION_SCHEME_ */
     ra_tls_err_loc_t err_loc; /* error location in RA-TLS */
 
-    /* below are only meaningful for ECDSA/DCAP attestation */
-    int dcap_func_verify_quote_result; /* return value of `sgx_qv_verify_quote()` itself */
-    int dcap_quote_verification_result; /* value stored in `p_quote_verification_result` arg */
-
-    /* below is only meaningful for EPID/IAS attestation */
-    char* ias_enclave_quote_status; /* string returned in `isvEnclaveQuoteStatus`; user is
-                                       responsible for its cleanup */
-
-    /* below is reserved for other attestation schemes */
-    int misc_verification_result;
+    union {
+        struct {
+            /* string returned in `isvEnclaveQuoteStatus`; possibly truncated (but NUL-terminated) */
+            char ias_enclave_quote_status[128];
+        } epid;
+        struct {
+            int func_verify_quote_result; /* return value of `sgx_qv_verify_quote()` itself */
+            int quote_verification_result; /* value stored in `p_quote_verification_result` arg */
+        } dcap;
+        struct {
+            char reserved[128];
+        } misc;
+    };
 };
 
 typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsigner,
@@ -77,7 +82,8 @@ void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
  * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
- *        verification (DER format).
+ *        verification (DER format). Deprecated in favor of the
+ *        `ra_tls_verify_callback_extended_der()` version of API (see below).
  *
  * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
  * \param der_crt_size  Size of the RA-TLS certificate.
@@ -93,11 +99,11 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 
 /*!
  * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
- *        verification (DER format) with extended error information.
+ *        verification (DER format) with additional information.
  *
  * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
  * \param der_crt_size  Size of the RA-TLS certificate.
- * \param args          (Optional) Verification callback arguments for retrieving detailed error
+ * \param args          (Optional) Verification callback arguments for retrieving additional
  *                      information from RA-TLS.
  *
  * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.

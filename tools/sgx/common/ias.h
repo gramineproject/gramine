@@ -114,8 +114,8 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
  *                               If not specified, a hardcoded Intel's key is used.
  * \param enclave_quote_status   (Optional) If non-NULL, this contains the returned
  *                               `isvEnclaveQuoteStatus` string on enclave quote status verification
- *                               failure; user is responsible for freeing it.
- *                               Otherwise this param is simply ignored and nothing contains.
+ *                               failure. The string may be truncated to fit into 128 bytes
+ *                               (including the terminating NULL char).
  * \param[out] out_quote         Buffer with quote. User is responsible for freeing it.
  * \param[out] out_quote_size    Size of \p out_quote in bytes.
  *
@@ -124,5 +124,5 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
                                     uint8_t* ias_sig_b64, size_t ias_sig_b64_size,
                                     bool allow_outdated_tcb, const char* nonce,
-                                    const char* ias_pub_key_pem, char** enclave_quote_status,
+                                    const char* ias_pub_key_pem, char (*enclave_quote_status)[128],
                                     uint8_t** out_quote, size_t* out_quote_size);

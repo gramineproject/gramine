@@ -135,8 +135,10 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     uint8_t* quote_from_ias    = NULL;
     size_t quote_from_ias_size = 0;
 
-    if (args)
+    if (args) {
+        args->attestation_scheme = RA_TLS_ATTESTATION_SCHEME_EPID;
         args->err_loc = AT_INIT;
+    }
 
     if (depth != 0) {
         /* the cert chain in RA-TLS consists of single self-signed cert, so we expect depth 0 */
@@ -175,7 +177,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     }
 
     if (args)
-        args->err_loc = AT_IAS_VERIFY;
+        args->err_loc = AT_VERIFY_EXTERNAL;
 
     /* initialize the IAS context, send the quote to the IAS and receive IAS attestation report */
     ias = ias_init(g_api_key, g_report_url, g_sigrl_url);
@@ -225,7 +227,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
                                           (uint8_t*)sig_data, sig_data_size,
                                           allow_outdated_tcb, nonce,
                                           ias_pub_key_pem,
-                                          (args) ? &args->ias_enclave_quote_status : NULL,
+                                          (args) ? &args->epid.ias_enclave_quote_status : NULL,
                                           &quote_from_ias, &quote_from_ias_size);
     if (ret < 0) {
         ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;

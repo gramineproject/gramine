@@ -36,9 +36,8 @@
 
 #include "ra_tls.h"
 
-/* RA-TLS: on client, only need to register ra_tls_verify_callback_der() or
- * ra_tls_verify_callback_extended_der() for cert verification.
- * In this example, we use ra_tls_verify_callback_extended_der() for demonstration. */
+/* RA-TLS: on client, only need to register ra_tls_verify_callback_extended_der() for cert
+ * verification. */
 int (*ra_tls_verify_callback_extended_der_f)(uint8_t* der_crt, size_t der_crt_size,
                                              struct ra_tls_verify_callback_args* args);
 
@@ -373,9 +372,28 @@ int main(int argc, char** argv) {
 
     while ((ret = mbedtls_ssl_handshake(&ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-            mbedtls_printf(" failed\n  ! mbedtls_ssl_handshake returned -0x%x\n\n", -ret);
+            mbedtls_printf(" failed\n  ! mbedtls_ssl_handshake returned -0x%x\n", -ret);
+            mbedtls_printf("  ! ra_tls_verify_callback_args:\n"
+                           "    attestation_scheme=%d, err_loc=%d, \n",
+                           my_verify_callback_args.attestation_scheme,
+                           my_verify_callback_args.err_loc);
+            if (RA_TLS_ATTESTATION_SCHEME_EPID == my_verify_callback_args.attestation_scheme) {
+                mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
+                               my_verify_callback_args.epid.ias_enclave_quote_status);
+            } else if (RA_TLS_ATTESTATION_SCHEME_DCAP \
+                       == my_verify_callback_args.attestation_scheme) {
+                mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
+                               "dcap.quote_verification_result=0x%x\n\n",
+                               my_verify_callback_args.dcap.func_verify_quote_result,
+                               my_verify_callback_args.dcap.quote_verification_result);
+            } else {
+                mbedtls_printf("  ! invalid attestation scheme!\n\n");
+            }
+
             goto exit;
         }
+        /* nullify callback args as it will get populated during TLS handshake */
+        memset(&my_verify_callback_args, 0, sizeof(my_verify_callback_args));
     }
 
     mbedtls_printf(" ok\n");
@@ -448,8 +466,6 @@ exit:
         mbedtls_printf("Last error was: %d - %s\n\n", ret, error_buf);
     }
 #endif
-    free(my_verify_callback_args.ias_enclave_quote_status);
-
     if (ra_tls_verify_lib)
         dlclose(ra_tls_verify_lib);
 
