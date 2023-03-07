@@ -6,7 +6,6 @@ Build-Depends: debhelper-compat (= 13),
  bison,
  jq,
  gawk,
- libcjson-dev (>= 1.7),
  libcurl4-openssl-dev (>= 7.58),
  libprotobuf-c-dev,
  libsgx-dcap-quote-verify-dev,
@@ -34,7 +33,6 @@ Package: gramine
 Architecture: amd64
 Description: A lightweight usermode guest OS designed to run a single Linux application
 Depends:
- libcjson1 (>= 1.7),
  libcurl4 (>= 7.58),
  libprotobuf-c1,
  python3,

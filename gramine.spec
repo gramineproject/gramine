@@ -12,7 +12,6 @@ BuildArch: x86_64
 Source0: %{name}-%{version}.tar.gz
 
 BuildRequires: bison
-BuildRequires: cjson-devel
 BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: jq
@@ -28,7 +27,6 @@ BuildRequires: python3-devel
 BuildRequires: python3-sphinx
 BuildRequires: python3-sphinx_rtd_theme
 
-Requires: cjson
 Requires: python3-click
 Requires: python3-cryptography
 Requires: python3-jinja2

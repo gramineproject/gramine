@@ -252,16 +252,7 @@ if sgx
 
     libcurl_dep = curl_proj.get_variable('curl_minimal_dep')
 
-    cjson_dep = dependency('cjson', required: false)
-    if not cjson_dep.found()
-        # on Debian < 11 .pc file is not installed and dependency() fails, so we fallback to
-        # cc.find_library()
-        cjson_dep = cc.find_library('cjson', required: false)
-    endif
-    if not cjson_dep.found()
-        # Ubuntu 18.04 does not have cjson at all
-        cjson_dep = cjson_proj.get_variable('cjson_dep')
-    endif
+    cjson_dep = cjson_proj.get_variable('cjson_dep')
 
     protobuf_dep = dependency('libprotobuf-c')
 

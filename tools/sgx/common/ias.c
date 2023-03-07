@@ -20,12 +20,7 @@
 #include <string.h>
 #include <strings.h>
 
-#ifdef HAVE_INTERNAL_CJSON
-/* here we -I the cJSON's repo root, which directly contains the header */
 #include <cJSON.h>
-#else
-#include <cjson/cJSON.h>
-#endif
 
 #include "util.h"
 
