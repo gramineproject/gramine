@@ -176,7 +176,8 @@ int main(int argc, char* argv[]) {
                                           &quote_body_size);
     if (ret < 0) {
         if (get_verbose()) {
-            INFO("QUOTE STATUS: %s", enclave_quote_status);
+            ERROR("Failed to verify IAS attestation report or extract the SGX quote from it, "
+                  "enclave quote status: %s\n", enclave_quote_status);
         }
         return ret;
     }
