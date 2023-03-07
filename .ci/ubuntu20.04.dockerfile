@@ -98,6 +98,7 @@ RUN python3 -m pip install -U \
     'tomli>=1.1.0' \
     'tomli-w>=0.4.0' \
     'meson>=0.56,<0.57' \
+    'recommonmark>=0.5.0,<=0.7.1' \
     'docutils>=0.17,<0.18'
 
 CMD ["bash"]

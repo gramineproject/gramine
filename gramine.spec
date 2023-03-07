@@ -24,6 +24,7 @@ BuildRequires: perl
 BuildRequires: protobuf-c-compiler
 BuildRequires: protobuf-c-devel
 BuildRequires: python3-devel
+BuildRequires: python3-recommonmark
 BuildRequires: python3-sphinx
 BuildRequires: python3-sphinx_rtd_theme
 

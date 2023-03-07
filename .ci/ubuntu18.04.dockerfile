@@ -47,7 +47,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python \
     python3-apport \
     python3-apt \
-    python3-breathe \
     python3-click \
     python3-cryptography \
     python3-jinja2 \
@@ -81,11 +80,8 @@ RUN git clone https://github.com/giltene/wrk2.git \
 # the earliest supported minor version (pip implicitly installs latest version satisfying the
 # specification)
 RUN python3 -m pip install -U \
-    'Sphinx==1.8' \
-    'sphinx_rtd_theme<1' \
     'tomli>=1.1.0' \
     'tomli-w>=0.4.0' \
-    'meson>=0.56,<0.57' \
-    'docutils>=0.17,<0.18'
+    'meson>=0.56,<0.57'
 
 CMD ["bash"]

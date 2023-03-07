@@ -1,5 +1,6 @@
 sphinx==1.8.0
 breathe<4.13.0
+recommonmark==0.7.1
 sphinx_rtd_theme<1
 tomli>=1.1.0
 
