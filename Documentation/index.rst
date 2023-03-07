@@ -102,6 +102,7 @@ Table of Contents
    devel/debugging
    devel/new-syscall
    devel/packaging
+   devel/features
 
 .. toctree::
    :caption: LibOS
