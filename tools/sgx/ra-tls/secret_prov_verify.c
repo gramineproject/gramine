@@ -74,6 +74,7 @@ int secret_provision_close(struct ra_tls_ctx* ctx) {
 static void* client_connection(void* data) {
     int ret;
     struct thread_info* ti = (struct thread_info*)data;
+    struct ra_tls_verify_callback_args args = {0};
 
     mbedtls_ssl_context ssl;
     mbedtls_ssl_init(&ssl);
@@ -95,6 +96,22 @@ static void* client_connection(void* data) {
     } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
     if (ret < 0) {
         ERROR("Secret Provisioning failed during mbedtls_ssl_handshake with error %d\n", ret);
+        ERROR("ra_tls_verify_callback_args:\n    attestation_scheme=%d, err_loc=%d, \n",
+              args.attestation_scheme, args.err_loc);
+        switch (args.attestation_scheme) {
+            case RA_TLS_ATTESTATION_SCHEME_EPID:
+                ERROR("    epid.ias_enclave_quote_status=%s\n", args.epid.ias_enclave_quote_status);
+                break;
+            case RA_TLS_ATTESTATION_SCHEME_DCAP:
+                ERROR("    dcap.func_verify_quote_result=0x%x, "
+                      "dcap.quote_verification_result=0x%x\n", args.dcap.func_verify_quote_result,
+                      args.dcap.quote_verification_result);
+                break;
+            default:
+                ERROR("    unknown attestation scheme!\n");
+                break;
+        }
+
         goto out;
     }
 
@@ -161,6 +178,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
                                   const char* cert_path, const char* key_path,
                                   verify_measurements_cb_t m_cb, secret_provision_cb_t f_cb) {
     int ret;
+    struct ra_tls_verify_callback_args args = {0};
 
     if (!secret || !secret_size || !cert_path || !key_path)
         return -EINVAL;
@@ -240,7 +258,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     mbedtls_ssl_conf_ca_chain(&conf, &srvcert, NULL);
 
     ra_tls_set_measurement_callback(m_cb);
-    mbedtls_ssl_conf_verify(&conf, ra_tls_verify_callback, NULL);
+    mbedtls_ssl_conf_verify(&conf, ra_tls_verify_callback, &args);
 
     ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &srvkey);
     if (ret < 0) {

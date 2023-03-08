@@ -28,9 +28,9 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
-#define RA_TLS_ATTESTATION_SCHEME_INVALID 0
-#define RA_TLS_ATTESTATION_SCHEME_EPID 1
-#define RA_TLS_ATTESTATION_SCHEME_DCAP 2
+#define RA_TLS_ATTESTATION_SCHEME_UNKNOWN 0
+#define RA_TLS_ATTESTATION_SCHEME_EPID    1
+#define RA_TLS_ATTESTATION_SCHEME_DCAP    2
 
 typedef enum {
     AT_NONE                        = 0,
@@ -48,7 +48,7 @@ struct ra_tls_verify_callback_args {
 
     union {
         struct {
-            /* string returned in `isvEnclaveQuoteStatus`; possibly truncated (but NUL-terminated) */
+            /* str returned in `isvEnclaveQuoteStatus`; possibly truncated (but NUL-terminated) */
             char ias_enclave_quote_status[128];
         } epid;
         struct {

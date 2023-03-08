@@ -732,8 +732,8 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
     }
 
     if (enclave_quote_status) {
-        strncpy(*enclave_quote_status, node->valuestring, sizeof(enclave_quote_status));
-        (*enclave_quote_status)[sizeof(enclave_quote_status) - 1] = '\0';
+        strncpy(*enclave_quote_status, node->valuestring, sizeof(*enclave_quote_status));
+        (*enclave_quote_status)[sizeof(*enclave_quote_status) - 1] = '\0';
     }
 
     if (strcmp("OK", node->valuestring) == 0) {

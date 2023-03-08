@@ -370,6 +370,8 @@ int main(int argc, char** argv) {
     mbedtls_printf("  . Performing the SSL/TLS handshake...");
     fflush(stdout);
 
+    /* nullify callback args as it will get populated during TLS handshake */
+    memset(&my_verify_callback_args, 0, sizeof(my_verify_callback_args));
     while ((ret = mbedtls_ssl_handshake(&ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             mbedtls_printf(" failed\n  ! mbedtls_ssl_handshake returned -0x%x\n", -ret);
@@ -377,23 +379,24 @@ int main(int argc, char** argv) {
                            "    attestation_scheme=%d, err_loc=%d, \n",
                            my_verify_callback_args.attestation_scheme,
                            my_verify_callback_args.err_loc);
-            if (RA_TLS_ATTESTATION_SCHEME_EPID == my_verify_callback_args.attestation_scheme) {
-                mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
-                               my_verify_callback_args.epid.ias_enclave_quote_status);
-            } else if (RA_TLS_ATTESTATION_SCHEME_DCAP \
-                       == my_verify_callback_args.attestation_scheme) {
-                mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
-                               "dcap.quote_verification_result=0x%x\n\n",
-                               my_verify_callback_args.dcap.func_verify_quote_result,
-                               my_verify_callback_args.dcap.quote_verification_result);
-            } else {
-                mbedtls_printf("  ! invalid attestation scheme!\n\n");
+            switch (my_verify_callback_args.attestation_scheme) {
+                case RA_TLS_ATTESTATION_SCHEME_EPID:
+                    mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
+                                   my_verify_callback_args.epid.ias_enclave_quote_status);
+                    break;
+                case RA_TLS_ATTESTATION_SCHEME_DCAP:
+                    mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
+                                   "dcap.quote_verification_result=0x%x\n\n",
+                                   my_verify_callback_args.dcap.func_verify_quote_result,
+                                   my_verify_callback_args.dcap.quote_verification_result);
+                    break;
+                default:
+                    mbedtls_printf("  ! unknown attestation scheme!\n\n");
+                    break;
             }
 
             goto exit;
         }
-        /* nullify callback args as it will get populated during TLS handshake */
-        memset(&my_verify_callback_args, 0, sizeof(my_verify_callback_args));
     }
 
     mbedtls_printf(" ok\n");
