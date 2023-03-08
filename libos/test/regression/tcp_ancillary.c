@@ -18,7 +18,7 @@
 #define SRV_IP "127.0.0.1"
 #define PORT   11110
 
-#define MSG_SPACE CMSG_SPACE(sizeof(int)) + CMSG_SPACE(sizeof(struct ucred))
+#define MSG_SPACE (CMSG_SPACE(sizeof(int)) + CMSG_SPACE(sizeof(struct ucred)))
 
 static const char g_buffer[] = "Hello from server!";
 
@@ -39,7 +39,7 @@ static void server(int pipefd) {
 
     char c = 0;
     ssize_t x = CHECK(write(pipefd, &c, sizeof(c)));
-    if (x != 1) {
+    if (x != sizeof(c)) {
         CHECK(-1);
     }
     CHECK(close(pipefd));
@@ -103,7 +103,7 @@ static void server(int pipefd) {
 static void client(int pipefd) {
     char c = 0;
     ssize_t x = CHECK(read(pipefd, &c, sizeof(c)));
-    if (x != 1) {
+    if (x != sizeof(c)) {
         CHECK(-1);
     }
     CHECK(close(pipefd));

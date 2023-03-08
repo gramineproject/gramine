@@ -15,11 +15,11 @@
 #include "pal.h"
 #include "socket_utils.h"
 
-static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
+static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen_ptr) {
     unsigned short family;
     switch (expected_family) {
         case AF_INET:
-            if (*addrlen < sizeof(struct sockaddr_in)) {
+            if (*addrlen_ptr < sizeof(struct sockaddr_in)) {
                 return -EINVAL;
             }
             memcpy(&family, (char*)addr + offsetof(struct sockaddr_in, sin_family), sizeof(family));
@@ -28,10 +28,10 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             }
             /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
              * ignored. */
-            *addrlen = sizeof(struct sockaddr_in);
+            *addrlen_ptr = sizeof(struct sockaddr_in);
             break;
         case AF_INET6:
-            if (*addrlen < sizeof(struct sockaddr_in6)) {
+            if (*addrlen_ptr < sizeof(struct sockaddr_in6)) {
                 return -EINVAL;
             }
             memcpy(&family, (char*)addr + offsetof(struct sockaddr_in6, sin6_family),
@@ -41,7 +41,7 @@ static int verify_sockaddr(int expected_family, void* addr, size_t* addrlen) {
             }
             /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
              * ignored. */
-            *addrlen = sizeof(struct sockaddr_in6);
+            *addrlen_ptr = sizeof(struct sockaddr_in6);
             break;
         default:
             BUG();
@@ -674,12 +674,14 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     struct cmsghdr* cmsg = (struct cmsghdr*)msg_control;
     size_t rest_msg_controllen = msg_controllen;
     while (cmsg && rest_msg_controllen >= sizeof(struct cmsghdr)) {
-        if (cmsg->cmsg_len < sizeof(struct cmsghdr) || cmsg->cmsg_len > rest_msg_controllen)
+        if (cmsg->cmsg_len < sizeof(struct cmsghdr) ||
+                CMSG_ALIGN(cmsg->cmsg_len) > rest_msg_controllen) {
             return -EINVAL;
+        }
 
         if (cmsg->cmsg_level != SOL_SOCKET) {
             /*
-             * Currently don't support:
+             * We currently don't support:
              * - SOL_UDP:  UDP_SEGMENT
              * - SOL_IPV6: IPV6_PKTINFO
              * - SOL_IP:   IP_RETOPTS, IP_PKTINFO, IP_TTL, IP_TOS
@@ -690,7 +692,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         }
 
         switch (cmsg->cmsg_type) {
-            /* currently don't support below SOL_SOCKET types */
+            /* We currently don't support below SOL_SOCKET types. */
             case SO_MARK:
             case SO_TIMESTAMPING_OLD:
             case SCM_TXTIME:
@@ -750,7 +752,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
 }
 
 static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
-                size_t* msg_controllen, size_t* out_total_size, void* addr, size_t* addrlen,
+                size_t* msg_controllen_ptr, size_t* out_total_size, void* addr, size_t* addrlen_ptr,
                 bool force_nonblocking) {
     assert(handle->type == TYPE_SOCK);
 
@@ -758,7 +760,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         case SOCK_STREAM:
             /* TCP - not interested in remote address (we know it already). */
             addr = NULL;
-            addrlen = NULL;
+            addrlen_ptr = NULL;
             break;
         case SOCK_DGRAM:
             break;
@@ -773,9 +775,9 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         return pal_to_unix_errno(ret);
     }
 
-    if (msg_control && msg_controllen) {
+    if (msg_control && msg_controllen_ptr) {
         /*
-         * Currently don't support:
+         * We currently don't support:
          * - SOL_TCP:    TCP_CM_INQ
          * - SOL_SOCKET: SO_TIMESTAMPNS_NEW, SO_TIMESTAMPNS_OLD, SO_TIMESTAMP_NEW, SO_TIMESTAMP_OLD
          * - SOL_IPV6:   IPV6_PKTINFO
@@ -784,7 +786,7 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
          *
          *  Note that SCM_RIGHTS and SCM_CREDENTIALS are not possible on TCP/UDP sockets.
          */
-        *msg_controllen = 0;
+        *msg_controllen_ptr = 0;
     }
 
     if (addr) {
@@ -792,9 +794,9 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
         size_t linux_addr_len = sizeof(linux_addr);
         pal_to_linux_sockaddr(&pal_ip_addr, &linux_addr, &linux_addr_len);
         /* If the user provided buffer is too small, the address is truncated, but we report
-         * the actual address size in `addrlen`. */
-        memcpy(addr, &linux_addr, MIN(*addrlen, linux_addr_len));
-        *addrlen = linux_addr_len;
+         * the actual address size in `addrlen_ptr`. */
+        memcpy(addr, &linux_addr, MIN(*addrlen_ptr, linux_addr_len));
+        *addrlen_ptr = linux_addr_len;
     }
     return 0;
 }

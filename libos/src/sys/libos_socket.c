@@ -783,7 +783,7 @@ out:
 /* We return the size directly (contrary to the usual out argument) for simplicity - this function
  * is called directly from syscall handlers, which return values in such a way. */
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
-                   void* msg_control, size_t* msg_controllen, void* addr, size_t* addrlen,
+                   void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,
                    unsigned int* flags) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
@@ -863,8 +863,8 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
             }
 
             ret = sock->ops->recv(handle, &tmp_iov, 1, /*msg_control=*/NULL,
-                                  /*msg_controllen=*/NULL, &tmp_iov.iov_len, /*addr=*/NULL,
-                                  /*addrlen=*/NULL, force_nonblocking);
+                                  /*msg_controllen_ptr=*/NULL, &tmp_iov.iov_len, /*addr=*/NULL,
+                                  /*addrlen_ptr=*/NULL, force_nonblocking);
             if (ret == -EAGAIN && sock->peek.data_size) {
                 /* We will just return what we have already. */
                 ret = 0;
@@ -907,8 +907,8 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     assert(!(*flags & MSG_PEEK));
 
     size_t size = 0;
-    ret = sock->ops->recv(handle, iov, iov_len, msg_control, msg_controllen, &size, addr, addrlen,
-                          force_nonblocking);
+    ret = sock->ops->recv(handle, iov, iov_len, msg_control, msg_controllen_ptr, &size, addr,
+                          addrlen_ptr, force_nonblocking);
     maybe_epoll_et_trigger(handle, ret, /*in=*/true, !ret ? size < total_size : false);
     if (!ret) {
         ret = *flags & MSG_TRUNC ? size : MIN(size, total_size);
@@ -958,8 +958,8 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
         .iov_base = buf,
         .iov_len = len,
     };
-    ssize_t ret = do_recvmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen=*/NULL, addr,
-                             &addrlen, &flags);
+    ssize_t ret = do_recvmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen_ptr=*/NULL,
+                             addr, &addrlen, &flags);
     if (ret >= 0 && addr) {
         *_addrlen = addrlen;
     }
