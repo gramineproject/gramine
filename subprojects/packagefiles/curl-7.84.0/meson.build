@@ -20,7 +20,8 @@ curl = custom_target('curl',
     install_dir: get_option('libdir'),
 )
 
-install_subdir('include/curl', install_dir: get_option('includedir') / 'gramine')
+install_subdir('include/curl', install_dir: get_option('includedir') / 'gramine',
+               exclude_files: ['Makefile.am', 'Makefile.in'])
 
 curl_minimal_dep = declare_dependency(
     link_with: curl,
