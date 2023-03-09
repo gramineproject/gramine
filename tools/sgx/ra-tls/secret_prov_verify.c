@@ -44,6 +44,7 @@ struct ra_tls_ctx {
 struct thread_info {
     mbedtls_net_context client_fd;
     mbedtls_ssl_config* conf;
+    struct ra_tls_verify_callback_args* cb_args;
     uint8_t* secret;
     size_t secret_size;
     secret_provision_cb_t f_cb;
@@ -91,7 +92,9 @@ static void* client_connection(void* data) {
         /* FIXME: this coarse-grained locking is less than optimal; need to switch to thread-safe
          *        mbedTLS configuration and thread-safe RA-TLS in the future */
         pthread_mutex_lock(&g_handshake_lock);
+        memset(ti->cb_args, 0, sizeof(*ti->cb_args));
         ret = mbedtls_ssl_handshake(&ssl);
+        memcpy(&args, ti->cb_args, sizeof(args));
         pthread_mutex_unlock(&g_handshake_lock);
     } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
     if (ret < 0) {
@@ -284,6 +287,7 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
         /* client_fd is reused for multiple threads, so pass ownership of its copy to new thread */
         memcpy(&ti->client_fd, &client_fd, sizeof(client_fd));
         ti->conf        = &conf;
+        ti->cb_args     = &args;
         ti->secret      = secret;
         ti->secret_size = secret_size;
         ti->f_cb        = f_cb;

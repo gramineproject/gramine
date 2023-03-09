@@ -41,7 +41,9 @@ typedef enum {
     AT_VERIFY_ENCLAVE_MEASUREMENTS = 5,
 } ra_tls_err_loc_t;
 
-/* Verification callback arguments for retrieving additional information from RA-TLS */
+/* Verification callback arguments for retrieving additional information from RA-TLS.
+ * Note that this is (at least currently) an out-only struct (i.e., there can be no input fields
+ * provided by the application/user) */
 struct ra_tls_verify_callback_args {
     int attestation_scheme;   /* see macros RA_TLS_ATTESTATION_SCHEME_ */
     ra_tls_err_loc_t err_loc; /* error location in RA-TLS */
