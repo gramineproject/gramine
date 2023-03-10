@@ -1,6 +1,5 @@
-/* Test description: this test verifies that in and out instructions
- * correctly generate SIGSEGV. This raises SIGSEGV once for IN and once for OUT
- * and then counts if number of SIGSEGVs are 2.
+/* Test description: this test verifies that in and out instructions correctly generate SIGSEGV.
+ * This raises SIGSEGV once for IN and once for OUT and then counts if number of SIGSEGVs is 2.
  */
 #define _XOPEN_SOURCE 700
 #define _POSIX_C_SOURCE 200809
@@ -26,21 +25,20 @@ static void fault_handler(int signum) {
 int main(void) {
     struct sigaction int_handler = {.sa_handler=fault_handler,
                                     .sa_flags = SA_RESTART};
-    int value = 0;
-    int port = 0;
-    sigaction(SIGSEGV, &int_handler, 0);
+    unsigned char value = 0;
+    unsigned short port = 0x3F8;
+    CHECK(sigaction(SIGSEGV, &int_handler, NULL));
     if (sigsetjmp(g_point, 1) == 0) {
-        __asm__ volatile("in %1, %0" : "=a"(value) : "d"(port));
+        __asm__ volatile("inb %1, %0" : "=a"(value) : "d"(port));
     }
     puts("handled IN instruction");
     if (sigsetjmp(g_point, 1) == 0) {
-        port = 0;
-        __asm__ volatile("out %0, %1" : "=a"(value) : "d"(port));
+        __asm__ volatile("outb %0, %1" : : "a"(value), "d"(port));
     }
     puts("handled OUT instruction");
-    if (g_sigsegv_triggered == EXPECTED_NUM_SIGSEGVS)
-        puts("SIGSEGV TEST OK");
-    else
-        puts("SIGSEGV TEST FAILED");
+    if (g_sigsegv_triggered != EXPECTED_NUM_SIGSEGVS)
+        errx(1, "Expected %d number of SIGSEGVs, but got only %d", EXPECTED_NUM_SIGSEGVS,
+             g_sigsegv_triggered);
+    puts("SIGSEGV TEST OK");
     return 0;
 }

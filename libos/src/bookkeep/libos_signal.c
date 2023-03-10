@@ -479,13 +479,11 @@ static bool is_in_out(PAL_CONTEXT* context) {
 }
 
 static bool maybe_raise_sigsegv(PAL_CONTEXT* context) {
-    /* Executing I/O instructions (e.g., in/out) inside an SGX enclave
-     * generates a #UD fault. Gramine's PAL tries to handle this exception and
-     * propogates it to LibOS/app as a SIGILL signal.
-     *
-     * However, I/O instructions result in a #GP fault (which raises a SIGSEGV
-     * signal) if I/O is not permitted. Let Gramine emulate these instructions
-     * as if they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+    /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
+     * Gramine's PAL tries to handle this exception and propogates it to LibOS/app as a SIGILL
+     * signal. However, I/O instructions result in a #GP fault (which raises a SIGSEGV signal) if
+     * I/O is not permitted. Let Gramine emulate these instructions as if they end up in SIGSEGV.
+     * This helps some apps, e.g. `lscpu`.
      */
     return is_in_out(context);
 }

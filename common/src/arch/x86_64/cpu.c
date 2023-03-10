@@ -1,11 +1,9 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Fortnanix Inc
+/* Copyright (C) 2022 Fortanix Inc
  *                    Nirjhar Roy <nirjhar.roy@fortanix.com>
  */
 
-/* This file contains functions that check various features and flags
- * specific to x86
- */
+/* This file contains functions that check various features and flags specific to x86 */
 
 #include <stddef.h>
 
@@ -31,9 +29,6 @@ bool is_x86_instr_legacy_prefix(uint8_t op) {
                              0x66, /*  Operand-size override prefix */
                              /* Group 3 */
                              0x67, /* Address-size override prefix  */
-                             /* The rest of the prefixes aren't really applicable
-                              * for the instruction(s) we are checking.
-                              */
                             };
     for (size_t i = 0; i < ARRAY_SIZE(prefix_list); i++) {
         if (op == prefix_list[i])
