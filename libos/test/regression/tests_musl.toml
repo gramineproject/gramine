@@ -32,6 +32,7 @@ manifests = [
   "exit",
   "exit_group",
   "fcntl_lock",
+  "fcntl_lock_child_only",
   "fdleak",
   "file_check_policy",
   "file_check_policy_allow_all_but_log",
