@@ -777,6 +777,8 @@ static bool ipf_init_new_file(pf_context_t* pf, const char* path) {
     memcpy(pf->encrypted_part_plain.path, path, strlen(path) + 1);
 
     pf->need_writing = true;
+    if (!ipf_internal_flush(pf))
+        return false;
 
     return true;
 }
