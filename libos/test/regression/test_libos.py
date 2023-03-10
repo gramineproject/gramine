@@ -943,6 +943,14 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/lock_file')
         self.assertIn('TEST OK', stdout)
 
+    def test_111_fcntl_lock_child_only(self):
+        try:
+            stdout, _ = self.run_binary(['fcntl_lock_child_only'], timeout=60)
+        finally:
+            if os.path.exists('tmp_enc/lock_file'):
+                os.remove('tmp_enc/lock_file')
+        self.assertIn('TEST OK', stdout)
+
     def test_120_gethostname_default(self):
         # The generic manifest (manifest.template) doesn't use extra runtime conf.
         stdout, _ = self.run_binary(['hostname', 'localhost'])

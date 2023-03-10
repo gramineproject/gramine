@@ -27,6 +27,7 @@ tests = {
     'exit': {},
     'exit_group': {},
     'fcntl_lock': {},
+    'fcntl_lock_child_only': {},
     'fdleak': {},
     'file_check_policy': {},
     'file_size': {},

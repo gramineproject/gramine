@@ -21,7 +21,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define TEST_DIR "tmp/"
 #define TEST_FILE "tmp/lock_file"
 
 static int g_fd;
