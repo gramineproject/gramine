@@ -318,7 +318,7 @@ long libos_syscall_flock(int fd, int operation) {
         goto out;
 
     pl.handle_id = hdl->id;
-    ret = posix_lock_set(hdl->dentry, &pl, !(operation&LOCK_NB));
+    ret = posix_lock_set(hdl->dentry, &pl, !(operation & LOCK_NB));
 
 out:
     put_handle(hdl);
