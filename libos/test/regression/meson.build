@@ -27,10 +27,10 @@ tests = {
     'exit': {},
     'exit_group': {},
     'fcntl_lock': {},
-    'flock_lock': {},
     'fdleak': {},
     'file_check_policy': {},
     'file_size': {},
+    'flock_lock': {},
     'fopen_cornercases': {},
     'fork_and_exec': {},
     'fp_multithread': {

@@ -142,7 +142,8 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
         ret = -ENOMEM;
         goto out;
     }
-    hdl->id=  ((uint64_t)g_process.pid << 32) | local_counter++;
+    __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
+    hdl->id=  ((uint64_t)g_process.pid << 32) | local_counter;
     
     ret = open_namei(hdl, dir, filename, flags, mode, NULL);
     if (ret < 0) {

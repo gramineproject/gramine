@@ -150,7 +150,6 @@ static void test_flock_fork() {
         child_func(fd);
     } else if (pid > 0) {
         try_flock(fd, LOCK_EX, 0);
-        
         int status;
         wait(&status);
     } else {
