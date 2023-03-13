@@ -59,7 +59,7 @@ important pages:
 - `Gramine manifest file syntax
   <https://gramine.readthedocs.io/en/latest/manifest-syntax.html>`__
 - `Performance tuning & analysis of SGX applications in Gramine
-  <https://gramine.readthedocs.io/en/latest/devel/performance.html>`__
+  <https://gramine.readthedocs.io/en/latest/performance.html>`__
 - `Remote attestation in Gramine
   <https://gramine.readthedocs.io/en/latest/attestation.html>`__
 
