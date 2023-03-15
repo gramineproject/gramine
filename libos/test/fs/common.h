@@ -26,7 +26,13 @@
         type __dummy;                               \
         __builtin_add_overflow((val), 0, &__dummy); \
     })
-
+#define CHECK(x) ({                                         \
+    __typeof__(x) _x = (x);                                 \
+    if (_x == -1) {                                         \
+        err(1, "error at %s (line %d): %m", #x, __LINE__);  \
+    }                                                       \
+    _x;                                                     \
+})
 noreturn void fatal_error(const char* fmt, ...);
 void setup(void);
 int open_input_fd(const char* path);

@@ -162,6 +162,9 @@ typedef uint32_t IDTYPE;
 
 #define PID_MAX_LIMIT 4194304 /* Linux limit 2^22, this value is *one greater* than max PID */
 #define PID_MAX (PID_MAX_LIMIT - 1)
+/* The following values are taken from Linux v6.2 */
+#define PIPE_MAX_SIZE 1048576
+#define LEASE_BREAK_TIME_MAX 45
 
 typedef uint64_t HASHTYPE;
 
