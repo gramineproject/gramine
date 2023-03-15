@@ -68,6 +68,7 @@ enum {
     OCALL_DEBUG_MAP_REMOVE,
     OCALL_DEBUG_DESCRIBE_LOCATION,
     OCALL_EVENTFD,
+    OCALL_IOCTL,
     OCALL_GET_QUOTE,
     OCALL_EDMM_RESTRICT_PAGES_PERM,
     OCALL_EDMM_MODIFY_PAGES_TYPE,
@@ -326,6 +327,12 @@ struct ocall_debug_describe_location {
 
 struct ocall_eventfd {
     int          flags;
+};
+
+struct ocall_ioctl {
+    int           fd;
+    unsigned int  cmd;
+    unsigned long arg;
 };
 
 struct ocall_get_quote {

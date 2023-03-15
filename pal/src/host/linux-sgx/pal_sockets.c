@@ -687,3 +687,85 @@ int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t*
     }
     return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }
+
+int _PalSocketIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
+    int ret;
+
+    if (handle->sock.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
+
+    void* untrusted_addr = NULL;
+    size_t untrusted_size = 0;
+    switch (cmd) {
+        case SIOCGIFCONF:{
+            if (((struct ifconf *)arg)->ifc_buf == NULL)
+                untrusted_size = sizeof(struct ifconf);
+            else
+                untrusted_size = sizeof(struct ifconf) + ((struct ifconf *)arg)->ifc_len;
+
+            ret = ocall_mmap_untrusted(&untrusted_addr, ALLOC_ALIGN_UP(untrusted_size),
+                               PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1,
+                               /*offset=*/0);
+            if (ret < 0) {
+                ret = unix_to_pal_error(ret);
+                break;
+            }
+            assert(untrusted_addr);
+            memset(untrusted_addr, 0, untrusted_size);
+            if (((struct ifconf *)arg)->ifc_buf != NULL) {
+                ((struct ifconf *)untrusted_addr)->ifc_len = ((struct ifconf *)arg)->ifc_len;
+                ((struct ifconf *)untrusted_addr)->ifc_buf = untrusted_addr + sizeof(struct ifconf);
+            }
+
+            int ioctl_ret = ocall_ioctl(handle->sock.fd, cmd, (unsigned long)untrusted_addr);
+            if (ioctl_ret < 0) {
+                ret = unix_to_pal_error(ioctl_ret);
+                break;
+            }
+            int ifc_len = ((struct ifconf *)untrusted_addr)->ifc_len;
+            if (ifc_len % sizeof(struct ifreq) != 0) {
+                ret = -PAL_ERROR_INVAL;
+                break;
+            }
+            ((struct ifconf *)arg)->ifc_len = ifc_len;
+            if (((struct ifconf *)arg)->ifc_buf != NULL) {
+                memcpy(((struct ifconf *)arg)->ifc_buf, untrusted_addr + sizeof(struct ifconf),
+                       ifc_len);
+            }
+            *out_ret = ioctl_ret;
+            ret = 0;
+            break;
+        }
+        case SIOCGIFHWADDR:{
+            untrusted_size = sizeof(struct ifreq);
+            ret = ocall_mmap_untrusted(&untrusted_addr, ALLOC_ALIGN_UP(untrusted_size),
+                                       PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE,
+                                       /*fd=*/-1, /*offset=*/0);
+            if (ret < 0) {
+                ret = unix_to_pal_error(ret);
+                break;
+            }
+
+            assert(untrusted_addr);
+            memset(untrusted_addr, 0, untrusted_size);
+            memcpy(untrusted_addr, (void*)arg, sizeof((struct ifreq*)arg)->ifr_name);
+            int ioctl_ret = ocall_ioctl(handle->sock.fd, cmd, (unsigned long)untrusted_addr);
+            if (ioctl_ret < 0) {
+                ret = unix_to_pal_error(ioctl_ret);
+                break;
+            }
+            memcpy(((struct ifreq*)arg)->ifr_ifru, ((struct ifreq*)untrusted_addr)->ifr_ifru,
+                   sizeof((struct ifreq*)arg)->ifr_ifru);
+            *out_ret = ioctl_ret;
+            break;
+        }
+        default:
+            ret = -ENOSYS;
+            break;
+    }
+
+    if (untrusted_addr)
+        ocall_munmap_untrusted(untrusted_addr, ALLOC_ALIGN_UP(untrusted_size));
+    return ret;
+}

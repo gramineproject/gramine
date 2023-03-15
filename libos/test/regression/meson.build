@@ -112,6 +112,7 @@ tests = {
     'sighandler_sigpipe': {},
     'signal_multithread': {},
     'sigprocmask_pending': {},
+    'socket_ioctl': {},
     'spinlock': {
         'include_directories': include_directories(
             # for `spinlock.h`

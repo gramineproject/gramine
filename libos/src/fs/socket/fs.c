@@ -168,6 +168,46 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
             }
             *(int*)arg = size;
             return 0;
+        case SIOCGIFCONF:;
+           PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            if (!pal_handle) {
+                return -EINVAL;
+            }
+            if (!is_user_memory_writable((void*)arg, sizeof(struct ifconf))) {
+                return -PAL_ERROR_INVAL;
+            }
+            struct ifconf ifc;
+            memcpy((void*)&ifc, (void*)arg, sizeof(struct ifconf));
+            if (ifc.ifc_buf != NULL && !is_user_memory_writable(ifc.ifc_buf, ifc.ifc_len)) {
+                return -PAL_ERROR_INVAL;
+            }
+            int cmd_ret;
+            ret = PalSocketIoControl(pal_handle, cmd, (unsigned long)&ifc, &cmd_ret);
+            if (ret < 0) {
+                return pal_to_unix_errno(ret);
+            }
+
+            memcpy((void*)arg, (void*)&ifc, sizeof(struct ifconf));
+            assert(ret == 0);
+            return cmd_ret;
+        case SIOCGIFHWADDR:;
+            pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            if (!pal_handle) {
+                return -EINVAL;
+            }
+            if (!is_user_memory_writable((void*)arg, sizeof(struct ifreq))) {
+                return -PAL_ERROR_INVAL;
+            }
+            struct ifreq ifr;
+            memcpy((void*)&ifr, (void*)arg, sizeof(struct ifreq));
+            ret = PalSocketIoControl(pal_handle, cmd, (unsigned long)&ifr, &cmd_ret);
+            if (ret < 0) {
+                return pal_to_unix_errno(ret);
+            }
+
+            memcpy((void*)arg, (void*)&ifr, sizeof(struct ifreq));
+            assert(ret == 0);
+            return cmd_ret;
         default:
             return -ENOTTY;
     }
