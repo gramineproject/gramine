@@ -97,6 +97,7 @@ manifests = [
   "sealed_file_mod",
   "select",
   "send_handle",
+  "shadow_pseudo_fs",
   "shared_object",
   "sigaction_per_process",
   "sigaltstack",

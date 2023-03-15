@@ -1070,6 +1070,10 @@ class TC_40_FileSystem(RegressionTestCase):
         # proc/stat Linux-based formatting
         self.assertIn('/proc/stat test passed', stdout)
 
+    def test_022_shadow_pseudo_fs(self):
+        stdout, _ = self.run_binary(['shadow_pseudo_fs'])
+        self.assertIn('TEST OK', stdout)
+
     def test_030_fdleak(self):
         # The fd limit is rather arbitrary, but must be in sync with numbers from the test.
         # Currently test opens 10 fds simultaneously, so 50 is a safe margin for any fds that

@@ -44,8 +44,12 @@ static struct pseudo_node* pseudo_find(struct libos_dentry* dent) {
         return pseudo_find_root(dent->mount->uri);
     }
 
+    assert(dent->parent != NULL);
     assert(dent->parent->inode);
+
     struct pseudo_node* parent_node = dent->parent->inode->data;
+    if (parent_node == NULL)
+        return NULL;
 
     /* Look for a child node with matching name */
     assert(parent_node->type == PSEUDO_DIR);
