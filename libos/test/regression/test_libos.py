@@ -1368,7 +1368,8 @@ class TC_92_avx(RegressionTestCase):
         stdout, _ = self.run_binary(['avx'])
         self.assertIn('TEST OK', stdout)
 
+@unittest.skipUnless(ON_X86, 'x86-specific')
 class TC_93_In_Out(RegressionTestCase):
     def test_000_in_out(self):
-        stdout, stderr = self.run_binary(['in_out_instruction_test'])
-        self.assertIn('SIGSEGV TEST OK', stdout)
+        stdout, stderr = self.run_binary(['in_out_instruction'])
+        self.assertIn('TEST OK', stdout)

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2023 Fortanix Inc
+ *                    Nirjhar Roy <nirjhar.roy@fortanix.com>
+ */
 /* Test description: this test verifies that in and out instructions correctly generate SIGSEGV.
  * This raises SIGSEGV once for IN and once for OUT and then counts if number of SIGSEGVs is 2.
  */
@@ -28,17 +32,26 @@ int main(void) {
     unsigned char value = 0;
     unsigned short port = 0x3F8;
     CHECK(sigaction(SIGSEGV, &int_handler, NULL));
+    /* sigsetjmp returns 0 if it directly invocated, else it returns a non zero value if it
+     * from a call to siglongjmp()
+     */
     if (sigsetjmp(g_point, 1) == 0) {
         __asm__ volatile("inb %1, %0" : "=a"(value) : "d"(port));
+    } else {
+        if (g_sigsegv_triggered < 1) {
+            errx(1, "sigsetjmp failed before inb instruction could have executed");
+        }
     }
-    puts("handled IN instruction");
     if (sigsetjmp(g_point, 1) == 0) {
         __asm__ volatile("outb %0, %1" : : "a"(value), "d"(port));
+    } else {
+        if (g_sigsegv_triggered < 2) {
+            errx(1, "sigsetjmp failed before outb instruction could have executed");
+        }
     }
-    puts("handled OUT instruction");
     if (g_sigsegv_triggered != EXPECTED_NUM_SIGSEGVS)
         errx(1, "Expected %d number of SIGSEGVs, but got only %d", EXPECTED_NUM_SIGSEGVS,
              g_sigsegv_triggered);
-    puts("SIGSEGV TEST OK");
+    puts("TEST OK");
     return 0;
 }
