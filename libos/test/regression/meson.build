@@ -66,6 +66,7 @@ tests = {
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},
     'munmap': {},
+    'open_file': {},
     'open_opath': {},
     'openmp': {
         # NOTE: This will use `libgomp` in GCC and `libomp` in Clang.
