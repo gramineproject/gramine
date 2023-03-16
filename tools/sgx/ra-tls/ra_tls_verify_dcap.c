@@ -96,16 +96,16 @@ static const char* sgx_ql_qv_result_to_str(sgx_ql_qv_result_t verification_resul
 }
 
 int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags) {
-    struct ra_tls_verify_callback_args* args = (struct ra_tls_verify_callback_args*)data;
+    struct ra_tls_verify_callback_results* results = (struct ra_tls_verify_callback_results*)data;
 
     int ret;
 
     uint8_t* supplemental_data      = NULL;
     uint32_t supplemental_data_size = 0;
 
-    if (args) {
-        args->attestation_scheme = RA_TLS_ATTESTATION_SCHEME_DCAP;
-        args->err_loc = AT_INIT;
+    if (results) {
+        results->attestation_scheme = ATTESTATION_SCHEME_DCAP;
+        results->err_loc = AT_INIT;
     }
 
     if (depth != 0) {
@@ -120,8 +120,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         *flags = 0;
     }
 
-    if (args)
-        args->err_loc = AT_EXTRACT_QUOTE;
+    if (results)
+        results->err_loc = AT_EXTRACT_QUOTE;
 
     /* extract SGX quote from "quote" OID extension from crt */
     sgx_quote_t* quote;
@@ -132,8 +132,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    if (args)
-        args->err_loc = AT_VERIFY_EXTERNAL;
+    if (results)
+        results->err_loc = AT_VERIFY_EXTERNAL;
 
     /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
     bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
@@ -167,9 +167,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
                               current_time, &collateral_expiration_status, &verification_result,
                               /*p_qve_report_info=*/NULL, supplemental_data_size,
                               supplemental_data);
-    if (args) {
-        args->dcap.func_verify_quote_result = ret;
-        args->dcap.quote_verification_result = verification_result;
+    if (results) {
+        results->dcap.func_verify_quote_result = ret;
+        results->dcap.quote_verification_result = verification_result;
     }
     if (ret) {
         ERROR("sgx_qv_verify_quote failed: %d\n", ret);
@@ -204,8 +204,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    if (args)
-        args->err_loc = AT_VERIFY_ENCLAVE_ATTRS;
+    if (results)
+        results->err_loc = AT_VERIFY_ENCLAVE_ATTRS;
 
     sgx_quote_body_t* quote_body = &quote->body;
 
@@ -216,8 +216,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    if (args)
-        args->err_loc = AT_VERIFY_ENCLAVE_MEASUREMENTS;
+    if (results)
+        results->err_loc = AT_VERIFY_ENCLAVE_MEASUREMENTS;
 
     /* verify other relevant enclave information from the SGX quote */
     if (g_verify_measurements_cb) {
@@ -235,8 +235,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         goto out;
     }
 
-    if (args)
-        args->err_loc = AT_NONE;
+    if (results)
+        results->err_loc = AT_NONE;
     ret = 0;
 out:
     free(supplemental_data);

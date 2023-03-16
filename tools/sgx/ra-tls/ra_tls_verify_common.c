@@ -237,11 +237,13 @@ void ra_tls_set_measurement_callback(int (*f_cb)(const char* mrenclave, const ch
 }
 
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size) {
-    return ra_tls_verify_callback_extended_der(der_crt, der_crt_size, /*unused args=*/NULL);
+    INFO("WARNING: The ra_tls_verify_callback_der() API is deprecated in favor of the "
+         "ra_tls_verify_callback_extended_der() version of API.\n");
+    return ra_tls_verify_callback_extended_der(der_crt, der_crt_size, /*unused results=*/NULL);
 }
 
 int ra_tls_verify_callback_extended_der(uint8_t* der_crt, size_t der_crt_size,
-                                        struct ra_tls_verify_callback_args* args) {
+                                        struct ra_tls_verify_callback_results* results) {
     int ret;
     mbedtls_x509_crt crt;
     mbedtls_x509_crt_init(&crt);
@@ -250,7 +252,12 @@ int ra_tls_verify_callback_extended_der(uint8_t* der_crt, size_t der_crt_size,
     if (ret < 0)
         goto out;
 
-    ret = ra_tls_verify_callback(args, &crt, /*depth=*/0, /*flags=*/NULL);
+    if (results) {
+        /* ensure that all the not-filled fields of callback results are always zeroized */
+        memset(results, 0, sizeof(*results));
+    }
+
+    ret = ra_tls_verify_callback(results, &crt, /*depth=*/0, /*flags=*/NULL);
     if (ret < 0)
         goto out;
 

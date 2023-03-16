@@ -39,7 +39,7 @@
 /* RA-TLS: on client, only need to register ra_tls_verify_callback_extended_der() for cert
  * verification. */
 int (*ra_tls_verify_callback_extended_der_f)(uint8_t* der_crt, size_t der_crt_size,
-                                             struct ra_tls_verify_callback_args* args);
+                                             struct ra_tls_verify_callback_results* results);
 
 /* RA-TLS: if specified in command-line options, use our own callback to verify SGX measurements */
 void (*ra_tls_set_measurement_callback_f)(int (*f_cb)(const char* mrenclave, const char* mrsigner,
@@ -121,7 +121,7 @@ static int my_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint
         *flags = 0;
     }
     return ra_tls_verify_callback_extended_der_f(crt->raw.p, crt->raw.len,
-                                                 (struct ra_tls_verify_callback_args*)data);
+                                                 (struct ra_tls_verify_callback_results*)data);
 }
 
 static bool getenv_client_inside_sgx() {
@@ -143,10 +143,10 @@ int main(int argc, char** argv) {
     bool in_sgx = getenv_client_inside_sgx();
 
     char* error;
-    void* ra_tls_verify_lib                                    = NULL;
-    ra_tls_verify_callback_extended_der_f                      = NULL;
-    ra_tls_set_measurement_callback_f                          = NULL;
-    struct ra_tls_verify_callback_args my_verify_callback_args = {0};
+    void* ra_tls_verify_lib                                          = NULL;
+    ra_tls_verify_callback_extended_der_f                            = NULL;
+    ra_tls_set_measurement_callback_f                                = NULL;
+    struct ra_tls_verify_callback_results my_verify_callback_results = {0};
 
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -346,7 +346,7 @@ int main(int argc, char** argv) {
     if (ra_tls_verify_lib) {
         /* use RA-TLS verification callback; this will overwrite CA chain set up above */
         mbedtls_printf("  . Installing RA-TLS callback ...");
-        mbedtls_ssl_conf_verify(&conf, &my_verify_callback, &my_verify_callback_args);
+        mbedtls_ssl_conf_verify(&conf, &my_verify_callback, &my_verify_callback_results);
         mbedtls_printf(" ok\n");
     }
 
@@ -370,25 +370,23 @@ int main(int argc, char** argv) {
     mbedtls_printf("  . Performing the SSL/TLS handshake...");
     fflush(stdout);
 
-    /* nullify callback args as it will get populated during TLS handshake */
-    memset(&my_verify_callback_args, 0, sizeof(my_verify_callback_args));
     while ((ret = mbedtls_ssl_handshake(&ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             mbedtls_printf(" failed\n  ! mbedtls_ssl_handshake returned -0x%x\n", -ret);
-            mbedtls_printf("  ! ra_tls_verify_callback_args:\n"
+            mbedtls_printf("  ! ra_tls_verify_callback_results:\n"
                            "    attestation_scheme=%d, err_loc=%d, \n",
-                           my_verify_callback_args.attestation_scheme,
-                           my_verify_callback_args.err_loc);
-            switch (my_verify_callback_args.attestation_scheme) {
-                case RA_TLS_ATTESTATION_SCHEME_EPID:
+                           my_verify_callback_results.attestation_scheme,
+                           my_verify_callback_results.err_loc);
+            switch (my_verify_callback_results.attestation_scheme) {
+                case ATTESTATION_SCHEME_EPID:
                     mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
-                                   my_verify_callback_args.epid.ias_enclave_quote_status);
+                                   my_verify_callback_results.epid.ias_enclave_quote_status);
                     break;
-                case RA_TLS_ATTESTATION_SCHEME_DCAP:
+                case ATTESTATION_SCHEME_DCAP:
                     mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
                                    "dcap.quote_verification_result=0x%x\n\n",
-                                   my_verify_callback_args.dcap.func_verify_quote_result,
-                                   my_verify_callback_args.dcap.quote_verification_result);
+                                   my_verify_callback_results.dcap.func_verify_quote_result,
+                                   my_verify_callback_results.dcap.quote_verification_result);
                     break;
                 default:
                     mbedtls_printf("  ! unknown attestation scheme!\n\n");

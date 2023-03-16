@@ -28,9 +28,11 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
-#define RA_TLS_ATTESTATION_SCHEME_UNKNOWN 0
-#define RA_TLS_ATTESTATION_SCHEME_EPID    1
-#define RA_TLS_ATTESTATION_SCHEME_DCAP    2
+typedef enum {
+    ATTESTATION_SCHEME_UNKNOWN = 0,
+    ATTESTATION_SCHEME_EPID    = 1,
+    ATTESTATION_SCHEME_DCAP    = 2,
+} ra_tls_attestation_scheme_t;
 
 typedef enum {
     AT_NONE                        = 0,
@@ -41,16 +43,16 @@ typedef enum {
     AT_VERIFY_ENCLAVE_MEASUREMENTS = 5,
 } ra_tls_err_loc_t;
 
-/* Verification callback arguments for retrieving additional information from RA-TLS.
+/* Verification callback results for retrieving additional verification results from RA-TLS.
  * Note that this is (at least currently) an out-only struct (i.e., there can be no input fields
  * provided by the application/user) */
-struct ra_tls_verify_callback_args {
-    int attestation_scheme;   /* see macros RA_TLS_ATTESTATION_SCHEME_ */
-    ra_tls_err_loc_t err_loc; /* error location in RA-TLS */
+struct ra_tls_verify_callback_results {
+    ra_tls_attestation_scheme_t attestation_scheme;   /* attestation scheme of RA-TLS */
+    ra_tls_err_loc_t err_loc; /* the step at which RA-TLS failed */
 
     union {
         struct {
-            /* str returned in `isvEnclaveQuoteStatus`; possibly truncated (but NUL-terminated) */
+            /* str returned in `isvEnclaveQuoteStatus`; possibly truncated (but NULL-terminated) */
             char ias_enclave_quote_status[128];
         } epid;
         struct {
@@ -58,6 +60,7 @@ struct ra_tls_verify_callback_args {
             int quote_verification_result; /* value stored in `p_quote_verification_result` arg */
         } dcap;
         struct {
+            /* To make it clear that this inner object is expected to be 128-byte-sized. */
             char reserved[128];
         } misc;
     };
@@ -105,8 +108,8 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
  *
  * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.
  * \param der_crt_size  Size of the RA-TLS certificate.
- * \param args          (Optional) Verification callback arguments for retrieving additional
- *                      information from RA-TLS.
+ * \param results       (Optional) Verification callback results for retrieving additional
+ *                      verification results from RA-TLS.
  *
  * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  *
@@ -116,7 +119,7 @@ int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
  * corresponding RA-TLS environment variables.
  */
 int ra_tls_verify_callback_extended_der(uint8_t* der_crt, size_t der_crt_size,
-                                        struct ra_tls_verify_callback_args* args);
+                                        struct ra_tls_verify_callback_results* results);
 
 /*!
  * \brief Generic function to generate a key and a corresponding RA-TLS certificate (DER format).
