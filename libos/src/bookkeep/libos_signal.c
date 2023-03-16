@@ -461,25 +461,25 @@ bool is_user_string_readable(const char* addr) {
 
 static bool is_in_out(PAL_CONTEXT* context) {
     uint8_t opcodes[] = {
-                        /* INS opcodes */
-                        0x6c,
-                        0x6d,
-                        /* OUTS opcodes */
-                        0x6e,
-                        0x6f,
-                        /* IN immediate opcodes */
-                        0xe4,
-                        0xe5,
-                        /* OUT immediate opcodes */
-                        0xe6,
-                        0xe7,
-                        /* IN register opcodes */
-                        0xec,
-                        0xed,
-                        /* OUT register opcodes */
-                        0xee,
-                        0xef,
-                        };
+        /* INS opcodes */
+        0x6c,
+        0x6d,
+        /* OUTS opcodes */
+        0x6e,
+        0x6f,
+        /* IN immediate opcodes */
+        0xe4,
+        0xe5,
+        /* OUT immediate opcodes */
+        0xe6,
+        0xe7,
+        /* IN register opcodes */
+        0xec,
+        0xed,
+        /* OUT register opcodes */
+        0xee,
+        0xef,
+    };
     uint8_t* rip = (uint8_t*)context->rip;
     size_t idx = 0;
     while (is_x86_instr_legacy_prefix(rip[idx])
