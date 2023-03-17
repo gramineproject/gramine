@@ -482,6 +482,7 @@ The secret may be retrieved by the application in two ways:
    ``mbedtls_base64_decode()``) instead of non-crypto-secure functions (e.g.,
    self-written decoding logic or a standard library function).
 
+
 ``secret_prov_verify_epid.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
