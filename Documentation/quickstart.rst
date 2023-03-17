@@ -1,27 +1,18 @@
-Quick start
-===========
+.. _quickstart_installation
 
-.. highlight:: sh
+Gramine installation options
+----------------------------
 
-Prerequisites
--------------
+There are three options to choose from when using Gramine to protect your application. The option you choose depends on how you are running your application. 
 
-Gramine without SGX has no special requirements.
+:ref:`Install Gramine` - This option provides instructions for installing Gramine on various versions of Ubuntu or Red Hat Enterprise Linux 8. 
 
-Gramine with SGX support requires several features from your system:
+:ref:`Gramine Docker Image` - This option provides instructions for installing a prepared Docker image with Gramine and running the container. This option enables you to protect an application running in the cloud. 
 
-- Linux kernel version at least 5.11 (with SGX driver enabled);
-- Intel SGX PSW and (optionally) Intel DCAP must be installed and configured.
+:doc:`devel/building` - This option is mainly used for assisting in helping the development of Gramine. This option is much more involved. The instructions for this option are listed on another page.
 
-If your system doesn't meet these requirements, please refer to more detailed
-descriptions in :doc:`devel/building`.
-
-We supply a tool :doc:`manpages/is-sgx-available`, which you can use to check
-your hardware and system. It's installed together with the respective gramine
-package (see below).
-
-Install Gramine
----------------
+..role:: h1Install Gramine 
+ 
 
 Debian 11
 ^^^^^^^^^
@@ -32,6 +23,7 @@ Debian 11
    echo "deb http://deb.debian.org/debian $(lsb_release -sc)-backports main" \
    | sudo tee /etc/apt/sources.list.d/backports.list
 
+
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/gramine.list
@@ -40,12 +32,10 @@ Debian 11
    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" \
    | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
-   sudo apt-get update
    sudo apt-get install gramine
 
 Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 ::
 
    sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
@@ -56,7 +46,6 @@ Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
-   sudo apt-get update
    sudo apt-get install gramine
 
 RHEL-like distributions version 8 (and experimentally also version 9)
@@ -67,76 +56,33 @@ RHEL-like distributions version 8 (and experimentally also version 9)
 1. Install EPEL repository as described here:
    https://docs.fedoraproject.org/en-US/epel/
 
+
 2. Install Gramine::
 
       sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
       sudo dnf install gramine
 
-Prepare a signing key
----------------------
+Gramine Docker image
+========================
 
-Only for SGX, and if you haven't already::
+This Gramine image is a minimal distribution of Gramine. It contains only Gramine binaries and tools, as well as the pre-requisite packages to run applications under Gramine. The only currently available Gramine image is based on Ubuntu 20.04. The only requirement on the host system is a Linux kernel with in-kernel SGX driver (available from version 5.11 onward). This Gramine image can be used as a disposable playground environment, to quickly test Gramine with your applications and workloads. This image can also be used as a base for your workflows to produce production-ready Docker images for your SGX applications. 
 
-   gramine-sgx-gen-private-key
+The Gramine team publishes a base Gramine Docker image at: `DockerHub <https://hub.docker.com/r/gramineproject/gramine>`_.
 
-This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
-stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
-be protected and should not be disclosed to anyone.
+The recommended command to run the Gramine image via Docker is::
 
-Run sample application
-----------------------
+``docker run --device /dev/sgx_enclave -it gramineproject/gramine``
 
-Core Gramine repository contains several sample applications. Thus, to test
-Gramine installation, we clone the Gramine repo:
+If you want to run :program:`gramine-direct` in addition to
+command:`gramine-sgx`, then you should run Docker with our custom seccomp
+profile using:
 
-.. parsed-literal::
+ ``--security-opt seccomp=<profile_file>``  
 
-   git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
+You can download the profile file from:
 
-We don't want to build Gramine (it is already installed on the system). Instead,
-we want to build and run the HelloWorld example. To build the HelloWorld
-application, we need the ``gcc`` compiler and the ``make`` build system::
+https://github.com/gramineproject/gramine/blob/master/scripts/docker_seccomp.json.
 
-   sudo apt-get install gcc make  # for Ubuntu distribution
-   sudo dnf install gcc make      # for RHEL-like distribution
+Alternatively you can disable seccomp completely using this command:
 
-Go to the HelloWorld example directory::
-
-   cd gramine/CI-Examples/helloworld
-
-Build and run without SGX::
-
-   make
-   gramine-direct helloworld
-
-Build and run with SGX::
-
-   make SGX=1
-   gramine-sgx helloworld
-
-Other sample applications
--------------------------
-
-We prepared and tested several applications to demonstrate Gramine usability.
-These applications can be found in the :file:`CI-Examples` directory in the
-repository, each containing a short README with instructions how to test it. We
-recommend starting with a simpler, thoroughly documented example of Redis, to
-understand manifest options and features of Gramine.
-
-Additional sample configurations for applications enabled in Gramine can be
-found in a separate repository https://github.com/gramineproject/examples.
-
-Please note that these sample applications are tested on Ubuntu. Most of these
-applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
-Linux, but with caveats. One caveat is that Makefiles should be invoked with
-``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications that rely on
-specific versions/builds of Glibc may break (our GCC example is known to work
-only on Ubuntu).
-
-glibc vs musl
--------------
-
-Most of the examples we provide use GNU C Library (glibc). If your application
-is built against musl libc, you can pass ``'musl'`` to
-:py:func:`gramine.runtimedir()` when generating the manifest from a template,
-which will mount musl libc (instead of the default glibc).
+``--security-optseccomp=unconfined``

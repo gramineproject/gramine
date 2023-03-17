@@ -3,7 +3,16 @@ Introduction to SGX
 
 .. highlight:: sh
 
-Gramine project uses :term:`SGX` to securely run software. SGX is
+Gramine project uses :term:`SGX` to securely run software. Gramine supports running Linux applications using the :term:`Intel SGX <SGX>`
+(Software Guard Extensions) technology (we sometimes call this version
+**Gramine-SGX**). With Intel SGX, applications are secured in
+hardware-encrypted memory regions (called SGX enclaves). SGX protects code and
+data in the enclave against privileged software attacks and against physical
+attacks on the hardware off the CPU package (e.g., cold-boot attacks on RAM).
+Gramine is able to run unmodified applications inside SGX enclaves, without the
+toll of manually porting the application to the SGX environment.
+
+SGX is
 a |~| complicated topic, which may be hard to learn, because the documentation
 is scattered through official/reference documentation, blogposts and academic
 papers. This page is an attempt to curate a |~| dossier of available reading
@@ -351,7 +360,7 @@ SGX terminology
 
          :term:`DCAP`
 
-   Key Separation and Sharing
+Key Separation and Sharing
    KSS
       A feature that lets developer define additional enclave identity
       attributes and configuration identifier. Extended enclave identity
@@ -381,6 +390,7 @@ SGX terminology
 
       This feature was not part of original SGX and therefore not supported by
       all SGX-enabled hardware.
+
 
    Launch Enclave
    LE
