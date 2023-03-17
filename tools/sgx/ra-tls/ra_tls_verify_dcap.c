@@ -104,7 +104,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     uint32_t supplemental_data_size = 0;
 
     if (results) {
-        results->attestation_scheme = ATTESTATION_SCHEME_DCAP;
+        results->attestation_scheme = RA_TLS_ATTESTATION_SCHEME_DCAP;
         results->err_loc = AT_INIT;
     }
 

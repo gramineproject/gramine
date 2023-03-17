@@ -136,7 +136,7 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     size_t quote_from_ias_size = 0;
 
     if (results) {
-        results->attestation_scheme = ATTESTATION_SCHEME_EPID;
+        results->attestation_scheme = RA_TLS_ATTESTATION_SCHEME_EPID;
         results->err_loc = AT_INIT;
     }
 

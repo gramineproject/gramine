@@ -378,11 +378,11 @@ int main(int argc, char** argv) {
                            my_verify_callback_results.attestation_scheme,
                            my_verify_callback_results.err_loc);
             switch (my_verify_callback_results.attestation_scheme) {
-                case ATTESTATION_SCHEME_EPID:
+                case RA_TLS_ATTESTATION_SCHEME_EPID:
                     mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
                                    my_verify_callback_results.epid.ias_enclave_quote_status);
                     break;
-                case ATTESTATION_SCHEME_DCAP:
+                case RA_TLS_ATTESTATION_SCHEME_DCAP:
                     mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
                                    "dcap.quote_verification_result=0x%x\n\n",
                                    my_verify_callback_results.dcap.func_verify_quote_result,
