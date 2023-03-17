@@ -60,8 +60,8 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
         return -ENOMEM;
     }
 
-    WRITE_ONCE(req->ocall_index, code);
-    WRITE_ONCE(req->buffer, ocall_args);
+    COPY_VALUE_TO_UNTRUSTED(&req->ocall_index, code);
+    COPY_VALUE_TO_UNTRUSTED(&req->buffer, ocall_args);
     spinlock_init(&req->lock);
 
     /* grab the lock on this request (it is the responsibility of RPC thread to unlock it when
@@ -108,9 +108,9 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
                 return -ENOMEM;
             }
 
-            WRITE_ONCE(ocall_futex_args->futex, &req->lock.lock);
-            WRITE_ONCE(ocall_futex_args->op, FUTEX_WAIT_PRIVATE);
-            WRITE_ONCE(ocall_futex_args->timeout_us, (uint64_t)-1); /* never time out */
+            COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->futex, &req->lock.lock);
+            COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->op, FUTEX_WAIT_PRIVATE);
+            COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->timeout_us, (uint64_t)-1); /* never time out */
 
             do {
                 /* at this point lock = LOCKED_*; before waiting on futex, need to move lock to
@@ -121,7 +121,7 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
                     /* at this point, futex(wait) syscall expects lock to be in LOCKED_WITH_WAITERS
                      * set by enclave thread above; if RPC thread moved it back to UNLOCKED, futex()
                      * immediately returns */
-                    WRITE_ONCE(ocall_futex_args->val, SPINLOCK_LOCKED_WITH_WAITERS);
+                    COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->val, SPINLOCK_LOCKED_WITH_WAITERS);
                     int ret = sgx_ocall(OCALL_FUTEX, ocall_futex_args);
                     if (ret < 0 && ret != -EAGAIN) {
                         sgx_reset_ustack(old_ustack);
@@ -152,8 +152,8 @@ noreturn void ocall_exit(int exitcode, int is_exitgroup) {
          * things. */
         die_or_inf_loop();
     }
-    WRITE_ONCE(ocall_exit_args->exitcode, exitcode);
-    WRITE_ONCE(ocall_exit_args->is_exitgroup, is_exitgroup);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_exit_args->exitcode, exitcode);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_exit_args->is_exitgroup, is_exitgroup);
 
 #ifdef ASAN
     /* Unpoison the stacks allocated for this thread. They can be later used for a new thread. */
@@ -203,12 +203,12 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
         requested_addr = NULL; /* for sanity */
     }
 
-    WRITE_ONCE(ocall_mmap_args->addr, requested_addr);
-    WRITE_ONCE(ocall_mmap_args->size, size);
-    WRITE_ONCE(ocall_mmap_args->prot, prot);
-    WRITE_ONCE(ocall_mmap_args->flags, flags);
-    WRITE_ONCE(ocall_mmap_args->fd, fd);
-    WRITE_ONCE(ocall_mmap_args->offset, offset);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->addr, requested_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->size, size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->prot, prot);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->flags, flags);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mmap_args->offset, offset);
 
     do {
         retval = sgx_exitless_ocall(OCALL_MMAP_UNTRUSTED, ocall_mmap_args);
@@ -258,8 +258,8 @@ int ocall_munmap_untrusted(const void* addr, size_t size) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_munmap_args->addr, addr);
-    WRITE_ONCE(ocall_munmap_args->size, size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_munmap_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_munmap_args->size, size);
 
     do {
         retval = sgx_exitless_ocall(OCALL_MUNMAP_UNTRUSTED, ocall_munmap_args);
@@ -358,8 +358,8 @@ int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[sta
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_cpuid_args->leaf, leaf);
-    WRITE_ONCE(ocall_cpuid_args->subleaf, subleaf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cpuid_args->leaf, leaf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cpuid_args->subleaf, subleaf);
 
     do {
         /* cpuid must be retrieved in the context of current logical core, cannot use exitless */
@@ -395,14 +395,14 @@ int ocall_open(const char* pathname, int flags, unsigned short mode) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_open_args->flags, flags);
-    WRITE_ONCE(ocall_open_args->mode, mode);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_open_args->flags, flags);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_open_args->mode, mode);
     void* untrusted_pathname = sgx_copy_to_ustack(pathname, path_size);
     if (!untrusted_pathname) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_open_args->pathname, untrusted_pathname);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_open_args->pathname, untrusted_pathname);
 
     do {
         retval = sgx_exitless_ocall(OCALL_OPEN, ocall_open_args);
@@ -432,7 +432,7 @@ int ocall_close(int fd) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_close_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_close_args->fd, fd);
 
     /* We should never restart host-level `close` syscall on errors (including `EINTR`), but
      * `sgx_ocall_close` does not forward any errors (always returns `0`), so this can only be
@@ -479,9 +479,9 @@ ssize_t ocall_read(int fd, void* buf, size_t count) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_read_args->fd, fd);
-    WRITE_ONCE(ocall_read_args->count, count);
-    WRITE_ONCE(ocall_read_args->buf, untrusted_buf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_read_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_read_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_read_args->buf, untrusted_buf);
 
     retval = sgx_exitless_ocall(OCALL_READ, ocall_read_args);
 
@@ -550,9 +550,9 @@ ssize_t ocall_write(int fd, const void* buf, size_t count) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_write_args->fd, fd);
-    WRITE_ONCE(ocall_write_args->count, count);
-    WRITE_ONCE(ocall_write_args->buf, untrusted_buf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_write_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_write_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_write_args->buf, untrusted_buf);
 
     retval = sgx_exitless_ocall(OCALL_WRITE, ocall_write_args);
 
@@ -604,10 +604,10 @@ ssize_t ocall_pread(int fd, void* buf, size_t count, off_t offset) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_pread_args->fd, fd);
-    WRITE_ONCE(ocall_pread_args->count, count);
-    WRITE_ONCE(ocall_pread_args->offset, offset);
-    WRITE_ONCE(ocall_pread_args->buf, untrusted_buf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pread_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pread_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pread_args->offset, offset);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pread_args->buf, untrusted_buf);
 
     retval = sgx_exitless_ocall(OCALL_PREAD, ocall_pread_args);
 
@@ -676,10 +676,10 @@ ssize_t ocall_pwrite(int fd, const void* buf, size_t count, off_t offset) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_pwrite_args->fd, fd);
-    WRITE_ONCE(ocall_pwrite_args->count, count);
-    WRITE_ONCE(ocall_pwrite_args->offset, offset);
-    WRITE_ONCE(ocall_pwrite_args->buf, untrusted_buf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pwrite_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pwrite_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pwrite_args->offset, offset);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_pwrite_args->buf, untrusted_buf);
 
     retval = sgx_exitless_ocall(OCALL_PWRITE, ocall_pwrite_args);
 
@@ -714,7 +714,7 @@ int ocall_fstat(int fd, struct stat* buf) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_fstat_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fstat_args->fd, fd);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FSTAT, ocall_fstat_args);
@@ -749,7 +749,7 @@ int ocall_fionread(int fd) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_fionread_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fionread_args->fd, fd);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FIONREAD, ocall_fionread_args);
@@ -775,8 +775,8 @@ int ocall_fsetnonblock(int fd, int nonblocking) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_fsetnonblock_args->fd, fd);
-    WRITE_ONCE(ocall_fsetnonblock_args->nonblocking, nonblocking);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fsetnonblock_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fsetnonblock_args->nonblocking, nonblocking);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FSETNONBLOCK, ocall_fsetnonblock_args);
@@ -804,8 +804,8 @@ int ocall_fchmod(int fd, unsigned short mode) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_fchmod_args->fd, fd);
-    WRITE_ONCE(ocall_fchmod_args->mode, mode);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fchmod_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fchmod_args->mode, mode);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FCHMOD, ocall_fchmod_args);
@@ -833,7 +833,7 @@ int ocall_fsync(int fd) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_fsync_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_fsync_args->fd, fd);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FSYNC, ocall_fsync_args);
@@ -859,8 +859,8 @@ int ocall_ftruncate(int fd, uint64_t length) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_ftruncate_args->fd, fd);
-    WRITE_ONCE(ocall_ftruncate_args->length, length);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_ftruncate_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_ftruncate_args->length, length);
 
     do {
         retval = sgx_exitless_ocall(OCALL_FTRUNCATE, ocall_ftruncate_args);
@@ -888,13 +888,13 @@ int ocall_mkdir(const char* pathname, unsigned short mode) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_mkdir_args->mode, mode);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mkdir_args->mode, mode);
     void* untrusted_pathname = sgx_copy_to_ustack(pathname, path_size);
     if (!untrusted_pathname) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_mkdir_args->pathname, untrusted_pathname);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_mkdir_args->pathname, untrusted_pathname);
 
     do {
         retval = sgx_exitless_ocall(OCALL_MKDIR, ocall_mkdir_args);
@@ -923,14 +923,14 @@ int ocall_getdents(int fd, struct linux_dirent64* dirp, size_t dirp_size) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_getdents_args->fd, fd);
-    WRITE_ONCE(ocall_getdents_args->size, dirp_size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_getdents_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_getdents_args->size, dirp_size);
     void* untrusted_dirp = sgx_alloc_on_ustack_aligned(dirp_size, alignof(*dirp));
     if (!untrusted_dirp) {
         retval = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_getdents_args->dirp, untrusted_dirp);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_getdents_args->dirp, untrusted_dirp);
 
     do {
         retval = sgx_exitless_ocall(OCALL_GETDENTS, ocall_getdents_args);
@@ -1023,7 +1023,7 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
         goto out;
     }
 
-    WRITE_ONCE(ocall_cp_args->nargs, nargs);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->nargs, nargs);
     for (size_t i = 0; i < nargs; i++) {
         size_t size = args[i] ? strlen(args[i]) + 1 : 0;
         void* unstrusted_arg = args[i] ? sgx_copy_to_ustack(args[i], size) : NULL;
@@ -1032,7 +1032,7 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
             ret = -EPERM;
             goto out;
         }
-        WRITE_ONCE(ocall_cp_args->args[i], unstrusted_arg);
+        COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->args[i], unstrusted_arg);
     }
 
     if (reserved_mem_ranges_size) {
@@ -1047,8 +1047,8 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
             goto out;
         }
     }
-    WRITE_ONCE(ocall_cp_args->reserved_mem_ranges, urts_reserved_mem_ranges);
-    WRITE_ONCE(ocall_cp_args->reserved_mem_ranges_size, reserved_mem_ranges_size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->reserved_mem_ranges, urts_reserved_mem_ranges);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->reserved_mem_ranges_size, reserved_mem_ranges_size);
 
     do {
         /* FIXME: if there was an EINTR, there may be an untrusted process left over */
@@ -1101,10 +1101,10 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_futex_args->futex, futex);
-    WRITE_ONCE(ocall_futex_args->op, op);
-    WRITE_ONCE(ocall_futex_args->val, val);
-    WRITE_ONCE(ocall_futex_args->timeout_us, timeout_us ? *timeout_us : (uint64_t)-1);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->futex, futex);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->op, op);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->val, val);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_futex_args->timeout_us, timeout_us ? *timeout_us : (uint64_t)-1);
 
     if (op == FUTEX_WAIT) {
         /* With `FUTEX_WAIT` this thread is most likely going to sleep, so there is no point in
@@ -1151,9 +1151,9 @@ int ocall_socket(int family, int type, int protocol) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_socket_args->family, family);
-    WRITE_ONCE(ocall_socket_args->type, type);
-    WRITE_ONCE(ocall_socket_args->protocol, protocol);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_socket_args->family, family);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_socket_args->type, type);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_socket_args->protocol, protocol);
 
     do {
         ret = sgx_exitless_ocall(OCALL_SOCKET, ocall_socket_args);
@@ -1181,15 +1181,15 @@ int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* 
         goto out;
     }
 
-    WRITE_ONCE(ocall_bind_args->fd, fd);
-    WRITE_ONCE(ocall_bind_args->addrlen, addrlen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_bind_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_bind_args->addrlen, addrlen);
 
     void* untrusted_addr = sgx_copy_to_ustack(addr, addrlen);
     if (!untrusted_addr) {
         ret = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_bind_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_bind_args->addr, untrusted_addr);
 
     do {
         ret = sgx_exitless_ocall(OCALL_BIND, ocall_bind_args);
@@ -1228,8 +1228,8 @@ int ocall_listen_simple(int fd, unsigned int backlog) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_listen_args->fd, fd);
-    WRITE_ONCE(ocall_listen_args->backlog, backlog);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->backlog, backlog);
 
     do {
         ret = sgx_exitless_ocall(OCALL_LISTEN_SIMPLE, ocall_listen_args);
@@ -1258,17 +1258,17 @@ int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct soc
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_listen_args->domain, domain);
-    WRITE_ONCE(ocall_listen_args->type, type);
-    WRITE_ONCE(ocall_listen_args->protocol, protocol);
-    WRITE_ONCE(ocall_listen_args->ipv6_v6only, ipv6_v6only);
-    WRITE_ONCE(ocall_listen_args->addrlen, len);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->domain, domain);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->type, type);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->protocol, protocol);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->ipv6_v6only, ipv6_v6only);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->addrlen, len);
     void* untrusted_addr = (addr && len) ? sgx_copy_to_ustack(addr, len) : NULL;
     if (addr && len && !untrusted_addr) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_listen_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_listen_args->addr, untrusted_addr);
 
     do {
         retval = sgx_exitless_ocall(OCALL_LISTEN, ocall_listen_args);
@@ -1312,9 +1312,9 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_accept_args->sockfd, sockfd);
-    WRITE_ONCE(ocall_accept_args->addrlen, len);
-    WRITE_ONCE(ocall_accept_args->local_addrlen, local_len);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->sockfd, sockfd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->addrlen, len);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->local_addrlen, local_len);
     void* untrusted_addr = (addr && len) ? sgx_copy_to_ustack(addr, len) : NULL;
     if (addr && len && !untrusted_addr) {
         sgx_reset_ustack(old_ustack);
@@ -1326,9 +1326,9 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_accept_args->addr, untrusted_addr);
-    WRITE_ONCE(ocall_accept_args->local_addr, untrusted_local_addr);
-    WRITE_ONCE(ocall_accept_args->options, options);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->local_addr, untrusted_local_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_accept_args->options, options);
 
     retval = sgx_exitless_ocall(OCALL_ACCEPT, ocall_accept_args);
 
@@ -1379,20 +1379,20 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_connect_args->domain, domain);
-    WRITE_ONCE(ocall_connect_args->type, type);
-    WRITE_ONCE(ocall_connect_args->protocol, protocol);
-    WRITE_ONCE(ocall_connect_args->ipv6_v6only, ipv6_v6only);
-    WRITE_ONCE(ocall_connect_args->addrlen, addrlen);
-    WRITE_ONCE(ocall_connect_args->bind_addrlen, bind_len);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->domain, domain);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->type, type);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->protocol, protocol);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->ipv6_v6only, ipv6_v6only);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->addrlen, addrlen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->bind_addrlen, bind_len);
     void* untrusted_addr = addr ? sgx_copy_to_ustack(addr, addrlen) : NULL;
     void* untrusted_bind_addr = bind_addr ? sgx_copy_to_ustack(bind_addr, bind_len) : NULL;
     if ((addr && !untrusted_addr) || (bind_addr && !untrusted_bind_addr)) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_connect_args->addr, untrusted_addr);
-    WRITE_ONCE(ocall_connect_args->bind_addr, untrusted_bind_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->bind_addr, untrusted_bind_addr);
 
     retval = sgx_exitless_ocall(OCALL_CONNECT, ocall_connect_args);
 
@@ -1436,8 +1436,8 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
         goto out;
     }
 
-    WRITE_ONCE(ocall_connect_args->fd, fd);
-    WRITE_ONCE(ocall_connect_args->addrlen, *addrlen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->addrlen, *addrlen);
 
     assert(*addrlen <= sizeof(*addr));
     struct sockaddr_storage* untrusted_addr = sgx_alloc_on_ustack_aligned(sizeof(*untrusted_addr),
@@ -1447,7 +1447,7 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
         goto out;
     }
     memcpy(untrusted_addr, addr, *addrlen);
-    WRITE_ONCE(ocall_connect_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_connect_args->addr, untrusted_addr);
 
     do {
         ret = sgx_exitless_ocall(OCALL_CONNECT_SIMPLE, ocall_connect_args);
@@ -1521,20 +1521,20 @@ ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, si
         goto out;
     }
 
-    WRITE_ONCE(ocall_recv_args->sockfd, sockfd);
-    WRITE_ONCE(ocall_recv_args->count, size);
-    WRITE_ONCE(ocall_recv_args->addrlen, addrlen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->sockfd, sockfd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->count, size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->addrlen, addrlen);
     void* untrusted_addr = addr ? sgx_alloc_on_ustack_aligned(addrlen, alignof(*addr)) : NULL;
     void* untrusted_control = control ? sgx_alloc_on_ustack(controllen) : NULL;
     if ((addr && !untrusted_addr) || (control && !untrusted_control)) {
         retval = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_recv_args->buf, obuf);
-    WRITE_ONCE(ocall_recv_args->addr, untrusted_addr);
-    WRITE_ONCE(ocall_recv_args->control, untrusted_control);
-    WRITE_ONCE(ocall_recv_args->controllen, controllen);
-    WRITE_ONCE(ocall_recv_args->flags, flags);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->buf, obuf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->control, untrusted_control);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->controllen, controllen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_recv_args->flags, flags);
 
     retval = sgx_exitless_ocall(OCALL_RECV, ocall_recv_args);
 
@@ -1645,20 +1645,20 @@ ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const vo
         goto out;
     }
 
-    WRITE_ONCE(ocall_send_args->sockfd, sockfd);
-    WRITE_ONCE(ocall_send_args->count, size);
-    WRITE_ONCE(ocall_send_args->addrlen, addrlen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->sockfd, sockfd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->count, size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->addrlen, addrlen);
     void* untrusted_addr = addr ? sgx_copy_to_ustack(addr, addrlen) : NULL;
     void* untrusted_control = control ? sgx_copy_to_ustack(control, controllen) : NULL;
     if ((addr && !untrusted_addr) || (control && !untrusted_control)) {
         retval = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_send_args->buf, obuf);
-    WRITE_ONCE(ocall_send_args->addr, untrusted_addr);
-    WRITE_ONCE(ocall_send_args->control, untrusted_control);
-    WRITE_ONCE(ocall_send_args->controllen, controllen);
-    WRITE_ONCE(ocall_send_args->flags, flags);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->buf, obuf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->addr, untrusted_addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->control, untrusted_control);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->controllen, controllen);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_send_args->flags, flags);
 
     retval = sgx_exitless_ocall(OCALL_SEND, ocall_send_args);
 
@@ -1694,20 +1694,20 @@ int ocall_setsockopt(int sockfd, int level, int optname, const void* optval, siz
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_setsockopt_args->sockfd, sockfd);
-    WRITE_ONCE(ocall_setsockopt_args->level, level);
-    WRITE_ONCE(ocall_setsockopt_args->optname, optname);
-    WRITE_ONCE(ocall_setsockopt_args->optlen, 0);
-    WRITE_ONCE(ocall_setsockopt_args->optval, NULL);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->sockfd, sockfd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->level, level);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->optname, optname);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->optlen, 0);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->optval, NULL);
 
     if (optval && optlen > 0) {
-        WRITE_ONCE(ocall_setsockopt_args->optlen, optlen);
+        COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->optlen, optlen);
         void* untrusted_optval = sgx_copy_to_ustack(optval, optlen);
         if (!untrusted_optval) {
             sgx_reset_ustack(old_ustack);
             return -EPERM;
         }
-        WRITE_ONCE(ocall_setsockopt_args->optval, untrusted_optval);
+        COPY_VALUE_TO_UNTRUSTED(&ocall_setsockopt_args->optval, untrusted_optval);
     }
 
     do {
@@ -1735,8 +1735,8 @@ int ocall_shutdown(int sockfd, int how) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_shutdown_args->sockfd, sockfd);
-    WRITE_ONCE(ocall_shutdown_args->how, how);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_shutdown_args->sockfd, sockfd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_shutdown_args->how, how);
 
     do {
         retval = sgx_exitless_ocall(OCALL_SHUTDOWN, ocall_shutdown_args);
@@ -1819,14 +1819,14 @@ int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_poll_args->nfds, nfds);
-    WRITE_ONCE(ocall_poll_args->timeout_us, remaining_time_us);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_poll_args->nfds, nfds);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_poll_args->timeout_us, remaining_time_us);
     void* untrusted_fds = sgx_copy_to_ustack(fds, nfds_bytes);
     if (!untrusted_fds) {
         retval = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_poll_args->fds, untrusted_fds);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_poll_args->fds, untrusted_fds);
 
     retval = sgx_exitless_ocall(OCALL_POLL, ocall_poll_args);
 
@@ -1880,8 +1880,8 @@ int ocall_rename(const char* oldpath, const char* newpath) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_rename_args->oldpath, untrusted_oldpath);
-    WRITE_ONCE(ocall_rename_args->newpath, untrusted_newpath);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_rename_args->oldpath, untrusted_oldpath);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_rename_args->newpath, untrusted_newpath);
 
     do {
         retval = sgx_exitless_ocall(OCALL_RENAME, ocall_rename_args);
@@ -1917,7 +1917,7 @@ int ocall_delete(const char* pathname) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_delete_args->pathname, untrusted_pathname);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_delete_args->pathname, untrusted_pathname);
 
     do {
         retval = sgx_exitless_ocall(OCALL_DELETE, ocall_delete_args);
@@ -1955,8 +1955,8 @@ int ocall_debug_map_add(const char* name, void* addr) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_debug_map_args->name, untrusted_name);
-    WRITE_ONCE(ocall_debug_map_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_map_args->name, untrusted_name);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_map_args->addr, addr);
 
     do {
         retval = sgx_exitless_ocall(OCALL_DEBUG_MAP_ADD, ocall_debug_map_args);
@@ -1985,7 +1985,7 @@ int ocall_debug_map_remove(void* addr) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_debug_map_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_map_args->addr, addr);
 
     do {
         retval = sgx_exitless_ocall(OCALL_DEBUG_MAP_REMOVE, ocall_debug_map_args);
@@ -2015,9 +2015,9 @@ int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_debug_describe_args->addr, addr);
-    WRITE_ONCE(ocall_debug_describe_args->buf, untrusted_buf);
-    WRITE_ONCE(ocall_debug_describe_args->buf_size, buf_size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_describe_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_describe_args->buf, untrusted_buf);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_debug_describe_args->buf_size, buf_size);
 
     do {
         retval = sgx_exitless_ocall(OCALL_DEBUG_DESCRIBE_LOCATION, ocall_debug_describe_args);
@@ -2052,7 +2052,7 @@ int ocall_eventfd(int flags) {
         return -EPERM;
     }
 
-    WRITE_ONCE(ocall_eventfd_args->flags, flags);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_eventfd_args->flags, flags);
 
     do {
         retval = sgx_exitless_ocall(OCALL_EVENTFD, ocall_eventfd_args);
@@ -2082,16 +2082,16 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
     }
 
     if (spid) {
-        WRITE_ONCE(ocall_quote_args->is_epid, true);
+        COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->is_epid, true);
         memcpy(&ocall_quote_args->spid, spid, sizeof(*spid));
     } else {
-        WRITE_ONCE(ocall_quote_args->is_epid, false);
+        COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->is_epid, false);
         memset(&ocall_quote_args->spid, 0, sizeof(ocall_quote_args->spid)); /* for sanity */
     }
 
     memcpy(&ocall_quote_args->report, report, sizeof(*report));
     memcpy(&ocall_quote_args->nonce, nonce, sizeof(*nonce));
-    WRITE_ONCE(ocall_quote_args->linkable, linkable);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->linkable, linkable);
 
     do {
         retval = sgx_exitless_ocall(OCALL_GET_QUOTE, ocall_quote_args);
@@ -2161,14 +2161,14 @@ int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_
     }
 
     size_t cpu_mask_size = cpu_mask_len * sizeof(*cpu_mask);
-    WRITE_ONCE(ocall_sched_args->tcs, tcs);
-    WRITE_ONCE(ocall_sched_args->cpumask_size, cpu_mask_size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->tcs, tcs);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->cpumask_size, cpu_mask_size);
     void* untrusted_cpu_mask = sgx_copy_to_ustack(cpu_mask, cpu_mask_size);
     if (!untrusted_cpu_mask) {
         sgx_reset_ustack(old_ustack);
         return -EPERM;
     }
-    WRITE_ONCE(ocall_sched_args->cpu_mask, untrusted_cpu_mask);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->cpu_mask, untrusted_cpu_mask);
 
     do {
         retval = sgx_exitless_ocall(OCALL_SCHED_SETAFFINITY, ocall_sched_args);
@@ -2219,14 +2219,14 @@ int ocall_sched_getaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_
     }
 
     size_t cpu_mask_size = cpu_mask_len * sizeof(*cpu_mask);
-    WRITE_ONCE(ocall_sched_args->tcs, tcs);
-    WRITE_ONCE(ocall_sched_args->cpumask_size, cpu_mask_size);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->tcs, tcs);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->cpumask_size, cpu_mask_size);
     void* untrusted_cpu_mask = sgx_alloc_on_ustack_aligned(cpu_mask_size, alignof(*cpu_mask));
     if (!untrusted_cpu_mask) {
         retval = -EPERM;
         goto out;
     }
-    WRITE_ONCE(ocall_sched_args->cpu_mask, untrusted_cpu_mask);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_sched_args->cpu_mask, untrusted_cpu_mask);
 
     do {
         retval = sgx_exitless_ocall(OCALL_SCHED_GETAFFINITY, ocall_sched_args);
@@ -2273,9 +2273,9 @@ int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_args->addr, addr);
-    WRITE_ONCE(ocall_args->count, count);
-    WRITE_ONCE(ocall_args->prot, prot);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->prot, prot);
 
     do {
         ret = sgx_exitless_ocall(OCALL_EDMM_RESTRICT_PAGES_PERM, ocall_args);
@@ -2305,9 +2305,9 @@ int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_args->addr, addr);
-    WRITE_ONCE(ocall_args->count, count);
-    WRITE_ONCE(ocall_args->type, type);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->type, type);
 
     do {
         ret = sgx_exitless_ocall(OCALL_EDMM_MODIFY_PAGES_TYPE, ocall_args);
@@ -2337,8 +2337,8 @@ int ocall_edmm_remove_pages(uint64_t addr, size_t count) {
         goto out;
     }
 
-    WRITE_ONCE(ocall_args->addr, addr);
-    WRITE_ONCE(ocall_args->count, count);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->addr, addr);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->count, count);
 
     do {
         ret = sgx_exitless_ocall(OCALL_EDMM_REMOVE_PAGES, ocall_args);
