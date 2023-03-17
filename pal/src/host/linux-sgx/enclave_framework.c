@@ -231,11 +231,11 @@ void sgx_copy_from_enclave_verified(void* uptr, const void* ptr, size_t size) {
     if (prefix_misalignment) {
         /* Beginning of the range to copy is misaligned. */
         char prefix_val[8] = { 0 };
-        copy_u64s_from_untrusted(prefix_val, (char*)uptr - prefix_misalignment, /*count=*/1);
-
         copy_len = MIN(sizeof(prefix_val) - prefix_misalignment, size);
+
+        copy_u64s_from_untrusted(prefix_val, (char*)uptr - prefix_misalignment, /*count=*/1);
         memcpy(prefix_val + prefix_misalignment, ptr, copy_len);
-        copy_u64s_to_untrusted(uptr - prefix_misalignment, prefix_val, /*count=*/1);
+        copy_u64s_to_untrusted((char*)uptr - prefix_misalignment, prefix_val, /*count=*/1);
         uptr = (char*)uptr + copy_len;
         ptr = (const char*)ptr + copy_len;
         size -= copy_len;
@@ -258,6 +258,7 @@ void sgx_copy_from_enclave_verified(void* uptr, const void* ptr, size_t size) {
     if (suffix_misalignment) {
         /* End of the range to copy is misaligned. */
         char suffix_val[8] = { 0 };
+
         copy_u64s_from_untrusted(suffix_val, uptr, /*count=*/1);
         memcpy(suffix_val, ptr, suffix_misalignment);
         copy_u64s_to_untrusted(uptr, suffix_val, 1);
