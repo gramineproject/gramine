@@ -60,7 +60,8 @@ struct ra_tls_verify_callback_results {
             int quote_verification_result; /* value stored in `p_quote_verification_result` arg */
         } dcap;
         struct {
-            /* To make it clear that this inner object is expected to be 128-byte-sized. */
+            /* buffer reserved for other RA-TLS plugins to store the data specific to their
+             * implementations */
             char reserved[128];
         } misc;
     };
