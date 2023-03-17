@@ -54,7 +54,7 @@ Compiling with optimizations enabled
 ------------------------------------
 
 Building Gramine with ``--buildtype=debug`` enables debug symbols and GDB
-integration, but disables optimizations. This is usually the right thing to do:
+integration but disables optimizations. This is usually the right thing to do:
 optimized builds are harder to debug, as they may cause GDB to display confusing
 tracebacks or garbage data.
 

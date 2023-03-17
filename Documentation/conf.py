@@ -47,6 +47,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx_rtd_theme',
+    'sphinx.ext.autosectionlabel',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -120,8 +121,9 @@ else:
         for p in breathe_projects:
             subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
 
+html_css_files=['css/gramine.css']
+
 def setup(app):
-    app.add_stylesheet('css/gramine.css')
     app.connect('builder-inited', generate_doxygen)
 
 todo_include_todos = True
