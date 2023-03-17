@@ -712,10 +712,13 @@ int _PalSocketIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
                 break;
             }
             assert(untrusted_addr);
-            memset(untrusted_addr, 0, untrusted_size);
             if (((struct ifconf *)arg)->ifc_buf != NULL) {
-                ((struct ifconf *)untrusted_addr)->ifc_len = ((struct ifconf *)arg)->ifc_len;
                 ((struct ifconf *)untrusted_addr)->ifc_buf = untrusted_addr + sizeof(struct ifconf);
+                if (!sgx_copy_from_enclave(&((struct ifconf *)untrusted_addr)->ifc_len,
+                                           &((struct ifconf *)arg)->ifc_len, sizeof(int))) {
+                    ret = -PAL_ERROR_DENIED;
+                    break;
+                }
             }
 
             int ioctl_ret = ocall_ioctl(handle->sock.fd, cmd, (unsigned long)untrusted_addr);
@@ -723,16 +726,20 @@ int _PalSocketIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
                 ret = unix_to_pal_error(ioctl_ret);
                 break;
             }
-            int ifc_len = ((struct ifconf *)untrusted_addr)->ifc_len;
+            int ifc_len = COPY_UNTRUSTED_VALUE(&((struct ifconf *)untrusted_addr)->ifc_len);
             if (ifc_len % sizeof(struct ifreq) != 0) {
                 ret = -PAL_ERROR_INVAL;
                 break;
             }
-            ((struct ifconf *)arg)->ifc_len = ifc_len;
             if (((struct ifconf *)arg)->ifc_buf != NULL) {
-                memcpy(((struct ifconf *)arg)->ifc_buf, untrusted_addr + sizeof(struct ifconf),
-                       ifc_len);
+                if (ifc_len > ((struct ifconf *)arg)->ifc_len) {
+                    ret = -PAL_ERROR_INVAL;
+                    break;
+                }
+                sgx_copy_to_enclave_verified(((struct ifconf *)arg)->ifc_buf,
+                                             untrusted_addr + sizeof(struct ifconf), ifc_len);
             }
+            ((struct ifconf *)arg)->ifc_len = ifc_len;
             *out_ret = ioctl_ret;
             ret = 0;
             break;
@@ -748,15 +755,19 @@ int _PalSocketIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
             }
 
             assert(untrusted_addr);
-            memset(untrusted_addr, 0, untrusted_size);
-            memcpy(untrusted_addr, (void*)arg, sizeof((struct ifreq*)arg)->ifr_name);
+            if (!sgx_copy_from_enclave(untrusted_addr, (void*)arg,
+                                      sizeof((struct ifreq*)arg)->ifr_name)) {
+                ret = -PAL_ERROR_DENIED;
+                break;
+            }
             int ioctl_ret = ocall_ioctl(handle->sock.fd, cmd, (unsigned long)untrusted_addr);
             if (ioctl_ret < 0) {
                 ret = unix_to_pal_error(ioctl_ret);
                 break;
             }
-            memcpy(((struct ifreq*)arg)->ifr_ifru, ((struct ifreq*)untrusted_addr)->ifr_ifru,
-                   sizeof((struct ifreq*)arg)->ifr_ifru);
+            sgx_copy_to_enclave_verified(&((struct ifreq*)arg)->ifr_ifru,
+                                         &((struct ifreq*)untrusted_addr)->ifr_ifru,
+                                         sizeof((struct ifreq*)arg)->ifr_ifru);
             *out_ret = ioctl_ret;
             break;
         }
