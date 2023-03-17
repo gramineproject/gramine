@@ -7,7 +7,7 @@ An ephemeral cryptographic keypair is generated on the fly in code
 to illustrate how to provision a cert for various purpose,
 such as establishing a secure communication channel, wrapping secrets.
 
-NOTE: this example was validated with project Amber beta1 and the corresponding KBS.
+NOTE: this example was validated with project Amber RC2 and the corresponding KBS.
       Sever-side TLS certificate authentication is not enabled.
 
 # Quick Start

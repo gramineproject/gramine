@@ -375,7 +375,7 @@ static int amber_http_post(const char* path, const char* post_data, char* respon
             snprintf(url, sz, "%s%s", g_amber_endpoint_url, path);
         }
         snprintf(hi.request.ext_headers, H_FIELD_SIZE,
-                 "Accept: application/jwt\r\n"
+                 "Accept: application/json\r\n"
                  "Content-Type: application/json\r\n"
                  "x-api-key: %s\r\n", apikey);
         log_debug("HTTP POST (%s): %s with apikey: %s", g_amber_endpoint_ip, url, apikey);
@@ -613,7 +613,6 @@ static int amber_update_token(void) {
     int ret = -1;
     char response[4096];
     char* keyid = get_amber_kbs_keyid();
-    //"uJzueTbG8uTrkoBcSG7Duu2izGJ2lAZveRqx0E/exGnX81/4kJdU1Wh1FDkn0K8+";
     const char *inp_udata = g_amber_userdata;
     size_t inp_udata_sz = g_amber_userdata_size; // strlen(inp_udata);
 
@@ -715,18 +714,30 @@ static int amber_update_token(void) {
 
         log_debug(">>> APPRAISE Req. JSON DATA: %s", data_buf);
 
+        jsmntok_t t[10];
+        int sz;
+        int idx;
+        int cnt;
         ret = amber_post_appraise(data_buf, response, sizeof(response));
         free(data_buf);
         if (ret == 0) {
             log_debug(">>> APPRAISE Resp. JSON DATA: %s", response);
-            set_amber_token(response, strlen(response));
-            amber_status_info("token saved");
+            cnt = amber_json_parse(response, t, 10);
+            if (cnt > 0) {
+                idx = amber_json_query(response, t, cnt, "token");
+                if (idx >= 0) {
+                    sz = t[idx].end - t[idx].start;
+                    set_amber_token(response + t[idx].start, sz);
+                    amber_status_info("token saved");
+                } else {
+                    amber_status_error("There is no token found");
+                }
+            } else {
+                amber_status_error("The response doesn't contain any fields");
+            }
         } else {
             set_amber_token("", 0);
-            jsmntok_t t[10];
-            int sz;
-            int idx;
-            int cnt = amber_json_parse(response, t, 10);
+            cnt = amber_json_parse(response, t, 10);
             log_debug("APPRAISE error - amber_json_parse found count: %d \n", cnt);
             if (cnt > 0) {
                 idx = amber_json_query(response, t, cnt, "error");
