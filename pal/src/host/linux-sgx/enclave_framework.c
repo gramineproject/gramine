@@ -120,11 +120,6 @@ void* sgx_copy_to_ustack(const void* ptr, size_t size) {
     }
     void* uptr = sgx_alloc_on_ustack(size);
     if (uptr) {
-        /*
-         * This should be simple `memcpy(uptr, ptr, size)`, but CVE-2022-21166 (INTEL-SA-00615).
-         * To mitigate this issue, all writes to untrusted memory from within the enclave must be done
-         * in 8-byte chunks aligned to 8-bytes boundary.
-         */
         sgx_copy_from_enclave_verified(uptr, ptr, size);
     }
     return uptr;
@@ -136,7 +131,6 @@ void sgx_reset_ustack(const void* old_ustack) {
 }
 
 static void copy_u64s(void* dst, const void* src, size_t count) {
-    assert((uintptr_t)src % 8 == 0);
     __asm__ volatile (
         "rep movsq\n"
         : "+D"(dst), "+S"(src), "+c"(count)
@@ -145,56 +139,66 @@ static void copy_u64s(void* dst, const void* src, size_t count) {
     );
 }
 
-static void sgx_copy_verified(void* dest, const void* src, size_t size) {
-    if (size == 0) {
-        return;
-    }
+static void copy_u64s_from_untrusted(void* dst, const void* untrusted_src, size_t count) {
+    assert((uintptr_t)untrusted_src % 8 == 0);
 
-    /*
-     * Since x64 allocates memory in pages of (at least) 0x1000 in size, we can safely 8-align the
-     * pointer down and the size up.
-     */
-    size_t copy_len;
-    size_t prefix_misalignment = (uintptr_t)src & 7;
-    if (prefix_misalignment) {
-        /* Beginning of the copied range is misaligned. */
-        char prefix_val[8] = { 0 };
-        copy_u64s(prefix_val, (char*)src - prefix_misalignment, /*count=*/1);
+    copy_u64s(dst, untrusted_src, count);
+}
 
-        copy_len = MIN(sizeof(prefix_val) - prefix_misalignment, size);
-        memcpy(dest, prefix_val + prefix_misalignment, copy_len);
-        dest = (char*)dest + copy_len;
-        src = (const char*)src + copy_len;
-        size -= copy_len;
+static void copy_u64s_to_untrusted(void* untrusted_dst, const void* src, size_t count) {
+    assert((uintptr_t)untrusted_dst % 8 == 0);
 
-        if (size == 0) {
-            return;
-        }
-    }
-    assert((uintptr_t)src % 8 == 0);
-
-    size_t suffix_misalignment = size & 7;
-    copy_len = size - suffix_misalignment;
-    assert(copy_len % 8 == 0);
-    copy_u64s(dest, src, copy_len / 8);
-    dest = (char*)dest + copy_len;
-    src = (const char*)src + copy_len;
-    size -= copy_len;
-
-    assert(size == suffix_misalignment);
-    if (suffix_misalignment) {
-        /* End of the copied range is misaligned. */
-        char suffix_val[8] = { 0 };
-        copy_u64s(suffix_val, src, /*count=*/1);
-        memcpy(dest, suffix_val, suffix_misalignment);
-    }
+    copy_u64s(untrusted_dst, src, count);
 }
 
 void sgx_copy_to_enclave_verified(void* ptr, const void* uptr, size_t size) {
     assert(sgx_is_valid_untrusted_ptr(uptr, size, /*alignment=*/1));
     assert(sgx_is_completely_within_enclave(ptr, size));
 
-    sgx_copy_verified(ptr, uptr, size);
+    if (size == 0) {
+        return;
+    }
+
+    /*
+     * This should be simple `memcpy(ptr, uptr, size)`, but CVE-2022-21233 (INTEL-SA-00657).
+     * To mitigate this issue, all reads of untrusted memory from within the enclave must be done
+     * in 8-byte chunks aligned to 8-bytes boundary. Since x64 allocates memory in pages of
+     * (at least) 0x1000 in size, we can safely 8-align the pointer down and the size up.
+     */
+    size_t copy_len;
+    size_t prefix_misalignment = (uintptr_t)uptr & 7;
+    if (prefix_misalignment) {
+        /* Beginning of the copied range is misaligned. */
+        char prefix_val[8] = { 0 };
+        copy_u64s_from_untrusted(prefix_val, (char*)uptr - prefix_misalignment, /*count=*/1);
+
+        copy_len = MIN(sizeof(prefix_val) - prefix_misalignment, size);
+        memcpy(ptr, prefix_val + prefix_misalignment, copy_len);
+        ptr = (char*)ptr + copy_len;
+        uptr = (const char*)uptr + copy_len;
+        size -= copy_len;
+
+        if (size == 0) {
+            return;
+        }
+    }
+    assert((uintptr_t)uptr % 8 == 0);
+
+    size_t suffix_misalignment = size & 7;
+    copy_len = size - suffix_misalignment;
+    assert(copy_len % 8 == 0);
+    copy_u64s_from_untrusted(ptr, uptr, copy_len / 8);
+    ptr = (char*)ptr + copy_len;
+    uptr = (const char*)uptr + copy_len;
+    size -= copy_len;
+
+    assert(size == suffix_misalignment);
+    if (suffix_misalignment) {
+        /* End of the copied range is misaligned. */
+        char suffix_val[8] = { 0 };
+        copy_u64s_from_untrusted(suffix_val, uptr, /*count=*/1);
+        memcpy(ptr, suffix_val, suffix_misalignment);
+    }
 }
 
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize) {
@@ -204,11 +208,6 @@ bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usi
         return false;
     }
 
-    /*
-     * This should be simple `memcpy(ptr, uptr, size)`, but CVE-2022-21233 (INTEL-SA-00657).
-     * To mitigate this issue, all reads of untrusted memory from within the enclave must be done in
-     * 8-byte chunks aligned to 8-bytes boundary.
-     */
     sgx_copy_to_enclave_verified(ptr, uptr, usize);
     return true;
 }
@@ -217,7 +216,52 @@ void sgx_copy_from_enclave_verified(void* uptr, const void* ptr, size_t size) {
     assert(sgx_is_completely_within_enclave(ptr, size));
     assert(sgx_is_valid_untrusted_ptr(uptr, size, /*alignment=*/1));
 
-    sgx_copy_verified(uptr, ptr, size);
+    if (size == 0) {
+        return;
+    }
+
+    /*
+     * This should be simple `memcpy(uptr, ptr, size)`, but CVE-2022-21166 (INTEL-SA-00615).
+     * To mitigate this issue, all writes to untrusted memory from within the enclave must be done
+     * in 8-byte chunks aligned to 8-bytes boundary. Since x64 allocates memory in pages of
+     * (at least) 0x1000 in size, we can safely 8-align the pointer down and the size up.
+     */
+    size_t copy_len;
+    size_t prefix_misalignment = (uintptr_t)uptr & 7;
+    if (prefix_misalignment) {
+        /* Beginning of the range to copy is misaligned. */
+        char prefix_val[8] = { 0 };
+        copy_u64s_from_untrusted(prefix_val, (char*)uptr - prefix_misalignment, /*count=*/1);
+
+        copy_len = MIN(sizeof(prefix_val) - prefix_misalignment, size);
+        memcpy(prefix_val + prefix_misalignment, ptr, copy_len);
+        copy_u64s_to_untrusted(uptr - prefix_misalignment, prefix_val, /*count=*/1);
+        uptr = (char*)uptr + copy_len;
+        ptr = (const char*)ptr + copy_len;
+        size -= copy_len;
+
+        if (size == 0) {
+            return;
+        }
+    }
+    assert((uintptr_t)uptr % 8 == 0);
+
+    size_t suffix_misalignment = size & 7;
+    copy_len = size - suffix_misalignment;
+    assert(copy_len % 8 == 0);
+    copy_u64s_to_untrusted(uptr, ptr, copy_len / 8);
+    uptr = (char*)uptr + copy_len;
+    ptr = (const char*)ptr + copy_len;
+    size -= copy_len;
+
+    assert(size == suffix_misalignment);
+    if (suffix_misalignment) {
+        /* End of the range to copy is misaligned. */
+        char suffix_val[8] = { 0 };
+        copy_u64s_from_untrusted(suffix_val, uptr, /*count=*/1);
+        memcpy(suffix_val, ptr, suffix_misalignment);
+        copy_u64s_to_untrusted(uptr, suffix_val, 1);
+    }
 }
 
 bool sgx_copy_from_enclave(void* uptr, const void* ptr, size_t size) {
@@ -226,11 +270,6 @@ bool sgx_copy_from_enclave(void* uptr, const void* ptr, size_t size) {
         return false;
     }
 
-    /*
-     * This should be simple `memcpy(uptr, ptr, size)`, but CVE-2022-21166 (INTEL-SA-00615).
-     * To mitigate this issue, all writes to untrusted memory from within the enclave must be done
-     * in 8-byte chunks aligned to 8-bytes boundary.
-     */
     sgx_copy_from_enclave_verified(uptr, ptr, size);
     return true;
 }
