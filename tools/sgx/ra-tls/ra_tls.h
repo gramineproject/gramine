@@ -47,7 +47,7 @@ typedef enum {
  * Note that this is (at least currently) an out-only struct (i.e., there can be no input fields
  * provided by the application/user) */
 struct ra_tls_verify_callback_results {
-    ra_tls_attestation_scheme_t attestation_scheme;   /* attestation scheme of RA-TLS */
+    ra_tls_attestation_scheme_t attestation_scheme;
     ra_tls_err_loc_t err_loc; /* the step at which RA-TLS failed */
 
     union {

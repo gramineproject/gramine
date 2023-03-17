@@ -143,9 +143,9 @@ int main(int argc, char** argv) {
     bool in_sgx = getenv_client_inside_sgx();
 
     char* error;
-    void* ra_tls_verify_lib                                          = NULL;
-    ra_tls_verify_callback_extended_der_f                            = NULL;
-    ra_tls_set_measurement_callback_f                                = NULL;
+    void* ra_tls_verify_lib = NULL;
+    ra_tls_verify_callback_extended_der_f = NULL;
+    ra_tls_set_measurement_callback_f = NULL;
     struct ra_tls_verify_callback_results my_verify_callback_results = {0};
 
     mbedtls_entropy_context entropy;
