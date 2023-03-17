@@ -94,7 +94,7 @@ path inside Gramine pointing to a mounted file. Relative paths will be
 interpreted as starting from the current working directory (i.e. from ``/`` by
 default, or ``fs.start_dir`` if specified).
 
-The recommended usage is to provide an absolute path, and mount the executable
+The recommended usage is to provide an absolute path and mount the executable
 at that path. For example::
 
    libos.entrypoint = "/usr/bin/python3.8"
@@ -124,16 +124,12 @@ or
 
    loader.argv_src_file = "file:file_with_serialized_argv"
 
-If you want your application to use commandline arguments, you must choose one
-of the three mutually exclusive options:
-
+If you want your application to use commandline arguments, you must choose one of the three mutually exclusive options:
 - set ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases),
 - put commandline arguments into ``loader.argv`` array,
-- point ``loader.argv_src_file`` to a file
-  containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
+- point ``loader.argv_src_file`` to a file containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
-If none of the above arguments-handling manifest options is specified in the
-manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
+If none of the above arguments-handling manifest options are specified in the manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
 encrypted file. The former allows to securely hardcode arguments, the latter
@@ -251,7 +247,7 @@ User ID and Group ID
    (Default: 0)
 
 This specifies the initial, Gramine emulated user/group ID and effective
-user/group ID. It must be non-negative. By default Gramine emulates the
+user/group ID. It must be non-negative. By default, Gramine emulates the
 user/group ID and effective user/group ID as the root user (uid = gid = 0).
 
 
@@ -358,6 +354,7 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
@@ -404,7 +401,7 @@ will be mounted in the order in which they appear in the manifest.
    ``{ path = "...", uri = "...", }`` is a syntax error.
 
 The ``type`` parameter specifies the mount point type. If omitted, it defaults
-to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e. must
+to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e., must
 begin with ``/``).
 
 Gramine currently supports the following types of mount points:
@@ -424,12 +421,12 @@ Gramine currently supports the following types of mount points:
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
   empty on Gramine instance startup) and are destroyed when a Gramine instance
-  terminates. The ``[URI]`` parameter is always ignored, and can be omitted.
+  terminates. The ``[URI]`` parameter is always ignored and can be omitted.
 
   ``tmpfs`` is especially useful in trusted environments (like Intel SGX) for
   securely storing temporary files. This concept is similar to Linux's tmpfs.
   Files under ``tmpfs`` mount points currently do *not* support mmap and each
-  process has its own, non-shared tmpfs (i.e. processes don't see each other's
+  process has its own, non-shared tmpfs (i.e., processes don't see each other's
   files).
 
 Start (current working) directory
@@ -488,6 +485,7 @@ explicit value will take precedence.
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
+
 Enclave size
 ^^^^^^^^^^^^
 
@@ -535,12 +533,13 @@ your system, such ``bash -c ls`` SGX workload will fail. Note this does not
 apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
 upfront and is allocated on demand.
 
+
 Number of threads
 ^^^^^^^^^^^^^^^^^
 
 ::
 
-    sgx.max_threads = [NUM]
+    sgx.insecure__rpc_thread_num = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -572,7 +571,7 @@ Number of RPC threads (Exitless feature)
 
 ::
 
-    sgx.insecure__rpc_thread_num = [NUM]
+    sgx.rpc_thread_num = [NUM]
     (Default: 0)
 
 This syntax specifies the number of RPC threads that are created outside of
@@ -582,8 +581,8 @@ threads. This allows "exitless" design when application threads never leave
 the enclave (except for a few syscalls where there is no benefit, e.g.,
 ``nanosleep()``).
 
-If user specifies ``0`` or omits this directive, then no RPC threads are
-created and all system calls perform an enclave exit ("normal" execution).
+If the user specifies ``0`` or omits this directive, then no RPC threads are
+created, and all system calls perform an enclave exit ("normal" execution).
 
 Note that the number of created RPC threads should match the maximum number of
 simultaneous enclave threads. If there are more RPC threads, then CPU time is
@@ -693,7 +692,7 @@ Trusted files
     uri = "[URI]"
     sha256 = "[HASH]"
 
-This syntax specifies the files to be cryptographically hashed at build time,
+This syntax specifies the files to be cryptographically hashed at build time
 and allowed to be accessed by the app in runtime only if their hashes match.
 This implies that trusted files can be only opened for reading (not for writing)
 and cannot be created if they do not exist already. The signer tool will
@@ -810,7 +809,7 @@ Attestation and quotes
     sgx.ra_client_spid     = "[HEX]"
     (Only for EPID based attestation)
 
-This syntax specifies the parameters for remote attestation. By default it is
+This syntax specifies the parameters for remote attestation. By default, it is
 not enabled.
 
 For :term:`EPID` based attestation, ``remote_attestation`` must be set to
@@ -910,7 +909,7 @@ Specifies what events to record:
 
 * ``ocall_inner``: Records enclave state during OCALL.
 
-* ``ocall_outer``: Records the outer OCALL function, i.e. what OCALL handlers
+* ``ocall_outer``: Records the outer OCALL function, i.e., what OCALL handlers
   are going to be executed. Does not include stack information (cannot be used
   with ``sgx.profile.with_stack = true``).
 
