@@ -358,6 +358,7 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
@@ -480,13 +481,10 @@ as RWX). Unfortunately it can negatively impact performance, as adding a page
 to the enclave at runtime is a more expensive operation than adding the page
 before enclave creation (because it involves more enclave exits and syscalls).
 
-When this feature is enabled, it is not necessary to specify
-``sgx.enclave_size`` (Gramine will automatically set it to 1TB which should be
-enough for any application). However if ``sgx.enclave_size`` is specified, this
-explicit value will take precedence.
 
 .. note::
    Support for EDMM first appeared in Linux 6.0.
+
 
 Enclave size
 ^^^^^^^^^^^^
@@ -494,7 +492,7 @@ Enclave size
 ::
 
     sgx.enclave_size = "[SIZE]"
-    (default: "256M" without EDMM, "1024G" with EDMM)
+    (default: "256M")
 
 This syntax specifies the size of the enclave set during enclave creation time
 if :term:`EDMM` is not enabled (``sgx.edmm_enable = false``) or the maximal
@@ -535,12 +533,13 @@ your system, such ``bash -c ls`` SGX workload will fail. Note this does not
 apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
 upfront and is allocated on demand.
 
+
 Number of threads
 ^^^^^^^^^^^^^^^^^
 
 ::
 
-    sgx.max_threads = [NUM]
+    sgx.insecure__rpc_thread_num = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -572,7 +571,7 @@ Number of RPC threads (Exitless feature)
 
 ::
 
-    sgx.insecure__rpc_thread_num = [NUM]
+    sgx.rpc_thread_num = [NUM]
     (Default: 0)
 
 This syntax specifies the number of RPC threads that are created outside of
@@ -596,10 +595,8 @@ more CPU cores and burning more CPU cycles. For example, a single-threaded
 Redis instance on Linux becomes 5-threaded on Gramine with Exitless. Thus,
 Exitless may negatively impact throughput but may improve latency.
 
-This feature is currently marked as insecure, because it reads and writes to
-untrusted memory in potentially insecure manner - susceptible to
-CVE-2022-21233 (INTEL-SA-00657) and CVE-2022-21166 (INTEL-SA-00615)
-respectively.
+This feature is currently marked as insecure, because it reads untrusted memory
+in potentially insecure manner - susceptible to CVE-2022-21233 (INTEL-SA-00657).
 
 Optional CPU features (AVX, AVX512, MPX, PKRU, AMX, EXINFO)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -768,15 +765,6 @@ Gramine:
 * ``"_sgx_mrsigner"`` (SGX only) is the SGX sealing key based on the MRSIGNER
   identity of the enclave. This is useful to allow all enclaves signed with the
   same key (and on the same platform) to unseal files.
-
-.. warning::
-   The same key must not be used for the encrypted-files mount and for the
-   application's own crypto operations. Such "double" use of the same key may
-   lead to compromise of the key. For example, specifying an FS mount via
-   ``{type = "encrypted", ..., key_name = "_sgx_mrenclave"}`` in the manifest
-   and using the same key obtained via ``/dev/attestation/keys/_sgx_mrenclave``
-   in the application is insecure. If you need to derive encryption keys from
-   such a "doubly-used" key, you must apply a KDF.
 
 File check policy
 ^^^^^^^^^^^^^^^^^
@@ -964,6 +952,18 @@ See :ref:`vtune-sgx-profiling` for more information.
 Deprecated options
 ------------------
 
+FS mount points (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   fs.mount.[identifier].type = "[chroot|...]"
+   fs.mount.[identifier].path = "[PATH]"
+   fs.mount.[identifier].uri  = "[URI]"
+
+This syntax used a TOML table schema with keys for each mount. It has been
+replaced with the ``fs.mounts`` TOML array.
+
 Experimental sysfs topology support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -972,6 +972,43 @@ Experimental sysfs topology support
     fs.experimental__enable_sysfs_topology = [true|false]
 
 This feature is now enabled by default and the option was removed.
+
+Protected files (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.protected_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+    sgx.protected_mrenclave_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+    sgx.protected_mrsigner_files = [
+      "[URI]",
+      "[URI]",
+    ]
+
+This syntax specified the previous SGX-only protected files. It has been
+replaced with ``type = "encrypted"`` mounts (see :ref:`encrypted-files`).
+
+.. warning::
+   Gramine will attempt to convert this syntax to mounted filesystems, but might
+   fail to do so correctly in more complicated cases (e.g., when a single host
+   file belongs to multiple mounts). It is recommended to rewrite all usages of
+   this syntax to ``type = "encrypted"`` mounts.
+
+::
+
+   fs.insecure__protected_files_key = "[32-character hex value]"
+
+This syntax allowed specifying the default encryption key for protected files.
+It has been replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old
+and new syntax are suitable for debugging purposes only.
 
 Attestation and quotes (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

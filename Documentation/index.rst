@@ -1,128 +1,170 @@
-***********************
-Introduction to Gramine
-***********************
+*********************
+Gramine Documentation
+*********************
 
-Gramine is a |~| lightweight guest OS, designed to run a |~| single Linux
-application with minimal host requirements. Gramine can run applications in an
-isolated environment with benefits comparable to running a |~| complete OS in a
-|~| virtual machine -- including guest customization, ease of porting to
-different host OSes, and process migration.
+Gramine is a lightweight guest OS that's designed to run a single Linux application with minimal host requirements. Gramine can run applications in an isolated environment with benefits comparable to running a complete OS in a virtual machine, including guest customization, ease of porting to different host OSs, and process migration.
 
-Gramine supports running Linux applications using the :term:`Intel SGX <SGX>`
-(Software Guard Extensions) technology (we sometimes call this version
-**Gramine-SGX**).  With Intel SGX, applications are secured in
-hardware-encrypted memory regions (called SGX enclaves). SGX protects code and
-data in the enclave against privileged software attacks and against physical
-attacks on the hardware off the CPU package (e.g., cold-boot attacks on RAM).
-Gramine is able to run unmodified applications inside SGX enclaves, without the
-toll of manually porting the application to the SGX environment.
+Gramine supports running Linux applications using the Intel Software Guard Extensions, or Intel SGX. For mor information, refer to the :doc:`sgx-intro` article.
 
-External documentation
-======================
+This page provides an overview of this site. Each section is outlined below with a brief explanation and links to specific sections. This page mimics the table of contents in the left column. 
 
-This website contains the official documentation of Gramine. For external
-contributions and additional resources, please visit
-https://gramine-contrib.readthedocs.io. Note that this link contains unofficial
-documents; these documents are not guaranteed to always be up-to-date and
-correct.
+Gramine deployment options
+------------------------------------
+There are three deployment options for Gramine—each option is described below. There is also one option to help develop Gramine.
 
+Ready-made protected applications
+=====================================
+Confidential compute images are ready-made solutions for popular open source projects such as `PyTorch <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/pytorch>`_ and `Redis <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/redis>`_. These images enable you to customize your environment through interactive scripts. The result is an image that includes your specific machine-learning application, common dependencies, and a manifest file. 
 
-GSC documentation
-=================
+.. note::  These confidential compute images only run on machines that support Intel SGX.
 
-For GSC (Gramine Shielded Containers) documentation please visit
-https://gramine.readthedocs.io/projects/gsc.
+See the :doc:`curated-installation` article for more information.
 
-Building and running Gramine
+Protect your container
 ============================
+Docker images are used to run applications in the cloud. The Gramine Shielded Container tool transforms a Docker image into a graminized image that includes the Gramine Library OS and Intel SGX related information. It enables you to run an application on a Docker image and keep it protected. 
 
-See :doc:`quickstart` for instructions how to quickly install and run Gramine.
-For full build instructions, see :doc:`devel/building`. To deploy Gramine in the
-cloud, see :doc:`cloud-deployment`.
+- :doc:`gsc-installation` - Get an overview of the installation process of a Gramine Shielded Container.
+-  `Build a Gramine Docker image <https://gramine.readthedocs.io/projects/gsc/en/latest/>`_ - Build a Docker image that contains the Gramine functionality. 
+-  `Download the Gramine Shielded Container tool <https://github.com/gramineproject/gsc>`_ - Protect the Docker image containing the application you want to protect. 
 
-Contacts and Contributing
-=========================
+
+Protect your application
+==========================
+
+Use this option to protect an exiting application with Gramine. Little to no addition modification of your application is needed. 
+
+These are the processes to follow protect your application with Gramine: 
+
+- :doc:`Install Gramine<quickstart>` - Install Gramine from binaries on to the various supported versions of Ubuntu or RHEL 8. 
+- :doc:`Set up the environment<environment-setup>` - Set up the Gramine environment to work with or without SGX and prepare a signing key.
+- :doc:`Run a sample application<run-sample-application>` - Run a sample application to ensure your environment is running correctly. 
+
+
+Develop Gramine
+------------------------------------
+
+This section describes how to develop Gramine. It contains instructions on how to install Gramine from binaries, install dependencies, set up debugging and other processes necessary for Gramine development.
+
+- :doc:`Build Gramine from source files<devel/building>` - Build Gramine and ensure all the dependencies installed with proper drivers. This option requires a more work but allows you to choose build options. 
+- :doc:`Set up Debugging<devel/debugging>` - Configure Gramine with Gnu Debugger (GDB) and setup compiling optimizations.
+- :doc:`Implement a new system call<devel/new-syscall>` - Define the interface of the system call, add, import, and Implement new PAL calls if needed. 
+
+
+Contribute to Gramine
+------------------------------------
+We encourage anyone who is interested to contribute to Gramine. We offer procedures and user groups that to help you get started. 
+
+These articles contain helpful material for users who want to contribute to Gramine development. 
+
+- :doc:`devel/contributing` - The Contributing to Gramine page outlines the procedures for performing pull requests, reviews, and regression tests. 
+
+- :doc:`devel/onboarding` - This page describes the knowledge needed to efficiently contribute high-quality PRs to the Gramine project. This page also describes typical flows that Gramine developers should follow to make the process of PR review consistent for everyone involved. 
+
+- :doc:`devel/DCO/index` - Affirm that the source code you will submit was originated by you and/or that you have permission to submit it to the Gramine project. 
+
+- :doc:`devel/setup` - Learn the Emacs and Vim configurations used for Gramine. 
+
+- :doc:`devel/coding-style` - This document describes coding conventions and formatting styles we use in Gramine. All newly committed code must conform to them to pass a review.
+
+- :doc:`devel/howto-doc` - This section describes how the Gramine documentation is constructed and provides directions on how to contribute to it.
+
+
+- `Gramine User Groups <https://groups.google.com/g/gramine-users>`_ - The Gramine user-groups page lists the user groups you can join to help you get up to speed with developing Gramine.
+
+Resources
+------------------------------------
+The Gramine project provides resources to help you understand and develop it. The resources page contains a list of maintainers, users, and a glossary to help you with any questions you may have. 
+
+- :doc:`management-team` - This page list the people managing the maintenance of Gramine
+- :doc:`gramine-users` - See what companies are using Gramine for their confidential computing needs 
+- :doc:`glossary` - Become familiar with the terms used for Gramine  
+
+Getting help
+------------------------------------
+
+For any questions, please send an email to users@gramineproject.io
+or join us on our `Gitter chat <https://gitter.im/gramineproject/community>`__.
 
 For bug reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
+  
+Indices and tables
+------------------------------------
 
-For any questions, please send an email to users@gramineproject.io
-(`public archive <https://groups.google.com/g/gramine-users>`__).
-
-If you want to contribute to the project, please see :doc:`devel/contributing`
-and :doc:`devel/onboarding`. Thank you for your interest!
-
-*****************
-Table of Contents
-*****************
+- :ref:`genindex`
+- :ref:`search`
 
 .. toctree::
-   :caption: User Manual
-   :maxdepth: 2
+   :hidden:
+   :caption: Ready-made protected applications 
+   :maxdepth: 1
+
+   curated-installation
+
+.. toctree::
+   :hidden:
+   :caption: Protect your container 
+   :maxdepth: 1
+
+   gsc-installation
+
+
+
+.. toctree::
+   :hidden:
+   :caption: Protect your application
+   :maxdepth: 1
+   :maxdepth: 1
 
    quickstart
-   manifest-syntax
-   attestation
-   performance
-   cloud-deployment
-   gramine-users
-   container-integration
-   sgx-intro
-   glossary
+   environment-setup
+   run-sample-application
+   tutorials-index
+
+
 
 .. toctree::
-   :caption: Tutorials
-   :maxdepth: 2
-
-   tutorials/pytorch/index.rst
-   tutorials/cczoo/index.rst
-
-.. toctree::
-   :caption: Manual pages
-   :maxdepth: 1
-   :glob:
-
-   manpages/*
-
-.. TODO manpages:
-   gramine-direct
-   gramine-sgx
-
-.. toctree::
-   :caption: Developing Gramine
+   :hidden:
+   :caption: Develop Gramine 
    :maxdepth: 1
 
    devel/building
-   devel/onboarding
-   devel/contributing
-   devel/DCO/index
-   devel/howto-doc
-   devel/coding-style
-   devel/setup
+   devel/building
    devel/debugging
    devel/new-syscall
-   devel/packaging
-   devel/features
-
-.. toctree::
-   :caption: LibOS
-
-   libos/libos-init
-
-.. toctree::
-   :caption: PAL
-
    pal/host-abi
+   python/api
+   concepts-index
 
 .. toctree::
-   :caption: Python
+   :hidden:
+   :caption: Contribute to Gramine
    :maxdepth: 1
 
-   python/api
+   devel/contributing
+   devel/onboarding
+   devel/DCO/index 
+   devel/setup
+   devel/coding-style
+   devel/howto-doc
 
-Indices and tables
-==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+
+
+
+
+
+
+.. toctree::
+   :hidden:
+   :caption: Resources
+   :maxdepth: 1
+
+   management-team
+   gramine-users
+   glossary
+
+
+
+
