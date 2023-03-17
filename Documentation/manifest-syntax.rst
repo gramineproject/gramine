@@ -590,8 +590,10 @@ more CPU cores and burning more CPU cycles. For example, a single-threaded
 Redis instance on Linux becomes 5-threaded on Gramine with Exitless. Thus,
 Exitless may negatively impact throughput but may improve latency.
 
-This feature is currently marked as insecure, because it reads untrusted memory
-in potentially insecure manner - susceptible to CVE-2022-21233 (INTEL-SA-00657).
+This feature is currently marked as insecure, because it reads and writes to
+untrusted memory in potentially insecure manner - susceptible to
+CVE-2022-21233 (INTEL-SA-00657) and CVE-2022-21166 (INTEL-SA-00615)
+respectively.
 
 Optional CPU features (AVX, AVX512, MPX, PKRU, AMX, EXINFO)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

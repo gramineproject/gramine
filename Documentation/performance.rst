@@ -164,7 +164,8 @@ Exitless feature
 ----------------
 
 Note this feature is currently insecure and not recommended for production
-usage (potentially susceptible to CVE-2022-21233 aka INTEL-SA-00657).
+usage (potentially susceptible to CVE-2022-21233 aka INTEL-SA-00657 and
+CVE-2022-21166 aka INTEL-SA-00615).
 
 Gramine supports the Exitless (or Switchless) feature – it trades off CPU cores
 for faster OCALL execution. More specifically, with Exitless, enclave threads do

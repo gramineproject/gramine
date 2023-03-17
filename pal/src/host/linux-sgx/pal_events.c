@@ -55,7 +55,7 @@ static int alloc_untrusted_futex_word(uint32_t** out_addr) {
      * at any point, so we can keep the counter in untrusted memory. */
     uint64_t* untrusted_users_counter_ptr = (uint64_t*)ALIGN_DOWN(addr, PAGE_SIZE);
     uint64_t users_counter = COPY_UNTRUSTED_VALUE(untrusted_users_counter_ptr);
-    WRITE_ONCE(*untrusted_users_counter_ptr, users_counter + 1);
+    COPY_TO_UNTRUSTED_VALUE(untrusted_users_counter_ptr, users_counter + 1);
     spinlock_unlock(&g_untrusted_page_lock);
 
     *out_addr = (uint32_t*)addr;
@@ -76,7 +76,7 @@ static void free_untrusted_futex_word(uint32_t* addr) {
         }
     } else {
         assert(users_counter);
-        WRITE_ONCE(*untrusted_users_counter_ptr, users_counter - 1);
+        COPY_TO_UNTRUSTED_VALUE(untrusted_users_counter_ptr, users_counter - 1);
     }
 #ifdef ASAN
     asan_poison_region((uintptr_t)addr, 2 * sizeof(uint32_t), ASAN_POISON_HEAP_LEFT_REDZONE);
