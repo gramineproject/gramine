@@ -310,7 +310,8 @@ long libos_syscall_flock(int fd, int operation) {
     }
 
     fl.l_whence = SEEK_SET;
-    fl.l_start = fl.l_len = 0L;/* Lock the whold file. */
+    /* Lock the whole file. */
+    fl.l_start = fl.l_len = 0L;
 
     struct posix_lock pl;
     ret = flock_to_posix_lock(&fl, hdl, &pl);

@@ -343,7 +343,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
         new->pid = pl->pid;
         new->handle_id = pl->handle_id;
 #ifdef DEBUG
-        /* Assert that list order is preserved */
+        /* Assert that list order is preserved in `fcntl` */
         if (new->handle_id == 0) {
             struct posix_lock* next = prev ? LISTP_NEXT_ENTRY(prev, &fs_lock->posix_locks, list)
                 : LISTP_FIRST_ENTRY(&fs_lock->posix_locks, struct posix_lock, list);
