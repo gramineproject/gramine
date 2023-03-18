@@ -200,7 +200,7 @@ struct libos_handle {
      * `libos_inode.lock`. */
     struct libos_lock pos_lock;
 
-    /* unique id for each new allocated handle */
+    /* Unique id, works as an identifier for `flock` syscall */
     uint64_t id;
 };
 

@@ -22,8 +22,6 @@
 #include "libos_table.h"
 #include "stat.h"
 
-static uint64_t local_counter = 0;
-
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count) {
     if (!(hdl->acc_mode & MAY_READ))
         return -EBADF;
@@ -142,8 +140,6 @@ long libos_syscall_openat(int dfd, const char* filename, int flags, int mode) {
         ret = -ENOMEM;
         goto out;
     }
-    
-    hdl->id=  ((uint64_t)g_process.pid << 32) | __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
     
     ret = open_namei(hdl, dir, filename, flags, mode, NULL);
     if (ret < 0) {
