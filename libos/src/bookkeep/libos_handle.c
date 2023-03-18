@@ -18,6 +18,8 @@
 
 static struct libos_lock handle_mgr_lock;
 
+static uint64_t local_counter = 0;
+
 #define HANDLE_MGR_ALLOC 32
 
 #define SYSTEM_LOCK()   lock(&handle_mgr_lock)
@@ -326,7 +328,7 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
         handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
 
     unlock(&handle_map->lock);
-    if (handle->id == 0 || (handle->ref_count == 1 && handle->id != 0)) {
+    if (handle->id == 0 || (handle->ref_count == 1)) {
         (void)clear_posix_locks(handle);
     }
 
@@ -365,6 +367,7 @@ struct libos_handle* get_new_handle(void) {
     }
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
+    new_handle->id= ((uint64_t)g_process.pid << 32) | __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
     return new_handle;
 }
 

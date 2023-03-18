@@ -54,7 +54,7 @@ struct posix_lock {
     /* List node, used internally */
     LIST_TYPE(posix_lock) list;
 
-    /* Related handle id */
+    /* Unique handle id, works as an identifier for `flock` syscall */
     uint64_t handle_id;
 };
 
