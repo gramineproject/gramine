@@ -9,16 +9,15 @@
 
 #include "common.h"
 
-int main(int argc, const char** argv, const char** envp) {
+int main(int argc, const char** argv) {
     if (argc != 2) {
         fprintf(stderr, "This test requires a file to test");
         return 1;
     }
 
-    int fd = open(argv[1], O_RDONLY);
-    CHECK(fd);
-    close(fd);
+    int fd = CHECK(open(argv[1], O_RDONLY));
+    CHECK(close(fd));
 
-    printf("TEST OK");
+    printf("TEST OK\n");
     return 0;
 }
