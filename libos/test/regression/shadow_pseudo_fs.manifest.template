@@ -4,14 +4,14 @@ loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
-loader.argv = [ "{{ entrypoint }}", "/proc/test/nasted/dirs/exec" ]
+loader.argv = [ "{{ entrypoint }}", "/proc/test/nested/dirs/exec" ]
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 
   # Let's shadow some file in /proc as it is a pseudo fs.
-  { path = "/proc/test/nasted/dirs/exec", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/proc/test/nested/dirs/exec", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
 sgx.debug = true

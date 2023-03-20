@@ -18,6 +18,6 @@ int main(int argc, const char** argv) {
     int fd = CHECK(open(argv[1], O_RDONLY));
     CHECK(close(fd));
 
-    printf("TEST OK\n");
+    puts("TEST OK");
     return 0;
 }
