@@ -481,9 +481,9 @@ static bool is_in_out(PAL_CONTEXT* context) {
         0xef,
     };
     uint8_t* rip = (uint8_t*)context->rip;
+    /* note that x86-64 instructions can have up to four legacy prefixes */
     size_t idx = 0;
-    while (is_x86_instr_legacy_prefix(rip[idx])
-           && idx < 4 /* Each instruction can have up to four prefixes.*/)
+    while (is_x86_instr_legacy_prefix(rip[idx]) && idx < 4)
         idx++;
     for (size_t i = 0; i < ARRAY_SIZE(opcodes); i++)
         if (rip[idx] == opcodes[i])
