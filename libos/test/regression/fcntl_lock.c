@@ -288,7 +288,7 @@ static void test_file_close(void) {
 
         int fd2 = dup(g_fd);
         if (fd2 < 0)
-            err(1, "fopen");
+            err(1, "dup");
 
         if (close(fd2) < 0)
             err(1, "close");
