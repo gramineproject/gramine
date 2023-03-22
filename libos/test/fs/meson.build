@@ -42,7 +42,6 @@ tests = {
     },
     'open_close': {},
     'open_flags': {},
-    'proc_pseudo_files': {},
     'read_write': {},
     'seek_tell': {},
     'seek_tell_truncate': {},

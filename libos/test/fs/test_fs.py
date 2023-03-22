@@ -343,17 +343,3 @@ class TC_01_Sync(RegressionTestCase):
     @unittest.skip('file handle sync is not supported yet')
     def test_003_multiple_writers_many_processes_and_threads(self):
         self._test_multiple_writers(20, 5, 5)
-
-class TC_02_Proc_Pseudo_Files(RegressionTestCase):
-    TEST_DIR = 'tmp'
-
-    def setUp(self):
-        shutil.rmtree(self.TEST_DIR, ignore_errors=True)
-        os.mkdir(self.TEST_DIR)
-
-    def tearDown(self):
-        shutil.rmtree(self.TEST_DIR)
-
-    def test_000_proc_pseudo_files(self):
-        stdout, stderr = self.run_binary(['proc_pseudo_files'])
-        self.assertIn('TEST OK', stdout)
