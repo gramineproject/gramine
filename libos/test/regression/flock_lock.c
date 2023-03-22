@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#include "common.h"
+
 #define TEST_FILE "lock_file"
 
 static const char* str_type(int type) {
@@ -36,7 +38,7 @@ static const char* str_type(int type) {
 }
 
 static void try_flock(int fd, int operation, int expect_ret) {
-    int ret = flock(fd, operation);
+    int ret = CHECK(flock(fd, operation));
     if (ret != expect_ret) {
         errx(1, "flock(%d, %s) error return value = %d\n", fd, str_type(operation), ret);
     }
@@ -44,7 +46,7 @@ static void try_flock(int fd, int operation, int expect_ret) {
 
 static void open_pipes(int pipes[2][2]) {
     for (unsigned int i = 0; i < 2; i++) {
-        if (pipe(pipes[i]) < 0)
+        if (CHECK(pipe(pipes[i])) < 0)
             err(1, "pipe");
     }
 }
@@ -52,7 +54,7 @@ static void open_pipes(int pipes[2][2]) {
 static void close_pipes(int pipes[2][2]) {
     for (unsigned int i = 0; i < 2; i++) {
         for (unsigned int j = 0; j < 2; j++) {
-            if (close(pipes[i][j]) < 0)
+            if (CHECK(close(pipes[i][j])) < 0)
                 err(1, "close pipe");
         }
     }
@@ -62,7 +64,7 @@ static void write_pipe(int pipe[2]) {
     char c = 0;
     int ret;
     do {
-        ret = write(pipe[1], &c, sizeof(c));
+        ret = CHECK(write(pipe[1], &c, sizeof(c)));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
         err(1, "write");
@@ -72,7 +74,7 @@ static void read_pipe(int pipe[2]) {
     char c;
     int ret;
     do {
-        ret = read(pipe[0], &c, sizeof(c));
+        ret = CHECK(read(pipe[0], &c, sizeof(c)));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
         err(1, "read");
@@ -83,7 +85,7 @@ static void read_pipe(int pipe[2]) {
 static void wait_for_child(void) {
     int ret;
     do {
-        ret = wait(NULL);
+        ret = CHECK(wait(NULL));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
         err(1, "wait");
@@ -92,7 +94,7 @@ static void wait_for_child(void) {
 /* Test: lock file with various lock type  */
 static void test_locks(void) {
     printf("testing various locks...\n");
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
     
@@ -108,13 +110,13 @@ static void test_locks(void) {
 
 static void test_flock_open(void) {
     printf("testing locks with the same file's different fds...\n");
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
 
     try_flock(fd, LOCK_EX, 0);
 
-    int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd2 < 0)
         err(1, "open");
     
@@ -129,13 +131,13 @@ static void test_flock_open(void) {
 
 static void test_flock_dup_open(void) {
     printf("testing locks with the dup and open...\n");
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
 
     try_flock(fd, LOCK_EX, 0);
 
-    int fd2 = dup(fd);
+    int fd2 = CHECK(dup(fd));
     if (fd2 < 0)
         err(1, "dup");
     
@@ -143,15 +145,15 @@ static void test_flock_dup_open(void) {
     try_flock(fd, LOCK_UN, 0);
     try_flock(fd2, LOCK_EX, 0);
 
-    int fd3 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd3 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd3 < 0)
         err(1, "open");
     
-    close(fd);
+    CHECK(close(fd));
     try_flock(fd3, LOCK_EX | LOCK_NB, -1);
-    close(fd2);
+    CHECK(close(fd2));
     try_flock(fd3, LOCK_EX | LOCK_NB, 0);
-    close(fd3);
+    CHECK(close(fd3));
 }
 
 static void test_flock_fork(void) {
@@ -160,31 +162,31 @@ static void test_flock_fork(void) {
     int pipes[2][2];
     open_pipes(pipes);
 
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
 
-    pid_t pid = fork();
+    pid_t pid = CHECK(fork());
     if (pid < 0)
         err(1, "fork");
     
     if (pid == 0) {
         read_pipe(pipes[1]);
         try_flock(fd, LOCK_EX, 0);
-        int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+        int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
         if (fd2 < 0)
             err(1, "open");
         
         try_flock(fd2, LOCK_EX | LOCK_NB, -1);
         try_flock(fd2, LOCK_SH | LOCK_NB, -1);
-        close(fd2);
-        close(fd);
+        CHECK(close(fd2));
+        CHECK(close(fd));
         exit(0);
     } 
     write_pipe(pipes[1]);
     try_flock(fd, LOCK_EX, 0);
 
-    close(fd);
+    CHECK(close(fd));
     wait_for_child();
     close_pipes(pipes);
 }
@@ -192,14 +194,14 @@ static void test_flock_fork(void) {
 static void test_file_unlock(void) {
     printf("testing flock with fork and unlock...\n");
 
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
 
     int pipes[2][2];
     open_pipes(pipes);
 
-    pid_t pid = fork();
+    pid_t pid = CHECK(fork());
     if (pid < 0)
         err(1, "fork");
     
@@ -210,11 +212,11 @@ static void test_file_unlock(void) {
         try_flock(fd, LOCK_UN, 0);
         
         write_pipe(pipes[0]);
-        close(fd);
+        CHECK(close(fd));
         exit(0);
     }
 
-    int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd2 < 0)
         err(1, "open");
 
@@ -224,8 +226,8 @@ static void test_file_unlock(void) {
     read_pipe(pipes[0]);
     try_flock(fd2, LOCK_EX | LOCK_NB, 0);
 
-    close(fd);
-    close(fd2);
+    CHECK(close(fd));
+    CHECK(close(fd2));
     wait_for_child();
     close_pipes(pipes);
 }
@@ -233,14 +235,14 @@ static void test_file_unlock(void) {
 static void test_file_close(void) {
     printf("testing flock with fork and close...\n");
 
-    int fd = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd < 0)
         err(1, "open");
     
     int pipes[2][2];
     open_pipes(pipes);
 
-    pid_t pid = fork();
+    pid_t pid = CHECK(fork());
     if (pid < 0)
         err(1, "fork");
     
@@ -256,22 +258,22 @@ static void test_file_close(void) {
         exit(0);
     }
 
-    int fd2 = open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     if (fd2 < 0)
         err(1, "open");
 
     read_pipe(pipes[0]);
     try_flock(fd2, LOCK_EX | LOCK_NB, -1);
 
-    if (close(fd) < 0)
+    if (CHECK(close(fd)) < 0)
         err(1, "close");
 
     write_pipe(pipes[1]);
     read_pipe(pipes[0]);
     try_flock(fd2, LOCK_EX | LOCK_NB, 0);
 
-    close(fd);
-    close(fd2);
+    CHECK(close(fd));
+    CHECK(close(fd2));
     wait_for_child();
     close_pipes(pipes);
 }
