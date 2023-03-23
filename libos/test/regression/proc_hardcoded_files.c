@@ -59,10 +59,15 @@ int main(void) {
         }
 
         struct stat sb;
-        CHECK(stat(tc[i].path, &sb));
+        int ret = stat(tc[i].path, &sb);
+        if (ret < 0)
+            errx(1, "stat failed for file %s with error code = %d", tc[i].path, errno);
         if (!S_ISREG(sb.st_mode))
             errx(1,"Unexpected type for file = %s. Expected S_ISREG", tc[i].path);
-        CHECK(close(fd));
+        ret = close(fd);
+        if (ret < 0)
+            errx(1, "close() failed for file %s fd = %d with error code = %d", tc[i].path, fd,
+                 errno);
     }
     puts("TEST OK");
     return 0;
