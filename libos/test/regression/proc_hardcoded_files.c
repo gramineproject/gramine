@@ -47,11 +47,13 @@ int main(void) {
         memset(buf, 0, sizeof(buf));
         int fd = open(tc[i].path, O_RDONLY);
         if (fd < 0)
-            errx(1,"opening file %s failed", tc[i].path);
+            err(1, "opening file %s failed", tc[i].path);
         ssize_t read_bytes = read(fd, buf, sizeof(buf));
+        if (read_bytes < 0)
+            err(1, "reading file %s failed", tc[i].path);
         if (read_bytes != tc[i].expected_length) {
-            errx(1,"Content length mismatch for file = %s. Expected %ld got %ld", tc[i].path,
-                 tc[i].expected_length, read_bytes);
+            errx(1, "Content length mismatch for file = %s. Expected %ld got %ld", tc[i].path,
+                tc[i].expected_length, read_bytes);
         }
         if (strcmp(tc[i].expected_value, buf)) {
             errx(1,"Content mismatch for file = %s. Expected %s got %s", tc[i].path,
@@ -61,13 +63,12 @@ int main(void) {
         struct stat sb;
         int ret = stat(tc[i].path, &sb);
         if (ret < 0)
-            errx(1, "stat failed for file %s with error code = %d", tc[i].path, errno);
+            err(1, "stat failed for file %s", tc[i].path);
         if (!S_ISREG(sb.st_mode))
             errx(1,"Unexpected type for file = %s. Expected S_ISREG", tc[i].path);
         ret = close(fd);
         if (ret < 0)
-            errx(1, "close() failed for file %s fd = %d with error code = %d", tc[i].path, fd,
-                 errno);
+            err(1, "close() failed for file %s", tc[i].path);
     }
     puts("TEST OK");
     return 0;
