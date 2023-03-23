@@ -53,10 +53,10 @@ int main(void) {
             err(1, "reading file %s failed", tc[i].path);
         if (read_bytes != tc[i].expected_length) {
             errx(1, "Content length mismatch for file = %s. Expected %ld got %ld", tc[i].path,
-                tc[i].expected_length, read_bytes);
+                 tc[i].expected_length, read_bytes);
         }
         if (strcmp(tc[i].expected_value, buf)) {
-            errx(1,"Content mismatch for file = %s. Expected %s got %s", tc[i].path,
+            errx(1, "Content mismatch for file = %s. Expected %s got %s", tc[i].path,
                  tc[i].expected_value, buf);
         }
 
@@ -65,7 +65,7 @@ int main(void) {
         if (ret < 0)
             err(1, "stat failed for file %s", tc[i].path);
         if (!S_ISREG(sb.st_mode))
-            errx(1,"Unexpected type for file = %s. Expected S_ISREG", tc[i].path);
+            errx(1, "Unexpected type for file = %s. Expected S_ISREG", tc[i].path);
         ret = close(fd);
         if (ret < 0)
             err(1, "close() failed for file %s", tc[i].path);
