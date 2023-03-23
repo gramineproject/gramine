@@ -1036,7 +1036,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     def test_003_proc_hardcoded_files(self):
-        stdout, stderr = self.run_binary(['proc_hardcoded_files'])
+        stdout, _ = self.run_binary(['proc_hardcoded_files'])
         self.assertIn('TEST OK', stdout)
 
     def test_010_path(self):
