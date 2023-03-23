@@ -1018,10 +1018,6 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/1/exe: link: /proc_common', lines)
         self.assertIn('/proc/1/root: link: /', lines)
 
-    def test_001_proc(self):
-        stdout, stderr = self.run_binary(['proc_pseudo_files'])
-        self.assertIn('TEST OK', stdout)
-
     def test_001_devfs(self):
         stdout, _ = self.run_binary(['devfs'])
         self.assertIn('/dev/.', stdout)
@@ -1037,6 +1033,10 @@ class TC_40_FileSystem(RegressionTestCase):
 
     def test_002_device_passthrough(self):
         stdout, _ = self.run_binary(['device_passthrough'])
+        self.assertIn('TEST OK', stdout)
+
+    def test_003_proc_hardcoded_files(self):
+        stdout, stderr = self.run_binary(['proc_hardcoded_files'])
         self.assertIn('TEST OK', stdout)
 
     def test_010_path(self):
