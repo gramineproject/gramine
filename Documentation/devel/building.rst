@@ -88,14 +88,15 @@ Run the following commands on Ubuntu to install SGX-related dependencies::
 2. Install Intel SGX SDK/PSW
 """"""""""""""""""""""""""""
 
-Follow the installation instructions from the "Intel SGX Software Installation
-Guide" version 1.14 (the latest version as of July 2022):
+Follow the installation instructions from the latest version of "Intel SGX
+Software Installation Guide":
 
-- https://download.01.org/intel-sgx/sgx-dcap/1.14/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf
+- https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf
 
 In general, various documentation for Intel SGX SDK/PSW can be found here:
 
-- https://download.01.org/intel-sgx/sgx-dcap/1.14/linux/docs
+- https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/
+- https://download.01.org/intel-sgx/latest/linux-latest/docs/
 
 Additional information, package descriptions, etc. can be found in the official
 "Intel SGX for Linux" GitHub repo:
