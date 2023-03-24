@@ -949,12 +949,15 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
  *                          size.
  *
  * Retrieve the value of a special key. Currently implemented for Linux-SGX PAL, which supports two
- * such keys: `_sgx_mrenclave` and `_sgx_mrsigner`.
+ * such keys: `_sgx_mrenclave` and `_sgx_mrsigner` (see macros below).
  *
  * If a given key is not supported by the current PAL host, the function will return
  * -PAL_ERROR_NOTIMPLEMENTED.
  */
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size);
+
+#define PAL_KEY_NAME_SGX_MRENCLAVE "_sgx_mrenclave"
+#define PAL_KEY_NAME_SGX_MRSIGNER  "_sgx_mrsigner"
 
 #ifdef __GNUC__
 #define symbol_version_default(real, name, version) \

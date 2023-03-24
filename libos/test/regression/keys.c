@@ -26,6 +26,10 @@ typedef uint8_t pf_key_t[KEY_SIZE];
 #define DEFAULT_KEY_PATH "/dev/attestation/keys/default"
 #define CUSTOM_KEY_PATH "/dev/attestation/keys/my_custom_key"
 
+/* Special keys (SGX sealing keys), always existing under SGX and read-only */
+#define MRENCLAVE_KEY_PATH "/dev/attestation/keys/_sgx_mrenclave"
+#define MRSIGNER_KEY_PATH "/dev/attestation/keys/_sgx_mrsigner"
+
 static const pf_key_t default_key = {
     0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
 
@@ -45,6 +49,15 @@ static void format_key(char buf[static KEY_STR_SIZE], const pf_key_t* key) {
         buf[i * 2 + 1] = hex[byte % 16];
     }
     buf[KEY_SIZE * 2] = '\0';
+}
+
+static void verify_key_exists(const char* desc, const char* path) {
+    pf_key_t key;
+    ssize_t n = posix_file_read(path, (char*)&key, sizeof(key));
+    if (n < 0)
+        err(1, "%s: error reading %s", desc, path);
+    if ((size_t)n != sizeof(key))
+        errx(1, "%s: file %s has wrong size: expected %zd, got %zd", desc, path, sizeof(key), n);
 }
 
 static void expect_key(const char* desc, const char* path, const pf_key_t* expected_key) {
@@ -75,7 +88,24 @@ static void write_key(const char* desc, const char* path, const pf_key_t* key) {
         errx(1, "%s: not enough bytes written to %s: %zd", desc, path, n);
 }
 
-int main(void) {
+static void fail_write_key(const char* desc, const char* path) {
+    pf_key_t dummy_key = {0};
+    ssize_t n = posix_file_write(path, (char*)&dummy_key, sizeof(dummy_key));
+    if (n >= 0)
+        errx(1, "%s: writing to %s unexpectedly succeeded", desc, path);
+}
+
+int main(int argc, char** argv) {
+    if (argc > 2 || (argc == 2 && strcmp(argv[1], "sgx") != 0))
+        errx(1, "test expects either no arguments, or one argument `sgx`");
+
+    if (argc == 2) {
+        verify_key_exists("SGX sealing keys", MRENCLAVE_KEY_PATH);
+        verify_key_exists("SGX sealing keys", MRSIGNER_KEY_PATH);
+        fail_write_key("SGX sealing keys", MRENCLAVE_KEY_PATH);
+        fail_write_key("SGX sealing keys", MRSIGNER_KEY_PATH);
+    }
+
     expect_key("before writing key", DEFAULT_KEY_PATH, &default_key);
     expect_key("before writing key", CUSTOM_KEY_PATH, &custom_key);
 

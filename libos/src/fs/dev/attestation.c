@@ -18,6 +18,7 @@
 #include "api.h"
 #include "libos_fs_encrypted.h"
 #include "libos_fs_pseudo.h"
+#include "pal.h"
 #include "toml_utils.h"
 
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently
@@ -322,7 +323,7 @@ static int key_save(struct libos_dentry* dent, const char* data, size_t size) {
     return 0;
 }
 
-static int init_sgx_attestation(struct pseudo_node* attestation) {
+static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_node* keys) {
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
 
@@ -344,6 +345,21 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     target_info->perm = PSEUDO_PERM_FILE_RW;
     target_info->str.save = &target_info_save;
 
+    /* dummy retrieval of SGX sealing keys, so that they appear under /dev/attestation/keys/ */
+    const char* sealing_keys_names[] = { PAL_KEY_NAME_SGX_MRENCLAVE, PAL_KEY_NAME_SGX_MRSIGNER };
+    for (size_t i = 0; i < ARRAY_SIZE(sealing_keys_names); i++) {
+        struct libos_encrypted_files_key* key;
+        int ret = get_or_create_encrypted_files_key(sealing_keys_names[i], &key);
+        if (ret < 0) {
+            log_error("Cannot initialize SGX sealing key `%s`", sealing_keys_names[i]);
+            return ret;
+        }
+    }
+
+    /* SGX sealing keys must be read-only, so we mount them over other /dev/attestation/keys/ */
+    pseudo_add_str(keys, PAL_KEY_NAME_SGX_MRENCLAVE, &key_load);
+    pseudo_add_str(keys, PAL_KEY_NAME_SGX_MRSIGNER, &key_load);
+
     if (!strcmp(g_pal_public_state->attestation_type, "none")) {
         log_debug("host is Linux-SGX and remote attestation type is 'none', skipping "
                   "/dev/attestation/quote file");
@@ -359,10 +375,6 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
 int init_attestation(struct pseudo_node* dev) {
     struct pseudo_node* attestation = pseudo_add_dir(dev, "attestation");
 
-    int ret = init_sgx_attestation(attestation);
-    if (ret < 0)
-        return ret;
-
     struct pseudo_node* keys = pseudo_add_dir(attestation, "keys");
     struct pseudo_node* key = pseudo_add_str(keys, /*name=*/NULL, &key_load);
     key->name_exists = &key_name_exists;
@@ -370,5 +382,5 @@ int init_attestation(struct pseudo_node* dev) {
     key->perm = PSEUDO_PERM_FILE_RW;
     key->str.save = &key_save;
 
-    return 0;
+    return init_sgx_attestation(attestation, keys);
 }
