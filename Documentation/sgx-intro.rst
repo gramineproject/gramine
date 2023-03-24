@@ -262,7 +262,7 @@ SGX terminology
       .. seealso::
 
          Orientation Guide
-            https://download.01.org/intel-sgx/sgx-dcap/1.14/linux/docs/DCAP_ECDSA_Orientation.pdf
+            https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/DCAP_ECDSA_Orientation.pdf
 
          :term:`EPID`
             A |~| way to launch enclaves with Intel's infrastructure, intended
