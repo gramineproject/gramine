@@ -111,7 +111,7 @@ Prerequisites
 
 - SDK/PSW. You need a machine that supports Intel SGX and
   FLC/DCAP. Please follow `this guide
-  <https://download.01.org/intel-sgx/sgx-linux/2.17/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf>`__
+  <https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf>`__
   to install the Intel SGX driver and SDK/PSW.
 
 - Gramine. Unfortunately, the latest stable release (v1.2) has a bug that
