@@ -406,6 +406,17 @@ static int init_sgx_attestation(struct pseudo_node* attestation) {
     target_info->perm = PSEUDO_PERM_FILE_RW;
     target_info->str.save = &target_info_save;
 
+    /* dummy retrieval of SGX sealing keys, so that they appear under /dev/attestation/keys/ */
+    const char* sealing_key_names[2] = { "_sgx_mrenclave", "_sgx_mrsigner" };
+    for (size_t i = 0; i < 2; i++) {
+        struct libos_encrypted_files_key* key;
+        int ret = get_or_create_encrypted_files_key(sealing_key_names[i], &key);
+        if (ret < 0) {
+            log_error("Cannot initialize SGX sealing key `%s`", sealing_key_names[i]);
+            return ret;
+        }
+    }
+
     if (!strcmp(g_pal_public_state->attestation_type, "none")) {
         log_debug("host is Linux-SGX and remote attestation type is 'none', skipping "
                   "/dev/attestation/quote file");

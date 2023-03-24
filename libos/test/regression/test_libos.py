@@ -324,7 +324,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         self.assertIn('TEST OK', stdout, 'test failed: {}'.format(cmd))
 
     def test_230_keys(self):
-        stdout, _ = self.run_binary(['keys'])
+        if HAS_SGX:
+            stdout, _ = self.run_binary(['keys', 'sgx'])
+        else:
+            stdout, _ = self.run_binary(['keys'])
         self.assertIn('TEST OK', stdout)
 
     def test_300_shared_object(self):

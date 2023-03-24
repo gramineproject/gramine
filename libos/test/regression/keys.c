@@ -47,6 +47,15 @@ static void format_key(char buf[static KEY_STR_SIZE], const pf_key_t* key) {
     buf[KEY_SIZE * 2] = '\0';
 }
 
+static void verify_key_exists(const char* desc, const char* path) {
+    pf_key_t key;
+    ssize_t n = posix_file_read(path, (char*)&key, sizeof(key));
+    if (n < 0)
+        err(1, "%s: error reading %s", desc, path);
+    if ((size_t)n < sizeof(key))
+        errx(1, "%s: file %s is too short: %zd", desc, path, n);
+}
+
 static void expect_key(const char* desc, const char* path, const pf_key_t* expected_key) {
     pf_key_t key;
 
@@ -75,7 +84,13 @@ static void write_key(const char* desc, const char* path, const pf_key_t* key) {
         errx(1, "%s: not enough bytes written to %s: %zd", desc, path, n);
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+    if (argc > 1) {
+        /* simple trick to test SGX-specific keys */
+        verify_key_exists("SGX sealing keys", "/dev/attestation/keys/_sgx_mrenclave");
+        verify_key_exists("SGX sealing keys", "/dev/attestation/keys/_sgx_mrsigner");
+    }
+
     expect_key("before writing key", DEFAULT_KEY_PATH, &default_key);
     expect_key("before writing key", CUSTOM_KEY_PATH, &custom_key);
 
