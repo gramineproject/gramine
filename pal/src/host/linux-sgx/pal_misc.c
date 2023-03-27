@@ -627,9 +627,9 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
         return -PAL_ERROR_INVAL;
 
     int ret;
-    if (!strcmp(name, "_sgx_mrenclave")) {
+    if (!strcmp(name, PAL_KEY_NAME_SGX_MRENCLAVE)) {
         ret = sgx_get_seal_key(SGX_KEYPOLICY_MRENCLAVE, &sgx_key);
-    } else if (!strcmp(name, "_sgx_mrsigner")) {
+    } else if (!strcmp(name, PAL_KEY_NAME_SGX_MRSIGNER)) {
         ret = sgx_get_seal_key(SGX_KEYPOLICY_MRSIGNER, &sgx_key);
     } else {
         return -PAL_ERROR_NOTIMPLEMENTED;

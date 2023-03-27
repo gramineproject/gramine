@@ -26,6 +26,10 @@ typedef uint8_t pf_key_t[KEY_SIZE];
 #define DEFAULT_KEY_PATH "/dev/attestation/keys/default"
 #define CUSTOM_KEY_PATH "/dev/attestation/keys/my_custom_key"
 
+/* Special keys (SGX sealing keys), always existing under SGX and read-only */
+#define MRENCLAVE_KEY_PATH "/dev/attestation/keys/_sgx_mrenclave"
+#define MRSIGNER_KEY_PATH "/dev/attestation/keys/_sgx_mrsigner"
+
 static const pf_key_t default_key = {
     0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
 
@@ -84,11 +88,20 @@ static void write_key(const char* desc, const char* path, const pf_key_t* key) {
         errx(1, "%s: not enough bytes written to %s: %zd", desc, path, n);
 }
 
+static void fail_write_key(const char* desc, const char* path) {
+    pf_key_t dummy_key;
+    ssize_t n = posix_file_write(path, (char*)&dummy_key, sizeof(dummy_key));
+    if (n >= 0)
+        errx(1, "%s: writing to %s unexpectedly succeeded", desc, path);
+}
+
 int main(int argc, char** argv) {
     if (argc > 1) {
         /* simple trick to test SGX-specific keys */
-        verify_key_exists("SGX sealing keys", "/dev/attestation/keys/_sgx_mrenclave");
-        verify_key_exists("SGX sealing keys", "/dev/attestation/keys/_sgx_mrsigner");
+        verify_key_exists("SGX sealing keys", MRENCLAVE_KEY_PATH);
+        verify_key_exists("SGX sealing keys", MRSIGNER_KEY_PATH);
+        fail_write_key("SGX sealing keys", MRENCLAVE_KEY_PATH);
+        fail_write_key("SGX sealing keys", MRSIGNER_KEY_PATH);
     }
 
     expect_key("before writing key", DEFAULT_KEY_PATH, &default_key);
