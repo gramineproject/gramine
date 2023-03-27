@@ -104,6 +104,7 @@ class Manifest:
         sgx.setdefault('require_amx', False)
         sgx.setdefault('require_exinfo', False)
         sgx.setdefault('enable_stats', False)
+        sgx.setdefault('edmm_heap_prealloc_size', '0')
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
