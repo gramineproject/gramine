@@ -11,6 +11,14 @@
 #include "libos_fs_pseudo.h"
 #include "libos_process.h"
 
+/* Maximum number of memory map areas a process may have.
+ * From: include/linux/mm.h
+ */
+#define MAPCOUNT_ELF_CORE_MARGIN    (5)
+#define DEFAULT_MAX_MAP_COUNT       (USHRT_MAX - MAPCOUNT_ELF_CORE_MARGIN)
+
+#define INT_MAX_STR_LEN 16
+
 static int proc_pid_max_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
@@ -30,6 +38,29 @@ static int proc_pid_max_load(struct libos_dentry* dent, char** out_data, size_t*
     *out_data = buffer;
     *out_size = buffer_size;
     return 0;
+}
+
+static int proc_hardcoded_value(unsigned val, char** out_data, size_t* out_size) {
+    char buf[(3 * sizeof val) + 1/* z-terminator*/];
+    int ret = snprintf(buf, sizeof buf, "%u", val);
+    if (ret < 0)
+        return ret;
+    assert((size_t)ret < sizeof buf);
+
+    char* buffer = strdup(buf);
+    if (!buffer)
+        return -ENOMEM;
+
+    *out_data = buffer;
+    *out_size = (size_t)ret + 1;
+    return 0;
+}
+
+static int proc_vm_max_map_count(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+    static_assert(DEFAULT_MAX_MAP_COUNT <= UINT_MAX, "default value is to high");
+    int ret = proc_hardcoded_value(DEFAULT_MAX_MAP_COUNT, out_data, out_size);
+    return ret;
 }
 
 int proc_self_follow_link(struct libos_dentry* dent, char** out_target) {
@@ -73,6 +104,9 @@ int init_procfs(void) {
     struct pseudo_node* kernel = pseudo_add_dir(sys, "kernel");
     pseudo_add_str(kernel, "pid_max", &proc_pid_max_load);
 
+    struct pseudo_node* vm = pseudo_add_dir(sys, "vm"); /* /proc/sys/vm/ */
+    pseudo_add_str(vm, "max_map_count", &proc_vm_max_map_count);
+
     pseudo_add_str(root, "meminfo", &proc_meminfo_load);
     pseudo_add_str(root, "cpuinfo", &proc_cpuinfo_load);
     pseudo_add_str(root, "stat", &proc_stat_load);
@@ -96,5 +130,5 @@ int init_procfs(void) {
     ipc_thread_pid->list_names = NULL;
     init_ipc_thread_dir(ipc_thread_pid);
 
-    return 0;
+   return 0;
 }

@@ -1018,7 +1018,27 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/proc/1/exe: link: /proc_common', lines)
         self.assertIn('/proc/1/root: link: /', lines)
 
-    def test_001_devfs(self):
+    class ProcFile:
+        def __init__(self, filePath, min_val, max_val):
+            self.path = filePath
+            self.min = min_val
+            self.max = max_val
+
+    proc_const_files = [
+        ProcFile("/proc/sys/vm/max_map_count", 65530, 65530),
+    ]
+
+    def test_001_proc_const_files(self):
+        for f in self.proc_const_files:
+            stdout, stderr = self.run_binary(['proc_fs', f.path , str(f.min), str(f.max)])
+            self.assertNotIn('ERROR: ', stderr)
+            self.assertNotIn('Usage: ', stderr)
+            self.assertIn("'" + f.path + "': Parent stats test SUCCESS", stdout)
+            self.assertIn("'" + f.path + "': File stats test SUCCESS"  , stdout)
+            self.assertIn("'" + f.path + "': File content test SUCCESS", stdout)
+            self.assertIn("'" + f.path + "': TEST OK"                  , stdout)
+
+    def test_005_devfs(self):
         stdout, _ = self.run_binary(['devfs'])
         self.assertIn('/dev/.', stdout)
         self.assertIn('/dev/null', stdout)
@@ -1031,7 +1051,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('Four bytes from /dev/urandom', stdout)
         self.assertIn('TEST OK', stdout)
 
-    def test_002_device_passthrough(self):
+    def test_007_device_passthrough(self):
         stdout, _ = self.run_binary(['device_passthrough'])
         self.assertIn('TEST OK', stdout)
 
