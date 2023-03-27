@@ -217,15 +217,6 @@ encryption keys (see also :doc:`manifest-syntax`):
   a remote secret provisioning service. The format of the file is a 16-byte raw
   binary value.
 
-.. note::
-   Previously, ``/dev/attestation/protected_files_key`` was used for setting the
-   default encryption key, and Gramine still supports that file for backward
-   compatibility.
-
-   Note that the old file (``/dev/attestation/protected_files_key``) uses a
-   32-character hex value, and the new files
-   (``/dev/attestation/keys/<key_name>``) use a 16-byte raw binary value.
-
 Mid-level RA-TLS interface
 --------------------------
 

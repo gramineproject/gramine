@@ -976,43 +976,6 @@ Experimental sysfs topology support
 
 This feature is now enabled by default and the option was removed.
 
-Protected files (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.protected_files = [
-      "[URI]",
-      "[URI]",
-    ]
-
-    sgx.protected_mrenclave_files = [
-      "[URI]",
-      "[URI]",
-    ]
-
-    sgx.protected_mrsigner_files = [
-      "[URI]",
-      "[URI]",
-    ]
-
-This syntax specified the previous SGX-only protected files. It has been
-replaced with ``type = "encrypted"`` mounts (see :ref:`encrypted-files`).
-
-.. warning::
-   Gramine will attempt to convert this syntax to mounted filesystems, but might
-   fail to do so correctly in more complicated cases (e.g. when a single host
-   file belongs to multiple mounts). It is recommended to rewrite all usages of
-   this syntax to ``type = "encrypted"`` mounts.
-
-::
-
-   fs.insecure__protected_files_key = "[32-character hex value]"
-
-This syntax allowed specifying the default encryption key for protected files.
-It has been replaced by ``fs.insecure__keys.[KEY_NAME]]``. Note that both old
-and new syntax are suitable for debugging purposes only.
-
 Attestation and quotes (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
