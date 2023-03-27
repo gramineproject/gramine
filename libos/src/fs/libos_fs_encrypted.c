@@ -215,7 +215,7 @@ out:
     return ret;
 }
 
-/* Used only in debug code / by deprecated options, no need to be side-channel-resistant. */
+/* Used only in debug code, no need to be side-channel-resistant. */
 int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     size_t len = strlen(key_str);
     if (len != sizeof(*pf_key) * 2) {
@@ -230,14 +230,6 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
         return -EINVAL;
     }
     memcpy(pf_key, &tmp_pf_key, sizeof(tmp_pf_key));
-    return 0;
-}
-
-int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size) {
-    if (buf_size < sizeof(*pf_key) * 2 + 1)
-        return -EINVAL;
-
-    bytes2hex(pf_key, sizeof(*pf_key), buf, buf_size);
     return 0;
 }
 
@@ -309,31 +301,6 @@ int init_encrypted_files(void) {
             assert(key_str);
 
             ret = parse_and_update_key(key_name, key_str);
-            free(key_str);
-            if (ret < 0)
-                return ret;
-        }
-    }
-
-    /*
-     * If we're under SGX PAL, parse `sgx.insecure__protected_files_key` (and interpret it as the
-     * "default" key).
-     *
-     * TODO: this is deprecated in v1.2, remove two versions later.
-     */
-    if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
-        char* key_str;
-        ret = toml_string_in(g_manifest_root, "sgx.insecure__protected_files_key", &key_str);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.insecure__protected_files_key'");
-            return -EINVAL;
-        }
-
-        if (key_str) {
-            log_error("Detected deprecated syntax: 'sgx.insecure__protected_files_key'. "
-                      "Consider converting it to 'fs.insecure__keys.default'.");
-
-            ret = parse_and_update_key("default", key_str);
             free(key_str);
             if (ret < 0)
                 return ret;

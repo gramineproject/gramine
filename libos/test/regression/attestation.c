@@ -14,13 +14,6 @@
 #include "mbedtls/cipher.h"
 #include "mbedtls/cmac.h"
 
-#define MANIFEST_KEY "ffeeddccbbaa99887766554433221100"
-#define NEW_KEY      "00112233445566778899aabbccddeeff"
-
-#define KEY_LEN 32
-
-#define KEY_PATH "/dev/attestation/protected_files_key"
-
 #include "enclave_api.h"
 #include "rw_file.h"
 #include "sgx_arch.h"
@@ -77,67 +70,6 @@ static int verify_report_mac(sgx_report_t* report) {
         fprintf(stderr, "MAC comparison failed\n");
         return FAILURE;
     }
-
-    return SUCCESS;
-}
-
-static int expect_key(const char* expected_key) {
-    assert(strlen(expected_key) == KEY_LEN);
-
-    char buf[KEY_LEN];
-    ssize_t bytes = file_read_f(KEY_PATH, buf, sizeof(buf));
-    if (bytes < 0) {
-        fprintf(stderr, "Error reading %s\n", KEY_PATH);
-        return FAILURE;
-    }
-    if ((size_t)bytes != sizeof(buf)) {
-        fprintf(stderr, "Failed: %s has wrong size\n", KEY_PATH);
-        return FAILURE;
-    }
-    if (memcmp(buf, expected_key, sizeof(buf))) {
-        fprintf(stderr, "Failed: %s has wrong content (expected \"%s\", got \"%.*s\")\n", KEY_PATH,
-                expected_key, (int)sizeof(buf), buf);
-        return FAILURE;
-    }
-    return SUCCESS;
-}
-
-static int write_key(const char* key) {
-    assert(strlen(key) == KEY_LEN);
-
-    ssize_t bytes = file_write_f(KEY_PATH, key, KEY_LEN);
-    if (bytes < 0) {
-        fprintf(stderr, "Error writing %s\n", KEY_PATH);
-        return FAILURE;
-    }
-    if ((size_t)bytes != KEY_LEN) {
-        fprintf(stderr, "Failed: not enough bytes written to %s\n", KEY_PATH);
-        return FAILURE;
-    }
-    return SUCCESS;
-}
-
-
-/*
- * Test the deprecated `/dev/attestation/protected_files_key` file (and setting the initial key
- * using deprecated `sgx.insecure__protected_files_key` manifest syntax).
- *
- * TODO: remove this part of the test when these deprecated interfaces are removed (two versions
- * after v1.2). The new way of setting keys (`/dev/attestation/keys`, `fs.insecure__keys`) is
- * already tested in `keys.c`.
- */
-static int test_protected_files_key(void) {
-    int ret = expect_key(MANIFEST_KEY);
-    if (ret != SUCCESS)
-        return ret;
-
-    ret = write_key(NEW_KEY);
-    if (ret != SUCCESS)
-        return ret;
-
-    ret = expect_key(NEW_KEY);
-    if (ret != SUCCESS)
-        return ret;
 
     return SUCCESS;
 }
@@ -206,7 +138,6 @@ static const char* paths[] = {
     "/dev/attestation/target_info",
     "/dev/attestation/my_target_info",
     "/dev/attestation/report",
-    "/dev/attestation/protected_files_key",
 };
 
 /*!
@@ -306,8 +237,6 @@ int main(int argc, char** argv) {
         file_write_f = stdio_file_write;
     }
 
-    printf("Test protected_files_key... %s\n",
-           test_protected_files_key() == SUCCESS ? "SUCCESS" : "FAIL");
     printf("Test local attestation... %s\n",
            test_local_attestation() == SUCCESS ? "SUCCESS" : "FAIL");
     printf("Test quote interface... %s\n",

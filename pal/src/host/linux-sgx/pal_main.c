@@ -391,9 +391,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
         return 0;
     }
 
-    /* TODO: `sgx.insecure__protected_files_key` is deprecated in v1.2, remove two versions
-     * later. */
-
     bool verbose_log_level    = false;
     bool sgx_debug            = false;
     bool use_cmdline_argv     = false;
@@ -402,11 +399,9 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool allow_eventfd        = false;
     bool allow_all_files      = false;
     bool use_allowed_files    = g_allowed_files_warn;
-    bool protected_files_key  = false;
     bool encrypted_files_keys = false;
 
     char* log_level_str = NULL;
-    char* protected_files_key_str = NULL;
 
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
@@ -442,13 +437,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
 
-    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.insecure__protected_files_key",
-                         &protected_files_key_str);
-    if (ret < 0)
-        goto out;
-    if (protected_files_key_str)
-        protected_files_key = true;
-
     toml_table_t* manifest_fs = toml_table_in(g_pal_public_state.manifest_root, "fs");
     if (manifest_fs) {
         toml_table_t* manifest_fs_keys = toml_table_in(manifest_fs, "insecure__keys");
@@ -463,8 +451,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     }
 
     if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
-            !allow_eventfd && !allow_all_files && !use_allowed_files && !protected_files_key &&
-            !encrypted_files_keys) {
+            !allow_eventfd && !allow_all_files && !use_allowed_files && !encrypted_files_keys) {
         /* there are no insecure configurations, skip printing */
         ret = 0;
         goto out;
@@ -506,10 +493,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
         log_always("  - sgx.allowed_files = [ ... ]                "
                    "(some files are passed through from untrusted host without verification)");
 
-    if (protected_files_key)
-        log_always("  - sgx.insecure__protected_files_key = \"...\"  "
-                   "(key hardcoded in manifest)");
-
     if (encrypted_files_keys)
         log_always("  - fs.insecure__keys.* = \"...\"                "
                    "(keys hardcoded in manifest)");
@@ -522,7 +505,6 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     ret = 0;
 out:
     free(log_level_str);
-    free(protected_files_key_str);
     return ret;
 }
 
