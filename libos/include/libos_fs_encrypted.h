@@ -171,6 +171,3 @@ int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_si
 int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);
 
 int parse_pf_key(const char* key_str, pf_key_t* pf_key);
-
-/* TODO: This function is used only by a feature deprecated in v1.2, remove two versions later. */
-int dump_pf_key(const pf_key_t* pf_key, char* buf, size_t buf_size);

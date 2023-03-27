@@ -304,7 +304,7 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
     }
 
     INFO("Encrypting: %s -> %s\n", input_path, norm_output_path);
-    INFO("            (Gramine's sgx.protected_files must contain this exact path: \"%s\")\n",
+    INFO("            (Gramine's encrypted files must contain this exact path: \"%s\")\n",
                       norm_output_path);
 
     pf_handle_t handle = (pf_handle_t)&output;

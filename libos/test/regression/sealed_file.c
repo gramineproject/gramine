@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 #ifdef MODIFY_MRENCLAVE
     /* The build system adds MODIFE_MRENCLAVE macro to produce a slightly different executable (due
      * to the below different string), which in turn produces a different MRENCLAVE SGX measurement.
-     * This trick is to test `protected_mrsigner_files` functionality. */
+     * This trick is to test `_sgx_mrsigner` functionality. */
     printf("READING FROM MODIFIED ENCLAVE OK\n");
 #else
     printf("READING OK\n");
