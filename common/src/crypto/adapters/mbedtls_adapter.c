@@ -506,3 +506,14 @@ int lib_HKDF_SHA256(const uint8_t* input_key, size_t input_key_size, const uint8
                            input_key_size, info, info_size, output_key, output_key_size);
     return mbedtls_to_pal_error(ret);
 }
+
+/* mbedTLS library will use this implementation to zeroize a block of memory, see
+ * https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/include/mbedtls/mbedtls_config.h#L3890.
+ * We explicitly specify this to skip mbedTLS's auto detection of the presence of a platform secure
+ * memset at the compiling stage, which can lead to errors at the linking stage. See
+ * https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/library/platform_util.c#L110-L127 for details. */
+void mbedtls_platform_zeroize(void* buf, size_t len) {
+    assert(len == 0 || buf != NULL);
+
+    erase_memory(buf, len);
+}
