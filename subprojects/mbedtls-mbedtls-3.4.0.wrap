@@ -1,0 +1,11 @@
+[wrap-file]
+directory = mbedtls-mbedtls-3.4.0
+source_url = https://github.com/ARMmbed/mbedtls/archive/mbedtls-3.4.0.tar.gz
+source_fallback_url = https://packages.gramineproject.io/distfiles/mbedtls-3.4.0.tar.gz
+source_filename = mbedtls-3.4.0.tar.gz
+source_hash = a5dac98592b1ac2232de0aed8f4ee62dffaa99e843e6f41dca2958095c737afd
+
+patch_directory = mbedtls
+
+# this unpacks the sources to `mbedtls-mbedtls-3.4.0/mbedtls-mbedtls-3.4.0`
+lead_directory_missing = true
