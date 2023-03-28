@@ -20,9 +20,13 @@
 static uintptr_t g_untrusted_page_next_entry = 0;
 static spinlock_t g_untrusted_page_lock = INIT_SPINLOCK_UNLOCKED;
 
-static int alloc_untrusted_futex_word(uint32_t** out_addr) {
+/* Allocate 8-byte ints instead of classic 4-byte ints for the futex word. This is to mitigate
+ * CVE-2022-21166 (INTEL-SA-00615) which requires all writes to untrusted memory from within the
+ * enclave to be done in 8-byte chunks aligned to 8-bytes boundary. Since the 8-byte ints returned
+ * are guaranteed to be 8-byte aligned, we don't need to care about the alignment later. */
+static int alloc_untrusted_futex_word(uint64_t** out_addr) {
     spinlock_lock(&g_untrusted_page_lock);
-    static_assert(PAGE_SIZE % sizeof(uint32_t) == 0, "required by the check below");
+    static_assert(PAGE_SIZE % sizeof(uint64_t) == 0, "required by the check below");
     if (g_untrusted_page_next_entry % PAGE_SIZE == 0) {
         void* untrusted_page;
         int ret = ocall_mmap_untrusted(&untrusted_page, PAGE_SIZE, PROT_READ | PROT_WRITE,
@@ -44,11 +48,9 @@ static int alloc_untrusted_futex_word(uint32_t** out_addr) {
     }
 
     uintptr_t addr = g_untrusted_page_next_entry;
-    g_untrusted_page_next_entry += sizeof(uint32_t);
+    g_untrusted_page_next_entry += sizeof(uint64_t);
 #ifdef ASAN
-    /* ASAN requires 8-byte aligned addresses, so we need to pad. */
-    g_untrusted_page_next_entry += sizeof(uint32_t);
-    asan_unpoison_region(addr, 2 * sizeof(uint32_t));
+    asan_unpoison_region(addr, sizeof(uint64_t));
 #endif
 
     /* This counter is only used to decide when to free the page - untrusted host can do this anyway
@@ -58,11 +60,11 @@ static int alloc_untrusted_futex_word(uint32_t** out_addr) {
     COPY_VALUE_TO_UNTRUSTED(untrusted_users_counter_ptr, users_counter + 1);
     spinlock_unlock(&g_untrusted_page_lock);
 
-    *out_addr = (uint32_t*)addr;
+    *out_addr = (uint64_t*)addr;
     return 0;
 }
 
-static void free_untrusted_futex_word(uint32_t* addr) {
+static void free_untrusted_futex_word(uint64_t* addr) {
     uint64_t* untrusted_users_counter_ptr = (uint64_t*)ALIGN_DOWN((uintptr_t)addr, PAGE_SIZE);
 
     void* addr_to_munmap = NULL;
@@ -79,7 +81,7 @@ static void free_untrusted_futex_word(uint32_t* addr) {
         COPY_VALUE_TO_UNTRUSTED(untrusted_users_counter_ptr, users_counter - 1);
     }
 #ifdef ASAN
-    asan_poison_region((uintptr_t)addr, 2 * sizeof(uint32_t), ASAN_POISON_HEAP_LEFT_REDZONE);
+    asan_poison_region((uintptr_t)addr, sizeof(uint64_t), ASAN_POISON_HEAP_LEFT_REDZONE);
 #endif
     spinlock_unlock(&g_untrusted_page_lock);
 
@@ -131,7 +133,12 @@ void _PalEventSet(PAL_HANDLE handle) {
     if (need_wake) {
         int ret = 0;
         do {
-            ret = ocall_futex(handle->event.signaled_untrusted, FUTEX_WAKE,
+            /* We use 8-byte ints instead of classic 4-byte ints for futexes. This is to mitigate
+             * CVE-2022-21166 (INTEL-SA-00615) which requires all writes to untrusted memory from
+             * within the enclave to be done in 8-byte chunks aligned to 8-bytes boundary. We hence
+             * cast this 8-byte int of the futex word to a 4-byte int here to be compatible with
+             * futex() syscall signature. */
+            ret = ocall_futex((uint32_t*)handle->event.signaled_untrusted, FUTEX_WAKE,
                               handle->event.auto_clear ? 1 : INT_MAX, /*timeout=*/NULL);
         } while (ret == -EINTR);
         /* This `FUTEX_WAKE` cannot really fail. Negative return value would mean malicious host,
@@ -172,7 +179,13 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
         }
         spinlock_unlock(&handle->event.lock);
 
-        int ret = ocall_futex(handle->event.signaled_untrusted, FUTEX_WAIT, 0, timeout_us);
+        /* We use 8-byte ints instead of classic 4-byte ints for futexes. This is to mitigate
+         * CVE-2022-21166 (INTEL-SA-00615) which requires all writes to untrusted memory from within
+         * the enclave to be done in 8-byte chunks aligned to 8-bytes boundary. We hence cast this
+         * 8-byte int of the futex word to a 4-byte int here to be compatible with futex() syscall
+         * signature. */
+        int ret = ocall_futex((uint32_t*)handle->event.signaled_untrusted, FUTEX_WAIT, 0,
+                              timeout_us);
         if (ret < 0 && ret != -EAGAIN) {
             if (added_to_count) {
                 spinlock_lock(&handle->event.lock);

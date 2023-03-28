@@ -133,8 +133,11 @@ typedef struct {
             bool signaled;
             bool auto_clear;
             /* Access to the *content* of this field should be atomic, because it's used as futex
-             * word on the untrusted host. */
-            uint32_t* signaled_untrusted;
+             * word on the untrusted host. We use 8-byte ints instead of classic 4-byte ints for
+             * this futex word. This is to mitigate CVE-2022-21166 (INTEL-SA-00615) which requires
+             * all writes to untrusted memory from within the enclave to be done in 8-byte chunks
+             * aligned to 8-bytes boundary.*/
+            uint64_t* signaled_untrusted;
         } event;
     };
 }* PAL_HANDLE;
