@@ -9,41 +9,41 @@
 # TODO: remove this patch after we drop Ubuntu 18.04 support
 
 diff --git a/library/net_sockets.c b/library/net_sockets.c
-index 17a9e4a5760bb19270af584f9acc861c2f9ab4c7..b02b4c99f15c4881876bf8a061748056f1161b86 100644
+index e63d08b15dda887e3a62528f43505b64b7bbc99f..b37f26e60d2b0546c1b8a29276caaa7a6d5cbe0e 100644
 --- a/library/net_sockets.c
 +++ b/library/net_sockets.c
-@@ -92,6 +92,7 @@ static int wsa_init_done = 0;
+@@ -88,6 +88,7 @@ static int wsa_init_done = 0;
  #include <fcntl.h>
  #include <netdb.h>
  #include <errno.h>
 +#include <sys/syscall.h>
  
- #define IS_EINTR( ret ) ( ( ret ) == EINTR )
+ #define IS_EINTR(ret) ((ret) == EINTR)
  
-@@ -313,7 +314,7 @@ static int net_would_block( const mbedtls_net_context *ctx )
+@@ -309,7 +310,7 @@ static int net_would_block(const mbedtls_net_context *ctx)
      /*
       * Never return 'WOULD BLOCK' on a blocking socket
       */
--    if( ( fcntl( ctx->fd, F_GETFL ) & O_NONBLOCK ) != O_NONBLOCK )
-+    if( ( syscall( SYS_fcntl, ctx->fd, F_GETFL ) & O_NONBLOCK ) != O_NONBLOCK )
-     {
+-    if ((fcntl(ctx->fd, F_GETFL) & O_NONBLOCK) != O_NONBLOCK) {
++    if ((syscall(SYS_fcntl, ctx->fd, F_GETFL) & O_NONBLOCK) != O_NONBLOCK) {
          errno = err;
-         return( 0 );
-@@ -462,7 +463,7 @@ int mbedtls_net_set_block( mbedtls_net_context *ctx )
+         return 0;
+     }
+@@ -447,7 +448,7 @@ int mbedtls_net_set_block(mbedtls_net_context *ctx)
      u_long n = 0;
-     return( ioctlsocket( ctx->fd, FIONBIO, &n ) );
+     return ioctlsocket(ctx->fd, FIONBIO, &n);
  #else
--    return( fcntl( ctx->fd, F_SETFL, fcntl( ctx->fd, F_GETFL ) & ~O_NONBLOCK ) );
-+    return( syscall( SYS_fcntl, ctx->fd, F_SETFL, syscall(SYS_fcntl, ctx->fd, F_GETFL ) & ~O_NONBLOCK ) );
+-    return fcntl(ctx->fd, F_SETFL, fcntl(ctx->fd, F_GETFL) & ~O_NONBLOCK);
++    return syscall(SYS_fcntl, ctx->fd, F_SETFL, syscall(SYS_fcntl, ctx->fd, F_GETFL) & ~O_NONBLOCK);
  #endif
  }
  
-@@ -473,7 +474,7 @@ int mbedtls_net_set_nonblock( mbedtls_net_context *ctx )
+@@ -458,7 +459,7 @@ int mbedtls_net_set_nonblock(mbedtls_net_context *ctx)
      u_long n = 1;
-     return( ioctlsocket( ctx->fd, FIONBIO, &n ) );
+     return ioctlsocket(ctx->fd, FIONBIO, &n);
  #else
--    return( fcntl( ctx->fd, F_SETFL, fcntl( ctx->fd, F_GETFL ) | O_NONBLOCK ) );
-+    return( syscall( SYS_fcntl, ctx->fd, F_SETFL, syscall( SYS_fcntl, ctx->fd, F_GETFL ) | O_NONBLOCK ) );
+-    return fcntl(ctx->fd, F_SETFL, fcntl(ctx->fd, F_GETFL) | O_NONBLOCK);
++    return syscall(SYS_fcntl, ctx->fd, F_SETFL, syscall(SYS_fcntl, ctx->fd, F_GETFL) | O_NONBLOCK);
  #endif
  }
  
