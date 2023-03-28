@@ -26,13 +26,13 @@ void* sgx_import_array2d_to_enclave(const void* uptr, size_t elem_size, size_t e
 
 #define COPY_UNTRUSTED_VALUE(untrusted_ptr) ({                          \
     __typeof__(*(untrusted_ptr)) val;                                   \
-    sgx_copy_to_enclave_verified(&val, (untrusted_ptr), sizeof(val));   \
+    sgx_copy_to_enclave_verified(&val, untrusted_ptr, sizeof(val));     \
     val;                                                                \
 })
 
 #define COPY_VALUE_TO_UNTRUSTED(untrusted_ptr, val) ({                            \
     __typeof__(*(untrusted_ptr)) src_val = (val);                                 \
-    sgx_copy_from_enclave_verified((untrusted_ptr), &src_val, sizeof(src_val));   \
+    sgx_copy_from_enclave_verified(untrusted_ptr, &src_val, sizeof(src_val));     \
 })
 
 /*!
