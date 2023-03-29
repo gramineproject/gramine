@@ -136,7 +136,8 @@ typedef struct {
              * word on the untrusted host. We use 8-byte ints instead of classic 4-byte ints for
              * this futex word. This is to mitigate CVE-2022-21166 (INTEL-SA-00615) which requires
              * all writes to untrusted memory from within the enclave to be done in 8-byte chunks
-             * aligned to 8-bytes boundary.*/
+             * aligned to 8-bytes boundary. We can safely typecast this 8-byte int to a 4-byte futex
+             * word because Intel SGX implies a little-endian CPU. */
             uint64_t* signaled_untrusted;
         } event;
     };
