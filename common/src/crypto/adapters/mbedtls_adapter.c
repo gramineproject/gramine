@@ -507,9 +507,22 @@ int lib_HKDF_SHA256(const uint8_t* input_key, size_t input_key_size, const uint8
     return mbedtls_to_pal_error(ret);
 }
 
-/* mbedTLS library will use this implementation of zeroizing a block of memory, see
- * https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/include/mbedtls/mbedtls_config.h#L3890 */
+/* Use a volatile function pointer to the standard memset(). This is taken from mbedTLS to make the
+ * implementation of mbedtls_platform_zeroize() survive from compiler optimization in most cases.
+ * See https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/library/platform_util.c#L69-L103 for
+ * detailed explanation. */
+static void *(*const volatile memset_func)(void *, int, size_t) = memset;
+
+/* mbedTLS library will use this implementation to zeroize a block of memory, see
+ * https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/include/mbedtls/mbedtls_config.h#L3890.
+ * Currently, we keep the same implementation as mbedTLS's built-in implementation. But we
+ * explicitly specify this to skip mbedTLS's auto detection of the presence of a platform secure
+ * memset at the compiling stage, which can lead to errors at the linking stage. See
+ * https://github.com/Mbed-TLS/mbedtls/blob/v3.4.0/library/platform_util.c#L110-L127 for details. */
 void mbedtls_platform_zeroize(void* buf, size_t len) {
     assert(len == 0 || buf != NULL);
-    erase_memory(buf, len);
+
+    if (len > 0) {
+        memset_func(buf, 0, len);
+    }
 }
