@@ -50,6 +50,10 @@ static int alloc_untrusted_futex_word(uint64_t** out_addr) {
     uintptr_t addr = g_untrusted_page_next_entry;
     g_untrusted_page_next_entry += sizeof(uint64_t);
 #ifdef ASAN
+    /* TODO: uncomment the following code once the painful mitigation for CVE-2022-21166
+     * (INTEL-SA-00615) can be removed in the future. This is a reminder that ASAN requires 8-byte
+     * aligned addresses, so we need to pad if using classic 4-byte ints for the futex word. */
+    /* g_untrusted_page_next_entry += sizeof(uint32_t); */
     asan_unpoison_region(addr, sizeof(uint64_t));
 #endif
 
