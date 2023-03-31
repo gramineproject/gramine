@@ -252,6 +252,7 @@ To run these tests::
 
 For more information on how to run the ltp tests, please refer to
 :file:`libos/test/ltp/README.rst`.
+<<<<<<< HEAD
 
 
 Management Team (Maintainers)
@@ -290,3 +291,5 @@ The Procedure for Adding and Removing Maintainers
   from this document.
 + Additionally, at least 60% (rounded up) of currently active members have to
   agree to make any change to the team membership.
+=======
+>>>>>>> [Doc] Updates suggest by Dmitrii.
