@@ -40,7 +40,9 @@ On Ubuntu 20.04 LTS and 18.04 LTS::
 Prepare a signing key
 ^^^^^^^^^^^^^^^^^^^^^
 
-Only if you haven't already::
+Only prepare a signing key if you haven't already done so.::
+
+The following command generates an |~| RSA 3072 key suitable for signing SGX enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. Protect this key and do not disclose it to anyone:: 
 
    gramine-sgx-gen-private-key
 
@@ -65,5 +67,3 @@ Run the HelloWorld example with SGX::
    cd gramine/CI-Examples/helloworld
    make SGX=1
    gramine-sgx helloworld
-
-   
