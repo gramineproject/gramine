@@ -23,7 +23,7 @@ hardware-independent applications.
 
 Gramine currently has two backends: direct execution on the host Linux OS (called `gramine-direct`)
 and execution inside an Intel SGX enclave (called `gramine-sgx`). If some feature has quirks and
-pecularities in some backend, we describe it explicitly. More backends are possible in the future.
+peculiarities in some backend, we describe it explicitly. More backends are possible in the future.
 
 Features implemented in Gramine can be classified as:
 
