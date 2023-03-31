@@ -1,5 +1,5 @@
 Build and install Gramine from source
-====================
+=====================================
 
 .. highlight:: sh
 
@@ -273,13 +273,17 @@ Additional build options
 Prepare a signing key
 ---------------------
 
-Only for SGX enclave development, and if you haven't already, run the following
-command::
+These instructions are only required for systems using Intel® SGX that have not already created a signing key.
+
+   - If your system is not using Intel® SGX, skip this step.
+
+   - If your system is using Intel® SGX and you already created a signing key, skip this step. 
+
+   - If your system is using Intel® SGX and have not created a signing key, follow the instructions below. 
+
+The following command generates an |~| RSA 3072 key suitable for signing SGX enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. Protect this key and do not disclose it to anyone:: 
 
    gramine-sgx-gen-private-key
-
-This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
-stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. Protect this key and do not disclose it to anyone.
 
 After signing the application's manifest, users may ship the application and
 Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
