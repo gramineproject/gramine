@@ -360,7 +360,7 @@ SGX terminology
 
          :term:`DCAP`
 
-Key Separation and Sharing
+   Key Separation and Sharing
    KSS
       A feature that lets developer define additional enclave identity
       attributes and configuration identifier. Extended enclave identity
@@ -390,7 +390,6 @@ Key Separation and Sharing
 
       This feature was not part of original SGX and therefore not supported by
       all SGX-enabled hardware.
-
 
    Launch Enclave
    LE
