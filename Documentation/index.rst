@@ -92,7 +92,6 @@ Table of Contents
    :caption: Developing Gramine
    :maxdepth: 1
 
-   devel/features
    devel/building
    devel/onboarding
    devel/contributing
@@ -103,6 +102,7 @@ Table of Contents
    devel/debugging
    devel/new-syscall
    devel/packaging
+   devel/features
 
 .. toctree::
    :caption: LibOS

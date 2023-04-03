@@ -1,19 +1,20 @@
-<!-- Cannot render this doc in RestructedText as it has no support for nested inline markup. -->
+<!-- Cannot render this doc in reStructedText as it has no support for nested inline markup. -->
 
 # Gramine features
 
-> ⚠ Highly technical document intended for software engineers with knowledge of OS kernels.
+> ⚠ This is a highly technical document intended for software engineers with knowledge of OS
+> kernels.
 
 > ⛏ This is a living document. The last major update happened in **March 2023**.
 
-Gramine strives to **support native, unmodified Linux applications** on any platform. The SGX
-backend additionally strives to **provide security guarantees**, in particular, protect against a
-malicious host OS.
+Gramine strives to **run native, unmodified Linux applications** on any platform. The SGX backend
+additionally strives to **provide security guarantees**, in particular, protect against a malicious
+host OS.
 
 Gramine **intercepts all application requests** to the host OS. Some of these requests are processed
-entirely inside Gramine, and some are forwarded to the host OS. Either way, each application's
-request and each host's reply are verified for correctness and consistency. For these verifications,
-Gramine maintains internal, "shadow" state. Thus, Gramine defends against [Iago
+entirely inside Gramine, and some are funneled through a thin API to the host OS. Either way, each
+application's request and each host's reply are verified for correctness and consistency. For these
+verifications, Gramine maintains internal, "shadow" state. Thus, Gramine defends against [Iago
 attacks](https://dl.acm.org/doi/10.1145/2490301.2451145).
 
 Gramine strives to be **100% compatible with the Linux kernel**, even when it deviates from
@@ -21,17 +22,17 @@ standards like POSIX ("bug-for-bug compatibility"). At the same time, Gramine is
 implements **only the most important subset of Linux functionality**, enough to run portable,
 hardware-independent applications.
 
-Gramine currently has two backends: direct execution on the host Linux OS (called `gramine-direct`)
-and execution inside an Intel SGX enclave (called `gramine-sgx`). If some feature has quirks and
+Gramine currently has two backends: execution on the host Linux OS (called `gramine-direct`) and
+execution inside an Intel SGX enclave (called `gramine-sgx`). If some feature has quirks and
 peculiarities in some backend, we describe it explicitly. More backends are possible in the future.
 
 Features implemented in Gramine can be classified as:
 
 - **Linux features**: features can be (1) implemented, (2) partially implemented, or (3) not
   implemented at all in Gramine. If the feature is partially implemented, then we also document the
-  parts that are implemented and the parts that are implemented. If the feature is not implemented
-  at all, we also specify whether there are plans to implement it in the future (and if not, the
-  rationale why not).
+  parts that are implemented and the parts that are not implemented. If the feature is not
+  implemented at all, we also specify whether there are plans to implement it in the future (and if
+  not, the rationale why not).
 
   - Some features are **not implemented by design**: either they increase the Trusted Computing Base
     (TCB) of Gramine disproportionately, or they cannot be implemented securely.
@@ -59,7 +60,7 @@ Each feature has a list of related system calls and pseudo-files, for cross-refe
 
 Similarly to Linux, Gramine provides two interfaces to user applications:
 
-- **Linux kernel-to-userspace API**, consisting of two sub-interfaces:
+- **Linux userspace-to-kernel interface**, consisting of two sub-interfaces:
 
   - **Linux System Call Interface**: a set of system calls which allow applications to access system
     resources and services. Examples: `open()`, `fork()`, `gettimeofday()`.
@@ -68,7 +69,7 @@ Similarly to Linux, Gramine provides two interfaces to user applications:
     about the Gramine instance, system resources, hardware configuration, etc. These filesystems are
     generated on the fly upon Gramine startup. Examples: `/proc/cpuinfo`, `/dev/attestation/quote`.
 
-- **Linux kernel-to-userspace ABI**, in particular, two standards:
+- **Linux kernel-to-userspace interface**, in particular, two standards:
 
   - **System V ABI**: defines how applications invoke system calls and receive signals.
   - **Executable and Linking Format (ELF)**: defines how applications are loaded from binary files.
@@ -78,16 +79,16 @@ Similarly to Linux, Gramine provides two interfaces to user applications:
 Legend:
 
 - ☑ implemented (no serious limitations)
-- ☐ partially implemented (serious limitations or quirks)
+- ▣ partially implemented (serious limitations or quirks)
 - ☒ not implemented
 
 ## List of system calls
 
 Gramine implements ~170 system calls out of ~360 system calls available on Linux. Many system calls
 are implemented only partially, typically because real world workloads do not use the unimplemented
-functionality (for example, `O_ASYNC` flag in `open()` is not used). Some system calls are not
-implemented because they are deprecated in Linux, because they are unused by real world applications
-or because they don't fit the purpose of Gramine ("virtualize a single application").
+functionality (for example, `O_ASYNC` flag in `open()` is not used widely). Some system calls are
+not implemented because they are deprecated in Linux, because they are unused by real world
+applications or because they don't fit the purpose of Gramine ("virtualize a single application").
 
 The list of implemented system calls grows with time, as Gramine adds functionality required by real
 world workloads.
@@ -100,55 +101,55 @@ The below list is generated from the [syscall table of Linux
 - ☑ `read()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
 - ☑ `write()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
-- ☐ `open()`
+- ▣ `open()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `close()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#event-notifications-eventfd)</sup>
 
-- ☐ `stat()`
+- ▣ `stat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `fstat()`
+- ▣ `fstat()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- ☐ `lstat()`
+- ▣ `lstat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `poll()`
+- ▣ `poll()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- ☐ `lseek()`
+- ▣ `lseek()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `mmap()`
+- ▣ `mmap()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#file-system-operations)</sup>
 
-- ☐ `mprotect()`
+- ▣ `mprotect()`
   <sup>[1](#memory-management)</sup>
 
 - ☑ `munmap()`
@@ -167,9 +168,9 @@ The below list is generated from the [syscall table of Linux
 - ☑ `rt_sigreturn()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- ☐ `ioctl()`
+- ▣ `ioctl()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[2](#tcpip-and-udpip-sockets)</sup>
+  <sup>[2](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[3](#unix-domain-sockets)</sup>
   <sup>[4](#ioctls)</sup>
 
@@ -182,27 +183,27 @@ The below list is generated from the [syscall table of Linux
 - ☑ `readv()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
 - ☑ `writev()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- ☐ `access()`
+- ▣ `access()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `pipe()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- ☐ `select()`
+- ▣ `select()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☑ `sched_yield()`
@@ -211,14 +212,14 @@ The below list is generated from the [syscall table of Linux
 - ☒ `mremap()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `msync()`
+- ▣ `msync()`
   <sup>[1](#memory-management)</sup>
   <sup>[2](#file-system-operations)</sup>
 
-- ☐ `mincore()`
+- ▣ `mincore()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `madvise()`
+- ▣ `madvise()`
   <sup>[1](#memory-management)</sup>
 
 - ☒ `shmget()`
@@ -242,81 +243,81 @@ The below list is generated from the [syscall table of Linux
 - ☑ `nanosleep()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- ☐ `getitimer()`
+- ▣ `getitimer()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `alarm()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- ☐ `setitimer()`
+- ▣ `setitimer()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `getpid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- ☐ `sendfile()`
+- ▣ `sendfile()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
 
-- ☐ `socket()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `socket()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `connect()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `accept()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- ☐ `sendto()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `sendto()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- ☐ `recvfrom()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `recvfrom()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- ☐ `sendmsg()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `sendmsg()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
-- ☐ `recvmsg()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `recvmsg()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `shutdown()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `bind()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `listen()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `getsockname()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `getpeername()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `socketpair()`
   <sup>[1](#unix-domain-sockets)</sup>
 
 - ☑ `setsockopt()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `getsockopt()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☑ `clone()`
@@ -336,13 +337,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
-- ☐ `wait4()`
+- ▣ `wait4()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- ☐ `kill()`
+- ▣ `kill()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- ☐ `uname()`
+- ▣ `uname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☒ `semget()`
@@ -369,10 +370,10 @@ The below list is generated from the [syscall table of Linux
 - ☒ `msgctl()`
   <sup>[1](#message-queues)</sup>
 
-- ☐ `fcntl()`
+- ▣ `fcntl()`
   <sup>[1](#file-locking)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
   <sup>[5](#misc)</sup>
 
@@ -385,10 +386,10 @@ The below list is generated from the [syscall table of Linux
 - ☑ `fdatasync()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `truncate()`
+- ▣ `truncate()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `ftruncate()`
+- ▣ `ftruncate()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `getdents()`
@@ -403,7 +404,7 @@ The below list is generated from the [syscall table of Linux
 - ☑ `fchdir()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `rename()`
+- ▣ `rename()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `mkdir()`
@@ -424,7 +425,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `symlink()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- ☐ `readlink()`
+- ▣ `readlink()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `chmod()`
@@ -433,10 +434,10 @@ The below list is generated from the [syscall table of Linux
 - ☑ `fchmod()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `chown()`
+- ▣ `chown()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `fchown()`
+- ▣ `fchown()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `lchown()`
@@ -449,53 +450,53 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#date-and-time)</sup>
   <sup>[2](#misc)</sup>
 
-- ☐ `getrlimit()`
+- ▣ `getrlimit()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☒ `getrusage()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- ☐ `sysinfo()`
+- ▣ `sysinfo()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☒ `times()`
   <sup>[1](#date-and-time)</sup>
 
 - ☒ `ptrace()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `getuid()`
+- ▣ `getuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
 - ☒ `syslog()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `getgid()`
+- ▣ `getgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `setuid()`
+- ▣ `setuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `setgid()`
+- ▣ `setgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `geteuid()`
+- ▣ `geteuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `getegid()`
+- ▣ `getegid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `setpgid()`
+- ▣ `setpgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
 - ☑ `getppid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
-- ☐ `getpgrp()`
+- ▣ `getpgrp()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
 - ☒ `setsid()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `setreuid()`
   <sup>[1](#user-and-group-identifiers)</sup>
@@ -503,10 +504,10 @@ The below list is generated from the [syscall table of Linux
 - ☒ `setregid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `getgroups()`
+- ▣ `getgroups()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `setgroups()`
+- ▣ `setgroups()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
 - ☒ `setresuid()`
@@ -521,7 +522,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `getresgid()`
   <sup>[1](#user-and-group-identifiers)</sup>
 
-- ☐ `getpgid()`
+- ▣ `getpgid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
 - ☒ `setfsuid()`
@@ -531,13 +532,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#user-and-group-identifiers)</sup>
 
 - ☒ `getsid()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `capget()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `capset()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `rt_sigpending()`
   <sup>[1](#signals-and-process-state-changes)</sup>
@@ -557,88 +558,88 @@ The below list is generated from the [syscall table of Linux
 - ☒ `utime()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `mknod()`
+- ▣ `mknod()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `uselib()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `personality()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ustat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `statfs()`
+- ▣ `statfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `fstatfs()`
+- ▣ `fstatfs()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `sysfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `getpriority()`
+- ▣ `getpriority()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `setpriority()`
+- ▣ `setpriority()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_setparam()`
+- ▣ `sched_setparam()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_getparam()`
+- ▣ `sched_getparam()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_setscheduler()`
+- ▣ `sched_setscheduler()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_getscheduler()`
+- ▣ `sched_getscheduler()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_get_priority_max()`
+- ▣ `sched_get_priority_max()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_get_priority_min()`
+- ▣ `sched_get_priority_min()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `sched_rr_get_interval()`
+- ▣ `sched_rr_get_interval()`
   <sup>[1](#scheduling)</sup>
 
-- ☐ `mlock()`
+- ▣ `mlock()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `munlock()`
+- ▣ `munlock()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `mlockall()`
+- ▣ `mlockall()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `munlockall()`
+- ▣ `munlockall()`
   <sup>[1](#memory-management)</sup>
 
 - ☒ `vhangup()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `modify_ldt()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pivot_root()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `_sysctl()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `prctl()`
   <sup>[1](#threads)</sup>
 
-- ☐ `arch_prctl()`
+- ▣ `arch_prctl()`
   <sup>[1](#threads)</sup>
 
 - ☒ `adjtimex()`
   <sup>[1](#date-and-time)</sup>
 
-- ☐ `setrlimit()`
+- ▣ `setrlimit()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☑ `chroot()`
@@ -648,7 +649,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `acct()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `settimeofday()`
   <sup>[1](#date-and-time)</sup>
@@ -660,111 +661,111 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `swapon()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `swapoff()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `reboot()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `sethostname()`
+- ▣ `sethostname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
-- ☐ `setdomainname()`
+- ▣ `setdomainname()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☒ `iopl()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ioperm()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `create_module()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `init_module()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `delete_module()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `get_kernel_syms()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `query_module()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☒`quotactl()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+- ☒ `quotactl()`
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `nfsservctl()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `getpmsg()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `putpmsg()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `afs_syscall()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `tuxcall()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `security()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `gettid()`
   <sup>[1](#process-and-thread-identifiers)</sup>
 
 - ☒ `readahead()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `setxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lsetxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsetxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `getxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lgetxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fgetxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `listxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `llistxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `flistxattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `removexattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lremovexattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fremovexattr()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `tkill()`
+- ▣ `tkill()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
 - ☑ `time()`
   <sup>[1](#date-and-time)</sup>
 
-- ☐ `futex()`
+- ▣ `futex()`
   <sup>[1](#memory-synchronization-futexes)</sup>
 
 - ☑ `sched_setaffinity()`
@@ -777,32 +778,32 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#threads)</sup>
 
 - ☒ `io_setup()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_destroy()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_getevents()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_submit()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_cancel()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `get_thread_area()`
   <sup>[1](#threads)</sup>
 
 - ☒ `lookup_dcookie()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `epoll_create()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☒ `remap_file_pages()`
@@ -815,12 +816,12 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#process-and-thread-identifiers)</sup>
 
 - ☒ `restart_syscall()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `semtimedop()`
   <sup>[1](#semaphores)</sup>
 
-- ☐ `fadvise64()`
+- ▣ `fadvise64()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `timer_create()`
@@ -841,13 +842,13 @@ The below list is generated from the [syscall table of Linux
 - ☒ `clock_settime()`
   <sup>[1](#date-and-time)</sup>
 
-- ☐ `clock_gettime()`
+- ▣ `clock_gettime()`
   <sup>[1](#date-and-time)</sup>
 
-- ☐ `clock_getres()`
+- ▣ `clock_getres()`
   <sup>[1](#date-and-time)</sup>
 
-- ☐ `clock_nanosleep()`
+- ▣ `clock_nanosleep()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `exit_group()`
@@ -856,17 +857,17 @@ The below list is generated from the [syscall table of Linux
 - ☑ `epoll_wait()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_ctl()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☑ `tgkill()`
@@ -876,9 +877,9 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `vserver()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `mbind()`
+- ▣ `mbind()`
   <sup>[1](#memory-management)</sup>
 
 - ☒ `set_mempolicy()`
@@ -906,19 +907,19 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#message-queues)</sup>
 
 - ☒ `kexec_load()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `waitid()`
+- ▣ `waitid()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
 - ☒ `add_key()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `request_key()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `keyctl()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ioprio_set()`
   <sup>[1](#scheduling)</sup>
@@ -938,28 +939,28 @@ The below list is generated from the [syscall table of Linux
 - ☒ `migrate_pages()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `openat()`
+- ▣ `openat()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `mkdirat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `mknodat()`
+- ▣ `mknodat()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
-- ☐ `fchownat()`
+- ▣ `fchownat()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `futimesat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `newfstatat()`
+- ▣ `newfstatat()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☑ `unlinkat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `renameat()`
+- ▣ `renameat()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `linkat()`
@@ -968,34 +969,34 @@ The below list is generated from the [syscall table of Linux
 - ☒ `symlinkat()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- ☐ `readlinkat()`
+- ▣ `readlinkat()`
   <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `fchmodat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `faccessat()`
+- ▣ `faccessat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `pselect6()`
+- ▣ `pselect6()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
-- ☐ `ppoll()`
+- ▣ `ppoll()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☒ `unshare()`
   <sup>[1](#processes)</sup>
-  <sup>[2](#advanced-unimplemented-features)</sup>
+  <sup>[2](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `set_robust_list()`
   <sup>[1](#memory-synchronization-futexes)</sup>
@@ -1004,16 +1005,16 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#memory-synchronization-futexes)</sup>
 
 - ☒ `splice()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `tee()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `sync_file_range()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `vmsplice()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `move_pages()`
   <sup>[1](#memory-management)</sup>
@@ -1021,12 +1022,12 @@ The below list is generated from the [syscall table of Linux
 - ☒ `utimensat()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `epoll_pwait()`
+- ▣ `epoll_pwait()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☒ `signalfd()`
@@ -1035,10 +1036,10 @@ The below list is generated from the [syscall table of Linux
 - ☒ `timerfd_create()`
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
-- ☐ `eventfd()`
+- ▣ `eventfd()`
   <sup>[1](#event-notifications-eventfd)</sup>
 
-- ☐ `fallocate()`
+- ▣ `fallocate()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `timerfd_settime()`
@@ -1048,27 +1049,27 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `accept4()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☒ `signalfd4()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
-- ☐ `eventfd2()`
+- ▣ `eventfd2()`
   <sup>[1](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_create1()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☑ `dup3()`
   <sup>[1](#misc)</sup>
 
-- ☐ `pipe2()`
+- ▣ `pipe2()`
   <sup>[1](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `inotify_init1()`
@@ -1084,10 +1085,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#signals-and-process-state-changes)</sup>
 
 - ☒ `perf_event_open()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `recvmmsg()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `recvmmsg()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☒ `fanotify_init()`
@@ -1096,7 +1097,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `fanotify_mark()`
   <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
-- ☐ `prlimit64()`
+- ▣ `prlimit64()`
   <sup>[1](#system-information-and-resource-accounting)</sup>
 
 - ☒ `name_to_handle_at()`
@@ -1111,28 +1112,28 @@ The below list is generated from the [syscall table of Linux
 - ☒ `syncfs()`
   <sup>[1](#file-system-operations)</sup>
 
-- ☐ `sendmmsg()`
-  <sup>[1](#tcpip-and-udpip-sockets)</sup>
+- ▣ `sendmmsg()`
+  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[2](#unix-domain-sockets)</sup>
 
 - ☒ `setns()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
-- ☐ `getcpu()`
+- ▣ `getcpu()`
   <sup>[1](#scheduling)</sup>
   <sup>[2](#misc)</sup>
 
 - ☒ `process_vm_readv()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `process_vm_writev()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `kcmp()`
   <sup>[1](#processes)</sup>
 
 - ☒ `finit_module()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `sched_setattr()`
   <sup>[1](#scheduling)</sup>
@@ -1144,7 +1145,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `seccomp()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `getrandom()`
   <sup>[1](#randomness)</sup>
@@ -1153,10 +1154,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#memory-management)</sup>
 
 - ☒ `kexec_file_load()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `bpf()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `execveat()`
   <sup>[1](#processes)</sup>
@@ -1167,11 +1168,11 @@ The below list is generated from the [syscall table of Linux
 - ☒ `membarrier()`
   <sup>[1](#memory-management)</sup>
 
-- ☐ `mlock2()`
+- ▣ `mlock2()`
   <sup>[1](#memory-management)</sup>
 
 - ☒ `copy_file_range()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `preadv2()`
   <sup>[1](#file-system-operations)</sup>
@@ -1180,52 +1181,52 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `pkey_mprotect()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_alloc()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_free()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `statx()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `io_pgetevents()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `rseq()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_send_signal()`
   <sup>[1](#signals-and-process-state-changes)</sup>
 
 - ☒ `io_uring_setup()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_uring_enter()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `io_uring_register()`
-  <sup>[1](#asynchronous-io)</sup>
+  <sup>[1](#asynchronous-i-o)</sup>
 
 - ☒ `open_tree()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `move_mount()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `fsopen()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsconfig()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsmount()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fspick()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_open()`
   <sup>[1](#signals-and-process-state-changes)</sup>
@@ -1235,7 +1236,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[2](#threads)</sup>
 
 - ☒ `close_range()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `openat2()`
   <sup>[1](#file-system-operations)</sup>
@@ -1253,25 +1254,25 @@ The below list is generated from the [syscall table of Linux
 - ☒ `epoll_pwait2()`
   <sup>[1](#file-system-operations)</sup>
   <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcpip-and-udpip-sockets)</sup>
+  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
   <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#io-multiplexing)</sup>
+  <sup>[5](#i-o-multiplexing)</sup>
   <sup>[6](#event-notifications-eventfd)</sup>
 
 - ☒ `mount_setattr()`
   <sup>[1](#file-system-operations)</sup>
 
 - ☒ `quotactl_fd()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_create_ruleset()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_add_rule()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_restrict_self()`
-  <sup>[1](#advanced-unimplemented-features)</sup>
+  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `memfd_secret()`
   <sup>[1](#memory-management)</sup>
@@ -1293,7 +1294,7 @@ The below list is generated from the [syscall table of Linux
 Gramine partially emulates Linux pseudo-filesystems: `/dev`, `/proc` and `/sys`.
 
 Only a subset of most widely used pseudo-files is implemented. The list of implemented pseudo-files
-grows with time, as Gramine adds functionality required by real world workloads.
+grows with time, as Gramine adds functionality required by real-world workloads.
 
 <details><summary>List of all pseudo-files in Gramine</summary>
 
@@ -1308,7 +1309,7 @@ grows with time, as Gramine adds functionality required by real world workloads.
     - ☑ `/dev/attestation/report` <sup>[1](#attestation)</sup>
     - ☑ `/dev/attestation/keys` <sup>[1](#attestation)</sup>
       - ☑ `/dev/attestation/keys/<key_name>` <sup>[1](#attestation)</sup>
-    - ☐ `/dev/attestation/protected_files_key`
+    - ▣ `/dev/attestation/protected_files_key`
       <sup>[1](#attestation)</sup>
   - ☑ `/dev/null` <sup>[1](#misc)</sup>
   - ☑ `/dev/zero` <sup>[1](#misc)</sup>
@@ -1319,13 +1320,13 @@ grows with time, as Gramine adds functionality required by real world workloads.
   - ☑ `/dev/stdout` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
   - ☑ `/dev/stderr` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- ☐ `/proc/`
+- ▣ `/proc/`
   <sup>[1](#process-and-thread-identifiers)</sup>
   <sup>[2](#user-and-group-identifiers)</sup>
   <sup>[3](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[4](#system-information-and-resource-accounting)</sup>
-  <sup>[5](#tcpip-and-udpip-sockets)</sup> <sup>[6](#unix-domain-sockets)</sup>
-  - ☐ `/proc/[this-pid]/` (aka `/proc/self/`)
+  <sup>[5](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[6](#unix-domain-sockets)</sup>
+  - ▣ `/proc/[this-pid]/` (aka `/proc/self/`)
     <sup>[1](#process-and-thread-identifiers)</sup>
     <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[this-pid]/cmdline` <sup>[1](#process-and-thread-identifiers)</sup>
@@ -1337,16 +1338,16 @@ grows with time, as Gramine adds functionality required by real world workloads.
     - ☑ `/proc/[this-pid]/maps` <sup>[1](#process-and-thread-identifiers)</sup>
     - ☑ `/proc/[this-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☐ `/proc/[this-pid]/stat`
+    - ▣ `/proc/[this-pid]/stat`
       <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☐ `/proc/[this-pid]/statm`
+    - ▣ `/proc/[this-pid]/statm`
       <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☐ `/proc/[this-pid]/status`
+    - ▣ `/proc/[this-pid]/status`
       <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#user-and-group-identifiers)</sup>
     - ☑ `/proc/[this-pid]/task` <sup>[1](#process-and-thread-identifiers)</sup>
 
-  - ☐ `/proc/[remote-pid]/`
+  - ▣ `/proc/[remote-pid]/`
     <sup>[1](#process-and-thread-identifiers)</sup>
     <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[remote-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
@@ -1356,39 +1357,39 @@ grows with time, as Gramine adds functionality required by real world workloads.
     - ☑ `/proc/[remote-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
       <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
 
-  - ☐ `/proc/[local-tid]/`
+  - ▣ `/proc/[local-tid]/`
     <sup>[1](#process-and-thread-identifiers)</sup>
 
   - ☒ `/proc/[remote-tid]/` <sup>[1](#process-and-thread-identifiers)</sup>
 
-  - ☐ `/proc/cpuinfo`
+  - ▣ `/proc/cpuinfo`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-  - ☐ `/proc/meminfo`
+  - ▣ `/proc/meminfo`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-  - ☐ `/proc/stat`
+  - ▣ `/proc/stat`
     <sup>[1](#system-information-and-resource-accounting)</sup>
 
-  - ☐ `/proc/sys/`
+  - ▣ `/proc/sys/`
     <sup>[1](#process-and-thread-identifiers)</sup>
-    <sup>[2](#tcpip-and-udpip-sockets)</sup> <sup>[3](#unix-domain-sockets)</sup>
-    - ☐ `/proc/sys/kernel/`
+    <sup>[2](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[3](#unix-domain-sockets)</sup>
+    - ▣ `/proc/sys/kernel/`
       <sup>[1](#process-and-thread-identifiers)</sup>
       - ☑ `/proc/sys/kernel/pid_max`
         <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☒ `/proc/sys/net/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+    - ☒ `/proc/sys/net/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
       <sup>[2](#unix-domain-sockets)</sup>
-      - ☒ `/proc/sys/net/core/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv4/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv6/` <sup>[1](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/core/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv4/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv6/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
       - ☒ `/proc/sys/net/unix/` <sup>[1](#unix-domain-sockets)</sup>
 
-- ☐ `/sys/devices/system/`
+- ▣ `/sys/devices/system/`
   <sup>[1](#system-information-and-resource-accounting)</sup>
-  - ☐ `/sys/devices/system/cpu/`
+  - ▣ `/sys/devices/system/cpu/`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-    - ☐ `/sys/devices/system/cpu/cpu[x]/`
+    - ▣ `/sys/devices/system/cpu/cpu[x]/`
       <sup>[1](#system-information-and-resource-accounting)</sup>
-      - ☐ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
+      - ▣ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
           <sup>[1](#system-information-and-resource-accounting)</sup>
@@ -1406,7 +1407,7 @@ grows with time, as Gramine adds functionality required by real world workloads.
           <sup>[1](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/cpu/cpu[x]/online`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-      - ☐ `/sys/devices/system/cpu/cpu[x]/topology/`
+      - ▣ `/sys/devices/system/cpu/cpu[x]/topology/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_id`
           <sup>[1](#system-information-and-resource-accounting)</sup>
@@ -1421,9 +1422,9 @@ grows with time, as Gramine adds functionality required by real world workloads.
     - ☑ `/sys/devices/system/cpu/possible`
       <sup>[1](#system-information-and-resource-accounting)</sup>
 
-  - ☐ `/sys/devices/system/node/`
+  - ▣ `/sys/devices/system/node/`
     <sup>[1](#system-information-and-resource-accounting)</sup>
-    - ☐ `/sys/devices/system/node/node[x]/`
+    - ▣ `/sys/devices/system/node/node[x]/`
       <sup>[1](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/node/node[x]/cpumap`
         <sup>[1](#system-information-and-resource-accounting)</sup>
@@ -1431,10 +1432,10 @@ grows with time, as Gramine adds functionality required by real world workloads.
         <sup>[1](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/node/node[x]/hugepages/`
         <sup>[1](#system-information-and-resource-accounting)</sup>
-        - ☐
+        - ▣
           `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`
           <sup>[1](#system-information-and-resource-accounting)</sup>
-      - ☐ `/sys/devices/system/node/node[x]/meminfo`
+      - ▣ `/sys/devices/system/node/node[x]/meminfo`
         <sup>[1](#system-information-and-resource-accounting)</sup>
 
 </details><br />
@@ -1447,7 +1448,7 @@ Gramine supports multi-processing. A Gramine instance starts the first (main) pr
 in the entrypoint of the manifest. The first process can spawn child processes, which belong to the
 same Gramine instance.
 
-Gramine can execute ELF binaries (executables and libraries) and scripts (aka shebangs). Gramine
+Gramine can execute ELF binaries (executables and libraries) and executable scripts. Gramine
 supports executing them as
 [entrypoints](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#libos-entrypoint) and
 via `execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program
@@ -1463,10 +1464,10 @@ bug in Gramine](https://github.com/gramineproject/gramine/issues/1156) that if o
 performing fork and another thread modifies the internal Gramine state, the state may get corrupted
 (which may lead to failures).
 
-Gramine supports process termination using `exit()` (if a single thread) and `exit_group()` (even if
-multiple threads) system calls. If there are child processes executing and the first process exits,
-Gramine currently does *not* kill child processes; this is however not a problem in practice because
-the host OS cleans up these orphaned children.
+Gramine supports process termination using `exit()` and `exit_group()` system calls. If there are
+child processes executing and the first process exits, Gramine currently does *not* kill child
+processes; this is however not a problem in practice because the host OS cleans up these orphaned
+children.
 
 All aforementioned system calls follow Linux semantics, barring the mentioned peculiarities.
 However, properties of processes not supported by Gramine (e.g. namespaces, pidfd, etc.) are
@@ -1478,22 +1479,22 @@ system call). Gramine does *not* support comparing two processes (via `kcmp()`).
 <details><summary>Related system calls</summary>
 
 - ☑ `execve()`
-- ☒ `execveat()`: not used by applications
-- ☑ `clone()`: except exotic combination `CLONE_VM & !CLONE_THREAD`
+- ☒ `execveat()`: very rarely used by applications
+- ☑ `clone()`: except exotic combination `CLONE_VM & !CLONE_THREAD & !CLONE_VFORK`
 - ☑ `fork()`
 - ☑ `vfork()`: with the same semantics as `fork()`
 - ☑ `exit()`
 - ☑ `exit_group()`
-- ☒ `clone3()`: not used by applications
-- ☒ `unshare()`: not used by applications
-- ☒ `kcmp()`: not used by applications
+- ☒ `clone3()`: very rarely used by applications
+- ☒ `unshare()`: very rarely used by applications
+- ☒ `kcmp()`: very rarely used by applications
 
 </details>
 
 <details><summary>Additional materials</summary>
 
 - `LD_LIBRARY_PATH` environment variable is always propagated into new process, see
-  https://github.com/gramineproject/graphene/issues/2081.
+  [the issue](https://github.com/gramineproject/graphene/issues/2081).
 
 </details><br />
 
@@ -1521,8 +1522,8 @@ arch-specific (x86-specific) thread state via `arch_prctl(ARCH_GET_FS)` and
 
 <details><summary>Note on thread's stack size</summary>
 
-Gramine sets the same stack size for each thread. In other words, Gramine does *not* support
-dynamically-growing stacks (as Linux does). The stack size in Gramine can be configured via the
+Gramine sets the same stack size for each thread. Gramine does *not* support dynamic growth of the
+first-thread stack (as Linux does). The stack size in Gramine can be configured via the
 [`sys.stack.size` manifest
 option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size).
 
@@ -1532,15 +1533,15 @@ option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size
 
 - ☑ `clone()`: must have combination `CLONE_VM | CLONE_THREAD`
 - ☑ `exit()`
-- ☒ `get_thread_area()`: not used by applications
-- ☒ `set_thread_area()`: not used by applications
-- ☒ `prctl()`: not used by applications
-- ☐ `arch_prctl()`: only x86-specific subset of flags
+- ☒ `get_thread_area()`: very rarely used by applications
+- ☒ `set_thread_area()`: very rarely used by applications
+- ☒ `prctl()`: very rarely used by applications
+- ▣ `arch_prctl()`: only x86-specific subset of flags
   - ☑ `ARCH_GET_FS`
   - ☑ `ARCH_SET_FS`
   - ☒ `ARCH_GET_GS`
   - ☒ `ARCH_SET_GS`
-- ☒ `clone3()`: not used by applications
+- ☒ `clone3()`: very rarely used by applications
 
 </details><br />
 
@@ -1568,15 +1569,15 @@ and no pseudo-files for remote threads. See the list under "Related pseudo-files
 - ☑ `gettid()`
 - ☑ `set_tid_address()`
 
-- ☐ `getpgid()`: dummy, see above
-- ☐ `setpgid()`: dummy, see above
-- ☐ `getpgrp()`: dummy, see above
+- ▣ `getpgid()`: dummy, see above
+- ▣ `setpgid()`: dummy, see above
+- ▣ `getpgrp()`: dummy, see above
 
 </details>
 
 <details><summary>Related pseudo-files</summary>
 
-- ☐ `/proc/[this-pid]/` (aka `/proc/self/`):
+- ▣ `/proc/[this-pid]/` (aka `/proc/self/`):
   only most important files implemented
   - ☑ `/proc/[this-pid]/cmdline`
   - ☑ `/proc/[this-pid]/cwd`
@@ -1584,27 +1585,27 @@ and no pseudo-files for remote threads. See the list under "Related pseudo-files
   - ☑ `/proc/[this-pid]/fd`
   - ☑ `/proc/[this-pid]/maps`
   - ☑ `/proc/[this-pid]/root`
-  - ☐ `/proc/[this-pid]/stat`: partially implemented
+  - ▣ `/proc/[this-pid]/stat`: partially implemented
     - ☑ `pid`, `comm`, `ppid`, `pgrp`, `num_threads`, `vsize`, `rss`
-    - ☐ `state`: always indicates "R" (running)
-    - ☐ `flags`: indicates only `PF_RANDOMIZE`
+    - ▣ `state`: always indicates "R" (running)
+    - ▣ `flags`: indicates only `PF_RANDOMIZE`
     - ☒ rest fields: always zero
-  - ☐ `/proc/[this-pid]/statm`: partially implemented
+  - ▣ `/proc/[this-pid]/statm`: partially implemented
     - ☑ `size`/`VmSize`, `resident`/`VmRSS`
     - ☒ rest fields: always zero
-  - ☐ `/proc/[this-pid]/status`: partially implemented
+  - ▣ `/proc/[this-pid]/status`: partially implemented
     - ☑ `VmPeak`
     - ☒ rest fields: not printed
   - ☑ `/proc/[this-pid]/task`
 
-- ☐ `/proc/[remote-pid]/`: minimally implemented
+- ▣ `/proc/[remote-pid]/`: minimally implemented
   - ☑ `/proc/[remote-pid]/cwd`
   - ☑ `/proc/[remote-pid]/exe`
   - ☑ `/proc/[remote-pid]/root`
 
-- ☐ `/proc/[local-tid]/`: same as `/proc/[this-pid]`
+- ▣ `/proc/[local-tid]/`: same as `/proc/[this-pid]`
 
-- ☒ `/proc/[remote-tid]/`: not used by applications
+- ☒ `/proc/[remote-tid]/`: very rarely used by applications
 
 - ☑ `/proc/sys/kernel/pid_max`
 
@@ -1637,23 +1638,23 @@ To support CPU affinity masks and expose NUMA/CPU topology, Gramine implements
 - ☑ `sched_getaffinity()`
 - ☑ `sched_setaffinity()`
 
-- ☐ `getcpu()`: dummy, returns a random allowed CPU
-- ☐ `getpriority()`: dummy, returns default value
-- ☐ `setpriority()`: dummy, does nothing
-- ☐ `sched_getparam()`: dummy, returns default values
-- ☐ `sched_setparam()`: dummy, does nothing
-- ☐ `sched_getscheduler()`: dummy, returns default value
-- ☐ `sched_setscheduler()`: dummy, does nothing
-- ☐ `sched_get_priority_max()`: dummy, returns default
+- ▣ `getcpu()`: dummy, returns a random allowed CPU
+- ▣ `getpriority()`: dummy, returns default value
+- ▣ `setpriority()`: dummy, does nothing
+- ▣ `sched_getparam()`: dummy, returns default values
+- ▣ `sched_setparam()`: dummy, does nothing
+- ▣ `sched_getscheduler()`: dummy, returns default value
+- ▣ `sched_setscheduler()`: dummy, does nothing
+- ▣ `sched_get_priority_max()`: dummy, returns default
   value
-- ☐ `sched_get_priority_min()`: dummy, returns default
-- ☐ `sched_rr_get_interval()`: dummy, returns default
+- ▣ `sched_get_priority_min()`: dummy, returns default
+- ▣ `sched_rr_get_interval()`: dummy, returns default
   value
 
-- ☒ `sched_getattr()`: not used by applications
-- ☒ `sched_setattr()`: not used by applications
-- ☒ `ioprio_get()`: not used by applications
-- ☒ `ioprio_set()`: not used by applications
+- ☒ `sched_getattr()`: very rarely used by applications
+- ☒ `sched_setattr()`: very rarely used by applications
+- ☒ `ioprio_get()`: very rarely used by applications
+- ☒ `ioprio_set()`: very rarely used by applications
 
 </details><br />
 
@@ -1677,11 +1678,11 @@ Gramine implements getting/setting the list of robust futexes, via `get_robust_l
 
 <details><summary>Related system calls</summary>
 
-- ☐ `futex()`: see notes above
+- ▣ `futex()`: see notes above
 - ☑ `get_robust_list()`
 - ☑ `set_robust_list()`
 
-- ☒ `futex_waitv()`: not used by applications
+- ☒ `futex_waitv()`: very rarely used by applications
 
 </details><br />
 
@@ -1707,10 +1708,10 @@ mappings, it depends on the type of file:
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
-- on [EDMM-enabled systems](https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-edmm),
+- on [systems supporting EDMM](https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-edmm),
   `mprotect()` correctly applies permissions;
-- on non-EDMM-enabled systems, all enclave memory is allocated with Read-Write-Execute permissions,
-  and `mprotect()` calls are silently ignored.
+- on systems not supporting EDMM, all enclave memory is allocated with Read-Write-Execute
+  permissions, and `mprotect()` calls are silently ignored.
 
 `madvise()` implements only a minimal subset of functionality:
 - `MADV_DONTNEED` is partially supported:
@@ -1726,7 +1727,7 @@ Gramine does *not* support anonymous files (created via `memfd_create()`).
 
 Quick summary of other memory-management system calls:
 - `munmap()` has nothing of note;
-- `mremap()` is not implemented (not used by applications);
+- `mremap()` is not implemented (very rarely used by applications);
 - `msync()` implements only `MS_SYNC` and `MS_ASYNC` (`MS_INVALIDATE` is not implemented);
 - `mbind()` is a no-op;
 - `mincore()` always tells that pages are *not* in RAM;
@@ -1740,32 +1741,32 @@ As can be seen from above, many performance-improving system calls, flags and fe
 <details><summary>Related system calls</summary>
 
 - ☑ `brk()`
-- ☐ `mmap()`: see above for notes
-- ☐ `mprotect()`: see above for notes
+- ▣ `mmap()`: see above for notes
+- ▣ `mprotect()`: see above for notes
 - ☑ `munmap()`
 
-- ☐ `msync()`: does not implement `MS_INVALIDATE`
-- ☐ `madvise()`: see above for notes
-- ☐ `mbind()`: dummy
-- ☐ `mincore()`: dummy
-- ☐ `mlock()`: dummy
-- ☐ `munlock()`: dummy
-- ☐ `mlockall()`: dummy
-- ☐ `munlockall()`: dummy
-- ☐ `mlock2()`: dummy
+- ▣ `msync()`: does not implement `MS_INVALIDATE`
+- ▣ `madvise()`: see above for notes
+- ▣ `mbind()`: dummy
+- ▣ `mincore()`: dummy
+- ▣ `mlock()`: dummy
+- ▣ `munlock()`: dummy
+- ▣ `mlockall()`: dummy
+- ▣ `munlockall()`: dummy
+- ▣ `mlock2()`: dummy
 
-- ☒ `mremap()`: not used by applications
-- ☒ `remap_file_pages()`: not used by applications
-- ☒ `set_mempolicy()`: may be implemented in future
-- ☒ `get_mempolicy()`: may be implemented in future
-- ☒ `memfd_create()`: may be implemented in future
-- ☒ `memfd_secret()`: not used by applications
-- ☒ `membarrier()`: may be implemented in future
-- ☒ `move_pages()`: not used by applications
-- ☒ `migrate_pages()`: not used by applications
-- ☒ `process_madvise()`: not used by applications
-- ☒ `process_mrelease()`: not used by applications
-- ☒ `set_mempolicy_home_node()`: not used by applications
+- ☒ `mremap()`: very rarely used by applications
+- ☒ `remap_file_pages()`: very rarely used by applications
+- ☒ `set_mempolicy()`: may be implemented in the future
+- ☒ `get_mempolicy()`: may be implemented in the future
+- ☒ `memfd_create()`: may be implemented in the future
+- ☒ `memfd_secret()`: very rarely used by applications
+- ☒ `membarrier()`: may be implemented in the future
+- ☒ `move_pages()`: very rarely used by applications
+- ☒ `migrate_pages()`: very rarely used by applications
+- ☒ `process_madvise()`: very rarely used by applications
+- ☒ `process_mrelease()`: very rarely used by applications
+- ☒ `set_mempolicy_home_node()`: very rarely used by applications
 
 </details><br />
 
@@ -1776,8 +1777,8 @@ Gramine implements most of the Linux IPC mechanisms. In particular:
 - ☑ Signals and process state changes
 - ☑ Pipes
 - ☑ FIFOs (named pipes)
-- ☐ UNIX domain sockets
-- ☐ File locking
+- ▣ UNIX domain sockets
+- ▣ File locking
 - ☒ Message queues
 - ☒ Semaphores
 - ☒ Shared memory
@@ -1809,7 +1810,7 @@ sections below.
 <details><summary>Additional materials</summary>
 
 - For Linux IPC overview, we recommend reading [Beej's Guide to Unix
-  IPC](https://beej.us/guide/bgipc/html/single/bgipc.html).
+  IPC](https://beej.us/guide/bgipc/html/).
 
 - In case of SGX backend, pipes, FIFOs, UDSes and all other IPC communication are encrypted using
   the TLS-PSK (TLS with Pre-Shared Keys) protocol. The pre-shared key is randomly generated for each
@@ -1873,23 +1874,23 @@ pseudo-files" in the ["Process and thread identifiers" section](#process-and-thr
 - ☑ `rt_sigtimedwait()`
 - ☑ `sigaltstack()`
 
-- ☒ `rt_sigqueueinfo()`: not used by applications
-- ☒ `rt_tgsigqueueinfo()`: not used by applications
-- ☒ `signalfd()`: not used by applications
-- ☒ `signalfd4()`: not used by applications
-- ☒ `pidfd_open()`: not used by applications
-- ☒ `pidfd_getfd()`: not used by applications
-- ☒ `pidfd_send_signal()`: not used by applications
-- ☒ `process_madvise()`: not used by applications
-- ☒ `process_mrelease()`: not used by applications
-- ☒ `userfaultfd()`: not used by applications
+- ☒ `rt_sigqueueinfo()`: very rarely used by applications
+- ☒ `rt_tgsigqueueinfo()`: very rarely used by applications
+- ☒ `signalfd()`: very rarely used by applications
+- ☒ `signalfd4()`: very rarely used by applications
+- ☒ `pidfd_open()`: very rarely used by applications
+- ☒ `pidfd_getfd()`: very rarely used by applications
+- ☒ `pidfd_send_signal()`: very rarely used by applications
+- ☒ `process_madvise()`: very rarely used by applications
+- ☒ `process_mrelease()`: very rarely used by applications
+- ☒ `userfaultfd()`: very rarely used by applications
 
-- ☐ `kill()`: process groups not supported
-- ☐ `tkill()`: remote threads not supported
+- ▣ `kill()`: process groups not supported
+- ▣ `tkill()`: remote threads not supported
 - ☑ `tgkill()`
 
-- ☐ `wait4()`: `WSTOPPED` and `WCONTINUED` not supported
-- ☐ `waitid()`: `WSTOPPED` and `WCONTINUED` not supported
+- ▣ `wait4()`: `WSTOPPED` and `WCONTINUED` not supported
+- ▣ `waitid()`: `WSTOPPED` and `WCONTINUED` not supported
 
 </details><br />
 
@@ -1912,42 +1913,43 @@ Gramine starts the application with UID = EUID = SUID and equal to
 Similarly, the application is started with GID = EGID = SGID and equal to `loader.gid`. If these
 manifest options are not set, then all IDs are equal to zero, which means root user.
 
-During execution, the application may modify these IDs, and the changes will be visible internally
-in Gramine but will *not* propagate to the host OS.
+During execution, the application may modify these IDs, and the changes will be visible inside the
+Gramine environment.
 
 Gramine does *not* support Filesystem user ID (FSUID) and filesystem group ID (FSGID). The
 corresponding system calls are `setfsuid()` and `setfsgid()` (not implemented).
 
 Gramine has dummy support for Supplementary group IDs. The corresponding system calls are
 `getgroups()` and `setgroups()`. Gramine starts the applications with an empty set of supplementary
-groups. The application may modify this set, and the changes will be visible internally in Gramine
-but will *not* propagate to the host OS.
+groups. The application may modify this set, and the changes will be visible inside the Gramine
+environment.
 
 Currently, there are only two usages of user/group IDs in Gramine:
 - changing ownership of a file via `chown()` and similar system calls;
-- injecting SIGCHLD on terminated child processes.
+- injecting SIGCHLD on terminated child processes (user ID is injected into the signal information
+  `siginfo_t::si_uid`).
 
 Gramine does *not* currently implement user/group ID fields in the `/proc/[pid]/status` pseudo-file.
 
 <details><summary>Related system calls</summary>
 
-- ☐ `getuid()`: dummy
-- ☐ `getgid()`: dummy
-- ☐ `setuid()`: dummy
-- ☐ `setgid()`: dummy
-- ☐ `geteuid()`: dummy
-- ☐ `getegid()`: dummy
-- ☐ `getgroups()`: dummy
-- ☐ `setgroups()`: dummy
+- ▣ `getuid()`: dummy
+- ▣ `getgid()`: dummy
+- ▣ `setuid()`: dummy
+- ▣ `setgid()`: dummy
+- ▣ `geteuid()`: dummy
+- ▣ `getegid()`: dummy
+- ▣ `getgroups()`: dummy
+- ▣ `setgroups()`: dummy
 
-- ☒ `setreuid()`: not used by applications, may be implemented in future
-- ☒ `setregid()`: not used by applications, may be implemented in future
-- ☒ `getresuid()`: not used by applications, may be implemented in future
-- ☒ `setresuid()`: not used by applications, may be implemented in future
-- ☒ `getresgid()`: not used by applications, may be implemented in future
-- ☒ `setresgid()`: not used by applications, may be implemented in future
-- ☒ `setfsuid()`: not used by applications
-- ☒ `setfsgid()`: not used by applications
+- ☒ `setreuid()`: very rarely used by applications, may be implemented in the future
+- ☒ `setregid()`: very rarely used by applications, may be implemented in the future
+- ☒ `getresuid()`: very rarely used by applications, may be implemented in the future
+- ☒ `setresuid()`: very rarely used by applications, may be implemented in the future
+- ☒ `getresgid()`: very rarely used by applications, may be implemented in the future
+- ☒ `setresgid()`: very rarely used by applications, may be implemented in the future
+- ☒ `setfsuid()`: very rarely used by applications
+- ☒ `setfsgid()`: very rarely used by applications
 
 </details>
 
@@ -1965,24 +1967,24 @@ The most important peculiarity is that Gramine does *not* simply mirror the host
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
 files: this is controlled by the manifest's [FS mount points
 (`fs.mounts`)](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#fs-mount-points). This
-feature is similar to the *chroot* concept on Linux and *jail* concept on FreeBSD. This Gramine
-feature is introduced for security.
+feature is similar to the *volumes* concept in [Docker](https://docs.docker.com/storage/volumes/).
+This Gramine feature is introduced for security.
 
-Another peculiarity is that Gramine provides several types of files:
-- plain files (unencrypted files, see below),
-- encrypted files (files that are automatically encrypted and integrity-protected).
+Another peculiarity is that Gramine provides several types of filesystem mounts:
+- passthrough mounts (contain unencrypted files, see below),
+- encrypted mounts (contain files that are automatically encrypted and integrity-protected).
 
-In case of SGX backend, plain files must be of one of two kinds:
-- allowed files (insecure, not protected in any way, only for testing purposes),
-- trusted files (secure, cryptographically hashed).
+In case of SGX backend, passthrough mounts must be of one of two kinds:
+- containing allowed files (insecure, not protected in any way, only for testing purposes),
+- containing trusted files (secure, cryptographically hashed).
 
-Additionally, files may be hosted in one of two ways:
-- on the host OS (passthrough-to-host, in *chroot* mounts),
+Additionally, mounts may be hosted in one of two ways:
+- on the host OS (in passthrough mounts),
 - inside the Gramine process (in *tmpfs* mounts).
 
-The types of all files potentially used by the application must be specified in the manifest file.
-Instead of single files, whole directories can be specified. Refer to the [manifest documentation for
-more details](https://gramine.readthedocs.io/en/stable/manifest-syntax.html).
+All files potentially used by the application must be specified in the manifest file. Instead of
+single files, whole directories can be specified. Refer to the [manifest documentation for more
+details](https://gramine.readthedocs.io/en/stable/manifest-syntax.html).
 
 Gramine also provides a subset of pseudo-files that can be found in a Linux kernel. In particular,
 Gramine automatically populates `/proc`, `/dev` and `/sys` pseudo-filesystems with most widely used
@@ -2008,7 +2010,8 @@ for most operations. The only exceptions are the tmpfs filesystem and the pseudo
 
 General FS limitations in Gramine include:
 - no support for dynamic mounting: all mounts must be specified beforehand in the manifest;
-- no operations across mounts (e.g. no rename of file located in one mount to another one);
+- no operations across mounts, e.g., no rename of file located in one mount to another one (note
+  that Linux also doesn't support such operations);
 - no synchronization of file offsets, file sizes, etc. between Gramine processes;
 - tmpfs mounts (in-memory file systems) are not shared by Gramine processes;
 - File timestamps (access, modified, change timestamps) are not set/updated.
@@ -2018,10 +2021,10 @@ General FS limitations in Gramine include:
 A mechanism for FS synchronization, as well as a general redesign of certain FS components, is a
 task Gramine will tackle in the future. Below are some discussions and RFCs:
 
-- https://github.com/gramineproject/graphene/issues/2158
-- https://github.com/gramineproject/gramine/issues/12
-- https://github.com/gramineproject/gramine/issues/584
-- https://github.com/gramineproject/gramine/issues/578
+- <https://github.com/gramineproject/graphene/issues/2158>
+- <https://github.com/gramineproject/gramine/issues/12>
+- <https://github.com/gramineproject/gramine/issues/584>
+- <https://github.com/gramineproject/gramine/issues/578>
 
 </details><br />
 
@@ -2034,7 +2037,7 @@ Gramine supports opening files and directories (via `open()` and `openat()` syst
 supported. Other flags are ignored. Notable ignored flags are `O_APPEND` (not yet implemented in
 Gramine) and `O_TMPFILE` (bug in Gramine: should not be silently ignored).
 
-Trusted files can be opened only for read. Already-existing encrypted files can be opened only if
+Trusted files can be opened only for reading. Already-existing encrypted files can be opened only if
 they were not moved or renamed on the host (this is for protection against file renaming attacks).
 
 Gramine supports creating files and directories (via `creat()`, `mkdir()`, `mkdirat()` system
@@ -2052,7 +2055,7 @@ Gramine supports mmap and msync operations on files. For more information, see t
 management" section](#memory-management).
 
 Gramine has dummy support for polling on files via `poll()`, `ppoll()`, `select()` system calls.
-Regular files always return events "there is data to read" and "writing is possible".  Other files
+Regular files always return events "there is data to read" and "writing is possible". Other files
 return an error code.
 
 Gramine does *not* support epoll on files.
@@ -2077,8 +2080,8 @@ correctly set the file mode. The `umask()` system call is also supported.
 
 Gramine has dummy support for file owner and group manipulations. In Gramine, users and groups are
 dummy; see the ["User and group identifiers" section](#user-and-group-identifiers) for details.
-Therefore, `chown()`, `fchownat()`, `fchown()` system calls updated UID and GID internally in
-Gramine, but do not propagate these changes to the host.
+Therefore, `chown()`, `fchownat()`, `fchown()` system calls update UID and GID inside the
+Gramine environment, but not on host files.
 
 Gramine supports checking permissions on the file via `access()` and `faccessat()` system calls.
 Recall however that users and groups are dummy in Gramine, thus the checks are also largely
@@ -2105,8 +2108,8 @@ Gramine currently does *not* support changing file access/modification times, vi
 
 <details><summary>Related system calls</summary>
 
-- ☐ `open()`: implemented, with limitations
-- ☐ `openat()`: implemented, with limitations
+- ▣ `open()`: implemented, with limitations
+- ▣ `openat()`: implemented, with limitations
 - ☑ `close()`
 - ☑ `creat()`
 - ☑ `mkdir()`
@@ -2116,8 +2119,8 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ☑ `unlink()`
 - ☑ `unlinkat()`
 - ☑ `rmdir()`
-- ☐ `rename()`: cannot rename across mounts
-- ☐ `renameat()`: cannot rename across mounts
+- ▣ `rename()`: cannot rename across mounts
+- ▣ `renameat()`: cannot rename across mounts
 
 - ☑ `read()`
 - ☑ `pread64()`
@@ -2128,74 +2131,74 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ☑ `writev()`
 - ☑ `pwritev()`
 
-- ☐ `lseek()`: see note above
-- ☐ `mmap()`: see notes above
-- ☐ `msync()`: see notes above
-- ☐ `select()`: dummy
-- ☐ `pselect6()`: dummy
-- ☐ `poll()`: dummy
-- ☐ `ppoll()`: dummy
+- ▣ `lseek()`: see note above
+- ▣ `mmap()`: see notes above
+- ▣ `msync()`: see notes above
+- ▣ `select()`: dummy
+- ▣ `pselect6()`: dummy
+- ▣ `poll()`: dummy
+- ▣ `ppoll()`: dummy
 - ☑ `fsync()`
 - ☑ `fdatasync()`
-- ☐ `truncate()`: see note above
-- ☐ `ftruncate()`: see note above
-- ☐ `fallocate()`: dummy
-- ☐ `fadvise64()`: dummy
+- ▣ `truncate()`: see note above
+- ▣ `ftruncate()`: see note above
+- ▣ `fallocate()`: dummy
+- ▣ `fadvise64()`: dummy
 
 - ☑ `chmod()`
 - ☑ `fchmod()`
 - ☑ `fchmodat()`
-- ☐ `chown()`: dummy
-- ☐ `fchown()`: dummy
-- ☐ `fchownat()`: dummy
-- ☐ `access()`: dummy
-- ☐ `faccessat()`: dummy
+- ▣ `chown()`: dummy
+- ▣ `fchown()`: dummy
+- ▣ `fchownat()`: dummy
+- ▣ `access()`: dummy
+- ▣ `faccessat()`: dummy
 - ☑ `umask()`
 
-- ☐ `sendfile()`: unoptimized
+- ▣ `sendfile()`: unoptimized
 
 - ☑ `chdir()`
 - ☑ `fchdir()`
 - ☑ `getcwd()`
 
-- ☐ `stat()`: partially dummy
-- ☐ `fstat()`: partially dummy
-- ☐ `lstat()`: partially dummy, always resolves to actual
+- ▣ `stat()`: partially dummy
+- ▣ `fstat()`: partially dummy
+- ▣ `lstat()`: partially dummy, always resolves to actual
   file
-- ☐ `newfstatat()`: partially dummy
-- ☐ `statfs()`: partially dummy
-- ☐ `fstatfs()`: partially dummy
+- ▣ `newfstatat()`: partially dummy
+- ▣ `statfs()`: partially dummy
+- ▣ `fstatfs()`: partially dummy
 
 - ☑ `chroot()`
 
-- ☒ `name_to_handle_at()`: not used by applications
-- ☒ `open_by_handle_at()`: not used by applications
-- ☒ `openat2()`: not used by applications
-- ☒ `renameat2()`: not used by applications
-- ☒ `preadv2()`: not used by applications
-- ☒ `pwritev2()`: not used by applications
-- ☒ `epoll_create()`: not used by applications
-- ☒ `epoll_create1()`: not used by applications
-- ☒ `epoll_wait()`: not used by applications
-- ☒ `epoll_pwait()`: not used by applications
-- ☒ `epoll_pwait2()`: not used by applications
-- ☒ `epoll_ctl()`: not used by applications
-- ☒ `sync()`: not used by applications
-- ☒ `syncfs()`: not used by applications
-- ☒ `sync_file_range()`: not used by applications
-- ☒ `faccessat2()`: not used by applications
-- ☒ `statx()`: not used by applications
-- ☒ `sysfs()`: not used by applications
-- ☒ `ustat()`: not used by applications
-- ☒ `mount()`: not used by applications
-- ☒ `move_mount()`: not used by applications
-- ☒ `umount2()`: not used by applications
-- ☒ `mount_setattr()`: not used by applications
-- ☒ `pivot_root()`: not used by applications
-- ☒ `utime()`: may be implemented in future
-- ☒ `utimes()`: may be implemented in future
-- ☒ `futimesat()`: may be implemented in future
-- ☒ `utimensat()`: may be implemented in future
+- ☒ `name_to_handle_at()`: very rarely used by applications
+- ☒ `open_by_handle_at()`: very rarely used by applications
+- ☒ `openat2()`: very rarely used by applications
+- ☒ `renameat2()`: very rarely used by applications
+- ☒ `preadv2()`: very rarely used by applications
+- ☒ `pwritev2()`: very rarely used by applications
+- ☒ `epoll_create()`: very rarely used by applications
+- ☒ `epoll_create1()`: very rarely used by applications
+- ☒ `epoll_wait()`: very rarely used by applications
+- ☒ `epoll_pwait()`: very rarely used by applications
+- ☒ `epoll_pwait2()`: very rarely used by applications
+- ☒ `epoll_ctl()`: very rarely used by applications
+- ☒ `sync()`: very rarely used by applications
+- ☒ `syncfs()`: very rarely used by applications
+- ☒ `sync_file_range()`: very rarely used by applications
+- ☒ `faccessat2()`: very rarely used by applications
+- ☒ `statx()`: very rarely used by applications
+- ☒ `sysfs()`: very rarely used by applications
+- ☒ `ustat()`: very rarely used by applications
+- ☒ `mount()`: very rarely used by applications
+- ☒ `move_mount()`: very rarely used by applications
+- ☒ `umount2()`: very rarely used by applications
+- ☒ `mount_setattr()`: very rarely used by applications
+- ☒ `pivot_root()`: very rarely used by applications
+- ☒ `utime()`: may be implemented in the future
+- ☒ `utimes()`: may be implemented in the future
+- ☒ `futimesat()`: may be implemented in the future
+- ☒ `utimensat()`: may be implemented in the future
 
 </details><br />
 
@@ -2223,12 +2226,12 @@ Gramine does *not* currently implement the `flock()` system call.
 
 <details><summary>Related system calls</summary>
 
-- ☐ `fcntl()`
-  - ☐ `F_SETLK`: see notes above
-  - ☐ `F_SETLKW`: see notes above
-  - ☐ `F_GETLK`: see notes above
+- ▣ `fcntl()`
+  - ▣ `F_SETLK`: see notes above
+  - ▣ `F_SETLKW`: see notes above
+  - ▣ `F_GETLK`: see notes above
 
-- ☒ `flock()`: may be implemented in future
+- ☒ `flock()`: may be implemented in the future
 
 </details><br />
 
@@ -2252,8 +2255,8 @@ the future, if need arises.
 
 There are two notions that must be discussed separately:
 
-1. Host OS's links: Gramine sees them as normal files. These links are currently always followed
-   during directory/file lookup.
+1. Host OS's links: Gramine sees them as normal files. On Linux host, these links are currently
+   always followed during directory/file lookup.
 2. In-Gramine links: Gramine has no support for links (i.e., applications cannot create links).
    - There is one exception: some pseudo-files like `/proc/[pid]/cwd` and `/proc/self`.
 
@@ -2266,10 +2269,10 @@ Gramine may implement hard and soft links in the future.
 
 - ☒ `link()`
 - ☒ `symlink()`
-- ☐ `readlink()`: see note above
+- ▣ `readlink()`: see note above
 - ☒ `linkat()`
 - ☒ `symlinkat()`
-- ☐ `readlinkat()`: see note above
+- ▣ `readlinkat()`: see note above
 - ☒ `lchown()`
 
 </details>
@@ -2328,9 +2331,9 @@ Gramine also supports setting blocking/non-blocking mode via `ioctl(FIONBIO)`.
 <details><summary>Related system calls</summary>
 
 - ☑ `pipe()`
-- ☐ `pipe2()`: `O_DIRECT` flag is ignored
-- ☐ `mknod()`: `S_ISFIFO` type is supported
-- ☐ `mknodat()`: `S_ISFIFO` type is supported
+- ▣ `pipe2()`: `O_DIRECT` flag is ignored
+- ▣ `mknod()`: `S_ISFIFO` type is supported
+- ▣ `mknodat()`: `S_ISFIFO` type is supported
 - ☑ `close()`
 
 - ☑ `fstat()`
@@ -2349,17 +2352,17 @@ Gramine also supports setting blocking/non-blocking mode via `ioctl(FIONBIO)`.
 - ☑ `epoll_wait()`
 - ☑ `epoll_pwait()`
 - ☑ `epoll_ctl()`
-- ☒ `epoll_pwait2()`: not used by applications
+- ☒ `epoll_pwait2()`: very rarely used by applications
 
-- ☐ `sendfile()`: unoptimized
+- ▣ `sendfile()`: unoptimized
 
-- ☐ `fcntl()`
-  - ☐ `F_GETFL`: only `O_NONBLOCK`
-  - ☐ `F_SETFL`: only `O_NONBLOCK`
-  - ☒ `F_GETPIPE_SZ`: not used by applications
-  - ☒ `F_SETPIPE_SZ`: not used by applications
+- ▣ `fcntl()`
+  - ▣ `F_GETFL`: only `O_NONBLOCK`
+  - ▣ `F_SETFL`: only `O_NONBLOCK`
+  - ☒ `F_GETPIPE_SZ`: very rarely used by applications
+  - ☒ `F_SETPIPE_SZ`: very rarely used by applications
 
-- ☐ `ioctl()`
+- ▣ `ioctl()`
   - ☑ `FIONREAD`
   - ☑ `FIONBIO`
 
@@ -2419,7 +2422,7 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 
 <details><summary>Note on domain names configuration</summary>
 
-- To use name-resolving Berkeley socket APIs like `gethostbyname()`, `gethostbyaddr()`,
+- To use libc name-resolving Berkeley socket APIs like `gethostbyname()`, `gethostbyaddr()`,
   `getaddrinfo`, one must enable the [`sys.enable_extra_runtime_domain_names_conf` manifest
   option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#domain-names-configuration).
 
@@ -2427,7 +2430,7 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 
 <details><summary>Related system calls</summary>
 
-- ☐ `socket()`: see notes above
+- ▣ `socket()`: see notes above
 - ☑ `bind()`
 - ☑ `listen()`
 - ☑ `accept()`
@@ -2448,14 +2451,14 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 - ☑ `write()`
 - ☑ `writev()`
 
-- ☐ `recv()`: see supported flags above
-- ☐ `recvfrom()`: see supported flags above
-- ☐ `recvmsg()`: see supported flags above
-- ☐ `recvmmsg()`: see supported flags above
-- ☐ `send()`: see supported flags above
-- ☐ `sendto()`: see supported flags above
-- ☐ `sendmsg()`: see supported flags above
-- ☐ `sendmmsg()`: see supported flags above
+- ▣ `recv()`: see supported flags above
+- ▣ `recvfrom()`: see supported flags above
+- ▣ `recvmsg()`: see supported flags above
+- ▣ `recvmmsg()`: see supported flags above
+- ▣ `send()`: see supported flags above
+- ▣ `sendto()`: see supported flags above
+- ▣ `sendmsg()`: see supported flags above
+- ▣ `sendmmsg()`: see supported flags above
 
 - ☑ `select()`
 - ☑ `pselect6()`
@@ -2466,15 +2469,15 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 - ☑ `epoll_wait()`
 - ☑ `epoll_pwait()`
 - ☑ `epoll_ctl()`
-- ☒ `epoll_pwait2()`: not used by applications
+- ☒ `epoll_pwait2()`: very rarely used by applications
 
-- ☐ `sendfile()`: unoptimized
+- ▣ `sendfile()`: unoptimized
 
-- ☐ `fcntl()`
-  - ☐ `F_GETFL`: only `O_NONBLOCK`
-  - ☐ `F_SETFL`: only `O_NONBLOCK`
+- ▣ `fcntl()`
+  - ▣ `F_GETFL`: only `O_NONBLOCK`
+  - ▣ `F_SETFL`: only `O_NONBLOCK`
 
-- ☐ `ioctl()`
+- ▣ `ioctl()`
   - ☑ `FIONREAD`
   - ☑ `FIONBIO`
 
@@ -2527,14 +2530,14 @@ UDSes support the following socket options:
 <details><summary>Note on named UDSes</summary>
 
 - There is an effort to make named UDSes visible on the Gramine filesystem, see
-  https://github.com/gramineproject/gramine/pull/1021.
+  <https://github.com/gramineproject/gramine/pull/1021>.
 
 </details>
 
 <details><summary>Related system calls</summary>
 
 - ☑ `socketpair()`
-- For other system calls, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
+- For other system calls, see ["TCP/IP and UDP/IP sockets" subsection](#tcp-ip-and-udp-ip-sockets)
   above.
 
 </details>
@@ -2542,7 +2545,7 @@ UDSes support the following socket options:
 <details><summary>Related pseudo-files</summary>
 
 - ☒ `/proc/sys/net/unix/`
-- For other pseudo-files, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
+- For other pseudo-files, see ["TCP/IP and UDP/IP sockets" subsection](#tcp-ip-and-udp-ip-sockets)
   above.
 
 </details><br />
@@ -2586,12 +2589,12 @@ distinguish between the three error conditions.
 - ☑ `pselect6()`
 - ☑ `poll()`
 - ☑ `ppoll()`
-- ☐ `epoll_create()`: see notes above
-- ☐ `epoll_create1()`: see notes above
-- ☐ `epoll_wait()`: see notes above
-- ☐ `epoll_pwait()`: see notes above
-- ☐ `epoll_ctl()`: see notes above
-- ☒ `epoll_pwait2()`: not used by applications
+- ▣ `epoll_create()`: see notes above
+- ▣ `epoll_create1()`: see notes above
+- ▣ `epoll_wait()`: see notes above
+- ▣ `epoll_pwait()`: see notes above
+- ▣ `epoll_ctl()`: see notes above
+- ☒ `epoll_pwait2()`: very rarely used by applications
 
 </details><br />
 
@@ -2636,8 +2639,8 @@ the future. Such secure version will *not* be able to receive events from the ho
 
 <details><summary>Related system calls</summary>
 
-- ☐ `eventfd()`: insecure implementation
-- ☐ `eventfd2()`: insecure implementation
+- ▣ `eventfd()`: insecure implementation
+- ▣ `eventfd2()`: insecure implementation
 - ☑ `close()`
 
 - ☑ `read()`
@@ -2652,7 +2655,7 @@ the future. Such secure version will *not* be able to receive events from the ho
 - ☑ `epoll_wait()`
 - ☑ `epoll_pwait()`
 - ☑ `epoll_ctl()`
-- ☒ `epoll_pwait2()`: not used by applications
+- ☒ `epoll_pwait2()`: very rarely used by applications
 
 </details><br />
 
@@ -2663,7 +2666,7 @@ There are two semaphore APIs in Linux kernel:
 - POSIX semaphores (newer API).
 
 POSIX semaphores are technically not a Linux kernel API. Instead, they are implemented on top of the
-POSIX shared memory functionality of Linux (i.e., via `/dev/shm` pseudo-filesystem).
+POSIX shared memory functionality of Linux by libc (i.e., via `/dev/shm` pseudo-filesystem).
 
 Gramine does *not* currently implement either of these APIs. Gramine could implement them in
 the future, if need arises.
@@ -2741,7 +2744,7 @@ like communication with hardware accelerators (e.g. GPUs):
 
 <details><summary>Related pseudo-files</summary>
 
-- ☒ `/dev/shm`: may be implemented in future (in a limited insecure way, see note above)
+- ☒ `/dev/shm`: may be implemented in the future (in a limited insecure way, see note above)
 
 </details><br />
 
@@ -2763,8 +2766,8 @@ hardware accelerators (e.g. GPUs):
 
 <details><summary>Related system calls</summary>
 
-- ☐ `ioctl()`
-  - ☐ `TIOCGPGRP`: dummy
+- ▣ `ioctl()`
+  - ▣ `TIOCGPGRP`: dummy
   - ☑ `FIONBIO`
   - ☑ `FIONCLEX`
   - ☑ `FIOCLEX`
@@ -2797,16 +2800,16 @@ malicious host OS. There is currently no solution to this limitation.
 
 - ☑ `gettimeofday()`
 - ☑ `time()`
-- ☐ `clock_gettime()`: all clocks emulated via
+- ▣ `clock_gettime()`: all clocks emulated via
   `CLOCK_REALTIME`
-- ☐ `clock_getres()`: all clocks emulated via
+- ▣ `clock_getres()`: all clocks emulated via
   `CLOCK_REALTIME`
 
-- ☒ `settimeofday()`: not used by applications
-- ☒ `clock_settime()`: not used by applications
-- ☒ `adjtimex()`: not used by applications
-- ☒ `clock_adjtime()`: not used by applications
-- ☒ `times()`: may be implemented in future
+- ☒ `settimeofday()`: very rarely used by applications
+- ☒ `clock_settime()`: very rarely used by applications
+- ☒ `adjtimex()`: very rarely used by applications
+- ☒ `clock_adjtime()`: very rarely used by applications
+- ☒ `times()`: may be implemented in the future
 
 </details><br />
 
@@ -2828,21 +2831,21 @@ these timers in the future, if need arises.
 <details><summary>Related system calls</summary>
 
 - ☑ `nanosleep()`
-- ☐ `clock_nanosleep()`: all clocks emulated via
+- ▣ `clock_nanosleep()`: all clocks emulated via
   `CLOCK_REALTIME`
-- ☐ `getitimer()`: only `ITIMER_REAL`
-- ☐ `setitimer()`: only `ITIMER_REAL`
+- ▣ `getitimer()`: only `ITIMER_REAL`
+- ▣ `setitimer()`: only `ITIMER_REAL`
 - ☑ `alarm()`
 
-- ☒ `timer_create()`: may be implemented in future
-- ☒ `timer_settime()`: may be implemented in future
-- ☒ `timer_gettime()`: may be implemented in future
-- ☒ `timer_getoverrun()`: may be implemented in future
-- ☒ `timer_delete()`: may be implemented in future
+- ☒ `timer_create()`: may be implemented in the future
+- ☒ `timer_settime()`: may be implemented in the future
+- ☒ `timer_gettime()`: may be implemented in the future
+- ☒ `timer_getoverrun()`: may be implemented in the future
+- ☒ `timer_delete()`: may be implemented in the future
 
-- ☒ `timerfd_create()`: may be implemented in future
-- ☒ `timerfd_settime()`: may be implemented in future
-- ☒ `timerfd_gettime()`: may be implemented in future
+- ☒ `timerfd_create()`: may be implemented in the future
+- ☒ `timerfd_settime()`: may be implemented in the future
+- ☒ `timerfd_gettime()`: may be implemented in the future
 
 </details><br />
 
@@ -2914,44 +2917,44 @@ pseudo-files". For additional pseudo-files containing process-specific informati
 <details><summary>Related system calls</summary>
 
 - ☒ `getrusage()`
-- ☐ `sysinfo()`: only `totalram`, `totalhigh`, `freeram`
+- ▣ `sysinfo()`: only `totalram`, `totalhigh`, `freeram`
   and `freehigh`
-- ☐ `uname()`: only `sysname`, `nodename`, `release`,
+- ▣ `uname()`: only `sysname`, `nodename`, `release`,
   `version`, `machine` and `domainname`
-- ☐ `sethostname()`: dummy
-- ☐ `setdomainname()`: dummy
-- ☐ `getrlimit()`: see notes above
-- ☐ `setrlimit()`: see notes above
-- ☐ `prlimit64()`: see notes above
+- ▣ `sethostname()`: dummy
+- ▣ `setdomainname()`: dummy
+- ▣ `getrlimit()`: see notes above
+- ▣ `setrlimit()`: see notes above
+- ▣ `prlimit64()`: see notes above
 
 </details>
 
 <details><summary>Related pseudo-files</summary>
 
-- ☐ `/proc/cpuinfo`: partially implemented
+- ▣ `/proc/cpuinfo`: partially implemented
     - ☑ `processor`, `vendor_id`, `cpu family`, `model`, `model name`, `stepping`,
       `physical id`, `core id`, `cpu cores`, `bogomips`
     - ☑ `flags`: all known CPU flags
 
-- ☐ `/proc/meminfo`: partially implemented
+- ▣ `/proc/meminfo`: partially implemented
     - ☑ `MemTotal`, `MemFree`, `MemAvailable`, `Committed_AS`, `VmallocTotal`
     - ☒ rest fields: always zero
 
-- ☐ `/proc/stat`: dummy
-    - ☐ `cpu` line: all fields are zeros
-    - ☐ `cpuX` lines: all fields are zeros
-    - ☐ `ctxt` line: always zero
-    - ☐ `btime` line: always zero
-    - ☐ `processes` line: always one
-    - ☐ `procs_running` line: always one
-    - ☐ `procs_blocked` line: always zero
+- ▣ `/proc/stat`: dummy
+    - ▣ `cpu` line: all fields are zeros
+    - ▣ `cpuX` lines: all fields are zeros
+    - ▣ `ctxt` line: always zero
+    - ▣ `btime` line: always zero
+    - ▣ `processes` line: always one
+    - ▣ `procs_running` line: always one
+    - ▣ `procs_blocked` line: always zero
     - ☒ `intr` line
     - ☒ `softirq` line
 
-- ☐ `/sys/devices/system/cpu/`: only most important files
+- ▣ `/sys/devices/system/cpu/`: only most important files
   implemented
-  - ☐ `/sys/devices/system/cpu/cpu[x]/`
-    - ☐ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
+  - ▣ `/sys/devices/system/cpu/cpu[x]/`
+    - ▣ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
@@ -2960,7 +2963,7 @@ pseudo-files". For additional pseudo-files containing process-specific informati
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
     - ☑ `/sys/devices/system/cpu/cpu[x]/online`
-    - ☐ `/sys/devices/system/cpu/cpu[x]/topology/`
+    - ▣ `/sys/devices/system/cpu/cpu[x]/topology/`
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_id`
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
@@ -2968,15 +2971,15 @@ pseudo-files". For additional pseudo-files containing process-specific informati
   - ☑ `/sys/devices/system/cpu/online`
   - ☑ `/sys/devices/system/cpu/possible`
 
-- ☐ `/sys/devices/system/node/`: only most important files
+- ▣ `/sys/devices/system/node/`: only most important files
   implemented
-  - ☐ `/sys/devices/system/node/node[x]/`
+  - ▣ `/sys/devices/system/node/node[x]/`
     - ☑ `/sys/devices/system/node/node[x]/cpumap`
     - ☑ `/sys/devices/system/node/node[x]/distance`
     - ☑ `/sys/devices/system/node/node[x]/hugepages/`
-      - ☐
+      - ▣
         `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`: always zero
-    - ☐ `/sys/devices/system/node/node[x]/meminfo`:
+    - ▣ `/sys/devices/system/node/node[x]/meminfo`:
       partially implemented
       - ☑ `MemTotal`, `MemFree`, `MemUsed`
       - ☒ rest fields: always zero
@@ -3004,21 +3007,21 @@ Gramine implements the `/dev/null` and `/dev/zero` pseudo-files.
 <details><summary>Related system calls</summary>
 
 - ☑ `gettimeofday()`: implemented in vDSO
-- ☐ `clock_gettime()`: implemented in vDSO
+- ▣ `clock_gettime()`: implemented in vDSO
 - ☑ `time()`: implemented in vDSO
-- ☐ `getcpu()`: implemented in vDSO
+- ▣ `getcpu()`: implemented in vDSO
 
 - ☑ `dup()`
 - ☑ `dup2()`
 - ☑ `dup3()`
 
-- ☐ `fcntl()`
+- ▣ `fcntl()`
   - ☑ `F_DUPFD`
   - ☑ `F_DUPFD_CLOEXEC`
   - ☑ `F_GETFD`
   - ☑ `F_SETFD`
 
-- ☐ `arch_prctl()`
+- ▣ `arch_prctl()`
   - ☑ `ARCH_GET_XCOMP_SUPP`
   - ☑ `ARCH_GET_XCOMP_PERM`
   - ☑ `ARCH_REQ_XCOMP_PERM`
@@ -3033,7 +3036,7 @@ Gramine implements the `/dev/null` and `/dev/zero` pseudo-files.
 
 </details><br />
 
-### Advanced (unimplemented) features
+### Advanced/infeasible, unimplemented features
 
 Gramine does not implement the following classes of features. This is by design, to keep the
 codebase of Gramine minimal.
@@ -3171,7 +3174,7 @@ Gramine](https://gramine.readthedocs.io/en/stable/attestation.html#low-level-dev
 
   - ☑ `/dev/attestation/keys`
     - ☑ `/dev/attestation/keys/<key_name>`
-  - ☐ `/dev/attestation/protected_files_key`: deprecated
+  - ▣ `/dev/attestation/protected_files_key`: deprecated
 
 </details><br />
 
@@ -3179,7 +3182,7 @@ Gramine](https://gramine.readthedocs.io/en/stable/attestation.html#low-level-dev
 
 > ⚠ Below description assumes x86-64 architecture.
 
-Gramine implements the system-call entry point (analogous to the `SYSCALL` x86 instruction).
+Gramine implements the system-call entry point (analogous to the `SYSCALL` x86 instruction ABI).
 Instead of performing a context switch from userland (ring-3) to kernelspace (ring-0), Gramine
 relies on the system call being routed directly into Gramine process. There are two paths how the
 application's system call requests end up in Gramine emulation:
@@ -3214,8 +3217,5 @@ Gramine supports Linux x86-64 signal frames.
 
 ## Notes on application loading
 
-Gramine can execute only ELF binaries (executables and libraries) and scripts (aka shebangs). Other
+Gramine can execute only ELF binaries (executables and libraries) and executable scripts. Other
 formats are not supported.
-
-Gramine does *not* perform any dynamic linking during binary loading. Instead it just executes load
-commands and transfers control to the dynamic linker (ld).
