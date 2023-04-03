@@ -12,3 +12,5 @@ Current list of solutions and installation instructions:
 
 - `Redis <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/redis>`_
 - `PyTorch <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/pytorch>`_
+- `Redis <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/redis>`_
+- `PyTorch <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/pytorch>`_

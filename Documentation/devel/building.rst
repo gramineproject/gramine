@@ -11,6 +11,7 @@ Gramine consists of several components:
   Currently there are two options: musl and GNU C Library (glibc).
 
 Building Gramine implies building at least the first two components. The
+Building Gramine implies building at least the first two components. The
 build of the patched C library is optional but highly recommended for
 performance reasons. Both patched glibc and patched musl are built by default.
 
@@ -18,9 +19,16 @@ Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
 building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
 higher. If you find problems with Gramine on other Linux distributions, 
+higher. If you find problems with Gramine on other Linux distributions, 
 contact us with a |~| detailed `bug report
 <https://github.com/gramineproject/gramine/issues/new>`__.
 
+**Install from a Docker container**
+
+If you opt to build Gramine, you can install Gramine from a Docker container you build that includes an OS packaged with Gramine binaries. The container includes everything that's included in the custom installation. You must create your own manifest. Go to :doc:`docker-image-installation`.
+
+Install dependencies
+--------------------
 **Install from a Docker container**
 
 If you opt to build Gramine, you can install Gramine from a Docker container you build that includes an OS packaged with Gramine binaries. The container includes everything that's included in the custom installation. You must create your own manifest. Go to :doc:`docker-image-installation`.
@@ -76,6 +84,7 @@ If your current kernel version is lower than 5.11, then you have two options:
 
 - Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,
   you can follow e.g., `this tutorial
+  you can follow e.g., `this tutorial
   <https://itsfoss.com/upgrade-linux-kernel-ubuntu/>`__.
 
 - Install out-of-tree driver and use our provided patches to the Linux kernel
@@ -121,7 +130,10 @@ If you plan on enabling ``-Ddcap`` option, you need to install
 
 Build Gramine
 -------------
+Build Gramine
+-------------
 
+To build Gramine, you need to first set up the build directory. In the
 To build Gramine, you need to first set up the build directory. In the
 root directory of Gramine repo, run the following command (recall that "direct"
 means non-SGX version)::
@@ -254,6 +266,7 @@ Additional build options
   .. _POSIX.1-2018 8.3: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_03
 
   This very much depends on a particular distribution, so please consult relevant
+  This very much depends on a particular distribution, so please consult relevant
   documentation provided by your distro.
 
 - To compile a patched version of GCC's OpenMP library (``libgomp``), install
@@ -267,6 +280,8 @@ Additional build options
   Building the patched ``libgomp`` library is disabled by default because it can
   take a long time: unfortunately, the only supported way of building
   ``libgomp`` is as part of a complete GCC build.
+
+.. _FSGSBASE:
 
 .. _FSGSBASE:
 
@@ -370,6 +385,7 @@ version is 5.9 or higher, then the FSGSBASE feature is already supported and you
 can skip this step. For older kernels it is available as `separate patches
 <https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
 
+
 (Note that Gramine was prevously called *Graphene* and was hosted under
 a different organization, hence the name of the linked repository.)
 
@@ -419,6 +435,8 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
+SDK/PSW, and Gramine itself.  
+
 SDK/PSW, and Gramine itself.  
 
 
