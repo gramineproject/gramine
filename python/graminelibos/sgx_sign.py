@@ -54,6 +54,10 @@ def rounddown(addr):
     return addr - addr % offs.PAGESIZE
 
 
+def is_aligned(val, alignment):
+    return (val % alignment == 0)
+
+
 def parse_size(value):
     scale = 1
     if value.endswith('K'):
@@ -277,9 +281,25 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
 
     gen_area_content(attr, areas, enclave_base, enclave_heap_min)
 
-    # Enclaves with EDMM do not add "free" memory at startup.
+    # Enclaves with EDMM do not add "free" memory at startup but if heap is pre-allocated
+    # using manifest `sgx.edmm_heap_prealloc_size` add the "free" pre-allocated pages.
+    # PS: Assumption here is that we have a single heap region (called "free") that is beneath all
+    # other statically allocated memory areas(manifest, ssa, tls. tcs, stack, sig_stack, pal).
     if attr['edmm_enable']:
-        return areas
+        free_preallocated = []
+        if (attr['edmm_heap_prealloc_size'] > 0 and
+                last_populated_addr > enclave_heap_min):
+
+            flags = PAGEINFO_R | PAGEINFO_W | PAGEINFO_X | PAGEINFO_REG
+            start_addr = last_populated_addr - attr['edmm_heap_prealloc_size']
+            if start_addr < enclave_heap_min:
+                raise Exception(" sgx.edmm_heap_prealloc_size cannot be more than total heap size!")
+
+            free_preallocated.append(
+                MemoryArea('free', addr=start_addr, size=attr['edmm_heap_prealloc_size'],
+                           flags=flags, measure=False))
+
+        return areas + free_preallocated
 
     free_areas = []
     for area in areas:
@@ -438,6 +458,17 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
     return mrenclave.digest()
 
 
+def check_memory_area_holes(attr, areas, enclave_base):
+    last_populated_addr = enclave_base + attr['enclave_size']
+
+    for area in areas:
+        if last_populated_addr != area.addr + area.size:
+            return 1
+        last_populated_addr = area.addr
+
+    return 0
+
+
 def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     with open(manifest_path, 'rb') as f: # pylint: disable=invalid-name
         manifest_data = f.read()
@@ -447,22 +478,32 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     attr = {
         'enclave_size': parse_size(manifest_sgx['enclave_size']),
         'edmm_enable': manifest_sgx.get('edmm_enable', False),
+        'edmm_heap_prealloc_size': parse_size(manifest_sgx['edmm_heap_prealloc_size']),
         'max_threads': manifest_sgx.get('max_threads', manifest_sgx.get('thread_num')),
         'isv_prod_id': manifest_sgx['isvprodid'],
         'isv_svn': manifest_sgx['isvsvn'],
     }
     attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
+    if not attr['edmm_enable'] and attr['edmm_heap_prealloc_size'] > 0:
+        raise Exception("sgx.edmm_heap_prealloc_size should be used along with sgx.edmm_enable!")
+
+    if attr['edmm_heap_prealloc_size'] < 0 or  \
+       is_aligned(attr['edmm_heap_prealloc_size'], offs.PAGESIZE) == 0:
+        raise Exception("sgx.edmm_heap_prealloc_size: {0} should be greater than or equal to 0!"
+                        .format(attr['edmm_heap_prealloc_size']))
+
     if verbose:
         print('Attributes:')
-        print(f'    size:        {attr["enclave_size"]:#x}')
-        print(f'    edmm:        {attr["edmm_enable"]}')
-        print(f'    max_threads: {attr["max_threads"]}')
-        print(f'    isv_prod_id: {attr["isv_prod_id"]}')
-        print(f'    isv_svn:     {attr["isv_svn"]}')
-        print(f'    attr.flags:  {attr["flags"]:#x}')
-        print(f'    attr.xfrm:   {attr["xfrms"]:#x}')
-        print(f'    misc_select: {attr["misc_select"]:#x}')
+        print(f'    size:                    {attr["enclave_size"]:#x}')
+        print(f'    edmm:                    {attr["edmm_enable"]}')
+        print(f'    edmm_heap_prealloc_size: {attr["edmm_heap_prealloc_size"]:#x}')
+        print(f'    max_threads:             {attr["max_threads"]}')
+        print(f'    isv_prod_id:             {attr["isv_prod_id"]}')
+        print(f'    isv_svn:                 {attr["isv_svn"]}')
+        print(f'    attr.flags:              {attr["flags"]:#x}')
+        print(f'    attr.xfrm:               {attr["xfrms"]:#x}')
+        print(f'    misc_select:             {attr["misc_select"]:#x}')
 
         print('SGX remote attestation:')
         attestation_type = manifest_sgx.get('remote_attestation', 'none')
@@ -491,6 +532,11 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
         ] + memory_areas
 
     memory_areas = populate_memory_areas(attr, memory_areas, enclave_base, enclave_heap_min)
+
+    # Ensure no holes in the populated memory areas
+    memory_area_holes = check_memory_area_holes(attr, memory_areas, enclave_base)
+    if memory_area_holes:
+        raise Exception('Cannot have holes in memory areas!')
 
     # Generate measurement
     mrenclave = generate_measurement(enclave_base, attr, memory_areas, verbose=verbose)

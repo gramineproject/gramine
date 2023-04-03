@@ -490,8 +490,20 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 
         if (areas[i].skip_eextend && enclave->edmm_enabled) {
             assert(areas[i].data_src == ZERO);
-            /* If EDMM is enabled, no need to add non-measured zero pages. */
-            continue;
+            if (enclave->edmm_heap_prealloc_size == 0) {
+                /* If EDMM is enabled and no pre-allocated heap is requested, then skip adding
+                 non-measured zero pages. */
+                continue;
+            } else {
+                if (enclave->edmm_heap_prealloc_size > areas[i].size) {
+                    log_error("edmm_heap_prealloc_size should be less than total heap size 0x%lx",
+                              areas[i].size);
+                    ret = -EINVAL;
+                    goto out;
+                }
+                areas[i].addr = areas[i].addr + areas[i].size - enclave->edmm_heap_prealloc_size;
+                areas[i].size = enclave->edmm_heap_prealloc_size;
+            }
         }
 
         void* data = NULL;
@@ -682,6 +694,12 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+    if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
+        log_error("Enclave size not a power of two (an SGX-imposed requirement)");
+        ret = -EINVAL;
+        goto out;
+    }
+
     ret = toml_bool_in(manifest_root, "sgx.edmm_enable", /*defaultval=*/false,
                        &enclave_info->edmm_enabled);
     if (ret < 0) {
@@ -690,8 +708,22 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
-    if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
-        log_error("Enclave size not a power of two (an SGX-imposed requirement)");
+    ret = toml_sizestring_in(manifest_root, "sgx.edmm_heap_prealloc_size", /*defaultval=*/0,
+                             &enclave_info->edmm_heap_prealloc_size);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.edmm_heap_prealloc_size'");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (!enclave_info->edmm_enabled && enclave_info->edmm_heap_prealloc_size > 0) {
+        log_error("sgx.edmm_heap_prealloc_size should be used along with sgx.edmm_enable!");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (!IS_ALIGNED(enclave_info->edmm_heap_prealloc_size, g_page_size)) {
+        log_error("edmm_heap_prealloc_size should be page aligned: %ld", g_page_size);
         ret = -EINVAL;
         goto out;
     }
@@ -1083,7 +1115,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
                         &qe_targetinfo, &topo_info, &dns_conf, enclave->edmm_enabled,
-                        reserved_mem_ranges, reserved_mem_ranges_size);
+                        enclave->edmm_heap_prealloc_size, reserved_mem_ranges,
+                        reserved_mem_ranges_size);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);

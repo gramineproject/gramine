@@ -30,12 +30,63 @@ static void sgx_emodpe(uint64_t addr, uint64_t prot) {
     /* `EMODPE` does not return errors, it can only fault. */
 }
 
+/* Returns page count that is non overlapping with the pre-allocated heap. 0 means entire request
+ * overlaps with the pre-allocated region.
+ * Partial overlap illustration:
+                  +---------+--------> heap_max
+                  |         |
+addr + size <-----+ Pre-allocated Heap
+                  |         |
+                  +---------+--------> edmm_heap_prealloc_start (heap_max - edmm_heap_prealloc_size)
+                  |         |
+                  | Dynamically allocated heap
+    addr    <-----+         |
+                  |         |
+                  +---------+
+*/
+static void exclude_preallocated_pages(uint64_t addr, size_t* count) {
+    size_t size = *count * PAGE_SIZE;
+    uint64_t edmm_heap_prealloc_start = (uint64_t)g_pal_linuxsgx_state.heap_max -
+                                        g_pal_linuxsgx_state.edmm_heap_prealloc_size;
+
+    if (addr + size > edmm_heap_prealloc_start) {
+        if (addr >= edmm_heap_prealloc_start) {
+            /* Full overlap: Entire request lies in the pre-allocated region */
+            *count = 0;
+            return;
+        }
+        /* Partial overlap: Update count to skip the overlapped region. */
+        *count = (edmm_heap_prealloc_start - addr) / PAGE_SIZE;
+    } else {
+        /* No overlap: Return the original count */
+    }
+}
+
 int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
     int ret;
 
     if (prot & SGX_SECINFO_FLAGS_W) {
         /* HW limitation. */
         prot |= SGX_SECINFO_FLAGS_R;
+    }
+
+    /* Update count with preallocated heap */
+    if (g_pal_linuxsgx_state.edmm_heap_prealloc_size > 0) {
+        size_t original_count = count;
+        exclude_preallocated_pages(addr, &count);
+
+        size_t pre_allocated_count = original_count - count;
+        if (pre_allocated_count != 0) {
+            /* Entire request is in pre-allocated range, so clear memory to mimic SGX2 allocation */
+            if (pre_allocated_count == original_count) {
+                memset((void*)addr, 0, (pre_allocated_count * PAGE_SIZE));
+                return 0;
+            }
+
+            /* Partial request is part of the pre-allocated range, so just clear memory contents in
+             * the pre-allocated range to mimic SGX2 allocation */
+            memset((void*)(addr + (count * PAGE_SIZE)), 0, (pre_allocated_count * PAGE_SIZE));
+        }
     }
 
     for (size_t i = 0; i < count; i++) {
@@ -84,6 +135,13 @@ int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
 }
 
 int sgx_edmm_remove_pages(uint64_t addr, size_t count) {
+    /* Update count with preallocated heap */
+    if (g_pal_linuxsgx_state.edmm_heap_prealloc_size > 0) {
+        exclude_preallocated_pages(addr, &count);
+        if (count == 0)
+            return 0;
+    }
+
     int ret = ocall_edmm_modify_pages_type(addr, count, SGX_PAGE_TYPE_TRIM);
     if (ret < 0) {
         return unix_to_pal_error(ret);
@@ -114,6 +172,12 @@ int sgx_edmm_remove_pages(uint64_t addr, size_t count) {
 }
 
 int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
+    if (g_pal_linuxsgx_state.edmm_heap_prealloc_size > 0) {
+        exclude_preallocated_pages(addr, &count);
+        if (count == 0)
+            return 0;
+    }
+
     if (prot & SGX_SECINFO_FLAGS_W) {
         /* HW limitation. */
         prot |= SGX_SECINFO_FLAGS_R;
