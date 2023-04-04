@@ -243,7 +243,8 @@ BEGIN_CP_FUNC(process_description) {
     new_process->pid = process->pid;
     new_process->ppid = process->ppid;
     new_process->pgid = process->pgid;
-    new_process->attached_to_other_pg = false;
+    /* attached_to_other_pg is set to false in libos/src/sys/libos_clone.c: do_clone_new_vm() */
+    new_process->attached_to_other_pg = process->attached_to_other_pg;
     new_process->sid = process->sid;
 
     /* copy cmdline (used by /proc/[pid]/cmdline) from the current process */
