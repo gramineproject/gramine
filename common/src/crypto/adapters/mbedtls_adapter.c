@@ -515,7 +515,5 @@ int lib_HKDF_SHA256(const uint8_t* input_key, size_t input_key_size, const uint8
 void mbedtls_platform_zeroize(void* buf, size_t len) {
     assert(len == 0 || buf != NULL);
 
-    if (len > 0) {
-        erase_memory(buf, len);
-    }
+    erase_memory(buf, len);
 }
