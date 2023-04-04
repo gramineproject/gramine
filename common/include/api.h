@@ -405,7 +405,8 @@ extern const char* const* sys_errlist_internal;
  * copy-pasted literally into the final assembly source which gets compiled into the binary, so
  * we're safe against being optimized away. */
 static inline void erase_memory(void* buffer, size_t size) {
-    __asm__ volatile("rep stosb" : "+D"((char*)buffer), "+c"(size) : "a"((uint8_t)0) : "cc", "memory");
+    char* buf = buffer;
+    __asm__ volatile("rep stosb" : "+D"(buf), "+c"(size) : "a"((uint8_t)0) : "cc", "memory");
 }
 
 #ifdef __x86_64__
