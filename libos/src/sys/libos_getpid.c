@@ -41,7 +41,7 @@ long libos_syscall_setpgid(pid_t pid, pid_t pgid) {
 
         IDTYPE pgid_to_set = (IDTYPE)pgid ?: g_process.pid;
 
-        /* TODO: Currently we do not support checking the process group of the joining process
+        /* TODO: Currently we do not support checking that the process group of the joining process
          * (specified by `pid`) and the existing process group to be joined (specified by `pgid`)
          * must have the same session ID. */
 
@@ -57,7 +57,7 @@ long libos_syscall_setpgid(pid_t pid, pid_t pgid) {
     }
 
     /* TODO: Currently we do not support setting pgid of children processes. */
-    return -EINVAL;
+    return -ESRCH;
 }
 
 long libos_syscall_getpgid(pid_t pid) {
@@ -71,7 +71,7 @@ long libos_syscall_getpgid(pid_t pid) {
 
     /* TODO: Currently we do not support getting pgid of other processes.
      * Implement child lookup once `libos_syscall_setpgid` sends info to the parent. */
-    return -EINVAL;
+    return -ESRCH;
 }
 
 long libos_syscall_getpgrp(void) {

@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
     errno = 0;
     setsid();
     if (errno != EPERM) {
-        errx(1, "unexpected setsid error (expected: %d, actual: %d)", -EPERM, errno);
+        errx(1, "Parent: unexpected setsid error (expected: %d, actual: %d)", EPERM, errno);
     }
 
     pid_t psid = getsid(0);
@@ -26,16 +26,33 @@ int main(int argc, const char** argv) {
         /* Child created via fork inherits its parent's session ID. */
         pid_t sid = CHECK(getsid(0));
         if (sid != psid) {
-            errx(1, "unexpected child's sid (expected: %d, actual: %d)", psid, sid);
+            errx(1, "Child: unexpected child's sid (expected: %d, actual: %d)", psid, sid);
         }
 
         /* On setsid() success, the calling process is the leader of the new session (i.e., its
          * session ID is made the same as its process ID). It also becomes the process group leader
          * of a new process group in the session (i.e., its process group ID is made the same as its
-         * process ID).*/
+         * process ID). */
         sid = CHECK(setsid());
         if (sid != getpid() || getpgid(0) != sid) {
-            errx(1, "setsid returned wrong value: %d (expected: %d)", sid, getpid());
+            errx(1, "Child: setsid returned wrong value: %d (expected: %d)", sid, getpid());
+        }
+
+        p = CHECK(fork());
+        if (p == 0) {
+            /* A forked child of the session leader should be able to create a new session. */
+            sid = CHECK(setsid());
+            if (sid != getpid() || getpgid(0) != sid) {
+                errx(1, "Grandchild: setsid returned wrong value: %d (expected: %d)", sid,
+                     getpid());
+            }
+            exit(0);
+        }
+
+        int status = 0;
+        CHECK(wait(&status));
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            errx(1, "Grandchild: died with status: %#x", status);
         }
 
         exit(0);
@@ -46,8 +63,8 @@ int main(int argc, const char** argv) {
      * shell. Here we just wait for child termination for testing purposes. */
     int status = 0;
     CHECK(wait(&status));
-    if (!WIFEXITED(status) || WEXITSTATUS(status)) {
-        errx(1, "child wait status: %#x", status);
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        errx(1, "Child: died with status: %#x", status);
     }
 
     puts("TEST OK");

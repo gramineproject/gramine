@@ -42,7 +42,7 @@ struct libos_process {
     /* Process Group ID. Protected by `g_process_id_lock`. */
     IDTYPE pgid;
 
-    /* Indicate whether the process has been attached to another process group. Protected by
+    /* Indicates whether the process has been attached to another process group. Protected by
      * `g_process_id_lock`. */
     bool attached_to_other_pg;
 
