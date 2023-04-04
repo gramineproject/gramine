@@ -266,6 +266,11 @@ static int pseudo_hstat(struct libos_handle* handle, struct stat* buf) {
     return pseudo_istat(handle->dentry, handle->inode, buf);
 }
 
+static int pseudo_unlink(struct libos_dentry* dent) {
+    __UNUSED(dent);
+    return -EACCES;
+}
+
 static int pseudo_follow_link(struct libos_dentry* dent, char** out_target) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
@@ -592,6 +597,7 @@ struct libos_d_ops pseudo_d_ops = {
     .lookup      = &pseudo_lookup,
     .readdir     = &pseudo_readdir,
     .stat        = &pseudo_stat,
+    .unlink      = &pseudo_unlink,
     .follow_link = &pseudo_follow_link,
     .icheckpoint = &pseudo_icheckpoint,
     .irestore    = &pseudo_irestore,

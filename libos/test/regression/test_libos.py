@@ -1060,9 +1060,7 @@ class TC_40_FileSystem(RegressionTestCase):
             cpuinfo['flags'] = ''
 
         stdout, _ = self.run_binary(['proc_cpuinfo', cpuinfo['flags']])
-
-        # proc/cpuinfo Linux-based formatting
-        self.assertIn('cpuinfo test passed', stdout)
+        self.assertIn('TEST OK', stdout)
 
     def test_021_procstat(self):
         stdout, _ = self.run_binary(['proc_stat'])
