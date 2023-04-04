@@ -20,6 +20,8 @@
 #include "list.h"
 #include "pal.h"
 
+extern bool g_execve_happenning;
+
 #define WAKE_QUEUE_TAIL ((void*)1)
 /* If next is NULL, then this node is not on any queue.
  * Otherwise it is a valid pointer to the next node or WAKE_QUEUE_TAIL. */

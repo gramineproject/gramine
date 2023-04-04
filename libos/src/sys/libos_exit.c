@@ -69,8 +69,64 @@ noreturn void thread_exit(int error_code, int term_signal) {
         cur_thread->robust_list = NULL;
     }
 
+    bool keep_alive_main_thread = false;
+    if (__atomic_load_n(&g_execve_happenning, __ATOMIC_RELAXED)
+            && cur_thread->pal_handle == g_pal_public_state->first_thread) {
+        /*
+         * The main thread ends up here in three cases:
+         *
+         *   1. Common case: a non-main thread issues `execve()`, which leads to killing all other
+         *      threads (including this main thread). The main thread is kicked into signal handling
+         *      and ends up here. At this point, the non-main thread is waiting on the
+         *      `check_last_thread()` loop, so there is no data race (until the main thread calls
+         *      `check_last_thread(true)` below).
+         *
+         *   2. Corner-case data race: main thread issues `exit()` while a non-main thread issues
+         *      `execve()`. In this case, the data race is always resolved as if the non-main thread
+         *      issued `execve()` before the main-thread's `exit()`.
+         *
+         *   3. Corner-case data race: both main thread and a non-main thread issue `execve()`. If
+         *      the non-main thread wins the race, then the main thread calls `thread_exit()` and
+         *      ends up here; see `libos_syscall_execve()` for details. (If the main thread wins,
+         *      then we cannot land here, as discussed below.)
+         *
+         *   Note that if the main thread itself issues `execve()`, we cannot land here because only
+         *   non-main threads will be kicked into signal handling.
+         */
+        keep_alive_main_thread = true;
+    }
+
     /* Remove current thread from the threads list. */
     if (!check_last_thread(/*mark_self_dead=*/true)) {
+        if (keep_alive_main_thread) {
+            /*
+             * This is a corner case of a non-main thread performing `execve()`.
+             *
+             * Do not exit the main thread and do not free thread resources -- this leaks memory,
+             * but only once per process (as there is only one main thread per process, even after
+             * several execve invocations). Instead, wait forever so that the host OS doesn't "lose
+             * track" of this Gramine process. E.g. on Linux, if the main thread (aka leader thread)
+             * terminates, then the process becomes a zombie, which may confuse some tools like
+             * `docker kill`.
+             *
+             * Linux solves this corner case differently: the leader thread is terminated, and the
+             * non-main thread assumes its identity (in particular, its PID):
+             *
+             *   https://elixir.bootlin.com/linux/v6.0/source/fs/exec.c#L1078
+             *
+             * Gramine can't do the same because there is no way to ask the host OS to "rewire" the
+             * identity of one thread to the other thread. Thus this workaround of infinite wait.
+             * Note that because the main thread was removed from the list of threads (thanks to
+             * `mark_self_dead=true` above), the still-alive main thread will not prevent the
+             * Gramine process from terminating later on. Also note that because this thread never
+             * leaves LibOS/PAL context, it will not receive signals.
+             */
+            thread_prepare_wait();
+            while (true)
+                thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/true);
+            __builtin_unreachable();
+        }
+
         /* ask async worker thread to cleanup this thread */
         cur_thread->clear_child_tid_pal = 1; /* any non-zero value suffices */
         /* We pass this ownership to `cleanup_thread`. */

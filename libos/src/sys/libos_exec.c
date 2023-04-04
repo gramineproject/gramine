@@ -15,6 +15,8 @@
 #include "libos_vma.h"
 #include "pal.h"
 
+bool g_execve_happenning;
+
 /* new_argp: pointer to beginning of first stack frame (argc, argv[0], ...)
  * new_auxv: pointer inside first stack frame (auxv[0], auxv[1], ...) */
 noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new_auxv) {
@@ -174,6 +176,8 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
         return ret;
     }
 
+    __atomic_store_n(&g_execve_happenning, true, __ATOMIC_RELAXED);
+
     /* If `execve` is invoked concurrently by multiple threads, let only one succeed. From this
      * point errors are fatal. */
     static unsigned int first = 0;
@@ -183,9 +187,10 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
     }
     (void)kill_other_threads();
 
-    /* All other threads are dead. Restoring initial value in case we stay inside same process
+    /* All other threads are dead. Restoring initial values in case we stay inside same process
      * instance and call execve again. */
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&g_execve_happenning, false, __ATOMIC_RELAXED);
 
     /* Passing ownership of `exec` and `new_argv`. */
     ret = libos_syscall_execve_rtld(exec, new_argv, envp);
