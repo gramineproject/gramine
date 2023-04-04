@@ -401,12 +401,11 @@ extern const char* const* sys_errlist_internal;
 #define TIME_NS_IN_S (TIME_NS_IN_US * TIME_US_IN_S)
 
 /* Scrub sensitive memory bufs (memset can be optimized away and memset_s is not available in PAL).
- * FIXME: This implementation is inefficient (and used in perf-critical functions).
- * TODO:  Is this really needed? Intel SGX SDK uses similar function as "defense in depth". */
+ * NOTE: optimizer runs only on C code and intermediate representations while assembly is
+ * copy-pasted literally into the final assembly source which gets compiled into the binary, so
+ * we're safe against being optimized away. */
 static inline void erase_memory(void* buffer, size_t size) {
-    volatile unsigned char* p = buffer;
-    while (size--)
-        *p++ = 0;
+    __asm__ volatile("rep stosb" : "+D"((char*)buffer), "+c"(size) : "a"((uint8_t)0) : "cc", "memory");
 }
 
 #ifdef __x86_64__

@@ -516,8 +516,6 @@ void mbedtls_platform_zeroize(void* buf, size_t len) {
     assert(len == 0 || buf != NULL);
 
     if (len > 0) {
-        /* memset() is written in volatile inline asm in Gramine for x86-64 (see
-         * common/src/string/memset.c) so it is safe against being optimized away. */
-        memset(buf, 0, len);
+        erase_memory(buf, len);
     }
 }
