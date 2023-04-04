@@ -483,8 +483,8 @@ before enclave creation (because it involves more enclave exits and syscalls).
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
-EDMM Hybrid allocation (Experimental)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+EDMM heap pre-allocate size
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
@@ -492,10 +492,10 @@ EDMM Hybrid allocation (Experimental)
     (default: "0")
 
 When ``sgx.edmm_enable`` is enabled, users can precisely set the amount of heap
-to pre-allocate by setting the ``sgx.edmm_heap_prealloc_size``. For
-example, when size is set to "64M" Gramine will pre-allocate top 64M of heap
-pages rather than allocating dynamically and thus the name "Hybrid allocation".
-This may help to balance out the cost between load time and run time.
+to pre-allocate by setting this option. For example, when size is set to "64M"
+Gramine will pre-allocate 64M of heap pages to the enclave (similar to SGXv1)
+rather than allocating dynamically them. Higher values in this option may
+improve run time but could worsen startup time, and vice versa.
 
 Enclave size
 ^^^^^^^^^^^^
@@ -838,9 +838,9 @@ predictable.
 Please note that using this option makes sense only when the :term:`EPC` is
 large enough to hold the whole heap area.
 
-This option is invalid (i.e. must be ``false``) when only ``sgx.edmm_enable``is
+This option is invalid (i.e. must be ``false``) when only ``sgx.edmm_enable`` is
 specified, as there are no heap pages to pre-fault. But if used together with
-``sgx.edmm_heap_prealloc_size``, then the pre-allocated heap size will be
+``sgx.edmm_heap_prealloc_size``, then the pre-allocated heap will also be
 pre-faulted.
 
 Enabling per-thread and process-wide SGX stats

@@ -529,7 +529,7 @@ out:
 __attribute_no_sanitize_address
 static void do_preheat_enclave(void) {
     /* Heap allocation requests are serviced starting from highest heap address. So when
-     * sgx.edmm_heap_prealloc_size is turned on preheat from the top of the heap until
+     * sgx.edmm_heap_prealloc_size is turned on, preheat from the top of the heap until
      * sgx.edmm_heap_prealloc_size. */
     uint8_t* start = (uint8_t*)g_pal_linuxsgx_state.heap_min;
     if (g_pal_linuxsgx_state.edmm_heap_prealloc_size > 0) {
@@ -579,19 +579,19 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_linuxsgx_state.edmm_enabled = edmm_enabled;
 
     if (!edmm_enabled && edmm_heap_prealloc_size > 0) {
-        log_error("edmm_heap_prealloc_size should be used along with edmm_enabled!");
+        log_error("'sgx.edmm_heap_prealloc_size' must be used together with 'sgx.edmm_enable'!");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     size_t total_heap_size = g_pal_linuxsgx_state.heap_max - g_pal_linuxsgx_state.heap_min;
     if (edmm_heap_prealloc_size > total_heap_size) {
-        log_error("edmm_heap_prealloc_size should be less than total heap size 0x%lx",
+        log_error("'sgx.edmm_heap_prealloc_size' must be less than total heap size 0x%lx",
                    total_heap_size);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
     if (!IS_ALIGNED(edmm_heap_prealloc_size, g_page_size)) {
-        log_error("edmm_heap_prealloc_size should be page aligned: %ld", g_page_size);
+        log_error("edmm_heap_prealloc_size must be 4K (page) aligned");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
     g_pal_linuxsgx_state.edmm_heap_prealloc_size = edmm_heap_prealloc_size;
@@ -771,8 +771,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     if (preheat_enclave) {
         if (g_pal_linuxsgx_state.edmm_enabled && !g_pal_linuxsgx_state.edmm_heap_prealloc_size) {
-            log_error("'sgx.preheat_enclave' manifest option makes no sense with only EDMM enabled."
-                        " Need to enable edmm_heap_prealloc_size as well!");
+            log_error("'sgx.preheat_enclave' manifest option makes no sense with EDMM enabled and "
+                      "'sgx.edmm_heap_prealloc_size' set to zero!");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
         do_preheat_enclave();

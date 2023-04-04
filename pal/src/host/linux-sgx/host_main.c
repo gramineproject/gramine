@@ -717,13 +717,13 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
 
     if (!enclave_info->edmm_enabled && enclave_info->edmm_heap_prealloc_size > 0) {
-        log_error("sgx.edmm_heap_prealloc_size should be used along with sgx.edmm_enable!");
+        log_error("'sgx.edmm_heap_prealloc_size' must be used together with 'sgx.edmm_enable'!");
         ret = -EINVAL;
         goto out;
     }
 
     if (!IS_ALIGNED(enclave_info->edmm_heap_prealloc_size, g_page_size)) {
-        log_error("edmm_heap_prealloc_size should be page aligned: %ld", g_page_size);
+        log_error("'sgx.edmm_heap_prealloc_size' must be 4K (page) aligned");
         ret = -EINVAL;
         goto out;
     }
