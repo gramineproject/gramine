@@ -56,8 +56,8 @@ static void verify_key_exists(const char* desc, const char* path) {
     ssize_t n = posix_file_read(path, (char*)&key, sizeof(key));
     if (n < 0)
         err(1, "%s: error reading %s", desc, path);
-    if ((size_t)n < sizeof(key))
-        errx(1, "%s: file %s is too short: %zd", desc, path, n);
+    if ((size_t)n != sizeof(key))
+        errx(1, "%s: file %s has wrong size: expected %zd, got %zd", desc, path, sizeof(key), n);
 }
 
 static void expect_key(const char* desc, const char* path, const pf_key_t* expected_key) {
@@ -89,15 +89,17 @@ static void write_key(const char* desc, const char* path, const pf_key_t* key) {
 }
 
 static void fail_write_key(const char* desc, const char* path) {
-    pf_key_t dummy_key;
+    pf_key_t dummy_key = {0};
     ssize_t n = posix_file_write(path, (char*)&dummy_key, sizeof(dummy_key));
     if (n >= 0)
         errx(1, "%s: writing to %s unexpectedly succeeded", desc, path);
 }
 
 int main(int argc, char** argv) {
-    if (argc > 1) {
-        /* simple trick to test SGX-specific keys */
+    if (argc > 2 || (argc == 2 && strcmp(argv[1], "sgx") != 0))
+        errx(1, "test expects either no arguments, or one argument `sgx`");
+
+    if (argc == 2) {
         verify_key_exists("SGX sealing keys", MRENCLAVE_KEY_PATH);
         verify_key_exists("SGX sealing keys", MRSIGNER_KEY_PATH);
         fail_write_key("SGX sealing keys", MRENCLAVE_KEY_PATH);

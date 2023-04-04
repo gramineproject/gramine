@@ -761,6 +761,15 @@ Gramine:
   identity of the enclave. This is useful to allow all enclaves signed with the
   same key (and on the same platform) to unseal files.
 
+.. warning::
+   The same key must not be used for the encrypted-files mount and for the
+   application's own crypto operations. Such "double" use of the same key may
+   lead to compromise of the key. For example, specifying an FS mount via
+   ``{type = "encrypted", ..., key_name = "_sgx_mrenclave"}`` in the manifest
+   and using the same key obtained via ``/dev/attestation/keys/_sgx_mrenclave``
+   in the application is insecure. If you need to derive encryption keys from
+   such a "doubly-used" key, you must apply a KDF.
+
 File check policy
 ^^^^^^^^^^^^^^^^^
 
