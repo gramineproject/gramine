@@ -1,8 +1,11 @@
 #define _GNU_SOURCE
+#include <err.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define CPUINFO_FILE   "/proc/cpuinfo"
 #define BUF_SIZE       (10 * 1024) /* 10KB */
@@ -168,29 +171,21 @@ int main(int argc, char* argv[]) {
     FILE* fp = NULL;
     int cpu_cnt = 0, rv = 0;
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <CPU feature flags to validate>\n", argv[0]);
-        return 1;
-    }
+    if (argc != 2)
+        errx(1, "Usage: %s <CPU feature flags to validate>", argv[0]);
 
     char* line = calloc(1, BUF_SIZE);
-    if (!line) {
-        fprintf(stderr, "out of memory\n");
-        return 1;
-    }
+    if (!line)
+        errx(1, "out of memory");
 
     struct cpuinfo* ci = malloc(sizeof(*ci));
-    if (!ci) {
-        fprintf(stderr, "out of memory\n");
-        return 1;
-    }
+    if (!ci)
+        errx(1, "out of memory");
 
     init_cpuinfo(ci);
 
-    if ((fp = fopen(CPUINFO_FILE, "r")) == NULL) {
-        perror("fopen");
-        return 1;
-    }
+    if ((fp = fopen(CPUINFO_FILE, "r")) == NULL)
+        err(1, "fopen");
 
     while (fgets(line, BUF_SIZE, fp) != NULL) {
         if (line[0] == '\n') {
@@ -211,11 +206,13 @@ int main(int argc, char* argv[]) {
     if (rv != 0)
         return 1;
 
-    if (cpu_cnt == 0) {
-        fprintf(stderr, "Could not get online cpu info.\n");
-        return 1;
-    }
+    if (cpu_cnt == 0)
+        errx(1, "could not get online cpu info");
 
-    printf("cpuinfo test passed\n");
+    rv = unlink(CPUINFO_FILE);
+    if (rv != -1 || errno != EACCES)
+        errx(1, "Removing %s didn't fail with -EACCES", CPUINFO_FILE);
+
+    puts("TEST OK");
     return 0;
 }
