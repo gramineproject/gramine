@@ -1,5 +1,3 @@
-ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
-
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
@@ -16,7 +14,6 @@ bash.manifest: manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Dexecdir=$(shell dirname $(shell which bash)) \
-		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< >$@
 
 bash.manifest.sgx: bash.manifest
