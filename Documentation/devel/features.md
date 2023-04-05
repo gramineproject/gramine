@@ -1,5 +1,7 @@
 <!-- Cannot render this doc in reStructuredText as it has no support for nested inline markup. -->
 
+<!-- If this document is moved to another dir, relative links must be modified. -->
+
 # Gramine features
 
 > ⚠ This is a highly technical document intended for software engineers with knowledge of OS
@@ -1449,10 +1451,9 @@ in the entrypoint of the manifest. The first process can spawn child processes, 
 same Gramine instance.
 
 Gramine can execute ELF binaries (executables and libraries) and executable scripts. Gramine
-supports executing them as
-[entrypoints](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#libos-entrypoint) and
-via `execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program
-with a new program *in the same SGX enclave*.
+supports executing them as [entrypoints](../manifest-syntax.html#libos-entrypoint) and via
+`execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program with
+a new program *in the same SGX enclave*.
 
 Gramine supports creating child processes using `fork()`, `vfork()` and `clone()` system calls.
 `vfork()` is emulated via `fork()`. `clone()` always means a separate process with its own address
@@ -1524,8 +1525,7 @@ arch-specific (x86-specific) thread state via `arch_prctl(ARCH_GET_FS)` and
 
 Gramine sets the same stack size for each thread. Gramine does *not* support dynamic growth of the
 first-thread stack (as Linux does). The stack size in Gramine can be configured via the
-[`sys.stack.size` manifest
-option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size).
+[`sys.stack.size` manifest option](../manifest-syntax.html#stack-size).
 
 </details>
 
@@ -1708,8 +1708,8 @@ mappings, it depends on the type of file:
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
-- on [systems supporting EDMM](https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-edmm),
-  `mprotect()` correctly applies permissions;
+- on [systems supporting EDMM](../sgx-intro.html#term-edmm), `mprotect()` correctly applies
+  permissions;
 - on systems not supporting EDMM, all enclave memory is allocated with Read-Write-Execute
   permissions, and `mprotect()` calls are silently ignored.
 
@@ -1837,10 +1837,10 @@ Gramine implements signal dispositions, but some rarely used features are not im
   `siginfo_t` are populated.
 
 Gramine supports injecting a [single SIGTERM signal from the
-host](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#external-sigterm-injection). No
-other signals from the host are supported. By default, Gramine ignores all signals sent by the host
-(including signals sent from other applications or from other Gramine instances). This limitation is
-for security reasons, relevant on SGX backend.
+host](../manifest-syntax.html#external-sigterm-injection). No other signals from the host are
+supported. By default, Gramine ignores all signals sent by the host (including signals sent from
+other applications or from other Gramine instances). This limitation is for security reasons,
+relevant on SGX backend.
 
 Gramine has some limitations on sending signals to processes and threads:
 - sending a signal to a process group is not supported (e.g. `kill(0)` sends the signal only to the
@@ -1909,9 +1909,9 @@ The corresponding system calls are:
   and GID + EGID + SGID (not implemented).
 
 Gramine starts the application with UID = EUID = SUID and equal to
-[`loader.uid`](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#user-id-and-group-id).
-Similarly, the application is started with GID = EGID = SGID and equal to `loader.gid`. If these
-manifest options are not set, then all IDs are equal to zero, which means root user.
+[`loader.uid`](../manifest-syntax.html#user-id-and-group-id). Similarly, the application is started
+with GID = EGID = SGID and equal to `loader.gid`. If these manifest options are not set, then all
+IDs are equal to zero, which means root user.
 
 During execution, the application may modify these IDs, and the changes will be visible inside the
 Gramine environment.
@@ -1966,9 +1966,9 @@ Gramine implements file system operations, but with several peculiarities and li
 The most important peculiarity is that Gramine does *not* simply mirror the host OS's directory
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
 files: this is controlled by the manifest's [FS mount points
-(`fs.mounts`)](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#fs-mount-points). This
-feature is similar to the *volumes* concept in [Docker](https://docs.docker.com/storage/volumes/).
-This Gramine feature is introduced for security.
+(`fs.mounts`)](../manifest-syntax.html#fs-mount-points). This feature is similar to the *volumes*
+concept in [Docker](https://docs.docker.com/storage/volumes/). This Gramine feature is introduced
+for security.
 
 Another peculiarity is that Gramine provides several types of filesystem mounts:
 - passthrough mounts (contain unencrypted files, see below),
@@ -1985,7 +1985,7 @@ Additionally, mounts may be hosted in one of two ways:
 
 All files potentially used by the application must be specified in the manifest file. Instead of
 single files, whole directories can be specified. Refer to the [manifest documentation for more
-details](https://gramine.readthedocs.io/en/stable/manifest-syntax.html).
+details](../manifest-syntax.html#manifest-syntax).
 
 Gramine also provides a subset of pseudo-files that can be found in a Linux kernel. In particular,
 Gramine automatically populates `/proc`, `/dev` and `/sys` pseudo-filesystems with most widely used
@@ -2425,7 +2425,7 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 
 - To use libc name-resolving Berkeley socket APIs like `gethostbyname()`, `gethostbyaddr()`,
   `getaddrinfo`, one must enable the [`sys.enable_extra_runtime_domain_names_conf` manifest
-  option](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#domain-names-configuration).
+  option](../manifest-syntax.html#domain-names-configuration).
 
 </details>
 
@@ -2631,7 +2631,7 @@ Gramine currently implements an *insecure* version of the `eventfd()` system cal
 insecure in the context of SGX backend because it relies on the host OS, which could for example
 maliciously drop an event or inject a random one. To enable this `eventfd()` implementation, the
 manifest file must contain [`sys.insecure__allow_eventfd =
-true`](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#allowing-eventfd).
+true`](../manifest-syntax.html#allowing-eventfd).
 
 Gramine supports polling on eventfd via `poll()`, `ppoll()`, `select()`, `epoll_*()` system calls.
 
@@ -2893,8 +2893,7 @@ current process. The following resources are supported:
 - `RLIMIT_CPU` -- dummy, no limit by default
 - `RLIMIT_FSIZE` -- dummy, no limit by default
 - `RLIMIT_DATA` -- implemented, affects `brk()` system call
-- `RLIMIT_STACK` -- dummy, equal to
-  [`sys.stack.size`](https://gramine.readthedocs.io/en/stable/manifest-syntax.html#stack-size) by
+- `RLIMIT_STACK` -- dummy, equal to [`sys.stack.size`](../manifest-syntax.html#stack-size) by
   default
 - `RLIMIT_CORE` -- dummy, zero by default
 - `RLIMIT_RSS` -- dummy, no limit by default
@@ -3161,7 +3160,7 @@ attestation and remote attestation flows. Additionally, the `/dev/attestation/ke
 exposes pseudo-files to set encryption keys (in particular, for encrypted files).
 
 For detailed information, refer to the ["Attestation and Secret Provisioning" documentation of
-Gramine](https://gramine.readthedocs.io/en/stable/attestation.html#low-level-dev-attestation-interface).
+Gramine](../attestation.html#low-level-dev-attestation-interface).
 
 <details><summary>Related pseudo-files</summary>
 
