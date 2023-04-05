@@ -1,4 +1,4 @@
-<!-- Cannot render this doc in reStructedText as it has no support for nested inline markup. -->
+<!-- Cannot render this doc in reStructuredText as it has no support for nested inline markup. -->
 
 # Gramine features
 
@@ -1454,10 +1454,10 @@ supports executing them as
 via `execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program
 with a new program *in the same SGX enclave*.
 
-Gramine supports creating child processes using `fork()`, `vfork()` and `clone(..no CLONE_VM..)`
-system calls. `vfork()` is emulated via `fork()`. `clone(..no CLONE_VM..)` always means a separate
-process with its own address space (i.e., `CLONE_THREAD`, `CLONE_FILES`, etc. flags cannot be
-specified). In case of SGX backend, child processes are created *in a new SGX enclave*.
+Gramine supports creating child processes using `fork()`, `vfork()` and `clone()` system calls.
+`vfork()` is emulated via `fork()`. `clone()` always means a separate process with its own address
+space (i.e., `CLONE_THREAD`, `CLONE_FILES`, etc. flags cannot be specified). In case of SGX backend,
+child processes are created *in a new SGX enclave*.
 
 Currently, Gramine does *not* fully support fork in multi-threaded applications. There is a [known
 bug in Gramine](https://github.com/gramineproject/gramine/issues/1156) that if one thread is
@@ -1504,7 +1504,7 @@ Gramine implements multi-threading. In case of SGX backend, all threads of one G
 in the same SGX enclave.
 
 Gramine implements per-thread:
-- stack and signal (alternate) stack,
+- information about signal (alternate) stack,
 - user/group IDs,
 - thread groups info,
 - signal mask, signal dispositions, signal queue,
@@ -1926,7 +1926,7 @@ environment.
 
 Currently, there are only two usages of user/group IDs in Gramine:
 - changing ownership of a file via `chown()` and similar system calls;
-- injecting SIGCHLD on terminated child processes (user ID is injected into the signal information
+- passing user ID in the SIGCHLD signal information on child process termination (in
   `siginfo_t::si_uid`).
 
 Gramine does *not* currently implement user/group ID fields in the `/proc/[pid]/status` pseudo-file.
@@ -1975,8 +1975,9 @@ Another peculiarity is that Gramine provides several types of filesystem mounts:
 - encrypted mounts (contain files that are automatically encrypted and integrity-protected).
 
 In case of SGX backend, passthrough mounts must be of one of two kinds:
-- containing allowed files (insecure, not protected in any way, only for testing purposes),
-- containing trusted files (secure, cryptographically hashed).
+- containing allowed files (not encrypted or cryptographically hashed),
+- containing trusted files (cryptographically hashed -- effectively, their contents are mixed into
+  MRENCLAVE on SGX).
 
 Additionally, mounts may be hosted in one of two ways:
 - on the host OS (in passthrough mounts),
