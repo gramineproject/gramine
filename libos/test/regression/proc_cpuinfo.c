@@ -210,7 +210,7 @@ int main(int argc, char* argv[]) {
         errx(1, "could not get online cpu info");
 
     rv = unlink(CPUINFO_FILE);
-    if (rv != -1 && errno != EACCES)
+    if (rv != -1 || errno != EACCES)
         errx(1, "Removing %s didn't fail with -EACCES", CPUINFO_FILE);
 
     puts("TEST OK");
