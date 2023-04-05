@@ -6,7 +6,7 @@ import sysconfig
 
 import jinja2
 
-from . import _CONFIG_PKGLIBDIR
+from . import _CONFIG_PKGLIBDIR, _CONFIG_SYSLIBDIR
 
 def ldd(*args):
     '''
@@ -75,6 +75,7 @@ def add_globals_from_gramine(env):
         'libos': pathlib.Path(_CONFIG_PKGLIBDIR) / 'libsysdb.so',
         'pkglibdir': pathlib.Path(_CONFIG_PKGLIBDIR),
         'runtimedir': Runtimedir(),
+        'syslibdir': pathlib.Path(_CONFIG_SYSLIBDIR),
     }
 
     try:

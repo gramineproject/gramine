@@ -25,7 +25,7 @@ pkgdatadir = get_option('datadir') / meson.project_name()
 
 syslibdir = get_option('syslibdir')
 if syslibdir == ''
-    syslibdir = '/' / get_option('libdir')
+    syslibdir = '/usr' / get_option('libdir')
 endif
 
 direct = get_option('direct') == 'enabled'
