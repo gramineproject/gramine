@@ -34,16 +34,16 @@ static void sgx_emodpe(uint64_t addr, uint64_t prot) {
  * updated to 0, then the entire request overlaps with pre-allocated heap.
  *
  * Partial overlap illustration:
-                ------------------------ --> heap_max
+                +----------------------+ --> heap_max
                 |                      |
 addr + size <-- |  Pre-allocated heap  |
                 |                      |
-                ------------------------ --> edmm_heap_prealloc_start
-                |                      |     (heap_max + edmm_heap_prealloc_size)
+                +----------------------+ --> edmm_heap_prealloc_start
+                |                      |     (heap_max - edmm_heap_prealloc_size)
                 |  Dynamically         |
        addr <-- |  allocated heap      |
                 |                      |
-                ------------------------
+                +----------------------+
 */
 static void exclude_preallocated_pages(uint64_t addr, size_t* count) {
     size_t size = *count * PAGE_SIZE;
