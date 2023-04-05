@@ -30,21 +30,20 @@ static void sgx_emodpe(uint64_t addr, uint64_t prot) {
     /* `EMODPE` does not return errors, it can only fault. */
 }
 
-/* Updates page count such that the request is fully below the pre-allocated
- * heap. If `count` is updated to 0, then the entire request overlaps with
- * pre-allocated heap.
+/* Updates page count such that the request is fully below the pre-allocated heap. If `count` is
+ * updated to 0, then the entire request overlaps with pre-allocated heap.
  *
  * Partial overlap illustration:
-                +----------------------+ --> heap_max
+                ------------------------ --> heap_max
                 |                      |
 addr + size <-- |  Pre-allocated heap  |
                 |                      |
-                +----------------------+ --> edmm_heap_prealloc_start
+                ------------------------ --> edmm_heap_prealloc_start
                 |                      |     (heap_max + edmm_heap_prealloc_size)
                 |  Dynamically         |
        addr <-- |  allocated heap      |
                 |                      |
-                +----------------------+
+                ------------------------
 */
 static void exclude_preallocated_pages(uint64_t addr, size_t* count) {
     size_t size = *count * PAGE_SIZE;
@@ -76,14 +75,11 @@ int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot) {
 
         size_t preallocated_count = original_count - count;
         if (preallocated_count != 0) {
-            /* Entire request is in pre-allocated range */
+            memset((void*)(addr + count * PAGE_SIZE), 0, preallocated_count * PAGE_SIZE);
             if (count == 0) {
-                memset((void*)addr, 0, preallocated_count * PAGE_SIZE);
+                /* Entire request is in pre-allocated range */
                 return 0;
             }
-
-            /* Request is partially in pre-allocated range */
-            memset((void*)(addr + count * PAGE_SIZE), 0, preallocated_count * PAGE_SIZE);
         }
     }
 

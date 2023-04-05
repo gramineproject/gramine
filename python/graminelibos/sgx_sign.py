@@ -281,21 +281,24 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
     # using `sgx.edmm_heap_prealloc_size` then add the "free" pre-allocated pages.
     #
     # Assumption here is that we have a single heap region (called "free") that is beneath all
-    # other statically allocated memory areas(manifest, ssa, tls. tcs, stack, sig_stack, pal).
+    # other statically allocated memory areas(manifest, ssa, tls, tcs, stack, sig_stack, pal).
     if attr['edmm_enable']:
         free_preallocated = []
         if attr['edmm_heap_prealloc_size'] > 0:
 
             if last_populated_addr < attr['edmm_heap_prealloc_size']:
-                raise Exception("Not enough space for edmm heap pre-allocation!")
+                raise Exception("Not enough space for edmm heap pre-allocation! Increase "
+                                "'sgx.enclave_size' or decrease 'sgx.edmm_heap_prealloc_size' in "
+                                "the manifest.")
 
             if last_populated_addr < enclave_heap_min:
-                raise Exception("No space for heap!! Please check your manifest!")
+                raise Exception("No space for heap!! Increase 'sgx.enclave_size' in the manifest.")
 
             flags = PAGEINFO_R | PAGEINFO_W | PAGEINFO_X | PAGEINFO_REG
             start_addr = last_populated_addr - attr['edmm_heap_prealloc_size']
             if start_addr < enclave_heap_min:
-                raise Exception("sgx.edmm_heap_prealloc_size is greater than total heap size!")
+                raise Exception(f"'sgx.edmm_heap_prealloc_size' must be less than total heap size "
+                                f"{last_populated_addr-enclave_heap_min:016x}")
 
             free_preallocated.append(
                 MemoryArea('free', addr=start_addr, size=attr['edmm_heap_prealloc_size'],
@@ -486,7 +489,8 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     attr['flags'], attr['xfrms'], attr['misc_select'] = get_enclave_attributes(manifest_sgx)
 
     if not attr['edmm_enable'] and attr['edmm_heap_prealloc_size'] > 0:
-        raise Exception("sgx.edmm_heap_prealloc_size must be used together with sgx.edmm_enable!")
+        raise Exception("'sgx.edmm_heap_prealloc_size' must be used together with "
+                        "'sgx.edmm_enable'!")
 
     if verbose:
         print('Attributes:')
