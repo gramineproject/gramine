@@ -964,18 +964,6 @@ See :ref:`vtune-sgx-profiling` for more information.
 Deprecated options
 ------------------
 
-FS mount points (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-   fs.mount.[identifier].type = "[chroot|...]"
-   fs.mount.[identifier].path = "[PATH]"
-   fs.mount.[identifier].uri  = "[URI]"
-
-This syntax used a TOML table schema with keys for each mount. It has been
-replaced with the ``fs.mounts`` TOML array.
-
 Experimental sysfs topology support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

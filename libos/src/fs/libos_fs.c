@@ -249,16 +249,11 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     }
 
     if (mount_path[0] != '/') {
-        /* FIXME: Relative paths are deprecated starting from Gramine v1.2, we can disallow them
-         * completely two versions after it. */
-        if (is_dot_or_dotdot(mount_path)) {
-            log_error("Mount points '.' and '..' are not allowed, use absolute paths instead.");
-            ret = -EINVAL;
-            goto out;
-        }
-        log_error("Detected deprecated syntax: '%s.path' (\"%s\") is not absolute. "
+        log_error("Relative mount path: '%s.path' (\"%s\") is disallowed! "
                   "Consider converting it to absolute by adding \"/\" at the beginning.",
                   prefix, mount_path);
+        ret = -EINVAL;
+        goto out;
     }
 
     if (!mount_type || !strcmp(mount_type, "chroot")) {
@@ -293,105 +288,6 @@ out:
     free(mount_path);
     free(mount_uri);
     free(mount_key_name);
-    return ret;
-}
-
-/*
- * Mount filesystems using the deprecated TOML-table syntax.
- *
- * FIXME: This is deprecated starting from Gramine v1.2 and can be removed two versions after it.
- */
-static int mount_nonroot_from_toml_table(void) {
-    int ret = 0;
-
-    assert(g_manifest_root);
-    toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
-    if (!manifest_fs)
-        return 0;
-
-    toml_table_t* manifest_fs_mounts = toml_table_in(manifest_fs, "mount");
-    if (!manifest_fs_mounts)
-        return 0;
-
-    ssize_t mounts_cnt = toml_table_ntab(manifest_fs_mounts);
-    if (mounts_cnt < 0)
-        return -EINVAL;
-    if (mounts_cnt == 0)
-        return 0;
-
-    log_error("Detected deprecated syntax: 'fs.mount'. Consider converting to the new array "
-              "syntax: 'fs.mounts = [{ type = \"chroot\", uri = \"...\", path = \"...\" }]'.");
-
-    /*
-     * *** Warning: A _very_ ugly hack below ***
-     *
-     * In the TOML-table syntax, the entries are not ordered, but Gramine actually relies on the
-     * specific mounting order (e.g. you can't mount /lib/asdf first and then /lib, but the other
-     * way around works). The problem is, that TOML structure is just a dictionary, so the order of
-     * keys is not preserved.
-     *
-     * To fix the issue, we use an ugly heuristic - we apply mounts sorted by the path length, which
-     * in most cases should result in a proper mount order.
-     *
-     * We do this in O(n^2) because we don't have a sort function, but that shouldn't be an issue -
-     * usually there are around 5 mountpoints with ~30 chars in paths, so it should still be quite
-     * fast.
-     *
-     * Fortunately, the table syntax is deprecated, so we'll be able to remove this code in a future
-     * Gramine release.
-     *
-     * Corresponding issue: https://github.com/gramineproject/gramine/issues/23.
-     */
-    const char** keys = malloc(mounts_cnt * sizeof(*keys));
-    if (!keys)
-        return -ENOMEM;
-
-    size_t* lengths = malloc(mounts_cnt * sizeof(*lengths));
-    if (!lengths) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    size_t longest = 0;
-    for (ssize_t i = 0; i < mounts_cnt; i++) {
-        keys[i] = toml_key_in(manifest_fs_mounts, i);
-        assert(keys[i]);
-
-        toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[i]);
-        assert(mount);
-        char* mount_path;
-        ret = toml_string_in(mount, "path", &mount_path);
-        if (ret < 0 || !mount_path) {
-            if (!ret)
-                ret = -ENOENT;
-            goto out;
-        }
-        lengths[i] = strlen(mount_path);
-        longest = MAX(longest, lengths[i]);
-        free(mount_path);
-    }
-
-    for (size_t i = 0; i <= longest; i++) {
-        for (ssize_t j = 0; j < mounts_cnt; j++) {
-            if (lengths[j] != i)
-                continue;
-            toml_table_t* mount = toml_table_in(manifest_fs_mounts, keys[j]);
-            assert(mount);
-
-            char* prefix = alloc_concat("fs.mount.", -1, keys[j], -1);
-            if (!prefix) {
-                ret = -ENOMEM;
-                goto out;
-            }
-            ret = mount_one_nonroot(mount, prefix);
-            free(prefix);
-            if (ret < 0)
-                goto out;
-        }
-    }
-out:
-    free(keys);
-    free(lengths);
     return ret;
 }
 
@@ -465,10 +361,6 @@ int init_mount(void) {
         return 0;
 
     int ret;
-
-    ret = mount_nonroot_from_toml_table();
-    if (ret < 0)
-        return ret;
 
     ret = mount_nonroot_from_toml_array();
     if (ret < 0)
