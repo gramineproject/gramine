@@ -99,226 +99,226 @@ The below list is generated from the [syscall table of Linux
 <details><summary>Status of system call support in Gramine</summary>
 
 - ☑ `read()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `write()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `open()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `close()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `stat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `fstat()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `lstat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `poll()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `lseek()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `mmap()`
-  <sup>[1](#memory-management)</sup>
-  <sup>[2](#file-system-operations)</sup>
+  <sup>[6](#memory-management)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `mprotect()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☑ `munmap()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☑ `brk()`
-  <sup>[1](#memory-management)</sup>
-  <sup>[2](#system-information-and-resource-accounting)</sup>
+  <sup>[6](#memory-management)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☑ `rt_sigaction()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `rt_sigprocmask()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `rt_sigreturn()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ▣ `ioctl()`
-  <sup>[1](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[2](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[3](#unix-domain-sockets)</sup>
-  <sup>[4](#ioctls)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[18](#ioctls)</sup>
 
 - ☑ `pread64()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `pwrite64()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `readv()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `writev()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `access()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `pipe()`
-  <sup>[1](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ▣ `select()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `sched_yield()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `mremap()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `msync()`
-  <sup>[1](#memory-management)</sup>
-  <sup>[2](#file-system-operations)</sup>
+  <sup>[6](#memory-management)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `mincore()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `madvise()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `shmget()`
-  <sup>[1](#shared-memory)</sup>
+  <sup>[17](#shared-memory)</sup>
 
 - ☒ `shmat()`
-  <sup>[1](#shared-memory)</sup>
+  <sup>[17](#shared-memory)</sup>
 
 - ☒ `shmctl()`
-  <sup>[1](#shared-memory)</sup>
+  <sup>[17](#shared-memory)</sup>
 
 - ☑ `dup()`
-  <sup>[1](#misc)</sup>
+  <sup>[23](#misc)</sup>
 
 - ☑ `dup2()`
-  <sup>[1](#misc)</sup>
+  <sup>[23](#misc)</sup>
 
 - ☑ `pause()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `nanosleep()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ▣ `getitimer()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `alarm()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ▣ `setitimer()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `getpid()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ▣ `sendfile()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `socket()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `connect()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `accept()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `sendto()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `recvfrom()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `sendmsg()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `recvmsg()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `shutdown()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `bind()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `listen()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `getsockname()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `getpeername()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `socketpair()`
-  <sup>[1](#unix-domain-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `setsockopt()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `getsockopt()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☑ `clone()`
   <sup>[1](#processes)</sup>
@@ -338,954 +338,954 @@ The below list is generated from the [syscall table of Linux
   <sup>[2](#threads)</sup>
 
 - ▣ `wait4()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ▣ `kill()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ▣ `uname()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `semget()`
-  <sup>[1](#semaphores)</sup>
+  <sup>[15](#semaphores)</sup>
 
 - ☒ `semop()`
-  <sup>[1](#semaphores)</sup>
+  <sup>[15](#semaphores)</sup>
 
 - ☒ `semctl()`
-  <sup>[1](#semaphores)</sup>
+  <sup>[15](#semaphores)</sup>
 
 - ☒ `shmdt()`
-  <sup>[1](#shared-memory)</sup>
+  <sup>[17](#shared-memory)</sup>
 
 - ☒ `msgget()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `msgsnd()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `msgrcv()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `msgctl()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ▣ `fcntl()`
-  <sup>[1](#file-locking)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#misc)</sup>
+  <sup>[9.2](#file-locking)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[23](#misc)</sup>
 
 - ☒ `flock()`
-  <sup>[1](#file-locking)</sup>
+  <sup>[9.2](#file-locking)</sup>
 
 - ☑ `fsync()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `fdatasync()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `truncate()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `ftruncate()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `getdents()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `getcwd()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `chdir()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `fchdir()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `rename()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `mkdir()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `rmdir()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `creat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `link()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `unlink()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `symlink()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlink()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `chmod()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `fchmod()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `chown()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `fchown()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `lchown()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `umask()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `gettimeofday()`
-  <sup>[1](#date-and-time)</sup>
-  <sup>[2](#misc)</sup>
+  <sup>[19](#date-and-time)</sup>
+  <sup>[23](#misc)</sup>
 
 - ▣ `getrlimit()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `getrusage()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ▣ `sysinfo()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `times()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ☒ `ptrace()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `getuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `syslog()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `getgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `setuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `setgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `geteuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `getegid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `setpgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☑ `getppid()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ▣ `getpgrp()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `setsid()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `setreuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `setregid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `getgroups()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `setgroups()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `setresuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `getresuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `setresgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `getresgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ▣ `getpgid()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `setfsuid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `setfsgid()`
-  <sup>[1](#user-and-group-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `getsid()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `capget()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `capset()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `rt_sigpending()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `rt_sigtimedwait()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `rt_sigqueueinfo()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `rt_sigsuspend()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `sigaltstack()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `utime()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `mknod()`
-  <sup>[1](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `uselib()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `personality()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ustat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `statfs()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `fstatfs()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `sysfs()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `getpriority()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `setpriority()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_setparam()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_getparam()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_setscheduler()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_getscheduler()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_get_priority_max()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_get_priority_min()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `sched_rr_get_interval()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ▣ `mlock()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `munlock()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `mlockall()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `munlockall()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `vhangup()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `modify_ldt()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pivot_root()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `_sysctl()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `prctl()`
-  <sup>[1](#threads)</sup>
+  <sup>[2](#threads)</sup>
 
 - ▣ `arch_prctl()`
-  <sup>[1](#threads)</sup>
+  <sup>[2](#threads)</sup>
 
 - ☒ `adjtimex()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ▣ `setrlimit()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☑ `chroot()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `sync()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `acct()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `settimeofday()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ☒ `mount()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `umount2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `swapon()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `swapoff()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `reboot()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `sethostname()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ▣ `setdomainname()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `iopl()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ioperm()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `create_module()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `init_module()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `delete_module()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `get_kernel_syms()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `query_module()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `quotactl()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `nfsservctl()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `getpmsg()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `putpmsg()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `afs_syscall()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `tuxcall()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `security()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `gettid()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `readahead()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `setxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lsetxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsetxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `getxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lgetxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fgetxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `listxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `llistxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `flistxattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `removexattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `lremovexattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fremovexattr()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `tkill()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☑ `time()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ▣ `futex()`
-  <sup>[1](#memory-synchronization-futexes)</sup>
+  <sup>[5](#memory-synchronization-futexes)</sup>
 
 - ☑ `sched_setaffinity()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☑ `sched_getaffinity()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `set_thread_area()`
-  <sup>[1](#threads)</sup>
+  <sup>[2](#threads)</sup>
 
 - ☒ `io_setup()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_destroy()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_getevents()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_submit()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_cancel()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `get_thread_area()`
-  <sup>[1](#threads)</sup>
+  <sup>[2](#threads)</sup>
 
 - ☒ `lookup_dcookie()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `epoll_create()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `remap_file_pages()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☑ `getdents64()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `set_tid_address()`
-  <sup>[1](#process-and-thread-identifiers)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `restart_syscall()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `semtimedop()`
-  <sup>[1](#semaphores)</sup>
+  <sup>[15](#semaphores)</sup>
 
 - ▣ `fadvise64()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `timer_create()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `timer_settime()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `timer_gettime()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `timer_getoverrun()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `timer_delete()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `clock_settime()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ▣ `clock_gettime()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ▣ `clock_getres()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ▣ `clock_nanosleep()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `exit_group()`
   <sup>[1](#processes)</sup>
 
 - ☑ `epoll_wait()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_ctl()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `tgkill()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `utimes()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `vserver()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `mbind()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `set_mempolicy()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `get_mempolicy()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `mq_open()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `mq_unlink()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `mq_timedsend()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `mq_timedreceive()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `mq_notify()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `mq_getsetattr()`
-  <sup>[1](#message-queues)</sup>
+  <sup>[16](#message-queues)</sup>
 
 - ☒ `kexec_load()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `waitid()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `add_key()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `request_key()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `keyctl()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ioprio_set()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `ioprio_get()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `inotify_init()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `inotify_add_watch()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `inotify_rm_watch()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `migrate_pages()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `openat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `mkdirat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `mknodat()`
-  <sup>[1](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ▣ `fchownat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `futimesat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `newfstatat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `unlinkat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `renameat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `linkat()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☒ `symlinkat()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlinkat()`
-  <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `fchmodat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `faccessat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `pselect6()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `ppoll()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `unshare()`
   <sup>[1](#processes)</sup>
-  <sup>[2](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `set_robust_list()`
-  <sup>[1](#memory-synchronization-futexes)</sup>
+  <sup>[5](#memory-synchronization-futexes)</sup>
 
 - ☑ `get_robust_list()`
-  <sup>[1](#memory-synchronization-futexes)</sup>
+  <sup>[5](#memory-synchronization-futexes)</sup>
 
 - ☒ `splice()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `tee()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `sync_file_range()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `vmsplice()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `move_pages()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `utimensat()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `epoll_pwait()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `signalfd()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `timerfd_create()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ▣ `eventfd()`
-  <sup>[1](#event-notifications-eventfd)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `fallocate()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `timerfd_settime()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☒ `timerfd_gettime()`
-  <sup>[1](#sleeps-timers-and-alarms)</sup>
+  <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `accept4()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☒ `signalfd4()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ▣ `eventfd2()`
-  <sup>[1](#event-notifications-eventfd)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_create1()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `dup3()`
-  <sup>[1](#misc)</sup>
+  <sup>[23](#misc)</sup>
 
 - ▣ `pipe2()`
-  <sup>[1](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `inotify_init1()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☑ `preadv()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☑ `pwritev()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `rt_tgsigqueueinfo()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `perf_event_open()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `recvmmsg()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☒ `fanotify_init()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `fanotify_mark()`
-  <sup>[1](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ▣ `prlimit64()`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `name_to_handle_at()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `open_by_handle_at()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `clock_adjtime()`
-  <sup>[1](#date-and-time)</sup>
+  <sup>[19](#date-and-time)</sup>
 
 - ☒ `syncfs()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ▣ `sendmmsg()`
-  <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[2](#unix-domain-sockets)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ☒ `setns()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `getcpu()`
-  <sup>[1](#scheduling)</sup>
-  <sup>[2](#misc)</sup>
+  <sup>[4](#scheduling)</sup>
+  <sup>[23](#misc)</sup>
 
 - ☒ `process_vm_readv()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `process_vm_writev()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `kcmp()`
   <sup>[1](#processes)</sup>
 
 - ☒ `finit_module()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `sched_setattr()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `sched_getattr()`
-  <sup>[1](#scheduling)</sup>
+  <sup>[4](#scheduling)</sup>
 
 - ☒ `renameat2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `seccomp()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `getrandom()`
-  <sup>[1](#randomness)</sup>
+  <sup>[21](#randomness)</sup>
 
 - ☒ `memfd_create()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `kexec_file_load()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `bpf()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `execveat()`
   <sup>[1](#processes)</sup>
 
 - ☒ `userfaultfd()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `membarrier()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ▣ `mlock2()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `copy_file_range()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `preadv2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `pwritev2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `pkey_mprotect()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_alloc()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_free()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `statx()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `io_pgetevents()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `rseq()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_send_signal()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `io_uring_setup()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_uring_enter()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `io_uring_register()`
-  <sup>[1](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-i-o)</sup>
 
 - ☒ `open_tree()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `move_mount()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `fsopen()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsconfig()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fsmount()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `fspick()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_open()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `clone3()`
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
 - ☒ `close_range()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `openat2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `pidfd_getfd()`
-  <sup>[1](#signals-and-process-state-changes)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `faccessat2()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `process_madvise()`
-  <sup>[1](#memory-management)</sup>
-  <sup>[2](#signals-and-process-state-changes)</sup>
+  <sup>[6](#memory-management)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `epoll_pwait2()`
-  <sup>[1](#file-system-operations)</sup>
-  <sup>[2](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[3](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[4](#unix-domain-sockets)</sup>
-  <sup>[5](#i-o-multiplexing)</sup>
-  <sup>[6](#event-notifications-eventfd)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[10](#pipes-and-fifos-named-pipes)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `mount_setattr()`
-  <sup>[1](#file-system-operations)</sup>
+  <sup>[9.1](#file-system-operations)</sup>
 
 - ☒ `quotactl_fd()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_create_ruleset()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_add_rule()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_restrict_self()`
-  <sup>[1](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `memfd_secret()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 - ☒ `process_mrelease()`
-  <sup>[1](#memory-management)</sup>
-  <sup>[2](#signals-and-process-state-changes)</sup>
+  <sup>[6](#memory-management)</sup>
+  <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `futex_waitv()`
-  <sup>[1](#memory-synchronization-futexes)</sup>
+  <sup>[5](#memory-synchronization-futexes)</sup>
 
 - ☒ `set_mempolicy_home_node()`
-  <sup>[1](#memory-management)</sup>
+  <sup>[6](#memory-management)</sup>
 
 </details><br />
 
@@ -1298,145 +1298,145 @@ grows with time, as Gramine adds functionality required by real-world workloads.
 
 <details><summary>List of all pseudo-files in Gramine</summary>
 
-- ☑ `/dev/` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
-  <sup>[2](#semaphores)</sup> <sup>[3](#shared-memory)</sup> <sup>[4](#attestation)</sup>
+- ☑ `/dev/` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup> <sup>[25](#attestation)</sup>
 
-  - ☑ `/dev/attestation/` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/attestation_type` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/user_report_data` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/target_info` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/my_target_info` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/report` <sup>[1](#attestation)</sup>
-    - ☑ `/dev/attestation/keys` <sup>[1](#attestation)</sup>
-      - ☑ `/dev/attestation/keys/<key_name>` <sup>[1](#attestation)</sup>
+  - ☑ `/dev/attestation/` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/attestation_type` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/user_report_data` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/target_info` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/my_target_info` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/report` <sup>[25](#attestation)</sup>
+    - ☑ `/dev/attestation/keys` <sup>[25](#attestation)</sup>
+      - ☑ `/dev/attestation/keys/<key_name>` <sup>[25](#attestation)</sup>
     - ▣ `/dev/attestation/protected_files_key`
-      <sup>[1](#attestation)</sup>
-  - ☑ `/dev/null` <sup>[1](#misc)</sup>
-  - ☑ `/dev/zero` <sup>[1](#misc)</sup>
-  - ☑ `/dev/random` <sup>[1](#randomness)</sup>
-  - ☑ `/dev/urandom` <sup>[1](#randomness)</sup>
-  - ☒ `/dev/shm` <sup>[1](#semaphores)</sup> <sup>[2](#shared-memory)</sup>
-  - ☑ `/dev/stdin` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
-  - ☑ `/dev/stdout` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
-  - ☑ `/dev/stderr` <sup>[1](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[25](#attestation)</sup>
+  - ☑ `/dev/null` <sup>[23](#misc)</sup>
+  - ☑ `/dev/zero` <sup>[23](#misc)</sup>
+  - ☑ `/dev/random` <sup>[21](#randomness)</sup>
+  - ☑ `/dev/urandom` <sup>[21](#randomness)</sup>
+  - ☒ `/dev/shm` <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup>
+  - ☑ `/dev/stdin` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stdout` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stderr` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `/proc/`
-  <sup>[1](#process-and-thread-identifiers)</sup>
-  <sup>[2](#user-and-group-identifiers)</sup>
-  <sup>[3](#hard-links-and-soft-links-symbolic-links)</sup>
-  <sup>[4](#system-information-and-resource-accounting)</sup>
-  <sup>[5](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[6](#unix-domain-sockets)</sup>
+  <sup>[3](#process-and-thread-identifiers)</sup>
+  <sup>[8](#user-and-group-identifiers)</sup>
+  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
+  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11.2](#unix-domain-sockets)</sup>
   - ▣ `/proc/[this-pid]/` (aka `/proc/self/`)
-    <sup>[1](#process-and-thread-identifiers)</sup>
-    <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[this-pid]/cmdline` <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☑ `/proc/[this-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[this-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[this-pid]/fd` <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☑ `/proc/[this-pid]/maps` <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☑ `/proc/[this-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
+    <sup>[3](#process-and-thread-identifiers)</sup>
+    <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[this-pid]/cmdline` <sup>[3](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/cwd` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[this-pid]/exe` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[this-pid]/fd` <sup>[3](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/maps` <sup>[3](#process-and-thread-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/root` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
     - ▣ `/proc/[this-pid]/stat`
-      <sup>[1](#process-and-thread-identifiers)</sup>
+      <sup>[3](#process-and-thread-identifiers)</sup>
     - ▣ `/proc/[this-pid]/statm`
-      <sup>[1](#process-and-thread-identifiers)</sup>
+      <sup>[3](#process-and-thread-identifiers)</sup>
     - ▣ `/proc/[this-pid]/status`
-      <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#user-and-group-identifiers)</sup>
-    - ☑ `/proc/[this-pid]/task` <sup>[1](#process-and-thread-identifiers)</sup>
+      <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[8](#user-and-group-identifiers)</sup>
+    - ☑ `/proc/[this-pid]/task` <sup>[3](#process-and-thread-identifiers)</sup>
 
   - ▣ `/proc/[remote-pid]/`
-    <sup>[1](#process-and-thread-identifiers)</sup>
-    <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[remote-pid]/cwd` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[remote-pid]/exe` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
-    - ☑ `/proc/[remote-pid]/root` <sup>[1](#process-and-thread-identifiers)</sup>
-      <sup>[2](#hard-links-and-soft-links-symbolic-links)</sup>
+    <sup>[3](#process-and-thread-identifiers)</sup>
+    <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[remote-pid]/cwd` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[remote-pid]/exe` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    - ☑ `/proc/[remote-pid]/root` <sup>[3](#process-and-thread-identifiers)</sup>
+      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
 
   - ▣ `/proc/[local-tid]/`
-    <sup>[1](#process-and-thread-identifiers)</sup>
+    <sup>[3](#process-and-thread-identifiers)</sup>
 
-  - ☒ `/proc/[remote-tid]/` <sup>[1](#process-and-thread-identifiers)</sup>
+  - ☒ `/proc/[remote-tid]/` <sup>[3](#process-and-thread-identifiers)</sup>
 
   - ▣ `/proc/cpuinfo`
-    <sup>[1](#system-information-and-resource-accounting)</sup>
+    <sup>[22](#system-information-and-resource-accounting)</sup>
   - ▣ `/proc/meminfo`
-    <sup>[1](#system-information-and-resource-accounting)</sup>
+    <sup>[22](#system-information-and-resource-accounting)</sup>
   - ▣ `/proc/stat`
-    <sup>[1](#system-information-and-resource-accounting)</sup>
+    <sup>[22](#system-information-and-resource-accounting)</sup>
 
   - ▣ `/proc/sys/`
-    <sup>[1](#process-and-thread-identifiers)</sup>
-    <sup>[2](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[3](#unix-domain-sockets)</sup>
+    <sup>[3](#process-and-thread-identifiers)</sup>
+    <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11.2](#unix-domain-sockets)</sup>
     - ▣ `/proc/sys/kernel/`
-      <sup>[1](#process-and-thread-identifiers)</sup>
+      <sup>[3](#process-and-thread-identifiers)</sup>
       - ☑ `/proc/sys/kernel/pid_max`
-        <sup>[1](#process-and-thread-identifiers)</sup>
-    - ☒ `/proc/sys/net/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-      <sup>[2](#unix-domain-sockets)</sup>
-      - ☒ `/proc/sys/net/core/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv4/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv6/` <sup>[1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/unix/` <sup>[1](#unix-domain-sockets)</sup>
+        <sup>[3](#process-and-thread-identifiers)</sup>
+    - ☒ `/proc/sys/net/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+      <sup>[11.2](#unix-domain-sockets)</sup>
+      - ☒ `/proc/sys/net/core/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv4/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv6/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/unix/` <sup>[11.2](#unix-domain-sockets)</sup>
 
 - ▣ `/sys/devices/system/`
-  <sup>[1](#system-information-and-resource-accounting)</sup>
+  <sup>[22](#system-information-and-resource-accounting)</sup>
   - ▣ `/sys/devices/system/cpu/`
-    <sup>[1](#system-information-and-resource-accounting)</sup>
+    <sup>[22](#system-information-and-resource-accounting)</sup>
     - ▣ `/sys/devices/system/cpu/cpu[x]/`
-      <sup>[1](#system-information-and-resource-accounting)</sup>
+      <sup>[22](#system-information-and-resource-accounting)</sup>
       - ▣ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/level`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/number_of_sets`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/physical_line_partition`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/shared_cpu_map`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/size`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/type`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/cpu/cpu[x]/online`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
       - ▣ `/sys/devices/system/cpu/cpu[x]/topology/`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_id`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
     - ☑ `/sys/devices/system/cpu/online`
-      <sup>[1](#system-information-and-resource-accounting)</sup>
+      <sup>[22](#system-information-and-resource-accounting)</sup>
     - ☑ `/sys/devices/system/cpu/possible`
-      <sup>[1](#system-information-and-resource-accounting)</sup>
+      <sup>[22](#system-information-and-resource-accounting)</sup>
 
   - ▣ `/sys/devices/system/node/`
-    <sup>[1](#system-information-and-resource-accounting)</sup>
+    <sup>[22](#system-information-and-resource-accounting)</sup>
     - ▣ `/sys/devices/system/node/node[x]/`
-      <sup>[1](#system-information-and-resource-accounting)</sup>
+      <sup>[22](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/node/node[x]/cpumap`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/node/node[x]/distance`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
       - ☑ `/sys/devices/system/node/node[x]/hugepages/`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
         - ▣
           `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`
-          <sup>[1](#system-information-and-resource-accounting)</sup>
+          <sup>[22](#system-information-and-resource-accounting)</sup>
       - ▣ `/sys/devices/system/node/node[x]/meminfo`
-        <sup>[1](#system-information-and-resource-accounting)</sup>
+        <sup>[22](#system-information-and-resource-accounting)</sup>
 
 </details><br />
 
