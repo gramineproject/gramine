@@ -496,8 +496,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 continue;
             } else {
                 if (enclave->edmm_heap_prealloc_size > areas[i].size) {
-                    log_error("'sgx.edmm_heap_prealloc_size' must be less than total heap size 0x%lx",
-                              areas[i].size);
+                    log_error("'sgx.edmm_heap_prealloc_size' must be less than total heap size "
+                              "0x%lx", areas[i].size);
                     ret = -EINVAL;
                     goto out;
                 }

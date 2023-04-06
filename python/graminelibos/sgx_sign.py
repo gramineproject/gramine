@@ -292,7 +292,7 @@ def populate_memory_areas(attr, areas, enclave_base, enclave_heap_min):
                                 "the manifest.")
 
             if last_populated_addr < enclave_heap_min:
-                raise Exception("No space for heap!! Increase 'sgx.enclave_size' in the manifest.")
+                raise Exception("No space for heap! Increase 'sgx.enclave_size' in the manifest.")
 
             flags = PAGEINFO_R | PAGEINFO_W | PAGEINFO_X | PAGEINFO_REG
             start_addr = last_populated_addr - attr['edmm_heap_prealloc_size']
