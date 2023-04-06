@@ -14,6 +14,7 @@
 #include "pal_linux_types.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
+#include "linux_capabilities.h"
 
 /*
  * These structures must be packed, otherwise will leak data in their padding when copied to
@@ -45,6 +46,8 @@ enum {
     OCALL_RESUME_THREAD,
     OCALL_SCHED_SETAFFINITY,
     OCALL_SCHED_GETAFFINITY,
+    OCALL_CAPGET,
+    OCALL_CAPSET,
     OCALL_CLONE_THREAD,
     OCALL_CREATE_PROCESS,
     OCALL_FUTEX,
@@ -353,6 +356,11 @@ struct ocall_edmm_modify_pages_type {
 struct ocall_edmm_remove_pages {
     uint64_t addr;
     size_t count;
+};
+
+struct ocall_capget_t {
+    uint32_t version;
+    void *cap_data;
 };
 
 #pragma pack(pop)

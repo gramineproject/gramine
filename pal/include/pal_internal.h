@@ -17,6 +17,7 @@
 #include "pal_error.h"
 #include "pal_topology.h"
 #include "toml.h"
+#include "linux_capabilities.h"
 
 #ifndef IN_PAL
 #error "pal_internal.h can only be included in PAL"
@@ -239,6 +240,8 @@ int _PalAttestationReport(const void* user_report_data, size_t* user_report_data
 int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
                          size_t* quote_size);
 int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
+int _Palcapget(uint32_t version, struct gramine_user_cap_data* datap);
+int _Palcapset(uint32_t version, struct gramine_user_cap_data* datap);
 
 #define INIT_FAIL(msg, ...)                                                              \
     do {                                                                                 \

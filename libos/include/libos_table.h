@@ -12,6 +12,7 @@
 #endif
 
 #include "libos_types.h"
+#include <linux/capability.h>
 
 typedef void (*libos_syscall_t)(void);
 
@@ -206,6 +207,8 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* un
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
+long libos_syscall_capget(cap_user_header_t hdrp, const cap_user_data_t datap);
+long libos_syscall_capset(cap_user_header_t hdrp, const cap_user_data_t datap);
 
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM   0x0002

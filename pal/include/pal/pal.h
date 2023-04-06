@@ -15,6 +15,7 @@
 #include <stdnoreturn.h>
 
 #include "iovec.h"
+#include "linux_capabilities.h"
 
 // TODO: fix this (but see pal/include/arch/x86_64/pal_arch.h)
 #define INSIDE_PAL_H
@@ -981,5 +982,7 @@ void PalDebugMapRemove(void* start_addr);
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without
  * DEBUG, falls back to raw value ("0x1234"). */
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+int Palcapget(uint32_t version, struct gramine_user_cap_data* datap);
+int Palcapset(uint32_t version, struct gramine_user_cap_data* datap);
 
 #undef INSIDE_PAL_H

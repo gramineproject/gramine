@@ -22,6 +22,7 @@
 #include "spinlock.h"
 #include "toml_utils.h"
 #include "topo_info.h"
+#include "linux_capabilities.h"
 
 /* The timeout of 50ms was found to be a safe TSC drift correction periodicity based on results
  * from multiple systems. Any higher or lower could pose risks of negative time drift or
@@ -727,4 +728,18 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
         default:
             return -PAL_ERROR_INVAL;
     }
+}
+
+int _Palcapget(uint32_t version, struct gramine_user_cap_data* datap) {
+    if (version != GRAMINE_LINUX_CAPABILITY_VERSION_1 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_2 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_3)
+        return -EINVAL;
+    int ret = ocall_capget(version, datap);
+    return ret;
+}
+
+int _Palcapset(uint32_t version, struct gramine_user_cap_data* datap) {
+    int ret = ocall_capset(version, datap);
+    return ret;
 }

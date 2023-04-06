@@ -19,6 +19,7 @@
 #include "libos_types.h"
 #include "list.h"
 #include "pal.h"
+#include "linux_capabilities.h"
 
 #define WAKE_QUEUE_TAIL ((void*)1)
 /* If next is NULL, then this node is not on any queue.
@@ -135,6 +136,8 @@ struct libos_thread {
 
     refcount_t ref_count;
     struct libos_lock lock;
+    struct gramine_user_cap_data capabilities[2];
+    bool is_cap_set;
 };
 
 struct libos_thread_queue {

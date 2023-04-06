@@ -7,6 +7,7 @@
 
 #include <asm/fcntl.h>
 #include <linux/time.h>
+#include <sys/capability.h>
 
 #include "api.h"
 #include "pal.h"
@@ -78,4 +79,45 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(key);
     __UNUSED(key_size);
     return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
+int _Palcapget(uint32_t version, struct gramine_user_cap_data* datap) {
+    if (version != GRAMINE_LINUX_CAPABILITY_VERSION_1 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_2 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_3)
+        return -EINVAL;
+    int ret = 0;
+    struct __user_cap_header_struct header = {
+        .version = version,
+       /* Setting header.pid to 0 since we support getting and setting capabilities only for
+        * current thread and current process */
+        .pid = 0
+    };
+    header.version = version;
+    header.pid = 0;
+    ret = DO_SYSCALL(capget, &header, (struct __user_cap_data_struct *)datap);
+    if ( ret < 0 ) {
+        return ret;
+    }
+    return 0;
+}
+
+int _Palcapset(uint32_t version, struct gramine_user_cap_data* datap) {
+    if (version != GRAMINE_LINUX_CAPABILITY_VERSION_1 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_2 &&
+        version != GRAMINE_LINUX_CAPABILITY_VERSION_3) {
+        return -EINVAL;
+    }
+    int ret = 0;
+    struct __user_cap_header_struct header = {
+        .version = version,
+       /* Setting header.pid to 0 since we support getting and setting capabilities only for
+        * current thread and current process */
+        .pid = 0
+    };
+    ret = DO_SYSCALL(capset, &header, (struct __user_cap_data_struct *)datap);
+    if ( ret < 0 ) {
+        return ret;
+    }
+    return 0;
 }

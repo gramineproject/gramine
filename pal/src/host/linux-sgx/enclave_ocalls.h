@@ -11,6 +11,7 @@
 #include "pal_linux.h"
 #include "pal_linux_types.h"
 #include "sgx_attest.h"
+#include "linux_capabilities.h"
 
 noreturn void ocall_exit(int exitcode, int is_exitgroup);
 
@@ -129,3 +130,5 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int ocall_edmm_remove_pages(uint64_t addr, size_t count);
+int ocall_capget(uint32_t version, struct gramine_user_cap_data* datap);
+int ocall_capset(uint32_t version, struct gramine_user_cap_data* datap);

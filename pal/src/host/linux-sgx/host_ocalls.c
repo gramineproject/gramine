@@ -8,6 +8,7 @@
 #include <asm/mman.h>
 #include <asm/poll.h>
 #include <limits.h>
+#include <linux/capability.h>
 #include <linux/futex.h>
 #include <linux/in.h>
 #include <linux/in6.h>
@@ -752,6 +753,28 @@ static long sgx_ocall_edmm_restrict_pages_perm(void* _args) {
     return edmm_restrict_pages_perm(args->addr, args->count, args->prot);
 }
 
+static long sgx_ocall_capget(void* args) {
+    struct ocall_capget_t* capget_args = args;
+    struct __user_cap_header_struct header = {
+        /* Setting header.pid to 0 since we support getting and setting capabilities only for
+         * current thread and current process */
+        .version = capget_args->version,
+        .pid = 0
+    };
+    return DO_SYSCALL(capget, &header, capget_args->cap_data);
+}
+
+static long sgx_ocall_capset(void* args) {
+    struct ocall_capget_t* capget_args = args;
+    struct __user_cap_header_struct header = {
+        /* Setting header.pid to 0 since we support getting and setting capabilities only for
+         * current thread and current process */
+        .version = capget_args->version,
+        .pid = 0
+    };
+    return DO_SYSCALL(capset, &header, capget_args->cap_data);
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -759,6 +782,8 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_CPUID]                    = sgx_ocall_cpuid,
     [OCALL_OPEN]                     = sgx_ocall_open,
     [OCALL_CLOSE]                    = sgx_ocall_close,
+    [OCALL_CAPGET]                   = sgx_ocall_capget,
+    [OCALL_CAPSET]                   = sgx_ocall_capset,
     [OCALL_READ]                     = sgx_ocall_read,
     [OCALL_WRITE]                    = sgx_ocall_write,
     [OCALL_PREAD]                    = sgx_ocall_pread,
