@@ -1,22 +1,31 @@
-conf = configuration_data()
-conf.set_quoted('IN_GIT', '')
-conf.set_quoted('PREFIX', prefix)
-conf.set_quoted('BINDIR', get_option('bindir'))
+gramine_with_git_version = vcs_tag(
+    command: ['git', 'describe'],
+    input: 'gramine.in',
+    output: 'gramine.pre',
+    replace_string: '@GRAMINE_VERSION@',
+)
 
 if direct
     hostpalpath_direct = prefix / pkglibdir / 'direct'
-    conf_gramine_direct = configuration_data()
-    conf_gramine_direct.merge_from(conf)
-    conf_gramine_direct.set('SGX', 0)
-    conf_gramine_direct.set_quoted('HOST_PAL_PATH', hostpalpath_direct)
-    conf_gramine_direct.set_quoted('LIBPAL_PATH', hostpalpath_direct / 'libpal.so')
-    conf_gramine_direct.set_quoted('PAL_CMD', hostpalpath_direct / 'loader')
-    conf_gramine_direct.set_quoted('CONFIG_SGX_DRIVER', '')
 
-    configure_file(
-        input: 'gramine.in',
+    custom_target('gramine-direct',
+        command: [
+            find_program('gramine-sed.sh'),
+            '@INPUT@',
+            '@OUTPUT@',
+            '0',                               # @SGX@
+            '',                                # @CONFIG_SGX_DRIVER@
+            prefix,                            # @PREFIX@
+            get_option('bindir'),              # @BINDIR@
+            hostpalpath_direct,                # @HOST_PAL_PATH@
+            hostpalpath_direct / 'libpal.so',  # @LIBPAL_PATH@
+            hostpalpath_direct / 'loader',     # @PAL_CMD@
+        ],
+
+        input: gramine_with_git_version,
         output: 'gramine-direct',
-        configuration: conf_gramine_direct,
+
+        install: true,
         install_dir: get_option('bindir'),
     )
 endif
@@ -25,18 +34,25 @@ if sgx
     subdir('sgx')
 
     hostpalpath_linux_sgx = prefix / pkglibdir / 'sgx'
-    conf_gramine_sgx = configuration_data()
-    conf_gramine_sgx.merge_from(conf)
-    conf_gramine_sgx.set('SGX', 1)
-    conf_gramine_sgx.set_quoted('HOST_PAL_PATH', hostpalpath_linux_sgx)
-    conf_gramine_sgx.set_quoted('LIBPAL_PATH', hostpalpath_linux_sgx / 'libpal.so')
-    conf_gramine_sgx.set_quoted('PAL_CMD', prefix / pkglibdir / 'sgx' / 'loader')
-    conf_gramine_sgx.set_quoted('CONFIG_SGX_DRIVER', sgx_driver)
 
-    configure_file(
-        input: 'gramine.in',
+    custom_target('gramine-sgx',
+        command: [
+            find_program('gramine-sed.sh'),
+            '@INPUT@',
+            '@OUTPUT@',
+            '1',                                  # @SGX@
+            sgx_driver,                           # @CONFIG_SGX_DRIVER@
+            prefix,                               # @PREFIX@
+            get_option('bindir'),                 # @BINDIR@
+            hostpalpath_linux_sgx,                # @HOST_PAL_PATH@
+            hostpalpath_linux_sgx / 'libpal.so',  # @LIBPAL_PATH@
+            hostpalpath_linux_sgx / 'loader',     # @PAL_CMD@
+        ],
+
+        input: gramine_with_git_version,
         output: 'gramine-sgx',
-        configuration: conf_gramine_sgx,
+
+        install: true,
         install_dir: get_option('bindir'),
     )
 endif
