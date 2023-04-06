@@ -101,55 +101,55 @@ The below list is generated from the [syscall table of Linux
 <details><summary>Status of system call support in Gramine</summary>
 
 - ☑ `read()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `write()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `open()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `close()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `stat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `fstat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `lstat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `poll()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `lseek()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mmap()`
   <sup>[6](#memory-management)</sup>
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mprotect()`
   <sup>[6](#memory-management)</sup>
@@ -172,39 +172,39 @@ The below list is generated from the [syscall table of Linux
 
 - ▣ `ioctl()`
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[18](#ioctls)</sup>
 
 - ☑ `pread64()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `pwrite64()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `readv()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `writev()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `access()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `pipe()`
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ▣ `select()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -216,7 +216,7 @@ The below list is generated from the [syscall table of Linux
 
 - ▣ `msync()`
   <sup>[6](#memory-management)</sup>
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mincore()`
   <sup>[6](#memory-management)</sup>
@@ -258,69 +258,69 @@ The below list is generated from the [syscall table of Linux
   <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ▣ `sendfile()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `socket()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `connect()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `accept()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `sendto()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `recvfrom()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `sendmsg()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `recvmsg()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `shutdown()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `bind()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `listen()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getsockname()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getpeername()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `socketpair()`
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `setsockopt()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getsockopt()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `clone()`
   <sup>[1](#processes)</sup>
@@ -373,80 +373,80 @@ The below list is generated from the [syscall table of Linux
   <sup>[16](#message-queues)</sup>
 
 - ▣ `fcntl()`
-  <sup>[9.2](#file-locking)</sup>
+  <sup>[9b](#file-locking)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[23](#misc)</sup>
 
 - ☒ `flock()`
-  <sup>[9.2](#file-locking)</sup>
+  <sup>[9b](#file-locking)</sup>
 
 - ☑ `fsync()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `fdatasync()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `truncate()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `ftruncate()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `getdents()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `getcwd()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `chdir()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `fchdir()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `rename()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `mkdir()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `rmdir()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `creat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `link()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `unlink()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `symlink()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlink()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `chmod()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `fchmod()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `chown()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `fchown()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `lchown()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `umask()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `gettimeofday()`
   <sup>[19](#date-and-time)</sup>
@@ -558,7 +558,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `utime()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mknod()`
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
@@ -570,16 +570,16 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `ustat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `statfs()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `fstatfs()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `sysfs()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `getpriority()`
   <sup>[4](#scheduling)</sup>
@@ -627,7 +627,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `pivot_root()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `_sysctl()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -645,10 +645,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☑ `chroot()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `sync()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `acct()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -657,10 +657,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[19](#date-and-time)</sup>
 
 - ☒ `mount()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `umount2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `swapon()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -801,10 +801,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☑ `epoll_create()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -812,7 +812,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[6](#memory-management)</sup>
 
 - ☑ `getdents64()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `set_tid_address()`
   <sup>[3](#process-and-thread-identifiers)</sup>
@@ -824,7 +824,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[15](#semaphores)</sup>
 
 - ▣ `fadvise64()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `timer_create()`
   <sup>[20](#sleeps-timers-and-alarms)</sup>
@@ -857,18 +857,18 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#processes)</sup>
 
 - ☑ `epoll_wait()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_ctl()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -876,7 +876,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `utimes()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `vserver()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -930,69 +930,69 @@ The below list is generated from the [syscall table of Linux
   <sup>[4](#scheduling)</sup>
 
 - ☒ `inotify_init()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `inotify_add_watch()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `inotify_rm_watch()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `migrate_pages()`
   <sup>[6](#memory-management)</sup>
 
 - ▣ `openat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `mkdirat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mknodat()`
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ▣ `fchownat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `futimesat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `newfstatat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `unlinkat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `renameat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `linkat()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☒ `symlinkat()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlinkat()`
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `fchmodat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `faccessat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `pselect6()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `ppoll()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -1013,7 +1013,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `sync_file_range()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `vmsplice()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1022,13 +1022,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[6](#memory-management)</sup>
 
 - ☒ `utimensat()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `epoll_pwait()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -1042,7 +1042,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `fallocate()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `timerfd_settime()`
   <sup>[20](#sleeps-timers-and-alarms)</sup>
@@ -1051,8 +1051,8 @@ The below list is generated from the [syscall table of Linux
   <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `accept4()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `signalfd4()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -1061,10 +1061,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_create1()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -1075,13 +1075,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `inotify_init1()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☑ `preadv()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `pwritev()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `rt_tgsigqueueinfo()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -1090,33 +1090,33 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ▣ `recvmmsg()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `fanotify_init()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ☒ `fanotify_mark()`
-  <sup>[9.3](#monitoring-filesystem-events-inotify-fanotify)</sup>
+  <sup>[9c](#monitoring-filesystem-events-inotify-fanotify)</sup>
 
 - ▣ `prlimit64()`
   <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `name_to_handle_at()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `open_by_handle_at()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `clock_adjtime()`
   <sup>[19](#date-and-time)</sup>
 
 - ☒ `syncfs()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `sendmmsg()`
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `setns()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1144,7 +1144,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[4](#scheduling)</sup>
 
 - ☒ `renameat2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `seccomp()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1177,10 +1177,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `preadv2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `pwritev2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `pkey_mprotect()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1192,7 +1192,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `statx()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `io_pgetevents()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1216,7 +1216,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `move_mount()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fsopen()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1241,28 +1241,28 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
 
 - ☒ `openat2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `pidfd_getfd()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `faccessat2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `process_madvise()`
   <sup>[6](#memory-management)</sup>
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `epoll_pwait2()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-  <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[12](#i-o-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `mount_setattr()`
-  <sup>[9.1](#file-system-operations)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `quotactl_fd()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1300,7 +1300,7 @@ grows with time, as Gramine adds functionality required by real-world workloads.
 
 <details><summary>List of all pseudo-files in Gramine</summary>
 
-- ☑ `/dev/` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+- ☑ `/dev/` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup> <sup>[25](#attestation)</sup>
 
   - ☑ `/dev/attestation/` <sup>[25](#attestation)</sup>
@@ -1318,28 +1318,28 @@ grows with time, as Gramine adds functionality required by real-world workloads.
   - ☑ `/dev/random` <sup>[21](#randomness)</sup>
   - ☑ `/dev/urandom` <sup>[21](#randomness)</sup>
   - ☒ `/dev/shm` <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup>
-  - ☑ `/dev/stdin` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
-  - ☑ `/dev/stdout` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
-  - ☑ `/dev/stderr` <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stdin` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stdout` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
+  - ☑ `/dev/stderr` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `/proc/`
   <sup>[3](#process-and-thread-identifiers)</sup>
   <sup>[8](#user-and-group-identifiers)</sup>
-  <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+  <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[22](#system-information-and-resource-accounting)</sup>
-  <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11.2](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
   - ▣ `/proc/[this-pid]/` (aka `/proc/self/`)
     <sup>[3](#process-and-thread-identifiers)</sup>
-    <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[this-pid]/cmdline` <sup>[3](#process-and-thread-identifiers)</sup>
     - ☑ `/proc/[this-pid]/cwd` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[this-pid]/exe` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[this-pid]/fd` <sup>[3](#process-and-thread-identifiers)</sup>
     - ☑ `/proc/[this-pid]/maps` <sup>[3](#process-and-thread-identifiers)</sup>
     - ☑ `/proc/[this-pid]/root` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ▣ `/proc/[this-pid]/stat`
       <sup>[3](#process-and-thread-identifiers)</sup>
     - ▣ `/proc/[this-pid]/statm`
@@ -1351,13 +1351,13 @@ grows with time, as Gramine adds functionality required by real-world workloads.
 
   - ▣ `/proc/[remote-pid]/`
     <sup>[3](#process-and-thread-identifiers)</sup>
-    <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+    <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[remote-pid]/cwd` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[remote-pid]/exe` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
     - ☑ `/proc/[remote-pid]/root` <sup>[3](#process-and-thread-identifiers)</sup>
-      <sup>[9.4](#hard-links-and-soft-links-symbolic-links)</sup>
+      <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
   - ▣ `/proc/[local-tid]/`
     <sup>[3](#process-and-thread-identifiers)</sup>
@@ -1373,17 +1373,17 @@ grows with time, as Gramine adds functionality required by real-world workloads.
 
   - ▣ `/proc/sys/`
     <sup>[3](#process-and-thread-identifiers)</sup>
-    <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11.2](#unix-domain-sockets)</sup>
+    <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
     - ▣ `/proc/sys/kernel/`
       <sup>[3](#process-and-thread-identifiers)</sup>
       - ☑ `/proc/sys/kernel/pid_max`
         <sup>[3](#process-and-thread-identifiers)</sup>
-    - ☒ `/proc/sys/net/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-      <sup>[11.2](#unix-domain-sockets)</sup>
-      - ☒ `/proc/sys/net/core/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv4/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv6/` <sup>[11.1](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/unix/` <sup>[11.2](#unix-domain-sockets)</sup>
+    - ☒ `/proc/sys/net/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+      <sup>[11b](#unix-domain-sockets)</sup>
+      - ☒ `/proc/sys/net/core/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv4/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv6/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/unix/` <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `/sys/devices/system/`
   <sup>[22](#system-information-and-resource-accounting)</sup>
