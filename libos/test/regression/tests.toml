@@ -8,6 +8,8 @@ manifests = [
   "bootstrap",
   "bootstrap_pie",
   "bootstrap_static",
+  "capget_bytes",
+  "capget_capset_values",
   "debug",
   "debug_log_file",
   "debug_log_inline",

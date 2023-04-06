@@ -151,7 +151,7 @@ static int init_main_thread(void) {
     __atomic_store_n(&g_process.pgid, g_process.pid, __ATOMIC_RELEASE);
 
     int64_t uid_int64;
-    ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/0, &uid_int64);
+    ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/1, &uid_int64);
     if (ret < 0) {
         log_error("Cannot parse 'loader.uid'");
         put_thread(cur_thread);
@@ -159,7 +159,7 @@ static int init_main_thread(void) {
     }
 
     int64_t gid_int64;
-    ret = toml_int_in(g_manifest_root, "loader.gid", /*defaultval=*/0, &gid_int64);
+    ret = toml_int_in(g_manifest_root, "loader.gid", /*defaultval=*/1, &gid_int64);
     if (ret < 0) {
         log_error("Cannot parse 'loader.gid'");
         put_thread(cur_thread);

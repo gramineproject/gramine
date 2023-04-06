@@ -2356,3 +2356,63 @@ out:
     sgx_reset_ustack(old_ustack);
     return ret;
 }
+
+int ocall_capget(uint32_t version, struct gramine_user_cap_data* datap) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    struct ocall_capget_t* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->version, version);
+    void* untrusted_datap = sgx_copy_to_ustack(datap, sizeof(*datap));
+    if (!untrusted_datap) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->cap_data, untrusted_datap);
+    do {
+        ret = sgx_exitless_ocall(OCALL_CAPGET, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0 && ret != -EINVAL && ret != -EPERM && ret != -ESRCH) {
+        ret = -EPERM;
+    }
+    size_t size = version == GRAMINE_LINUX_CAPABILITY_VERSION_1 ? 1 : 2;
+    if (!sgx_copy_to_enclave(datap, size, untrusted_datap, size)) {
+        ret = -EPERM;
+        goto out;
+    }
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
+
+int ocall_capset(uint32_t version, struct gramine_user_cap_data* datap) {
+    int ret;
+    void* old_ustack = sgx_prepare_ustack();
+    struct ocall_capget_t* ocall_args;
+    ocall_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_args), alignof(*ocall_args));
+    if (!ocall_args) {
+        ret = -EPERM;
+        goto out;
+    }
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->version, version);
+    void* untrusted_datap = sgx_copy_to_ustack(datap, sizeof(*datap));
+    if (!untrusted_datap) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+    COPY_VALUE_TO_UNTRUSTED(&ocall_args->cap_data, untrusted_datap);
+    do {
+        ret = sgx_exitless_ocall(OCALL_CAPSET, ocall_args);
+    } while (ret == -EINTR);
+    if (ret < 0 && ret != -EINVAL && ret != -EPERM && ret != -ESRCH) {
+        ret = -EPERM;
+    }
+out:
+    sgx_reset_ustack(old_ustack);
+    return ret;
+}
