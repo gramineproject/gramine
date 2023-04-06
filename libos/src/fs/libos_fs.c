@@ -248,6 +248,14 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         goto out;
     }
 
+    if (mount_path[0] != '/') {
+        log_error("Relative mount path: '%s.path' (\"%s\") is disallowed! "
+                  "Consider converting it to absolute by adding \"/\" at the beginning.",
+                  prefix, mount_path);
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (!mount_type || !strcmp(mount_type, "chroot")) {
         if (!mount_uri) {
             log_error("No value provided for '%s.uri'", prefix);
