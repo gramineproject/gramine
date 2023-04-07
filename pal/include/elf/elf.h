@@ -23,8 +23,6 @@
 #include <features.h>
 #include <stdint.h>
 
-__BEGIN_DECLS
-
 /* Standard ELF types.  */
 
 #define __ELF_NATIVE_CLASS 64
@@ -2661,5 +2659,3 @@ typedef ElfW(Rela)   elf_rela_t;
 typedef ElfW(Sym)    elf_sym_t;
 typedef ElfW(Word)   elf_word_t;
 typedef ElfW(Xword)  elf_xword_t;
-
-__END_DECLS
