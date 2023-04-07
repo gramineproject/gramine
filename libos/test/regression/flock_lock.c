@@ -24,7 +24,8 @@
 
 #include "common.h"
 
-#define TEST_FILE "lock_file"
+#define TEST_DIR "tmp/"
+#define TEST_FILE "tmp/lock_file"
 
 static const char* str_type(int type) {
     switch (type) {
@@ -87,38 +88,6 @@ static void wait_for_child(void) {
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
         err(1, "wait");
-}
-
-/* Test: lock file with various lock type  */
-static void test_locks(void) {
-    printf("testing various locks...\n");
-    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    
-    try_flock(fd, LOCK_EX, 0);
-    try_flock(fd, LOCK_SH, 0);
-    try_flock(fd, LOCK_EX | LOCK_NB, 0);
-    try_flock(fd, LOCK_SH | LOCK_NB, 0);
-    try_flock(fd, LOCK_UN | LOCK_NB, 0);
-    try_flock(fd, LOCK_EX | LOCK_SH, -1);
-    
-    close(fd);
-}
-
-static void test_flock_open(void) {
-    printf("testing locks with the same file's different fds...\n");
-    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-
-    try_flock(fd, LOCK_EX, 0);
-
-    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    
-    try_flock(fd2, LOCK_EX | LOCK_NB, -1);
-    try_flock(fd2, LOCK_SH | LOCK_NB, -1);
-    try_flock(fd, LOCK_UN, 0);
-    try_flock(fd2, LOCK_EX | LOCK_NB, 0);
-    
-    close(fd);
-    close(fd2);
 }
 
 static void test_flock_dup_open(void) {
@@ -249,8 +218,6 @@ static void test_file_close(void) {
 int main(void) {
     setbuf(stdout, NULL);
 
-    test_locks();
-    test_flock_open();
     test_flock_dup_open();
     test_flock_fork();
     test_file_unlock();

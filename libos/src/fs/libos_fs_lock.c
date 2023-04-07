@@ -190,9 +190,9 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
 }
 
 /*
- * Main part of `posix_lock_set`. Adds/removes a lock (depending on `pl->type`), assumes we already
- * verified there are no conflicts. For `fcntl` case (pl->handle_id == 0), Replaces existing locks for a given PID and merge adjacent
- * locks if possible. For `flock` case, Replaces existing locks for a given handle ID.
+ * Main part of `posix_lock_set`. Adds/removes locks based on `pl->type`, assumes we already
+ * verified there are no conflicts. For `fcntl` (where pl->handle_id == 0), replaces & merges adjacent locks. 
+ * For `flock`, replaces locks for a handle ID.
  *
  * See also Linux sources (`fs/locks.c`) for a similar implementation.
  */

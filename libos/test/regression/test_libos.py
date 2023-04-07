@@ -681,6 +681,14 @@ class TC_30_Syscall(RegressionTestCase):
     def test_031_file_size(self):
         stdout, _ = self.run_binary(['file_size'])
         self.assertIn('test completed successfully', stdout)
+    
+    def test_032_flock_lock(self):
+        try:
+            stdout, _ = self.run_binary(['flock_lock'])
+        finally:
+            if os.path.exists('tmp/lock_file'):
+                os.remove('tmp/lock_file')
+        self.assertIn('TEST OK', stdout)
 
     def test_032_large_file(self):
         try:
