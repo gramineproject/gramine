@@ -690,7 +690,7 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/lock_file')
         self.assertIn('TEST OK', stdout)
 
-    def test_032_large_file(self):
+    def test_033_large_file(self):
         try:
             stdout, _ = self.run_binary(['large_file'])
         finally:
@@ -699,7 +699,7 @@ class TC_30_Syscall(RegressionTestCase):
 
         self.assertIn('TEST OK', stdout)
 
-    def test_033_rename_unlink_chroot(self):
+    def test_034_rename_unlink_chroot(self):
         file1 = 'tmp/file1'
         file2 = 'tmp/file2'
         try:
@@ -713,7 +713,7 @@ class TC_30_Syscall(RegressionTestCase):
     @unittest.skip('Protected files (as implemented in Linux-SGX PAL) do not support renaming yet')
     @unittest.skipUnless(HAS_SGX,
         'Protected files are only available with SGX')
-    def test_034_rename_unlink_pf(self):
+    def test_035_rename_unlink_pf(self):
         os.makedirs('tmp/pf', exist_ok=True)
         file1 = 'tmp/pf/file1'
         file2 = 'tmp/pf/file2'
@@ -725,7 +725,7 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    def test_035_rename_unlink_enc(self):
+    def test_036_rename_unlink_enc(self):
         os.makedirs('tmp_enc', exist_ok=True)
         file1 = 'tmp_enc/file1'
         file2 = 'tmp_enc/file2'
@@ -741,7 +741,7 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    def test_036_rename_unlink_tmpfs(self):
+    def test_037_rename_unlink_tmpfs(self):
         file1 = '/mnt/tmpfs/file1'
         file2 = '/mnt/tmpfs/file2'
         stdout, _ = self.run_binary(['rename_unlink', file1, file2])
