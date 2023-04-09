@@ -202,7 +202,7 @@ long libos_syscall_prlimit64(pid_t pid, int resource, const struct __kernel_rlim
 long libos_syscall_sendmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsigned int flags);
 long libos_syscall_eventfd2(unsigned int count, int flags);
 long libos_syscall_eventfd(unsigned int count);
-long libos_syscall_getcpu(unsigned* cpu, unsigned* node, struct getcpu_cache* unused);
+long libos_syscall_getcpu(unsigned* cpu, unsigned* node, void* unused_cache);
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
