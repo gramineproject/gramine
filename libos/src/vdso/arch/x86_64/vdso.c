@@ -39,7 +39,7 @@ time_t __vdso_time(time_t* t) {
 }
 EXPORT_WEAK_SYMBOL(time);
 
-long __vdso_getcpu(unsigned* cpu, struct getcpu_cache* unused) {
-    return vdso_arch_syscall(__NR_getcpu, (long)cpu, (long)unused);
+long __vdso_getcpu(unsigned* cpu, void* unused_cache) {
+    return vdso_arch_syscall(__NR_getcpu, (long)cpu, (long)unused_cache);
 }
 EXPORT_WEAK_SYMBOL(getcpu);
