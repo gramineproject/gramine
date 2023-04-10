@@ -37,5 +37,4 @@ typedef __kernel_ino_t     ino_t;
 typedef __kernel_clockid_t clockid_t;
 typedef __kernel_fd_set    fd_set;
 
-/* /arch/x86/include/asm/posix_types_64.h */
 typedef unsigned int __kernel_uid_t;
