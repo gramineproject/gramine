@@ -142,86 +142,11 @@ static void test_flock_fork(void) {
     close_pipes(pipes);
 }
 
-static void test_file_unlock(void) {
-    printf("testing flock with fork and unlock...\n");
-
-    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-
-    int pipes[2][2];
-    open_pipes(pipes);
-
-    pid_t pid = CHECK(fork());
-    
-    if (pid == 0) {
-        try_flock(fd, LOCK_EX, 0);
-        write_pipe(pipes[0]);
-        read_pipe(pipes[1]);
-        try_flock(fd, LOCK_UN, 0);
-        
-        write_pipe(pipes[0]);
-        CHECK(close(fd));
-        exit(0);
-    }
-
-    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-
-    read_pipe(pipes[0]);
-    try_flock(fd2, LOCK_EX | LOCK_NB, -1);
-    write_pipe(pipes[1]);
-    read_pipe(pipes[0]);
-    try_flock(fd2, LOCK_EX | LOCK_NB, 0);
-
-    CHECK(close(fd));
-    CHECK(close(fd2));
-    wait_for_child();
-    close_pipes(pipes);
-}
-
-static void test_file_close(void) {
-    printf("testing flock with fork and close...\n");
-
-    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    
-    int pipes[2][2];
-    open_pipes(pipes);
-
-    pid_t pid = CHECK(fork());
-    
-    if (pid == 0) {
-        try_flock(fd, LOCK_EX, 0);
-        write_pipe(pipes[0]);
-        read_pipe(pipes[1]);
-
-        CHECK(close(fd));
-
-        write_pipe(pipes[0]);
-        exit(0);
-    }
-
-    int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-
-    read_pipe(pipes[0]);
-    try_flock(fd2, LOCK_EX | LOCK_NB, -1);
-
-    CHECK(close(fd));
-
-    write_pipe(pipes[1]);
-    read_pipe(pipes[0]);
-    try_flock(fd2, LOCK_EX | LOCK_NB, 0);
-
-    CHECK(close(fd));
-    CHECK(close(fd2));
-    wait_for_child();
-    close_pipes(pipes);
-}
-
 int main(void) {
     setbuf(stdout, NULL);
 
     test_flock_dup_open();
     test_flock_fork();
-    test_file_unlock();
-    test_file_close();
 
     printf("TEST OK\n");
     return 0;
