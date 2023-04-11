@@ -1789,7 +1789,7 @@ int ocall_gettime(uint64_t* microsec_ptr) {
                 break;
             }
         }
-        *microsec_ptr = microsec;
+        *microsec_ptr = MAX(microsec, expected_microsec);
     }
 
     sgx_reset_ustack(old_ustack);
