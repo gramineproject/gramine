@@ -4,7 +4,7 @@
  */
 #pragma once
 
-/* Types and structure used by various Linux ABIs (e.g. syscalls). */
+/* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
 #include <stdint.h>
