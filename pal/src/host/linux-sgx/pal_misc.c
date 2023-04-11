@@ -101,22 +101,22 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
          * from RDTSC (`last_usec`); this can happen if the actual host time drifted backwards
          * compared to the RDTSC time. */
          usec = last_usec;
-    } else {
-        /* we need to match the OCALL-obtained timestamp (`usec`) with the RDTSC-obtained number of
-         * cycles (`tsc_cyc`); since OCALL is a time-consuming operation, we estimate `tsc_cyc` as a
-         * mid-point between the RDTSC values obtained right-before and right-after the OCALL. */
-        uint64_t tsc_cyc = tsc_cyc1 + (tsc_cyc2 - tsc_cyc1) / 2;
-        if (tsc_cyc < tsc_cyc1)
-            return -PAL_ERROR_OVERFLOW;
-
-        /* refresh the baseline data if no other thread updated g_start_tsc */
-        write_seqbegin(&g_tsc_lock);
-        if (g_start_tsc < tsc_cyc) {
-            g_start_tsc  = tsc_cyc;
-            g_start_usec = usec;
-        }
-        write_seqend(&g_tsc_lock);
     }
+
+    /* we need to match the OCALL-obtained timestamp (`usec`) with the RDTSC-obtained number of
+     * cycles (`tsc_cyc`); since OCALL is a time-consuming operation, we estimate `tsc_cyc` as a
+     * mid-point between the RDTSC values obtained right-before and right-after the OCALL. */
+    uint64_t tsc_cyc = tsc_cyc1 + (tsc_cyc2 - tsc_cyc1) / 2;
+    if (tsc_cyc < tsc_cyc1)
+        return -PAL_ERROR_OVERFLOW;
+
+    /* refresh the baseline data if no other thread updated g_start_tsc */
+    write_seqbegin(&g_tsc_lock);
+    if (g_start_tsc < tsc_cyc) {
+        g_start_tsc  = tsc_cyc;
+        g_start_usec = usec;
+    }
+    write_seqend(&g_tsc_lock);
 
     *out_usec = usec;
     return 0;
