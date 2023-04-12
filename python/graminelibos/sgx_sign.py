@@ -463,7 +463,7 @@ def generate_measurement(enclave_base, attr, areas, verbose=False):
     return mrenclave.digest()
 
 
-def check_memory_area_holes(attr, areas, enclave_base):
+def has_memory_area_holes(attr, areas, enclave_base):
     last_populated_addr = enclave_base + attr['enclave_size']
     for area in areas:
         if last_populated_addr != area.addr + area.size:
@@ -532,9 +532,8 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
 
     memory_areas = populate_memory_areas(attr, memory_areas, enclave_base, enclave_heap_min)
 
-    memory_area_holes = check_memory_area_holes(attr, memory_areas, enclave_base)
-    if memory_area_holes:
-        raise Exception('Cannot have holes in enclave memory areas!')
+    if has_memory_area_holes(attr, memory_areas, enclave_base):
+        raise Exception('Cannot have holes between enclave memory areas!')
 
     # Generate measurement
     mrenclave = generate_measurement(enclave_base, attr, memory_areas, verbose=verbose)
