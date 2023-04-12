@@ -74,15 +74,14 @@ noreturn void thread_exit(int error_code, int term_signal) {
         if (cur_thread->pal_handle == g_pal_public_state->first_thread) {
             /*
              * Do not exit the main thread (and do not free its resources) if the main thread is not
-             * the last one in the process. This corner case is added to correctly handle the case
-             * of a non-main thread performing `execve()`, even after the main thread is considered
-             * terminated.
+             * the last one in the process. This is added to correctly handle the case of a non-main
+             * thread performing `execve()`, even after the main thread is considered terminated.
              *
-             * This leaks memory, but only once per process (as there is only one main thread per
-             * process, even after several execve invocations). Instead, wait forever so that the
-             * host OS doesn't "lose track" of this Gramine process. E.g. on Linux, if the main
-             * thread (aka leader thread) terminates, then the process becomes a zombie, which may
-             * confuse some tools like `docker kill`.
+             * The main thread waits forever so that the host OS doesn't "lose track" of this
+             * Gramine process. E.g. on Linux, if the main thread (aka leader thread) terminates,
+             * then the process becomes a zombie, which may confuse some tools like `docker kill`.
+             * This "waiting forever" leaks memory, but only once per process (as there is only one
+             * main thread per process, even after several execve invocations).
              *
              * Linux solves this corner case differently: the leader thread is terminated, and the
              * non-main thread assumes its identity (in particular, its PID):
@@ -90,11 +89,14 @@ noreturn void thread_exit(int error_code, int term_signal) {
              *   https://elixir.bootlin.com/linux/v6.0/source/fs/exec.c#L1078
              *
              * Gramine can't do the same because there is no way to ask the host OS to "rewire" the
-             * identity of one thread to the other thread. Thus this workaround of infinite wait.
+             * identity of one thread to another thread. Thus this workaround of infinite wait.
              * Note that because the main thread was removed from the list of threads (thanks to
              * `mark_self_dead=true` above), the still-alive main thread will not prevent the
              * Gramine process from terminating later on. Also note that because this thread never
              * leaves LibOS/PAL context, it will not receive signals.
+             *
+             * TODO: "Rewire" the identity of the non-main thread inside Gramine, similarly to how
+             *       Linux does it.
              */
             thread_prepare_wait();
             while (true)
