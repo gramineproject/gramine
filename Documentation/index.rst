@@ -134,6 +134,15 @@ Indices and tables
    python/api
    concepts-index
 
+
+.. toctree::
+   :hidden:
+   :caption: Manpages
+   :maxdepth: 1
+
+   manpages/index.rst
+
+
 .. toctree::
    :hidden:
    :caption: Contribute to Gramine
@@ -147,9 +156,6 @@ Indices and tables
    devel/howto-doc
 
 
-
-
-
 .. toctree::
    :hidden:
    :caption: Resources
@@ -158,5 +164,4 @@ Indices and tables
    management-team
    gramine-users
    glossary
-
 

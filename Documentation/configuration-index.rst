@@ -9,4 +9,4 @@ Configuration
    manifest-syntax
    attestation
    performance
-   manpages/index.rst
+
