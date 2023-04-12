@@ -1017,6 +1017,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/dev/stdout', stdout)
         self.assertIn('/dev/stderr', stdout)
         self.assertIn('Four bytes from /dev/urandom', stdout)
+        self.assertIn('Hello World written to stdout!', stdout)
         self.assertIn('TEST OK', stdout)
 
     def test_002_device_passthrough(self):

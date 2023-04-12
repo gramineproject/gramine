@@ -110,9 +110,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-#if 0
-    /* `/dev/stdout` is a link to `/proc/self/fd/1`; Gramine currently fails, see #1387 */
-
     printf("===== Write to /dev/stdout\n");
     f = fopen("/dev/stdout", "w");
     if (!f) {
@@ -133,7 +130,6 @@ int main(int argc, char** argv) {
         perror("fclose /dev/stdout");
         return 1;
     }
-#endif
 
     puts("TEST OK!");
     return 0;
