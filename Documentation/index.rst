@@ -115,7 +115,6 @@ Indices and tables
    :hidden:
    :caption: Protect your application
    :maxdepth: 1
-   :maxdepth: 1
 
    quickstart
    environment-setup
@@ -130,13 +129,21 @@ Indices and tables
    :maxdepth: 1
 
    devel/building
-   devel/building
    devel/debugging
    devel/new-syscall
    configuration-index
    pal/host-abi
    python/api
    concepts-index
+
+
+.. toctree::
+   :hidden:
+   :caption: Manpages
+   :maxdepth: 1
+
+   manpages/index.rst
+
 
 .. toctree::
    :hidden:
@@ -151,12 +158,6 @@ Indices and tables
    devel/howto-doc
 
 
-
-
-
-
-
-
 .. toctree::
    :hidden:
    :caption: Resources
@@ -165,7 +166,4 @@ Indices and tables
    management-team
    gramine-users
    glossary
-
-
-
 
