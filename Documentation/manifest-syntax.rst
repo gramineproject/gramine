@@ -125,6 +125,7 @@ or
    loader.argv_src_file = "file:file_with_serialized_argv"
 
 If you want your application to use commandline arguments, you must choose one of the three mutually exclusive options:
+
 - set ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases),
 - put commandline arguments into ``loader.argv`` array,
 - point ``loader.argv_src_file`` to a file containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
@@ -250,7 +251,6 @@ This specifies the initial, Gramine emulated user/group ID and effective
 user/group ID. It must be non-negative. By default, Gramine emulates the
 user/group ID and effective user/group ID as the root user (uid = gid = 0).
 
-
 Disabling ASLR
 ^^^^^^^^^^^^^^
 
@@ -353,7 +353,6 @@ Python). Could be useful in SGX environments: child processes consume
    option if you want to somehow mitigate running untrusted enclaves. Instead,
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
-
 
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
@@ -480,7 +479,6 @@ before enclave creation (because it involves more enclave exits and syscalls).
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
-
 Enclave size
 ^^^^^^^^^^^^
 
@@ -534,7 +532,7 @@ Number of threads
 
 ::
 
-    sgx.insecure__rpc_thread_num = [NUM]
+    sgx.max_threads = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
