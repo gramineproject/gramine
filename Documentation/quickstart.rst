@@ -3,16 +3,13 @@
 Gramine installation options
 ----------------------------
 
-There are three options to choose from when using Gramine to protect your application. The option you choose depends on how you are running your application. 
+There are three options to choose from when using Gramine to protect your application. The option you choose depends on how you are running your application.
 
-:ref:`Install Gramine` - This option provides instructions for installing Gramine on various versions of Ubuntu or Red Hat Enterprise Linux 8. 
+:ref:`Install Gramine` - This option provides instructions for installing Gramine on various versions of Ubuntu or Red Hat Enterprise Linux 8.
 
-:doc:`docker-image-installation` - This option provides instructions for installing a prepared Docker image with Gramine and running the container. This option enables you to protect an application running in the cloud. 
+:doc:`docker-image-installation` - This option provides instructions for installing a prepared Docker image with Gramine and running the container. This option enables you to protect an application running in the cloud.
 
 :doc:`devel/building` - This option is mainly used for assisting in helping the development of Gramine. This option is much more involved. The instructions for this option are listed on another page.
-
-..role:: h1Install Gramine 
- 
 
 Debian 11
 ^^^^^^^^^
@@ -46,6 +43,7 @@ Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/intel-sgx.list
 
+   sudo apt-get update
    sudo apt-get install gramine
 
 RHEL-like distributions version 8 (and experimentally also version 9)
