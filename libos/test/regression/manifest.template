@@ -24,7 +24,7 @@ fs.mounts = [
 sgx.max_threads = 16
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.edmm_heap_prealloc_size = {{ "\"64M\"" if env.get('EDMM', '0') == '1' else "\"0\"" }}
+sgx.edmm_heap_prealloc_size = "{{ '64M' if env.get('EDMM', '0') == '1' else '0' }}"
 
 sgx.allowed_files = [
   "file:tmp/",
