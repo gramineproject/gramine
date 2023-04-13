@@ -19,8 +19,6 @@ struct option g_options[] = {
     { "msb", no_argument, 0, 'm' },
     { "report-path", required_argument, 0, 'r' },
     { "sig-path", required_argument, 0, 's' },
-    { "allow-outdated-tcb", no_argument, 0, 'o' },
-    { "allow-debug-enclave", no_argument, 0, 'd' },
     { "nonce", required_argument, 0, 'n' },
     { "mr-signer", required_argument, 0, 'S' },
     { "mr-enclave", required_argument, 0, 'E' },
@@ -28,50 +26,65 @@ struct option g_options[] = {
     { "isv-prod-id", required_argument, 0, 'P' },
     { "isv-svn", required_argument, 0, 'S' },
     { "ias-pubkey", required_argument, 0, 'i' },
+    /* below 4 long options don't have corresponding short names (see 3rd arg in `getopt_long()`),
+     * but they return '1', '2', ... chars to use in the switch statement */
+    { "allow-debug-enclave", no_argument, 0, '1' },
+    { "allow-outdated-tcb", no_argument, 0, '2' },
+    { "allow-hw-config-needed", no_argument, 0, '3' },
+    { "allow-sw-hardening-needed", no_argument, 0, '4' },
     { 0, 0, 0, 0 }
 };
 
 static void usage(const char* exec) {
     INFO("Usage: %s [options]\n", exec);
     INFO("Available options:\n");
-    INFO("  --help, -h                Display this help\n");
-    INFO("  --verbose, -v             Enable verbose output\n");
-    INFO("  --msb, -m                 Print/parse hex strings in big-endian order\n");
-    INFO("  --report-path, -r PATH    Path to the IAS report\n");
-    INFO("  --sig-path, -s PATH       Path to the IAS report's signature\n");
-    INFO("  --allow-outdated-tcb, -o  Treat IAS status GROUP_OUT_OF_DATE as OK\n");
-    INFO("  --allow-debug-enclave, -d Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1)\n");
-    INFO("  --nonce, -n STRING        Nonce that's expected in the report (optional)\n");
-    INFO("  --mr-signer, -S STRING    Expected mr_signer field (hex string, optional)\n");
-    INFO("  --mr-enclave, -E STRING   Expected mr_enclave field (hex string, optional)\n");
-    INFO("  --report-data, -R STRING  Expected report_data field (hex string, optional)\n");
-    INFO("  --isv-prod-id, -P NUMBER  Expected isv_prod_id field (uint16_t, optional)\n");
-    INFO("  --isv-svn, -V NUMBER      Expected isv_svn field (uint16_t, optional)\n");
-    INFO("  --ias-pubkey, -i PATH     Path to IAS public RSA key (PEM format, optional)\n");
+    INFO("  --help, -h                   Display this help\n");
+    INFO("  --verbose, -v                Enable verbose output\n");
+    INFO("  --msb, -m                    Print/parse hex strings in big-endian order\n");
+    INFO("  --report-path, -r PATH       Path to the IAS report\n");
+    INFO("  --sig-path, -s PATH          Path to the IAS report's signature\n");
+    INFO("  --nonce, -n STRING           Nonce that's expected in the report (optional)\n");
+    INFO("  --mr-signer, -S STRING       Expected mr_signer field (hex string, optional)\n");
+    INFO("  --mr-enclave, -E STRING      Expected mr_enclave field (hex string, optional)\n");
+    INFO("  --report-data, -R STRING     Expected report_data field (hex string, optional)\n");
+    INFO("  --isv-prod-id, -P NUMBER     Expected isv_prod_id field (uint16_t, optional)\n");
+    INFO("  --isv-svn, -V NUMBER         Expected isv_svn field (uint16_t, optional)\n");
+    INFO("  --ias-pubkey, -i PATH        Path to IAS public RSA key (PEM format, optional)\n");
+    INFO("  --allow-debug-enclave        Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1)\n");
+    INFO("  --allow-outdated-tcb         Treat IAS status code GROUP_OUT_OF_DATE as OK\n");
+    INFO("  --allow-hw-config-needed     Treat IAS status code CONFIGURATION_NEEDED as OK\n");
+    INFO("  --allow-sw-hardening-needed  Treat IAS status code SW_HARDENING_NEEDED as OK\n");
+    INFO("\n");
+    INFO("To treat the IAS status code CONFIGURATION_AND_SW_HARDENING_NEEDED as OK, set both\n");
+    INFO("--allow-hw-config-needed and --allow-sw-hardening-needed options.\n");
 }
 
 int main(int argc, char* argv[]) {
     int ret;
 
-    int option               = 0;
-    char* report_path        = NULL;
-    size_t report_size       = 0;
-    char* sig_path           = NULL;
-    size_t sig_size          = 0;
-    char* nonce              = NULL;
-    bool allow_outdated_tcb  = false;
-    bool allow_debug_enclave = false;
-    char* mrsigner           = NULL;
-    char* mrenclave          = NULL;
-    char* report_data        = NULL;
-    char* isv_prod_id        = NULL;
-    char* isv_svn            = NULL;
-    char* ias_pubkey_path    = NULL;
-    endianness_t endian      = ENDIAN_LSB;
+    int option            = 0;
+    char* report_path     = NULL;
+    size_t report_size    = 0;
+    char* sig_path        = NULL;
+    size_t sig_size       = 0;
+    char* nonce           = NULL;
+    char* mrsigner        = NULL;
+    char* mrenclave       = NULL;
+    char* report_data     = NULL;
+    char* isv_prod_id     = NULL;
+    char* isv_svn         = NULL;
+    char* ias_pubkey_path = NULL;
+
+    bool allow_debug_enclave       = false;
+    bool allow_outdated_tcb        = false;
+    bool allow_hw_config_needed    = false;
+    bool allow_sw_hardening_needed = false;
+
+    endianness_t endian = ENDIAN_LSB;
 
     // parse command line
     while (true) {
-        option = getopt_long(argc, argv, "hvmr:s:odn:S:E:R:P:V:i:", g_options, NULL);
+        option = getopt_long(argc, argv, "hvmr:s:n:S:E:R:P:V:i:", g_options, NULL);
         if (option == -1)
             break;
 
@@ -90,12 +103,6 @@ int main(int argc, char* argv[]) {
                 break;
             case 's':
                 sig_path = optarg;
-                break;
-            case 'o':
-                allow_outdated_tcb = true;
-                break;
-            case 'd':
-                allow_debug_enclave = true;
                 break;
             case 'n':
                 nonce = optarg;
@@ -117,6 +124,18 @@ int main(int argc, char* argv[]) {
                 break;
             case 'i':
                 ias_pubkey_path = optarg;
+                break;
+            case '1':
+                allow_debug_enclave = true;
+                break;
+            case '2':
+                allow_outdated_tcb = true;
+                break;
+            case '3':
+                allow_hw_config_needed = true;
+                break;
+            case '4':
+                allow_sw_hardening_needed = true;
                 break;
             default:
                 usage(argv[0]);
@@ -171,7 +190,8 @@ int main(int argc, char* argv[]) {
 
     /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
     ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
-                                          allow_outdated_tcb, nonce, ias_pubkey,
+                                          allow_outdated_tcb, allow_hw_config_needed,
+                                          allow_sw_hardening_needed, nonce, ias_pubkey,
                                           &enclave_quote_status, &report_quote_body,
                                           &quote_body_size);
     if (ret < 0) {

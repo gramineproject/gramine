@@ -135,9 +135,11 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     if (results)
         results->err_loc = AT_VERIFY_EXTERNAL;
 
-    /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
-    bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
-    bool allow_debug_enclave = getenv_allow_debug_enclave();
+    /* prepare user-supplied verification parameters "allow outdated TCB", etc. */
+    bool allow_outdated_tcb        = getenv_allow_outdated_tcb();
+    bool allow_hw_config_needed    = getenv_allow_hw_config_needed();
+    bool allow_sw_hardening_needed = getenv_allow_sw_hardening_needed();
+    bool allow_debug_enclave       = getenv_allow_debug_enclave();
 
     /* call into libsgx_dcap_quoteverify to get supplemental data size */
     ret = sgx_qv_get_quote_supplemental_data_size(&supplemental_data_size);
@@ -179,17 +181,31 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
 
     switch (verification_result) {
         case SGX_QL_QV_RESULT_OK:
+            ret = 0;
             if (collateral_expiration_status != 0) {
                 INFO("WARNING: The collateral is out of date.\n");
+                if (!allow_outdated_tcb)
+                    ret = MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
             }
-            ret = 0;
             break;
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
+            ret = allow_hw_config_needed ? 0 : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+            break;
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
-        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
-        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
-        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
             ret = allow_outdated_tcb ? 0 : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+            break;
+        case SGX_QL_QV_RESULT_OUT_OF_DATE_CONFIG_NEEDED:
+            ret = allow_outdated_tcb
+                      ? (allow_hw_config_needed ? 0 : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
+                      : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+            break;
+        case SGX_QL_QV_RESULT_SW_HARDENING_NEEDED:
+            ret = allow_sw_hardening_needed ? 0 : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+            break;
+        case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
+            ret = allow_hw_config_needed
+                      ? (allow_sw_hardening_needed ? 0 : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
+                      : MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
             break;
         case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
         case SGX_QL_QV_RESULT_REVOKED:
@@ -199,9 +215,17 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
             break;
     }
     if (ret < 0) {
-        ERROR("Quote: verification failed with error %s\n",
-              sgx_ql_qv_result_to_str(verification_result));
+        if (verification_result == SGX_QL_QV_RESULT_OK) {
+            assert(collateral_expiration_status != 0 && !allow_outdated_tcb);
+            ERROR("Quote: verification failed because collateral is out of date\n");
+        } else {
+            ERROR("Quote: verification failed with error %s\n",
+                  sgx_ql_qv_result_to_str(verification_result));
+        }
         goto out;
+    }
+    if (verification_result != SGX_QL_QV_RESULT_OK) {
+        INFO("Allowing quote status %s\n", sgx_ql_qv_result_to_str(verification_result));
     }
 
     if (results)

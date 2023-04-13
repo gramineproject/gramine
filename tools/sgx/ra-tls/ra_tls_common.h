@@ -27,7 +27,10 @@ static const uint8_t g_quote_oid[] = OID(0x06);
 static const size_t g_quote_oid_size = sizeof(g_quote_oid);
 
 bool getenv_allow_outdated_tcb(void);
+bool getenv_allow_hw_config_needed(void);
+bool getenv_allow_sw_hardening_needed(void);
 bool getenv_allow_debug_enclave(void);
+
 int find_oid_in_cert_extensions(const uint8_t* exts, size_t exts_size, const uint8_t* oid,
                                 size_t oid_size, uint8_t** out_val, size_t* out_size);
 int cmp_crt_pk_against_quote_report_data(mbedtls_x509_crt* crt, sgx_quote_t* quote);

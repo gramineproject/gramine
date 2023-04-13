@@ -55,11 +55,12 @@ Also, because this example builds and uses debug SGX enclaves (`sgx.debug` is
 set to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
 Note that in production environments, you must *not* use this option!
 
-Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
-the tests when some of Intel's security advisories haven't been addressed (for
-example, when the microcode or architectural enclaves aren't fully up-to-date).
-As the name of this setting suggests, this is not secure and likewise should not
-be used in production.
+Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`,
+`RA_TLS_ALLOW_HW_CONFIG_NEEDED=1` and `RA_TLS_ALLOW_SW_HARDENING_NEEDED=1` to
+allow performing the tests when some of Intel's security advisories haven't been
+addressed (for example, when the microcode or architectural enclaves aren't
+fully up-to-date). Note that in production environments, you must carefully
+analyze whether to use these options!
 
 # Quick Start
 
@@ -71,6 +72,14 @@ Moreover, for EPID-based (IAS) attestation, you will need to provide
 an [SPID and the corresponding IAS API keys][spid].
 
 [spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
+
+For all examples, we set the following environment variables:
+```sh
+export RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1
+export RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1
+export RA_TLS_ALLOW_HW_CONFIG_NEEDED=1
+export RA_TLS_ALLOW_SW_HARDENING_NEEDED=1
+```
 
 - Normal non-RA-TLS flows; without SGX and without Gramine:
 
@@ -91,8 +100,6 @@ make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
 
 gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
 RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
 RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
@@ -112,8 +119,6 @@ make app dcap RA_TYPE=dcap
 
 gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_MRENCLAVE=<MRENCLAVE of the server enclave> \
 RA_TLS_MRSIGNER=<MRSIGNER of the server enclave> \
 RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the server enclave> \
@@ -132,7 +137,7 @@ make app dcap RA_TYPE=dcap
 
 gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 ./client dcap \
+./client dcap \
     <MRENCLAVE of the server enclave> \
     <MRSIGNER of the server enclave> \
     <ISV_PROD_ID of the server enclave> \
@@ -157,10 +162,8 @@ kill %%
 
 - RA-TLS flows with SGX and with Gramine, running EPID client in SGX:
 
-Note: you may also add environment variables to `client.manifest.template`, such
-as `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`, `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`,
-`RA_TLS_MRENCLAVE`, `RA_TLS_MRSIGNER`, `RA_TLS_ISV_PROD_ID` and
-`RA_TLS_ISV_SVN`.
+Note: you may need to add environment variables to `client.manifest.template`, such
+as `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`, `RA_TLS_MRENCLAVE`, etc.
 
 ```sh
 make clean
@@ -169,8 +172,7 @@ make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
 
 gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-    RA_TLS_EPID_API_KEY=<your EPID API key> \
+RA_TLS_EPID_API_KEY=<your EPID API key> \
     gramine-sgx ./client_epid epid
 
 # client will successfully connect to the server via RA-TLS/EPID flows
@@ -185,8 +187,7 @@ make app dcap RA_TYPE=dcap
 
 gramine-sgx ./server &
 
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
-    gramine-sgx ./client_dcap dcap \
+gramine-sgx ./client_dcap dcap \
     <MRENCLAVE of the server enclave> \
     <MRSIGNER of the server enclave> \
     <ISV_PROD_ID of the server enclave> \

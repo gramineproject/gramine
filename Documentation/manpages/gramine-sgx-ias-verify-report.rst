@@ -40,14 +40,6 @@ Command line arguments
 
    Path to the IAS report's signature.
 
-.. option:: -o, --allow-outdated-tcb
-
-   Treat IAS status GROUP_OUT_OF_DATE as OK.
-
-.. option:: -d, --allow-debug-enclave
-
-   Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1).
-
 .. option:: -n, --nonce
 
    Nonce that's expected in the report (optional).
@@ -76,21 +68,40 @@ Command line arguments
 
    Path to IAS public RSA key (PEM format, optional).
 
+.. option:: --allow-debug-enclave
+
+   Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1).
+
+.. option:: --allow-outdated-tcb
+
+   Treat IAS status code GROUP_OUT_OF_DATE as OK.
+
+.. option:: --allow-hw-config-needed
+
+   Treat IAS status code CONFIGURATION_NEEDED as OK.
+
+.. option:: --allow-sw-hardening-needed
+
+   Treat IAS status code SW_HARDENING_NEEDED as OK.
+
+To treat the IAS status code CONFIGURATION_AND_SW_HARDENING_NEEDED as OK, set
+both :option:`--allow-hw-config-needed` and
+:option:`--allow-sw-hardening-needed` options.
+
 Example
 =======
 
-Report verification with all options enabled:
+Report verification with most options enabled:
 
 .. code-block:: sh
 
-    $ gramine-sgx-ias-verify-report -v -m -r rp -s sp -i ias.pem -o -d -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
+    $ gramine-sgx-ias-verify-report -v -m -r rp -s sp -i ias.pem -n thisisnonce -S 14b284525c45c4f526bf1535d05bd88aa73b9e184464f2d97be3dabc0d187b57 -E 4d69102c40401f40a54eb156601be73fb7605db0601845580f036fd284b7b303 -R 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004ba476e321e12c720000000000000001 -P 0 -V 0
     Verbose output enabled
     Endianness set to MSB
     Using IAS public key from file 'ias.pem'
     IAS key: RSA, 2048 bits
     Decoded IAS signature size: 256 bytes
     IAS report: signature verified correctly
-    IAS report: allowing quote status GROUP_OUT_OF_DATE
     IAS report: nonce OK
     IAS report: quote decoded, size 432 bytes
     [...quote dump...]

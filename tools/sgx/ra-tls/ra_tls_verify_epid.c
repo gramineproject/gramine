@@ -211,9 +211,11 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
     assert(sig_data[sig_data_size - 1] == '\0');
     sig_data_size--;
 
-    /* prepare user-supplied verification parameters "allow outdated TCB"/"allow debug enclave" */
-    bool allow_outdated_tcb  = getenv_allow_outdated_tcb();
-    bool allow_debug_enclave = getenv_allow_debug_enclave();
+    /* prepare user-supplied verification parameters "allow outdated TCB", etc. */
+    bool allow_outdated_tcb        = getenv_allow_outdated_tcb();
+    bool allow_hw_config_needed    = getenv_allow_hw_config_needed();
+    bool allow_sw_hardening_needed = getenv_allow_sw_hardening_needed();
+    bool allow_debug_enclave       = getenv_allow_debug_enclave();
 
     ret = getenv_ias_pub_key_pem(&ias_pub_key_pem);
     if (ret < 0)
@@ -225,8 +227,8 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
      * for details) */
     ret = ias_verify_report_extract_quote((uint8_t*)report_data, report_data_size,
                                           (uint8_t*)sig_data, sig_data_size,
-                                          allow_outdated_tcb, nonce,
-                                          ias_pub_key_pem,
+                                          allow_outdated_tcb, allow_hw_config_needed,
+                                          allow_sw_hardening_needed, nonce, ias_pub_key_pem,
                                           results ? &results->epid.ias_enclave_quote_status : NULL,
                                           &quote_from_ias, &quote_from_ias_size);
     if (ret < 0) {

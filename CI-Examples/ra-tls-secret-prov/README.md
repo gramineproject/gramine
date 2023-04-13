@@ -41,11 +41,12 @@ Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
 to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
 Note that in production environments, you must *not* use this option!
 
-Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`, to allow performing
-the tests when some of Intel's security advisories haven't been addressed (for
-example, when the microcode or architectural enclaves aren't fully up-to-date).
-As the name of this setting suggests, this is not secure and likewise should not
-be used in production.
+Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`,
+`RA_TLS_ALLOW_HW_CONFIG_NEEDED=1` and `RA_TLS_ALLOW_SW_HARDENING_NEEDED=1` to
+allow performing the tests when some of Intel's security advisories haven't been
+addressed (for example, when the microcode or architectural enclaves aren't
+fully up-to-date). Note that in production environments, you must carefully
+analyze whether to use these options!
 
 ## Secret Provisioning clients
 
@@ -73,6 +74,14 @@ build time.
 
 # Quick Start
 
+For all examples, we set the following environment variables:
+```sh
+export RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1
+export RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1
+export RA_TLS_ALLOW_HW_CONFIG_NEEDED=1
+export RA_TLS_ALLOW_SW_HARDENING_NEEDED=1
+```
+
 - Secret Provisioning flows, EPID-based (IAS) attestation (you will need to
   provide an [SPID and the corresponding IAS API keys][spid]):
 
@@ -84,8 +93,6 @@ make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
 
 # test encrypted files client (other examples can be tested similarly)
 cd secret_prov_pf
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 RA_TLS_EPID_API_KEY=<your EPID API key> \
 ./server_epid wrap_key &
 
@@ -101,8 +108,6 @@ make app dcap RA_TYPE=dcap
 
 # test encrypted files client (other examples can be tested similarly)
 cd secret_prov_pf
-RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1 \
-RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1 \
 ./server_dcap wrap_key &
 
 gramine-sgx ./client
