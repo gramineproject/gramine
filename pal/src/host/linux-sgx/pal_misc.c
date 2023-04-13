@@ -43,7 +43,6 @@ void init_tsc(void) {
     }
 }
 
-/* TODO: result comes from the untrusted host, introduce some schielding */
 int _PalSystemTimeQuery(uint64_t* out_usec) {
     int ret;
 
@@ -62,8 +61,8 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
     } while (read_seqretry(&g_tsc_lock, seq));
 
     uint64_t usec = 0;
-    /* Last seen RDTSC time value. This guards against time rewinding. */
-    static uint64_t last_usec_rdtsc = 0;
+    /* Last seen RDTSC-calculated time value. This guards against time rewinding. */
+    static uint64_t last_usec = 0;
     if (start_tsc > 0 && start_usec > 0) {
         /* baseline TSC/usec pair was initialized, can calculate time via RDTSC (but should be
          * careful with integer overflow during calculations) */
@@ -77,14 +76,21 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
                 if (usec < start_usec)
                     return -PAL_ERROR_OVERFLOW;
 
-                __atomic_store_n(&last_usec_rdtsc, usec, __ATOMIC_RELEASE);
+                if (usec) {
+                    uint64_t expected_usec = __atomic_load_n(&last_usec, __ATOMIC_ACQUIRE);
+                    while (expected_usec < usec) {
+                        if (__atomic_compare_exchange_n(&last_usec, &expected_usec, usec,
+                                                        /*weak=*/true, __ATOMIC_RELEASE,
+                                                        __ATOMIC_ACQUIRE)) {
+                            break;
+                        }
+                    }
+
+                    *out_usec = MAX(usec, expected_usec);
+                    return 0;
+                }
             }
         }
-    }
-
-    if (usec) {
-        *out_usec = usec;
-        return 0;
     }
 
     /* if we are here, either the baseline TSC/usec pair was not yet initialized or too much time
@@ -95,12 +101,12 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
         return -PAL_ERROR_DENIED;
     uint64_t tsc_cyc2 = get_tsc();
 
-    uint64_t last_usec = __atomic_load_n(&last_usec_rdtsc, __ATOMIC_ACQUIRE);
-    if (usec < last_usec) {
+    uint64_t last_recorded_rdtsc = __atomic_load_n(&last_usec, __ATOMIC_ACQUIRE);
+    if (usec < last_recorded_rdtsc) {
         /* new OCALL-obtained timestamp (`usec`) is "back in time" than the last recorded timestamp
-         * from RDTSC (`last_usec`); this can happen if the actual host time drifted backwards
-         * compared to the RDTSC time. */
-         usec = last_usec;
+         * from RDTSC (`last_recorded_rdtsc`); this can happen if the actual host time drifted
+         * backwards compared to the RDTSC time. */
+         usec = last_recorded_rdtsc;
     }
 
     /* we need to match the OCALL-obtained timestamp (`usec`) with the RDTSC-obtained number of
