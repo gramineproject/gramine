@@ -316,7 +316,7 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     if (!strcmp(filename, ""))
         filename = get_main_exec_path();
 
-    if (!strcmp(filename, "linux-vdso.so.1"))
+    if (!strcmp(filename, "[vdso_libos]"))
         return;
 
     // Convert filename to absolute path - some tools (e.g. libunwind in 'perf report') refuse to
