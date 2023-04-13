@@ -16,6 +16,6 @@ clean:
 		*.xml \
 		testfile \
 		trusted_testfile \
-		regression/__pycache__ \
+		asm/x86_64/__pycache__ \
 		tmp/* \
 		tmp_enc/*
