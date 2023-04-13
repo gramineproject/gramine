@@ -76,19 +76,17 @@ int _PalSystemTimeQuery(uint64_t* out_usec) {
                 if (usec < start_usec)
                     return -PAL_ERROR_OVERFLOW;
 
-                if (usec) {
-                    uint64_t expected_usec = __atomic_load_n(&last_usec, __ATOMIC_ACQUIRE);
-                    while (expected_usec < usec) {
-                        if (__atomic_compare_exchange_n(&last_usec, &expected_usec, usec,
-                                                        /*weak=*/true, __ATOMIC_RELEASE,
-                                                        __ATOMIC_ACQUIRE)) {
-                            break;
-                        }
+                uint64_t expected_usec = __atomic_load_n(&last_usec, __ATOMIC_ACQUIRE);
+                while (expected_usec < usec) {
+                    if (__atomic_compare_exchange_n(&last_usec, &expected_usec, usec,
+                                                    /*weak=*/true, __ATOMIC_RELEASE,
+                                                    __ATOMIC_ACQUIRE)) {
+                        break;
                     }
-
-                    *out_usec = MAX(usec, expected_usec);
-                    return 0;
                 }
+
+                *out_usec = MAX(usec, expected_usec);
+                return 0;
             }
         }
     }
