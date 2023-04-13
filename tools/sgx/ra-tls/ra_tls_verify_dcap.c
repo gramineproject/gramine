@@ -219,6 +219,9 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
               sgx_ql_qv_result_to_str(verification_result));
         goto out;
     }
+    if (verification_result != SGX_QL_QV_RESULT_OK) {
+        INFO("Allowing quote status %s\n", sgx_ql_qv_result_to_str(verification_result));
+    }
 
     if (results)
         results->err_loc = AT_VERIFY_ENCLAVE_ATTRS;

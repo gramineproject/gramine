@@ -763,7 +763,7 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
         ret = 0;
         print_allowed_and_advisories(node->valuestring, json);
     } else if (allow_hw_config_needed && allow_sw_hardening_needed
-                && strcmp("CONFIGURATION_AND_SW_HARDENING_NEEDED", node->valuestring) == 0) {
+                   && strcmp("CONFIGURATION_AND_SW_HARDENING_NEEDED", node->valuestring) == 0) {
         ret = 0;
         print_allowed_and_advisories(node->valuestring, json);
     }
