@@ -132,7 +132,7 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
 
 static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
 #ifndef __x86_64__
-    #error "cs and ss regs might change on this arch. Currently this is unsupported."
+    #error "The iret emulation is unsupported on other platforms."
 #endif
 
     if (FIRST_TIME()) {

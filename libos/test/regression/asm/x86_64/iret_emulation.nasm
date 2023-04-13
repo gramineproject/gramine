@@ -12,10 +12,10 @@ section .text
 %define NEW_RSP_VALUE   0x8811223344556677
 
 ; Turn on all EFLAGS.
-; ABI x86_64 defines which are set and which are not.
-; Please refer to x86_64 abi test for more details.
+; x86_64 ABI defines which flags are set and which are not on
+; process startup. Please refer to x86_64 ABI test for more details.
 ; In this test we set all of them, besides TF (trap flag),
-; which can throw exception.
+; which would cause an exception later.
 %define NEW_RFLAGS      0xED7
 
 check_rflags:
@@ -27,11 +27,11 @@ check_rflags:
 
 test_rflags:
     mov     rax, rsp
-    mov     rdx, ss            ; ss register can't change
-    push    rdx
+    mov     rdx, ss
+    push    rdx                ; this test doesn't change ss
     push    rax                ; new rsp
     push    NEW_RFLAGS         ; new rflags
-    mov     rdx, cs            ; cs register can't change
+    mov     rdx, cs            ; this test doesn't change cs
     push    rdx
     push    check_rflags       ; new rip
     iretq
@@ -50,12 +50,12 @@ test_rsp:
     mov     rax, rsp           ; store current rsp in rax,
                                ; this test sets rsp to garbage value
     mov     rdx, ss
-    push    rdx                ; ss register can't change
+    push    rdx                ; this test doesn't change ss
     mov     rdx, NEW_RSP_VALUE ; new rsp
     push    rdx
     push    0x00               ; new rflags
-    mov     rdx, cs            ; cs register can't change
-    push    rdx
+    mov     rdx, cs
+    push    rdx                ; this test doesn't change cs
     push    check_rsp          ; new rip
     iretq
 
