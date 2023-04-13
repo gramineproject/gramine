@@ -326,17 +326,34 @@ against expected values stored in a central database).
 
 The library also uses the following SGX-specific environment variables:
 
-- ``RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`` (optional) -- whether to allow outdated
-  TCB as returned in the IAS attestation report or returned by the DCAP
-  verification library. Value ``1`` means "allow outdated TCB". Note that
-  allowing outdated TCB is **insecure** and should be used only for debugging
-  and testing. Outdated TCB is not allowed by default.
+- ``RA_TLS_ALLOW_OUTDATED_TCB_INSECURE`` (optional) -- whether to allow
+  "outdated TCB" status as returned in the IAS attestation report or returned by
+  the DCAP verification library. Note that allowing outdated TCB is **insecure**
+  and should be used only for debugging and testing.
+
+- ``RA_TLS_ALLOW_HW_CONFIG_NEEDED`` (optional) -- whether to allow "HW
+  configuration needed" status. Note that this is not marked as insecure, as in
+  some situations a strictly-compliant HW configuration is not required.
+
+- ``RA_TLS_ALLOW_SW_HARDENING_NEEDED`` (optional) -- whether to allow "SW
+  hardening needed" status. Note that this is not marked as insecure, as in some
+  situations a strictly-compliant SW configuration is not required.
 
 - ``RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE`` (optional) -- whether to allow debug
-  enclaves (enclaves with ``SECS.ATTRIBUTES.DEBUG`` bit set to one). Value ``1``
-  means "allow debug enclaves". Note that allowing debug enclaves is
-  **insecure** and should be used only for debugging and testing. Debug enclaves
-  are not allowed by default.
+  enclaves (enclaves with ``SECS.ATTRIBUTES.DEBUG`` bit set to one). Note that
+  allowing debug enclaves is **insecure** and should be used only for debugging
+  and testing.
+
+Each of the above environment variables must be set to ``1`` to allow the
+corresponding status. By default, all of the above environment variables are not
+set, and thus all not-OK statuses are disallowed; in other words, only
+strictly-compliant HW/SW SGX platforms can pass verification by default. For
+more information, please refer to official Intel documentation:
+
+- `Intel EPID/IAS
+  <https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf>`__
+- `Intel ECDSA/DCAP
+  <https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf>`__
 
 The library uses the following EPID-specific environment variables if available:
 

@@ -42,7 +42,7 @@ Command line arguments
 
 .. option:: -o, --allow-outdated-tcb
 
-   Treat IAS status GROUP_OUT_OF_DATE as OK.
+   Treat non-terminal IAS statuses as OK.
 
 .. option:: -d, --allow-debug-enclave
 

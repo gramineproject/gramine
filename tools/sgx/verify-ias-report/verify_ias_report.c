@@ -39,7 +39,7 @@ static void usage(const char* exec) {
     INFO("  --msb, -m                 Print/parse hex strings in big-endian order\n");
     INFO("  --report-path, -r PATH    Path to the IAS report\n");
     INFO("  --sig-path, -s PATH       Path to the IAS report's signature\n");
-    INFO("  --allow-outdated-tcb, -o  Treat IAS status GROUP_OUT_OF_DATE as OK\n");
+    INFO("  --allow-outdated-tcb, -o  Treat non-terminal IAS statuses as OK\n");
     INFO("  --allow-debug-enclave, -d Allow debug enclave (SGXREPORT.ATTRIBUTES.DEBUG = 1)\n");
     INFO("  --nonce, -n STRING        Nonce that's expected in the report (optional)\n");
     INFO("  --mr-signer, -S STRING    Expected mr_signer field (hex string, optional)\n");
@@ -169,8 +169,11 @@ int main(int argc, char* argv[]) {
     size_t quote_body_size = 0;
     char enclave_quote_status[128] = {0};
 
-    /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body) */
+    /* IAS returns a truncated SGX quote without signature fields (only the SGX quote body).
+     * Note that we use `allow_outdated_tcb` as a catch-all for OUT_OF_DATE, HW_CONFIG_NEEDED and
+     * SW_HARDENING_NEEDED returned statuses for simplicity.*/
     ret = ias_verify_report_extract_quote(report, report_size, sig, sig_size,
+                                          allow_outdated_tcb, allow_outdated_tcb,
                                           allow_outdated_tcb, nonce, ias_pubkey,
                                           &enclave_quote_status, &report_quote_body,
                                           &quote_body_size);

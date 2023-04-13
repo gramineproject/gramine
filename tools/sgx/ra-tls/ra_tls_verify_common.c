@@ -102,6 +102,16 @@ bool getenv_allow_outdated_tcb(void) {
     return (str && !strcmp(str, "1"));
 }
 
+bool getenv_allow_hw_config_needed(void) {
+    char* str = getenv(RA_TLS_ALLOW_HW_CONFIG_NEEDED);
+    return (str && !strcmp(str, "1"));
+}
+
+bool getenv_allow_sw_hardening_needed(void) {
+    char* str = getenv(RA_TLS_ALLOW_SW_HARDENING_NEEDED);
+    return (str && !strcmp(str, "1"));
+}
+
 bool getenv_allow_debug_enclave(void) {
     char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
     return (str && !strcmp(str, "1"));
