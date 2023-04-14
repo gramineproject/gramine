@@ -27,12 +27,12 @@ check_rflags:
 
 test_rflags:
     mov     rax, rsp
-    mov     rdx, ss
-    push    rdx                ; this test doesn't change ss
+    mov     rdx, ss            ; this test doesn't change ss, because
+    push    rdx                ; Gramine doesn't support doing this through iret
     push    rax                ; new rsp
     push    NEW_RFLAGS         ; new rflags
-    mov     rdx, cs            ; this test doesn't change cs
-    push    rdx
+    mov     rdx, cs            ; this test doesn't change cs, because
+    push    rdx                ; Gramine doesn't support doing this through iret
     push    check_rflags       ; new rip
     iretq
 
@@ -49,13 +49,13 @@ check_rsp:
 test_rsp:
     mov     rax, rsp           ; store current rsp in rax,
                                ; this test sets rsp to garbage value
-    mov     rdx, ss
-    push    rdx                ; this test doesn't change ss
+    mov     rdx, ss            ; this test doesn't change ss, because
+    push    rdx                ; Gramine doesn't support doing this through iret
     mov     rdx, NEW_RSP_VALUE ; new rsp
     push    rdx
     push    0x00               ; new rflags
-    mov     rdx, cs
-    push    rdx                ; this test doesn't change cs
+    mov     rdx, cs            ; this test doesn't change cs, because
+    push    rdx                ; Gramine doesn't support doing this through iret
     push    check_rsp          ; new rip
     iretq
 

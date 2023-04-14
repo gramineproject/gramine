@@ -7,6 +7,8 @@ from graminelibos.regression import (
     RegressionTestCase,
 )
 
+# These tests don't require libc, so it doesn't make sense to run them
+# twice (once with glibc and once with musl) as the result is not dependable on libc.
 @unittest.skipIf(USES_MUSL, 'Assembly tests are disabled with musl')
 class TC_00_X86_64(RegressionTestCase):
     # The iret emulation is used only on PAL/Linux-SGX.
