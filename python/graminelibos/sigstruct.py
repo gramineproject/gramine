@@ -18,9 +18,9 @@ class Sigstruct:
     fields = {
         'header': (offs.SGX_ARCH_SIGSTRUCT_HEADER, '16s'),
         'vendor': (offs.SGX_ARCH_SIGSTRUCT_VENDOR, '<L'),
-        'date_year': (offs.SGX_ARCH_SIGSTRUCT_DATE, '<H'),
-        'date_month': (offs.SGX_ARCH_SIGSTRUCT_DATE + 2, '<B'),
-        'date_day': (offs.SGX_ARCH_SIGSTRUCT_DATE + 3, '<B'),
+        'date_year': (offs.SGX_ARCH_SIGSTRUCT_DATE + 2, '<H'),
+        'date_month': (offs.SGX_ARCH_SIGSTRUCT_DATE + 1, '<B'),
+        'date_day': (offs.SGX_ARCH_SIGSTRUCT_DATE, '<B'),
         'header2': (offs.SGX_ARCH_SIGSTRUCT_HEADER2, '16s'),
         'swdefined': (offs.SGX_ARCH_SIGSTRUCT_SWDEFINED, '<L'),
         'modulus': (offs.SGX_ARCH_SIGSTRUCT_MODULUS, '384s'),

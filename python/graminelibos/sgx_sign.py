@@ -524,9 +524,13 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 
     sig = Sigstruct()
 
-    sig['date_year'] = date.year
-    sig['date_month'] = date.month
-    sig['date_day'] = date.day
+    # SIGSTRUCT following the generic CSS format requires the "date" field in CSS header (aka
+    # "SGX_ARCH_SIGSTRUCT_DATE") to have its byte representation in a {0xYYYYMMDD} format.
+    # We thus treat the "date" inputs as hex value directly.
+    sig['date_year'] = int(f'{date.year}', 16)
+    sig['date_month'] = int(f'{date.month}', 16)
+    sig['date_day'] = int(f'{date.day}', 16)
+
     sig['enclave_hash'] = mrenclave
     sig['isv_prod_id'] = manifest_sgx['isvprodid']
     sig['isv_svn'] = manifest_sgx['isvsvn']
