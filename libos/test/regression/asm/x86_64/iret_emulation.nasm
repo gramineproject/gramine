@@ -11,9 +11,10 @@ section .text
 
 %define NEW_RSP_VALUE   0x8811223344556677
 
+; Turn off all (not reserved) EFLAGS.
+%define ZERO_RFLAGS      0x002
+
 ; Turn on all EFLAGS.
-; x86_64 ABI defines which flags are set and which are not on
-; process startup. Please refer to x86_64 ABI test for more details.
 ; In this test we set all of them, besides TF (trap flag),
 ; which would cause an exception later.
 %define NEW_RFLAGS      0xED7
@@ -26,13 +27,20 @@ check_rflags:
     ret
 
 test_rflags:
+    push    ZERO_RFLAGS        ; make sure that current value of rflags is diffrent
+                               ; then NEW_RFLAGS to verify that iret actually
+                               ; has changed it to a new value
+    popfq
+
     mov     rax, rsp
     mov     rdx, ss            ; this test doesn't change ss, because
-    push    rdx                ; Gramine doesn't support doing this through iret
+                               ; Gramine doesn't support doing this through iret
+    push    rdx
     push    rax                ; new rsp
     push    NEW_RFLAGS         ; new rflags
     mov     rdx, cs            ; this test doesn't change cs, because
-    push    rdx                ; Gramine doesn't support doing this through iret
+                               ; Gramine doesn't support doing this through iret
+    push    rdx
     push    check_rflags       ; new rip
     iretq
 
@@ -50,12 +58,14 @@ test_rsp:
     mov     rax, rsp           ; store current rsp in rax,
                                ; this test sets rsp to garbage value
     mov     rdx, ss            ; this test doesn't change ss, because
-    push    rdx                ; Gramine doesn't support doing this through iret
+                               ; Gramine doesn't support doing this through iret
+    push    rdx
     mov     rdx, NEW_RSP_VALUE ; new rsp
     push    rdx
     push    0x00               ; new rflags
     mov     rdx, cs            ; this test doesn't change cs, because
-    push    rdx                ; Gramine doesn't support doing this through iret
+                               ; Gramine doesn't support doing this through iret
+    push    rdx
     push    check_rsp          ; new rip
     iretq
 
