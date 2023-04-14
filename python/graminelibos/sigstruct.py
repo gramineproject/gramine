@@ -3,6 +3,7 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import struct
+import sys
 
 import _graminelibos_offsets as offs # pylint: disable=import-error
 
@@ -18,9 +19,9 @@ class Sigstruct:
     fields = {
         'header': (offs.SGX_ARCH_SIGSTRUCT_HEADER, '16s'),
         'vendor': (offs.SGX_ARCH_SIGSTRUCT_VENDOR, '<L'),
-        'date_year': (offs.SGX_ARCH_SIGSTRUCT_DATE, '<H'),
-        'date_month': (offs.SGX_ARCH_SIGSTRUCT_DATE + 2, '<B'),
-        'date_day': (offs.SGX_ARCH_SIGSTRUCT_DATE + 3, '<B'),
+        'date_year': (offs.SGX_ARCH_SIGSTRUCT_DATE + 2, '<H'),
+        'date_month': (offs.SGX_ARCH_SIGSTRUCT_DATE + 1, '<B'),
+        'date_day': (offs.SGX_ARCH_SIGSTRUCT_DATE, '<B'),
         'header2': (offs.SGX_ARCH_SIGSTRUCT_HEADER2, '16s'),
         'swdefined': (offs.SGX_ARCH_SIGSTRUCT_SWDEFINED, '<L'),
         'modulus': (offs.SGX_ARCH_SIGSTRUCT_MODULUS, '384s'),
@@ -102,6 +103,18 @@ class Sigstruct:
                                or verify_sig_fields):
                     raise KeyError(f'{key} is not set')
                 continue
+            # `SIGSTRUCT.DATE` (signing date) is stored in yyyymmdd format in hex: yyyy=4 digit
+            # year, mm=1-12, dd=1-31 according to Intel SDM (Table 35-21. Layout of Enclave
+            # Signature Structure (SIGSTRUCT), Chapter 34, Volume 3, version March 2023). Further,
+            # SGX SDK and some code signing systems interpret it as "Binary-coded decimal", e.g.,
+            # expecting "14 04 23 20" rather than "0e 04 e7 07" for date "2023-04-14" in its byte
+            # representation. See below for details:
+            # - https://github.com/intel/linux-sgx/blob/1efe23c20e37f868498f8287921eedfbcecdc216/sdk/sign_tool/SignTool/manage_metadata.cpp#L252-L253
+            # - https://en.wikipedia.org/wiki/Binary-coded_decimal
+            # We thus treat the date-related inputs as if they are hex numbers.
+            if key in ['date_year', 'date_month', 'date_day']:
+                struct.pack_into(fmt, buffer, offset, int(f'{self[key]}', 16))
+                continue
             struct.pack_into(fmt, buffer, offset, self[key])
         return buffer
 
@@ -130,6 +143,16 @@ class Sigstruct:
         sig = cls()
 
         for key, (offset, fmt) in cls.fields.items():
+            # See the analogous place in to_bytes() method for explanation.
+            if key in ['date_year', 'date_month', 'date_day']:
+                try:
+                    sig[key] = int(f'{struct.unpack_from(fmt, buffer, offset)[0]:x}')
+                except ValueError:
+                    print(f'Misencoded {key} in SIGSTRUCT! '
+                          f'Please consider generating a new SIGSTRUCT with "gramine-sgx-sign".',
+                          file=sys.stderr)
+                    raise
+                continue
             sig[key] = struct.unpack_from(fmt, buffer, offset)[0]
 
         if sig['header'] != cls.defaults['header']:
