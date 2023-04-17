@@ -524,9 +524,14 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 
     sig = Sigstruct()
 
-    # SIGSTRUCT following the generic CSS format requires the "date" field in CSS header (aka
-    # "SGX_ARCH_SIGSTRUCT_DATE") to have its byte representation in a {0xYYYYMMDD} format.
-    # We thus treat the "date" inputs as hex value directly.
+    # `SIGSTRUCT.DATE` (build date) is required to be yyyymmdd in hex: yyyy=4 digit year, mm=1-12,
+    # dd=1-31 according to Intel SDM (Table 35-21. Layout of Enclave Signature Structure
+    # (SIGSTRUCT), Chapter 34, Volume 3, Version March 2023). Further, SGX SDK and some code signing
+    # systems interpret it as "Binary-coded decimal", e.g., expecting "14 04 23 20" rather than
+    # "0e 04 e7 07" for date "2023-4-14" in its byte representation. See below for details:
+    # - https://github.com/intel/linux-sgx/blob/1efe23c20e37f868498f8287921eedfbcecdc216/sdk/sign_tool/SignTool/manage_metadata.cpp#L252-L253
+    # - https://en.wikipedia.org/wiki/Binary-coded_decimal
+    # We thus treat the "date" inputs as if it is a hex value.
     sig['date_year'] = int(f'{date.year}', 16)
     sig['date_month'] = int(f'{date.month}', 16)
     sig['date_day'] = int(f'{date.day}', 16)
