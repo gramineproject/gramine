@@ -1,9 +1,11 @@
 #define _GNU_SOURCE
+#include <arpa/inet.h>
 #include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -11,6 +13,9 @@
 
 #define ERR(msg, args...) \
     errx(1, "%d: " msg, __LINE__, ##args)
+
+#define SRV_IP "127.0.0.1"
+#define PORT   11113
 
 static uint64_t wait_event(int epfd, struct epoll_event* possible_events,
                            size_t possible_events_len) {
@@ -147,12 +152,132 @@ static void test_epoll_empty(void) {
     CHECK(close(epfd));
 }
 
+static void server(int sockfd) {
+    int epfd = CHECK(epoll_create1(EPOLL_CLOEXEC));
+
+    int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
+
+    int enable = 1;
+    CHECK(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable)));
+
+    struct sockaddr_in sa = {
+        .sin_family = AF_INET,
+        .sin_port = htons(PORT),
+        .sin_addr.s_addr = htonl(INADDR_ANY),
+    };
+
+    CHECK(bind(s, (void*)&sa, sizeof(sa)));
+    CHECK(listen(s, 5));
+
+    char c = 0;
+    ssize_t x = CHECK(write(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+
+    int client = CHECK(accept(s, NULL, NULL));
+
+    CHECK(close(s));
+
+    struct epoll_event event = {
+        .events = EPOLLIN | EPOLLRDHUP,
+        .data.fd = client,
+    };
+    CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, client, &event));
+
+    memset(&event, 0, sizeof(event));
+    int r = CHECK(epoll_wait(epfd, &event, 1, 0));
+    if (r != 0) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
+    }
+
+    x = CHECK(write(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+
+    x = CHECK(read(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+    CHECK(close(sockfd));
+
+    memset(&event, 0, sizeof(event));
+    r = CHECK(epoll_wait(epfd, &event, 1, 0));
+    if (r != 1 || event.events != (EPOLLIN | EPOLLHUP | EPOLLRDHUP) || event.data.fd != client) {
+        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
+    }
+
+    CHECK(close(client));
+    CHECK(close(epfd));
+}
+
+static void client(int sockfd) {
+    char c = 0;
+    ssize_t x = CHECK(read(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+
+    int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
+
+    struct sockaddr_in sa = {
+        .sin_family = AF_INET,
+        .sin_port = htons(PORT),
+        .sin_addr = {
+            /* TODO: remove this once Ubuntu 18.04 is deprecated. */
+            .s_addr = 0,
+        },
+    };
+    if (inet_aton(SRV_IP, &sa.sin_addr) != 1) {
+        CHECK(-1);
+    }
+
+    CHECK(connect(s, (void*)&sa, sizeof(sa)));
+
+    x = CHECK(read(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+
+    CHECK(close(s));
+
+    x = CHECK(write(sockfd, &c, sizeof(c)));
+    if (x != 1) {
+        CHECK(-1);
+    }
+    CHECK(close(sockfd));
+}
+
+static void test_epoll_wait_rdhup(void) {
+    int sockfds[2];
+    CHECK(socketpair(AF_UNIX, SOCK_STREAM, 0, sockfds));
+
+    pid_t p = CHECK(fork());
+    if (p == 0) {
+        CHECK(close(sockfds[1]));
+        client(sockfds[0]);
+        exit(0);
+    }
+
+    CHECK(close(sockfds[0]));
+    server(sockfds[1]);
+
+    int status = 0;
+    CHECK(wait(&status));
+    if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+        errx(1, "child wait status: %#x", status);
+    }
+}
+
 int main(void) {
     test_epoll_empty();
 
     test_epoll_migration();
 
     test_epoll_oneshot();
+
+    test_epoll_wait_rdhup();
 
     puts("TEST OK");
     return 0;

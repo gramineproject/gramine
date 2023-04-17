@@ -151,3 +151,5 @@ typedef struct {
 #define PAL_HANDLE_FD_WRITABLE  2
 /* Set if an error was seen on this handle. Currently only set by `_PalStreamsWaitEvents`. */
 #define PAL_HANDLE_FD_ERROR     4
+/* Set if a hang up (HUP) was seen on this handle. Currently only set by `_PalStreamsWaitEvents`. */
+#define PAL_HANDLE_FD_HUP       8
