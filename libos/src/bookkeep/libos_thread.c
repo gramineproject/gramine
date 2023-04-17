@@ -122,6 +122,17 @@ unmap:;
     return ret;
 }
 
+static void set_cur_thread_capabilities(struct libos_thread* cur_thread) {
+    bool is_root = cur_thread->euid == 0;
+    cur_thread->capabilities[0].inheritable = cur_thread->capabilities[1].inheritable = 0;
+
+    cur_thread->capabilities[0].effective = is_root ? 0xffffffff : 0;
+    cur_thread->capabilities[1].effective = is_root ? 0x1ff : 0;
+
+    cur_thread->capabilities[0].permitted = is_root ? 0xffffffff : 0;
+    cur_thread->capabilities[1].permitted = is_root ? 0x1ff : 0;
+}
+
 static int init_main_thread(void) {
     struct libos_thread* cur_thread = get_cur_thread();
     if (cur_thread) {
@@ -228,7 +239,7 @@ static int init_main_thread(void) {
         put_thread(cur_thread);
         return ret;
     }
-
+    set_cur_thread_capabilities(cur_thread);
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 

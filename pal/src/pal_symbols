@@ -52,5 +52,3 @@ PalAttestationQuote
 PalGetSpecialKey
 PalDebugLog
 PalGetPalPublicState
-Palcapget
-Palcapset

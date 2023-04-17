@@ -165,7 +165,7 @@ int main(void) {
     if (errno != EINVAL)
         err(1, "Invalid errno for capset at line = %d", __LINE__);
 
-    /* Passing invalid version numbers with cap_data==NULL */
+    /* Passing invalid version numbers with cap_data = NULL */
     cap_header.version = 1;
     cap_header.pid = getpid();
     CHECK(capget(&cap_header, NULL));
