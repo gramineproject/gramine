@@ -112,8 +112,10 @@ typedef struct {
  * writable respectively. If none of these is set, then the handle has no host-level fd. */
 #define PAL_HANDLE_FD_READABLE  1
 #define PAL_HANDLE_FD_WRITABLE  2
-/* Set if an error was seen on this handle. Currently only set by `_PalStreamsWaitEvents`. */
+/* Set if an error was seen on this handle. */
 #define PAL_HANDLE_FD_ERROR     4
+/* Set if a hang-up was seen on this handle. */
+#define PAL_HANDLE_FD_HANG_UP   8
 
 int arch_do_rt_sigprocmask(int sig, int how);
 int arch_do_rt_sigaction(int sig, void* handler,
