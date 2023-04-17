@@ -7,7 +7,6 @@
 
 #include "pal.h"
 #include "pal_internal.h"
-#include "linux_capabilities.h"
 
 int PalSystemTimeQuery(uint64_t* time) {
     return _PalSystemTimeQuery(time);
@@ -47,12 +46,4 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
 
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
-}
-
-int Palcapget(uint32_t version, struct gramine_user_cap_data* datap) {
-    return _Palcapget(version, datap);
-}
-
-int Palcapset(uint32_t version, struct gramine_user_cap_data* datap) {
-    return _Palcapset(version, datap);
 }

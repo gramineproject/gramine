@@ -13,7 +13,6 @@
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_table.h"
-#include "linux_capabilities.h"
 
 long libos_syscall_access(const char* file, mode_t mode) {
     return libos_syscall_faccessat(AT_FDCWD, file, mode);
@@ -53,13 +52,13 @@ out:
 }
 
 long libos_syscall_capget(cap_user_header_t _hdrp, const cap_user_data_t _datap) {
-
-    struct gramine_user_cap_header hdrp;
-    struct gramine_user_cap_data datap[2];
+    struct __user_cap_header_struct hdrp;
+    struct __user_cap_data_struct datap[2];
     int ret;
     if (!_hdrp || !is_user_memory_readable(_hdrp, sizeof(*_hdrp)))
         return -EFAULT;
     memcpy(&hdrp, _hdrp, sizeof(*_hdrp));
+
     struct libos_thread* cur_thread = get_cur_thread();
     lock(&cur_thread->lock);
     if (hdrp.pid != 0 && hdrp.pid != (int)cur_thread->tid) {
@@ -69,15 +68,15 @@ long libos_syscall_capget(cap_user_header_t _hdrp, const cap_user_data_t _datap)
     unlock(&cur_thread->lock);
     size_t size = 0;
     switch(hdrp.version) {
-        case GRAMINE_LINUX_CAPABILITY_VERSION_1:
+        case _LINUX_CAPABILITY_VERSION_1:
             size = 1;
             break;
-        case GRAMINE_LINUX_CAPABILITY_VERSION_2:
-        case GRAMINE_LINUX_CAPABILITY_VERSION_3:
+        case _LINUX_CAPABILITY_VERSION_2:
+        case _LINUX_CAPABILITY_VERSION_3:
             size = 2;
             break;
         default:
-            hdrp.version = GRAMINE_LINUX_CAPABILITY_VERSION_3;
+            hdrp.version = _LINUX_CAPABILITY_VERSION_3;
             if (!_hdrp || !is_user_memory_writable(_hdrp, sizeof(hdrp)))
                 ret = -EFAULT;
             else {
@@ -93,39 +92,12 @@ long libos_syscall_capget(cap_user_header_t _hdrp, const cap_user_data_t _datap)
     /* For now we can get and set capabilties for current thread.
      * TODO: Add support to get and set capabalities for other threads */
     lock(&cur_thread->lock);
-    if( cur_thread->is_cap_set) {
-        if (!_datap || !is_user_memory_writable(_datap, size * sizeof(datap[0])))
-            ret = -EFAULT;
-        else {
-            memcpy(_datap, cur_thread->capabilities, size * sizeof(datap[0]));
-            ret = 0;
-        }
-        goto out_locked;
-    } else {
-        unlock(&cur_thread->lock);
-        uint32_t version = hdrp.version;
-        ret = Palcapget(version, datap);
-        if (ret < 0) {
-            goto out;
-        }
-        lock(&cur_thread->lock);
-        for(size_t i = 0; i < size; i++) {
-            cur_thread->capabilities[i].effective = datap[i].effective;
-            cur_thread->capabilities[i].permitted = datap[i].permitted;
-            cur_thread->capabilities[i].inheritable = datap[i].inheritable;
-        }
-        cur_thread->is_cap_set = true;
-        unlock(&cur_thread->lock);
-        if (!_datap || !is_user_memory_writable(_datap, size * sizeof(datap[0])))
-            ret = -EFAULT;
-        else {
-            memcpy(_datap, cur_thread->capabilities, size * sizeof(datap[0]));
-            ret = 0;
-        }
-        goto out;
+    if (!_datap || !is_user_memory_writable(_datap, size * sizeof(datap[0])))
+        ret = -EFAULT;
+    else {
+        memcpy(_datap, cur_thread->capabilities, size * sizeof(datap[0]));
+        ret = 0;
     }
-    goto out;
-
 out_locked:
     unlock(&cur_thread->lock);
 out:
@@ -133,12 +105,13 @@ out:
 }
 
 long libos_syscall_capset(cap_user_header_t _hdrp, const cap_user_data_t _datap) {
-    struct gramine_user_cap_header hdrp;
-    struct gramine_user_cap_data datap[2];
+    struct __user_cap_header_struct hdrp;
+    struct __user_cap_data_struct datap[2];
     int ret;
     if (!_hdrp || !is_user_memory_readable(_hdrp, sizeof(*_hdrp)))
         return -EFAULT;
     memcpy(&hdrp, _hdrp, sizeof(*_hdrp));
+
     /* For now we can get and set capabilties for current thread.
      * TODO: Add support to get and set capabalities for other threads */
     struct libos_thread* cur_thread = get_cur_thread();
@@ -147,34 +120,37 @@ long libos_syscall_capset(cap_user_header_t _hdrp, const cap_user_data_t _datap)
         unlock(&cur_thread->lock);
         return -ESRCH;
     }
-    unlock(&cur_thread->lock);
     size_t size = 0;
     switch(hdrp.version) {
-        case GRAMINE_LINUX_CAPABILITY_VERSION_1:
+        case _LINUX_CAPABILITY_VERSION_1:
             size = 1;
             break;
-        case GRAMINE_LINUX_CAPABILITY_VERSION_2:
-        case GRAMINE_LINUX_CAPABILITY_VERSION_3:
+        case _LINUX_CAPABILITY_VERSION_2:
+        case _LINUX_CAPABILITY_VERSION_3:
             size = 2;
             break;
         default:
-            hdrp.version = GRAMINE_LINUX_CAPABILITY_VERSION_3;
-            if (!_hdrp || !is_user_memory_writable(_hdrp, sizeof(*_hdrp)))
+            hdrp.version = _LINUX_CAPABILITY_VERSION_3;
+            if (!_hdrp || !is_user_memory_writable(_hdrp, sizeof(*_hdrp))) {
+                unlock(&cur_thread->lock);
                 return -EFAULT;
+            }
             memcpy(_hdrp, &hdrp, sizeof(hdrp));
+            unlock(&cur_thread->lock);
             return -EINVAL;
     }
-    if (!_datap || !is_user_memory_readable(_datap, size * sizeof(datap[0])))
+    if (!_datap || !is_user_memory_readable(_datap, size * sizeof(datap[0]))) {
+        unlock(&cur_thread->lock);
         return -EFAULT;
+    }
     memcpy(datap, _datap, size * sizeof(datap[0]));
 
-    uint32_t version = hdrp.version;
-    ret = Palcapset(version, datap);
+    ret = cur_thread->euid == 0 ? 0 : -EPERM;
     if (ret < 0) {
+        unlock(&cur_thread->lock);
         return ret;
     }
-    lock(&cur_thread->lock);
-    cur_thread->is_cap_set = true;
+
     for(size_t i = 0; i < size; i++) {
         cur_thread->capabilities[i].effective = datap[i].effective;
         cur_thread->capabilities[i].permitted = datap[i].permitted;

@@ -10,7 +10,6 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
-#include "linux_capabilities.h"
 
 int _PalSystemTimeQuery(uint64_t* out_usec) {
     return -PAL_ERROR_NOTIMPLEMENTED;
@@ -63,16 +62,4 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
 double _PalGetBogomips(void) {
     /* this has to be implemented */
     return 0.0;
-}
-
-int _Palcapget(uint32_t version, struct gramine_user_cap_data* datap) {
-    __UNUSED(version);
-    __UNUSED(datap);
-    return 0;
-}
-
-int _Palcapset(uint32_t version, struct gramine_user_cap_data* datap) {
-    __UNUSED(version);
-    __UNUSED(datap);
-    return 0;
 }

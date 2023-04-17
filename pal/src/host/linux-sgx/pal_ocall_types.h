@@ -14,7 +14,6 @@
 #include "pal_linux_types.h"
 #include "sgx_arch.h"
 #include "sgx_attest.h"
-#include "linux_capabilities.h"
 
 /*
  * These structures must be packed, otherwise will leak data in their padding when copied to
