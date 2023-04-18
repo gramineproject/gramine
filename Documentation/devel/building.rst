@@ -17,13 +17,16 @@ performance reasons. Both patched glibc and patched musl are built by default.
 Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
 building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
-higher. If you find problems with Gramine on other Linux distributions, 
+higher. If you find problems with Gramine on other Linux distributions,
 contact us with a |~| detailed `bug report
 <https://github.com/gramineproject/gramine/issues/new>`__.
 
 **Install from a Docker container**
 
-If you opt to build Gramine, you can install Gramine from a Docker container you build that includes an OS packaged with Gramine binaries. The container includes everything that's included in the custom installation. You must create your own manifest. Go to :doc:`docker-image-installation`.
+If you opt to build Gramine, you can install Gramine from a Docker container
+you build that includes an OS packaged with Gramine binaries.
+The container includes everything that's included in the custom installation.
+You must create your own manifest. Go to :doc:`docker-image-installation`.
 
 Install dependencies
 --------------------
@@ -269,20 +272,23 @@ Additional build options
   take a long time: unfortunately, the only supported way of building
   ``libgomp`` is as part of a complete GCC build.
 
-.. _FSGSBASE:
-
 Prepare a signing key
 ---------------------
 
-These instructions are only required for systems using Intel® SGX that have not already created a signing key.
+These instructions are only required for systems using Intel® SGX that have not
+already created a signing key.
 
    - If your system is not using Intel® SGX, skip this step.
 
-   - If your system is using Intel® SGX and you already created a signing key, skip this step. 
+   - If your system is using Intel® SGX and you already created a signing key,
+     skip this step.
 
-   - If your system is using Intel® SGX and have not created a signing key, follow the instructions below. 
+   - If your system is using Intel® SGX and have not created a signing key,
+     follow the instructions below.
 
-The following command generates an |~| RSA 3072 key suitable for signing SGX enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. Protect this key and do not disclose it to anyone:: 
+The following command generates an |~| RSA 3072 key suitable for signing SGX
+enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`.
+Protect this key and do not disclose it to anyone::
 
    gramine-sgx-gen-private-key
 
@@ -420,8 +426,7 @@ instructions ensure that the resulting kernel has FSGSBASE support.
 
 After the patched Linux kernel is installed, you may proceed with installations
 of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
-SDK/PSW, and Gramine itself.  
-
+SDK/PSW, and Gramine itself.
 
 2. Install the Intel SGX driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

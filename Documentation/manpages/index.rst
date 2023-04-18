@@ -13,7 +13,8 @@ The following man pages are available:
    gramine-sgx-get-token
    gramine-sgx-ias-request
    gramine-sgx-ias-verify-report
-   gramine-sgx-quote-dump
+   gramine-sgx-quote-view
+   gramine-sgx-sigstruct-view
    gramine-sgx-sign
    is-sgx-available
 
