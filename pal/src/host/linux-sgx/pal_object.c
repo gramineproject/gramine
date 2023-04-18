@@ -96,11 +96,11 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
         if (handle->flags & PAL_HANDLE_FD_ERROR)
             ret_events[i] |= PAL_WAIT_ERROR;
 
-        /* report hup events on this FD */
+        /* report hang-up events on this FD */
         if (fds[i].revents & (POLLHUP | POLLRDHUP))
-            handle->flags |= PAL_HANDLE_FD_HUP;
-        if (handle->flags & PAL_HANDLE_FD_HUP)
-            ret_events[i] |= PAL_WAIT_HUP;
+            handle->flags |= PAL_HANDLE_FD_HANG_UP;
+        if (handle->flags & PAL_HANDLE_FD_HANG_UP)
+            ret_events[i] |= PAL_WAIT_HANG_UP;
     }
 
     ret = 0;

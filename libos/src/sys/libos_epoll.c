@@ -14,8 +14,8 @@
  *   using this flag,
  * - adding an epoll to another epoll instance is not supported, but should be implementable without
  *   design changes if need be,
- * - `EPOLLRDHUP` is always reported as `EPOLLHUP` - this is current limitation of PAL API, which
- *   does not distinguish these conditions.
+ * - `EPOLLRDHUP` is always reported together with `EPOLLHUP` - this is current limitation of PAL
+ *   API, which does not distinguish these conditions.
  */
 
 #include <stdint.h>
@@ -660,7 +660,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             if (pal_ret_events[i] & PAL_WAIT_ERROR) {
                 this_item_events |= EPOLLERR;
             }
-            if (pal_ret_events[i] & PAL_WAIT_HUP) {
+            if (pal_ret_events[i] & PAL_WAIT_HANG_UP) {
                 this_item_events |= EPOLLHUP;
                 /* add RDHUP event only if user requested for it to be reported */
                 this_item_events |= items[i]->events & EPOLLRDHUP;

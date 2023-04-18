@@ -171,8 +171,8 @@ static void server(int sockfd) {
 
     char c = 0;
     ssize_t x = CHECK(write(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("write: %zd", x);
     }
 
     int client = CHECK(accept(s, NULL, NULL));
@@ -188,24 +188,25 @@ static void server(int sockfd) {
     memset(&event, 0, sizeof(event));
     int r = CHECK(epoll_wait(epfd, &event, 1, 0));
     if (r != 0) {
-        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
+        ERR("epoll_wait returned: %d, events: %#x, fd: %d", r, event.events, event.data.fd);
     }
 
     x = CHECK(write(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("write: %zd", x);
     }
 
     x = CHECK(read(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("read: %zd", x);
     }
     CHECK(close(sockfd));
 
+    uint32_t events_to_check = EPOLLIN | EPOLLRDHUP;
     memset(&event, 0, sizeof(event));
     r = CHECK(epoll_wait(epfd, &event, 1, 0));
-    if (r != 1 || event.events != (EPOLLIN | EPOLLHUP | EPOLLRDHUP) || event.data.fd != client) {
-        ERR("epoll_wait returned: %d, events: %#x, data: %d", r, event.events, event.data.fd);
+    if (r != 1 || (event.events & events_to_check) != events_to_check || event.data.fd != client) {
+        ERR("epoll_wait returned: %d, events: %#x, fd: %d", r, event.events, event.data.fd);
     }
 
     CHECK(close(client));
@@ -215,8 +216,8 @@ static void server(int sockfd) {
 static void client(int sockfd) {
     char c = 0;
     ssize_t x = CHECK(read(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("read: %zd", x);
     }
 
     int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
@@ -230,21 +231,21 @@ static void client(int sockfd) {
         },
     };
     if (inet_aton(SRV_IP, &sa.sin_addr) != 1) {
-        CHECK(-1);
+        ERR("inet_aton failed");
     }
 
     CHECK(connect(s, (void*)&sa, sizeof(sa)));
 
     x = CHECK(read(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("read: %zd", x);
     }
 
     CHECK(close(s));
 
     x = CHECK(write(sockfd, &c, sizeof(c)));
-    if (x != 1) {
-        CHECK(-1);
+    if (x != sizeof(c)) {
+        ERR("write: %zd", x);
     }
     CHECK(close(sockfd));
 }

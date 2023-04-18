@@ -192,7 +192,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
         fds[i].revents = 0;
         if (ret_events[i] & PAL_WAIT_ERROR)
             fds[i].revents |= POLLERR;
-        if (ret_events[i] & PAL_WAIT_HUP) {
+        if (ret_events[i] & PAL_WAIT_HANG_UP) {
             fds[i].revents |= POLLHUP;
             /* add RDHUP event only if user requested for it to be reported */
             fds[i].revents |= fds[i].events & POLLRDHUP;
