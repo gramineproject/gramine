@@ -102,6 +102,18 @@ class Sigstruct:
                                or verify_sig_fields):
                     raise KeyError(f'{key} is not set')
                 continue
+            # `SIGSTRUCT.DATE` (build date) is required to be yyyymmdd in hex: yyyy=4 digit year,
+            # mm=1-12, dd=1-31 according to Intel SDM (Table 35-21. Layout of Enclave Signature
+            # Structure (SIGSTRUCT), Chapter 34, Volume 3, Version March 2023). Further, SGX SDK and
+            # some code signing systems interpret it as "Binary-coded decimal", e.g., expecting
+            # "14 04 23 20" rather than "0e 04 e7 07" for date "2023-04-14" in its byte
+            # representation. See below for details:
+            # - https://github.com/intel/linux-sgx/blob/1efe23c20e37f868498f8287921eedfbcecdc216/sdk/sign_tool/SignTool/manage_metadata.cpp#L252-L253
+            # - https://en.wikipedia.org/wiki/Binary-coded_decimal
+            # We thus treat the date-related inputs as if they are hex numbers.
+            if key in ['date_year', 'date_month', 'date_day']:
+                struct.pack_into(fmt, buffer, offset, int(f'{self[key]}', 16))
+                continue
             struct.pack_into(fmt, buffer, offset, self[key])
         return buffer
 
@@ -130,6 +142,13 @@ class Sigstruct:
         sig = cls()
 
         for key, (offset, fmt) in cls.fields.items():
+            # `SIGSTRUCT.DATE` is required to be yyyymmdd in hex and is interpreted as
+            # "Binary-coded decimal". See above explanation in `to_bytes()` for details.
+            # We thus turn this "Binary-coded decimal" of the date-related bytes back into their
+            # decimal values.
+            if key in ['date_year', 'date_month', 'date_day']:
+                sig[key] = int(f'{struct.unpack_from(fmt, buffer, offset)[0]:x}')
+                continue
             sig[key] = struct.unpack_from(fmt, buffer, offset)[0]
 
         if sig['header'] != cls.defaults['header']:

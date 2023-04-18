@@ -132,7 +132,7 @@ def get_token(sig, verbose=False):
         print(f'    modulus:     {sig["modulus"].hex()[:32]}...')
         print(f'    exponent:    {sig["exponent"]}')
         print(f'    signature:   {sig["signature"].hex()[:32]}...')
-        print(f'    date:        {sig["date_year"]:04x}-{sig["date_month"]:02x}-'
-              f'{sig["date_day"]:02x}')
+        print(f'    date:        {sig["date_year"]:04d}-{sig["date_month"]:02d}-'
+              f'{sig["date_day"]:02d}')
 
     return connect_aesmd(sig['enclave_hash'], sig['modulus'], sig['attribute_flags'], xfrms)
