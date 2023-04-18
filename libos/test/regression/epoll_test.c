@@ -202,10 +202,12 @@ static void server(int sockfd) {
     }
     CHECK(close(sockfd));
 
-    uint32_t events_to_check = EPOLLIN | EPOLLRDHUP;
     memset(&event, 0, sizeof(event));
     r = CHECK(epoll_wait(epfd, &event, 1, 0));
-    if (r != 1 || (event.events & events_to_check) != events_to_check || event.data.fd != client) {
+    /* `EPOLLRDHUP` is always reported together with `EPOLLHUP` in Gramine as a limitation. We thus
+     * ignore `EPOLLHUP` here (which is not reported natively) to make the test also work for
+     * native. */
+    if (r != 1 || (event.events & ~EPOLLHUP) != (EPOLLIN | EPOLLRDHUP) || event.data.fd != client) {
         ERR("epoll_wait returned: %d, events: %#x, fd: %d", r, event.events, event.data.fd);
     }
 
