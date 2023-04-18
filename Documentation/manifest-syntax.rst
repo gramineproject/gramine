@@ -494,7 +494,7 @@ Enclave size
 ::
 
     sgx.enclave_size = "[SIZE]"
-    (default: "256M")
+    (default: "256M" without EDMM, "1024G" with EDMM)
 
 This syntax specifies the size of the enclave set during enclave creation time
 if :term:`EDMM` is not enabled (``sgx.edmm_enable = false``) or the maximal
