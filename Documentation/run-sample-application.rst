@@ -4,7 +4,8 @@
 Run a sample application
 =======================
 
-The core Gramine repository contains sample applications to test the Gramine installation. To clone the Gramine repo, use the following command:
+The core Gramine repository contains sample applications to test the Gramine
+installation. To clone the Gramine repo, use the following command:
 
 .. parsed-literal::
 
@@ -37,7 +38,8 @@ Build and run with SGX::
 Other sample applications
 -------------------------
 
-Several applications that demonstrate Gramine usability are available in the :file:`CI-Examples` directory in the repository. Each application contains a
+Several applications that demonstrate Gramine usability are available in the
+:file:`CI-Examples` directory in the repository. Each application contains a
 short README file with instructions how to test it. We recommend starting
 with a simpler, thoroughly documented example of Redis to
 understand manifest options and Gramine features.
@@ -54,4 +56,7 @@ only on Ubuntu).
 
 glibc vs musl
 ------------------------------------
-Most of the examples we provide use GNU C Library (glibc). If your application is built against musl libc, you can pass ''musl'' to ''gramine.runtimedir()'' when generating the manifest from a template; this will mount musl libc (instead of the default glibc).
+Most of the examples we provide use GNU C Library (glibc).
+If your application is built against musl libc, you can pass ''musl'' to
+''gramine.runtimedir()'' when generating the manifest from a template;
+this will mount musl libc (instead of the default glibc).

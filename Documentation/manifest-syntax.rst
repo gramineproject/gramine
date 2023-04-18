@@ -124,10 +124,13 @@ or
 
    loader.argv_src_file = "file:file_with_serialized_argv"
 
-If you want your application to use commandline arguments, you must choose one of the three mutually exclusive options:
+If you want your application to use commandline arguments, you must choose one
+of the three mutually exclusive options:
+
 - set ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases),
 - put commandline arguments into ``loader.argv`` array,
-- point ``loader.argv_src_file`` to a file containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
+- point ``loader.argv_src_file`` to a file
+  containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
 If none of the above arguments-handling manifest options are specified in the manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
@@ -354,7 +357,6 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
-
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
@@ -485,7 +487,6 @@ explicit value will take precedence.
 .. note::
    Support for EDMM first appeared in Linux 6.0.
 
-
 Enclave size
 ^^^^^^^^^^^^
 
@@ -533,13 +534,12 @@ your system, such ``bash -c ls`` SGX workload will fail. Note this does not
 apply to the enclaves with :term:`EDMM` enabled, where memory is not reserved
 upfront and is allocated on demand.
 
-
 Number of threads
 ^^^^^^^^^^^^^^^^^
 
 ::
 
-    sgx.insecure__rpc_thread_num = [NUM]
+    sgx.max_threads = [NUM]
     (Default: 4)
 
 This syntax specifies the maximum number of threads that can be created inside
@@ -571,7 +571,7 @@ Number of RPC threads (Exitless feature)
 
 ::
 
-    sgx.rpc_thread_num = [NUM]
+    sgx.insecure__rpc_thread_num = [NUM]
     (Default: 0)
 
 This syntax specifies the number of RPC threads that are created outside of
