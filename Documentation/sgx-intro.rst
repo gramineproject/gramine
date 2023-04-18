@@ -3,7 +3,8 @@ Introduction to SGX
 
 .. highlight:: sh
 
-Gramine project uses :term:`SGX` to securely run software. Gramine supports running Linux applications using the :term:`Intel SGX <SGX>`
+Gramine project uses :term:`SGX` to securely run software.
+Gramine supports running Linux applications using the :term:`Intel SGX <SGX>`
 (Software Guard Extensions) technology (we sometimes call this version
 **Gramine-SGX**). With Intel SGX, applications are secured in
 hardware-encrypted memory regions (called SGX enclaves). SGX protects code and
