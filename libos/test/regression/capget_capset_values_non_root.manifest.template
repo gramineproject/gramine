@@ -1,8 +1,11 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
-libos.entrypoint = "{{ entrypoint }}"
+libos.entrypoint = "capget_capset_values"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
 loader.insecure__use_cmdline_argv = true
+
+loader.uid = 1
+loader.gid = 1
 
 # for eventfd test
 sys.insecure__allow_eventfd = true
@@ -12,7 +15,7 @@ sys.enable_dummy_capabilities = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
-  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/capget_capset_values", uri = "file:{{ binary_dir }}/capget_capset_values" },
   { path = "/exec_victim", uri = "file:{{ binary_dir }}/exec_victim" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
@@ -40,7 +43,7 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",
   "file:/usr{{ arch_libdir }}/libstdc++.so.6",
-  "file:{{ binary_dir }}/{{ entrypoint }}",
+  "file:{{ binary_dir }}/capget_capset_values",
   "file:{{ binary_dir }}/exec_victim",
   "file:/bin/sh",
   "file:/bin/sleep",

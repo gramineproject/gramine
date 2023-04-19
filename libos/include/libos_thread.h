@@ -5,13 +5,13 @@
 
 #pragma once
 
-#include <linux/capability.h>
 #include <linux/futex.h>
 #include <linux/signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "api.h"
+#include "linux_capabilities.h"
 #include "libos_internal.h"
 #include "libos_pollable_event.h"
 #include "libos_refcount.h"
@@ -142,8 +142,8 @@ struct libos_thread {
     bool is_capability_enabled;
     /* According to man page, 64-bit capabilities use datap[0] and datap[1], whereas
      * 32-bit capabilities use only datap[0]. That is why we have an array of size 2 of struct
-     * __user_cap_data_struct capabilities. */
-    struct __user_cap_data_struct capabilities[2];
+     * struct gramine_user_cap_data. */
+    struct gramine_user_cap_data capabilities[2];
 };
 
 struct libos_thread_queue {

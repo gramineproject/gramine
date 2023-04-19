@@ -108,7 +108,6 @@ int main(void) {
         /* No point in checking with non-root user as capset will fail with non-root user
          * and hence the capabilities of the parent thread won't be modified
          */
-        printf("Checking if child thread inherits parent thread capabilities\n");
         pthread_t thread[1];
         CHECK(pthread_create(&thread[0], NULL, check_capabilities_for_different_thread,
               &cap_data_mod));

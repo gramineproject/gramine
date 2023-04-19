@@ -189,10 +189,10 @@ static int init_main_thread(void) {
         return -EINVAL;
     }
 
-    ret = toml_bool_in(g_manifest_root, "sys.enable_capabilities", /*defaultval=*/false,
+    ret = toml_bool_in(g_manifest_root, "sys.enable_dummy_capabilities", /*defaultval=*/false,
                        &cur_thread->is_capability_enabled);
     if (ret < 0) {
-        log_error("Cannot parse 'sys.enable_capabilities'");
+        log_error("Cannot parse 'sys.enable_dummy_capabilities'");
         put_thread(cur_thread);
         return -EINVAL;
     }
