@@ -5,11 +5,10 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <asm/prctl.h>
-
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_tcb.h"
+#include "linux_abi/process.h"
 #include "pal.h"
 
 /* Linux v5.16 supports Intel AMX. To enable this feature, Linux added several XSTATE-related

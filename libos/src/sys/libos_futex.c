@@ -15,7 +15,6 @@
  * As a result we can distinguish futexes by their virtual address.
  */
 
-#include <linux/futex.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -28,6 +27,8 @@
 #include "libos_thread.h"
 #include "libos_types.h"
 #include "libos_utils.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/futex.h"
 #include "list.h"
 #include "pal.h"
 #include "spinlock.h"

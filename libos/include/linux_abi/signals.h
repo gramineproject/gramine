@@ -9,7 +9,10 @@
 
 // TODO: remove all of these includes and make this header libc-independent.
 #include <asm/siginfo.h>
-#include <asm/signal.h>
+#include <stddef.h>  // FIXME(mkow): Without this we get:
+                     //     asm/signal.h:126:2: error: unknown type name ‘size_t’
+                     // It definitely shouldn't behave like this...
+#include <linux/signal.h>
 
 #include "linux_abi/signals_arch.h"
 

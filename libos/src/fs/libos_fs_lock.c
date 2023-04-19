@@ -3,12 +3,11 @@
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
-#include <linux/fcntl.h>
-
 #include "libos_fs.h"
 #include "libos_fs_lock.h"
 #include "libos_ipc.h"
 #include "libos_lock.h"
+#include "linux_abi/fs.h"
 
 /*
  * Global lock for the whole subsystem. Protects access to `g_fs_lock_list`, and also to dentry

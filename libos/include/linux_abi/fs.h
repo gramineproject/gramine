@@ -7,6 +7,10 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
+#include <asm/fcntl.h>
+#include <asm/stat.h>
+#include <linux/fadvise.h>
+#include <linux/fcntl.h>
 #include <stdint.h>
 
 struct linux_dirent64 {

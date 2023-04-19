@@ -11,6 +11,7 @@
 #include <linux/times.h>
 #include <linux/timex.h>
 #include <linux/utime.h>
+#include <linux/version.h>
 
 typedef __kernel_time_t time_t;
 

@@ -17,6 +17,7 @@
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_vma.h"
+#include "linux_abi/memory.h"
 #include "pal.h"
 #include "pal_error.h"
 

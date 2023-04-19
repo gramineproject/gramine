@@ -11,6 +11,7 @@
 #include "libos_table.h"
 #include "libos_tcb.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
                                                  arch_syscall_arg_t, arch_syscall_arg_t,

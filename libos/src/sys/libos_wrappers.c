@@ -11,6 +11,7 @@
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
 
 /* TODO: `readv` and `writev` syscalls below are not correctly atomic if the implementation does not
  * provide `.readv` and `.writev` callbacks and does not use file position (`hdl->pos`). This most

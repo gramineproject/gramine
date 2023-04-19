@@ -4,11 +4,9 @@
  */
 #pragma once
 
-#include <linux/sched.h>
-
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-struct __kernel_sched_param {
-    int __sched_priority;
-};
+#define GRND_NONBLOCK 0x0001
+#define GRND_RANDOM   0x0002
+#define GRND_INSECURE 0x0004

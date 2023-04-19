@@ -10,18 +10,16 @@
 #include "pal.h"
 
 // TODO: remove from here and include only where they are used.
-#include "linux_abi/types.h"
 #include "linux_abi/fs.h"
 #include "linux_abi/limits.h"
+#include "linux_abi/poll.h"
 #include "linux_abi/sched.h"
 #include "linux_abi/signals.h"
 #include "linux_abi/time.h"
+#include "linux_abi/types.h"
 
 typedef unsigned long int nfds_t;
 typedef unsigned long int nlink_t;
-
-#undef __CPU_SETSIZE
-#undef __NCPUBITS
 
 typedef Elf64_auxv_t elf_auxv_t;
 
@@ -44,8 +42,3 @@ struct libos_lock {
 
 /* maximum length of pipe/FIFO name (should be less than Linux sockaddr_un.sun_path = 108) */
 #define PIPE_URI_SIZE 96
-
-#ifndef EPOLLNVAL
-/* This is not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
-#define EPOLLNVAL ((uint32_t)0x00000020)
-#endif

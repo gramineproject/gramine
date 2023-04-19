@@ -3,10 +3,6 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <stddef.h> /* needed by <linux/signal.h> for size_t */
-
-#include <linux/signal.h>
-#include <linux/wait.h>
 #include <stdbool.h>
 
 #include "api.h"
@@ -18,6 +14,9 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/process.h"
+#include "linux_abi/signals.h"
 
 /* For wait4() return value */
 #define WCOREFLAG 0x80

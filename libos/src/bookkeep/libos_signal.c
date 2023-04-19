@@ -8,9 +8,6 @@
  * This file contains code for handling signals and exceptions passed from PAL.
  */
 
-#include <stddef.h> /* needed by <linux/signal.h> for size_t */
-
-#include <asm/signal.h>
 #include <stdnoreturn.h>
 
 #include "cpu.h"
@@ -23,6 +20,8 @@
 #include "libos_types.h"
 #include "libos_utils.h"
 #include "libos_vma.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/signals.h"
 #include "pal.h"
 #include "toml_utils.h"
 

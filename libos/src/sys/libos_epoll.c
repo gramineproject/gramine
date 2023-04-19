@@ -31,6 +31,7 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
+#include "linux_abi/errors.h"
 #include "list.h"
 
 /* This bit is currently unoccupied in epoll events mask. */

@@ -6,8 +6,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <asm/unistd.h>
-
+#include "linux_abi/time.h"
+#include "linux_abi/syscalls_nr_arch.h"
 #include "vdso.h"
 #include "vdso_syscall.h"
 

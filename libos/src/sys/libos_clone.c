@@ -4,9 +4,6 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <errno.h>
-#include <linux/sched.h>
-
 #include "libos_checkpoint.h"
 #include "libos_fs.h"
 #include "libos_internal.h"
@@ -18,6 +15,9 @@
 #include "libos_vma.h"
 #include "pal.h"
 #include "toml_utils.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/process.h"
+#include "linux_abi/sched.h"
 
 struct libos_clone_args {
     PAL_HANDLE create_event;

@@ -5,13 +5,13 @@
  * Implementation of system call "ioctl".
  */
 
-#include <asm/ioctls.h>
-
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_process.h"
 #include "libos_signal.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/ioctl.h"
 #include "pal.h"
 
 static void signal_io(IDTYPE caller, void* arg) {

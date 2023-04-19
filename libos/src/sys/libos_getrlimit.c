@@ -5,9 +5,6 @@
  * Implementation of system calls "getrlimit", "setrlimit" and "sysinfo".
  */
 
-#include <asm/resource.h>
-#include <linux/sysinfo.h>
-
 #include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
@@ -15,6 +12,7 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
+#include "linux_abi/limits.h"
 
 /*
  * TODO: implement actual limitation on each resource.
@@ -30,6 +28,8 @@
                                  the host limit). Ideally, we should have a PAL API which tells
                                  LibOS how many PAL handles it can use simultaneously. */
 #define MAX_MAX_FDS     65536
+#undef MLOCK_LIMIT /* Clashes with a macro from linux/resource.h. TODO: Remove after cleaning up
+                    * our headers. */
 #define MLOCK_LIMIT     (64 * 1024)
 #define MQ_BYTES_MAX    819200
 

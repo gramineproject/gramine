@@ -5,9 +5,6 @@
  * Implementation of system calls "pipe", "pipe2", "mknod", and "mknodat".
  */
 
-#include <asm/fcntl.h>
-#include <errno.h>
-
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
@@ -16,6 +13,8 @@
 #include "libos_table.h"
 #include "libos_types.h"
 #include "libos_utils.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "perm.h"

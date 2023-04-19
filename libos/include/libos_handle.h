@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <asm/fcntl.h>
-#include <asm/resource.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,6 +18,7 @@
 #include "libos_refcount.h"
 #include "libos_sync.h"
 #include "libos_types.h"
+#include "linux_abi/limits.h"
 #include "linux_socket.h"
 #include "list.h"
 #include "pal.h"

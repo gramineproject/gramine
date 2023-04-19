@@ -6,15 +6,14 @@
  * "chmod", "fchmod", "fchmodat", "rename", "renameat" and "sendfile".
  */
 
-#include <errno.h>
-#include <linux/fcntl.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_process.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
 #include "perm.h"
 #include "stat.h"
 

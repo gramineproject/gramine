@@ -4,11 +4,10 @@
  */
 #pragma once
 
-#include <linux/sched.h>
-
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-struct __kernel_sched_param {
-    int __sched_priority;
-};
+#ifndef EPOLLNVAL
+/* This is not defined in the older kernels e.g. the default kernel on Ubuntu 18.04. */
+#define EPOLLNVAL ((uint32_t)0x00000020)
+#endif

@@ -8,15 +8,14 @@
  * "getcpu".
  */
 
-#include <errno.h>
-#include <linux/resource.h>
-#include <linux/sched.h>
-
 #include "api.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_table.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/limits.h"
+#include "linux_abi/sched.h"
 #include "pal.h"
 
 long libos_syscall_sched_yield(void) {

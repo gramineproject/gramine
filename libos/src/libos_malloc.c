@@ -9,13 +9,12 @@
  * ends up here (__system_alloc and __system_free).
  */
 
-#include <asm/mman.h>
-
 #include "asan.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_utils.h"
 #include "libos_vma.h"
+#include "linux_abi/memory.h"
 #include "pal.h"
 
 static struct libos_lock slab_mgr_lock;

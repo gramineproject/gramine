@@ -14,9 +14,6 @@
  * - F_SETOWN (file descriptor owner): dummy implementation
  */
 
-#include <errno.h>
-#include <linux/fcntl.h>
-
 #include "libos_fs.h"
 #include "libos_fs_lock.h"
 #include "libos_handle.h"
@@ -25,6 +22,8 @@
 #include "libos_process.h"
 #include "libos_table.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
 
 #define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 

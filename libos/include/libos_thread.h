@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <linux/futex.h>
-#include <linux/signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -17,6 +15,7 @@
 #include "libos_signal.h"
 #include "libos_tcb.h"
 #include "libos_types.h"
+#include "linux_abi/signals.h"
 #include "list.h"
 #include "pal.h"
 
