@@ -105,7 +105,8 @@ out:
     return ret;
 }
 
-long libos_syscall_capset(struct gramine_user_cap_header* hdrp_unaligned, struct gramine_user_cap_data* datap_unaligned) {
+long libos_syscall_capset(struct gramine_user_cap_header* hdrp_unaligned,
+                          struct gramine_user_cap_data* datap_unaligned) {
     struct libos_thread* cur_thread = get_cur_thread();
     if (!cur_thread->is_capability_enabled) {
         log_debug("Setting of capabilities is disabled. Please set sys.enable_capabilities to true "

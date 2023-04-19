@@ -175,7 +175,8 @@ int main(void) {
     if ((cap_header.version != _LINUX_CAPABILITY_VERSION_1 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_2 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_3 ))
-        err(1, "incorrect version number for header is obtained from capget at line = %d", __LINE__);
+        err(1, "incorrect version number for header is obtained from capget at line = %d",
+            __LINE__);
     if (errno != EINVAL)
         err(1, "Incorrect errno at line = %d", __LINE__);
 
@@ -190,7 +191,8 @@ int main(void) {
     if ((cap_header.version != _LINUX_CAPABILITY_VERSION_1 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_2 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_3 ))
-        err(1, "incorrect version number for header is obtained from capset at line = %d", __LINE__);
+        err(1, "incorrect version number for header is obtained from capset at line = %d",
+            __LINE__);
     if (errno != EINVAL)
         err(1, "Invalid errno for capset at line = %d", __LINE__);
 
@@ -201,7 +203,8 @@ int main(void) {
     if ((cap_header.version != _LINUX_CAPABILITY_VERSION_1 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_2 &&
          cap_header.version != _LINUX_CAPABILITY_VERSION_3 ))
-        err(1, "incorrect version number for header is obtained from capset at line = %d", __LINE__);
+        err(1, "incorrect version number for header is obtained from capset at line = %d",
+            __LINE__);
     if (errno != EINVAL)
         err(1, "Invalid errno for capget at line = %d", __LINE__);
 

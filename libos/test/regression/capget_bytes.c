@@ -41,11 +41,14 @@ int main(void) {
     for(size_t i = 0; i < 3; i++) {
         if (i < 2) {
             if (cap_data[i].effective == MAGIC_NUM)
-                errx(1, "effective value is not modified for index = %ld and header version 3", i);
+                errx(1, "effective value is not modified for index = %ld and header version 3",
+                     i);
             if (cap_data[i].permitted == MAGIC_NUM)
-                errx(1, "permitted value is not modified for index = %ld and header version 3", i);
+                errx(1, "permitted value is not modified for index = %ld and header version 3",
+                     i);
             if (cap_data[i].inheritable == MAGIC_NUM)
-                errx(1, "inheritable value is not modified for index = %ld and header version 3", i);
+                errx(1, "inheritable value is not modified for index = %ld and header version 3",
+                     i);
         } else {
             if (cap_data[i].effective != MAGIC_NUM) {
                 errx(1, "effective value is incorrectly modified for index = %ld"
@@ -75,11 +78,14 @@ int main(void) {
     for(size_t i = 0; i < 3; i++) {
         if (i < 1) {
             if (cap_data[i].effective == MAGIC_NUM)
-                errx(1, "effective value is not modified for index = %ld and header version 1", i);
+                errx(1, "effective value is not modified for index = %ld and header version 1",
+                     i);
             if (cap_data[i].permitted == MAGIC_NUM)
-                errx(1, "permitted value is not modified for index = %ld and header version 1", i);
+                errx(1, "permitted value is not modified for index = %ld and header version 1",
+                     i);
             if (cap_data[i].inheritable == MAGIC_NUM)
-                errx(1, "inheritable value is not modified for index = %ld and header version 1", i);
+                errx(1, "inheritable value is not modified for index = %ld and header version 1",
+                     i);
         } else {
             if (cap_data[i].effective != MAGIC_NUM) {
                 errx(1, "effective value is incorrectly modified for index = %ld"

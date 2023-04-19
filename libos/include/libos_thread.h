@@ -142,7 +142,7 @@ struct libos_thread {
     bool is_capability_enabled;
     /* According to man page, 64-bit capabilities use 2 structures variables, each capable of
      * storing 32 bit capabilities. Hence we are using an array of 2 struct gramine_user_cap_data
-     * variables. one struct gramine_user_cap_data variable is capable of storing 32 bit
+     * variables. One struct gramine_user_cap_data variable is capable of storing 32 bit
      * capabilities. */
     struct gramine_user_cap_data capabilities[2];
 };
