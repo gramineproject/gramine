@@ -78,9 +78,9 @@ long libos_syscall_capget(struct gramine_user_cap_header* hdrp_unaligned,
             break;
         default:
             hdrp.version = GRAMINE_LINUX_CAPABILITY_VERSION_3;
-            if (!is_user_memory_writable(hdrp_unaligned, sizeof(hdrp)))
+            if (!is_user_memory_writable(hdrp_unaligned, sizeof(hdrp))) {
                 ret = -EFAULT;
-            else {
+            } else {
                 memcpy(hdrp_unaligned, &hdrp, sizeof(*hdrp_unaligned));
                 ret = datap_unaligned == NULL ? 0 : -EINVAL;
             }
@@ -93,9 +93,9 @@ long libos_syscall_capget(struct gramine_user_cap_header* hdrp_unaligned,
     /* For now we can get and set capabilities for current thread.
      * TODO: Add support to get and set capabalities for other threads */
     lock(&cur_thread->lock);
-    if (!is_user_memory_writable(datap_unaligned, size * sizeof(datap[0])))
+    if (!is_user_memory_writable(datap_unaligned, size * sizeof(datap[0]))) {
         ret = -EFAULT;
-    else {
+    } else {
         memcpy(datap_unaligned, cur_thread->capabilities, size * sizeof(datap[0]));
         ret = 0;
     }
